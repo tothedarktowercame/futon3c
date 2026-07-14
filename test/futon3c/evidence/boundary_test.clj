@@ -11,25 +11,21 @@
          success (I-evidence-per-turn binding).
 
    Tests cover the three kinds of receipts (success / shape-fail /
-   coerce-fail) against an XTDB-backed store. Mission:
+   coerce-fail) against an evidence backend. Mission:
    M-invariant-queue-unstuck (futon3c/holes/missions/)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [xtdb.api :as xtdb]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as store]
-            [futon3c.evidence.xtdb-backend :as xb]))
+            [futon3c.evidence.backend :as backend]))
 
-(def ^:dynamic *xtdb-backend* nil)
+(def ^:dynamic *evidence-backend* nil)
 
 (use-fixtures
   :each
   (fn [f]
-    (let [node (xtdb/start-node {})]
-      (try
-        (binding [*xtdb-backend* (xb/make-xtdb-backend node)]
-          (f))
-        (finally
-          (.close node))))))
+    (binding [*evidence-backend*
+              (backend/->AtomBackend (atom {:entries {} :order []}))]
+      (f))))
 
 ;; -----------------------------------------------------------------------------
 ;; Round-trip: well-shaped input persists and is readable back.
@@ -38,7 +34,7 @@
 (deftest well-shaped-entry-round-trips
   (testing "fully namespaced + correctly-typed entry succeeds"
     (let [result (boundary/append!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:subject {:ref/type :agent :ref/id "claude-test"}
                    :type :coordination
                    :claim-type :step
@@ -49,7 +45,7 @@
       (is (string? (:evidence/id result)))
       (is (= "claude-test" (get-in result [:entry :evidence/author])))
       (is (= [:boundary :test] (get-in result [:entry :evidence/tags])))
-      (let [readback (store/get-entry* *xtdb-backend* (:evidence/id result))]
+      (let [readback (store/get-entry* *evidence-backend* (:evidence/id result))]
         (is (some? readback) "entry must be readable back through the same backend")
         (is (= (:evidence/id result) (:evidence/id readback)))))))
 
@@ -61,7 +57,7 @@
 (deftest string-tags-are-coerced-to-keywords
   (testing "string tags coerced + entry persists"
     (let [result (boundary/append!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:subject {:ref/type :agent :ref/id "claude-test"}
                    :type :coordination
                    :claim-type :step
@@ -76,7 +72,7 @@
 (deftest string-subject-ref-type-is-coerced
   (testing "string :ref/type coerced to keyword"
     (let [result (boundary/append!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:subject {:ref/type "agent" :ref/id "claude-test"}
                    :type :coordination
                    :claim-type :step
@@ -90,7 +86,7 @@
 (deftest string-evidence-type-is-coerced
   (testing "string :type coerced to enum keyword"
     (let [result (boundary/append!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:subject {:ref/type :agent :ref/id "claude-test"}
                    :type "coordination"
                    :claim-type "step"
@@ -104,7 +100,7 @@
 (deftest fully-namespaced-string-tags-coerced
   (testing "namespaced :evidence/tags accepts strings and coerces them"
     (let [result (boundary/append!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:evidence/subject {:ref/type :agent :ref/id "claude-test"}
                    :evidence/type :coordination
                    :evidence/claim-type :step
@@ -121,7 +117,7 @@
 (deftest unrecoverable-tag-throws-structured-violation
   (testing "non-string non-keyword tag triggers exception → structured violation"
     (let [result (boundary/append!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:subject {:ref/type :agent :ref/id "claude-test"}
                    :type :coordination
                    :claim-type :step
@@ -131,14 +127,14 @@
       (is (false? (:ok result)))
       (is (= :exception (:error/code result)))
       (is (= :exception (get-in result [:invariant/violation :kind])))
-      (let [readback (store/query* *xtdb-backend* {:query/limit 100})]
+      (let [readback (store/query* *evidence-backend* {:query/limit 100})]
         (is (zero? (count readback))
             "no entry persisted when coercion threw")))))
 
 (deftest blank-string-tag-fails-loudly
   (testing "blank string tag throws coercion exception"
     (let [result (boundary/append!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:subject {:ref/type :agent :ref/id "claude-test"}
                    :type :coordination
                    :claim-type :step
@@ -151,7 +147,7 @@
 (deftest invalid-evidence-type-fails-shape
   (testing "unknown evidence-type keyword fails shape validation, not coercion"
     (let [result (boundary/append!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:subject {:ref/type :agent :ref/id "claude-test"}
                    :type :nonsense-type
                    :claim-type :step
@@ -170,7 +166,7 @@
 (deftest success-receipt-has-id-failure-receipt-has-violation
   (testing "success vs failure receipt shapes are distinguishable by :ok"
     (let [success (boundary/append!
-                   *xtdb-backend*
+                   *evidence-backend*
                    {:subject {:ref/type :agent :ref/id "claude-test"}
                     :type :coordination
                     :claim-type :step
@@ -178,7 +174,7 @@
                     :body {}
                     :tags [:test]})
           failure (boundary/append!
-                   *xtdb-backend*
+                   *evidence-backend*
                    {:subject {:ref/type :agent :ref/id "claude-test"}
                     :type :nonsense-type
                     :claim-type :step
@@ -201,10 +197,10 @@
                  :evidence/at "2026-05-21T18:00:00Z"
                  :evidence/body {}
                  :evidence/tags [:test]}
-          success (boundary/append! *xtdb-backend* entry)
+          success (boundary/append! *evidence-backend* entry)
           err-writer (java.io.StringWriter.)
           _ (binding [*err* err-writer]
-              (let [duplicate (boundary/append! *xtdb-backend* entry)]
+              (let [duplicate (boundary/append! *evidence-backend* entry)]
                 (is (false? (:ok duplicate)))
                 (is (= :duplicate-id (:error/code duplicate)))
                 (is (= "e-duplicate-boundary-test" (:evidence/id duplicate)))

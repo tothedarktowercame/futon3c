@@ -7,14 +7,13 @@
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing use-fixtures]]
-            [xtdb.api :as xtdb]
             [futon3c.evidence.store :as store]
-            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.backend :as backend]
             [futon3c.logic.archaeology :as arch]
             [futon3c.logic.probe :as probe]
             [futon3c.logic.tracer :as tracer]))
 
-(def ^:dynamic *xtdb-backend* nil)
+(def ^:dynamic *evidence-backend* nil)
 
 (defn- temp-dir
   [prefix]
@@ -33,12 +32,9 @@
 (use-fixtures
   :each
   (fn [f]
-    (let [node (xtdb/start-node {})]
-      (try
-        (binding [*xtdb-backend* (xb/make-xtdb-backend node)]
-          (f))
-        (finally
-          (.close node))))))
+    (binding [*evidence-backend*
+              (backend/->AtomBackend (atom {:entries {} :order []}))]
+      (f))))
 
 ;; -----------------------------------------------------------------------------
 ;; obsolescence-recognition/autostash
@@ -47,7 +43,7 @@
 (deftest autostash-empty-repo-list-is-ok
   (testing "no repos to scan → :ok with zero obsolete artifacts"
     (let [check (arch/check-autostash-obsolescence [])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r)))
       (is (= 0 (get-in r [:detail :obsolete-count]))))))
 
@@ -58,7 +54,7 @@
     ;; so this exercise the happy path against live state.
     (let [check (arch/check-autostash-obsolescence
                  ["/home/joe/code/futon3c"])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected :ok with no stashes, got " (pr-str r))))))
 
@@ -66,7 +62,7 @@
   (testing "non-git directories are skipped, not errored"
     (let [check (arch/check-autostash-obsolescence
                  ["/tmp/definitely-not-a-repo-xyz123"])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           "non-existent repo path produces no violations"))))
 
@@ -80,7 +76,7 @@
       (try
         (reset! probe/family-check-fns {})
         (let [check (arch/check-deferred-stub-obsolescence nil)
-              r (check *xtdb-backend*)]
+              r (check *evidence-backend*)]
           (is (= :ok (:outcome r)))
           (is (= 0 (get-in r [:detail :obsolete-count]))))
         (finally
@@ -95,7 +91,7 @@
          :test/deferred-thing
          (fn [_] {:outcome :inactive :detail {:deferred? true}}))
         (let [check (arch/check-deferred-stub-obsolescence nil)
-              r (check *xtdb-backend*)]
+              r (check *evidence-backend*)]
           (is (= :ok (:outcome r))
               "no inventory means no cross-check; can't detect obsolescence"))
         (finally
@@ -111,7 +107,7 @@
          :single-boundary
          (fn [_] {:outcome :ok :detail {:checked true}}))
         (let [check (arch/check-deferred-stub-obsolescence inv-path)
-              r (check *xtdb-backend*)]
+              r (check *evidence-backend*)]
           (is (= :ok (:outcome r))
               "non-deferred check-fns can't be obsolescence-stubs"))
         (finally
@@ -124,14 +120,14 @@
 (deftest pipeline-tracer-no-tracers-is-ok
   (testing "no open or closed tracers → :ok"
     (let [check (arch/check-pipeline-tracer-obsolescence)
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r)))
       (is (= 0 (get-in r [:detail :open-count]))))))
 
 (deftest pipeline-tracer-closed-track-not-flagged-as-obsolete
   (testing "a later :closed entry retires the open state for that track-id"
     (tracer/emit-tracer!
-     *xtdb-backend*
+     *evidence-backend*
      {:track-id :test/track-flagged
       :title "test"
       :mission :M-test
@@ -139,12 +135,12 @@
       :expected-outcome "test"
       :owner nil})
     (tracer/emit-tracer-closed!
-     *xtdb-backend*
+     *evidence-backend*
      {:track-id :test/track-flagged
       :resolution "test-closed"
       :closed-by "archaeology-test"})
     (let [check (arch/check-pipeline-tracer-obsolescence)
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected closed track to retire cleanly, got " (pr-str r)))
       (is (= 0 (get-in r [:detail :open-count])))
@@ -154,7 +150,7 @@
 (deftest pipeline-tracer-past-target-flagged-as-obsolete
   (testing "open tracer past target-date with no close → flagged"
     (tracer/emit-tracer!
-     *xtdb-backend*
+     *evidence-backend*
      {:track-id :test/past-due
       :title "test"
       :mission :M-test
@@ -162,7 +158,7 @@
       :expected-outcome "test"
       :owner nil})
     (let [check (arch/check-pipeline-tracer-obsolescence)
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :violation (:outcome r))
           (str "expected violation, got " (pr-str r)))
       (is (= 1 (get-in r [:detail :obsolete-count]))))))
@@ -170,7 +166,7 @@
 (deftest pipeline-tracer-fresh-open-not-flagged
   (testing "open tracer with future target-date and no close → not flagged"
     (tracer/emit-tracer!
-     *xtdb-backend*
+     *evidence-backend*
      {:track-id :test/future
       :title "test"
       :mission :M-test
@@ -178,14 +174,14 @@
       :expected-outcome "test"
       :owner nil})
     (let [check (arch/check-pipeline-tracer-obsolescence)
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected ok for future-dated open tracer, got " (pr-str r))))))
 
 (deftest pipeline-tracer-latest-event-wins
   (testing "a reopened track is evaluated from its latest event, not stale history"
     (tracer/emit-tracer!
-     *xtdb-backend*
+     *evidence-backend*
      {:track-id :test/reopened
       :title "test"
       :mission :M-test
@@ -193,12 +189,12 @@
       :expected-outcome "test"
       :owner nil})
     (tracer/emit-tracer-closed!
-     *xtdb-backend*
+     *evidence-backend*
      {:track-id :test/reopened
       :resolution "closed"
       :closed-by "archaeology-test"})
     (tracer/emit-tracer!
-     *xtdb-backend*
+     *evidence-backend*
      {:track-id :test/reopened
       :title "test"
       :mission :M-test
@@ -206,7 +202,7 @@
       :expected-outcome "test"
       :owner nil})
     (let [check (arch/check-pipeline-tracer-obsolescence)
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected reopened track to use latest open state, got " (pr-str r)))
       (is (= 1 (get-in r [:detail :open-count])))
@@ -219,14 +215,14 @@
 (deftest stash-disposition-empty-repo-list-is-ok
   (testing "no repos to scan → :ok"
     (let [check (arch/check-stash-disposition [])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r)))
       (is (= 0 (get-in r [:detail :scanned-repos]))))))
 
 (deftest stash-disposition-no-stashes-is-ok
   (testing "real repo with no stashes → :ok"
     (let [check (arch/check-stash-disposition ["/home/joe/code/futon3c"])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected :ok with no stashes, got " (pr-str r))))))
 
@@ -234,7 +230,7 @@
   (testing "non-git directories skipped, not errored"
     (let [check (arch/check-stash-disposition
                  ["/tmp/definitely-not-a-repo-xyz123"])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))))))
 
 (deftest parse-stash-disposition-vocabulary
@@ -290,7 +286,7 @@
 (deftest branch-disposition-empty-repo-list-is-ok
   (testing "no repos to scan -> :ok"
     (let [check (arch/check-branch-disposition [])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r)))
       (is (= 0 (get-in r [:detail :scanned-repos]))))))
 
@@ -298,7 +294,7 @@
   (testing "empty git repo with no local branches beyond init state -> :ok"
     (let [repo (init-git-repo! (temp-dir "branch-disposition-empty"))
           check (arch/check-branch-disposition [(.getPath repo)])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected :ok with no branches, got " (pr-str r))))))
 
@@ -328,7 +324,7 @@
 (deftest mission-doc-disposition-empty-repo-list-is-ok
   (testing "no repos to scan -> :ok"
     (let [check (arch/check-mission-doc-disposition [])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r)))
       (is (= 0 (get-in r [:detail :scanned-repos]))))))
 
@@ -344,7 +340,7 @@
                    "body\n")))
       (let [check (arch/check-mission-doc-disposition [(.getPath repo)]
                                                        {:undecided-bound 10})
-            r (check *xtdb-backend*)]
+            r (check *evidence-backend*)]
         (is (= :ok (:outcome r)))
         (is (= 0 (get-in r [:detail :violations 0 :undecided-count] 0)))))))
 
@@ -358,7 +354,7 @@
       (let [check (arch/check-mission-doc-disposition [(.getPath repo)]
                                                        {:undecided-bound 0
                                                         :old-days 60})
-            r (check *xtdb-backend*)
+            r (check *evidence-backend*)
             fix (get-in r [:detail :how-to-fix])
             doc-fix (get-in r [:detail :violations 0 :missing-status-recent 0 :fix])]
         (is (= :violation (:outcome r)))
@@ -408,9 +404,9 @@
 
 (deftest check-autostash-on-load-emits-family-fired-evidence
   (let [result (arch/check-autostash-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :repo-paths []})
-        entries (family-fired-entries *xtdb-backend*
+        entries (family-fired-entries *evidence-backend*
                                       :obsolescence-recognition/autostash)]
     (is (#{:ok :violation :inactive} (:outcome result)))
     (is (= {:ok true} (select-keys (:emit-receipt result) [:ok])))
@@ -418,17 +414,17 @@
 
 (deftest check-autostash-on-load-respects-emit-flag
   (let [result (arch/check-autostash-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :emit? false :repo-paths []})]
     (is (nil? (:emit-receipt result)))
-    (is (empty? (family-fired-entries *xtdb-backend*
+    (is (empty? (family-fired-entries *evidence-backend*
                                       :obsolescence-recognition/autostash)))))
 
 (deftest check-deferred-stub-on-load-emits-family-fired-evidence
   (let [result (arch/check-deferred-stub-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :inventory-path nil})
-        entries (family-fired-entries *xtdb-backend*
+        entries (family-fired-entries *evidence-backend*
                                       :obsolescence-recognition/deferred-stub)]
     (is (#{:ok :violation :inactive} (:outcome result)))
     (is (= {:ok true} (select-keys (:emit-receipt result) [:ok])))
@@ -436,17 +432,17 @@
 
 (deftest check-deferred-stub-on-load-respects-emit-flag
   (let [result (arch/check-deferred-stub-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :emit? false :inventory-path nil})]
     (is (nil? (:emit-receipt result)))
-    (is (empty? (family-fired-entries *xtdb-backend*
+    (is (empty? (family-fired-entries *evidence-backend*
                                       :obsolescence-recognition/deferred-stub)))))
 
 (deftest check-pipeline-tracer-on-load-emits-family-fired-evidence
   (let [result (arch/check-pipeline-tracer-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false})
-        entries (family-fired-entries *xtdb-backend*
+        entries (family-fired-entries *evidence-backend*
                                       :obsolescence-recognition/pipeline-tracer)]
     (is (#{:ok :violation :inactive} (:outcome result)))
     (is (= {:ok true} (select-keys (:emit-receipt result) [:ok])))
@@ -454,17 +450,17 @@
 
 (deftest check-pipeline-tracer-on-load-respects-emit-flag
   (let [result (arch/check-pipeline-tracer-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :emit? false})]
     (is (nil? (:emit-receipt result)))
-    (is (empty? (family-fired-entries *xtdb-backend*
+    (is (empty? (family-fired-entries *evidence-backend*
                                       :obsolescence-recognition/pipeline-tracer)))))
 
 (deftest check-stash-disposition-on-load-emits-family-fired-evidence
   (let [result (arch/check-stash-disposition-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :repo-paths []})
-        entries (family-fired-entries *xtdb-backend*
+        entries (family-fired-entries *evidence-backend*
                                       :bounded-disposition/stash)]
     (is (#{:ok :violation :inactive} (:outcome result)))
     (is (= {:ok true} (select-keys (:emit-receipt result) [:ok])))
@@ -472,17 +468,17 @@
 
 (deftest check-stash-disposition-on-load-respects-emit-flag
   (let [result (arch/check-stash-disposition-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :emit? false :repo-paths []})]
     (is (nil? (:emit-receipt result)))
-    (is (empty? (family-fired-entries *xtdb-backend*
+    (is (empty? (family-fired-entries *evidence-backend*
                                       :bounded-disposition/stash)))))
 
 (deftest check-branch-disposition-on-load-emits-family-fired-evidence
   (let [result (arch/check-branch-disposition-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :repo-paths []})
-        entries (family-fired-entries *xtdb-backend*
+        entries (family-fired-entries *evidence-backend*
                                       :bounded-disposition/branch)]
     (is (#{:ok :violation :inactive} (:outcome result)))
     (is (= {:ok true} (select-keys (:emit-receipt result) [:ok])))
@@ -490,17 +486,17 @@
 
 (deftest check-branch-disposition-on-load-respects-emit-flag
   (let [result (arch/check-branch-disposition-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :emit? false :repo-paths []})]
     (is (nil? (:emit-receipt result)))
-    (is (empty? (family-fired-entries *xtdb-backend*
+    (is (empty? (family-fired-entries *evidence-backend*
                                       :bounded-disposition/branch)))))
 
 (deftest check-mission-doc-disposition-on-load-emits-family-fired-evidence
   (let [result (arch/check-mission-doc-disposition-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :repo-paths []})
-        entries (family-fired-entries *xtdb-backend*
+        entries (family-fired-entries *evidence-backend*
                                       :bounded-disposition/mission-doc)]
     (is (#{:ok :violation :inactive} (:outcome result)))
     (is (= {:ok true} (select-keys (:emit-receipt result) [:ok])))
@@ -508,8 +504,8 @@
 
 (deftest check-mission-doc-disposition-on-load-respects-emit-flag
   (let [result (arch/check-mission-doc-disposition-on-load!
-                *xtdb-backend*
+                *evidence-backend*
                 {:print? false :emit? false :repo-paths []})]
     (is (nil? (:emit-receipt result)))
-    (is (empty? (family-fired-entries *xtdb-backend*
+    (is (empty? (family-fired-entries *evidence-backend*
                                       :bounded-disposition/mission-doc)))))

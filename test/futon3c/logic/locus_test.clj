@@ -4,22 +4,18 @@
    Mission: M-single-locus (futon3c/holes/missions/)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.java.io :as io]
-            [xtdb.api :as xtdb]
-            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.backend :as backend]
             [futon3c.logic.locus :as locus]
             [futon3c.logic.probe :as probe]))
 
-(def ^:dynamic *xtdb-backend* nil)
+(def ^:dynamic *evidence-backend* nil)
 
 (use-fixtures
   :each
   (fn [f]
-    (let [node (xtdb/start-node {})]
-      (try
-        (binding [*xtdb-backend* (xb/make-xtdb-backend node)]
-          (f))
-        (finally
-          (.close node))))))
+    (binding [*evidence-backend*
+              (backend/->AtomBackend (atom {:entries {} :order []}))]
+      (f))))
 
 ;; -----------------------------------------------------------------------------
 ;; Helpers
@@ -102,7 +98,7 @@
 (deftest mission-home-empty-repo-list-is-ok
   (testing "no repos → :ok"
     (let [check (locus/check-mission-home-locus [])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r)))
       (is (= 0 (get-in r [:detail :total-missions]))))))
 
@@ -110,7 +106,7 @@
   (testing "live futon3c repo: many missions, none with contradictory annotations"
     (let [check (locus/check-mission-home-locus
                  ["/home/joe/code/futon3c"])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected :ok against live futon3c, got "
                (pr-str (select-keys (:detail r)
@@ -121,7 +117,7 @@
   (testing "explicit-home-count >= 1 once we annotate, implicit fills the rest"
     (let [check (locus/check-mission-home-locus
                  ["/home/joe/code/futon3c"])
-          r (check *xtdb-backend*)
+          r (check *evidence-backend*)
           d (:detail r)]
       (is (= :ok (:outcome r)))
       (is (>= (:explicit-home-count d) 1)
@@ -138,7 +134,7 @@
              missions-dir "M-bad.md"
              "**Status:** open\n**Home-repo:** futon3c\n**Home-repo:** futon4\n# body\n")
           check (locus/check-mission-home-locus [(.getPath tmp-repo)])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :violation (:outcome r))
           (str "expected violation, got " (pr-str r)))
       (is (= 1 (count (get-in r [:detail :violations]))))
@@ -152,7 +148,7 @@
 
 (deftest agent-routing-empty-registry-is-ok
   (let [check (locus/check-agent-routing-locus (atom {}))
-        r (check *xtdb-backend*)]
+        r (check *evidence-backend*)]
     (is (= :ok (:outcome r)))
     (is (= 0 (get-in r [:detail :total-agent-records])))))
 
@@ -162,7 +158,7 @@
                                            :id/type :continuity}
                                  :agent/type :codex
                                  :agent/session-id "s-1"}}))
-        r (check *xtdb-backend*)]
+        r (check *evidence-backend*)]
     (is (= :ok (:outcome r)))
     (is (= 1 (get-in r [:detail :scanned-identities])))))
 
@@ -174,7 +170,7 @@
                       "registry-key-2" {:agent/id {:id/value "codex-1"
                                                   :id/type :continuity}
                                         :agent/session-id "s-2"}}))
-        r (check *xtdb-backend*)]
+        r (check *evidence-backend*)]
     (is (= :violation (:outcome r))
         (str "expected violation, got " (pr-str r)))
     (is (= 1 (count (get-in r [:detail :violations]))))
@@ -188,7 +184,7 @@
 
 (deftest artifact-live-copy-empty-repos-is-ok
   (let [check (locus/check-artifact-live-copy-locus [])
-        r (check *xtdb-backend*)]
+        r (check *evidence-backend*)]
     (is (= :ok (:outcome r)))
     (is (= 0 (get-in r [:detail :total-artifacts])))))
 
@@ -203,7 +199,7 @@
                     (swap! traversed-roots conj (.getCanonicalPath root))
                     [])]
       (let [check (locus/check-artifact-live-copy-locus [(.getPath repo)])]
-        (check *xtdb-backend*)))
+        (check *evidence-backend*)))
     (is (= #{(.getCanonicalPath (io/file repo "library"))
              (.getCanonicalPath (io/file repo "scripts"))}
            (set @traversed-roots)))))
@@ -216,7 +212,7 @@
           _ (write-file! repo-b "scripts/shared-tool.clj" "(println :b)\n")
           check (locus/check-artifact-live-copy-locus
                  [(.getPath repo-a) (.getPath repo-b)])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :violation (:outcome r))
           (str "expected violation, got " (pr-str r)))
       (is (= ["scripts/shared-tool.clj"]
@@ -230,7 +226,7 @@
                          "! conclusion: b\n")
           check (locus/check-artifact-live-copy-locus
                  [(.getPath repo-a) (.getPath repo-b)])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected ok, got " (pr-str r)))))
   (testing "canonical-repo marker on one matching file suppresses violation"
@@ -242,7 +238,7 @@
           _ (write-file! repo-b "scripts/shared-tool.clj" "(println :b)\n")
           check (locus/check-artifact-live-copy-locus
                  [(.getPath repo-a) (.getPath repo-b)])
-          r (check *xtdb-backend*)]
+          r (check *evidence-backend*)]
       (is (= :ok (:outcome r))
           (str "expected ok, got " (pr-str r)))))) 
 
@@ -261,7 +257,7 @@
 (deftest mission-home-on-load-emits-family-fired-evidence
   (testing "mission-home on-load fires family-fired with proper outcome and emit-receipt"
     (let [r (locus/check-mission-home-locus-on-load!
-             *xtdb-backend*
+             *evidence-backend*
              {:print? false :repo-paths ["/home/joe/code/futon3c"]})]
       (is (#{:ok :violation :inactive} (:outcome r))
           (str "expected one of #{:ok :violation :inactive}, got "
@@ -272,14 +268,14 @@
 (deftest mission-home-on-load-respects-emit-flag
   (testing "mission-home emit? false → no emit-receipt"
     (let [r (locus/check-mission-home-locus-on-load!
-             *xtdb-backend*
+             *evidence-backend*
              {:print? false :emit? false
               :repo-paths ["/home/joe/code/futon3c"]})]
       (is (nil? (:emit-receipt r))))))
 
 (deftest agent-routing-on-load-emits-family-fired-evidence
   (let [r (locus/check-agent-routing-locus-on-load!
-           *xtdb-backend*
+           *evidence-backend*
            {:print? false
             :state-source (atom {})})]
     (is (#{:ok :violation :inactive} (:outcome r)))
@@ -288,7 +284,7 @@
 
 (deftest agent-routing-on-load-respects-emit-flag
   (let [r (locus/check-agent-routing-locus-on-load!
-           *xtdb-backend*
+           *evidence-backend*
            {:print? false
             :emit? false
             :state-source (atom {})})]
@@ -300,7 +296,7 @@
         _ (write-file! repo-a "library/example.flexiarg" "! conclusion: a\n")
         _ (write-file! repo-b "library/other.flexiarg" "! conclusion: b\n")
         r (locus/check-artifact-live-copy-locus-on-load!
-           *xtdb-backend*
+           *evidence-backend*
            {:print? false
             :repo-paths [(.getPath repo-a) (.getPath repo-b)]})]
     (is (#{:ok :violation :inactive} (:outcome r)))
@@ -313,7 +309,7 @@
         _ (write-file! repo-a "scripts/left.clj" "(println :left)\n")
         _ (write-file! repo-b "scripts/right.clj" "(println :right)\n")
         r (locus/check-artifact-live-copy-locus-on-load!
-           *xtdb-backend*
+           *evidence-backend*
            {:print? false
             :emit? false
             :repo-paths [(.getPath repo-a) (.getPath repo-b)]})]

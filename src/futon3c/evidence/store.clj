@@ -2,7 +2,7 @@
   "Evidence store — append/query for the evidence landscape.
 
    Supports pluggable backends via the EvidenceBackend protocol (backend.clj).
-   Default backend: in-memory atom (AtomBackend). Production: XTDB (XtdbBackend).
+   Default backend: in-memory atom (AtomBackend). Production: Futon1bBackend.
 
    R8 (authoritative transcript): the store is the authority for EvidenceEntry.
    R9 (structured events): entries are typed maps (EvidenceEntry), not free text.
@@ -17,7 +17,7 @@
 ;;
 ;; ^:durable metadata (M-reachable-from-boot 2026-05-01): the authoritative
 ;; value of this atom must come from `bootstrap.clj`'s `make-evidence-store`
-;; (XtdbBackend). Direct `(reset! !store ...)` / `(reset-store!)` calls
+;; (Futon1bBackend). Direct `(reset! !store ...)` / `(reset-store!)` calls
 ;; from outside the construction-path allowlist are forbidden by the
 ;; pre-commit hook `scripts/check-reachable-from-boot.sh`. See
 ;; futon3/library/invariant-coherence/reachable-from-boot.flexiarg.

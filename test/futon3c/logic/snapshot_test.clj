@@ -3,15 +3,14 @@
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing use-fixtures]]
-            [xtdb.api :as xtdb]
             [futon3c.evidence.store :as estore]
-            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.backend :as backend]
             [futon3c.logic.probe :as probe]
             [futon3c.logic.snapshot :as snapshot])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
-(def ^:dynamic *xtdb-backend* nil)
+(def ^:dynamic *evidence-backend* nil)
 
 (defn- temp-dir
   [prefix]
@@ -43,20 +42,19 @@
 (use-fixtures
   :each
   (fn [f]
-    (let [node (xtdb/start-node {})
+    (let [evidence-backend (backend/->AtomBackend (atom {:entries {} :order []}))
           old-registry @probe/family-check-fns
           old-hud (snapshot/current-hud-render)]
       (try
         (reset! probe/family-check-fns {})
         (snapshot/clear-hud-render!)
-        (binding [*xtdb-backend* (xb/make-xtdb-backend node)]
+        (binding [*evidence-backend* evidence-backend]
           (f))
         (finally
           (reset! probe/family-check-fns old-registry)
           (if old-hud
             (snapshot/record-hud-render! old-hud)
-            (snapshot/clear-hud-render!))
-          (.close node))))))
+            (snapshot/clear-hud-render!)))))))
 
 (deftest project-inventory-real-stack-yields-records
   (testing "real inventory parses and projects to >=10 family records"
@@ -137,29 +135,29 @@
                                   :motion-flag :moving})
     (doseq [{:keys [label emit tags event container]}
             [{:label "inventory"
-              :emit #(snapshot/snapshot-inventory! *xtdb-backend*)
+              :emit #(snapshot/snapshot-inventory! *evidence-backend*)
               :tags [:invariant-queue :state-snapshot :inventory]
               :event :inventory-snapshot
               :container :inventory}
              {:label "registry"
-              :emit #(snapshot/snapshot-registry! *xtdb-backend*)
+              :emit #(snapshot/snapshot-registry! *evidence-backend*)
               :tags [:invariant-queue :state-snapshot :registry]
               :event :registry-snapshot
               :container :registry}
              {:label "repo-refs"
-              :emit #(snapshot/snapshot-repo-refs! *xtdb-backend* [repo])
+              :emit #(snapshot/snapshot-repo-refs! *evidence-backend* [repo])
               :tags [:invariant-queue :state-snapshot :repo-refs]
               :event :repo-refs-snapshot
               :container :repo-refs}
              {:label "hud-render"
-              :emit #(snapshot/snapshot-hud-render! *xtdb-backend*)
+              :emit #(snapshot/snapshot-hud-render! *evidence-backend*)
               :tags [:invariant-queue :state-snapshot :hud-render]
               :event :hud-render-snapshot
               :container :hud-render}]]
       (testing (str label " emits a queryable snapshot evidence entry")
         (let [r (emit)]
           (is (:ok r) (str "expected emit success, got " (pr-str r))))
-        (let [hits (estore/query* *xtdb-backend*
+        (let [hits (estore/query* *evidence-backend*
                                   {:query/type :coordination
                                    :query/tags tags})
               entry (first hits)]
@@ -177,15 +175,15 @@
                                   :motion-flag :flowing})
     (doseq [{:keys [label run]}
             [{:label "inventory"
-              :run #(snapshot/snapshot-inventory-on-load! *xtdb-backend* {:print? false})}
+              :run #(snapshot/snapshot-inventory-on-load! *evidence-backend* {:print? false})}
              {:label "registry"
-              :run #(snapshot/snapshot-registry-on-load! *xtdb-backend* {:print? false})}
+              :run #(snapshot/snapshot-registry-on-load! *evidence-backend* {:print? false})}
              {:label "repo-refs"
-              :run #(snapshot/snapshot-repo-refs-on-load! *xtdb-backend*
+              :run #(snapshot/snapshot-repo-refs-on-load! *evidence-backend*
                                                           {:repo-paths [repo]
                                                            :print? false})}
              {:label "hud-render"
-              :run #(snapshot/snapshot-hud-render-on-load! *xtdb-backend* {:print? false})}]]
+              :run #(snapshot/snapshot-hud-render-on-load! *evidence-backend* {:print? false})}]]
       (testing (str label " on-load wrapper returns a receipt")
         (let [r (run)]
           (is (:ok r) (str "expected on-load success, got " (pr-str r))))))))

@@ -46,6 +46,13 @@
 
  :aliases
  {:test {:extra-paths ["test" "dev"]
+         ;; Integration tests host the authoritative Futon1b/XTDB2 backend
+         ;; in-process. Arrow requires the same module access and bounded
+         ;; direct-memory settings as the serving JVM.
+         :jvm-opts ["--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED"
+                    "-Dio.netty.tryReflectionSetAccessible=true"
+                    "-Djava.net.preferIPv4Stack=true"
+                    "-Xmx2g" "-XX:MaxDirectMemorySize=768m"]
          :extra-deps {io.github.cognitect-labs/test-runner
                       {:git/url "https://github.com/cognitect-labs/test-runner.git"
                        :sha "5e91ee0989d93115cfb5e15b6f242f5ec7ab762e"}}

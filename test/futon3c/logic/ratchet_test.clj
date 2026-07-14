@@ -8,21 +8,17 @@
 
    Mission: M-invariant-queue-unstuck (futon3c/holes/missions/)."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [xtdb.api :as xtdb]
-            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.backend :as backend]
             [futon3c.logic.ratchet :as ratchet]))
 
-(def ^:dynamic *xtdb-backend* nil)
+(def ^:dynamic *evidence-backend* nil)
 
 (use-fixtures
   :each
   (fn [f]
-    (let [node (xtdb/start-node {})]
-      (try
-        (binding [*xtdb-backend* (xb/make-xtdb-backend node)]
-          (f))
-        (finally
-          (.close node))))))
+    (binding [*evidence-backend*
+              (backend/->AtomBackend (atom {:entries {} :order []}))]
+      (f))))
 
 ;; -----------------------------------------------------------------------------
 ;; status ordering + decreased?
@@ -87,7 +83,7 @@
 (deftest emit-then-match-then-reconcile
   (testing "after emitting a demotion event, the matching demotion reconciles"
     (let [emit-result (ratchet/emit-demotion-event!
-                       *xtdb-backend*
+                       *evidence-backend*
                        {:family-id :test-family
                         :from :operational
                         :to :candidate
@@ -98,7 +94,7 @@
       (let [demotion {:family-id :test-family
                       :from :operational
                       :to :candidate}
-            unreconciled (ratchet/unreconciled-demotions *xtdb-backend* [demotion])]
+            unreconciled (ratchet/unreconciled-demotions *evidence-backend* [demotion])]
         (is (empty? unreconciled)
             "matching evidence entry reconciles the demotion")))))
 
@@ -107,14 +103,14 @@
     (let [demotion {:family-id :no-evidence-family
                     :from :operational
                     :to :candidate}
-          unreconciled (ratchet/unreconciled-demotions *xtdb-backend* [demotion])]
+          unreconciled (ratchet/unreconciled-demotions *evidence-backend* [demotion])]
       (is (= [demotion] unreconciled)
           "demotion without matching evidence is unreconciled"))))
 
 (deftest unreconciled-when-evidence-mismatches
   (testing "evidence with different from/to does not reconcile"
     (let [_ (ratchet/emit-demotion-event!
-             *xtdb-backend*
+             *evidence-backend*
              {:family-id :mismatch-family
               :from :operational
               :to :violated      ;; different :to than the demotion below
@@ -122,7 +118,7 @@
           demotion {:family-id :mismatch-family
                     :from :operational
                     :to :candidate}
-          unreconciled (ratchet/unreconciled-demotions *xtdb-backend* [demotion])]
+          unreconciled (ratchet/unreconciled-demotions *evidence-backend* [demotion])]
       (is (= [demotion] unreconciled)
           "evidence with different to-status does not match"))))
 
@@ -133,7 +129,7 @@
 (deftest validate-passes-when-no-changes
   (testing "identical baseline + current → ok"
     (let [statuses {:fa :operational :fb :candidate}
-          result (ratchet/validate-against-baseline *xtdb-backend* statuses statuses)]
+          result (ratchet/validate-against-baseline *evidence-backend* statuses statuses)]
       (is (true? (:ok? result)))
       (is (empty? (:demotions result)))
       (is (empty? (:unreconciled result))))))
@@ -142,7 +138,7 @@
   (testing "promotions and additions don't trigger ratchet"
     (let [old {:fa :candidate :fb :operational}
           new {:fa :operational :fb :operational :fc :candidate}
-          result (ratchet/validate-against-baseline *xtdb-backend* old new)]
+          result (ratchet/validate-against-baseline *evidence-backend* old new)]
       (is (true? (:ok? result)))
       (is (empty? (:demotions result)))
       (is (= 1 (count (:promotions result))))
@@ -152,7 +148,7 @@
   (testing "demotion without evidence → :ok? false"
     (let [old {:fa :operational}
           new {:fa :candidate}
-          result (ratchet/validate-against-baseline *xtdb-backend* old new)]
+          result (ratchet/validate-against-baseline *evidence-backend* old new)]
       (is (false? (:ok? result)))
       (is (= 1 (count (:demotions result))))
       (is (= 1 (count (:unreconciled result))))
@@ -161,14 +157,14 @@
 (deftest validate-passes-when-demotion-has-evidence
   (testing "demotion with matching evidence → :ok? true"
     (let [_ (ratchet/emit-demotion-event!
-             *xtdb-backend*
+             *evidence-backend*
              {:family-id :fa
               :from :operational
               :to :candidate
               :reason "test"})
           old {:fa :operational}
           new {:fa :candidate}
-          result (ratchet/validate-against-baseline *xtdb-backend* old new)]
+          result (ratchet/validate-against-baseline *evidence-backend* old new)]
       (is (true? (:ok? result)) (str "expected ok, got " (pr-str result)))
       (is (empty? (:unreconciled result))))))
 
@@ -179,7 +175,7 @@
 (deftest check-on-load-emits-family-fired-evidence
   (testing "check-on-load! emits a :family-fired entry for :coverage-ratchet"
     (let [result (ratchet/check-on-load!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:print? false})]
       (is (contains? result :outcome)
           "result carries an :outcome (:ok / :violation / :inactive)")
@@ -193,7 +189,7 @@
 (deftest check-on-load-respects-emit-flag
   (testing "emit?=false skips evidence emission"
     (let [result (ratchet/check-on-load!
-                  *xtdb-backend*
+                  *evidence-backend*
                   {:print? false :emit? false})]
       (is (nil? (:emit-receipt result))
           "emit-receipt absent when emit? is false"))))

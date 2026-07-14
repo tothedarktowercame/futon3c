@@ -8,25 +8,23 @@
    Mission: M-invariant-queue-unstuck (futon3c/holes/missions/),
    INSTANTIATE-4."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [xtdb.api :as xtdb]
             [futon3c.evidence.store :as estore]
-            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.backend :as backend]
             [futon3c.logic.probe :as probe]
             [futon3c.logic.probe-taps :as taps]))
 
-(def ^:dynamic *xtdb-backend* nil)
+(def ^:dynamic *evidence-backend* nil)
 
 (use-fixtures
   :each
   (fn [f]
-    (let [node (xtdb/start-node {})]
+    (let [evidence-backend (backend/->AtomBackend (atom {:entries {} :order []}))]
       (try
-        (binding [*xtdb-backend* (xb/make-xtdb-backend node)]
+        (binding [*evidence-backend* evidence-backend]
           (reset! probe/family-check-fns {})
           (f))
         (finally
-          (reset! probe/family-check-fns {})
-          (.close node))))))
+          (reset! probe/family-check-fns {}))))))
 
 ;; -----------------------------------------------------------------------------
 ;; agency tap
@@ -36,7 +34,7 @@
   (testing "tap against an empty registry → :outcome :ok"
     (let [registry-atom (atom {})
           check-fn (taps/make-agency-tap registry-atom)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :ok (:outcome result))
           (str "expected :ok, got " (pr-str result)))
       (is (zero? (get-in result [:detail :total-violations]))))))
@@ -49,7 +47,7 @@
                          {"untyped-agent"
                           {:type :claude :status :idle}})
           check-fn (taps/make-agency-tap registry-atom)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :violation (:outcome result)) (str "got " (pr-str result)))
       (is (pos? (get-in result [:detail :total-violations]))))))
 
@@ -57,7 +55,7 @@
   (testing "category-scoped tap reports only that category"
     (let [registry-atom (atom {})
           check-fn (taps/make-agency-tap registry-atom :route-inconsistencies)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :ok (:outcome result)))
       (is (= #{:route-inconsistencies}
              (get-in result [:detail :checked-categories]))))))
@@ -69,7 +67,7 @@
                                 :declared-state :connected
                                 :channel-state :dead}]}
           check-fn (taps/make-agency-tap state :dead-connected-channels)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :violation (:outcome result)))
       (is (= 1 (get-in result [:detail :total-violations])))
       (is (= [{:connection-id "codex-ws"
@@ -88,9 +86,9 @@
                                   :accept-latency-ms 60000
                                   :latency-bound-ms 1000}]}
           check-fn (taps/make-agency-tap state :unaccepting-servers {:backtrace? true})
-          result (check-fn *xtdb-backend*)
+          result (check-fn *evidence-backend*)
           eid (get-in result [:detail :backtrace-evidence/id])
-          entry (estore/get-entry* *xtdb-backend* eid)]
+          entry (estore/get-entry* *evidence-backend* eid)]
       (is (= :violation (:outcome result)))
       (is (true? (get-in result [:detail :backtrace-emitted?])))
       (is (string? eid))
@@ -147,7 +145,7 @@
                                     :accept-latency-ms 60000
                                     :latency-bound-ms 1000}]})
           check-fn (taps/make-agency-tap source)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :violation (:outcome result)))
       (is (= 2 (get-in result [:detail :total-violations])))
       (is (seq (get-in result [:detail :violations :dead-connected-channels])))
@@ -157,7 +155,7 @@
   (testing "throwing state source → :outcome :violation with exception detail"
     (let [bad-source (fn [] (throw (ex-info "bad state" {})))
           check-fn (taps/make-agency-tap bad-source)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :violation (:outcome result)))
       (is (re-find #"bad state" (get-in result [:detail :exception]))))))
 
@@ -173,7 +171,7 @@
                               :assignments [] :scans []
                               :evidence []})
           check-fn (taps/make-tickle-tap state-source)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :ok (:outcome result)) (str "got " (pr-str result)))
       (is (zero? (get-in result [:detail :total-violations]))))))
 
@@ -181,7 +179,7 @@
   (testing "tickle tap with throwing state → :outcome :violation"
     (let [bad-source (fn [] (throw (ex-info "tickle boom" {})))
           check-fn (taps/make-tickle-tap bad-source)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :violation (:outcome result)))
       (is (re-find #"tickle boom" (get-in result [:detail :exception]))))))
 
@@ -193,7 +191,7 @@
   (testing "portfolio tap with throwing state → :outcome :violation"
     (let [bad-source (fn [] (throw (ex-info "portfolio boom" {})))
           check-fn (taps/make-portfolio-tap bad-source)
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :violation (:outcome result)))
       (is (re-find #"portfolio boom" (get-in result [:detail :exception]))))))
 
@@ -212,7 +210,7 @@
       (probe/register-family-check! :tickle-invariants
                                     (taps/make-tickle-tap tickle-state))
       (let [summary (probe/run-probe-sweep!
-                     *xtdb-backend*
+                     *evidence-backend*
                      [:agency-invariants :tickle-invariants])
             results-by-id (->> (:results summary)
                                (map (juxt :family-id identity))
@@ -241,7 +239,7 @@
   (testing "make-deferred-tap returns :inactive carrying its meta"
     (let [check-fn (taps/make-deferred-tap
                     {:source "test-source" :follow-on "M-test"})
-          result (check-fn *xtdb-backend*)]
+          result (check-fn *evidence-backend*)]
       (is (= :inactive (:outcome result)))
       (is (true? (get-in result [:detail :deferred?])))
       (is (= "test-source" (get-in result [:detail :source])))
@@ -265,7 +263,7 @@
   (testing "deferred families show as :inactive (not silently absent) in sweep"
     (taps/register-deferred-taps!)
     (let [summary (probe/run-probe-sweep!
-                   *xtdb-backend*
+                   *evidence-backend*
                    (concat taps/substrate-2-phase-1-invariants
                            taps/war-machine-aif-invariants))
           all-inactive? (every? #(= :inactive (:outcome %)) (:results summary))

@@ -74,7 +74,7 @@
    single-process store lock). Safe to call when nothing is embedded."
   []
   (when-let [server @!f1b-embedded]
-    (try (.stop server 0) (catch Throwable _))
+    (try (f1b/stop-server! server) (catch Throwable _))
     (reset! !f1b-embedded nil)
     ;; best-effort node close via runtime resolve (avoids compile coupling)
     (try
