@@ -188,8 +188,14 @@
 
 (defn- backoff-delay-ms
   [failure-count]
-  (min (max-backoff-ms)
-       (* 1000 (long (Math/pow 2 (max 0 (dec failure-count)))))))
+  (let [cap (max 1 (max-backoff-ms))
+        doublings (max 0 (dec (long failure-count)))]
+    (loop [delay (min 1000 cap)
+           remaining doublings]
+      (if (or (zero? remaining) (>= delay cap))
+        delay
+        (recur (long (min cap (*' delay 2)))
+               (dec remaining))))))
 
 (defn- run-loop!
   [{:keys [url]} executor]

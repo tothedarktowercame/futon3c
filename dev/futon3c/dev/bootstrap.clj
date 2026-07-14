@@ -2,6 +2,7 @@
   "Bootstrap helpers and top-level startup orchestration for futon3c.dev."
   (:require [cheshire.core :as json]
             [futon1a.system :as f1]
+            [futon3c.agency.fed-uplink :as fed-uplink]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.invariants :as agency-invariants]
             [futon3c.agency.registry :as reg]
@@ -565,6 +566,14 @@
               (federation/announce! agent-record)))
         fed-sync-results (federation/sync-peers!)
         fed-sync-daemon (federation/start-sync-daemon!)
+        fed-uplink-status (when (config/env "FUTON3C_FED_UPLINK" nil)
+                            (fed-uplink/start-uplink!))
+        _ (when (:running? fed-uplink-status)
+            (cyder/register!
+             {:id "federation-uplink"
+              :type :daemon
+              :stop-fn fed-uplink/stop-uplink!
+              :state-fn fed-uplink/uplink-status}))
         fed-peers (federation/peers)
         fed-self (federation/self-url)
         mission-count (cyder/register-missions!)
@@ -590,6 +599,11 @@
     (when (:enabled? fed-sync-daemon)
       (println (str "[dev] Federation continuous sync enabled interval-ms="
                     (:interval-ms fed-sync-daemon))))
+    (when fed-uplink-status
+      (println (str "[dev] Federation uplink running="
+                    (:running? fed-uplink-status)
+                    " connected=" (:connected? fed-uplink-status)
+                    " site=" (:site fed-uplink-status))))
     (println)
     (println "[dev] Evidence API (futon3c transport → XTDB backend)")
     (println "[dev]   POST /api/alpha/invoke             — invoke registered agent")
@@ -684,6 +698,10 @@
         (remove-watch cyder/!processes :blackboard)
         (reset! cyder/!processes {})
         (try (multi-watcher/stop!)
+             (catch Throwable _))
+        (try (fed-uplink/stop-uplink!)
+             (catch Throwable _))
+        (try (federation/stop-sync-daemon!)
              (catch Throwable _))
         ;; Drain embedded shadow-cljs FIRST so its runtime-loop sees a
         ;; clean stop signal while the JVM thread pools are still healthy.

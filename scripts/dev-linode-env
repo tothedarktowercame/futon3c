@@ -100,8 +100,11 @@ export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-chi,oxf}"
 export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-30000}"
 
 # WS federation uplink hub token (CP-F, default OFF).
-# Set the same value on NAT'd clients using FUTON3C_FED_UPLINK.
-# export FUTON3C_FED_TOKEN="${FUTON3C_FED_TOKEN:-change-me}"
+# Load the untracked shared token before the final exec so the JVM can validate
+# NAT'd clients using FUTON3C_FED_UPLINK.
+if [[ -f "${script_dir}/../.fedtoken" ]]; then
+  export FUTON3C_FED_TOKEN="${FUTON3C_FED_TOKEN:-$(<"${script_dir}/../.fedtoken")}"
+fi
 
 # --- Emacs daemon socket auto-detection (for blackboard) ---
 if [[ -z "${FUTON3C_EMACS_SOCKET:-}" ]]; then
@@ -173,9 +176,3 @@ for arg in "$@"; do
 done
 
 exec make dev "${remaining_args[@]+"${remaining_args[@]}"}"
-
-# CP-F federation uplink token (server side): read from untracked .fedtoken
-# so the secret never lands in git. Laptop uplinks must present the same token.
-if [[ -f "${script_dir:-$(dirname "$0")}/../.fedtoken" ]]; then
-  export FUTON3C_FED_TOKEN="${FUTON3C_FED_TOKEN:-$(cat "${script_dir:-$(dirname "$0")}/../.fedtoken")}"
-fi

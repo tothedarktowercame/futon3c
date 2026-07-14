@@ -1,6 +1,7 @@
 (ns futon3c.agency.fed-uplink-test
   (:require [cheshire.core :as json]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.agency.fed-uplink :as fed-uplink]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.registry :as reg]
             [futon3c.transport.protocol :as proto]
@@ -42,6 +43,19 @@
 (defn- announce-frame
   [token roster]
   (proto/render-fed-announce "oxf" token roster))
+
+(deftest uplink-backoff-caps-without-overflow
+  (testing "a long outage reaches the cap without overflowing long arithmetic"
+    (is (= 60000 (#'fed-uplink/backoff-delay-ms Long/MAX_VALUE)))))
+
+(deftest federation-launchers-load-token-before-exec
+  (testing "the final JVM inherits the token instead of exec bypassing its loader"
+    (doseq [path ["scripts/dev-laptop-env" "scripts/dev-linode-env"]]
+      (let [source (slurp path)
+            token-index (.indexOf source "export FUTON3C_FED_TOKEN=")
+            exec-index (.indexOf source "exec make dev")]
+        (is (<= 0 token-index) (str path " loads FUTON3C_FED_TOKEN"))
+        (is (< token-index exec-index) (str path " loads the token before exec"))))))
 
 (deftest fed-announce-registers-qualified-uplink-proxies
   (testing "valid announce imports remote agents through the CP-D proxy seam"
