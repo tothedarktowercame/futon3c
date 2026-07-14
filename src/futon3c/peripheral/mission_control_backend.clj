@@ -959,7 +959,7 @@
   (try
     (let [url (str futon1a-url
                    "/api/alpha/hyperedges?type=" mission-doc-hyperedge-type
-                   "&limit=500")
+                   "&limit=500&include-total=false")
           resp (http/get url {:headers {"Accept" "application/json"}
                               :throw false
                               :timeout 5000})]
