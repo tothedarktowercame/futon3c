@@ -1110,6 +1110,34 @@
           (is (= 200 (:status job-response)))
           (is (nil? (get-in job-parsed [:job :artifact-ref]))))))))
 
+(deftest invoke-job-artifact-ref-does-not-take-pr-prefix-from-prose
+  (testing "ordinary prose before a commit SHA cannot masquerade as a PR ref"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-http-sha-after-prose"
+                                      "prompt" "hello from artifact parser"})]
+      (register-mock-agent! "codex-http-sha-after-prose" :codex)
+      (with-redefs [reg/invoke-agent!
+                    (fn [_ _ _]
+                      {:ok true
+                       :result (str "Implemented fail-closed provenance checks. "
+                                    "FULL_LOOP_AUTHOR: DONE "
+                                    "dd3a23c81dfd275cbe406e4315a46087a8263f13")
+                       :session-id "sess-http-sha-after-prose"
+                       :invoke-meta
+                       {:invoke-trace-id "invoke-http-sha-after-prose-1"
+                        :execution {:executed? true
+                                    :tool-events 1
+                                    :command-events 1}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (= "dd3a23c81dfd275cbe406e4315a46087a8263f13"
+                 (get-in job-parsed [:job :artifact-ref]))))))))
+
 (deftest invoke-job-artifact-ref-mfuton-mode-preserves-generic-matching
   (testing "mfuton mode still leaves gitlab issue URLs outside the generic canonical artifact-ref slot"
     (let [handler (make-handler)

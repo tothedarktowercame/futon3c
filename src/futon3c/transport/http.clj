@@ -411,15 +411,10 @@
               v)))
         [:invoke-trace-id :invoke_trace_id :invokeTraceId]))
 
+;; Keep this out of extended/comments mode: `#` is data in the PR alternative,
+;; not a regex comment. Ordinary words beginning with "pr" must not match.
 (def ^:private artifact-ref-re
-  #"(?ix)
-    (https?://github\.com/\S+/(?:pull|issues)/\d+)
-    |
-    (\bPR\s*#\d+\b)
-    |
-    (\b[0-9a-f]{7,40}\b)
-    |
-    ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b))")
+  #"(?i)(https?://github\.com/\S+/(?:pull|issues)/\d+)|(\bPR\s*#\d+\b)|(\b[0-9a-f]{7,40}\b)|((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b)")
 
 #_{:clj-kondo/ignore [:unused-private-var]}
 (defn- first-matching-ref
