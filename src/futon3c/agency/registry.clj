@@ -66,6 +66,17 @@
     (when-let [uplink-ns (find-ns 'futon3c.agency.fed-uplink)]
       (ns-resolve uplink-ns 'announce!))))
 
+(def ^:dynamic *resolve-site-prefix*
+  "Best-effort resolver for futon3c.agency.federation/site-prefix.
+   Returns a 0-arity fn or nil. Kept dynamic to avoid a registry -> federation
+   dependency cycle: federation already requires registry, so registry must not
+   require it back. Same idiom as *resolve-uplink-announce* above — and it keeps
+   ONE source of truth for what this site's prefix is, rather than a second
+   copy of the env read that could drift from federation's."
+  (fn []
+    (when-let [fed-ns (find-ns 'futon3c.agency.federation)]
+      (ns-resolve fed-ns 'site-prefix))))
+
 (defonce ^{:doc "Registry of agents.
 
    Structure: {agent-id-value -> agent-record}
@@ -269,15 +280,84 @@
                (:bell-on-complete? metadata)
                (get metadata "bell-on-complete?")))))
 
+(defn- local-site-alias->bare
+  "Area codes (TN-agency-area-codes). This box registers its OWN agents bare, so
+   `claude-6` is an INDEXICAL: it names whichever claude-6 is local to the asker.
+   Our peers already carry our global name — the oxf peer holds `lon-claude-6`
+   bound to lucy's claude-6 session — but the box itself does not answer to it.
+   Your own number has an area code even when you never dial it locally.
+
+   Maps `<our-site>-<id>` back to the local `<id>`: lon-claude-6 -> claude-6.
+
+   Returns nil for ANY other prefix, which is the load-bearing half: oxf-claude-2
+   must never resolve to a local agent. That would be the AG-2 violation
+   federation/remote-homed-agent-id? exists to prevent. We only ever strip OUR
+   OWN area code."
+  [id-value]
+  (when-let [site-prefix-fn (*resolve-site-prefix*)]
+    (when-let [site (site-prefix-fn)]
+      (let [prefix (str site "-")
+            s (str id-value)]
+        (when (and (str/starts-with? s prefix)
+                   (> (count s) (count prefix)))
+          (subs s (count prefix)))))))
+
 (defn get-agent
-  "Get agent record by typed ID, or nil if not registered."
+  "Get agent record by typed ID, or nil if not registered.
+
+   Resolves this site's area code as an ALIAS, never a second record: both
+   `claude-6` and `lon-claude-6` return the SAME record. Aliasing at LOOKUP
+   rather than indexing a second key is deliberate — a second key would double
+   the registry count and make `*agents*` misreport the roster, and a second
+   RECORD would violate I-1 (one agent = one session = one identity). lucy
+   already carries a `lon-claude-1` ghost with a null session-id beside the real
+   `claude-1`, which is what dual registration looks like when it goes wrong.
+
+   The alias is a FALLBACK: a registered bare id is returned before it is ever
+   consulted, so no existing resolution changes behaviour."
   [typed-id]
-  (get @!registry (agent-id-value typed-id)))
+  (let [id (agent-id-value typed-id)]
+    (or (get @!registry id)
+        (when-let [bare (local-site-alias->bare id)]
+          (get @!registry bare)))))
+
+(defn addressable-names
+  "Every name get-agent will resolve: the registered ids, plus this site's area
+   code for each LOCAL agent.
+
+   'Registered' and 'addressable' were the same set until aliases existed, and
+   code that conflates them now reports a caller as unreachable while the router
+   happily reaches it — mesh_qa's MQ-7 gates on a raw key set while
+   transport/http's auto-bellback-caller-registered? gates on get-agent. A QA
+   check that contradicts the router is worse than no check. So: one rule, asked
+   once, here.
+
+   Proxies are excluded, which is what keeps this honest — oxf-claude-2 is a
+   proxy (:proxy? true) and must never acquire OUR area code as lon-oxf-claude-2.
+   Already-qualified ids are excluded too, so a lon- name is never re-prefixed."
+  []
+  (let [reg @!registry
+        ids (map str (keys reg))
+        site (when-let [f (*resolve-site-prefix*)] (f))]
+    (cond-> (set ids)
+      site (into (keep (fn [id]
+                         (let [record (get reg id)]
+                           (when (and (not (get-in record [:agent/metadata :proxy?]))
+                                      (nil? (local-site-alias->bare id)))
+                             (str site "-" id))))
+                       ids)))))
 
 (defn agent-registered?
-  "Check if an agent is registered."
+  "Check if an agent is registered, by any of its names (see get-agent).
+
+   Goes through get-agent so the area code resolves here too. This is what makes
+   a qualified signature routable: auto-bellback gates on
+   `(boolean (reg/get-agent caller))` (transport/http.clj
+   auto-bellback-caller-registered?), and mesh_qa's MQ-7 says an unregistered
+   caller 'cannot auto-bell back' — so before this, signing --from lon-claude-6
+   made the sender unaddressable and silently ate the reply."
   [typed-id]
-  (contains? @!registry (agent-id-value typed-id)))
+  (some? (get-agent typed-id)))
 
 (defn register-agent!
   "Register an agent with the registry.
