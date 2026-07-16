@@ -274,3 +274,16 @@ mechanism may be a race or lane-dependence in the finalize→notify path rather
 than a wholesale dead hook — but the probe pins the current live state as
 failing, and the conclusion stands: behavioral probes + restart in the quiet
 window; treat the timeline above as the diagnostic starting point.
+
+**Finding 7 addendum 2 (2026-07-14):** the probe park ITSELF later released
+via completion ("dependencies complete (1)", resume delivered) despite the
++10s disk-ledger check showing it unreleased with arrived={}. Revised
+mechanism: the finalize-time hook (parked-on-notify! at job completion) is
+failing or racy in the live image, but a SLOWER path (reconcile-on-park /
+periodic sweep reconciliation) eventually folds terminal jobs into waiting
+parks. Each park's fate = race between late reconciliation and its deadline:
+-379/-393 (45-min deadlines, reconciler slower) → deadline wakes; -388 and
+probe -424 (reconciler beat the deadline) → completion wakes, delivered late.
+No wakes are lost either way (backstop semantics working as designed); the
+degradation is latency + unsuppressed bellbacks. Restart still the fix;
+diagnose the finalize-time hook first in the quiet window.
