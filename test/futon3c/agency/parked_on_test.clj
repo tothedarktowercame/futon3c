@@ -31,6 +31,25 @@
       (is (= :released (:status r)) "park reconciled the already-finished dep")
       (is (= [(:id r)] @fired)))))
 
+(deftest reconcile-prefers-full-result-and-falls-back-for-legacy-jobs
+  (testing "already-terminal jobs deliver :result; absent/blank results use :result-summary"
+    (doseq [[job expected] [[{:state "done" :result "the complete reply"
+                              :result-summary "short preview"}
+                             "the complete reply"]
+                            [{:state "done" :result nil
+                              :result-summary "legacy summary"}
+                             "legacy summary"]
+                            [{:state "done" :result "   "
+                              :result-summary "blank fallback"}
+                             "blank fallback"]]]
+      (p/clear!)
+      (let [resumed (atom nil)]
+        (p/park! {:agent "claude-1" :awaiting ["b1"] :payload "P"}
+                 {:ledger-lookup (constantly job)
+                  :resume! #(reset! resumed %)
+                  :now-ms 1000})
+        (is (= expected (get-in @resumed [:arrived "b1"])))))))
+
 (deftest case2-double-delivery-fires-once
   (testing "the same dep completing twice resumes exactly once (index-consumption + single-fire)"
     (let [fired (collector)

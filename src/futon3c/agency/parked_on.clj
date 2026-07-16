@@ -3,7 +3,7 @@
 
    An agent ends a turn by PARKING it on a join of dispatched dep-ids (the bell/job
    ids it is waiting on). When every dep reaches a terminal state, exactly ONE
-   resume fires for the parked agent, carrying the joined result-summaries. This is
+   resume fires for the parked agent, carrying the joined results. This is
    autobell-back generalised: autobell-back is the n=1, caller-keyed case; a
    `parked-on` record is the n>=1, dep-keyed case, with a durable payload + a
    runaway budget.
@@ -22,10 +22,11 @@
      due no-dep timer parks.
 
    The ns is dependency-injected: callers pass `resume!` (fn of a record),
-   `ledger-lookup` (dep-id -> {:state :result-summary}), and `now-ms`, so the five
+   `ledger-lookup` (dep-id -> {:state :result :result-summary}), and `now-ms`, so the five
    hard cases are unit-testable without the live JVM."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [futon3c.dev.config :as config])
   (:import [java.util UUID]))
 
@@ -55,6 +56,17 @@
 
 (defn- terminal-state? [state]
   (and (some? state) (not (contains? non-terminal-states (str state)))))
+
+(defn- completion-result
+  "Return a terminal ledger entry's complete result. The summary is a legacy
+   fallback for failed/old records that have no nonblank :result; it must never
+   replace a present result because parked delivery suppresses auto-bellback."
+  [job]
+  (let [result (:result job)]
+    (if (or (nil? result)
+            (and (string? result) (str/blank? result)))
+      (:result-summary job)
+      result)))
 
 (defn- load-state []
   (let [f (io/file (store-path))]
@@ -245,7 +257,7 @@
       ;; budget exhausted -> retract, do not fire
       (drop-record state rid))))
 
-(defn- apply-completion [state dep-id summary now-ms]
+(defn- apply-completion [state dep-id result now-ms]
   (let [rids (get-in state [:index dep-id])]
     (reduce
      (fn [st rid]
@@ -253,7 +265,7 @@
          (if (or (nil? rec) (:released? rec))
            st
            (let [rec* (-> rec (update :awaiting disj dep-id)
-                          (assoc-in [:arrived dep-id] summary))
+                          (assoc-in [:arrived dep-id] result))
                  st (-> st
                         (assoc-in [:records rid] rec*)
                         (update :index index-disj dep-id rid))]
@@ -264,15 +276,15 @@
      rids)))
 
 (defn note-completion!
-  "Fold dep DEP-ID (terminal, carrying RESULT-SUMMARY) into every record awaiting it.
+  "Fold dep DEP-ID (terminal, carrying RESULT) into every record awaiting it.
    Fires RESUME! exactly once for each record whose join just completed (budget
    permitting); budget-exhausted records are retracted silently. Returns
    {:released [rid ...] :released-records [rec ...]}."
-  [dep-id result-summary {:keys [resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
+  [dep-id result {:keys [resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (ensure!)
   (if-not (contains? (:index @!parked) dep-id)
     {:released [] :released-records []} ; nothing parked on this dep — cheap no-op, no swap/disk write
-    (let [[_ new] (swap-vals! !parked #(apply-completion % dep-id result-summary now-ms))
+    (let [[_ new] (swap-vals! !parked #(apply-completion % dep-id result now-ms))
           fired (:just-released new)]
       (when (seq fired)
         (swap! !parked (fn [st] (reduce (fn [s rec] (drop-record s (:id rec))) st fired))))
@@ -317,7 +329,7 @@
           (doseq [dep awaiting]
             (let [j (ledger-lookup dep)]
               (when (and j (terminal-state? (:state j)))
-                (note-completion! dep (:result-summary j)
+                (note-completion! dep (completion-result j)
                                   {:resume! resume! :now-ms now-ms})))))
         (if (get-in @!parked [:records rid])
           {:id rid :status :parked}
@@ -364,7 +376,7 @@
         (when ledger-lookup
           (let [j (ledger-lookup dep)]
             (when (and j (terminal-state? (:state j)))
-              (let [r (note-completion! dep (:result-summary j)
+              (let [r (note-completion! dep (completion-result j)
                                         {:resume! resume! :now-ms now-ms})]
                 (swap! released into (:released r)))))))
       {:loaded (count recs) :released @released :requeued-leases @requeued})))

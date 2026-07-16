@@ -31,6 +31,9 @@ ap.add_argument("--ref", help="typed-bell referent, usually an ArSE thread id")
 ap.add_argument("--mission", help="mission-id this dispatch works on; the server clocks the "
                 "recipient's session to it (durable lineage, http.clj clock-dispatch!) so the "
                 "agent appears on the live EFE map without a manual clock-in")
+ap.add_argument("--mode", choices=["work", "brief"],
+                help="explicit invoke-job mode; when omitted the server retains its legacy "
+                     "prompt-text classification fallback")
 ap.add_argument("--park", action="store_true",
                 help="after a bell, park the sender's turn on the returned job-id")
 ap.add_argument("--park-deadline", type=int, default=2700,
@@ -52,6 +55,9 @@ if not prompt.strip():
 if a.park and a.kind != "bell":
     sys.exit("agency_send: --park is only valid with --kind bell")
 
+if a.mode and a.kind != "bell":
+    sys.exit("agency_send: --mode is only valid with --kind bell")
+
 if a.park and not a.frm:
     sys.exit("agency_send: --park requires --from <id> so the sender's session can be parked")
 
@@ -69,6 +75,8 @@ if a.ref:
     body["ref"] = a.ref
 if a.mission:
     body["mission-id"] = a.mission
+if a.mode:
+    body["mode"] = a.mode
 payload = json.dumps(body)
 
 

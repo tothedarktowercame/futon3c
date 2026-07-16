@@ -185,9 +185,11 @@
                   :park-id "park-1"}
         view ((var-get #'http/invoke-job-public-view)
               {:job-id "job-1" :state "done" :auto-bellback decision
-               :result-text "private full response"})]
+               :result "private complete response"
+               :result-text "private bounded response"})]
     (is (= decision (:auto-bellback view)))
-    (is (not (contains? view :result-text)))))
+    (is (not (contains? view :result-text)))
+    (is (not (contains? view :result)))))
 
 (defn- parse-body
   "Parse the JSON body string from a Ring response."
@@ -1365,6 +1367,40 @@
       (is (or (= "done" (get-in final [:job :state]))
               (= "failed" (get-in final [:job :state]))))
       (is (some? (get-in final [:job :finished-at]))))))
+
+(deftest bell-explicit-work-mode-overrides-keyword-fallback
+  (testing "an explicit client mode is stored even when the prompt has no work keywords"
+    (register-mock-agent! "codex-bell-mode-work" :codex)
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-bell-mode-work"
+                                      "prompt" "Please investigate this unusual coordination behavior."
+                                      "mode" "work"})
+          response (post handler "/api/alpha/bell" body)
+          parsed (parse-body response)
+          final (-> (wait-for-job-state handler (:job-id parsed) 10000) :parsed)]
+      (is (= 202 (:status response)))
+      (is (= "work" (:mode parsed))
+          "the response must not silently classify the supplied mode as brief")
+      (is (= "work" (get-in final [:job :mode]))
+          "the durable job record honors the client-supplied mode")
+      (is (= "no-execution-evidence" (get-in final [:job :terminal-code]))
+          "explicit work mode also drives work-mode execution enforcement"))))
+
+(deftest bell-explicit-brief-mode-overrides-work-keywords
+  (testing "explicit mode has precedence over prompt-text inference"
+    (register-mock-agent! "codex-bell-mode-brief" :codex)
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-bell-mode-brief"
+                                      "prompt" "State of play on this task assignment"
+                                      "mode" "brief"})
+          response (post handler "/api/alpha/bell" body)
+          parsed (parse-body response)
+          final (-> (wait-for-job-state handler (:job-id parsed) 10000) :parsed)]
+      (is (= 202 (:status response)))
+      (is (= "brief" (:mode parsed)))
+      (is (= "brief" (get-in final [:job :mode])))
+      (is (= "done" (get-in final [:job :state]))
+          "explicit brief mode disables keyword-inferred work enforcement"))))
 
 (deftest invoke-announce-creates-canonical-queued-job
   (testing "POST /api/alpha/invoke/announce records a queued job before external acceptance"

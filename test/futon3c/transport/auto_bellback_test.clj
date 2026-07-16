@@ -228,7 +228,10 @@
   (register-agent! "codex-1" :codex)
   (register-agent! "claude-6" :claude)
   (create-job! {:job-id "job-park-1" :agent-id "codex-1" :caller "claude-6"})
-  (let [park (parked-on/park! {:agent "claude-6"
+  (let [full-result (str "FULL-RESULT-BEGIN\n"
+                         (apply str (repeat 80 "long parked reply line\n"))
+                         "FULL-RESULT-END")
+        park (parked-on/park! {:agent "claude-6"
                                :session "session-1"
                                :surface "emacs-codex-repl"
                                :awaiting ["job-park-1"]
@@ -239,11 +242,13 @@
     (with-redefs-fn {#'http/auto-bellback-enabled? (constantly true)
                     #'http/parked-on-enabled? (constantly true)
                     #'http/*enqueue-auto-bellback!* #(swap! enqueued conj %)}
-      #(finalize! "job-park-1"))
+      #(finalize! "job-park-1" "done" {:ok true :result full-result}))
     (is (empty? @enqueued) "server auto-bellback is skipped")
     (let [resume (http/parked-ready-pop! "claude-6" "session-1")]
       (is (= (:id park) (:park-id resume)) "park resume was pushed instead")
-      (is (str/includes? (:prompt resume) "resume checklist")))
+      (is (str/includes? (:prompt resume) "resume checklist"))
+      (is (str/includes? (:prompt resume) full-result)
+          "the substituted park channel carries the complete result, not its summary"))
     (is (= {:suppressed? true
             :reason :parked-on
             :park-id (:id park)}

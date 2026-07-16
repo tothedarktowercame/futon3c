@@ -392,16 +392,25 @@
     [(str "invoke-" (System/currentTimeMillis) "-" next-seq "-" rand-sfx)
      next-seq]))
 
-(defn- invoke-job-mode
-  [prompt]
-  (let [p (str (or prompt ""))]
-  (cond
-    (or (re-find #"(?i)\bmode:\s*task\b" p)
-        (re-find #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b" p))
-    "work"
+(def ^:private invoke-job-modes #{"work" "brief"})
 
-    :else
-    "brief")))
+(defn- normalize-invoke-job-mode
+  [mode]
+  (let [mode' (some-> (cond
+                        (keyword? mode) (name mode)
+                        (some? mode) (str mode))
+                      str/lower-case str/trim)]
+    (when (contains? invoke-job-modes mode') mode')))
+
+(defn- invoke-job-mode
+  ([prompt] (invoke-job-mode prompt nil))
+  ([prompt explicit-mode]
+   (or (normalize-invoke-job-mode explicit-mode)
+       (let [p (str (or prompt ""))]
+         (if (or (re-find #"(?i)\bmode:\s*task\b" p)
+                 (re-find #"(?i)\b(task assignment|fm-\d{3}|falsify|prove|counterexample|state of play)\b" p))
+           "work"
+           "brief")))))
 
 (defn- extract-trace-id
   [invoke-meta]
@@ -752,20 +761,28 @@
         job-id))))
 
 (defn parked-job-lookup
-  "Ledger view for parked-on reconcile/rehydrate: job-id -> {:state :result-summary}."
+  "Ledger view for parked-on reconcile/rehydrate. :result is the complete reply;
+   legacy ledgers stored it as :result-text. :result-summary remains only as a
+   fallback for records with neither full field."
   [job-id]
   (when-let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])]
-    {:state (:state job) :result-summary (:result-summary job)}))
+    {:state (:state job)
+     :result (let [result (:result job)]
+               (if (or (nil? result)
+                       (and (string? result) (str/blank? result)))
+                 (:result-text job)
+                 result))
+     :result-summary (:result-summary job)}))
 
 (defn parked-on-notify!
   "Hot-path hook (flag-gated): job JOB-ID reached terminal state -> fold it into
    any parked-on join awaiting it. Returns the records that actually released so
    finalize can suppress the duplicate auto-bellback only after a resume was
    enqueued. Never throws into finalize."
-  [job-id summary]
+  [job-id result]
   (when (parked-on-enabled?)
     (try
-      (parked-on/note-completion! job-id summary
+      (parked-on/note-completion! job-id result
                                   {:resume! parked-resume!
                                    :now-ms (System/currentTimeMillis)})
       (catch Throwable t
@@ -872,7 +889,7 @@
        msg])))
 
 (defn- create-invoke-job!
-  [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref]}]
+  [{:keys [requested-job-id agent-id prompt caller surface bellback-of bell-type ref mode]}]
   (let [created-id (atom nil)]
     (update-invoke-jobs-ledger!
      (fn [ledger]
@@ -892,7 +909,7 @@
                                        requested)
                  job-id (or usable-requested auto-id)
                  created-at (str (Instant/now))
-                 mode (invoke-job-mode prompt)
+                 mode (invoke-job-mode prompt mode)
                  job (cond-> {:job-id job-id
                                :agent-id (str agent-id)
                                :caller (str (or caller "http-caller"))
@@ -1002,6 +1019,7 @@
                                       :terminal-message terminal-message
                                       :session-id sid
                                       :trace-id trace-id
+                                      :result result-text
                                       :result-summary summary
                                       :result-text bellback-text
                                       :artifact-ref artifact-ref
@@ -1014,7 +1032,7 @@
              (and (string? trace-id) (not (str/blank? trace-id)))
              (assoc-in [:trace->job trace-id] job-id)))
          ledger)))
-    (let [released-park-records (:released-records (parked-on-notify! job-id summary))]
+    (let [released-park-records (:released-records (parked-on-notify! job-id result-text))]
       (when @updated-terminal-job
         (let [bellback-request (atom nil)]
           (update-invoke-jobs-ledger!
@@ -3003,19 +3021,26 @@
 
 (defn- codex-task-no-execution?
   "True when an execution-enforced agent returns a task-mode reply with no evidence.
-   Optional REQUIRE-EXECUTION? bypasses metadata lookup for pure tests."
+   Optional REQUIRE-EXECUTION? bypasses metadata lookup for pure tests. JOB-MODE,
+   when supplied, is authoritative; prompt inference remains the legacy fallback."
   ([agent-id prompt result]
    (codex-task-no-execution? agent-id prompt result nil))
   ([agent-id prompt result require-execution?]
+   (codex-task-no-execution? agent-id prompt result require-execution? nil))
+  ([agent-id prompt result require-execution? job-mode]
    (let [text (some-> (:result result) str str/trim)
          {:keys [executed tool-events command-events]} (invoke-execution-evidence result)
          enforced? (if (some? require-execution?)
                      (boolean require-execution?)
-                     (agent-requires-execution? agent-id))]
+                     (agent-requires-execution? agent-id))
+         work-mode? (if (some? job-mode)
+                      (= "work" (normalize-invoke-job-mode job-mode))
+                      (let [p (str (or prompt ""))]
+                        (or (boolean (re-find task-mode-re p))
+                            (boolean (re-find mission-work-re p)))))]
     (and enforced?
          (string? prompt)
-         (or (boolean (re-find task-mode-re prompt))
-             (boolean (re-find mission-work-re prompt)))
+         work-mode?
          (string? text)
          (not (str/blank? text))
          (not (boolean (re-find planning-only-re text)))
@@ -3101,7 +3126,10 @@
             result (maybe-route-surface-writes agent-id raw-result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
-                              (codex-task-no-execution? agent-id effective-prompt result))
+                              (codex-task-no-execution?
+                               agent-id effective-prompt result nil
+                               (:mode (get-in (ensure-invoke-jobs-ledger!)
+                                              [:jobs job-id]))))
             [terminal-state terminal-code terminal-message]
             (classify-terminal result no-evidence?)]
         ;; D1/O3 durable lineage: a successful dispatch with a mission-id clocks
@@ -3192,7 +3220,10 @@
             result (maybe-route-surface-writes agent-id raw-result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
-                              (codex-task-no-execution? agent-id effective-prompt result))
+                              (codex-task-no-execution?
+                               agent-id effective-prompt result nil
+                               (:mode (get-in (ensure-invoke-jobs-ledger!)
+                                              [:jobs job-id]))))
             [terminal-state terminal-code terminal-message]
             (classify-terminal result no-evidence?)]
         ;; D1/O3 durable lineage: a successful dispatch with a mission-id clocks
@@ -3518,6 +3549,8 @@
                         "bell")
             requested-job-id (or (:job-id payload) (get payload "job-id")
                                  (:job_id payload) (get payload "job_id"))
+            raw-mode (or (:mode payload) (get payload "mode"))
+            mode (normalize-invoke-job-mode raw-mode)
             mission-id (or (:mission-id payload) (get payload "mission-id"))
             ;; bell-router: a bell that answers another bell carries its id, so the
             ;; conversation graph correlates the reply (not just auto-bellbacks).
@@ -3539,6 +3572,10 @@
           (nil? prompt)
           (json-response 400 {:ok false :err "missing-prompt"
                               :message "prompt is required"})
+
+          (and (some? raw-mode) (nil? mode))
+          (json-response 400 {:ok false :err "invalid-invoke-mode"
+                              :message "mode must be work or brief"})
 
           (and typed? (nil? bell-type))
           (json-response 400 {:ok false :err "invalid-bell-type"
@@ -3577,6 +3614,7 @@
                                                   :prompt prompt
                                                   :caller caller
                                                   :surface surface
+                                                  :mode mode
                                                   :bellback-of (when (bell-router-enabled?) in-reply-to)
                                                   :bell-type (when typed? bell-type)
                                                   :ref (when typed? ref')})
@@ -3618,7 +3656,7 @@
                                                 :accepted true
                                                 :job-id job-id
                                                 :state "queued"
-                                                :mode (invoke-job-mode prompt)
+                                                :mode (invoke-job-mode prompt mode)
                                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)}
                                          typed? (assoc :bell-type bell-type
                                                        :ref ref'
