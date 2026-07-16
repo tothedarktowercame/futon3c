@@ -11,6 +11,17 @@ source "${script_dir}/emacs-socket-lib.sh"
 # All role-specific knowledge is baked in. Override env vars only if
 # you know what you're doing.
 
+# --- JVM sizing (host-specific: lucy is a 3.8G box) ---
+# This box is RAM-bound, so the numbers are a constraint, not a preference.
+# 2g heap + 768m direct + Arrow native + JVM overhead ran ~3.2G resident here
+# (already ~850M into swap): a FUTON1B_EMBED=1 run swap-thrashed until the
+# in-process :7074 evidence query blew its 120s idle timeout ("futon1b
+# unreachable") and the OOM killer reaped `make dev` (2026-07-14). 1536m/640m
+# is ~2.4G resident, which keeps swap as backstop rather than working set.
+# Raise only if lucy gains RAM. Other hosts set their own in their own env file.
+export FUTON3C_HEAP="${FUTON3C_HEAP:-1536m}"
+export FUTON3C_DIRECT="${FUTON3C_DIRECT:-640m}"
+
 # --- Role & network ---
 export FUTON3C_ROLE="${FUTON3C_ROLE:-linode}"
 # Site code: prefixes this box's locally-registered agent ids (lon-claude-1)

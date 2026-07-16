@@ -4,6 +4,18 @@ CODEX_SANDBOX?=danger-full-access
 CODEX_APPROVAL?=never
 CODEX_APPROVAL_POLICY?=$(CODEX_APPROVAL)
 NONSTARTER_DB?=$(HOME)/code/storage/nonstarter.db
+# Host-specific JVM sizing, passed as -J flags rather than baked into the
+# shared :dev alias so two hosts never edit the same committed line. Override
+# from your scripts/dev-<host>-env (a separate file per host), not here.
+# Defaults are the 3.8G Linode's values (the 2026-07-14 OOM-ledge fix): -Xmx2g
+# + 768m direct + Arrow native + JVM overhead ran ~3.2G resident on a 3.8G box
+# already ~850M into swap, so a FUTON1B_EMBED=1 run swap-thrashed until the
+# in-process :7074 query blew the 120s idle timeout ("futon1b unreachable") and
+# the OOM killer reaped `make dev`. 1536m/640m is ~2.4G resident, leaving swap
+# as backstop rather than working set. Raise only if the host has the RAM.
+FUTON3C_HEAP ?= 1536m
+FUTON3C_DIRECT ?= 640m
+FUTON3C_JVM_SIZING = -J-Xmx$(FUTON3C_HEAP) -J-XX:MaxDirectMemorySize=$(FUTON3C_DIRECT)
 # Embedded shadow-cljs watcher (CLAUDE.md I-0: one JVM at rest). When true,
 # `make dev` runs the CLJS watch inside the futon3c JVM instead of a second
 # `npx shadow-cljs` process. Both builds verified embedded 2026-05-30.
@@ -33,7 +45,7 @@ tools:
 
 dev:
 	@echo "[dev] Codex defaults: sandbox=$(CODEX_SANDBOX) approval=$(CODEX_APPROVAL_POLICY)"
-	$(CLOJURE) -M:dev
+	$(CLOJURE) $(FUTON3C_JVM_SIZING) -M:dev
 
 dev-linode:
 	FUTON3C_IRC_PORT=0 FUTON3C_ROLE=linode FUTON1A_STATIC_DIR=$(HOME)/code/futon4/dev/web $(MAKE) dev
@@ -97,7 +109,7 @@ gh-issue-holes:
 	fi
 
 repl:
-	$(CLOJURE) -M:dev:repl
+	$(CLOJURE) $(FUTON3C_JVM_SIZING) -M:dev:repl
 
 ALFWORLD_PORT ?= 3456
 ALFWORLD_PY ?= python

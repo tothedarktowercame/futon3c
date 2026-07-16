@@ -56,13 +56,18 @@
   :dev {:extra-paths ["dev"]
         ;; JVM opts for the one serving JVM (I-0). The Arrow --add-opens +
         ;; netty/pgwire flags are required for the embedded futon1b XTDB 2
-        ;; node (FUTON1B_EMBED=1); harmless when it isn't embedded. Heap
-        ;; sized 2026-07-14 for the 3.8G box to hold futon3c's working set
-        ;; + futon1b's ~850M XTDB2 live set; 768m direct is Arrow off-heap.
+        ;; node (FUTON1B_EMBED=1); harmless when it isn't embedded. These are
+        ;; correctness flags and apply on every host, so they live here.
+        ;;
+        ;; HEAP SIZING IS DELIBERATELY NOT HERE. It is host-specific (the 3.8G
+        ;; Linode and a laptop want different numbers), and a shared alias is
+        ;; the one place two hosts cannot disagree without conflicting on every
+        ;; pull. Sizing is passed as -J flags by the launcher and defaulted in
+        ;; the Makefile (FUTON3C_HEAP / FUTON3C_DIRECT); each host overrides in
+        ;; its own scripts/dev-<host>-env, which are separate committed files.
         :jvm-opts ["--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED"
                    "-Dio.netty.tryReflectionSetAccessible=true"
-                   "-Djava.net.preferIPv4Stack=true"
-                   "-Xmx2g" "-XX:MaxDirectMemorySize=768m"]
+                   "-Djava.net.preferIPv4Stack=true"]
         :extra-deps {futon5/futon5 {:local/root "../futon5"}
                      webarxana/webarxana {:local/root "../futon4/dev/web/webarxana"}
                      ;; war-machine CLJS source must be on the JVM classpath

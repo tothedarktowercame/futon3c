@@ -11,6 +11,14 @@ source "${script_dir}/emacs-socket-lib.sh"
 # All role-specific knowledge is baked in. Override env vars only if
 # you know what you're doing.
 
+# --- JVM sizing (host-specific) ---
+# Left unset on purpose: the Makefile default (1536m/640m) is the 3.8G Linode's
+# ceiling, so it is safe anywhere, just small for a laptop with real RAM. Set
+# these to this machine's numbers — they live here, in this host's own file, so
+# raising them never conflicts with lucy's constraint on pull.
+# export FUTON3C_HEAP=3g
+# export FUTON3C_DIRECT=1g
+
 # --- Role & network ---
 # Force the role (not ${FUTON3C_ROLE:-laptop}): this launcher's whole job is the
 # laptop profile, and the `:-` default silently deferred to a stale FUTON3C_ROLE

@@ -43,5 +43,11 @@ if defined CLAUDE_SESSION_DIR (
 
 echo [dev-windows] Codex defaults: sandbox=%CODEX_SANDBOX% approval=%CODEX_APPROVAL_POLICY% reasoning=%CODEX_REASONING_EFFORT%
 echo [dev-windows] Codex session file: %CODEX_SESSION_FILE%
-call "%~dp0run-clojure-windows.bat" -M:dev %*
+rem JVM sizing is host-specific and no longer lives in the shared :dev alias.
+rem These preserve what this launcher got when it was baked into deps.edn
+rem (2g/768m); adjust for this machine — it is this host's own file, so the
+rem Linode's tighter 3.8G numbers can never overwrite them on pull.
+if not defined FUTON3C_HEAP set "FUTON3C_HEAP=2g"
+if not defined FUTON3C_DIRECT set "FUTON3C_DIRECT=768m"
+call "%~dp0run-clojure-windows.bat" -J-Xmx%FUTON3C_HEAP% -J-XX:MaxDirectMemorySize=%FUTON3C_DIRECT% -M:dev %*
 exit /b %ERRORLEVEL%
