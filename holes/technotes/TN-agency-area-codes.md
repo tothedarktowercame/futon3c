@@ -59,7 +59,7 @@ site prefix as evidence of remoteness:
   its own area code.** It simply never applies it to itself.
 - `agent-id-home-site` (`:170`) parses `lon-claude-1` → `"lon"` by regex, so
   qualified ids are already understood.
-- `remote-homed-agent-id?` (`:192`) is the AG-2 guard. It refuses site-qualified
+- `remote-homed-agent-id?` (`:196`) is the AG-2 guard. It refuses site-qualified
   peer ids from being rebound locally — but `known-remote-home-sites` explicitly
   `disj`es the local site, so **`lon-*` is already not-remote on lucy**. The
   guard would not block a local `lon-claude-6`.
@@ -140,7 +140,7 @@ curl -s http://127.0.0.1:17070/api/alpha/agents  # oxf    : claude-6 -> 380d6e33
 ```
 
 Code: `src/futon3c/agency/federation.clj` — `site-prefix` :161,
-`agent-id-home-site` :170, `remote-homed-agent-id?` :192. No alias mechanism
+`agent-id-home-site` :170, `remote-homed-agent-id?` :196. No alias mechanism
 exists: `grep -i alias src/futon3c/agency/*.clj` returns nothing.
 
 Related: memory `federation-roster-completeness` already lists a
