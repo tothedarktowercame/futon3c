@@ -1,5 +1,6 @@
 .cpcache/
 .clj-config/
+.clj-kondo/.cache/
 .m2/
 .gitlibs/
 .nrepl-port
@@ -38,3 +39,4 @@ replay_pid*.log
 core.*
 *.hprof
 .fedtoken
+*.bak-*
