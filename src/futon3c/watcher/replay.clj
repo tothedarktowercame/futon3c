@@ -35,7 +35,8 @@
             [futon3c.watcher.file-ingest :as fi]
             [futon3c.watcher.commit-ingest :as ci]))
 
-(def FUTON1A (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def FUTON1A (or (System/getenv "FUTON_SUBSTRATE_URL")
+                 (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 ;; ---------- git layer (blob-accurate) ----------
 

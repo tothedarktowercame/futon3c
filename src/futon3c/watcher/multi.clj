@@ -34,7 +34,8 @@
            [java.util.concurrent
             Executors ScheduledExecutorService TimeUnit]))
 
-(def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def FUTON1A   (or (System/getenv "FUTON_SUBSTRATE_URL")
+                   (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 
 (def WATCHED-EXTS #{"clj" "cljs" "cljc" "el" "py" "flexiarg" "md"})
@@ -554,12 +555,27 @@
   (let [norm (str/replace (str dir) "\\" "/")]
     (boolean (re-find NOISE-PATTERN (str norm "/")))))
 
+(defn- pruned-file-seq
+  "Depth-first file traversal that never enters ignored directory trees.
+
+  `watched?` still decides which files enter the snapshot; pruning here makes
+  the same exclusion structural at traversal time, so polling a repository
+  does not walk `.git`, virtualenv, `node_modules`, build-output, or cache
+  corpora merely to reject their descendants afterwards."
+  [root]
+  (tree-seq (fn [^java.io.File f]
+              (and (.isDirectory f)
+                   (not (noise-dir? (.getPath f)))))
+            (fn [^java.io.File dir]
+              (or (seq (.listFiles dir)) []))
+            (java.io.File. ^String root)))
+
 (defn file-fingerprint [^String path]
   (let [f (java.io.File. path)]
     {:mtime (.lastModified f) :size (.length f)}))
 
 (defn walk-root [root]
-  (->> (file-seq (java.io.File. ^String root))
+  (->> (pruned-file-seq root)
        (filter #(.isFile ^java.io.File %))
        (map #(.getPath ^java.io.File %))
        (filter watched?)

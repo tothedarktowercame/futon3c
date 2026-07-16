@@ -14,7 +14,8 @@
             [clojure.string :as str]))
 
 (def ^:private FUTON1A
-  (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+  (or (System/getenv "FUTON_SUBSTRATE_URL")
+      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 
 (def ^:private PENHOLDER
   (or (System/getenv "FUTON1A_PENHOLDER") "api"))

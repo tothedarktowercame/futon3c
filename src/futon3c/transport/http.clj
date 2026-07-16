@@ -411,15 +411,10 @@
               v)))
         [:invoke-trace-id :invoke_trace_id :invokeTraceId]))
 
+;; Keep this out of extended/comments mode: `#` is data in the PR alternative,
+;; not a regex comment. Ordinary words beginning with "pr" must not match.
 (def ^:private artifact-ref-re
-  #"(?ix)
-    (https?://github\.com/\S+/(?:pull|issues)/\d+)
-    |
-    (\bPR\s*#\d+\b)
-    |
-    (\b[0-9a-f]{7,40}\b)
-    |
-    ((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b))")
+  #"(?i)(https?://github\.com/\S+/(?:pull|issues)/\d+)|(\bPR\s*#\d+\b)|(\b[0-9a-f]{7,40}\b)|((?:/|\.{1,2}/|~?/)[^\s]+?\.(?:clj|cljs|cljc|el|md|txt|sh|py|js|ts|tsx|java|go|rs|tex|json|edn)\b)")
 
 #_{:clj-kondo/ignore [:unused-private-var]}
 (defn- first-matching-ref
@@ -1105,7 +1100,7 @@
                     :terminal-code :terminal-message
                     :session-id :trace-id
                     :result-summary :artifact-ref
-                    :execution :delivery :events]))
+                    :execution :auto-bellback :delivery :events]))
 
 (defn- get-invoke-job
   [job-id]
@@ -2481,19 +2476,20 @@
                                   :emacs-socket emacs-socket
                                   :evidence-store (evidence-store-for-config config)
                                   :irc-send-fn (:irc-send-fn config)})
-                      result (reg/register-agent!
-                              {:agent-id {:id/value agent-id :id/type :continuity}
-                               :type agent-type
-                               :invoke-fn invoke-fn
-                               :session-reset-fn session-reset-fn
-                               :capabilities (get default-capabilities agent-type [])
-                               :metadata (cond-> {:auto-registered? true}
-                                           (= agent-type :codex) (assoc :require-execution? true)
-                                           requested-cwd (assoc :cwd requested-cwd)
-                                           campaign-id (assoc :campaign-id campaign-id)
-                                           mission-id (assoc :mission-id mission-id)
-                                           excursion-id (assoc :excursion-id excursion-id)
-                                           emacs-socket (assoc :emacs-socket emacs-socket))})]
+                      result (when invoke-fn
+                               (reg/register-agent!
+                                {:agent-id {:id/value agent-id :id/type :continuity}
+                                 :type agent-type
+                                 :invoke-fn invoke-fn
+                                 :session-reset-fn session-reset-fn
+                                 :capabilities (get default-capabilities agent-type [])
+                                 :metadata (cond-> {:auto-registered? true}
+                                             (= agent-type :codex) (assoc :require-execution? true)
+                                             requested-cwd (assoc :cwd requested-cwd)
+                                             campaign-id (assoc :campaign-id campaign-id)
+                                             mission-id (assoc :mission-id mission-id)
+                                             excursion-id (assoc :excursion-id excursion-id)
+                                             emacs-socket (assoc :emacs-socket emacs-socket))}))]
                   (when (and (map? result) (:agent/id result))
                     (when invoke-fn
                       (reg/update-agent! agent-id :agent/invoke-fn invoke-fn))
@@ -2602,7 +2598,7 @@
                            (seq raw-contracts) (assoc :agency/contracts raw-contracts)
                            restored-detached? (assoc :restore/state :restored/detached
                                                      :restore/restored-at (str (java.time.Instant/now))))]
-            (if (and (nil? invoke-fn) (not= :zai agent-type))
+            (if (nil? invoke-fn)
               (json-response 500 {:ok false
                                   :err "restore-failed"
                                   :message (str "Could not build invoke-fn for " agent-id)})
@@ -3438,27 +3434,36 @@
         (json-response 200 {:ok true :acked acked})))))
 
 (defn- handle-parked
-  "GET /api/alpha/parked?agent=&session= — outstanding (unreleased) parks for a repl
-   buffer, so a turn can tell it parked (E-repl-continuations within-turn model)."
+  "GET /api/alpha/parked?agent=&session=&mode= — outstanding (unreleased) parks.
+
+   The default view remains :within-turn because this endpoint also supplies the
+   turn-finalization :more-pending signal.  mode=all is the operator visibility
+   view and includes background parks, without letting them defer finalization."
   [request _config]
   (let [agent (req-query-param request "agent")
         session (req-query-param request "session")
+        mode (req-query-param request "mode")
+        all-modes? (= "all" (some-> mode str/trim str/lower-case))
         recs (when (and (parked-on-enabled?) agent)
                (->> (vals (:records (parked-on/snapshot)))
                     (filter (fn [r] (and (= (str (:agent r)) (str agent))
                                          (or (str/blank? (str session))
                                              (= (str (:session r)) (str session)))
                                          (not (:released? r))
-                                         (= (or (:mode r) :within-turn) :within-turn))))
+                                         (or all-modes?
+                                             (= (or (:mode r) :within-turn)
+                                                :within-turn)))))
                     (mapv (fn [r] {:id (:id r) :awaiting (vec (:awaiting r))
-                                   :deadline-ms (:deadline-ms r)}))))
+                                   :deadline-ms (:deadline-ms r)
+                                   :mode (or (:mode r) :within-turn)}))))
         ;; A ready resume already in the inbox (dep completed, poller not yet fired)
         ;; also means "more is coming" — so the check is race-free even for a fast dep.
         inbox-pending (and (parked-on-enabled?) agent
                            (parked-on/ready-inbox-pending? agent (or session "")
-                                                           :within-turn))]
+                                                           :within-turn))
+        within-turn-pending (some #(= (:mode %) :within-turn) recs)]
     (json-response 200 {:ok true :parked (vec (or recs []))
-                        :more-pending (boolean (or (seq recs) inbox-pending))})))
+                        :more-pending (boolean (or within-turn-pending inbox-pending))})))
 
 (defn- handle-park
   "POST /api/alpha/park — register a continuation (E-repl-continuations Car 2b):
@@ -4579,14 +4584,23 @@
 
 (defn- handle-missions
   "GET /api/alpha/missions — cross-repo mission inventory with per-mission
-  turn-count telemetry. Telemetry is computed once over the live runtime store
-  and both attached per-mission and surfaced top-level."
-  [_request config]
-  (let [turn-counts (mcb/mission-turn-count-telemetry (evidence-store-for-config config))
-        missions (mcb/attach-turn-counts (mcb/build-inventory) turn-counts)]
+  turn-count telemetry. Pass include-turn-counts=false when the caller needs
+  only the strategic inventory; telemetry is ancillary and can be expensive."
+  [request config]
+  (let [include-turn-counts? (not= "false"
+                                   (get (parse-query-params request)
+                                        "include-turn-counts"))
+        inventory (mcb/build-inventory)
+        turn-counts (when include-turn-counts?
+                      (mcb/mission-turn-count-telemetry
+                       (evidence-store-for-config config)))
+        missions (if turn-counts
+                   (mcb/attach-turn-counts inventory turn-counts)
+                   inventory)]
     (json-response 200 {:ok true
                         :missions missions
                         :count (count missions)
+                        :turn-counts-included? include-turn-counts?
                         :turn-counts turn-counts})))
 
 (defn- handle-mission-detail
@@ -4776,7 +4790,8 @@
     (if (or (nil? path) (str/blank? (str path)))
       (json-response 400 {:ok false :error "missing-path"
                            :message "path query parameter is required"})
-      (let [futon1a-url (or (System/getenv "FUTON1A_URL") "http://localhost:7071")
+      (let [futon1a-url (or (System/getenv "FUTON_SUBSTRATE_URL")
+                            (System/getenv "FUTON1A_URL") "http://localhost:7071")
             result (enrich/enrich-file (str path) {:futon1a-url futon1a-url})]
         (json-response 200 (assoc result :ok true))))))
 

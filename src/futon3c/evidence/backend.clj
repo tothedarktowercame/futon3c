@@ -66,7 +66,7 @@
 
 (defn filter-and-sort-entries
   "Apply standard query filtering and sorting to a seq of entries.
-   Shared logic used by both AtomBackend and XtdbBackend."
+   Shared logic used by AtomBackend and the authoritative Futon1bBackend."
   [entries {:query/keys [subject type claim-type author session-id pattern-id
                          since before limit include-ephemeral? tags]}]
   (let [include-ephemeral? (true? include-ephemeral?)

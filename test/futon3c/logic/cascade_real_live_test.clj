@@ -5,7 +5,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.java.io :as io]
             [futon3c.logic.cascade-real :as cr]
-            [futon3c.logic.cascade-real-live :as live]))
+            [futon3c.logic.cascade-real-live :as live]
+            [futon3c.substrate.client :as substrate]))
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)
@@ -87,6 +88,14 @@
     (is (= [] (vec (live/o3-claims-from []))))
     (is (= [] (vec (live/o2-meme-claims-from []))))))
 
+(deftest fetch-edges-uses-canonical-substrate-client
+  (with-redefs [substrate/hyperedges-by-type
+                (fn [type opts]
+                  (is (= "clock/clocked-on" type))
+                  (is (pos? (:timeout-ms opts)))
+                  sample-clock-edges)]
+    (is (= sample-clock-edges (live/fetch-edges "clock/clocked-on")))))
+
 (deftest o2-extractor-maps-memes
   (testing "mine/meme edges → claims-typeo :O2 meme:ask-* :meme (only meme: endpoints)"
     (let [edges  [{:hx/type :mine/meme :hx/endpoints ["meme:ask-abc123"] :hx/props {}}
@@ -108,6 +117,25 @@
                                          [claims-typeo-rel :O2 "mission:M-x" :meme]]))]
       (is (some #{"mission:M-x"} (:composition-violations v)))
       (is (false? (:consistent? v))))))
+
+(deftest cascade-summary-uses-fast-claim-consistency
+  (testing "the UI summary computes dimensions and composition without running the full logic gate"
+    (let [edges {"clock/clocked-on" sample-clock-edges
+                 "mine/meme" [{:hx/endpoints ["meme:ask-abc123"]}]
+                 "code/v05/mined-move" [{:hx/endpoints ["futon3c-d/mission/autoclock-in"
+                                                        "futon3c-d/mission/autoclock-in-head"]}]
+                 "cascade/cluster-member" [{:hx/endpoints ["cascade/cluster/x"
+                                                           "futon3c-d/mission/autoclock-in"]}]
+                 "cascade/hole-target" [{:hx/endpoints ["cascade/hole/x"
+                                                        "futon3c-d/mission/autoclock-in"]
+                                         :hx/props {:hole-kind "gap"}}]}]
+      (with-redefs [live/fetch-edges (fn [hx-type] (get edges hx-type []))
+                    live/verify-live (fn [] (throw (ex-info "should-not-run" {})))]
+        (let [summary (live/cascade-real-summary)]
+          (is (true? (:consistent? summary)))
+          (is (= {:O3 4 :O2 1 :O1 1 :O4 2 :O5 2} (:dimensions summary)))
+          (is (= 1 (get-in summary [:composition :O1xO4])))
+          (is (= {"gap" 1} (:holes summary))))))))
 
 ;; --- §7 DISSOLUTION Checklist B: the per-section BODY structure -------------
 

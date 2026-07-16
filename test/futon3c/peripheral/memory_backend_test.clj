@@ -4,7 +4,8 @@
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.evidence.store :as estore]
-            [futon3c.peripheral.memory-backend :as memory-backend]))
+            [futon3c.peripheral.memory-backend :as memory-backend]
+            [futon3c.substrate.client :as substrate]))
 
 (use-fixtures
   :each
@@ -79,3 +80,18 @@
           (is (= "M-bare" (get-in resp [:result :query :target])))
           (is (some #(str/ends-with? (str (:file %)) "M-bare.md")
                     (get-in resp [:result :items]))))))))
+
+(deftest neighborhood-uses-authoritative-substrate-client
+  (with-redefs [substrate/hyperedges-by-end
+                (fn [end opts]
+                  (is (= "mission:M-x" end))
+                  (is (= 5 (:limit opts)))
+                  [{:hx/id "hx:test" :hx/type :test/edge
+                    :hx/endpoints ["mission:M-x" "cap:y"]}])]
+    (let [resp (memory-backend/evidence-graph
+                {} {:mode :neighborhood :end-id "mission:M-x" :limit 5})]
+      (is (true? (:ok resp)))
+      (is (= 1 (get-in resp [:result :query :count])))
+      (is (= [{:id "hx:test" :type :test/edge
+               :endpoints ["mission:M-x" "cap:y"]}]
+             (get-in resp [:result :items]))))))

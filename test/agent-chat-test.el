@@ -17,6 +17,13 @@
            :thinking-text "agent is thinking..."
            :thinking-prop 'agent-chat-test-thinking))))
 
+(ert-deftest agent-chat-init-buffer-preserves-default-face-remapping ()
+  (with-temp-buffer
+    (setq-local face-remapping-alist '((default custom-existing-face)))
+    (agent-chat-test--init-buffer)
+    (should (equal face-remapping-alist
+                   '((default custom-existing-face))))))
+
 (ert-deftest agent-chat-ensure-prompt-markers-preserves-live-input ()
   (with-temp-buffer
     (agent-chat-test--init-buffer)

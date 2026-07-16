@@ -5,8 +5,8 @@
             [futon3c.evidence.futon1b-backend :as sut]
             [org.httpkit.client :as http]))
 
-(deftest client-only-filters-are-sent-as-narrowing-hints
-  (testing "the server narrows candidates while the client retains exact membership"
+(deftest post-filters-retain-the-bounded-server-window
+  (testing "the server fills an exact bounded window and the client rechecks membership"
     (let [seen-url (atom nil)
           store (sut/make-futon1b-backend "http://store.test")]
       (with-redefs [http/get (fn [url _]
@@ -23,5 +23,16 @@
         (is (str/includes? @seen-url "subject-type=thread"))
         (is (str/includes? @seen-url "subject-id=t+1"))
         (is (str/includes? @seen-url "pattern-id=pause"))
-        (is (not (str/includes? @seen-url "limit=")))
-        (is (str/includes? @seen-url "include-ephemeral=true"))))))
+        (is (str/includes? @seen-url "limit=5"))
+        (is (str/includes? @seen-url "include-ephemeral=false"))))))
+
+(deftest post-filtered-count-uses-projected-count-route
+  (testing "counting tags never hydrates an unbounded evidence response"
+    (let [seen-url (atom nil)
+          store (sut/make-futon1b-backend "http://store.test")]
+      (with-redefs [http/get (fn [url _]
+                               (reset! seen-url url)
+                               (delay {:status 200 :body "{:count 7}"}))]
+        (is (= 7 (backend/-count store {:query/tags [:open]})))
+        (is (str/includes? @seen-url "/api/alpha/evidence/count?"))
+        (is (str/includes? @seen-url "tags=open"))))))

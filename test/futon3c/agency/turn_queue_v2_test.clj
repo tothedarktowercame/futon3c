@@ -103,3 +103,18 @@
         (is (= 1 @calls) "duplicate msg-id is not processed twice")
         (is (= :queued (:status r1)))
         (is (= :deduped (:status r2)))))))
+
+(deftest idle-drainer-does-not-enter-durable-drain-loop
+  (let [drain-calls (atom 0)
+        {:keys [running lock thread]}
+        (with-redefs [turn-queue/drain! (fn [& _] (swap! drain-calls inc))]
+          (#'turn-queue/spawn-drainer! "idle-test"))]
+    (try
+      (Thread/sleep 1200)
+      (is (zero? @drain-calls)
+          "an empty queue must not wake into durable acquire/release writes")
+      (finally
+        (reset! running false)
+        (locking lock (.notifyAll lock))
+        (.interrupt ^Thread thread)
+        (.join ^Thread thread 2000)))))

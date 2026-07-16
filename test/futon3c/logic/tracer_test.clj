@@ -5,12 +5,11 @@
    reframe 2026-04-29."
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is testing use-fixtures]]
-            [xtdb.api :as xtdb]
             [futon3c.evidence.store :as store]
-            [futon3c.evidence.xtdb-backend :as xb]
+            [futon3c.evidence.backend :as backend]
             [futon3c.logic.tracer :as tracer]))
 
-(def ^:dynamic *xtdb-backend* nil)
+(def ^:dynamic *evidence-backend* nil)
 
 (def prototype-path "holes/excursions/pipeline-prototype.edn")
 
@@ -34,12 +33,9 @@
 (use-fixtures
   :each
   (fn [f]
-    (let [node (xtdb/start-node {})]
-      (try
-        (binding [*xtdb-backend* (xb/make-xtdb-backend node)]
-          (f))
-        (finally
-          (.close node))))))
+    (binding [*evidence-backend*
+              (backend/->AtomBackend (atom {:entries {} :order []}))]
+      (f))))
 
 (deftest emit-tracer-emits-pipeline-tracer-item
   (testing "emit-tracer! emits one entry tagged :pipeline-tracer + :open"
@@ -49,20 +45,20 @@
                        :target-date "2026-05-06"
                        :expected-outcome "test outcome"
                        :owner nil}
-          receipt (tracer/emit-tracer! *xtdb-backend* tracer-data)]
+          receipt (tracer/emit-tracer! *evidence-backend* tracer-data)]
       (is (:ok receipt) (str "expected emit success, got " (pr-str receipt))))))
 
 (deftest emit-pipeline-tracers-emits-one-per-tracer
   (testing "emit-pipeline-tracers! returns one receipt per explicit tracer"
-    (let [receipts (tracer/emit-pipeline-tracers! *xtdb-backend* test-tracers)]
+    (let [receipts (tracer/emit-pipeline-tracers! *evidence-backend* test-tracers)]
       (is (= (count test-tracers) (count receipts))
           "one receipt per supplied tracer")
       (is (every? :ok receipts) "all emits succeeded"))))
 
 (deftest open-tracers-queryable-by-tag
   (testing "after emission, open tracers are queryable via :pipeline-tracer + :open"
-    (tracer/emit-pipeline-tracers! *xtdb-backend* test-tracers)
-    (let [open (store/query* *xtdb-backend*
+    (tracer/emit-pipeline-tracers! *evidence-backend* test-tracers)
+    (let [open (store/query* *evidence-backend*
                              {:query/type :coordination
                               :query/tags [:pipeline-tracer :open]})]
       (is (= (count test-tracers) (count open))
@@ -70,7 +66,7 @@
 
 (deftest emit-tracer-closed-emits-resolution
   (testing "emit-tracer-closed! emits a resolution entry for a track-id"
-    (let [_ (tracer/emit-tracer! *xtdb-backend*
+    (let [_ (tracer/emit-tracer! *evidence-backend*
                                  {:track-id :soon-to-close
                                   :title "x"
                                   :mission :M-invariant-queue-extend
@@ -78,7 +74,7 @@
                                   :expected-outcome "x"
                                   :owner nil})
           receipt (tracer/emit-tracer-closed!
-                   *xtdb-backend*
+                   *evidence-backend*
                    {:track-id :soon-to-close
                     :resolution "test resolution"
                     :closed-by "tracer-test"})]
@@ -100,12 +96,12 @@
               :emitted 0
               :attempted 0
               :failed []}
-             (tracer/ensure-default-tracers! *xtdb-backend*))))))
+             (tracer/ensure-default-tracers! *evidence-backend*))))))
 
 (deftest ensure-default-tracers-is-idempotent
   (testing "second call against the same store emits nothing"
-    (tracer/ensure-default-tracers! *xtdb-backend*)
-    (let [r (tracer/ensure-default-tracers! *xtdb-backend*)]
+    (tracer/ensure-default-tracers! *evidence-backend*)
+    (let [r (tracer/ensure-default-tracers! *evidence-backend*)]
       (is (= 0 (:already-present r)))
       (is (= 0 (:emitted r)))
       (is (= 0 (:attempted r))))))

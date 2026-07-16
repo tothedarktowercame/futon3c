@@ -15,11 +15,12 @@
    windows (the unlimited author=joe fetch hydrated 8,882 docs/10MB for a
    5-item recall and, cold, silently timed out zai-1's first live demo,
    2026-07-11). When client-only filters are present (tags/subject/
-   pattern-id), those filters are also sent as narrowing hints, while the
-   fetch stays ephemeral-inclusive and unlimited so the local filter still
-   owns membership.
+   pattern-id), Futon1b's keyset-window implementation applies the same
+   predicates before completing the requested window. The client still
+   re-applies the shared filter as a parity check, but no longer disables the
+   limit and accidentally requests the entire corpus.
 
-   -append preserves AtomBackend/XtdbBackend semantics: duplicate-id /
+   -append preserves the EvidenceBackend semantics: duplicate-id /
    reply-not-found / fork-not-found come back as SocialError maps (the
    server's 409 maps to :duplicate-id; reply/fork existence is checked
    client-side — the append-only server doesn't enforce those).
@@ -84,21 +85,12 @@
       (throw (ex-info "futon1b unreachable" {:url url} error)))
     {:status status :body (read-edn body)}))
 
-(defn- client-only-filters?
-  "Filters the server does not apply identically — membership must then be
-   decided locally over an ephemeral-inclusive, unlimited fetch."
-  [{:query/keys [tags subject pattern-id]}]
-  (boolean (or (seq tags) subject pattern-id)))
-
 (defn- query-string
   "Pushdown params. See ns docstring for the two regimes."
   [{:query/keys [type claim-type author session-id since before fork-of
-                 tags subject pattern-id limit include-ephemeral?] :as params}]
-  (let [server-decidable? (not (client-only-filters? params))
-        pairs (cond-> [["include-ephemeral"
-                        (str (boolean (or include-ephemeral?
-                                          (not server-decidable?))))]]
-                (and server-decidable? (int? limit) (pos? limit))
+                 tags subject pattern-id limit include-ephemeral?]}]
+  (let [pairs (cond-> [["include-ephemeral" (str (boolean include-ephemeral?))]]
+                (and (int? limit) (pos? limit))
                 (conj ["limit" (str limit)])
                 type (conj ["type" (name type)])
                 claim-type (conj ["claim-type" (name claim-type)])
@@ -173,16 +165,15 @@
     (backend/filter-and-sort-entries (fetch-entries base-url params) params))
 
   (-count [_ params]
-    (let [params (dissoc params :query/limit)]
-      (if (client-only-filters? params)
-        (count (backend/filter-and-sort-entries (fetch-entries base-url params) params))
-        ;; fully server-decidable -> the server'\''s projected /count path
-        (let [url (str (api-url base-url "/api/alpha/evidence/count")
-                       "?" (query-string params))
-              {:keys [status body]} (get-edn url)]
-          (if (= 200 status)
-            (long (or (:count body) 0))
-            (throw (ex-info "futon1b count failed" {:status status :body body})))))))
+    ;; Futon1b's projected count path implements every supported filter. Never
+    ;; fetch and hydrate the corpus merely to count a locally filtered subset.
+    (let [params (dissoc params :query/limit)
+          url (str (api-url base-url "/api/alpha/evidence/count")
+                   "?" (query-string params))
+          {:keys [status body]} (get-edn url)]
+      (if (= 200 status)
+        (long (or (:count body) 0))
+        (throw (ex-info "futon1b count failed" {:status status :body body})))))
 
   (-forks-of [_ evidence-id]
     ;; include-ephemeral? true: -forks-of does not filter ephemeral (protocol)

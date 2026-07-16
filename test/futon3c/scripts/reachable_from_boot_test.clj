@@ -52,7 +52,7 @@
                          "dev/futon3c/dev.clj"
                          "src/futon3c/evidence/store.clj"
                          "src/futon3c/evidence/backend.clj"
-                         "src/futon3c/evidence/xtdb_backend.clj"
+                         "src/futon3c/evidence/futon1b_backend.clj"
                          "src/futon3c/logic/probe.clj"
                          "src/futon3c/logic/probe_taps.clj"
                          "src/futon3c/logic/archaeology.clj"

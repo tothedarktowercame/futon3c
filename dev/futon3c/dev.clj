@@ -61,7 +61,6 @@
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
             [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
             [futon3c.social.coordination-ledger :as coordination]
             [futon3c.runtime.agents :as rt]
@@ -2305,8 +2304,6 @@ RESPOND WITH ONLY:
      :mentor (when (seq @!mentor)
                {:running true :handles (mentor-handles)})
      :irc (when @!irc-sys {:port (:port @!irc-sys)})
-     :evidence-count (when @!evidence-store
-                       (count (futon3c.evidence.store/query* @!evidence-store {})))
      :ct-queue (when @!evidence-store
                  (let [s (ct-queue/queue-status @!evidence-store)]
                    {:completed (:completed s) :remaining (:remaining s)}))

@@ -1,7 +1,8 @@
 (ns futon3c.agents.zai-api-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
-            [futon3c.agents.zai-api :as zai]))
+            [futon3c.agents.zai-api :as zai]
+            [futon3c.evidence.boundary :as boundary]))
 
 (defn- tool-call
   [i]
@@ -37,6 +38,7 @@
    (merge {:agent-id "zai-test"
            :api-key "test-key"
            :initial-session-id "sid-test"
+           :evidence-store (atom {:entries {} :order []})
            :memory-mode :none
            :cwd "/tmp"}
           opts)))
@@ -124,3 +126,56 @@
       (let [resp (invoke "hot swap?" "sid-hot")]
         (is (= "redefined for zai-test" (:result resp)))
         (is (= "sid-hot" (:session-id resp)))))))
+
+(deftest transcript-records-prompt-round-profile-and-stable-turn-id
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store :profile :zai})]
+    (with-redefs [zai/chat! (fn [_client _opts _messages]
+                              (text-response "proved"))]
+      (is (= "proved" (:result (invoke "prove theorem T" nil))))
+      (let [entries (mapv #(get-in @store [:entries %]) (:order @store))
+            start (first entries)
+            round (second entries)
+            turn-id (get-in start [:evidence/body :turn-id])]
+        (is (= 2 (count entries)))
+        (is (= [:transcript :turn-start :zai] (:evidence/tags start)))
+        (is (= "prove theorem T" (get-in start [:evidence/body :prompt])))
+        (is (= :zai (get-in start [:evidence/body :profile])))
+        (is (str/starts-with? turn-id "zai-turn-"))
+        (is (= [:transcript :turn-round :zai] (:evidence/tags round)))
+        (is (= turn-id (get-in round [:evidence/body :turn-id])))
+        (is (= true (get-in round [:evidence/body :final])))
+        (is (= "proved" (get-in round [:evidence/body :text])))))))
+
+(deftest zaif-profile-records-prompt-decision-and-final-round
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store :profile :zaif})]
+    (with-redefs [zai/chat! (fn [_client _opts _messages]
+                              (text-response "zaif done"))]
+      (is (= "zaif done" (:result (invoke "choose and prove" nil))))
+      (let [entries (mapv #(get-in @store [:entries %]) (:order @store))
+            events (mapv #(get-in % [:evidence/body :event]) entries)
+            turn-ids (set (keep #(get-in % [:evidence/body :turn-id]) entries))]
+        (is (= [:turn-start :zaif-arm-choice :turn-round] events))
+        (is (= 1 (count turn-ids)))
+        (is (= [:transcript :turn-start :zaif]
+               (:evidence/tags (first entries))))))))
+
+(deftest invoke-construction-requires-evidence-store
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"requires a durable evidence store"
+       (zai/make-invoke-fn {:agent-id "zai-no-store"
+                            :api-key "test-key"
+                            :memory-mode :none}))))
+
+(deftest transcript-persistence-failure-is-counted-and-stops-turn
+  (let [store (atom {:entries {} :order []})
+        invoke (make-invoke {:evidence-store store})
+        before (:failure-count (zai/transcript-persistence-status))]
+    (with-redefs [boundary/append!
+                  (fn [& _] {:ok false :error/code :store-rejected})]
+      (is (thrown? clojure.lang.ExceptionInfo (invoke "must be durable" nil))))
+    (let [status (zai/transcript-persistence-status)]
+      (is (= (inc before) (:failure-count status)))
+      (is (string? (:last-error status))))))

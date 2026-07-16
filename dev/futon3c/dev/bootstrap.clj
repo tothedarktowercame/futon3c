@@ -119,7 +119,7 @@
    single-process store lock). Safe to call when nothing is embedded."
   []
   (when-let [server @!f1b-embedded]
-    (try (.stop server 0) (catch Throwable _))
+    (try (f1b/stop-server! server) (catch Throwable _))
     (reset! !f1b-embedded nil)
     ;; best-effort node close via runtime resolve (avoids compile coupling)
     (try
@@ -497,10 +497,10 @@
                (catch Throwable t
                  (println (str "[dev] locus/agent-routing load-time check threw: "
                                (.getName (class t)) ": " (.getMessage t)))))
-        _ (try (locus/check-artifact-live-copy-locus-on-load! evidence-store)
-               (catch Throwable t
-                 (println (str "[dev] locus/artifact-live-copy load-time check threw: "
-                               (.getName (class t)) ": " (.getMessage t)))))
+        ;; artifact-live-copy is intentionally NOT scanned here. Walking every
+        ;; artifact glob across every repo made JVM readiness depend on an
+        ;; expensive whole-workspace traversal. The family remains registered
+        ;; above and can be evidenced explicitly with a one-family probe sweep.
         _ (mcs/configure! {:evidence-store evidence-store
                            :repos mcb/default-repo-roots})
         _ (when f1-sys

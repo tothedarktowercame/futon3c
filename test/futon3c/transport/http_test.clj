@@ -13,6 +13,7 @@
             [futon3c.agency.parked-on :as parked-on]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.portfolio.perceive :as perceive]
+            [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.store :as estore]
             [futon3c.social.test-fixtures :as fix]
@@ -155,10 +156,57 @@
       (is (= [] (:parked body)))
       (is (false? (:more-pending body))))))
 
+(deftest parked-all-mode-shows-background-without-deferring-finalization
+  (testing "mode=all is an operator view, not a change to more-pending semantics"
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 parked-on/snapshot (fn []
+                                                      {:records
+                                                       {"bg" {:id "bg"
+                                                              :agent "claude-1"
+                                                              :session "sid"
+                                                              :awaiting #{"job-1"}
+                                                              :deadline-ms 123
+                                                              :mode :background
+                                                              :released? false}}})
+                                 parked-on/ready-inbox-pending? (constantly false)]
+                     ((var-get #'http/handle-parked)
+                      {:query-string "agent=claude-1&session=sid&mode=all"} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= [{:id "bg"
+               :awaiting ["job-1"]
+               :deadline-ms 123
+               :mode "background"}]
+             (:parked body)))
+      (is (false? (:more-pending body))))))
+
+(deftest invoke-job-public-view-exposes-auto-bellback-decision
+  (let [decision {:suppressed? true
+                  :reason :parked-on
+                  :park-id "park-1"}
+        view ((var-get #'http/invoke-job-public-view)
+              {:job-id "job-1" :state "done" :auto-bellback decision
+               :result-text "private full response"})]
+    (is (= decision (:auto-bellback view)))
+    (is (not (contains? view :result-text)))))
+
 (defn- parse-body
   "Parse the JSON body string from a Ring response."
   [response]
   (json/parse-string (:body response) true))
+
+(deftest missions-can-skip-ancillary-turn-count-scan
+  (testing "inventory-only callers do not query live coordination evidence"
+    (with-redefs [mcb/build-inventory (fn [] [{:mission/id "M-test"}])
+                  mcb/mission-turn-count-telemetry
+                  (fn [& _] (throw (ex-info "must not run" {})))]
+      (let [response (get-req-with-query (make-handler)
+                                         "/api/alpha/missions"
+                                         "include-turn-counts=false")
+            body (parse-body response)]
+        (is (= 200 (:status response)))
+        (is (= [{:mission/id "M-test"}] (:missions body)))
+        (is (false? (:turn-counts-included? body)))
+        (is (nil? (:turn-counts body)))))))
 
 (defn- with-system-properties
   [settings f]
@@ -593,7 +641,7 @@
 
 (deftest zai-auto-register-seeds-session-id
   (testing "POST /api/alpha/agents/auto creates a fresh zai lane with its own session file"
-    (let [handler (make-handler)
+    (let [handler (make-handler {:evidence-store (atom {:entries {} :order []})})
           session-file (io/file "/tmp/futon-zai-session-id-zai-1")
           backup (when (.exists session-file) (slurp session-file))
           sid "sess-auto-zai-register"
@@ -1061,6 +1109,34 @@
           (is (= 200 (:status invoke-response)))
           (is (= 200 (:status job-response)))
           (is (nil? (get-in job-parsed [:job :artifact-ref]))))))))
+
+(deftest invoke-job-artifact-ref-does-not-take-pr-prefix-from-prose
+  (testing "ordinary prose before a commit SHA cannot masquerade as a PR ref"
+    (let [handler (make-handler)
+          body (json/generate-string {"agent-id" "codex-http-sha-after-prose"
+                                      "prompt" "hello from artifact parser"})]
+      (register-mock-agent! "codex-http-sha-after-prose" :codex)
+      (with-redefs [reg/invoke-agent!
+                    (fn [_ _ _]
+                      {:ok true
+                       :result (str "Implemented fail-closed provenance checks. "
+                                    "FULL_LOOP_AUTHOR: DONE "
+                                    "dd3a23c81dfd275cbe406e4315a46087a8263f13")
+                       :session-id "sess-http-sha-after-prose"
+                       :invoke-meta
+                       {:invoke-trace-id "invoke-http-sha-after-prose-1"
+                        :execution {:executed? true
+                                    :tool-events 1
+                                    :command-events 1}}})]
+        (let [invoke-response (post handler "/api/alpha/invoke" body)
+              invoke-parsed (parse-body invoke-response)
+              job-id (:job-id invoke-parsed)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job-parsed (parse-body job-response)]
+          (is (= 200 (:status invoke-response)))
+          (is (= 200 (:status job-response)))
+          (is (= "dd3a23c81dfd275cbe406e4315a46087a8263f13"
+                 (get-in job-parsed [:job :artifact-ref]))))))))
 
 (deftest invoke-job-artifact-ref-mfuton-mode-preserves-generic-matching
   (testing "mfuton mode still leaves gitlab issue URLs outside the generic canonical artifact-ref slot"

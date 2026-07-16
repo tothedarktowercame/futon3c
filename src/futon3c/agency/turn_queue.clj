@@ -9,7 +9,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.dev.config :as config])
-  (:import [java.security MessageDigest]
+  (:import [java.nio.file Files StandardCopyOption]
+           [java.security MessageDigest]
            [java.time Instant]
            [java.util UUID]))
 
@@ -76,14 +77,34 @@
 
 (defn- persist! [state]
   (try
-    (spit (queue-store-path) (pr-str state))
+    (let [target (.toPath (io/file (queue-store-path)))
+          tmp (.resolveSibling target (str (.getFileName target) ".tmp"))]
+      (io/make-parents (.toFile target))
+      (spit (.toFile tmp) (pr-str state))
+      (Files/move tmp target
+                  (into-array java.nio.file.CopyOption
+                              [StandardCopyOption/ATOMIC_MOVE
+                               StandardCopyOption/REPLACE_EXISTING])))
     (catch Throwable t
       (println (str "[turn-queue] persist failed: " (.getMessage t)))))
   state)
 
 (defn- swap-state! [f & args]
-  (ensure-state!)
-  (persist! (apply swap! !queue f args)))
+  ;; Atom mutation and disk replacement must have the same total order. Without
+  ;; this lock, two drainers can persist snapshots in the opposite order from
+  ;; their successful swaps, restoring stale queue state after a crash.
+  (locking !queue
+    (ensure-state!)
+    (let [changed? (atom false)
+          state (swap! !queue
+                       (fn [old]
+                         (let [new (apply f old args)]
+                           (when-not (identical? old new)
+                             (reset! changed? true))
+                           new)))]
+      (when @changed?
+        (persist! state))
+      state)))
 
 (defn clear!
   "Reset queue state. Intended for tests/dev only."
@@ -351,15 +372,22 @@
                 ^Runnable
                 (fn []
                   (while @running
-                    (try
-                      (drain! agent-id nil)   ;; each entry carries its own processor
-                      (catch Throwable t
-                        (println (str "[turn-queue] drainer " agent-id " error: "
-                                      (.getMessage t)))))
                     (locking lock
-                      (when (empty? (get-in (snapshot) [:queues agent-id]))
+                      (when (and @running
+                                 (empty? (get-in (snapshot) [:queues agent-id])))
                         (try (.wait lock (long drainer-wait-ms))
-                             (catch InterruptedException _))))))
+                             (catch InterruptedException _))))
+                    ;; A timeout or spurious wake with no work is genuinely
+                    ;; idle: do not acquire a durable drain lock or rewrite the
+                    ;; queue store. A signal cannot be lost because the queue is
+                    ;; checked while holding the same monitor used by notify.
+                    (when (and @running
+                               (seq (get-in (snapshot) [:queues agent-id])))
+                      (try
+                        (drain! agent-id nil)   ;; each entry carries its own processor
+                        (catch Throwable t
+                          (println (str "[turn-queue] drainer " agent-id " error: "
+                                        (.getMessage t))))))))
                 (str "turn-drainer-" agent-id))]
     (.setDaemon thread true)
     (.start thread)

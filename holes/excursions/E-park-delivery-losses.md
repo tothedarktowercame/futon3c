@@ -175,3 +175,115 @@ Fix 1 done (claude-6, review-fix carve-out). Bugs 2 and 3 + finding-0
 bootstrap wiring: charter as a follow-up slice once codex-3's
 Agency-ergonomics slice (in flight, `invoke-1783934754106-308-69ad7fe1`) lands
 — they touch the same surfaces and should be reviewed together.
+
+## Independent review (zai-2, 2026-07-13, dispatched by claude-6 at Joe's request)
+
+Full findings in the zai-2 review bell (job invoke-1783977555575-380). Summary:
+authorship map established (claude-5: bugs 4/5 + one-slot shift + ring fix;
+codex-5: triple-wake suppression, commit 704cf61 — unattributed in the commit,
+attributed here from dispatch records; claude-6: pop-one + deadline backstop).
+Verdicts: bugs 1-4, one-slot shift, and the triple-wake suppression all
+CONFIRMED-FIXED with evidence (incl. the zero-wake atomicity: release-first
+ordering, ledger-stamped suppression, repeat-finalization-proof). Bug 5
+FIXED-WITH-GAP: inbox is the single custody path with a payload-less WS poke;
+accepted blast radius = an ACKed resume queued in Emacs dies with Emacs.
+All server fns verified LIVE in the JVM; nothing dormant.
+
+Closed by owner evidence (out of reviewer's range): finding 6 deadline
+backstop — verified live by smoke test 3's delivered DEADLINE EXPIRED resume.
+
+**Remaining open items:**
+1. **Provenance, server side** — the elisp now attributes resumes to
+   `continuation:` in the buffer, but the surface-contract header the AGENT
+   sees still read `From: joe / Origin: operator` on every resume observed
+   through 2026-07-13 (claude-6, direct observation incl. the 4b resume).
+   The header is constructed harness-side; not yet located. A machine wake
+   must not present as operator input.
+2. **Bug 0 wiring** — `claude-repl-bootstrap.el` exists but is not required
+   from any load path yet; an Emacs restart still silently drops the poller.
+   Needs one line wherever Joe's workflow loads `claude-repl.el` (operator
+   decision on placement).
+
+## Post-review opens (claude-6, 2026-07-13 evening)
+
+3. **Suppression miss on job invoke-...379-5184a07f** — an auto-bellback was
+   delivered for a job with a background park awaiting it (park-7fee6a85), and
+   the job's `:auto-bellback` ledger field is NULL — the suppression decision
+   never stamped the job at all. Inconsistent with the earlier observation
+   (zai-1's 4b job: bellback correctly absent). Hypotheses to trace: a
+   zai-route finalize path that bypasses the decision; a race where the
+   bellback is enqueued before parked-on-notify! returns; or background-mode
+   parks missing from the released-records match. Needs a trace with
+   introspection access (see next item).
+4. **Drawbridge answers `forbidden`** (first observed ~22:0x, after working
+   all day). `.admintoken` on disk unchanged (Feb 27). Recent unrelated
+   commits landed (19cf56c, 4988209, merge cd902be); cause unknown. This
+   blocks live-state introspection AND the single-defn live-patch pattern —
+   operationally significant for everything in this excursion.
+5. **Background parks are invisible to GET /api/alpha/parked** — the bug-4 fix
+   filters that endpoint to `:within-turn` mode, so the parks the bell-and-park
+   routine creates (all background) no longer appear in the operator
+   visibility surface (`M-x claude-repl-jobs` reads this endpoint). The fix
+   traded prompt-restoration correctness for park observability. Small fix:
+   `?mode=all` (or `background=1`) param + claude-repl-jobs passes it.
+
+## Finding 7 — live JVM's note-completion! is dead; park releases only via deadline backstop (2026-07-14)
+
+Three observations, one mechanism, confirmed by probe:
+- Job invoke-...379 (R1a): auto-bellback UNSUPPRESSED despite awaiting park
+  (suppression consults released parks — none were released).
+- Job invoke-...393 (R1b): park deadline-expired claiming "0 of 1 dependencies
+  complete" HOURS after the job completed.
+- PROBE (invoke-...424, trivial job + park-3c302de9): job `done` at t=15s;
+  park still present with `arrived={}` at +10s. **note-completion! did not
+  fire.** (Trace: probe polled the job API + the disk ledger
+  /tmp/futon3c-parked-on.edn — no Drawbridge needed.)
+
+Timeline: job -358 (slice 4b) released correctly (~20:0x); -379 (~21:26)
+did not. In between, claude-5's revised bug-5 fix (a64bcbf) was live-patched.
+The FILE state is coherent (parked-on tests 12/40 green; finalize path calls
+parked-on-notify! -> note-completion!), so this is a LIVE-IMAGE divergence:
+partial/mixed-generation live patches, not a code bug. It cannot be fixed by
+another live patch because Drawbridge is forbidden (open item 4).
+
+**Operational state (degraded but safe):** completions still wake via
+auto-bellback (unsuppressed — the triple-wake returns temporarily), and parks
+still wake via the deadline backstop (finding-6 fix confirmed working THREE
+times today, including surfacing this very regression). No silent waits.
+
+**Fix: the Joe-gated quiet-window JVM restart**, which now carries three
+payloads: (1) restores the coherent file state (this regression + all of
+claude-5/codex-5's fixes as tested); (2) activates zai-15's ZU-4 zai_api
+changes; (3) first live test of parked-on disk rehydration. Diagnose
+Drawbridge access in the same window. Until then: rely on bellbacks +
+deadline backstops; treat park resumes as bonus.
+
+Meta-lesson for the live-patch pattern: single-defn Drawbridge patches were
+sound when ONE owner applied them with a self-test; N agents live-patching
+one namespace across a day produced an untestable mixed image. Standard
+candidate: after any live patch, run an end-to-end behavioral probe (like
+this one), not just a defn-metadata check — zai-2's "all fns LIVE" audit
+passed while the composition was broken.
+
+**Finding 7 addendum (2026-07-14):** the R1a.2 park (job invoke-...388,
+completed ~23:0x) RELEASED via completion and its resume delivered (very
+late — hours of delivery lag, but a completion release, not a deadline).
+Release history is therefore INTERMITTENT, not cleanly broken-after-a-patch:
+-358 ✓, -379 ✗, -388 ✓, -393 ✗, probe -424 ✗ (deterministic, current). So the
+mechanism may be a race or lane-dependence in the finalize→notify path rather
+than a wholesale dead hook — but the probe pins the current live state as
+failing, and the conclusion stands: behavioral probes + restart in the quiet
+window; treat the timeline above as the diagnostic starting point.
+
+**Finding 7 addendum 2 (2026-07-14):** the probe park ITSELF later released
+via completion ("dependencies complete (1)", resume delivered) despite the
++10s disk-ledger check showing it unreleased with arrived={}. Revised
+mechanism: the finalize-time hook (parked-on-notify! at job completion) is
+failing or racy in the live image, but a SLOWER path (reconcile-on-park /
+periodic sweep reconciliation) eventually folds terminal jobs into waiting
+parks. Each park's fate = race between late reconciliation and its deadline:
+-379/-393 (45-min deadlines, reconciler slower) → deadline wakes; -388 and
+probe -424 (reconciler beat the deadline) → completion wakes, delivered late.
+No wakes are lost either way (backstop semantics working as designed); the
+degradation is latency + unsuppressed bellbacks. Restart still the fix;
+diagnose the finalize-time hook first in the quiet window.

@@ -64,7 +64,10 @@ export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
 export FUTON1A_PORT="${FUTON1A_PORT:-0}"
 export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
 export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:7074}"
-export FUTON1A_URL="${FUTON1A_URL:-http://127.0.0.1:7074}"
+# Kept from agency-fixes-2026-06-11: lucy's dev-linode-env sets FUTON_SUBSTRATE_URL
+# and chicago should not diverge on the substrate seam.
+export FUTON_SUBSTRATE_URL="${FUTON_SUBSTRATE_URL:-${FUTON1A_URL:-http://127.0.0.1:7074}}"
+export FUTON1A_URL="${FUTON1A_URL:-${FUTON_SUBSTRATE_URL}}"
 # I-0 unification status, chicago: NOT YET UNIFIED — the futon1b-server unit
 # still serves :7074 here, so the embed defaults OFF (lucy flipped to embedded
 # 2026-07-14; see dev-linode-env). Both vars are exported unconditionally so

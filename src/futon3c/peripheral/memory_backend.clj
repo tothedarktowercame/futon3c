@@ -15,7 +15,8 @@
    namespace never creates a load-order dependency on the Agency."
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon3c.substrate.client :as substrate])
   (:import [java.time Instant]))
 
 (def ^:private boot-packet-max-chars 8192) ; INV-4: boot packet hard cap
@@ -166,15 +167,6 @@
   (let [durable (durable-evidence-store)
         r (when durable (apply safe-call sym durable args))]
     (if (seq r) r (apply safe-call sym nil args))))
-
-(defn- f1-sys-node
-  "The XTDB node from futon3c.dev/!f1-sys, when present. Resolved via
-   requiring-resolve (dev namespace is user-loaded, not a src dep)."
-  []
-  ;; Double deref: requiring-resolve → var, deref → the atom, deref → the
-  ;; system map (same shape as durable-evidence-store above).
-  (try (some-> (requiring-resolve 'futon3c.dev/!f1-sys) deref deref :node)
-       (catch Throwable _ nil)))
 
 (defn- discipline-info-from-body
   "Extract discipline identity from an evidence body when it carries a
@@ -345,23 +337,18 @@
                            (mapv evidence-item entries) limit)})
 
       :neighborhood
-      (let [node (f1-sys-node)
-            resp (when (and node end-id)
-                   (safe-call 'futon1a.api.routes/hyperedges-by-end
-                              {:node node :end-id end-id :limit limit}))
-            ;; Review fix (claude-16): the routes fn returns a ring-shaped
-            ;; {:status 200 :body {:hyperedges [...] :count n}} — unwrap.
-            hx (when (= 200 (:status resp)) (:body resp))]
+      (let [edges (when end-id
+                    (substrate/hyperedges-by-end end-id {:limit limit}))]
         {:ok true
          :result (envelope {:mode :neighborhood
                             :end-id end-id
-                            :count (get hx :count 0)}
+                            :count (count edges)}
                            (mapv (fn [h]
                    {:id (:hx/id h)
                     :at (:hx/at h)
                     :type (:hx/type h)
                     :endpoints (:hx/endpoints h)})
-                 (:hyperedges hx))
+                 edges)
                            limit)})
 
       {:ok false :error (str "Unknown evidence-graph mode: " mode)})))

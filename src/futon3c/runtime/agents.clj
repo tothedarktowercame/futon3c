@@ -50,7 +50,7 @@
       :peripherals (preg/load-peripherals)
       :evidence-store e-store})))
 
-;; make-persistent-peripheral-config (in-process XtdbBackend over an XTDB 1
+;; make-persistent-peripheral-config (authoritative Futon1bBackend over the XTDB 2
 ;; node) was removed in the I-0 unification (2026-07-14): the substrate is now
 ;; futon1b/XTDB 2, and durable evidence persists through the Futon1bBackend
 ;; (HTTP/EDN) selected by make-evidence-store. Peripheral configs use

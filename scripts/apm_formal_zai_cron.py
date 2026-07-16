@@ -4,7 +4,8 @@
 The cron entry runs this every 15 minutes.  A dispatch is allowed only when
 every reported Z.AI token quota has strictly more than the configured amount
 remaining and Agency reports no more than the configured number of other Zai
-agents invoking.  Usage or Agency failures are fail-closed.
+agents invoking.  Every lock-owning run records formal-proof progress before
+evaluating those gates.  Usage or Agency failures are fail-closed.
 """
 
 from __future__ import annotations
@@ -33,6 +34,9 @@ OVERRIDES_PATH = Path(
 )
 STATE_DIR = Path(
     os.environ.get("APM_FORMAL_ZAI_STATE_DIR", FUTON3C_DIR / ".state/apm-formal-zai")
+)
+PROGRESS_PATH = Path(
+    os.environ.get("APM_FORMAL_ZAI_PROGRESS", STATE_DIR / "formal-progress.jsonl")
 )
 LOG_PATH = Path(
     os.environ.get(
@@ -224,6 +228,53 @@ def formal_artifact_exists(problem_id: str) -> bool:
     )
 
 
+def proof_progress_snapshot() -> dict[str, Any]:
+    """Scan the same canonical problem universe used by the Stack HUD."""
+    problem_ids = sorted(path.stem for path in (APM_LEAN_DIR / "apm").glob("*.tex"))
+    snapshot: dict[str, Any] = {
+        "schema": "apm-formal-progress.v1",
+        "timestamp": iso_now(),
+        "total": len(problem_ids),
+        "informal": 0,
+        "lean_total": 0,
+        "lean_with_sorry": 0,
+        "lean_clean": 0,
+        "sorries": 0,
+    }
+    for problem_id in problem_ids:
+        bundle = APM_LEAN_DIR / "problems" / problem_id
+        informal = bundle / "informal-solution.md"
+        try:
+            if informal.stat().st_size >= 100:
+                snapshot["informal"] += 1
+        except OSError:
+            pass
+        lean_files = list(bundle.rglob("*.lean")) if bundle.is_dir() else []
+        if not lean_files:
+            continue
+        snapshot["lean_total"] += 1
+        sorry_count = 0
+        for path in lean_files:
+            text = path.read_text(encoding="utf-8")
+            sorry_count += len(re.findall(r"\bsorry\b", text))
+        snapshot["sorries"] += sorry_count
+        if sorry_count:
+            snapshot["lean_with_sorry"] += 1
+        else:
+            snapshot["lean_clean"] += 1
+    snapshot["remaining"] = snapshot["total"] - snapshot["lean_clean"]
+    return snapshot
+
+
+def append_progress_snapshot() -> dict[str, Any]:
+    """Append one durable progress observation for the burndown chart."""
+    snapshot = proof_progress_snapshot()
+    PROGRESS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with PROGRESS_PATH.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(snapshot, separators=(",", ":")) + "\n")
+    return snapshot
+
+
 def canonical_bundle_is_informal_only(problem_id: str) -> bool:
     """Require the canonical handoff bundle, not only the transient harvest."""
     bundle = APM_LEAN_DIR / "problems" / problem_id
@@ -352,6 +403,11 @@ def run(dry_run: bool) -> int:
             log(f"already-running lock={LOCK_PATH}")
             return 0
 
+        progress = append_progress_snapshot()
+        log(
+            f"progress lean-clean={progress['lean_clean']} "
+            f"remaining={progress['remaining']} sorries={progress['sorries']}"
+        )
         fetch_and_enforce_quota()
         roster = get_json(f"{AGENCY_BASE}/api/alpha/agents")
         agent_id, invoking_count = choose_agent(zai_agents(roster))

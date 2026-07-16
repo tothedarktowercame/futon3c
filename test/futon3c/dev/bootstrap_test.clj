@@ -1,7 +1,17 @@
 (ns futon3c.dev.bootstrap-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.dev.bootstrap :as bootstrap]
             [futon3c.dev.config :as config]))
+
+(deftest artifact-live-copy-is-registered-but-not-run-at-startup
+  (testing "boot preserves the explicit probe without paying for its repo scan"
+    (let [source (slurp (io/resource "futon3c/dev/bootstrap.clj"))]
+      (is (str/includes? source "(locus/register-locus-taps!)"))
+      (is (not (str/includes?
+                source
+                "(locus/check-artifact-live-copy-locus-on-load!"))))))
 
 (deftest start-webarxana-wraps-resolved-vars-as-functions
   (testing "start-webarxana! exposes real functions for CYDER registration"

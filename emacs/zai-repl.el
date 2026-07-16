@@ -32,9 +32,10 @@
   :type 'string
   :group 'zai-repl)
 
-(defcustom zai-repl-use-agency nil
-  "When non-nil, send turns through Agency /api/alpha/invoke-stream."
-  :type 'boolean
+(defcustom zai-repl-use-agency t
+  "Compatibility setting retained for existing custom files.
+ZAI and ZAIF REPL turns always use Agency; nil no longer enables direct mode."
+  :type '(const t)
   :group 'zai-repl)
 
 (defcustom zai-repl-session-file nil
@@ -229,9 +230,7 @@ the id is display-only, so a failed read must never break buffer setup."
 
 (defun zai-repl--call (text callback)
   "Send TEXT to Z.AI asynchronously and call CALLBACK with assistant text."
-  (if zai-repl-use-agency
-      (zai-repl--call-agency-streaming text callback)
-    (zai-repl--call-direct text callback)))
+  (zai-repl--call-agency-streaming text callback))
 
 (defun zai-repl--call-direct (text callback)
   "Send TEXT directly to Z.AI asynchronously and call CALLBACK with assistant text."
@@ -464,11 +463,9 @@ the id is display-only, so a failed read must never break buffer setup."
 
 (defun zai-repl--build-modeline ()
   "Build Z.AI REPL modeline text."
-  (format "%s %s | model: %s | local history: %d turns"
+  (format "%s Agency: %s/api/alpha/invoke-stream | model: %s | local history: %d turns"
           (agent-chat-mission-segment)
-          (if zai-repl-use-agency
-              (format "Agency: %s/api/alpha/invoke-stream" (string-remove-suffix "/" zai-repl-agency-url))
-            (format "API: %s" (zai-repl--endpoint)))
+          (string-remove-suffix "/" zai-repl-agency-url)
           zai-repl-model
           (/ (length zai-repl--messages) 2)))
 
@@ -514,26 +511,81 @@ With prefix argument, prompt for a clock TARGET."
   (agent-chat-insert-message "system" "[new local Z.AI session]")
   (goto-char (point-max)))
 
+(defun zai-repl--auto-register ()
+  "Register a fresh Agency ZAI lane.
+Return a plist containing its agent and session binding."
+  (let* ((session-id (zai-repl--new-session-id))
+         (url (concat (string-remove-suffix "/" zai-repl-agency-url)
+                      "/api/alpha/agents/auto"))
+         (payload (json-serialize
+                   (append `(:type "zai"
+                             :session-id ,session-id
+                             :cwd ,(expand-file-name default-directory))
+                           (when agent-chat--campaign-id
+                             `(:campaign-id ,agent-chat--campaign-id))
+                           (when agent-chat--mission-id
+                             `(:mission-id ,agent-chat--mission-id))
+                           (when agent-chat--excursion-id
+                             `(:excursion-id ,agent-chat--excursion-id)))))
+         (buffer (generate-new-buffer " *zai-repl-register*")))
+    (unwind-protect
+        (let ((status (call-process "curl" nil buffer nil
+                                    "-sS" "--max-time" "10"
+                                    "-H" "Content-Type: application/json"
+                                    "-X" "POST" "-d" payload url)))
+          (unless (zerop status)
+            (user-error "Agency ZAI registration failed (curl exit %s)" status))
+          (with-current-buffer buffer
+            (goto-char (point-min))
+            (let* ((response (json-parse-buffer :object-type 'alist
+                                                :array-type 'list
+                                                :null-object nil
+                                                :false-object nil))
+                   (ok (alist-get 'ok response))
+                   (agent-id (alist-get 'agent-id response))
+                   (session-file (alist-get 'session-file response)))
+              (unless (and ok (stringp agent-id) (stringp session-file))
+                (user-error "Agency ZAI registration rejected: %s"
+                            (or (alist-get 'message response) response)))
+              (list :agent-id agent-id
+                    :session-id session-id
+                    :session-file session-file))))
+      (when (buffer-live-p buffer)
+        (kill-buffer buffer)))))
+
+(defun zai-repl--open-agency (buffer-name &optional target)
+  "Open an Agency-backed ZAI BUFFER-NAME."
+  (let ((buffer (get-buffer-create buffer-name)))
+    (with-current-buffer buffer
+      (unless (eq major-mode 'zai-repl-mode)
+        (zai-repl-mode))
+      (setq-local zai-repl-buffer-name buffer-name)
+      (setq-local zai-repl-use-agency t)
+      (when target
+        (agent-chat-set-clock! target nil t))
+      (unless (local-variable-p 'zai-repl-agent-id)
+        (let ((binding (zai-repl--auto-register)))
+          (setq-local zai-repl-agent-id (plist-get binding :agent-id))
+          (setq-local zai-repl-session-file (plist-get binding :session-file))
+          (setq-local zai-repl--session-id (plist-get binding :session-id))))
+      (unless (and (markerp agent-chat--prompt-marker)
+                   (marker-position agent-chat--prompt-marker))
+        (zai-repl--init-display)
+        (zai-repl--persist-session-id)))
+    (pop-to-buffer buffer)
+    (goto-char (point-max))
+    buffer))
+
 ;;;###autoload
 (defun zai-repl (&optional target)
-  "Open a Z.AI REPL buffer.
+  "Open an Agency-backed ZAI REPL buffer.
 With prefix argument, prompt for a clock TARGET."
   (interactive (list (when current-prefix-arg
                        (agent-chat-read-clock-target))))
-  (let ((buf (get-buffer-create zai-repl-buffer-name)))
-    (pop-to-buffer buf)
-    (unless (eq major-mode 'zai-repl-mode)
-      (zai-repl-mode))
-    (when target
-      (agent-chat-set-clock! target nil t))
-    (unless (and (markerp agent-chat--prompt-marker)
-                 (marker-position agent-chat--prompt-marker))
-      (zai-repl--init-display)
-      (zai-repl--persist-session-id))
-    buf))
+  (zai-repl--open-agency zai-repl-buffer-name target))
 
 (defun zai-repl--roster-zai-ids ()
-  "Registered zai agent ids from the Agency roster, or nil on any failure."
+  "Registered ZAI agent ids from the Agency roster, or nil on failure."
   (condition-case nil
       (let* ((url (concat (string-remove-suffix "/" zai-repl-agency-url)
                           "/api/alpha/agents"))
@@ -548,20 +600,45 @@ With prefix argument, prompt for a clock TARGET."
               (push id ids)))))
     (error nil)))
 
+(defun zai-repl--read-attach-agent-id ()
+  "Prompt for a registered ZAI agent with completion."
+  (let* ((agent-ids (zai-repl--roster-zai-ids))
+         (default (or (car agent-ids) "zai-1")))
+    (if agent-ids
+        (completing-read (format "Attach ZAI agent (default %s): " default)
+                         agent-ids nil t nil nil default)
+      (read-string "Attach ZAI agent: " default))))
+
+(defun zai-repl--attach-registered-agent (agent-id)
+  "Attach to registered ZAI AGENT-ID."
+  (let ((agent-id (string-trim agent-id)))
+    (when (string-empty-p agent-id)
+      (user-error "ZAI agent id cannot be empty"))
+    (let ((all-zai-ids (zai-repl--roster-zai-ids)))
+      (unless all-zai-ids
+        (user-error "Cannot verify ZAI agent: Agency roster unavailable"))
+      (unless (member agent-id all-zai-ids)
+        (user-error "%s is not a registered ZAI agent" agent-id)))
+    (let ((buffer
+           (zai-repl--open-instance
+            (format "*zai-repl:%s*" agent-id)
+            agent-id
+            (format "/tmp/futon-zai-session-id-%s" agent-id))))
+      (message "zai-repl: attached to %s" agent-id)
+      buffer)))
+
 ;;;###autoload
-(defun zai-repl-for-agent (agent-id)
-  "Open a Z.AI REPL buffer bound to Agency AGENT-ID (e.g. \"zai-8\").
-Completes over the zai agents currently registered with the Agency.
+(defun zai-repl-attach-agent (agent-id)
+  "Attach a Z.AI REPL buffer to Agency AGENT-ID (e.g. \"zai-8\").
+Fetches live ZAI agents from the Agency roster for completion.
 The buffer is named *zai-repl:AGENT-ID* and shares the agent's server-side
 session file, so it attaches to the same identity the Agency invokes."
-  (interactive
-   (list (completing-read "Agency zai agent: "
-                          (or (zai-repl--roster-zai-ids) '("zai-8"))
-                          nil nil nil nil "zai-8")))
-  (let ((agent-id (string-trim agent-id)))
-    (zai-repl--open-instance (format "*zai-repl:%s*" agent-id)
-                             agent-id
-                             (format "/tmp/futon-zai-session-id-%s" agent-id))))
+  (interactive (list (zai-repl--read-attach-agent-id)))
+  (zai-repl--attach-registered-agent agent-id))
+
+;;;###autoload
+(defalias 'zai-repl-for-agent #'zai-repl-attach-agent
+  "Compatibility alias for `zai-repl-attach-agent'.")
 
 ;;;###autoload
 (defun zai-repl--open-instance (buffer-name agent-id session-file &optional target session-id)

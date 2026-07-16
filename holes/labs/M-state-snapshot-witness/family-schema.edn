@@ -1,0 +1,89 @@
+{:family-schema
+ {:source "futon3c/src/futon3c/logic/snapshot.clj (landed code, read-only) + M-state-snapshot-witness.md + dev/futon3c/dev/bootstrap.clj"
+  :author "zai-3"
+  :deposit "ft-state-snapshot-witness-002 (protocol-family naming + run-14 h1 holes)"
+  :shape "state-snapshot-witness/<container> — four-component sibling: container, projection-fn, cadence, emit-fn"
+  :mission-doc-vs-code-note
+  "MISSION DOC says 'three siblings handed to Codex' (scope-out in IDENTIFY) with only inventory-snapshot in INSTANTIATE. LANDED CODE in snapshot.clj implements ALL FOUR siblings with projection-fns, emit-fns, on-load wrappers, and comprehensive tests. bootstrap.clj wires all four on-load. The mission doc is stale relative to the code. This grid reflects the CODE, not the doc's scope notes."
+  :siblings
+  [{:id "state-snapshot-witness/inventory"
+    :status :landed
+    :container
+    {:source "futon3c/src/futon3c/logic/snapshot.clj line 54: default-inventory-path = /home/joe/code/futon3c/docs/structural-law-inventory.sexp"
+     :description "structural-law-inventory.sexp parsed — the full inventory of invariant families and their siblings"
+     :real-path-exists true
+     :real-path "/home/joe/code/futon3c/docs/structural-law-inventory.sexp (77162 bytes, 2026-06-03)"}
+    :projection-fn
+    {:source "futon3c/src/futon3c/logic/snapshot.clj lines 74-96: project-inventory"
+     :fn-name "snapshot/project-inventory"
+     :description "reads inventory at path, parses via inventory/parse-sexp-string, extracts families via inventory/extract-all-families, projects each via project-family to {:family-id :status :scope :kind :question :summary}, returns {:source :read-at :families :families-by-status :scope-stack-families :family-records}"}
+    :cadence
+    {:source "futon3c/dev/futon3c/dev/bootstrap.clj line 411: snapshot-inventory-on-load! called at boot"
+     :description "boot-time (reachable-from-boot: wired into bootstrap.clj after registrar block); operator-on-demand via snapshot-inventory!"}
+    :emit-fn
+    {:source "futon3c/src/futon3c/logic/snapshot.clj lines 166-175: snapshot-inventory! + private emit-snapshot! (lines 155-165)"
+     :fn-name "snapshot/snapshot-inventory!"
+     :description "emits one :event :inventory-snapshot evidence entry through boundary/append! with {:subject {:ref/type :pattern :ref/id state-snapshot/inventory} :type :coordination :claim-type :observation :body {:event :inventory-snapshot :container :inventory :state <projection> :emitted-at <iso> :invariant I-state-snapshot-witness} :tags [:invariant-queue :state-snapshot :inventory]}"}
+    :test-ref "futon3c/test/futon3c/logic/snapshot_test.clj: project-inventory-real-stack-yields-records, project-inventory-nonexistent-path-is-nil, snapshot-emits-queryable-evidence-for-all-siblings (inventory label)"}
+
+   {:id "state-snapshot-witness/registry"
+    :status :landed
+    :container
+    {:source "futon3c/src/futon3c/logic/snapshot.clj: @probe/family-check-fns (the live family-check-fns registry atom)"
+     :description "the probe registry — which families have registered check-fns and which are deferred"
+     :real-path-exists true
+     :real-path "futon3c/src/futon3c/logic/probe.clj: family-check-fns atom (referenced by snapshot/project-registry)"}
+    :projection-fn
+    {:source "futon3c/src/futon3c/logic/snapshot.clj lines 110-121: project-registry"
+     :fn-name "snapshot/project-registry"
+     :description "sorts registry by family-id, maps each to {:family-id :deferred? :registered-at}, where deferred? is tested via deferred-check-fn? (calls check-fn, checks :inactive + :deferred? true in :detail). Returns {:captured-at :registered-families :deferred-families :family-records}"}
+    :cadence
+    {:source "futon3c/dev/futon3c/dev/bootstrap.clj line 416: snapshot-registry-on-load! called at boot"
+     :description "boot-time (wired into bootstrap.clj); operator-on-demand via snapshot-registry!"}
+    :emit-fn
+    {:source "futon3c/src/futon3c/logic/snapshot.clj lines 177-184: snapshot-registry!"
+     :fn-name "snapshot/snapshot-registry!"
+     :description "emits one :event :registry-snapshot evidence entry with container :registry, tags [:invariant-queue :state-snapshot :registry]"}
+    :test-ref "futon3c/test/futon3c/logic/snapshot_test.clj: project-registry-empty-yields-zero-records, project-registry-real-yields-deferred-state-and-timestamps, snapshot-emits-queryable-evidence-for-all-siblings (registry label)"}
+
+   {:id "state-snapshot-witness/repo-refs"
+    :status :landed
+    :container
+    {:source "futon3c/src/futon3c/logic/snapshot.clj: git state for futon* repos under default-code-root (/home/joe/code)"
+     :description "git refs for each futon* repo: HEAD sha, branch, dirty status, stash count, ahead/behind origin"
+     :real-path-exists true
+     :real-path "discovered dynamically via discover-repo-roots (lines 131-141): scans /home/joe/code for futon* dirs with .git"}
+    :projection-fn
+    {:source "futon3c/src/futon3c/logic/snapshot.clj lines 143-162: project-repo-ref + project-repo-refs"
+     :fn-name "snapshot/project-repo-refs"
+     :description "for each repo: git rev-parse HEAD, rev-parse --abbrev-ref HEAD, status --porcelain (dirty?), stash list (count), rev-list --left-right --count HEAD...@{upstream} (ahead/behind). Returns {:captured-at :repos :dirty-repos :repo-records [{:repo :branch :HEAD-sha :ahead-of-origin :behind-origin :dirty? :stash-count}]}"}
+    :cadence
+    {:source "futon3c/dev/futon3c/dev/bootstrap.clj line 420: snapshot-repo-refs-on-load! called at boot"
+     :description "boot-time (wired into bootstrap.clj); operator-on-demand via snapshot-repo-refs!"}
+    :emit-fn
+    {:source "futon3c/src/futon3c/logic/snapshot.clj lines 186-193: snapshot-repo-refs!"
+     :fn-name "snapshot/snapshot-repo-refs!"
+     :description "emits one :event :repo-refs-snapshot evidence entry with container :repo-refs, tags [:invariant-queue :state-snapshot :repo-refs]"}
+    :test-ref "futon3c/test/futon3c/logic/snapshot_test.clj: project-repo-refs-empty-yields-zero-records, project-repo-refs-real-yields-git-state, snapshot-emits-queryable-evidence-for-all-siblings (repo-refs label)"}
+
+   {:id "state-snapshot-witness/hud-render"
+    :status :landed
+    :container
+    {:source "futon3c/src/futon3c/logic/snapshot.clj line 48: !last-hud-render atom"
+     :description "the last HUD widget render snapshot — what the operator last saw on the invariant-queue HUD"
+     :real-path-exists true
+     :real-path "futon3c/src/futon3c/logic/snapshot.clj: !last-hud-render atom (populated by record-hud-render!, read by project-hud-render)"}
+    :projection-fn
+    {:source "futon3c/src/futon3c/logic/snapshot.clj lines 166-178: project-hud-render"
+     :fn-name "snapshot/project-hud-render"
+     :description "returns @!last-hud-render with :outcome :ok and :captured-at, or if no render recorded: {:outcome :inactive :captured-at :reason no HUD render snapshot has been reported yet}. Keys: :widget-id :rendered-at :counts :motion-flag"}
+    :cadence
+    {:source "futon3c/dev/futon3c/dev/bootstrap.clj line 424: snapshot-hud-render-on-load! called at boot"
+     :description "boot-time (wired into bootstrap.clj); operator-on-demand via snapshot-hud-render!; also updated on each HUD render via record-hud-render!"}
+    :emit-fn
+    {:source "futon3c/src/futon3c/logic/snapshot.clj lines 195-201: snapshot-hud-render!"
+     :fn-name "snapshot/snapshot-hud-render!"
+     :description "emits one :event :hud-render-snapshot evidence entry with container :hud-render, tags [:invariant-queue :state-snapshot :hud-render]"}
+    :test-ref "futon3c/test/futon3c/logic/snapshot_test.clj: project-hud-render-inactive-when-empty, project-hud-render-real-yields-recorded-state, snapshot-emits-queryable-evidence-for-all-siblings (hud-render label)"}]
+  :remaining-holes
+  "With all four siblings landed in code, the run-14 h1 holes (projection-fn content for Codex siblings) are RESOLVED by the code. The remaining holes from the fold are: (h3) the notions layer (snapshot diff/similarity tooling) — no code; (h4) the lineage query surface (reconstruction view 'state as of boot N') — no code; (h3/h4 from run-14) the periodic cadence beyond boot-only — bootstrap wires boot-time only, no periodic canary-coupled hourly snapshot."}}

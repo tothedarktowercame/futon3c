@@ -30,7 +30,8 @@
             [futon3c.watcher.projections.essay :as essay]
             [futon3c.watcher.scope-reingest :as scope-reingest]))
 
-(def FUTON1A   (or (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+(def FUTON1A   (or (System/getenv "FUTON_SUBSTRATE_URL")
+                   (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 (def FUTON3C   (or (System/getenv "FUTON3C_URL") "http://localhost:7070"))
 (def ^:private home (System/getProperty "user.home"))

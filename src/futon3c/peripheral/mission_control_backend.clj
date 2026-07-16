@@ -28,7 +28,8 @@
             [futon3c.peripheral.tools :as tools]))
 
 (def ^:private futon1a-url
-  (or (System/getenv "FUTON1A_URL")
+  (or (System/getenv "FUTON_SUBSTRATE_URL")
+      (System/getenv "FUTON1A_URL")
       "http://localhost:7071"))
 
 (def ^:private mission-doc-hyperedge-type
@@ -45,9 +46,12 @@
     (catch Exception _ default)))
 
 (def ^:private live-turn-query-limit
-  "Bound live chat-turn evidence scans. The old 50k all-coordination query
-   repeatedly timed out against XTDB on the live store."
-  (long (parse-long-env "FUTON3C_MC_LIVE_TURN_QUERY_LIMIT" 2000)))
+  "Bound live chat-turn evidence scans. This is ancillary telemetry, so even
+   an operator override cannot turn mission inventory into a corpus query."
+  (-> (parse-long-env "FUTON3C_MC_LIVE_TURN_QUERY_LIMIT" 200)
+      (max 1)
+      (min 500)
+      long))
 
 (def ^:private live-turn-window-days
   "Recent window, in days, used for live mission turn telemetry."
@@ -955,7 +959,7 @@
   (try
     (let [url (str futon1a-url
                    "/api/alpha/hyperedges?type=" mission-doc-hyperedge-type
-                   "&limit=500")
+                   "&limit=500&include-total=false")
           resp (http/get url {:headers {"Accept" "application/json"}
                               :throw false
                               :timeout 5000})]

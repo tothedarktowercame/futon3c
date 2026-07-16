@@ -203,7 +203,7 @@
   "Fetch parks and invoke jobs for AGENT asynchronously."
   (let* ((api (claude-repl-jobs--api-url))
          (agent-q (url-hexify-string agent))
-         (parks-url (format "%s/api/alpha/parked?agent=%s" api agent-q))
+         (parks-url (format "%s/api/alpha/parked?agent=%s&mode=all" api agent-q))
          (jobs-url (format "%s/api/alpha/invoke/jobs?limit=100" api)))
     (setq claude-repl-jobs--last-agent agent
           claude-repl-jobs--last-api-url api)
