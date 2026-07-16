@@ -69,11 +69,28 @@ export FUTON1A_URL="${FUTON1A_URL:-http://127.0.0.1:7074}"
 export FUTON1B_EMBED="${FUTON1B_EMBED:-1}"
 export FUTON1B_STORE_DIR="${FUTON1B_STORE_DIR:-${HOME}/code/futon1b/switchover-store}"
 
-if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
-  echo "[dev] futon1b-server: running"
+# This check is EMBED-AWARE on purpose. Under FUTON1B_EMBED=1 the store lives
+# in the futon3c JVM, so a running futon1b-server unit is the FAULT, not the
+# fix: XTDB2 stores are single-process and the unit's :7074 listener makes this
+# JVM's bind fail. The pre-I-0 version of this check was unconditional, so it
+# alarmed on the CORRECT state and told the operator to start the unit — advice
+# that causes the very "Address already in use" it was meant to prevent
+# (2026-07-16). Keep the two arms in sync with FUTON1B_EMBED above.
+if [[ "${FUTON1B_EMBED}" != "0" ]]; then
+  if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+    echo -e "[dev] \033[1;31m██ futon1b-server unit is RUNNING but FUTON1B_EMBED=${FUTON1B_EMBED} — it holds the :7074 store this JVM is about to embed ██\033[0m"
+    echo -e "[dev] \033[31m   stop it with: systemctl --user stop futon1b-server   (or boot two-JVM: FUTON1B_EMBED=0 make dev)\033[0m"
+  else
+    echo "[dev] futon1b-server unit: stopped (correct — the :7074 store embeds in this JVM, I-0)"
+  fi
 else
-  echo -e "[dev] \033[1;31m██ futon1b-server: DOWN — the I-evidence-per-turn boot check will fail ██\033[0m"
-  echo -e "[dev] \033[31m   start with: systemctl --user start futon1b-server\033[0m"
+  # Rollback path: FUTON1B_EMBED=0 means the separate unit serves :7074.
+  if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+    echo "[dev] futon1b-server: running (FUTON1B_EMBED=0, two-JVM rollback)"
+  else
+    echo -e "[dev] \033[1;31m██ futon1b-server: DOWN and FUTON1B_EMBED=0 — the I-evidence-per-turn boot check will fail ██\033[0m"
+    echo -e "[dev] \033[31m   start with: systemctl --user start futon1b-server   (or embed it: FUTON1B_EMBED=1 make dev)\033[0m"
+  fi
 fi
 
 # --- Futon1a/Futon4 compatibility (static dir unused while futon1a disabled) ---

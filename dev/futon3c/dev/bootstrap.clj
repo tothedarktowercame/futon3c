@@ -22,6 +22,7 @@
             [futon3c.transport.irc :as irc]
             [futon3c.watcher.multi :as multi-watcher]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [org.httpkit.server :as hk]
             [repl.http :as drawbridge]))
@@ -54,6 +55,34 @@
 ;; ~/code/futon1b/switchover-store; chicago sets ~/code/futon1b/chicago-store.
 (defonce ^:private !f1b-embedded (atom nil))
 
+(defn- port-in-use?
+  "True when PORT already has a listener. Probed with the same wildcard bind
+   futon1b's HttpServer uses (InetSocketAddress on the port alone), so this
+   sees a holder on any interface — loopback, IPv4 or IPv6 — the way the real
+   bind will."
+  [port]
+  (try
+    (with-open [s (java.net.ServerSocket.)]
+      (.bind s (java.net.InetSocketAddress. (int port)))
+      false)
+    (catch java.net.BindException _ true)
+    (catch Throwable _ false)))
+
+(defn- port-holder-hint
+  "Best-effort description of whatever is listening on PORT, for the error
+   message. nil when `ss` is unavailable or says nothing."
+  [port]
+  (try
+    (let [{:keys [exit out]} (shell/sh "ss" "-tlnp" "sport" "=" (str ":" port))]
+      (when (zero? exit)
+        (some->> (str/split-lines (str out))
+                 (drop 1)
+                 (map str/trim)
+                 (remove str/blank?)
+                 seq
+                 (str/join "; "))))
+    (catch Throwable _ nil)))
+
 (defn start-futon1b-embedded!
   "Start futon1b's XTDB2 node + HTTP server in-process when FUTON1B_EMBED is
    truthy. Returns the HttpServer, or nil (no-op) by default."
@@ -65,6 +94,22 @@
           port (config/env-int "FUTON1B_PORT" 7074)]
       (println (format "[dev] EMBEDDING futon1b XTDB2 node in-process (store %s, :%d) — the futon1b-server systemd unit MUST be stopped first"
                        store-dir port))
+      ;; Preflight the port BEFORE f1b/start-server!, which opens the XTDB2
+      ;; store (single-process lock, ~20s) and only then binds. Without this a
+      ;; taken :7074 costs a full store open and reports a bare
+      ;; "Address already in use" naming neither the port nor the holder
+      ;; (bit us 2026-07-16). Name both, and name the two ways out.
+      (when (port-in-use? port)
+        (throw (ex-info
+                (str "futon1b embed cannot bind :" port " — something is already listening.\n"
+                     "  holder: " (or (port-holder-hint port) "unknown (ss gave nothing)") "\n"
+                     "  Usual causes, in order:\n"
+                     "    1. a previous `make dev` JVM is still up — check `pgrep -a java`, and\n"
+                     "       reload code over Drawbridge instead of restarting (I-0).\n"
+                     "    2. the futon1b-server systemd unit is running — under FUTON1B_EMBED\n"
+                     "       it must stay stopped: `systemctl --user stop futon1b-server`.\n"
+                     "  To run the two-JVM setup on purpose instead: FUTON1B_EMBED=0 make dev.")
+                {:port port :store-dir store-dir})))
       (let [server (f1b/start-server! {:store-dir store-dir :port port})]
         (reset! !f1b-embedded server)
         server))))

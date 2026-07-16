@@ -55,3 +55,50 @@
           (is @status-called?)
           (is (= :stopped ((:stop-fn system))))
           (is @stopped?))))))
+
+;; --- futon1b embed preflight (I-0) ----------------------------------------
+;; Regression cover for the self-defeating startup of 2026-07-16: a taken :7074
+;; died on a bare BindException, and dev-linode-env's embed-blind health check
+;; told the operator to start the very unit that would cause it.
+
+(deftest port-in-use-detects-a-live-listener
+  (testing "an occupied port reads as in-use, and a free one does not"
+    (with-open [held (java.net.ServerSocket.)]
+      (.bind held (java.net.InetSocketAddress. 0))
+      (let [taken (.getLocalPort held)]
+        (is (true? (#'bootstrap/port-in-use? taken))
+            "a bound port is detected before we pay for a store open")
+        (let [free (with-open [probe (java.net.ServerSocket.)]
+                     (.bind probe (java.net.InetSocketAddress. 0))
+                     (.getLocalPort probe))]
+          (is (false? (#'bootstrap/port-in-use? free))
+              "a released port is bindable"))))))
+
+(deftest futon1b-health-check-is-embed-aware
+  (testing "every launcher gates its futon1b-server check on FUTON1B_EMBED"
+    (doseq [path ["scripts/dev-linode-env" "scripts/dev-linode2-env"]]
+      (let [source (slurp path)
+            export (.indexOf source "export FUTON1B_EMBED=")
+            embed-guard (.indexOf source "if [[ \"${FUTON1B_EMBED}\" != \"0\" ]]; then")
+            check (.indexOf source "systemctl --user is-active futon1b-server.service")]
+        (is (<= 0 embed-guard)
+            (str path " gates the check on FUTON1B_EMBED, not unconditionally"))
+        (is (< embed-guard check)
+            (str path " gates before the first futon1b-server probe"))
+        ;; These launchers run under `set -u`, so an unexported FUTON1B_EMBED
+        ;; would abort the script at the guard rather than fall through.
+        (is (< export embed-guard)
+            (str path " exports FUTON1B_EMBED before the guard reads it"))
+        (is (<= 0 (.indexOf source "stop it with: systemctl --user stop futon1b-server"))
+            (str path " reports a running unit as the fault under embed"))))))
+
+(deftest launchers-pin-their-own-futon1b-store
+  (testing "a launcher that can embed names its store rather than inheriting
+            bootstrap.clj's switchover-store default, which belongs to lucy"
+    (doseq [[path store] {"scripts/dev-linode-env" "switchover-store"
+                          "scripts/dev-linode2-env" "chicago-store"}]
+      (let [source (slurp path)]
+        (is (<= 0 (.indexOf source (str "export FUTON1B_STORE_DIR=")))
+            (str path " pins FUTON1B_STORE_DIR"))
+        (is (<= 0 (.indexOf source store))
+            (str path " pins it to " store))))))

@@ -65,10 +65,35 @@ export FUTON1A_PORT="${FUTON1A_PORT:-0}"
 export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
 export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:7074}"
 export FUTON1A_URL="${FUTON1A_URL:-http://127.0.0.1:7074}"
-if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
-  echo "[dev] futon1b-server: running"
+# I-0 unification status, chicago: NOT YET UNIFIED — the futon1b-server unit
+# still serves :7074 here, so the embed defaults OFF (lucy flipped to embedded
+# 2026-07-14; see dev-linode-env). Both vars are exported unconditionally so
+# the embed-aware check below is well-defined under `set -u` and so unifying
+# this box is a one-flag change: FUTON1B_EMBED=1 fdev.
+export FUTON1B_EMBED="${FUTON1B_EMBED:-0}"
+# Pin chicago-store explicitly. bootstrap.clj's default is lucy's
+# switchover-store, so an embed here without this would not fail loudly — XTDB2
+# would CREATE an empty switchover-store on this box and serve a blank evidence
+# store. Chicago's store is the thin fresh one.
+export FUTON1B_STORE_DIR="${FUTON1B_STORE_DIR:-${HOME}/code/futon1b/chicago-store}"
+
+# Embed-aware on purpose — see the long note in dev-linode-env. Under
+# FUTON1B_EMBED=1 a running unit is the FAULT (single-process XTDB2 store, and
+# its :7074 listener makes the JVM's bind fail); under =0 it is required.
+if [[ "${FUTON1B_EMBED}" != "0" ]]; then
+  if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+    echo -e "[dev] \033[1;31m██ futon1b-server unit is RUNNING but FUTON1B_EMBED=${FUTON1B_EMBED} — it holds the :7074 store this JVM is about to embed ██\033[0m"
+    echo -e "[dev] \033[31m   stop it with: systemctl --user stop futon1b-server   (or boot two-JVM: FUTON1B_EMBED=0 fdev)\033[0m"
+  else
+    echo "[dev] futon1b-server unit: stopped (correct — the :7074 store embeds in this JVM, I-0)"
+  fi
 else
-  echo -e "[dev] \033[1;31m██ futon1b-server: DOWN — start with: systemctl --user start futon1b-server ██\033[0m"
+  if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+    echo "[dev] futon1b-server: running (FUTON1B_EMBED=0, chicago not yet unified)"
+  else
+    echo -e "[dev] \033[1;31m██ futon1b-server: DOWN and FUTON1B_EMBED=0 — the evidence backend has nothing on :7074 ██\033[0m"
+    echo -e "[dev] \033[31m   start with: systemctl --user start futon1b-server   (or embed it: FUTON1B_EMBED=1 fdev)\033[0m"
+  fi
 fi
 export FUTON1A_STATIC_DIR="${FUTON1A_STATIC_DIR:-${HOME}/code/futon4/dev/web}"
 export FUTON1A_COMPAT_PENHOLDER="${FUTON1A_COMPAT_PENHOLDER:-api}"
