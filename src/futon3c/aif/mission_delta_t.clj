@@ -70,6 +70,21 @@
    "code/v05/file→mission"
    "code/v05/sorry-doc"])
 
+(defn- selected-fetch-types
+  "Return FAMILIES in canonical fetch order, rejecting requests outside the
+   delta-T family universe. Nil retains the full historical family set."
+  [families]
+  (if (nil? families)
+    fetch-types
+    (let [requested (set families)
+          known (set fetch-types)
+          unknown (remove known requested)]
+      (when (seq unknown)
+        (throw (ex-info "Unknown mission delta-T fetch families"
+                        {:unknown-families (vec (sort unknown))
+                         :known-families fetch-types})))
+      (filterv requested fetch-types))))
+
 (defn- parse-edn-body
   [body]
   (cond
@@ -190,12 +205,13 @@
    1b does not serve the targeted `?end=` route, so we fetch the fixed
    `fetch-types` families via the served `?type=` route (per-process cached) and
    filter to those whose endpoints include `endpoint`. Semantically equivalent to
-   the old 1a targeted read for delta-t's purposes."
+   the old 1a targeted read for delta-t's purposes. `:families` may restrict the
+   read to a validated subset; nil preserves the complete family set."
   ([endpoint] (fetch-hyperedges-by-endpoint endpoint {}))
-  ([endpoint {:keys [limit futon1a-url]
+  ([endpoint {:keys [limit futon1a-url families]
               :or {limit 500
                    futon1a-url FUTON1A}}]
-   (->> fetch-types
+   (->> (selected-fetch-types families)
         (mapcat #(cached-fetch-by-type futon1a-url % limit))
         (filter (fn [hx] (some #(= endpoint %) (real-endpoints hx))))
         vec)))
@@ -285,9 +301,10 @@
 
 (defn delta-t-mission
   "Compute v0 mission ΔT over incoming related-mission + mission-cross-ref
-   edges for the given mission endpoint string."
+   edges for the given mission endpoint string. `:families` is forwarded to
+   endpoint reads; omitting it preserves full-family behavior."
   ([mission-endpoint] (delta-t-mission mission-endpoint {}))
-  ([mission-endpoint {:keys [limit futon1a-url]
+  ([mission-endpoint {:keys [limit futon1a-url families]
                       :or {limit 200
                            futon1a-url FUTON1A}}]
    (let [cache (atom {})
@@ -295,7 +312,8 @@
                   (or (get @cache endpoint)
                       (let [hyperedges (fetch-hyperedges-by-endpoint endpoint
                                                                      {:limit limit
-                                                                      :futon1a-url futon1a-url})]
+                                                                      :futon1a-url futon1a-url
+                                                                      :families families})]
                         (swap! cache assoc endpoint hyperedges)
                         hyperedges)))
          target-hyperedges (fetch* mission-endpoint)

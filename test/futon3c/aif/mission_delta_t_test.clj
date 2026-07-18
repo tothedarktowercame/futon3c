@@ -101,6 +101,59 @@
        (Double/isFinite (double x))
        (not (zero? (double x)))))
 
+(deftest endpoint-fetch-can-be-restricted-to-a-validated-family-subset
+  (let [fetched (atom [])]
+    (sut/reset-type-cache!)
+    (with-redefs [sut/fetch-hyperedges-by-type
+                  (fn [_url hx-type _limit]
+                    (swap! fetched conj hx-type)
+                    [{:hx/type hx-type
+                      :hx/endpoints [war-machine-pilot]
+                      :hx/props {}}])]
+      (is (= 1 (count (sut/fetch-hyperedges-by-endpoint
+                       war-machine-pilot
+                       {:futon1a-url "http://substrate.test"
+                        :families ["code/v05/mission-doc"]}))))
+      (is (= ["code/v05/mission-doc"] @fetched))
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"Unknown mission delta-T fetch families"
+           (sut/fetch-hyperedges-by-endpoint
+            war-machine-pilot
+            {:families ["code/v05/not-a-real-family"]}))))))
+
+(deftest endpoint-fetch-retains-all-families-by-default
+  (let [fetched (atom [])]
+    (sut/reset-type-cache!)
+    (with-redefs [sut/fetch-hyperedges-by-type
+                  (fn [_url hx-type _limit]
+                    (swap! fetched conj hx-type)
+                    [])]
+      (is (empty? (sut/fetch-hyperedges-by-endpoint
+                   war-machine-pilot
+                   {:futon1a-url "http://default-families.test"})))
+      (is (= ["code/v05/mission-doc"
+              "code/v05/related-mission"
+              "code/v05/mission-cross-ref"
+              "code/v05/file→mission"
+              "code/v05/sorry-doc"]
+             @fetched)))))
+
+(deftest delta-t-propagates-family-subset-to-endpoint-fetches
+  (let [seen-opts (atom [])]
+    (with-redefs [sut/fetch-hyperedges-by-endpoint
+                  (fn [endpoint opts]
+                    (swap! seen-opts conj [endpoint opts])
+                    [{:hx/type "code/v05/mission-doc"
+                      :hx/endpoints [endpoint]
+                      :hx/props {"mission/phase" "instantiate"}}])]
+      (is (= 0.3 (:mission-T
+                  (sut/delta-t-mission
+                   war-machine-pilot
+                   {:families ["code/v05/mission-doc"]}))))
+      (is (= ["code/v05/mission-doc"]
+             (get-in (first @seen-opts) [1 :families]))))))
+
 (deftest delta-t-mission-case-studies-return-nonzero-values
   (with-redefs [sut/fetch-hyperedges-by-endpoint
                 (fn [endpoint _opts]
