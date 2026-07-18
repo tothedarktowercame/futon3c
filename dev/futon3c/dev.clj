@@ -64,6 +64,7 @@
             [futon3c.agency.registry :as reg]
             [futon3c.social.coordination-ledger :as coordination]
             [futon3c.runtime.agents :as rt]
+            [futon3c.runtime.incidents :as incidents]
             [futon3c.cyder :as cyder]
             [futon3c.transport.ws.replication :as ws-repl]
             [futon3c.dev.config :as config]
@@ -5114,6 +5115,7 @@ RESPOND WITH ONLY:
   (start-agents!))
 
 (defn -main [& _args]
+  (incidents/install-default-handler!)
   (dev-bootstrap/run-main!
    {:!f1-sys !f1-sys
     :!evidence-store !evidence-store

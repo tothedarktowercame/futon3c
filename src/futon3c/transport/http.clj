@@ -5903,6 +5903,47 @@
       (olane-cors (json-response 500 {:ok false :error "cascade-real-graph-failed"
                                       :message (.getMessage e)})))))
 
+(def ^:private jvm-incident-symbols
+  {:incidents 'futon3c.runtime.incidents/incidents
+   :health 'futon3c.runtime.incidents/health})
+
+(defn- resolve-jvm-incident-fns
+  [ks]
+  (let [resolved
+        (into {}
+              (for [k ks]
+                [k (try
+                     (requiring-resolve (get jvm-incident-symbols k))
+                     (catch Throwable _ nil))]))]
+    (when (every? ifn? (vals resolved)) resolved)))
+
+(defn- jvm-incidents-unavailable-response []
+  (json-response
+   501
+   {:ok false
+    :err "jvm-incidents-unavailable"
+    :message "The serving JVM cannot resolve futon3c.runtime.incidents"}))
+
+(defn handle-jvm-incidents
+  "GET /api/alpha/jvm/incidents — newest durable uncaught JVM failures."
+  [request]
+  (if-let [{read-incidents :incidents}
+           (resolve-jvm-incident-fns [:incidents])]
+    (let [requested (or (parse-int (get (parse-query-params request) "limit")) 50)
+          limit (-> requested (max 0) (min 500))
+          records (read-incidents limit)]
+      (json-response 200 {:ok true
+                          :incidents records
+                          :count (count records)}))
+    (jvm-incidents-unavailable-response)))
+
+(defn handle-jvm-health
+  "GET /api/alpha/jvm/health — current JVM health plus durable incident count."
+  [_request]
+  (if-let [{health :health} (resolve-jvm-incident-fns [:health])]
+    (json-response 200 (assoc (health) :ok true))
+    (jvm-incidents-unavailable-response)))
+
 (def ^:private morning-brief-symbols
   {:review! 'futon2.aif.morning-brief/review!
    :addendum! 'futon2.aif.morning-brief/addendum!
@@ -6046,6 +6087,12 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      (and (= :get method) (= "/api/alpha/jvm/incidents" uri))
+      (handle-jvm-incidents request)
+
+      (and (= :get method) (= "/api/alpha/jvm/health" uri))
+      (handle-jvm-health request)
+
       (and (= :post method) (= "/api/alpha/morning-brief/review" uri))
       (handle-morning-brief-review request)
 
