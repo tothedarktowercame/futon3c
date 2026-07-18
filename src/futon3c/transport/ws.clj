@@ -536,16 +536,41 @@
    config: same as make-ws-callbacks.
 
    Returns {:handler ring-fn, :connections atom}.
-   The handler upgrades HTTP requests to WebSocket via hk/as-channel."
+   The handler upgrades HTTP requests to WebSocket via hk/as-channel.
+
+   Frame handling is offloaded to a per-channel serial worker (a Clojure
+   agent), so the http-kit callback returns immediately. http-kit serializes
+   a channel's on-receive calls through a LinkingRunnable chain whose walk
+   only terminates when the callback outpaces frame arrival — a callback
+   slower than the arrival cadence keeps one walk alive indefinitely, and
+   the walk's root FutureTask then retains every frame ever chained (the
+   2026-07-18 GC-livelock leak: ~97k retained fed-announce frames). The
+   agent preserves per-channel ordering; on-close is routed through the
+   same worker so cleanup runs after all queued frames."
   [config]
   (let [{:keys [on-open on-receive on-close connections]}
-        (make-ws-callbacks config)]
+        (make-ws-callbacks config)
+        !workers (atom {})
+        run-serial! (fn [ch thunk]
+                      (if-let [worker (get @!workers ch)]
+                        (send-off worker
+                                  (fn [_]
+                                    (try (thunk)
+                                         (catch Throwable t
+                                           (println (str "[ws] handler error: "
+                                                         (.getMessage t)))))
+                                    nil))
+                        (thunk)))]
     {:handler
      (fn [request]
        (hk/as-channel request
-         {:on-open (fn [ch] (on-open ch request))
-          :on-receive on-receive
-          :on-close on-close}))
+         {:on-open (fn [ch]
+                     (swap! !workers assoc ch (agent nil))
+                     (on-open ch request))
+          :on-receive (fn [ch data] (run-serial! ch #(on-receive ch data)))
+          :on-close (fn [ch status]
+                      (run-serial! ch #(on-close ch status))
+                      (swap! !workers dissoc ch))}))
      :connections connections}))
 
 (defn connected-agents

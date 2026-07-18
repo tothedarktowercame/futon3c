@@ -1273,27 +1273,45 @@
 ;; Introspection
 ;; =============================================================================
 
+(def ^:private codex-session-scan-ttl-ms
+  "Cache TTL for running-codex-session-ids. The scan walks the whole process
+   table with a native ProcessHandle info call per process; callers (the
+   agents ticker, every registry-status, every federation roster import)
+   invoke it far more often than external codex sessions appear or vanish.
+   Uncached, it made the federation ws on-receive slower than the uplink's
+   announce cadence — see make-ws-handler in transport/ws.clj (2026-07-18)."
+  5000)
+
+(defonce ^:private !codex-session-scan
+  (atom nil))  ;; {:at-ms long, :ids #{sid ...}}
+
 (defn running-codex-session-ids
   "Best-effort detection of local `codex exec --json resume <sid>` processes.
-   Returns a set of active session IDs.
+   Returns a set of active session IDs, cached for codex-session-scan-ttl-ms.
 
    This is used to surface external Codex activity (e.g. emacs codex-repl)
    in the shared *agents* panel even when that invoke did not flow through
    registry/invoke-agent!."
   []
-  (try
-    (with-open [processes (java.lang.ProcessHandle/allProcesses)]
-      (->> (iterator-seq (.iterator processes))
-           (keep (fn [^java.lang.ProcessHandle process]
-                   (let [cmd-opt (.. process info commandLine)]
-                     (when (.isPresent cmd-opt)
-                       (let [line (.get cmd-opt)]
-                         (when (and (str/includes? line "codex exec --json")
-                                    (str/includes? line " resume "))
-                           (second (re-find #"resume\s+([0-9a-fA-F-]{36})\b" line))))))))
-           set))
-    (catch Throwable _
-      #{})))
+  (let [now-ms (System/currentTimeMillis)
+        cached @!codex-session-scan]
+    (if (and cached (< (- now-ms (:at-ms cached)) codex-session-scan-ttl-ms))
+      (:ids cached)
+      (let [ids (try
+                  (with-open [processes (java.lang.ProcessHandle/allProcesses)]
+                    (->> (iterator-seq (.iterator processes))
+                         (keep (fn [^java.lang.ProcessHandle process]
+                                 (let [cmd-opt (.. process info commandLine)]
+                                   (when (.isPresent cmd-opt)
+                                     (let [line (.get cmd-opt)]
+                                       (when (and (str/includes? line "codex exec --json")
+                                                  (str/includes? line " resume "))
+                                         (second (re-find #"resume\s+([0-9a-fA-F-]{36})\b" line))))))))
+                         set))
+                  (catch Throwable _
+                    #{}))]
+        (reset! !codex-session-scan {:at-ms now-ms :ids ids})
+        ids))))
 
 (defn- external-invoke-live?
   [entry]

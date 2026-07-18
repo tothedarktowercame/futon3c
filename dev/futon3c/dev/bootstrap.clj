@@ -120,7 +120,9 @@
    single-process store lock). Safe to call when nothing is embedded."
   []
   (when-let [server @!f1b-embedded]
-    (try (f1b/stop-server! server) (catch Throwable _))
+    ;; start-server! returns a JDK com.sun.net.httpserver.HttpServer;
+    ;; futon1b dropped its stop-server! wrapper, so stop it directly.
+    (try (.stop ^com.sun.net.httpserver.HttpServer server 0) (catch Throwable _))
     (reset! !f1b-embedded nil)
     ;; best-effort node close via runtime resolve (avoids compile coupling)
     (try
