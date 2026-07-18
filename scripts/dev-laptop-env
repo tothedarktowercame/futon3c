@@ -89,8 +89,13 @@ export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-127.0.0.1}"
 
 # --- Federation uplink (CP-F, default OFF) ---
 # Uncomment to let this NAT'd box dial a hub over WebSocket instead of relying
-# on a reverse SSH tunnel. Shape is <site>=<ws-url>.
-export FUTON3C_FED_UPLINK="${FUTON3C_FED_UPLINK:-lon=ws://172.236.28.208:7070/agency/ws}"
+# on a reverse SSH tunnel. Shape is <site>=<ws-url>, where <site> is THIS
+# node's own site code (announced as :fed/site — the client's identity), NOT
+# the hub's. It must match FUTON3C_SITE below. The old default "lon=…" made
+# the laptop announce as the hub's own site: the hub then excluded its lon
+# agents from the return roster (laptop never saw them) and echoed the oxf
+# roster back (found 2026-07-18 while chasing the CPU-alert announce storm).
+export FUTON3C_FED_UPLINK="${FUTON3C_FED_UPLINK:-oxf=ws://172.236.28.208:7070/agency/ws}"
 # CP-F uplink token (client side): read before the final exec so the JVM
 # actually inherits it.  The file is untracked and must match the hub's token.
 if [[ -f "${script_dir}/../.fedtoken" ]]; then

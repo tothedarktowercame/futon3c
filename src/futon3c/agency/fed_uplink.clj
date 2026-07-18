@@ -236,12 +236,23 @@
 
 (defn start-uplink!
   "Start the outbound federation uplink from FUTON3C_FED_UPLINK.
-   FUTON3C_FED_UPLINK shape: <site>=<ws-url>."
+   FUTON3C_FED_UPLINK shape: <site>=<ws-url>. <site> is THIS node's own site
+   code — it is announced to the hub as :fed/site, and the hub uses it to
+   exclude this node's agents from the return roster. It must match
+   FUTON3C_SITE; a mismatch (e.g. writing the HUB's site there) makes the hub
+   echo this node's roster back and withhold its own (seen 2026-07-18,
+   dev-laptop-env announcing as \"lon\")."
   ([] (start-uplink! {}))
   ([{:keys [uplink]}]
    (let [{:keys [site url] :as cfg} (parse-uplink (or uplink
                                                       (env-or-prop "FUTON3C_FED_UPLINK")))
          executor (Executors/newCachedThreadPool)]
+     (when-let [local-site (federation/site-prefix)]
+       (when (and site (not= site local-site))
+         (println (str "[fed-uplink][WARN] FUTON3C_FED_UPLINK site \"" site
+                       "\" != FUTON3C_SITE \"" local-site
+                       "\" — the uplink announces <site> as this node's own identity; "
+                       "the hub will misattribute this roster."))))
      (cond
        (or (nil? cfg) (str/blank? url))
        (swap! !state assoc :running? false :last-error "FUTON3C_FED_UPLINK unset")

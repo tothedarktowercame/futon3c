@@ -457,6 +457,20 @@
                                                    "Invalid federation token")))
                      (close-fn ch))
                    (let [site (:fed/site parsed)
+                         ;; A client announcing THIS hub's own site code is a
+                         ;; misconfigured FUTON3C_FED_UPLINK (the <site> there
+                         ;; is the client's identity, not the hub's): the
+                         ;; return roster below would exclude the hub's own
+                         ;; agents and echo the client's back. Warn once per
+                         ;; connection (2026-07-18, dev-laptop-env as "lon").
+                         _ (when (and site
+                                      (= site (federation/site-prefix))
+                                      (not= site (get-in conn [:fed-uplink :site])))
+                             (println (str "[ws][WARN] fed-announce from remote claims this "
+                                           "hub's own site \"" site "\" — misconfigured "
+                                           "FUTON3C_FED_UPLINK on the client; its roster will "
+                                           "be misattributed and the return roster will omit "
+                                           "this hub's agents.")))
                          pending (or (get-in conn [:fed-uplink :pending])
                                      (atom {}))
                          send-frame! (fn [frame]
