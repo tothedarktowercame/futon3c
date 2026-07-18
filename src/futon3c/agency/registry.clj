@@ -997,6 +997,75 @@
                     (assoc a :agent/invoke-activity activity-str))
              m))))
 
+(defn mark-agent-idle!
+  "Public idle-reset for use by HTTP-layer try/finally guarantees.
+   Resets :agent/status to :idle, clears invoke metadata. Idempotent —
+   safe to call when already idle. Only updates if the agent is still
+   registered (R5: no resurrect). Returns true if a transition occurred."
+  [agent-id-val]
+  (let [aid-val (agent-id-value agent-id-val)
+        transitioned? (atom false)]
+    (swap! !registry
+           (fn [m]
+             (if-let [agent* (get m aid-val)]
+               (do
+                 (when (= :invoking (:agent/status agent*))
+                   (reset! transitioned? true))
+                 (assoc m aid-val
+                        (merge agent*
+                               {:agent/last-active (now)
+                                :agent/status :idle
+                                :agent/invoke-started-at nil
+                                :agent/invoke-prompt-preview nil
+                                :agent/invoke-activity nil})))
+               m)))
+    @transitioned?))
+
+(defn- invoke-jobs-running-for-agent?
+  "Best-effort check: does the invoke-jobs ledger have a running/queued job
+   for AGENT-ID? Uses requiring-resolve to avoid a registry -> transport.http
+   dependency cycle. Returns false when the ledger is unavailable."
+  [agent-id]
+  (try
+    (when-let [http-ns (or (find-ns 'futon3c.transport.http)
+                           (try (require 'futon3c.transport.http)
+                                (find-ns 'futon3c.transport.http)
+                                (catch Throwable _)))]
+      (when-let [counts-fn (ns-resolve http-ns 'active-invoke-job-counts)]
+        (let [counts (counts-fn)
+              entry (get counts agent-id)]
+          (pos? (long (or (:running-jobs entry)
+                          (get entry "running-jobs")
+                          0))))))
+    (catch Throwable _ false)))
+
+(defn reconcile-stale-invoking!
+  "Read-repair: find agents whose :agent/status is :invoking but who have
+   no running job in the invoke-jobs ledger AND whose invoking state is
+   older than THRESHOLD-MS (default 120s). Reset them to :idle.
+
+   Returns a vector of repaired agent-id strings. Safe when the jobs ledger
+   is unavailable (no-op). NEVER touches an agent with a live running job."
+  ([]
+   (reconcile-stale-invoking! 120000))
+  ([threshold-ms]
+   (let [now-ms (.toEpochMilli (now))
+         registry @!registry
+         stale-agents
+         (for [[aid agent] registry
+               :when (= :invoking (:agent/status agent))
+               :when (not (invoke-jobs-running-for-agent? aid))
+               :let [started-at (:agent/invoke-started-at agent)
+                     last-active (:agent/last-active agent)
+                     ref-inst (or started-at last-active)
+                     age-ms (when (instance? Instant ref-inst)
+                              (- now-ms (.toEpochMilli ^Instant ref-inst)))]
+               :when (and age-ms (> age-ms (long threshold-ms)))]
+           aid)]
+     (doseq [aid stale-agents]
+       (mark-agent-idle! aid))
+     (vec stale-agents))))
+
 (defn report-external-invoke!
   "Record or clear externally-driven invoke state for AGENT-ID-VAL.
 
@@ -1239,6 +1308,8 @@
 (defn registry-status
   "Return status of all registered agents."
   []
+  ;; Read-repair: reset agents stuck at :invoking with no running job.
+  (try (reconcile-stale-invoking!) (catch Throwable _))
   (let [registry @!registry
         now* (now)
         codex-session-ids (running-codex-session-ids)

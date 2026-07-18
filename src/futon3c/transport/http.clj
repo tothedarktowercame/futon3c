@@ -3256,7 +3256,10 @@
         (json-response 500 {:ok false
                             :job-id job-id
                             :error "invoke-error"
-                            :message (.getMessage t)})))))
+                            :message (.getMessage t)}))
+      (finally
+       ;; Guarantee: every terminal outcome resets agent status.
+       (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _))))))
 
 (defn- run-invoke-job!
   "Execute a queued invoke job to terminal state.
@@ -3336,7 +3339,13 @@
         {:ok false
          :job-id job-id
          :error "invoke-error"
-         :message (.getMessage t)}))))
+         :message (.getMessage t)})
+      (finally
+       ;; Guarantee: every terminal outcome resets agent status. The registry's
+       ;; invoke-agent! wrapper normally handles this, but if the worker thread
+       ;; is killed or the invoke-fn blocks past process boundaries, mark-idle!
+       ;; may never run. This finally ensures no terminal path leaks :invoking.
+       (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _))))))
 
 (defn- handle-invoke
   "POST /api/alpha/invoke — invoke a registered agent directly.
