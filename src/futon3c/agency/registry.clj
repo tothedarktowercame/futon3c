@@ -1309,7 +1309,12 @@
   "Return status of all registered agents."
   []
   ;; Read-repair: reset agents stuck at :invoking with no running job.
-  (try (reconcile-stale-invoking!) (catch Throwable _))
+  ;; INTERIM threshold 45 min, not the 120s default: the ~30-min job cap marks
+  ;; jobs "failed" while the lane keeps executing (capped-but-alive,
+  ;; 2026-07-19), and such lanes have no "running" ledger job — a 120s sweep
+  ;; would mark busy lanes idle and invite double-dispatch. Restore the tight
+  ;; default when the :overrun job state lands (timeout-enforcement packet).
+  (try (reconcile-stale-invoking! 2700000) (catch Throwable _))
   (let [registry @!registry
         now* (now)
         codex-session-ids (running-codex-session-ids)
