@@ -5903,6 +5903,99 @@
       (olane-cors (json-response 500 {:ok false :error "cascade-real-graph-failed"
                                       :message (.getMessage e)})))))
 
+(def ^:private morning-brief-symbols
+  {:review! 'futon2.aif.morning-brief/review!
+   :items 'futon2.aif.morning-brief/items
+   :reviews 'futon2.aif.morning-brief/reviews
+   :item-objectives 'futon2.aif.morning-brief/item-objectives})
+
+(defn- resolve-morning-brief-fns
+  [ks]
+  (let [resolved
+        (into {}
+              (for [k ks]
+                [k (try
+                     (requiring-resolve (get morning-brief-symbols k))
+                     (catch Throwable _ nil))]))]
+    ;; `requiring-resolve` returns Vars, which are invokable but not `fn?`.
+    (when (every? ifn? (vals resolved)) resolved)))
+
+(defn- morning-brief-unavailable-response []
+  (json-response
+   501
+   {:ok false
+    :err "morning-brief-unavailable"
+    :message "The serving JVM cannot resolve futon2.aif.morning-brief; review storage is unavailable"}))
+
+(defn- nonblank-string? [x]
+  (and (string? x) (not (str/blank? x))))
+
+(defn- duplicate-morning-brief-review-error? [e]
+  (or (instance? java.nio.file.FileAlreadyExistsException e)
+      (some? (:review-id (ex-data e)))
+      (str/includes? (or (.getMessage e) "") "already reviewed")))
+
+(defn handle-morning-brief-review
+  "POST /api/alpha/morning-brief/review — append one typed operator review
+   through futon2.aif.morning-brief/review!."
+  [request]
+  (if-let [{review! :review!} (resolve-morning-brief-fns [:review!])]
+    (let [payload (parse-json-map (read-body request))
+          attempt-id (:attempt-id payload)
+          objective (:objective payload)
+          answer (:answer payload)
+          note (:note payload)
+          reviewer (:reviewer payload)]
+      (if-not (and payload
+                   (every? nonblank-string?
+                           [attempt-id objective answer note reviewer]))
+        (json-response
+         400
+         {:ok false
+          :err "invalid-morning-brief-review"
+          :message "attempt-id, objective, answer, note, and reviewer must be non-blank strings"})
+        (try
+          (let [review (review! attempt-id (keyword objective) (keyword answer)
+                                note reviewer)]
+            (json-response 200 {:ok true :review review}))
+          (catch Exception e
+            (json-response
+             (if (duplicate-morning-brief-review-error? e) 409 400)
+             {:ok false
+              :err (if (duplicate-morning-brief-review-error? e)
+                     "morning-brief-review-conflict"
+                     "invalid-morning-brief-review")
+              :message (or (.getMessage e) "Morning Brief review failed")})))))
+    (morning-brief-unavailable-response)))
+
+(defn handle-morning-brief-pending
+  "GET /api/alpha/morning-brief/pending — return items with applicable and
+   answered objective sets, resolved from the canonical futon2 store API."
+  [_request]
+  (if-let [{items :items reviews :reviews item-objectives :item-objectives}
+           (resolve-morning-brief-fns [:items :reviews :item-objectives])]
+    (try
+      (let [review-records (reviews)
+            answered-by-attempt
+            (reduce (fn [acc review]
+                      (update acc (:attempt-id review) (fnil conj [])
+                              (:objective review)))
+                    {} review-records)
+            item-records
+            (mapv (fn [item]
+                    (assoc item
+                           :applicable-objectives (vec (item-objectives item))
+                           :answered-objectives
+                           (vec (distinct
+                                 (get answered-by-attempt (:attempt-id item) [])))))
+                  (items))]
+        (json-response 200 {:ok true :items item-records
+                            :count (count item-records)}))
+      (catch Exception e
+        (json-response 500 {:ok false :err "morning-brief-read-failed"
+                            :message (.getMessage e)})))
+    (morning-brief-unavailable-response)))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -5910,6 +6003,12 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      (and (= :post method) (= "/api/alpha/morning-brief/review" uri))
+      (handle-morning-brief-review request)
+
+      (and (= :get method) (= "/api/alpha/morning-brief/pending" uri))
+      (handle-morning-brief-pending request)
+
       (and (= :get method) (= "/api/alpha/cascade-real/graph" uri))
       (handle-cascade-real-graph request config)
 
