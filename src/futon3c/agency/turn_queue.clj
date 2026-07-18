@@ -89,10 +89,65 @@
       (println (str "[turn-queue] persist failed: " (.getMessage t)))))
   state)
 
+(def ^:private persist-coalesce-ms
+  "Minimum interval between durable-store writes. persist! pr-strs the WHOLE
+   state (~0.5MB); a single drain cycle mutates state 4-5 times per turn, and
+   writing synchronously on every mutation was the chronic half of the
+   2026-07-18 CPU alert (five drainer threads averaging 15% CPU each over the
+   JVM's life). The flusher writes immediately on the first change after an
+   idle stretch, then coalesces further changes into at most one write per
+   this interval — so the crash-loss window under sustained churn equals this
+   interval, and a lone change still hits disk right away.
+   Override: FUTON3C_DURABLE_QUEUE_PERSIST_MS."
+  (or (some-> (config/env "FUTON3C_DURABLE_QUEUE_PERSIST_MS") parse-long)
+      2000))
+
+(defonce ^:private !dirty? (atom false))
+(defonce ^:private !flusher (atom nil))   ;; {:lock Object :running atom :thread Thread}
+
+(defn- flusher-loop [lock running]
+  (while @running
+    (locking lock
+      (when (and @running (not @!dirty?))
+        (try (.wait lock) (catch InterruptedException _))))
+    (when (and @running @!dirty?)
+      (reset! !dirty? false)
+      (persist! @!queue)
+      ;; Coalesce window: changes landing during this sleep fold into the
+      ;; next single write instead of one write each.
+      (try (Thread/sleep (long persist-coalesce-ms))
+           (catch InterruptedException _)))))
+
+(defn- ensure-flusher! []
+  (or @!flusher
+      (locking !flusher
+        (or @!flusher
+            (let [lock (Object.)
+                  running (atom true)
+                  thread (doto (Thread. ^Runnable #(flusher-loop lock running)
+                                        "turn-queue-persist-flusher")
+                           (.setDaemon true)
+                           (.start))]
+              (.addShutdownHook (Runtime/getRuntime)
+                                (Thread. ^Runnable
+                                         (fn []
+                                           (when @!dirty?
+                                             (reset! !dirty? false)
+                                             (persist! @!queue)))
+                                         "turn-queue-persist-final"))
+              (reset! !flusher {:lock lock :running running :thread thread}))))))
+
+(defn- mark-dirty! []
+  (let [{:keys [lock]} (ensure-flusher!)]
+    (reset! !dirty? true)
+    (locking lock (.notifyAll lock))))
+
 (defn- swap-state! [f & args]
-  ;; Atom mutation and disk replacement must have the same total order. Without
-  ;; this lock, two drainers can persist snapshots in the opposite order from
-  ;; their successful swaps, restoring stale queue state after a crash.
+  ;; Persistence is asynchronous: the single flusher thread snapshots @!queue
+  ;; at write time, so the file always holds a state at least as new as any
+  ;; acknowledged mutation from the last coalesce window — write order cannot
+  ;; invert (there is only one writer), which is what the old
+  ;; persist-under-lock scheme guaranteed at ~5 full-store writes per turn.
   (locking !queue
     (ensure-state!)
     (let [changed? (atom false)
@@ -103,7 +158,7 @@
                              (reset! changed? true))
                            new)))]
       (when @changed?
-        (persist! state))
+        (mark-dirty!))
       state)))
 
 (defn clear!
@@ -113,6 +168,10 @@
     (stop-all-drainers!))
   (clojure.core/reset! !waiters {})
   (clojure.core/reset! !processors {})
+  ;; Consume any pending async flush, then write synchronously: tests redef
+  ;; queue-store-path around clear!, and a flush left pending here could fire
+  ;; after the redef unwinds and write test state to the real store path.
+  (clojure.core/reset! !dirty? false)
   (persist! (clojure.core/reset! !queue (empty-state))))
 
 (defn snapshot []
@@ -250,6 +309,32 @@
          state)))
     @entry))
 
+(defn- prune-terminal [state]
+  ;; Only :history is capped; without pruning, :entries and :msg-index keep a
+  ;; record of every turn ever accepted (the persisted store grows without
+  ;; bound — 490KB after two days when the 2026-07-18 CPU alert hit). Retain
+  ;; entries that are still queued, still in flight (popped by a drainer but
+  ;; not yet terminal, status :queued), or within the :history window; dedup
+  ;; memory (:msg-index) follows the same window, so a msg-id repeated more
+  ;; than max-history turns later re-processes instead of deduping — retries
+  ;; arrive within seconds, so that window is ample.
+  (let [keep-ids (-> #{}
+                     (into (keep (fn [[id e]] (when (= :queued (:status e)) id)))
+                           (:entries state))
+                     (into (map :id) (:history state))
+                     (into cat (vals (:queues state))))]
+    (if (= (count keep-ids) (count (:entries state)))
+      state
+      (assoc state
+             :entries (select-keys (:entries state) keep-ids)
+             :msg-index (into {}
+                              (keep (fn [[to m]]
+                                      (let [m* (into {}
+                                                     (filter (fn [[_ id]] (contains? keep-ids id)))
+                                                     m)]
+                                        (when (seq m*) [to m*]))))
+                              (:msg-index state))))))
+
 (defn- mark-terminal! [entry status result]
   (let [entry* (assoc entry
                       :status status
@@ -259,7 +344,8 @@
      (fn [state]
        (cond-> (-> state
                    (assoc-in [:entries (:id entry*)] entry*)
-                   (update :history #(vec (take-last max-history (conj (or % []) entry*)))))
+                   (update :history #(vec (take-last max-history (conj (or % []) entry*))))
+                   prune-terminal)
          (and (:seq entry*) (not= :deduped status))
          (update-in [:drained-frontier (:to entry*)] (fnil max 0) (:seq entry*)))))
     (when-let [p (get @!waiters (:id entry*))]
