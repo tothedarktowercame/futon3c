@@ -995,7 +995,7 @@
 (defn- finalize-invoke-job!
   [job-id terminal-state terminal-code terminal-message result sid]
   (let [invoke-meta (:invoke-meta result)
-        execution (invoke-execution-evidence result)
+        execution (invoke-execution-evidence result job-id)
         trace-id (extract-trace-id invoke-meta)
         result-text (when (string? (:result result)) (:result result))
         ;; Bounded full text for the auto-bellback (operative reply channel);
@@ -2991,22 +2991,102 @@
 (def ^:private planning-only-re
   #"(?i)\b(planning-only|not started|need clarification|need more context|cannot execute yet|blocked)\b")
 
+(def ^:private bash-tool-name-re
+  "Matches tool names that represent shell/command execution (Bash, bash, etc.)."
+  #"(?i)\bbash\b")
+
+(defn- tool-use-event?
+  "True when a recorded job event is a tool_use event."
+  [event]
+  (= "tool_use" (str (:type event))))
+
+(defn- event-names-bash?
+  "True when a tool_use event's payload names a Bash-ish tool."
+  [event]
+  (let [tools (:tools event)
+        previews (:previews event)]
+    (or (some #(re-find bash-tool-name-re (str %)) tools)
+        (some #(re-find bash-tool-name-re (str %)) previews))))
+
+(defn- count-tool-use-events
+  "Count tool_use events in EVENTS (a job's :events vector).
+   Returns {:tool-events n :command-events m} where command-events is the
+   subset of tool_use events whose payload names a Bash-ish tool."
+  [events]
+  (let [tool-events (filter tool-use-event? events)
+        tool-count (count tool-events)
+        command-count (count (filter event-names-bash? tool-events))]
+    {:tool-events (long tool-count)
+     :command-events (long command-count)}))
+
+(defn- execution-evidence-from-ledger
+  "Best-effort: derive execution evidence from a job's recorded stream events.
+   Returns nil when the job is unknown or has no tool_use events. The ledger
+   is in-memory and lost on restart — this is corroboration only."
+  [job-id]
+  (when (some? job-id)
+    (let [events (:events (get-in @!invoke-jobs-ledger [:jobs job-id]))
+          {:keys [tool-events command-events]} (count-tool-use-events events)]
+      (when (pos? tool-events)
+        {:executed true
+         :tool-events tool-events
+         :command-events command-events}))))
+
 (defn- invoke-execution-evidence
-  "Extract execution evidence map from invoke result metadata."
-  [result]
-  (let [invoke-meta (:invoke-meta result)
-        execution (or (:execution invoke-meta) (get invoke-meta "execution"))
-        raw-executed (or (:executed? execution) (get execution "executed?")
+  "Extract execution evidence map from invoke result metadata.
+
+   When JOB-ID is supplied and the self-reported execution evidence (from
+   :invoke-meta) is absent or reports zero tool-events, consult the job's
+   recorded stream events as a best-effort fallback. The fallback may only
+   UPGRADE evidence (absent/zero -> observed-positive), never downgrade."
+  ([result]
+   (invoke-execution-evidence result nil))
+  ([result job-id]
+   (let [invoke-meta (:invoke-meta result)
+         execution (or (:execution invoke-meta) (get invoke-meta "execution"))
+         raw-executed (or (:executed? execution) (get execution "executed?")
                          (:executed execution) (get execution "executed"))
-        executed (cond
-                   (boolean? raw-executed) raw-executed
-                   (string? raw-executed) (boolean (parse-bool raw-executed))
-                   :else (boolean raw-executed))
-        tool-events (long (or (:tool-events execution) (get execution "tool-events") 0))
-        command-events (long (or (:command-events execution) (get execution "command-events") 0))]
-    {:executed executed
-     :tool-events tool-events
-     :command-events command-events}))
+         executed (cond
+                    (boolean? raw-executed) raw-executed
+                    (string? raw-executed) (boolean (parse-bool raw-executed))
+                    :else (boolean raw-executed))
+         tool-events (long (or (:tool-events execution) (get execution "tool-events") 0))
+         command-events (long (or (:command-events execution) (get execution "command-events") 0))
+         self-reported-positive? (or executed
+                                     (pos? tool-events)
+                                     (pos? command-events))
+         fallback (when (not self-reported-positive?)
+                    (execution-evidence-from-ledger job-id))]
+     (cond
+       (some? fallback) fallback
+       :else {:executed executed
+              :tool-events tool-events
+              :command-events command-events}))))
+
+(defn- enrich-result-with-stream-execution
+  "Layer-1 source fix: populate :invoke-meta :execution on RESULT from the
+   job's recorded tool_use stream events when the lane did not self-report
+   execution telemetry (the claude lane currently does not; codex does).
+
+   This runs BEFORE the execution gate (codex-task-no-execution?) so that an
+   honest claude review that DID run tools is not refused. The ledger events
+   are in-memory; on a fresh JVM the events are absent and this is a no-op,
+   leaving the result unchanged. Mirrors the shape codex populates:
+   {:executed true :tool-events n :command-events m}.
+
+   Only UPGRADES — never overwrites existing self-reported execution evidence."
+  [job-id result]
+  (let [existing (or (get-in result [:invoke-meta :execution])
+                     (get-in result [:invoke-meta "execution"]))
+        existing-positive? (or (:executed? existing) (:executed existing)
+                               (pos? (long (or (:tool-events existing) 0)))
+                               (pos? (long (or (:command-events existing) 0))))]
+    (if existing-positive?
+      result
+      (if-let [evidence (execution-evidence-from-ledger job-id)]
+        (update result :invoke-meta
+                #(assoc (or % {}) :execution evidence))
+        result))))
 
 (defn- agent-requires-execution?
   "Return true when the agent metadata requests execution evidence enforcement."
@@ -3124,6 +3204,7 @@
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
             raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
             result (maybe-route-surface-writes agent-id raw-result)
+            result (enrich-result-with-stream-execution job-id result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
                               (codex-task-no-execution?
@@ -3218,6 +3299,7 @@
                              (reg/set-invoke-event-sink! aid prev-sink)
                              (reg/clear-invoke-event-sink! aid))))
             result (maybe-route-surface-writes agent-id raw-result)
+            result (enrich-result-with-stream-execution job-id result)
             sid (:session-id result)
             no-evidence? (and (:ok result)
                               (codex-task-no-execution?
