@@ -5905,8 +5905,10 @@
 
 (def ^:private morning-brief-symbols
   {:review! 'futon2.aif.morning-brief/review!
+   :addendum! 'futon2.aif.morning-brief/addendum!
    :items 'futon2.aif.morning-brief/items
    :reviews 'futon2.aif.morning-brief/reviews
+   :addenda 'futon2.aif.morning-brief/addenda
    :item-objectives 'futon2.aif.morning-brief/item-objectives})
 
 (defn- resolve-morning-brief-fns
@@ -5925,7 +5927,7 @@
    501
    {:ok false
     :err "morning-brief-unavailable"
-    :message "The serving JVM cannot resolve futon2.aif.morning-brief; review storage is unavailable"}))
+    :message "The serving JVM cannot resolve futon2.aif.morning-brief; Morning Brief storage is unavailable"}))
 
 (defn- nonblank-string? [x]
   (and (string? x) (not (str/blank? x))))
@@ -5968,14 +5970,53 @@
               :message (or (.getMessage e) "Morning Brief review failed")})))))
     (morning-brief-unavailable-response)))
 
+(defn handle-morning-brief-addendum
+  "POST /api/alpha/morning-brief/addendum — append one notebook record
+   through futon2.aif.morning-brief/addendum!."
+  [request]
+  (if-let [{addendum! :addendum!} (resolve-morning-brief-fns [:addendum!])]
+    (let [payload (parse-json-map (read-body request))
+          attempt-id (:attempt-id payload)
+          kind (:kind payload)
+          title (:title payload)
+          body (:body payload)
+          author (:author payload)]
+      (if-not (and payload
+                   (every? nonblank-string?
+                           [attempt-id kind title body author]))
+        (json-response
+         400
+         {:ok false
+          :err "invalid-morning-brief-addendum"
+          :message "attempt-id, kind, title, body, and author must be non-blank strings"})
+        (try
+          (json-response 200 {:ok true
+                              :addendum (addendum! attempt-id (keyword kind)
+                                                   title body author)})
+          (catch Exception e
+            (json-response 400 {:ok false
+                                :err "invalid-morning-brief-addendum"
+                                :message (or (.getMessage e)
+                                             "Morning Brief addendum failed")})))))
+    (morning-brief-unavailable-response)))
+
 (defn handle-morning-brief-pending
   "GET /api/alpha/morning-brief/pending — return items with applicable and
-   answered objective sets, resolved from the canonical futon2 store API."
+   answered objective sets and sorted addenda, resolved from the canonical
+   futon2 store API."
   [_request]
-  (if-let [{items :items reviews :reviews item-objectives :item-objectives}
-           (resolve-morning-brief-fns [:items :reviews :item-objectives])]
+  (if-let [{items :items reviews :reviews addenda :addenda
+            item-objectives :item-objectives}
+           (resolve-morning-brief-fns [:items :reviews :addenda
+                                      :item-objectives])]
     (try
       (let [review-records (reviews)
+            addenda-by-attempt
+            (->> (addenda)
+                 (group-by :attempt-id)
+                 (map (fn [[attempt-id records]]
+                        [attempt-id (vec (sort-by :created-at records))]))
+                 (into {}))
             answered-by-attempt
             (reduce (fn [acc review]
                       (update acc (:attempt-id review) (fnil conj [])
@@ -5987,7 +6028,9 @@
                            :applicable-objectives (vec (item-objectives item))
                            :answered-objectives
                            (vec (distinct
-                                 (get answered-by-attempt (:attempt-id item) [])))))
+                                 (get answered-by-attempt (:attempt-id item) [])))
+                           :addenda (get addenda-by-attempt
+                                         (:attempt-id item) [])))
                   (items))]
         (json-response 200 {:ok true :items item-records
                             :count (count item-records)}))
@@ -6005,6 +6048,9 @@
     (cond
       (and (= :post method) (= "/api/alpha/morning-brief/review" uri))
       (handle-morning-brief-review request)
+
+      (and (= :post method) (= "/api/alpha/morning-brief/addendum" uri))
+      (handle-morning-brief-addendum request)
 
       (and (= :get method) (= "/api/alpha/morning-brief/pending" uri))
       (handle-morning-brief-pending request)
