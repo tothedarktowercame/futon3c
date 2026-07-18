@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+serving_pids() {
+  pgrep -f '[c]lojure\.main -m futon3c\.dev($| )' || true
+}
+
+show_pids() {
+  local pids="$1"
+  [[ -z "$pids" ]] || ps -ww -o pid=,ppid=,rss=,etimes=,cmd= -p "${pids//$'\n'/,}"
+}
+
+wait_seconds=0
+case "${1:-}" in
+  assert-zero)
+    pids="$(serving_pids)"
+    if [[ -n "$pids" ]]; then
+      echo "FAIL I-0: refusing to start a second futon3c serving JVM" >&2
+      show_pids "$pids" >&2
+      exit 1
+    fi
+    echo "PASS I-0 preflight: no serving futon3c JVM exists"
+    ;;
+  assert-one)
+    shift
+    if [[ "${1:-}" == "--wait" ]]; then
+      wait_seconds="${2:-0}"
+    fi
+    deadline=$((SECONDS + wait_seconds))
+    while :; do
+      pids="$(serving_pids)"
+      count="$(grep -c . <<<"$pids" || true)"
+      if [[ -n "$pids" && "$count" -eq 1 ]]; then
+        echo "PASS I-0: exactly one serving futon3c JVM (pid $pids)"
+        exit 0
+      fi
+      if (( SECONDS >= deadline )); then
+        echo "FAIL I-0: expected exactly one serving futon3c JVM, found $count" >&2
+        show_pids "$pids" >&2
+        exit 1
+      fi
+      sleep 1
+    done
+    ;;
+  *)
+    echo "usage: server-guard {assert-zero|assert-one [--wait seconds]}" >&2
+    exit 2
+    ;;
+esac

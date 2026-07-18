@@ -1,0 +1,10 @@
+[Unit]
+Description=Resource-bounded Futon agent and tooling workloads
+
+[Slice]
+CPUAccounting=yes
+MemoryAccounting=yes
+IOAccounting=yes
+TasksAccounting=yes
+ManagedOOMMemoryPressure=kill
+ManagedOOMMemoryPressureLimit=60%
