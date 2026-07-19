@@ -1011,7 +1011,14 @@
     (update-invoke-jobs-ledger!
      (fn [ledger]
        (if-let [job (get-in ledger [:jobs job-id])]
-         (let [finished-at (str (Instant/now))
+         ;; First terminal transition wins: if the ceiling reaper already
+         ;; force-terminated this job ("timeout"), the interrupted worker's
+         ;; own finalize must not overwrite it (no timeout->failed flip,
+         ;; no double delivery). Non-terminal states (queued/running/overrun)
+         ;; finalize normally.
+         (if (not (#{"queued" "running" "overrun"} (str (:state job))))
+           ledger
+           (let [finished-at (str (Instant/now))
                updated-job (-> job
                                (assoc :state terminal-state
                                       :finished-at finished-at
@@ -1030,7 +1037,7 @@
            (reset! updated-terminal-job updated-job)
            (cond-> (assoc-in ledger [:jobs job-id] updated-job)
              (and (string? trace-id) (not (str/blank? trace-id)))
-             (assoc-in [:trace->job trace-id] job-id)))
+             (assoc-in [:trace->job trace-id] job-id))))
          ledger)))
     (let [released-park-records (:released-records (parked-on-notify! job-id result-text))]
       (when @updated-terminal-job
