@@ -958,11 +958,11 @@
    (fn [acc job]
      (let [aid (some-> (:agent-id job) str str/trim not-empty)
            state (some-> (:state job) str)]
-       (if-not (and aid (#{"queued" "running"} state))
+       (if-not (and aid (#{"queued" "running" "overrun"} state))
          acc
          (-> acc
              (update-in [aid :queued-jobs] (fnil + 0) (if (= "queued" state) 1 0))
-             (update-in [aid :running-jobs] (fnil + 0) (if (= "running" state) 1 0))
+             (update-in [aid :running-jobs] (fnil + 0) (if (#{"running" "overrun"} state) 1 0))
              (update-in [aid :nonterminal-jobs] (fnil inc 0))))))
    {}
    (vals (get @!invoke-jobs-ledger :jobs {}))))
@@ -1135,50 +1135,130 @@
          (map #(get-in ledger [:jobs %]))
          (remove nil?))))
 
-(def ^:const stale-job-threshold-ms
-  "Jobs running longer than this are considered stale and will be reaped."
+(defn- parse-env-ms
+  "Parse a millisecond duration from env var NAME, falling back to DEFAULT."
+  [name default]
+  (try
+    (let [raw (System/getenv name)]
+      (if (and raw (not (str/blank? (str/trim raw))))
+        (long (Integer/parseInt (str/trim raw)))
+        default))
+    (catch Exception _ default)))
+
+(def ^:private default-job-cap-ms
+  "Soft cap: jobs running longer than this enter the 'overrun' state.
+   The lane keeps executing (supervised); this is NOT a terminal state."
   (* 35 60 1000))  ;; 35 minutes
 
+(defn job-cap-ms
+  "Current job cap in ms. Overridable via FUTON3C_JOB_CAP_MS."
+  []
+  (parse-env-ms "FUTON3C_JOB_CAP_MS" default-job-cap-ms))
+
+(defn job-ceiling-ms
+  "Hard ceiling: jobs running longer than this are force-terminated.
+   Default 2x cap. Overridable via FUTON3C_JOB_CEILING_MS."
+  []
+  (parse-env-ms "FUTON3C_JOB_CEILING_MS" (* 2 (job-cap-ms))))
+
+;; Keep the old const for backward compatibility.
+(def ^:const stale-job-threshold-ms default-job-cap-ms)
+
+;; Worker thread tracking for ceiling enforcement. Maps job-id -> {:thread Thread :future Future}.
+(defonce ^:private !job-workers (atom {}))
+
+(defn- register-job-worker!
+  "Track the worker thread/future for JOB-ID so the ceiling reaper can interrupt it."
+  [job-id thread future]
+  (swap! !job-workers assoc job-id {:thread thread :future future}))
+
+(defn- unregister-job-worker!
+  [job-id]
+  (swap! !job-workers dissoc job-id))
+
+(defn- interrupt-job-worker!
+  "Interrupt the worker thread for JOB-ID if tracked. Returns true if interrupted."
+  [job-id]
+  (when-let [{:keys [thread future]} (get @!job-workers job-id)]
+    (swap! !job-workers dissoc job-id)
+    (try
+      (when future (future-cancel future))
+      (catch Throwable _))
+    (try
+      (when thread (.interrupt thread))
+      (catch Throwable _))
+    true))
+
+(defn- finalize-overrun-job!
+  "Force-terminate an overrun job past the ceiling.
+   Marks 'timeout', runs execution-evidence fallback, marks agent idle."
+  [jid job ceiling-ms]
+  (interrupt-job-worker! jid)
+  (let [finished-at (str (Instant/now))
+        agent-id (:agent-id job)
+        execution (try
+                    (invoke-execution-evidence {:ok false} jid)
+                    (catch Throwable _ {:executed false :tool-events 0 :command-events 0}))
+        updated-job (-> job
+                        (assoc :state "timeout"
+                               :finished-at finished-at
+                               :terminal-code "job-ceiling-exceeded"
+                               :terminal-message (str "Job force-terminated after exceeding "
+                                                      (/ ceiling-ms 60000) " minute ceiling")
+                               :execution execution)
+                        (append-job-event "timeout" {:code "job-ceiling-exceeded"
+                                                     :ceiling-ms ceiling-ms}))]
+    (when agent-id
+      (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _)))
+    updated-job))
+
 (defn reap-stale-invoke-jobs!
-  "Finalize jobs stuck in 'running' state past the stale threshold.
-   Returns the count of reaped jobs."
-  ([] (reap-stale-invoke-jobs! stale-job-threshold-ms))
+  "Transition running jobs past the cap to 'overrun' (non-terminal, supervised).
+   Force-terminate overrun jobs past the ceiling to 'timeout' (terminal).
+   Returns the count of jobs transitioned."
+  ([] (reap-stale-invoke-jobs! (job-cap-ms)))
   ([threshold-ms]
    (ensure-invoke-jobs-ledger!)
-   (let [now-ms (System/currentTimeMillis)
-         reaped (atom 0)]
+   (let [ceiling-ms (job-ceiling-ms)
+         now-ms (System/currentTimeMillis)
+         transitioned (atom 0)]
      (update-invoke-jobs-ledger!
       (fn [ledger]
         (let [jobs (:jobs ledger)
               updated-jobs
               (reduce-kv
                (fn [acc jid job]
-                 (if (and (= "running" (str (:state job)))
-                          (let [started (:started-at job)]
-                            (when (string? started)
-                              (try
-                                (let [started-ms (.toEpochMilli (Instant/parse started))
-                                      age-ms (- now-ms started-ms)]
-                                  (> age-ms threshold-ms))
-                                (catch Exception _ false)))))
-                   (do
-                     (swap! reaped inc)
-                     (let [finished-at (str (Instant/now))]
-                       (assoc acc jid
-                              (-> job
-                                  (assoc :state "failed"
-                                         :finished-at finished-at
-                                         :terminal-code "stale-job-reaped"
-                                         :terminal-message (str "Job stuck in running state; reaped after "
-                                                                (/ threshold-ms 60000) " minutes"))
-                                  (append-job-event "failed" {:code "stale-job-reaped"})))))
-                   (assoc acc jid job)))
+                 (let [started (:started-at job)
+                       age-ms (when (string? started)
+                                (try
+                                  (- now-ms (.toEpochMilli (Instant/parse started)))
+                                  (catch Exception _ nil)))]
+                   (cond
+                     ;; Running past cap -> overrun (non-terminal, supervised)
+                     (and (= "running" (str (:state job)))
+                          (some? age-ms) (> age-ms threshold-ms))
+                     (do (swap! transitioned inc)
+                         (assoc acc jid
+                                (-> job
+                                    (assoc :state "overrun"
+                                           :overrun-at (str (Instant/now)))
+                                    (append-job-event "overrun" {:code "job-cap-exceeded"
+                                                                 :cap-ms threshold-ms}))))
+
+                     ;; Overrun past ceiling -> timeout (terminal, force-terminated)
+                     (and (= "overrun" (str (:state job)))
+                          (some? age-ms) (> age-ms ceiling-ms))
+                     (do (swap! transitioned inc)
+                         (assoc acc jid (finalize-overrun-job! jid job ceiling-ms)))
+
+                     :else
+                     (assoc acc jid job))))
                {}
                jobs)]
           (assoc ledger :jobs updated-jobs))))
-     (let [n @reaped]
+     (let [n @transitioned]
        (when (pos? n)
-         (println (str "[invoke-jobs] Reaped " n " stale job(s)"))
+         (println (str "[invoke-jobs] Transitioned " n " stale/overrun job(s)"))
          (flush))
        n))))
 
@@ -3200,6 +3280,7 @@
                                     :surface surface})]
     (try
       (mark-invoke-job-running! job-id)
+      (register-job-worker! job-id (Thread/currentThread) nil)
       (preclock-dispatch! agent-id mission-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
             raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
@@ -3258,6 +3339,7 @@
                             :error "invoke-error"
                             :message (.getMessage t)}))
       (finally
+       (unregister-job-worker! job-id)
        ;; Guarantee: every terminal outcome resets agent status.
        (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _))))))
 
@@ -3268,6 +3350,8 @@
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
+      ;; Register the worker thread for ceiling enforcement (interrupt at hard ceiling).
+      (register-job-worker! job-id (Thread/currentThread) nil)
       (preclock-dispatch! agent-id mission-id)
       (let [thread (let [bell? (= "bell" (some-> surface str str/trim))
                          job   (when bell? (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]))]
@@ -3341,6 +3425,8 @@
          :error "invoke-error"
          :message (.getMessage t)})
       (finally
+       ;; Unregister worker (ceiling reaper no longer needs to track this job).
+       (unregister-job-worker! job-id)
        ;; Guarantee: every terminal outcome resets agent status. The registry's
        ;; invoke-agent! wrapper normally handles this, but if the worker thread
        ;; is killed or the invoke-fn blocks past process boundaries, mark-idle!
@@ -3946,7 +4032,7 @@
 
 (defn- invoke-job-terminal-state?
   [state]
-  (not (#{"queued" "running"} (str state))))
+  (not (#{"queued" "running" "overrun"} (str state))))
 
 (defn- stream-flag?
   [payload]
