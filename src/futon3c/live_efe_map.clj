@@ -23,6 +23,9 @@
 (def ^:private bge-path
   "/home/joe/code/futon3a/resources/notions/bge_mission_embeddings.json")
 
+(def ^:private capability-zones-path
+  "/home/joe/code/futon3c/resources/capability_zones/live-map-pca3-v1.json")
+
 (def ^:private coordinate-variant "embed")
 
 (def ^:private placement-weights
@@ -106,6 +109,14 @@
       (vector? raw) raw
       (map? raw) (or (get raw "records") [])
       :else [])))
+
+(defn- capability-zones
+  []
+  (or (read-json-cached capability-zones-path)
+      {"schema" "capability-zones-live-map.v1"
+       "available" false
+       "items" []
+       "legend" []}))
 
 (defn- mission-docs
   []
@@ -409,6 +420,7 @@
      :war-machine {:count (count wm)
                    :items wm}
      :coordination (recent-coordination)
+     :capability-zones (capability-zones)
      :ship (ship-position agents)
      :frontier {:count (count frontier)
                 :items frontier}}))
