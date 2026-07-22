@@ -55,6 +55,13 @@
   (or (some-> (System/getenv "FUTON1B_TIMEOUT_MS") parse-long)
       120000))
 
+(def ^:private append-timeout-ms
+  ;; Append is retried by stable id. It must return control to the compatibility
+  ;; route well before the general 120s analytical-read budget so abandoned
+  ;; callers cannot accumulate indefinitely under store contention.
+  (or (some-> (System/getenv "FUTON1B_APPEND_TIMEOUT_MS") parse-long)
+      30000))
+
 (defn- api-url [base-url path]
   (str (str/replace base-url #"/$" "") path))
 
@@ -89,11 +96,13 @@
 (defn- get-edn
   "GET url, EDN-parse the body. Returns {:status n :body v}.
    Throws on transport-level failure (connection refused etc.)."
-  [url]
-  (let [{:keys [status body error]} @(http/get url {:timeout timeout-ms :as :text})]
+  ([url] (get-edn url timeout-ms))
+  ([url request-timeout-ms]
+   (let [{:keys [status body error]}
+         @(http/get url {:timeout request-timeout-ms :as :text})]
     (when error
       (throw (ex-info "futon1b unreachable" {:url url} error)))
-    {:status status :body (read-edn body)}))
+    {:status status :body (read-edn body)})))
 
 (defn- query-string
   "Pushdown params. See ns docstring for the two regimes."
@@ -167,52 +176,51 @@
 (defrecord Futon1bBackend [base-url]
   backend/EvidenceBackend
 
-  (-append [this validated]
+  (-append [_ validated]
     (let [eid (:evidence/id validated)
-          reply (:evidence/in-reply-to validated)
-          fork (:evidence/fork-of validated)]
+          {:keys [status body error]}
+          @(http/post (api-url base-url "/api/alpha/evidence")
+                      {:timeout append-timeout-ms
+                       :as :text
+                       :headers {"content-type" "application/edn"
+                                 "x-penholder" (penholder)}
+                       :body (pr-str validated)})
+          parsed (read-edn body)]
       (cond
-        (and reply (not (backend/-exists? this reply)))
-        (social-error :reply-not-found "in-reply-to references missing entry"
-                      :in-reply-to reply :evidence-id eid)
+        error
+        (social-error (if (timeout-error? error)
+                        :store-timeout
+                        :store-unreachable)
+                      (if (timeout-error? error)
+                        "futon1b persistence timed out"
+                        "futon1b server unreachable")
+                      :evidence-id eid :detail (str error))
 
-        (and fork (not (backend/-exists? this fork)))
+        (= 201 status)
+        {:ok true :entry (or (:entry parsed) validated)}
+
+        (and (= 409 status) (= :reply-not-found (:error parsed)))
+        (social-error :reply-not-found "in-reply-to references missing entry"
+                      :in-reply-to (:evidence/in-reply-to validated)
+                      :evidence-id eid)
+
+        (and (= 409 status) (= :fork-not-found (:error parsed)))
         (social-error :fork-not-found "fork-of references missing entry"
-                      :fork-of fork :evidence-id eid)
+                      :fork-of (:evidence/fork-of validated)
+                      :evidence-id eid)
+
+        (= 409 status)
+        (social-error :duplicate-id "Evidence id already exists"
+                      :evidence-id eid)
 
         :else
-        (let [{:keys [status body error]}
-              @(http/post (api-url base-url "/api/alpha/evidence")
-                          {:timeout timeout-ms
-                           :as :text
-                           :headers {"content-type" "application/edn"
-                                     "x-penholder" (penholder)}
-                           :body (pr-str validated)})
-              parsed (read-edn body)]
-          (cond
-            error
-            (social-error (if (timeout-error? error)
-                            :store-timeout
-                            :store-unreachable)
-                          (if (timeout-error? error)
-                            "futon1b persistence timed out"
-                            "futon1b server unreachable")
-                          :evidence-id eid :detail (str error))
-
-            (= 201 status)
-            {:ok true :entry (or (:entry parsed) validated)}
-
-            (= 409 status)
-            (social-error :duplicate-id "Evidence id already exists"
-                          :evidence-id eid)
-
-            :else
-            (social-error :store-rejected "futon1b rejected the append"
-                          :evidence-id eid :status status :body parsed))))))
+        (social-error :store-rejected "futon1b rejected the append"
+                      :evidence-id eid :status status :body parsed))))
 
   (-get [_ evidence-id]
     (let [{:keys [status body]}
-          (get-edn (str (api-url base-url "/api/alpha/evidence/") (enc evidence-id)))]
+          (get-edn (str (api-url base-url "/api/alpha/evidence/") (enc evidence-id))
+                   append-timeout-ms)]
       (when (= 200 status) body)))
 
   (-exists? [this evidence-id]

@@ -192,10 +192,12 @@ already recorded the park-id, so refusing here would destroy the resume."
           (make-temp-file "agent-chat-evidence-outbox-" t))
          (responses '((:status 0 :error "timed out")
                       (:status 201 :json (:evidence/id "ignored-server-id"))))
+         seen-timeouts
          evidence-id)
     (unwind-protect
         (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
-                   (lambda (&rest _)
+                   (lambda (_method _url timeout &rest _)
+                     (push timeout seen-timeouts)
                      (prog1 (car responses) (setq responses (cdr responses)))))
                   ((symbol-function 'agent-chat-evidence-start-outbox!) #'ignore))
           (setq evidence-id
@@ -212,8 +214,17 @@ already recorded the park-id, so refusing here would destroy the resume."
                  (record (agent-chat-evidence--read-record (car files)))
                  (payload (alist-get 'payload record)))
             (should (= 1 (length files)))
-            (should (equal evidence-id (alist-get 'id payload))))
-          (agent-chat-evidence-drain-outbox!)
+            (should (equal evidence-id (alist-get 'id payload)))
+            (should-not (assq 'timeout record)))
+          (cl-letf (((symbol-function 'agent-chat-evidence--start-replay!)
+                     (lambda (path record)
+                       (when (eq 'acked
+                                 (agent-chat-evidence--attempt-record record))
+                         (delete-file path))
+                       (agent-chat-evidence--release-drain-lease))))
+            (agent-chat-evidence-drain-outbox!))
+          (should (equal (reverse seen-timeouts)
+                         (list 1 agent-chat-evidence-outbox-attempt-timeout)))
           (should-not (agent-chat-evidence--queue-files)))
       (delete-directory agent-chat-evidence-outbox-directory t))))
 
@@ -249,6 +260,30 @@ already recorded the park-id, so refusing here would destroy the resume."
               (author . "joe"))))
           (should-not (agent-chat-evidence--queue-files))
           (should (= 1 (length (agent-chat-evidence--failed-files)))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-evidence-replay-parses-status-before-process-notice ()
+  (should (= 409 (agent-chat-evidence--curl-status
+                  "409\n\nProcess agent-chat-evidence-replay finished\n")))
+  (should (= 0 (agent-chat-evidence--curl-status "curl transport error"))))
+
+(ert-deftest agent-chat-evidence-retry-deadline-is-persisted-across-emacs-processes ()
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (agent-chat-evidence-outbox-retry-seconds 15)
+         (path (expand-file-name "record.json"
+                                 agent-chat-evidence-outbox-directory))
+         (record '((evidence-url . "http://store.test/api/alpha/evidence")
+                   (payload . ((evidence-id . "stable-id")))
+                   (attempts . 0)
+                   (next-at . 0))))
+    (unwind-protect
+        (cl-letf (((symbol-function 'float-time) (lambda (&rest _) 1000.0)))
+          (agent-chat-evidence--schedule-retry path record)
+          (let ((saved (agent-chat-evidence--read-record path)))
+            (should (= 1 (alist-get 'attempts saved)))
+            (should (= 1030.0 (alist-get 'next-at saved)))
+            (should-not (agent-chat-evidence--eligible-record))))
       (delete-directory agent-chat-evidence-outbox-directory t))))
 
 (ert-deftest agent-chat-ensure-prompt-markers-repairs-drifting-input-start ()

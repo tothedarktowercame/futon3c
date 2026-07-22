@@ -59,6 +59,18 @@
   :type 'number
   :group 'agent-chat)
 
+(defcustom agent-chat-evidence-outbox-attempt-timeout 75
+  "Seconds allowed for an asynchronous outbox delivery attempt.
+This is independent of the short interactive evidence timeout. It exceeds the
+bounded Futon3c compatibility append path without blocking the Emacs UI."
+  :type 'number
+  :group 'agent-chat)
+
+(defcustom agent-chat-evidence-outbox-lease-seconds 180
+  "Age after which a crashed outbox drainer's filesystem lease may be reclaimed."
+  :type 'number
+  :group 'agent-chat)
+
 (defface agent-chat-joe-face
   '((t :foreground "#50fa7b" :weight bold))
   "Face for joe."
@@ -137,6 +149,9 @@
 
 (defvar agent-chat--evidence-outbox-timer nil
   "Process-wide timer that retries durable evidence deliveries.")
+
+(defvar agent-chat--evidence-outbox-process nil
+  "Asynchronous curl process currently draining one outbox record.")
 
 (defvar agent-chat--last-evidence-delivery-outcome nil
   "Outcome of the most recent evidence post: acked, queued, or failed.")
@@ -2372,15 +2387,9 @@ Replaces the `(session: ...)' text in the first line."
               path (error-message-string err))
      nil)))
 
-(defun agent-chat-evidence--attempt-record (record)
-  "Attempt RECORD once and return acked, retry, or failed."
-  (let* ((evidence-url (alist-get 'evidence-url record))
-         (timeout (or (alist-get 'timeout record) 1))
-         (payload (alist-get 'payload record))
-         (url (format "%s/api/alpha/evidence"
-                      (agent-chat-evidence-base-url evidence-url)))
-         (response (agent-chat-evidence-request-json "POST" url timeout payload))
-         (status (or (plist-get response :status) 0))
+(defun agent-chat-evidence--classify-response (response)
+  "Classify RESPONSE as acked, retry, or failed."
+  (let* ((status (or (plist-get response :status) 0))
          (json (plist-get response :json))
          (error-text (let ((value (plist-get json :error)))
                        (and (stringp value) value)))
@@ -2394,6 +2403,16 @@ Replaces the `(session: ...)' text in the first line."
           (>= status 500))
       'retry)
      (t 'failed))))
+
+(defun agent-chat-evidence--attempt-record (record &optional timeout)
+  "Attempt RECORD once and return acked, retry, or failed."
+  (let* ((evidence-url (alist-get 'evidence-url record))
+         (timeout (or timeout agent-chat-evidence-outbox-attempt-timeout))
+         (payload (alist-get 'payload record))
+         (url (format "%s/api/alpha/evidence"
+                      (agent-chat-evidence-base-url evidence-url)))
+         (response (agent-chat-evidence-request-json "POST" url timeout payload)))
+    (agent-chat-evidence--classify-response response)))
 
 (defun agent-chat-evidence--failed-path (path)
   "Return the durable failed-delivery destination for PATH."
@@ -2413,6 +2432,139 @@ Replaces the `(session: ...)' text in the first line."
     (when (file-directory-p directory)
       (directory-files directory t "\\.json\\'" t))))
 
+(defun agent-chat-evidence--drain-lease-path ()
+  "Return the cross-Emacs singleton drain lease directory."
+  (expand-file-name ".drain-lease" agent-chat-evidence-outbox-directory))
+
+(defun agent-chat-evidence--acquire-drain-lease ()
+  "Acquire the cross-Emacs outbox drain lease, reclaiming it only when stale."
+  (make-directory agent-chat-evidence-outbox-directory t)
+  (let ((lease (agent-chat-evidence--drain-lease-path)))
+    (when (file-directory-p lease)
+      (let* ((attrs (file-attributes lease))
+             (age (and attrs
+                       (- (float-time)
+                          (float-time (file-attribute-modification-time attrs))))))
+        (when (and age (> age agent-chat-evidence-outbox-lease-seconds))
+          (delete-directory lease t))))
+    (condition-case nil
+        (progn
+          (make-directory lease nil)
+          (set-file-modes lease #o700)
+          t)
+      (file-already-exists nil))))
+
+(defun agent-chat-evidence--release-drain-lease ()
+  "Release this process's cross-Emacs drain lease."
+  (let ((lease (agent-chat-evidence--drain-lease-path)))
+    (when (file-directory-p lease)
+      (delete-directory lease t))))
+
+(defun agent-chat-evidence--read-json-file (path)
+  "Read PATH as a JSON plist, returning nil for an absent/invalid body."
+  (condition-case nil
+      (with-temp-buffer
+        (insert-file-contents path)
+        (agent-chat--parse-json-string (buffer-string)))
+    (error nil)))
+
+(defun agent-chat-evidence--curl-status (output)
+  "Extract curl's three-digit HTTP status from OUTPUT.
+Emacs may append a process-finished notice to the process buffer before the
+sentinel runs, so the status is not necessarily the final text."
+  (if (and output
+           (string-match "\\b\\([0-9][0-9][0-9]\\)\\b" output))
+      (string-to-number (match-string 1 output))
+    0))
+
+(defun agent-chat-evidence--schedule-retry (path record)
+  "Persist a cross-Emacs retry deadline with bounded exponential backoff."
+  (let* ((attempts (1+ (or (alist-get 'attempts record) 0)))
+         (delay (min 300 (* agent-chat-evidence-outbox-retry-seconds
+                            (expt 2 (min attempts 4))))))
+    (setf (alist-get 'attempts record) attempts)
+    (setf (alist-get 'next-at record) (+ (float-time) delay))
+    (agent-chat-evidence--write-record path record)))
+
+(defun agent-chat-evidence--eligible-record ()
+  "Return the first (PATH RECORD) whose persisted retry deadline has passed."
+  (seq-some
+   (lambda (path)
+     (when-let* ((record (agent-chat-evidence--read-record path))
+                 (next-at (or (alist-get 'next-at record) 0)))
+       (when (<= next-at (float-time))
+         (list path record))))
+   (agent-chat-evidence--queue-files)))
+
+(defun agent-chat-evidence--finish-replay
+    (path record response-file process-buffer response)
+  "Apply RESPONSE to PATH, clean replay resources, and expose queue state."
+  (pcase (agent-chat-evidence--classify-response response)
+    ('acked (when (file-exists-p path) (delete-file path)))
+    ('retry
+     (when (file-exists-p path)
+       (agent-chat-evidence--schedule-retry path record)))
+    ('failed
+     (when (file-exists-p path)
+       (rename-file path (agent-chat-evidence--failed-path path) t)
+       (message "Evidence delivery rejected permanently; retained in %s"
+                (agent-chat-evidence--failed-path path)))))
+  (when (file-exists-p response-file) (delete-file response-file))
+  (when (buffer-live-p process-buffer) (kill-buffer process-buffer))
+  (setq agent-chat--evidence-outbox-process nil)
+  (agent-chat-evidence--release-drain-lease)
+  (agent-chat-evidence--refresh-delivery-status))
+
+(defun agent-chat-evidence--start-replay! (path record)
+  "Asynchronously replay RECORD from PATH without blocking the Emacs UI."
+  (let* ((payload (alist-get 'payload record))
+         (evidence-url (alist-get 'evidence-url record))
+         (url (format "%s/api/alpha/evidence"
+                      (agent-chat-evidence-base-url evidence-url)))
+         (response-file (make-temp-file "agent-chat-evidence-response-"))
+         (process-buffer (generate-new-buffer " *agent-chat-evidence-replay*"))
+         (command (list "curl" "--silent" "--show-error"
+                        "--connect-timeout" "3"
+                        "--max-time" (number-to-string
+                                      agent-chat-evidence-outbox-attempt-timeout)
+                        "--output" response-file
+                        "--write-out" "%{http_code}"
+                        "--request" "POST"
+                        "--header" "Content-Type: application/json"
+                        "--header" "Accept: application/json"
+                        "--data-binary" "@-" url)))
+    (condition-case err
+        (let ((process
+               (make-process
+                :name "agent-chat-evidence-replay"
+                :buffer process-buffer
+                :command command
+                :connection-type 'pipe
+                :noquery t
+                :sentinel
+                (lambda (proc _event)
+                  (when (memq (process-status proc) '(exit signal))
+                    (let* ((output (when (buffer-live-p process-buffer)
+                                     (with-current-buffer process-buffer
+                                       (string-trim (buffer-string)))))
+                           (status (agent-chat-evidence--curl-status output))
+                           (response `(:status ,status
+                                      :json ,(agent-chat-evidence--read-json-file
+                                               response-file))))
+                      (agent-chat-evidence--finish-replay
+                       path record response-file process-buffer response)))))))
+          (setq agent-chat--evidence-outbox-process process)
+          (process-send-string
+           process
+           (json-encode (agent-chat--json-encodable payload)))
+          (process-send-eof process))
+      (error
+       (when (file-exists-p response-file) (delete-file response-file))
+       (when (buffer-live-p process-buffer) (kill-buffer process-buffer))
+       (setq agent-chat--evidence-outbox-process nil)
+       (agent-chat-evidence--release-drain-lease)
+       (message "Evidence replay could not start: %s" (error-message-string err))))))
+
 (defun agent-chat-evidence--refresh-delivery-status ()
   "Expose global outbox state in every live chat buffer header."
   (let ((pending (length (agent-chat-evidence--queue-files)))
@@ -2430,16 +2582,13 @@ Replaces the `(session: ...)' text in the first line."
             (agent-chat--update-session-header-line)))))))
 
 (defun agent-chat-evidence-drain-outbox! ()
-  "Attempt every pending evidence record once."
+  "Start one asynchronous, cross-Emacs-singleton evidence replay."
   (interactive)
-  (dolist (path (agent-chat-evidence--queue-files))
-    (when-let ((record (agent-chat-evidence--read-record path)))
-      (pcase (agent-chat-evidence--attempt-record record)
-        ('acked (delete-file path))
-        ('failed
-         (rename-file path (agent-chat-evidence--failed-path path) t)
-         (message "Evidence delivery rejected permanently; retained in %s"
-                  (agent-chat-evidence--failed-path path))))))
+  (when (and (not (process-live-p agent-chat--evidence-outbox-process))
+             (agent-chat-evidence--acquire-drain-lease))
+    (if-let* ((candidate (agent-chat-evidence--eligible-record)))
+        (agent-chat-evidence--start-replay! (car candidate) (cadr candidate))
+      (agent-chat-evidence--release-drain-lease)))
   (agent-chat-evidence--refresh-delivery-status))
 
 (defun agent-chat-evidence-start-outbox! ()
@@ -2459,13 +2608,14 @@ under outbox/failed and return nil."
                   (agent-chat-evidence--ensure-id payload))
                  (path (agent-chat-evidence--outbox-path evidence-id))
                  (record `((evidence-url . ,evidence-url)
-                           (timeout . ,timeout)
                            (payload . ,stable-payload)
+                           (attempts . 0)
+                           (next-at . 0)
                            (queued-at . ,(format-time-string
                                           "%Y-%m-%dT%H:%M:%S%z")))))
       (agent-chat-evidence--write-record path record)
       (setq agent-chat--last-evidence-delivery-outcome
-            (agent-chat-evidence--attempt-record record))
+            (agent-chat-evidence--attempt-record record timeout))
       (pcase agent-chat--last-evidence-delivery-outcome
         ('acked
          (delete-file path)

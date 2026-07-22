@@ -35,9 +35,11 @@ systemctl --user daemon-reload
 ```
 
 The vitality timer is independent of the serving JVM. It samples cgroup
-`memory.current/high/max`, anon/file breakdown, `memory.events`, PSI, and a
-timed `/health` request once per minute into the bounded private log
-`~/.local/state/futon1b/vitality.jsonl`. Enable it after installing:
+`memory.current/high/max`, anon/file breakdown, `memory.events`, PSI, the main
+`:7073/health` path, and a separate one-worker `:7072/health` acceptor once per
+minute into the bounded private log `~/.local/state/futon1b/vitality.jsonl`.
+The split distinguishes a live JVM from a dead or saturated main dispatcher.
+Enable it after installing:
 
 ```bash
 systemctl --user enable --now futon1b-vitality.timer

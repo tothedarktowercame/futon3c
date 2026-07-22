@@ -1713,6 +1713,16 @@
     :store-rejected 503
     400))
 
+(defonce ^:private !evidence-appends-in-flight (atom #{}))
+
+(defn- claim-evidence-append!
+  "Claim EVIDENCE-ID for one compatibility-route append. A timed-out caller
+  does not cancel its server-side work, so retries for the same stable id must
+  receive a fast retryable response rather than starting duplicate store IO."
+  [evidence-id]
+  (let [[before _] (swap-vals! !evidence-appends-in-flight conj evidence-id)]
+    (not (contains? before evidence-id))))
+
 (defn- normalize-evidence-payload
   "Normalize write payload (string fields to keywords where needed)."
   [payload]
@@ -1770,15 +1780,25 @@
                           :message "Request body must be a JSON object"})
       (let [evidence-store (evidence-store-for-config config)
             normalized (normalize-evidence-payload payload)
-            result (boundary/append! evidence-store normalized)]
-        (if (:ok result)
-          (json-response 201 {:ok true
-                              :evidence/id (get-in result [:entry :evidence/id])
-                              :entry (:entry result)})
-          (json-response (append-error-status (:error/code result))
-                         {:ok false
-                          :err (name (:error/code result))
-                          :error result}))))))
+            evidence-id (:evidence-id normalized)]
+        (if (and evidence-id (not (claim-evidence-append! evidence-id)))
+          (json-response 503 {:ok false
+                              :err "evidence-append-in-flight"
+                              :evidence-id evidence-id
+                              :retry-after-seconds 5})
+          (try
+            (let [result (boundary/append! evidence-store normalized)]
+              (if (:ok result)
+                (json-response 201 {:ok true
+                                    :evidence/id (get-in result [:entry :evidence/id])
+                                    :entry (:entry result)})
+                (json-response (append-error-status (:error/code result))
+                               {:ok false
+                                :err (name (:error/code result))
+                                :error result})))
+            (finally
+              (when evidence-id
+                (swap! !evidence-appends-in-flight disj evidence-id)))))))))
 
 ;; =============================================================================
 ;; ArSE (Artificial Stack Exchange) endpoints — walkie-talkie surface

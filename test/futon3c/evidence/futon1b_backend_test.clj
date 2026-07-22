@@ -76,3 +76,21 @@
                                                "connection refused")}))]
       (is (= :store-unreachable
              (:error/code (backend/-append store entry)))))))
+
+(deftest append-delegates-reference-validation-to-the-store
+  (let [gets (atom 0)
+        store (sut/make-futon1b-backend "http://store.test")
+        entry {:evidence/id "e-child"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "test"
+               :evidence/at "2026-07-22T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags []
+               :evidence/in-reply-to "missing-parent"}]
+    (with-redefs [http/get (fn [& _] (swap! gets inc) (delay {:status 404 :body "{}"}))
+                  http/post (fn [_ _]
+                              (delay {:status 409
+                                      :body "{:error :reply-not-found}"}))]
+      (is (= :reply-not-found (:error/code (backend/-append store entry))))
+      (is (zero? @gets) "the client does not add a preflight point read"))))

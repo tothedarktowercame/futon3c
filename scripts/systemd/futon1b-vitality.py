@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 
 
 UNIT = "futon1b-server.service"
-HEALTH_URL = "http://127.0.0.1:7073/health"
+MAIN_HEALTH_URL = "http://127.0.0.1:7073/health"
+LIVENESS_URL = "http://127.0.0.1:7072/health"
 STATE_DIR = pathlib.Path(os.environ.get("XDG_STATE_HOME", pathlib.Path.home() / ".local/state")) / "futon1b"
 LOG_PATH = STATE_DIR / "vitality.jsonl"
 STATE_PATH = STATE_DIR / "vitality-state.json"
@@ -38,10 +39,10 @@ def read_pairs(path):
     return {key: int(value) for key, value in (line.split() for line in path.read_text().splitlines())}
 
 
-def health_probe():
+def health_probe(url):
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(HEALTH_URL, timeout=2) as response:
+        with urllib.request.urlopen(url, timeout=2) as response:
             response.read()
             return response.status, round((time.monotonic() - started) * 1000, 1), None
     except (urllib.error.URLError, TimeoutError, OSError) as error:
@@ -80,7 +81,7 @@ def main():
     control_group = systemctl_property("ControlGroup")
     cgroup = pathlib.Path("/sys/fs/cgroup") / control_group.lstrip("/")
     if active_state != "active" or not cgroup.exists():
-        status, latency_ms, health_error = health_probe()
+        status, latency_ms, health_error = health_probe(LIVENESS_URL)
         record = {
             "at": datetime.now(timezone.utc).isoformat(),
             "unit": UNIT,
@@ -97,7 +98,8 @@ def main():
     events = read_pairs(cgroup / "memory.events")
     stats = read_pairs(cgroup / "memory.stat")
     previous = load_state()
-    status, latency_ms, health_error = health_probe()
+    status, latency_ms, health_error = health_probe(MAIN_HEALTH_URL)
+    liveness_status, liveness_latency_ms, liveness_error = health_probe(LIVENESS_URL)
     high_delta = events.get("high", 0) - int(previous.get("memory_events_high", 0))
     ratio = (current / high) if high else None
     alerts = []
@@ -106,9 +108,13 @@ def main():
     if high_delta > 0:
         alerts.append("memory-high-throttled")
     if status != 200:
-        alerts.append("health-failed")
+        alerts.append("main-health-failed")
     elif latency_ms >= 500:
-        alerts.append("health-slow")
+        alerts.append("main-health-slow")
+    if liveness_status != 200:
+        alerts.append("independent-liveness-failed")
+    elif liveness_latency_ms >= 500:
+        alerts.append("independent-liveness-slow")
     record = {
         "at": datetime.now(timezone.utc).isoformat(),
         "unit": UNIT,
@@ -125,6 +131,11 @@ def main():
         },
         "pressure": (cgroup / "memory.pressure").read_text().splitlines(),
         "health": {"status": status, "elapsed_ms": latency_ms, "error": health_error},
+        "independent_liveness": {
+            "status": liveness_status,
+            "elapsed_ms": liveness_latency_ms,
+            "error": liveness_error,
+        },
         "alerts": alerts,
     }
     append_bounded(record)

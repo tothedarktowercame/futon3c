@@ -1889,6 +1889,16 @@
     (is (= 503 (#'http/append-error-status :store-unreachable)))
     (is (= 503 (#'http/append-error-status :store-rejected)))))
 
+(deftest evidence-create-coalesces-the-same-stable-id
+  (let [in-flight (var-get #'http/!evidence-appends-in-flight)]
+    (reset! in-flight #{})
+    (try
+      (is (#'http/claim-evidence-append! "stable-id"))
+      (is (not (#'http/claim-evidence-append! "stable-id")))
+      (is (#'http/claim-evidence-append! "other-id"))
+      (finally
+        (reset! in-flight #{})))))
+
 (deftest evidence-count-returns-total
   (testing "GET /api/alpha/evidence/count returns total evidence count"
     (let [_ (estore/append! {:subject {:ref/type :session :ref/id "sess-count-1"}
