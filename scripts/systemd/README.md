@@ -21,15 +21,27 @@ of the bounded agent slice.
 cd /home/joe/code/futon3c
 install -Dm644 scripts/systemd/units/futon-services.slice ~/.config/systemd/user/futon-services.slice
 install -Dm644 scripts/systemd/units/futon-agents.slice ~/.config/systemd/user/futon-agents.slice
+install -Dm644 scripts/systemd/units/futon1b-server.service ~/.config/systemd/user/futon1b-server.service
 install -Dm644 scripts/systemd/units/futon3c-server.service ~/.config/systemd/user/futon3c-server.service
 systemd-analyze --user verify ~/.config/systemd/user/futon-services.slice \
   ~/.config/systemd/user/futon-agents.slice \
+  ~/.config/systemd/user/futon1b-server.service \
   ~/.config/systemd/user/futon3c-server.service
 systemctl --user daemon-reload
 ```
 
-`daemon-reload` only loads definitions; do **not** enable or start the service
-yet. Keep using the current tmux server until the quiet-window migration below.
+`daemon-reload` only loads definitions; do **not** enable or start the futon3c
+service yet. `futon1b-server.service` is the laptop's authoritative evidence
+and substrate boundary and may be started independently while futon3c remains
+in tmux:
+
+```bash
+systemctl --user enable --now futon1b-server.service
+curl -fsS http://127.0.0.1:7073/health
+```
+
+Keep using the current tmux futon3c server until the quiet-window migration
+below.
 
 ## Quiet-window migration (exact commands)
 

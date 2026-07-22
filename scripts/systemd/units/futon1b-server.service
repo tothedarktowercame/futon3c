@@ -1,0 +1,28 @@
+[Unit]
+Description=futon1b XTDB2 store server (E-futon1b-operational-switchover)
+After=network.target
+
+[Service]
+Type=simple
+Slice=futon-services.slice
+WorkingDirectory=%h/code/futon1b
+ExecStart=/usr/local/bin/clojure -M:server -m futon1b-server --store-dir migration-store-21 --port 7073
+Restart=on-failure
+RestartSec=10
+KillMode=control-group
+KillSignal=SIGTERM
+SuccessExitStatus=143
+TimeoutStopSec=45
+ManagedOOMPreference=avoid
+OOMPolicy=stop
+CPUAccounting=yes
+MemoryAccounting=yes
+IOAccounting=yes
+TasksAccounting=yes
+MemoryHigh=7G
+MemoryMax=9G
+MemorySwapMax=1G
+TasksMax=512
+
+[Install]
+WantedBy=default.target

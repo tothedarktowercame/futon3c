@@ -112,3 +112,22 @@
             (str path " pins FUTON1B_STORE_DIR"))
         (is (<= 0 (.indexOf source store))
             (str path " pins it to " store))))))
+
+(deftest laptop-launcher-refuses-missing-authoritative-store
+  (testing "the laptop cannot continue after its futon1b lifecycle check fails"
+    (let [source (slurp "scripts/dev-laptop-env")
+          service-check (.indexOf source "systemctl --user is-active futon1b-server.service")
+          readiness-check (.indexOf source "\"${FUTON1B_URL}/health\"")
+          refusal (.indexOf source "refusing an incoherent boot")
+          exit (.indexOf source "  exit 1" refusal)]
+      (is (<= 0 service-check))
+      (is (< service-check readiness-check refusal exit)
+          "the dependency must be active and HTTP-ready before make dev can start"))))
+
+(deftest futon1b-systemd-unit-is-a-real-futon3c-dependency
+  (testing "the referenced futon1b unit is tracked with the laptop store and port"
+    (let [source (slurp "scripts/systemd/units/futon1b-server.service")]
+      (is (str/includes? source "WorkingDirectory=%h/code/futon1b"))
+      (is (str/includes? source
+                         "-M:server -m futon1b-server --store-dir migration-store-21 --port 7073"))
+      (is (str/includes? source "WantedBy=default.target")))))
