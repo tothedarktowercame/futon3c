@@ -811,20 +811,46 @@ CALLS contains maps of tool name, arguments, and result digest."
    :mission mission
    :observations (or observations {})})
 
+(defn- zaif-pairing-key
+  "Build a deterministic pairing key for Z3a dual-constant entries.
+   Shared across both entries from the same round so the scorer can
+   mechanically pair them by querying for the key."
+  [turn-id round]
+  (str turn-id ":r" (or round 0)))
+
 (defn- maybe-zaif-decision!
+  "Compute and persist ZAIF arm decisions for this round.
+
+   When hydrated inputs are available, records BOTH Z3a constants'
+   decisions (shipped 0.65 + sweep 0.15) from the same inputs, mechanically
+   paired via :pairing-key. Returns the shipped (primary) decision. The
+   _decision binding in run-tool-rounds! stays unused — NO actuation.
+
+   Any hydration error degrades to the empty-map default (never hurts a
+   turn); persistence errors propagate (the loss-accounting contract)."
   [{:keys [profile zaif-inputs-fn agent-id sid evidence-store] :as ctx}]
   (when (= :zaif (resolve-profile profile))
-    (let [inputs (if zaif-inputs-fn
-                   (zaif-inputs-fn ctx)
-                   (default-zaif-inputs ctx))
-          decision (zaif/decide inputs)]
-      (zaif/persist-decision! {:agent-id agent-id
-                               :sid sid
-                               :turn-id (:turn-id ctx)
-                               :evidence-store evidence-store
-                               :decision decision
-                               :inputs inputs})
-      decision)))
+    (let [inputs (try
+                   (if zaif-inputs-fn
+                     (zaif-inputs-fn ctx)
+                     (default-zaif-inputs ctx))
+                   (catch Throwable _
+                     (default-zaif-inputs ctx)))
+          pairing-key (zaif-pairing-key (:turn-id ctx) (:round ctx))
+          dual-results (zaif/dual-decide inputs)]
+      (doseq [{:keys [label operator-attention-cost decision]} dual-results]
+        (zaif/persist-decision! {:agent-id agent-id
+                                 :sid sid
+                                 :turn-id (:turn-id ctx)
+                                 :round (:round ctx)
+                                 :evidence-store evidence-store
+                                 :decision decision
+                                 :inputs inputs
+                                 :constant operator-attention-cost
+                                 :constant-label label
+                                 :pairing-key pairing-key}))
+      ;; Return the shipped (primary) decision for any callers that read it.
+      (:decision (first dual-results)))))
 
 (defn run-tool-rounds!
   "Run one logical Z.AI turn. Kept as a top-level var so a namespace reload can
@@ -845,7 +871,13 @@ CALLS contains maps of tool name, arguments, and result digest."
             (sink! agent-id {:type "text" :text (str "[auto-continue " n "/" auto-continue-max "]")})
             (recur tool-round-budget final-text n false round-n))
           (max-tool-rounds-result sid final-text))
-        (let [_decision (maybe-zaif-decision! (assoc ctx :round round-n))
+        (let [_decision (maybe-zaif-decision!
+                          (assoc ctx
+                                 :round round-n
+                                 :context (some->> @!messages
+                                                   (filter #(= (:role %) "user"))
+                                                   last
+                                                   :content)))
               resp (chat! client (assoc opts :api-key api-key) @!messages)
               err (:error resp)]
           (if err

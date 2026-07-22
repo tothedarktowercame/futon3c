@@ -56,33 +56,39 @@
       0.0)))
 
 (defn- retrieve-value
-  [observations]
-  (let [eig (or (:retrieve-eig observations)
+  ([observations]
+   (retrieve-value observations constants))
+  ([observations consts]
+   (let [eig (or (:retrieve-eig observations)
                 (:eig observations)
                 (idf-ish (:posting-stats observations)))
         tokens (or (:estimated-tokens observations)
                    (get-in observations [:posting-stats :estimated-tokens])
-                   (:default-retrieve-tokens constants))]
-    (- (* (:retrieve-eig-scale constants) (as-double eig 0.0))
-       (* (:retrieve-token-cost constants) (as-double tokens (:default-retrieve-tokens constants))))))
+                   (:default-retrieve-tokens consts))]
+     (- (* (:retrieve-eig-scale consts) (as-double eig 0.0))
+        (* (:retrieve-token-cost consts) (as-double tokens (:default-retrieve-tokens consts)))))))
 
 (defn- act-value
-  [task-belief gamma-used]
-  (* (:act-pragmatic-scale constants)
-     gamma-used
-     (as-double (or (:act-value task-belief)
-                    (:pragmatic-value task-belief)
-                    (:expected-utility task-belief))
-                0.0)))
+  ([task-belief gamma-used]
+   (act-value task-belief gamma-used constants))
+  ([task-belief gamma-used consts]
+   (* (:act-pragmatic-scale consts)
+      gamma-used
+      (as-double (or (:act-value task-belief)
+                     (:pragmatic-value task-belief)
+                     (:expected-utility task-belief))
+                 0.0))))
 
 (defn- ask-value
-  [c-belief]
-  (- (* (:ask-eig-scale constants)
+  ([c-belief]
+   (ask-value c-belief constants))
+  ([c-belief consts]
+   (- (* (:ask-eig-scale consts)
         (as-double (or (:operator-c-uncertainty c-belief)
                        (:uncertainty c-belief)
                        (:ask-eig c-belief))
                    0.0))
-     (:operator-attention-cost constants)))
+     (:operator-attention-cost consts))))
 
 (defn- choose-arm
   [g-terms]
@@ -100,24 +106,64 @@
       :gamma {mission {:policy-precision ...}} ; or scalar cells
       :mission \"M-...\"
       :observations {:posting-stats {:total-docs n :dfs [...]}
-                     :estimated-tokens n}}
+                     :estimated-tokens n}
+      :constants-override {:operator-attention-cost 0.15, ...}}
 
    Higher v0 G term wins. Asymmetric admissibility is upstream: callers pass
-   only beliefs/actions that are allowed to be considered."
-  [{:keys [task-belief c-belief gamma mission observations]}]
-  (let [gamma-used (gamma-for-mission gamma mission)
-        g-terms {:retrieve (retrieve-value observations)
-                 :act (act-value task-belief gamma-used)
-                 :ask (ask-value c-belief)
-                 :yield (:yield-baseline constants)}
+   only beliefs/actions that are allowed to be considered.
+
+   When :constants-override is supplied, its entries replace the
+   corresponding defaults in `constants` — this is how Z3a's dual-constant
+   paired comparison runs the same pure kernel under two costs without
+   duplicating the arithmetic (the shared-kernel discipline)."
+  [{:keys [task-belief c-belief gamma mission observations constants-override]}]
+  (let [consts (if constants-override
+                 (merge constants constants-override)
+                 constants)
+        gamma-used (gamma-for-mission gamma mission)
+        g-terms {:retrieve (retrieve-value observations consts)
+                 :act (act-value task-belief gamma-used consts)
+                 :ask (ask-value c-belief consts)
+                 :yield (:yield-baseline consts)}
         arm (choose-arm g-terms)]
     {:arm arm
      :g-terms g-terms
      :gamma-used gamma-used
      :mission mission
+     :operator-attention-cost (:operator-attention-cost consts)
      :why (format "zaif v0 chose %s: retrieve %.3f, act %.3f, ask %.3f, yield %.3f"
                   (name arm) (:retrieve g-terms) (:act g-terms)
                   (:ask g-terms) (:yield g-terms))}))
+
+(def ^:private z3a-sweep-constant
+  "The Z3a sweep value for operator-attention-cost. At 0.15, ZU-2's replay
+   showed clean arm-separation (all corrections → :ask, all non-corrections
+   → :act). NOT shipped — recorded alongside the shipped 0.65 for paired
+   comparison (z3-prereg.md §Z3a)."
+  0.15)
+
+(defn dual-constants
+  "Return the two operator-attention-cost values Z3a records per round:
+   the shipped constant and the sweep value. The Z3a scorer pairs decisions
+   across these two costs from the same inputs."
+  []
+  [{:operator-attention-cost (:operator-attention-cost constants)
+    :label :shipped}
+   {:operator-attention-cost z3a-sweep-constant
+    :label :sweep}])
+
+(defn dual-decide
+  "Run decide() under both Z3a constants from the same inputs. Returns a
+   sequence of {:constant-override :label :decision} maps, one per constant.
+   The inputs are shared (the shared-kernel discipline); only the constant
+   differs. Pure and deterministic — re-derivable by calling decide again
+   with the recorded inputs and constant-override."
+  [inputs]
+  (for [{:keys [operator-attention-cost label]} (dual-constants)]
+    {:label label
+     :operator-attention-cost operator-attention-cost
+     :decision (decide (assoc inputs :constants-override
+                              {:operator-attention-cost operator-attention-cost}))}))
 
 (defn- sha256-16
   [x]
@@ -132,23 +178,39 @@
    :chars (count (pr-str inputs))})
 
 (defn decision-evidence-entry
-  [{:keys [agent-id sid turn-id decision inputs]}]
-  {:evidence/id (str "e-" (UUID/randomUUID))
-   :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
-   :evidence/type :coordination
-   :evidence/claim-type :step
-   :evidence/author (str agent-id)
-   :evidence/session-id (str sid)
-   :evidence/at (str (java.time.Instant/now))
-   :evidence/tags [:zaif :arm-choice]
-   :evidence/body {:event :zaif-arm-choice
+  "Build an evidence entry for a ZAIF arm decision.
+
+   Optional ctx keys for Z3a dual-constant recording:
+     :constant       — the operator-attention-cost used (0.65 or 0.15)
+     :constant-label — :shipped or :sweep
+     :pairing-key    — shared key linking paired decisions from the same round
+     :round          — the round number within the turn
+   When :constant is absent, the entry is backward-compatible with the
+   pre-Z3a shape (single decision per round)."
+  [{:keys [agent-id sid turn-id decision inputs constant constant-label pairing-key round]}]
+  (let [base-body {:event :zaif-arm-choice
                    :turn-id (some-> turn-id str)
                    :arm (:arm decision)
                    :g-terms (:g-terms decision)
                    :gamma-used (:gamma-used decision)
                    :mission (:mission decision)
+                   :operator-attention-cost (:operator-attention-cost decision)
                    :why (:why decision)
-                   :inputs-digest (inputs-digest inputs)}})
+                   :inputs-digest (inputs-digest inputs)
+                   :inputs-snapshot inputs}]
+    {:evidence/id (str "e-" (UUID/randomUUID))
+     :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
+     :evidence/type :coordination
+     :evidence/claim-type :step
+     :evidence/author (str agent-id)
+     :evidence/session-id (str sid)
+     :evidence/at (str (java.time.Instant/now))
+     :evidence/tags [:zaif :arm-choice]
+     :evidence/body (cond-> base-body
+                      (some? constant)       (assoc :constant constant)
+                      (some? constant-label) (assoc :constant-label constant-label)
+                      (some? pairing-key)    (assoc :pairing-key pairing-key)
+                      (some? round)          (assoc :round round))}))
 
 (defonce ^:private !persistence-status
   (atom {:ok-count 0 :failure-count 0 :last-error nil :last-evidence-id nil}))

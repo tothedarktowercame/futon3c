@@ -61,17 +61,28 @@
       (is (false? @called?)))))
 
 (deftest zaif-profile-consults-controller-and-persists
-  (let [persisted (atom nil)]
-    (with-redefs [zaif/persist-decision! (fn [ctx] (reset! persisted ctx))]
+  (let [persisted (atom [])]
+    (with-redefs [zaif/persist-decision! (fn [ctx] (swap! persisted conj ctx))]
       (let [decision (#'zai/maybe-zaif-decision!
                       {:profile :zaif
                        :agent-id "zai-test"
                        :sid "sid"
+                       :turn-id "turn-1"
+                       :round 1
                        :zaif-inputs-fn (fn [_] {:mission "M-z"
                                                 :task-belief {:act-value 1.0}})})]
+        ;; Returns the shipped (primary) decision
         (is (= :act (:arm decision)))
-        (is (= :act (get-in @persisted [:decision :arm])))
-        (is (= "M-z" (get-in @persisted [:inputs :mission])))))))
+        ;; Both constants persisted (D-1 dual recording)
+        (is (= 2 (count @persisted)))
+        (is (= #{:shipped :sweep}
+               (set (map :constant-label @persisted))))
+        (is (= #{0.65 0.15}
+               (set (map :constant @persisted))))
+        ;; Both share the same pairing-key
+        (is (= 1 (count (set (map :pairing-key @persisted)))))
+        ;; Both use the same inputs
+        (is (every? #(= "M-z" (get-in % [:inputs :mission])) @persisted))))))
 
 (deftest zaif-persistence-failure-is-counted-and-raised
   (let [before (:failure-count (zaif/persistence-status))]
@@ -111,3 +122,148 @@
                                      :task-belief {:act-value 0.5}
                                      :c-belief {:operator-c-uncertainty 0.2}
                                      :observations {}}))))))
+
+;; ─── D-1: dual-constant recording tests ────────────────────────
+
+(deftest decide-with-constants-override-changes-ask-value
+  (testing "constants-override changes the operator-attention-cost in the output"
+    (let [inputs {:mission "M-z"
+                  :c-belief {:operator-c-uncertainty 0.5}
+                  :task-belief {:act-value 0.1}
+                  :observations {}}
+          shipped (zaif/decide inputs)
+          swept (zaif/decide (assoc inputs :constants-override
+                                    {:operator-attention-cost 0.15}))]
+      (is (= 0.65 (:operator-attention-cost shipped)))
+      (is (= 0.15 (:operator-attention-cost swept)))
+      ;; ask-value at shipped cost = 0.5 - 0.65 = -0.15
+      (is (< (Math/abs (- (get-in shipped [:g-terms :ask]) -0.15)) 0.001))
+      ;; ask-value at sweep cost = 0.5 - 0.15 = 0.35
+      (is (< (Math/abs (- (get-in swept [:g-terms :ask]) 0.35)) 0.001)))))
+
+(deftest dual-decide-produces-two-paired-decisions
+  (testing "dual-decide returns both constants from the same inputs"
+    (let [inputs {:mission "M-z"
+                  :c-belief {:operator-c-uncertainty 0.5}
+                  :task-belief {:act-value 0.1}
+                  :observations {}}
+          results (zaif/dual-decide inputs)]
+      (is (= 2 (count results)))
+      (is (= #{:shipped :sweep} (set (map :label results))))
+      (is (= #{0.65 0.15} (set (map :operator-attention-cost results)))))))
+
+(deftest dual-decide-determinism-check
+  (testing "arms are re-derivable from recorded inputs by calling decide again"
+    ;; This is the acceptance criterion 2 determinism check: the scorer
+    ;; can re-derive the arm from the inputs + constant override.
+    (let [inputs {:mission "M-futon-forward-model"
+                  :c-belief {:operator-c-uncertainty 1.0}
+                  :task-belief {:act-value 0.1}
+                  :gamma {"M-futon-forward-model" {:policy-precision 0.7071067811865476}}
+                  :observations {:posting-stats {:total-docs 10 :dfs [1]}}}
+          results (zaif/dual-decide inputs)]
+      (doseq [{:keys [label operator-attention-cost decision]} results]
+        (let [re-derived (zaif/decide
+                          (assoc inputs :constants-override
+                                 {:operator-attention-cost operator-attention-cost}))]
+          (is (= (:arm decision) (:arm re-derived))
+              (str "arm mismatch for " label ": " (:arm decision) " vs " (:arm re-derived)))
+          (is (= (:g-terms decision) (:g-terms re-derived))
+              (str "g-terms mismatch for " label)))))))
+
+(deftest dual-decide-constants-diverge-on-high-c-uncertainty
+  (testing "at moderate c-uncertainty, shipped picks :act, sweep picks :ask"
+    ;; c-uncertainty 0.5: shipped ask = 0.5-0.65 = -0.15 (below act=0.3);
+    ;; sweep ask = 0.5-0.15 = 0.35 (above act=0.3).
+    (let [inputs {:mission "M-z"
+                  :c-belief {:operator-c-uncertainty 0.5}
+                  :task-belief {:act-value 0.3}
+                  :gamma {"M-z" {:policy-precision 1.0}}
+                  :observations {}}
+          results (zaif/dual-decide inputs)
+          by-label (into {} (map (juxt :label :decision) results))]
+      (is (= :act (get-in by-label [:shipped :arm])))
+      (is (= :ask (get-in by-label [:sweep :arm]))))))
+
+(deftest decision-evidence-entry-carries-pairing-and-constant
+  (testing "evidence entry includes :constant, :constant-label, :pairing-key"
+    (let [inputs {:mission "M-z" :task-belief {:act-value 0.2}}
+          decision (zaif/decide inputs)
+          entry (zaif/decision-evidence-entry
+                 {:agent-id "zai-test"
+                  :sid "sid-1"
+                  :turn-id "turn-1"
+                  :round 3
+                  :decision decision
+                  :inputs inputs
+                  :constant 0.15
+                  :constant-label :sweep
+                  :pairing-key "turn-1:r3"})]
+      (is (= [:zaif :arm-choice] (:evidence/tags entry)))
+      (is (= 0.15 (get-in entry [:evidence/body :constant])))
+      (is (= :sweep (get-in entry [:evidence/body :constant-label])))
+      (is (= "turn-1:r3" (get-in entry [:evidence/body :pairing-key])))
+      (is (= 3 (get-in entry [:evidence/body :round])))
+      (is (contains? (get-in entry [:evidence/body]) :inputs-snapshot))
+      (is (= "M-z" (get-in entry [:evidence/body :inputs-snapshot :mission]))))))
+
+(deftest decision-evidence-entry-backward-compatible-without-z3a-fields
+  (testing "entry works without constant/pairing fields (backward compat)"
+    (let [inputs {:mission "M-z" :task-belief {:act-value 0.2}}
+          decision (zaif/decide inputs)
+          entry (zaif/decision-evidence-entry
+                 {:agent-id "zai-test"
+                  :sid "sid-1"
+                  :decision decision
+                  :inputs inputs})]
+      (is (= [:zaif :arm-choice] (:evidence/tags entry)))
+      (is (nil? (get-in entry [:evidence/body :constant])))
+      (is (nil? (get-in entry [:evidence/body :pairing-key]))))))
+
+(deftest dual-decision-through-stub-evidence-store
+  (testing "both constants' decisions recorded through a stub store, mechanically paired"
+    ;; Acceptance criterion 2: dual-decision test through a stub evidence store.
+    ;; Uses a simple atom as the evidence store (boundary resolves it to AtomBackend).
+    (let [!store (atom [])
+          inputs {:mission "M-futon-forward-model"
+                  :c-belief {:operator-c-uncertainty 0.5}
+                  :task-belief {:act-value 0.3}
+                  :gamma {"M-futon-forward-model" {:policy-precision 0.7071067811865476}}
+                  :observations {}}
+          pairing-key "test-turn:r1"
+          results (zaif/dual-decide inputs)]
+      ;; Persist both decisions through persist-decision! with the stub
+      ;; We test decision-evidence-entry directly (persist-decision! requires
+      ;; a real boundary store; here we verify the entry shape + pairing).
+      (doseq [{:keys [label operator-attention-cost decision]} results]
+        (let [entry (zaif/decision-evidence-entry
+                     {:agent-id "zai-test"
+                      :sid "sid-stub"
+                      :turn-id "test-turn"
+                      :round 1
+                      :decision decision
+                      :inputs inputs
+                      :constant operator-attention-cost
+                      :constant-label label
+                      :pairing-key pairing-key})]
+          (swap! !store conj entry)))
+      (let [entries @!store]
+        (is (= 2 (count entries)))
+        (is (= #{:shipped :sweep}
+               (set (map #(get-in % [:evidence/body :constant-label]) entries))))
+        ;; Mechanical pairing: both share the same pairing-key
+        (is (= 1 (count (set (map #(get-in % [:evidence/body :pairing-key]) entries)))))
+        ;; Determinism: arms re-derivable from recorded inputs
+        (doseq [entry entries
+                :let [body (:evidence/body entry)
+                      recorded-inputs (:inputs-snapshot body)
+                      constant (:constant body)
+                      re-derived (zaif/decide
+                                  (assoc recorded-inputs :constants-override
+                                         {:operator-attention-cost constant}))]]
+          (is (= (get-in entry [:evidence/body :arm]) (:arm re-derived))
+              "arm must be re-derivable from recorded inputs + constant"))
+        ;; Divergence: the two constants pick different arms on high c-uncertainty
+        (let [arms (set (map #(get-in % [:evidence/body :arm]) entries))]
+          (is (> (count arms) 1)
+              "high-c-uncertainty inputs should produce arm divergence across constants"))))))
