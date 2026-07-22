@@ -59,6 +59,11 @@
                              [{:table :hyperedges :id "hx-1"}])))
       (is (= 1 @calls)))))
 
+(deftest operator-gates-are-archival-not-removal-candidates
+  (is (#'ingest/archival-binder? "operator-gate"))
+  (is (#'ingest/archival-binder? :mission-scope/operator-gate))
+  (is (not (#'ingest/archival-binder? "eightfold-phase"))))
+
 (deftest operator-gates-become-stable-typed-substrate-records
   (let [raw-scope {:scope-id "M-learning-loop:scope-999"
                    :binder-type "operator-gate"

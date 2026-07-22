@@ -23,6 +23,7 @@
    "relates-to" "source-material" "mission-scope-in" "mission-scope-out"
    "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"
    "operator-gate"])
+(def ^:private archival-binders #{"operator-gate"})
 (def ^:private pattern-library-limit 5000)
 (def ^:private !pattern-library-cache (atom nil))
 
@@ -855,6 +856,9 @@
 (defn- legacy-scope-id? [id]
   (boolean (re-matches #"^M-.+:scope-[0-9]+$" (str id))))
 
+(defn- archival-binder? [binder]
+  (contains? archival-binders (name binder)))
+
 (defn- scope-endpoint-id [h]
   (or (some (fn [end]
               (when (= :environment (:role end))
@@ -877,12 +881,15 @@
   three '## 3. DERIVE' generations, 46 scopes). For this mission+binder,
   any stored scope whose id is absent from SELECTED-IDS is retracted."
   [client base-url penholder mission-entity binder-filter selected-ids]
-  (let [stale-hxs (->> (hyperedges-by-type client base-url (str "mission-scope/" binder-filter))
-                       (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
-                       (remove #(let [sid (or (get-in % [:hx/props :scope/id])
-                                              (scope-endpoint-id %))]
-                                  (or (nil? sid) (contains? selected-ids sid))))
-                       vec)
+  (let [stale-hxs (if (archival-binder? binder-filter)
+                    []
+                    (->> (hyperedges-by-type client base-url
+                                             (str "mission-scope/" binder-filter))
+                         (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
+                         (remove #(let [sid (or (get-in % [:hx/props :scope/id])
+                                                (scope-endpoint-id %))]
+                                    (or (nil? sid) (contains? selected-ids sid))))
+                         vec))
         hx-ids (keep :hx/id stale-hxs)
         scope-ids (->> stale-hxs
                        (keep scope-endpoint-id)
@@ -899,10 +906,13 @@
 
 (defn- retract-legacy-position-scopes!
   [client base-url penholder mission-entity binder-filter]
-  (let [legacy-hxs (->> (hyperedges-by-type client base-url (str "mission-scope/" binder-filter))
-                        (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
-                        (filter #(legacy-position-scope-hyperedge? binder-filter %))
-                        vec)
+  (let [legacy-hxs (if (archival-binder? binder-filter)
+                     []
+                     (->> (hyperedges-by-type client base-url
+                                              (str "mission-scope/" binder-filter))
+                          (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
+                          (filter #(legacy-position-scope-hyperedge? binder-filter %))
+                          vec))
         hx-ids (keep :hx/id legacy-hxs)
         scope-ids (->> legacy-hxs
                        (keep scope-endpoint-id)
@@ -1365,6 +1375,7 @@
   [client base-url penholder mission tree-binders]
   (let [stale-hxs (->> (stored-scope-hyperedges-for-mission client base-url mission)
                        (remove #(contains? tree-binders (name (:hx/type %))))
+                       (remove #(archival-binder? (name (:hx/type %))))
                        vec)
         hx-ids (keep :hx/id stale-hxs)
         scope-ids (keep scope-endpoint-id stale-hxs)
@@ -1607,12 +1618,16 @@
                       :detected-count (count new-scopes)
                       :added-count 0
                       :removed-count 0
+                      :archived-count 0
                       :reworded-count 0
                       :unchanged-count 0
                       :detached-count 0
                       :dry-run? (boolean dry-run?)})]
     (doseq [[stored new-scope] matched]
       (cond
+        (and (nil? new-scope) (archival-binder? (:binder stored)))
+        (swap! report update :archived-count inc)
+
         (nil? new-scope)
         (do
           (swap! report update :removed-count inc)
