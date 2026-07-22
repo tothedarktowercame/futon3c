@@ -655,6 +655,24 @@
           (flush))
         (throw t)))))
 
+(defn- persist-transcript-safely!
+  "Turn-safe transcript persistence. The loss is already counted in
+   !transcript-persistence-status and logged FATAL by persist-transcript-entry!;
+   here it is additionally surfaced to follow-mode and then swallowed —
+   instrumentation must not kill a live turn (2026-07-22: store outages
+   aborted operator turns through this path, losing the turn AND the
+   transcript; the ledger + visible line preserve loss-accounting instead)."
+  [agent-id evidence-store entry]
+  (try
+    (persist-transcript-entry! evidence-store entry)
+    (catch Throwable t
+      (try
+        (sink! agent-id {:type "text"
+                         :text (str "[zai ✗ transcript not persisted: "
+                                    (.getMessage t) "]")})
+        (catch Throwable _ nil))
+      nil)))
+
 (defn- transcript-entry
   [{:keys [agent-id sid turn-id profile event body]}]
   {:evidence/id (str "e-" (UUID/randomUUID))
@@ -673,8 +691,8 @@
 (defn- persist-turn-start!
   "Persist the exact model-facing PROMPT before a ZAI/ZAIF turn begins."
   [{:keys [evidence-store agent-id sid turn-id profile prompt]}]
-  (persist-transcript-entry!
-   evidence-store
+  (persist-transcript-safely!
+   agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-start
@@ -685,8 +703,8 @@
   "Append one durable, turn-addressable round record.
 CALLS contains maps of tool name, arguments, and result digest."
   [{:keys [evidence-store agent-id sid turn-id profile round text calls final?]}]
-  (persist-transcript-entry!
-   evidence-store
+  (persist-transcript-safely!
+   agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-round
@@ -725,8 +743,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    (assoc :count (inc (long (:count v 0)))))))))
                  {} failed-calls)]
     (doseq [[[_tool _sha] bug] grouped]
-      (persist-transcript-entry!
-       evidence-store
+      (persist-transcript-safely!
+       agent-id evidence-store
        {:evidence/id (str "bug-" (UUID/randomUUID))
         :evidence/subject {:ref/type :agent :ref/id (str agent-id)}
         :evidence/type :coordination

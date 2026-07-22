@@ -1,7 +1,8 @@
 (ns futon3c.agents.zaif-controller-test
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.agents.zai-api :as zai]
-            [futon3c.agents.zaif-controller :as zaif]))
+            [futon3c.agents.zaif-controller :as zaif]
+            [futon3c.evidence.boundary :as boundary]))
 
 (deftest fixture-beliefs-produce-deterministic-arm-choices
   (testing "posting statistics can select retrieve"
@@ -120,6 +121,21 @@
                                                 :task-belief {:act-value 1.0}})})]
         ;; still returns the shipped decision; no exception escaped
         (is (= :act (:arm decision)))))))
+
+(deftest transcript-persistence-rejection-does-not-kill-the-turn
+  (testing "a rejected transcript append is counted+surfaced, never thrown
+    into the round loop (2026-07-22: store outages aborted operator turns
+    via persist-round!/persist-turn-start! — 'ZAI transcript persistence
+    was rejected' killed live turns)"
+    (with-redefs [boundary/append! (fn [_ _] {:ok false :err "store down"})]
+      (is (nil? (#'zai/persist-round! {:evidence-store :stub
+                                       :agent-id "zai-test"
+                                       :sid "s" :turn-id "t" :profile :zai
+                                       :round 1 :text "x" :calls []})))
+      (is (nil? (#'zai/persist-turn-start! {:evidence-store :stub
+                                            :agent-id "zai-test"
+                                            :sid "s" :turn-id "t"
+                                            :profile :zai :prompt "p"}))))))
 
 (deftest zaif-persistence-failure-is-counted-and-raised
   (let [before (:failure-count (zaif/persistence-status))]
