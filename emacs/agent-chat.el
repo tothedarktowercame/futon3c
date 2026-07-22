@@ -1160,118 +1160,6 @@ _e_: clear Excursion       _n_: no mission           _q_: quit
 (defun agent-chat-mark-procedural-long () (interactive) (agent-chat--insert-mark "📋" t))
 (defun agent-chat-mark-hinge-long () (interactive) (agent-chat--insert-mark "⚖" t))
 
-;; --- B0: turn-end mark recognizer (M-zaif-harness §B0) ---
-;; D1's FTS index cannot see the glyphs (unicode61 strips symbol
-;; characters), so the operator's chat-turn evidence entry carries them as
-;; tags.  Use-vs-mention rule of record (b1-live-marks.edn): a mark
-;; punctuating an operator statement = an EVENT; a mark inside a
-;; description or proposal of the convention itself = a MENTION, which
-;; mints nothing.  Mentions are still written to the body marks record for
-;; audit — they just carry no tag.  The mechanization below is v0 and
-;; revisable; the two adjudicated corpus cases are its ground truth.
-
-(defconst agent-chat-mark-vocabulary
-  '(("✘" . "correction")    ; core tier — the two halves of the γ ledger
-    ("✓" . "approval")
-    ("💡" . "idea")          ; provisional (2026-07-11); mints no label
-    ("🧭" . "guidance")      ; shadow tier — tags-only, no labels, no γ events
-    ("♟" . "tactics")
-    ("⚠" . "concern")
-    ("📌" . "fact")
-    ("👏" . "encouragement")
-    ("🙏" . "request")
-    ("🌿" . "extension")
-    ("📋" . "procedural")
-    ("⚖" . "hinge"))
-  "Declared-mark glyph → evidence tag (M-points-de-fuite v0 + shadow tier).")
-
-(defconst agent-chat--mark-mention-preceders
-  '("a" "an" "the" "with" "add" "use" "using" "insert" "inserting"
-    "write" "writing" "type" "typing" "like" "via" "mark" "e.g." "eg")
-  "Words that, immediately before a glyph, read it as an object noun.
-\"mark corrections with ✘\" and \"add a ✓\" are the adjudicated mention
-cases; a glyph opening a turn or punctuating a judgement has no such
-preceder.")
-
-(defun agent-chat--mark-word-before (text pos)
-  "Return the downcased word immediately before POS in TEXT, or nil."
-  (let ((end pos))
-    (while (and (> end 0) (memq (aref text (1- end)) '(?\s ?\t ?\n)))
-      (setq end (1- end)))
-    (let ((start end))
-      (while (and (> start 0)
-                  (not (memq (aref text (1- start)) '(?\s ?\t ?\n))))
-        (setq start (1- start)))
-      (when (> end start)
-        (let ((word (downcase (substring text start end))))
-          (setq word (string-trim word "[^[:alnum:]]+" "[^[:alnum:].]+"))
-          (and (not (string-empty-p word)) word))))))
-
-(defun agent-chat--mark-in-quotes-p (text pos)
-  "Non-nil when POS in TEXT falls inside a double-quoted span."
-  (let ((count 0) (i 0))
-    (while (< i pos)
-      (when (eq (aref text i) ?\") (setq count (1+ count)))
-      (setq i (1+ i)))
-    (= 1 (mod count 2))))
-
-(defun agent-chat--recognize-mark-at (text pos glyph tag)
-  "Classify the GLYPH occurrence at POS in TEXT as event or mention.
-Returns a plist (:pos :glyph :mark :verdict [:ref])."
-  (let* ((tail (substring text pos (min (length text) (+ pos 200))))
-         (long-ref (and (> pos 0)
-                        (eq (aref text (1- pos)) ?\()
-                        (string-match
-                         (concat "\\`" (regexp-quote glyph)
-                                 "\\s-+:ref\\s-+\\([^]()\s\"]+\\)")
-                         tail)
-                        (match-string 1 tail))))
-    (cond
-     ;; The hydra's long form (GLYPH :ref TARGET "why") is a use by
-     ;; construction, and names its referent.
-     (long-ref (list :pos pos :glyph glyph :mark tag
-                     :verdict "event" :ref long-ref))
-     ((agent-chat--mark-in-quotes-p text pos)
-      (list :pos pos :glyph glyph :mark tag :verdict "mention"))
-     ((member (agent-chat--mark-word-before text pos)
-              agent-chat--mark-mention-preceders)
-      (list :pos pos :glyph glyph :mark tag :verdict "mention"))
-     (t (list :pos pos :glyph glyph :mark tag :verdict "event")))))
-
-(defun agent-chat-recognize-marks (text)
-  "Scan TEXT for declared marks; return plists sorted by position.
-Each is (:pos :glyph :mark :verdict [:ref]); verdict \"event\" or
-\"mention\" per the b1-live-marks.edn adjudication rule."
-  (let (found)
-    (dolist (entry agent-chat-mark-vocabulary)
-      (let ((glyph (car entry))
-            (tag (cdr entry))
-            (start 0))
-        (while (string-match (regexp-quote glyph) text start)
-          (let ((pos (match-beginning 0)))
-            (push (agent-chat--recognize-mark-at text pos glyph tag) found)
-            (setq start (match-end 0))))))
-    (sort found (lambda (a b) (< (plist-get a :pos) (plist-get b :pos))))))
-
-(defun agent-chat--mark-event-tags (marks)
-  "Distinct tags for the event-verdict entries of MARKS, in order."
-  (delete-dups
-   (mapcar (lambda (m) (plist-get m :mark))
-           (seq-filter (lambda (m) (equal "event" (plist-get m :verdict)))
-                       marks))))
-
-(defun agent-chat--mark-body-records (marks)
-  "MARKS as a vector of alists for the evidence body."
-  (apply #'vector
-         (mapcar (lambda (m)
-                   (append `((glyph . ,(plist-get m :glyph))
-                             (mark . ,(plist-get m :mark))
-                             (verdict . ,(plist-get m :verdict))
-                             (pos . ,(plist-get m :pos)))
-                           (when-let ((ref (plist-get m :ref)))
-                             `((ref . ,ref)))))
-                 marks)))
-
 (defvar agent-chat-marks-quota-script
   "/home/joe/code/futon2/holes/labs/M-zaif-harness/marks_quota.clj"
   "The store-truth quota reconciler (targets = real gate constants only).")
@@ -2528,11 +2416,6 @@ Replaces the `(session: ...)' text in the first line."
                        (or (getenv "USER") user-login-name "joe")
                      assistant-author))
            (role-tag (if is-user "user" "assistant"))
-           ;; B0: operator-declared marks become queryable tags (event
-           ;; verdicts only); the full recognition, mentions included,
-           ;; goes in the body for audit.
-           (marks (and is-user (agent-chat-recognize-marks trimmed)))
-           (mark-tags (agent-chat--mark-event-tags marks))
            (payload `((subject . ((ref/type . "session")
                                   (ref/id . ,sid)))
                       (type . "coordination")
@@ -2544,10 +2427,8 @@ Replaces the `(session: ...)' text in the first line."
                                          (role . ,role)
                                          (turn-id . ,agent-chat--current-turn-id)
                                          (text . ,trimmed))
-                                       (when marks
-                                         `((marks . ,(agent-chat--mark-body-records marks))))
                                        (agent-chat--mission-body-fields)))
-                      (tags . ,(apply #'vector (append tags mark-tags (list role-tag)))))))
+                      (tags . ,(apply #'vector (append tags (list role-tag)))))))
       (when (and (stringp (symbol-value last-id-var))
                  (not (string-empty-p (symbol-value last-id-var))))
         (setq payload (append payload
