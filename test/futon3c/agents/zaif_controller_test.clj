@@ -84,6 +84,26 @@
         ;; Both use the same inputs
         (is (every? #(= "M-z" (get-in % [:inputs :mission])) @persisted))))))
 
+(deftest zaif-profile-hydrates-by-default
+  (testing "without an explicit :zaif-inputs-fn the D-1 hydrator runs —
+    recorded inputs must NOT be the empty-map degenerate shape (the
+    unwired-hydrator regression caught live on zai-2, 2026-07-22)"
+    (let [persisted (atom [])]
+      (with-redefs [zaif/persist-decision! (fn [ctx] (swap! persisted conj ctx))]
+        (#'zai/maybe-zaif-decision!
+         {:profile :zaif
+          :agent-id "zai-test"
+          :sid "sid"
+          :turn-id "turn-h"
+          :round 1
+          :context "please check the failing witness derivation in M-a-sorry-enterprise"})
+        (is (= 2 (count @persisted)))
+        (doseq [p @persisted]
+          (let [inputs (:inputs p)]
+            (is (= "M-a-sorry-enterprise" (:mission inputs)))
+            (is (number? (get-in inputs [:c-belief :operator-c-uncertainty])))
+            (is (seq (get-in inputs [:observations :posting-stats])))))))))
+
 (deftest zaif-persistence-failure-is-counted-and-raised
   (let [before (:failure-count (zaif/persistence-status))]
     (is (thrown? clojure.lang.ExceptionInfo

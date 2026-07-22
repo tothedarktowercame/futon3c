@@ -7,6 +7,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agents.zaif-controller :as zaif]
+            [futon3c.agents.zaif-inputs :as zaif-inputs]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-backend :as memory-backend]
@@ -833,7 +834,10 @@ CALLS contains maps of tool name, arguments, and result digest."
     (let [inputs (try
                    (if zaif-inputs-fn
                      (zaif-inputs-fn ctx)
-                     (default-zaif-inputs ctx))
+                     ;; D-1 hydrator is the default: real beliefs from the B1
+                     ;; γ artifact + context text. Without it every live
+                     ;; decide() sees empty maps and degenerates to :act.
+                     (zaif-inputs/hydrate-inputs ctx))
                    (catch Throwable _
                      (default-zaif-inputs ctx)))
           pairing-key (zaif-pairing-key (:turn-id ctx) (:round ctx))
