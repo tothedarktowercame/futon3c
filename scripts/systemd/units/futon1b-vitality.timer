@@ -1,0 +1,11 @@
+[Unit]
+Description=Monitor futon1b memory headroom before cgroup throttling
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+Unit=futon1b-vitality.service
+
+[Install]
+WantedBy=timers.target

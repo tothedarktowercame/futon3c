@@ -45,6 +45,20 @@
   :type 'integer
   :group 'agent-chat)
 
+(defcustom agent-chat-evidence-outbox-directory
+  (expand-file-name
+   "futon3c/evidence-outbox"
+   (or (getenv "XDG_STATE_HOME")
+       (expand-file-name "~/.local/state")))
+  "Private durable queue for chat evidence awaiting server acknowledgement."
+  :type 'directory
+  :group 'agent-chat)
+
+(defcustom agent-chat-evidence-outbox-retry-seconds 15
+  "Seconds between bounded attempts to drain queued chat evidence."
+  :type 'number
+  :group 'agent-chat)
+
 (defface agent-chat-joe-face
   '((t :foreground "#50fa7b" :weight bold))
   "Face for joe."
@@ -117,6 +131,15 @@
 
 (defvar-local agent-chat--evidence-timeout 1
   "Timeout (seconds) for evidence API queries.")
+
+(defvar-local agent-chat--evidence-delivery-status nil
+  "Visible evidence delivery state for this chat buffer.")
+
+(defvar agent-chat--evidence-outbox-timer nil
+  "Process-wide timer that retries durable evidence deliveries.")
+
+(defvar agent-chat--last-evidence-delivery-outcome nil
+  "Outcome of the most recent evidence post: acked, queued, or failed.")
 
 (defvar-local agent-chat--face-alist nil
   "Alist mapping speaker name to face, e.g. ((\"claude\" . face)).")
@@ -2163,6 +2186,9 @@ CONFIG keys:
     (setq agent-chat--session-id (or session-id "pending"))
     (setq agent-chat--evidence-url evidence-url)
     (setq agent-chat--evidence-timeout (or evidence-timeout 1))
+    (when (and (agent-chat-evidence-enabled-p evidence-url)
+               (agent-chat-evidence--queue-files))
+      (agent-chat-evidence-start-outbox!))
     (setq-local agent-chat-hide-markup agent-chat-hide-markup-default)
     ;; Insert header
     (insert (propertize (concat title " ") 'face 'bold)
@@ -2211,10 +2237,13 @@ Calls SETTER-FN with the loaded ID. Does NOT generate new UUIDs
 
 (defun agent-chat--session-header-text ()
   "Return the formatted session header text with turn counts."
-  (format "(session: %s%s) %s"
+  (format "(session: %s%s%s) %s"
           (or agent-chat--session-id "pending")
           (if (numberp agent-chat--session-turn-count)
               (format ", turns: %d" agent-chat--session-turn-count)
+            "")
+          (if agent-chat--evidence-delivery-status
+              (format ", %s" agent-chat--evidence-delivery-status)
             "")
           (agent-chat-mission-segment)))
 
@@ -2266,30 +2295,192 @@ Replaces the `(session: ...)' text in the first line."
                              (encode-coding-string
                               (json-encode (agent-chat--json-encodable payload))
                               'utf-8)))
-         (buffer (condition-case nil
+         (request-error nil)
+         (buffer (condition-case err
                      (url-retrieve-synchronously url t t timeout)
-                   (error nil))))
-    (when (buffer-live-p buffer)
+                   (error
+                    (setq request-error (error-message-string err))
+                    nil))))
+    (if (buffer-live-p buffer)
+        (with-current-buffer buffer
+          (goto-char (point-min))
+          (let ((status (or (and (boundp 'url-http-response-status)
+                                 url-http-response-status)
+                            0)))
+            (re-search-forward "\n\n" nil 'move)
+            (let* ((body (buffer-substring-no-properties (point) (point-max)))
+                   (parsed (agent-chat--parse-json-string body)))
+              (kill-buffer buffer)
+              (list :status status :json parsed))))
+      (list :status 0 :error (or request-error "no HTTP response")))))
+
+(defun agent-chat-evidence--ensure-id (payload)
+  "Return PAYLOAD with a stable evidence id and its id."
+  (let ((id (or (alist-get 'evidence/id payload)
+                (alist-get 'evidence-id payload)
+                (alist-get 'id payload)
+                (format "emacs-%s"
+                        (substring
+                         (secure-hash
+                          'sha256
+                          (format "%s/%s/%s/%s"
+                                  (float-time) (random) (emacs-pid) (user-uid)))
+                         0 32)))))
+    ;; Futon3c's JSON compatibility route names this `evidence-id`; direct
+    ;; futon1b accepts `id`/`evidence/id`. Carry both with the same value so a
+    ;; replay retains identity across either configured endpoint.
+    (let ((stable-payload payload))
+      (unless (assq 'evidence-id stable-payload)
+        (setq stable-payload (cons (cons 'evidence-id id) stable-payload)))
+      (unless (or (assq 'id stable-payload)
+                  (assq 'evidence/id stable-payload))
+        (setq stable-payload (cons (cons 'id id) stable-payload)))
+      (list stable-payload id))))
+
+(defun agent-chat-evidence--outbox-path (evidence-id)
+  "Return the queue filename for EVIDENCE-ID."
+  (expand-file-name (concat (secure-hash 'sha256 evidence-id) ".json")
+                    agent-chat-evidence-outbox-directory))
+
+(defun agent-chat-evidence--write-record (path record)
+  "Atomically write RECORD as private JSON at PATH."
+  (make-directory (file-name-directory path) t)
+  (set-file-modes (file-name-directory path) #o700)
+  (let ((temporary (make-temp-file
+                    (expand-file-name ".evidence-" (file-name-directory path)))))
+    (unwind-protect
+        (progn
+          (with-temp-buffer
+            (insert (json-encode record))
+            (write-region (point-min) (point-max) temporary nil 'silent))
+          (set-file-modes temporary #o600)
+          (rename-file temporary path t))
+      (when (file-exists-p temporary)
+        (delete-file temporary)))))
+
+(defun agent-chat-evidence--read-record (path)
+  "Read one outbox record from PATH, or nil when corrupt."
+  (condition-case err
+      (with-temp-buffer
+        (insert-file-contents path)
+        (json-parse-buffer :object-type 'alist
+                           :array-type 'list
+                           :null-object nil
+                           :false-object nil))
+    (error
+     (message "Evidence outbox record unreadable (%s): %s"
+              path (error-message-string err))
+     nil)))
+
+(defun agent-chat-evidence--attempt-record (record)
+  "Attempt RECORD once and return acked, retry, or failed."
+  (let* ((evidence-url (alist-get 'evidence-url record))
+         (timeout (or (alist-get 'timeout record) 1))
+         (payload (alist-get 'payload record))
+         (url (format "%s/api/alpha/evidence"
+                      (agent-chat-evidence-base-url evidence-url)))
+         (response (agent-chat-evidence-request-json "POST" url timeout payload))
+         (status (or (plist-get response :status) 0))
+         (json (plist-get response :json))
+         (error-text (let ((value (plist-get json :error)))
+                       (and (stringp value) value)))
+         (duplicate? (and (= status 409)
+                          (or (equal "duplicate-id" (plist-get json :err))
+                              (and error-text
+                                   (string-match-p "duplicate" error-text))))))
+    (cond
+     ((or (and (<= 200 status) (< status 300)) duplicate?) 'acked)
+     ((or (= status 0) (= status 408) (= status 429) (= status 503)
+          (>= status 500))
+      'retry)
+     (t 'failed))))
+
+(defun agent-chat-evidence--failed-path (path)
+  "Return the durable failed-delivery destination for PATH."
+  (let ((directory (expand-file-name "failed" agent-chat-evidence-outbox-directory)))
+    (make-directory directory t)
+    (set-file-modes directory #o700)
+    (expand-file-name (file-name-nondirectory path) directory)))
+
+(defun agent-chat-evidence--queue-files ()
+  "Return pending outbox record paths."
+  (when (file-directory-p agent-chat-evidence-outbox-directory)
+    (directory-files agent-chat-evidence-outbox-directory t "\\.json\\'" t)))
+
+(defun agent-chat-evidence--failed-files ()
+  "Return terminally failed outbox record paths."
+  (let ((directory (expand-file-name "failed" agent-chat-evidence-outbox-directory)))
+    (when (file-directory-p directory)
+      (directory-files directory t "\\.json\\'" t))))
+
+(defun agent-chat-evidence--refresh-delivery-status ()
+  "Expose global outbox state in every live chat buffer header."
+  (let ((pending (length (agent-chat-evidence--queue-files)))
+        (failed (length (agent-chat-evidence--failed-files))))
+    (dolist (buffer (buffer-list))
       (with-current-buffer buffer
-        (goto-char (point-min))
-        (let ((status (or (and (boundp 'url-http-response-status) url-http-response-status) 0)))
-          (re-search-forward "\n\n" nil 'move)
-          (let* ((body (buffer-substring-no-properties (point) (point-max)))
-                 (parsed (agent-chat--parse-json-string body)))
-            (kill-buffer buffer)
-            (list :status status :json parsed)))))))
+        (when (local-variable-p 'agent-chat--evidence-url buffer)
+          (setq agent-chat--evidence-delivery-status
+                (cond
+                 ((> failed 0) (format "evidence: %d failed" failed))
+                 ((> pending 0) (format "evidence: %d pending" pending))
+                 (t nil)))
+          (when (and (> (buffer-size) 0)
+                     (fboundp 'agent-chat--update-session-header-line))
+            (agent-chat--update-session-header-line)))))))
+
+(defun agent-chat-evidence-drain-outbox! ()
+  "Attempt every pending evidence record once."
+  (interactive)
+  (dolist (path (agent-chat-evidence--queue-files))
+    (when-let ((record (agent-chat-evidence--read-record path)))
+      (pcase (agent-chat-evidence--attempt-record record)
+        ('acked (delete-file path))
+        ('failed
+         (rename-file path (agent-chat-evidence--failed-path path) t)
+         (message "Evidence delivery rejected permanently; retained in %s"
+                  (agent-chat-evidence--failed-path path))))))
+  (agent-chat-evidence--refresh-delivery-status))
+
+(defun agent-chat-evidence-start-outbox! ()
+  "Start the singleton evidence outbox replay timer."
+  (unless (timerp agent-chat--evidence-outbox-timer)
+    (setq agent-chat--evidence-outbox-timer
+          (run-at-time 0 agent-chat-evidence-outbox-retry-seconds
+                       #'agent-chat-evidence-drain-outbox!))))
 
 (defun agent-chat-evidence-post-entry-id (evidence-url timeout payload)
-  "POST PAYLOAD to evidence API and return created evidence id, or nil."
+  "Durably queue PAYLOAD, POST it, and return its stable id.
+Transport and retryable server failures retain the record for replay. A 409
+acknowledges an earlier successful attempt. Permanent 4xx failures are retained
+under outbox/failed and return nil."
   (when (agent-chat-evidence-enabled-p evidence-url)
-    (let* ((url (format "%s/api/alpha/evidence"
-                        (agent-chat-evidence-base-url evidence-url)))
-           (response (agent-chat-evidence-request-json "POST" url timeout payload))
-           (status (plist-get response :status))
-           (parsed (plist-get response :json)))
-      (when (and (integerp status) (<= 200 status) (< status 300))
-        (or (plist-get parsed :evidence/id)
-            (plist-get (plist-get parsed :entry) :evidence/id))))))
+    (pcase-let* ((`(,stable-payload ,evidence-id)
+                  (agent-chat-evidence--ensure-id payload))
+                 (path (agent-chat-evidence--outbox-path evidence-id))
+                 (record `((evidence-url . ,evidence-url)
+                           (timeout . ,timeout)
+                           (payload . ,stable-payload)
+                           (queued-at . ,(format-time-string
+                                          "%Y-%m-%dT%H:%M:%S%z")))))
+      (agent-chat-evidence--write-record path record)
+      (setq agent-chat--last-evidence-delivery-outcome
+            (agent-chat-evidence--attempt-record record))
+      (pcase agent-chat--last-evidence-delivery-outcome
+        ('acked
+         (delete-file path)
+         (agent-chat-evidence--refresh-delivery-status)
+         evidence-id)
+        ('retry
+         (agent-chat-evidence-start-outbox!)
+         (agent-chat-evidence--refresh-delivery-status)
+         (message "Evidence %s queued for durable retry" evidence-id)
+         evidence-id)
+        ('failed
+         (rename-file path (agent-chat-evidence--failed-path path) t)
+         (agent-chat-evidence--refresh-delivery-status)
+         (message "Evidence %s rejected; retained for inspection" evidence-id)
+         nil)))))
 
 (defun agent-chat--mission-body-fields ()
   "Return campaign/mission/excursion evidence fields for the current buffer."
@@ -2365,8 +2556,8 @@ Replaces the `(session: ...)' text in the first line."
                                         (agent-chat--mission-body-fields)))
                        (tags . ,(apply #'vector tags)))))
         (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
-          (set last-id-var new-id))
-        (set last-emitted-var sid)))
+          (set last-id-var new-id)
+          (set last-emitted-var sid))))
     (unless (and (stringp (symbol-value last-id-var))
                  (not (string-empty-p (symbol-value last-id-var))))
       (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var t))))
@@ -2436,7 +2627,8 @@ Replaces the `(session: ...)' text in the first line."
       (when-let ((new-id (agent-chat-evidence-post-entry-id evidence-url timeout payload)))
         (set session-var sid)
         (set last-id-var new-id)
-        (agent-chat--maybe-run-affect-live evidence-url)))))
+        (when (eq agent-chat--last-evidence-delivery-outcome 'acked)
+          (agent-chat--maybe-run-affect-live evidence-url))))))
 
 (defun agent-chat-emit-turn-commits-evidence!
     (evidence-url timeout sid assistant-author transport session-var last-id-var)

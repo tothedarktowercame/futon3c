@@ -1708,6 +1708,9 @@
     :fork-not-found 409
     :invalid-entry 400
     :invalid-input 400
+    :store-timeout 503
+    :store-unreachable 503
+    :store-rejected 503
     400))
 
 (defn- normalize-evidence-payload

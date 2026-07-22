@@ -19,8 +19,8 @@ CPUAccounting=yes
 MemoryAccounting=yes
 IOAccounting=yes
 TasksAccounting=yes
-MemoryHigh=7G
-MemoryMax=9G
+MemoryHigh=10G
+MemoryMax=12G
 MemorySwapMax=1G
 TasksMax=512
 

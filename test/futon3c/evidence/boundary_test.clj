@@ -211,6 +211,34 @@
       (is (:ok success))
       (is (= "" err-output)))))
 
+(deftest persistence-social-errors-retain-transport-taxonomy
+  (let [entry {:evidence/id "e-transport-boundary-test"
+               :evidence/subject {:ref/type :agent :ref/id "claude-test"}
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "claude-test"
+               :evidence/at "2026-07-22T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags [:test]}]
+    (doseq [[error-code expected-kind expected-log]
+            [[:store-timeout :timeout "persistence timeout"]
+             [:store-unreachable :unreachable "persistence transport unreachable"]]]
+      (let [err-writer (java.io.StringWriter.)
+            result (with-redefs [store/append*
+                                 (fn [_ _]
+                                   {:error/component :E-store
+                                    :error/code error-code
+                                    :error/message "store unavailable"
+                                    :error/at "2026-07-22T00:00:01Z"})]
+                     (binding [*err* err-writer]
+                       (boundary/append! *evidence-backend* entry)))]
+        (is (false? (:ok result)))
+        (is (= error-code (:error/code result)))
+        (is (= expected-kind (get-in result [:invariant/violation :kind])))
+        (is (re-find (re-pattern expected-log) (str err-writer)))
+        (is (re-find #"I-evidence-per-turn" (str err-writer)))
+        (is (not (re-find #"shape rejected" (str err-writer))))))))
+
 ;; -----------------------------------------------------------------------------
 ;; I-single-boundary canonical statement is grep-verifiable.
 ;; -----------------------------------------------------------------------------

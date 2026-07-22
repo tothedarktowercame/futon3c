@@ -56,6 +56,27 @@
        "calls futon3c.evidence.store/append*. New direct callers of "
        "store/append* are I-single-boundary violations."))
 
+(defn- social-error-taxonomy
+  [error-code]
+  (case error-code
+    :duplicate-id {:kind :duplicate-id
+                   :label "duplicate id"
+                   :invariant I-single-boundary
+                   :quiet? true
+                   :idempotent? true}
+    :store-timeout {:kind :timeout
+                    :label "persistence timeout"
+                    :invariant invariant/I-evidence-per-turn}
+    :store-unreachable {:kind :unreachable
+                        :label "persistence transport unreachable"
+                        :invariant invariant/I-evidence-per-turn}
+    :store-rejected {:kind :store-rejected
+                     :label "persistence rejected"
+                     :invariant invariant/I-evidence-per-turn}
+    {:kind :shape
+     :label "shape rejected"
+     :invariant invariant/I-evidence-per-turn}))
+
 ;; ---------------------------------------------------------------------------
 ;; Coercion — translate commonly-misshaped fields to their canonical types
 ;; before shape validation. Loud failure for unknown shapes.
@@ -267,11 +288,15 @@
         ;; Detect via the SocialError shape; convert to boundary's receipt shape.
         (shapes/valid? shapes/SocialError result)
         (let [msg (:error/message result)
-              duplicate-id? (= :duplicate-id (:error/code result))]
-          (when-not duplicate-id?
+              taxonomy (social-error-taxonomy (:error/code result))]
+          (when-not (:quiet? taxonomy)
             (binding [*out* *err*]
-              (println (str "[boundary] I-single-boundary VIOLATION: "
-                            "shape rejected — " msg))))
+              (println (str "[boundary] "
+                            (if (= I-single-boundary (:invariant taxonomy))
+                              "I-single-boundary"
+                              "I-evidence-per-turn")
+                            " VIOLATION: "
+                            (:label taxonomy) " — " msg))))
           {:ok false
            :error/code (:error/code result)
            :error/message msg
@@ -279,12 +304,10 @@
            :evidence/id (or (:evidence/id coerced)
                             (get-in result [:error/context :evidence-id]))
            :invariant/violation
-           {:invariant (if duplicate-id?
-                         I-single-boundary
-                         invariant/I-evidence-per-turn)
-            :kind (if duplicate-id? :duplicate-id :shape)
+           {:invariant (:invariant taxonomy)
+            :kind (:kind taxonomy)
             :reason msg
-            :idempotent? duplicate-id?
+            :idempotent? (boolean (:idempotent? taxonomy))
             :rejected-entry coerced}})
 
         ;; Backend returned a typed-result with :ok semantics.

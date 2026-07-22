@@ -187,6 +187,70 @@ already recorded the park-id, so refusing here would destroy the resume."
                        "--evidence-url" "http://localhost:7070/api/alpha/evidence")))
       (should (null (plist-get captured :buffer))))))
 
+(ert-deftest agent-chat-evidence-outbox-replays-stable-id-after-timeout ()
+  (let* ((agent-chat-evidence-outbox-directory
+          (make-temp-file "agent-chat-evidence-outbox-" t))
+         (responses '((:status 0 :error "timed out")
+                      (:status 201 :json (:evidence/id "ignored-server-id"))))
+         evidence-id)
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (&rest _)
+                     (prog1 (car responses) (setq responses (cdr responses)))))
+                  ((symbol-function 'agent-chat-evidence-start-outbox!) #'ignore))
+          (setq evidence-id
+                (agent-chat-evidence-post-entry-id
+                 "http://store.test/api/alpha/evidence" 1
+                 '((type . "coordination")
+                   (claim-type . "observation")
+                   (author . "joe")
+                   (body . ((event . "chat-turn")))
+                   (tags . ["user"]))))
+          (should (string-prefix-p "emacs-" evidence-id))
+          (should (eq 'retry agent-chat--last-evidence-delivery-outcome))
+          (let* ((files (agent-chat-evidence--queue-files))
+                 (record (agent-chat-evidence--read-record (car files)))
+                 (payload (alist-get 'payload record)))
+            (should (= 1 (length files)))
+            (should (equal evidence-id (alist-get 'id payload))))
+          (agent-chat-evidence-drain-outbox!)
+          (should-not (agent-chat-evidence--queue-files)))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-evidence-outbox-treats-duplicate-as-ack ()
+  (let ((agent-chat-evidence-outbox-directory
+         (make-temp-file "agent-chat-evidence-outbox-" t)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (&rest _) '(:status 409 :json (:error "duplicate")))))
+          (should (equal "stable-evidence-id"
+                         (agent-chat-evidence-post-entry-id
+                          "http://store.test/api/alpha/evidence" 1
+                          '((id . "stable-evidence-id")
+                            (type . "coordination")
+                            (claim-type . "observation")
+                            (author . "joe")))))
+          (should (eq 'acked agent-chat--last-evidence-delivery-outcome))
+          (should-not (agent-chat-evidence--queue-files)))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-evidence-outbox-retains-terminal-rejection ()
+  (let ((agent-chat-evidence-outbox-directory
+         (make-temp-file "agent-chat-evidence-outbox-" t)))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (&rest _) '(:status 400 :json (:error "bad shape")))))
+          (should-not
+           (agent-chat-evidence-post-entry-id
+            "http://store.test/api/alpha/evidence" 1
+            '((id . "rejected-evidence-id")
+              (type . "coordination")
+              (claim-type . "observation")
+              (author . "joe"))))
+          (should-not (agent-chat-evidence--queue-files))
+          (should (= 1 (length (agent-chat-evidence--failed-files)))))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
 (ert-deftest agent-chat-ensure-prompt-markers-repairs-drifting-input-start ()
   (with-temp-buffer
     (agent-chat-test--init-buffer)

@@ -1883,6 +1883,12 @@
       (is (string? entry-id))
       (is (some? (estore/get-entry entry-id))))))
 
+(deftest evidence-create-transport-failures-are-retryable
+  (testing "outbox clients receive 503, not a terminal shape-like 400"
+    (is (= 503 (#'http/append-error-status :store-timeout)))
+    (is (= 503 (#'http/append-error-status :store-unreachable)))
+    (is (= 503 (#'http/append-error-status :store-rejected)))))
+
 (deftest evidence-count-returns-total
   (testing "GET /api/alpha/evidence/count returns total evidence count"
     (let [_ (estore/append! {:subject {:ref/type :session :ref/id "sess-count-1"}

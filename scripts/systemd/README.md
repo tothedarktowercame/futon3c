@@ -22,12 +22,25 @@ cd /home/joe/code/futon3c
 install -Dm644 scripts/systemd/units/futon-services.slice ~/.config/systemd/user/futon-services.slice
 install -Dm644 scripts/systemd/units/futon-agents.slice ~/.config/systemd/user/futon-agents.slice
 install -Dm644 scripts/systemd/units/futon1b-server.service ~/.config/systemd/user/futon1b-server.service
+install -Dm644 scripts/systemd/units/futon1b-vitality.service ~/.config/systemd/user/futon1b-vitality.service
+install -Dm644 scripts/systemd/units/futon1b-vitality.timer ~/.config/systemd/user/futon1b-vitality.timer
 install -Dm644 scripts/systemd/units/futon3c-server.service ~/.config/systemd/user/futon3c-server.service
 systemd-analyze --user verify ~/.config/systemd/user/futon-services.slice \
   ~/.config/systemd/user/futon-agents.slice \
   ~/.config/systemd/user/futon1b-server.service \
+  ~/.config/systemd/user/futon1b-vitality.service \
+  ~/.config/systemd/user/futon1b-vitality.timer \
   ~/.config/systemd/user/futon3c-server.service
 systemctl --user daemon-reload
+```
+
+The vitality timer is independent of the serving JVM. It samples cgroup
+`memory.current/high/max`, anon/file breakdown, `memory.events`, PSI, and a
+timed `/health` request once per minute into the bounded private log
+`~/.local/state/futon1b/vitality.jsonl`. Enable it after installing:
+
+```bash
+systemctl --user enable --now futon1b-vitality.timer
 ```
 
 `daemon-reload` only loads definitions; do **not** enable or start the futon3c

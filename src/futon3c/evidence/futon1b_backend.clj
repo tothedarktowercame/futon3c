@@ -76,6 +76,16 @@
            :error/at (str (Instant/now))}
     (seq context) (assoc :error/context context)))
 
+(defn- timeout-error?
+  [error]
+  (loop [t error]
+    (when t
+      (let [throwable? (instance? Throwable t)
+            description (str (.getName (class t)) " "
+                             (if throwable? (.getMessage ^Throwable t) t))]
+        (or (re-find #"(?i)timeout|timed out" description)
+            (when throwable? (recur (.getCause ^Throwable t))))))))
+
 (defn- get-edn
   "GET url, EDN-parse the body. Returns {:status n :body v}.
    Throws on transport-level failure (connection refused etc.)."
@@ -88,7 +98,8 @@
 (defn- query-string
   "Pushdown params. See ns docstring for the two regimes."
   [{:query/keys [type claim-type author session-id since before fork-of
-                 tags subject pattern-id limit include-ephemeral?]}]
+                 tags subject pattern-id limit include-ephemeral?
+                 cursor-at cursor-id]}]
   (let [pairs (cond-> [["include-ephemeral" (str (boolean include-ephemeral?))]]
                 (and (int? limit) (pos? limit))
                 (conj ["limit" (str limit)])
@@ -99,18 +110,59 @@
                 since (conj ["since" (str since)])
                 before (conj ["before" (str before)])
                 fork-of (conj ["fork-of" (str fork-of)])
+                (and cursor-at cursor-id)
+                (conj ["cursor-at" (str cursor-at)]
+                      ["cursor-id" (str cursor-id)])
                 (seq tags) (conj ["tags" (str/join "," (map name tags))])
                 subject (conj ["subject-type" (name (:ref/type subject))]
                               ["subject-id" (str (:ref/id subject))])
                 pattern-id (conj ["pattern-id" (name pattern-id)]))]
     (str/join "&" (map (fn [[k v]] (str k "=" (enc v))) pairs))))
 
-(defn- fetch-entries [base-url params]
-  (let [url (str (api-url base-url "/api/alpha/evidence") "?" (query-string params))
-        {:keys [status body]} (get-edn url)]
-    (if (= 200 status)
-      (:entries body)
-      (throw (ex-info "futon1b evidence query failed" {:status status :body body})))))
+(def ^:private server-page-size 1000)
+(def ^:private admission-retries 7)
+
+(defn- fetch-page
+  [base-url params]
+  (let [url (str (api-url base-url "/api/alpha/evidence") "?"
+                 (query-string params))]
+    (loop [attempt 0]
+      (let [{:keys [status body]} (get-edn url)]
+        (cond
+          (= 200 status) body
+
+          (and (= 503 status)
+               (= :expensive-read-busy (:error body))
+               (< attempt admission-retries))
+          (do (Thread/sleep (* 100 (bit-shift-left 1 attempt)))
+              (recur (inc attempt)))
+
+          :else
+          (throw (ex-info "futon1b evidence query failed"
+                          {:status status :body body :url url})))))))
+
+(defn- fetch-entries
+  "Fetch exact query semantics through futon1b's bounded cursor protocol.
+  A caller limit may span multiple server pages; protocol operations such as
+  -all page until exhaustion without asking the store JVM for an unbounded
+  response."
+  [base-url params]
+  (let [requested (get params :query/limit)
+        target (when (and (int? requested) (pos? requested)) requested)]
+    (loop [cursor nil
+           entries []]
+      (let [remaining (when target (- target (count entries)))
+            page-limit (long (min server-page-size (or remaining server-page-size)))
+            page-params (cond-> (assoc params :query/limit page-limit)
+                          cursor (assoc :query/cursor-at (:at cursor)
+                                        :query/cursor-id (:id cursor)))
+            body (fetch-page base-url page-params)
+            entries' (into entries (:entries body))
+            next-cursor (:next-cursor body)]
+        (if (or (nil? next-cursor)
+                (and target (>= (count entries') target)))
+          (if target (vec (take target entries')) entries')
+          (recur next-cursor entries'))))))
 
 (defrecord Futon1bBackend [base-url]
   backend/EvidenceBackend
@@ -139,7 +191,12 @@
               parsed (read-edn body)]
           (cond
             error
-            (social-error :store-unreachable "futon1b server unreachable"
+            (social-error (if (timeout-error? error)
+                            :store-timeout
+                            :store-unreachable)
+                          (if (timeout-error? error)
+                            "futon1b persistence timed out"
+                            "futon1b server unreachable")
                           :evidence-id eid :detail (str error))
 
             (= 201 status)
