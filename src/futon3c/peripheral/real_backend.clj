@@ -22,6 +22,7 @@
             [futon3b.query.relations :as relations]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
+            [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.tools :as tools]
             [futon3c.reflection.core :as reflection])
   (:import [java.io File]
@@ -710,6 +711,10 @@
         :pur-update     (tool-pur-update discipline-state evidence-store args)
         :pur-mark-pivot (tool-pur-mark-pivot discipline-state evidence-store args)
         :par-punctuate  (tool-par-punctuate discipline-state evidence-store args)
+        :memory-record  (let [[ctx payload] args]
+                          (memory-write/record-memory!
+                           (assoc (or ctx {}) :evidence-store evidence-store)
+                           payload))
 
         ;; Unknown
         {:ok false :error (str "Unknown tool: " tool-id)}))))

@@ -32,7 +32,8 @@
    "PSRSelect"    [:psr-select]
    "PURUpdate"    [:pur-update]
    "PURMarkPivot" [:pur-mark-pivot]
-   "PARPunctuate" [:par-punctuate]})
+   "PARPunctuate" [:par-punctuate]
+   "MemoryRecord" [:memory-record]})
 
 (def ^:private codex-to-peripheral
   "Reverse mapping: Codex tool name → candidate peripheral tool keywords.
@@ -61,7 +62,8 @@
    "psr_select"        [:psr-select]
    "pur_update"        [:pur-update]
    "pur_mark_pivot"    [:pur-mark-pivot]
-   "par_punctuate"     [:par-punctuate]})
+   "par_punctuate"     [:par-punctuate]
+   "memory_record"     [:memory-record]})
 
 (defn- mapping-for
   [catalog peripheral-spec]
@@ -88,6 +90,7 @@
    :bash-deploy  "Bash"
    :web-fetch    "WebFetch"
    :musn-log     nil
+   :memory-record nil
    ;; Proof-domain tools — no Claude mapping
    :proof-load       nil
    :proof-save       nil
@@ -188,6 +191,7 @@
                :pur-update [pattern-id status]
                :pur-mark-pivot [pattern-id reason]
                :par-punctuate [reason]
+               :memory-record [input]
                [])))))
 
 (defn tool-call->action
@@ -252,6 +256,7 @@
    :pur-update     "Record post-use result for a selected pattern (PUR step)"
    :pur-mark-pivot "Record a pattern pivot with rationale"
    :par-punctuate  "Emit session punctuation summary for handoff"
+   :memory-record  "Record a deliberate typed memory"
    ;; Proof-domain tools
    :proof-load       "Load proof state from disk"
    :proof-save       "Save proof state (atomic write, version bump)"

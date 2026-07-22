@@ -282,11 +282,13 @@
   "Type of claim made by an evidence entry.
    Extended beyond futon3's 5-type set to cover Corneli (2014) Table 24 entities."
   [:enum :goal :step :evidence :conclusion :question :observation
-   :tension :correction :conjecture])
+   :tension :correction :conjecture :assert])
 
 (def ArtifactRefType
   "Universal reference types for any artifact that can accumulate evidence."
-  [:enum :pattern :mission :component :gate :session :agent :thread :evidence :proof-path :task :portfolio :arse-thread])
+  [:enum :pattern :mission :component :gate :session :agent :thread :evidence
+   :proof-path :task :portfolio :arse-thread :library :problem :language :tool
+   :service :script])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
@@ -298,7 +300,7 @@
   "Typed evidence event category (distinguishes timescale/function provenance)."
   [:enum :coordination :gate-traversal :pattern-selection :pattern-outcome
    :reflection :forum-post :mode-transition :presence-event :correction :conjecture
-   :arse-qa])
+   :arse-qa :memory])
 
 (def EvidenceEntry
   "Primary evidence shape — all other evidence projections are derived from this.

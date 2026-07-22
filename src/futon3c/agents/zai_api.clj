@@ -176,6 +176,28 @@
                                       :description "Structured entries, e.g. {\"expected\": ..., \"actual\": ...} or {\"description\": ...}. The PAR shape requires maps, not strings."}
                   :suggestions {:type "array" :items {:type "string"}}}
                  ["what_worked"])}
+   {:name "memory_record"
+    :description (str "Record one deliberate assert memory as evidence plus a typed hyperedge. "
+                      "Kind rule: derived-from-a-failure-with-a-why → feedback; documented "
+                      "contract/scope fact → reference. Identity is server-stamped.")
+    :parameters (json-schema
+                 {:name {:type "string" :description "Kebab-case identity hint."}
+                  :hook {:type "string" :description "One-line retrieval hook, at most 80 characters."}
+                  :kind {:type "string" :enum ["feedback" "reference" "project" "user"]}
+                  :body {:type "string" :description "Self-contained memory fact."}
+                  :why {:type "string"}
+                  :how_to_apply {:type "string" :description "Retrieval predicate or application condition."}
+                  :subjects {:type "array"
+                             :items {:type "object"
+                                     :properties {:ref/type {:type "string"}
+                                                  :ref/id {:type "string"}}
+                                     :required ["ref/type" "ref/id"]
+                                     :additionalProperties false}}
+                  :distills {:type "array" :items {:type "string"}
+                             :description "Evidence ids or @current-round."}
+                  :facets {:type "array" :items {:type "string"}}
+                  :volatile {:type "boolean" :description "True when valid-until-changed."}}
+                 ["name" "hook" "kind" "body"])}
    {:name "memory_search"
     :description "Search the evidence store by filters (type, claim-type, author, since, tags). Returns the memory envelope {:frame :query :items}. Read-only."
     :parameters (json-schema
@@ -220,9 +242,9 @@
                  [])}])
 
 (def ^:private memory-family-tool-names
-  "The six memory-read tools plus the two orientation tools; removable per
+  "The memory write/read tools plus the two orientation tools; removable per
    :memory-mode for the M-custom-harness §8.4 comparison conditions."
-  #{"memory_search" "tool_history" "evidence_graph" "pattern_memory"
+  #{"memory_record" "memory_search" "tool_history" "evidence_graph" "pattern_memory"
     "recent_coordination" "mission_context"})
 
 (def ^:private orientation-tool-names
@@ -310,9 +332,17 @@
 
 (declare emit-bug-records!)
 
+(defn- current-mission-id
+  [agent-id session-id]
+  (try
+    (when-let [current-clock (requiring-resolve
+                              'futon3c.agency.clock-store/current-clock)]
+      (:mission-id (current-clock agent-id session-id)))
+    (catch Throwable _ nil)))
+
 (defn- execute-tool
   [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom
-                   evidence-store turn-id profile]} tool-call]
+                   evidence-store turn-id round profile]} tool-call]
   (let [name (get-in tool-call [:function :name])
         args (parse-arguments (get-in tool-call [:function :arguments]))
         fail (fn [msg] {:ok false :error msg})
@@ -336,7 +366,7 @@
                             "write_file" "run_shell" "run_readonly"
                             "reflect_ns" "reflect_var" "reflect_deps"
                             "reflect_java_class" "psr_search" "psr_select"
-                            "pur_update" "irc_send"}
+                            "pur_update" "memory_record" "irc_send"}
                           name))
           (fail (str "TOOL-CALL ARGUMENTS ARRIVED EMPTY at the harness for "
                      name " — a transport/truncation artifact, not you "
@@ -486,6 +516,23 @@
                                  (:rationale args) (assoc :rationale (:rationale args))
                                  (:task_id args) (assoc :task-id (:task_id args))
                                  (seq (:candidates args)) (assoc :candidates (vec (:candidates args))))])
+
+          "memory_record"
+          (let [session-id (some-> session-id-atom deref)
+                payload (cond-> args
+                          (:how_to_apply args)
+                          (assoc :how-to-apply (:how_to_apply args))
+                          (contains? args :volatile)
+                          (assoc :volatile? (:volatile args)))]
+            (tools/execute-tool
+             backend :memory-record
+             [{:agent-id agent-id
+               :session-id session-id
+               :turn-id turn-id
+               :round round
+               :mission-id (current-mission-id agent-id session-id)
+               :evidence-store evidence-store}
+              (dissoc payload :how_to_apply :volatile)]))
 
           "pur_update"
           (tools/execute-tool backend :pur-update
@@ -937,6 +984,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                         (try (execute-tool backend
                                                            (assoc tool-opts
                                                                   :turn-id (:turn-id ctx)
+                                                                  :round round-n
                                                                   :profile (:profile ctx))
                                                            tc)
                                              (catch Throwable t

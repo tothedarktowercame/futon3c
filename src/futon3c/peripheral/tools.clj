@@ -67,6 +67,10 @@
                           [(second args)]
                           [])
 
+                        ;; Structured payload, never a filesystem path.
+                        :memory-record
+                        []
+
                         ;; Conservative fallback: any string could be a path.
                         (->> args (filter string?) vec))]
         (every? #(path-in-scope? % scope-paths) path-args))
