@@ -24,7 +24,8 @@
    "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"
    "operator-gate"])
 (def ^:private archival-binders #{"operator-gate"})
-(def ^:private pattern-library-limit 5000)
+(def ^:private substrate-page-limit 1000)
+(def ^:private pattern-library-limit substrate-page-limit)
 (def ^:private !pattern-library-cache (atom nil))
 
 (defn- sha1 [s]
@@ -159,13 +160,17 @@
 (defn- hyperedges-by-type [client base-url hx-type]
   (if-let [cached (get @!hyperedge-type-cache hx-type)]
     cached
-    (let [hxs (-> (http-edn client :get
-                            (str base-url "/api/alpha/hyperedges?type="
-                                 (url-encode hx-type)
-                                 "&limit=5000"))
-                  (ok! {:op :hyperedges-by-type :type hx-type})
-                  (get-in [:body :hyperedges])
-                  (or []))]
+    (let [resp (-> (http-edn client :get
+                             (str base-url "/api/alpha/hyperedges?type="
+                                  (url-encode hx-type)
+                                  "&limit=" substrate-page-limit))
+                   (ok! {:op :hyperedges-by-type :type hx-type}))
+          hxs (or (get-in resp [:body :hyperedges]) [])
+          total (get-in resp [:body :count])]
+      (when (and (integer? total) (> total (count hxs)))
+        (throw (ex-info "futon1b hyperedge result truncated"
+                        {:op :hyperedges-by-type :type hx-type
+                         :returned (count hxs) :total total})))
       (swap! !hyperedge-type-cache assoc hx-type hxs)
       hxs)))
 
@@ -1351,20 +1356,28 @@
             structural-binders)))
 
 (defn- hyperedges-by-end [client base-url end-id]
-  (-> (http-edn client :get
-                (str base-url "/api/alpha/hyperedges?end="
-                     (url-encode end-id)
-                     "&limit=5000"))
-      (ok! {:op :hyperedges-by-end :end end-id})
-      (get-in [:body :hyperedges])
-      (or [])))
+  (let [resp (-> (http-edn client :get
+                           (str base-url "/api/alpha/hyperedges?end="
+                                (url-encode end-id)
+                                "&limit=" substrate-page-limit))
+                 (ok! {:op :hyperedges-by-end :end end-id}))
+        hxs (or (get-in resp [:body :hyperedges]) [])
+        total (get-in resp [:body :count])]
+    (when (and (integer? total) (> total (count hxs)))
+      (throw (ex-info "futon1b hyperedge result truncated"
+                      {:op :hyperedges-by-end :end end-id
+                       :returned (count hxs) :total total})))
+    hxs))
 
 (defn- stored-scope-hyperedges-for-mission [client base-url mission]
-  (->> structural-binders
-       (mapcat (fn [binder]
-                 (hyperedges-by-type client base-url (str "mission-scope/" binder))))
+  (let [mission-entity (get-entity client base-url mission)]
+    (when-not (:id mission-entity)
+      (throw (ex-info "mission entity not found in futon1b"
+                      {:mission mission})))
+    (->> (hyperedges-by-end client base-url (:id mission-entity))
+       (filter #(contains? (set structural-binders) (name (:hx/type %))))
        (filter #(= mission (get (hx-props %) :mission)))
-       vec))
+       vec)))
 
 (defn- retract-absent-binder-scopes!
   "Binder types with stored scopes for MISSION but ZERO presence in the
