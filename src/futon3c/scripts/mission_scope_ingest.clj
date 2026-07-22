@@ -21,7 +21,8 @@
 (def ^:private structural-binders
   ["eightfold-phase" "loose-section" "capability-scope" "map-item"
    "relates-to" "source-material" "mission-scope-in" "mission-scope-out"
-   "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"])
+   "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"
+   "operator-gate"])
 (def ^:private pattern-library-limit 5000)
 (def ^:private !pattern-library-cache (atom nil))
 
@@ -173,6 +174,12 @@
 (defn- boundary-item-text [scope]
   (:boundary-item-text scope))
 
+(defn- operator-gate-kind [scope]
+  (:gate-kind scope))
+
+(defn- operator-gate-text [scope]
+  (:gate-text scope))
+
 (defn- anchor-text [scope]
   (case (:binder-type scope)
     "map-item" (map-item-title scope)
@@ -181,6 +188,7 @@
     ("pattern" "psr" "pur") (or (target-pattern-ident scope) (heading-title scope))
     "mission-scope-in" (or (boundary-item-text scope) (heading-title scope))
     "mission-scope-out" (or (boundary-item-text scope) (heading-title scope))
+    "operator-gate" (or (operator-gate-text scope) (heading-title scope))
     (heading-title scope)))
 
 (defn- env-phase [scope]
@@ -579,6 +587,35 @@
       (str base "--" (subs (sha1 (str pattern-ident "|" original-id)) 0 8))
       base)))
 
+(defn- stable-operator-gate-scopes
+  [mission mission-path all-scopes scopes]
+  (let [gate-counts (frequencies (map (juxt operator-gate-kind
+                                             operator-gate-text)
+                                      scopes))]
+    (mapv
+     (fn [scope]
+       (let [kind (operator-gate-kind scope)
+             text (operator-gate-text scope)
+             duplicate? (> (get gate-counts [kind text] 0) 1)
+             stem (str/replace-first (str mission) #"^M-" "")
+             base (str stem "/operator-gate/" (slug kind) "/"
+                       (truncated-slug text))
+             stable-id (if duplicate?
+                         (str base "--" (subs (sha1 (:scope-id scope)) 0 8))
+                         base)
+             anchor (anchor-for-scope mission-path all-scopes scope)]
+         (assoc scope
+                :original-scope-id (:scope-id scope)
+                :scope-id stable-id
+                :stable-scope-id stable-id
+                :canonical-scope-id base
+                :heading-slug (str "operator-gate/" (slug kind) "/"
+                                   (truncated-slug text))
+                :duplicate-heading? duplicate?
+                :anchor anchor
+                :parent nil)))
+     scopes)))
+
 (defn- scope-boundary-polarity [scope]
   (case (:binder-type scope)
     "mission-scope-in" :scope/in
@@ -888,7 +925,11 @@
                    :pattern/detached-reason (:pattern-detached-reason scope))
             (:scope-polarity scope)
             (assoc :scope/polarity (:scope-polarity scope)
-                   :scope/boundary-text (:boundary-item-text scope)))})
+                   :scope/boundary-text (:boundary-item-text scope))
+            (:gate-kind scope)
+            (assoc :operator-gate/kind (:gate-kind scope)
+                   :operator-gate/text (:gate-text scope)
+                   :operator-gate/source-line (:source-line scope)))})
 
 (defn- scope-hyperedge [mission-entity scope-entity slot-entities scope]
   {:hx/id (str "hx|mission-scope|" (:scope-id scope))
@@ -931,6 +972,9 @@
            :record/notes (get-in scope [:facets :notes])
            :scope/polarity (:scope-polarity scope)
            :scope/boundary-text (:boundary-item-text scope)
+           :operator-gate/kind (:gate-kind scope)
+           :operator-gate/text (:gate-text scope)
+           :operator-gate/source-line (:source-line scope)
            :anchor/state (:state (:anchor scope))
            :anchor/passage (:passage (:anchor scope))
            :anchor/fingerprint (:fingerprint (:anchor scope))
@@ -1246,6 +1290,7 @@
       "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
       "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
       "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+      "operator-gate" (stable-operator-gate-scopes mission mission-path raw-scopes (vec scopes))
       ("pattern" "psr" "pur") (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
       (vec scopes))))
 
@@ -1587,6 +1632,7 @@
                  "source-material" (stable-source-material-scopes mission mission-path raw-scopes (vec scopes))
                  "mission-scope-in" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
                  "mission-scope-out" (stable-boundary-scopes mission mission-path raw-scopes (vec scopes))
+                 "operator-gate" (stable-operator-gate-scopes mission mission-path raw-scopes (vec scopes))
                  "pattern" (stable-pattern-scopes mission mission-path raw-scopes (vec scopes))
                  ("psr" "pur") (stable-record-scopes mission mission-path raw-scopes (vec scopes))
                  (vec scopes))
