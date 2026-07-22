@@ -842,17 +842,31 @@ CALLS contains maps of tool name, arguments, and result digest."
                      (default-zaif-inputs ctx)))
           pairing-key (zaif-pairing-key (:turn-id ctx) (:round ctx))
           dual-results (zaif/dual-decide inputs)]
-      (doseq [{:keys [label operator-attention-cost decision]} dual-results]
-        (zaif/persist-decision! {:agent-id agent-id
-                                 :sid sid
-                                 :turn-id (:turn-id ctx)
-                                 :round (:round ctx)
-                                 :evidence-store evidence-store
-                                 :decision decision
-                                 :inputs inputs
-                                 :constant operator-attention-cost
-                                 :constant-label label
-                                 :pairing-key pairing-key}))
+      ;; Shadow instrumentation must never kill a live turn: a persistence
+      ;; rejection (e.g. a store brown-out) is counted in persistence-status
+      ;; by persist-decision! and surfaced in follow-mode, then swallowed.
+      ;; The scorer only counts complete pairs, so a partial round drops out
+      ;; of the cohort and shows up in the failure ledger — visible loss,
+      ;; not a dead turn (incident 2026-07-22: futon1b memory-pressure
+      ;; brown-out aborted an operator turn through this path).
+      (try
+        (doseq [{:keys [label operator-attention-cost decision]} dual-results]
+          (zaif/persist-decision! {:agent-id agent-id
+                                   :sid sid
+                                   :turn-id (:turn-id ctx)
+                                   :round (:round ctx)
+                                   :evidence-store evidence-store
+                                   :decision decision
+                                   :inputs inputs
+                                   :constant operator-attention-cost
+                                   :constant-label label
+                                   :pairing-key pairing-key}))
+        (catch Throwable t
+          (try
+            (sink! agent-id {:type "text"
+                             :text (str "[zaif ✗ decision not persisted: "
+                                        (.getMessage t) "]")})
+            (catch Throwable _ nil))))
       ;; Return the shipped (primary) decision for any callers that read it.
       (:decision (first dual-results)))))
 

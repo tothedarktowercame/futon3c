@@ -104,6 +104,23 @@
             (is (number? (get-in inputs [:c-belief :operator-c-uncertainty])))
             (is (seq (get-in inputs [:observations :posting-stats])))))))))
 
+(deftest zaif-persistence-rejection-does-not-kill-the-turn
+  (testing "a store rejection during shadow persistence is swallowed —
+    counted+surfaced, never propagated into the round loop (2026-07-22
+    brown-out incident: a rejected write aborted a live operator turn)"
+    (with-redefs [zaif/persist-decision!
+                  (fn [_] (throw (ex-info "ZAIF decision persistence was rejected" {})))]
+      (let [decision (#'zai/maybe-zaif-decision!
+                      {:profile :zaif
+                       :agent-id "zai-test"
+                       :sid "sid"
+                       :turn-id "turn-b"
+                       :round 1
+                       :zaif-inputs-fn (fn [_] {:mission "M-z"
+                                                :task-belief {:act-value 1.0}})})]
+        ;; still returns the shipped decision; no exception escaped
+        (is (= :act (:arm decision)))))))
+
 (deftest zaif-persistence-failure-is-counted-and-raised
   (let [before (:failure-count (zaif/persistence-status))]
     (is (thrown? clojure.lang.ExceptionInfo
