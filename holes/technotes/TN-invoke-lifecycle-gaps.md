@@ -22,10 +22,23 @@ bell claude-1", 13:43, via `/api/alpha/invoke-stream`, curl `--max-time
 1800`). The manual turn ran a real codex process tree for ~28 minutes
 (verified live: codex binary with 3m16s CPU, two ESTABLISHED api TLS
 connections, two spawned futon3c-classpath JVMs loading
-`mission_scope_ingest.clj`) and its processes exited ~14:11 having delivered
-**nothing visible anywhere**. The repl buffer showed nothing throughout; the
-operator reasonably concluded codex-2 was wedged. Roster stayed `invoking`
-with no process behind it.
+`mission_scope_ingest.clj`), during which the repl buffer showed nothing,
+and the roster stayed `invoking` after the processes exited ~14:11.
+
+**CORRECTION (added ~14:45, after claude-1's park-backstop reconciliation):
+the task DELIVERED.** Commits landed in futon3c at 13:30 (`1bbd8c7`,
+superseded-gates archive) and 14:06/14:11 (`0fe209c`, `5789b86` — the
+mission-scope reads), the last two timestamped exactly when the processes
+were observed exiting; review checks passed on claude-1's side and live
+acceptance was running. The failure was **purely observational**: no job
+record, no buffer output, wedged roster status. Both the operator ("ran 30
+minutes printing nothing") and the diagnosing agent (this note's author,
+whose first published conclusion was "delivered nothing visible anywhere")
+judged a *successful* turn to be a dead one. That double misdiagnosis by
+two motivated observers with full system access is Exhibit A for D1 and D5
+below: the defects are real even though the health was fine. claude-1's
+park deadline-wake is what caught the truth — the backstop protocol
+working exactly as designed, and currently the ONLY mechanism that did.
 
 In parallel, zai-1 received an APM Lean formalization from the formal-methods
 cron (caller `http-caller`, job `…-12-a2d75b10`, 13:58): 27 tool events of
