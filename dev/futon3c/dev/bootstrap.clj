@@ -29,16 +29,17 @@
 
 ;; futon1a (XTDB 1) is retired (I-0 unification, 2026-07-14). The substrate
 ;; store is now futon1b (XTDB 2), reached over HTTP (FUTON1A_URL/FUTON1B_URL
-;; → :7074). start-futon1a! is kept as a no-op so the injected call site in
+;; → :7073; embedded/lucy → :7074). start-futon1a! is kept as a no-op so
+;; the injected call site in
 ;; run-main! is unchanged; it always returns nil, so futon3c boots nodeless —
 ;; exactly as it already did under FUTON1A_PORT=0. The XTDB2 node/HTTP is
 ;; served either by the futon1b-server systemd unit or, when FUTON1B_EMBED=1,
 ;; in-process by start-futon1b-embedded! below.
 (defn start-futon1a!
   "Retired: futon1a's embedded XTDB 1 node is gone. Always returns nil; the
-   stack gets substrate/evidence over HTTP from futon1b (:7074)."
+   stack gets substrate/evidence over HTTP from futon1b (systemd :7073)."
   [_direct-xtdb?]
-  (println "[dev] futon1a retired — substrate is futon1b/XTDB2 over HTTP (:7074)")
+  (println "[dev] futon1a retired — substrate is futon1b/XTDB2 over HTTP (systemd :7073)")
   nil)
 
 ;; --- Embedded futon1b XTDB2 node (I-0 unification) ------------------------

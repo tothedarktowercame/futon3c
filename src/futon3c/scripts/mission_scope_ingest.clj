@@ -1,5 +1,5 @@
 (ns futon3c.scripts.mission-scope-ingest
-  "Ingest mission scope-tree JSON into futon1a as scope entities and hyperedges."
+  "Ingest mission scope-tree JSON into the live futon1b scope substrate."
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
@@ -13,7 +13,7 @@
 (def ^:private default-scope-dir "/home/joe/code/futon6/data/mission-scope-trees")
 (def ^:private default-futon1a-url
   (or (System/getenv "FUTON_SUBSTRATE_URL")
-      (System/getenv "FUTON1A_URL") "http://localhost:7071"))
+      (System/getenv "FUTON1A_URL") "http://localhost:7073"))
 (def ^:private default-penholder "api")
 (def ^:private code-root "/home/joe/code")
 (def ^:private canonical-phases
@@ -56,7 +56,9 @@
          resp (.send client req (HttpResponse$BodyHandlers/ofString))
          body-text (.body resp)]
      {:status (.statusCode resp)
-      :body (when (seq body-text) (edn/read-string body-text))})))
+      :body (when (seq body-text)
+              (try (edn/read-string body-text)
+                   (catch Exception _ body-text)))})))
 
 (defn- ok!
   [resp context]
@@ -92,25 +94,54 @@
       (ok! {:op :hyperedge :payload payload})
       (get-in [:body :hyperedge])))
 
-(defn- write-tx! [client base-url penholder tx-ops claim]
-  (-> (http-edn client :post (str base-url "/write")
-                {:penholder penholder
-                 :model {}
-                 :identity nil
-                 :tx-ops tx-ops
-                 :counter-ratchet {:allow-drop-classes #{:entity}}
-                 :claim claim})
-      (ok! {:op :write :tx-ops tx-ops})
-      :body))
+(defn- get-hyperedge [client base-url id]
+  (let [resp (http-edn client :get
+                       (str base-url "/api/alpha/hyperedge/" (url-encode id)))]
+    (when (<= 200 (:status resp) 299)
+      (:body resp))))
 
-(defn- delete-docs! [client base-url penholder ids]
-  (let [ids (->> ids (remove str/blank?) distinct vec)]
-    (when (seq ids)
-      (write-tx! client base-url penholder
-                 (mapv (fn [id] [:xtdb.api/delete id]) ids)
-                 {:op :mission-scope/retract-legacy-position-anchors
-                  :doc-count (count ids)}))
-    {:deleted-count (count ids)}))
+(defn- unported-retraction-route? [{:keys [status]}]
+  (contains? #{404 405} status))
+
+(defn- retract-hyperedge! [client base-url penholder id]
+  (when-let [h (get-hyperedge client base-url id)]
+    (post-hyperedge! client base-url penholder
+                     {:hx/id id
+                      :hx/type (:hx/type h)
+                      :hx/endpoints (:hx/endpoints h)
+                      :hx/op "retract"})))
+
+(defn- delete-docs!
+  "Prefer futon1b's atomic document-retraction route. Before that route is
+  deployed, fall back only on its unported 404/405 signature: retract graph
+  membership hyperedges through the already-live sanctioned route and retain
+  now-unreachable entity documents as archival records. Other failures abort."
+  [client base-url penholder documents]
+  (let [documents (->> documents
+                       (filter (fn [{:keys [id]}] (not (str/blank? id))))
+                       distinct
+                       vec)]
+    (if (empty? documents)
+      {:deleted-count 0 :retraction-mode :none}
+      (let [resp (http-edn client :post
+                           (str base-url "/api/alpha/documents/retract")
+                           {:penholder penholder
+                            :documents documents
+                            :claim {:op :mission-scope/retract
+                                    :doc-count (count documents)}})]
+        (if (unported-retraction-route? resp)
+          (let [hyperedge-ids (mapv :id (filter #(= :hyperedges (:table %)) documents))
+                retained-ids (mapv :id (filter #(= :entities (:table %)) documents))]
+            (doseq [id hyperedge-ids]
+              (retract-hyperedge! client base-url penholder id))
+            {:deleted-count (count hyperedge-ids)
+             :retained-entity-count (count retained-ids)
+             :retraction-mode :per-hyperedge-archival})
+          (do
+            (ok! resp {:op :documents-retract :documents documents})
+            {:deleted-count (count documents)
+             :retained-entity-count 0
+             :retraction-mode :batch}))))))
 
 (def ^:private !hyperedge-type-cache (atom {}))
 
@@ -856,11 +887,15 @@
         scope-ids (->> stale-hxs
                        (keep scope-endpoint-id)
                        (remove #(contains? selected-ids %)))
-        ids (distinct (concat hx-ids scope-ids))]
-    (delete-docs! client base-url penholder ids)
+        documents (distinct (concat (map #(hash-map :table :hyperedges :id %) hx-ids)
+                                    (map #(hash-map :table :entities :id %) scope-ids)))
+        retraction (delete-docs! client base-url penholder documents)]
     {:stale-hyperedge-retract-count (count (distinct hx-ids))
-     :stale-entity-retract-count (count (distinct scope-ids))
-     :stale-doc-retract-count (count ids)}))
+     :stale-entity-retract-count (- (count (distinct scope-ids))
+                                    (:retained-entity-count retraction 0))
+     :stale-entity-retained-count (:retained-entity-count retraction 0)
+     :stale-retraction-mode (:retraction-mode retraction)
+     :stale-doc-retract-count (count documents)}))
 
 (defn- retract-legacy-position-scopes!
   [client base-url penholder mission-entity binder-filter]
@@ -872,11 +907,15 @@
         scope-ids (->> legacy-hxs
                        (keep scope-endpoint-id)
                        (filter legacy-scope-id?))
-        ids (distinct (concat hx-ids scope-ids))]
-    (delete-docs! client base-url penholder ids)
+        documents (distinct (concat (map #(hash-map :table :hyperedges :id %) hx-ids)
+                                    (map #(hash-map :table :entities :id %) scope-ids)))
+        retraction (delete-docs! client base-url penholder documents)]
     {:legacy-hyperedge-retract-count (count (distinct hx-ids))
-     :legacy-entity-retract-count (count (distinct scope-ids))
-     :legacy-doc-retract-count (count ids)}))
+     :legacy-entity-retract-count (- (count (distinct scope-ids))
+                                     (:retained-entity-count retraction 0))
+     :legacy-entity-retained-count (:retained-entity-count retraction 0)
+     :legacy-retraction-mode (:retraction-mode retraction)
+     :legacy-doc-retract-count (count documents)}))
 
 (defn- scope-entity-spec [mission path scope]
   {:id (:scope-id scope)
@@ -1329,10 +1368,14 @@
                        vec)
         hx-ids (keep :hx/id stale-hxs)
         scope-ids (keep scope-endpoint-id stale-hxs)
-        ids (distinct (concat hx-ids scope-ids))]
-    (delete-docs! client base-url penholder ids)
+        documents (distinct (concat (map #(hash-map :table :hyperedges :id %) hx-ids)
+                                    (map #(hash-map :table :entities :id %) scope-ids)))
+        retraction (delete-docs! client base-url penholder documents)]
     {:absent-binder-hyperedge-retract-count (count (distinct hx-ids))
-     :absent-binder-entity-retract-count (count (distinct scope-ids))
+     :absent-binder-entity-retract-count (- (count (distinct scope-ids))
+                                            (:retained-entity-count retraction 0))
+     :absent-binder-entity-retained-count (:retained-entity-count retraction 0)
+     :absent-binder-retraction-mode (:retraction-mode retraction)
      :absent-binder-types (->> stale-hxs (map #(name (:hx/type %))) distinct sort vec)}))
 
 (defn- concept-ids-from-hx [h]
@@ -1426,10 +1469,15 @@
 (defn- delete-scope-docs! [client base-url penholder scope-id hx-id]
   (let [edge-ids (->> (hyperedges-by-end client base-url scope-id)
                       (keep :hx/id))
-        ids (distinct (concat [scope-id hx-id] edge-ids))]
-    (delete-docs! client base-url penholder ids)
-    {:deleted-count (count ids)
-     :deleted-ids ids}))
+        documents (distinct
+                   (concat [{:table :entities :id scope-id}]
+                           (map #(hash-map :table :hyperedges :id %)
+                                (cons hx-id edge-ids))))
+        retraction (delete-docs! client base-url penholder documents)]
+    {:deleted-count (:deleted-count retraction)
+     :retained-entity-count (:retained-entity-count retraction 0)
+     :retraction-mode (:retraction-mode retraction)
+     :deleted-ids (mapv :id documents)}))
 
 (defn- anchor-props [scope]
   {:anchor/state (:state (:anchor scope))
@@ -1650,6 +1698,8 @@
                         (retract-legacy-position-scopes! client base-url penholder mission-entity binder-filter)
                         {:legacy-hyperedge-retract-count 0
                          :legacy-entity-retract-count 0
+                         :legacy-entity-retained-count 0
+                         :legacy-retraction-mode :none
                          :legacy-doc-retract-count 0})
         stale-report (if binder-filter
                        (retract-stale-generation-scopes! client base-url penholder
@@ -1657,6 +1707,8 @@
                                                          selected-ids)
                        {:stale-hyperedge-retract-count 0
                         :stale-entity-retract-count 0
+                        :stale-entity-retained-count 0
+                        :stale-retraction-mode :none
                         :stale-doc-retract-count 0})
         entity-ids (atom #{(:id mission-entity)})
         hx-ids (atom #{})
@@ -1752,9 +1804,13 @@
      :duplicate-heading-count (count (filter :duplicate-heading? scopes))
      :legacy-hyperedge-retract-count (:legacy-hyperedge-retract-count legacy-report)
      :legacy-entity-retract-count (:legacy-entity-retract-count legacy-report)
+     :legacy-entity-retained-count (:legacy-entity-retained-count legacy-report)
+     :legacy-retraction-mode (:legacy-retraction-mode legacy-report)
      :legacy-doc-retract-count (:legacy-doc-retract-count legacy-report)
      :stale-hyperedge-retract-count (:stale-hyperedge-retract-count stale-report)
      :stale-entity-retract-count (:stale-entity-retract-count stale-report)
+     :stale-entity-retained-count (:stale-entity-retained-count stale-report)
+     :stale-retraction-mode (:stale-retraction-mode stale-report)
      :stale-doc-retract-count (:stale-doc-retract-count stale-report)
      :linked-target-count (count @linked-targets)
      :dangling-target-count (count @dangling-targets)
