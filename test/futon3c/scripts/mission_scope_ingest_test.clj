@@ -19,6 +19,21 @@
              (subvec (first @calls) 0 2)))
       (is (= documents (get-in @calls [0 2 :documents]))))))
 
+(deftest expensive-read-admission-is-retried
+  (let [attempts (atom 0)
+        sleeps (atom [])]
+    (with-redefs [ingest/http-edn
+                  (fn [& _]
+                    (if (< (swap! attempts inc) 3)
+                      {:status 503 :body {:error :expensive-read-busy
+                                          :retry-after-seconds 2}}
+                      {:status 200 :body {:ok true}}))]
+      (binding [ingest/*retry-sleep!* #(swap! sleeps conj %)]
+        (is (= {:status 200 :body {:ok true}}
+               (#'ingest/http-edn-read :client "http://substrate/read")))
+        (is (= 3 @attempts))
+        (is (= [2000 2000] @sleeps))))))
+
 (deftest removal-falls-back-only-for-an-unported-route
   (let [calls (atom [])
         documents [{:table :hyperedges :id "hx-1"}

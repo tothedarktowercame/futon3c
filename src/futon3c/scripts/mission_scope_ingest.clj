@@ -43,6 +43,8 @@
   (URLEncoder/encode (str s) "UTF-8"))
 
 (defn- http-client [] (HttpClient/newHttpClient))
+(def ^:dynamic *retry-sleep!* (fn [millis] (Thread/sleep millis)))
+(def ^:private max-expensive-read-retries 300)
 
 (defn- http-edn
   ([client method url] (http-edn client method url nil))
@@ -67,6 +69,20 @@
   (when-not (<= 200 (:status resp) 299)
     (throw (ex-info "futon1a request failed" (assoc context :response resp))))
   resp)
+
+(defn- http-edn-read
+  "Honor futon1b's retryable expensive-read admission signal without
+  bypassing its single-scan gate. Other responses return immediately."
+  [client url]
+  (loop [attempt 0]
+    (let [resp (http-edn client :get url)
+          retry? (and (= 503 (:status resp))
+                      (= :expensive-read-busy (get-in resp [:body :error])))]
+      (if (and retry? (< attempt max-expensive-read-retries))
+        (let [seconds (max 1 (long (or (get-in resp [:body :retry-after-seconds]) 1)))]
+          (*retry-sleep!* (* 1000 seconds))
+          (recur (inc attempt)))
+        resp))))
 
 (defn- get-entity [client base-url id-or-name]
   (let [resp (http-edn client :get
@@ -160,10 +176,10 @@
 (defn- hyperedges-by-type [client base-url hx-type]
   (if-let [cached (get @!hyperedge-type-cache hx-type)]
     cached
-    (let [resp (-> (http-edn client :get
-                             (str base-url "/api/alpha/hyperedges?type="
-                                  (url-encode hx-type)
-                                  "&limit=" substrate-page-limit))
+    (let [resp (-> (http-edn-read client
+                                  (str base-url "/api/alpha/hyperedges?type="
+                                       (url-encode hx-type)
+                                       "&limit=" substrate-page-limit))
                    (ok! {:op :hyperedges-by-type :type hx-type}))
           hxs (or (get-in resp [:body :hyperedges]) [])
           total (get-in resp [:body :count])]
@@ -1356,10 +1372,10 @@
             structural-binders)))
 
 (defn- hyperedges-by-end [client base-url end-id]
-  (let [resp (-> (http-edn client :get
-                           (str base-url "/api/alpha/hyperedges?end="
-                                (url-encode end-id)
-                                "&limit=" substrate-page-limit))
+  (let [resp (-> (http-edn-read client
+                                (str base-url "/api/alpha/hyperedges?end="
+                                     (url-encode end-id)
+                                     "&limit=" substrate-page-limit))
                  (ok! {:op :hyperedges-by-end :end end-id}))
         hxs (or (get-in resp [:body :hyperedges]) [])
         total (get-in resp [:body :count])]
