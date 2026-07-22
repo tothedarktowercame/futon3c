@@ -185,6 +185,26 @@
       (is (= :act (get-in by-label [:shipped :arm])))
       (is (= :ask (get-in by-label [:sweep :arm]))))))
 
+(deftest live-shaped-context-leaves-divergent-rounds-reachable
+  (testing "realistic posting-stats cannot let :retrieve swamp both constants"
+    ;; Live task-belief is empty (act = 0) and context text is never blank,
+    ;; so an unnormalized EIG proxy (2.5-4 on any real message) made
+    ;; :retrieve win at BOTH constants — an empty Z3a divergent-round set.
+    ;; With the log(total+1) normalization the sweep's ask arm stays
+    ;; reachable on high-c-uncertainty missions.
+    (let [inputs {:mission "M-live"
+                  :c-belief {:operator-c-uncertainty 1.0}
+                  :task-belief {}
+                  :gamma {"M-live" {:policy-precision 1.0}}
+                  :observations {:posting-stats {:total-docs 48
+                                                 :dfs [1 1 1 1 1 1 1 1 1 1]
+                                                 :estimated-tokens 96}}}
+          results (zaif/dual-decide inputs)
+          by-label (into {} (map (juxt :label :decision) results))]
+      (is (= :retrieve (get-in by-label [:shipped :arm])))
+      (is (= :ask (get-in by-label [:sweep :arm])))
+      (is (< (get-in by-label [:shipped :g-terms :retrieve]) 1.0)))))
+
 (deftest decision-evidence-entry-carries-pairing-and-constant
   (testing "evidence entry includes :constant, :constant-label, :pairing-key"
     (let [inputs {:mission "M-z" :task-belief {:act-value 0.2}}

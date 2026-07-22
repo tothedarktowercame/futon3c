@@ -44,7 +44,11 @@
       :else 1.0)))
 
 (defn- idf-ish
-  "D1-compatible posting-stat EIG proxy: rarer observed terms have more value."
+  "D1-compatible posting-stat EIG proxy: rarer observed terms have more value.
+   Normalized by log(total+1) into [0,1) so the proxy is commensurate with
+   the ask/act value scales — unnormalized, any non-trivial context text
+   yields values in the 2.5-4 range and :retrieve dominates every arm at
+   every constant, which would empty Z3a's divergent-round set."
   [stats]
   (let [total (max 1.0 (as-double (:total-docs stats) 1.0))
         dfs (seq (or (:dfs stats)
@@ -52,7 +56,8 @@
     (if dfs
       (/ (reduce + (map #(Math/log (/ (inc total) (inc (max 0.0 (as-double % total)))))
                         dfs))
-         (double (count dfs)))
+         (* (double (count dfs))
+            (Math/log (inc total))))
       0.0)))
 
 (defn- retrieve-value
