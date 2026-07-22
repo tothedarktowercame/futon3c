@@ -1386,14 +1386,11 @@
     hxs))
 
 (defn- stored-scope-hyperedges-for-mission [client base-url mission]
-  (let [mission-entity (get-entity client base-url mission)]
-    (when-not (:id mission-entity)
-      (throw (ex-info "mission entity not found in futon1b"
-                      {:mission mission})))
-    (->> (hyperedges-by-end client base-url (:id mission-entity))
-       (filter #(contains? (set structural-binders) (name (:hx/type %))))
+  (->> structural-binders
+       (mapcat (fn [binder]
+                 (hyperedges-by-type client base-url (str "mission-scope/" binder))))
        (filter #(= mission (get (hx-props %) :mission)))
-       vec)))
+       vec))
 
 (defn- retract-absent-binder-scopes!
   "Binder types with stored scopes for MISSION but ZERO presence in the
