@@ -1,0 +1,11 @@
+{:fixture-version 1
+ :status :frozen-rung2-replay
+ :phase6-freeze-id "phase6-preregistered-shadow-v1-20260723"
+ :judgement-id "phase6-judgement-4"
+ :transition-id "phase6-test-a-2"
+ :expected
+ {:affected-pattern-ids ["p4ng/R5-policy-evaluation"]
+  :typed-before-top "M-aif-policy-conditioned-eig"
+  :typed-after-top "M-shared-memory-control-build-test"
+  :gold-mission-id "M-shared-memory-control-build-test"
+  :promotion-eligible? false}}

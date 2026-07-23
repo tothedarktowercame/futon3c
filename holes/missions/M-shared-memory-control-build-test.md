@@ -1,7 +1,8 @@
 # Mission: Shared memory/control build-test regime
 
 **Date:** 2026-07-23
-**Status:** DERIVE — Phases 1–3 ACCEPTED live; Phase 4 is next
+**Status:** Phases 1–3 ACCEPTED live; Phases 4–7 ACCEPTED dark/shadow;
+Phase 8 advice-only ACCEPTED replay, enactment rungs operator-gated
 **Owners:** Joe + Zaif/WM implementers
 **Systems:** futon1b store, futon3c Zaif runners, futon2 War Machine, p4ng control patterns
 **Cross-references:** `M-typed-memories`, `CODEX-HANDOFF-p0-memory-record.md`,
@@ -532,6 +533,16 @@ promising. Run the replay with:
 clojure -M scripts/run_phase6_strategic_outcomes_demo.clj
 ```
 
+The companion Rung 2 replay consumes exactly one additional independent
+failure, updates only the admitted R5 operator entry by the mission-posterior
+ratio \(6/7\), and reranks once. It recovers the frozen gold without changing
+the candidate set, but remains non-promotable because Phase 6 has not passed
+its calibration/sample gate. Run it with:
+
+```bash
+clojure -M scripts/run_dynamic_queries_rung2_demo.clj
+```
+
 Verification and operational boundary:
 
 - the focused Phase 4–6/Rungs 1+3 suite passes 21 tests / 134 assertions;
@@ -561,6 +572,10 @@ reviewed typed edges.
 Acceptance is informative only. Losing to the non-vector baseline causes no
 architectural rollback because direct endpoint recall is already operational.
 
+**Disposition, 2026-07-23:** deliberately not run. Direct typed endpoint
+retrieval, lifecycle-aware lexical proposal, and the Phase 5 cascade already
+support the critical path. No acceptance claim depends on an embedding.
+
 ## Phase 7 — Strategic policies and `E_S`, shadow first
 
 ### Build
@@ -586,6 +601,39 @@ A fixed shadow window completes with no unexplained candidates, no identity or
 provenance loss, and reviewed disagreement cases. Promotion is an operator
 decision based on that evidence, never an automatic metric threshold.
 
+### Shadow acceptance, 2026-07-23
+
+ACCEPTED SHADOW. `futon3c.peripheral.strategic-policies` gives every ordered
+strategic mission policy a stable SHA-256-derived `pi-s-*` identity. The Phase
+5 fixture produces one admissible length-1 policy and one admissible short
+cascade. The dependent EIG mission is correctly excluded as a singleton and
+appears only after its shared-memory dependency in the two-mission cascade;
+the blocked compliance singleton remains held.
+
+`fit-strategic-habit` learns a symmetric Dirichlet `E_S` only from events
+stamped `:grain :strategic`. Nine strategic selections yield a normalized
+distribution with positive prior mass; two tactical `E_T` selections are
+reported in `:excluded-tactical-event-count` and have no numerical effect.
+The shadow ranking keeps these fields separate:
+
+- `:e-s` — selection-frequency habit, never outcome value;
+- `:predicted-g-s` — declared strategic cost and uncertainty with evidence;
+- `:hard-support` — the Phase 5 admission and typed relations;
+- `:proposal-reasons`, `:provenance`, and recalled `:memory-ids`.
+
+The frozen four-decision window has complete explanations, stable identities,
+preserved candidate sets and provenance, three reviewed disagreements with the
+additive baseline, and 4/4 agreement with its independent review labels.
+Temperature probes recover the low-temperature G-dominated and
+high-temperature habit-dominated limits. `:promote?` remains false even though
+the completed window is eligible for operator review.
+
+Run:
+
+```bash
+clojure -M scripts/run_phase7_strategic_policy_shadow.clj
+```
+
 ## Phase 8 — Operator-gated canary and bounded live use
 
 ### Build/test ladder
@@ -608,6 +656,50 @@ The canary demonstrates stable operation and useful reviewed decisions without
 loss of operator/completion gates. The old controller remains available until
 an explicit retirement mission closes it.
 
+### Advice-only acceptance and terminal gate, 2026-07-23
+
+The advice-only rung is ACCEPTED REPLAY through
+`futon3c.peripheral.strategic-canary`. It shows the Phase 7 strategic
+recommendation and the additive counterfactual, preserves complete support,
+habit, predicted-cost, provenance, and memory-use reasons, records the
+operator's retained choice and an independently witnessed outcome, and audits
+the Phase 5 budget plus an explicit query limit.
+
+Even with `:operator-confirmed? true`, the advice-only result reports
+`:enactment {:authorized? false :executed? false}`. The additive controller
+remains the named fallback. Injected tripwire, query-bound, independent-witness,
+and surfaced-memory failures all withhold advice and return a concrete rollback
+reason. Asking for `:confirm-to-enact` fails closed with
+`:reviewed-window-required-before-advance`.
+
+Run:
+
+```bash
+clojure -M scripts/run_phase8_advice_only_canary.clj
+```
+
+The build plan is complete through the highest rung that can be advanced
+without a new operator decision. Confirm-to-enact and bounded autonomy are
+promotion gates, not unfinished implementation work: they require a reviewed
+real advice window and explicit operator authorization. No test fixture or
+metric can promote itself across that boundary.
+
+Phase 7–8 completion packet:
+
+- focused Phase 4–8/Rungs 1–3 suite: 31 tests / 210 assertions, green;
+- wider shared-memory/strategic regression: 69 tests / 569 assertions, with
+  only the already documented unrelated `memory_backend_test` expectation
+  drift (`:at nil` present in the runtime item);
+- changed Clojure and scripts: `clj-kondo` clean and `check-parens` clean;
+  Rung 2, Phase 7, and Phase 8 fixtures parse as EDN, and all three demos run;
+- schema/API additions are pure version-1 trace contracts; no stored-data
+  migration, live-store query, serving-namespace reload, or JVM restart;
+- rollback is removal of the Phase 7/8 pure namespaces, fixtures, demos, tests,
+  and these acceptance notes. Phase 4–6 and the additive controller are
+  unaffected;
+- current live effect: none. Advice is replay-only and no actuator is
+  reachable.
+
 ## Per-phase completion packet
 
 Every phase reports:
@@ -623,14 +715,14 @@ Every phase reports:
   that no JVM restart occurred;
 - rollback procedure and current live-effect statement.
 
-## Immediate next packet
+## Current terminal packet
 
-Phase 1 is next. It should be split into two reviewable changes:
+No implementation phase is silently open. The next permissible move is an
+operator decision on a real Phase 7/Phase 8 advice-only window. A positive
+decision may open a separate confirm-to-enact packet with an allow-listed
+reversible action and explicit rollback witness. Until then:
 
-1. futon1b bounded `end + optional type` query and contract tests;
-2. shared compact projection/use-receipt contract consumed from futon3c and
-   futon2 fixtures.
-
-Do not begin `psr_search` enrichment, WM live integration, embeddings, or
-mission-score replacement until both Phase 1 changes pass their acceptance
-gate.
+- the live additive controller remains authoritative;
+- the strategic model remains shadow/advice only;
+- the old controller cannot be retired;
+- no serving namespace needs reload and no stored-data migration is pending.

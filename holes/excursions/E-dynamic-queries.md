@@ -4,8 +4,8 @@
 **Type:** E-prefix excursion; bounded dark companion to
 `M-typed-memories` and `M-shared-memory-control-build-test`.
 **Status:** RUNGS 1 + 3 IMPLEMENTED DARK; PHASE 5 CHECKPOINT INFORMATIVE;
-RUNG 2 / PHASE 6 MECHANISM IMPLEMENTED DARK, CALIBRATION GATE NOT MET
-(2026-07-23).
+RUNG 2 ONE-OUTCOME OPERATOR UPDATE IMPLEMENTED DARK OVER PHASE 6,
+CALIBRATION GATE NOT MET (2026-07-23).
 **Boundary:** this excursion may rank only inside the Phase 1–4 admissible
 dark subgraph. It cannot admit records, change domain/lifecycle/witness gates,
 mutate memory, alter shared receipts, or affect live mission ordering.
@@ -173,7 +173,71 @@ it does not overwrite the support operator or the Rung 3 information model.
 Unknown missions abstain, witnessed failures remain negative observations, and
 blocked missions never enter the admissible subgraph. The initial frozen
 sample is deliberately below its promotion threshold, so it validates the
-trace and evaluation contract but does not yet earn an operator update.
+trace and evaluation contract but does not earn promotion of an operator
+update.
+
+#### One-outcome operator update
+
+`strategic-outcomes/outcome-conditioned-operator-update` implements the
+literal Rung 2 step:
+
+1. fit the Phase 6 beta-binomial model on the frozen training transitions;
+2. consume exactly one new independently witnessed transition;
+3. refit once and compute the affected mission's posterior-probability ratio;
+4. multiply only the \(\theta\) entries for admitted patterns supporting that
+   mission by this ratio;
+5. perform exactly one Rung 1 rerank, retaining the pre-update typed ranking
+   as the counterfactual.
+
+Thus, for affected pattern \(p\) supporting mission \(m\),
+
+\[
+\theta_{t+1}(p)
+\;=\;\theta_t(p)\,
+\frac{P_{t+1}(\mathrm{useful\ progress}\mid m)}
+     {P_t(\mathrm{useful\ progress}\mid m)}.
+\]
+
+This is a dark operator-update proposal. It does not consume Rung 3 entropy,
+does not update patterns outside the witnessed mission, cannot introduce a
+mission outside the Phase 4/5 admissible set, and abstains if the additional
+outcome still leaves the mission below the Phase 6 observation floor.
+The ratio transports an earned mission-outcome estimate into an operator
+activation; it does **not** make \(\theta\) a calibrated posterior over
+patterns. That stronger semantics would require a separately validated
+pattern-likelihood model.
+
+The frozen replay uses judgement 4's misleading R5 seed and the independently
+witnessed failure `phase6-test-a-2`. The failure changes the R5 multiplier
+from \(1\) to \(6/7\), moving the typed top result from
+`M-aif-policy-conditioned-eig` to the gold
+`M-shared-memory-control-build-test` without changing the candidate set.
+
+Run:
+
+```bash
+clojure -M scripts/run_dynamic_queries_rung2_demo.clj
+```
+
+Promotion remains false: the updated training count is 13 against the frozen
+minimum of 20, and Phase 6 itself reports `:advance? false`.
+
+#### Rung 2 verification, 2026-07-23
+
+- Integrated Rungs 1–3 / Phases 4–6 focused suite: 24 tests,
+  159 assertions, 0 failures, 0 errors.
+- `clj-kondo`: 0 errors, 0 warnings.
+- `check-parens.el`: clean for the implementation, tests, and demo.
+- The frozen Rung 2 replay parses as EDN and the executable demo completes.
+- Exactly one independently witnessed failure moves the affected mission
+  posterior from \(2/3\) to \(4/7\), hence the R5 operator multiplier is
+  \((4/7)/(2/3)=6/7\).
+- The update recovers the held-out gold at rank 1, reports no degradation or
+  unsupported top result, preserves the three-candidate set, consumes no
+  Rung 3 entropy, selects no mission, and leaves live ordering unchanged.
+- Self-asserted outcomes and outcomes for missions outside the admissible
+  projection are rejected. Thin evidence produces explicit abstention and no
+  operator change.
 
 ### Rung 3 — budgeted facet refinement
 

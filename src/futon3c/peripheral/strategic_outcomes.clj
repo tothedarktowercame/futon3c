@@ -9,6 +9,8 @@
             [futon3c.peripheral.dynamic-queries :as dynamic-queries]))
 
 (def algorithm :strategic-outcomes/dark-ablation-v1)
+(def operator-update-algorithm
+  :dynamic-queries/outcome-conditioned-operator-update-v1)
 (def default-prior {:alpha 1.0 :beta 1.0})
 
 (defn- finite-number?
@@ -302,6 +304,186 @@
      :rankings rankings
      :counterfactual-additive-choice
      (get-in rankings [:current-additive 0 :mission-id])
+     :selected-mission nil
+     :live-ordering-changed? false}))
+
+(defn outcome-conditioned-operator-update
+  "Propose exactly one dark theta update from one witnessed outcome.
+
+   The Phase-6 beta-binomial model is fitted before and after TRANSITION. For
+   each pattern supporting that transition's admitted mission, theta is
+   multiplied by the mission posterior-probability ratio. Other patterns are
+   unchanged. The function then performs exactly one Rung-1 rerank and retains
+   the pre-update typed ranking as counterfactual control.
+
+   This is an operator-update proposal, never a live choice. Promotion requires
+   both the explicit Phase-6 promotion gate and its minimum sample size."
+  [projection training-transitions transition judgement
+   {:keys [min-observations minimum-promotion-sample-size
+           phase6-promotion phase6-outcome-evaluation]
+    :or {min-observations 3
+         minimum-promotion-sample-size 20}}]
+  (let [transition (validate-transition transition)
+        candidate-ids (set (map :mission-id (:candidates projection)))
+        mission-id (:mission-id transition)
+        _ (when-not (contains? candidate-ids mission-id)
+            (throw (ex-info
+                    "operator update mission is outside admissible projection"
+                    {:mission-id mission-id
+                     :admissible-candidate-ids candidate-ids})))
+        before-model
+        (fit-outcome-model
+         training-transitions
+         {:min-observations min-observations})
+        after-model
+        (fit-outcome-model
+         (conj (vec training-transitions) transition)
+         {:min-observations min-observations})
+        before-outcome (predict-outcome before-model mission-id)
+        after-outcome (predict-outcome after-model mission-id)
+        candidate
+        (first (filter #(= mission-id (:mission-id %))
+                       (:candidates projection)))
+        affected-patterns
+        (->> (:support-relations candidate)
+             (map :control-pattern-id)
+             distinct sort vec)
+        all-patterns
+        (->> (:candidates projection)
+             (mapcat :support-relations)
+             (map :control-pattern-id)
+             distinct sort vec)
+        theta-before
+        (into {}
+              (map (fn [pattern-id]
+                     [pattern-id
+                      (double
+                       (get (:pattern-activation judgement)
+                            pattern-id 1.0))]))
+              all-patterns)
+        applicable?
+        (and (seq affected-patterns)
+             (number? (:outcome-probability before-outcome))
+             (number? (:outcome-probability after-outcome))
+             (not (:abstain? after-outcome)))
+        posterior-ratio
+        (when applicable?
+          (/ (double (:outcome-probability after-outcome))
+             (double (:outcome-probability before-outcome))))
+        theta-after
+        (if applicable?
+          (reduce
+           (fn [theta pattern-id]
+             (update theta pattern-id * posterior-ratio))
+           theta-before
+           affected-patterns)
+          theta-before)
+        ranking-options
+        {:relation-weights (:relation-weights judgement)
+         :facet-resolution :rung2-outcome-update}
+        before-ranking
+        (dynamic-queries/fixed-typed-ranking
+         projection
+         (assoc ranking-options :pattern-activation theta-before))
+        after-ranking
+        (dynamic-queries/fixed-typed-ranking
+         projection
+         (assoc ranking-options :pattern-activation theta-after))
+        before-top (first (:typed-ranking before-ranking))
+        after-top (first (:typed-ranking after-ranking))
+        after-top-outcome (predict-outcome after-model after-top)
+        gold-mission-id (:gold-mission-id judgement)
+        recovered?
+        (and (string? gold-mission-id)
+             (not= gold-mission-id before-top)
+             (= gold-mission-id after-top))
+        degraded?
+        (and (string? gold-mission-id)
+             (= gold-mission-id before-top)
+             (not= gold-mission-id after-top))
+        sample-count (:training-transition-count after-model)
+        enough-data?
+        (>= sample-count minimum-promotion-sample-size)
+        phase6-advance? (true? (:advance? phase6-promotion))
+        promotion-eligible? (and applicable?
+                                 enough-data?
+                                 phase6-advance?)
+        memory-ids
+        (->> (:support-relations candidate)
+             (mapcat :memory-ids)
+             distinct sort vec)
+        update-rows
+        (mapv
+         (fn [pattern-id]
+           {:pattern-id pattern-id
+            :theta-before (get theta-before pattern-id)
+            :posterior-ratio posterior-ratio
+            :theta-after (get theta-after pattern-id)
+            :mission-id mission-id
+            :memory-ids memory-ids})
+         affected-patterns)]
+    {:status (if applicable? :dark-update-proposal :dark-abstention)
+     :algorithm operator-update-algorithm
+     :transition
+     (select-keys transition
+                  [:transition-id :mission-id :outcome
+                   :witness-status :witness-id])
+     :outcome-update
+     {:semantics (:semantics before-model)
+      :before (select-keys
+               before-outcome
+               [:mission-id :observation-count :success-count :failure-count
+                :outcome-probability :uncertainty-interval :abstain?
+                :abstention-reason])
+      :after (select-keys
+              after-outcome
+              [:mission-id :observation-count :success-count :failure-count
+               :outcome-probability :uncertainty-interval :abstain?
+               :abstention-reason])
+      :one-transition-consumed? true
+      :rung3-entropy-consumed? false}
+     :operator-update
+     {:semantics
+      :mission-posterior-ratio-rescaling-not-pattern-posterior
+      :applied-to-dark-rerank? (boolean applicable?)
+      :affected-pattern-ids affected-patterns
+      :theta-before theta-before
+      :theta-after theta-after
+      :updates update-rows
+      :abstention-reason
+      (when-not applicable?
+        (or (:abstention-reason after-outcome)
+            :no-admitted-pattern-for-mission))}
+     :rankings
+     {:fixed-endpoint (:control-ranking before-ranking)
+      :typed-before-outcome (:typed-ranking before-ranking)
+      :typed-after-one-outcome (:typed-ranking after-ranking)}
+     :candidate-set-preserved?
+     (and (:candidate-set-preserved? before-ranking)
+          (:candidate-set-preserved? after-ranking)
+          (= (set (:typed-ranking before-ranking))
+             (set (:typed-ranking after-ranking))))
+     :evaluation
+     {:gold-mission-id gold-mission-id
+      :before-top before-top
+      :after-top after-top
+      :recovered-from-misleading-seed? (boolean recovered?)
+      :degraded? (boolean degraded?)
+      :unsupported-after-top?
+      (boolean (:abstain? after-top-outcome))
+      :phase6-outcome-evaluation phase6-outcome-evaluation}
+     :promotion
+     {:sample-count sample-count
+      :minimum-sample-size minimum-promotion-sample-size
+      :phase6-advance? phase6-advance?
+      :promotion-eligible? promotion-eligible?
+      :decision-reason
+      (cond
+        (not applicable?) :operator-update-abstained
+        (not enough-data?) :exploratory-sample-too-small
+        (not phase6-advance?) :phase6-calibration-gate-not-met
+        :else :operator-review-required)}
+     :counterfactual-ranking (:typed-ranking before-ranking)
      :selected-mission nil
      :live-ordering-changed? false}))
 

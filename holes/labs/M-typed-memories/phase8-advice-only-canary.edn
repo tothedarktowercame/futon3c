@@ -1,0 +1,17 @@
+{:fixture-version 1
+ :status :frozen-phase8-advice-only
+ :freeze-id "phase8-advice-only-v1-20260723"
+ :frozen-at "2026-07-23T13:16:42Z"
+ :requested-rung :advice-only
+ :decision-id "phase7-shadow-2"
+ :operator-choice-mission-ids ["M-shared-memory-control-build-test"
+                               "M-aif-policy-conditioned-eig"]
+ :operator-confirmed? true
+ :tripwire-clear? true
+ :query-limit 10
+ :maximum-query-limit 10
+ :observed-outcome
+ {:outcome :useful-progress
+  :witness-status :independently-witnessed
+  :witness-id "phase8-independent-reviewer-1"
+  :memory-ids-used ["e-wm-eig-support"]}}

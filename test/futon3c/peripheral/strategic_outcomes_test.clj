@@ -135,3 +135,122 @@
          clojure.lang.ExceptionInfo
          #"invalid or unfrozen"
          (outcomes/run-dark-ablation outer-result overlap)))))
+
+(deftest rung2-updates-the-pattern-operator-once-and-recovers-the-gold
+  (let [{:keys [outer-result fixture]} (phase6-input)
+        rung2
+        (read-edn
+         "holes/labs/M-typed-memories/rung2-operator-update.edn")
+        ablation (outcomes/run-dark-ablation outer-result fixture)
+        judgement
+        (first (filter #(= (:judgement-id rung2) (:judgement-id %))
+                       (:judgements fixture)))
+        transition
+        (first (filter #(= (:transition-id rung2) (:transition-id %))
+                       (:held-out-outcomes fixture)))
+        result
+        (outcomes/outcome-conditioned-operator-update
+         (:admissible-projection outer-result)
+         (:training-transitions fixture)
+         transition
+         judgement
+         {:min-observations (:min-outcome-observations fixture)
+          :minimum-promotion-sample-size
+          (:minimum-promotion-sample-size fixture)
+          :phase6-promotion (:outcome-promotion ablation)
+          :phase6-outcome-evaluation (:outcome-evaluation ablation)})
+        expected (:expected rung2)]
+    (is (= :dark-update-proposal (:status result)))
+    (is (= (:affected-pattern-ids expected)
+           (get-in result [:operator-update :affected-pattern-ids])))
+    (is (= :mission-posterior-ratio-rescaling-not-pattern-posterior
+           (get-in result [:operator-update :semantics])))
+    (is (= (/ 2.0 3.0)
+           (get-in result
+                   [:outcome-update :before :outcome-probability])))
+    (is (= (/ 4.0 7.0)
+           (get-in result
+                   [:outcome-update :after :outcome-probability])))
+    (is (= (/ 6.0 7.0)
+           (get-in result
+                   [:operator-update :updates 0 :posterior-ratio])))
+    (is (= (:typed-before-top expected)
+           (get-in result
+                   [:rankings :typed-before-outcome 0])))
+    (is (= (:typed-after-top expected)
+           (get-in result
+                   [:rankings :typed-after-one-outcome 0])))
+    (is (true?
+         (get-in result
+                 [:evaluation :recovered-from-misleading-seed?])))
+    (is (false? (get-in result [:evaluation :degraded?])))
+    (is (false?
+         (get-in result [:evaluation :unsupported-after-top?])))
+    (is (true? (:candidate-set-preserved? result)))
+    (is (false? (get-in result [:promotion :promotion-eligible?])))
+    (is (= :exploratory-sample-too-small
+           (get-in result [:promotion :decision-reason])))
+    (is (true?
+         (get-in result
+                 [:outcome-update :one-transition-consumed?])))
+    (is (false?
+         (get-in result
+                 [:outcome-update :rung3-entropy-consumed?])))
+    (is (nil? (:selected-mission result)))
+    (is (false? (:live-ordering-changed? result)))))
+
+(deftest rung2-refuses-unwitnessed-outcomes-and-outside-missions
+  (let [{:keys [outer-result fixture]} (phase6-input)
+        projection (:admissible-projection outer-result)
+        judgement (first (:judgements fixture))
+        training (:training-transitions fixture)
+        transition (first (:held-out-outcomes fixture))]
+    (testing "self-assertion cannot update theta"
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"independently witnessed"
+           (outcomes/outcome-conditioned-operator-update
+            projection training
+            (assoc transition :witness-status :self-asserted)
+            judgement {}))))
+    (testing "an outcome cannot introduce an inadmissible mission"
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"outside admissible projection"
+           (outcomes/outcome-conditioned-operator-update
+            projection training
+            (assoc transition
+                   :transition-id "outside-transition"
+                   :mission-id "M-outside")
+            judgement {}))))))
+
+(deftest rung2-abstains-when-one-update-still-leaves-thin-evidence
+  (let [{:keys [outer-result fixture]} (phase6-input)
+        mission-id "M-aif-policy-conditioned-eig"
+        judgement (first (:judgements fixture))
+        training
+        [{:transition-id "thin-before"
+          :mission-id mission-id
+          :outcome :success
+          :witness-status :independently-witnessed
+          :witness-id "thin-checker-before"}]
+        transition
+        {:transition-id "thin-update"
+         :mission-id mission-id
+         :outcome :failure
+         :witness-status :independently-witnessed
+         :witness-id "thin-checker-update"}
+        result
+        (outcomes/outcome-conditioned-operator-update
+         (:admissible-projection outer-result)
+         training transition judgement {:min-observations 3})]
+    (is (= :dark-abstention (:status result)))
+    (is (false?
+         (get-in result
+                 [:operator-update :applied-to-dark-rerank?])))
+    (is (= :insufficient-independent-outcomes
+           (get-in result
+                   [:operator-update :abstention-reason])))
+    (is (= (get-in result [:rankings :typed-before-outcome])
+           (get-in result [:rankings :typed-after-one-outcome])))
+    (is (false? (get-in result [:promotion :promotion-eligible?])))))
