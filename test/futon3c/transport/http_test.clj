@@ -2362,6 +2362,36 @@
       (is (integer? (:scan-age-seconds parsed)))
       (is (= 300 (get-in parsed [:scheduler :period-seconds]))))))
 
+(deftest r14-summary-reads-selection-gain-schema
+  (testing "the WM compatibility projection reads Futon2's current selection-gain state"
+    (let [summary (with-redefs [requiring-resolve
+                                (fn [sym]
+                                  (case sym
+                                    futon2.aif.trace/latest-trace-record
+                                    (fn []
+                                      {:selection-gain {:selection-gain 1.25
+                                                        :perf-history [0.1 0.2]
+                                                        :samples 2}
+                                       :realized-outcome {:tick 17}})
+                                    futon2.aif.selection-gain/coerce-state
+                                    identity
+                                    futon2.aif.selection-gain/selection-gain-for
+                                    (fn [state] (double (:selection-gain state)))
+                                    futon3c.aif.calibration/load-evidence
+                                    (fn [] [])
+                                    futon3c.aif.calibration/calibration-report
+                                    (fn [_] {:paired-count 0
+                                             :independent-paired-count 0
+                                             :verdict :insufficient-data})
+                                    nil))]
+                    (#'http/r14-gamma-summary))]
+      (is (= :selection-gain (:controller-kind summary)))
+      (is (= 1.25 (:gamma summary)))
+      (is (= 2 (:policy-outcome-samples summary)))
+      (is (= {:tick 17} (:last-realized-outcome summary)))
+      (is (false? (:held-at-prior? summary)))
+      (is (not (str/includes? (:status summary) "trace read failed"))))))
+
 (deftest war-machine-returns-503-while-background-warmup-starts
   (testing "GET /api/alpha/war-machine returns 503 and requests a background warmup when no snapshot exists yet"
     (let [handler (make-handler)

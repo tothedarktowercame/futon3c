@@ -5811,37 +5811,39 @@
     (catch Throwable _ nil)))
 
 (defn- r14-gamma-summary
-  "R14 γ (policy-precision) live state, folded into the war-machine payload for the
+  "R14 selection-gain live state, folded into the war-machine payload for the
    AIF↔cascade loop render (C-cascade-real).
 
-   γ modulates the selection temperature `τ_eff = τ/γ` and LEARNS from the chosen
+   The gain modulates the selection temperature `τ_eff = τ/g` and learns from the chosen
    policy's realized-vs-expected outcome — the R16→R14 `:realized-outcome` trace
-   contract (futon2.aif.policy-precision). That feed is STAGED behind
-   `fold-realized/*live-wire?*` (off; operator-governed R16-ARM): enactment isn't
-   live-wired, so there are **0 policy-outcome samples** and γ holds at its
-   reduction-safe prior 1.0 (policy_precision.clj: 'absent today ⇒ no sample ⇒ γ
-   holds at 1.0').
+   contract (`futon2.aif.selection-gain`). This is an engineering commitment
+   control learned from realised controller performance, not Friston's
+   variational policy precision. The outward `:gamma` key is retained for War
+   Machine client compatibility.
 
    HONESTY NOTE: the calibration report over repl-traces (predicted-vs-realised
-   DISCHARGE) is a RELATED but DISTINCT signal — NOT γ's policy-outcome feed. It is
-   surfaced under `:calibration-signal` for context, never as γ's sample count."
+   DISCHARGE) is a RELATED but DISTINCT signal — NOT the gain's policy-outcome
+   feed. It is surfaced under `:calibration-signal` for context, never as the
+   gain's sample count."
   []
   (let [base (try
-               ;; LIVE-WIRED 2026-07-02 (Joe-ratified): read the REAL γ-state from
+               ;; LIVE-WIRED 2026-07-02 (Joe-ratified): read the real gain-state from
                ;; the latest WM trace record — the same state `judge` threads
                ;; tick-to-tick. The scheduled runner (futon2.aif.enact) now
                ;; computes act-gates per tick and enacts the first :pass
                ;; (artifact-only; WM-I4 firing stays operator-gated), so
-               ;; :realized-outcome records flow and γ accrues through burn-in.
+               ;; :realized-outcome records flow and gain accrues through burn-in.
                ;; coerce-state guards the retired v0 :error-history schema (the
-               ;; 8 junk samples that pinned γ to 0.5 for days; found 2026-07-02).
+               ;; 8 junk samples that pinned gain to 0.5 for days; found 2026-07-02).
                (let [rec ((requiring-resolve 'futon2.aif.trace/latest-trace-record))
-                     coerce (requiring-resolve 'futon2.aif.policy-precision/coerce-state)
-                     st (coerce (:policy-precision rec))
-                     gamma (double (:policy-precision st 1.0))
+                     coerce (requiring-resolve 'futon2.aif.selection-gain/coerce-state)
+                     gain-for (requiring-resolve 'futon2.aif.selection-gain/selection-gain-for)
+                     st (coerce (:selection-gain rec))
+                     gain (gain-for st)
                      samples (long (:samples st 0))]
-                 {:gamma gamma
-                  :held-at-prior? (= gamma 1.0)
+                 {:gamma gain
+                  :controller-kind :selection-gain
+                  :held-at-prior? (= gain 1.0)
                   :bounds [0.5 2.0]
                   :policy-outcome-samples samples
                   :burn-in-threshold 5
@@ -5852,14 +5854,15 @@
                   :last-enactment (:enactment rec)
                   :act-gate-verdicts (:act-gate-verdicts rec)
                   :status (str "R16 enactment LIVE-WIRED (2026-07-02; scheduled-runner enactor, "
-                               "artifact-only — WM-I4 firing stays operator-gated). γ=" gamma
+                               "artifact-only — WM-I4 firing stays operator-gated). selection gain=" gain
                                " from " samples " realized policy-outcome sample(s); 5-sample "
-                               "burn-in, then γ moves. Retired-schema guard active (the γ=0.5 "
+                               "burn-in, then gain moves. Retired-schema guard active (the gain=0.5 "
                                "pin on 8 junk 2026-06-27 samples is fixed). (The calibration "
                                "discharge signal below is a related but DISTINCT readout, not "
-                               "γ's learning feed.)")})
+                               "the gain's learning feed.)")})
                (catch Throwable t
                  {:gamma 1.0 :held-at-prior? true :bounds [0.5 2.0]
+                  :controller-kind :selection-gain
                   :policy-outcome-samples 0 :burn-in-threshold 5 :burn-in-met? false
                   :live-wire? true
                   :status (str "R16 live-wired but trace read failed: " (.getMessage t))}))]
@@ -5870,7 +5873,7 @@
                {:paired (:paired-count report)
                 :independent (or (:independent-paired-count report) 0)
                 :verdict (:verdict report)
-                :note "predicted-vs-realised DISCHARGE over repl-traces — distinct from γ's policy feed"}))
+                :note "predicted-vs-realised DISCHARGE over repl-traces — distinct from the selection-gain feed"}))
       (catch Throwable t (assoc base :calibration-signal {:error (.getMessage t)})))))
 
 (defn- handle-war-machine
