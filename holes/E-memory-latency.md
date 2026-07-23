@@ -130,6 +130,28 @@ Deployment evidence:
   returned the same three memories in 7.239 ms caller wall / 0.711 ms service
   time. The service was active with about 1.0 GB current / 1.09 GB peak memory.
 
+### Restart-catch-up correction
+
+The first post-restart Phase 3 smoke found a correctness defect hidden by the
+latency result: revision 1 had been built while XTDB was still replaying its
+durable log. It contained the superseded `e-6bcbb51e…` but omitted current
+correction `e-aa9c729b…`. Fast stale recall is not acceptance.
+
+Futon1b commit `f887aa9` (`Gate memory projection on XTDB progress`) now records
+the XTDB completed/submitted/processed transaction watermark. A projection is
+published only when that watermark is stable across selection and hydration;
+later drift forces a coherent bounded rebuild. A regression writes below the
+normal synchronous refresh hook and proves that the next read self-heals.
+
+After deployment the startup build required four attempts while XTDB caught up,
+then published 14 components / 31 endpoints. The corrected smoke completed in
+3.323 s total search time, ranked
+`math-formalization/tactic-algebra-interference` first, used current correction
+`e-aa9c729b…` as its proposal support, returned it among the three reviewed
+hooks, and counted the superseded original among two state exclusions. The
+shared top-five projection took about 85 ms caller wall. Futon1b remained
+39/39 and 59/59 green; the temporal suite is now 4 tests / 13 assertions.
+
 ### Monitoring still required
 
 Preserve trace ids and gather a longer fixed-query series over normal traffic.

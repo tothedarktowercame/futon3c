@@ -74,7 +74,8 @@
     distill))
 
 (defn- memory-hyperedge
-  [{:keys [session-id mission-id domain] :as ctx} payload evidence-id hx-id]
+  [{:keys [session-id mission-id domain witness-status] :as ctx}
+   payload evidence-id hx-id]
   (let [subject-ids (mapv (comp str :ref/id) (:subjects payload))
         pattern-ids (->> (:subjects payload)
                          (filter #(= :pattern (:ref/type %)))
@@ -107,6 +108,7 @@
                         :volatile? (:volatile? payload)
                         :state :current}
                  domain (assoc :domain domain)
+                 witness-status (assoc :witness-status witness-status)
                  ;; Agent-supplied pattern subjects are proposals.  A
                  ;; librarian/reviewer must promote the attachment before it
                  ;; can surface as a recall warrant.

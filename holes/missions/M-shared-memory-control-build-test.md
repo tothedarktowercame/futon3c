@@ -369,6 +369,33 @@ A dark WM query selects a p4ng endpoint, retrieves a concrete WM episode, and
 projects a related mission with complete reasons. The same query and receipt
 code used by Zaif is present in the trace. Live mission ordering is unchanged.
 
+### Live acceptance, 2026-07-23
+
+ACCEPTED DARK. `futon3c.peripheral.wm-memory` is a controller adapter over the
+existing `memory_record`, endpoint recall, and
+`futon2.aif.memory-contract/use-receipt` code. It stamps the WM domain, mission,
+observation/intervention kind, p4ng patterns, provenance, and witness endpoints;
+it owns no store and no alternate memory type.
+
+The reviewed fixture corpus
+`holes/labs/M-typed-memories/phase4-wm-corpus.edn` covers WM compliance, typed
+memory, policy-conditioned EIG, and liveness tripwires. Each active p4ng
+endpoint retrieves both a supporting and challenging concrete episode. The
+strict dark projection admits only reviewed, current, independently witnessed
+WM bodies. Proposed relations, self-asserted material, cross-domain memories,
+and lifecycle-excluded attachments remain auditable but cannot admit a
+mission; an independently witnessed blocking counterexample removes its
+mission.
+
+The live trace `phase4-live-dark-warm-20260723` queried
+`p4ng/R15-hierarchical-temporal-depth` through the shared backend, retrieved
+full episode `e-phase4-wm-r15-live-20260723`, and projected
+`M-wm-strategic-mission-selection` with its concrete observation, intervention,
+memory provenance, and independent checker
+`e-phase4-wm-r15-check-20260723`. It also produced a pending-outcome receipt
+through the shared Phase 1 receipt function. Warm substrate wall time was
+26.9 ms; the result explicitly reports `:live-ordering-changed? false`.
+
 ## Phase 5 — Outer strategic cascades and policy holes
 
 ### Build
