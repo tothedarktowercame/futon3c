@@ -17,6 +17,7 @@
 
 (def test-ctx
   {:agent-id "zai-fixture"
+   :domain :mathematics
    :session-id "zai-session-fixture"
    :turn-id "zai-turn-fixture"
    :round 7
@@ -68,6 +69,8 @@
           (is (= (boolean (:volatile? payload))
                  (get-in hx [:hx/props :volatile?]))
               (:name payload))
+          (is (= :mathematics (get-in hx [:hx/props :domain]))
+              (:name payload))
           (is (every? (set (:hx/endpoints hx))
                       (concat [(:id receipt)] subject-ids
                               [(:session-id test-ctx) (:mission-id test-ctx)]))
@@ -77,11 +80,13 @@
 
 (deftest identity-is-stamped-from-context-and-smuggled-values-are-ignored
   (let [store (empty-store)
+        hyperedges (atom {})
         payload (assoc (first (fixtures))
                        :author "mallory"
                        :session-id "stolen-session"
+                       :domain :war-machine
                        :evidence/author "also-mallory")]
-    (with-redefs [memory-write/post-hyperedge! (graph-stub (atom {}))]
+    (with-redefs [memory-write/post-hyperedge! (graph-stub hyperedges)]
       (let [receipt (memory-write/record-memory!
                      (assoc test-ctx :evidence-store store)
                      payload)
@@ -89,6 +94,8 @@
         (is (true? (:ok receipt)))
         (is (= "zai-fixture" (:evidence/author entry)))
         (is (= "zai-session-fixture" (:evidence/session-id entry)))
+        (is (= :mathematics
+               (get-in (first (vals @hyperedges)) [:hx/props :domain])))
         (is (not (contains? (:evidence/body entry) :author)))
         (is (not (contains? (:evidence/body entry) :session-id)))))))
 
@@ -106,6 +113,25 @@
                (get-in hx [:hx/props :roles :distills])))
         (is (some #{"e-prior"} (:hx/endpoints hx)))
         (is (not (some map? (:hx/endpoints hx))))))))
+
+(deftest agent-supplied-pattern-attachment-is-only-a-proposal
+  (let [store (empty-store)
+        hyperedges (atom {})
+        payload (assoc (first (fixtures))
+                       :subjects
+                       [{:ref/type :problem :ref/id "apm/a94A06"}
+                        {:ref/type :pattern
+                         :ref/id
+                         "math-formalization/tactic-algebra-interference"}])]
+    (with-redefs [memory-write/post-hyperedge! (graph-stub hyperedges)]
+      (let [receipt (memory-write/record-memory!
+                     (assoc test-ctx :evidence-store store)
+                     payload)
+            edge (get @hyperedges (:hx-id receipt))]
+        (is (= :proposed
+               (get-in edge [:hx/props :attachment-status])))
+        (is (= ["math-formalization/tactic-algebra-interference"]
+               (get-in edge [:hx/props :roles :patterns])))))))
 
 (deftest evidence-failure-returns-fixed-id-and-social-error
   (let [receipt (memory-write/record-memory!
@@ -205,5 +231,6 @@
     (is (= "sid-dispatch" (get-in args [0 :session-id])))
     (is (= "turn-dispatch" (get-in args [0 :turn-id])))
     (is (= 3 (get-in args [0 :round])))
+    (is (= :zaif-work (get-in args [0 :domain])))
     (is (= "dispatch-memory" (get-in args [1 :name])))
     (is (false? (:error? result)))))

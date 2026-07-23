@@ -13,6 +13,7 @@
             [futon3c.peripheral.tools :as tools]
             [futon3c.peripheral.explore :as explore]
             [futon3c.peripheral.edit :as edit]
+            [futon3c.peripheral.reflect :as reflect]
             [futon3c.peripheral.test-runner :as test-runner]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.common :as common]
@@ -276,6 +277,44 @@
       (is (false? (:ok result)))
       (is (str/includes? (:error result) "missing psr-ref")))))
 
+(deftest discipline-pur-update-exact-replay-is-idempotent
+  (testing "an exact PUR retry returns the first result without another proof"
+    (with-temp-dir dir
+      (with-redefs [relations/proof-path-dir (fn [] (.getPath dir))]
+        (let [discipline-state (atom {:psr/by-pattern {}
+                                      :pur/history []
+                                      :pivot/history []
+                                      :par/history []})
+              backend
+              (rb/make-real-backend
+               {:cwd "/home/joe/code/futon3c"
+                :discipline-state discipline-state})
+              _ (tools/execute-tool
+                 backend :psr-select
+                 ["coordination/mandatory-psr"
+                  {:task-id "task-pur-replay"}])
+              request
+              ["coordination/mandatory-psr"
+               {:status :ok
+                :criteria-eval {:tests-pass? true}
+                :prediction-error "none"
+                :memory-ids ["e-used"]
+                :memory-rejections
+                [{:memory-id "e-unused" :reason "not relevant"}]}]
+              first-result
+              (tools/execute-tool backend :pur-update request)
+              replay-result
+              (tools/execute-tool backend :pur-update request)]
+          (is (true? (:ok first-result)))
+          (is (true? (:ok replay-result)))
+          (is (true? (get-in replay-result
+                             [:result :idempotent-replay?])))
+          (is (= (get-in first-result [:result :pur :pur/id])
+                 (get-in replay-result [:result :pur :pur/id])))
+          (is (= 1 (count (:pur/history @discipline-state))))
+          (is (= 1 (count (filter #(.isFile ^File %)
+                                  (file-seq dir))))))))))
+
 ;; =============================================================================
 ;; 9. Explore peripheral with RealBackend — full lifecycle
 ;; =============================================================================
@@ -437,7 +476,7 @@
                :evidence/session-id "sess-reflect"})
           backend (rb/make-real-backend {:evidence-store evidence-store})
           spec (common/load-spec :reflect)
-          peripheral (futon3c.peripheral.reflect/make-reflect spec backend)
+          peripheral (reflect/make-reflect spec backend)
           start-result (runner/start peripheral {:session-id "sess-reflect"
                                                  :evidence-store evidence-store})
           ;; Read session log

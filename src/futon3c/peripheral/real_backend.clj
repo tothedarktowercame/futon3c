@@ -20,8 +20,10 @@
             [futon.notions :as notions]
             [futon3.gate.shapes :as gate-shapes]
             [futon3b.query.relations :as relations]
+            [futon2.aif.memory-contract :as memory-contract]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
+            [futon3c.peripheral.memory-recall :as memory-recall]
             [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.tools :as tools]
             [futon3c.reflection.core :as reflection])
@@ -439,6 +441,15 @@
       :pass
       :fail)))
 
+(defn- normalize-prediction-error
+  [prediction-error]
+  (cond
+    (map? prediction-error) prediction-error
+    (and (string? prediction-error)
+         (not (str/blank? prediction-error)))
+    {:description prediction-error}
+    :else nil))
+
 (defn- persist-proof-path!
   "Persist a proof-path to EDN and, when an evidence-store is available,
    also append a synthetic evidence entry so the proof-path is queryable
@@ -514,26 +525,119 @@
                            :source :futon3a/notions-index}
                     include-details?
                     (assoc :details (notions/get-pattern-details pid)))))
-              candidates (->> index
-                              (map candidate->result)
-                              (filter #(pos? (:score %)))
-                              (sort-by :score >)
-                              (take top-k)
-                              vec)]
+              scored-by-id
+              (into {} (map (fn [entry]
+                              [(:id entry) (candidate->result entry)]))
+                    index)
+              lexical-candidates
+              (->> (vals scored-by-id)
+                   (filter #(pos? (:score %))))
+              proposal-fn
+              (or (:memory-proposal-fn config)
+                  memory-recall/propose-patterns-by-query)
+              proposal
+              (if-let [domain (:memory-domain config)]
+                (try
+                  (proposal-fn
+                   {:domain domain}
+                   query
+                   {:limit (or (:memory-proposal-limit config) 10)})
+                  (catch Throwable t
+                    {:ok false
+                     :candidates []
+                     :error {:error/code :memory-proposal-unavailable
+                             :error/message (or (.getMessage t)
+                                                "Memory proposal lane failed")}}))
+                {:ok false :candidates []})
+              proposed-by-id
+              (into {}
+                    (keep
+                     (fn [{:keys [pattern-id memory-support source]}]
+                       (when-let [base (get scored-by-id pattern-id)]
+                         [pattern-id
+                          (assoc base
+                                 :memory-proposal-source source
+                                 :memory-proposal-support memory-support)])))
+                    (:candidates proposal))
+              candidates
+              (->> (concat lexical-candidates (vals proposed-by-id))
+                   (reduce
+                    (fn [by-id candidate]
+                      (update by-id (:pattern-id candidate)
+                              #(merge % candidate)))
+                    {})
+                   vals
+                   (sort-by (juxt #(count (:memory-proposal-support %))
+                                  :score)
+                            #(compare %2 %1))
+                   (take top-k)
+                   vec)
+              candidates
+              (mapv (fn [candidate]
+                      (let [pattern-id (:pattern-id candidate)
+                            recall-fn
+                            (or (:memory-recall-fn config)
+                                memory-recall/recall-by-endpoint)
+                            recall
+                            (if-let [domain (:memory-domain config)]
+                              (recall-fn
+                               {:domain domain
+                                :evidence-store (:evidence-store config)}
+                               pattern-id
+                               {:limit (or (:memory-recall-limit config) 3)})
+                              {:ok false
+                               :endpoint pattern-id
+                               :memories []
+                               :error {:error/code :memory-domain-not-configured
+                                       :error/message
+                                       "Pattern recall requires an explicit memory domain"}})
+                            hooks
+                            (mapv (fn [memory]
+                                    {:memory-id (:memory/id memory)
+                                     :hook (:memory/hook memory)
+                                     :role (if (or (= :challenged
+                                                     (:memory/state memory))
+                                                   (= :challenged
+                                                      (:memory/witness-status memory)))
+                                             :challenging
+                                             :supporting)
+                                     :state (:memory/state memory)
+                                     :witness-status
+                                     (:memory/witness-status memory)
+                                     :volatile? (:memory/volatile? memory)})
+                                  (:memories recall))]
+                        (cond-> (assoc candidate
+                                       :memory-hooks hooks
+                                       :memory-recall
+                                       (dissoc recall :memories))
+                          (empty? hooks)
+                          (assoc :memory-hole
+                                 {:kind (if (:ok recall)
+                                          :no-reviewed-attachment
+                                          :recall-unavailable)
+                                  :pattern-id pattern-id
+                                  :error (:error recall)}))))
+                    candidates)]
           {:ok true
            :result {:query query
                     :top-k top-k
+                    :candidate-construction
+                    {:lexical-index :futon3a/notions-index
+                     :reviewed-memory-proposal
+                     (dissoc proposal :candidates)}
                     :candidates candidates}})
         (catch Exception e
           {:ok false :error (str "psr-search failed: " (.getMessage e))})))))
 
 (defn- tool-psr-select
-  [discipline-state args]
+  [discipline-state config args]
   (let [pattern-id (normalize-pattern-id (first args))
         opts (if (map? (second args)) (second args) {})
         task-id (or (:task-id opts) (gen-id "task"))
         rationale (or (:rationale opts)
-                      (some-> (nth args 2 nil) str))]
+                      (some-> (nth args 2 nil) str))
+        recall-fn (or (:memory-recall-fn config)
+                      memory-recall/recall-by-endpoint)]
     (cond
       (str/blank? pattern-id)
       {:ok false :error "psr-select requires a pattern-id"}
@@ -549,17 +653,122 @@
                    :psr/pattern-ref pattern-id
                    :psr/candidates (vec (or (:candidates opts) []))
                    :psr/rationale rationale}
-              _ (gate-shapes/validate! gate-shapes/PSR psr)]
+              _ (gate-shapes/validate! gate-shapes/PSR psr)
+              recall
+              (if-let [domain (:memory-domain config)]
+                (recall-fn
+                 {:domain domain
+                  :evidence-store (:evidence-store config)}
+                 pattern-id
+                 {:limit (or (:memory-recall-limit config) 3)
+                  :include-bodies? true})
+                {:ok false
+                 :endpoint pattern-id
+                 :memories []
+                 :error {:error/code :memory-domain-not-configured
+                         :error/message
+                         "Pattern recall requires an explicit memory domain"}})
+              memories (vec (:memories recall))
+              surfaced-ids (mapv :memory/id memories)
+              inclusion-reasons
+              (into {}
+                    (map (fn [memory]
+                           [(:memory/id memory)
+                            (str "reviewed attachment to selected pattern "
+                                 pattern-id)])
+                         memories))]
           (swap! discipline-state assoc-in [:psr/by-pattern pattern-id] psr)
+          (swap! discipline-state assoc-in
+                 [:memory/by-psr (:psr/id psr)]
+                 {:pattern-id pattern-id
+                  :domain (:memory-domain config)
+                  :surfaced-at (now-str)
+                  :surfaced-memory-ids surfaced-ids
+                  :inclusion-reasons inclusion-reasons
+                  :recall-audit (dissoc recall :memories)})
           {:ok true
            :result {:pattern-id pattern-id
                     :psr psr
-                    :selected? true}})
+                    :selected? true
+                    :attached-memories memories
+                    :memory-recall (dissoc recall :memories)
+                    :memory-hole
+                    (when (empty? memories)
+                      {:kind (if (:ok recall)
+                               :no-reviewed-attachment
+                               :recall-unavailable)
+                       :pattern-id pattern-id
+                       :error (:error recall)})}})
         (catch Exception e
           {:ok false :error (str "psr-select failed: " (.getMessage e))})))))
 
+(defn- normalize-memory-rejections
+  [xs]
+  (reduce
+   (fn [acc item]
+     (let [memory-id (or (:memory-id item) (:memory_id item))
+           reason (:reason item)]
+       (if (and (string? memory-id) (not (str/blank? memory-id))
+                (string? reason) (not (str/blank? reason)))
+         (assoc acc memory-id reason)
+         (throw (ex-info "memory rejections require memory_id and reason"
+                         {:rejection item})))))
+   {}
+   (or xs [])))
+
+(defn- verify-independent-outcome
+  [evidence-store agent-id outcome-id]
+  (when outcome-id
+    (let [entry (estore/get-entry* evidence-store outcome-id)]
+      (cond
+        (nil? entry)
+        (throw (ex-info "independent outcome evidence was not found"
+                        {:outcome-id outcome-id}))
+
+        (= (str agent-id) (:evidence/author entry))
+        (throw (ex-info "memory user cannot witness its own outcome"
+                        {:outcome-id outcome-id :author agent-id}))
+
+        (not= :independently-witnessed
+              (get-in entry [:evidence/body
+                             :memory-outcome/witness-status]))
+        (throw (ex-info "outcome evidence is not independently witnessed"
+                        {:outcome-id outcome-id}))
+
+        :else entry))))
+
+(defn- persist-memory-use!
+  [evidence-store config pattern-id receipt]
+  (let [entry
+        {:evidence/subject {:ref/type :pattern :ref/id pattern-id}
+         :evidence/type :pattern-outcome
+         :evidence/claim-type :observation
+         :evidence/author (str (:agent-id config))
+         :evidence/session-id ((:session-id-fn config))
+         :evidence/body {:event :memory-use
+                         :memory-use receipt}
+         :evidence/tags [:memory :memory-use]}
+        persisted (boundary/append! evidence-store entry)]
+    (when-not (:ok persisted)
+      (throw (ex-info "memory-use receipt persistence failed"
+                      {:receipt persisted})))
+    persisted))
+
+(defn- pur-request-key
+  [pattern-id psr-ref outcome opts]
+  {:pattern-id pattern-id
+   :psr-ref psr-ref
+   :outcome outcome
+   :outcome-id (:outcome-id opts)
+   :criteria-eval (:criteria-eval opts)
+   :prediction-error (normalize-prediction-error
+                      (:prediction-error opts))
+   :memory-ids (vec (or (:memory-ids opts) []))
+   :memory-rejections
+   (normalize-memory-rejections (:memory-rejections opts))})
+
 (defn- tool-pur-update
-  [discipline-state evidence-store args]
+  [discipline-state evidence-store config args]
   (let [pattern-id (normalize-pattern-id (first args))
         second-arg (second args)
         third-arg (nth args 2 nil)
@@ -568,15 +777,32 @@
                (map? third-arg) third-arg
                :else {})
         status (if (map? second-arg) (:status second-arg) second-arg)
-        outcome (or (:outcome opts) (normalize-pur-outcome status))
+        outcome (normalize-pur-outcome (or (:outcome opts) status))
         psr (get-in @discipline-state [:psr/by-pattern pattern-id])
-        psr-ref (or (:psr/id psr) (:psr-ref opts))]
+        psr-ref (or (:psr/id psr) (:psr-ref opts))
+        memory-context (get-in @discipline-state [:memory/by-psr psr-ref])
+        request-key-result
+        (try
+          {:key (pur-request-key pattern-id psr-ref outcome opts)}
+          (catch Exception e
+            {:error (.getMessage e)}))
+        request-key (:key request-key-result)
+        prior (some #(when (= request-key (:request-key %)) %)
+                    (get @discipline-state :pur/history))]
     (cond
       (str/blank? pattern-id)
       {:ok false :error "pur-update requires a pattern-id"}
 
       (str/blank? psr-ref)
       {:ok false :error "pur-update requires prior psr-select (missing psr-ref)"}
+
+      (:error request-key-result)
+      {:ok false
+       :error (str "pur-update failed: " (:error request-key-result))}
+
+      prior
+      {:ok true
+       :result (assoc (:result prior) :idempotent-replay? true)}
 
       :else
       (try
@@ -587,23 +813,64 @@
                            :pur/psr-ref psr-ref
                            :pur/outcome outcome
                            :pur/criteria-eval criteria-eval}
-                    (contains? opts :prediction-error)
-                    (assoc :pur/prediction-error (:prediction-error opts)))
+                    (some? (normalize-prediction-error
+                            (:prediction-error opts)))
+                    (assoc :pur/prediction-error
+                           (normalize-prediction-error
+                            (:prediction-error opts))))
               _ (gate-shapes/validate! gate-shapes/PUR pur)
               events (cond-> []
                        psr (conj {:gate/id :g3 :gate/record psr :gate/at (now-str)})
                        true (conj {:gate/id :g1 :gate/record pur :gate/at (now-str)}))
+              memory-receipt
+              (when (:memory-domain config)
+                (let [surfaced (vec (or (:surfaced-memory-ids memory-context)
+                                        []))
+                      used (vec (or (:memory-ids opts) []))
+                      rejection-reasons
+                      (normalize-memory-rejections (:memory-rejections opts))
+                      outcome-id (:outcome-id opts)
+                      recorded-at (now-str)]
+                  (verify-independent-outcome
+                   evidence-store (:agent-id config) outcome-id)
+                  (memory-contract/use-receipt
+                   {:decision-id psr-ref
+                    :session-id ((:session-id-fn config))
+                    :domain (:memory-domain config)
+                    :surfaced-memory-ids surfaced
+                    :used-memory-ids used
+                    :rejected-memory-ids (vec (keys rejection-reasons))
+                    :inclusion-reasons
+                    (or (:inclusion-reasons memory-context) {})
+                    :rejection-reasons rejection-reasons
+                    :pattern-id pattern-id
+                    :outcome-id outcome-id
+                    :surfaced-at (:surfaced-at memory-context)
+                    :recorded-at recorded-at})))
               persisted (persist-proof-path! events {:pattern-id pattern-id
                                                      :psr psr
                                                      :pur pur}
-                                                   evidence-store)]
+                                                   evidence-store)
+              memory-use
+              (when memory-receipt
+                (let [persisted-receipt
+                      (persist-memory-use! evidence-store config
+                                           pattern-id memory-receipt)]
+                  {:receipt memory-receipt
+                   :evidence-id (:evidence/id persisted-receipt)}))
+              result {:pattern-id pattern-id
+                      :outcome outcome
+                      :pur pur
+                      :proof persisted
+                      :memory-use memory-use}]
           (swap! discipline-state update :pur/history
-                 (fnil conj []) {:pattern-id pattern-id :pur pur :proof persisted})
-          {:ok true
-           :result {:pattern-id pattern-id
-                    :outcome outcome
-                    :pur pur
-                    :proof persisted}})
+                 (fnil conj []) {:pattern-id pattern-id
+                                 :request-key request-key
+                                 :pur pur
+                                 :proof persisted
+                                 :memory-use memory-use
+                                 :result result})
+          {:ok true :result result})
         (catch Exception e
           {:ok false :error (str "pur-update failed: " (.getMessage e))})))))
 
@@ -707,8 +974,8 @@
 
         ;; Discipline-domain tools
         :psr-search     (tool-psr-search cwd config args)
-        :psr-select     (tool-psr-select discipline-state args)
-        :pur-update     (tool-pur-update discipline-state evidence-store args)
+        :psr-select     (tool-psr-select discipline-state config args)
+        :pur-update     (tool-pur-update discipline-state evidence-store config args)
         :pur-mark-pivot (tool-pur-mark-pivot discipline-state evidence-store args)
         :par-punctuate  (tool-par-punctuate discipline-state evidence-store args)
         :memory-record  (let [[ctx payload] args]
@@ -727,6 +994,10 @@
      :timeout-ms     — default command timeout (default: 30000)
      :evidence-store — atom for :musn-log tool (optional)
      :notions-index-path — futon3a patterns index path for :psr-search (optional)
+     :memory-domain — explicit shared-memory domain; enables PSR recall
+     :memory-recall-limit — per-pattern bound (default 3)
+     :memory-recall-fn — injectable recall function for tests
+     :agent-id / :session-id-fn — controller-stamped receipt identity
      :discipline-state — atom for PSR/PUR/PAR continuity (optional)"
   ([]
    (make-real-backend {}))

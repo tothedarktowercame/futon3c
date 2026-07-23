@@ -1,0 +1,12 @@
+[{:trial/id "phase2-natural-semantic-residual"
+  :trial/query "field_simp polynomial denominator normalization"
+  :trial/expected-pattern "math-formalization/tactic-algebra-interference"
+  :trial/baseline :known-failing-at-phase2}
+ {:trial/id "pattern-id-control"
+  :trial/query "tactic algebra interference"
+  :trial/expected-pattern "math-formalization/tactic-algebra-interference"
+  :trial/baseline :passing-at-phase2}
+ {:trial/id "memory-hook-paraphrase"
+  :trial/query "normalize a denominator before using field_simp"
+  :trial/expected-pattern "math-formalization/tactic-algebra-interference"
+  :trial/baseline :new-phase3-probe}]

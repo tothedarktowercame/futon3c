@@ -282,13 +282,16 @@
   "Type of claim made by an evidence entry.
    Extended beyond futon3's 5-type set to cover Corneli (2014) Table 24 entities."
   [:enum :goal :step :evidence :conclusion :question :observation
-   :tension :correction :conjecture :assert])
+   :tension :correction :conjecture
+   ;; IATC/typed-memory performatives. These are evidence acts, distinct from
+   ;; lifecycle projection state (:challenged/:retracted/:superseded).
+   :assert :challenge :agree :define :retract :suggest :request :query])
 
 (def ArtifactRefType
   "Universal reference types for any artifact that can accumulate evidence."
   [:enum :pattern :mission :component :gate :session :agent :thread :evidence
    :proof-path :task :portfolio :arse-thread :library :problem :language :tool
-   :service :script])
+   :service :script :memory])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."

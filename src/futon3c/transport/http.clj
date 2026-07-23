@@ -1723,6 +1723,18 @@
   (let [[before _] (swap-vals! !evidence-appends-in-flight conj evidence-id)]
     (not (contains? before evidence-id))))
 
+(defn- normalize-evidence-body
+  "Normalize the small set of typed enums accepted inside generic evidence
+   bodies. JSON cannot carry Clojure keywords, so leaving these as strings
+   makes an otherwise valid independently witnessed outcome unusable by PUR."
+  [body]
+  (cond-> body
+    (and (map? body) (contains? body :memory-outcome/witness-status))
+    (update :memory-outcome/witness-status parse-keyword)
+
+    (and (map? body) (contains? body :memory/witness-status))
+    (update :memory/witness-status parse-keyword)))
+
 (defn- normalize-evidence-payload
   "Normalize write payload (string fields to keywords where needed)."
   [payload]
@@ -1737,7 +1749,8 @@
                :type (parse-keyword (or (:type payload) (get payload "type")))
                :claim-type (parse-keyword (or (:claim-type payload) (get payload "claim-type")))
                :author (or (:author payload) (get payload "author"))
-               :body (or (:body payload) (get payload "body"))
+               :body (normalize-evidence-body
+                      (or (:body payload) (get payload "body")))
                :pattern-id (parse-keyword (or (:pattern-id payload) (get payload "pattern-id")))
                :session-id (or (:session-id payload) (get payload "session-id"))
                :in-reply-to (or (:in-reply-to payload) (get payload "in-reply-to"))
@@ -2358,7 +2371,7 @@
 (defn- make-local-agent-invoke-fn
   "Best-effort builder for a local invoke-fn for AGENT-TYPE."
   [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model
-                      evidence-store irc-send-fn]}]
+                      evidence-store irc-send-fn memory-domain]}]
   (let [sid-atom (or session-id-atom
                      (make-session-id-atom initial-session-id session-file))]
     (case agent-type
@@ -2395,6 +2408,7 @@
                   :evidence-store evidence-store
                   :irc-send-fn irc-send-fn}
            model (assoc :model model)
+           memory-domain (assoc :memory-domain memory-domain)
            requested-cwd (assoc :cwd requested-cwd)))
         (catch Throwable t
           (println (str "[zai] failed to build invoke-fn for " agent-id ": " (.getMessage t)))
@@ -2561,6 +2575,9 @@
                                           str
                                           str/trim
                                           not-empty)
+                    memory-domain (some-> (or (:memory-domain payload)
+                                              (get payload "memory-domain"))
+                                          parse-keyword)
                     campaign-id (some-> (or (:campaign-id payload)
                                             (get payload "campaign-id"))
                                         str
@@ -2601,6 +2618,7 @@
                                   :initial-session-id initial-session-id
                                   :session-id-atom sid-atom
                                   :requested-cwd requested-cwd
+                                  :memory-domain memory-domain
                                   :emacs-socket emacs-socket
                                   :evidence-store (evidence-store-for-config config)
                                   :irc-send-fn (:irc-send-fn config)})
@@ -2614,6 +2632,7 @@
                                  :metadata (cond-> {:auto-registered? true}
                                              (= agent-type :codex) (assoc :require-execution? true)
                                              requested-cwd (assoc :cwd requested-cwd)
+                                             memory-domain (assoc :memory-domain memory-domain)
                                              campaign-id (assoc :campaign-id campaign-id)
                                              mission-id (assoc :mission-id mission-id)
                                              excursion-id (assoc :excursion-id excursion-id)
@@ -2631,7 +2650,8 @@
                                         :type (name agent-type)
                                         :session-id initial-session-id
                                         :session-file session-file
-                                        :cwd requested-cwd})
+                                        :cwd requested-cwd
+                                        :memory-domain memory-domain})
                     (json-response 409 {:ok false
                                         :err "registration-failed"
                                         :message (str "Could not register: " agent-id)})))))))))))

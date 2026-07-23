@@ -650,7 +650,8 @@
           cwd "/home/joe/code"
           body (json/generate-string {"type" "zai"
                                       "session-id" sid
-                                      "cwd" cwd})]
+                                      "cwd" cwd
+                                      "memory-domain" "mathematics"})]
       (try
         (when (.exists session-file)
           (.delete session-file))
@@ -663,7 +664,10 @@
           (is (= sid (:session-id parsed)))
           (is (= (.getPath session-file) (:session-file parsed)))
           (is (= cwd (:cwd parsed)))
+          (is (= "mathematics" (:memory-domain parsed)))
           (is (= :zai (:agent/type agent)))
+          (is (= :mathematics
+                 (get-in agent [:agent/metadata :memory-domain])))
           (is (fn? (:agent/invoke-fn agent)))
           (is (= sid (:agent/session-id agent)))
           (is (= sid (some-> session-file slurp str/trim))))
@@ -1882,6 +1886,27 @@
       (is (true? (:ok parsed)))
       (is (string? entry-id))
       (is (some? (estore/get-entry entry-id))))))
+
+(deftest evidence-create-normalizes-memory-witness-enum
+  (testing "JSON outcome evidence remains usable by the typed PUR guard"
+    (let [handler (make-handler)
+          body
+          (json/generate-string
+           {"subject" {"ref/type" "task" "ref/id" "phase3/http-witness"}
+            "type" "pattern-outcome"
+            "claim-type" "observation"
+            "author" "independent-checker"
+            "body"
+            {"memory-outcome/witness-status" "independently-witnessed"
+             "exit" 0}})
+          response (post handler "/api/alpha/evidence" body)
+          parsed (parse-body response)
+          stored (estore/get-entry (:evidence/id parsed))]
+      (is (= 201 (:status response)))
+      (is (= :independently-witnessed
+             (get-in stored
+                     [:evidence/body
+                      :memory-outcome/witness-status]))))))
 
 (deftest evidence-create-transport-failures-are-retryable
   (testing "outbox clients receive 503, not a terminal shape-like 400"

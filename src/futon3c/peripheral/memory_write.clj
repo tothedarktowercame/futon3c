@@ -74,8 +74,11 @@
     distill))
 
 (defn- memory-hyperedge
-  [{:keys [session-id mission-id] :as ctx} payload evidence-id hx-id]
+  [{:keys [session-id mission-id domain] :as ctx} payload evidence-id hx-id]
   (let [subject-ids (mapv (comp str :ref/id) (:subjects payload))
+        pattern-ids (->> (:subjects payload)
+                         (filter #(= :pattern (:ref/type %)))
+                         (mapv (comp str :ref/id)))
         distills (mapv #(resolve-distill ctx %) (or (:distills payload) []))
         explicit-distill-ids (filterv #(and (string? %)
                                             (str/starts-with? % "e-"))
@@ -92,6 +95,7 @@
                        :subjects subject-ids
                        :distills distills
                        :session (some-> session-id str)}
+                (seq pattern-ids) (assoc :patterns pattern-ids)
                 mission-id (assoc :mission (str mission-id)))]
     {:hx/id hx-id
      :hx/type :memory/assert
@@ -100,7 +104,13 @@
                         :kind (:kind payload)
                         :name (:name payload)
                         :hook (:hook payload)
-                        :volatile? (:volatile? payload)}
+                        :volatile? (:volatile? payload)
+                        :state :current}
+                 domain (assoc :domain domain)
+                 ;; Agent-supplied pattern subjects are proposals.  A
+                 ;; librarian/reviewer must promote the attachment before it
+                 ;; can surface as a recall warrant.
+                 (seq pattern-ids) (assoc :attachment-status :proposed)
                  (contains? payload :facets)
                  (assoc :facets (vec (:facets payload))))}))
 
@@ -172,15 +182,18 @@
         hx-id (str "hx-mem-" (subs evidence-id 2))
         payload (normalize-payload raw-payload)
         primary-subject (first (:subjects payload))
-        entry {:evidence/id evidence-id
-               :evidence/subject primary-subject
-               :evidence/type :memory
-               :evidence/claim-type :assert
-               :evidence/author (some-> agent-id str)
-               :evidence/session-id (some-> session-id str)
-               :evidence/at (now-str)
-               :evidence/body (entry-body payload)
-               :evidence/tags [:memory :memory/assert]}
+        ;; Never assoc nil identity keys: EvidenceEntry rejects present-but-nil
+        ;; (live failure 2026-07-22 — nil session-id killed all 8 of zai-3's
+        ;; memory_record attempts). Absent keys pass; nil values do not.
+        entry (cond-> {:evidence/id evidence-id
+                       :evidence/subject primary-subject
+                       :evidence/type :memory
+                       :evidence/claim-type :assert
+                       :evidence/at (now-str)
+                       :evidence/body (entry-body payload)
+                       :evidence/tags [:memory :memory/assert]}
+                agent-id (assoc :evidence/author (str agent-id))
+                session-id (assoc :evidence/session-id (str session-id)))
         entry-start (System/nanoTime)
         entry-receipt (boundary/append! evidence-store entry)
         entry-ms (elapsed-ms entry-start)]

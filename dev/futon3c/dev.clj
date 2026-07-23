@@ -3968,7 +3968,8 @@ RESPOND WITH ONLY:
 
 (defn make-zai-invoke-fn
   "Create an invoke-fn backed by Z.AI chat completions plus local Futon tools."
-  [{:keys [agent-id session-file session-id-atom initial-session-id timeout-ms model cwd evidence-store]
+  [{:keys [agent-id session-file session-id-atom initial-session-id timeout-ms model cwd evidence-store
+           memory-domain]
     :or {agent-id "zai" timeout-ms 300000}}]
   (let [irc-send-fn (or (some-> @!irc-sys :server :send-to-channel!)
                         (try
@@ -3985,6 +3986,7 @@ RESPOND WITH ONLY:
               :evidence-store evidence-store
               :irc-recent-fn irc-recent-fn}
        model (assoc :model model)
+       memory-domain (assoc :memory-domain memory-domain)
        irc-send-fn (assoc :irc-send-fn irc-send-fn)))))
 
 (def ^:private codex-work-claim-re

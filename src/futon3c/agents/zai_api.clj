@@ -146,14 +146,14 @@
                  {:repo {:type "string" :description "Optional directory; defaults to the agent cwd."}}
                  [])}
    {:name "psr_search"
-    :description "Search the futon pattern library for patterns relevant to a task. Returns scored candidates with pattern ids; cite the ids you rely on."
+    :description "Search the futon pattern library for patterns relevant to a task. Returns scored candidates plus bounded hooks for reviewed attached memories; cite the ids you rely on."
     :parameters (json-schema
                  {:query {:type "string"}
                   :top_k {:type "integer"}
                   :include_details {:type "boolean"}}
                  ["query"])}
    {:name "psr_select"
-    :description "Record a Pattern Selection Record (PSR) before applying a library pattern. Use a pattern id returned by psr_search."
+    :description "Record a Pattern Selection Record (PSR) before applying a library pattern. Returns full bodies of reviewed memories attached to the selected pattern."
     :parameters (json-schema
                  {:pattern_id {:type "string"}
                   :rationale {:type "string"}
@@ -161,11 +161,24 @@
                   :candidates {:type "array" :items {:type "string"}}}
                  ["pattern_id"])}
    {:name "pur_update"
-    :description "Record a Pattern Use Record (PUR) after applying a selected pattern. Requires a prior psr_select for the same pattern id."
+    :description "Record a Pattern Use Record (PUR) after applying a selected pattern. Cite used memory ids, explain deliberate rejections, and optionally attach a separately recorded independent outcome id."
     :parameters (json-schema
                  {:pattern_id {:type "string"}
                   :outcome {:type "string" :description "success | partial | failure"}
-                  :prediction_error {:type "string"}}
+                  :prediction_error {:type "string"}
+                  :memory_ids {:type "array" :items {:type "string"}
+                               :description "Ids returned by psr_select that materially informed the work."}
+                  :memory_rejections
+                  {:type "array"
+                   :items {:type "object"
+                           :properties
+                           {:memory_id {:type "string"}
+                            :reason {:type "string"}}
+                           :required ["memory_id" "reason"]}
+                   :description "Surfaced memories deliberately rejected as irrelevant or misleading."}
+                  :outcome_id
+                  {:type "string"
+                   :description "Existing separately recorded independently witnessed outcome evidence id."}}
                  ["pattern_id" "outcome"])}
    {:name "par_punctuate"
     :description "Punctuate the session with a PAR: what worked, what didn't, prediction errors, suggestions. Lands as a proof path in the evidence store."
@@ -188,6 +201,8 @@
                   :why {:type "string"}
                   :how_to_apply {:type "string" :description "Retrieval predicate or application condition."}
                   :subjects {:type "array"
+                             :minItems 1
+                             :description "At least one; first is the primary subject."
                              :items {:type "object"
                                      :properties {:ref/type {:type "string"}
                                                   :ref/id {:type "string"}}
@@ -197,7 +212,7 @@
                              :description "Evidence ids or @current-round."}
                   :facets {:type "array" :items {:type "string"}}
                   :volatile {:type "boolean" :description "True when valid-until-changed."}}
-                 ["name" "hook" "kind" "body"])}
+                 ["name" "hook" "kind" "body" "subjects"])}
    {:name "memory_search"
     :description "Search the evidence store by filters (type, claim-type, author, since, tags). Returns the memory envelope {:frame :query :items}. Read-only."
     :parameters (json-schema
@@ -342,7 +357,9 @@
 
 (defn- execute-tool
   [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom
-                   evidence-store turn-id round profile]} tool-call]
+                   evidence-store turn-id round profile session-id-fallback]
+            :as ctx}
+   tool-call]
   (let [name (get-in tool-call [:function :name])
         args (parse-arguments (get-in tool-call [:function :arguments]))
         fail (fn [msg] {:ok false :error msg})
@@ -518,7 +535,7 @@
                                  (seq (:candidates args)) (assoc :candidates (vec (:candidates args))))])
 
           "memory_record"
-          (let [session-id (some-> session-id-atom deref)
+          (let [session-id (or (some-> session-id-atom deref) session-id-fallback)
                 payload (cond-> args
                           (:how_to_apply args)
                           (assoc :how-to-apply (:how_to_apply args))
@@ -531,6 +548,7 @@
                :turn-id turn-id
                :round round
                :mission-id (current-mission-id agent-id session-id)
+               :domain (or (:memory-domain ctx) :zaif-work)
                :evidence-store evidence-store}
               (dissoc payload :how_to_apply :volatile)]))
 
@@ -538,7 +556,15 @@
           (tools/execute-tool backend :pur-update
                               [(:pattern_id args)
                                (cond-> {:outcome (:outcome args)}
-                                 (:prediction_error args) (assoc :prediction-error (:prediction_error args)))])
+                                 (:prediction_error args)
+                                 (assoc :prediction-error (:prediction_error args))
+                                 (seq (:memory_ids args))
+                                 (assoc :memory-ids (vec (:memory_ids args)))
+                                 (seq (:memory_rejections args))
+                                 (assoc :memory-rejections
+                                        (vec (:memory_rejections args)))
+                                 (:outcome_id args)
+                                 (assoc :outcome-id (:outcome_id args)))])
 
           "par_punctuate"
           (let [par-result (tools/execute-tool backend :par-punctuate
@@ -985,7 +1011,12 @@ CALLS contains maps of tool name, arguments, and result digest."
                                                            (assoc tool-opts
                                                                   :turn-id (:turn-id ctx)
                                                                   :round round-n
-                                                                  :profile (:profile ctx))
+                                                                  :profile (:profile ctx)
+                                                                  ;; the live session id; tool-opts'
+                                                                  ;; session-id-atom is nil on this
+                                                                  ;; path (found live 2026-07-22:
+                                                                  ;; nil killed every memory_record)
+                                                                  :session-id-fallback sid)
                                                            tc)
                                              (catch Throwable t
                                                (let [d (tool-call-detail
@@ -1044,7 +1075,7 @@ CALLS contains maps of tool name, arguments, and result digest."
   "Return an Agency invoke-fn backed by Z.AI tool calling."
   [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
            api-key base-url model timeout-ms max-tokens temperature irc-send-fn irc-recent-fn
-           memory-mode auto-continue-max profile zaif-inputs-fn]
+           memory-mode memory-domain auto-continue-max profile zaif-inputs-fn]
     :or {agent-id "zai" timeout-ms 300000 memory-mode :full}}]
   (when-not evidence-store
     (throw (ex-info "ZAI/ZAIF requires a durable evidence store"
@@ -1052,15 +1083,19 @@ CALLS contains maps of tool name, arguments, and result digest."
   (let [client (HttpClient/newHttpClient)
         key (or api-key (resolve-api-key))
         cwd* (or cwd (System/getProperty "user.dir"))
-        backend (real-backend/make-real-backend
-                 {:cwd cwd*
-                  :timeout-ms 30000
-                  :evidence-store evidence-store})
         sid0 (or initial-session-id
                  (when (and session-file (.exists (io/file session-file)))
                    (some-> session-file slurp str/trim not-empty))
                  (str "zai-" (UUID/randomUUID)))
         !session-id (or session-id-atom (atom sid0))
+        backend (real-backend/make-real-backend
+                 {:cwd cwd*
+                  :timeout-ms 30000
+                  :evidence-store evidence-store
+                  :memory-domain (or memory-domain :zaif-work)
+                  :memory-recall-limit 3
+                  :agent-id agent-id
+                  :session-id-fn #(some-> @!session-id str)})
         !messages (atom [{:role "system"
                           :content (str "You are " agent-id ", an agentic coding assistant running inside Joe's Futon Agency. "
                                         "Use tools to inspect files, edit files, run commands, inspect the JVM, and talk on IRC when asked. "
@@ -1071,6 +1106,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                         "For live state (what is running, what is dirty, who is active) use live tools, never remembered results. "
                                         "Never present a single remembered entry as a standing operator preference; standing preferences arrive explicitly tagged. "
                                         "When you adopt a library pattern for non-trivial work, record it: psr_search then psr_select before applying, pur_update after, and par_punctuate when a work session ends. "
+                                        "When you learn something durable and reusable — an approach failed for a stateable reason, a replacement worked, a tool or API behaves contrary to expectation — record it with memory_record at the moment of the realization, not at session end. "
                                         "To message another agent in the Agency, send a bell via run_shell: "
                                         "python3 /home/joe/code/futon3c/scripts/agency_send.py --from " agent-id " --to <agent> --kind bell "
                                         "with the message on stdin (a quoted heredoc is safest). Always pass --from " agent-id " so the reply can route back to you. "
@@ -1102,6 +1138,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                    :agent-id agent-id
                    :cwd cwd*
                    :evidence-store evidence-store
+                   :memory-domain (or memory-domain :zaif-work)
                    :session-id-atom !session-id}]
     (fn [prompt incoming-session-id]
       (let [key* (or key (resolve-api-key))

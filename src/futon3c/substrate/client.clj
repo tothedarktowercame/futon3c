@@ -31,16 +31,39 @@
 
 (defn hyperedges-by-type
   ([type] (hyperedges-by-type type {}))
-  ([type {:keys [limit timeout-ms] :or {limit 10000 timeout-ms 60000}}]
+  ([type {:keys [limit timeout-ms valid-as-of system-as-of]
+          :or {limit 10000 timeout-ms 60000}}]
    (:hyperedges
     (get-edn! (str (configured-url) "/api/alpha/hyperedges?type=" (encode type)
-                   "&limit=" (long limit))
+                   "&limit=" (long limit)
+                   (when valid-as-of
+                     (str "&valid-as-of=" (encode valid-as-of)))
+                   (when system-as-of
+                     (str "&system-as-of=" (encode system-as-of))))
               timeout-ms))))
 
 (defn hyperedges-by-end
   ([end] (hyperedges-by-end end {}))
-  ([end {:keys [limit timeout-ms] :or {limit 10000 timeout-ms 60000}}]
-   (:hyperedges
-    (get-edn! (str (configured-url) "/api/alpha/hyperedges?end=" (encode end)
-                   "&limit=" (long limit))
-              timeout-ms))))
+  ([end {:keys [type limit timeout-ms valid-as-of system-as-of]
+         :or {limit 10000 timeout-ms 60000}}]
+   (let [url (str (configured-url) "/api/alpha/hyperedges?end=" (encode end)
+                  (when type (str "&type=" (encode type)))
+                  "&limit=" (long limit)
+                  (when valid-as-of
+                    (str "&valid-as-of=" (encode valid-as-of)))
+                  (when system-as-of
+                    (str "&system-as-of=" (encode system-as-of))))]
+     (:hyperedges (get-edn! url timeout-ms)))))
+
+(defn hyperedge-by-id
+  ([id] (hyperedge-by-id id {}))
+  ([id {:keys [timeout-ms] :or {timeout-ms 60000}}]
+   (get-edn! (str (configured-url) "/api/alpha/hyperedge/" (encode id))
+             timeout-ms)))
+
+(defn evidence-text-search
+  ([query] (evidence-text-search query {}))
+  ([query {:keys [limit timeout-ms] :or {limit 10 timeout-ms 60000}}]
+   (get-edn! (str (configured-url) "/api/alpha/evidence/text-search?q="
+                  (encode query) "&limit=" (long limit))
+             timeout-ms)))
