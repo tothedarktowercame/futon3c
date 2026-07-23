@@ -1,0 +1,171 @@
+{:fixture-version 1
+ :freeze-id "phase6-preregistered-shadow-v1-20260723"
+ :frozen-at "2026-07-23T12:53:29Z"
+ :status :frozen-before-comparison
+ :minimum-promotion-sample-size 20
+ :min-outcome-observations 3
+ :rung3-trace-reference
+ {:fixture "holes/labs/M-typed-memories/rung3-facet-refinement.edn"
+  :role :exploration-order-only
+  :probability-status :uncalibrated-do-not-consume}
+
+ :training-transitions
+ [{:transition-id "phase6-train-a-1"
+   :mission-id "M-aif-policy-conditioned-eig"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-a-1"}
+  {:transition-id "phase6-train-a-2"
+   :mission-id "M-aif-policy-conditioned-eig"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-a-2"}
+  {:transition-id "phase6-train-a-3"
+   :mission-id "M-aif-policy-conditioned-eig"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-a-3"}
+  {:transition-id "phase6-train-a-4"
+   :mission-id "M-aif-policy-conditioned-eig"
+   :outcome :failure
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-a-4"}
+
+  {:transition-id "phase6-train-b-1"
+   :mission-id "M-shared-memory-control-build-test"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-b-1"}
+  {:transition-id "phase6-train-b-2"
+   :mission-id "M-shared-memory-control-build-test"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-b-2"}
+  {:transition-id "phase6-train-b-3"
+   :mission-id "M-shared-memory-control-build-test"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-b-3"}
+  {:transition-id "phase6-train-b-4"
+   :mission-id "M-shared-memory-control-build-test"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-b-4"}
+
+  {:transition-id "phase6-train-c-1"
+   :mission-id "M-wm-aif-policy-grain-compliance"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-c-1"}
+  {:transition-id "phase6-train-c-2"
+   :mission-id "M-wm-aif-policy-grain-compliance"
+   :outcome :failure
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-c-2"}
+  {:transition-id "phase6-train-c-3"
+   :mission-id "M-wm-aif-policy-grain-compliance"
+   :outcome :failure
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-c-3"}
+  {:transition-id "phase6-train-c-4"
+   :mission-id "M-wm-aif-policy-grain-compliance"
+   :outcome :failure
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-train-c-4"}]
+
+ :held-out-outcomes
+ [{:transition-id "phase6-test-a-1"
+   :mission-id "M-aif-policy-conditioned-eig"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-test-a-1"}
+  {:transition-id "phase6-test-a-2"
+   :mission-id "M-aif-policy-conditioned-eig"
+   :outcome :failure
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-test-a-2"}
+  {:transition-id "phase6-test-b-1"
+   :mission-id "M-shared-memory-control-build-test"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-test-b-1"}
+  {:transition-id "phase6-test-b-2"
+   :mission-id "M-shared-memory-control-build-test"
+   :outcome :success
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-test-b-2"}
+  {:transition-id "phase6-test-c-1"
+   :mission-id "M-wm-aif-policy-grain-compliance"
+   :outcome :failure
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-test-c-1"}
+  {:transition-id "phase6-test-c-2"
+   :mission-id "M-wm-aif-policy-grain-compliance"
+   :outcome :failure
+   :witness-status :independently-witnessed
+   :witness-id "phase6-checker-test-c-2"}]
+
+ :judgements
+ [{:judgement-id "phase6-judgement-1"
+   :gold-mission-id "M-shared-memory-control-build-test"
+   :gold-witness-id "phase6-gold-checker-1"
+   :pattern-activation
+   {"p4ng/R5-policy-evaluation" 0.6
+    "p4ng/R6-candidate-pattern-action-space" 1.0
+    "p4ng/R9-independent-witness" 0.25}
+   :relation-weights {:repairs-control 1.0 :requires-control 1.0}
+   :current-additive-factors
+   {"M-aif-policy-conditioned-eig"
+    {:central 0.2 :strategic 0.6 :phase-doable 0.5}
+    "M-shared-memory-control-build-test"
+    {:central 0.4 :strategic 1.0 :phase-doable 0.8}
+    "M-wm-aif-policy-grain-compliance"
+    {:central 1.0 :strategic 0.25 :phase-doable 0.4}}}
+
+  {:judgement-id "phase6-judgement-2"
+   :gold-mission-id "M-aif-policy-conditioned-eig"
+   :gold-witness-id "phase6-gold-checker-2"
+   :pattern-activation
+   {"p4ng/R5-policy-evaluation" 1.0
+    "p4ng/R6-candidate-pattern-action-space" 0.5
+    "p4ng/R9-independent-witness" 0.7}
+   :relation-weights {:repairs-control 1.0 :requires-control 1.0}
+   :current-additive-factors
+   {"M-aif-policy-conditioned-eig"
+    {:central 0.7 :strategic 1.0 :phase-doable 0.8}
+    "M-shared-memory-control-build-test"
+    {:central 0.3 :strategic 0.5 :phase-doable 0.7}
+    "M-wm-aif-policy-grain-compliance"
+    {:central 1.0 :strategic 0.7 :phase-doable 0.3}}}
+
+  {:judgement-id "phase6-judgement-3"
+   :gold-mission-id "M-shared-memory-control-build-test"
+   :gold-witness-id "phase6-gold-checker-3"
+   :pattern-activation
+   {"p4ng/R5-policy-evaluation" 0.7
+    "p4ng/R6-candidate-pattern-action-space" 0.8
+    "p4ng/R9-independent-witness" 1.0}
+   :relation-weights {:repairs-control 1.0 :requires-control 1.0}
+   :current-additive-factors
+   {"M-aif-policy-conditioned-eig"
+    {:central 0.4 :strategic 0.7 :phase-doable 0.6}
+    "M-shared-memory-control-build-test"
+    {:central 0.2 :strategic 0.8 :phase-doable 0.8}
+    "M-wm-aif-policy-grain-compliance"
+    {:central 1.0 :strategic 1.0 :phase-doable 0.5}}}
+
+  {:judgement-id "phase6-judgement-4"
+   :gold-mission-id "M-shared-memory-control-build-test"
+   :gold-witness-id "phase6-gold-checker-4"
+   :pattern-activation
+   {"p4ng/R5-policy-evaluation" 1.0
+    "p4ng/R6-candidate-pattern-action-space" 0.9
+    "p4ng/R9-independent-witness" 0.4}
+   :relation-weights {:repairs-control 1.0 :requires-control 1.0}
+   :current-additive-factors
+   {"M-aif-policy-conditioned-eig"
+    {:central 0.6 :strategic 1.0 :phase-doable 0.8}
+    "M-shared-memory-control-build-test"
+    {:central 0.5 :strategic 0.9 :phase-doable 0.7}
+    "M-wm-aif-policy-grain-compliance"
+    {:central 1.0 :strategic 0.4 :phase-doable 0.4}}}]}

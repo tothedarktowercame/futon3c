@@ -7,6 +7,8 @@
   (:require [futon2.aif.mission-control-graph :as mission-graph]))
 
 (def algorithm :dynamic-queries/fixed-typed-re-ranker-v1)
+(def refinement-algorithm
+  :dynamic-queries/budgeted-facet-refinement-v1)
 
 (defn- finite-nonnegative-number?
   [value]
@@ -149,3 +151,214 @@
       :candidate-set-preserved?
       (= (set control-ranking) (set typed-ranking))
       :live-ordering-changed? false})))
+
+(defn- information-row
+  [pattern-id {:keys [cost prior-entropy outcomes] :as model}]
+  (when-not (and (map? model)
+                 (integer? cost)
+                 (pos? cost)
+                 (finite-nonnegative-number? prior-entropy)
+                 (vector? outcomes)
+                 (seq outcomes)
+                 (= (count outcomes)
+                    (count (set (map :label outcomes))))
+                 (every?
+                  (fn [{:keys [label probability posterior-entropy]}]
+                    (and (some? label)
+                         (finite-nonnegative-number? probability)
+                         (<= (double probability) 1.0)
+                         (finite-nonnegative-number? posterior-entropy)))
+                  outcomes))
+    (throw (ex-info "invalid facet information model"
+                    {:pattern-id pattern-id :model model})))
+  (let [probability-sum (reduce + 0.0 (map :probability outcomes))
+        _ (when (> (Math/abs (- probability-sum 1.0)) 1.0e-9)
+            (throw (ex-info "facet outcome probabilities must sum to one"
+                            {:pattern-id pattern-id
+                             :probability-sum probability-sum})))
+        expected-posterior
+        (reduce + 0.0
+                (map #(* (double (:probability %))
+                         (double (:posterior-entropy %)))
+                     outcomes))
+        gain (- (double prior-entropy) expected-posterior)
+        _ (when (< gain -1.0e-9)
+            (throw (ex-info "facet model has negative expected information gain"
+                            {:pattern-id pattern-id
+                             :prior-entropy prior-entropy
+                             :expected-posterior-entropy expected-posterior})))]
+    {:pattern-id pattern-id
+     :cost cost
+     :prior-entropy (double prior-entropy)
+     :expected-posterior-entropy expected-posterior
+     :expected-information-gain (max 0.0 gain)
+     :gain-per-cost (/ (max 0.0 gain) (double cost))
+     :outcomes outcomes}))
+
+(defn budgeted-facet-plan
+  "Plan a coarse-to-fine traversal over a Phase-5 control-pattern cascade.
+
+   CASCADE supplies the existing :shown and :semilattice/:descent structure.
+   Children become eligible only after every parent was expanded and every
+   parent edge has a witnessed transition warrant. INFORMATION-MODELS supplies
+   explicit prior/outcome entropies and integer query costs per shown pattern;
+   no memory count is used as evidence or as a score.
+
+   The planner is greedy over expected-information-gain / cost. Its purpose is
+   a deterministic, auditable dark policy, not a learned or live selector."
+  [{:keys [cascade transition-warrants information-models budget]}]
+  (let [shown (:shown cascade)
+        descent (get-in cascade [:semilattice :descent])
+        shown-set (set shown)
+        _ (when-not (and (vector? shown)
+                         (seq shown)
+                         (= (count shown) (count shown-set))
+                         (every? mission-graph/valid-control-pattern-id? shown)
+                         (vector? descent)
+                         (every? #(and (vector? %)
+                                       (= 2 (count %))
+                                       (every? shown-set %))
+                                 descent)
+                         (vector? transition-warrants)
+                         (every?
+                          (fn [{:keys [from to status provenance]}]
+                            (and (contains? shown-set from)
+                                 (contains? shown-set to)
+                                 (contains?
+                                  #{:witnessed :proposed
+                                    :challenged :retracted}
+                                  status)
+                                 (vector? provenance)
+                                 (seq provenance)))
+                          transition-warrants)
+                         (map? information-models)
+                         (= shown-set (set (keys information-models)))
+                         (integer? budget)
+                         (not (neg? budget)))
+            (throw (ex-info "invalid budgeted facet refinement input"
+                            {:cascade cascade
+                             :transition-warrants transition-warrants
+                             :information-model-keys
+                             (when (map? information-models)
+                               (set (keys information-models)))
+                             :budget budget})))
+        information
+        (into {} (map (fn [pattern-id]
+                        [pattern-id
+                         (information-row
+                          pattern-id
+                          (get information-models pattern-id))])
+                      shown))
+        shown-index (zipmap shown (range))
+        parents
+        (reduce (fn [by-child [parent child]]
+                  (update by-child child (fnil conj []) parent))
+                (zipmap shown (repeat []))
+                descent)
+        transition-by-edge
+        (group-by (juxt :from :to) transition-warrants)
+        witnessed-warrants
+        (fn [parent child]
+          (->> (get transition-by-edge [parent child])
+               (filter #(= :witnessed (:status %)))
+               (mapv #(select-keys
+                       % [:from :to :status :provenance]))))
+        eligible?
+        (fn [selected pattern-id]
+          (every? (fn [parent]
+                    (and (contains? selected parent)
+                         (seq (witnessed-warrants parent pattern-id))))
+                  (get parents pattern-id)))
+        choose
+        (fn [selected remaining]
+          (->> shown
+               (remove selected)
+               (filter #(eligible? selected %))
+               (filter #(<= (:cost (get information %)) remaining))
+               (sort-by
+                (fn [pattern-id]
+                  (let [{:keys [gain-per-cost expected-information-gain]}
+                        (get information pattern-id)]
+                    [(- gain-per-cost)
+                     (- expected-information-gain)
+                     (get shown-index pattern-id)])))
+               first))]
+    (loop [selected #{}
+           trace []
+           remaining budget]
+      (if-let [pattern-id (choose selected remaining)]
+        (let [{:keys [cost] :as info} (get information pattern-id)
+              pattern-parents (vec (sort (get parents pattern-id)))
+              warrants (->> pattern-parents
+                            (mapcat #(witnessed-warrants % pattern-id))
+                            vec)]
+          (recur
+           (conj selected pattern-id)
+           (conj trace
+                 (merge
+                  info
+                  {:step (count trace)
+                   :parent-pattern-ids pattern-parents
+                   :transition-warrants warrants
+                   :remaining-budget-before remaining
+                   :remaining-budget-after (- remaining cost)}))
+           (- remaining cost)))
+        (let [selected-order (mapv :pattern-id trace)
+              unexpanded
+              (->> shown
+                   (remove selected)
+                   (mapv
+                    (fn [pattern-id]
+                      (let [pattern-parents (get parents pattern-id)
+                            missing-warrants
+                            (->> pattern-parents
+                                 (filter #(empty?
+                                           (witnessed-warrants
+                                            % pattern-id)))
+                                 sort vec)
+                            unexpanded-parents
+                            (->> pattern-parents
+                                 (remove selected)
+                                 sort vec)
+                            cost (:cost (get information pattern-id))]
+                        {:pattern-id pattern-id
+                         :cost cost
+                         :reason
+                         (cond
+                           (seq missing-warrants)
+                           :missing-transition-warrant
+
+                           (seq unexpanded-parents)
+                           :ancestor-not-expanded
+
+                           (> cost remaining)
+                           :budget-exhausted
+
+                           :else
+                           :not-selected)
+                         :missing-warrant-parent-ids missing-warrants
+                         :unexpanded-parent-ids unexpanded-parents}))))]
+          {:status :dark-plan
+           :algorithm refinement-algorithm
+           :budget {:initial budget
+                    :spent (- budget remaining)
+                    :remaining remaining}
+           :selected-patterns selected-order
+           :selection-trace trace
+           :unexpanded-patterns unexpanded
+           :path-diversity
+           {:distinct-pattern-count (count selected-order)
+            :distinct-transition-count
+            (count
+             (set
+              (mapcat
+               (fn [row]
+                 (map (juxt :from :to)
+                      (:transition-warrants row)))
+               trace)))
+            :distinct-root-count
+            (count (filter #(empty? (get parents %)) selected-order))}
+           :evidence-counting
+           :outcome-model-not-memory-multiplicity
+           :selected-mission nil
+           :live-ordering-changed? false})))))

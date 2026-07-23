@@ -3,7 +3,8 @@
 **Date chartered:** 2026-07-23
 **Type:** E-prefix excursion; bounded dark companion to
 `M-typed-memories` and `M-shared-memory-control-build-test`.
-**Status:** RUNG 1 ACCEPTED DARK; PHASE 5 CHECKPOINT INFORMATIVE
+**Status:** RUNGS 1 + 3 IMPLEMENTED DARK; PHASE 5 CHECKPOINT INFORMATIVE;
+RUNG 2 / PHASE 6 MECHANISM IMPLEMENTED DARK, CALIBRATION GATE NOT MET
 (2026-07-23).
 **Boundary:** this excursion may rank only inside the Phase 1–4 admissible
 dark subgraph. It cannot admit records, change domain/lifecycle/witness gates,
@@ -164,11 +165,94 @@ Update \(\theta_t\) once from an independently witnessed outcome, then rerank
 once. Gate on calibration, abstention, unsupported-answer rate, and recovery
 from a misleading seed as well as target rank.
 
+Phase 6 supplies the first dark outcome seam. It fits a beta-binomial
+useful-progress estimate from independently witnessed replay transitions and
+compares it with direct Phase 5 support, centrality ablations, and the current
+additive controller. The update is visible as a named outcome contribution;
+it does not overwrite the support operator or the Rung 3 information model.
+Unknown missions abstain, witnessed failures remain negative observations, and
+blocked missions never enter the admissible subgraph. The initial frozen
+sample is deliberately below its promotion threshold, so it validates the
+trace and evaluation contract but does not yet earn an operator update.
+
 ### Rung 3 — budgeted facet refinement
 
 Choose the next facet or relation expansion by expected information gain under
 explicit depth and query budgets. Preserve path provenance and diversity, and
 ensure repeated supportive paths do not count as independent evidence.
+
+#### Construction
+
+Rung 3 reuses the Phase 5 control-pattern cascade as its facet hierarchy:
+`:shown` is the available facet set and `:semilattice/:descent` supplies
+coarse-to-fine edges. It does not create a second graph.
+
+`dynamic-queries/budgeted-facet-plan` accepts:
+
+- the Phase 5 cascade and transition warrants;
+- one explicit information model per shown pattern;
+- an integer cost budget.
+
+Each information model declares a prior entropy, query cost, and a finite
+outcome distribution with posterior entropies. The planner computes
+
+\[
+\operatorname{EIG}(p)
+=H_{\mathrm{prior}}(p)
+-\sum_o P(o\mid p)H_{\mathrm{posterior}}(p,o)
+\]
+
+and greedily chooses the currently eligible facet with greatest
+`EIG / cost`. A child is eligible only after all parents have been expanded
+and all parent edges have witnessed transition warrants. Missing warrants
+remain explicit refinement holes.
+
+`strategic-cascade/budgeted-facet-frontier` executes the selected prefix
+through the unchanged Phase 5 `outer-frontier`. It records:
+
+- selection score, cost, and remaining budget at every step;
+- parent paths and the full witnessed transition provenance;
+- observed, admitted, challenged, and blocking memory IDs;
+- pattern, transition, evidence-path, and challenge-path diversity;
+- unexpanded facets and their exact reason.
+
+Memory multiplicity never enters the EIG calculation. The result remains dark,
+has no selected mission, and cannot affect live ordering.
+
+#### Demonstration
+
+Run:
+
+```bash
+clojure -M scripts/run_dynamic_queries_rung3_demo.clj
+```
+
+The reviewed fixture spends three units following
+`R9 independent witness → R6 candidate action space → R10 liveness`.
+R10 wins the final refinement step on declared information gain, and its
+challenging and blocking episodes remain visible. R5 is left as an explicit
+budget hole. Removing the independently reviewed R6→R10 warrant makes that
+branch ineligible rather than silently traversable.
+
+The fixture entropies are declared exploratory inputs, not learned or
+calibrated probabilities. Rung 3 establishes the traversal contract and its
+falsifiability surface; earning an outcome model remains Rung 2 / Phase 6 work.
+
+#### Verification, 2026-07-23
+
+- Focused Phase 4 + Rung 1 + Phase 5 + Rung 3 suite: 18 tests,
+  105 assertions, 0 failures, 0 errors.
+- `clj-kondo`: 0 errors, 0 warnings.
+- `check-parens.el`: clean for changed implementation, tests, and demo.
+- Rung 3 fixture parses as EDN and the executable demo completes.
+- Replay result: 3 selected patterns, 2 witnessed refinement transitions,
+  7 distinct pattern→evidence paths, and 3 distinct challenge memories;
+  `M-wm-tripwires` remains excluded, R5 remains a budget hole,
+  `:selected-mission nil`, and `:live-ordering-changed? false`.
+- Wider memory regression: 56 tests / 464 assertions reached one pre-existing
+  assertion mismatch in `memory_backend_test` (`:at nil` now present in the
+  runtime item but absent from the expected map); all remaining tests passed.
+  Rung 3 does not touch that namespace or shape.
 
 ## Principal epistemic risk
 

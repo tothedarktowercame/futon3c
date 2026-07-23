@@ -190,3 +190,59 @@
     (is (= (:budget result) (:budget checkpoint)))
     (is (nil? (:selected-mission checkpoint)))
     (is (false? (:live-ordering-changed? checkpoint)))))
+
+(deftest rung3-budgeted-refinement-reuses-the-phase5-frontier
+  (let [{:keys [episodes control-edges]} @phase4-corpus
+        {:keys [cascade dependencies transition-warrants]} @phase5-fixture
+        {:keys [budget information-models additional-transition-warrants]}
+        (read-edn
+         "holes/labs/M-typed-memories/rung3-facet-refinement.edn")
+        all-warrants
+        (into transition-warrants additional-transition-warrants)
+        calls (atom [])
+        base-step (query-step episodes control-edges)
+        result
+        (strategic/budgeted-facet-frontier
+         {:cascade cascade
+          :dependencies dependencies
+          :transition-warrants all-warrants
+          :information-models information-models
+          :budget budget
+          :query-step-fn
+          (fn [pattern-id remaining-budget]
+            (swap! calls conj [pattern-id remaining-budget])
+            (base-step pattern-id remaining-budget))})
+        refinement (:facet-refinement result)
+        observed-challenges
+        (set (mapcat :observed-challenge-memory-ids
+                     (:observations refinement)))]
+    (is (= [["p4ng/R9-independent-witness" 3]
+            ["p4ng/R6-candidate-pattern-action-space" 2]
+            ["p4ng/R10-liveness" 1]]
+           @calls))
+    (is (= ["p4ng/R9-independent-witness"
+            "p4ng/R6-candidate-pattern-action-space"
+            "p4ng/R10-liveness"]
+           (:selected-patterns refinement)))
+    (is (= #{"e-wm-compliance-challenge"
+             "e-wm-memory-challenge"
+             "e-wm-tripwire-challenge"}
+           observed-challenges))
+    (is (= 3
+           (get-in refinement
+                   [:path-diversity :distinct-challenge-memory-count])))
+    (is (= 7
+           (get-in refinement
+                   [:path-diversity :distinct-evidence-path-count])))
+    (is (= "M-wm-tripwires"
+           (get-in result [:excluded-missions 0 :mission-id])))
+    (is (not (some #{"M-aif-policy-conditioned-eig"}
+                   (map :mission-id (:frontier result)))))
+    (is (some #(and (= :budget-exhausted (:hole/type %))
+                    (= "p4ng/R5-policy-evaluation"
+                       (:control-pattern-id %)))
+              (:holes result)))
+    (is (= :outcome-model-not-memory-multiplicity
+           (:evidence-counting refinement)))
+    (is (nil? (:selected-mission result)))
+    (is (false? (:live-ordering-changed? result)))))

@@ -135,3 +135,99 @@
         result (dynamic-queries/fixed-typed-ranking projection)]
     (is (= ["M-z" "M-a"] (:control-ranking result)))
     (is (= (:control-ranking result) (:typed-ranking result)))))
+
+(deftest budgeted-facet-plan-refines-only-through-witnessed-edges
+  (let [{:keys [cascade transition-warrants]}
+        (-> "holes/labs/M-typed-memories/phase5-outer-cascade.edn"
+            io/file slurp edn/read-string)
+        {:keys [budget information-models additional-transition-warrants]}
+        (-> "holes/labs/M-typed-memories/rung3-facet-refinement.edn"
+            io/file slurp edn/read-string)
+        result
+        (dynamic-queries/budgeted-facet-plan
+         {:cascade cascade
+          :transition-warrants
+          (into transition-warrants additional-transition-warrants)
+          :information-models information-models
+          :budget budget})]
+    (is (= [r9 r6 r10] (:selected-patterns result)))
+    (is (= {:initial 3 :spent 3 :remaining 0}
+           (:budget result)))
+    (is (= :budget-exhausted
+           (get-in result [:unexpanded-patterns 0 :reason])))
+    (is (= r5
+           (get-in result [:unexpanded-patterns 0 :pattern-id])))
+    (is (= 2
+           (get-in result
+                   [:path-diversity :distinct-transition-count])))
+    (is (= :outcome-model-not-memory-multiplicity
+           (:evidence-counting result)))
+    (is (= "independent-wm-checker"
+           (get-in result
+                   [:selection-trace 2 :transition-warrants
+                    0 :provenance 0 :reviewer])))
+    (is (nil? (:selected-mission result)))
+    (is (false? (:live-ordering-changed? result)))))
+
+(deftest missing-transition-warrant-remains-a-refinement-hole
+  (let [{:keys [cascade transition-warrants]}
+        (-> "holes/labs/M-typed-memories/phase5-outer-cascade.edn"
+            io/file slurp edn/read-string)
+        {:keys [budget information-models]}
+        (-> "holes/labs/M-typed-memories/rung3-facet-refinement.edn"
+            io/file slurp edn/read-string)
+        result
+        (dynamic-queries/budgeted-facet-plan
+         {:cascade cascade
+          :transition-warrants transition-warrants
+          :information-models information-models
+          :budget budget})
+        unexpanded (into {} (map (juxt :pattern-id identity))
+                         (:unexpanded-patterns result))]
+    (is (= [r9 r6 r5] (:selected-patterns result)))
+    (is (= :missing-transition-warrant
+           (get-in unexpanded [r10 :reason])))
+    (is (= [r6]
+           (get-in unexpanded
+                   [r10 :missing-warrant-parent-ids])))))
+
+(deftest facet-information-model-must-be-probabilistically-coherent
+  (let [cascade
+        {:shown [r9]
+         :semilattice {:descent []}}
+        base
+        {:cascade cascade
+         :transition-warrants []
+         :budget 1}]
+    (testing "outcome probabilities sum to one"
+      (is
+       (thrown-with-msg?
+        clojure.lang.ExceptionInfo
+        #"probabilities must sum to one"
+        (dynamic-queries/budgeted-facet-plan
+         (assoc
+          base
+          :information-models
+          {r9
+           {:cost 1
+            :prior-entropy 1.0
+            :outcomes
+            [{:label :a
+              :probability 0.8
+              :posterior-entropy 0.2}]}})))))
+    (testing "expected information gain cannot be negative"
+      (is
+       (thrown-with-msg?
+        clojure.lang.ExceptionInfo
+        #"negative expected information gain"
+        (dynamic-queries/budgeted-facet-plan
+         (assoc
+          base
+          :information-models
+          {r9
+           {:cost 1
+            :prior-entropy 0.1
+            :outcomes
+            [{:label :a
+              :probability 1.0
+              :posterior-entropy 0.9}]}})))))))

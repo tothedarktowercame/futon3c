@@ -351,3 +351,87 @@
              useful?
              (assoc :relation-contributions
                     (:ranked-candidates ranking))))))
+
+(defn budgeted-facet-frontier
+  "Execute Rung-3 budgeted refinement through the Phase-5 frontier machinery.
+
+   The plan chooses only existing cascade patterns and witnessed descent edges.
+   The selected prefix is then executed by outer-frontier; no second cascade or
+   candidate representation is introduced. Challenged memories remain
+   non-admitting but are retained in the observation trace."
+  [{:keys [cascade query-step-fn dependencies transition-warrants
+           information-models budget]}]
+  (let [plan
+        (dynamic-queries/budgeted-facet-plan
+         {:cascade cascade
+          :transition-warrants transition-warrants
+          :information-models information-models
+          :budget budget})
+        selected (:selected-patterns plan)
+        _ (when-not (seq selected)
+            (throw (ex-info "facet refinement selected no affordable root"
+                            {:plan plan})))
+        selected-set (set selected)
+        reordered
+        (assoc cascade :shown
+               (into selected
+                     (remove selected-set (:shown cascade))))
+        trace-by-pattern
+        (into {} (map (juxt :pattern-id identity))
+              (:selection-trace plan))
+        result
+        (outer-frontier
+         {:cascade reordered
+          :query-step-fn
+          (fn [pattern-id _step-budget]
+            (query-step-fn
+             pattern-id
+             (:remaining-budget-before
+              (get trace-by-pattern pattern-id))))
+          :dependencies dependencies
+          :transition-warrants transition-warrants
+          :budget (count selected)})
+        observations
+        (mapv
+         (fn [{:keys [pattern-id result]}]
+           (let [memories (->> (:recalls result)
+                               (mapcat :memories)
+                               (reduce
+                                (fn [by-id memory]
+                                  (assoc by-id (:memory/id memory) memory))
+                                {})
+                               vals)
+                 challenged
+                 (->> memories
+                      (filter #(or (= :challenged (:memory/state %))
+                                   (= :challenged
+                                      (:memory/witness-status %))))
+                      (map :memory/id)
+                      sort vec)]
+             {:pattern-id pattern-id
+              :trace-id (:trace-id result)
+              :observed-memory-ids
+              (->> memories (map :memory/id) sort vec)
+              :observed-challenge-memory-ids challenged
+              :admitted-mission-ids
+              (->> (get-in result [:projection :candidates])
+                   (map :mission-id) sort vec)
+              :excluded-mission-ids
+              (->> (get-in result [:projection :excluded-missions])
+                   (map :mission-id) sort vec)}))
+         (:steps result))
+        evidence-paths
+        (set (mapcat
+              (fn [{:keys [pattern-id observed-memory-ids]}]
+                (map #(vector pattern-id %) observed-memory-ids))
+              observations))
+        challenge-ids
+        (set (mapcat :observed-challenge-memory-ids observations))]
+    (assoc result
+           :facet-refinement
+           (-> plan
+               (assoc :observations observations)
+               (assoc-in [:path-diversity :distinct-evidence-path-count]
+                         (count evidence-paths))
+               (assoc-in [:path-diversity :distinct-challenge-memory-count]
+                         (count challenge-ids))))))

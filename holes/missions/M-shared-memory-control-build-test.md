@@ -492,6 +492,62 @@ and the direct model preserves coverage. A new outcome model advances only if
 it is calibrated enough to beat or complement the named baseline without
 conflating unknown, blocked, and negative evidence.
 
+### Dark mechanism checkpoint, 2026-07-23
+
+The Phase 6 comparison is implemented dark in
+`futon3c.peripheral.strategic-outcomes`. It consumes the completed Phase 5
+`:admissible-projection` and `:excluded-missions` fields without changing
+`outer-frontier`, the live additive controller, or mission selection. Its
+frozen exploratory fixture contains 12 independently witnessed replay
+transitions for fitting, six held-out outcomes, and four held-out gold
+judgements. Training and held-out transition ids must be disjoint.
+
+The outcome term is a beta-binomial estimate of independently witnessed useful
+progress. It is separate from executable support, centrality, the current
+`0.25 central + 0.45 strategic + 0.30 phase-doable` engineering blend, and
+future habit. Unseen or thin missions cause explicit abstention; witnessed
+failure is negative data; blocked missions remain outside the admissible
+candidate set. Rung 3 entropy is referenced only as an exploration-order trace
+and is never consumed as an outcome probability.
+
+The frozen replay reports:
+
+- outcome Brier 0.139 and log loss 0.447, versus the named global-rate
+  baseline's 0.270 and 0.736;
+- support-plus-outcome top-choice accuracy 4/4, current additive 2/4, and
+  support-plus-outcome-plus-centrality 3/4;
+- two recoveries from misleading direct-support seeds and no degradation on
+  this replay;
+- complete explanations, outcome coverage 1.0, abstention 0.0 on the observed
+  held-out missions, calibration bins with Wilson intervals, paired
+  exploratory intervals, counterfactual additive choices, and latency.
+
+These are mechanism results, not a calibration or superiority claim. Six
+outcomes and four judgements are below the preregistered promotion minimum of
+20; the paired intervals are wide. Therefore `:advance? false` and
+`:retire-centrality? false` are mandatory even though the point estimates are
+promising. Run the replay with:
+
+```bash
+clojure -M scripts/run_phase6_strategic_outcomes_demo.clj
+```
+
+Verification and operational boundary:
+
+- the focused Phase 4–6/Rungs 1+3 suite passes 21 tests / 134 assertions;
+- the wider shared-memory regression reaches 59 tests / 493 assertions with
+  the same single pre-existing `memory_backend_test` mismatch documented
+  above (`:at nil` in the runtime item); all other assertions pass;
+- changed Clojure and the demo are `clj-kondo`-clean and
+  `check-parens`-clean; the frozen fixture parses as EDN;
+- no serving namespace was reloaded, no JVM was restarted, no stored-data
+  migration was introduced, and no live mission order changed.
+
+Rollback is deletion of the additive
+`strategic_outcomes.clj`, its test/demo/fixture, and this checkpoint text. The
+Phase 4 projection, Phase 5 frontier, Rung 3 traversal, and live additive
+controller require no rollback because their APIs and state were not changed.
+
 ## Phase 6b — Optional embedding experiment
 
 This phase is off the critical path and may begin only after Phase 4 provides
