@@ -198,16 +198,30 @@
                :entry (assoc original-entry :evidence/id "e-unreviewed")}
               {:score -0.5
                :entry (assoc original-entry :evidence/id "e-over-limit")}]})
-          :fetch-hyperedges
-          (fn [memory-id opts]
-            (swap! calls conj [:edge memory-id opts])
-            [(cond-> original-edge
-               (= memory-id "e-unreviewed")
-               (assoc-in [:hx/props :attachment-status] :proposed))])})]
+          :recall-batch-fn
+          (fn [_ endpoints opts]
+            (swap! calls conj [:batch endpoints opts])
+            {:ok true
+             :elapsed-ms 1.0
+             :recalls
+             (mapv
+              (fn [memory-id]
+                {:ok true
+                 :endpoint memory-id
+                 :memories
+                 (if (= "e-original" memory-id)
+                   [{:memory/id memory-id
+                     :memory/hook "Normalize before field_simp."
+                     :memory/pattern-ids
+                     ["math-formalization/tactic-algebra-interference"]}]
+                   [])})
+              endpoints)})})]
     (is (= ["math-formalization/tactic-algebra-interference"]
            (mapv :pattern-id (:candidates result))))
     (is (= 2 (:checked-memory-count result)))
-    (is (= 2 (count (filter #(= :edge (first %)) @calls))))))
+    (is (= 1 (count (filter #(= :batch (first %)) @calls))))
+    (is (= ["e-original" "e-unreviewed"]
+           (second (first (filter #(= :batch (first %)) @calls)))))))
 
 (deftest lexical-memory-proposal-falls-back-to-bounded-token-disjunction
   (let [queries (atom [])
@@ -226,8 +240,21 @@
              (if (= query "normalize OR denominator OR field_simp")
                [memory-row]
                [])})
-          :fetch-hyperedges
-          (fn [_ _] [original-edge])})]
+          :recall-batch-fn
+          (fn [_ endpoints _]
+            {:ok true
+             :elapsed-ms 1.0
+             :recalls
+             (mapv
+              (fn [memory-id]
+                {:ok true
+                 :endpoint memory-id
+                 :memories
+                 [{:memory/id memory-id
+                   :memory/hook "Normalize before field_simp."
+                   :memory/pattern-ids
+                   ["math-formalization/tactic-algebra-interference"]}]})
+              endpoints)})})]
     (is (= :bounded-token-disjunction (:query-strategy result)))
     (is (= ["normalize" "denominator" "field_simp"]
            (:fallback-tokens result)))
@@ -253,9 +280,16 @@
           "../futon3a/resources/notions/patterns-index.tsv"
           :memory-domain :mathematics
           :memory-proposal-fn proposal
-          :memory-recall-fn
-          (fn [_ endpoint _]
-            {:ok true :endpoint endpoint :memories [] :audit {}})})
+          :memory-recall-batch-fn
+          (fn [_ endpoints _]
+            {:ok true
+             :trace-id "test"
+             :elapsed-ms 1.0
+             :recalls
+             (mapv (fn [endpoint]
+                     {:ok true :endpoint endpoint
+                      :memories [] :audit {}})
+                   endpoints)})})
         result
         (tools/execute-tool
          backend :psr-search
@@ -267,7 +301,9 @@
     (is (= "e-original"
            (get-in result
                    [:result :candidates 0
-                    :memory-proposal-support 0 :memory-id])))))
+                    :memory-proposal-support 0 :memory-id])))
+    (is (string? (get-in result [:result :trace-id])))
+    (is (number? (get-in result [:result :timing :total-ms])))))
 
 (deftest repeated-trials-are-bounded-and-auditable
   (let [cases

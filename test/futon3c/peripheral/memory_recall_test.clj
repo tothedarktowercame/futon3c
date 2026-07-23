@@ -139,6 +139,42 @@
     (is (empty? (:memories partial)))
     (is (= 1 (get-in partial [:audit :missing-body])))))
 
+(deftest current-full-body-recall-selects-through-projection
+  (let [{math :mathematics} (fixtures)
+        edge (assoc-in (:edge math) [:hx/props :domain] :mathematics)
+        calls (atom [])
+        result
+        (memory-recall/recall-by-endpoint
+         {:domain :mathematics :evidence-store ::unused}
+         "lean/field-simp-denominator"
+         {:limit 3
+          :include-bodies? true
+          :trace-id "selection-trace"
+          :fetch-components
+          (fn [endpoints opts]
+            (swap! calls conj [endpoints opts])
+            {:ok true
+             :groups
+             [{:endpoint "lean/field-simp-denominator"
+               :components
+               [{:edge edge
+                 :entry (select-keys (:entry math)
+                                     [:evidence/id :evidence/type
+                                      :evidence/claim-type :evidence/author
+                                      :evidence/session-id])}]}]
+             :audit {:distinct-edge-count 1}
+             :timing {:service-total-ms 1.0}})
+          :fetch-entry
+          (fn [memory-id]
+            (when (= "e-math-1" memory-id) (:entry math)))})]
+    (is (= [[["lean/field-simp-denominator"]
+             {:limit 9 :trace-id "selection-trace"}]]
+           @calls))
+    (is (= {:hook "Normalize the denominator before field_simp."}
+           (get-in result [:memories 0 :memory/body])))
+    (is (= 1
+           (get-in result [:substrate :audit :distinct-edge-count])))))
+
 (deftest query-limit-is-capped-and-store-failure-is-data
   (let [seen-limit (atom nil)
         result (memory-recall/recall-by-endpoint
@@ -168,3 +204,59 @@
     (is (= (str "http://substrate.test/api/alpha/hyperedges?"
                 "end=p4ng%2FR15&type=memory%2Fassert&limit=7")
            @seen-url))))
+
+(deftest batch-recall-projects-several-endpoints-with-one-substrate-call
+  (let [{math :mathematics} (fixtures)
+        edge (assoc-in (:edge math) [:hx/props :domain] :mathematics)
+        calls (atom [])
+        result
+        (memory-recall/recall-by-endpoints
+         {:domain :mathematics}
+         ["lean/field-simp-denominator" "pattern/empty"]
+         {:limit 3
+          :trace-id "trace-batch"
+          :fetch-components
+          (fn [endpoints opts]
+            (swap! calls conj [endpoints opts])
+            {:ok true
+             :trace-id "trace-batch"
+             :temporal-basis {:mode :current}
+             :groups
+             [{:endpoint "lean/field-simp-denominator"
+               :components [{:edge edge :entry (:entry math)}]
+               :audit {:selected-count 1}}
+              {:endpoint "pattern/empty"
+               :components []
+               :audit {:selected-count 0}}]
+             :audit {:distinct-edge-count 1}
+             :timing {:endpoint-selection-ms 12.0
+                      :service-total-ms 15.0}})})]
+    (is (= 1 (count @calls)))
+    (is (= [["lean/field-simp-denominator" "pattern/empty"]
+            {:limit 9 :trace-id "trace-batch"}]
+           (first @calls)))
+    (is (= [["e-math-1"] []]
+           (mapv #(mapv :memory/id (:memories %)) (:recalls result))))
+    (is (= 12.0
+           (get-in result
+                   [:substrate :timing :endpoint-selection-ms])))
+    (is (number? (get-in result [:substrate :caller-wall-ms])))))
+
+(deftest substrate-client-posts-bounded-memory-projection-with-trace
+  (let [seen (atom nil)
+        post-edn-var (ns-resolve 'futon3c.substrate.client 'post-edn!)]
+    (with-redefs-fn
+      {#'substrate/configured-url (constantly "http://substrate.test")
+       post-edn-var
+       (fn [url payload timeout-ms trace-id]
+         (reset! seen [url payload timeout-ms trace-id])
+         {:ok true :groups []})}
+      #(is (= {:ok true :groups []}
+              (substrate/memory-projection
+               ["pattern/a" "pattern/b"]
+               {:limit 9 :timeout-ms 1234 :trace-id "trace-1"}))))
+    (is (= ["http://substrate.test/api/alpha/memory/projection"
+            {:endpoints ["pattern/a" "pattern/b"] :limit 9}
+            1234
+            "trace-1"]
+           @seen))))

@@ -1,6 +1,7 @@
 # E-memory-latency — slow pattern-conditioned memory queries
 
-**Status: IDENTIFY (2026-07-23). Owner: Joe + Zaif/WM implementers.**
+**Status: BUILD-TEST COMPLETE; MONITOR (2026-07-23). Owner: Joe + Zaif/WM
+implementers.**
 
 **Origin:** Phase 3 live acceptance for
 `M-shared-memory-control-build-test`. Correctness acceptance passed; this
@@ -36,6 +37,103 @@ The immediate conclusion is therefore deliberately narrow:
 > become the WM reference path without instrumentation and one bounded
 > multi-endpoint substrate operation.
 
+## 2026-07-23 implementation outcome
+
+The plan below has now been implemented through the live build-test stage.
+The current search path no longer performs a corpus membership scan per
+memory or per candidate:
+
+```text
+primary/fallback FTS
+  -> one compact batch projection for proposal validation
+  -> one compact batch projection for top-k enrichment
+```
+
+Futon1b exposes `POST /api/alpha/memory/projection` with hard bounds of 20
+distinct endpoints and 100 components per endpoint. Futon3c propagates one
+trace id through FTS, proposal validation, and candidate enrichment, and
+reports local scoring, proposal, enrichment, substrate, and total clocks.
+Search returns only the compact hook-bearing memory projection. `psr_select`
+uses the same projection to identify current memories and then point-fetches
+the complete evidence bodies that it records as surfaced.
+
+### The database-backed batch experiments were insufficient
+
+Three implementations were measured rather than accepted on shape alone:
+
+1. One endpoint-membership scan followed by OR-filtered whole-document
+   hydration took about **15–20 seconds** live. One instrumented run spent
+   4.95 s selecting endpoints, 12.25 s hydrating edges, and 2.59 s hydrating
+   evidence.
+2. Joining a bounded selected-id relation to the full hyperedge table took
+   10.63 s once, then exceeded 103 s on the next run before the client
+   disconnected. The independent health listener remained responsive; the
+   hardened accept loop did not reproduce the earlier zombie failure.
+3. Bounded indexed point hydration fixed the second table scan, but every
+   request still paid the original multi-second corpus membership scan. That
+   could not meet the 500 ms direct-projection target.
+
+These failures justified L4, but not a TTL workaround. Futon1b now builds a
+bounded, revisioned projection of current `:memory/assert` components before
+opening either listener. Verified memory assertions and both retraction paths
+serialize the store mutation with a synchronous point refresh of that
+projection. Other hyperedge traffic does not invalidate it. The projection
+contains compact hooks, never full selection bodies, and has a hard
+5000-component startup ceiling. Explicit valid-time or system-time reads
+bypass it and retain the bounded bitemporal database path.
+
+The live restart built revision 1 from **9 memory components / 16 endpoints**
+in **12,280.8 ms**. This cost is paid before readiness rather than on an agent
+turn.
+
+### Short live acceptance series
+
+Corpus and host: local Futon1b `migration-store-21`, projection revision 1,
+9 components, one caller, no deliberate concurrent load.
+
+- Ten direct five-endpoint projection requests (one populated endpoint plus
+  four misses, limit 9) completed in **1.765–4.572 ms** caller wall time.
+  The first response reported 0.613 ms service time and returned the same
+  three mathematics memories as before.
+- Five top-five `psr_search` repetitions completed in **1.825–3.521 s**.
+  `math-formalization/tactic-algebra-interference` remained rank 1 and carried
+  all three reviewed hooks on every checked result. Candidate enrichment was
+  44–48 ms; the remaining dominant work was primary/fallback FTS
+  (proposal totals 1.68–3.02 s).
+- Five `psr_select` repetitions returned the same three complete bodies in
+  **242–861 ms** outer wall time. After the first process-cold call, the four
+  observations were 242–295 ms.
+
+These are acceptance probes, not a latency distribution. They clear the
+initial targets for the observed cases without supporting a general p95 or
+concurrency claim.
+
+Validation gates:
+
+- Futon1b A1/A2: **39/39 PASS**.
+- Futon1b A3/A4/A5, including projection overwrite and retraction coherence:
+  **59/59 PASS**.
+- Futon3c focused memory/backend suite: **45 tests, 196 assertions, 0
+  failures/errors**.
+- `check-parens.el`: clean on every changed Clojure file.
+- `clj-kondo`: zero errors and zero warnings on every changed Clojure file.
+
+### Monitoring still required
+
+Preserve trace ids and gather a longer fixed-query series over normal traffic.
+At minimum, record cold/warm classification, projection revision/component
+count, FTS primary/fallback time, proposal-validation substrate wall time,
+candidate-enrichment substrate wall time, total search time, admission
+outcomes, and concurrency. Report p50/p95 only after a stated sample size;
+separate 503 admission from latency and correctness failures.
+
+Also watch startup build duration and component count, projection revision
+advancement after memory lifecycle writes, process memory/PSI, accept-loop
+exceptions, and response correctness after every Futon1b restart. Re-run the
+same measurements when the WM domain is admitted or corpus size changes
+materially. The remaining obvious latency target is FTS, not endpoint
+membership.
+
 ## The observed cases
 
 All three probes used:
@@ -67,9 +165,9 @@ the intended pattern to rank 1 without an embedding fallback.
 The machine-readable record is
 `holes/labs/M-typed-memories/phase3-trial-results.edn`.
 
-## Where the time can accumulate
+## Where the time accumulated before this fix
 
-The current `psr_search` path has four read stages:
+The pre-fix `psr_search` path had four read stages:
 
 ```text
 local notions-index scoring
@@ -87,25 +185,25 @@ tokens.
 
 This is now at most two FTS calls, not one call per token. Both calls remain
 serial, because the fallback depends on the result of the primary query.
-After FTS, however, `proposals-from-rows` also validates each retained memory
+Before this fix, `proposals-from-rows` also validated each retained memory
 with a separate endpoint query. The final probe checked three memories, so
 candidate construction could pay three endpoint scans before top-\(k\)
-enrichment begins.
+enrichment began. It now validates those memories in one bounded projection.
 
-### 2. Proposal validation and top-\(k\) enrichment are both serial
+### 2. Proposal validation and top-\(k\) enrichment were both serial
 
-After merging local lexical candidates and reviewed-memory proposals,
-`tool-psr-search` uses `mapv` over the top candidates. For each candidate it
-calls `recall-by-endpoint` before moving to the next candidate.
+Before this fix, after merging local lexical candidates and reviewed-memory
+proposals, `tool-psr-search` used `mapv` over the top candidates. For each
+candidate it called `recall-by-endpoint` before moving to the next candidate.
 
 With three checked proposal memories and `top_k = 5`, the whole path can pay
 for eight endpoint scans. The final probe's approximately 17.8-second sum
 accounts only for the latter five candidate recalls, not the proposal
 validation calls. Consolidating both lanes is the first optimization target.
 
-### 3. One endpoint recall is itself multi-stage
+### 3. One endpoint recall was itself multi-stage
 
-`recall-by-endpoint`:
+The old database-backed `recall-by-endpoint` path:
 
 1. requests `:memory/assert` hyperedges for one pattern endpoint;
 2. overfetches up to three times the requested result count;
@@ -282,14 +380,13 @@ coherent projection, not explaining the present 3–5-second floor.
 **Exit:** search does not fetch full evidence entries one by one; selection
 still retrieves the complete bodies and records exactly what surfaced.
 
-### L4 — Add conservative caching only after measurement
+### L4 — Materialize the current compact projection after measurement
 
-If batching is insufficient, consider a short-lived cache of the compact
-current reviewed projection. Cache identity must include domain, pattern,
-valid/system time basis, and corpus revision. Challenge, supersession,
-retraction, and review changes must invalidate or advance the projection.
-
-Do not cache full selection bodies merely to improve search benchmarks.
+Batching was insufficient on the live XTDB corpus, so the implemented L4 is a
+coherent revisioned current-state projection rather than a short-lived TTL
+cache. It advances synchronously with memory assertion/retraction writes;
+explicit valid/system time bases bypass it. Domain and lifecycle filtering
+remain canonical in Futon3c, and full selection bodies are not cached.
 
 ## Proposed latency gates
 

@@ -64,6 +64,14 @@
                       :evidence-store store
                       :memory-domain :mathematics
                       :memory-recall-fn phase2-recall-fixture
+                      :memory-recall-batch-fn
+                      (fn [ctx endpoints opts]
+                        {:ok true
+                         :trace-id (:trace-id opts)
+                         :elapsed-ms 1.5
+                         :recalls
+                         (mapv #(phase2-recall-fixture ctx % opts)
+                               endpoints)})
                       :agent-id "zai-phase2"
                       :session-id-fn (constantly "phase2-session")}
               backend (rb/make-real-backend config)

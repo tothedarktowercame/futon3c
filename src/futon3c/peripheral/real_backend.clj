@@ -326,11 +326,11 @@
 (defn- tool-reflect-ns
   "Public vars in a namespace. Args: [ns-sym-or-string]."
   [args]
-  (let [ns-sym (symbol (str (first args)))]
-    (let [result (reflection/reflect-ns ns-sym)]
-      (if (:error result)
-        {:ok false :error (:error result)}
-        {:ok true :result result}))))
+  (let [ns-sym (symbol (str (first args)))
+        result (reflection/reflect-ns ns-sym)]
+    (if (:error result)
+      {:ok false :error (:error result)}
+      {:ok true :result result})))
 
 (defn- tool-reflect-var
   "Full metadata for a var. Args: [ns-sym var-sym] or [\"ns/var\"]."
@@ -354,20 +354,20 @@
 (defn- tool-reflect-deps
   "Namespace dependency graph. Args: [ns-sym-or-string]."
   [args]
-  (let [ns-sym (symbol (str (first args)))]
-    (let [result (reflection/reflect-deps ns-sym)]
-      (if (:error result)
-        {:ok false :error (:error result)}
-        {:ok true :result result}))))
+  (let [ns-sym (symbol (str (first args)))
+        result (reflection/reflect-deps ns-sym)]
+    (if (:error result)
+      {:ok false :error (:error result)}
+      {:ok true :result result})))
 
 (defn- tool-reflect-java-class
   "Reflect on a Java class. Args: [class-name-string]."
   [args]
-  (let [class-name (str (first args))]
-    (let [result (reflection/reflect-java-class class-name)]
-      (if (:error result)
-        {:ok false :error (:error result)}
-        {:ok true :result result}))))
+  (let [class-name (str (first args))
+        result (reflection/reflect-java-class class-name)]
+    (if (:error result)
+      {:ok false :error (:error result)}
+      {:ok true :result result})))
 
 ;; =============================================================================
 ;; Discipline tools (futon3a + futon3b adapters)
@@ -377,6 +377,10 @@
 
 (defn- gen-id [prefix]
   (str prefix "-" (UUID/randomUUID)))
+
+(defn- monotonic-elapsed-ms
+  [started-ns]
+  (/ (double (- (System/nanoTime) started-ns)) 1000000.0))
 
 (defn- parse-int
   [x default]
@@ -496,7 +500,8 @@
 
 (defn- tool-psr-search
   [cwd config args]
-  (let [query (some-> (first args) str str/trim)
+  (let [started (System/nanoTime)
+        query (some-> (first args) str str/trim)
         opts (if (map? (second args)) (second args) {})
         top-k (parse-int (:top-k opts) 5)
         include-details? (true? (:include-details opts))
@@ -510,7 +515,9 @@
 
       :else
       (try
-        (let [tokens (tokenize-query query)
+        (let [trace-id (gen-id "memory-query")
+              local-start (System/nanoTime)
+              tokens (tokenize-query query)
               index (notions/load-pattern-index idx-path)
               candidate->result
               (fn [entry]
@@ -532,6 +539,7 @@
               lexical-candidates
               (->> (vals scored-by-id)
                    (filter #(pos? (:score %))))
+              local-index-ms (monotonic-elapsed-ms local-start)
               proposal-fn
               (or (:memory-proposal-fn config)
                   memory-recall/propose-patterns-by-query)
@@ -541,7 +549,11 @@
                   (proposal-fn
                    {:domain domain}
                    query
-                   {:limit (or (:memory-proposal-limit config) 10)})
+                   (cond-> {:limit (or (:memory-proposal-limit config) 10)
+                            :trace-id trace-id}
+                     (:memory-recall-batch-fn config)
+                     (assoc :recall-batch-fn
+                            (:memory-recall-batch-fn config))))
                   (catch Throwable t
                     {:ok false
                      :candidates []
@@ -572,25 +584,46 @@
                             #(compare %2 %1))
                    (take top-k)
                    vec)
+              recall-batch-fn
+              (or (:memory-recall-batch-fn config)
+                  memory-recall/recall-by-endpoints)
+              enrichment
+              (if-let [domain (:memory-domain config)]
+                (if (seq candidates)
+                  (recall-batch-fn
+                   {:domain domain
+                    :evidence-store (:evidence-store config)}
+                   (mapv :pattern-id candidates)
+                   {:limit (or (:memory-recall-limit config) 3)
+                    :trace-id trace-id})
+                  {:ok true :trace-id trace-id :recalls []
+                   :elapsed-ms 0.0})
+                {:ok false :trace-id trace-id
+                 :recalls
+                 (mapv
+                  (fn [{:keys [pattern-id]}]
+                    {:ok false
+                     :endpoint pattern-id
+                     :memories []
+                     :error
+                     {:error/code :memory-domain-not-configured
+                      :error/message
+                      "Pattern recall requires an explicit memory domain"}})
+                  candidates)})
+              recall-by-pattern
+              (into {} (map (juxt :endpoint identity))
+                    (:recalls enrichment))
               candidates
               (mapv (fn [candidate]
                       (let [pattern-id (:pattern-id candidate)
-                            recall-fn
-                            (or (:memory-recall-fn config)
-                                memory-recall/recall-by-endpoint)
-                            recall
-                            (if-let [domain (:memory-domain config)]
-                              (recall-fn
-                               {:domain domain
-                                :evidence-store (:evidence-store config)}
-                               pattern-id
-                               {:limit (or (:memory-recall-limit config) 3)})
-                              {:ok false
-                               :endpoint pattern-id
-                               :memories []
-                               :error {:error/code :memory-domain-not-configured
-                                       :error/message
-                                       "Pattern recall requires an explicit memory domain"}})
+                            recall (get recall-by-pattern pattern-id
+                                        {:ok false
+                                         :endpoint pattern-id
+                                         :memories []
+                                         :error
+                                         {:error/code :batch-result-missing
+                                          :error/message
+                                          "Batch recall omitted requested pattern"}})
                             hooks
                             (mapv (fn [memory]
                                     {:memory-id (:memory/id memory)
@@ -620,11 +653,22 @@
                     candidates)]
           {:ok true
            :result {:query query
+                    :trace-id trace-id
                     :top-k top-k
+                    :timing
+                    {:local-index-ms local-index-ms
+                     :proposal-ms
+                     (get-in proposal [:timing :proposal-total-ms])
+                     :candidate-enrichment-ms (:elapsed-ms enrichment)
+                     :total-ms (monotonic-elapsed-ms started)}
                     :candidate-construction
                     {:lexical-index :futon3a/notions-index
                      :reviewed-memory-proposal
                      (dissoc proposal :candidates)}
+                    :memory-enrichment
+                    (select-keys enrichment
+                                 [:ok :trace-id :endpoints :limit :fetch-limit
+                                  :substrate :elapsed-ms :error])
                     :candidates candidates}})
         (catch Exception e
           {:ok false :error (str "psr-search failed: " (.getMessage e))})))))
@@ -997,6 +1041,7 @@
      :memory-domain — explicit shared-memory domain; enables PSR recall
      :memory-recall-limit — per-pattern bound (default 3)
      :memory-recall-fn — injectable recall function for tests
+     :memory-recall-batch-fn — injectable bounded search recall for tests
      :agent-id / :session-id-fn — controller-stamped receipt identity
      :discipline-state — atom for PSR/PUR/PAR continuity (optional)"
   ([]
