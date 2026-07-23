@@ -118,6 +118,18 @@ Validation gates:
 - `check-parens.el`: clean on every changed Clojure file.
 - `clj-kondo`: zero errors and zero warnings on every changed Clojure file.
 
+Deployment evidence:
+
+- Futon1b implementation commit: `63a170e` (`Add coherent bounded memory
+  projection`).
+- Futon3c implementation commit: `e8c7364` (`Batch and instrument memory
+  recall`).
+- Final Futon1b restart: 2026-07-23 12:11 BST, PID 233414. Startup rebuilt
+  revision 1 from 9 components / 16 endpoints in 12,187.0 ms; both main and
+  independent health endpoints returned 200. A traced post-restart projection
+  returned the same three memories in 7.239 ms caller wall / 0.711 ms service
+  time. The service was active with about 1.0 GB current / 1.09 GB peak memory.
+
 ### Monitoring still required
 
 Preserve trace ids and gather a longer fixed-query series over normal traffic.
