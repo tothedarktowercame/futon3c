@@ -425,6 +425,42 @@ For a reviewed dark WM state, the outer cascade explains the candidate frontier,
 the retrieved episodes, dependencies, blockers, and holes without centrality or
 embedding similarity. A reviewer can reconstruct the frontier from the trace.
 
+### Dark acceptance and retrieval checkpoint, 2026-07-23
+
+ACCEPTED DARK. `futon3c.peripheral.strategic-cascade` executes the existing
+Phase 4 query once per ordered p4ng step and emits:
+
+- the ordinary `:shown` / `:semilattice` cascade representation;
+- a reason-bearing frontier with full supporting memory bodies;
+- witnessed mission dependencies and ready/held short mission cascades;
+- concrete excluded missions with their blocking memories;
+- explicit missing-transition, blocked-dependency, no-warrant, policy, and
+  budget holes;
+- R17''' proposals only after two repeated holes, two distinct witnesses, and
+  two distinct memories. Such patterns retain `:prior :unearned`,
+  `:status :proposed`, and `:promotion-eligible? false`.
+
+Golden reductions are deterministic and cover a branch, blocker, dependency,
+and hole. Retracting the EIG warrant removes its mission; adding an irrelevant
+memory changes nothing; reversing endpoint execution order preserves frontier
+and exclusion sets. A single memory, similarity value, or repeated
+same-author assertion cannot mint a promotable pattern.
+
+The pre-completion Rung 1 checkpoint was useful and inspectable. For the
+preregistered one-target fixture, fixed endpoint retrieval scored hit@1 = 0
+and typed replay scored hit@1 = 1 without changing the candidate set.
+Phase 5 therefore carries relation contributions, path diversity, explicit
+budget, and fixed counterfactual ranking in its dark trace. It still reports
+`:selected-mission nil` and `:live-ordering-changed? false`; no theory output
+enters standard mission selection.
+
+Verification: the integrated Phase 4/Rung 1/Phase 5 focused suite passed 14
+tests / 80 assertions; the wider memory regression passed 47 tests / 420
+assertions. Futon2 memory/control contracts passed 12 tests / 46 assertions.
+Changed Clojure and scripts are clj-kondo-clean and check-parens-clean; both
+fixture files parse as EDN. No serving namespace was reloaded, no stored-data
+migration was required, and no live mission-selection path was changed.
+
 ## Phase 6 — Strategic outcome model and factor ablations
 
 ### Build
