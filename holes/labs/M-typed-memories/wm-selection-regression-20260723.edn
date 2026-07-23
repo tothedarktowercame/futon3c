@@ -1,0 +1,40 @@
+{:fixture-version 1
+ :status :frozen-live-regression
+ :source
+ {:endpoint "/api/alpha/war-machine?days=14"
+  :snapshot-as-of "2026-07-23T21:16:20.159739365Z"
+  :purpose
+  "Minimal exact rows reproducing a viable controller head suppressed by a habit-adjusted legacy abstention."}
+ :judgement
+ {:selection-gain
+  {:selection-gain 1.0
+   :perf-history []
+   :mean-perf nil
+   :samples 0}
+  :decision
+  {:action :abstain
+   :reason :no-action-beats-no-op}
+  :ranked-actions
+  [{:rank 1
+    :controller-score 15.006113125291307
+    :G-efe 11.865439536347168
+    :habit-prior-bias -4.304065093204169
+    :action
+    {:type :advance-mission
+     :target "M-expressions-of-interest"
+     :rationale
+     "mission substrate: Mission: Expressions of Interest [active; advance open holes]"
+     :mission-value-factor 0.7862126476719944}}
+   {:rank 100
+    :controller-score 15.62266170992065
+    :G-efe 12.48198812097651
+    :habit-prior-bias -4.997212273764115
+    :action {:type :no-op}}
+   {:rank 113
+    :controller-score 15.68319193474288
+    :G-efe 12.54251834579874
+    :habit-prior-bias -1.9526898360406921
+    :action
+    {:type :advance-mission
+     :target "M-learning-loop"
+     :rationale "historically selected mission"}}]}}

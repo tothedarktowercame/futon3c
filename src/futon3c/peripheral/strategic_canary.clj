@@ -121,9 +121,10 @@
        :operator
        {:choice-mission-ids operator-choice-mission-ids
         :confirmed? operator-confirmed?
-        :override?
-        (not= operator-choice-mission-ids
-              (:mission-ids recommendation))
+        :agrees-with-advice?
+        (= operator-choice-mission-ids
+           (:mission-ids recommendation))
+        :override-required? false
         :retains-choice? true}
        :observed-outcome observed-outcome
        :memory-use

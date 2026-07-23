@@ -2334,7 +2334,20 @@
                                        (when (= 14 days)
                                          {:as-of as-of
                                           :payload {"window" {"days" 14}
-                                                    "judgement" {"mode" "steady"}}}))
+                                                    "judgement"
+                                                    {"mode" "steady"
+                                                     "selection-gain"
+                                                     {"selection-gain" 1.0}
+                                                     "decision"
+                                                     {"action" "abstain"
+                                                      "reason" "no-action-beats-no-op"}
+                                                     "ranked-actions"
+                                                     [{"rank" 1
+                                                       "controller-score" 1.0
+                                                       "habit-prior-bias" -2.0
+                                                       "action"
+                                                       {"type" "advance-mission"
+                                                        "target" "M-live"}}]}}}))
                                      futon3c.wm.scheduler/status
                                      (fn []
                                        {:running? true
@@ -2357,6 +2370,15 @@
       (is (= "*" (get-in response [:headers "Access-Control-Allow-Origin"])))
       (is (= 14 (get-in parsed [:window :days])))
       (is (= "steady" (get-in parsed [:judgement :mode])))
+      (is (= "M-live"
+             (get-in parsed
+                     [:live-recommendation
+                      :recommendation :target])))
+      (is (false?
+           (get-in parsed
+                   [:live-recommendation
+                    :selection-boundary
+                    :blocks-recommendation?])))
       (is (= true (get-in parsed [:vsatarcs-status :available?])))
       (is (= "violation" (get-in parsed [:vsatarcs-status :build :status])))
       (is (= "2026-05-25T12:00:00Z" (:as-of parsed)))

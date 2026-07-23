@@ -72,6 +72,7 @@
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.portfolio.core :as portfolio]
             [futon3c.agents.zai-api :as zai-api]
+            [futon3c.aif.live-recommendation :as live-recommendation]
             [futon3c.reflection.core :as reflection]
             [futon3c.enrichment.query :as enrich]
             [futon3c.transport.peripheral-events :as peripheral-events]
@@ -5813,6 +5814,14 @@
       (f days))
     (catch Throwable _ nil)))
 
+(defn- wm-live-recommendation
+  [snapshot]
+  (let [payload (:payload snapshot)
+        judgement (or (:judgement payload)
+                      (get payload "judgement"))]
+    (when (map? judgement)
+      (live-recommendation/project judgement))))
+
 (defn- r14-gamma-summary
   "R14 selection-gain live state, folded into the war-machine payload for the
    AIF↔cascade loop render (C-cascade-real).
@@ -5911,11 +5920,16 @@
       (if snapshot
         (let [scheduler (wm-scheduler-status-snapshot)
               ;; wm-prebuilt-response-body returns a pre-rendered JSON STRING (to avoid
-              ;; re-encoding the 10MB+ payload) — so splice :r14-gamma into it as the
-              ;; first key rather than assoc'ing onto a map.
+              ;; re-encoding the 10MB+ payload) — splice the lightweight control
+              ;; projections into it rather than assoc'ing onto a map.
               s    (wm-prebuilt-response-body snapshot scheduler)
+              recommendation (wm-live-recommendation snapshot)
               body (if (and (string? s) (str/starts-with? s "{"))
-                     (str "{\"r14-gamma\":" (json/generate-string (r14-gamma-summary)) "," (subs s 1))
+                     (str "{\"live-recommendation\":"
+                          (json/generate-string recommendation)
+                          ",\"r14-gamma\":"
+                          (json/generate-string (r14-gamma-summary))
+                          "," (subs s 1))
                      s)]
           (-> (json-response 200 body)
               (assoc-in [:headers "Access-Control-Allow-Origin"] "*")))

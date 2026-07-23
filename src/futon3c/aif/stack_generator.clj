@@ -20,6 +20,7 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.aif.live-recommendation :as live-recommendation]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.evidence.store :as estore]))
 
@@ -549,32 +550,41 @@
            stale? (when (number? age-s) (> age-s (* 2 period-s)))
            tied (tied-prefix ranked live-rec-tied-epsilon)
            tied-actions (mapv ranked-entry->tile-entry tied)
-           tied-count (count tied-actions)]
+           tied-count (count tied-actions)
+           selection-trace (live-recommendation/project judgement)]
        (when top-action
-         {:action top-action
-          :rank (or (ranked-entry-rank top) 1)
-          :G-total (ranked-entry-g-total top)
-          :specifically (action->specifically top-action)
-          :rationale (or (:rationale top-action)
-                         (get top-action "rationale")
-                         "Top of judgement.ranked-actions for this WM tick")
-          :alternatives-considered (alternatives-from-ranked ranked)
-          :priorities (vec (take 5 (or priorities [])))
-          :mode mode
-          :source :wm-judgement-ranked-actions
-          :as-of as-of
-          :scheduler-period-seconds period-s
-          :age-seconds age-s
-          :stale? (boolean stale?)
-          ;; E-wm-live-recommendation v1.1: tied-bucket display.
-          ;; When the WM's EFE has multiple actions at near-equal G-total,
-          ;; surface the whole bucket so the cljs tile doesn't falsely
-          ;; promote rank-1 as if it were a real preference.
-          :tied-actions tied-actions
-          :tied-count tied-count
-          :tied-epsilon live-rec-tied-epsilon
-          :note (str "Recomputed every WM scheduler tick (default "
-                     period-s "s). See E-wm-live-recommendation.md.")})))))
+         (merge
+          {:action top-action
+           :rank (or (ranked-entry-rank top) 1)
+           :G-total (ranked-entry-g-total top)
+           :specifically (action->specifically top-action)
+           :rationale (or (:rationale top-action)
+                          (get top-action "rationale")
+                          "Top of judgement.ranked-actions for this WM tick")
+           :alternatives-considered (alternatives-from-ranked ranked)
+           :priorities (vec (take 5 (or priorities [])))
+           :mode mode
+           :source :wm-judgement-ranked-actions
+           :as-of as-of
+           :scheduler-period-seconds period-s
+           :age-seconds age-s
+           :stale? (boolean stale?)
+           ;; E-wm-live-recommendation v1.1: tied-bucket display.
+           ;; When the WM's EFE has multiple actions at near-equal G-total,
+           ;; surface the whole bucket so the cljs tile doesn't falsely
+           ;; promote rank-1 as if it were a real preference.
+           :tied-actions tied-actions
+           :tied-count tied-count
+           :tied-epsilon live-rec-tied-epsilon
+           :note (str "Recomputed every WM scheduler tick (default "
+                      period-s "s). See E-wm-live-recommendation.md.")}
+          ;; v1.2: recommendation, policy comparison, and actuation authority
+          ;; are distinct. A selector abstention is inspectable but cannot
+          ;; suppress this live strategic-selection surface.
+          (select-keys selection-trace
+                       [:status :algorithm :recommendation :rankings
+                        :strategic-memory :selection-boundary :actuation
+                        :comparison])))))))
 
 (defn- cached-prose-mtime []
   (try

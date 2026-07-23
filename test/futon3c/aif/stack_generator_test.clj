@@ -19,18 +19,27 @@
      "ranked-actions"
      [{"rank" 1
        "G-total" -4.99
+       "controller-score" -4.99
+       "habit-prior-bias" -2.0
        "action" {"type" "address-sorry"
                  "target" "sorry/foo"
                  "rationale" "open sorry: foo"}}
       {"rank" 2
        "G-total" -4.39
+       "controller-score" -4.39
+       "habit-prior-bias" -1.0
        "action" {"type" "address-sorry"
                  "target" "sorry/bar"
                  "rationale" "open sorry: bar"}}
       {"rank" 3
        "G-total" -4.39
+       "controller-score" -4.39
+       "habit-prior-bias" -3.0
        "action" {"type" "no-op"
                  "rationale" "wait"}}]
+     "selection-gain" {"selection-gain" 1.0}
+     "decision" {"action" "abstain"
+                 "reason" "no-action-beats-no-op"}
      "priorities"
      [{"type" "missing-head" "id" "h1" "summary" "no head h1"}
       {"type" "channel-gap" "id" "g1" "summary" "gap g1"}]}}})
@@ -45,6 +54,17 @@
       (is (= :wm-judgement-ranked-actions (:source live)))
       (is (= "address-sorry sorry/foo" (:specifically live)))
       (is (= "open sorry: foo" (:rationale live)))
+      (is (= :recommendation-issued (:status live)))
+      (is (= "sorry/foo"
+             (get-in live [:recommendation :target])))
+      (is (false? (get-in live
+                          [:selection-boundary
+                           :blocks-recommendation?])))
+      (is (= "sorry/bar"
+             (get-in live
+                     [:rankings :habit-adjusted :winner :target])))
+      (is (false? (get-in live
+                          [:strategic-memory :influenced?])))
       (is (= 300 (:scheduler-period-seconds live)))
       (is (false? (:stale? live)) "fresh snapshot is not stale")
       (testing "Alternatives projection (ranks 2 + 3 only by default)"

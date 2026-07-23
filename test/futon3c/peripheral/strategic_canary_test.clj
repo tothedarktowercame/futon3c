@@ -30,7 +30,8 @@
     (is (= ["M-shared-memory-control-build-test"]
            (get-in result
                    [:counterfactual-baseline :mission-ids])))
-    (is (false? (get-in result [:operator :override?])))
+    (is (true? (get-in result [:operator :agrees-with-advice?])))
+    (is (false? (get-in result [:operator :override-required?])))
     (is (true? (get-in result [:operator :retains-choice?])))
     (is (= :independently-witnessed
            (get-in result
