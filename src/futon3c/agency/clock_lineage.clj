@@ -60,9 +60,12 @@
 
 (defn- endpoint-exists?
   "True when substrate-2 has any current-valid edge on endpoint EP (so we only
-   attach to nodes that really exist). Never throws."
+   attach to nodes that really exist). Never throws. BOUNDED lookup (`&limit=1`)
+   — an unbounded `?end=` on a high-fan-in mission node made the store realize
+   every edge and OOMed the serving JVMs (2026-07-21)."
   [ep]
-  (let [url  (str FUTON1A "/api/alpha/hyperedges?end=" (URLEncoder/encode ep "UTF-8"))
+  (let [url  (str FUTON1A "/api/alpha/hyperedges?end=" (URLEncoder/encode ep "UTF-8")
+                  "&limit=1")
         resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
                   (catch Exception _ nil))]
     (boolean (and resp (= 200 (:status resp)) (string? (:body resp))
@@ -197,7 +200,8 @@
    retracted edges are excluded). Returns a seq of hyperedge maps, or []."
   [hx-type]
   (let [url  (str FUTON1A "/api/alpha/hyperedges?type="
-                  (URLEncoder/encode hx-type "UTF-8"))
+                  (URLEncoder/encode hx-type "UTF-8")
+                  "&limit=10000")
         resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
                   (catch Exception _ nil))]
     (or (when (and resp (= 200 (:status resp)) (string? (:body resp)))

@@ -86,9 +86,13 @@
                      ;; futon3c JVM instead of spawning standalone npx
                      ;; processes (CLAUDE.md I-0: one JVM at rest).
                      ;; Driven via futon3c.dev.shadow + M-x start-shadow /
-                     ;; stop-shadow. Version pinned to match the per-app
-                     ;; package.json files (war-machine + webarxana).
-                     thheller/shadow-cljs {:mvn/version "2.28.20"}
+                     ;; stop-shadow. The embedded build intentionally uses
+                     ;; Shadow 3.1, the first line with the shaded Closure
+                     ;; compiler. 2.28's unshaded compiler requires protobuf
+                     ;; 3.21, which is ABI-incompatible with XTDB 2.1's
+                     ;; protobuf 4.31 in this deliberately unified JVM. The
+                     ;; per-app Node launchers do not share this classpath.
+                     thheller/shadow-cljs {:mvn/version "3.1.0"}
                      ;; CLJS compile-time deps for the embedded shadow-cljs
                      ;; builds. Standalone shadow-cljs reads these from its
                      ;; own :dependencies in shadow-cljs.edn; the embedded

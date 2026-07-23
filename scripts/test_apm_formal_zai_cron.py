@@ -114,10 +114,20 @@ class ProgressTests(unittest.TestCase):
             )
             (apm / "problems/a00J02/lean").mkdir()
             (apm / "problems/a00J02/lean/Main.lean").write_text(
+                "-- sorry in a comment\n"
+                "/- outer sorry /- nested sorry -/ comment -/\n"
+                "def documentation := \"sorry in a string\"\n"
+                "def «sorry» := True\n"
+                "example : True := by\n  sorry\n"
+            )
+            (apm / "problems/a00J03/candidates/old/lean").mkdir(parents=True)
+            (apm / "problems/a00J03/candidates/old/lean/Main.lean").write_text(
                 "example : True := by\n  sorry\n"
             )
             with mock.patch.object(cron, "APM_LEAN_DIR", apm):
                 snapshot = cron.proof_progress_snapshot()
+            self.assertEqual("apm-formal-progress.v2", snapshot["schema"])
+            self.assertEqual("current-lean-code.v1", snapshot["metric_version"])
             self.assertEqual(3, snapshot["total"])
             self.assertEqual(1, snapshot["informal"])
             self.assertEqual(2, snapshot["lean_total"])
@@ -129,7 +139,7 @@ class ProgressTests(unittest.TestCase):
     def test_append_progress_snapshot_writes_jsonl(self):
         with tempfile.TemporaryDirectory() as tmp:
             progress_path = Path(tmp) / "formal-progress.jsonl"
-            snapshot = {"schema": "apm-formal-progress.v1", "lean_clean": 7}
+            snapshot = {"schema": "apm-formal-progress.v2", "lean_clean": 7}
             with (
                 mock.patch.object(cron, "PROGRESS_PATH", progress_path),
                 mock.patch.object(cron, "proof_progress_snapshot", return_value=snapshot),

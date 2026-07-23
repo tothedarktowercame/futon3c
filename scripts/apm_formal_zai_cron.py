@@ -228,11 +228,82 @@ def formal_artifact_exists(problem_id: str) -> bool:
     )
 
 
+APM_PROGRESS_SCHEMA = "apm-formal-progress.v2"
+APM_PROGRESS_METRIC_VERSION = "current-lean-code.v1"
+
+
+def count_lean_sorries(text: str) -> int:
+    """Count executable lowercase ``sorry`` tokens in Lean source text."""
+    index = 0
+    count = 0
+    block_depth = 0
+    state = "code"
+
+    def ident_char(char: str) -> bool:
+        return char.isalnum() or char in "_'"
+
+    while index < len(text):
+        if state == "line-comment":
+            if text[index] == "\n":
+                state = "code"
+            index += 1
+        elif state == "block-comment":
+            if text.startswith("/-", index):
+                block_depth += 1
+                index += 2
+            elif text.startswith("-/", index):
+                block_depth -= 1
+                index += 2
+                if block_depth == 0:
+                    state = "code"
+            else:
+                index += 1
+        elif state == "string":
+            if text[index] == "\\":
+                index = min(len(text), index + 2)
+            elif text[index] == '"':
+                state = "code"
+                index += 1
+            else:
+                index += 1
+        elif state == "quoted-ident":
+            if text[index] == "»":
+                state = "code"
+            index += 1
+        elif text.startswith("--", index):
+            state = "line-comment"
+            index += 2
+        elif text.startswith("/-", index):
+            state = "block-comment"
+            block_depth = 1
+            index += 2
+        elif text[index] == '"':
+            state = "string"
+            index += 1
+        elif text[index] == "«":
+            state = "quoted-ident"
+            index += 1
+        elif (
+            text.startswith("sorry", index)
+            and (index == 0 or not ident_char(text[index - 1]))
+            and (
+                index + 5 == len(text)
+                or not ident_char(text[index + 5])
+            )
+        ):
+            count += 1
+            index += 5
+        else:
+            index += 1
+    return count
+
+
 def proof_progress_snapshot() -> dict[str, Any]:
     """Scan the same canonical problem universe used by the Stack HUD."""
     problem_ids = sorted(path.stem for path in (APM_LEAN_DIR / "apm").glob("*.tex"))
     snapshot: dict[str, Any] = {
-        "schema": "apm-formal-progress.v1",
+        "schema": APM_PROGRESS_SCHEMA,
+        "metric_version": APM_PROGRESS_METRIC_VERSION,
         "timestamp": iso_now(),
         "total": len(problem_ids),
         "informal": 0,
@@ -249,14 +320,15 @@ def proof_progress_snapshot() -> dict[str, Any]:
                 snapshot["informal"] += 1
         except OSError:
             pass
-        lean_files = list(bundle.rglob("*.lean")) if bundle.is_dir() else []
+        lean_dir = bundle / "lean"
+        lean_files = list(lean_dir.rglob("*.lean")) if lean_dir.is_dir() else []
         if not lean_files:
             continue
         snapshot["lean_total"] += 1
         sorry_count = 0
         for path in lean_files:
             text = path.read_text(encoding="utf-8")
-            sorry_count += len(re.findall(r"\bsorry\b", text))
+            sorry_count += count_lean_sorries(text)
         snapshot["sorries"] += sorry_count
         if sorry_count:
             snapshot["lean_with_sorry"] += 1

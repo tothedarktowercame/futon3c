@@ -123,6 +123,28 @@
   (roster/persist-registry! (registry-with-agents ["a" "b"]))
   (is (= ["a" "b"] (persisted-agent-ids))))
 
+(deftest concurrent-readers-never-observe-partial-roster-edn
+  (let [path (roster/roster-store-path)
+        done? (atom false)
+        read-errors (atom [])
+        reader (future
+                 (while (not @done?)
+                   (try
+                     (edn/read-string (slurp path))
+                     (catch Throwable t
+                       (swap! read-errors conj (.getMessage t))))))]
+    (try
+      (dotimes [n 200]
+        (roster/persist-registry!
+         {"a" {:agent/id {:id/value "a" :id/type :continuity}
+               :agent/type :codex
+               :agent/session-id (str "session-" n)}}))
+      (finally
+        (reset! done? true)
+        @reader))
+    (is (empty? @read-errors) @read-errors)
+    (is (= ["a"] (persisted-agent-ids)))))
+
 (deftest counter-ratchet-allow-drop-escape-permits-bulk-drop
   (roster/persist-registry! (registry-with-agents ["a" "b" "c" "d"]))
   (System/setProperty "FUTON3C_ROSTER_ALLOW_DROP" "true")

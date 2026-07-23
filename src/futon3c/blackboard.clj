@@ -176,6 +176,14 @@
 ;; target; the next ticker will refresh after that client exits.
 (defonce ^:private !async-emacsclient-inflight (atom #{}))
 
+(def ^:private async-emacsclient-reap-grace-ms
+  "Additional grace after the caller's one-second wait. An async projection
+  must never retain a target's in-flight claim indefinitely: one wedged
+  emacsclient otherwise freezes every later *agents* snapshot for that socket."
+  1000)
+
+(declare reap-emacsclient!)
+
 (defn- claim-async-emacsclient! [target-key]
   (loop []
     (let [current @!async-emacsclient-inflight]
@@ -189,7 +197,13 @@
 (defn- clear-async-emacsclient-inflight! [target-key proc]
   (future
     (try
-      (.waitFor proc)
+      (when-not (.waitFor proc async-emacsclient-reap-grace-ms
+                          java.util.concurrent.TimeUnit/MILLISECONDS)
+        (println (str "[bb] async emacsclient pid="
+                      (try (.pid proc) (catch Throwable _ "?"))
+                      " exceeded bounded grace; reaping target=" target-key))
+        (flush)
+        (reap-emacsclient! proc))
       (catch Throwable _ nil)
       (finally
         (swap! !async-emacsclient-inflight disj target-key)))))
@@ -236,12 +250,10 @@
    immediately without waiting for a reply. Returns {:ok bool :output nil|str}.
    The next poll will redo the projection if this one is dropped.
 
-   Does NOT forcibly kill the child on timeout: with -n the client should
-   exit in milliseconds, and a >1s wait means Emacs is briefly wedged.
-   Killing emacsclient mid-handshake makes Emacs log
-   \"Process server <PID> no longer connected to pipe; closed it\" — letting
-   the client complete on its own avoids that noise; the process exits
-   naturally once Emacs unwedges."
+   A timed-out child receives a short additional grace period, then is reaped
+   and its per-target in-flight claim is cleared. With -n the client normally
+   exits in milliseconds; bounding the exceptional path prevents one wedged
+   handshake from freezing all later snapshots for that Emacs socket."
   ([elisp] (run-emacsclient-async! elisp nil))
   ([elisp socket-override]
    (try

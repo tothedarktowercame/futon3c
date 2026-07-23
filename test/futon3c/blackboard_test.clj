@@ -265,12 +265,12 @@
       (is (= "back\\\\slash" (escape "back\\slash"))))))
 
 (deftest async-emacsclient-coalesces-per-target-while-inflight
-  (testing "slow async snapshots do not pile up behind a wedged Emacs socket"
+  (testing "slow async snapshots coalesce, then a wedged client is reaped"
     (let [script (doto (java.io.File/createTempFile "fake-emacsclient-" ".sh")
                    (.deleteOnExit))
           run-async #'futon3c.blackboard/run-emacsclient-async!
           inflight #'futon3c.blackboard/!async-emacsclient-inflight]
-      (spit script "#!/usr/bin/env bash\nsleep 2\n")
+      (spit script "#!/usr/bin/env bash\nsleep 30\n")
       (.setExecutable script true)
       (with-redefs [bb/emacsclient-bin (fn [] (.getAbsolutePath script))]
         (try
@@ -279,7 +279,13 @@
                 second-result (run-async "(message \"two\")" "test-socket")]
             (is (= {:ok false :output "timeout"} first-result))
             (is (= {:ok false :output "inflight"} second-result))
-            (is (contains? @@inflight "test-socket")))
+            (is (contains? @@inflight "test-socket"))
+            (let [deadline (+ (System/currentTimeMillis) 4000)]
+              (while (and (contains? @@inflight "test-socket")
+                          (< (System/currentTimeMillis) deadline))
+                (Thread/sleep 25))
+              (is (not (contains? @@inflight "test-socket"))
+                  "bounded reap releases the target for a later snapshot")))
           (finally
             (reset! @inflight #{})))))))
 

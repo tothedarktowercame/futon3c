@@ -106,6 +106,22 @@ By default those are skipped: the REPL already streams its own turns."
   :type 'boolean
   :group 'agent-follow)
 
+(defcustom agent-follow-overrun-grace 900
+  "Seconds a non-done job may stay quiet before follow-mode stops pinning it.
+The Agency's job cap marks long jobs \"failed\" while the lane keeps
+executing (capped-but-alive, observed 2026-07-19); such jobs are followed —
+pinned and fetched individually when they fall out of the windowed poll —
+until they reach \"done\" or go quiet for this long."
+  :type 'integer
+  :group 'agent-follow)
+
+(defvar-local agent-follow--live-jobs nil
+  "Hash of job-id → wallclock time of the last NEW event we rendered.
+Jobs land here while streaming (any state but \"done\"); they are dropped
+on \"done\" or after `agent-follow-overrun-grace' seconds of silence.
+Used to fetch capped-but-alive jobs individually when job traffic pushes
+them out of the windowed poll response.")
+
 (declare-function futon-agency-ws-subscribe "futon-agency-ws" (type handler))
 (declare-function futon-agency-ws-connect "futon-agency-ws" ())
 (declare-function websocket-openp "websocket" (websocket))
@@ -249,9 +265,66 @@ Never touches the progress line while the REPL streams its own turn."
              (format "%s⇐%s" agent-follow--agent-id caller)
              lines))
           (puthash job-id max-seq agent-follow--seen)
+          ;; Pin any job still emitting events, whatever its state — the cap
+          ;; marks jobs "failed" while the lane keeps working. Unpin on done.
+          (when agent-follow--live-jobs
+            (cond
+             ((equal state "done")
+              (remhash job-id agent-follow--live-jobs))
+             (new-events
+              (puthash job-id (float-time) agent-follow--live-jobs))))
           (agent-follow--update-progress
            job-id caller (equal state "running")
            (agent-follow--last-tool-preview events)))))))
+
+(defun agent-follow--fetch-pinned-missing (buffer present-ids)
+  "Individually fetch pinned live jobs absent from PRESENT-IDS.
+Capped-but-alive jobs drop out of the windowed poll as newer jobs arrive;
+this keeps them streaming. Expired pins (quiet longer than
+`agent-follow-overrun-grace') are dropped instead of fetched. At most
+three fetches per poll."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when agent-follow--live-jobs
+        (let ((now (float-time)) (fetched 0))
+          (maphash
+           (lambda (job-id last-event-at)
+             (cond
+              ((member job-id present-ids) nil)
+              ((> (- now last-event-at) agent-follow-overrun-grace)
+               (remhash job-id agent-follow--live-jobs))
+              ((>= fetched 3) nil)
+              (t
+               (setq fetched (1+ fetched))
+               (let ((url (format "%s/api/alpha/invoke/jobs/%s"
+                                  (agent-follow--agency-url) job-id))
+                     (outbuf (generate-new-buffer " *agent-follow-pin*")))
+                 (make-process
+                  :name "agent-follow-pin"
+                  :buffer outbuf
+                  :command (list "curl" "-sS" "--max-time" "10" url)
+                  :noquery t
+                  :sentinel
+                  (lambda (p _event)
+                    (when (memq (process-status p) '(exit signal))
+                      (let ((out (when (buffer-live-p (process-buffer p))
+                                   (with-current-buffer (process-buffer p)
+                                     (buffer-string)))))
+                        (when (buffer-live-p (process-buffer p))
+                          (kill-buffer (process-buffer p)))
+                        (when (and out (buffer-live-p buffer))
+                          (with-current-buffer buffer
+                            (condition-case nil
+                                (let* ((data (json-parse-string
+                                              out :object-type 'alist
+                                              :array-type 'list
+                                              :null-object nil
+                                              :false-object nil))
+                                       (job (alist-get 'job data)))
+                                  (when job
+                                    (agent-follow--render-jobs (list job))))
+                              (error nil)))))))))))
+           agent-follow--live-jobs)))))))
 
 (defun agent-follow--handle-response (buffer json-string)
   "Parse JSON-STRING and render into BUFFER."
@@ -264,7 +337,9 @@ Never touches the progress line while the REPL streams its own turn."
                                           :null-object nil
                                           :false-object nil))
                  (jobs (alist-get 'jobs data)))
-            (when jobs (agent-follow--render-jobs jobs)))
+            (when jobs (agent-follow--render-jobs jobs))
+            (agent-follow--fetch-pinned-missing
+             buffer (mapcar (lambda (j) (alist-get 'job-id j)) jobs)))
         (error nil)))))
 
 (defvar-local agent-follow--inflight nil
@@ -342,15 +417,29 @@ jobs still in flight plus anything new."
                                                    :null-object nil
                                                    :false-object nil)))
                      (dolist (job (alist-get 'jobs data))
-                       (let ((job-id (alist-get 'job-id job))
-                             (state (alist-get 'state job)))
+                       (let* ((job-id (alist-get 'job-id job))
+                              (state (alist-get 'state job))
+                              (events (append (alist-get 'events job) nil))
+                              (last-at (let ((at (alist-get
+                                                  'at (car (last events)))))
+                                         (when at
+                                           (ignore-errors
+                                             (float-time (date-to-time at))))))
+                              ;; A "failed" job with recent events is likely
+                              ;; capped-but-alive — do NOT swallow its history;
+                              ;; it renders and gets pinned like a live job.
+                              (capped-alive?
+                               (and (equal state "failed") last-at
+                                    (< (- (float-time) last-at)
+                                       agent-follow-overrun-grace))))
                          (when (and job-id
-                                    (member state '("done" "failed")))
+                                    (member state '("done" "failed"))
+                                    (not capped-alive?))
                            (puthash job-id
                                     (apply #'max 0
                                            (mapcar (lambda (e)
                                                      (or (alist-get 'seq e) 0))
-                                                   (append (alist-get 'events job) nil)))
+                                                   events))
                                     agent-follow--seen)))))
                  (error nil))
                (agent-follow--start-timer)))))))))
@@ -388,7 +477,11 @@ when its buffer dies."
 Polls the Agency invoke-jobs ledger and renders text/tool events; while a
 followed job runs, the REPL progress line shows the caller and last tool.
 History is not replayed: on enable, finished jobs are marked seen; only
-in-flight and future turns stream in."
+in-flight and future turns stream in.  Jobs the cap marked \"failed\" that
+are still emitting events (capped-but-alive) count as in-flight: their
+history renders and they stay pinned — fetched individually if job traffic
+pushes them out of the poll window — until done or quiet past
+`agent-follow-overrun-grace'."
   :lighter " ⟲follow"
   (if agent-follow-mode
       (let ((aid (agent-follow--detect-agent-id)))
@@ -399,6 +492,7 @@ in-flight and future turns stream in."
                        (buffer-name)))
           (setq agent-follow--agent-id aid)
           (setq agent-follow--seen (make-hash-table :test 'equal))
+          (setq agent-follow--live-jobs (make-hash-table :test 'equal))
           (setq agent-follow--progress-jobs nil)
           ;; Marker-line highlighting via font-lock (insert-time face
           ;; properties get stripped by refontification).
