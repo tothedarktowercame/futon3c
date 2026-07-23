@@ -15,4 +15,12 @@
 
   futon3c.agency.federation-test
   {:linters {:unresolved-var {:exclude [org.httpkit.client/get
+                                        org.httpkit.client/post]}}}
+
+  futon3c.evidence.futon1b-backend
+  {:linters {:unresolved-var {:exclude [org.httpkit.client/get
+                                        org.httpkit.client/post]}}}
+
+  futon3c.evidence.futon1b-backend-test
+  {:linters {:unresolved-var {:exclude [org.httpkit.client/get
                                         org.httpkit.client/post]}}}}}

@@ -1708,6 +1708,7 @@
     :fork-not-found 409
     :invalid-entry 400
     :invalid-input 400
+    :store-serialization 400
     :store-timeout 503
     :store-unreachable 503
     :store-rejected 503
@@ -1804,10 +1805,12 @@
               (if (:ok result)
                 (json-response 201 {:ok true
                                     :evidence/id (get-in result [:entry :evidence/id])
+                                    :trace-id (:trace-id result)
                                     :entry (:entry result)})
                 (json-response (append-error-status (:error/code result))
                                {:ok false
                                 :err (name (:error/code result))
+                                :trace-id (:trace-id result)
                                 :error result})))
             (finally
               (when evidence-id

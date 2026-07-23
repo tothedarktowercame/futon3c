@@ -83,6 +83,76 @@
            :error/at (str (Instant/now))}
     (seq context) (assoc :error/context context)))
 
+(defn- append-trace-id
+  "Stable, non-secret correlation id shared by the producer and Futon1b logs."
+  [evidence-id]
+  (str "evidence-append:" evidence-id))
+
+(defn- edn-readable?
+  [value]
+  (try
+    (edn/read-string (pr-str value))
+    true
+    (catch Exception _
+      false)))
+
+(defn- path-segment
+  "Keep diagnostic paths structural. Map keys that cannot themselves be
+   represented as EDN are replaced with their entry index."
+  [k idx]
+  (if (and (or (keyword? k) (string? k) (integer? k))
+           (edn-readable? k))
+    k
+    [:map-entry idx]))
+
+(defn- invalid-edn-leaves
+  "Locate the deepest values that make a payload unreadable by
+   clojure.edn/read-string. Values are not copied into diagnostics; only a
+   structural path, JVM type, and malformed keyword/symbol token are retained."
+  ([value] (invalid-edn-leaves [] value))
+  ([path value]
+   (let [children
+         (cond
+           (map? value)
+           (mapcat (fn [[idx [k v]]]
+                     (let [segment (path-segment k idx)]
+                       (concat
+                        (invalid-edn-leaves (conj path segment :map-key) k)
+                        (invalid-edn-leaves (conj path segment) v))))
+                   (map-indexed vector value))
+
+           (or (vector? value) (list? value) (seq? value))
+           (mapcat (fn [[idx v]]
+                     (invalid-edn-leaves (conj path idx) v))
+                   (map-indexed vector value))
+
+           (set? value)
+           (mapcat (fn [[idx v]]
+                     (invalid-edn-leaves (conj path [:set-member idx]) v))
+                   (map-indexed vector value))
+
+           :else
+           [])]
+     (if (seq children)
+       children
+       (when-not (edn-readable? value)
+         [{:path path
+           :value-type (.getName (class value))
+           :token (when (or (keyword? value) (symbol? value))
+                    (pr-str value))}])))))
+
+(defn- serialize-append
+  "Serialize exactly once and prove that Futon1b's EDN reader can consume the
+   resulting wire representation before opening a connection."
+  [validated]
+  (try
+    (let [body (pr-str validated)]
+      (edn/read-string body)
+      {:body body})
+    (catch Exception e
+      {:error e
+       :invalid-edn (vec (invalid-edn-leaves validated))})))
+
 (defn- timeout-error?
   [error]
   (loop [t error]
@@ -178,44 +248,59 @@
 
   (-append [_ validated]
     (let [eid (:evidence/id validated)
-          {:keys [status body error]}
-          @(http/post (api-url base-url "/api/alpha/evidence")
-                      {:timeout append-timeout-ms
-                       :as :text
-                       :headers {"content-type" "application/edn"
-                                 "x-penholder" (penholder)}
-                       :body (pr-str validated)})
-          parsed (read-edn body)]
-      (cond
-        error
-        (social-error (if (timeout-error? error)
-                        :store-timeout
-                        :store-unreachable)
-                      (if (timeout-error? error)
-                        "futon1b persistence timed out"
-                        "futon1b server unreachable")
-                      :evidence-id eid :detail (str error))
+          trace-id (append-trace-id eid)
+          serialized (serialize-append validated)]
+      (if-let [serialization-error (:error serialized)]
+        (social-error :store-serialization
+                      "evidence payload is not EDN-wire-readable"
+                      :evidence-id eid
+                      :trace-id trace-id
+                      :detail (.getMessage ^Exception serialization-error)
+                      :invalid-edn (:invalid-edn serialized))
+        (let [{:keys [status body error]}
+              @(http/post (api-url base-url "/api/alpha/evidence")
+                          {:timeout append-timeout-ms
+                           :as :text
+                           :headers {"content-type" "application/edn"
+                                     "x-penholder" (penholder)
+                                     "x-trace-id" trace-id}
+                           :body (:body serialized)})
+              parsed (read-edn body)]
+          (cond
+            error
+            (social-error (if (timeout-error? error)
+                            :store-timeout
+                            :store-unreachable)
+                          (if (timeout-error? error)
+                            "futon1b persistence timed out"
+                            "futon1b server unreachable")
+                          :evidence-id eid :trace-id trace-id
+                          :detail (str error))
 
-        (= 201 status)
-        {:ok true :entry (or (:entry parsed) validated)}
+            (= 201 status)
+            {:ok true
+             :entry (or (:entry parsed) validated)
+             :trace-id trace-id}
 
-        (and (= 409 status) (= :reply-not-found (:error parsed)))
-        (social-error :reply-not-found "in-reply-to references missing entry"
-                      :in-reply-to (:evidence/in-reply-to validated)
-                      :evidence-id eid)
+            (and (= 409 status) (= :reply-not-found (:error parsed)))
+            (social-error :reply-not-found
+                          "in-reply-to references missing entry"
+                          :in-reply-to (:evidence/in-reply-to validated)
+                          :evidence-id eid :trace-id trace-id)
 
-        (and (= 409 status) (= :fork-not-found (:error parsed)))
-        (social-error :fork-not-found "fork-of references missing entry"
-                      :fork-of (:evidence/fork-of validated)
-                      :evidence-id eid)
+            (and (= 409 status) (= :fork-not-found (:error parsed)))
+            (social-error :fork-not-found "fork-of references missing entry"
+                          :fork-of (:evidence/fork-of validated)
+                          :evidence-id eid :trace-id trace-id)
 
-        (= 409 status)
-        (social-error :duplicate-id "Evidence id already exists"
-                      :evidence-id eid)
+            (= 409 status)
+            (social-error :duplicate-id "Evidence id already exists"
+                          :evidence-id eid :trace-id trace-id)
 
-        :else
-        (social-error :store-rejected "futon1b rejected the append"
-                      :evidence-id eid :status status :body parsed))))
+            :else
+            (social-error :store-rejected "futon1b rejected the append"
+                          :evidence-id eid :trace-id trace-id
+                          :status status :body parsed))))))
 
   (-get [_ evidence-id]
     (let [{:keys [status body]}

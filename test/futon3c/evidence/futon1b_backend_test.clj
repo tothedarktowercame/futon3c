@@ -1,5 +1,6 @@
 (ns futon3c.evidence.futon1b-backend-test
-  (:require [clojure.string :as str]
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.evidence.backend :as backend]
             [futon3c.evidence.futon1b-backend :as sut]
@@ -94,3 +95,51 @@
                                       :body "{:error :reply-not-found}"}))]
       (is (= :reply-not-found (:error/code (backend/-append store entry))))
       (is (zero? @gets) "the client does not add a preflight point read"))))
+
+(deftest append-propagates-a-stable-trace-id
+  (let [request (atom nil)
+        store (sut/make-futon1b-backend "http://store.test")
+        entry {:evidence/id "e-traced"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "producer-test"
+               :evidence/at "2026-07-23T00:00:00Z"
+               :evidence/body {:event "trace-test"}
+               :evidence/tags []}]
+    (with-redefs [http/post
+                  (fn [url options]
+                    (reset! request {:url url :options options})
+                    (delay {:status 201 :body (pr-str {:entry entry})}))]
+      (let [result (backend/-append store entry)]
+        (is (:ok result))
+        (is (= "evidence-append:e-traced" (:trace-id result)))
+        (is (= "evidence-append:e-traced"
+               (get-in @request [:options :headers "x-trace-id"])))
+        (is (= entry
+               (edn/read-string (get-in @request [:options :body]))))))))
+
+(deftest malformed-wire-edn-is-rejected-before-http
+  (let [posts (atom 0)
+        store (sut/make-futon1b-backend "http://store.test")
+        malformed (keyword ":")
+        entry {:evidence/id "e-malformed"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "producer-test"
+               :evidence/at "2026-07-23T00:00:00Z"
+               :evidence/body {:event "malformed-test"
+                               :producer-value malformed}
+               :evidence/tags []}]
+    (with-redefs [http/post (fn [& _]
+                              (swap! posts inc)
+                              (delay {:status 201 :body "{}"}))]
+      (let [result (backend/-append store entry)]
+        (is (= :store-serialization (:error/code result)))
+        (is (= "evidence-append:e-malformed"
+               (get-in result [:error/context :trace-id])))
+        (is (= [{:path [:evidence/body :producer-value]
+                 :value-type "clojure.lang.Keyword"
+                 :token "::"}]
+               (get-in result [:error/context :invalid-edn])))
+        (is (zero? @posts)
+            "an unreadable payload never opens a store connection")))))

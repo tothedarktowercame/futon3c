@@ -70,6 +70,9 @@
     :store-unreachable {:kind :unreachable
                         :label "persistence transport unreachable"
                         :invariant invariant/I-evidence-per-turn}
+    :store-serialization {:kind :serialization
+                          :label "persistence serialization rejected"
+                          :invariant invariant/I-evidence-per-turn}
     :store-rejected {:kind :store-rejected
                      :label "persistence rejected"
                      :invariant invariant/I-evidence-per-turn}
@@ -228,6 +231,38 @@
 
     :else nil))
 
+(defn- evidence-field
+  [entry namespaced-key unqualified-key]
+  (or (get entry namespaced-key)
+      (get entry unqualified-key)))
+
+(defn- event-kind
+  [entry]
+  (let [body (evidence-field entry :evidence/body :body)]
+    (when (map? body)
+      (or (get body :event)
+          (get body "event")))))
+
+(defn- diagnostic-suffix
+  "Render producer identity and wire diagnostics without logging evidence body."
+  [entry result]
+  (let [context (:error/context result)
+        fields [["trace-id" (:trace-id context)]
+                ["evidence-id" (or (:evidence/id entry)
+                                   (:evidence-id context))]
+                ["author" (evidence-field entry :evidence/author :author)]
+                ["session" (evidence-field entry
+                                           :evidence/session-id
+                                           :session-id)]
+                ["event" (event-kind entry)]
+                ["status" (:status context)]
+                ["invalid-edn" (:invalid-edn context)]]]
+    (str/join " "
+              (keep (fn [[label value]]
+                      (when (some? value)
+                        (str label "=" (pr-str value))))
+                    fields))))
+
 (defn append!
   "Append an evidence entry through the single boundary.
 
@@ -288,7 +323,8 @@
         ;; Detect via the SocialError shape; convert to boundary's receipt shape.
         (shapes/valid? shapes/SocialError result)
         (let [msg (:error/message result)
-              taxonomy (social-error-taxonomy (:error/code result))]
+              taxonomy (social-error-taxonomy (:error/code result))
+              diagnostic (diagnostic-suffix coerced result)]
           (when-not (:quiet? taxonomy)
             (binding [*out* *err*]
               (println (str "[boundary] "
@@ -296,11 +332,14 @@
                               "I-single-boundary"
                               "I-evidence-per-turn")
                             " VIOLATION: "
-                            (:label taxonomy) " — " msg))))
+                            (:label taxonomy) " — " msg
+                            (when (seq diagnostic)
+                              (str " " diagnostic))))))
           {:ok false
            :error/code (:error/code result)
            :error/message msg
            :error/at (:error/at result)
+           :trace-id (get-in result [:error/context :trace-id])
            :evidence/id (or (:evidence/id coerced)
                             (get-in result [:error/context :evidence-id]))
            :invariant/violation
@@ -364,7 +403,8 @@
             :else
             {:ok true
              :entry entry
-             :evidence/id eid}))))
+             :evidence/id eid
+             :trace-id (:trace-id result)}))))
     (catch clojure.lang.ExceptionInfo e
       (let [msg (.getMessage e)
             data (ex-data e)]

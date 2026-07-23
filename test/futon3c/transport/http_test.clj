@@ -1910,6 +1910,7 @@
 
 (deftest evidence-create-transport-failures-are-retryable
   (testing "outbox clients receive 503, not a terminal shape-like 400"
+    (is (= 400 (#'http/append-error-status :store-serialization)))
     (is (= 503 (#'http/append-error-status :store-timeout)))
     (is (= 503 (#'http/append-error-status :store-unreachable)))
     (is (= 503 (#'http/append-error-status :store-rejected)))))

@@ -239,6 +239,46 @@
         (is (re-find #"I-evidence-per-turn" (str err-writer)))
         (is (not (re-find #"shape rejected" (str err-writer))))))))
 
+(deftest persistence-failure-log-identifies-producer-without-body
+  (let [entry {:evidence/id "e-producer-trace"
+               :evidence/subject {:ref/type :agent :ref/id "claude-test"}
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "codex-producer"
+               :evidence/session-id "session-42"
+               :evidence/at "2026-07-23T00:00:00Z"
+               :evidence/body {:event "invoke-complete"
+                               :secret "must-not-appear"}
+               :evidence/tags [:test]}
+        err-writer (java.io.StringWriter.)
+        result (with-redefs [store/append*
+                             (fn [_ _]
+                               {:error/component :E-store
+                                :error/code :store-serialization
+                                :error/message
+                                "evidence payload is not EDN-wire-readable"
+                                :error/at "2026-07-23T00:00:01Z"
+                                :error/context
+                                {:evidence-id "e-producer-trace"
+                                 :trace-id
+                                 "evidence-append:e-producer-trace"
+                                 :invalid-edn
+                                 [{:path [:evidence/body :producer-value]
+                                   :value-type "clojure.lang.Keyword"
+                                   :token "::"}]}})]
+                 (binding [*err* err-writer]
+                   (boundary/append! *evidence-backend* entry)))
+        logged (str err-writer)]
+    (is (false? (:ok result)))
+    (is (= :serialization (get-in result [:invariant/violation :kind])))
+    (is (= "evidence-append:e-producer-trace" (:trace-id result)))
+    (is (re-find #"trace-id=\"evidence-append:e-producer-trace\"" logged))
+    (is (re-find #"author=\"codex-producer\"" logged))
+    (is (re-find #"session=\"session-42\"" logged))
+    (is (re-find #"event=\"invoke-complete\"" logged))
+    (is (re-find #"producer-value" logged))
+    (is (not (re-find #"must-not-appear" logged)))))
+
 ;; -----------------------------------------------------------------------------
 ;; I-single-boundary canonical statement is grep-verifiable.
 ;; -----------------------------------------------------------------------------
