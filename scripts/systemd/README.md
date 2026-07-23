@@ -38,12 +38,25 @@ The vitality timer is independent of the serving JVM. It samples cgroup
 `memory.current/high/max`, anon/file breakdown, `memory.events`, PSI, the main
 `:7073/health` path, and a separate one-worker `:7072/health` acceptor once per
 minute into the bounded private log `~/.local/state/futon1b/vitality.jsonl`.
-The split distinguishes a live JVM from a dead or saturated main dispatcher.
+It also counts completed `/api/alpha/evidence` errors since the preceding
+sample, so a live store with rejected boundary appends is reported as degraded
+rather than healthy. The split distinguishes a live JVM from a dead or
+saturated main dispatcher.
 Enable it after installing:
 
 ```bash
 systemctl --user enable --now futon1b-vitality.timer
 ```
+
+For a concise, read-only five-minute check:
+
+```bash
+python3 scripts/systemd/futon1b-vitality.py --check
+```
+
+It exits zero for `OK` and nonzero for `DEGRADED`, while reporting unit state,
+both listener latencies, memory-high ratio, and recent evidence rejections.
+Manual checks do not advance the timer's journal cursor or monitoring state.
 
 `daemon-reload` only loads definitions; do **not** enable or start the futon3c
 service yet. `futon1b-server.service` is the laptop's authoritative evidence
