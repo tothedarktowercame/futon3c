@@ -1,196 +1,111 @@
 (ns futon3c.aif.live-recommendation
-  "Pure projection separating a live strategic selection from policy comparison
-   and downstream actuation authority.
+  "Presentation-only projection of the authoritative judgement decision.
 
-   The War Machine recommendation is an authoritative, reason-bearing strategic
-   selection, not an operator-approval request. A selector abstention is
-   diagnostic evidence; it cannot turn the operator surface into an abstain
-   page. Actual abstention belongs to the downstream act-gate, which this
-   namespace never authorizes.")
+   Selection belongs to the reason-bearing WM selector. This namespace never
+  re-ranks `ranked-actions`, so a held cascade, placeholder score, no-op, or
+   stale presentation heuristic cannot manufacture a second winner."
+  (:require [clojure.walk :as walk]))
 
-(def algorithm :wm-live-recommendation/separated-v1)
-(def default-ranking-limit 5)
+(def algorithm :wm-live-recommendation/decision-projection-v2)
 
 (defn- value
   [m k]
   (or (get m k) (get m (name k))))
 
-(defn- finite-number?
+(defn- keyword-value
   [x]
-  (and (number? x) (Double/isFinite (double x))))
+  (cond
+    (keyword? x) x
+    (string? x) (keyword x)
+    :else x))
 
-(defn- action-of
-  [entry]
-  (value entry :action))
+(defn- ranking-items
+  [mission-ids]
+  (mapv (fn [rank mission-id]
+          {:rank rank
+           :type :advance-mission
+           :target mission-id})
+        (range 1 (inc (count mission-ids)))
+        mission-ids))
 
-(defn- controller-score
-  [entry]
-  (some #(when (finite-number? %) (double %))
-        [(value entry :controller-score)
-         (value entry :G-total)
-         (value entry :G-efe)]))
-
-(defn- habit-bias
-  [entry]
-  (let [bias (value entry :habit-prior-bias)]
-    (if (finite-number? bias) (double bias) 0.0)))
-
-(defn- selection-gain
-  [judgement]
-  (let [state (value judgement :selection-gain)
-        gain (if (map? state) (value state :selection-gain) state)]
-    (if (and (finite-number? gain) (pos? (double gain)))
-      (double gain)
-      1.0)))
-
-(defn- ranking-item
-  [entry tau]
-  (let [action (action-of entry)
-        score (controller-score entry)
-        bias (habit-bias entry)]
-    {:rank (value entry :rank)
-     :action action
-     :type (value action :type)
-     :target (or (value action :target)
-                 (value action :target-class))
-     :controller-score score
-     :habit-prior-bias bias
-     :selection-potential
-     (when score (+ (- (/ score tau)) bias))}))
-
-(defn- controller-ranking
-  [ranked tau]
-  (->> ranked
-       (keep #(let [item (ranking-item % tau)]
-                (when (:controller-score item) item)))
-       (sort-by (juxt :controller-score :rank))
-       vec))
-
-(defn- habit-ranking
-  [controller-items]
-  (->> controller-items
-       (sort-by (juxt (comp - :selection-potential)
-                      :controller-score
-                      :rank))
-       vec))
-
-(defn- actionable?
-  [item]
-  (not= :no-op (some-> (:type item) keyword)))
-
-(defn- strategic-checkpoint
-  [judgement controller-items]
-  (let [checkpoint (value judgement :strategic-checkpoint)
-        selector-report (some-> (value judgement :decision)
-                                (value :strategic-memory))
-        status (some-> (value checkpoint :status) keyword)
-        recommendation (value checkpoint :recommendation)
-        mission-ids (vec (or (value recommendation :mission-ids) []))
-        mission-id (first mission-ids)
-        memory-ids (vec (or (value recommendation :memory-ids) []))
-        contributions (vec (or (value recommendation :relation-contributions)
-                               []))
-        candidate (first (filter #(= mission-id (:target %))
-                                 controller-items))
-        eligible? (and (= :advice-issued status)
-                       (string? mission-id)
-                       candidate
-                       (seq memory-ids)
-                       (seq contributions))]
-    (if eligible?
-      {:trace-present? true
-       :influenced? true
-       :status :eligible
-       :reason :reviewed-strategic-checkpoint
-       :mission-ids mission-ids
-       :memory-ids memory-ids
-       :relation-contributions contributions
-       :candidate candidate}
-      {:trace-present? (map? checkpoint)
-       :influenced? false
-       :status (if (map? checkpoint) :ineligible :absent)
-       :reason (cond
-                 (map? checkpoint) :strategic-checkpoint-incomplete
-                 (map? selector-report)
-                 (or (some-> (value selector-report :reason) keyword)
-                     :selector-reports-no-strategic-influence)
-                 :else :no-live-strategic-trace)
-       :selector-report selector-report
-       :mission-ids mission-ids
-       :memory-ids memory-ids
-       :relation-contributions contributions})))
+(defn- ranking
+  [semantics mission-ids]
+  (let [items (ranking-items (vec (or mission-ids [])))]
+    {:semantics semantics
+     :winner (first items)
+     :items items}))
 
 (defn project
-  "Build a live strategic recommendation and inspectable comparison trace.
+  "Display `judgement.decision` and its named counterfactuals unchanged.
 
-   The controller head is the reduction-safe recommendation. A complete,
-   reviewed strategic checkpoint may replace it, but an absent or incomplete
-   checkpoint is recorded as non-influential rather than silently inferred.
-   The selector decision is retained as a comparison diagnostic and
-   never blocks the recommendation."
+   A missing/non-actionable decision is a system-readiness failure, not an
+   invitation for this presentation layer to choose another action."
   ([judgement] (project judgement {}))
-  ([judgement {:keys [ranking-limit]
-               :or {ranking-limit default-ranking-limit}}]
-   (let [ranked (vec (or (value judgement :ranked-actions)
-                         (value judgement :admissible-actions)
-                         []))
-         gain (selection-gain judgement)
-         tau (/ 1.0 gain)
-         controller-items (controller-ranking ranked tau)
-         habit-items (habit-ranking controller-items)
-         controller-head (first (filter actionable? controller-items))
-         habit-head (first (filter actionable? habit-items))
-         strategic (strategic-checkpoint judgement controller-items)
-         recommendation
-         (or (:candidate strategic) controller-head)
-         legacy-decision (value judgement :decision)
-         legacy-action (value legacy-decision :action)
-         legacy-reason (value legacy-decision :reason)]
-     (when recommendation
+  ([judgement _opts]
+   (let [judgement (walk/keywordize-keys judgement)
+         decision (value judgement :decision)
+         action (value decision :action)
+         action-type (keyword-value (value action :type))
+         strategic (value decision :strategic-memory)
+         influenced? (true? (value strategic :influenced?))
+         counterfactuals (or (value strategic :counterfactuals) {})
+         actuation (or (value strategic :actuation)
+                       {:status :pending-downstream-gates
+                        :authorized? false
+                        :executed? false})]
+     (if (and (map? decision)
+              (map? action)
+              (not= :abstain action-type)
+              influenced?)
        {:status :recommendation-issued
         :algorithm algorithm
         :recommendation
-        (assoc recommendation
-               :source (if (:influenced? strategic)
-                         :reviewed-strategic-checkpoint
-                         :controller-head)
+        (assoc action
+               :source :judgement.decision
+               :policy-id (value decision :selected-policy-id)
+               :mission-ids (vec (or (value decision
+                                             :selected-mission-ids)
+                                     []))
+               :memory-ids (vec (or (value strategic :memory-ids) []))
                :recommendation-authority :live
                :live-selection? true
                :advisory? false
                :requires-operator-override? false)
         :rankings
-        {:controller
-         {:semantics :controller-score-ascending
-          :winner (first controller-items)
-          :items (vec (take ranking-limit controller-items))}
-         :habit-adjusted
-         {:semantics :lnE-minus-controller-score-over-temperature
-          :temperature tau
-          :selection-gain gain
-          :winner (first habit-items)
-          :items (vec (take ranking-limit habit-items))}
-         :counterfactual
-         {:semantics :habit-disabled-controller-ranking
-          :winner (first controller-items)
-          :items (vec (take ranking-limit controller-items))}}
+        {:authoritative
+         (ranking :reason-bearing-strategic-policy
+                  (value decision :selected-mission-ids))
+         :fixed
+         (ranking :fixed-endpoint-order
+                  (value counterfactuals :fixed))
+         :additive-controller
+         (ranking :legacy-additive-controller
+                  (value counterfactuals :additive-controller))
+         :scheduler-habit
+         (ranking :tactical-scheduler-habit
+                  (value counterfactuals :scheduler-habit))}
         :strategic-memory strategic
         :selection-boundary
-        {:legacy-decision
-         {:action legacy-action
-          :reason legacy-reason}
-         :legacy-abstained? (= :abstain (some-> legacy-action keyword))
-         :blocks-recommendation? false
+        {:source :judgement.decision
+         :recomputed? false
+         :operator-override-required? false
+         :actuation-owner :downstream-act-gate}
+        :actuation actuation
+        :comparison
+        {:authoritative-policy-id (value decision :selected-policy-id)
+         :authoritative-mission-ids
+         (vec (or (value decision :selected-mission-ids) []))
+         :newer-strategic-memory-influenced? true}}
+       {:status :authoritative-decision-unavailable
+        :algorithm algorithm
+        :recommendation nil
+        :strategic-memory strategic
+        :selection-boundary
+        {:source :judgement.decision
+         :recomputed? false
+         :failure :missing-actionable-reason-bearing-decision
          :operator-override-required? false}
         :actuation
-        {:status :pending-downstream-gates
+        {:status :withheld-system-readiness-failure
          :authorized? false
-         :executed? false
-         :gate-owner :downstream-act-gate
-         :note "Strategic selection is live; only the downstream act-gate may abstain from enactment."}
-        :comparison
-        {:controller-winner-target (:target controller-head)
-         :habit-winner-target (:target habit-head)
-         :rankings-disagree?
-         (not= (:target controller-head) (:target habit-head))
-         :newer-strategic-memory-influenced?
-         (:influenced? strategic)}}))))
+         :executed? false}}))))

@@ -38,41 +38,57 @@
        "action" {"type" "no-op"
                  "rationale" "wait"}}]
      "selection-gain" {"selection-gain" 1.0}
-     "decision" {"action" "abstain"
-                 "reason" "no-action-beats-no-op"}
+     "decision"
+     {"action" {"type" "address-sorry"
+                "target" "sorry/bar"
+                "rationale" "open sorry: bar"}
+      "selected-policy-id" "pi-s-test"
+      "selected-mission-ids" ["sorry/bar"]
+      "strategic-memory"
+      {"influenced?" true
+       "authority" "live"
+       "memory-ids" ["e-test"]
+       "counterfactuals"
+       {"fixed" ["sorry/foo" "sorry/bar"]
+        "additive-controller" ["sorry/foo" "sorry/bar"]
+        "scheduler-habit" ["sorry/bar" "sorry/foo"]}
+       "actuation" {"status" "pending-downstream-gates"
+                    "authorized?" false
+                    "executed?" false}}}
      "priorities"
      [{"type" "missing-head" "id" "h1" "summary" "no head h1"}
       {"type" "channel-gap" "id" "g1" "summary" "gap g1"}]}}})
 
 (deftest derive-next-move-live-from-fake-snapshot
-  (testing "Projects top-1 ranked-action into the next-move-tile shape"
+  (testing "Projects the reason-bearing decision, not ranked-actions top-1"
     (let [live (sg/derive-next-move-live fake-snapshot)]
       (is (some? live))
-      (is (= 1 (:rank live)))
-      (is (= -4.99 (:G-total live)))
+      (is (= 2 (:rank live)))
+      (is (= -4.39 (:G-total live)))
       (is (= "recovery" (:mode live)))
-      (is (= :wm-judgement-ranked-actions (:source live)))
-      (is (= "address-sorry sorry/foo" (:specifically live)))
-      (is (= "open sorry: foo" (:rationale live)))
+      (is (= :judgement.decision (:source live)))
+      (is (= "address-sorry sorry/bar" (:specifically live)))
+      (is (= "open sorry: bar" (:rationale live)))
       (is (= :recommendation-issued (:status live)))
-      (is (= "sorry/foo"
+      (is (= "sorry/bar"
              (get-in live [:recommendation :target])))
       (is (false? (get-in live
                           [:selection-boundary
-                           :blocks-recommendation?])))
+                           :recomputed?])))
       (is (= "sorry/bar"
              (get-in live
-                     [:rankings :habit-adjusted :winner :target])))
-      (is (false? (get-in live
-                          [:strategic-memory :influenced?])))
+                     [:rankings :scheduler-habit :winner :target])))
+      (is (true? (get-in live
+                         [:strategic-memory :influenced?])))
       (is (= 300 (:scheduler-period-seconds live)))
       (is (false? (:stale? live)) "fresh snapshot is not stale")
-      (testing "Alternatives projection (ranks 2 + 3 only by default)"
+      (testing "Alternatives exclude the authoritative action"
         (let [alts (:alternatives-considered live)]
-          (is (contains? alts :rank-2))
-          (is (contains? alts :rank-3))
-          (is (re-find #"address-sorry sorry/bar" (:rank-2 alts)))
-          (is (re-find #"no-op" (:rank-3 alts)))))
+          (is (contains? alts :alternative-1))
+          (is (contains? alts :alternative-2))
+          (is (re-find #"address-sorry sorry/foo"
+                       (:alternative-1 alts)))
+          (is (re-find #"no-op" (:alternative-2 alts)))))
       (testing "Priorities are carried through (top 5)"
         (let [prs (:priorities live)]
           (is (= 2 (count prs))))))))
@@ -82,10 +98,13 @@
     (is (nil? (sg/derive-next-move-live nil)))))
 
 (deftest derive-next-move-live-handles-empty-ranked
-  (testing "Returns nil when ranked-actions is empty"
+  (testing "Keeps the authoritative decision when rankings are empty"
     (let [empty-snap (assoc-in fake-snapshot
-                               [:payload "judgement" "ranked-actions"] [])]
-      (is (nil? (sg/derive-next-move-live empty-snap))))))
+                               [:payload "judgement" "ranked-actions"] [])
+          live (sg/derive-next-move-live empty-snap)]
+      (is (= "sorry/bar" (get-in live [:recommendation :target])))
+      (is (nil? (:G-total live)))
+      (is (= [] (:tied-actions live))))))
 
 (deftest derive-next-move-live-marks-stale
   (testing "An hours-old snapshot is marked stale (>2× period)"

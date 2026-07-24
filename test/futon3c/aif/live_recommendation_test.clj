@@ -1,87 +1,81 @@
 (ns futon3c.aif.live-recommendation-test
-  (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing]]
             [futon3c.aif.live-recommendation :as recommendation]))
 
-(defn- frozen-judgement
-  []
-  (-> "holes/labs/M-typed-memories/wm-selection-regression-20260723.edn"
-      io/file slurp edn/read-string :judgement))
+(def decision
+  {:action {:type :advance-mission
+            :target "M-shared-memory-control-build-test"}
+   :reason :reviewed-live-reason-bearing-policy
+   :selected-policy-id "pi-s-9dbc2ceb3317bc38050c41ce"
+   :selected-mission-ids
+   ["M-shared-memory-control-build-test"
+    "M-aif-policy-conditioned-eig"]
+   :strategic-memory
+   {:influenced? true
+    :authority :live
+    :memory-ids ["e-live-r6" "e-live-r5"]
+    :counterfactuals
+    {:fixed ["M-aif-policy-conditioned-eig"
+             "M-shared-memory-control-build-test"]
+     :additive-controller ["M-aif-policy-conditioned-eig"
+                           "M-shared-memory-control-build-test"]
+     :scheduler-habit ["M-wm-aif-policy-grain-compliance"
+                       "M-shared-memory-control-build-test"]}
+    :actuation {:status :pending-downstream-gates
+                :authorized? false
+                :executed? false}}})
 
-(deftest frozen-abstention-cannot-suppress-the-live-recommendation
-  (let [result (recommendation/project (frozen-judgement))]
-    (testing "1. a reason-bearing strategic recommendation is always present"
-      (is (= :recommendation-issued (:status result)))
-      (is (= "M-expressions-of-interest"
-             (get-in result [:recommendation :target])))
-      (is (= :live
-             (get-in result [:recommendation :recommendation-authority])))
-      (is (true? (get-in result [:recommendation :live-selection?])))
-      (is (false? (get-in result [:recommendation :advisory?]))))
-    (testing "2. controller, habit-adjusted, and counterfactual rankings stay separate"
-      (is (= "M-expressions-of-interest"
-             (get-in result [:rankings :controller :winner :target])))
-      (is (= "M-learning-loop"
-             (get-in result [:rankings :habit-adjusted :winner :target])))
-      (is (= "M-expressions-of-interest"
-             (get-in result [:rankings :counterfactual :winner :target])))
-      (is (true? (get-in result [:comparison :rankings-disagree?]))))
-    (testing "3. no operator override is requested"
-      (is (false? (get-in result
-                          [:recommendation :requires-operator-override?])))
-      (is (false? (get-in result
-                          [:selection-boundary
-                           :operator-override-required?]))))
-    (testing "4. selection-layer abstention is quarantined from recommendation"
-      (is (true? (get-in result
-                         [:selection-boundary :legacy-abstained?])))
-      (is (false? (get-in result
-                          [:selection-boundary
-                           :blocks-recommendation?])))
-      (is (= :downstream-act-gate
-             (get-in result [:actuation :gate-owner])))
-      (is (= :pending-downstream-gates
-             (get-in result [:actuation :status])))
-      (is (false? (get-in result [:actuation :authorized?]))))
-    (testing "5. absent strategic-memory machinery is explicitly non-influential"
-      (is (false? (get-in result
-                          [:strategic-memory :influenced?])))
-      (is (= :no-live-strategic-trace
-             (get-in result [:strategic-memory :reason]))))))
-
-(deftest reviewed-strategic-checkpoint-can-influence-with-complete-reasons
+(deftest judgement-decision-is-the-only-presentation-winner
   (let [judgement
-        (assoc (frozen-judgement)
-               :strategic-checkpoint
-               {:status :advice-issued
-                :recommendation
-                {:mission-ids ["M-expressions-of-interest"]
-                 :memory-ids ["e-wm-r15-example"]
-                 :relation-contributions
-                 [{:control-pattern-id "p4ng/R15"
-                   :relation :repairs-control}]}})
+        {:decision decision
+         :ranked-actions
+         [{:action {:type :apply-cascade :target "M-held-placeholder"}
+           :controller-score 0.0
+           :score-provenance :placeholder
+           :held-for-arming? true}
+          {:action {:type :no-op}
+           :controller-score -10.0}
+          {:action {:type :advance-mission
+                    :target "M-other-presentation-winner"}
+           :controller-score -20.0}]}
         result (recommendation/project judgement)]
-    (is (= :reviewed-strategic-checkpoint
-           (get-in result [:recommendation :source])))
-    (is (true? (get-in result [:strategic-memory :influenced?])))
-    (is (= ["e-wm-r15-example"]
-           (get-in result [:strategic-memory :memory-ids])))
-    (is (true? (get-in result
-                       [:comparison
-                        :newer-strategic-memory-influenced?])))))
-
-(deftest selector-noninfluence-report-is-preserved
-  (let [judgement (assoc-in
-                   (frozen-judgement)
-                   [:decision :strategic-memory]
-                   {:influenced? false
-                    :reason :no-reviewed-live-strategic-trace
-                    :authority :not-yet-live})
-        result (recommendation/project judgement)]
-    (is (false? (get-in result [:strategic-memory :influenced?])))
-    (is (= :no-reviewed-live-strategic-trace
-           (get-in result [:strategic-memory :reason])))
-    (is (= :not-yet-live
+    (testing "held and no-op rows cannot manufacture a winner"
+      (is (= :recommendation-issued (:status result)))
+      (is (= "M-shared-memory-control-build-test"
+             (get-in result [:recommendation :target])))
+      (is (= :judgement.decision
+             (get-in result [:recommendation :source])))
+      (is (= "pi-s-9dbc2ceb3317bc38050c41ce"
+             (get-in result [:recommendation :policy-id]))))
+    (testing "all three comparisons remain named and inspectable"
+      (is (= "M-aif-policy-conditioned-eig"
+             (get-in result [:rankings :fixed :winner :target])))
+      (is (= "M-aif-policy-conditioned-eig"
+             (get-in result
+                     [:rankings :additive-controller :winner :target])))
+      (is (= "M-wm-aif-policy-grain-compliance"
+             (get-in result
+                     [:rankings :scheduler-habit :winner :target]))))
+    (testing "presentation explicitly performs no selection"
+      (is (false? (get-in result
+                          [:selection-boundary :recomputed?])))
+      (is (false? (get-in result [:actuation :authorized?])))
+      (is (false?
            (get-in result
-                   [:strategic-memory :selector-report :authority])))))
+                   [:recommendation :requires-operator-override?]))))))
+
+(deftest missing-reason-bearing-decision-is-a-readiness-failure
+  (let [result
+        (recommendation/project
+         {:decision {:action :abstain
+                     :strategic-memory {:influenced? false}}
+          :ranked-actions
+          [{:action {:type :advance-mission :target "M-tempting-fallback"}
+            :controller-score -100.0}]})]
+    (is (= :authoritative-decision-unavailable (:status result)))
+    (is (nil? (:recommendation result)))
+    (is (= :missing-actionable-reason-bearing-decision
+           (get-in result [:selection-boundary :failure])))
+    (is (false? (get-in result
+                        [:selection-boundary :recomputed?])))
+    (is (false? (get-in result [:actuation :authorized?])))))

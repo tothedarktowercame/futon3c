@@ -56,7 +56,8 @@
          :error-count 0
          :last-tick-at nil
          :last-success-at nil
-         :last-error nil}))
+         :last-error nil
+         :last-error-data nil}))
 
 ;; Re-entrancy guard for tick! — set to true while a tick is mid-flight,
 ;; false otherwise.  `tick!` checks-and-sets via compare-and-set! so two
@@ -86,6 +87,7 @@
         snapshot @!wm-snapshot
         by-days (get snapshot :by-days {})]
     {:running? running?
+     :tick-in-progress? @!tick-in-progress?
      :period-seconds (:period-seconds s)
      :days-windows (:days-windows s)
      :started-at (some-> (:started-at s) str)
@@ -95,6 +97,7 @@
      :last-success-at (some-> (:last-success-at s) str)
      :next-tick-at (some-> next-tick-at str)
      :last-error (:last-error s)
+     :last-error-data (:last-error-data s)
      :cached-days
      (into {}
            (map (fn [[days entry]]
@@ -168,10 +171,12 @@
     {:payload payload
      :body (json/generate-string payload)}))
 
-(defn- refresh-one-window! [generate days]
+(defn- refresh-one-window! [generate strategic-selection-fn days]
   (let [started-ns (System/nanoTime)
         started-at (Instant/now)
-        bundle (-> (generate days)
+        bundle (-> (generate days
+                            {:strategic-selection-fn
+                             strategic-selection-fn})
                    http/apply-wm-operator-clear
                    ((requiring-resolve 'futon3c.wm.promote/apply-operator-promote)))
         {:keys [payload body]} (render-payload-json bundle)
@@ -213,19 +218,26 @@
       (swap! !state assoc :last-tick-at now)
       (try
         (let [generate (requiring-resolve 'futon2.report.war-machine/generate-war-machine)
+              strategic-selection-fn
+              (requiring-resolve
+               'futon3c.peripheral.live-wm-selection/current-selection)
               ;; demand-driven, debounced belly refresh at score time — reuses
               ;; THIS established tick (no separate poll loop; the retired
               ;; turn-trigger loop froze the evidence store, 2026-06-26).
               _ (when-let [ebf (requiring-resolve 'futon2.aif.c-vector/ensure-belly-fresh!)]
                   (try (ebf) (catch Throwable _ nil)))
               days-windows (:days-windows @!state)
-              refreshed (mapv #(refresh-one-window! generate %) days-windows)]
+              refreshed
+              (mapv #(refresh-one-window!
+                      generate strategic-selection-fn %)
+                    days-windows)]
           (swap! !state
                  (fn [s]
                    (-> s
                        (update :tick-count inc)
                        (assoc :last-success-at (Instant/now)
-                              :last-error nil))))
+                              :last-error nil
+                              :last-error-data nil))))
           (cyder/touch! cyder-process-id)
           {:ok true :refreshed refreshed})
         (catch Throwable t
@@ -233,7 +245,8 @@
                  (fn [s]
                    (-> s
                        (update :error-count inc)
-                       (assoc :last-error (.getMessage t)))))
+                       (assoc :last-error (.getMessage t)
+                              :last-error-data (ex-data t)))))
           (cyder/touch! cyder-process-id)
           {:ok false :error (.getMessage t)})
         (finally
@@ -318,7 +331,8 @@
                   :error-count 0
                   :last-tick-at nil
                   :last-success-at nil
-                  :last-error nil)
+                  :last-error nil
+                  :last-error-data nil)
          initial-delay (if run-on-start? 0 period-seconds)
          handle (.scheduleWithFixedDelay
                  executor

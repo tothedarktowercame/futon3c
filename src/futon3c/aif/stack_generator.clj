@@ -444,12 +444,20 @@
 (defn- ranked-entry-rank [entry]
   (or (:rank entry) (get entry "rank")))
 
-(defn- alternatives-from-ranked [ranked-actions]
-  (->> (rest (take (inc live-rec-alt-count) ranked-actions))
+(defn- same-action?
+  [left right]
+  (and (= (action-type-str left) (action-type-str right))
+       (= (action-target-str left) (action-target-str right))))
+
+(defn- alternatives-from-ranked [ranked-actions authoritative-action]
+  (->> ranked-actions
+       (remove #(same-action? authoritative-action
+                              (ranked-entry-action %)))
+       (take live-rec-alt-count)
        (map-indexed
         (fn [i entry]
           (let [a (ranked-entry-action entry)]
-            [(keyword (str "rank-" (+ 2 i)))
+            [(keyword (str "alternative-" (inc i)))
              (str (action-type-str a)
                   " " (action-target-str a)
                   " (G=" (some-> (ranked-entry-g-total entry)
@@ -482,20 +490,6 @@
    exact cases."
   1.0e-3)
 
-(defn- tied-prefix
-  "Return the prefix of RANKED-ACTIONS whose G-total is within EPS of
-   top-1's G-total.  Caller decides what to do with the count (display
-   as tied-bucket when > 1; single-action when = 1)."
-  [ranked-actions eps]
-  (when-let [top (first ranked-actions)]
-    (let [top-g (ranked-entry-g-total top)]
-      (->> ranked-actions
-           (take-while (fn [r]
-                         (let [g (ranked-entry-g-total r)]
-                           (and (number? g) (number? top-g)
-                                (< (Math/abs (- g top-g)) eps)))))
-           vec))))
-
 (defn- ranked-entry->tile-entry
   "Project a ranked-action into the slim form the cljs tile renders for
    the tied-bucket display. §3.4 trace affordance: include per-term G
@@ -519,7 +513,7 @@
      :rationale    (or (:rationale a) (get a "rationale"))}))
 
 (defn derive-next-move-live
-  "Project the top of judgement.ranked-actions into the next-move-tile shape.
+  "Project the authoritative judgement.decision into the next-move-tile shape.
 
    Returns a map with :action, :rank, :G-total, :specifically, :rationale,
    :alternatives-considered, :priorities, :mode, :source, :as-of,
@@ -537,8 +531,6 @@
      (let [ranked (or (:ranked-actions judgement)
                       (get judgement "ranked-actions")
                       (get judgement "ranked_actions"))
-           top    (first ranked)
-           top-action (ranked-entry-action top)
            priorities (or (:priorities judgement)
                           (get judgement "priorities"))
            mode (or (:mode judgement) (get judgement "mode"))
@@ -548,31 +540,44 @@
            ;; to keep stack-generator's surface minimal.
            period-s 300
            stale? (when (number? age-s) (> age-s (* 2 period-s)))
-           tied (tied-prefix ranked live-rec-tied-epsilon)
-           tied-actions (mapv ranked-entry->tile-entry tied)
-           tied-count (count tied-actions)
-           selection-trace (live-recommendation/project judgement)]
-       (when top-action
+           selection-trace (live-recommendation/project judgement)
+           authoritative-action
+           (get-in selection-trace [:recommendation :action]
+                   (:recommendation selection-trace))
+           authoritative-entry
+           (first
+            (filter
+             #(same-action? authoritative-action
+                            (ranked-entry-action %))
+             ranked))
+           authoritative-rank
+           (or (ranked-entry-rank authoritative-entry) 1)
+           tied-actions
+           (if authoritative-entry
+             [(ranked-entry->tile-entry authoritative-entry)]
+             [])
+           tied-count (count tied-actions)]
+       (when (map? authoritative-action)
          (merge
-          {:action top-action
-           :rank (or (ranked-entry-rank top) 1)
-           :G-total (ranked-entry-g-total top)
-           :specifically (action->specifically top-action)
-           :rationale (or (:rationale top-action)
-                          (get top-action "rationale")
-                          "Top of judgement.ranked-actions for this WM tick")
-           :alternatives-considered (alternatives-from-ranked ranked)
+          {:action authoritative-action
+           :rank authoritative-rank
+           :G-total (ranked-entry-g-total authoritative-entry)
+           :specifically (action->specifically authoritative-action)
+           :rationale (or (:rationale authoritative-action)
+                          (get authoritative-action "rationale")
+                          "Authoritative judgement.decision for this WM tick")
+           :alternatives-considered
+           (alternatives-from-ranked ranked authoritative-action)
            :priorities (vec (take 5 (or priorities [])))
            :mode mode
-           :source :wm-judgement-ranked-actions
+           :source :judgement.decision
            :as-of as-of
            :scheduler-period-seconds period-s
            :age-seconds age-s
            :stale? (boolean stale?)
-           ;; E-wm-live-recommendation v1.1: tied-bucket display.
-           ;; When the WM's EFE has multiple actions at near-equal G-total,
-           ;; surface the whole bucket so the cljs tile doesn't falsely
-           ;; promote rank-1 as if it were a real preference.
+           ;; A presentation projection must not re-rank held/advisory rows.
+           ;; Keep only the authoritative decision's matching row here; named
+           ;; counterfactual rankings travel in selection-trace.
            :tied-actions tied-actions
            :tied-count tied-count
            :tied-epsilon live-rec-tied-epsilon

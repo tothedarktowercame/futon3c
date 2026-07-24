@@ -43,3 +43,23 @@
             out (#'scheduler/trim-action-predictions judgement)]
         (is (= 6 (get-in out [:ranked-actions 0 :action :open-hole-count])))
         (is (nil? (get-in out [:ranked-actions 0 :action :structural-hole-count])))))))
+
+(deftest refresh-forwards-the-reason-bearing-selector
+  (testing "the scheduler cannot silently call the WM generator without selection"
+    (let [seen (atom nil)
+          selector (fn [_] {:status :verified-live-selection})
+          generate
+          (fn [days opts]
+            (reset! seen {:days days :opts opts})
+            {:data {:window {:days days}}
+             :judgement {:decision {:selected-policy-id "pi-s-test"}}})]
+      (with-redefs-fn
+        {#'scheduler/render-payload-json
+         (fn [bundle]
+           {:payload bundle
+            :body "{}"})}
+        (fn []
+          (#'scheduler/refresh-one-window! generate selector 14)))
+      (is (= 14 (:days @seen)))
+      (is (identical? selector
+                      (get-in @seen [:opts :strategic-selection-fn]))))))
