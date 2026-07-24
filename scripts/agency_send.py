@@ -42,6 +42,11 @@ ap.add_argument("--park-payload",
                 help="continuation payload for /api/alpha/park")
 ap.add_argument("--surface", default="emacs-repl",
                 help="park surface to resume on (default: emacs-repl)")
+ap.add_argument("--timeout-ms", type=int,
+                help="invoke timeout in ms (default: server's 1800000 = 30 min). "
+                     "Until the supervised-overrun fix lands, a turn hitting this "
+                     "is abandoned as state=failed and its result is lost — set "
+                     "generously for long packets.")
 ap.add_argument("--dry-run", action="store_true", help="print payload, do not send")
 a = ap.parse_args()
 
@@ -77,6 +82,8 @@ if a.mission:
     body["mission-id"] = a.mission
 if a.mode:
     body["mode"] = a.mode
+if a.timeout_ms:
+    body["timeout-ms"] = a.timeout_ms
 payload = json.dumps(body)
 
 
