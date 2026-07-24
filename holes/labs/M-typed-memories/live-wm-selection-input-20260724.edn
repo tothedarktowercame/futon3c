@@ -1,0 +1,104 @@
+{:trace-id "live-wm-selection-verify-20260724"
+ :strategic-decision-id "phase7-shadow-2"
+ :memory-limit 10
+ :control-edges
+ [{:mission-id "M-wm-aif-policy-grain-compliance"
+   :control-pattern-id "p4ng/R9-independent-witness"
+   :relation :requires-control
+   :status :witnessed
+   :provenance
+   [{:kind :live-independent-review
+     :review-evidence-id "b4904003-6c63-4ffc-91fe-402ab55dc7a8"
+     :reviewer "claude-4"}]
+   :memory-ids ["e-4b9716ef-6df4-4e89-acc8-7394d06c177d"]}
+  {:mission-id "M-shared-memory-control-build-test"
+   :control-pattern-id "p4ng/R6-candidate-pattern-action-space"
+   :relation :repairs-control
+   :status :witnessed
+   :provenance
+   [{:kind :live-independent-review
+     :review-evidence-id "b1cf276f-c4c0-4757-a00e-ae3f02e3ca00"
+     :reviewer "claude-4"}]
+   :memory-ids ["e-d13a4076-feb0-4906-b2b3-6a1d9e275692"]}
+  {:mission-id "M-aif-policy-conditioned-eig"
+   :control-pattern-id "p4ng/R5-policy-evaluation"
+   :relation :repairs-control
+   :status :witnessed
+   :provenance
+   [{:kind :live-independent-review
+     :review-evidence-id "03f524fb-690f-4c11-8c10-a8b20bc73cc2"
+     :reviewer "claude-4"
+     :scope :frozen-replay-result-not-live-outcome}]
+   :memory-ids ["e-7782c5f4-2a2b-465e-afcf-6c8947b144ba"]}
+  {:mission-id "M-wm-tripwires"
+   :control-pattern-id "p4ng/R10-liveness"
+   :relation :produces-evidence-for
+   :status :witnessed
+   :provenance
+   [{:kind :live-independent-review
+     :review-evidence-id "167f259f-22fb-4b5c-b87e-44527b014e86"
+     :reviewer "claude-4"}]
+   :memory-ids ["e-d6e04968-d665-403e-bf1d-7ad86cff2745"]}
+  {:mission-id "M-wm-tripwires"
+   :control-pattern-id "p4ng/R10-liveness"
+   :relation :blocked-by-control
+   :status :witnessed
+   :provenance
+   [{:kind :live-independent-review
+     :review-evidence-id "e57a0685-cf1f-4f80-a40b-ea4025d4de8e"
+     :reviewer "claude-4"}]
+   :memory-ids ["e-9026ee4c-5cc2-4e74-ae68-5dae873fd708"]}]
+ :ranking-options
+ {:pattern-activation
+  {"p4ng/R5-policy-evaluation" 0.6
+   "p4ng/R6-candidate-pattern-action-space" 1.0
+   "p4ng/R9-independent-witness" 0.25
+   "p4ng/R10-liveness" 1.0}
+  :relation-weights
+  {:requires-control 1.0
+   :repairs-control 1.0
+   :instantiates-control 0.75
+   :produces-evidence-for 0.5
+   :blocked-by-control 0.0}
+  :facet-resolution :phase4-admissible-subgraph}
+ :scheduler-habit-ranking
+ ["M-wm-aif-policy-grain-compliance"
+  "M-aif-policy-conditioned-eig"
+  "M-shared-memory-control-build-test"]
+ :latency
+ {:cold
+  {:scope :first-bounded-projection-before-warm-up
+   :service-total-ms 3497.585939
+   :endpoint "p4ng/R9-independent-witness"}
+ :cold-after-five-writes
+  {:scope :first-four-endpoint-projection-after-bootstrap-writes
+   :service-total-ms 8501.371553}
+  :cold-full-body-recall
+  [{:scope :first-endpoint-from-fresh-client-jvm
+    :endpoint "p4ng/R9-independent-witness"
+    :elapsed-ms 21325.910421}
+   {:scope :second-fresh-client-jvm
+    :endpoint "p4ng/R9-independent-witness"
+    :elapsed-ms 9077.629103}]
+  :warm-projection
+  [{:service-total-ms 49.652105 :caller-wall-ms 51.752}
+   {:service-total-ms 166.361593 :caller-wall-ms 169.062}]
+  :warm-serving-jvm-full-body-recall
+  [{:endpoint "p4ng/R9-independent-witness" :elapsed-ms 353.335743}
+   {:endpoint "p4ng/R6-candidate-pattern-action-space" :elapsed-ms 263.533705}
+   {:endpoint "p4ng/R5-policy-evaluation" :elapsed-ms 296.810666}
+   {:endpoint "p4ng/R10-liveness" :elapsed-ms 615.283986}]
+  :click-time-contract
+  {:warm-up-required? true
+   :warm-up-kind :full-body-wm-recall-in-serving-jvm
+   :warm-up-endpoints
+   ["p4ng/R9-independent-witness"
+    "p4ng/R6-candidate-pattern-action-space"
+   "p4ng/R5-policy-evaluation"
+    "p4ng/R10-liveness"]
+   :maximum-post-warm-endpoint-recall-ms 1000
+   :maximum-warm-up-to-click-gap-ms 5000
+   :require-projection-revision-unchanged? true
+   :cache-eviction-recheck-required? true
+   :on-eviction-or-revision-change :block-click-and-repeat-warm-up
+   :latest-probes-within-bound? true}}}

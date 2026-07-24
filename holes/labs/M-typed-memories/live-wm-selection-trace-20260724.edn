@@ -1,0 +1,174 @@
+{:status :verified-live-selection
+ :trace-id "live-wm-selection-verify-20260724"
+ :recorded-at "2026-07-24T19:51:00Z"
+ :source
+ {:runner "scripts/run_live_wm_selection_verify.clj"
+  :input "holes/labs/M-typed-memories/live-wm-selection-input-20260724.edn"
+  :recall-mode :ordinary-live-store-no-injected-recall}
+ :authority
+ {:basis :chain-integrity-and-auditability
+  :demonstrated-better-selection? false
+  :admissible-set :unchanged-phase1-4
+  :relation-weight-semantics :illustrative
+  :earned-semantics-gate
+  {:minimum-independently-witnessed-live-transitions 20
+   :satisfied? false}}
+ :candidate-domain
+ ["M-aif-policy-conditioned-eig"
+  "M-shared-memory-control-build-test"
+  "M-wm-aif-policy-grain-compliance"]
+ :live-memory-ids
+ ["e-4b9716ef-6df4-4e89-acc8-7394d06c177d"
+  "e-7782c5f4-2a2b-465e-afcf-6c8947b144ba"
+  "e-9026ee4c-5cc2-4e74-ae68-5dae873fd708"
+  "e-d13a4076-feb0-4906-b2b3-6a1d9e275692"
+  "e-d6e04968-d665-403e-bf1d-7ad86cff2745"]
+ :recall-audits
+ [{:pattern-id "p4ng/R9-independent-witness"
+   :audit {:edge-count 1 :returned-count 1
+           :attachment-excluded 0 :state-excluded 0
+           :domain-excluded 0 :missing-body 0}}
+  {:pattern-id "p4ng/R6-candidate-pattern-action-space"
+   :audit {:edge-count 1 :returned-count 1
+           :attachment-excluded 0 :state-excluded 0
+           :domain-excluded 0 :missing-body 0}}
+  {:pattern-id "p4ng/R5-policy-evaluation"
+   :audit {:edge-count 1 :returned-count 1
+           :attachment-excluded 0 :state-excluded 0
+           :domain-excluded 0 :missing-body 0}}
+  {:pattern-id "p4ng/R10-liveness"
+   :audit {:edge-count 2 :returned-count 2
+           :attachment-excluded 0 :state-excluded 0
+           :domain-excluded 0 :missing-body 0}}]
+ :fixed-ranking
+ ["M-aif-policy-conditioned-eig"
+  "M-shared-memory-control-build-test"
+  "M-wm-aif-policy-grain-compliance"]
+ :typed-ranking
+ ["M-shared-memory-control-build-test"
+  "M-aif-policy-conditioned-eig"
+  "M-wm-aif-policy-grain-compliance"]
+ :outcome-conditioned-ranking
+ ["M-shared-memory-control-build-test"
+  "M-aif-policy-conditioned-eig"
+  "M-wm-aif-policy-grain-compliance"]
+ :strategic-policy-ranking
+ ["pi-s-9dbc2ceb3317bc38050c41ce"
+  "pi-s-333889ba71ae67544d53f17a"]
+ :selected-policy-id "pi-s-9dbc2ceb3317bc38050c41ce"
+ :selected-mission-ids
+ ["M-shared-memory-control-build-test"
+  "M-aif-policy-conditioned-eig"]
+ :selected-memory-ids
+ ["e-7782c5f4-2a2b-465e-afcf-6c8947b144ba"
+  "e-d13a4076-feb0-4906-b2b3-6a1d9e275692"]
+ :relation-contributions
+ [{:mission-id "M-shared-memory-control-build-test"
+   :score 1.0
+   :contributions
+   [{:control-pattern-id "p4ng/R6-candidate-pattern-action-space"
+     :relation :repairs-control
+     :memory-ids ["e-d13a4076-feb0-4906-b2b3-6a1d9e275692"]
+     :pattern-activation 1.0
+     :relation-weight 1.0
+     :contribution 1.0}]}
+  {:mission-id "M-aif-policy-conditioned-eig"
+   :score 0.6
+   :contributions
+   [{:control-pattern-id "p4ng/R5-policy-evaluation"
+     :relation :repairs-control
+     :memory-ids ["e-7782c5f4-2a2b-465e-afcf-6c8947b144ba"]
+     :pattern-activation 0.6
+     :relation-weight 1.0
+     :contribution 0.6}]}
+  {:mission-id "M-wm-aif-policy-grain-compliance"
+   :score 0.25
+   :contributions
+   [{:control-pattern-id "p4ng/R9-independent-witness"
+     :relation :requires-control
+     :memory-ids ["e-4b9716ef-6df4-4e89-acc8-7394d06c177d"]
+     :pattern-activation 0.25
+     :relation-weight 1.0
+     :contribution 0.25}]}]
+ :path-diversity
+ {:distinct-path-count 3
+  :distinct-pattern-count 3
+  :distinct-relation-count 2}
+ :budget {:initial 4 :spent 4 :remaining 0 :skipped-patterns []}
+ :blockers
+ [{:mission-id "M-wm-tripwires"
+   :exclusion :witnessed-block
+   :memory-id "e-9026ee4c-5cc2-4e74-ae68-5dae873fd708"
+   :review-evidence-id "e57a0685-cf1f-4f80-a40b-ea4025d4de8e"
+   :disposition :block-unwarmed-click}]
+ :holes
+ [{:hole/type :missing-pattern-transition
+   :from "p4ng/R6-candidate-pattern-action-space"
+   :to "p4ng/R10-liveness"}
+  {:hole/type :blocked-mission-dependency
+   :mission-id "M-wm-aif-policy-grain-compliance"
+   :dependency-id "M-wm-tripwires"}]
+ :one-outcome-update
+ {:transition-id "phase6-test-a-2"
+  :mission-id "M-aif-policy-conditioned-eig"
+  :outcome :failure
+  :witness-status :independently-witnessed
+  :witness-id "phase6-checker-test-a-2"
+  :one-transition-consumed? true
+  :posterior-ratio 0.8571428571428571
+  :affected-pattern-ids ["p4ng/R5-policy-evaluation"]
+  :recovered-from-misleading-seed? true}
+ :calibration
+ {:status :exploratory-sample-too-small
+  :sample-count 13
+  :minimum 20
+  :phase6-advance? false
+  :exploratory-values-are-calibrated-probabilities? false}
+ :latency
+ {:cold-full-body-recall-ms [21325.910421 9077.629103]
+  :warm-serving-jvm-full-body-recall-ms
+  [353.335743 263.533705 296.810666 615.283986]
+  :warm-up-required? true
+  :warm-up-kind :full-body-wm-recall-in-serving-jvm
+  :maximum-post-warm-endpoint-recall-ms 1000
+  :maximum-warm-up-to-click-gap-ms 5000
+  :require-projection-revision-unchanged? true
+  :cache-eviction-recheck-required? true
+  :on-eviction-or-revision-change :block-click-and-repeat-warm-up
+  :serving-jvm-cache-recheck
+  {:cold-or-evicted-call
+   {:total-ms 7513.618764
+    :endpoint-ms
+    {"p4ng/R9-independent-witness" 7035.729376
+     "p4ng/R6-candidate-pattern-action-space" 122.308302
+     "p4ng/R5-policy-evaluation" 119.775268
+     "p4ng/R10-liveness" 223.580146}}
+   :immediate-cache-recheck
+   {:total-ms 547.954246
+    :endpoint-ms
+    {"p4ng/R9-independent-witness" 111.50981
+     "p4ng/R6-candidate-pattern-action-space" 97.215177
+     "p4ng/R5-policy-evaluation" 126.863302
+     "p4ng/R10-liveness" 199.269188}
+    :all-endpoints-under-bound? true}
+   :cache-eviction-observed-between-warm-up-and-queue? false}
+  :latest-probes-within-bound? true}
+ :counterfactuals
+ {:fixed
+  ["M-aif-policy-conditioned-eig"
+   "M-shared-memory-control-build-test"
+   "M-wm-aif-policy-grain-compliance"]
+  :additive-controller
+  ["M-aif-policy-conditioned-eig"
+   "M-shared-memory-control-build-test"
+   "M-wm-aif-policy-grain-compliance"]
+  :scheduler-habit
+  ["M-wm-aif-policy-grain-compliance"
+   "M-aif-policy-conditioned-eig"
+   "M-shared-memory-control-build-test"]}
+ :actuation
+ {:status :pending-downstream-gates
+  :authorized? false
+  :executed? false}
+ :evidence-receipt-id
+ "e-f80e7837-4ca1-4130-8060-31c9d984ab8b"}
