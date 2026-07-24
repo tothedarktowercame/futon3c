@@ -5,7 +5,8 @@
 `M-typed-memories` and `M-shared-memory-control-build-test`.
 **Status:** RUNGS 1 + 3 IMPLEMENTED DARK; PHASE 5 CHECKPOINT INFORMATIVE;
 RUNG 2 ONE-OUTCOME OPERATOR UPDATE IMPLEMENTED DARK OVER PHASE 6,
-CALIBRATION GATE NOT MET (2026-07-23).
+CALIBRATION GATE NOT MET (2026-07-23). RUNG 4 CHARTERED DARK 2026-07-24
+(Joe's direction), NOT IMPLEMENTED — see §Rung 4.
 **Boundary:** this excursion may rank only inside the Phase 1–4 admissible
 dark subgraph. It cannot admit records, change domain/lifecycle/witness gates,
 mutate memory, alter shared receipts, or affect live mission ordering.
@@ -317,6 +318,78 @@ falsifiability surface; earning an outcome model remains Rung 2 / Phase 6 work.
   assertion mismatch in `memory_backend_test` (`:at nil` now present in the
   runtime item but absent from the expected map); all remaining tests passed.
   Rung 3 does not touch that namespace or shape.
+
+### Rung 4 — k-step coupled propagation with exploration mass (CHARTERED 2026-07-24, dark)
+
+Chartered at Joe's direction 2026-07-24 after the post-hoc VERIFY
+(`V-typed-memory-dynamic-queries-20260724.md`) confirmed the mechanism chain
+composes on frozen replay. Rungs 1–3 realized the state vector
+\((x_t,\theta_t,F_t,B_t)\) with every dynamical dimension truncated to one
+step. Rung 4 is the first genuinely dynamical rung: iterate the coupled
+updates
+
+\[
+x_{t+1}=\Phi(x_t,\Delta_{\theta_t},q),\qquad
+\theta_{t+1}=\Psi(\theta_t,x_{t+1},q)
+\]
+
+for up to \(k\) steps under the existing budget \(B_t\), over frozen corpora
+only. This is the "wave" in the wave-function framing: activation propagating
+over the admitted subgraph while the propagation operator itself moves.
+
+**Boundary (unchanged from Rungs 1–3, restated as binding):** ranks only
+inside the Phase 1–4 admissible dark subgraph; candidate set preserved
+exactly; `:selected-mission nil`; `:live-ordering-changed? false`; frozen
+and synthetic corpora only — no live-store reads, keeping this rung fully
+independent of the live-integration packet in flight.
+
+**Construction requirements:**
+
+1. **Exploration-mass floor.** \(\theta\) retains a minimum mass
+   \(\epsilon > 0\) on every admitted relation type at every step. The floor
+   is an explicit, reported parameter — never an implicit default.
+2. **Per-step audit.** Every step reports its contribution rows (extending
+   Rung 1's discipline), the entropy of \(x_t\) and \(\theta_t\), path
+   diversity, and challenge-memory reachability. Termination is classified
+   explicitly: fixed point, cycle, or step-budget exhaustion. No silent
+   truncation.
+3. **Identity at k=1.** With one step and the floor inactive, Rung 4 must
+   reproduce Rung 1's ranking exactly (regression identity test).
+4. **Control arms retained.** Fixed endpoint order and the Rung 1 one-step
+   typed ranking are named counterfactuals in every trace.
+5. **θ semantics stay unearned.** Iterated \(\theta\) is a search heuristic,
+   not a posterior. Any θ-learning beyond the Rung 2 one-outcome ratio
+   remains gated on the Phase 6 calibration minimum (n ≥ 20) and a
+   separately validated pattern-likelihood model. Rung 4 changes the
+   *dynamics*, not the *epistemic standing*, of \(\theta\).
+6. **Determinism** under stable inputs, as for Rungs 1–3.
+
+**The confirmation-collapse battery (the rung's falsifiability core).** The
+principal epistemic risk below — endogenous confirmation — is precisely what
+iteration amplifies, so Rung 4's acceptance is built around demonstrating the
+failure mode and its guard:
+
+- synthetic corpora with a planted target and a decoy relation seeded with
+  early accidental corroboration;
+- **floor-off ablation must exhibit collapse** (θ concentrating on the decoy,
+  target hidden) — if the failure cannot be produced, the battery is not
+  probing anything;
+- **floor-on run must recover the planted target** within the step budget,
+  or report a reasoned non-recovery;
+- Rung 1 single-step ranking runs as the control arm on every battery case;
+- independently witnessed challenge memories must remain reachable at every
+  step of every run.
+
+**Acceptance:** executable demo over `phase4-wm-corpus.edn` plus the
+synthetic battery; the k=1 identity test; the collapse/recovery pair above;
+per-step traces deterministic and fully explained; clj-kondo and
+check-parens clean; focused tests green. Implementation belongs in a fresh
+namespace beside `dynamic_queries.clj` (no changes to Rung 1–3 code paths),
+so the packet in flight is untouched.
+
+**Explicitly out of scope:** live-store reads; any effect on live ordering;
+multi-coordinate θ-learning promotion; consuming Rung 3 entropies as outcome
+probabilities; any relaxation of the Phase 6 calibration gate.
 
 ## Principal epistemic risk
 
