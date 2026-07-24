@@ -6281,7 +6281,8 @@
     (jvm-incidents-unavailable-response)))
 
 (def ^:private morning-brief-symbols
-  {:review! 'futon2.aif.morning-brief/review!
+  {:queue-item! 'futon2.aif.morning-brief/queue-item!
+   :review! 'futon2.aif.morning-brief/review!
    :addendum! 'futon2.aif.morning-brief/addendum!
    :items 'futon2.aif.morning-brief/items
    :reviews 'futon2.aif.morning-brief/reviews
@@ -6345,6 +6346,40 @@
                      "morning-brief-review-conflict"
                      "invalid-morning-brief-review")
               :message (or (.getMessage e) "Morning Brief review failed")})))))
+    (morning-brief-unavailable-response)))
+
+(defn handle-morning-brief-item
+  "POST /api/alpha/morning-brief/item — append one typed machine attempt.
+
+   This is the loss-ledger ingress used when selection fails before the
+   full-loop runner can own an attempt."
+  [request]
+  (if-let [{queue-item! :queue-item!}
+           (resolve-morning-brief-fns [:queue-item!])]
+    (let [payload (parse-json-map (read-body request))
+          attempt-id (:attempt-id payload)
+          failure (:failure payload)]
+      (if-not (and payload
+                   (nonblank-string? attempt-id)
+                   (map? failure)
+                   (nonblank-string? (:kind failure))
+                   (= "selection" (:stage failure)))
+        (json-response
+         400
+         {:ok false
+          :err "invalid-morning-brief-item"
+          :message "selection failure item requires attempt-id and typed failure"})
+        (try
+          (json-response 200
+                         {:ok true
+                          :attempt-id attempt-id
+                          :item-ref (queue-item! payload)})
+          (catch Exception e
+            (json-response 400
+                           {:ok false
+                            :err "morning-brief-item-write-failed"
+                            :message (or (.getMessage e)
+                                         "Morning Brief item failed")})))))
     (morning-brief-unavailable-response)))
 
 (defn handle-morning-brief-addendum
@@ -6475,6 +6510,9 @@
 
       (and (= :post method) (= "/api/alpha/morning-brief/review" uri))
       (handle-morning-brief-review request)
+
+      (and (= :post method) (= "/api/alpha/morning-brief/item" uri))
+      (handle-morning-brief-item request)
 
       (and (= :post method) (= "/api/alpha/morning-brief/addendum" uri))
       (handle-morning-brief-addendum request)

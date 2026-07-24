@@ -4,12 +4,14 @@
    Runs `futon2.report.war-machine/generate-war-machine` on a background
    schedule and stores per-window snapshots in `!wm-snapshot` so HTTP reads
    are O(1) and never block on the filesystem walk / repo scan."
-  (:require [cheshire.core :as json]
+  (:require [babashka.http-client :as http-client]
+            [cheshire.core :as json]
             [clojure.string :as str]
             [futon3c.cyder :as cyder]
             [futon3c.logic.capability-star-map-extractor :as star-extractor]
             [futon3c.transport.http :as http])
   (:import [java.time Instant]
+           [java.util UUID]
            [java.util.concurrent Executors ScheduledExecutorService
                                  ScheduledFuture TimeUnit]))
 
@@ -72,6 +74,72 @@
 ;; for the discipline; this guard is the structural backstop.
 (defonce !tick-in-progress?
   (atom false))
+
+(def ^:private field-desk-item-url
+  "http://127.0.0.1:7070/api/alpha/morning-brief/item")
+
+(defn- selection-failure-kind
+  [error-data]
+  (or
+   (:failure-kind error-data)
+   (cond
+     (= :phase5-admissible-projection (:first-failed-seam error-data))
+     :strategic-selection-empty-frontier
+
+     (or (:maximum-endpoint-ms error-data)
+         (:recheck-endpoint-latencies error-data))
+     :strategic-selection-cache-gate-failed
+
+     :else :strategic-selection-failed)))
+
+(defn deposit-selection-loss!
+  "Write a pre-actuation selection failure into the Field Desk loss ledger."
+  [throwable]
+  (let [error-data (or (ex-data throwable) {})
+        attempt-id (str "wm-selection-failure-" (UUID/randomUUID))
+        failure-kind (selection-failure-kind error-data)
+        payload
+        {:attempt-id attempt-id
+         :trigger :wm-scheduler-tick
+         :outcome :incomplete
+         :author "war-machine"
+         :reviewer "ground-control"
+         :achievement
+         {:tier :none
+          :summary "Strategic selection stopped before enactment"}
+         :failure
+         {:kind failure-kind
+          :stage :selection
+          :error (or (.getMessage ^Throwable throwable)
+                     "Strategic selection failed")
+          :first-failed-seam (:first-failed-seam error-data)
+          :error-data error-data}
+         :qa-targets
+         {:selection {:failure-kind failure-kind
+                      :first-failed-seam
+                      (:first-failed-seam error-data)}}}
+        response
+        (http-client/post
+         field-desk-item-url
+         {:headers {"Content-Type" "application/json"}
+          :body (json/generate-string payload)
+          :timeout 10000
+          :throw false})
+        body
+        (try
+          (json/parse-string (str (:body response)) true)
+          (catch Throwable _ {}))]
+    (if (and (<= 200 (long (or (:status response) 0)) 299)
+             (true? (:ok body)))
+      {:status :recorded
+       :attempt-id attempt-id
+       :item-ref (:item-ref body)
+       :failure-kind failure-kind}
+      {:status :record-failed
+       :attempt-id attempt-id
+       :failure-kind failure-kind
+       :http-status (:status response)
+       :response body})))
 
 (defn- compute-next-tick-at [last-tick-at period-seconds]
   (when (and last-tick-at period-seconds)
@@ -241,14 +309,24 @@
           (cyder/touch! cyder-process-id)
           {:ok true :refreshed refreshed})
         (catch Throwable t
-          (swap! !state
+          (let [loss-ledger
+                (try
+                  (deposit-selection-loss! t)
+                  (catch Throwable ledger-error
+                    {:status :record-failed
+                     :error (.getMessage ledger-error)}))]
+            (swap! !state
                  (fn [s]
                    (-> s
                        (update :error-count inc)
                        (assoc :last-error (.getMessage t)
-                              :last-error-data (ex-data t)))))
-          (cyder/touch! cyder-process-id)
-          {:ok false :error (.getMessage t)})
+                              :last-error-data
+                              (assoc (or (ex-data t) {})
+                                     :loss-ledger loss-ledger)))))
+            (cyder/touch! cyder-process-id)
+            {:ok false
+             :error (.getMessage t)
+             :loss-ledger loss-ledger}))
         (finally
           ;; Always clear the guard, even on Throwable — never leave the
           ;; scheduler permanently locked.

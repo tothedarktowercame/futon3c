@@ -1,7 +1,38 @@
 (ns futon3c.wm.scheduler-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [babashka.http-client :as http-client]
+            [cheshire.core :as json]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.logic.capability-star-map-extractor :as star-extractor]
             [futon3c.wm.scheduler :as scheduler]))
+
+(deftest selection-failure-is-deposited-as-a-typed-loss
+  (let [seen (atom nil)
+        failure
+        (ex-info "live WM verification produced an empty frontier"
+                 {:first-failed-seam :phase5-admissible-projection})
+        result
+        (with-redefs
+          [http-client/post
+           (fn [url opts]
+             (reset! seen {:url url
+                           :body (json/parse-string (:body opts) true)})
+             {:status 200
+              :body
+              (json/generate-string
+               {:ok true
+                :item-ref "/field-desk/items/failure.edn"})})]
+          (scheduler/deposit-selection-loss! failure))]
+    (is (= :recorded (:status result)))
+    (is (= :strategic-selection-empty-frontier
+           (:failure-kind result)))
+    (is (= "http://127.0.0.1:7070/api/alpha/morning-brief/item"
+           (:url @seen)))
+    (is (= "strategic-selection-empty-frontier"
+           (get-in @seen [:body :failure :kind])))
+    (is (= "selection"
+           (get-in @seen [:body :failure :stage])))
+    (is (= "phase5-admissible-projection"
+           (get-in @seen [:body :failure :first-failed-seam])))))
 
 (deftest trim-action-predictions-adds-structural-hole-count-beside-lexical-count
   (testing "served ranked-actions carry structural holes without changing lexical holes"

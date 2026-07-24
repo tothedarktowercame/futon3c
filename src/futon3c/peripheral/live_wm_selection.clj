@@ -78,6 +78,18 @@
          (:transition-warrants phase5)
          {:budget (count (get-in phase5 [:cascade :shown]))
           :memory-limit (:memory-limit input 10)})
+        recall-failures
+        (->> (:steps outer)
+             (mapcat #(get-in % [:result :recalls]))
+             (remove :ok)
+             (mapv #(select-keys % [:endpoint :elapsed-ms :error])))
+        _recall-check
+        (when (seq recall-failures)
+          (throw
+           (ex-info "live WM shared-memory recall failed"
+                    {:first-failed-seam :live-memory-recall
+                     :failure-kind :strategic-selection-recall-failed
+                     :recall-failures recall-failures})))
         candidates (get-in outer [:admissible-projection :candidates])
         candidate-domain (candidate-ranking candidates)
         candidate-set (set candidate-domain)

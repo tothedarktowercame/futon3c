@@ -128,6 +128,26 @@
                   [{:pattern-id "p4ng/R9-independent-witness"
                     :elapsed-ms 1001.0}]}))))))
 
+(deftest substrate-failure-is-not-misreported-as-an-empty-frontier
+  (let [failure
+        (try
+          (live/run-verification
+           {:recall-fn
+            (fn [_ endpoint _]
+              {:ok false
+               :endpoint endpoint
+               :elapsed-ms 2.0
+               :memories []
+               :error {:error/code :substrate-read-failed}})}
+           live-input)
+          nil
+          (catch clojure.lang.ExceptionInfo e e))]
+    (is (= :live-memory-recall
+           (:first-failed-seam (ex-data failure))))
+    (is (= :strategic-selection-recall-failed
+           (:failure-kind (ex-data failure))))
+    (is (= 4 (count (:recall-failures (ex-data failure)))))))
+
 (deftest review-removal-and-warrant-retraction-fail-closed
   (testing "removing review prevents a memory from admitting its mission"
     (let [r6-memory-id

@@ -5,6 +5,7 @@
 
 (def ^:private review-uri "/api/alpha/morning-brief/review")
 (def ^:private addendum-uri "/api/alpha/morning-brief/addendum")
+(def ^:private item-uri "/api/alpha/morning-brief/item")
 (def ^:private pending-uri "/api/alpha/morning-brief/pending")
 (def ^:private strategic-selection-uri
   "/api/alpha/war-machine/strategic-selection")
@@ -24,6 +25,12 @@
     :uri addendum-uri
     :body (json/generate-string payload)}))
 
+(defn- post-item [payload]
+  ((http/make-handler {})
+   {:request-method :post
+    :uri item-uri
+    :body (json/generate-string payload)}))
+
 (defn- get-pending []
   ((http/make-handler {}) {:request-method :get :uri pending-uri}))
 
@@ -35,6 +42,28 @@
 
 (defn- resolver [implementations]
   (fn [sym] (get implementations sym)))
+
+(deftest selection-failure-item-enters-the-field-desk-ledger
+  (let [seen (atom nil)]
+    (with-redefs
+      [clojure.core/requiring-resolve
+       (resolver
+        {'futon2.aif.morning-brief/queue-item!
+         (fn [item]
+           (reset! seen item)
+           "/tmp/attempt-selection-failure.edn")})]
+      (let [response
+            (post-item
+             {:attempt-id "wm-selection-failure-1"
+              :outcome "incomplete"
+              :failure
+              {:kind "strategic-selection-empty-frontier"
+               :stage "selection"
+               :first-failed-seam "phase5-admissible-projection"}})]
+        (is (= 200 (:status response)))
+        (is (= "wm-selection-failure-1" (:attempt-id @seen)))
+        (is (= "/tmp/attempt-selection-failure.edn"
+               (:item-ref (response-body response))))))))
 
 (deftest strategic-selection-route-invokes-the-cache-gated-selector
   (let [seen (atom nil)
