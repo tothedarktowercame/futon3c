@@ -6,6 +6,7 @@
    end-valid-time retracted without deleting either episode."
   (:require [clojure.string :as str]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.substrate.client :as substrate])
   (:import [java.time Duration Instant]
@@ -85,6 +86,171 @@
                      :requested-domain (:domain ctx)
                      :edge-domain (get-in edge [:hx/props :domain])})))
   edge)
+
+(def ^:private review-verdicts
+  #{:approve :challenge :reject})
+
+(def ^:private witness-statuses
+  #{:self-asserted :independently-witnessed})
+
+(defn- nonblank-string?
+  [x]
+  (and (string? x) (not (str/blank? x))))
+
+(defn- exact-patterns?
+  [expected actual]
+  (and (= (count expected) (count actual))
+       (= (set expected) (set actual))))
+
+(defn- validate-review!
+  [memory-id pattern-ids verdict memory-entry review-entry]
+  (when-not review-entry
+    (throw (ex-info "memory attachment review evidence not found"
+                    {:memory-id memory-id})))
+  (let [body (:evidence/body review-entry)
+        reviewer (:evidence/author review-entry)
+        author (:evidence/author memory-entry)
+        reviewed-patterns (:review/pattern-ids body)]
+    (when-not memory-entry
+      (throw (ex-info "memory evidence entry not found"
+                      {:memory-id memory-id})))
+    (when-not (and (nonblank-string? reviewer)
+                   (not= reviewer author))
+      (throw (ex-info "memory author cannot review their own attachment"
+                      {:memory-id memory-id
+                       :memory-author author
+                       :reviewer reviewer})))
+    (when-not (= {:ref/type :memory :ref/id memory-id}
+                 (:evidence/subject review-entry))
+      (throw (ex-info "review evidence subject does not name the memory"
+                      {:memory-id memory-id
+                       :subject (:evidence/subject review-entry)})))
+    (when-not (and (= :memory-attachment-review (:review/event body))
+                   (= memory-id (:review/memory-id body))
+                   (= verdict (:review/verdict body))
+                   (exact-patterns? pattern-ids reviewed-patterns)
+                   (some? (:review/provenance body))
+                   (nonblank-string? (:evidence/at review-entry)))
+      (throw (ex-info "review evidence does not certify the exact attachment"
+                      {:memory-id memory-id
+                       :pattern-ids pattern-ids
+                       :verdict verdict
+                       :review-body body})))
+    (when (and (= :approve verdict)
+               (not (contains? witness-statuses
+                               (:review/witness-status body))))
+      (throw (ex-info "approval must state its supported witness status"
+                      {:memory-id memory-id
+                       :witness-status (:review/witness-status body)})))
+    {:reviewer reviewer
+     :witness-status (:review/witness-status body)}))
+
+(defn- review-visible?
+  [memory-id review-evidence-id attachment-status fetch-hyperedges]
+  (let [edge (current-edge memory-id fetch-hyperedges)]
+    (and edge
+         (= attachment-status
+            (get-in edge [:hx/props :attachment-status]))
+         (= review-evidence-id
+            (get-in edge [:hx/props :review :evidence-id])))))
+
+(defn review-attachment!
+  "Review one proposed pattern attachment using separately authored evidence.
+
+   The Futon1b hyperedge POST synchronously invalidates its query cache.  This
+   operation additionally performs a fresh endpoint read and refuses success
+   until that read observes the new review version, making the cache contract
+   an explicit postcondition."
+  ([ctx request] (review-attachment! ctx request {}))
+  ([ctx {:keys [memory-id review-evidence-id verdict pattern-ids] :as request}
+    {:keys [fetch-hyperedges fetch-entry post-hyperedge]
+     :or {fetch-hyperedges substrate/hyperedges-by-end
+          fetch-entry #(estore/get-entry* (:evidence-store ctx) %)
+          post-hyperedge memory-write/post-hyperedge!}}]
+   (when-not (and (nonblank-string? memory-id)
+                  (nonblank-string? review-evidence-id)
+                  (contains? review-verdicts verdict)
+                  (vector? pattern-ids)
+                  (seq pattern-ids)
+                  (every? nonblank-string? pattern-ids)
+                  (keyword? (:domain ctx)))
+     (throw (ex-info "attachment review requires ids, patterns, verdict, and domain"
+                     {:request request :domain (:domain ctx)})))
+   (let [edge (validate-edge! ctx memory-id
+                              (current-edge memory-id fetch-hyperedges))
+         edge-patterns (get-in edge [:hx/props :roles :patterns])
+         memory-entry (fetch-entry memory-id)
+         review-entry (fetch-entry review-evidence-id)
+         {:keys [reviewer witness-status]}
+         (validate-review! memory-id pattern-ids verdict memory-entry
+                           review-entry)
+         existing-review (get-in edge [:hx/props :review])
+         attachment-status (case verdict
+                             :approve :reviewed
+                             :challenge :challenged
+                             :reject :rejected)]
+     (when-not (exact-patterns? edge-patterns pattern-ids)
+       (throw (ex-info "review pattern set does not match attachment"
+                       {:memory-id memory-id
+                        :edge-patterns edge-patterns
+                        :review-patterns pattern-ids})))
+     (when-not (= :current (get-in edge [:hx/props :state]))
+       (throw (ex-info "only a current memory attachment can be reviewed"
+                       {:memory-id memory-id
+                        :state (get-in edge [:hx/props :state])})))
+     (if (= review-evidence-id (:evidence-id existing-review))
+       (if (and (= verdict (:verdict existing-review))
+                (exact-patterns? pattern-ids (:pattern-ids existing-review)))
+         {:ok (review-visible? memory-id review-evidence-id
+                               attachment-status fetch-hyperedges)
+          :memory-id memory-id
+          :review-evidence-id review-evidence-id
+          :attachment-status attachment-status
+          :idempotent-replay? true
+          :cache-postcondition :fresh-endpoint-read}
+         (throw (ex-info "review evidence id was reused with a changed verdict"
+                         {:memory-id memory-id
+                          :review-evidence-id review-evidence-id
+                          :existing-review existing-review
+                          :request request})))
+       (let [reviewed-at (:evidence/at review-entry)
+             review {:evidence-id review-evidence-id
+                     :reviewer reviewer
+                     :verdict verdict
+                     :pattern-ids pattern-ids
+                     :reviewed-at reviewed-at}
+             updated
+             (cond-> (-> edge
+                         (assoc-in [:hx/props :attachment-status]
+                                   attachment-status)
+                         (assoc-in [:hx/props :review] review)
+                         (update-in [:hx/props :review-history]
+                                    (fnil conj []) review)
+                         (assoc-in [:hx/props :system-time] reviewed-at))
+               (= :approve verdict)
+               (assoc-in [:hx/props :witness-status] witness-status))
+             projection (post-hyperedge ctx updated)]
+         (if-not (:ok projection)
+           {:ok false
+            :stage :review-projection
+            :memory-id memory-id
+            :review-evidence-id review-evidence-id
+            :projection projection}
+           (let [visible? (review-visible? memory-id review-evidence-id
+                                           attachment-status
+                                           fetch-hyperedges)]
+             {:ok visible?
+              :stage (if visible? :complete :cache-postcondition)
+              :memory-id memory-id
+              :review-evidence-id review-evidence-id
+              :attachment-status attachment-status
+              :witness-status (when (= :approve verdict) witness-status)
+              :reviewer reviewer
+              :cache-postcondition
+              (if visible?
+                :fresh-endpoint-read
+                :stale-after-successful-repost)
+              :projection projection})))))))
 
 (defn challenge-memory!
   "Record a failed or disputed use, then project the memory as challenged.
