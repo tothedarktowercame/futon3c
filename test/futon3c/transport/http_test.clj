@@ -19,6 +19,7 @@
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.clock-store :as clock-store]
             [clojure.java.io :as io]
@@ -270,6 +271,54 @@
           (do
             (Thread/sleep 20)
             (recur)))))))
+
+(deftest whistle-timeout-returns-pollable-supervised-job
+  (testing "strict whistle timeout returns job-id/overrun while the same turn completes"
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-whistle-overrun" :id/type :continuity}
+      :type :codex
+      :invoke-fn (fn [_prompt _session-id]
+                   (Thread/sleep 120)
+                   {:result "late whistle result" :session-id "s-whistle"})
+      :capabilities [:explore :edit]})
+    (let [handler (make-handler)]
+      (with-redefs [http/job-ceiling-ms (constantly 500)
+                    turn-queue/drainer-v2-enabled? (constantly false)]
+        (with-live-server
+          handler
+          (fn [base-url]
+            (let [response (http-post-json
+                            base-url
+                            "/api/alpha/whistle"
+                            (json/generate-string
+                             {:agent-id "codex-whistle-overrun"
+                              :prompt "slow question"
+                              :timeout-ms 20}))
+                  body (parse-body response)
+                  job-id (:job-id body)]
+              (is (= 504 (:status response)))
+              (is (true? (:overrun body)))
+              (is (string? job-id))
+              (is (= (str "/api/alpha/invoke/jobs/" job-id)
+                     (:status-url body)))
+              (let [deadline (+ (System/currentTimeMillis) 1000)
+                    terminal
+                    (loop []
+                      (let [job-response (get-req
+                                          handler
+                                          (str "/api/alpha/invoke/jobs/" job-id))
+                            parsed (parse-body job-response)
+                            state (get-in parsed [:job :state])]
+                        (if (or (= "done" state)
+                                (>= (System/currentTimeMillis) deadline))
+                          parsed
+                          (do (Thread/sleep 10) (recur)))))]
+                (is (= "done" (get-in terminal [:job :state])))
+                (is (= "late whistle result"
+                       (get-in terminal [:job :result-summary])))
+                (is (= :idle
+                       (:agent/status
+                        (reg/get-agent "codex-whistle-overrun"))))))))))))
 
 (defn- with-temp-dir
   [f]

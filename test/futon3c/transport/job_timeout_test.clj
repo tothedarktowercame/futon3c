@@ -96,6 +96,36 @@
     :invoke-fn (fn [_ _] {:result "ok" :session-id nil})
     :capabilities [:explore :edit]}))
 
+(defn- register-invoke-agent!
+  [agent-id-str type invoke-fn]
+  (reg/register-agent!
+   {:agent-id {:id/value agent-id-str :id/type :continuity}
+    :type type
+    :invoke-fn invoke-fn
+    :capabilities [:explore :edit]}))
+
+(defn- create-job!
+  [job-id agent-id caller]
+  (#'http/create-invoke-job! {:requested-job-id job-id
+                              :agent-id agent-id
+                              :prompt "test turn"
+                              :caller caller
+                              :surface "bell"}))
+
+(defn- run-job!
+  [job-id agent-id timeout-ms]
+  (#'http/run-invoke-job! {:job-id job-id
+                           :agent-id agent-id
+                           :prompt "test turn"
+                           :caller "caller-1"
+                           :surface "bell"
+                           :timeout-ms timeout-ms}))
+
+(defn- job-events
+  [job-id event-type]
+  (->> (get-in @@#'http/!invoke-jobs-ledger [:jobs job-id :events])
+       (filter #(= event-type (:type %)))))
+
 (defn- agent-status
   [agent-id]
   (or (:agent/status (reg/get-agent agent-id)) :idle))
@@ -181,6 +211,79 @@
     (#'http/finalize-invoke-job! "job-done-1" "done" nil nil {:ok true :result "finished"} "sid-1")
     (is (= "done" (job-state "job-done-1"))
         "overrun job can finish as done — no false failed state")))
+
+(deftest on-time-supervised-turn-is-unchanged
+  (testing "an on-time async turn finalizes normally and returns the agent idle"
+    (register-invoke-agent! "agent-fast" :codex
+                            (fn [_ _] {:result "on time" :session-id "s-fast"}))
+    (create-job! "job-fast" "agent-fast" "caller-1")
+    (with-redefs [http/job-ceiling-ms (constantly 200)]
+      (let [result (run-job! "job-fast" "agent-fast" 100)]
+        (is (= "done" (:terminal-state result)))
+        (is (= "done" (job-state "job-fast")))
+        (is (empty? (job-events "job-fast" "overrun")))
+        (is (= :idle (agent-status "agent-fast")))))))
+
+(deftest overrun-late-result-finalizes-done-and-bells-once
+  (testing "the same future may finish after timeout and still takes the normal path"
+    (register-invoke-agent! "agent-late" :codex
+                            (fn [_ _]
+                              (Thread/sleep 70)
+                              {:result "late but valid" :session-id "s-late"}))
+    (register-invoke-agent! "caller-1" :claude
+                            (fn [_ _] {:result "ack" :session-id nil}))
+    (create-job! "job-late" "agent-late" "caller-1")
+    (let [bellbacks (atom [])]
+      (with-redefs [http/job-ceiling-ms (constantly 250)
+                    http/*enqueue-auto-bellback!* #(swap! bellbacks conj %)]
+        (run-job! "job-late" "agent-late" 15))
+      (is (= "done" (job-state "job-late")))
+      (is (= 1 (count (job-events "job-late" "overrun"))))
+      (is (= 1 (count @bellbacks)))
+      (is (= :idle (agent-status "agent-late"))))))
+
+(deftest overrun-ceiling-finalizes-timeout-and-bells-once
+  (testing "the ceiling wins once, interrupts the turn, and releases the agent"
+    (register-invoke-agent! "agent-ceiling" :codex
+                            (fn [_ _]
+                              (Thread/sleep 500)
+                              {:result "too late" :session-id nil}))
+    (register-invoke-agent! "caller-1" :claude
+                            (fn [_ _] {:result "ack" :session-id nil}))
+    (create-job! "job-ceiling" "agent-ceiling" "caller-1")
+    (let [bellbacks (atom [])]
+      (with-redefs [http/job-ceiling-ms (constantly 60)
+                    http/*enqueue-auto-bellback!* #(swap! bellbacks conj %)]
+        (run-job! "job-ceiling" "agent-ceiling" 15))
+      (is (= "timeout" (job-state "job-ceiling")))
+      (is (= "job-ceiling-exceeded" (job-terminal-code "job-ceiling")))
+      (is (= 1 (count (job-events "job-ceiling" "timeout"))))
+      (is (= 1 (count @bellbacks)))
+      (is (= :idle (agent-status "agent-ceiling"))))))
+
+(deftest reaper-and-supervisor-race-finalizes-once
+  (testing "the reaper and supervisor share the same atomic completion guard"
+    (register-invoke-agent! "agent-race" :codex
+                            (fn [_ _] {:result "unused" :session-id nil}))
+    (register-invoke-agent! "caller-1" :claude
+                            (fn [_ _] {:result "ack" :session-id nil}))
+    (setup-overrun-job! "job-finalize-race" "agent-race" 1000)
+    (swap! @#'http/!invoke-jobs-ledger assoc-in
+           [:jobs "job-finalize-race" :caller] "caller-1")
+    (let [start (promise)
+          bellbacks (atom [])]
+      (with-redefs [http/job-ceiling-ms (constantly 1)
+                    http/*enqueue-auto-bellback!* #(swap! bellbacks conj %)]
+        (let [supervisor (future @start
+                                 (#'http/finalize-job-at-ceiling!
+                                  "job-finalize-race" 1))
+              reaper (future @start (reap-stale-invoke-jobs! 1))]
+          (deliver start true)
+          @supervisor
+          @reaper))
+      (is (= "timeout" (job-state "job-finalize-race")))
+      (is (= 1 (count (job-events "job-finalize-race" "timeout"))))
+      (is (= 1 (count @bellbacks))))))
 
 ;; =============================================================================
 ;; Reconcile treats overrun as live (d)

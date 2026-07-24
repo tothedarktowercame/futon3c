@@ -66,7 +66,6 @@
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
             [futon3c.social.persist :as persist]
-            [futon3c.social.whistles :as whistles]
             [futon3c.social.coordination-ledger :as coordination-ledger]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
@@ -1040,10 +1039,11 @@
              (and (string? trace-id) (not (str/blank? trace-id)))
              (assoc-in [:trace->job trace-id] job-id))))
          ledger)))
-    (let [released-park-records (:released-records (parked-on-notify! job-id result-text))]
-      (when @updated-terminal-job
-        (let [bellback-request (atom nil)]
-          (update-invoke-jobs-ledger!
+    (when @updated-terminal-job
+      (let [released-park-records
+            (:released-records (parked-on-notify! job-id result-text))
+            bellback-request (atom nil)]
+        (update-invoke-jobs-ledger!
            (fn [ledger]
              (if-let [job (get-in ledger [:jobs job-id])]
                (let [finished-at (or (:finished-at job) (str (Instant/now)))
@@ -1072,14 +1072,14 @@
                                   :at finished-at}))
                      ledger)))
                ledger)))
-          (when-let [request @bellback-request]
-            (try
-              (*enqueue-auto-bellback!* request)
-              (catch Throwable t
-                (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
-                              (.getMessage t)))
-                (flush)))))))
-    nil))
+        (when-let [request @bellback-request]
+          (try
+            (*enqueue-auto-bellback!* request)
+            (catch Throwable t
+              (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
+                            (.getMessage t)))
+              (flush))))))
+    (boolean @updated-terminal-job)))
 
 (defn- record-invoke-job-delivery!
   [invoke-trace-id {:keys [surface destination delivered? note]}]
@@ -1169,6 +1169,28 @@
   []
   (parse-env-ms "FUTON3C_JOB_CEILING_MS" (* 2 (job-cap-ms))))
 
+(defn- mark-invoke-job-overrun!
+  "Atomically move JOB-ID from running to overrun. Returns true only to the
+   caller that won the transition."
+  [job-id timeout-ms]
+  (let [transitioned? (atom false)]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (if-let [job (get-in ledger [:jobs job-id])]
+         (if (= "running" (str (:state job)))
+           (do
+             (reset! transitioned? true)
+             (assoc-in ledger [:jobs job-id]
+                       (-> job
+                           (assoc :state "overrun"
+                                  :overrun-at (str (Instant/now)))
+                           (append-job-event "overrun"
+                                             {:code "job-timeout-exceeded"
+                                              :timeout-ms timeout-ms}))))
+           ledger)
+         ledger)))
+    @transitioned?))
+
 ;; Keep the old const for backward compatibility.
 (def ^:const stale-job-threshold-ms default-job-cap-ms)
 
@@ -1197,28 +1219,66 @@
       (catch Throwable _))
     true))
 
-(defn- finalize-overrun-job!
-  "Force-terminate an overrun job past the ceiling.
-   Marks 'timeout', runs execution-evidence fallback, marks agent idle."
-  [jid job ceiling-ms]
-  (interrupt-job-worker! jid)
-  (let [finished-at (str (Instant/now))
-        agent-id (:agent-id job)
-        execution (try
-                    (invoke-execution-evidence {:ok false} jid)
-                    (catch Throwable _ {:executed false :tool-events 0 :command-events 0}))
-        updated-job (-> job
-                        (assoc :state "timeout"
-                               :finished-at finished-at
-                               :terminal-code "job-ceiling-exceeded"
-                               :terminal-message (str "Job force-terminated after exceeding "
-                                                      (/ ceiling-ms 60000) " minute ceiling")
-                               :execution execution)
-                        (append-job-event "timeout" {:code "job-ceiling-exceeded"
-                                                     :ceiling-ms ceiling-ms}))]
-    (when agent-id
-      (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _)))
-    updated-job))
+(defn- ceiling-timeout-message
+  [ceiling-ms]
+  (str "Turn terminated at the hard job ceiling after " ceiling-ms "ms"))
+
+(defn- finalize-job-at-ceiling!
+  "Try the single terminal transition for JOB-ID, then interrupt its worker.
+   Returns true only when this caller won finalization."
+  [job-id ceiling-ms]
+  (let [message (ceiling-timeout-message ceiling-ms)
+        result {:ok false
+                :error {:error/code :timeout
+                        :error/message message}}]
+    (when (finalize-invoke-job! job-id "timeout" "job-ceiling-exceeded"
+                                message result nil)
+      (interrupt-job-worker! job-id)
+      (when-let [agent-id (:agent-id (get-invoke-job job-id))]
+        (try (reg/mark-agent-idle! (str agent-id)) (catch Throwable _)))
+      true)))
+
+(def ^:private default-async-invoke-timeout-ms
+  (* 30 60 1000))
+
+(defn- supervise-invoke-future!
+  "Run INVOKE-FN once and supervise its future for a durable async job.
+
+   The soft timeout is observational: the job becomes overrun and the same
+   future remains authoritative. The hard ceiling is terminal: exactly one
+   finalizer wins, then the worker is interrupted."
+  [job-id timeout-ms invoke-fn]
+  (let [soft-ms (long (or (when (and timeout-ms (pos? (long timeout-ms)))
+                            timeout-ms)
+                          default-async-invoke-timeout-ms))
+        ceiling-ms (long (job-ceiling-ms))
+        started-ms (System/currentTimeMillis)
+        worker-thread (promise)
+        turn-future (future
+                      (deliver worker-thread (Thread/currentThread))
+                      (invoke-fn))]
+    (register-job-worker! job-id (deref worker-thread 1000 nil) turn-future)
+    (let [initial-wait-ms (max 1 (min soft-ms ceiling-ms))
+          initial-result (deref turn-future initial-wait-ms ::invoke-overrun)]
+      (if (not= ::invoke-overrun initial-result)
+        initial-result
+        (do
+          (mark-invoke-job-overrun! job-id soft-ms)
+          (let [elapsed-ms (- (System/currentTimeMillis) started-ms)
+                remaining-ms (max 0 (- ceiling-ms elapsed-ms))
+                late-result (if (pos? remaining-ms)
+                              (deref turn-future remaining-ms ::invoke-ceiling)
+                              ::invoke-ceiling)]
+            (if (not= ::invoke-ceiling late-result)
+              late-result
+              (let [message (ceiling-timeout-message ceiling-ms)]
+                (finalize-job-at-ceiling! job-id ceiling-ms)
+                {:ok false
+                 :error {:error/code :timeout
+                         :error/message message}
+                 :job-id job-id
+                 :overrun true
+                 :ceiling-ms ceiling-ms}))))))))
 
 (defn reap-stale-invoke-jobs!
   "Transition running jobs past the cap to 'overrun' (non-terminal, supervised).
@@ -1230,40 +1290,22 @@
    (let [ceiling-ms (job-ceiling-ms)
          now-ms (System/currentTimeMillis)
          transitioned (atom 0)]
-     (update-invoke-jobs-ledger!
-      (fn [ledger]
-        (let [jobs (:jobs ledger)
-              updated-jobs
-              (reduce-kv
-               (fn [acc jid job]
-                 (let [started (:started-at job)
-                       age-ms (when (string? started)
-                                (try
-                                  (- now-ms (.toEpochMilli (Instant/parse started)))
-                                  (catch Exception _ nil)))]
-                   (cond
-                     ;; Running past cap -> overrun (non-terminal, supervised)
-                     (and (= "running" (str (:state job)))
-                          (some? age-ms) (> age-ms threshold-ms))
-                     (do (swap! transitioned inc)
-                         (assoc acc jid
-                                (-> job
-                                    (assoc :state "overrun"
-                                           :overrun-at (str (Instant/now)))
-                                    (append-job-event "overrun" {:code "job-cap-exceeded"
-                                                                 :cap-ms threshold-ms}))))
+     (doseq [[jid job] (:jobs @!invoke-jobs-ledger)]
+       (let [started (:started-at job)
+             age-ms (when (string? started)
+                      (try
+                        (- now-ms (.toEpochMilli (Instant/parse started)))
+                        (catch Exception _ nil)))]
+         (cond
+           (and (= "running" (str (:state job)))
+                (some? age-ms) (> age-ms threshold-ms))
+           (when (mark-invoke-job-overrun! jid threshold-ms)
+             (swap! transitioned inc))
 
-                     ;; Overrun past ceiling -> timeout (terminal, force-terminated)
-                     (and (= "overrun" (str (:state job)))
-                          (some? age-ms) (> age-ms ceiling-ms))
-                     (do (swap! transitioned inc)
-                         (assoc acc jid (finalize-overrun-job! jid job ceiling-ms)))
-
-                     :else
-                     (assoc acc jid job))))
-               {}
-               jobs)]
-          (assoc ledger :jobs updated-jobs))))
+           (and (= "overrun" (str (:state job)))
+                (some? age-ms) (> age-ms ceiling-ms))
+           (when (finalize-job-at-ceiling! jid ceiling-ms)
+             (swap! transitioned inc)))))
      (let [n @transitioned]
        (when (pos? n)
          (println (str "[invoke-jobs] Transitioned " n " stale/overrun job(s)"))
@@ -3404,8 +3446,6 @@
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
-      ;; Register the worker thread for ceiling enforcement (interrupt at hard ceiling).
-      (register-job-worker! job-id (Thread/currentThread) nil)
       (preclock-dispatch! agent-id mission-id)
       (let [thread (let [bell? (= "bell" (some-> surface str str/trim))
                          job   (when bell? (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id]))]
@@ -3434,7 +3474,9 @@
             _ (try (record-job-stream-event! job-id {:type "prompt" :text prompt})
                    (catch Throwable _))
             raw-result (try
-                         (invoke-agent-with-session-recovery! aid effective-prompt timeout-ms)
+                         (supervise-invoke-future!
+                          job-id timeout-ms
+                          #(invoke-agent-with-session-recovery! aid effective-prompt nil))
                          (finally
                            (if prev-sink
                              (reg/set-invoke-event-sink! aid prev-sink)
@@ -4264,7 +4306,8 @@
 (defn- handle-whistle
   "POST /api/alpha/whistle — synchronous request-response to a registered agent.
    Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 1800000}
-   Delegates to whistles/whistle! which wraps invoke-agent! with evidence."
+   Uses the canonical supervised invoke-job engine. At the strict response
+   timeout the caller receives a pollable overrun job instead of losing it."
   [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
@@ -4296,29 +4339,75 @@
                        ^Runnable
                        (fn []
                          (try
-                           (let [result (whistles/whistle!
-                                         {:agent-id (str agent-id)
-                                          :prompt prompt
-                                          :author caller
-                                          :timeout-ms timeout-ms
-                                          :evidence-store evidence-store})]
-                             (if (:whistle/ok result)
-                               (hk/send! channel
-                                         (json-response 200 (cond-> {:ok true
-                                                                     :response (:whistle/response result)
-                                                                     :agent-id (:whistle/agent-id result)
-                                                                     :session-id (:whistle/session-id result)}
-                                                              (:whistle/invoke-trace-id result)
-                                                              (assoc :invoke-trace-id (:whistle/invoke-trace-id result)))))
-                               (let [err (:whistle/error result)]
-                                 (hk/send! channel
-                                           (json-response
-                                            (if (and (string? err) (.contains ^String err "not registered")) 404 502)
-                                            (cond-> {:ok false
-                                                     :error err
-                                                     :agent-id (:whistle/agent-id result)}
-                                              (:whistle/invoke-trace-id result)
-                                              (assoc :invoke-trace-id (:whistle/invoke-trace-id result))))))))
+                           (let [wait-ms (long (or timeout-ms default-async-invoke-timeout-ms))
+                                 job-id (create-invoke-job! {:agent-id agent-id
+                                                            :prompt prompt
+                                                            :caller caller
+                                                            :surface "whistle"})
+                                 completed (promise)
+                                 run-job #(run-invoke-job! {:job-id job-id
+                                                           :agent-id agent-id
+                                                           :prompt prompt
+                                                           :caller caller
+                                                           :surface "whistle"
+                                                           :timeout-ms wait-ms
+                                                           :evidence-store evidence-store})
+                                 deliver! #(deliver completed %)]
+                             (if (turn-queue/drainer-v2-enabled?)
+                               (turn-queue/accept-async!
+                                {:to (str agent-id)
+                                 :from caller
+                                 :surface "whistle"
+                                 :prompt prompt
+                                 :process-fn (fn [_entry]
+                                               (binding [turn-queue/*drained-by-outer* true]
+                                                 (run-job)))
+                                 :finalize-fn deliver!})
+                               (future (deliver! (run-job))))
+                             (let [outcome (deref completed wait-ms ::whistle-overrun)]
+                               (if (= ::whistle-overrun outcome)
+                                 (do
+                                   (mark-invoke-job-overrun! job-id wait-ms)
+                                   (hk/send! channel
+                                             (json-response
+                                              504
+                                              {:ok false
+                                               :error "timeout"
+                                               :overrun true
+                                               :job-id job-id
+                                               :state "overrun"
+                                               :status-url (str "/api/alpha/invoke/jobs/" job-id)})))
+                                 (let [result (:result outcome)
+                                       err (:error result)
+                                       code (if (map? err) (:error/code err) :invoke-failed)
+                                       msg (if (map? err) (:error/message err) (str err))]
+                                   (record-invoke-job-delivery-by-job-id!
+                                    job-id
+                                    {:surface "whistle"
+                                     :destination (str "caller " caller)
+                                     :delivered? true
+                                     :note (if (:ok result)
+                                             "whistle-response"
+                                             "whistle-error")})
+                                   (hk/send! channel
+                                             (if (:ok result)
+                                               (json-response
+                                                200
+                                                (cond-> {:ok true
+                                                         :job-id job-id
+                                                         :response (:result result)
+                                                         :agent-id (str agent-id)
+                                                         :session-id (:session-id result)}
+                                                  (extract-trace-id (:invoke-meta result))
+                                                  (assoc :invoke-trace-id
+                                                         (extract-trace-id
+                                                          (:invoke-meta result)))))
+                                               (json-response
+                                                (if (= :agent-not-found code) 404 502)
+                                                {:ok false
+                                                 :job-id job-id
+                                                 :error msg
+                                                 :agent-id (str agent-id)})))))))
                            (catch Throwable t
                              (println (str "[whistle] async error: " (.getMessage t)))
                              (flush)
