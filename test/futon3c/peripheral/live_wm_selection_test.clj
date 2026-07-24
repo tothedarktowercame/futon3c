@@ -85,6 +85,49 @@
                  [:components :rung2 :evaluation
                   :recovered-from-misleading-seed?])))))
 
+(deftest cache-gated-selection-becomes-machine-authorized
+  (let [verified
+        (live/run-verification
+         {:recall-fn (recall-fixture memories)
+          :trace-id "bounded-autonomy-unit"}
+         live-input)
+        authorized
+        (live/authorize-bounded-autonomy
+         (assoc verified :serving-cache-gate
+                {:status :warm
+                 :maximum-endpoint-ms 1000
+                 :accepted-endpoint-latencies
+                 [{:pattern-id "p4ng/R9-independent-witness"
+                   :elapsed-ms 20.0}]}))]
+    (is (= :machine-authorized-bounded-autonomy
+           (get-in authorized [:actuation :status])))
+    (is (true? (get-in authorized [:actuation :authorized?])))
+    (is (false? (get-in authorized [:actuation :executed?])))
+    (is (= 13 (get-in authorized
+                      [:actuation :machine-gates
+                       :armed-tripwire-count])))
+    (is (= live/operator-decision-evidence-id
+           (get-in authorized
+                   [:actuation :operator-decision-evidence-id])))
+    (is (= live/delivery-qa-endpoint
+           (get-in authorized [:actuation :delivery-qa :endpoint])))))
+
+(deftest bounded-autonomy-rejects-an-unwarmed-selection
+  (let [verified
+        (live/run-verification
+         {:recall-fn (recall-fixture memories)}
+         live-input)]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"machine gates are incomplete"
+         (live/authorize-bounded-autonomy
+          (assoc verified :serving-cache-gate
+                 {:status :warmed-and-rechecked
+                  :maximum-endpoint-ms 1000
+                  :accepted-endpoint-latencies
+                  [{:pattern-id "p4ng/R9-independent-witness"
+                    :elapsed-ms 1001.0}]}))))))
+
 (deftest review-removal-and-warrant-retraction-fail-closed
   (testing "removing review prevents a memory from admitting its mission"
     (let [r6-memory-id

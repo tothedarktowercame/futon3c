@@ -1,53 +1,90 @@
 (ns futon3c.peripheral.strategic-canary
-  "Phase-8 operator-gated strategic advice.
+  "Phase-8 bounded-autonomy gate for reason-bearing strategic selection.
 
-   Only the advice-only rung is implemented. Confirm-to-enact and bounded
-   autonomy fail closed until an operator-reviewed window explicitly promotes
-   them. This namespace has no actuator and cannot mutate mission ordering."
-  (:require [clojure.set :as set]))
+   Operator decision evidence 6e6f56a1-b9d7-4f83-928f-3a211ef890a0
+   retires confirm-to-enact.  The machine may authorize an admissible policy
+   only when every machine gate below passes.  Delivery still requires an
+   Arxana Field Desk QA note through the port-7070 API."
+  (:require [clojure.set :as set]
+            [clojure.string :as str]))
 
-(def algorithm :strategic-canary/advice-only-v1)
-(def canary-rungs [:advice-only :confirm-to-enact :bounded-autonomy])
+(def algorithm :strategic-canary/bounded-autonomy-v2)
+(def operator-decision-evidence-id
+  "6e6f56a1-b9d7-4f83-928f-3a211ef890a0")
+(def rollback-boundary "e74c7e7")
+(def armed-tripwires
+  (set (map #(keyword (str "T" %)) (range 1 14))))
+(def delivery-qa-path "/api/alpha/morning-brief/addendum")
 
 (defn- nonblank-string?
   [value]
-  (and (string? value) (not-empty value)))
+  (and (string? value) (not (str/blank? value))))
 
 (defn- fallback
-  [requested-rung reason details]
-  {:status :advice-withheld
+  [reason details]
+  {:status :actuation-withheld
    :algorithm algorithm
-   :requested-rung requested-rung
-   :effective-rung :advice-only
+   :effective-rung :bounded-autonomy
+   :operator-decision-evidence-id operator-decision-evidence-id
    :fallback-controller :current-additive
-   :old-controller-available? true
+   :fallback-mode :explicit-rollback-only
+   :rollback-boundary rollback-boundary
    :rollback-reason reason
    :rollback-details details
    :enactment {:authorized? false :executed? false}
    :selected-mission nil
    :live-ordering-changed? false})
 
-(defn advice-only
-  "Issue one replay-backed recommendation while leaving choice to the operator."
+(defn- warm-cache-gate?
+  [{:keys [maximum-endpoint-ms accepted-endpoint-latencies]}]
+  (and (number? maximum-endpoint-ms)
+       (<= maximum-endpoint-ms 1000)
+       (seq accepted-endpoint-latencies)
+       (every? #(and (number? (:elapsed-ms %))
+                     (<= (:elapsed-ms %) maximum-endpoint-ms))
+               accepted-endpoint-latencies)))
+
+(defn- port-7070-delivery-gate?
+  [{:keys [required? endpoint]}]
+  (and (true? required?)
+       (nonblank-string? endpoint)
+       (try
+         (let [uri (java.net.URI. endpoint)]
+           (and (= 7070 (.getPort uri))
+                (= delivery-qa-path (.getPath uri))))
+         (catch Exception _ false))))
+
+(defn bounded-autonomy
+  "Authorize the frozen strategic recommendation under machine gates.
+
+   This function does not execute an action.  It proves that the policy may
+   proceed to actuation; the click runner must still emit delivery QA."
   [shadow-result fixture]
   (let [{:keys [freeze-id requested-rung decision-id
-                operator-choice-mission-ids operator-confirmed?
-                tripwire-clear? query-limit maximum-query-limit
+                operator-decision-evidence-id admissible-mission-ids
+                tripwire-clear? armed-tripwire-ids
+                query-limit maximum-query-limit serving-cache-gate
+                rollback-boundary delivery-qa calibration
                 observed-outcome]} fixture
-        trace
-        (first (filter #(= decision-id (:decision-id %))
-                       (:shadow-traces shadow-result)))
+        trace (first (filter #(= decision-id (:decision-id %))
+                             (:shadow-traces shadow-result)))
         recommendation (first (:ranked-policies trace))
         budget (:source-budget shadow-result)
         observed-memory-ids (set (:memory-ids-used observed-outcome))
         recommendation-memory-ids (set (:memory-ids recommendation))
+        admissible-set (set admissible-mission-ids)
+        recommendation-set (set (:mission-ids recommendation))
         basic-valid?
         (and (nonblank-string? freeze-id)
-             (contains? (set canary-rungs) requested-rung)
+             (= :bounded-autonomy requested-rung)
              (nonblank-string? decision-id)
-             (vector? operator-choice-mission-ids)
-             (seq operator-choice-mission-ids)
-             (boolean? operator-confirmed?)
+             (= futon3c.peripheral.strategic-canary/operator-decision-evidence-id
+                operator-decision-evidence-id)
+             (= futon3c.peripheral.strategic-canary/rollback-boundary
+                rollback-boundary)
+             (vector? admissible-mission-ids)
+             (seq admissible-mission-ids)
+             (= armed-tripwires (set armed-tripwire-ids))
              (boolean? tripwire-clear?)
              (integer? query-limit)
              (pos? query-limit)
@@ -59,8 +96,8 @@
              (seq (:proposal-reasons recommendation))
              (seq (:provenance recommendation))
              (seq (:memory-ids recommendation))
-             (true? (get-in recommendation
-                            [:hard-support :admitted?])))
+             (true? (get-in recommendation [:hard-support :admitted?]))
+             (set/subset? recommendation-set admissible-set))
         budget-valid?
         (and (map? budget)
              (<= (:spent budget) (:initial budget))
@@ -69,83 +106,88 @@
         (and (map? observed-outcome)
              (contains? #{:useful-progress :no-useful-progress}
                         (:outcome observed-outcome))
-             (= :independently-witnessed
-                (:witness-status observed-outcome))
+             (= :independently-witnessed (:witness-status observed-outcome))
              (nonblank-string? (:witness-id observed-outcome))
-             (vector? (:memory-ids-used observed-outcome))
              (seq (:memory-ids-used observed-outcome))
-             (set/subset? observed-memory-ids
-                          recommendation-memory-ids))]
+             (set/subset? observed-memory-ids recommendation-memory-ids))
+        calibration-honest?
+        (and (= 13 (:sample-count calibration))
+             (= 20 (:minimum calibration))
+             (false? (:advance? calibration))
+             (false? (:calibrated-probabilities? calibration)))]
     (cond
       (not basic-valid?)
-      (fallback requested-rung :invalid-canary-fixture
-                {:decision-id decision-id})
-
-      (not= :advice-only requested-rung)
-      (fallback requested-rung :reviewed-window-required-before-advance
-                {:available-rung :advice-only})
+      (fallback :invalid-bounded-autonomy-fixture {:decision-id decision-id})
 
       (not tripwire-clear?)
-      (fallback requested-rung :tripwire-fired
-                {:decision-id decision-id})
+      (fallback :tripwire-fired {:decision-id decision-id})
 
       (not budget-valid?)
-      (fallback requested-rung :query-or-resource-bound-failed
-                {:budget budget
-                 :query-limit query-limit
+      (fallback :query-or-resource-bound-failed
+                {:budget budget :query-limit query-limit
                  :maximum-query-limit maximum-query-limit})
 
+      (not (warm-cache-gate? serving-cache-gate))
+      (fallback :block-unwarmed-click {:serving-cache-gate serving-cache-gate})
+
       (not explanation-valid?)
-      (fallback requested-rung :explanation-or-provenance-incomplete
+      (fallback :admissibility-explanation-or-provenance-incomplete
                 {:decision-id decision-id})
 
       (not outcome-valid?)
-      (fallback requested-rung :independent-outcome-incomplete
+      (fallback :independent-outcome-incomplete
                 {:observed-outcome observed-outcome})
 
+      (not calibration-honest?)
+      (fallback :calibration-status-incomplete {:calibration calibration})
+
+      (not (port-7070-delivery-gate? delivery-qa))
+      (fallback :delivery-qa-gate-invalid {:delivery-qa delivery-qa})
+
       :else
-      {:status :advice-issued
+      {:status :bounded-autonomy-authorized
        :algorithm algorithm
-       :requested-rung requested-rung
-       :effective-rung :advice-only
+       :effective-rung :bounded-autonomy
+       :operator-decision-evidence-id
+       futon3c.peripheral.strategic-canary/operator-decision-evidence-id
        :recommendation
-       {:policy-id (:policy-id recommendation)
-        :mission-ids (:mission-ids recommendation)
-        :shadow-probability (:shadow-probability recommendation)
-        :e-s (:e-s recommendation)
-        :predicted-g-s (:predicted-g-s recommendation)
-        :hard-support (:hard-support recommendation)
-        :proposal-reasons (:proposal-reasons recommendation)
-        :memory-ids (:memory-ids recommendation)}
+       (select-keys recommendation
+                    [:policy-id :mission-ids :shadow-probability :e-s
+                     :predicted-g-s :hard-support :proposal-reasons
+                     :memory-ids :provenance])
        :counterfactual-baseline (:counterfactual-baseline trace)
-       :operator
-       {:choice-mission-ids operator-choice-mission-ids
-        :confirmed? operator-confirmed?
-        :agrees-with-advice?
-        (= operator-choice-mission-ids
-           (:mission-ids recommendation))
-        :override-required? false
-        :retains-choice? true}
        :observed-outcome observed-outcome
-       :memory-use
-       {:surfaced-ids (:memory-ids recommendation)
-        :used-ids (:memory-ids-used observed-outcome)}
-       :resource-audit
-       {:outer-budget budget
-        :query-limit query-limit
-        :maximum-query-limit maximum-query-limit
-        :within-bounds? true}
-       :tripwire {:clear? true}
+       :memory-use {:surfaced-ids (:memory-ids recommendation)
+                    :used-ids (:memory-ids-used observed-outcome)}
+       :resource-audit {:outer-budget budget
+                        :query-limit query-limit
+                        :maximum-query-limit maximum-query-limit
+                        :within-bounds? true}
+       :machine-gates
+       {:admissible-mission-ids admissible-mission-ids
+        :armed-tripwire-ids (vec (sort armed-tripwires))
+        :tripwire-clear? true
+        :serving-cache serving-cache-gate
+        :witness-and-provenance? true
+        :query-bounds? true}
+       :calibration calibration
+       :delivery-qa delivery-qa
        :fallback-controller :current-additive
-       :old-controller-available? true
+       :fallback-mode :explicit-rollback-only
+       :rollback-boundary
+       futon3c.peripheral.strategic-canary/rollback-boundary
        :rollback-reason nil
        :enactment
-       {:authorized? false
+       {:authorized? true
         :executed? false
-        :why :advice-only-operator-retains-control}
-       :next-rung
-       {:rung :confirm-to-enact
-        :eligible? false
-        :why :reviewed-window-required}
-       :selected-mission nil
-       :live-ordering-changed? false})))
+        :authority :machine-determined-bounded-autonomy
+        :operator-confirmation-required? false}
+       :selected-mission (first (:mission-ids recommendation))
+       :selected-mission-ids (:mission-ids recommendation)
+       :live-ordering-changed? true})))
+
+(defn advice-only
+  "Compatibility entry point.  Operator gating has been retired; evaluate the
+   bounded-autonomy contract instead."
+  [shadow-result fixture]
+  (bounded-autonomy shadow-result fixture))

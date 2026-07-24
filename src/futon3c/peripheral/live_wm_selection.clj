@@ -7,12 +7,18 @@
    exploratory model has demonstrated better mission selection."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [futon3c.evidence.futon1b-backend :as futon1b]
             [futon3c.peripheral.strategic-cascade :as cascade]
             [futon3c.peripheral.strategic-outcomes :as outcomes]
             [futon3c.peripheral.strategic-policies :as policies]))
 
 (def algorithm :live-wm-selection/reason-bearing-v1)
+(def operator-decision-evidence-id
+  "6e6f56a1-b9d7-4f83-928f-3a211ef890a0")
+(def rollback-boundary "e74c7e7")
+(def delivery-qa-endpoint
+  "http://127.0.0.1:7070/api/alpha/morning-brief/addendum")
 
 (defn- trace-by-id
   [traces id key-name]
@@ -254,11 +260,64 @@
                   :warm-up-endpoint-latencies first-latencies
                   :accepted-endpoint-latencies accepted-latencies}))))))
 
+(defn authorize-bounded-autonomy
+  "Promote a cache-gated selection to machine-determined enactment authority.
+
+   Evidence 6e6f56a1-b9d7-4f83-928f-3a211ef890a0 retires operator
+   confirm-to-enact. This does not execute the click. The full-loop runner
+   retains T1--T13 and must close any delivery through Field Desk QA on 7070."
+  [selection]
+  (let [candidate-set (set (:candidate-domain selection))
+        selected-set (set (:selected-mission-ids selection))
+        cache-gate (:serving-cache-gate selection)
+        maximum (:maximum-endpoint-ms cache-gate)
+        accepted (:accepted-endpoint-latencies cache-gate)]
+    (when-not (and (= :verified-live-selection (:status selection))
+                   (seq candidate-set)
+                   (seq selected-set)
+                   (set/subset? selected-set candidate-set)
+                   (contains? #{:warm :warmed-and-rechecked}
+                              (:status cache-gate))
+                   (number? maximum)
+                   (<= maximum 1000)
+                   (seq accepted)
+                   (every? #(and (number? (:elapsed-ms %))
+                                 (<= (:elapsed-ms %) maximum))
+                           accepted))
+      (throw
+       (ex-info "bounded autonomy machine gates are incomplete"
+                {:candidate-domain (:candidate-domain selection)
+                 :selected-mission-ids (:selected-mission-ids selection)
+                 :serving-cache-gate cache-gate})))
+    (assoc selection :actuation
+           {:status :machine-authorized-bounded-autonomy
+            :authorized? true
+            :executed? false
+            :authority :machine-determined
+            :operator-confirmation-required? false
+            :operator-decision-evidence-id operator-decision-evidence-id
+            :admissible-set :unchanged-phase1-4
+            :allow-listed-mission-ids (:candidate-domain selection)
+            :machine-gates
+            {:armed-tripwire-count 13
+             :query-bounds-retained? true
+             :witness-and-admissibility-retained? true
+             :serving-cache cache-gate}
+            :delivery-qa
+            {:required? true
+             :endpoint delivery-qa-endpoint}
+            :fallback
+            {:controller :current-additive
+             :mode :explicit-rollback-only
+             :rollback-boundary rollback-boundary}})))
+
 (defn current-selection
   "Run the reason-bearing selector against the current shared store.
 
    SCHEDULER-HABIT-RANKING must already be restricted to the Phase 1-4
-   candidate ids. The operation is read-only and never authorizes actuation."
+   candidate ids. The operation is read-only but, after the immediate serving
+   cache gate passes, returns machine enactment authority. It never executes
+   the click."
   [{:keys [scheduler-habit-ranking evidence-store trace-id]}]
   (let [root (fixture-root)
         live-input
@@ -277,6 +336,7 @@
                 [:latency :click-time-contract
                  :maximum-post-warm-endpoint-recall-ms]
                 1000)]
-    (enforce-serving-cache-gate
-     #(run-verification ctx live-input)
-     max-endpoint-ms)))
+    (authorize-bounded-autonomy
+     (enforce-serving-cache-gate
+      #(run-verification ctx live-input)
+      max-endpoint-ms))))

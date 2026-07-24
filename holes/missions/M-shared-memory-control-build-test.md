@@ -634,27 +634,41 @@ Run:
 clojure -M scripts/run_phase7_strategic_policy_shadow.clj
 ```
 
-## Phase 8 — Operator-gated canary and bounded live use
+## Phase 8 — Machine-gated bounded autonomy and delivery QA
 
 ### Build/test ladder
 
-1. **Advice only:** show strategic recommendation and counterfactual baseline;
-   operator still chooses.
-2. **Confirm-to-enact:** recommendation may execute only after explicit
-   operator confirmation.
-3. **Bounded autonomy:** only an allow-listed reversible mission class, with
-   resource caps, tripwire, and immediate fallback to the additive controller.
+The original advice → confirm-to-enact → bounded-autonomy ladder is retained as
+historical evidence, but its operator enactment gate is superseded. Joe's
+decision is recorded in evidence
+`6e6f56a1-b9d7-4f83-928f-3a211ef890a0`: the War Machine is automatic and
+self-evidencing; operator review belongs at delivery in Arxana Field Desk.
 
-At every rung, independently record predicted and observed outcomes, memory
-use, operator override, and rollback reason. Advance one rung at a time after a
-reviewed window; any safety, provenance, query-bound, or explanation failure
-returns to advice-only.
+The active rung is therefore **bounded autonomy**. Strategic selection may
+authorize actuation without operator confirmation only inside the unchanged
+Phase 1–4 admissible mission set and only after all machine gates pass:
+
+- all 13 tripwires;
+- query/resource bounds;
+- independent-witness, attachment-review, admissibility, and explanation
+  checks;
+- the cache-aware R10 gate, with an immediate warm-up/recheck and every
+  accepted endpoint at or below 1000 ms;
+- rollback boundary `e74c7e7`.
+
+The additive controller is available only through that explicit rollback. It
+must never be substituted silently. Every enacted opportunity must close with
+a concrete Arxana Field Desk QA-notes addendum written through port 7070,
+naming what changed or progressed plus evidence ids and commit SHAs. A missing
+or rejected note is a delivery-gate failure.
 
 ### Acceptance
 
-The canary demonstrates stable operation and useful reviewed decisions without
-loss of operator/completion gates. The old controller remains available until
-an explicit retirement mission closes it.
+The canary demonstrates machine authorization without weakening safety,
+admissibility, query, witness, or completion gates. Human acceptance/rejection
+is applied to the delivered work, not used to choose or enact the policy.
+Predicted/observed outcomes, memory use, witness status, and the 13/20
+uncalibrated sample status remain explicit.
 
 ### Advice-only acceptance and terminal gate, 2026-07-23
 
@@ -678,11 +692,15 @@ Run:
 clojure -M scripts/run_phase8_advice_only_canary.clj
 ```
 
-The build plan is complete through the highest rung that can be advanced
-without a new operator decision. Confirm-to-enact and bounded autonomy are
-promotion gates, not unfinished implementation work: they require a reviewed
-real advice window and explicit operator authorization. No test fixture or
-metric can promote itself across that boundary.
+### Bounded-autonomy rung change, 2026-07-24
+
+The explicit operator decision above retires
+`:reviewed-window-required-before-advance` as an **operator** gate. It does not
+promote the outcome model and does not relax any machine gate. The Phase 8
+fixture now proves authorization separately from execution
+(`:authorized? true`, `:executed? false`), including all 13 tripwires, the
+Phase 1–4 allow-list, query and cache bounds, witness/provenance checks, the
+delivery-QA contract, and rollback boundary.
 
 Phase 7–8 completion packet:
 
@@ -717,12 +735,13 @@ Every phase reports:
 
 ## Current terminal packet
 
-No implementation phase is silently open. The next permissible move is an
-operator decision on a real Phase 7/Phase 8 advice-only window. A positive
-decision may open a separate confirm-to-enact packet with an allow-listed
-reversible action and explicit rollback witness. Until then:
+Packet E changes the control rung, not the outcome model. The reason-bearing
+selector is authoritative inside the unchanged admissible set and becomes
+machine-authorized only after the immediate R10 cache gate. The full-loop
+runner retains all 13 tripwires and makes the port-7070 Field Desk note a
+delivery gate. Calibration remains 13/20 with `:advance? false`.
 
-- the live additive controller remains authoritative;
-- the strategic model remains shadow/advice only;
-- the old controller cannot be retired;
-- no serving namespace needs reload and no stored-data migration is pending.
+No click is part of this wiring packet. Ground control may start the first
+bounded-autonomy click only after owner review and hot-load. Rollback is
+explicitly to boundary `e74c7e7`, where the additive controller is the named
+fallback; it is not a silent alternate selection path.

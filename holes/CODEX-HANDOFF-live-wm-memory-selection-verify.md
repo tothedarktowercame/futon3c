@@ -16,8 +16,10 @@ Close the gap found by the post-hoc VERIFY:
 This is not an advice-only exercise. Joe has already rejected both
 operator-override semantics and replacing a live recommendation with
 `abstain`. The adaptive result should eventually become the live strategic
-selection inside the existing admissible domain. Downstream act/completion
-gates remain authoritative over enactment.
+selection inside the existing admissible domain. Operator decision evidence
+`6e6f56a1-b9d7-4f83-928f-3a211ef890a0` subsequently moved human gating from
+enactment to delivered-work QA. Machine act/completion gates remain
+authoritative.
 
 Do not start a War Machine click during this packet. Finish with a live
 selection trace ready for the click.
@@ -282,8 +284,12 @@ Before hand-off completion, produce one trace containing:
   :additive-controller ...
   :scheduler-habit ...}
  :actuation
- {:status :pending-downstream-gates
-  :authorized? false}}
+ {:status :machine-authorized-bounded-autonomy
+  :authorized? true
+  :executed? false
+  :operator-confirmation-required? false
+  :delivery-qa {:required? true
+                :endpoint "http://127.0.0.1:7070/api/alpha/morning-brief/addendum"}}}
 ```
 
 The live HTTP representation and `judgement.decision` must agree on the same
@@ -300,6 +306,23 @@ Required negative traces:
   displayed winner;
 - no-op may be compared, but cannot suppress a valid strategic
   recommendation.
+
+## Terminal packet E — automatic enactment, delivery-level QA
+
+Evidence `6e6f56a1-b9d7-4f83-928f-3a211ef890a0` is the explicit operator
+authorization reserved by Phase 8. It retires confirm-to-enact and authorizes
+machine-determined bounded autonomy inside the unchanged Phase 1–4 admissible
+set. It does not promote the 13/20 exploratory outcome model.
+
+Before any future click, selection must pass the immediate cache-aware R10
+warm-up/recheck (accepted endpoint latency at most 1000 ms), query limits,
+review/witness/admissibility checks, and all 13 full-loop tripwires. The
+additive controller exists only behind explicit rollback boundary `e74c7e7`.
+Every enacted opportunity must emit a concrete Arxana Field Desk QA-notes
+addendum through port 7070 containing delivered progress, evidence ids, and
+commit SHAs. A rejected or missing note is a gate failure.
+
+This terminal packet is wiring-only. It starts no War Machine click.
 
 ## Test and operational gates
 

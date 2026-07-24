@@ -6,6 +6,8 @@
 (def ^:private review-uri "/api/alpha/morning-brief/review")
 (def ^:private addendum-uri "/api/alpha/morning-brief/addendum")
 (def ^:private pending-uri "/api/alpha/morning-brief/pending")
+(def ^:private strategic-selection-uri
+  "/api/alpha/war-machine/strategic-selection")
 
 (defn- response-body [response]
   (json/parse-string (:body response) true))
@@ -25,8 +27,45 @@
 (defn- get-pending []
   ((http/make-handler {}) {:request-method :get :uri pending-uri}))
 
+(defn- post-strategic-selection [payload]
+  ((http/make-handler {})
+   {:request-method :post
+    :uri strategic-selection-uri
+    :body (json/generate-string payload)}))
+
 (defn- resolver [implementations]
   (fn [sym] (get implementations sym)))
+
+(deftest strategic-selection-route-invokes-the-cache-gated-selector
+  (let [seen (atom nil)
+        selection {:status :verified-live-selection
+                   :selected-mission-ids
+                   ["M-shared-memory-control-build-test"]}]
+    (with-redefs
+      [clojure.core/requiring-resolve
+       (resolver
+        {'futon3c.peripheral.live-wm-selection/current-selection
+         (fn [request] (reset! seen request) selection)})]
+      (let [response
+            (post-strategic-selection
+             {:scheduler-habit-ranking
+              ["M-shared-memory-control-build-test"
+               "M-aif-policy-conditioned-eig"]
+              :trace-id "click-selection-1"})]
+        (is (= 200 (:status response)))
+        (is (= {:scheduler-habit-ranking
+                ["M-shared-memory-control-build-test"
+                 "M-aif-policy-conditioned-eig"]
+                :trace-id "click-selection-1"}
+               @seen))
+        (is (= ["M-shared-memory-control-build-test"]
+               (get-in (response-body response)
+                       [:selection :selected-mission-ids]))))))
+  (testing "unbounded or absent candidate input is rejected"
+    (is (= 400
+           (:status
+            (post-strategic-selection
+             {:scheduler-habit-ranking []}))))))
 
 (deftest review-route-resolves-and-invokes-canonical-store-api
   (let [called (atom nil)

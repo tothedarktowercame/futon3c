@@ -1,15 +1,35 @@
-{:fixture-version 1
- :status :frozen-phase8-advice-only
- :freeze-id "phase8-advice-only-v1-20260723"
+{:fixture-version 2
+ :status :frozen-phase8-bounded-autonomy
+ :freeze-id "phase8-bounded-autonomy-v2-20260724"
  :frozen-at "2026-07-23T13:16:42Z"
- :requested-rung :advice-only
+ :requested-rung :bounded-autonomy
  :decision-id "phase7-shadow-2"
- :operator-choice-mission-ids ["M-shared-memory-control-build-test"
-                               "M-aif-policy-conditioned-eig"]
- :operator-confirmed? true
+ :operator-decision-evidence-id "6e6f56a1-b9d7-4f83-928f-3a211ef890a0"
+ :admissible-mission-ids ["M-aif-policy-conditioned-eig"
+                          "M-shared-memory-control-build-test"
+                          "M-wm-aif-policy-grain-compliance"]
  :tripwire-clear? true
+ :armed-tripwire-ids [:T1 :T2 :T3 :T4 :T5 :T6 :T7
+                      :T8 :T9 :T10 :T11 :T12 :T13]
  :query-limit 10
  :maximum-query-limit 10
+ :serving-cache-gate
+ {:status :warm
+  :maximum-endpoint-ms 1000
+  :accepted-endpoint-latencies
+  [{:pattern-id "p4ng/R9-independent-witness" :elapsed-ms 88.0}
+   {:pattern-id "p4ng/R6-candidate-pattern-action-space" :elapsed-ms 92.0}
+   {:pattern-id "p4ng/R5-policy-evaluation" :elapsed-ms 96.0}
+   {:pattern-id "p4ng/R10-liveness" :elapsed-ms 110.0}]}
+ :rollback-boundary "e74c7e7"
+ :delivery-qa
+ {:required? true
+  :endpoint "http://127.0.0.1:7070/api/alpha/morning-brief/addendum"}
+ :calibration
+ {:sample-count 13
+  :minimum 20
+  :advance? false
+  :calibrated-probabilities? false}
  :observed-outcome
  {:outcome :useful-progress
   :witness-status :independently-witnessed

@@ -62,7 +62,7 @@
             :blocked-by-control 0.0}}))
         phase6-result (outcomes/run-dark-ablation outer phase6)
         phase7-result (policies/run-shadow-window outer phase7)
-        phase8-result (canary/advice-only phase7-result phase8)]
+        phase8-result (canary/bounded-autonomy phase7-result phase8)]
     {:outer outer
      :checkpoint checkpoint
      :phase6 phase6-result
@@ -109,12 +109,14 @@
       (is (true? (get-in phase7
                           [:promotion :promotion-eligible-for-review?])))
       (is (false? (get-in phase7 [:promotion :promote?]))))
-    (testing "canary recommendation contains concrete memories and remains non-actuating"
-      (is (= :advice-issued (:status phase8)))
+    (testing "bounded autonomy contains concrete memories and authorizes, but does not execute"
+      (is (= :bounded-autonomy-authorized (:status phase8)))
       (is (= ["e-wm-eig-support" "e-wm-memory-support"]
              (get-in phase8 [:recommendation :memory-ids])))
       (is (map? (get-in phase8 [:recommendation :e-s])))
       (is (map? (get-in phase8 [:recommendation :predicted-g-s])))
-      (is (false? (get-in phase8 [:enactment :authorized?])))
-      (is (nil? (:selected-mission phase8)))
-      (is (false? (:live-ordering-changed? phase8))))))
+      (is (true? (get-in phase8 [:enactment :authorized?])))
+      (is (false? (get-in phase8 [:enactment :executed?])))
+      (is (= "M-shared-memory-control-build-test"
+             (:selected-mission phase8)))
+      (is (true? (:live-ordering-changed? phase8))))))

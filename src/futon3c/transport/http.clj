@@ -6416,6 +6416,50 @@
                             :message (.getMessage e)})))
     (morning-brief-unavailable-response)))
 
+(defn handle-wm-strategic-selection
+  "POST /api/alpha/war-machine/strategic-selection — run the authoritative
+   cache-gated selector for the standalone Futon2 click runner."
+  [request]
+  (let [payload (parse-json-map (read-body request))
+        ranking (:scheduler-habit-ranking payload)
+        phase1-4-allow-list
+        #{"M-aif-policy-conditioned-eig"
+          "M-shared-memory-control-build-test"
+          "M-wm-aif-policy-grain-compliance"}]
+    (if-not (and payload
+                 (vector? ranking)
+                 (seq ranking)
+                 (<= (count ranking) 3)
+                 (every? nonblank-string? ranking)
+                 (every? phase1-4-allow-list ranking))
+      (json-response
+       400
+       {:ok false
+        :err "invalid-strategic-selection-request"
+        :message "scheduler-habit-ranking must be a non-empty vector of mission ids"})
+      (try
+        (if-let [select
+                 (try
+                   (requiring-resolve
+                    'futon3c.peripheral.live-wm-selection/current-selection)
+                   (catch Throwable _ nil))]
+          (json-response
+           200
+           {:ok true
+            :selection
+            (select {:scheduler-habit-ranking ranking
+                     :trace-id (:trace-id payload)})})
+          (json-response
+           503
+           {:ok false :err "strategic-selector-unavailable"}))
+        (catch Throwable e
+          (json-response
+           503
+           {:ok false
+            :err "strategic-selection-failed"
+            :message (or (.getMessage e) "Strategic selection failed")
+            :data (ex-data e)}))))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -6437,6 +6481,10 @@
 
       (and (= :get method) (= "/api/alpha/morning-brief/pending" uri))
       (handle-morning-brief-pending request)
+
+      (and (= :post method)
+           (= "/api/alpha/war-machine/strategic-selection" uri))
+      (handle-wm-strategic-selection request)
 
       (and (= :get method) (= "/api/alpha/cascade-real/graph" uri))
       (handle-cascade-real-graph request config)
@@ -6648,6 +6696,10 @@
           ;; War Machine — strategic synthesis snapshot for the CLJS viewer
           (and (= :get method) (= "/api/alpha/war-machine" uri))
           (handle-war-machine request)
+
+          (and (= :post method)
+               (= "/api/alpha/war-machine/strategic-selection" uri))
+          (handle-wm-strategic-selection request)
 
           (and (= :get method) (= "/api/alpha/aif-stack/live" uri))
           (handle-aif-stack-live request config)

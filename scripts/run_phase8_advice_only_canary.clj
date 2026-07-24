@@ -38,5 +38,5 @@
            {:recall-fn recall-fn :trace-id "phase8-advice-demo"}
            [pattern-id] control-edges {:limit 10}))})
       shadow-result (policies/run-shadow-window outer-result phase7)
-      result (canary/advice-only shadow-result phase8)]
+      result (canary/bounded-autonomy shadow-result phase8)]
   (pprint/pprint result))
