@@ -125,7 +125,10 @@
       (throw (ex-info "review evidence subject does not name the memory"
                       {:memory-id memory-id
                        :subject (:evidence/subject review-entry)})))
-    (when-not (and (= :memory-attachment-review (:review/event body))
+    (when-not (and (= :memory (:evidence/type review-entry))
+                   (contains? #{:observation :challenge}
+                              (:evidence/claim-type review-entry))
+                   (= :memory-attachment-review (:review/event body))
                    (= memory-id (:review/memory-id body))
                    (= verdict (:review/verdict body))
                    (exact-patterns? pattern-ids reviewed-patterns)
