@@ -1121,11 +1121,15 @@
 
 (defn- invoke-job-public-view
   [job]
+  ;; :result is the complete reply (capped at 8000 at finalize) and is what
+  ;; downstream contract parsers must read; :result-summary is a 220-char
+  ;; whitespace-collapsed list-view digest and truncates structured payloads
+  ;; (attempt-051 feature-card incident, 2026-07-25).
   (select-keys job [:job-id :agent-id :caller :surface :mode :state
                     :created-at :started-at :finished-at
                     :terminal-code :terminal-message
                     :session-id :trace-id
-                    :result-summary :artifact-ref
+                    :result :result-summary :artifact-ref
                     :execution :auto-bellback :delivery :events]))
 
 (defn- get-invoke-job
