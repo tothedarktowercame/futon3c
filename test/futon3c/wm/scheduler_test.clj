@@ -2,6 +2,7 @@
   (:require [babashka.http-client :as http-client]
             [cheshire.core :as json]
             [clojure.test :refer [deftest is testing]]
+            [futon3c.agency.registry :as reg]
             [futon3c.logic.capability-star-map-extractor :as star-extractor]
             [futon3c.wm.scheduler :as scheduler]))
 
@@ -78,6 +79,7 @@
 (deftest refresh-forwards-the-reason-bearing-selector
   (testing "the scheduler cannot silently call the WM generator without selection"
     (let [seen (atom nil)
+          statuses (atom [])
           selector (fn [_] {:status :verified-live-selection})
           generate
           (fn [days opts]
@@ -88,9 +90,32 @@
         {#'scheduler/render-payload-json
          (fn [bundle]
            {:payload bundle
-            :body "{}"})}
+            :body "{}"})
+         #'scheduler/report-snapshot-status!
+         (fn [status activity]
+           (swap! statuses conj [status activity]))}
         (fn []
           (#'scheduler/refresh-one-window! generate selector 14)))
       (is (= 14 (:days @seen)))
       (is (identical? selector
-                      (get-in @seen [:opts :strategic-selection-fn]))))))
+                      (get-in @seen [:opts :strategic-selection-fn])))
+      (is (= [[:invoking "snapshot scan 14d window"]
+              [:idle nil]]
+             @statuses)))))
+
+(deftest war-machine-roster-entry-is-stable-and-non-invokable
+  (let [registered (atom nil)]
+    (with-redefs [reg/get-agent (constantly nil)
+                  reg/register-agent!
+                  (fn [record]
+                    (reset! registered record)
+                    record)]
+      (scheduler/ensure-war-machine-agent!))
+    (is (= "war-machine" (get-in @registered [:agent-id :id/value])))
+    (is (= :apparatus (get-in @registered [:agent-id :id/type])))
+    (is (= :wm (:type @registered)))
+    (is (nil? (:invoke-fn @registered)))
+    (is (= {:apparatus? true
+            :cwd "/home/joe/code/futon2"
+            :agency/contracts {:bell-on-complete? false}}
+           (:metadata @registered)))))

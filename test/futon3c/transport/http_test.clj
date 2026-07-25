@@ -762,6 +762,28 @@
             (when (.exists session-file)
               (.delete session-file))))))))
 
+(deftest agent-restore-registers-non-invokable-war-machine-apparatus
+  (testing "persistent :wm records restore without manufacturing an invoke path"
+    (let [handler (make-handler)
+          body (json/generate-string
+                {"agent-id" "war-machine"
+                 "type" "wm"
+                 "cwd" "/home/joe/code/futon2"
+                 "metadata" {"apparatus?" true}})
+          response (post handler "/api/alpha/agents/restore" body)
+          parsed (parse-body response)
+          agent (reg/get-agent "war-machine")
+          refusal (reg/invoke-agent! "war-machine" "should refuse" nil)]
+      (is (= 201 (:status response)))
+      (is (true? (:ok parsed)))
+      (is (= :wm (:agent/type agent)))
+      (is (nil? (:agent/invoke-fn agent)))
+      (is (= true (get-in agent [:agent/metadata :apparatus?])))
+      (is (= "/home/joe/code/futon2"
+             (get-in agent [:agent/metadata :cwd])))
+      (is (false? (:ok refusal)))
+      (is (= :invoke-error (get-in refusal [:error :error/code]))))))
+
 (deftest agent-restore-clears-stale-remote-metadata
   (testing "POST /api/alpha/agents/restore makes a local lane stop displaying as remote"
     (let [handler (make-handler)

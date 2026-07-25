@@ -7,6 +7,7 @@
   (:require [babashka.http-client :as http-client]
             [cheshire.core :as json]
             [clojure.string :as str]
+            [futon3c.agency.registry :as reg]
             [futon3c.cyder :as cyder]
             [futon3c.logic.capability-star-map-extractor :as star-extractor]
             [futon3c.transport.http :as http])
@@ -43,6 +44,30 @@
   (configured-days-windows))
 
 (def cyder-process-id "war-machine-scheduler")
+(def wm-agent-id "war-machine")
+(def wm-agent-source "wm-snapshot-scan")
+
+(defn ensure-war-machine-agent!
+  "Ensure the WM apparatus has one stable, non-invokable roster identity."
+  []
+  (or
+   (reg/get-agent wm-agent-id)
+   (reg/register-agent!
+    {:agent-id {:id/value wm-agent-id :id/type :apparatus}
+     :type :wm
+     :invoke-fn nil
+     :capabilities []
+     :metadata {:apparatus? true
+                :cwd "/home/joe/code/futon2"
+                :agency/contracts {:bell-on-complete? false}}})))
+
+(defn- report-snapshot-status!
+  [status activity]
+  (ensure-war-machine-agent!)
+  (reg/report-external-invoke!
+   wm-agent-id wm-agent-source
+   (cond-> {:status status}
+     activity (assoc :activity activity))))
 
 (defonce !wm-snapshot
   (atom nil))
@@ -240,28 +265,33 @@
      :body (json/generate-string payload)}))
 
 (defn- refresh-one-window! [generate strategic-selection-fn days]
-  (let [started-ns (System/nanoTime)
-        started-at (Instant/now)
-        bundle (-> (generate days
-                            {:strategic-selection-fn
-                             strategic-selection-fn})
-                   http/apply-wm-operator-clear
-                   ((requiring-resolve 'futon3c.wm.promote/apply-operator-promote)))
-        {:keys [payload body]} (render-payload-json bundle)
-        finished-at (Instant/now)
-        duration-ms (long (/ (- (System/nanoTime) started-ns) 1000000))]
-    (swap! !wm-snapshot assoc-in [:by-days days]
-           {:days days
-            :as-of finished-at
-            :started-at started-at
-            :duration-ms duration-ms
-            :body-bytes (.length ^String body)
-            :payload payload
-            :body body})
-    {:days days
-     :as-of finished-at
-     :duration-ms duration-ms
-     :body-bytes (.length ^String body)}))
+  (report-snapshot-status! :invoking
+                           (str "snapshot scan " days "d window"))
+  (try
+    (let [started-ns (System/nanoTime)
+          started-at (Instant/now)
+          bundle (-> (generate days
+                              {:strategic-selection-fn
+                               strategic-selection-fn})
+                     http/apply-wm-operator-clear
+                     ((requiring-resolve 'futon3c.wm.promote/apply-operator-promote)))
+          {:keys [payload body]} (render-payload-json bundle)
+          finished-at (Instant/now)
+          duration-ms (long (/ (- (System/nanoTime) started-ns) 1000000))]
+      (swap! !wm-snapshot assoc-in [:by-days days]
+             {:days days
+              :as-of finished-at
+              :started-at started-at
+              :duration-ms duration-ms
+              :body-bytes (.length ^String body)
+              :payload payload
+              :body body})
+      {:days days
+       :as-of finished-at
+       :duration-ms duration-ms
+       :body-bytes (.length ^String body)})
+    (finally
+      (report-snapshot-status! :idle nil))))
 
 (defn tick!
   "Run one WM scheduler tick: regenerate the cached snapshot for each

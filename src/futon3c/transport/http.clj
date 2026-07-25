@@ -2747,10 +2747,13 @@
                               (get raw-metadata "agency/contracts"))
             restored-detached? (true? (or (:restored-detached? payload)
                                           (get payload "restored-detached?")))
-            session-file (some-> (or (:session-file payload)
-                                     (get payload "session-file")
-                                     (default-session-file-for-agent agent-type agent-id))
-                                 str str/trim not-empty)
+            apparatus? (= :wm agent-type)
+            session-file (when-not apparatus?
+                           (some-> (or (:session-file payload)
+                                       (get payload "session-file")
+                                       (default-session-file-for-agent
+                                        agent-type agent-id))
+                                   str str/trim not-empty))
             existing (when agent-id (reg/get-agent agent-id))
             restore-session-id (or initial-session-id
                                    (:agent/session-id existing))
@@ -2772,19 +2775,21 @@
           :else
           (let [sid-atom (make-session-id-atom initial-session-id session-file)
                 session-reset-fn (make-session-reset-fn session-file sid-atom)
-                invoke-fn (make-local-agent-invoke-fn
-                           agent-type
-                           {:agent-id agent-id
-                            :session-file session-file
-                            :initial-session-id initial-session-id
-                            :session-id-atom sid-atom
-                            :requested-cwd effective-cwd
-                            :emacs-socket emacs-socket
-                            :model model
-                            :evidence-store (evidence-store-for-config config)
-                            :irc-send-fn (:irc-send-fn config)})
+                invoke-fn (when-not apparatus?
+                            (make-local-agent-invoke-fn
+                             agent-type
+                             {:agent-id agent-id
+                              :session-file session-file
+                              :initial-session-id initial-session-id
+                              :session-id-atom sid-atom
+                              :requested-cwd effective-cwd
+                              :emacs-socket emacs-socket
+                              :model model
+                              :evidence-store (evidence-store-for-config config)
+                              :irc-send-fn (:irc-send-fn config)}))
                 metadata (cond-> (merge {:auto-registered? true}
                                         (when (map? raw-metadata) raw-metadata))
+                           apparatus? (assoc :apparatus? true)
                            (= agent-type :codex) (assoc :require-execution? true)
                            session-file (assoc :session-file session-file)
                            effective-cwd (assoc :cwd effective-cwd)
@@ -2796,7 +2801,7 @@
                            (seq raw-contracts) (assoc :agency/contracts raw-contracts)
                            restored-detached? (assoc :restore/state :restored/detached
                                                      :restore/restored-at (str (java.time.Instant/now))))]
-            (if (nil? invoke-fn)
+            (if (and (nil? invoke-fn) (not apparatus?))
               (json-response 500 {:ok false
                                   :err "restore-failed"
                                   :message (str "Could not build invoke-fn for " agent-id)})
