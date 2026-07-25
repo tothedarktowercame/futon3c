@@ -1120,7 +1120,15 @@
                                   (assoc :mission-id (some-> (:mission-id state) str str/trim))
                                   (some-> (:excursion-id state) str str/trim not-empty)
                                   (assoc :excursion-id (some-> (:excursion-id state) str str/trim)))))
-                       agent* (cond-> (assoc agent :agent/external-heartbeat-at now*)
+                       ;; An external status report IS activity evidence:
+                       ;; without this stamp an apparatus that only ever
+                       ;; reports externally keeps its registration-time
+                       ;; :agent/last-active forever, so the roster renders
+                       ;; "idle (Nh ago)" minutes after a completed run
+                       ;; (war-machine, 2026-07-25).
+                       agent* (cond-> (assoc agent
+                                             :agent/external-heartbeat-at now*
+                                             :agent/last-active now*)
                                 next-external
                                 (assoc :agent/external-invokes next-external)
                                 (nil? next-external)
