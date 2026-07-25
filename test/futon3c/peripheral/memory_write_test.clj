@@ -234,3 +234,32 @@
     (is (= :zaif-work (get-in args [0 :domain])))
     (is (= "dispatch-memory" (get-in args [1 :name])))
     (is (false? (:error? result)))))
+
+(deftest malformed-payload-fails-fast-with-actionable-fields
+  ;; zai-1's live memory_record attempts (2026-07-24T21:50Z) reached the store
+  ;; with a nil :evidence/subject and bounced as an opaque EvidenceEntry shape
+  ;; error the agent could not act on. Validation now happens before any write
+  ;; and names the missing fields.
+  (let [store (empty-store)
+        ctx (assoc test-ctx :evidence-store store)
+        call (fn [payload]
+               (memory-write/record-memory! ctx payload))
+        fields (fn [receipt]
+                 (set (map :field (get-in receipt [:error :error/context :fields]))))]
+    (let [r (call {:hook "a hook only" :kind :observation})]
+      (is (false? (:ok r)))
+      (is (= :invalid-memory-payload (get-in r [:error :error/code])))
+      (is (= #{:name :body :subjects} (fields r)))
+      (is (str/includes? (get-in r [:error :error/message]) "name"))
+      ;; nothing minted into the store on refusal
+      (is (empty? (:entries @store))))
+    (let [r (call {:name "has name" :body "has body"})]
+      (is (false? (:ok r)))
+      (is (= #{:subjects} (fields r))))
+    (let [r (call {:name "has name" :body "has body"
+                   :subjects [{:ref/type "mission"}]})]
+      (is (false? (:ok r)))
+      (is (= #{:subjects} (fields r))))
+    (let [r (call {:name "valid" :body "valid content"
+                   :subjects [{:ref/type "mission" :ref/id "M-typed-memories"}]})]
+      (is (true? (:ok r)) (pr-str (:error r))))))

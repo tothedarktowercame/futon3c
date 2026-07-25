@@ -66,6 +66,38 @@
   [payload]
   (select-keys payload [:name :hook :kind :body :why :how-to-apply]))
 
+(defn- valid-subject?
+  [subject]
+  (and (map? subject)
+       (keyword? (:ref/type subject))
+       (string? (:ref/id subject))
+       (not (str/blank? (:ref/id subject)))))
+
+(defn- payload-errors
+  "Field-level validation BEFORE minting any write. The store's EvidenceEntry
+   shape requires a non-nil :evidence/subject, and a memory without :name or
+   :body is unusable at recall time — but until 2026-07-25 a payload missing
+   these reached the store and bounced as an opaque
+   \"EvidenceEntry did not conform to shape\" (zai-1, 2026-07-24T21:50Z),
+   which the recording agent cannot act on. Return the missing fields so the
+   agent can self-correct in its next call."
+  [{:keys [name body subjects]}]
+  (cond-> []
+    (not (and (string? name) (not (str/blank? name))))
+    (conj {:field :name :want "non-blank string — short recall handle"})
+
+    (or (nil? body) (and (string? body) (str/blank? body)))
+    (conj {:field :body :want "the memory content (non-blank string or map)"})
+
+    (not (seq subjects))
+    (conj {:field :subjects
+           :want "at least one {:ref/type <keyword> :ref/id <string>} naming what the memory is about"})
+
+    (and (seq subjects) (not (every? valid-subject? subjects)))
+    (conj {:field :subjects
+           :want "every subject needs :ref/type (keyword) and non-blank :ref/id (string)"
+           :got (vec (remove valid-subject? subjects))})))
+
 (defn- resolve-distill
   [{:keys [turn-id round]} distill]
   (if (= "@current-round" distill)
@@ -171,19 +203,37 @@
      :error (social-error :E-store :missing-substrate-url
                           "No substrate URL is configured on the evidence backend or environment")}))
 
+(declare ^:private record-memory-validated!)
+
 (defn record-memory!
   "Record one P0 assert memory.
 
    ctx carries trusted agent/session/turn identity and the evidence backend;
    payload identity fields are deliberately ignored.  The evidence id is
    minted before validation or I/O and is returned on every failure."
-  [{:keys [agent-id session-id evidence-store] :as ctx} raw-payload]
+  [ctx raw-payload]
   (let [evidence-id (str "e-" (UUID/randomUUID))
         ;; Derive the edge id from the entry id: the body identity is fixed at
         ;; creation, and any later repair can therefore reproduce this id.
         hx-id (str "hx-mem-" (subs evidence-id 2))
         payload (normalize-payload raw-payload)
-        primary-subject (first (:subjects payload))
+        field-errors (payload-errors payload)]
+    (if (seq field-errors)
+      {:ok false
+       :id evidence-id
+       :error (social-error :E-store :invalid-memory-payload
+                            (str "memory_record payload is missing required fields: "
+                                 (str/join ", " (map (comp clojure.core/name :field)
+                                                     field-errors))
+                                 ". Required: name (non-blank), body (content), "
+                                 "subjects [{:ref/type <kw> :ref/id <id>} ...]. "
+                                 "Fix the listed fields and call memory_record again.")
+                            :fields field-errors)}
+      (record-memory-validated! ctx payload evidence-id hx-id))))
+
+(defn- record-memory-validated!
+  [{:keys [agent-id session-id evidence-store] :as ctx} payload evidence-id hx-id]
+  (let [primary-subject (first (:subjects payload))
         ;; Never assoc nil identity keys: EvidenceEntry rejects present-but-nil
         ;; (live failure 2026-07-22 — nil session-id killed all 8 of zai-3's
         ;; memory_record attempts). Absent keys pass; nil values do not.
