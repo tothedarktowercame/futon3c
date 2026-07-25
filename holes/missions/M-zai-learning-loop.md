@@ -92,6 +92,10 @@ Design rules, preregistered per evaluation cohort:
   reported with their n, never laundered.
 - CPM, DPM, and sibling collections, when acquired, become successive
   held-out sets — each new set is pristine exactly once.
+- The indexed PDF is the **2nd edition** (exams through Sp98, 741
+  problems). The 3rd edition (2004) extends past Sp98; its increment over
+  the 2nd-edition index is a naturally delimited fresh tranche when
+  acquired — treat the edition diff as its own pristine set.
 
 Baseline already in the landscape (2026-07-25): a95A07 complete (0 sorries,
 commit 1d622b0); a95A04 partial (symmetric_split proven, 2 sorries);
