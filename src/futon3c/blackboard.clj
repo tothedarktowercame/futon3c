@@ -923,7 +923,10 @@
          unreachable-count " unreachable"
          (when (seq ws-connected)
            (str ", " (count ws-connected) " inbound-ws-connected"))
-         ")\n"
+         ") — rendered "
+         (.format (java.time.LocalTime/now)
+                  (java.time.format.DateTimeFormatter/ofPattern "HH:mm:ss"))
+         "\n"
          (let [row (fn [[aid info]]
                      (let [site (agent-site aid info)
                            status (or (:status info) :idle)
