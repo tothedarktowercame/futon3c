@@ -97,6 +97,39 @@ Baseline already in the landscape (2026-07-25): a95A07 complete (0 sorries,
 commit 1d622b0); a95A04 partial (symmetric_split proven, 2 sorries);
 turn-round counts recoverable per problem.
 
+### The memorization contrast (Joe, 2026-07-25)
+
+BPM is a published book (Fa77–Sp98 exams) and plausibly in the runner
+model's training data; APM problems probably are not. Neither containment
+status is certain, and the charter treats both as unknown. Consequences:
+
+- **BPM absolute performance is confounded by pretraining recall** — in both
+  directions: memorization can inflate the baseline, and can also leave less
+  headroom for memory-driven improvement.
+- **The cleaner learning signal is the differential**: as the store accretes,
+  compare the improvement *slope* on probably-novel APM problems against the
+  slope on possibly-memorized BPM problems. Memory-driven capability should
+  show more strongly where pretraining recall helps least. Beating the
+  track record on APM specifically is the interesting result.
+- Both slopes are reported with the containment caveat stated; no claim of
+  "novel problems" without the "probably" attached.
+
+### BPM corpus status (2026-07-25)
+
+`~/Downloads/berkeley-problems-in-mathematics.pdf` (440pp, 2001-era Acrobat
+scan **with an OCR text layer**). The text layer reliably yields structure —
+**741 unique problems indexed** (`holes/labs/M-zai-learning-loop/bpm-index.json`:
+id, chapter, section, exam season; chapters 1–7 = real analysis 140,
+multivariable 51, ODEs 56, metric spaces 34, complex 166, algebra 147,
+linear algebra 148) — but math notation is badly garbled (`R + R` for
+`ℝ → ℝ`), so faithful problem statements need a second pass:
+vision-capable transcription over page images, with the garbled layer as a
+cross-check. (Noting the irony: memorization of the published text *helps*
+transcription while confounding evaluation — acceptable, since corpus
+fidelity is checked against the page image, not trusted from the model.)
+Formalization into Lean stubs is a third, quarantined step: the formalizing
+agent's session is excluded from memory formation like any BPM contact.
+
 ## Preregistration discipline
 
 Each training or evaluation cohort preregisters: target session count,

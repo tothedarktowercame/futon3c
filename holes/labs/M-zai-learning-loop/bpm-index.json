@@ -1,0 +1,5189 @@
+[
+{
+"id": "bpm-1.1.1",
+"chapter": 1,
+"section": 1,
+"number": 1,
+"exam": "Fa87"
+},
+{
+"id": "bpm-1.1.2",
+"chapter": 1,
+"section": 1,
+"number": 2,
+"exam": "Fa77"
+},
+{
+"id": "bpm-1.1.3",
+"chapter": 1,
+"section": 1,
+"number": 3,
+"exam": "Sp81"
+},
+{
+"id": "bpm-1.1.4",
+"chapter": 1,
+"section": 1,
+"number": 4,
+"exam": "Sp95"
+},
+{
+"id": "bpm-1.1.5",
+"chapter": 1,
+"section": 1,
+"number": 5,
+"exam": "Fa86"
+},
+{
+"id": "bpm-1.1.6",
+"chapter": 1,
+"section": 1,
+"number": 6,
+"exam": "Fa81"
+},
+{
+"id": "bpm-1.1.7",
+"chapter": 1,
+"section": 1,
+"number": 7,
+"exam": "Su81"
+},
+{
+"id": "bpm-1.1.8",
+"chapter": 1,
+"section": 1,
+"number": 8,
+"exam": "Fa82"
+},
+{
+"id": "bpm-1.1.10",
+"chapter": 1,
+"section": 1,
+"number": 10,
+"exam": "Fa93"
+},
+{
+"id": "bpm-1.1.11",
+"chapter": 1,
+"section": 1,
+"number": 11,
+"exam": "Su81"
+},
+{
+"id": "bpm-1.1.12",
+"chapter": 1,
+"section": 1,
+"number": 12,
+"exam": "Sp82"
+},
+{
+"id": "bpm-1.1.13",
+"chapter": 1,
+"section": 1,
+"number": 13,
+"exam": "Su84"
+},
+{
+"id": "bpm-1.1.14",
+"chapter": 1,
+"section": 1,
+"number": 14,
+"exam": "Fa84"
+},
+{
+"id": "bpm-1.1.15",
+"chapter": 1,
+"section": 1,
+"number": 15,
+"exam": "Fa90"
+},
+{
+"id": "bpm-1.1.16",
+"chapter": 1,
+"section": 1,
+"number": 16,
+"exam": "Sp92"
+},
+{
+"id": "bpm-1.1.17",
+"chapter": 1,
+"section": 1,
+"number": 17,
+"exam": "Sp84"
+},
+{
+"id": "bpm-1.1.18",
+"chapter": 1,
+"section": 1,
+"number": 18,
+"exam": "Sp94"
+},
+{
+"id": "bpm-1.1.19",
+"chapter": 1,
+"section": 1,
+"number": 19,
+"exam": "Sp96"
+},
+{
+"id": "bpm-1.1.20",
+"chapter": 1,
+"section": 1,
+"number": 20,
+"exam": "Su77"
+},
+{
+"id": "bpm-1.1.21",
+"chapter": 1,
+"section": 1,
+"number": 21,
+"exam": "Fa96"
+},
+{
+"id": "bpm-1.1.22",
+"chapter": 1,
+"section": 1,
+"number": 22,
+"exam": "Fa97"
+},
+{
+"id": "bpm-1.1.23",
+"chapter": 1,
+"section": 1,
+"number": 23,
+"exam": "Su85"
+},
+{
+"id": "bpm-1.1.24",
+"chapter": 1,
+"section": 1,
+"number": 24,
+"exam": "Su78"
+},
+{
+"id": "bpm-1.1.25",
+"chapter": 1,
+"section": 1,
+"number": 25,
+"exam": "Fa89"
+},
+{
+"id": "bpm-1.1.26",
+"chapter": 1,
+"section": 1,
+"number": 26,
+"exam": "Sp93"
+},
+{
+"id": "bpm-1.1.27",
+"chapter": 1,
+"section": 1,
+"number": 27,
+"exam": "Su82"
+},
+{
+"id": "bpm-1.1.28",
+"chapter": 1,
+"section": 1,
+"number": 28,
+"exam": "Fa87"
+},
+{
+"id": "bpm-1.1.30",
+"chapter": 1,
+"section": 1,
+"number": 30,
+"exam": "Sp96"
+},
+{
+"id": "bpm-1.1.31",
+"chapter": 1,
+"section": 1,
+"number": 31,
+"exam": "Su77"
+},
+{
+"id": "bpm-1.1.32",
+"chapter": 1,
+"section": 1,
+"number": 32,
+"exam": "Fa79"
+},
+{
+"id": "bpm-1.1.33",
+"chapter": 1,
+"section": 1,
+"number": 33,
+"exam": "Fa80"
+},
+{
+"id": "bpm-1.1.34",
+"chapter": 1,
+"section": 1,
+"number": 34,
+"exam": "Fa95"
+},
+{
+"id": "bpm-1.2.1",
+"chapter": 1,
+"section": 2,
+"number": 1,
+"exam": "Fa90"
+},
+{
+"id": "bpm-1.2.2",
+"chapter": 1,
+"section": 2,
+"number": 2,
+"exam": "Sp90"
+},
+{
+"id": "bpm-1.2.3",
+"chapter": 1,
+"section": 2,
+"number": 3,
+"exam": "Sp83"
+},
+{
+"id": "bpm-1.2.4",
+"chapter": 1,
+"section": 2,
+"number": 4,
+"exam": "Sp77"
+},
+{
+"id": "bpm-1.2.5",
+"chapter": 1,
+"section": 2,
+"number": 5,
+"exam": "Sp84"
+},
+{
+"id": "bpm-1.2.6",
+"chapter": 1,
+"section": 2,
+"number": 6,
+"exam": "Fa78"
+},
+{
+"id": "bpm-1.2.8",
+"chapter": 1,
+"section": 2,
+"number": 8,
+"exam": "Su83"
+},
+{
+"id": "bpm-1.2.9",
+"chapter": 1,
+"section": 2,
+"number": 9,
+"exam": "Fa91"
+},
+{
+"id": "bpm-1.2.10",
+"chapter": 1,
+"section": 2,
+"number": 10,
+"exam": "Fa81"
+},
+{
+"id": "bpm-1.2.12",
+"chapter": 1,
+"section": 2,
+"number": 12,
+"exam": "Sp89"
+},
+{
+"id": "bpm-1.3.1",
+"chapter": 1,
+"section": 3,
+"number": 1,
+"exam": "Su85"
+},
+{
+"id": "bpm-1.3.2",
+"chapter": 1,
+"section": 3,
+"number": 2,
+"exam": "Sp96"
+},
+{
+"id": "bpm-1.3.3",
+"chapter": 1,
+"section": 3,
+"number": 3,
+"exam": "Sp92"
+},
+{
+"id": "bpm-1.3.4",
+"chapter": 1,
+"section": 3,
+"number": 4,
+"exam": "Fa97"
+},
+{
+"id": "bpm-1.3.6",
+"chapter": 1,
+"section": 3,
+"number": 6,
+"exam": "Fa92"
+},
+{
+"id": "bpm-1.3.7",
+"chapter": 1,
+"section": 3,
+"number": 7,
+"exam": "Sp84"
+},
+{
+"id": "bpm-1.3.8",
+"chapter": 1,
+"section": 3,
+"number": 8,
+"exam": "Fa95"
+},
+{
+"id": "bpm-1.3.9",
+"chapter": 1,
+"section": 3,
+"number": 9,
+"exam": "Fa80"
+},
+{
+"id": "bpm-1.3.10",
+"chapter": 1,
+"section": 3,
+"number": 10,
+"exam": "Fa81"
+},
+{
+"id": "bpm-1.3.11",
+"chapter": 1,
+"section": 3,
+"number": 11,
+"exam": "Fa79"
+},
+{
+"id": "bpm-1.3.12",
+"chapter": 1,
+"section": 3,
+"number": 12,
+"exam": "Sp90"
+},
+{
+"id": "bpm-1.3.13",
+"chapter": 1,
+"section": 3,
+"number": 13,
+"exam": "Sp93"
+},
+{
+"id": "bpm-1.3.14",
+"chapter": 1,
+"section": 3,
+"number": 14,
+"exam": "Fa83"
+},
+{
+"id": "bpm-1.3.15",
+"chapter": 1,
+"section": 3,
+"number": 15,
+"exam": "Su83"
+},
+{
+"id": "bpm-1.3.16",
+"chapter": 1,
+"section": 3,
+"number": 16,
+"exam": "Sp81"
+},
+{
+"id": "bpm-1.3.17",
+"chapter": 1,
+"section": 3,
+"number": 17,
+"exam": "Fa91"
+},
+{
+"id": "bpm-1.3.19",
+"chapter": 1,
+"section": 3,
+"number": 19,
+"exam": "Sp91"
+},
+{
+"id": "bpm-1.3.20",
+"chapter": 1,
+"section": 3,
+"number": 20,
+"exam": "Fa94"
+},
+{
+"id": "bpm-1.3.21",
+"chapter": 1,
+"section": 3,
+"number": 21,
+"exam": "Sp91"
+},
+{
+"id": "bpm-1.3.22",
+"chapter": 1,
+"section": 3,
+"number": 22,
+"exam": "Sp89"
+},
+{
+"id": "bpm-1.3.23",
+"chapter": 1,
+"section": 3,
+"number": 23,
+"exam": "Fa90"
+},
+{
+"id": "bpm-1.4.1",
+"chapter": 1,
+"section": 4,
+"number": 1,
+"exam": "Su83"
+},
+{
+"id": "bpm-1.4.2",
+"chapter": 1,
+"section": 4,
+"number": 2,
+"exam": "Sp84"
+},
+{
+"id": "bpm-1.4.3",
+"chapter": 1,
+"section": 4,
+"number": 3,
+"exam": "Sp85"
+},
+{
+"id": "bpm-1.4.4",
+"chapter": 1,
+"section": 4,
+"number": 4,
+"exam": "Sp90"
+},
+{
+"id": "bpm-1.4.5",
+"chapter": 1,
+"section": 4,
+"number": 5,
+"exam": "Su85"
+},
+{
+"id": "bpm-1.4.6",
+"chapter": 1,
+"section": 4,
+"number": 6,
+"exam": "Sp98"
+},
+{
+"id": "bpm-1.4.8",
+"chapter": 1,
+"section": 4,
+"number": 8,
+"exam": "Fa97"
+},
+{
+"id": "bpm-1.4.9",
+"chapter": 1,
+"section": 4,
+"number": 9,
+"exam": "Sp86"
+},
+{
+"id": "bpm-1.4.10",
+"chapter": 1,
+"section": 4,
+"number": 10,
+"exam": "Sp88"
+},
+{
+"id": "bpm-1.4.11",
+"chapter": 1,
+"section": 4,
+"number": 11,
+"exam": "Sp88"
+},
+{
+"id": "bpm-1.4.12",
+"chapter": 1,
+"section": 4,
+"number": 12,
+"exam": "Sp91"
+},
+{
+"id": "bpm-1.4.13",
+"chapter": 1,
+"section": 4,
+"number": 13,
+"exam": "Fa86"
+},
+{
+"id": "bpm-1.4.14",
+"chapter": 1,
+"section": 4,
+"number": 14,
+"exam": "Sp84"
+},
+{
+"id": "bpm-1.4.15",
+"chapter": 1,
+"section": 4,
+"number": 15,
+"exam": "Sp84"
+},
+{
+"id": "bpm-1.4.16",
+"chapter": 1,
+"section": 4,
+"number": 16,
+"exam": "Sp79"
+},
+{
+"id": "bpm-1.4.17",
+"chapter": 1,
+"section": 4,
+"number": 17,
+"exam": "Su83"
+},
+{
+"id": "bpm-1.4.20",
+"chapter": 1,
+"section": 4,
+"number": 20,
+"exam": "Sp87"
+},
+{
+"id": "bpm-1.4.21",
+"chapter": 1,
+"section": 4,
+"number": 21,
+"exam": "Sp85"
+},
+{
+"id": "bpm-1.4.24",
+"chapter": 1,
+"section": 4,
+"number": 24,
+"exam": "Su81"
+},
+{
+"id": "bpm-1.4.25",
+"chapter": 1,
+"section": 4,
+"number": 25,
+"exam": "Sp84"
+},
+{
+"id": "bpm-1.4.26",
+"chapter": 1,
+"section": 4,
+"number": 26,
+"exam": "Fa95"
+},
+{
+"id": "bpm-1.5.1",
+"chapter": 1,
+"section": 5,
+"number": 1,
+"exam": "Sp98"
+},
+{
+"id": "bpm-1.5.2",
+"chapter": 1,
+"section": 5,
+"number": 2,
+"exam": "Fa90"
+},
+{
+"id": "bpm-1.5.3",
+"chapter": 1,
+"section": 5,
+"number": 3,
+"exam": "Sp77"
+},
+{
+"id": "bpm-1.5.4",
+"chapter": 1,
+"section": 5,
+"number": 4,
+"exam": "Sp78"
+},
+{
+"id": "bpm-1.5.5",
+"chapter": 1,
+"section": 5,
+"number": 5,
+"exam": "Su81"
+},
+{
+"id": "bpm-1.5.6",
+"chapter": 1,
+"section": 5,
+"number": 6,
+"exam": "Su85"
+},
+{
+"id": "bpm-1.5.7",
+"chapter": 1,
+"section": 5,
+"number": 7,
+"exam": "Su84"
+},
+{
+"id": "bpm-1.5.8",
+"chapter": 1,
+"section": 5,
+"number": 8,
+"exam": "Fa85"
+},
+{
+"id": "bpm-1.5.10",
+"chapter": 1,
+"section": 5,
+"number": 10,
+"exam": "Fa83"
+},
+{
+"id": "bpm-1.5.11",
+"chapter": 1,
+"section": 5,
+"number": 11,
+"exam": "Fa86"
+},
+{
+"id": "bpm-1.5.12",
+"chapter": 1,
+"section": 5,
+"number": 12,
+"exam": "Sp83"
+},
+{
+"id": "bpm-1.5.14",
+"chapter": 1,
+"section": 5,
+"number": 14,
+"exam": "Sp87"
+},
+{
+"id": "bpm-1.5.15",
+"chapter": 1,
+"section": 5,
+"number": 15,
+"exam": "Fa87"
+},
+{
+"id": "bpm-1.5.16",
+"chapter": 1,
+"section": 5,
+"number": 16,
+"exam": "Fa95"
+},
+{
+"id": "bpm-1.5.17",
+"chapter": 1,
+"section": 5,
+"number": 17,
+"exam": "Fa88"
+},
+{
+"id": "bpm-1.5.18",
+"chapter": 1,
+"section": 5,
+"number": 18,
+"exam": "Sp94"
+},
+{
+"id": "bpm-1.5.19",
+"chapter": 1,
+"section": 5,
+"number": 19,
+"exam": "Sp88"
+},
+{
+"id": "bpm-1.5.20",
+"chapter": 1,
+"section": 5,
+"number": 20,
+"exam": "Fa85"
+},
+{
+"id": "bpm-1.5.22",
+"chapter": 1,
+"section": 5,
+"number": 22,
+"exam": "Sp85"
+},
+{
+"id": "bpm-1.6.1",
+"chapter": 1,
+"section": 6,
+"number": 1,
+"exam": "Fa84"
+},
+{
+"id": "bpm-1.6.3",
+"chapter": 1,
+"section": 6,
+"number": 3,
+"exam": "Sp81"
+},
+{
+"id": "bpm-1.6.5",
+"chapter": 1,
+"section": 6,
+"number": 5,
+"exam": "Fa84"
+},
+{
+"id": "bpm-1.6.6",
+"chapter": 1,
+"section": 6,
+"number": 6,
+"exam": "Sp95"
+},
+{
+"id": "bpm-1.6.7",
+"chapter": 1,
+"section": 6,
+"number": 7,
+"exam": "Fa82"
+},
+{
+"id": "bpm-1.6.8",
+"chapter": 1,
+"section": 6,
+"number": 8,
+"exam": "Sp78"
+},
+{
+"id": "bpm-1.6.9",
+"chapter": 1,
+"section": 6,
+"number": 9,
+"exam": "Fa87"
+},
+{
+"id": "bpm-1.6.10",
+"chapter": 1,
+"section": 6,
+"number": 10,
+"exam": "Fa85"
+},
+{
+"id": "bpm-1.6.11",
+"chapter": 1,
+"section": 6,
+"number": 11,
+"exam": "Sp81"
+},
+{
+"id": "bpm-1.6.12",
+"chapter": 1,
+"section": 6,
+"number": 12,
+"exam": "Su85"
+},
+{
+"id": "bpm-1.6.13",
+"chapter": 1,
+"section": 6,
+"number": 13,
+"exam": "Sp95"
+},
+{
+"id": "bpm-1.6.14",
+"chapter": 1,
+"section": 6,
+"number": 14,
+"exam": "Fa86"
+},
+{
+"id": "bpm-1.6.15",
+"chapter": 1,
+"section": 6,
+"number": 15,
+"exam": "Fa92"
+},
+{
+"id": "bpm-1.6.16",
+"chapter": 1,
+"section": 6,
+"number": 16,
+"exam": "Fa96"
+},
+{
+"id": "bpm-1.6.17",
+"chapter": 1,
+"section": 6,
+"number": 17,
+"exam": "Su80"
+},
+{
+"id": "bpm-1.6.19",
+"chapter": 1,
+"section": 6,
+"number": 19,
+"exam": "Sp82"
+},
+{
+"id": "bpm-1.6.20",
+"chapter": 1,
+"section": 6,
+"number": 20,
+"exam": "Fa93"
+},
+{
+"id": "bpm-1.6.21",
+"chapter": 1,
+"section": 6,
+"number": 21,
+"exam": "Fa78"
+},
+{
+"id": "bpm-1.6.22",
+"chapter": 1,
+"section": 6,
+"number": 22,
+"exam": "Su79"
+},
+{
+"id": "bpm-1.6.23",
+"chapter": 1,
+"section": 6,
+"number": 23,
+"exam": "Su81"
+},
+{
+"id": "bpm-1.6.24",
+"chapter": 1,
+"section": 6,
+"number": 24,
+"exam": "Fa82"
+},
+{
+"id": "bpm-1.6.25",
+"chapter": 1,
+"section": 6,
+"number": 25,
+"exam": "Sp83"
+},
+{
+"id": "bpm-1.6.26",
+"chapter": 1,
+"section": 6,
+"number": 26,
+"exam": "Sp85"
+},
+{
+"id": "bpm-1.6.27",
+"chapter": 1,
+"section": 6,
+"number": 27,
+"exam": "Sp85"
+},
+{
+"id": "bpm-1.6.28",
+"chapter": 1,
+"section": 6,
+"number": 28,
+"exam": "Sp87"
+},
+{
+"id": "bpm-1.6.29",
+"chapter": 1,
+"section": 6,
+"number": 29,
+"exam": "Sp79"
+},
+{
+"id": "bpm-1.7.1",
+"chapter": 1,
+"section": 7,
+"number": 1,
+"exam": "Sp80"
+},
+{
+"id": "bpm-1.7.2",
+"chapter": 1,
+"section": 7,
+"number": 2,
+"exam": "Su81"
+},
+{
+"id": "bpm-1.7.3",
+"chapter": 1,
+"section": 7,
+"number": 3,
+"exam": "Su82"
+},
+{
+"id": "bpm-1.7.4",
+"chapter": 1,
+"section": 7,
+"number": 4,
+"exam": "Sp86"
+},
+{
+"id": "bpm-1.7.5",
+"chapter": 1,
+"section": 7,
+"number": 5,
+"exam": "Sp88"
+},
+{
+"id": "bpm-1.7.6",
+"chapter": 1,
+"section": 7,
+"number": 6,
+"exam": "Fa80"
+},
+{
+"id": "bpm-1.7.7",
+"chapter": 1,
+"section": 7,
+"number": 7,
+"exam": "Su83"
+},
+{
+"id": "bpm-1.7.8",
+"chapter": 1,
+"section": 7,
+"number": 8,
+"exam": "Fa81"
+},
+{
+"id": "bpm-1.8.1",
+"chapter": 1,
+"section": 8,
+"number": 1,
+"exam": "Sp81"
+},
+{
+"id": "bpm-1.8.2",
+"chapter": 1,
+"section": 8,
+"number": 2,
+"exam": "Sp82"
+},
+{
+"id": "bpm-1.8.3",
+"chapter": 1,
+"section": 8,
+"number": 3,
+"exam": "Sp86"
+},
+{
+"id": "bpm-2.1.1",
+"chapter": 2,
+"section": 1,
+"number": 1,
+"exam": "Fa94"
+},
+{
+"id": "bpm-2.1.2",
+"chapter": 2,
+"section": 1,
+"number": 2,
+"exam": "Sp78"
+},
+{
+"id": "bpm-2.1.3",
+"chapter": 2,
+"section": 1,
+"number": 3,
+"exam": "Su79"
+},
+{
+"id": "bpm-2.1.5",
+"chapter": 2,
+"section": 1,
+"number": 5,
+"exam": "Sp91"
+},
+{
+"id": "bpm-2.1.6",
+"chapter": 2,
+"section": 1,
+"number": 6,
+"exam": "Su78"
+},
+{
+"id": "bpm-2.1.8",
+"chapter": 2,
+"section": 1,
+"number": 8,
+"exam": "Sp83"
+},
+{
+"id": "bpm-2.2.2",
+"chapter": 2,
+"section": 2,
+"number": 2,
+"exam": "Fa86"
+},
+{
+"id": "bpm-2.2.4",
+"chapter": 2,
+"section": 2,
+"number": 4,
+"exam": "Sp89"
+},
+{
+"id": "bpm-2.2.5",
+"chapter": 2,
+"section": 2,
+"number": 5,
+"exam": "Fa81"
+},
+{
+"id": "bpm-2.2.6",
+"chapter": 2,
+"section": 2,
+"number": 6,
+"exam": "Su80"
+},
+{
+"id": "bpm-2.2.7",
+"chapter": 2,
+"section": 2,
+"number": 7,
+"exam": "Fa88"
+},
+{
+"id": "bpm-2.2.8",
+"chapter": 2,
+"section": 2,
+"number": 8,
+"exam": "Su82"
+},
+{
+"id": "bpm-2.2.10",
+"chapter": 2,
+"section": 2,
+"number": 10,
+"exam": "Fa91"
+},
+{
+"id": "bpm-2.2.11",
+"chapter": 2,
+"section": 2,
+"number": 11,
+"exam": "Fa80"
+},
+{
+"id": "bpm-2.2.12",
+"chapter": 2,
+"section": 2,
+"number": 12,
+"exam": "Su80"
+},
+{
+"id": "bpm-2.2.13",
+"chapter": 2,
+"section": 2,
+"number": 13,
+"exam": "Sp80"
+},
+{
+"id": "bpm-2.2.14",
+"chapter": 2,
+"section": 2,
+"number": 14,
+"exam": "Fa78"
+},
+{
+"id": "bpm-2.2.15",
+"chapter": 2,
+"section": 2,
+"number": 15,
+"exam": "Sp77"
+},
+{
+"id": "bpm-2.2.16",
+"chapter": 2,
+"section": 2,
+"number": 16,
+"exam": "Sp77"
+},
+{
+"id": "bpm-2.2.17",
+"chapter": 2,
+"section": 2,
+"number": 17,
+"exam": "Su77"
+},
+{
+"id": "bpm-2.2.18",
+"chapter": 2,
+"section": 2,
+"number": 18,
+"exam": "Fa77"
+},
+{
+"id": "bpm-2.2.20",
+"chapter": 2,
+"section": 2,
+"number": 20,
+"exam": "Sp79"
+},
+{
+"id": "bpm-2.2.21",
+"chapter": 2,
+"section": 2,
+"number": 21,
+"exam": "Sp82"
+},
+{
+"id": "bpm-2.2.22",
+"chapter": 2,
+"section": 2,
+"number": 22,
+"exam": "Fa78"
+},
+{
+"id": "bpm-2.2.23",
+"chapter": 2,
+"section": 2,
+"number": 23,
+"exam": "Su78"
+},
+{
+"id": "bpm-2.2.24",
+"chapter": 2,
+"section": 2,
+"number": 24,
+"exam": "Fa78"
+},
+{
+"id": "bpm-2.2.25",
+"chapter": 2,
+"section": 2,
+"number": 25,
+"exam": "Su79"
+},
+{
+"id": "bpm-2.2.26",
+"chapter": 2,
+"section": 2,
+"number": 26,
+"exam": "Sp92"
+},
+{
+"id": "bpm-2.2.27",
+"chapter": 2,
+"section": 2,
+"number": 27,
+"exam": "Fa83"
+},
+{
+"id": "bpm-2.2.28",
+"chapter": 2,
+"section": 2,
+"number": 28,
+"exam": "Sp78"
+},
+{
+"id": "bpm-2.2.30",
+"chapter": 2,
+"section": 2,
+"number": 30,
+"exam": "Fa87"
+},
+{
+"id": "bpm-2.2.31",
+"chapter": 2,
+"section": 2,
+"number": 31,
+"exam": "Fa94"
+},
+{
+"id": "bpm-2.2.32",
+"chapter": 2,
+"section": 2,
+"number": 32,
+"exam": "Su84"
+},
+{
+"id": "bpm-2.2.33",
+"chapter": 2,
+"section": 2,
+"number": 33,
+"exam": "Su79"
+},
+{
+"id": "bpm-2.2.34",
+"chapter": 2,
+"section": 2,
+"number": 34,
+"exam": "Su78"
+},
+{
+"id": "bpm-2.2.35",
+"chapter": 2,
+"section": 2,
+"number": 35,
+"exam": "Su82"
+},
+{
+"id": "bpm-2.2.36",
+"chapter": 2,
+"section": 2,
+"number": 36,
+"exam": "Fa80"
+},
+{
+"id": "bpm-2.2.37",
+"chapter": 2,
+"section": 2,
+"number": 37,
+"exam": "Sp96"
+},
+{
+"id": "bpm-2.2.38",
+"chapter": 2,
+"section": 2,
+"number": 38,
+"exam": "Fa78"
+},
+{
+"id": "bpm-2.2.40",
+"chapter": 2,
+"section": 2,
+"number": 40,
+"exam": "Fa81"
+},
+{
+"id": "bpm-2.3.1",
+"chapter": 2,
+"section": 3,
+"number": 1,
+"exam": "Sp78"
+},
+{
+"id": "bpm-2.3.2",
+"chapter": 2,
+"section": 3,
+"number": 2,
+"exam": "Sp78"
+},
+{
+"id": "bpm-2.3.3",
+"chapter": 2,
+"section": 3,
+"number": 3,
+"exam": "Sp98"
+},
+{
+"id": "bpm-2.3.4",
+"chapter": 2,
+"section": 3,
+"number": 4,
+"exam": "Sp80"
+},
+{
+"id": "bpm-2.3.5",
+"chapter": 2,
+"section": 3,
+"number": 5,
+"exam": "Sp81"
+},
+{
+"id": "bpm-2.3.6",
+"chapter": 2,
+"section": 3,
+"number": 6,
+"exam": "Fa86"
+},
+{
+"id": "bpm-2.3.7",
+"chapter": 2,
+"section": 3,
+"number": 7,
+"exam": "Sp91"
+},
+{
+"id": "bpm-2.3.8",
+"chapter": 2,
+"section": 3,
+"number": 8,
+"exam": "Fa91"
+},
+{
+"id": "bpm-2.3.9",
+"chapter": 2,
+"section": 3,
+"number": 9,
+"exam": "Fa94"
+},
+{
+"id": "bpm-2.3.10",
+"chapter": 2,
+"section": 3,
+"number": 10,
+"exam": "Sp92"
+},
+{
+"id": "bpm-3.1.1",
+"chapter": 3,
+"section": 1,
+"number": 1,
+"exam": "Fa93"
+},
+{
+"id": "bpm-3.1.2",
+"chapter": 3,
+"section": 1,
+"number": 2,
+"exam": "Fa77"
+},
+{
+"id": "bpm-3.1.3",
+"chapter": 3,
+"section": 1,
+"number": 3,
+"exam": "Sp78"
+},
+{
+"id": "bpm-3.1.4",
+"chapter": 3,
+"section": 1,
+"number": 4,
+"exam": "Sp78"
+},
+{
+"id": "bpm-3.1.5",
+"chapter": 3,
+"section": 1,
+"number": 5,
+"exam": "Su78"
+},
+{
+"id": "bpm-3.1.6",
+"chapter": 3,
+"section": 1,
+"number": 6,
+"exam": "Fa78"
+},
+{
+"id": "bpm-3.1.7",
+"chapter": 3,
+"section": 1,
+"number": 7,
+"exam": "Sp79"
+},
+{
+"id": "bpm-3.1.8",
+"chapter": 3,
+"section": 1,
+"number": 8,
+"exam": "Sp80"
+},
+{
+"id": "bpm-3.1.10",
+"chapter": 3,
+"section": 1,
+"number": 10,
+"exam": "Fa82"
+},
+{
+"id": "bpm-3.1.11",
+"chapter": 3,
+"section": 1,
+"number": 11,
+"exam": "Fa82"
+},
+{
+"id": "bpm-3.1.12",
+"chapter": 3,
+"section": 1,
+"number": 12,
+"exam": "Sp83"
+},
+{
+"id": "bpm-3.1.13",
+"chapter": 3,
+"section": 1,
+"number": 13,
+"exam": "Su83"
+},
+{
+"id": "bpm-3.1.14",
+"chapter": 3,
+"section": 1,
+"number": 14,
+"exam": "Fa83"
+},
+{
+"id": "bpm-3.1.15",
+"chapter": 3,
+"section": 1,
+"number": 15,
+"exam": "Sp84"
+},
+{
+"id": "bpm-3.1.16",
+"chapter": 3,
+"section": 1,
+"number": 16,
+"exam": "Fa84"
+},
+{
+"id": "bpm-3.1.17",
+"chapter": 3,
+"section": 1,
+"number": 17,
+"exam": "Fa85"
+},
+{
+"id": "bpm-3.1.18",
+"chapter": 3,
+"section": 1,
+"number": 18,
+"exam": "Fa86"
+},
+{
+"id": "bpm-3.1.19",
+"chapter": 3,
+"section": 1,
+"number": 19,
+"exam": "Fa86"
+},
+{
+"id": "bpm-3.1.20",
+"chapter": 3,
+"section": 1,
+"number": 20,
+"exam": "Fa92"
+},
+{
+"id": "bpm-3.1.21",
+"chapter": 3,
+"section": 1,
+"number": 21,
+"exam": "Sp93"
+},
+{
+"id": "bpm-3.1.22",
+"chapter": 3,
+"section": 1,
+"number": 22,
+"exam": "Sp95"
+},
+{
+"id": "bpm-3.1.23",
+"chapter": 3,
+"section": 1,
+"number": 23,
+"exam": "Fa87"
+},
+{
+"id": "bpm-3.2.1",
+"chapter": 3,
+"section": 2,
+"number": 1,
+"exam": "Sp97"
+},
+{
+"id": "bpm-3.2.2",
+"chapter": 3,
+"section": 2,
+"number": 2,
+"exam": "Sp77"
+},
+{
+"id": "bpm-3.2.3",
+"chapter": 3,
+"section": 2,
+"number": 3,
+"exam": "Fa77"
+},
+{
+"id": "bpm-3.2.4",
+"chapter": 3,
+"section": 2,
+"number": 4,
+"exam": "Su79"
+},
+{
+"id": "bpm-3.2.5",
+"chapter": 3,
+"section": 2,
+"number": 5,
+"exam": "Su84"
+},
+{
+"id": "bpm-3.2.7",
+"chapter": 3,
+"section": 2,
+"number": 7,
+"exam": "Fa80"
+},
+{
+"id": "bpm-3.2.8",
+"chapter": 3,
+"section": 2,
+"number": 8,
+"exam": "Fa95"
+},
+{
+"id": "bpm-3.2.9",
+"chapter": 3,
+"section": 2,
+"number": 9,
+"exam": "Fa83"
+},
+{
+"id": "bpm-3.2.10",
+"chapter": 3,
+"section": 2,
+"number": 10,
+"exam": "Sp87"
+},
+{
+"id": "bpm-3.2.11",
+"chapter": 3,
+"section": 2,
+"number": 11,
+"exam": "Fa93"
+},
+{
+"id": "bpm-3.2.12",
+"chapter": 3,
+"section": 2,
+"number": 12,
+"exam": "Sp93"
+},
+{
+"id": "bpm-3.2.13",
+"chapter": 3,
+"section": 2,
+"number": 13,
+"exam": "Sp85"
+},
+{
+"id": "bpm-3.3.1",
+"chapter": 3,
+"section": 3,
+"number": 1,
+"exam": "Su78"
+},
+{
+"id": "bpm-3.3.2",
+"chapter": 3,
+"section": 3,
+"number": 2,
+"exam": "Sp87"
+},
+{
+"id": "bpm-3.3.3",
+"chapter": 3,
+"section": 3,
+"number": 3,
+"exam": "Fa94"
+},
+{
+"id": "bpm-3.3.4",
+"chapter": 3,
+"section": 3,
+"number": 4,
+"exam": "Sp94"
+},
+{
+"id": "bpm-3.3.5",
+"chapter": 3,
+"section": 3,
+"number": 5,
+"exam": "Sp95"
+},
+{
+"id": "bpm-3.4.1",
+"chapter": 3,
+"section": 4,
+"number": 1,
+"exam": "Sp79"
+},
+{
+"id": "bpm-3.4.2",
+"chapter": 3,
+"section": 4,
+"number": 2,
+"exam": "Su79"
+},
+{
+"id": "bpm-3.4.4",
+"chapter": 3,
+"section": 4,
+"number": 4,
+"exam": "Su80"
+},
+{
+"id": "bpm-3.4.5",
+"chapter": 3,
+"section": 4,
+"number": 5,
+"exam": "Sp81"
+},
+{
+"id": "bpm-3.4.6",
+"chapter": 3,
+"section": 4,
+"number": 6,
+"exam": "Fa81"
+},
+{
+"id": "bpm-3.4.7",
+"chapter": 3,
+"section": 4,
+"number": 7,
+"exam": "Fa81"
+},
+{
+"id": "bpm-3.4.8",
+"chapter": 3,
+"section": 4,
+"number": 8,
+"exam": "Sp84"
+},
+{
+"id": "bpm-3.4.9",
+"chapter": 3,
+"section": 4,
+"number": 9,
+"exam": "Sp91"
+},
+{
+"id": "bpm-3.4.10",
+"chapter": 3,
+"section": 4,
+"number": 10,
+"exam": "Su84"
+},
+{
+"id": "bpm-3.4.11",
+"chapter": 3,
+"section": 4,
+"number": 11,
+"exam": "Fa84"
+},
+{
+"id": "bpm-3.4.12",
+"chapter": 3,
+"section": 4,
+"number": 12,
+"exam": "Sp86"
+},
+{
+"id": "bpm-3.4.13",
+"chapter": 3,
+"section": 4,
+"number": 13,
+"exam": "Sp86"
+},
+{
+"id": "bpm-3.4.14",
+"chapter": 3,
+"section": 4,
+"number": 14,
+"exam": "Fa88"
+},
+{
+"id": "bpm-3.4.15",
+"chapter": 3,
+"section": 4,
+"number": 15,
+"exam": "Fa91"
+},
+{
+"id": "bpm-3.4.16",
+"chapter": 3,
+"section": 4,
+"number": 16,
+"exam": "Sp94"
+},
+{
+"id": "bpm-3.4.17",
+"chapter": 3,
+"section": 4,
+"number": 17,
+"exam": "Sp80"
+},
+{
+"id": "bpm-3.4.18",
+"chapter": 3,
+"section": 4,
+"number": 18,
+"exam": "Sp89"
+},
+{
+"id": "bpm-4.1.2",
+"chapter": 4,
+"section": 1,
+"number": 2,
+"exam": "Su81"
+},
+{
+"id": "bpm-4.1.3",
+"chapter": 4,
+"section": 1,
+"number": 3,
+"exam": "Fa77"
+},
+{
+"id": "bpm-4.1.4",
+"chapter": 4,
+"section": 1,
+"number": 4,
+"exam": "Su80"
+},
+{
+"id": "bpm-4.1.5",
+"chapter": 4,
+"section": 1,
+"number": 5,
+"exam": "Sp83"
+},
+{
+"id": "bpm-4.1.6",
+"chapter": 4,
+"section": 1,
+"number": 6,
+"exam": "Su78"
+},
+{
+"id": "bpm-4.1.7",
+"chapter": 4,
+"section": 1,
+"number": 7,
+"exam": "Sp82"
+},
+{
+"id": "bpm-4.1.8",
+"chapter": 4,
+"section": 1,
+"number": 8,
+"exam": "Fa89"
+},
+{
+"id": "bpm-4.1.9",
+"chapter": 4,
+"section": 1,
+"number": 9,
+"exam": "Sp92"
+},
+{
+"id": "bpm-4.1.10",
+"chapter": 4,
+"section": 1,
+"number": 10,
+"exam": "Fa86"
+},
+{
+"id": "bpm-4.1.11",
+"chapter": 4,
+"section": 1,
+"number": 11,
+"exam": "Sp87"
+},
+{
+"id": "bpm-4.1.12",
+"chapter": 4,
+"section": 1,
+"number": 12,
+"exam": "Su77"
+},
+{
+"id": "bpm-4.1.13",
+"chapter": 4,
+"section": 1,
+"number": 13,
+"exam": "Fa89"
+},
+{
+"id": "bpm-4.1.14",
+"chapter": 4,
+"section": 1,
+"number": 14,
+"exam": "Su78"
+},
+{
+"id": "bpm-4.1.15",
+"chapter": 4,
+"section": 1,
+"number": 15,
+"exam": "Fa79"
+},
+{
+"id": "bpm-4.1.16",
+"chapter": 4,
+"section": 1,
+"number": 16,
+"exam": "Sp82"
+},
+{
+"id": "bpm-4.1.17",
+"chapter": 4,
+"section": 1,
+"number": 17,
+"exam": "Sp81"
+},
+{
+"id": "bpm-4.1.18",
+"chapter": 4,
+"section": 1,
+"number": 18,
+"exam": "Fa78"
+},
+{
+"id": "bpm-4.1.19",
+"chapter": 4,
+"section": 1,
+"number": 19,
+"exam": "Su81"
+},
+{
+"id": "bpm-4.1.20",
+"chapter": 4,
+"section": 1,
+"number": 20,
+"exam": "Fa83"
+},
+{
+"id": "bpm-4.1.21",
+"chapter": 4,
+"section": 1,
+"number": 21,
+"exam": "Fa91"
+},
+{
+"id": "bpm-4.2.1",
+"chapter": 4,
+"section": 2,
+"number": 1,
+"exam": "Fa93"
+},
+{
+"id": "bpm-4.2.2",
+"chapter": 4,
+"section": 2,
+"number": 2,
+"exam": "Sp79"
+},
+{
+"id": "bpm-4.2.3",
+"chapter": 4,
+"section": 2,
+"number": 3,
+"exam": "Fa80"
+},
+{
+"id": "bpm-4.2.4",
+"chapter": 4,
+"section": 2,
+"number": 4,
+"exam": "Sp97"
+},
+{
+"id": "bpm-4.2.5",
+"chapter": 4,
+"section": 2,
+"number": 5,
+"exam": "Su84"
+},
+{
+"id": "bpm-4.2.6",
+"chapter": 4,
+"section": 2,
+"number": 6,
+"exam": "Sp87"
+},
+{
+"id": "bpm-4.2.7",
+"chapter": 4,
+"section": 2,
+"number": 7,
+"exam": "Fa91"
+},
+{
+"id": "bpm-4.2.8",
+"chapter": 4,
+"section": 2,
+"number": 8,
+"exam": "Fa92"
+},
+{
+"id": "bpm-4.3.1",
+"chapter": 4,
+"section": 3,
+"number": 1,
+"exam": "Fa79"
+},
+{
+"id": "bpm-4.3.2",
+"chapter": 4,
+"section": 3,
+"number": 2,
+"exam": "Fa87"
+},
+{
+"id": "bpm-4.3.3",
+"chapter": 4,
+"section": 3,
+"number": 3,
+"exam": "Su80"
+},
+{
+"id": "bpm-4.3.5",
+"chapter": 4,
+"section": 3,
+"number": 5,
+"exam": "Fa82"
+},
+{
+"id": "bpm-4.3.6",
+"chapter": 4,
+"section": 3,
+"number": 6,
+"exam": "Fa88"
+},
+{
+"id": "bpm-4.3.7",
+"chapter": 4,
+"section": 3,
+"number": 7,
+"exam": "Su84"
+},
+{
+"id": "bpm-5.1.1",
+"chapter": 5,
+"section": 1,
+"number": 1,
+"exam": "Fa77"
+},
+{
+"id": "bpm-5.1.2",
+"chapter": 5,
+"section": 1,
+"number": 2,
+"exam": "Su77"
+},
+{
+"id": "bpm-5.1.3",
+"chapter": 5,
+"section": 1,
+"number": 3,
+"exam": "Sp85"
+},
+{
+"id": "bpm-5.1.4",
+"chapter": 5,
+"section": 1,
+"number": 4,
+"exam": "Fa86"
+},
+{
+"id": "bpm-5.1.5",
+"chapter": 5,
+"section": 1,
+"number": 5,
+"exam": "Sp77"
+},
+{
+"id": "bpm-5.1.6",
+"chapter": 5,
+"section": 1,
+"number": 6,
+"exam": "Sp90"
+},
+{
+"id": "bpm-5.1.7",
+"chapter": 5,
+"section": 1,
+"number": 7,
+"exam": "Sp94"
+},
+{
+"id": "bpm-5.1.8",
+"chapter": 5,
+"section": 1,
+"number": 8,
+"exam": "Fa82"
+},
+{
+"id": "bpm-5.1.9",
+"chapter": 5,
+"section": 1,
+"number": 9,
+"exam": "Fa95"
+},
+{
+"id": "bpm-5.1.10",
+"chapter": 5,
+"section": 1,
+"number": 10,
+"exam": "Su82"
+},
+{
+"id": "bpm-5.2.1",
+"chapter": 5,
+"section": 2,
+"number": 1,
+"exam": "Fa95"
+},
+{
+"id": "bpm-5.2.2",
+"chapter": 5,
+"section": 2,
+"number": 2,
+"exam": "Fa94"
+},
+{
+"id": "bpm-5.2.4",
+"chapter": 5,
+"section": 2,
+"number": 4,
+"exam": "Su77"
+},
+{
+"id": "bpm-5.2.5",
+"chapter": 5,
+"section": 2,
+"number": 5,
+"exam": "Sp77"
+},
+{
+"id": "bpm-5.2.6",
+"chapter": 5,
+"section": 2,
+"number": 6,
+"exam": "Su78"
+},
+{
+"id": "bpm-5.2.7",
+"chapter": 5,
+"section": 2,
+"number": 7,
+"exam": "Sp79"
+},
+{
+"id": "bpm-5.2.8",
+"chapter": 5,
+"section": 2,
+"number": 8,
+"exam": "Su79"
+},
+{
+"id": "bpm-5.2.9",
+"chapter": 5,
+"section": 2,
+"number": 9,
+"exam": "Su82"
+},
+{
+"id": "bpm-5.2.10",
+"chapter": 5,
+"section": 2,
+"number": 10,
+"exam": "Su84"
+},
+{
+"id": "bpm-5.2.11",
+"chapter": 5,
+"section": 2,
+"number": 11,
+"exam": "Sp85"
+},
+{
+"id": "bpm-5.2.12",
+"chapter": 5,
+"section": 2,
+"number": 12,
+"exam": "Fa95"
+},
+{
+"id": "bpm-5.2.13",
+"chapter": 5,
+"section": 2,
+"number": 13,
+"exam": "Sp78"
+},
+{
+"id": "bpm-5.2.14",
+"chapter": 5,
+"section": 2,
+"number": 14,
+"exam": "Su79"
+},
+{
+"id": "bpm-5.2.15",
+"chapter": 5,
+"section": 2,
+"number": 15,
+"exam": "Sp86"
+},
+{
+"id": "bpm-5.3.1",
+"chapter": 5,
+"section": 3,
+"number": 1,
+"exam": "Fa77"
+},
+{
+"id": "bpm-5.3.2",
+"chapter": 5,
+"section": 3,
+"number": 2,
+"exam": "Fa78"
+},
+{
+"id": "bpm-5.3.3",
+"chapter": 5,
+"section": 3,
+"number": 3,
+"exam": "Sp83"
+},
+{
+"id": "bpm-5.3.4",
+"chapter": 5,
+"section": 3,
+"number": 4,
+"exam": "Sp80"
+},
+{
+"id": "bpm-5.3.5",
+"chapter": 5,
+"section": 3,
+"number": 5,
+"exam": "Su80"
+},
+{
+"id": "bpm-5.3.6",
+"chapter": 5,
+"section": 3,
+"number": 6,
+"exam": "Sp90"
+},
+{
+"id": "bpm-5.3.7",
+"chapter": 5,
+"section": 3,
+"number": 7,
+"exam": "Fa97"
+},
+{
+"id": "bpm-5.3.8",
+"chapter": 5,
+"section": 3,
+"number": 8,
+"exam": "Sp95"
+},
+{
+"id": "bpm-5.4.1",
+"chapter": 5,
+"section": 4,
+"number": 1,
+"exam": "Sp96"
+},
+{
+"id": "bpm-5.4.2",
+"chapter": 5,
+"section": 4,
+"number": 2,
+"exam": "Fa93"
+},
+{
+"id": "bpm-5.4.5",
+"chapter": 5,
+"section": 4,
+"number": 5,
+"exam": "Sp84"
+},
+{
+"id": "bpm-5.5.1",
+"chapter": 5,
+"section": 5,
+"number": 1,
+"exam": "Fa82"
+},
+{
+"id": "bpm-5.5.3",
+"chapter": 5,
+"section": 5,
+"number": 3,
+"exam": "Sp80"
+},
+{
+"id": "bpm-5.5.4",
+"chapter": 5,
+"section": 5,
+"number": 4,
+"exam": "Su83"
+},
+{
+"id": "bpm-5.5.5",
+"chapter": 5,
+"section": 5,
+"number": 5,
+"exam": "Sp80"
+},
+{
+"id": "bpm-5.5.6",
+"chapter": 5,
+"section": 5,
+"number": 6,
+"exam": "Su85"
+},
+{
+"id": "bpm-5.5.7",
+"chapter": 5,
+"section": 5,
+"number": 7,
+"exam": "Sp88"
+},
+{
+"id": "bpm-5.5.8",
+"chapter": 5,
+"section": 5,
+"number": 8,
+"exam": "Fa91"
+},
+{
+"id": "bpm-5.5.9",
+"chapter": 5,
+"section": 5,
+"number": 9,
+"exam": "Fa78"
+},
+{
+"id": "bpm-5.5.11",
+"chapter": 5,
+"section": 5,
+"number": 11,
+"exam": "Fa85"
+},
+{
+"id": "bpm-5.5.12",
+"chapter": 5,
+"section": 5,
+"number": 12,
+"exam": "Su82"
+},
+{
+"id": "bpm-5.5.13",
+"chapter": 5,
+"section": 5,
+"number": 13,
+"exam": "Sp93"
+},
+{
+"id": "bpm-5.5.15",
+"chapter": 5,
+"section": 5,
+"number": 15,
+"exam": "Sp85"
+},
+{
+"id": "bpm-5.5.17",
+"chapter": 5,
+"section": 5,
+"number": 17,
+"exam": "Fa87"
+},
+{
+"id": "bpm-5.5.18",
+"chapter": 5,
+"section": 5,
+"number": 18,
+"exam": "Sp88"
+},
+{
+"id": "bpm-5.5.19",
+"chapter": 5,
+"section": 5,
+"number": 19,
+"exam": "Sp91"
+},
+{
+"id": "bpm-5.6.1",
+"chapter": 5,
+"section": 6,
+"number": 1,
+"exam": "Fa90"
+},
+{
+"id": "bpm-5.6.2",
+"chapter": 5,
+"section": 6,
+"number": 2,
+"exam": "Fa97"
+},
+{
+"id": "bpm-5.6.4",
+"chapter": 5,
+"section": 6,
+"number": 4,
+"exam": "Sp97"
+},
+{
+"id": "bpm-5.6.5",
+"chapter": 5,
+"section": 6,
+"number": 5,
+"exam": "Su78"
+},
+{
+"id": "bpm-5.6.6",
+"chapter": 5,
+"section": 6,
+"number": 6,
+"exam": "Fa90"
+},
+{
+"id": "bpm-5.6.7",
+"chapter": 5,
+"section": 6,
+"number": 7,
+"exam": "Fa96"
+},
+{
+"id": "bpm-5.6.8",
+"chapter": 5,
+"section": 6,
+"number": 8,
+"exam": "Fa91"
+},
+{
+"id": "bpm-5.7.1",
+"chapter": 5,
+"section": 7,
+"number": 1,
+"exam": "Sp88"
+},
+{
+"id": "bpm-5.7.2",
+"chapter": 5,
+"section": 7,
+"number": 2,
+"exam": "Fa80"
+},
+{
+"id": "bpm-5.7.3",
+"chapter": 5,
+"section": 7,
+"number": 3,
+"exam": "Su78"
+},
+{
+"id": "bpm-5.7.4",
+"chapter": 5,
+"section": 7,
+"number": 4,
+"exam": "Sp78"
+},
+{
+"id": "bpm-5.7.5",
+"chapter": 5,
+"section": 7,
+"number": 5,
+"exam": "Su82"
+},
+{
+"id": "bpm-5.7.6",
+"chapter": 5,
+"section": 7,
+"number": 6,
+"exam": "Sp83"
+},
+{
+"id": "bpm-5.7.7",
+"chapter": 5,
+"section": 7,
+"number": 7,
+"exam": "Su83"
+},
+{
+"id": "bpm-5.7.8",
+"chapter": 5,
+"section": 7,
+"number": 8,
+"exam": "Fa84"
+},
+{
+"id": "bpm-5.7.9",
+"chapter": 5,
+"section": 7,
+"number": 9,
+"exam": "Sp87"
+},
+{
+"id": "bpm-5.7.10",
+"chapter": 5,
+"section": 7,
+"number": 10,
+"exam": "Sp88"
+},
+{
+"id": "bpm-5.7.11",
+"chapter": 5,
+"section": 7,
+"number": 11,
+"exam": "Fa92"
+},
+{
+"id": "bpm-5.7.12",
+"chapter": 5,
+"section": 7,
+"number": 12,
+"exam": "Fa94"
+},
+{
+"id": "bpm-5.7.13",
+"chapter": 5,
+"section": 7,
+"number": 13,
+"exam": "Fa87"
+},
+{
+"id": "bpm-5.7.14",
+"chapter": 5,
+"section": 7,
+"number": 14,
+"exam": "Fa91"
+},
+{
+"id": "bpm-5.7.15",
+"chapter": 5,
+"section": 7,
+"number": 15,
+"exam": "Sp92"
+},
+{
+"id": "bpm-5.7.16",
+"chapter": 5,
+"section": 7,
+"number": 16,
+"exam": "Sp92"
+},
+{
+"id": "bpm-5.7.17",
+"chapter": 5,
+"section": 7,
+"number": 17,
+"exam": "Sp92"
+},
+{
+"id": "bpm-5.7.18",
+"chapter": 5,
+"section": 7,
+"number": 18,
+"exam": "Sp93"
+},
+{
+"id": "bpm-5.7.19",
+"chapter": 5,
+"section": 7,
+"number": 19,
+"exam": "Sp94"
+},
+{
+"id": "bpm-5.7.20",
+"chapter": 5,
+"section": 7,
+"number": 20,
+"exam": "Sp94"
+},
+{
+"id": "bpm-5.7.21",
+"chapter": 5,
+"section": 7,
+"number": 21,
+"exam": "Sp87"
+},
+{
+"id": "bpm-5.7.23",
+"chapter": 5,
+"section": 7,
+"number": 23,
+"exam": "Sp77"
+},
+{
+"id": "bpm-5.7.24",
+"chapter": 5,
+"section": 7,
+"number": 24,
+"exam": "Sp91"
+},
+{
+"id": "bpm-5.7.25",
+"chapter": 5,
+"section": 7,
+"number": 25,
+"exam": "Sp98"
+},
+{
+"id": "bpm-5.8.1",
+"chapter": 5,
+"section": 8,
+"number": 1,
+"exam": "Fa85"
+},
+{
+"id": "bpm-5.8.2",
+"chapter": 5,
+"section": 8,
+"number": 2,
+"exam": "Su78"
+},
+{
+"id": "bpm-5.8.3",
+"chapter": 5,
+"section": 8,
+"number": 3,
+"exam": "Sp98"
+},
+{
+"id": "bpm-5.8.5",
+"chapter": 5,
+"section": 8,
+"number": 5,
+"exam": "Su77"
+},
+{
+"id": "bpm-5.8.7",
+"chapter": 5,
+"section": 8,
+"number": 7,
+"exam": "Fa95"
+},
+{
+"id": "bpm-5.8.8",
+"chapter": 5,
+"section": 8,
+"number": 8,
+"exam": "Su83"
+},
+{
+"id": "bpm-5.8.9",
+"chapter": 5,
+"section": 8,
+"number": 9,
+"exam": "Su83"
+},
+{
+"id": "bpm-5.8.10",
+"chapter": 5,
+"section": 8,
+"number": 10,
+"exam": "Fa88"
+},
+{
+"id": "bpm-5.8.11",
+"chapter": 5,
+"section": 8,
+"number": 11,
+"exam": "Fa89"
+},
+{
+"id": "bpm-5.8.12",
+"chapter": 5,
+"section": 8,
+"number": 12,
+"exam": "Sp90"
+},
+{
+"id": "bpm-5.9.3",
+"chapter": 5,
+"section": 9,
+"number": 3,
+"exam": "Fa80"
+},
+{
+"id": "bpm-5.9.4",
+"chapter": 5,
+"section": 9,
+"number": 4,
+"exam": "Fa81"
+},
+{
+"id": "bpm-5.9.5",
+"chapter": 5,
+"section": 9,
+"number": 5,
+"exam": "Fa92"
+},
+{
+"id": "bpm-5.9.6",
+"chapter": 5,
+"section": 9,
+"number": 6,
+"exam": "Su80"
+},
+{
+"id": "bpm-5.9.7",
+"chapter": 5,
+"section": 9,
+"number": 7,
+"exam": "Fa83"
+},
+{
+"id": "bpm-5.9.9",
+"chapter": 5,
+"section": 9,
+"number": 9,
+"exam": "Sp96"
+},
+{
+"id": "bpm-5.9.10",
+"chapter": 5,
+"section": 9,
+"number": 10,
+"exam": "Sp86"
+},
+{
+"id": "bpm-5.0.11",
+"chapter": 5,
+"section": 0,
+"number": 11,
+"exam": "Fa85"
+},
+{
+"id": "bpm-5.9.12",
+"chapter": 5,
+"section": 9,
+"number": 12,
+"exam": "Sp87"
+},
+{
+"id": "bpm-5.9.13",
+"chapter": 5,
+"section": 9,
+"number": 13,
+"exam": "Sp92"
+},
+{
+"id": "bpm-5.9.15",
+"chapter": 5,
+"section": 9,
+"number": 15,
+"exam": "Fa85"
+},
+{
+"id": "bpm-5.9.16",
+"chapter": 5,
+"section": 9,
+"number": 16,
+"exam": "Sp85"
+},
+{
+"id": "bpm-5.9.17",
+"chapter": 5,
+"section": 9,
+"number": 17,
+"exam": "Sp98"
+},
+{
+"id": "bpm-5.9.18",
+"chapter": 5,
+"section": 9,
+"number": 18,
+"exam": "Sp98"
+},
+{
+"id": "bpm-5.9.19",
+"chapter": 5,
+"section": 9,
+"number": 19,
+"exam": "Su82"
+},
+{
+"id": "bpm-5.9.20",
+"chapter": 5,
+"section": 9,
+"number": 20,
+"exam": "Fa86"
+},
+{
+"id": "bpm-5.9.21",
+"chapter": 5,
+"section": 9,
+"number": 21,
+"exam": "Sp90"
+},
+{
+"id": "bpm-5.9.22",
+"chapter": 5,
+"section": 9,
+"number": 22,
+"exam": "Sp95"
+},
+{
+"id": "bpm-5.9.23",
+"chapter": 5,
+"section": 9,
+"number": 23,
+"exam": "Su81"
+},
+{
+"id": "bpm-5.9.24",
+"chapter": 5,
+"section": 9,
+"number": 24,
+"exam": "Su84"
+},
+{
+"id": "bpm-5.9.25",
+"chapter": 5,
+"section": 9,
+"number": 25,
+"exam": "Fa88"
+},
+{
+"id": "bpm-5.9.26",
+"chapter": 5,
+"section": 9,
+"number": 26,
+"exam": "Sp93"
+},
+{
+"id": "bpm-5.9.28",
+"chapter": 5,
+"section": 9,
+"number": 28,
+"exam": "Su85"
+},
+{
+"id": "bpm-5.9.29",
+"chapter": 5,
+"section": 9,
+"number": 29,
+"exam": "Su80"
+},
+{
+"id": "bpm-5.9.30",
+"chapter": 5,
+"section": 9,
+"number": 30,
+"exam": "Sp82"
+},
+{
+"id": "bpm-5.9.31",
+"chapter": 5,
+"section": 9,
+"number": 31,
+"exam": "Sp89"
+},
+{
+"id": "bpm-5.10.2",
+"chapter": 5,
+"section": 10,
+"number": 2,
+"exam": "Fa80"
+},
+{
+"id": "bpm-5.10.3",
+"chapter": 5,
+"section": 10,
+"number": 3,
+"exam": "Fa83"
+},
+{
+"id": "bpm-5.10.4",
+"chapter": 5,
+"section": 10,
+"number": 4,
+"exam": "Fa92"
+},
+{
+"id": "bpm-5.10.5",
+"chapter": 5,
+"section": 10,
+"number": 5,
+"exam": "Fa87"
+},
+{
+"id": "bpm-5.10.6",
+"chapter": 5,
+"section": 10,
+"number": 6,
+"exam": "Sp94"
+},
+{
+"id": "bpm-5.11.1",
+"chapter": 5,
+"section": 11,
+"number": 1,
+"exam": "Fa83"
+},
+{
+"id": "bpm-5.11.2",
+"chapter": 5,
+"section": 11,
+"number": 2,
+"exam": "Fa82"
+},
+{
+"id": "bpm-5.11.3",
+"chapter": 5,
+"section": 11,
+"number": 3,
+"exam": "Sp78"
+},
+{
+"id": "bpm-5.11.4",
+"chapter": 5,
+"section": 11,
+"number": 4,
+"exam": "Fa88"
+},
+{
+"id": "bpm-5.11.6",
+"chapter": 5,
+"section": 11,
+"number": 6,
+"exam": "Sp80"
+},
+{
+"id": "bpm-5.11.7",
+"chapter": 5,
+"section": 11,
+"number": 7,
+"exam": "Su80"
+},
+{
+"id": "bpm-5.11.8",
+"chapter": 5,
+"section": 11,
+"number": 8,
+"exam": "Su81"
+},
+{
+"id": "bpm-5.11.9",
+"chapter": 5,
+"section": 11,
+"number": 9,
+"exam": "Su84"
+},
+{
+"id": "bpm-5.11.10",
+"chapter": 5,
+"section": 11,
+"number": 10,
+"exam": "Sp86"
+},
+{
+"id": "bpm-5.11.11",
+"chapter": 5,
+"section": 11,
+"number": 11,
+"exam": "Sp86"
+},
+{
+"id": "bpm-5.11.12",
+"chapter": 5,
+"section": 11,
+"number": 12,
+"exam": "Fa86"
+},
+{
+"id": "bpm-5.11.13",
+"chapter": 5,
+"section": 11,
+"number": 13,
+"exam": "Sp89"
+},
+{
+"id": "bpm-5.11.14",
+"chapter": 5,
+"section": 11,
+"number": 14,
+"exam": "Fa90"
+},
+{
+"id": "bpm-5.11.15",
+"chapter": 5,
+"section": 11,
+"number": 15,
+"exam": "Fa91"
+},
+{
+"id": "bpm-5.11.16",
+"chapter": 5,
+"section": 11,
+"number": 16,
+"exam": "Fa92"
+},
+{
+"id": "bpm-5.11.17",
+"chapter": 5,
+"section": 11,
+"number": 17,
+"exam": "Fa93"
+},
+{
+"id": "bpm-5.11.18",
+"chapter": 5,
+"section": 11,
+"number": 18,
+"exam": "Sp81"
+},
+{
+"id": "bpm-5.11.19",
+"chapter": 5,
+"section": 11,
+"number": 19,
+"exam": "Sp95"
+},
+{
+"id": "bpm-5.11.21",
+"chapter": 5,
+"section": 11,
+"number": 21,
+"exam": "Fa78"
+},
+{
+"id": "bpm-5.11.22",
+"chapter": 5,
+"section": 11,
+"number": 22,
+"exam": "Sp87"
+},
+{
+"id": "bpm-5.11.23",
+"chapter": 5,
+"section": 11,
+"number": 23,
+"exam": "Fa87"
+},
+{
+"id": "bpm-5.11.24",
+"chapter": 5,
+"section": 11,
+"number": 24,
+"exam": "Sp95"
+},
+{
+"id": "bpm-5.11.25",
+"chapter": 5,
+"section": 11,
+"number": 25,
+"exam": "Fa94"
+},
+{
+"id": "bpm-5.11.26",
+"chapter": 5,
+"section": 11,
+"number": 26,
+"exam": "Sp88"
+},
+{
+"id": "bpm-5.12.1",
+"chapter": 5,
+"section": 12,
+"number": 1,
+"exam": "Sp86"
+},
+{
+"id": "bpm-5.12.2",
+"chapter": 5,
+"section": 12,
+"number": 2,
+"exam": "Fa85"
+},
+{
+"id": "bpm-5.12.5",
+"chapter": 5,
+"section": 12,
+"number": 5,
+"exam": "Sp93"
+},
+{
+"id": "bpm-5.12.6",
+"chapter": 5,
+"section": 12,
+"number": 6,
+"exam": "Sp81"
+},
+{
+"id": "bpm-5.12.8",
+"chapter": 5,
+"section": 12,
+"number": 8,
+"exam": "Sp91"
+},
+{
+"id": "bpm-5.12.9",
+"chapter": 5,
+"section": 12,
+"number": 9,
+"exam": "Sp83"
+},
+{
+"id": "bpm-5.12.10",
+"chapter": 5,
+"section": 12,
+"number": 10,
+"exam": "Fa97"
+},
+{
+"id": "bpm-5.12.11",
+"chapter": 5,
+"section": 12,
+"number": 11,
+"exam": "Fa82"
+},
+{
+"id": "bpm-5.12.13",
+"chapter": 5,
+"section": 12,
+"number": 13,
+"exam": "Sp79"
+},
+{
+"id": "bpm-5.12.14",
+"chapter": 5,
+"section": 12,
+"number": 14,
+"exam": "Su84"
+},
+{
+"id": "bpm-5.12.15",
+"chapter": 5,
+"section": 12,
+"number": 15,
+"exam": "Fa84"
+},
+{
+"id": "bpm-5.12.16",
+"chapter": 5,
+"section": 12,
+"number": 16,
+"exam": "Fa84"
+},
+{
+"id": "bpm-5.12.18",
+"chapter": 5,
+"section": 12,
+"number": 18,
+"exam": "Fa96"
+},
+{
+"id": "bpm-5.12.20",
+"chapter": 5,
+"section": 12,
+"number": 20,
+"exam": "Fa88"
+},
+{
+"id": "bpm-5.12.21",
+"chapter": 5,
+"section": 12,
+"number": 21,
+"exam": "Fa93"
+},
+{
+"id": "bpm-5.12.22",
+"chapter": 5,
+"section": 12,
+"number": 22,
+"exam": "Fa86"
+},
+{
+"id": "bpm-5.12.23",
+"chapter": 5,
+"section": 12,
+"number": 23,
+"exam": "Fa94"
+},
+{
+"id": "bpm-5.12.24",
+"chapter": 5,
+"section": 12,
+"number": 24,
+"exam": "Fa83"
+},
+{
+"id": "bpm-5.12.25",
+"chapter": 5,
+"section": 12,
+"number": 25,
+"exam": "Sp85"
+},
+{
+"id": "bpm-5.12.26",
+"chapter": 5,
+"section": 12,
+"number": 26,
+"exam": "Sp97"
+},
+{
+"id": "bpm-6.1.1",
+"chapter": 6,
+"section": 1,
+"number": 1,
+"exam": "Sp77"
+},
+{
+"id": "bpm-6.1.2",
+"chapter": 6,
+"section": 1,
+"number": 2,
+"exam": "Fa77"
+},
+{
+"id": "bpm-6.1.3",
+"chapter": 6,
+"section": 1,
+"number": 3,
+"exam": "Su78"
+},
+{
+"id": "bpm-6.1.4",
+"chapter": 6,
+"section": 1,
+"number": 4,
+"exam": "Fa80"
+},
+{
+"id": "bpm-6.1.5",
+"chapter": 6,
+"section": 1,
+"number": 5,
+"exam": "Sp83"
+},
+{
+"id": "bpm-6.1.6",
+"chapter": 6,
+"section": 1,
+"number": 6,
+"exam": "Fa90"
+},
+{
+"id": "bpm-6.1.7",
+"chapter": 6,
+"section": 1,
+"number": 7,
+"exam": "Sp81"
+},
+{
+"id": "bpm-6.1.8",
+"chapter": 6,
+"section": 1,
+"number": 8,
+"exam": "Sp91"
+},
+{
+"id": "bpm-6.1.9",
+"chapter": 6,
+"section": 1,
+"number": 9,
+"exam": "Sp84"
+},
+{
+"id": "bpm-6.1.10",
+"chapter": 6,
+"section": 1,
+"number": 10,
+"exam": "Sp85"
+},
+{
+"id": "bpm-6.1.11",
+"chapter": 6,
+"section": 1,
+"number": 11,
+"exam": "Fa85"
+},
+{
+"id": "bpm-6.1.12",
+"chapter": 6,
+"section": 1,
+"number": 12,
+"exam": "Sp88"
+},
+{
+"id": "bpm-6.2.1",
+"chapter": 6,
+"section": 2,
+"number": 1,
+"exam": "Fa78"
+},
+{
+"id": "bpm-6.2.2",
+"chapter": 6,
+"section": 2,
+"number": 2,
+"exam": "Sp90"
+},
+{
+"id": "bpm-6.2.3",
+"chapter": 6,
+"section": 2,
+"number": 3,
+"exam": "Su80"
+},
+{
+"id": "bpm-6.2.4",
+"chapter": 6,
+"section": 2,
+"number": 4,
+"exam": "Su79"
+},
+{
+"id": "bpm-6.2.5",
+"chapter": 6,
+"section": 2,
+"number": 5,
+"exam": "Su81"
+},
+{
+"id": "bpm-6.2.7",
+"chapter": 6,
+"section": 2,
+"number": 7,
+"exam": "Su81"
+},
+{
+"id": "bpm-6.2.8",
+"chapter": 6,
+"section": 2,
+"number": 8,
+"exam": "Sp83"
+},
+{
+"id": "bpm-6.2.9",
+"chapter": 6,
+"section": 2,
+"number": 9,
+"exam": "Fa84"
+},
+{
+"id": "bpm-6.2.10",
+"chapter": 6,
+"section": 2,
+"number": 10,
+"exam": "Fa78"
+},
+{
+"id": "bpm-6.2.12",
+"chapter": 6,
+"section": 2,
+"number": 12,
+"exam": "Fa90"
+},
+{
+"id": "bpm-6.2.13",
+"chapter": 6,
+"section": 2,
+"number": 13,
+"exam": "Fa92"
+},
+{
+"id": "bpm-6.2.14",
+"chapter": 6,
+"section": 2,
+"number": 14,
+"exam": "Fa94"
+},
+{
+"id": "bpm-6.2.15",
+"chapter": 6,
+"section": 2,
+"number": 15,
+"exam": "Fa95"
+},
+{
+"id": "bpm-6.3.2",
+"chapter": 6,
+"section": 3,
+"number": 2,
+"exam": "Sp98"
+},
+{
+"id": "bpm-6.3.3",
+"chapter": 6,
+"section": 3,
+"number": 3,
+"exam": "Su85"
+},
+{
+"id": "bpm-6.3.4",
+"chapter": 6,
+"section": 3,
+"number": 4,
+"exam": "Sp82"
+},
+{
+"id": "bpm-6.3.5",
+"chapter": 6,
+"section": 3,
+"number": 5,
+"exam": "Fa91"
+},
+{
+"id": "bpm-6.3.6",
+"chapter": 6,
+"section": 3,
+"number": 6,
+"exam": "Fa97"
+},
+{
+"id": "bpm-6.4.1",
+"chapter": 6,
+"section": 4,
+"number": 1,
+"exam": "Fa78"
+},
+{
+"id": "bpm-6.4.2",
+"chapter": 6,
+"section": 4,
+"number": 2,
+"exam": "Fa80"
+},
+{
+"id": "bpm-6.4.3",
+"chapter": 6,
+"section": 4,
+"number": 3,
+"exam": "Su84"
+},
+{
+"id": "bpm-6.4.4",
+"chapter": 6,
+"section": 4,
+"number": 4,
+"exam": "Su85"
+},
+{
+"id": "bpm-6.4.5",
+"chapter": 6,
+"section": 4,
+"number": 5,
+"exam": "Sp89"
+},
+{
+"id": "bpm-6.4.7",
+"chapter": 6,
+"section": 4,
+"number": 7,
+"exam": "Sp86"
+},
+{
+"id": "bpm-6.4.10",
+"chapter": 6,
+"section": 4,
+"number": 10,
+"exam": "Fa97"
+},
+{
+"id": "bpm-6.4.11",
+"chapter": 6,
+"section": 4,
+"number": 11,
+"exam": "Sp80"
+},
+{
+"id": "bpm-6.4.13",
+"chapter": 6,
+"section": 4,
+"number": 13,
+"exam": "Sp89"
+},
+{
+"id": "bpm-6.4.14",
+"chapter": 6,
+"section": 4,
+"number": 14,
+"exam": "Fa89"
+},
+{
+"id": "bpm-6.4.15",
+"chapter": 6,
+"section": 4,
+"number": 15,
+"exam": "Fa90"
+},
+{
+"id": "bpm-6.4.16",
+"chapter": 6,
+"section": 4,
+"number": 16,
+"exam": "Sp94"
+},
+{
+"id": "bpm-6.4.17",
+"chapter": 6,
+"section": 4,
+"number": 17,
+"exam": "Sp97"
+},
+{
+"id": "bpm-6.5.1",
+"chapter": 6,
+"section": 5,
+"number": 1,
+"exam": "Fa80"
+},
+{
+"id": "bpm-6.5.2",
+"chapter": 6,
+"section": 5,
+"number": 2,
+"exam": "Su84"
+},
+{
+"id": "bpm-6.5.3",
+"chapter": 6,
+"section": 5,
+"number": 3,
+"exam": "Fa86"
+},
+{
+"id": "bpm-6.5.4",
+"chapter": 6,
+"section": 5,
+"number": 4,
+"exam": "Fa85"
+},
+{
+"id": "bpm-6.5.5",
+"chapter": 6,
+"section": 5,
+"number": 5,
+"exam": "Sp79"
+},
+{
+"id": "bpm-6.5.6",
+"chapter": 6,
+"section": 5,
+"number": 6,
+"exam": "Sp80"
+},
+{
+"id": "bpm-6.5.7",
+"chapter": 6,
+"section": 5,
+"number": 7,
+"exam": "Sp88"
+},
+{
+"id": "bpm-6.5.8",
+"chapter": 6,
+"section": 5,
+"number": 8,
+"exam": "Sp92"
+},
+{
+"id": "bpm-6.5.10",
+"chapter": 6,
+"section": 5,
+"number": 10,
+"exam": "Sp80"
+},
+{
+"id": "bpm-6.5.11",
+"chapter": 6,
+"section": 5,
+"number": 11,
+"exam": "Su83"
+},
+{
+"id": "bpm-6.5.12",
+"chapter": 6,
+"section": 5,
+"number": 12,
+"exam": "Sp89"
+},
+{
+"id": "bpm-6.5.13",
+"chapter": 6,
+"section": 5,
+"number": 13,
+"exam": "Fa92"
+},
+{
+"id": "bpm-6.6.1",
+"chapter": 6,
+"section": 6,
+"number": 1,
+"exam": "Fa83"
+},
+{
+"id": "bpm-6.6.2",
+"chapter": 6,
+"section": 6,
+"number": 2,
+"exam": "Sp91"
+},
+{
+"id": "bpm-6.6.4",
+"chapter": 6,
+"section": 6,
+"number": 4,
+"exam": "Su83"
+},
+{
+"id": "bpm-6.6.5",
+"chapter": 6,
+"section": 6,
+"number": 5,
+"exam": "Fa82"
+},
+{
+"id": "bpm-6.7.1",
+"chapter": 6,
+"section": 7,
+"number": 1,
+"exam": "Sp77"
+},
+{
+"id": "bpm-6.7.2",
+"chapter": 6,
+"section": 7,
+"number": 2,
+"exam": "Sp86"
+},
+{
+"id": "bpm-6.7.5",
+"chapter": 6,
+"section": 7,
+"number": 5,
+"exam": "Su82"
+},
+{
+"id": "bpm-6.7.7",
+"chapter": 6,
+"section": 7,
+"number": 7,
+"exam": "Fa89"
+},
+{
+"id": "bpm-6.7.8",
+"chapter": 6,
+"section": 7,
+"number": 8,
+"exam": "Sp83"
+},
+{
+"id": "bpm-6.7.9",
+"chapter": 6,
+"section": 7,
+"number": 9,
+"exam": "Sp84"
+},
+{
+"id": "bpm-6.7.10",
+"chapter": 6,
+"section": 7,
+"number": 10,
+"exam": "Fa89"
+},
+{
+"id": "bpm-6.8.1",
+"chapter": 6,
+"section": 8,
+"number": 1,
+"exam": "Sp91"
+},
+{
+"id": "bpm-6.8.2",
+"chapter": 6,
+"section": 8,
+"number": 2,
+"exam": "Fa84"
+},
+{
+"id": "bpm-6.8.3",
+"chapter": 6,
+"section": 8,
+"number": 3,
+"exam": "Fa80"
+},
+{
+"id": "bpm-6.8.4",
+"chapter": 6,
+"section": 8,
+"number": 4,
+"exam": "Sp87"
+},
+{
+"id": "bpm-6.8.5",
+"chapter": 6,
+"section": 8,
+"number": 5,
+"exam": "Fa88"
+},
+{
+"id": "bpm-6.8.7",
+"chapter": 6,
+"section": 8,
+"number": 7,
+"exam": "Fa97"
+},
+{
+"id": "bpm-6.8.8",
+"chapter": 6,
+"section": 8,
+"number": 8,
+"exam": "Sp93"
+},
+{
+"id": "bpm-6.8.9",
+"chapter": 6,
+"section": 8,
+"number": 9,
+"exam": "Sp97"
+},
+{
+"id": "bpm-6.8.10",
+"chapter": 6,
+"section": 8,
+"number": 10,
+"exam": "Sp79"
+},
+{
+"id": "bpm-6.8.11",
+"chapter": 6,
+"section": 8,
+"number": 11,
+"exam": "Fa88"
+},
+{
+"id": "bpm-6.8.12",
+"chapter": 6,
+"section": 8,
+"number": 12,
+"exam": "Sp87"
+},
+{
+"id": "bpm-6.9.1",
+"chapter": 6,
+"section": 9,
+"number": 1,
+"exam": "Fa80"
+},
+{
+"id": "bpm-6.9.2",
+"chapter": 6,
+"section": 9,
+"number": 2,
+"exam": "Sp86"
+},
+{
+"id": "bpm-6.9.3",
+"chapter": 6,
+"section": 9,
+"number": 3,
+"exam": "Sp86"
+},
+{
+"id": "bpm-6.9.4",
+"chapter": 6,
+"section": 9,
+"number": 4,
+"exam": "Fa88"
+},
+{
+"id": "bpm-6.9.5",
+"chapter": 6,
+"section": 9,
+"number": 5,
+"exam": "Sp89"
+},
+{
+"id": "bpm-6.9.6",
+"chapter": 6,
+"section": 9,
+"number": 6,
+"exam": "Sp91"
+},
+{
+"id": "bpm-6.9.7",
+"chapter": 6,
+"section": 9,
+"number": 7,
+"exam": "Fa93"
+},
+{
+"id": "bpm-6.9.8",
+"chapter": 6,
+"section": 9,
+"number": 8,
+"exam": "Fa94"
+},
+{
+"id": "bpm-6.9.10",
+"chapter": 6,
+"section": 9,
+"number": 10,
+"exam": "Sp81"
+},
+{
+"id": "bpm-6.9.11",
+"chapter": 6,
+"section": 9,
+"number": 11,
+"exam": "Fa95"
+},
+{
+"id": "bpm-6.10.1",
+"chapter": 6,
+"section": 10,
+"number": 1,
+"exam": "Sp98"
+},
+{
+"id": "bpm-6.10.4",
+"chapter": 6,
+"section": 10,
+"number": 4,
+"exam": "Sp84"
+},
+{
+"id": "bpm-6.10.5",
+"chapter": 6,
+"section": 10,
+"number": 5,
+"exam": "Sp88"
+},
+{
+"id": "bpm-6.10.6",
+"chapter": 6,
+"section": 10,
+"number": 6,
+"exam": "Sp89"
+},
+{
+"id": "bpm-6.10.7",
+"chapter": 6,
+"section": 10,
+"number": 7,
+"exam": "Sp90"
+},
+{
+"id": "bpm-6.10.8",
+"chapter": 6,
+"section": 10,
+"number": 8,
+"exam": "Fa90"
+},
+{
+"id": "bpm-6.10.9",
+"chapter": 6,
+"section": 10,
+"number": 9,
+"exam": "Sp95"
+},
+{
+"id": "bpm-6.10.10",
+"chapter": 6,
+"section": 10,
+"number": 10,
+"exam": "Sp81"
+},
+{
+"id": "bpm-6.10.11",
+"chapter": 6,
+"section": 10,
+"number": 11,
+"exam": "Sp84"
+},
+{
+"id": "bpm-6.11.1",
+"chapter": 6,
+"section": 11,
+"number": 1,
+"exam": "Su85"
+},
+{
+"id": "bpm-6.11.2",
+"chapter": 6,
+"section": 11,
+"number": 2,
+"exam": "Fa77"
+},
+{
+"id": "bpm-6.11.3",
+"chapter": 6,
+"section": 11,
+"number": 3,
+"exam": "Sp85"
+},
+{
+"id": "bpm-6.11.6",
+"chapter": 6,
+"section": 11,
+"number": 6,
+"exam": "Su85"
+},
+{
+"id": "bpm-6.11.14",
+"chapter": 6,
+"section": 11,
+"number": 14,
+"exam": "Fa96"
+},
+{
+"id": "bpm-6.11.15",
+"chapter": 6,
+"section": 11,
+"number": 15,
+"exam": "Sp77"
+},
+{
+"id": "bpm-6.11.16",
+"chapter": 6,
+"section": 11,
+"number": 16,
+"exam": "Sp94"
+},
+{
+"id": "bpm-6.11.17",
+"chapter": 6,
+"section": 11,
+"number": 17,
+"exam": "Su78"
+},
+{
+"id": "bpm-6.11.18",
+"chapter": 6,
+"section": 11,
+"number": 18,
+"exam": "Sp79"
+},
+{
+"id": "bpm-6.11.19",
+"chapter": 6,
+"section": 11,
+"number": 19,
+"exam": "Su79"
+},
+{
+"id": "bpm-6.11.21",
+"chapter": 6,
+"section": 11,
+"number": 21,
+"exam": "Su84"
+},
+{
+"id": "bpm-6.11.22",
+"chapter": 6,
+"section": 11,
+"number": 22,
+"exam": "Sp82"
+},
+{
+"id": "bpm-6.11.24",
+"chapter": 6,
+"section": 11,
+"number": 24,
+"exam": "Sp96"
+},
+{
+"id": "bpm-6.11.25",
+"chapter": 6,
+"section": 11,
+"number": 25,
+"exam": "Su84"
+},
+{
+"id": "bpm-6.11.26",
+"chapter": 6,
+"section": 11,
+"number": 26,
+"exam": "Sp85"
+},
+{
+"id": "bpm-6.11.27",
+"chapter": 6,
+"section": 11,
+"number": 27,
+"exam": "Fa85"
+},
+{
+"id": "bpm-6.11.28",
+"chapter": 6,
+"section": 11,
+"number": 28,
+"exam": "Sp78"
+},
+{
+"id": "bpm-6.11.29",
+"chapter": 6,
+"section": 11,
+"number": 29,
+"exam": "Sp81"
+},
+{
+"id": "bpm-6.11.31",
+"chapter": 6,
+"section": 11,
+"number": 31,
+"exam": "Sp92"
+},
+{
+"id": "bpm-6.11.33",
+"chapter": 6,
+"section": 11,
+"number": 33,
+"exam": "Fa89"
+},
+{
+"id": "bpm-6.11.34",
+"chapter": 6,
+"section": 11,
+"number": 34,
+"exam": "Sp87"
+},
+{
+"id": "bpm-6.12.2",
+"chapter": 6,
+"section": 12,
+"number": 2,
+"exam": "Fa83"
+},
+{
+"id": "bpm-6.12.6",
+"chapter": 6,
+"section": 12,
+"number": 6,
+"exam": "Sp85"
+},
+{
+"id": "bpm-6.12.7",
+"chapter": 6,
+"section": 12,
+"number": 7,
+"exam": "Sp85"
+},
+{
+"id": "bpm-6.12.8",
+"chapter": 6,
+"section": 12,
+"number": 8,
+"exam": "Su85"
+},
+{
+"id": "bpm-6.12.9",
+"chapter": 6,
+"section": 12,
+"number": 9,
+"exam": "Fa85"
+},
+{
+"id": "bpm-6.12.10",
+"chapter": 6,
+"section": 12,
+"number": 10,
+"exam": "Fa86"
+},
+{
+"id": "bpm-6.12.11",
+"chapter": 6,
+"section": 12,
+"number": 11,
+"exam": "Sp96"
+},
+{
+"id": "bpm-6.12.12",
+"chapter": 6,
+"section": 12,
+"number": 12,
+"exam": "Fa94"
+},
+{
+"id": "bpm-6.12.13",
+"chapter": 6,
+"section": 12,
+"number": 13,
+"exam": "Sp95"
+},
+{
+"id": "bpm-6.12.14",
+"chapter": 6,
+"section": 12,
+"number": 14,
+"exam": "Fa94"
+},
+{
+"id": "bpm-6.12.15",
+"chapter": 6,
+"section": 12,
+"number": 15,
+"exam": "Sp94"
+},
+{
+"id": "bpm-6.12.16",
+"chapter": 6,
+"section": 12,
+"number": 16,
+"exam": "Sp95"
+},
+{
+"id": "bpm-6.12.17",
+"chapter": 6,
+"section": 12,
+"number": 17,
+"exam": "Sp97"
+},
+{
+"id": "bpm-6.13.1",
+"chapter": 6,
+"section": 13,
+"number": 1,
+"exam": "Fa86"
+},
+{
+"id": "bpm-6.13.2",
+"chapter": 6,
+"section": 13,
+"number": 2,
+"exam": "Sp98"
+},
+{
+"id": "bpm-6.13.3",
+"chapter": 6,
+"section": 13,
+"number": 3,
+"exam": "Sp77"
+},
+{
+"id": "bpm-6.13.4",
+"chapter": 6,
+"section": 13,
+"number": 4,
+"exam": "Su77"
+},
+{
+"id": "bpm-6.13.5",
+"chapter": 6,
+"section": 13,
+"number": 5,
+"exam": "Sp80"
+},
+{
+"id": "bpm-6.13.7",
+"chapter": 6,
+"section": 13,
+"number": 7,
+"exam": "Su79"
+},
+{
+"id": "bpm-6.13.8",
+"chapter": 6,
+"section": 13,
+"number": 8,
+"exam": "Fa96"
+},
+{
+"id": "bpm-6.13.9",
+"chapter": 6,
+"section": 13,
+"number": 9,
+"exam": "Su82"
+},
+{
+"id": "bpm-6.13.10",
+"chapter": 6,
+"section": 13,
+"number": 10,
+"exam": "Sp83"
+},
+{
+"id": "bpm-6.13.12",
+"chapter": 6,
+"section": 13,
+"number": 12,
+"exam": "Sp92"
+},
+{
+"id": "bpm-6.13.13",
+"chapter": 6,
+"section": 13,
+"number": 13,
+"exam": "Su83"
+},
+{
+"id": "bpm-6.13.14",
+"chapter": 6,
+"section": 13,
+"number": 14,
+"exam": "Sp96"
+},
+{
+"id": "bpm-6.13.15",
+"chapter": 6,
+"section": 13,
+"number": 15,
+"exam": "Sp88"
+},
+{
+"id": "bpm-6.13.16",
+"chapter": 6,
+"section": 13,
+"number": 16,
+"exam": "Sp88"
+},
+{
+"id": "bpm-6.13.17",
+"chapter": 6,
+"section": 13,
+"number": 17,
+"exam": "Fa89"
+},
+{
+"id": "bpm-6.13.18",
+"chapter": 6,
+"section": 13,
+"number": 18,
+"exam": "Sp90"
+},
+{
+"id": "bpm-6.13.19",
+"chapter": 6,
+"section": 13,
+"number": 19,
+"exam": "Sp91"
+},
+{
+"id": "bpm-7.1.2",
+"chapter": 7,
+"section": 1,
+"number": 2,
+"exam": "Sp97"
+},
+{
+"id": "bpm-7.1.3",
+"chapter": 7,
+"section": 1,
+"number": 3,
+"exam": "Sp96"
+},
+{
+"id": "bpm-7.1.4",
+"chapter": 7,
+"section": 1,
+"number": 4,
+"exam": "Su77"
+},
+{
+"id": "bpm-7.1.5",
+"chapter": 7,
+"section": 1,
+"number": 5,
+"exam": "Su84"
+},
+{
+"id": "bpm-7.1.7",
+"chapter": 7,
+"section": 1,
+"number": 7,
+"exam": "Fa88"
+},
+{
+"id": "bpm-7.1.9",
+"chapter": 7,
+"section": 1,
+"number": 9,
+"exam": "Sp90"
+},
+{
+"id": "bpm-7.1.10",
+"chapter": 7,
+"section": 1,
+"number": 10,
+"exam": "Sp81"
+},
+{
+"id": "bpm-7.1.11",
+"chapter": 7,
+"section": 1,
+"number": 11,
+"exam": "Fa97"
+},
+{
+"id": "bpm-7.1.12",
+"chapter": 7,
+"section": 1,
+"number": 12,
+"exam": "Su83"
+},
+{
+"id": "bpm-7.2.3",
+"chapter": 7,
+"section": 2,
+"number": 3,
+"exam": "Sp97"
+},
+{
+"id": "bpm-7.2.4",
+"chapter": 7,
+"section": 2,
+"number": 4,
+"exam": "Sp91"
+},
+{
+"id": "bpm-7.2.5",
+"chapter": 7,
+"section": 2,
+"number": 5,
+"exam": "Sp83"
+},
+{
+"id": "bpm-7.2.6",
+"chapter": 7,
+"section": 2,
+"number": 6,
+"exam": "Sp91"
+},
+{
+"id": "bpm-7.2.7",
+"chapter": 7,
+"section": 2,
+"number": 7,
+"exam": "Fa84"
+},
+{
+"id": "bpm-7.2.8",
+"chapter": 7,
+"section": 2,
+"number": 8,
+"exam": "Sp77"
+},
+{
+"id": "bpm-7.2.9",
+"chapter": 7,
+"section": 2,
+"number": 9,
+"exam": "Sp90"
+},
+{
+"id": "bpm-7.2.10",
+"chapter": 7,
+"section": 2,
+"number": 10,
+"exam": "Fa95"
+},
+{
+"id": "bpm-7.2.11",
+"chapter": 7,
+"section": 2,
+"number": 11,
+"exam": "Fa81"
+},
+{
+"id": "bpm-7.2.12",
+"chapter": 7,
+"section": 2,
+"number": 12,
+"exam": "Su82"
+},
+{
+"id": "bpm-7.2.13",
+"chapter": 7,
+"section": 2,
+"number": 13,
+"exam": "Sp80"
+},
+{
+"id": "bpm-7.2.14",
+"chapter": 7,
+"section": 2,
+"number": 14,
+"exam": "Su81"
+},
+{
+"id": "bpm-7.2.15",
+"chapter": 7,
+"section": 2,
+"number": 15,
+"exam": "Fa94"
+},
+{
+"id": "bpm-7.2.16",
+"chapter": 7,
+"section": 2,
+"number": 16,
+"exam": "Fa93"
+},
+{
+"id": "bpm-7.3.1",
+"chapter": 7,
+"section": 3,
+"number": 1,
+"exam": "Su77"
+},
+{
+"id": "bpm-7.4.1",
+"chapter": 7,
+"section": 4,
+"number": 1,
+"exam": "Fa77"
+},
+{
+"id": "bpm-7.4.2",
+"chapter": 7,
+"section": 4,
+"number": 2,
+"exam": "Sp82"
+},
+{
+"id": "bpm-7.4.3",
+"chapter": 7,
+"section": 4,
+"number": 3,
+"exam": "Sp95"
+},
+{
+"id": "bpm-7.4.4",
+"chapter": 7,
+"section": 4,
+"number": 4,
+"exam": "Sp95"
+},
+{
+"id": "bpm-7.4.5",
+"chapter": 7,
+"section": 4,
+"number": 5,
+"exam": "Su79"
+},
+{
+"id": "bpm-7.4.6",
+"chapter": 7,
+"section": 4,
+"number": 6,
+"exam": "Su80"
+},
+{
+"id": "bpm-7.4.7",
+"chapter": 7,
+"section": 4,
+"number": 7,
+"exam": "Sp86"
+},
+{
+"id": "bpm-7.4.8",
+"chapter": 7,
+"section": 4,
+"number": 8,
+"exam": "Su84"
+},
+{
+"id": "bpm-7.4.9",
+"chapter": 7,
+"section": 4,
+"number": 9,
+"exam": "Sp95"
+},
+{
+"id": "bpm-7.4.10",
+"chapter": 7,
+"section": 4,
+"number": 10,
+"exam": "Sp86"
+},
+{
+"id": "bpm-7.4.11",
+"chapter": 7,
+"section": 4,
+"number": 11,
+"exam": "Sp88"
+},
+{
+"id": "bpm-7.4.12",
+"chapter": 7,
+"section": 4,
+"number": 12,
+"exam": "Sp97"
+},
+{
+"id": "bpm-7.4.13",
+"chapter": 7,
+"section": 4,
+"number": 13,
+"exam": "Fa90"
+},
+{
+"id": "bpm-7.4.14",
+"chapter": 7,
+"section": 4,
+"number": 14,
+"exam": "Sp94"
+},
+{
+"id": "bpm-7.4.15",
+"chapter": 7,
+"section": 4,
+"number": 15,
+"exam": "Fa77"
+},
+{
+"id": "bpm-7.4.16",
+"chapter": 7,
+"section": 4,
+"number": 16,
+"exam": "Fa82"
+},
+{
+"id": "bpm-7.4.18",
+"chapter": 7,
+"section": 4,
+"number": 18,
+"exam": "Fa83"
+},
+{
+"id": "bpm-7.4.19",
+"chapter": 7,
+"section": 4,
+"number": 19,
+"exam": "Fa84"
+},
+{
+"id": "bpm-7.4.20",
+"chapter": 7,
+"section": 4,
+"number": 20,
+"exam": "Sp86"
+},
+{
+"id": "bpm-7.4.21",
+"chapter": 7,
+"section": 4,
+"number": 21,
+"exam": "Su80"
+},
+{
+"id": "bpm-7.4.22",
+"chapter": 7,
+"section": 4,
+"number": 22,
+"exam": "Su77"
+},
+{
+"id": "bpm-7.4.23",
+"chapter": 7,
+"section": 4,
+"number": 23,
+"exam": "Sp93"
+},
+{
+"id": "bpm-7.4.24",
+"chapter": 7,
+"section": 4,
+"number": 24,
+"exam": "Fa84"
+},
+{
+"id": "bpm-7.4.25",
+"chapter": 7,
+"section": 4,
+"number": 25,
+"exam": "Su77"
+},
+{
+"id": "bpm-7.5.1",
+"chapter": 7,
+"section": 5,
+"number": 1,
+"exam": "Fa77"
+},
+{
+"id": "bpm-7.5.2",
+"chapter": 7,
+"section": 5,
+"number": 2,
+"exam": "Fa79"
+},
+{
+"id": "bpm-7.5.3",
+"chapter": 7,
+"section": 5,
+"number": 3,
+"exam": "Sp89"
+},
+{
+"id": "bpm-7.5.5",
+"chapter": 7,
+"section": 5,
+"number": 5,
+"exam": "Fa92"
+},
+{
+"id": "bpm-7.5.7",
+"chapter": 7,
+"section": 5,
+"number": 7,
+"exam": "Fa94"
+},
+{
+"id": "bpm-7.5.8",
+"chapter": 7,
+"section": 5,
+"number": 8,
+"exam": "Sp85"
+},
+{
+"id": "bpm-7.5.11",
+"chapter": 7,
+"section": 5,
+"number": 11,
+"exam": "Sp86"
+},
+{
+"id": "bpm-7.5.12",
+"chapter": 7,
+"section": 5,
+"number": 12,
+"exam": "Sp84"
+},
+{
+"id": "bpm-7.5.13",
+"chapter": 7,
+"section": 5,
+"number": 13,
+"exam": "Su78"
+},
+{
+"id": "bpm-7.5.15",
+"chapter": 7,
+"section": 5,
+"number": 15,
+"exam": "Fa82"
+},
+{
+"id": "bpm-7.5.17",
+"chapter": 7,
+"section": 5,
+"number": 17,
+"exam": "Sp85"
+},
+{
+"id": "bpm-7.5.18",
+"chapter": 7,
+"section": 5,
+"number": 18,
+"exam": "Fa84"
+},
+{
+"id": "bpm-7.5.19",
+"chapter": 7,
+"section": 5,
+"number": 19,
+"exam": "Sp81"
+},
+{
+"id": "bpm-7.5.20",
+"chapter": 7,
+"section": 5,
+"number": 20,
+"exam": "Su84"
+},
+{
+"id": "bpm-7.5.25",
+"chapter": 7,
+"section": 5,
+"number": 25,
+"exam": "Fa85"
+},
+{
+"id": "bpm-7.5.26",
+"chapter": 7,
+"section": 5,
+"number": 26,
+"exam": "Fa87"
+},
+{
+"id": "bpm-7.5.27",
+"chapter": 7,
+"section": 5,
+"number": 27,
+"exam": "Fa90"
+},
+{
+"id": "bpm-7.6.2",
+"chapter": 7,
+"section": 6,
+"number": 2,
+"exam": "Sp84"
+},
+{
+"id": "bpm-7.6.3",
+"chapter": 7,
+"section": 6,
+"number": 3,
+"exam": "Fa96"
+},
+{
+"id": "bpm-7.6.4",
+"chapter": 7,
+"section": 6,
+"number": 4,
+"exam": "Fa78"
+},
+{
+"id": "bpm-7.6.5",
+"chapter": 7,
+"section": 6,
+"number": 5,
+"exam": "Sp81"
+},
+{
+"id": "bpm-7.6.6",
+"chapter": 7,
+"section": 6,
+"number": 6,
+"exam": "Sp88"
+},
+{
+"id": "bpm-7.6.7",
+"chapter": 7,
+"section": 6,
+"number": 7,
+"exam": "Fa87"
+},
+{
+"id": "bpm-7.6.8",
+"chapter": 7,
+"section": 6,
+"number": 8,
+"exam": "Sp96"
+},
+{
+"id": "bpm-7.6.9",
+"chapter": 7,
+"section": 6,
+"number": 9,
+"exam": "Su85"
+},
+{
+"id": "bpm-7.6.10",
+"chapter": 7,
+"section": 6,
+"number": 10,
+"exam": "Fa96"
+},
+{
+"id": "bpm-7.6.11",
+"chapter": 7,
+"section": 6,
+"number": 11,
+"exam": "Sp88"
+},
+{
+"id": "bpm-7.6.12",
+"chapter": 7,
+"section": 6,
+"number": 12,
+"exam": "Sp92"
+},
+{
+"id": "bpm-7.6.13",
+"chapter": 7,
+"section": 6,
+"number": 13,
+"exam": "Sp92"
+},
+{
+"id": "bpm-7.6.14",
+"chapter": 7,
+"section": 6,
+"number": 14,
+"exam": "Sp88"
+},
+{
+"id": "bpm-7.6.15",
+"chapter": 7,
+"section": 6,
+"number": 15,
+"exam": "Su83"
+},
+{
+"id": "bpm-7.6.16",
+"chapter": 7,
+"section": 6,
+"number": 16,
+"exam": "Su80"
+},
+{
+"id": "bpm-7.6.17",
+"chapter": 7,
+"section": 6,
+"number": 17,
+"exam": "Sp80"
+},
+{
+"id": "bpm-7.6.18",
+"chapter": 7,
+"section": 6,
+"number": 18,
+"exam": "Fa87"
+},
+{
+"id": "bpm-7.6.19",
+"chapter": 7,
+"section": 6,
+"number": 19,
+"exam": "Fa89"
+},
+{
+"id": "bpm-7.6.21",
+"chapter": 7,
+"section": 6,
+"number": 21,
+"exam": "Sp80"
+},
+{
+"id": "bpm-7.6.22",
+"chapter": 7,
+"section": 6,
+"number": 22,
+"exam": "Fa77"
+},
+{
+"id": "bpm-7.6.23",
+"chapter": 7,
+"section": 6,
+"number": 23,
+"exam": "Su77"
+},
+{
+"id": "bpm-7.6.25",
+"chapter": 7,
+"section": 6,
+"number": 25,
+"exam": "Su83"
+},
+{
+"id": "bpm-7.6.26",
+"chapter": 7,
+"section": 6,
+"number": 26,
+"exam": "Su83"
+},
+{
+"id": "bpm-7.6.28",
+"chapter": 7,
+"section": 6,
+"number": 28,
+"exam": "Fa86"
+},
+{
+"id": "bpm-7.6.29",
+"chapter": 7,
+"section": 6,
+"number": 29,
+"exam": "Fa88"
+},
+{
+"id": "bpm-7.6.30",
+"chapter": 7,
+"section": 6,
+"number": 30,
+"exam": "Fa89"
+},
+{
+"id": "bpm-7.6.31",
+"chapter": 7,
+"section": 6,
+"number": 31,
+"exam": "Su78"
+},
+{
+"id": "bpm-7.6.32",
+"chapter": 7,
+"section": 6,
+"number": 32,
+"exam": "Fa79"
+},
+{
+"id": "bpm-7.6.33",
+"chapter": 7,
+"section": 6,
+"number": 33,
+"exam": "Sp81"
+},
+{
+"id": "bpm-7.6.34",
+"chapter": 7,
+"section": 6,
+"number": 34,
+"exam": "Sp83"
+},
+{
+"id": "bpm-7.6.35",
+"chapter": 7,
+"section": 6,
+"number": 35,
+"exam": "Su85"
+},
+{
+"id": "bpm-7.6.36",
+"chapter": 7,
+"section": 6,
+"number": 36,
+"exam": "Sp95"
+},
+{
+"id": "bpm-7.6.37",
+"chapter": 7,
+"section": 6,
+"number": 37,
+"exam": "Fa96"
+},
+{
+"id": "bpm-7.7.2",
+"chapter": 7,
+"section": 7,
+"number": 2,
+"exam": "Fa78"
+},
+{
+"id": "bpm-7.7.3",
+"chapter": 7,
+"section": 7,
+"number": 3,
+"exam": "Sp79"
+},
+{
+"id": "bpm-7.7.4",
+"chapter": 7,
+"section": 7,
+"number": 4,
+"exam": "Sp79"
+},
+{
+"id": "bpm-7.7.7",
+"chapter": 7,
+"section": 7,
+"number": 7,
+"exam": "Fa97"
+},
+{
+"id": "bpm-7.7.8",
+"chapter": 7,
+"section": 7,
+"number": 8,
+"exam": "Fa80"
+},
+{
+"id": "bpm-7.7.9",
+"chapter": 7,
+"section": 7,
+"number": 9,
+"exam": "Su78"
+},
+{
+"id": "bpm-7.7.11",
+"chapter": 7,
+"section": 7,
+"number": 11,
+"exam": "Sp91"
+},
+{
+"id": "bpm-7.7.12",
+"chapter": 7,
+"section": 7,
+"number": 12,
+"exam": "Sp94"
+},
+{
+"id": "bpm-7.7.13",
+"chapter": 7,
+"section": 7,
+"number": 13,
+"exam": "Sp79"
+},
+{
+"id": "bpm-7.7.15",
+"chapter": 7,
+"section": 7,
+"number": 15,
+"exam": "Fa95"
+},
+{
+"id": "bpm-7.7.16",
+"chapter": 7,
+"section": 7,
+"number": 16,
+"exam": "Sp98"
+},
+{
+"id": "bpm-7.8.1",
+"chapter": 7,
+"section": 8,
+"number": 1,
+"exam": "Sp98"
+},
+{
+"id": "bpm-7.8.2",
+"chapter": 7,
+"section": 8,
+"number": 2,
+"exam": "Fa90"
+},
+{
+"id": "bpm-7.8.3",
+"chapter": 7,
+"section": 8,
+"number": 3,
+"exam": "Fa93"
+},
+{
+"id": "bpm-7.8.4",
+"chapter": 7,
+"section": 8,
+"number": 4,
+"exam": "Sp98"
+},
+{
+"id": "bpm-7.8.6",
+"chapter": 7,
+"section": 8,
+"number": 6,
+"exam": "Su82"
+},
+{
+"id": "bpm-7.8.7",
+"chapter": 7,
+"section": 8,
+"number": 7,
+"exam": "Fa85"
+},
+{
+"id": "bpm-7.8.8",
+"chapter": 7,
+"section": 8,
+"number": 8,
+"exam": "Sp83"
+},
+{
+"id": "bpm-7.8.9",
+"chapter": 7,
+"section": 8,
+"number": 9,
+"exam": "Fa85"
+},
+{
+"id": "bpm-7.8.10",
+"chapter": 7,
+"section": 8,
+"number": 10,
+"exam": "Fa97"
+},
+{
+"id": "bpm-7.8.11",
+"chapter": 7,
+"section": 8,
+"number": 11,
+"exam": "Fa78"
+},
+{
+"id": "bpm-7.8.12",
+"chapter": 7,
+"section": 8,
+"number": 12,
+"exam": "Sp79"
+},
+{
+"id": "bpm-7.8.13",
+"chapter": 7,
+"section": 8,
+"number": 13,
+"exam": "Fa86"
+},
+{
+"id": "bpm-7.9.1",
+"chapter": 7,
+"section": 9,
+"number": 1,
+"exam": "Fa81"
+},
+{
+"id": "bpm-7.9.2",
+"chapter": 7,
+"section": 9,
+"number": 2,
+"exam": "Fa79"
+},
+{
+"id": "bpm-7.9.3",
+"chapter": 7,
+"section": 9,
+"number": 3,
+"exam": "Sp79"
+},
+{
+"id": "bpm-7.9.4",
+"chapter": 7,
+"section": 9,
+"number": 4,
+"exam": "Fa79"
+},
+{
+"id": "bpm-7.9.6",
+"chapter": 7,
+"section": 9,
+"number": 6,
+"exam": "Sp78"
+},
+{
+"id": "bpm-7.9.7",
+"chapter": 7,
+"section": 9,
+"number": 7,
+"exam": "Sp98"
+},
+{
+"id": "bpm-7.9.8",
+"chapter": 7,
+"section": 9,
+"number": 8,
+"exam": "Su83"
+},
+{
+"id": "bpm-7.9.9",
+"chapter": 7,
+"section": 9,
+"number": 9,
+"exam": "Fa81"
+},
+{
+"id": "bpm-7.9.10",
+"chapter": 7,
+"section": 9,
+"number": 10,
+"exam": "Su78"
+},
+{
+"id": "bpm-7.9.11",
+"chapter": 7,
+"section": 9,
+"number": 11,
+"exam": "Sp89"
+},
+{
+"id": "bpm-7.9.12",
+"chapter": 7,
+"section": 9,
+"number": 12,
+"exam": "Sp89"
+},
+{
+"id": "bpm-7.9.13",
+"chapter": 7,
+"section": 9,
+"number": 13,
+"exam": "Sp80"
+},
+{
+"id": "bpm-7.9.14",
+"chapter": 7,
+"section": 9,
+"number": 14,
+"exam": "Su84"
+},
+{
+"id": "bpm-7.9.16",
+"chapter": 7,
+"section": 9,
+"number": 16,
+"exam": "Sp77"
+},
+{
+"id": "bpm-7.9.17",
+"chapter": 7,
+"section": 9,
+"number": 17,
+"exam": "Su77"
+},
+{
+"id": "bpm-7.9.18",
+"chapter": 7,
+"section": 9,
+"number": 18,
+"exam": "Sp97"
+},
+{
+"id": "bpm-7.9.19",
+"chapter": 7,
+"section": 9,
+"number": 19,
+"exam": "Fa77"
+},
+{
+"id": "bpm-7.9.20",
+"chapter": 7,
+"section": 9,
+"number": 20,
+"exam": "Sp82"
+},
+{
+"id": "bpm-7.9.21",
+"chapter": 7,
+"section": 9,
+"number": 21,
+"exam": "Fa83"
+},
+{
+"id": "bpm-7.9.22",
+"chapter": 7,
+"section": 9,
+"number": 22,
+"exam": "Fa84"
+},
+{
+"id": "bpm-7.9.23",
+"chapter": 7,
+"section": 9,
+"number": 23,
+"exam": "Fa91"
+},
+{
+"id": "bpm-7.9.24",
+"chapter": 7,
+"section": 9,
+"number": 24,
+"exam": "Sp98"
+},
+{
+"id": "bpm-7.9.25",
+"chapter": 7,
+"section": 9,
+"number": 25,
+"exam": "Fa94"
+},
+{
+"id": "bpm-7.9.26",
+"chapter": 7,
+"section": 9,
+"number": 26,
+"exam": "Fa95"
+},
+{
+"id": "bpm-7.9.27",
+"chapter": 7,
+"section": 9,
+"number": 27,
+"exam": "Sp93"
+},
+{
+"id": "bpm-7.9.28",
+"chapter": 7,
+"section": 9,
+"number": 28,
+"exam": "Sp94"
+},
+{
+"id": "bpm-7.9.29",
+"chapter": 7,
+"section": 9,
+"number": 29,
+"exam": "Sp97"
+}
+]
