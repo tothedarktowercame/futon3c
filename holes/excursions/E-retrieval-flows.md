@@ -103,6 +103,35 @@ Three consequences:
    Rung 4's charter, and the zai-learning loop is its live coefficient
    source.
 
+## v1 prototype (same day): the combined rules graph differentiates
+
+`retrieval_flow_sweep_v1.bb` rebuilds the graph from the six draft rewrite
+rules with their natural hubs — shared problem `a95A04` (degree 6), shared
+tactics, trigger-class patterns — 23 nodes, 27 typed edges, with cycles.
+Results: `retrieval-flow-sweep-v1-results.edn`.
+
+**The operator family is no longer degenerate.** Participation at heat
+ε=0.3: uniform θ → 10.0 effective nodes; prescribe-heavy → 3.9 (activation
+concentrates on the fix-side tactic cluster); uses-heavy → 4.2 (symptom
+side); hub-off → 11.0 (removing `:mined-from` spreads flow). All three
+regime characters appear across the grid: one dissipated run (uniform,
+ε=0.1, H→0.99·max), twelve sustained-structured, eleven
+sustained-oscillating (wave forms). Which neighborhood retrieval
+concentrates on is now a *choice of coefficients* — Rob's "which operator"
+question, live on 23 nodes.
+
+Confirms v0's diagnosis in the positive direction: the six rules' shared
+hubs (one problem, one tactic triple) were enough connectivity to make
+\(\Delta_\theta\) expressive. Scribe output IS operator food.
+
+**Corpus upgrade discovered en route**: zai self-talk is already persisted in
+the Evidence Landscape as `:coordination`/`:turn-round` entries (per-round,
+with turn-id and round number, `:profile :zaif`) — back to at least
+2026-07-18 across zai-3/4/5, and dense for zai-1 today (incl. the a95A07
+Basel completion, commit 1d622b0, round 83). The scribe should mine the
+store, not buffer scrapes, and rules should cite turn-round evidence ids as
+provenance.
+
 ## Next steps
 
 - v1 sweep on the combined graph (phase-4 + live bootstrap attachments + the
