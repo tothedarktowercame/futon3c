@@ -28,6 +28,12 @@
 (defface standoff-cued-face
   '((t :underline (:color "gray55" :style wave)))
   "Cued (low-precision) learning candidate.")
+(defface standoff-rule-scope-face
+  '((t :background "#22303a" :extend t))
+  "Span of a reshaped rewrite rule (the error->fix arc it was mined from).")
+(defface standoff-rule-label-face
+  '((t :foreground "#7fd4ff" :weight bold :box (:line-width -1 :color "#3a5a6a")))
+  "Label line naming the rewrite rule at the top of its scope.")
 
 (defvar standoff-overlay--kind-faces
   '(("error-signal" . standoff-error-face)
@@ -62,18 +68,41 @@
         (let* ((range (alist-get 'range a))
                (beg (min (car range) (point-max)))
                (end (min (cadr range) (point-max)))
-               (kind (alist-get 'type a))
-               (face (or (cdr (assoc kind standoff-overlay--kind-faces))
-                         'standoff-cued-face)))
+               (kind (alist-get 'type a)))
           (when (< beg end)
-            (let ((ov (make-overlay beg end)))
-              (overlay-put ov 'face face)
-              (overlay-put ov 'standoff-kind kind)
-              (overlay-put ov 'help-echo
-                           (format "[%s/%s] %s" (alist-get 'tier a) kind
-                                   (or (alist-get 'excerpt a) "")))
-              (push ov standoff-overlay--overlays)
-              (cl-incf n)))))
+            (if (equal kind "rule-scope")
+                ;; A reshaped rule: tint the whole evidence arc and hang a
+                ;; labeled banner naming the rule at the top of the span.
+                (let ((ov (make-overlay beg end))
+                      (label (format "⟦rule:%s · %s · %s⟧  %s → %s\n"
+                                     (alist-get 'rule-id a)
+                                     (alist-get 'level a)
+                                     (alist-get 'confidence a)
+                                     (or (alist-get 'before a) "?")
+                                     (or (alist-get 'after a) "?"))))
+                  (overlay-put ov 'face 'standoff-rule-scope-face)
+                  (overlay-put ov 'standoff-kind kind)
+                  (overlay-put ov 'before-string
+                               (propertize label 'face 'standoff-rule-label-face))
+                  (overlay-put ov 'help-echo
+                               (format "rule %s (%s, %s): %s"
+                                       (alist-get 'rule-id a)
+                                       (alist-get 'level a)
+                                       (alist-get 'confidence a)
+                                       (or (alist-get 'excerpt a) "")))
+                  (overlay-put ov 'priority -10) ;; term hits render on top
+                  (push ov standoff-overlay--overlays)
+                  (cl-incf n))
+              (let ((ov (make-overlay beg end))
+                    (face (or (cdr (assoc kind standoff-overlay--kind-faces))
+                              'standoff-cued-face)))
+                (overlay-put ov 'face face)
+                (overlay-put ov 'standoff-kind kind)
+                (overlay-put ov 'help-echo
+                             (format "[%s/%s] %s" (alist-get 'tier a) kind
+                                     (or (alist-get 'excerpt a) "")))
+                (push ov standoff-overlay--overlays)
+                (cl-incf n))))))
       (local-set-key (kbd "C-c C-.") #'standoff-overlay-next)
       (local-set-key (kbd "C-c C-,") #'standoff-overlay-prev)
       (message "standoff: %d annotations rendered (C-c C-. next, C-c C-, prev, hover for kind)" n))))
