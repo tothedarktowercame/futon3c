@@ -445,7 +445,8 @@
    (let [query (cond-> (str FUTON1A "/api/alpha/hyperedges?type="
                             (java.net.URLEncoder/encode hx-type "UTF-8")
                             "&repo="
-                            (java.net.URLEncoder/encode label "UTF-8"))
+                            (java.net.URLEncoder/encode label "UTF-8")
+                            "&include-total=false")
                  source-file
                  (str "&source-file="
                       (java.net.URLEncoder/encode source-file "UTF-8")))
@@ -874,7 +875,8 @@
      (fn [acc t]
        (let [resp (http-get-edn
                    (str FUTON1A "/api/alpha/hyperedges?type=" t
-                        "&repo=" repo-label))
+                        "&repo=" repo-label
+                        "&include-total=false"))
              edges (:hyperedges resp)]
          (reduce (fn [m e]
                    (let [src-file (some-> e :hx/props :source-file)

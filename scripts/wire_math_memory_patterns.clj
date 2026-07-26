@@ -122,7 +122,8 @@
         (http/get
          (str base-url "/api/alpha/hyperedges?end=" (encode endpoint)
               (when type (str "&type=" (encode (subs (str type) 1))))
-              "&limit=" limit)
+              "&limit=" limit
+              "&include-total=false")
          {:headers {"accept" "application/edn"}
           :timeout 60000
           :throw false})]

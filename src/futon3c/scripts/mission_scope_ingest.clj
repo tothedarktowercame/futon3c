@@ -323,7 +323,8 @@
   [client base-url end-id]
   (let [resp (http-edn client :get
                        (str base-url "/api/alpha/hyperedges?end="
-                            (url-encode end-id) "&limit=1"))]
+                            (url-encode end-id)
+                            "&limit=1&include-total=false"))]
     (boolean (and (<= 200 (:status resp) 299)
                   (seq (get-in resp [:body :hyperedges]))))))
 

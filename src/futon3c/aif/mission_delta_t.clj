@@ -112,7 +112,8 @@
    is the reliable family; only the ΔT contributions from a failed family are lost."
   [futon1a-url hx-type limit]
   (let [url (str futon1a-url "/api/alpha/hyperedges?type="
-                 (url-encode hx-type) "&limit=" limit)
+                 (url-encode hx-type) "&limit=" limit
+                 "&include-total=false")
         ;; The essential `mission-doc` family (supplies :mission-T) is a large
         ;; read — ~6-9s in the loaded serving JVM — so it gets ample headroom.
         ;; The ΔT-only edge families stay short: they are best-effort and some

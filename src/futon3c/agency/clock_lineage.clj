@@ -65,7 +65,7 @@
    every edge and OOMed the serving JVMs (2026-07-21)."
   [ep]
   (let [url  (str FUTON1A "/api/alpha/hyperedges?end=" (URLEncoder/encode ep "UTF-8")
-                  "&limit=1")
+                  "&limit=1&include-total=false")
         resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
                   (catch Exception _ nil))]
     (boolean (and resp (= 200 (:status resp)) (string? (:body resp))
@@ -201,7 +201,7 @@
   [hx-type]
   (let [url  (str FUTON1A "/api/alpha/hyperedges?type="
                   (URLEncoder/encode hx-type "UTF-8")
-                  "&limit=10000")
+                  "&limit=10000&include-total=false")
         resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
                   (catch Exception _ nil))]
     (or (when (and resp (= 200 (:status resp)) (string? (:body resp)))

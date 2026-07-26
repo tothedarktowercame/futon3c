@@ -215,7 +215,9 @@
    targets without having to know each cross-ref's source repo."
   []
   (try
-    (let [url (str FUTON1A "/api/alpha/hyperedges?type=code/v05/mission-doc&limit=500")
+    (let [url (str FUTON1A
+                   "/api/alpha/hyperedges?type=code/v05/mission-doc"
+                   "&limit=500&include-total=false")
           resp (http/get url {:headers {"Accept" "application/json"}
                               :throw false
                               :timeout 5000})]

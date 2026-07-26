@@ -61,6 +61,7 @@
    (:hyperedges
     (get-edn! (str (configured-url) "/api/alpha/hyperedges?type=" (encode type)
                    "&limit=" (long limit)
+                   "&include-total=false"
                    (when valid-as-of
                      (str "&valid-as-of=" (encode valid-as-of)))
                    (when system-as-of
@@ -74,6 +75,7 @@
    (let [url (str (configured-url) "/api/alpha/hyperedges?end=" (encode end)
                   (when type (str "&type=" (encode type)))
                   "&limit=" (long limit)
+                  "&include-total=false"
                   (when valid-as-of
                     (str "&valid-as-of=" (encode valid-as-of)))
                   (when system-as-of

@@ -42,7 +42,9 @@ class Edge:
 
 
 def fetch_type(base_url: str, hx_type: str, limit: int) -> List[dict]:
-    query = urllib.parse.urlencode({"type": hx_type, "limit": str(limit)})
+    query = urllib.parse.urlencode(
+        {"type": hx_type, "limit": str(limit), "include-total": "false"}
+    )
     req = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/alpha/hyperedges?{query}",
         headers={"Accept": "application/json", "X-Penholder": "api"},

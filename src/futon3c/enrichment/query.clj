@@ -42,7 +42,7 @@
   "Query futon1a for hyperedges involving endpoint-id (bounded by query-limit)."
   [futon1a-url endpoint-id]
   (let [url (str futon1a-url "/api/alpha/hyperedges?end=" (url-encode endpoint-id)
-                 "&limit=" query-limit)
+                 "&limit=" query-limit "&include-total=false")
         result (http-get-edn url)]
     (or (:hyperedges result) [])))
 
@@ -50,7 +50,7 @@
   "Query futon1a for hyperedges of a given type (bounded by query-limit)."
   [futon1a-url hx-type]
   (let [url (str futon1a-url "/api/alpha/hyperedges?type=" (url-encode hx-type)
-                 "&limit=" query-limit)
+                 "&limit=" query-limit "&include-total=false")
         result (http-get-edn url)]
     (or (:hyperedges result) [])))
 

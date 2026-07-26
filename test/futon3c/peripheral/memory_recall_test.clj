@@ -202,7 +202,8 @@
       #(is (= [] (substrate/hyperedges-by-end
                    "p4ng/R15" {:type :memory/assert :limit 7}))))
     (is (= (str "http://substrate.test/api/alpha/hyperedges?"
-                "end=p4ng%2FR15&type=memory%2Fassert&limit=7")
+                "end=p4ng%2FR15&type=memory%2Fassert&limit=7"
+                "&include-total=false")
            @seen-url))))
 
 (deftest batch-recall-projects-several-endpoints-with-one-substrate-call

@@ -196,7 +196,8 @@
   [repo-label]
   (try
     (let [resp (http/get (str FUTON1A "/api/alpha/hyperedges?type=code/v05/commit"
-                              "&repo=" repo-label "&latest=true&limit=1")
+                              "&repo=" repo-label
+                              "&latest=true&limit=1&include-total=false")
                          {:throw false
                           :timeout 5000})
           body (when (= 200 (:status resp)) (:body resp))

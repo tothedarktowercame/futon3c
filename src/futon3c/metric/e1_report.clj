@@ -52,7 +52,8 @@
                   "/api/alpha/hyperedges?type="
                   (url-encode hx-type)
                   "&limit="
-                  limit)
+                  limit
+                  "&include-total=false")
          resp (http/get url {:headers {"Accept" "application/json"
                                        "X-Penholder" default-penholder}
                              :throw false

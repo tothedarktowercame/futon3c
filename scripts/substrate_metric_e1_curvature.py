@@ -65,7 +65,9 @@ SORRY_STATUS = {
 
 
 def fetch_hyperedges_by_type(hx_type: str, limit: int) -> list[dict[str, Any]]:
-    query = urllib.parse.urlencode({"type": hx_type, "limit": str(limit)})
+    query = urllib.parse.urlencode(
+        {"type": hx_type, "limit": str(limit), "include-total": "false"}
+    )
     req = urllib.request.Request(
         f"{FUTON1A}/api/alpha/hyperedges?{query}",
         headers={"Accept": "application/json", "X-Penholder": PENHOLDER},

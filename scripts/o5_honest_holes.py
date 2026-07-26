@@ -31,7 +31,11 @@ F = os.environ.get("FUTON1A_URL", "http://localhost:7071")
 
 
 def edges_on(ep):
-    url = f"{F}/api/alpha/hyperedges?end=" + urllib.parse.quote(ep, safe="")
+    url = (
+        f"{F}/api/alpha/hyperedges?end="
+        + urllib.parse.quote(ep, safe="")
+        + "&include-total=false"
+    )
     try:
         return urllib.request.urlopen(url, timeout=20).read().decode().count("hx/id")
     except Exception:
@@ -39,7 +43,11 @@ def edges_on(ep):
 
 
 def fetch_endpoints(hx_type):
-    url = f"{F}/api/alpha/hyperedges?type=" + urllib.parse.quote(hx_type, safe="")
+    url = (
+        f"{F}/api/alpha/hyperedges?type="
+        + urllib.parse.quote(hx_type, safe="")
+        + "&include-total=false"
+    )
     try:
         raw = urllib.request.urlopen(url, timeout=30).read().decode()
     except Exception:
@@ -67,7 +75,11 @@ def main():
     core = set(fetch_endpoints("code/v05/mined-move")) | set(fetch_endpoints("cascade/cluster-member"))
     core = {c for c in core if "-d/mission/" in c and not c.endswith("-head")}
     with_cap = set()
-    cap_url = f"{F}/api/alpha/hyperedges?type=" + urllib.parse.quote("capability/produces", safe="")
+    cap_url = (
+        f"{F}/api/alpha/hyperedges?type="
+        + urllib.parse.quote("capability/produces", safe="")
+        + "&include-total=false"
+    )
     try:
         cap_raw = urllib.request.urlopen(cap_url, timeout=30).read().decode()
         with_cap = set(re.findall(r'"([a-zA-Z0-9][a-zA-Z0-9/_.-]*-d/mission/[A-Za-z0-9-]+)"', cap_raw))

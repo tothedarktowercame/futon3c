@@ -50,7 +50,11 @@ def slugify(s):
 def fetch_live_mission_index():
     idx = {}
     for t in ("code/v05/mined-move", "clock/clocked-on"):
-        url = f"{FUTON1A}/api/alpha/hyperedges?type=" + urllib.parse.quote(t, safe="")
+        url = (
+            f"{FUTON1A}/api/alpha/hyperedges?type="
+            + urllib.parse.quote(t, safe="")
+            + "&include-total=false"
+        )
         try:
             raw = urllib.request.urlopen(url, timeout=30).read().decode()
         except Exception as e:

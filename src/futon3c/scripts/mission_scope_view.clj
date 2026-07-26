@@ -36,7 +36,7 @@
   (let [hx-type (str "mission-scope/" binder)
         url (str (str/replace base-url #"/$" "")
                  "/api/alpha/hyperedges?type=" (url-encode hx-type)
-                 "&limit=5000")]
+                 "&limit=5000&include-total=false")]
     (-> (http-edn client url)
         :hyperedges
         (or []))))

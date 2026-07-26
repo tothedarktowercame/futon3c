@@ -88,7 +88,8 @@
                                        "&repo="
                                        (java.net.URLEncoder/encode label "UTF-8")
                                        "&source-file="
-                                       (java.net.URLEncoder/encode source-file "UTF-8"))
+                                       (java.net.URLEncoder/encode source-file "UTF-8")
+                                       "&include-total=false")
                               resp (http/get url {:headers {"Accept" "application/edn"
                                                             "X-Penholder" penholder}
                                                   :throw false

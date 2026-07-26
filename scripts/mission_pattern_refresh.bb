@@ -41,7 +41,8 @@
               :body (json/generate-string payload) :throw false}))
 
 (defn get-edges [hx-type]
-  (let [r (http/get (str BASE "/hyperedges?type=" hx-type)
+  (let [r (http/get (str BASE "/hyperedges?type=" hx-type
+                         "&include-total=false")
                     {:headers {"Accept" "application/edn"} :throw false})]
     (or (when (= 200 (:status r)) (:hyperedges (edn/read-string (:body r)))) [])))
 
