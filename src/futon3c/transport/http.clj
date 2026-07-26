@@ -5638,7 +5638,14 @@
            (mapcat results-of)
            (keep collection-of)
            frequencies))
-    (catch Throwable _ {})))
+    (catch Throwable t
+      ;; Stay quiet toward the endpoint (a malformed store must not break
+      ;; the WM snapshot) but never SILENTLY quiet: an expensive-read-busy
+      ;; rejection here used to render as honest-looking zero activation
+      ;; counts (observed 2026-07-26). The tag is greppable in the JVM log.
+      (println (str "[wm-activations-degraded] " (.getName (class t)) ": "
+                    (.getMessage t)))
+      {})))
 
 (defn enrich-patterns-with-activations
   "Given the WM `data` map and a days window, attach an :activations-Nd count
