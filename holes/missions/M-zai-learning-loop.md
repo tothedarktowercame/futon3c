@@ -250,3 +250,30 @@ acceptance template); librarian/challenge machinery takes over later.
 3. Provisioning: mathematics domain stamps for runner + scribe seats.
 4. Training cohort 1 (APM problems, scribe following per-session), then BPM
    batch 1 against the accreted store.
+
+## Beyond mathematics: WM memory mining and the HITL pattern economy (Joe, 2026-07-26)
+
+Parked for after batch 1 — recorded so it is not lost; the mathematics-facing
+sequence is unchanged.
+
+- **WM mining round**: the same scribe pipeline pointed at the WM's own
+  corpus (cohort attempt records, repair arcs like 056's :grounded-change,
+  typed failure kinds like 057/058 selection-timeouts). Lanes map directly:
+  solve = grounded operation sequences; arc = repair conversions;
+  trajectory = what failures teach about the workflow.
+- **Demarcation criterion** (the "mathematisization of programming"): a
+  workflow is WM-able iff it can be theorised as a pattern cascade;
+  human-sequenced build-outs are not. The frontier is dynamic and
+  diagnostic: where the cascade cannot be written, the residue is a missing
+  pattern — the work-list for pattern-supply HITL.
+- **Two HITL forms, one store signature**: HITs (per-instance, O(n)) vs
+  pattern-supply (per-class, amortized; e.g. patterns for reasoning about
+  topology without vision — a pattern as prosthetic for a modality gap).
+  Human-authored patterns enter the same typed graph and get the same
+  use-receipts/challenges, so HITL quality is measurable with existing
+  machinery; humans are another author class in the structure-formation
+  lane.
+- **Domain-differential capability mapping**: works-in-algebra/analysis vs
+  not-in-topology/web is the memorization-contrast methodology generalized —
+  the capability star-map across domains, with pattern-supply as the repair
+  action where stars are dark.
