@@ -277,3 +277,31 @@ sequence is unchanged.
   not-in-topology/web is the memorization-contrast methodology generalized —
   the capability star-map across domains, with pattern-supply as the repair
   action where stars are dark.
+
+## S5 (chartered 2026-07-26, from lane-B feasibility): semantic proposal lane
+
+Verdict from the timeboxed investigation (codex-5): **feasible-later; MiniLM
+is the right proposal tool.** The nightly futon3a pipeline (04:30 cron,
+`index_patterns.sh --minilm`) indexes 1,521 file-backed patterns/missions but
+zero :7073 store records. Two missing pieces before dispatch integration:
+
+1. **Nightly exporter**: reviewed :7073 memory/pattern records → the MiniLM
+   corpus (graph hydration measured at ~53s for 12 memories — must happen
+   nightly, never at dispatch).
+2. **Long-lived query boundary** reachable from futon3c (warm MiniLM query:
+   46ms; cold Clojure path: 11.8s — a persistent process or service, not
+   per-dispatch spawn).
+
+Integration seam (precisely located): `propose-patterns-by-query` gains an
+optional `:semantic-proposals` fn; candidates pass through the existing
+`recall-batch-fn` and are retained ONLY where the domain projection proves a
+reviewed memory/assert edge to that exact pattern. **Embeddings propose; the
+reviewed graph remains the warrant.** Dispatch exposes it as
+`--semantic-recall` (:recall-system :v2-semantic).
+
+Evidence this matters: the feasibility overlay queried with the a93A01
+statement surfaced candidates lexical FTS (v0 AND v1) missed —
+math/proof-architecture 0.29, series-evaluation-api 0.19,
+construction-before-estimates 0.17 — i.e. the a93A01 recall-empty rows in
+cohort 1 are exactly the rows a v2 lane would have populated. The cohort's
+recall-system column anticipates :v2-semantic.
