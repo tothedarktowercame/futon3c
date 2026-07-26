@@ -52,12 +52,19 @@ invoke-ready).
   `GET :7070/api/alpha/morning-brief/pending`,
   `POST .../review`, `POST .../addendum` (agents). Reads work off local disk;
   writes go only through the serving JVM.
-- **Clicks:** copy the pattern in `/tmp/wm-*-click.sh` — fresh JVM from
-  futon2 with futon3c via `-Sdeps :local/root`, explicit env (local reads:
-  `unset FUTON3C_EVIDENCE_BASE`; emit: `FUTON2_WM_EMIT_BASE=<lucy>`), explicit
-  `--author/--reviewer/--repair-reviewer`, background + a Monitor on the log.
-  Don't run heavy test JVMs concurrently with a click; don't click while an
-  agent has uncommitted edits in a shared checkout the click will compile.
+- **Clicks (M-omni-wm-runner, 2026-07-26):** clicks run IN-PROCESS in the
+  serving JVM — `POST :7070/api/alpha/wm/click` with
+  `{"author":..., "reviewer":..., "repair-reviewer":...}`; poll
+  `GET :7070/api/alpha/wm/click` for `{running? phase attempt-id last-result}`.
+  Single-flight: a second POST while one runs returns 409 with the active
+  click id. Status is registry-direct (the `*agents*` war-machine row is
+  synchronous — no freshness gap). **Do NOT launch `clojure -M:wm-full-loop`
+  as a process: per I-0 there is no third JVM, ever** (the old click-JVM
+  pattern caused classpath vintage skew, per-click evidence-env divergence,
+  and the external-invoke visibility seam — see the mission doc
+  `holes/missions/M-omni-wm-runner.md`). Selection runs through the
+  in-process bounded-autonomy-validated seam; phase events land in the
+  runner's durable phase log as before.
 
 ## When the machine is broken
 
