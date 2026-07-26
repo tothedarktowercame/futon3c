@@ -15,7 +15,9 @@
 
 (def base-url "http://127.0.0.1:7073")
 (def reviewer "joe")
-(def review-warrant "operator draft review recorded in each memory body")
+(def default-review-warrant "operator draft review recorded in each memory body")
+(def pudding-review-warrant
+  "operator-delegated: in-use evaluation (proof-in-pudding, Joe 2026-07-26)")
 (def recall-system :v1-enriched)
 
 (def pattern-descriptions
@@ -34,7 +36,17 @@
    "math/construction-before-estimates"
    "define auxiliary object first, piecewise construction, explicit witness function, build before bounding"
    "math/proof-architecture"
-   "overall proof plan, multi-layer architecture, reduction to lemmas, dyadic decomposition, differentiation theorem, convergence in measure, lacunary boundary"})
+   "overall proof plan, multi-layer architecture, reduction to lemmas, dyadic decomposition, differentiation theorem, convergence in measure, lacunary boundary"
+   "math/uniform-continuity-boundedness"
+   "uniform continuity, uniformly continuous, totally bounded interval, bounded image, difference quotient, epsilon delta, TotallyBounded.image, isUniformEmbedding_subtype_val"
+   "math/weak-convergence-hilbert"
+   "weak convergence Hilbert space, Kadec Klee, norm convergence implies strong convergence, norm_sub_sq_real, continuous sqrt, liminf side conditions"
+   "math/complex-liouville-periodicity"
+   "entire complex function, holomorphic, bounded entire Liouville, doubly periodic, lattice invariant, compact fundamental parallelogram, exists_const_forall_eq_of_bounded"
+   "math/cast-normalization"
+   "cast coercion normalization, integer to complex cast, real imaginary projection, Complex.ofReal_intCast, floor fract, simplify re im"
+   "math/corpus-trust-protocol"
+   "stale blocked assessment, informal solution error, verify corpus against current library, partial trust, reasoned memory non-use, subsumed recalled pattern"})
 
 (def attachments
   [{:memory-id "e-1ac936fb-04e8-460e-a710-37fac474401c"
@@ -72,7 +84,80 @@
     :pattern-id "math/proof-architecture"}
    {:memory-id "e-b3f51bc2-7509-4bc8-9750-3afc57cfdbec"
     :name "convergence-in-measure-through-bounded-transform"
-    :pattern-id "math/proof-architecture"}])
+    :pattern-id "math/proof-architecture"}
+
+   {:memory-id "e-909b0800-f5ea-46ac-ae87-7a9f77d46d95"
+    :name "bridge-strict-and-closed-convergence-in-measure-thresholds"
+    :pattern-id "math/proof-architecture"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-4adf0546-2bed-4f35-93f1-032cd254177f"
+    :name "tendsto-in-measure-ae-subsequence-api"
+    :pattern-id "math/proof-architecture"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-a86f234d-51cf-444f-8ac8-e0ce8913027a"
+    :name "verify-stale-blocked-labels-against-current-library"
+    :pattern-id "math/corpus-trust-protocol"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-16654eba-f541-47a5-ae79-3ff08cd2e600"
+    :name "record-subsumed-pattern-use-as-challenge"
+    :pattern-id "math/corpus-trust-protocol"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-46c09295-d8c9-4d1c-b8e9-a7c3c1767b3c"
+    :name "bound-uniformly-continuous-image-before-controlling-quotients"
+    :pattern-id "math/uniform-continuity-boundedness"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-3c62f164-174b-4d75-b5bd-67f1bbbbfb5d"
+    :name "uniformly-continuous-image-boundedness-api-chain"
+    :pattern-id "math/uniform-continuity-boundedness"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-7d94a954-2ccf-4832-9c0e-76afb7c119bf"
+    :name "correct-a93a01-direct-uniform-continuity-quotient-argument"
+    :pattern-id "math/corpus-trust-protocol"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-afb1eae8-284f-4551-8c49-d0babd83a780"
+    :name "kadec-klee-via-norm-sub-square-and-sqrt"
+    :pattern-id "math/weak-convergence-hilbert"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-ff95cfd3-c645-4b64-afa1-46605015bb00"
+    :name "norm-sub-square-to-norm-limit-api-chain"
+    :pattern-id "math/weak-convergence-hilbert"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-0b423578-4fa5-4bf8-95d9-1af599f78f04"
+    :name "liminf-eventual-lower-bound-api-side-conditions"
+    :pattern-id "math/weak-convergence-hilbert"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-e5d809a6-3bfc-468a-888a-16e651bfe468"
+    :name "use-informal-proof-architecture-with-leaf-level-verification"
+    :pattern-id "math/corpus-trust-protocol"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-f7982156-16dc-4863-8504-0f831999a55d"
+    :name "conditionally-convergent-series-use-ordered-partial-sums"
+    :pattern-id "math/series-evaluation-api"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-95c49e49-5982-4c66-abc0-7bba11a5be35"
+    :name "leibniz-formula-template-for-abel-boundary-limits"
+    :pattern-id "math/series-evaluation-api"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6"
+    :name "translate-interval-integrals-with-integral-comp-add-right"
+    :pattern-id "math/series-evaluation-api"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08"
+    :name "record-reasoned-non-use-of-surfaced-memories"
+    :pattern-id "math/corpus-trust-protocol"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-7b39a396-5b35-4b84-a12f-9032c438c804"
+    :name "reduce-lattice-periodic-entire-functions-to-compact-domain"
+    :pattern-id "math/complex-liouville-periodicity"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-65b94d16-3cdd-4850-970a-62974766637a"
+    :name "liouville-bounded-entire-constant-api"
+    :pattern-id "math/complex-liouville-periodicity"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-6b5dd8cb-1f6d-403b-af5b-f0953ef2a7d1"
+    :name "normalize-integer-complex-casts-before-projections"
+    :pattern-id "math/cast-normalization"
+    :review-warrant pudding-review-warrant}])
 
 (def pattern-ids
   (->> attachments (map :pattern-id) distinct sort vec))
@@ -267,10 +352,13 @@
                           {:memory-id memory-id :pattern-id pattern-id})))
         :attached))))
 
-(defn- review-id [{:keys [name]}]
-  (str "e-review-math-" name))
+(defn- review-id [{:keys [name review-warrant]}]
+  (str "e-review-math-"
+       (when review-warrant "pudding-v2-")
+       name))
 
-(defn- review-entry [{:keys [memory-id pattern-id] :as attachment}]
+(defn- review-entry
+  [{:keys [memory-id pattern-id review-warrant] :as attachment}]
   {:evidence/id (review-id attachment)
    :evidence/subject {:ref/type :memory :ref/id memory-id}
    :evidence/type :memory
@@ -279,16 +367,22 @@
    :evidence/session-id "M-zai-learning-loop/operator-review"
    :evidence/at (str (Instant/now))
    :evidence/body
-   {:review/event :memory-attachment-review
-    :review/memory-id memory-id
-    :review/pattern-ids [pattern-id]
-    :review/verdict :approve
-    :review/witness-status :independently-witnessed
-    :review/provenance
-    {:kind :operator-draft-review
-     :reviewer reviewer
-     :date "2026-07-26"
-     :warrant review-warrant}}
+   (cond->
+    {:review/event :memory-attachment-review
+     :review/memory-id memory-id
+     :review/pattern-ids [pattern-id]
+     :review/verdict :approve
+     :review/witness-status (if review-warrant
+                              :self-asserted
+                              :independently-witnessed)
+     :review/provenance
+     {:kind (if review-warrant
+              :operator-delegated-in-use-evaluation
+              :operator-draft-review)
+      :reviewer reviewer
+      :date "2026-07-26"
+      :warrant (or review-warrant default-review-warrant)}}
+     review-warrant (assoc :review/policy-verdict :pudding-delegated))
    :evidence/tags [:memory :memory/review :mathematics]})
 
 (defn- ensure-review-evidence! [evidence-store attachment]
