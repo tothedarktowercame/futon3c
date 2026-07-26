@@ -468,7 +468,31 @@
    30000))
 
 (defn- record-offered! [{:keys [base]} evidence]
-  (post-json (str (trim-base base) "/api/alpha/evidence") evidence 30000))
+  ;; The :7073 evidence endpoint reads an EDN EvidenceEntry (namespaced keys)
+  ;; and requires a penholder header; JSON with bare keys is the
+  ;; silent-lost-writes defect class (traced 2026-07-26) — it 4xx/5xxs and
+  ;; the receipt never lands.
+  (let [entry {:evidence/id (str "e-" (UUID/randomUUID))
+               :evidence/subject (:subject evidence)
+               :evidence/type (:type evidence)
+               :evidence/claim-type (:claim-type evidence)
+               :evidence/at (str (Instant/now))
+               :evidence/author (str (:author evidence))
+               :evidence/session-id (str (:session-id evidence))
+               :evidence/body (:body evidence)
+               :evidence/tags (:tags evidence)}
+        response (http/post (str (trim-base base) "/api/alpha/evidence")
+                            {:headers {"Content-Type" "application/edn"
+                                       "Accept" "application/edn"
+                                       "x-penholder" "api"}
+                             :body (pr-str entry)
+                             :timeout 30000
+                             :throw false})]
+    (if (<= 200 (long (:status response)) 299)
+      (:evidence/id entry)
+      (throw (ex-info "HTTP write failed"
+                      {:url (str (trim-base base) "/api/alpha/evidence")
+                       :status (:status response)})))))
 
 (defn- require-input! [opts packet]
   (when-not (:problem opts)
