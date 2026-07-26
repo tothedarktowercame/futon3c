@@ -5594,7 +5594,21 @@
     (let [since-ms (when (and (int? days) (pos? days))
                      (- (System/currentTimeMillis) (* days 24 60 60 1000)))
           live-store (or (:evidence-store @mcs/!config) estore/!store)
-          entries (estore/query* live-store {:query/tags [:context-retrieval]})
+          ;; Push the window into the query. Without :query/since this walked
+          ;; the ENTIRE context-retrieval history through the backend's
+          ;; page-until-exhaustion cursor loop on every 300s WM snapshot —
+          ;; 20-60s of store CPU per page, growing with every agent turn —
+          ;; and only then filtered to the window in memory. That walk was
+          ;; the standing :7073 saturation behind the cohort-44/45 preflight
+          ;; and selection timeouts (diagnosed 2026-07-26 via the
+          ;; futon1b-request journal). The client-side recent? filter stays
+          ;; as a belt over the server-side window.
+          entries (estore/query*
+                   live-store
+                   (cond-> {:query/tags [:context-retrieval]}
+                     since-ms
+                     (assoc :query/since
+                            (str (java.time.Instant/ofEpochMilli since-ms)))))
           recent? (fn [e]
                     (or (nil? since-ms)
                         (when-let [at (:evidence/at e)]
