@@ -43,3 +43,64 @@ memory system is being FIXED IN PARALLEL, targeted to come online mid-cohort:
   query-term extraction from problem.md/proof-outline.md), codex-5
   (embedding proposal lane feasibility via futon3a miniLM shared-corpus
   infra; timeboxed — feasibility verdict acceptable if build is large).
+
+## RESULTS (cohort complete, 2026-07-26 evening)
+
+| # | problem | outcome | commit | recall-system | surfaced/used |
+|---|---------|---------|--------|---------------|---------------|
+| 1 | a92J02 conv-in-measure subseq | **SOLVED** | 8b58d46 | v0-lexical | 0/0 |
+| 2 | a93A01 UC iff diff-quotient | **SOLVED** | 035e4d9 | v0-lexical | 0/0 |
+| 3 | a93A03 Kadec-Klee + liminf | PARTIAL (1 sorry) | a72683a | v1-enriched | 0/0 |
+| 4 | a93J02 alternating harmonic | PARTIAL (1 sorry) | e5158e7 | v1-enriched | 3/0 (reasoned non-use, named) |
+| 5 | a93J05 doubly periodic entire | **SOLVED** | 32f09c8 | v1-enriched | 0/0 |
+| R | a96A04 heat kernel (REVISIT, labeled) | IMPROVED 4→3 sorries | f614856 | v1-enriched | **2/2 — FIRST LEAF-LEVEL USE EVENT** |
+
+**Fresh arm: 3 solved, 2 honest partials, 0 failures, all formalizations
+verified faithful.** All receipts in store (rows 1–3 retro-written during
+receipt-path repair; rows 4–R written in-script).
+
+### Observables (four levels)
+
+1. **Leaf: ONE WITNESSED USE EVENT** (revisit arm). Memories mined from
+   a95J08/a96A04 cron sessions, recalled into the a96A04 revisit, cited by
+   the runner as redirecting effort away from re-probing the absent Young
+   inequality toward the provable Gaussian normalization — which it proved
+   (4→3 sorries, f614856). Offered receipt e-... (dispatch), outcome
+   receipt e-0436fa62 (use-half). The memory→behavior→outcome chain is
+   closed and witnessed. Caveat honestly: revisit row is confounded by
+   prior repo work; the *use citation* and behavior change are the
+   witnessed part, the sorry-reduction attribution is supporting evidence.
+2. **Pattern**: session 4 surfaced strategy-level memories in series
+   terrain (right neighborhood, wrong level) — partial pattern-level hit;
+   the scribe's coverage note formalizes the gap.
+3. **Field**: n=6 too small for trends; typed observations recorded
+   (2 partials both blocked on API side-conditions/absence, not on
+   mathematics — consistent with batch-0's finding).
+4. **Structure-formation**: stale-blocked-labels rule reached n=2
+   (updated in place, not duplicated); the scribe DECLINED a false n=3
+   merge (liminf ≠ missing-theorem — taxonomic differentiation); first
+   challenge draft (corpus correction, machine-witnessed).
+
+### Coverage map (scribe note, e6e554a/06ccb5e)
+
+Complex analysis: zero memories. Series: strategy-level only — the
+surfacing-miss diagnosis (generic terms outranked discriminative nouns:
+series/alternating/harmonic/tsum dropped) is the v1.1 tuning item.
+Measure theory/functional analysis: growing.
+
+### Infrastructure fixed mid-cohort (all committed)
+
+- Receipt path: three defects (JSON→EDN endpoint = the lost-writes class;
+  missing x-penholder; agency-base instead of substrate-base targeting) —
+  66fd3e7, 365a8ea. In-script writes verified from session 4 on.
+- Pattern descriptions + problem-file query terms (lane A, 7776cfc);
+  reviewed with my own gate re-runs.
+- Semantic lane: feasible-later verdict chartered as S5.
+
+### Outputs for operator review
+
+18 scribe drafts (4 strategy, 9 lemma-location, 4 process, 1 challenge)
+in memory-drafts-cohort1.edn — including the HasSum conditional-convergence
+trap, the corpus-correction challenge (a93A01 informal solution), and the
+reasoned-non-use process rule. Promotion path proven; awaiting operator
+review cadence.
