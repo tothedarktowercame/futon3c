@@ -18,7 +18,10 @@
 (def review-warrant "operator draft review recorded in each memory body")
 
 (def attachments
-  [{:memory-id "e-4fda2517-1d61-4bef-9130-4ef3dc32205e"
+  [{:memory-id "e-1ac936fb-04e8-460e-a710-37fac474401c"
+    :name "symmetric-interval-law-to-dyadic-differentiation"
+    :pattern-id "math/proof-architecture"}
+   {:memory-id "e-4fda2517-1d61-4bef-9130-4ef3dc32205e"
     :name "orient-rewrite-to-the-goal"
     :pattern-id "math/rewrite-orientation"}
    {:memory-id "e-5736f45a-151c-46b2-8993-f8d3e578b51a"
