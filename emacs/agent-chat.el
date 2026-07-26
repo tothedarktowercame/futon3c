@@ -2374,12 +2374,19 @@ Replaces the `(session: ...)' text in the first line."
         (delete-file temporary)))))
 
 (defun agent-chat-evidence--read-record (path)
-  "Read one outbox record from PATH, or nil when corrupt."
+  "Read one outbox record from PATH, or nil when corrupt.
+Arrays MUST parse as vectors: with :array-type \\='list, a JSON array of
+objects re-reads as a list of alists, and `json-encode' then treats the
+outer list as an alist — each object's first pair becomes a cons-printed
+key like \"(repo . futon2)\". Every turn-commits replay was mangled this
+way from 2026-07-25 until found on 2026-07-26; the live first attempts
+were unaffected (no disk round-trip), so no data was lost — only replays
+failed. Vectors round-trip unambiguously."
   (condition-case err
       (with-temp-buffer
         (insert-file-contents path)
         (json-parse-buffer :object-type 'alist
-                           :array-type 'list
+                           :array-type 'array
                            :null-object nil
                            :false-object nil))
     (error
