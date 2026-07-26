@@ -2,6 +2,7 @@
 ;; write tools remain opt-in so runner/APM seats do not acquire scribe powers.
 {:seats
  {"zai-4"   {:role :apm-runner :domain :mathematics}
+  "zai-5"   {:role :apm-runner :domain :mathematics}
   "codex-2" {:role :scribe     :domain :mathematics :tools #{:memory-record}}
   "codex-5" {:role :apm        :domain :mathematics}
   "codex-6" {:role :apm        :domain :mathematics}}}
