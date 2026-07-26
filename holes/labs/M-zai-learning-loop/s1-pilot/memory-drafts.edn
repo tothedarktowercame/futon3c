@@ -1,0 +1,245 @@
+[{:name "symmetric-interval-law-to-dyadic-differentiation"
+  :level :strategy
+  :body
+  {:problem-class "An interval-integral identity is invariant under splitting an interval at its midpoint."
+   :proof-shape
+   ["Prove the one-step midpoint split with `integral_add_adjacent_intervals`."
+    "Induct over dyadic subintervals so every dyadic average is fixed by the global average."
+    "Use Lebesgue differentiation to pass from shrinking dyadic averages to an almost-everywhere pointwise statement."]
+   :preconditions ["interval integrability on every subinterval"
+                   "a differentiation theorem whose basis matches the shrinking intervals"]
+   :failure-boundary "The local split can compile while the proof still stops at the dyadic induction or differentiation API."}
+  :subjects [{:ref/type :apm-problem :ref/id "a95A04"}
+             {:ref/type :proof-pattern :ref/id "dyadic-differentiation"}]
+  :evidence
+  {:turn-round-ids ["e-807d8892-107d-4246-b2b4-63589285aac5"]
+   :commits ["dce39a86a536141aaa3ed253c64ec18fc620dbdd"]
+   :problems ["a95A04"]}
+  :confidence :single-instance
+  :rationale "The final summary and committed proof agree on the midpoint lemma and explicitly identify dyadic induction plus Lebesgue differentiation as the remaining architecture."}
+
+ {:name "convergence-in-measure-through-bounded-transform"
+  :level :strategy
+  :body
+  {:problem-class "Relate convergence in measure of real-valued functions to vanishing integrals of a bounded transform that is zero only at zero."
+   :proof-shape
+   ["For integral-to-measure, lower-bound the transform away from zero on the bad set and apply a Markov-style estimate."
+    "For measure-to-integral, split the domain into the bad set and its complement."
+    "Use global boundedness on the bad set and uniform smallness of the transform on the complement."]
+   :preconditions ["finite measure of the domain"
+                   "transform is bounded"
+                   "transform is positive away from zero and continuous at zero"]
+   :failure-boundary "The mathematics is elementary, but formalization depends on the restricted-set integral and set-decomposition APIs."}
+  :subjects [{:ref/type :apm-problem :ref/id "a95J05"}
+             {:ref/type :proof-pattern :ref/id "bounded-transform-convergence"}]
+  :evidence
+  {:turn-round-ids ["e-43dfd8c2-b713-49a9-98c8-7f77c4bb5d30"]
+   :commits ["905fd8585c80bf900b18eb7b545e479be783fe62"]
+   :problems ["a95J05"]}
+  :confidence :single-instance
+  :rationale "The final summary names exactly these two directions for the arctangent transform and the commit contains the boundedness and positivity leaves while leaving the two set-integral assemblies open."}
+
+ {:name "lacunary-series-three-layer-architecture"
+  :level :strategy
+  :body
+  {:problem-class "Prove regularity inside a disk and singular behavior at its boundary for a lacunary power series."
+   :proof-shape
+   ["Use a summable uniform majorant and `continuousOn_tsum` for boundary continuity."
+    "Prove differentiability termwise and then justify derivative/sum interchange."
+    "Treat the natural-boundary claim as a separate gap-theorem layer, not as a consequence of the M-test."]
+   :preconditions ["uniform term bounds on the closed disk"
+                   "summability of the scalar majorant"
+                   "a termwise differentiation theorem"
+                   "a Hadamard-gap or equivalent boundary theorem"]
+   :failure-boundary "The M-test settles continuity only; it does not discharge derivative interchange or the natural-boundary theorem."}
+  :subjects [{:ref/type :apm-problem :ref/id "a95A06"}
+             {:ref/type :proof-pattern :ref/id "lacunary-series-layering"}]
+  :evidence
+  {:turn-round-ids ["e-7db07598-5214-4d99-88b5-17fa30c2925f"]
+   :commits ["2d7edf083849a7f5809b5588e4f46bfe37d2ec4e"]
+   :problems ["a95A06"]}
+  :confidence :single-instance
+  :rationale "The committed file completes the majorant and continuity layer, while its final summary sharply separates the derivative-assembly and absent gap-theorem layers."}
+
+ {:name "orient-rewrite-to-the-goal"
+  :level :tactic
+  :body
+  {:scope {:language :lean4
+           :context "An equality lemma has the desired terms but its orientation does not match the occurrence in the goal."}
+   :before "`have h_split := (integral_add_adjacent_intervals hf_am hf_mb).symm` followed by a rewrite expecting `left + right = whole`."
+   :after "Use `integral_add_adjacent_intervals hf_am hf_mb` in its native `left + right = whole` orientation, then rewrite with `← h_split` only where the reverse direction is needed."
+   :rationale "Choose the orientation from the syntactic goal before adding `.symm`; an equality with the right facts but the wrong direction produces misleading downstream type mismatches."
+   :evidence {:error-turn "e-f069f36b-ecd1-428f-a50e-4ed0ce3548bb"
+              :successful-artifact "problems/a95A04/lean/Main.lean:symmetric_split"}
+   :confidence :single-instance}
+  :subjects [{:ref/type :apm-problem :ref/id "a95A04"}
+             {:ref/type :lean-tactic :ref/id "rw"}]
+  :evidence
+  {:turn-round-ids ["e-f069f36b-ecd1-428f-a50e-4ed0ce3548bb"]
+   :commits ["dce39a86a536141aaa3ed253c64ec18fc620dbdd"]
+   :problems ["a95A04"]}
+  :confidence :single-instance
+  :rationale "The turn explicitly diagnoses the orientation error, and the committed lemma uses the corrected native orientation."}
+
+ {:name "let-lean-infer-integral-binder-equality"
+  :level :tactic
+  :body
+  {:scope {:language :lean4
+           :context "A theorem about interval integrals is propositionally correct, but an explicitly annotated local equality triggers binder-name/type elaboration friction."}
+   :before "`have h_split : ∫ t in a..m, f t + ∫ t in m..b, f t = ∫ t in a..b, f t := by have h := integral_add_adjacent_intervals hf_am hf_mb; exact h`"
+   :after "`have h_split := integral_add_adjacent_intervals hf_am hf_mb`"
+   :rationale "When the inferred theorem is already the equality needed for rewriting, avoid restating its binder-heavy type; inference preserves the elaborated expression and removes a needless conversion obligation."
+   :evidence {:error-turn "e-5b816f64-a376-4b4d-aa14-f10ff2ec75ec"
+              :fix-turn "e-06ffc434-b62c-40f2-bbeb-e239b12e022f"}
+   :confidence :single-instance}
+  :subjects [{:ref/type :apm-problem :ref/id "a95A04"}
+             {:ref/type :lean-api :ref/id "integral_add_adjacent_intervals"}]
+  :evidence
+  {:turn-round-ids ["e-5b816f64-a376-4b4d-aa14-f10ff2ec75ec"
+                    "e-06ffc434-b62c-40f2-bbeb-e239b12e022f"]
+   :commits ["dce39a86a536141aaa3ed253c64ec18fc620dbdd"]
+   :problems ["a95A04"]}
+  :confidence :single-instance
+  :rationale "The first turn records binder mismatch; the later turn records the successful simplification, which is the form retained in the committed proof."}
+
+ {:name "normalize-min-max-before-linear-arithmetic"
+  :level :tactic
+  :body
+  {:scope {:language :lean4
+           :context "A subinterval inclusion has been rewritten with `uIcc_subset_uIcc_iff_le`, leaving inequalities containing `min` and `max`."}
+   :before "`constructor <;> gcongr`"
+   :after "`constructor <;> simp only [min_def, max_def] <;> split_ifs <;> linarith`"
+   :rationale "Generic congruence can select an impossible ordering branch. Expose the piecewise definitions, split on their guards, and let linear arithmetic use the interval hypotheses."
+   :evidence {:error-turn "e-6fa7595f-09d3-4ef0-80d3-fd21e4ad54c3"
+              :fix-turn "e-7d908a71-14fb-4283-91f1-230537a6da40"}
+   :confidence :single-instance}
+  :subjects [{:ref/type :apm-problem :ref/id "a95A04"}
+             {:ref/type :lean-api :ref/id "uIcc_subset_uIcc_iff_le"}]
+  :evidence
+  {:turn-round-ids ["e-6fa7595f-09d3-4ef0-80d3-fd21e4ad54c3"
+                    "e-7d908a71-14fb-4283-91f1-230537a6da40"]
+   :commits ["dce39a86a536141aaa3ed253c64ec18fc620dbdd"]
+   :problems ["a95A04"]}
+  :confidence :single-instance
+  :rationale "The failed `gcongr` branch and the replacement are both recorded in adjacent rounds, and the replacement appears twice in the final proof."}
+
+ {:name "zeta-two-index-shift-api"
+  :level :lemma-location
+  :body
+  {:problem-class "Evaluate the Basel series indexed from one when Mathlib's theorem is indexed from zero."
+   :lemma "`Real.hasSum_zeta_two` (available unqualified after opening `Real`)"
+   :supporting-lemmas ["Summable.sum_add_tsum_nat_add"
+                       "summable_nat_add_iff"]
+   :location "Mathlib.NumberTheory.ZetaValues"
+   :use "Take `hasSum_zeta_two.tsum_eq`, prove the zero term vanishes, split off `Finset.range 1`, and reconstruct `HasSum` for `n + 1`."
+   :boundary "This proves the value from the library theorem; it does not formalize the requested contour-integration derivation."}
+  :subjects [{:ref/type :apm-problem :ref/id "a95A07"}
+             {:ref/type :mathlib-lemma :ref/id "Real.hasSum_zeta_two"}]
+  :evidence
+  {:turn-round-ids ["e-94d8bf3d-a0b4-44b6-812a-9ab70850306e"]
+   :commits ["1d622b03a9a646bce7d2bb3a08b6808b41ea915d"]
+   :problems ["a95A07"]}
+  :confidence :single-instance
+  :rationale "This is the only zero-sorry problem in the mined range; the final summary and proof identify all three API leaves used for the indexing bridge."}
+
+ {:name "uniform-series-continuity-api"
+  :level :lemma-location
+  :body
+  {:problem-class "Show continuity on a set of a function defined as an infinite sum with a pointwise summable uniform norm majorant."
+   :lemma "`continuousOn_tsum`"
+   :location "Mathlib topology/analysis series API, imported by the problem's Mathlib imports"
+   :use "Provide continuity of every summand on the set, a scalar bound for each norm, and summability of the bounds."
+   :boundary "The lemma supplies continuity, not differentiability or a natural-boundary result."}
+  :subjects [{:ref/type :apm-problem :ref/id "a95A06"}
+             {:ref/type :mathlib-lemma :ref/id "continuousOn_tsum"}]
+  :evidence
+  {:turn-round-ids ["e-7db07598-5214-4d99-88b5-17fa30c2925f"]
+   :commits ["2d7edf083849a7f5809b5588e4f46bfe37d2ec4e"]
+   :problems ["a95A06"]}
+  :confidence :single-instance
+  :rationale "The committed theorem `lacunarySeries_continuousOn` closes directly with this lemma after proving the two required leaf obligations."}
+
+ {:name "schwarz-derivative-bound-api"
+  :level :lemma-location
+  :body
+  {:problem-class "Bound the derivative at zero of a holomorphic self-map of the complex unit disk fixing zero."
+   :lemma "`norm_deriv_le_one_of_mapsTo_ball`"
+   :location "Mathlib complex Schwarz lemma API"
+   :use "Supply holomorphy, the map-to-open-ball hypothesis, and positivity of the unit radius."
+   :boundary "Mathlib provides the inequality leaf, but the equality characterization needed for rigidity was not found."}
+  :subjects [{:ref/type :apm-problem :ref/id "a95J01"}
+             {:ref/type :mathlib-lemma :ref/id "norm_deriv_le_one_of_mapsTo_ball"}]
+  :evidence
+  {:turn-round-ids ["e-19f86b44-e336-4345-a65e-03785310677c"]
+   :commits ["44f678c9e6f6fb83c37ecc196458fca790c2e14d"]
+   :problems ["a95J01"]}
+  :confidence :single-instance
+  :rationale "The final summary calls out the inequality/equality API boundary, and `schwarz_deriv_bound` in the committed artifact is a direct application."}
+
+ {:name "stop-research-after-repeated-young-api-miss"
+  :level :process
+  :body
+  {:trigger "A convolution or heat-kernel proof plan requires Young's convolution inequality."
+   :rule "Run a bounded API reconnaissance once, record the absence, and choose explicitly between proving a local Young inequality and declaring the dependency frontier. Do not spend a later problem repeating the same unbounded search."
+   :cost {:observed-problems ["a95J08" "a96A04"]
+          :observed-terminal-rounds {"a95J08" 12 "a96A04" 32}
+          :signal "Two separate partial artifacts identify the same missing theorem as a central blocker."}
+   :stop-condition "Stop library search when name search plus nearby convolution/MemLp API inspection yields no theorem and the earlier corpus already records the same miss."
+   :next-action "Promote a reusable local Young theorem to its own construction target before returning to downstream heat or MemLp goals."}
+  :subjects [{:ref/type :mathlib-gap :ref/id "young-convolution-inequality"}
+             {:ref/type :apm-problem :ref/id "a95J08"}
+             {:ref/type :apm-problem :ref/id "a96A04"}]
+  :evidence
+  {:turn-round-ids ["e-3b86a40f-e442-4e43-ae23-a5fa5fe49031"
+                    "e-eac2e161-cab8-41be-a09d-76d17d149e51"]
+   :commits ["83c1fe4f5b93ca53f94b97a81e463108c769be13"
+             "12d4e46d351fbfefef150a149cc105c6ed64016c"]
+   :problems ["a95J08" "a96A04"]}
+  :confidence :n-instances
+  :rationale "The same missing API leaf independently blocks the convolution inequality and the heat-semigroup contraction; recording it as a reusable frontier avoids duplicated search cost."}
+
+ {:name "define-infinite-piecewise-object-before-estimates"
+  :level :process
+  :body
+  {:trigger "A problem's main witness is an infinite piecewise function, but the current artifact represents it as an opaque function plus specifications."
+   :rule "Make the representation executable and prove its lookup/junction lemmas before investing in global Hölder or absolute-continuity estimates."
+   :cost {:observed-terminal-round 28
+          :completed-leaves ["spike_base_length"]
+          :blocked-goals ["spikeFunction_holderWith"
+                          "spikeFunction_not_absolutelyContinuous"]
+          :signal "Arithmetic progress did not unlock either global theorem because both require access to the function's pieces."}
+   :stop-condition "Do not continue estimate-level tactic work while evaluation on a named spike and zero behavior at junctions are unavailable."
+   :next-action "Define the locally finite spike sum or interval-indexed piecewise function, then prove evaluation and disjoint-support lemmas."}
+  :subjects [{:ref/type :apm-problem :ref/id "a96A02"}
+             {:ref/type :formalization-bottleneck :ref/id "infinite-piecewise-representation"}]
+  :evidence
+  {:turn-round-ids ["e-c90e0754-8996-4e3f-9606-6445d7a48a66"]
+   :commits ["2ee4ba959709d52ed0462a02e7370b2f4a31182e"]
+   :problems ["a96A02"]}
+  :confidence :single-instance
+  :rationale "The final summary identifies representation—not the spike arithmetic—as the shared dependency for both remaining substantive claims."}
+
+ {:name "inventory-assembly-dependencies-before-polishing-leaves"
+  :level :process
+  :body
+  {:trigger "Several elementary or compactness leaf lemmas compile, while every headline theorem still depends on a large analytic assembly API."
+   :rule "After the first useful leaf compiles, draw a dependency ladder to the main theorem and probe the highest-risk assembly edges before polishing more local lemmas."
+   :cost {:observed-problems ["a95J04" "a96A01"]
+          :observed-terminal-rounds {"a95J04" 26 "a96A01" 23}
+          :completed-leaves ["coefficients_bounded_simple_pole"
+                             "rpow_le_one_add"]
+          :blocked-regions ["meromorphic radius and pole-subtraction assembly"
+                            "quasi-Hölder, dominated convergence, and Jensen assembly"]}
+   :stop-condition "If the dependency ladder contains an unavailable theorem family, re-scope or isolate that family before accumulating unrelated helper lemmas."
+   :next-action "Turn the first missing assembly edge into a separately testable lemma-location or construction task."}
+  :subjects [{:ref/type :apm-problem :ref/id "a95J04"}
+             {:ref/type :apm-problem :ref/id "a96A01"}
+             {:ref/type :process-pattern :ref/id "dependency-ladder"}]
+  :evidence
+  {:turn-round-ids ["e-cb695312-a3e5-4020-b9e2-ae079ba7b31f"
+                    "e-50132ba3-f42a-4d53-9595-7029e3c71126"]
+   :commits ["a3b3f26bdcf8faa2652d1311c1eb7e4e6d6a61fa"
+             "76329180138a6f658365aab821fb0fde66a3ca7c"]
+   :problems ["a95J04" "a96A01"]}
+  :confidence :n-instances
+  :rationale "Both runs produced correct local leaves but stopped at broader analytic APIs; the repeated shape supports a process rule about probing dependency risk earlier."}]
