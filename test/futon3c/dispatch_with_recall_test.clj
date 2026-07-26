@@ -12,6 +12,15 @@
     (is (some #{"bpm-1-5-1"} (:terms query)))
     (is (some #{"nonnegative integral"} (:terms query)))))
 
+(deftest substrate-call-deadline-does-not-preempt-total-recall-budget
+  (let [timeout-fn
+        (ns-resolve 'futon3c.dispatch-with-recall 'per-call-timeout-ms)]
+    (is (= 3000 (timeout-fn 3000)))
+    (is (= 250 (timeout-fn 100)))))
+
+(deftest default-recall-budget-covers-corpus-projection
+  (is (= 30000 (:recall-timeout-ms (dispatch/parse-args [])))))
+
 (deftest packet-injection-is-conditional
   (let [memory {:memory/id "e-memory-1"
                 :memory/kind :lemma-location

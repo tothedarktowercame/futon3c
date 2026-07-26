@@ -16,7 +16,7 @@
            [java.util UUID]))
 
 (def default-limit 5)
-(def default-recall-timeout-ms 3000)
+(def default-recall-timeout-ms 30000)
 (def default-agency-base "http://localhost:7070")
 (def default-mission "M-zai-learning-loop")
 
@@ -94,7 +94,7 @@
    "  --limit N                 surfaced memories (default 5)\n"
    "  --subject TEXT            additional recall subject; repeatable\n"
    "  --terrain TEXT            explicit terrain override\n"
-   "  --recall-timeout-ms N     total recall budget (default 3000)\n"
+   "  --recall-timeout-ms N     total recall budget (default 30000)\n"
    "  --substrate-base URL      authoritative substrate override\n"
    "  --base URL                Agency base (default http://localhost:7070)\n"
    "  --from ID                 dispatch/receipt author (default ground-control)\n"
@@ -201,6 +201,13 @@
   (let [scores (keep :fts-score (:memory-support candidate))]
     (if (seq scores) (apply min scores) Double/POSITIVE_INFINITY)))
 
+(defn- per-call-timeout-ms
+  "Let the outer bounded-recall deadline own the total budget.  Giving an
+  individual substrate call a shorter deadline can misclassify a still-bounded
+  recall as store-unavailable before the outer deadline expires."
+  [recall-timeout-ms]
+  (max 250 recall-timeout-ms))
+
 (defn- recall-now
   [{:keys [problem subjects limit substrate-base recall-timeout-ms] :as opts}
    packet]
@@ -208,7 +215,7 @@
         terrain-map (read-bpm-terrains (default-terrain-readme))
         query-data (recall-query opts packet terrain-map)
         substrate-base (or substrate-base (substrate/configured-url))
-        per-call-timeout (max 250 (min 2000 recall-timeout-ms))
+        per-call-timeout (per-call-timeout-ms recall-timeout-ms)
         {:keys [search projection entry]}
         (substrate-seams substrate-base per-call-timeout)
         batch-recall
