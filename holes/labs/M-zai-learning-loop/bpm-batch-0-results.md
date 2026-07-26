@@ -16,9 +16,9 @@ injection (baseline). Stubs at apm-lean e40ebd9; all solve commits pushed.
 | 7 | 1.7.1 sawtooth Fourier | FAILED | — | 40m, 216 tool calls | **max-tool-rounds** exhausted (overrun WAS awarded at 35m); died mid-formalization, 8 errors, reverted |
 | 8 | 1.8.1 concave majorant | FAILED | — | 2m, 1 tool call | **self-terminated** (job state done): concluded turn after prose exploration, zero file edits |
 | 9 | 1.1.2 sup ≤ ‖f'‖₂ | FAILED | — | 31m, 151 tool calls | **substrate-quota-killed** (HTTP 429 mid-attempt — quota exhaustion began here, not at S10); reverted |
-| 10 | 1.3.2 (nⁿ/n!)^{1/n}→e | NOT-RUN | — | — | zai 5h quota exhausted (HTTP 429; resets 07-26 11:00) |
+| 10 | 1.3.2 (nⁿ/n!)^{1/n}→e | **PARTIAL** | f4b80ef | ~25m (post-reset 07-26) | Stirling machinery in place; 1 sorry on the final (1/n)log(nⁿ/n!)→1 limit; honest compiling partial per pacing note |
 
-**Solved with zero sorries: 6/10 (6/9 attempted).** All six solves verified by
+**Solved with zero sorries: 6/10; 1 compiling partial (1 sorry); batch complete at 10/10 attempted** (session 10 ran post-quota-reset 2026-07-26, dispatch refused pre-attempt on 07-25 so not a retry). All six solves verified by
 ground control: lake exit 0 / 0 sorries / 0 errors re-run independently;
 statement integrity checked against e40ebd9 per session.
 
