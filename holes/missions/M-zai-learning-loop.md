@@ -305,3 +305,43 @@ math/proof-architecture 0.29, series-evaluation-api 0.19,
 construction-before-estimates 0.17 — i.e. the a93A01 recall-empty rows in
 cohort 1 are exactly the rows a v2 lane would have populated. The cohort's
 recall-system column anticipates :v2-semantic.
+
+## Second derivative (Joe + claude-4, 2026-07-26 late)
+
+Cohort 1 closed the loop; this section charters making the LOOP itself
+self-improving. Design constraints from Joe:
+
+- **Proof-in-pudding review (POLICY, effective immediately):** operator
+  eyeballing of drafts is replaced by in-use evaluation — receipts, cascade
+  topology, and use-scoring judge memories. Promotion edges carry the
+  warrant "operator-delegated: in-use evaluation". The operator gate moves
+  from pre-store to post-use; challenges and demotion remain available.
+- **The meta-level has no Lean — but it has Basic System Virtual.** The
+  mechanical witness for meta-claims is the system state itself (store
+  receipts, job ledger, git, sorry counts). What is missing is the CLAIM
+  LANGUAGE: **CLean** = typed claims about loop state checkable against BSV
+  by deterministic scripts (every wake-protocol prose check today was an
+  informal instance). Meta-drafts should carry CLean-checkable claims where
+  possible; vibes-only meta-claims are marked as such.
+- **Points-de-fuite markers for meta-self-talk (the cheat-code):** Claude's
+  ground-control narration is less stereotyped than zai's — so make it
+  deterministic BY CONVENTION at write time (M-points-de-fuite: declare
+  as you create; a grammar, not a model). Starter roadsigns (working
+  language, NOT fixed ontology — operator revises):
+  - `⊸fix` infrastructure defect found→fixed (refs: commit, defect class)
+  - `⊸miss` surfacing/coverage miss (terms, what should have surfaced)
+  - `⊸win` mechanism worked as designed (evidence ref)
+  - `⊸prop` proposed loop change awaiting review (the meta-draft mint)
+  - `⊸meter` measurable meta-observation (value, baseline)
+  Ground control adopts these inline from cohort 2; the scribe meta-lane
+  parses them deterministically (zero re-mining, per the mission's design).
+- **S6: receipt-informed ranking** (close Ψ minimally): per-pattern
+  use/offer statistics as a bounded ranking factor. Receipts exist; this
+  makes them load-bearing.
+- **Curriculum lane**: coverage-map + memory-generated construction targets
+  (first: the local Young inequality — unblocks a95J08 + a96A04 b/c)
+  drive next-cohort selection as a preregistered design change.
+- **Meta-meters in cohort reports**: extraction yield; amendment rate at
+  review (now: challenge/demotion rate post-use, under pudding policy);
+  surfacing precision (used/offered) and post-hoc misses; time-to-first-
+  reuse; coverage growth. Cohort 2 reports them; cohort 3 shows the trend.
