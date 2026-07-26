@@ -82,28 +82,46 @@
     "Locate the library file for the core concept and search its current theorem inventory directly."
     "Search semantic variants and result shapes (`subsequence`, `StrictMono`, `tendsto_ae`) rather than only the guessed theorem name from the stale assessment."
     "Retain the blocker only after the checked dependency revision lacks both the direct theorem and a short conversion into it."]
-   :negative-example
-   "The harvested a92J02 candidates said the proof was blocked by missing convergence-in-measure API/theory and specifically claimed there was no packaged a.e.-subsequence theorem."
-   :observed-correction
-   "A direct search of the installed `ConvergenceInMeasure.lean` found `TendstoInMeasure.exists_seq_tendsto_ae` within two rounds; the completed proof then reduced the main theorem to that API leaf."
-   :cost-signal
-   "The stale label briefly shaped round 6's belief, but verification in rounds 7-8 prevented a needless manual Borel-Cantelli implementation."
+   :negative-examples
+   [{:problem "a92J02"
+     :stale-claim
+     "The harvested candidates said the proof was blocked by missing convergence-in-measure API/theory and specifically claimed there was no packaged a.e.-subsequence theorem."}
+    {:problem "a93A01"
+     :stale-claim
+     "A prior candidate assessment classified the problem as blocked by missing API/theory for the difference-quotient implication."}]
+   :observed-corrections
+   [{:problem "a92J02"
+     :correction
+     "A direct search of the installed `ConvergenceInMeasure.lean` found `TendstoInMeasure.exists_seq_tendsto_ae` within two rounds; the completed proof reduced the main theorem to that API leaf."}
+    {:problem "a93A01"
+     :correction
+     "The runner proceeded from the current problem and library rather than inheriting the blocker, found `totallyBounded_Ioo`, `isUniformEmbedding_subtype_val`, and `TotallyBounded.image`, and completed the allegedly blocked implication with zero sorries."}]
+   :cost-signals
+   ["For a92J02 the stale label briefly shaped round 6's belief, but verification in rounds 7-8 prevented a needless manual Borel-Cantelli implementation."
+    "For a93A01 the runner spent substantial effort finding the exact bounded-image composition, but the final current-library search falsified the blocker rather than confirming it."]
    :scope
    "Repository assessments whose dependency versions or search methods may differ from the current formalization environment."}
   :subjects
   [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :apm-problem, :id "a93A01"}
    #:ref{:type :process-pattern, :id "revalidate-stale-blockers"}]
   :evidence
   {:turn-round-ids
    ["e-1c03e343-f628-441d-bd93-50a25f041995"
     "e-1fb28d44-d532-47dc-be51-d0cd2698fdb0"
     "e-17dc5a24-fc9a-4885-beab-d2115c949ad7"
-    "e-0e685809-98e4-4527-a175-090e936cae01"]
-   :commits ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"]
-   :problems ["a92J02"]}
-  :confidence :single-instance
+    "e-0e685809-98e4-4527-a175-090e936cae01"
+    "e-fa0d8dcd-0f21-4371-af2c-c3c781e5bb62"
+    "e-28372a56-69a5-4b8d-8ccd-7f198c7958a4"
+    "e-6800d90d-68da-445c-bd0a-18633aee05bb"]
+   :commits
+   ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"
+    "035e4d97175ecc2b9dbbeebf72d734326c67b9e3"]
+   :problems ["a92J02" "a93A01"]}
+  :confidence :n-instances
+  :instance-count 2
   :rationale
-  "The stale candidate proof outlines contain the blocked claims, the turn stream records the belief reversal, and the complete artifact falsifies the blocker in the checked Mathlib environment."
+  "Two distinct sessions now show the same arc: a harvested blocker asserted a missing API, the runner checked the installed Mathlib directly, and a zero-sorry artifact falsified the blocker in the current environment."
   :review {:verdict :pending-operator-review}}
 
  {:name "record-subsumed-pattern-use-as-challenge"
@@ -141,4 +159,127 @@
   :confidence :single-instance
   :rationale
   "The evidence distinguishes search, failed receipt, successful selection, and final usefulness judgment, making this a traceable memory-use observation rather than an inference from the final proof alone."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "bound-uniformly-continuous-image-before-controlling-quotients"
+  :level :strategy
+  :status :draft
+  :maturity :one-shot-heuristic
+  :body
+  {:problem-class
+   "A uniformly continuous function on a totally bounded domain (including a bounded interval in Euclidean space) must satisfy a conclusion triggered by a large difference quotient, but the desired threshold must be independent of the chosen points."
+   :failure-of-direct-threshold
+   "Choosing only `N = ε / δ` from uniform continuity is insufficient in the direction from uniform continuity to the quotient condition: the numerator `|f x - f y|` is not bounded by ε before closeness of x and y is known."
+   :proof-shape
+   ["First prove that the uniformly continuous image of the domain is bounded."
+    "Extract `B` with `|f x| ≤ B` on the domain and replace it by a positive bound such as `B' = max B 1`."
+    "Uniform continuity at ε supplies δ > 0."
+    "Choose `N = 2 * B' / δ`; boundedness gives `|f x - f y| ≤ 2 * B'`."
+    "If the difference quotient exceeds N, the numerator bound forces `|x - y| < δ`; uniform continuity then gives `|f x - f y| < ε`."]
+   :why-boundedness-first
+   "The quotient hypothesis relates numerator and denominator but does not independently cap the numerator. Bounding the image closes that gap and makes the threshold uniform over all x and y."
+   :reverse-direction
+   "For the converse quotient-condition-to-uniform-continuity direction, the direct choice `δ = ε / N` is valid and no image bound is needed."
+   :scope
+   "Quotient-trigger conditions over totally bounded domains, with a uniformly continuous real-valued map or another codomain where bounded image controls pairwise distance."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A01"}
+   #:ref{:type :proof-pattern, :id "boundedness-before-quotient-threshold"}]
+  :evidence
+  {:turn-round-ids
+   ["e-bfb25214-35f0-4c1b-87f3-2e53f515a8cb"
+    "e-bb712e64-cadf-42ea-bbff-4bec4c20d12c"
+    "e-0e5ec559-1f0e-48af-a2bc-59521410e5f7"
+    "e-6800d90d-68da-445c-bd0a-18633aee05bb"]
+   :commits ["035e4d97175ecc2b9dbbeebf72d734326c67b9e3"]
+   :problems ["a93A01"]}
+  :confidence :single-instance
+  :rationale
+  "The turn stream records the failed attempt to avoid boundedness, the pivot to the bounded-image architecture, and the final summary; the zero-sorry commit implements the stated threshold."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "uniformly-continuous-image-boundedness-api-chain"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Show that a real-valued function uniformly continuous on the open interval `(0,1)` has bounded image, despite the domain not being compact."
+   :api-chain
+   [{:lemma "`totallyBounded_Ioo 0 1`"
+     :role "establish total boundedness of the interval as a set"}
+    {:lemma "`isUniformEmbedding_subtype_val`"
+     :role "relate total boundedness of the set to total boundedness of the interval subtype"}
+    {:lemma "`totallyBounded_image_iff h_emb.isUniformInducing`"
+     :role "transfer total boundedness through the subtype inclusion and identify the subtype universe"}
+    {:lemma "`TotallyBounded.image`"
+     :role "map the totally bounded subtype universe through the uniformly continuous restriction of f"}
+    {:lemma "`TotallyBounded.isBounded`"
+     :role "turn total boundedness of the image into metric boundedness"}
+    {:lemma "`Metric.isBounded_iff_subset_closedBall 0`"
+     :role "extract a numerical radius B usable by arithmetic proofs"}]
+   :bridge
+   "Use `Metric.uniformContinuousOn_iff` to convert the problem-local ε-δ predicate into `UniformContinuousOn`, then use the restriction `I01.restrict f` as the uniformly continuous map on the subtype."
+   :result-shape
+   "Obtain `∃ B, ∀ x ∈ Set.Ioo 0 1, |f x| ≤ B` after rewriting the restricted image back to `f '' Set.Ioo 0 1`."
+   :boundary
+   "`TotallyBounded.image` expects a uniformly continuous function on a type; the subtype restriction and uniform-embedding transfer are essential rather than cosmetic coercion fixes."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A01"}
+   #:ref{:type :mathlib-lemma, :id "TotallyBounded.image"}
+   #:ref{:type :mathlib-lemma, :id "isUniformEmbedding_subtype_val"}
+   #:ref{:type :mathlib-lemma, :id "totallyBounded_Ioo"}]
+  :evidence
+  {:turn-round-ids
+   ["e-bb712e64-cadf-42ea-bbff-4bec4c20d12c"
+    "e-28372a56-69a5-4b8d-8ccd-7f198c7958a4"
+    "e-0e5ec559-1f0e-48af-a2bc-59521410e5f7"
+    "e-6a0e1ad2-0f94-453e-92b7-c65c1ec9f918"
+    "e-6800d90d-68da-445c-bd0a-18633aee05bb"]
+   :commits ["035e4d97175ecc2b9dbbeebf72d734326c67b9e3"]
+   :problems ["a93A01"]}
+  :confidence :single-instance
+  :rationale
+  "Rounds 78-80 identify the subtype and uniform-embedding composition, round 93 validates the assembled proof, and the final zero-sorry artifact confirms the exact API chain."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "correct-a93a01-direct-uniform-continuity-quotient-argument"
+  :level :challenge
+  :status :draft
+  :body
+  {:challenge-kind :corpus-correction
+   :target
+   {:artifact "problems/a93A01/informal-solution.md"
+    :direction "(a) implies (b)"
+    :challenged-claim
+    "After uniform continuity supplies δ for ε, taking `N = ε / δ` directly proves that a quotient larger than N forces `|f(x)-f(y)| < ε`."}
+   :verdict :mathematically-invalid
+   :error
+   "The quotient inequality alone does not bound its numerator. A large value of `|f(x)-f(y)| / |x-y|` can coexist with `|x-y| ≥ δ` when `|f(x)-f(y)|` is large, so the proposed direct contradiction does not follow. The artifact's later sequence variant has the same gap: `|xₙ-yₙ| < |f(xₙ)-f(yₙ)| / n` does not imply `|xₙ-yₙ| → 0` unless the numerators are uniformly bounded."
+   :correction
+   {:architecture :boundedness-first
+    :steps
+    ["Use uniform continuity on the totally bounded interval `(0,1)` to prove the image is bounded."
+     "Choose a positive B' with `|f x| ≤ B'`, hence `|f x - f y| ≤ 2B'`."
+     "For the δ supplied by uniform continuity at ε, take `N = 2B' / δ`."
+     "A quotient larger than N now forces `|x-y| < δ`, and uniform continuity supplies the desired numerator bound."]}
+   :scope
+   "This challenge is limited to the harvested proof of `(a) implies (b)`. The reverse implication's use of `δ = ε / N`, after condition (b) supplies N, is valid."
+   :witness
+   {:formalization-commit "035e4d97175ecc2b9dbbeebf72d734326c67b9e3"
+    :validation "Lean exit 0 with zero errors and zero sorries"
+    :corrected-theorem "unifCont_implies_diffQuot"}}
+  :subjects
+  [#:ref{:type :apm-artifact,
+         :id "problems/a93A01/informal-solution.md"}]
+  :evidence
+  {:turn-round-ids
+   ["e-c0fbe153-6c1e-45b1-aba9-9c6cd652edc5"
+    "e-bfb25214-35f0-4c1b-87f3-2e53f515a8cb"
+    "e-bb712e64-cadf-42ea-bbff-4bec4c20d12c"
+    "e-6800d90d-68da-445c-bd0a-18633aee05bb"]
+   :commits ["035e4d97175ecc2b9dbbeebf72d734326c67b9e3"]
+   :problems ["a93A01"]}
+  :confidence :single-instance
+  :rationale
+  "The runner read the harvested artifact, independently encountered and diagnosed the missing numerator bound, replaced the argument with a boundedness-first proof, and explicitly recorded the correction in its final summary; the committed Lean proof is a machine-checked witness."
   :review {:verdict :pending-operator-review}}]
