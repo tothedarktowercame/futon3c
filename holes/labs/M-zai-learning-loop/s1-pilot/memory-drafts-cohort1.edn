@@ -1,0 +1,144 @@
+[{:name "bridge-strict-and-closed-convergence-in-measure-thresholds"
+  :level :strategy
+  :status :draft
+  :maturity :one-shot-heuristic
+  :body
+  {:problem-class
+   "A problem states convergence in measure with strict bad sets `{x | ε < |fₙ x - g x|}` and strict measure bounds, while the library API uses closed bad sets `{x | ε ≤ dist (fₙ x) (g x)}` whose measures tend to zero."
+   :proof-shape
+   ["Keep a problem-faithful definition rather than silently replacing `>` by `≤`."
+    "For the problem-to-library direction, unfold `tendstoInMeasure_iff_dist` and `ENNReal.tendsto_atTop_zero`. Given library distance threshold `ε` and target measure bound `b`, handle `b = ⊤` separately; otherwise choose `δ = min ε b.toReal / 2`."
+    "Use `{x | ε ≤ dist (fₙ x) (g x)} ⊆ {x | δ < |fₙ x - g x|}`, measure monotonicity, and `ENNReal.ofReal δ ≤ b`."
+    "Shift the problem witness from `N₀ < n` to the library tail convention `N₀ + 1 ≤ n`."
+    "For the library-to-problem direction, query the library limit at threshold `ε / 2`, include `{x | ε < |fₙ x - g x|}` in `{x | ε / 2 ≤ |fₙ x - g x|}`, and finish with `ofReal (ε / 2) < ofReal ε`."]
+   :preconditions
+   ["real-valued functions, so `Real.dist_eq` relates distance and absolute difference"
+    "the library convergence predicate exposes closed-threshold bad sets"
+    "measure values are in `ENNReal`, including a possible `⊤` target during the limit proof"]
+   :boundary
+   "The halving/slack argument transfers the convergence predicate; it does not itself construct the almost-everywhere convergent subsequence."
+   :key-api
+   ["tendstoInMeasure_iff_dist"
+    "ENNReal.tendsto_atTop_zero"
+    "ENNReal.toReal_pos"
+    "ENNReal.ofReal_le_iff_le_toReal"
+    "measure_mono"]}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :proof-pattern, :id "threshold-slack-bridge"}]
+  :evidence
+  {:turn-round-ids
+   ["e-48eeec58-b6a9-499e-9c32-ffac099ba25f"
+    "e-1e2d9c42-4c5a-42b6-97ae-cd9f8893b3c9"
+    "e-0e685809-98e4-4527-a175-090e936cae01"]
+   :commits ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"]
+   :problems ["a92J02"]}
+  :confidence :single-instance
+  :rationale
+  "The runner identified the boundary mismatch before writing, refined the slack construction through compilation, and the zero-sorry commit contains both directions of the bridge."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "tendsto-in-measure-ae-subsequence-api"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Extract a strictly monotone subsequence converging almost everywhere from a sequence converging in measure."
+   :lemma "`MeasureTheory.TendstoInMeasure.exists_seq_tendsto_ae`"
+   :location
+   "`Mathlib.MeasureTheory.Function.ConvergenceInMeasure`, in the `MeasureTheory` namespace"
+   :statement-shape
+   "From `TendstoInMeasure μ f atTop g`, obtain `∃ ns : ℕ → ℕ, StrictMono ns ∧ ∀ᵐ x ∂μ, Tendsto (fun i => f (ns i) x) atTop (𝓝 (g x))`."
+   :use
+   "First bridge the problem's convergence-in-measure definition to Mathlib's `TendstoInMeasure`; then invoke `.exists_seq_tendsto_ae` directly."
+   :implementation-note
+   "Mathlib's theorem already packages the fast `2⁻ᵏ` subsequence and first Borel-Cantelli argument, so callers should not rebuild that machinery unless their hypotheses cannot be converted to `TendstoInMeasure`."
+   :boundary
+   "The lemma consumes Mathlib's predicate, not an arbitrary problem-local strict-threshold definition; that conversion remains a separate obligation."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :mathlib-lemma,
+         :id "MeasureTheory.TendstoInMeasure.exists_seq_tendsto_ae"}]
+  :evidence
+  {:turn-round-ids
+   ["e-1fb28d44-d532-47dc-be51-d0cd2698fdb0"
+    "e-17dc5a24-fc9a-4885-beab-d2115c949ad7"
+    "e-0e685809-98e4-4527-a175-090e936cae01"]
+   :commits ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"]
+   :problems ["a92J02"]}
+  :confidence :single-instance
+  :rationale
+  "Rounds 7-8 show direct discovery and inspection of the exact theorem; the committed main theorem is a one-line application after the bridge and validates with zero sorries."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "verify-stale-blocked-labels-against-current-library"
+  :level :process
+  :status :draft
+  :body
+  {:trigger
+   "A prior candidate or assessment labels a formalization blocked because an API or packaged theorem is allegedly absent."
+   :rule
+   ["Treat the blocked label as dated evidence, not as a current environment fact."
+    "Locate the library file for the core concept and search its current theorem inventory directly."
+    "Search semantic variants and result shapes (`subsequence`, `StrictMono`, `tendsto_ae`) rather than only the guessed theorem name from the stale assessment."
+    "Retain the blocker only after the checked dependency revision lacks both the direct theorem and a short conversion into it."]
+   :negative-example
+   "The harvested a92J02 candidates said the proof was blocked by missing convergence-in-measure API/theory and specifically claimed there was no packaged a.e.-subsequence theorem."
+   :observed-correction
+   "A direct search of the installed `ConvergenceInMeasure.lean` found `TendstoInMeasure.exists_seq_tendsto_ae` within two rounds; the completed proof then reduced the main theorem to that API leaf."
+   :cost-signal
+   "The stale label briefly shaped round 6's belief, but verification in rounds 7-8 prevented a needless manual Borel-Cantelli implementation."
+   :scope
+   "Repository assessments whose dependency versions or search methods may differ from the current formalization environment."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :process-pattern, :id "revalidate-stale-blockers"}]
+  :evidence
+  {:turn-round-ids
+   ["e-1c03e343-f628-441d-bd93-50a25f041995"
+    "e-1fb28d44-d532-47dc-be51-d0cd2698fdb0"
+    "e-17dc5a24-fc9a-4885-beab-d2115c949ad7"
+    "e-0e685809-98e4-4527-a175-090e936cae01"]
+   :commits ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"]
+   :problems ["a92J02"]}
+  :confidence :single-instance
+  :rationale
+  "The stale candidate proof outlines contain the blocked claims, the turn stream records the belief reversal, and the complete artifact falsifies the blocker in the checked Mathlib environment."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "record-subsumed-pattern-use-as-challenge"
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :pattern-use-challenge
+   :pattern-id "math-informal/pass-to-a-subsequence"
+   :attachment-state :no-reviewed-memory-attachments
+   :use-texture
+   {:surfaced "The runner's own `psr_search` surfaced the pattern while it was planning the convergence-in-measure proof."
+    :selected "After one malformed selection receipt, the runner successfully recorded a PSR selection with a problem-specific rationale."
+    :contribution "The pattern correctly named the high-level move, but supplied no additional proof step beyond the already-discovered Mathlib theorem."
+    :runner-judgment "Conceptually relevant and subsumed by `TendstoInMeasure.exists_seq_tendsto_ae`."}
+   :challenge
+   {:claim
+    "For this problem class, the unattached pattern is too abstract to improve the proof once the native API leaf is known."
+    :not-a-retraction
+    "The pattern's mathematical content is sound; the observation challenges its marginal operational value and attachment state, not the pass-to-a-subsequence technique itself."
+    :review-question
+    "Should this pattern acquire an attachment that routes directly to `TendstoInMeasure.exists_seq_tendsto_ae`, or remain a conceptual label whose advice is considered subsumed when that lemma is available?"}
+   :process-rule
+   "Record consulted-but-subsumed patterns as use evidence with a scoped challenge; do not inflate them into successful proof dependencies, and do not discard the consultation as if recall never occurred."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a92J02"}
+   #:ref{:type :proof-pattern, :id "math-informal/pass-to-a-subsequence"}]
+  :evidence
+  {:turn-round-ids
+   ["e-48eeec58-b6a9-499e-9c32-ffac099ba25f"
+    "e-b93401a8-c321-4c8d-ab37-d61271c62fbe"
+    "e-d6582ea7-a490-4ea8-a03d-ca1a15e55428"
+    "e-0e685809-98e4-4527-a175-090e936cae01"]
+   :commits ["8b58d463d6b77c53e38fad126c1fe400f3c428fe"]
+   :problems ["a92J02"]}
+  :confidence :single-instance
+  :rationale
+  "The evidence distinguishes search, failed receipt, successful selection, and final usefulness judgment, making this a traceable memory-use observation rather than an inference from the final proof alone."
+  :review {:verdict :pending-operator-review}}]
