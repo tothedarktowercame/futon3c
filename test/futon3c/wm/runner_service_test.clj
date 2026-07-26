@@ -49,7 +49,7 @@
     (case sym
       futon2.aif.full-loop-runner/config identity
       futon2.aif.full-loop-runner/run-opportunity! run!
-      futon3c.peripheral.live-wm-selection/current-selection select
+      futon3c.peripheral.live-wm-selection/validated-selection select
       futon3c.wm.scheduler/ensure-war-machine-agent! (fn [] nil)
       nil)))
 

@@ -6486,34 +6486,39 @@
    cache-gated selector for the standalone Futon2 click runner."
   [request]
   (let [payload (parse-json-map (read-body request))
-        ranking (:scheduler-habit-ranking payload)
-        phase1-4-allow-list
-        #{"M-aif-policy-conditioned-eig"
-          "M-shared-memory-control-build-test"
-          "M-wm-aif-policy-grain-compliance"}]
-    (if-not (and payload
-                 (vector? ranking)
-                 (seq ranking)
-                 (<= (count ranking) 3)
-                 (every? nonblank-string? ranking)
-                 (every? phase1-4-allow-list ranking))
+        ranking (:scheduler-habit-ranking payload)]
+    (if-not payload
       (json-response
        400
        {:ok false
         :err "invalid-strategic-selection-request"
         :message "scheduler-habit-ranking must be a non-empty vector of mission ids"})
       (try
+        ;; Validation authority lives with the selector
+        ;; (live-wm-selection/validated-selection) so the in-process
+        ;; runner-service caller (M-omni-wm-runner) and this endpoint
+        ;; refuse identically — the allow-list is the bounded-autonomy
+        ;; boundary (919d975), not a transport nicety.
         (if-let [select
                  (try
                    (requiring-resolve
-                    'futon3c.peripheral.live-wm-selection/current-selection)
+                    'futon3c.peripheral.live-wm-selection/validated-selection)
                    (catch Throwable _ nil))]
-          (json-response
-           200
-           {:ok true
-            :selection
-            (select {:scheduler-habit-ranking ranking
-                     :trace-id (:trace-id payload)})})
+          (try
+            (json-response
+             200
+             {:ok true
+              :selection
+              (select {:scheduler-habit-ranking ranking
+                       :trace-id (:trace-id payload)})})
+            (catch clojure.lang.ExceptionInfo e
+              (if (= :invalid-strategic-selection-request (:err (ex-data e)))
+                (json-response
+                 400
+                 {:ok false
+                  :err "invalid-strategic-selection-request"
+                  :message "scheduler-habit-ranking must be a non-empty vector of mission ids"})
+                (throw e))))
           (json-response
            503
            {:ok false :err "strategic-selector-unavailable"}))

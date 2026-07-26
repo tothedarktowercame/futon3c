@@ -352,3 +352,32 @@
      (enforce-serving-cache-gate
       #(run-verification ctx live-input)
       max-endpoint-ms))))
+
+(def phase1-4-allow-list
+  "Bounded-autonomy authorization (919d975): the only mission ids the
+  reason-bearing selector may be asked to rank, regardless of transport.
+  Enforcement lived inline in the HTTP endpoint until M-omni-wm-runner
+  added an in-process caller; the authority now lives here so every
+  transport refuses identically."
+  #{"M-aif-policy-conditioned-eig"
+    "M-shared-memory-control-build-test"
+    "M-wm-aif-policy-grain-compliance"})
+
+(defn validated-selection
+  "Validate REQUEST exactly as the strategic-selection endpoint always has,
+  then run current-selection. Throws ex-info with
+  {:err :invalid-strategic-selection-request} on violation so the HTTP 400
+  and the in-process rejection are the same decision."
+  [{:keys [scheduler-habit-ranking] :as request}]
+  (when-not (and (vector? scheduler-habit-ranking)
+                 (seq scheduler-habit-ranking)
+                 (<= (count scheduler-habit-ranking) 3)
+                 (every? #(and (string? %)
+                               (pos? (count (.trim ^String %))))
+                         scheduler-habit-ranking)
+                 (every? phase1-4-allow-list scheduler-habit-ranking))
+    (throw (ex-info
+            "scheduler-habit-ranking must be a non-empty vector of authorized mission ids"
+            {:err :invalid-strategic-selection-request
+             :ranking scheduler-habit-ranking})))
+  (current-selection request))

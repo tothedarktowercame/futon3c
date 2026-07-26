@@ -97,9 +97,12 @@
         (append-phase! phase-log event)))))
 
 (defn- in-process-selection
+  ;; validated-selection, not current-selection: the phase1-4 allow-list is
+  ;; the bounded-autonomy boundary (919d975); the in-process path must refuse
+  ;; exactly what the HTTP bridge refuses (integration finding, M-omni-wm-runner).
   [request]
   (let [select (*resolve-var*
-                'futon3c.peripheral.live-wm-selection/current-selection)]
+                'futon3c.peripheral.live-wm-selection/validated-selection)]
     {:ok true
      :selection (select request)}))
 
