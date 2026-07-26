@@ -282,4 +282,169 @@
   :confidence :single-instance
   :rationale
   "The runner read the harvested artifact, independently encountered and diagnosed the missing numerator bound, replaced the argument with a boundedness-first proof, and explicitly recorded the correction in its final summary; the committed Lean proof is a machine-checked witness."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "kadec-klee-via-norm-sub-square-and-sqrt"
+  :level :strategy
+  :status :draft
+  :maturity :one-shot-heuristic
+  :body
+  {:problem-class
+   "Prove strong convergence in a real Hilbert space from weak convergence together with convergence of norms."
+   :proof-shape
+   ["Specialize weak convergence at the proposed limit x to obtain `⟪h n, x⟫_ℝ → ⟪x, x⟫_ℝ = ‖x‖²`."
+    "Use norm convergence and `Tendsto.pow` to obtain `‖h n‖² → ‖x‖²`."
+    "Rewrite `‖h n - x‖²` with the Hilbert-space norm-subtraction identity."
+    "Limit arithmetic makes the rewritten expression converge to `‖x‖² - 2‖x‖² + ‖x‖² = 0`."
+    "Compose with continuity of the real square root and rewrite `sqrt (‖h n - x‖²) = ‖h n - x‖` using nonnegativity of the norm."]
+   :why-this-shape
+   "Weak convergence controls the mixed inner-product term, while norm convergence controls the remaining quadratic term. The squared norm is therefore the common expression on which both hypotheses act directly."
+   :key-api
+   ["norm_sub_sq_real"
+    "real_inner_self_eq_norm_sq"
+    "Tendsto.pow"
+    "Real.continuous_sqrt"
+    "Real.sqrt_sq"]
+   :boundary
+   "This proves the real-Hilbert-space Kadec-Klee implication. It does not by itself establish the separate weak lower-semicontinuity liminf statement."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :proof-pattern, :id "kadec-klee-norm-square"}]
+  :evidence
+  {:turn-round-ids
+   ["e-0c1f164a-ce4a-4b09-8c52-8f0495b27dfa"
+    "e-9ace4878-0de4-46b4-b675-f3e7b5b5f8e1"
+    "e-167d52aa-1c14-4b8c-a1b7-57ea25331c7b"
+    "e-14a11c0a-aa86-4b46-aa8e-1da080d7688b"
+    "e-ded3507e-b861-4afe-ae7c-8c112d4f63b2"]
+   :commits ["a72683ad95a14ebc9875e66da317f8c524a69eb1"]
+   :problems ["a93A03"]}
+  :confidence :single-instance
+  :rationale
+  "The runner identified the quadratic architecture in round 4, resolved the square-root transport through rounds 52-64, and committed part (a) with zero sorries."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "norm-sub-square-to-norm-limit-api-chain"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Turn weak and norm convergence into convergence of distances in a real inner-product space, including the final conversion from squared distance to distance."
+   :api-chain
+   [{:lemma "`norm_sub_sq_real`"
+     :role
+     "Rewrite `‖a-b‖²` exactly as `‖a‖² - 2 * ⟪a,b⟫_ℝ + ‖b‖²`, avoiding a manual inner-product expansion."}
+    {:lemma "`real_inner_self_eq_norm_sq`"
+     :role
+     "Normalize the weak-limit target `⟪x,x⟫_ℝ` to `‖x‖²`."}
+    {:lemma "`Real.continuous_sqrt`"
+     :role
+     "Compose `‖h n-x‖² → 0` with square-root continuity."}
+    {:lemma "`Real.sqrt_sq`"
+     :role
+     "Rewrite `sqrt (‖h n-x‖²)` to `‖h n-x‖`, using `norm_nonneg`."}]
+   :use
+   "Transport the limit across `norm_sub_sq_real` with `Tendsto.congr`; after limit arithmetic reaches zero, apply `Real.continuous_sqrt.tendsto 0`, compose, rewrite `Real.sqrt_zero`, and use `Real.sqrt_sq (norm_nonneg _)` pointwise."
+   :boundary
+   "`Real.continuous_sqrt` is the real-valued final bridge. Complex inner-product proofs still use a real norm but need the appropriate real-part identity for the mixed term."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :mathlib-lemma, :id "norm_sub_sq_real"}
+   #:ref{:type :mathlib-lemma, :id "Real.continuous_sqrt"}]
+  :evidence
+  {:turn-round-ids
+   ["e-0c1f164a-ce4a-4b09-8c52-8f0495b27dfa"
+    "e-9ace4878-0de4-46b4-b675-f3e7b5b5f8e1"
+    "e-167d52aa-1c14-4b8c-a1b7-57ea25331c7b"
+    "e-ded3507e-b861-4afe-ae7c-8c112d4f63b2"]
+   :commits ["a72683ad95a14ebc9875e66da317f8c524a69eb1"]
+   :problems ["a93A03"]}
+  :confidence :single-instance
+  :rationale
+  "The exact identity was discovered in round 4; the runner then verified the square-root API and the committed theorem uses both leaves in a compiling, sorry-free proof."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "liminf-eventual-lower-bound-api-side-conditions"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Conclude `c ≤ liminf u atTop` after proving that every `a < c` is eventually a lower bound for a real-valued sequence u."
+   :gap-kind :side-condition-and-proof-dependency
+   :attempted-apis
+   [{:lemma "`le_liminf_of_le`"
+     :observed-requirement
+     "`IsCoboundedUnder (· ≥ ·) atTop u`; it was not derivable merely from the eventual-lower-bound helper in the attempted proof."}
+    {:lemma "`liminf_eq` followed by `le_csSup`"
+     :observed-requirement
+     "`BddAbove` for the set of eventual lower bounds; trying to obtain it from the contradiction hypothesis required the same supremum fact and became circular."}]
+   :established-leaf
+   "`eventually_le_norm_of_weak` successfully proves `∀ a < ‖x‖, ∀ᶠ n, a ≤ ‖h n‖`; the remaining sorry begins only at the order/filter packaging step."
+   :dependency-frontier
+   "Establish an upper bound on the norms of the weakly convergent sequence—mathematically available from boundedness of weakly convergent sequences—or choose an extended-order liminf formulation whose infinity cases are explicit. Then revisit the appropriate liminf lemma with its side condition discharged."
+   :negative-rule
+   "Do not try to manufacture `BddAbove` from `sSup S < c` using `le_csSup`: `le_csSup` already requires `BddAbove S`, so that route assumes the missing obligation."
+   :classification
+   "This is not evidence that Mathlib lacks liminf lemmas. The APIs were present and exposed a dependency absent from the proof state; it therefore should not be merged into the repeated-missing-theorem/Young instance."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :mathlib-lemma, :id "le_liminf_of_le"}
+   #:ref{:type :mathlib-lemma, :id "liminf_eq"}
+   #:ref{:type :formalization-bottleneck,
+         :id "liminf-coboundedness-side-condition"}]
+  :evidence
+  {:turn-round-ids
+   ["e-08eacba4-a1ae-442c-84b8-964d838aaedf"
+    "e-326e709a-64f2-4580-b884-57bab24253c7"
+    "e-8435a45b-9ed5-4bf4-894c-97a4e0458f07"
+    "e-cca77d7b-bbec-4a89-b359-f81c9bd60656"
+    "e-28a54c6e-8dd7-401b-8764-d66ea190b81a"
+    "e-ded3507e-b861-4afe-ae7c-8c112d4f63b2"]
+   :commits ["a72683ad95a14ebc9875e66da317f8c524a69eb1"]
+   :problems ["a93A03"]}
+  :confidence :single-instance
+  :rationale
+  "The trace repeatedly reaches the same explicit side conditions through two API routes, records the circularity, and the compiling partial commit isolates exactly one sorry at that frontier."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "use-informal-proof-architecture-with-leaf-level-verification"
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :partial-trust-corpus-use
+   :trigger
+   "A harvested informal solution contains a mathematically useful proof architecture plus speculative or sorry-filled Lean code."
+   :rule
+   ["Retain the high-level mathematical decomposition when it correctly identifies which hypotheses control which terms."
+    "Independently verify every proposed Mathlib leaf before adopting the formal skeleton."
+    "Replace manual or sorry-heavy expansions with a native identity when the library packages the entire algebraic step."
+    "Report the artifact as a template dependency, not as either a fully trusted proof or a rejected source."]
+   :observed-use
+   {:artifact "problems/a93A03/informal-solution.md"
+    :retained
+    "The architecture `weak convergence at x + convergence of norms + expansion of ‖hₙ-x‖²`."
+    :replaced
+    "The suggested sorry-heavy norm expansion and low-level inner-product manipulation."
+    :replacement
+    "`norm_sub_sq_real`, followed by ordinary limit arithmetic and `Real.continuous_sqrt`."
+    :outcome
+    "Part (a) compiles with zero sorries; the separate part (b) liminf packaging remains partial."}
+   :scope
+   "Harvested mathematical solutions that mix sound prose-level structure with unverified theorem names or incomplete Lean sketches."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :apm-artifact,
+         :id "problems/a93A03/informal-solution.md"}
+   #:ref{:type :process-pattern, :id "partial-trust-corpus-use"}]
+  :evidence
+  {:turn-round-ids
+   ["e-74b13e0c-b6bf-465b-923a-1fb44674666f"
+    "e-0c1f164a-ce4a-4b09-8c52-8f0495b27dfa"
+    "e-14a11c0a-aa86-4b46-aa8e-1da080d7688b"
+    "e-ded3507e-b861-4afe-ae7c-8c112d4f63b2"]
+   :commits ["a72683ad95a14ebc9875e66da317f8c524a69eb1"]
+   :problems ["a93A03"]}
+  :confidence :single-instance
+  :rationale
+  "The session begins by reading the informal solution, independently locates the exact identity, completes the retained architecture, and explicitly characterizes the source as a useful template whose formal expansion was replaced."
   :review {:verdict :pending-operator-review}}]
