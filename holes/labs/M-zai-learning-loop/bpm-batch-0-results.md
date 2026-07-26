@@ -13,9 +13,9 @@ injection (baseline). Stubs at apm-lean e40ebd9; all solve commits pushed.
 | 4 | 1.4.1 f'=0 ⟹ const | **SOLVED** | e2f2f12 | ~7m | Cauchy MVT |
 | 5 | 1.5.1 ∫f=0 ⟹ f≡0 | **SOLVED** | 9ab89c4 | ~3m | Mathlib integral_pos |
 | 6 | 1.6.2 ptwise lim Lipschitz | **SOLVED** | fd76fed | ~7m | Lipschitz transfer |
-| 7 | 1.7.1 sawtooth Fourier | FAILED | — | ~42m cap | died mid-formalization, 8 errors, dirty tree reverted |
-| 8 | 1.8.1 concave majorant | FAILED | — | ~3m | died in prose math exploration, zero file edits |
-| 9 | 1.1.2 sup ≤ ‖f'‖₂ | FAILED | — | ~31m cap | died mid-formalization (FTC+Cauchy–Schwarz API), reverted |
+| 7 | 1.7.1 sawtooth Fourier | FAILED | — | 40m, 216 tool calls | **max-tool-rounds** exhausted (overrun WAS awarded at 35m); died mid-formalization, 8 errors, reverted |
+| 8 | 1.8.1 concave majorant | FAILED | — | 2m, 1 tool call | **self-terminated** (job state done): concluded turn after prose exploration, zero file edits |
+| 9 | 1.1.2 sup ≤ ‖f'‖₂ | FAILED | — | 31m, 151 tool calls | **substrate-quota-killed** (HTTP 429 mid-attempt — quota exhaustion began here, not at S10); reverted |
 | 10 | 1.3.2 (nⁿ/n!)^{1/n}→e | NOT-RUN | — | — | zai 5h quota exhausted (HTTP 429; resets 07-26 11:00) |
 
 **Solved with zero sorries: 6/10 (6/9 attempted).** All six solves verified by
@@ -29,14 +29,21 @@ memory_record calls in any session. Held-out discipline held.
 
 ## Findings
 
-1. **The binding constraint is time-under-cap, not mathematical reach.** No
-   session failed on a wrong proof. Everything solvable inside ~25 minutes
-   was solved; all failures are cap/limit deaths on problems needing heavy
-   Mathlib API navigation (Fourier integrals; FTC+Cauchy–Schwarz chains) or
-   subtle construction search (least concave majorant). This is the best
-   possible shape for the learning-loop experiment: accumulated memory (API
-   maps, "check Mathlib for X" rules, construction templates) attacks
-   exactly this constraint, measurably (turns-to-green, cap-survival).
+1. **CORRECTED (2026-07-26, from job records): the three failures have three
+   different mechanisms, and only two are capability-relevant.**
+   - 1.7.1: **round-budget exhaustion** (max-tool-rounds at 216 calls, 40m).
+     The 30-min supervised overrun mechanism WORKED (extension logged at
+     35m); wall-clock was not the binding constraint — tool rounds were.
+   - 1.8.1: **self-termination** — the model concluded its turn after 2
+     minutes of prose construction-search without touching the file. A
+     turn-management failure, the organic form of "explore in Lean, not in
+     prose."
+   - 1.1.2: **substrate kill** (HTTP 429 quota at 31m mid-attempt) —
+     confounded row, not a capability result.
+   No session failed on wrong mathematics. Memory accretion attacks the two
+   real constraints directly: API-navigation rules reduce tool rounds
+   (1.7.1-class), and process rules ("edit early, explore in Lean") attack
+   self-termination (1.8.1-class). Both mechanically measurable.
 2. **Dispatch-prompt evolution during the batch** (recorded, not hidden):
    sessions 8–10 added a pacing note (commit honest partial by ~20m; edit
    Lean early). It did not rescue sessions 8–9. Future batches should carry
