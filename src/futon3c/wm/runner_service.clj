@@ -1,0 +1,197 @@
+(ns futon3c.wm.runner-service
+  "Single-flight, in-process service for one War Machine durée click.
+
+   The full-loop implementation remains in Futon2. This service owns only
+   serving-JVM lifecycle, direct apparatus visibility, and the HTTP-facing
+   status projection."
+  (:require [clojure.java.io :as io]
+            [futon3c.agency.registry :as reg])
+  (:import [java.time Instant]
+           [java.util UUID]))
+
+(def war-machine-agent-id "war-machine")
+
+(def initial-status
+  {:running? false
+   :click-id nil
+   :phase nil
+   :attempt-id nil
+   :started-at nil
+   :last-result nil})
+
+(defonce !status
+  (atom initial-status))
+
+(def ^:dynamic *resolve-var*
+  "Resolver seam for tests. Production always delegates to requiring-resolve."
+  requiring-resolve)
+
+(defn status
+  "Return the current click service status."
+  []
+  @!status)
+
+(defn- ensure-apparatus!
+  [agent-id]
+  (or
+   (reg/get-agent agent-id)
+   (when (= war-machine-agent-id agent-id)
+     (when-let [ensure! (*resolve-var*
+                         'futon3c.wm.scheduler/ensure-war-machine-agent!)]
+       (ensure!)))))
+
+(defn- phase-activity
+  [event click-id]
+  (str (name (or (:phase event) :unknown))
+       " "
+       (or (:attempt-id event) click-id)))
+
+(defn- report-phase!
+  [agent-id click-id event]
+  (ensure-apparatus! agent-id)
+  (let [activity (phase-activity event click-id)]
+    (reg/update-agent!
+     agent-id
+     :agent/status :invoking
+     :agent/invoke-activity activity
+     :agent/invoke-started-at
+     (or (:agent/invoke-started-at (reg/get-agent agent-id))
+         (Instant/now)))
+    (swap! !status
+           (fn [current]
+             (cond-> (assoc current :phase (:phase event))
+               (:attempt-id event) (assoc :attempt-id (:attempt-id event)))))))
+
+(defn- report-idle!
+  [agent-id]
+  ;; Clear the runner's legacy external-invoke source as well as the direct
+  ;; fields. The runner may keep emitting those harmless duplicate reports;
+  ;; the service's close boundary is authoritative for in-process lifecycle.
+  (reg/mark-agent-idle! agent-id)
+  (reg/clear-external-invoke! agent-id "wm-full-loop"))
+
+(defn- configured-runner-opts
+  [opts]
+  (try
+    (if-let [config-fn (*resolve-var*
+                        'futon2.aif.full-loop-runner/config)]
+      (config-fn opts)
+      opts)
+    (catch Throwable _
+      opts)))
+
+(defn- append-phase!
+  [phase-log event]
+  (when phase-log
+    (io/make-parents phase-log)
+    (spit phase-log (str (pr-str event) "\n") :append true)))
+
+(defn- phase-sink
+  [agent-id click-id configured]
+  (let [delegate (:phase-log-fn configured)
+        phase-log (:phase-log configured)]
+    (fn [event]
+      (report-phase! agent-id click-id event)
+      (if delegate
+        (delegate event)
+        (append-phase! phase-log event)))))
+
+(defn- in-process-selection
+  [request]
+  (let [select (*resolve-var*
+                'futon3c.peripheral.live-wm-selection/current-selection)]
+    {:ok true
+     :selection (select request)}))
+
+(defn- result-summary
+  [result fallback-attempt-id]
+  {:attempt-id (or (:attempt-id result) fallback-attempt-id)
+   :outcome (or (:outcome result) :unknown)})
+
+(defn- close-click!
+  [agent-id click-id result]
+  (let [fallback-attempt-id (:attempt-id @!status)
+        summary (result-summary result fallback-attempt-id)]
+    (report-idle! agent-id)
+    (swap! !status
+           (fn [current]
+             (if (= click-id (:click-id current))
+               (assoc current
+                      :running? false
+                      :phase nil
+                      :attempt-id (:attempt-id summary)
+                      :last-result summary)
+               current)))
+    (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
+    (flush)))
+
+(defn- fail-click!
+  [agent-id click-id throwable]
+  (let [attempt-id (:attempt-id @!status)
+        summary {:attempt-id attempt-id
+                 :outcome :service-failed
+                 :error (or (.getMessage ^Throwable throwable)
+                            (.getName (class throwable)))}]
+    (report-idle! agent-id)
+    (swap! !status
+           (fn [current]
+             (if (= click-id (:click-id current))
+               (assoc current
+                      :running? false
+                      :phase nil
+                      :last-result summary)
+               current)))
+    (println "[wm-click]" (pr-str (assoc summary :click-id click-id)))
+    (flush)))
+
+(defn- run-click!
+  [click-id opts]
+  (let [agent-id (or (:wm-agent-id opts) war-machine-agent-id)]
+    (try
+      (let [configured (configured-runner-opts opts)
+            run! (*resolve-var*
+                  'futon2.aif.full-loop-runner/run-opportunity!)
+            runner-opts
+            (-> configured
+                (dissoc :wm-agent-id)
+                (assoc :phase-log-fn
+                       (phase-sink agent-id click-id configured)
+                       :strategic-selection-invoke-fn
+                       in-process-selection))]
+        (close-click! agent-id click-id (run! runner-opts)))
+      (catch Throwable throwable
+        (fail-click! agent-id click-id throwable)))))
+
+(defn click!
+  "Start one in-process duration click.
+
+   Returns {:click-id ... :started-at ...} when accepted. While a click is
+   running, returns {:rejected :already-running :click-id ...} without
+   starting another thread."
+  [opts]
+  (loop []
+    (let [current @!status]
+      (if (:running? current)
+        {:rejected :already-running
+         :click-id (:click-id current)}
+        (let [click-id (str "wm-click-" (UUID/randomUUID))
+              started-at (str (Instant/now))
+              next-status (assoc current
+                                 :running? true
+                                 :click-id click-id
+                                 :phase :starting
+                                 :attempt-id nil
+                                 :started-at started-at)]
+          (if-not (compare-and-set! !status current next-status)
+            (recur)
+            (let [runnable (bound-fn [] (run-click! click-id opts))
+                  thread (Thread. ^Runnable runnable "wm-runner-click")]
+              (.setDaemon thread true)
+              (try
+                (.start thread)
+                {:click-id click-id :started-at started-at}
+                (catch Throwable throwable
+                  (fail-click! (or (:wm-agent-id opts)
+                                   war-machine-agent-id)
+                               click-id throwable)
+                  (throw throwable))))))))))
