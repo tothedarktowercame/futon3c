@@ -208,7 +208,8 @@
 (defn build-exec-args
   "Build argv for codex execution.
    When SESSION-ID is present, uses `codex ... exec resume <sid> -`."
-  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort session-id]
+  [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort session-id
+           mcp-server]
     :or {codex-bin "codex"
          sandbox "danger-full-access"
          approval-policy "never"}}]
@@ -219,6 +220,11 @@
                            "--skip-git-repo-check"
                            "--sandbox" sandbox
                            "-c" (format "approval_policy=\"%s\"" approval-policy)]
+                     mcp-server
+                     (into ["-c" (str "mcp_servers.futon_memory.command="
+                                      (pr-str (:command mcp-server)))
+                            "-c" (str "mcp_servers.futon_memory.args="
+                                      (json/generate-string (:args mcp-server)))])
                      (and (string? model) (not (str/blank? model)))
                      (into ["--model" model])
                      (and (string? reasoning-effort) (not (str/blank? reasoning-effort)))
@@ -448,6 +454,7 @@
    - :cwd (optional working directory)
    - :on-event (optional fn called with each parsed stream event)"
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
+           mcp-server
            on-event on-runtime-event on-process-started on-process-exit]
     :or {codex-bin "codex"
          sandbox "danger-full-access"
@@ -463,8 +470,9 @@
                                   :model model
                                   :sandbox sandbox
                                   :approval-policy approval-policy
-                                      :reasoning-effort reasoning-effort
-                                      :session-id session-id})
+                                  :reasoning-effort reasoning-effort
+                                  :mcp-server mcp-server
+                                  :session-id session-id})
                 {:keys [exit timed-out? text error-text stderr raw-output execution]
                  :as stream-result}
                 (run-codex-stream! cmd prompt-str {:timeout-ms timeout-ms
@@ -495,8 +503,9 @@
                                        :model model
                                        :sandbox sandbox
                                        :approval-policy approval-policy
-                                           :reasoning-effort reasoning-effort
-                                           :session-id nil})
+                                       :reasoning-effort reasoning-effort
+                                       :mcp-server mcp-server
+                                       :session-id nil})
                     r2 (run-codex-stream! cmd2 prompt-str {:timeout-ms timeout-ms
                                                            :cwd cwd
                                                            :on-event on-event

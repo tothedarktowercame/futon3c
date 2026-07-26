@@ -3,6 +3,24 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.agents.codex-cli :as codex-cli]))
 
+(deftest memory-mcp-is-added-only-when-provisioned
+  (let [base {:codex-bin "codex"
+              :sandbox "danger-full-access"
+              :approval-policy "never"}
+        plain (codex-cli/build-exec-args base)
+        provisioned
+        (codex-cli/build-exec-args
+         (assoc base :mcp-server
+                {:command "/tmp/memory-mcp"
+                 :args ["codex-2" "/tmp/sid" "mathematics"
+                        "http://127.0.0.1:7073"]}))]
+    (is (not-any? #(str/includes? % "mcp_servers.futon_memory") plain))
+    (is (some #(= "mcp_servers.futon_memory.command=\"/tmp/memory-mcp\"" %)
+              provisioned))
+    (is (some #(str/includes?
+                % "[\"codex-2\",\"/tmp/sid\",\"mathematics\"")
+              provisioned))))
+
 (deftest parse-output-prefers-agent-message-and-thread-id
   (testing "thread.started + item.completed agent_message"
     (let [raw (str "{\"type\":\"thread.started\",\"thread_id\":\"tid-123\"}\n"

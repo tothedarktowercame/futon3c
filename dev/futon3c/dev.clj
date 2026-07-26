@@ -4215,10 +4215,25 @@ RESPOND WITH ONLY:
      :session-file       — path to session ID file for persistence (optional)
      :session-id-atom    — atom holding current session ID (optional)"
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
-            session-file session-id-atom]
+            session-file session-id-atom memory-domain]
     :or {codex-bin "codex" sandbox "danger-full-access"
          approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
+        provisioned-domain
+        (or memory-domain
+            ((requiring-resolve 'futon3c.agents.memory-provisioning/domain-for)
+             aid-val))
+        memory-tool?
+        ((requiring-resolve 'futon3c.agents.memory-provisioning/tool-enabled?)
+         aid-val :memory-record)
+        mcp-server
+        (when memory-tool?
+          {:command "/home/joe/code/futon3c/scripts/memory-mcp"
+           :args [aid-val
+                  (str session-file)
+                  (name provisioned-domain)
+                  (or (System/getenv "FUTON1B_URL")
+                      "http://127.0.0.1:7073")]})
         update-activity! (ns-resolve 'futon3c.agency.registry 'update-invoke-activity!)
         get-event-sink (ns-resolve 'futon3c.agency.registry 'get-invoke-event-sink)
         !event-trace (atom [])
@@ -4413,6 +4428,7 @@ RESPOND WITH ONLY:
                                              :sandbox sandbox
                                              :approval-policy approval-policy
                                              :reasoning-effort reasoning-effort
+                                             :mcp-server mcp-server
                                              :timeout-ms timeout-ms
                                              :cwd cwd
                                              :on-event on-event

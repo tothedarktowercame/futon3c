@@ -6,6 +6,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.agents.memory-provisioning :as memory-provisioning]
             [futon3c.agents.zaif-controller :as zaif]
             [futon3c.agents.zaif-inputs :as zaif-inputs]
             [futon3c.evidence.boundary :as boundary]
@@ -191,6 +192,8 @@
                  ["what_worked"])}
    {:name "memory_record"
     :description (str "Record one deliberate assert memory as evidence plus a typed hyperedge. "
+                      "Required fields: name (non-blank), body (content), "
+                      "subjects [{ref/type, ref/id}] (at least one). "
                       "Kind rule: derived-from-a-failure-with-a-why → feedback; documented "
                       "contract/scope fact → reference. Identity is server-stamped.")
     :parameters (json-schema
@@ -1080,7 +1083,10 @@ CALLS contains maps of tool name, arguments, and result digest."
   (when-not evidence-store
     (throw (ex-info "ZAI/ZAIF requires a durable evidence store"
                     {:agent-id agent-id})))
-  (let [client (HttpClient/newHttpClient)
+  (let [memory-domain* (or memory-domain
+                           (memory-provisioning/domain-for agent-id)
+                           :zaif-work)
+        client (HttpClient/newHttpClient)
         key (or api-key (resolve-api-key))
         cwd* (or cwd (System/getProperty "user.dir"))
         sid0 (or initial-session-id
@@ -1092,7 +1098,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                  {:cwd cwd*
                   :timeout-ms 30000
                   :evidence-store evidence-store
-                  :memory-domain (or memory-domain :zaif-work)
+                  :memory-domain memory-domain*
                   :memory-recall-limit 3
                   :agent-id agent-id
                   :session-id-fn #(some-> @!session-id str)})
@@ -1138,7 +1144,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                    :agent-id agent-id
                    :cwd cwd*
                    :evidence-store evidence-store
-                   :memory-domain (or memory-domain :zaif-work)
+                   :memory-domain memory-domain*
                    :session-id-atom !session-id}]
     (fn [prompt incoming-session-id]
       (let [key* (or key (resolve-api-key))

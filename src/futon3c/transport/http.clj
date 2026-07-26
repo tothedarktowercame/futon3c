@@ -2445,6 +2445,7 @@
                              :session-file session-file
                              :session-id-atom sid-atom}
                       model (assoc :model model)
+                      memory-domain (assoc :memory-domain memory-domain)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
 
@@ -2625,9 +2626,13 @@
                                           str
                                           str/trim
                                           not-empty)
-                    memory-domain (some-> (or (:memory-domain payload)
-                                              (get payload "memory-domain"))
-                                          parse-keyword)
+                    memory-domain (or
+                                   (some-> (or (:memory-domain payload)
+                                               (get payload "memory-domain"))
+                                           parse-keyword)
+                                   ((requiring-resolve
+                                     'futon3c.agents.memory-provisioning/domain-for)
+                                    agent-id))
                     campaign-id (some-> (or (:campaign-id payload)
                                             (get payload "campaign-id"))
                                         str
@@ -2740,6 +2745,13 @@
                                  str str/trim not-empty)
             model (some-> (or (:model payload) (get payload "model"))
                           str str/trim not-empty)
+            memory-domain (or
+                           (some-> (or (:memory-domain payload)
+                                       (get payload "memory-domain"))
+                                   parse-keyword)
+                           ((requiring-resolve
+                             'futon3c.agents.memory-provisioning/domain-for)
+                            agent-id))
             raw-metadata (or (:metadata payload) (get payload "metadata") {})
             raw-contracts (or (:agency/contracts payload)
                               (get payload "agency/contracts")
@@ -2785,6 +2797,7 @@
                               :requested-cwd effective-cwd
                               :emacs-socket emacs-socket
                               :model model
+                              :memory-domain memory-domain
                               :evidence-store (evidence-store-for-config config)
                               :irc-send-fn (:irc-send-fn config)}))
                 metadata (cond-> (merge {:auto-registered? true}
@@ -2798,6 +2811,7 @@
                            excursion-id (assoc :excursion-id excursion-id)
                            emacs-socket (assoc :emacs-socket emacs-socket)
                            model (assoc :model model)
+                           memory-domain (assoc :memory-domain memory-domain)
                            (seq raw-contracts) (assoc :agency/contracts raw-contracts)
                            restored-detached? (assoc :restore/state :restored/detached
                                                      :restore/restored-at (str (java.time.Instant/now))))]

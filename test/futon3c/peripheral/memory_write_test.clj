@@ -206,6 +206,14 @@
          (:description spec)
          "derived-from-a-failure-with-a-why → feedback; documented contract/scope fact → reference"))))
 
+(deftest tool-description-names-every-required-field
+  (let [spec (first (filter #(= "memory_record" (:name %))
+                            @#'zai/tool-specs))]
+    (doseq [required ["name (non-blank)"
+                      "body (content)"
+                      "subjects [{ref/type, ref/id}]"]]
+      (is (str/includes? (:description spec) required)))))
+
 (deftest zai-dispatch-stamps-context-and-uses-peripheral-tool-path
   (let [backend (tools/make-mock-backend
                  {:memory-record (fn [_tool _args]

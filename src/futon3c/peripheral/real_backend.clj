@@ -1022,7 +1022,15 @@
         :pur-update     (tool-pur-update discipline-state evidence-store config args)
         :pur-mark-pivot (tool-pur-mark-pivot discipline-state evidence-store args)
         :par-punctuate  (tool-par-punctuate discipline-state evidence-store args)
-        :memory-record  (let [[ctx payload] args]
+        :memory-record  (let [[first-arg second-arg] args
+                              [ctx payload]
+                              (if (some? second-arg)
+                                [first-arg second-arg]
+                                [{:agent-id (:agent-id config)
+                                  :session-id (when-let [f (:session-id-fn config)]
+                                                (f))
+                                  :domain (:memory-domain config)}
+                                 first-arg])]
                           (memory-write/record-memory!
                            (assoc (or ctx {}) :evidence-store evidence-store)
                            payload))

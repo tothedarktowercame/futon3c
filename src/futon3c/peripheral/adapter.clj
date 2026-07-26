@@ -256,7 +256,9 @@
    :pur-update     "Record post-use result for a selected pattern (PUR step)"
    :pur-mark-pivot "Record a pattern pivot with rationale"
    :par-punctuate  "Emit session punctuation summary for handoff"
-   :memory-record  "Record a deliberate typed memory"
+   :memory-record  (str "Record a deliberate typed memory. Required: "
+                        "name (non-blank), body (content), "
+                        "subjects [{ref/type, ref/id}]")
    ;; Proof-domain tools
    :proof-load       "Load proof state from disk"
    :proof-save       "Save proof state (atomic write, version bump)"
