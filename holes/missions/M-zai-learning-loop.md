@@ -345,3 +345,29 @@ self-improving. Design constraints from Joe:
   review (now: challenge/demotion rate post-use, under pudding policy);
   surfacing precision (used/offered) and post-hoc misses; time-to-first-
   reuse; coverage growth. Cohort 2 reports them; cohort 3 shows the trend.
+
+### The typed self-talk peripheral (Joe's sharpening, 2026-07-26)
+
+Not markers-when-convenient but a PERIPHERAL: ground control's loop-operation
+self-talk in cohort 2 is constrained to emit ONLY typed statements (marker-
+fronted; free prose allowed only inside marker payloads). The geno-pheno
+stack lands in agent-loop layering: phenotype = the mathematics work (zai,
+Lean, compiles — naturally witnessed); genotype = the loop's coefficients,
+expressed in a semi-formal register that dampens vibes. zai's register was
+minable by natural stereotypy; Claude's becomes minable by imposed
+discipline — the empirical question is whether the constraint is a
+restriction or (like Lean itself for mathematics) an enabling discipline.
+
+Falsifiable, three meters:
+1. **Work quality survives**: cohort-2 outcomes (solve/partial rates,
+   review-fix rate, infrastructure error rate) do not degrade vs cohort 1.
+2. **Meta-extraction cost collapses**: the scribe meta-lane parses the
+   typed register deterministically (no model pass); yield per session ≥
+   the prose-mined baseline.
+3. **Register violations counted honestly**: unmarked prose in loop
+   narration = a typed violation event (CLean-lintable). High violation
+   rate = the register is fighting the work; that is a finding, not a
+   failure to hide.
+
+Scope discipline (Joe): mathematics domain first. The WM port via
+mathematisization-of-programming stays parked until this works here.
