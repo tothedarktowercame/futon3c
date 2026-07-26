@@ -6525,6 +6525,45 @@
             :message (or (.getMessage e) "Strategic selection failed")
             :data (ex-data e)}))))))
 
+(defn- handle-wm-click-start
+  [request]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:error "invalid-json"})
+      (try
+        (let [click! (requiring-resolve 'futon3c.wm.runner-service/click!)
+              opts (cond-> {}
+                     (nonblank-string? (:author payload))
+                     (assoc :author (:author payload))
+
+                     (nonblank-string? (:reviewer payload))
+                     (assoc :reviewer (:reviewer payload))
+
+                     (nonblank-string? (:repair-reviewer payload))
+                     (assoc :repair-reviewer (:repair-reviewer payload))
+
+                     (nonblank-string? (:trigger payload))
+                     (assoc :trigger (keyword (:trigger payload))))
+              result (click! opts)]
+          (if (= :already-running (:rejected result))
+            (json-response 409 result)
+            (json-response 200 result)))
+        (catch Throwable throwable
+          (json-response 500
+                         {:error "wm-click-start-failed"
+                          :message (.getMessage throwable)}))))))
+
+(defn- handle-wm-click-status
+  []
+  (try
+    (json-response
+     200
+     ((requiring-resolve 'futon3c.wm.runner-service/status)))
+    (catch Throwable throwable
+      (json-response 500
+                     {:error "wm-click-status-failed"
+                      :message (.getMessage throwable)}))))
+
 (defn extra-routes
   "Reload-safe route extension point for E-wm-operator-lane and future routes.
    Returns a response map, or nil to fall through to make-handler's 404."
@@ -6553,6 +6592,12 @@
       (and (= :post method)
            (= "/api/alpha/war-machine/strategic-selection" uri))
       (handle-wm-strategic-selection request)
+
+      (and (= :post method) (= "/api/alpha/wm/click" uri))
+      (handle-wm-click-start request)
+
+      (and (= :get method) (= "/api/alpha/wm/click" uri))
+      (handle-wm-click-status)
 
       (and (= :get method) (= "/api/alpha/cascade-real/graph" uri))
       (handle-cascade-real-graph request config)
