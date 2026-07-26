@@ -16,6 +16,25 @@
 (def base-url "http://127.0.0.1:7073")
 (def reviewer "joe")
 (def review-warrant "operator draft review recorded in each memory body")
+(def recall-system :v1-enriched)
+
+(def pattern-descriptions
+  {"math/rewrite-orientation"
+   "rw rewrite fails, motive is not type correct, equation direction, flip arrow, orient rewrite toward goal, hypothesis versus goal direction"
+   "math/binder-expression-mismatch"
+   "integral binder mismatch, bound variable differs, show to restate goal, convert tactic, definitional equality under binder"
+   "math/minmax-normalization"
+   "min max unfold, absolute value cases, split_ifs, le_min max_le, linarith after unfolding"
+   "math/series-evaluation-api"
+   "tsum series evaluation, zeta Basel, index shift, hasSum summable, geometric series, uniform convergence M-test, power series continuity"
+   "math/derivative-bounds-api"
+   "derivative bound, mean value theorem, Lipschitz from derivative, sup norm L2 derivative, Cauchy-Schwarz integral"
+   "math/missing-dependency-protocol"
+   "Mathlib lemma not found, missing theorem after search, API gap, bounded search budget, local lemma construction, dependency frontier"
+   "math/construction-before-estimates"
+   "define auxiliary object first, piecewise construction, explicit witness function, build before bounding"
+   "math/proof-architecture"
+   "overall proof plan, multi-layer architecture, reduction to lemmas, dyadic decomposition, differentiation theorem, convergence in measure, lacunary boundary"})
 
 (def attachments
   [{:memory-id "e-1ac936fb-04e8-460e-a710-37fac474401c"
@@ -92,29 +111,98 @@
                       {:path path :status (:status response) :body body})))
     body))
 
+(defn- pattern-payload [pattern-id entity]
+  {:id pattern-id
+   :name pattern-id
+   :type :pattern/library
+   :external-id pattern-id
+   :source (or (:source entity)
+               "M-zai-learning-loop trigger-class vocabulary")
+   ;; The entity API replaces the document at a stable id. Merge the new
+   ;; description into the read-back props so unrelated fields survive.
+   :props (merge (:props entity)
+                 {:domain :mathematics
+                  :pattern/kind :trigger-class
+                  :description (get pattern-descriptions pattern-id)
+                  :recall-system recall-system})})
+
+(defn- pattern-described? [pattern-id entity]
+  (and (= pattern-id (:id entity))
+       (= pattern-id (:name entity))
+       (= :pattern/library (:type entity))
+       (= pattern-id (:external-id entity))
+       (= (get pattern-descriptions pattern-id)
+          (get-in entity [:props :description]))
+       (= recall-system (get-in entity [:props :recall-system]))))
+
 (defn- ensure-pattern! [pattern-id]
-  (if-let [entity (get-entity pattern-id)]
-    (do
-      (when-not (and (= pattern-id (:id entity))
-                     (= pattern-id (:name entity))
-                     (= :pattern/library (:type entity))
-                     (= pattern-id (:external-id entity)))
-        (throw (ex-info "pattern id is already occupied by a different entity"
-                        {:pattern-id pattern-id :entity entity})))
-      :existing)
-    (let [payload
-          {:id pattern-id
-           :name pattern-id
-           :type :pattern/library
-           :external-id pattern-id
-           :source "M-zai-learning-loop trigger-class vocabulary"
-           :props {:domain :mathematics
-                   :pattern/kind :trigger-class}}]
-      (post-edn! "/api/alpha/entity" payload)
-      (when-not (get-entity pattern-id)
-        (throw (ex-info "new pattern was not visible after append"
-                        {:pattern-id pattern-id})))
-      :minted)))
+  (let [before (get-entity pattern-id)]
+    (when (and before
+               (not (and (= pattern-id (:id before))
+                         (= pattern-id (:name before))
+                         (= :pattern/library (:type before))
+                         (= pattern-id (:external-id before)))))
+      (throw (ex-info "pattern id is already occupied by a different entity"
+                      {:pattern-id pattern-id :entity before})))
+    (if (pattern-described? pattern-id before)
+      :existing
+      (let [payload (pattern-payload pattern-id before)
+            _ (post-edn! "/api/alpha/entity" payload)
+            after (get-entity pattern-id)
+            unrelated-before
+            (apply dissoc (:props before) [:description :recall-system])
+            unrelated-after
+            (apply dissoc (:props after) [:description :recall-system])]
+        (when-not (pattern-described? pattern-id after)
+          (throw (ex-info "pattern description was not visible after append"
+                          {:pattern-id pattern-id :entity after})))
+        (when (and before (not= unrelated-before unrelated-after))
+          (throw (ex-info "pattern description append changed unrelated props"
+                          {:pattern-id pattern-id
+                           :before unrelated-before
+                           :after unrelated-after})))
+        (if before :described :minted)))))
+
+(defn- description-evidence-id [pattern-id]
+  (str "e-pattern-description-v1-"
+       (subs pattern-id (count "math/"))))
+
+(defn- description-entry [pattern-id]
+  {:evidence/id (description-evidence-id pattern-id)
+   :evidence/subject {:ref/type :pattern :ref/id pattern-id}
+   :evidence/type :reflection
+   :evidence/claim-type :observation
+   :evidence/author "ground-control"
+   :evidence/session-id "M-zai-learning-loop/recall-v1-enriched"
+   :evidence/at (str (Instant/now))
+   :evidence/body
+   {:event :pattern-description
+    :pattern-id pattern-id
+    :description (get pattern-descriptions pattern-id)
+    :recall-system recall-system}
+   :evidence/tags [:memory :pattern-description :mathematics]})
+
+(defn- ensure-description-evidence! [evidence-store pattern-id]
+  (let [expected (description-entry pattern-id)
+        evidence-id (:evidence/id expected)
+        existing (estore/get-entry* evidence-store evidence-id)]
+    (if existing
+      (do
+        (when-not (= (dissoc expected :evidence/at)
+                     (dissoc existing :evidence/at))
+          (throw (ex-info "pattern description evidence has different content"
+                          {:id evidence-id :existing existing})))
+        :existing)
+      (let [receipt (boundary/append! evidence-store expected)
+            visible (estore/get-entry* evidence-store evidence-id)]
+        (when-not (:ok receipt)
+          (throw (ex-info "pattern description evidence append failed"
+                          {:id evidence-id :receipt receipt})))
+        (when-not (= (dissoc expected :evidence/at)
+                     (dissoc visible :evidence/at))
+          (throw (ex-info "pattern description evidence not visible after append"
+                          {:id evidence-id :visible visible})))
+        :appended))))
 
 (defn- fetch-hyperedges [endpoint {:keys [type limit]
                                    :or {limit 20}}]
@@ -259,7 +347,12 @@
              :domain :mathematics
              :evidence-store evidence-store}
         pattern-results
-        (into {} (map (fn [id] [id (ensure-pattern! id)]) pattern-ids))
+        (into {}
+              (map
+               (fn [id]
+                 [id {:entity (ensure-pattern! id)
+                      :fts-row (ensure-description-evidence! evidence-store id)}])
+               pattern-ids))
         results
         (mapv
          (fn [attachment]

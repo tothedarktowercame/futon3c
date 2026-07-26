@@ -310,11 +310,19 @@
                         "Shared memory substrate batch read failed")}
             :elapsed-ms (elapsed-ms started)}))))))
 
-(defn- memory-search-rows
+(defn- pattern-description-row?
+  [row]
+  (let [entry (:entry row)]
+    (and (= :reflection (:evidence/type entry))
+         (= :pattern-description (get-in entry [:evidence/body :event]))
+         (= :v1-enriched (get-in entry [:evidence/body :recall-system]))
+         (string? (get-in entry [:evidence/body :pattern-id])))))
+
+(defn- proposal-search-rows
   [search-result limit]
   (->> (:results search-result)
-       (filter #(= :memory
-                   (get-in % [:entry :evidence/type])))
+       (filter #(or (= :memory (get-in % [:entry :evidence/type]))
+                    (pattern-description-row? %)))
        (take limit)
        vec))
 
@@ -376,6 +384,72 @@
     {:proposals proposals
      :validation batch}))
 
+(defn- proposals-from-description-rows
+  "Turn FTS-visible pattern descriptions into proposals only when the pattern
+  endpoint currently projects at least one reviewed memory in DOMAIN. The
+  description row is a lexical bridge, never a recall warrant by itself."
+  [domain bounded-limit recall-batch-fn rows trace-id]
+  (let [pattern-ids (->> rows
+                         (keep #(get-in % [:entry :evidence/body :pattern-id]))
+                         distinct
+                         vec)
+        batch
+        (when (seq pattern-ids)
+          (recall-batch-fn {:domain domain}
+                           pattern-ids
+                           {:limit bounded-limit
+                            :trace-id trace-id}))
+        recall-by-pattern
+        (into {} (map (juxt :endpoint identity)) (:recalls batch))
+        proposals
+        (reduce
+         (fn [acc {:keys [score entry]}]
+           (let [pattern-id (get-in entry [:evidence/body :pattern-id])
+                 memories (:memories (get recall-by-pattern pattern-id))]
+             (if (seq memories)
+               (assoc acc pattern-id
+                      {:pattern-id pattern-id
+                       :source :reviewed-pattern-description-lexical-proposal
+                       :memory-support
+                       [{:description-evidence-id (:evidence/id entry)
+                         :memory-ids (mapv :memory/id memories)
+                         :fts-score score
+                         :hook (get-in entry
+                                       [:evidence/body :description])}]})
+               acc)))
+         {}
+         rows)]
+    {:proposals proposals
+     :validation batch}))
+
+(defn- merge-proposals
+  [& proposal-maps]
+  (apply
+   merge-with
+   (fn [left right]
+     (-> left
+         (assoc :source :reviewed-lexical-proposal)
+         (update :memory-support into (:memory-support right))))
+   proposal-maps))
+
+(defn- proposals-from-search-rows
+  [domain bounded-limit recall-batch-fn rows trace-id]
+  (let [memory-rows
+        (filterv #(= :memory (get-in % [:entry :evidence/type])) rows)
+        description-rows (filterv pattern-description-row? rows)
+        memory-result
+        (proposals-from-rows
+         domain bounded-limit recall-batch-fn memory-rows trace-id)
+        description-result
+        (proposals-from-description-rows
+         domain bounded-limit recall-batch-fn description-rows trace-id)]
+    {:proposals (merge-proposals (:proposals memory-result)
+                                 (:proposals description-result))
+     :memory-row-count (count memory-rows)
+     :description-row-count (count description-rows)
+     :validation {:memories (:validation memory-result)
+                  :descriptions (:validation description-result)}}))
+
 (defn- batch-audit
   [batch]
   (when batch
@@ -407,15 +481,16 @@
          search-evidence (or search-evidence substrate/evidence-text-search)
          recall-batch-fn (or recall-batch-fn recall-by-endpoints)
          ;; FTS indexes all evidence, so boundedly overfetch before retaining
-         ;; memory entries. This avoids spending graph reads on transcripts
-         ;; that happen to quote the query while preserving a hard cap.
+         ;; memory or typed pattern-description entries. This avoids spending
+         ;; graph reads on transcripts that quote the query while preserving a
+         ;; hard cap. Both row types still require a reviewed memory projection.
          [search-result primary-fts-ms]
          (timed #(search-evidence
                   query {:limit (min max-limit (* 3 bounded-limit))
                          :trace-id trace-id}))
-         primary-rows (memory-search-rows search-result bounded-limit)
+         primary-rows (proposal-search-rows search-result bounded-limit)
          primary-result
-         (proposals-from-rows
+         (proposals-from-search-rows
           domain bounded-limit recall-batch-fn primary-rows trace-id)
          primary-proposals (:proposals primary-result)
          fallback-tokens
@@ -428,36 +503,60 @@
                      :trace-id trace-id})))
          fallback-rows
          (when fallback-result
-           (memory-search-rows fallback-result bounded-limit))
+           (proposal-search-rows fallback-result bounded-limit))
          fallback-proposal-result
          (when fallback-result
-           (proposals-from-rows
+           (proposals-from-search-rows
             domain bounded-limit recall-batch-fn fallback-rows trace-id))
          proposals
          (if (seq primary-proposals)
            primary-proposals
-           (:proposals fallback-proposal-result))
-         rows (if (seq primary-proposals) primary-rows fallback-rows)]
+           (:proposals fallback-proposal-result))]
      {:ok true
       :trace-id trace-id
       :query query
       :limit bounded-limit
-      :checked-memory-count (count rows)
+      :checked-memory-count
+      (or (:memory-row-count
+           (if (seq primary-proposals)
+             primary-result
+             fallback-proposal-result))
+          0)
+      :checked-pattern-description-count
+      (or (:description-row-count
+           (if (seq primary-proposals)
+             primary-result
+             fallback-proposal-result))
+          0)
       :query-strategy (if (seq primary-proposals)
                         :full-query
                         :bounded-token-disjunction)
       :fallback-tokens (vec fallback-tokens)
       :index-as-of (:index-as-of search-result)
       :validation
-      {:primary (batch-audit (:validation primary-result))
-       :fallback (batch-audit (:validation fallback-proposal-result))}
+      {:primary
+       {:memories
+        (batch-audit (get-in primary-result [:validation :memories]))
+        :descriptions
+        (batch-audit (get-in primary-result [:validation :descriptions]))}
+       :fallback
+       {:memories
+        (batch-audit
+         (get-in fallback-proposal-result [:validation :memories]))
+        :descriptions
+        (batch-audit
+         (get-in fallback-proposal-result [:validation :descriptions]))}}
       :timing
       {:primary-fts-ms primary-fts-ms
        :primary-validation-ms
-       (some-> primary-result :validation :elapsed-ms)
+       (reduce + 0
+               (keep :elapsed-ms
+                     (vals (:validation primary-result))))
        :fallback-fts-ms fallback-fts-ms
        :fallback-validation-ms
-       (some-> fallback-proposal-result :validation :elapsed-ms)
+       (reduce + 0
+               (keep :elapsed-ms
+                     (vals (:validation fallback-proposal-result))))
        :proposal-total-ms (elapsed-ms started)}
       :candidates (->> (vals proposals)
                        (sort-by (comp str :pattern-id))

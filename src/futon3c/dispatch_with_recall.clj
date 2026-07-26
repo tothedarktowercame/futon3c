@@ -19,13 +19,21 @@
 (def default-recall-timeout-ms 30000)
 (def default-agency-base "http://localhost:7070")
 (def default-mission "M-zai-learning-loop")
+(def default-problem-root "/home/joe/code/apm-lean/problems")
+(def recall-system :v1-enriched)
 
 (def ^:private stopwords
-  #{"about" "after" "again" "against" "also" "been" "before" "being"
-    "between" "build" "could" "does" "each" "every" "from" "have" "into"
-    "mathlib" "over" "problem" "prove" "runner" "should" "statement" "that"
-    "their" "there" "these" "this" "through" "using" "validate" "where"
-    "which" "with" "would"})
+  #{"about" "after" "again" "against" "alist" "also" "apm" "attempt"
+    "been" "before" "begin" "being" "between" "build" "bundle" "canonical"
+    "corpus" "could" "currently" "directory" "does" "each" "end" "every"
+    "exists" "extract" "filename" "follow-up" "following" "forall"
+    "formalization" "formalization-oriented" "from" "harvested"
+    "harvested-filename" "have" "imported" "imported-at" "informal"
+    "informal-proof" "informal-solution" "into" "item" "lean" "mathlib"
+    "needed" "oriented" "outline" "over" "overview" "problem" "proof"
+    "prove" "rightarrow" "root" "runner" "should" "solution" "source"
+    "statement" "that" "their" "then" "there" "these" "this" "through"
+    "using" "validate" "where" "which" "with" "would"})
 
 (defn- encode [value]
   (URLEncoder/encode (str value) "UTF-8"))
@@ -124,29 +132,72 @@
   (str (System/getProperty "user.dir")
        "/holes/labs/M-zai-learning-loop/bpm-starter/README.md"))
 
-(defn- packet-keywords [packet]
-  (->> (re-seq #"[A-Za-z][A-Za-z0-9_/-]{3,}" (str/lower-case packet))
+(defn- text-keywords [text limit]
+  (->> (re-seq #"[A-Za-z][A-Za-z0-9_/-]{3,}" (str/lower-case text))
        (remove stopwords)
        frequencies
        (sort-by (fn [[word count]] [(- count) word]))
        (map first)
-       (take 12)
+       (take limit)
        vec))
+
+(defn- problem-statement-text [text]
+  (let [marker "## Problem Statement"
+        index (str/index-of text marker)]
+    (if index (subs text index) text)))
+
+(defn- readable-file [path]
+  (let [file (java.io.File. path)]
+    (when (.isFile file) (slurp file))))
+
+(defn- problem-term-sources
+  [{:keys [problem problem-root]} packet]
+  (let [root (or problem-root default-problem-root)
+        bundle (str (trim-base root) "/" problem)
+        problem-path (str bundle "/problem.md")
+        outline-path (str bundle "/proof-outline.md")
+        problem-text (some-> (readable-file problem-path)
+                             problem-statement-text)
+        outline-text (readable-file outline-path)]
+    (cond-> []
+      problem-text
+      (conj {:source :problem-md
+             :path problem-path
+             :terms (text-keywords problem-text 14)})
+
+      outline-text
+      (conj {:source :proof-outline-md
+             :path outline-path
+             :terms (text-keywords outline-text 10)})
+
+      true
+      (conj {:source :stdin-packet
+             :terms (text-keywords packet 8)}))))
 
 (defn recall-query
   "Build a bounded lexical query from subject ids, preregistered terrain, and
-  the problem packet. The exact problem id is also queried as a graph endpoint."
-  [{:keys [problem subjects terrain]} packet terrain-map]
+  problem files, with packet terms retained as fallback. The exact problem id
+  is also queried as a graph endpoint."
+  [{:keys [problem subjects terrain] :as opts} packet terrain-map]
   (let [terrain (or terrain (some-> problem bpm-source-id terrain-map))
-        packet-terms (remove #{(str/lower-case problem)}
-                             (packet-keywords packet))]
+        term-sources
+        (mapv
+         (fn [source]
+           (update source :terms
+                   #(vec (remove #{(str/lower-case problem)} %))))
+         (problem-term-sources opts packet))
+        source-terms (mapcat :terms term-sources)
+        terms (->> (concat [problem] subjects
+                           (when terrain [terrain])
+                           source-terms)
+                   distinct
+                   (take 36)
+                   vec)]
     {:terrain terrain
-     :terms (vec (distinct (concat [problem] subjects
-                                  (when terrain [terrain])
-                                  packet-terms)))
-     :query (str/join " " (distinct (concat [problem] subjects
-                                             (when terrain [terrain])
-                                             packet-terms)))}))
+     :recall-system recall-system
+     :term-sources term-sources
+     :terms terms
+     :query (str/join " " terms)}))
 
 (defn- request-edn
   [method url opts]
@@ -379,6 +430,7 @@
      :session-id session-id
      :body (cond-> {:event :memory-use
                     :phase :offered
+                    :recall-system recall-system
                     :problem problem
                     :job-id job-id
                     :recall-status (:status recall-result)

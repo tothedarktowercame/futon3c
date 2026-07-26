@@ -261,3 +261,68 @@
             1234
             "trace-1"]
            @seen))))
+
+(deftest typed-pattern-description-proposes-only-reviewed-neighborhood
+  (let [description-entry
+        {:evidence/id "e-pattern-description-v1-rewrite-orientation"
+         :evidence/type :reflection
+         :evidence/body
+         {:event :pattern-description
+          :pattern-id "math/rewrite-orientation"
+          :description "rw rewrite motive is not type correct"
+          :recall-system :v1-enriched}}
+        search-result
+        {:results [{:score -9.0 :entry description-entry}]
+         :index-as-of "now"}
+        calls (atom [])
+        recall-batch
+        (fn [_ctx endpoints _opts]
+          (swap! calls conj endpoints)
+          {:ok true
+           :recalls
+           (mapv
+            (fn [endpoint]
+              {:endpoint endpoint
+               :memories
+               (if (= endpoint "math/rewrite-orientation")
+                 [{:memory/id "e-orientation-memory"}]
+                 [])})
+            endpoints)})
+        result
+        (memory-recall/propose-patterns-by-query
+         {:domain :mathematics}
+         "rw rewrite motive is not type correct"
+         {:limit 5
+          :search-evidence (fn [_query _opts] search-result)
+          :recall-batch-fn recall-batch})]
+    (is (= [["math/rewrite-orientation"]] @calls))
+    (is (= 1 (:checked-pattern-description-count result)))
+    (is (= ["math/rewrite-orientation"]
+           (mapv :pattern-id (:candidates result))))
+    (is (= :reviewed-pattern-description-lexical-proposal
+           (get-in result [:candidates 0 :source])))))
+
+(deftest typed-pattern-description-with-empty-neighborhood-is-not-a-warrant
+  (let [result
+        (memory-recall/propose-patterns-by-query
+         {:domain :mathematics}
+         "rw rewrite motive is not type correct"
+         {:limit 5
+          :search-evidence
+          (fn [_query _opts]
+            {:results
+             [{:score -9.0
+               :entry
+               {:evidence/id "e-description"
+                :evidence/type :reflection
+                :evidence/body
+                {:event :pattern-description
+                 :pattern-id "math/rewrite-orientation"
+                 :description "rw rewrite"
+                 :recall-system :v1-enriched}}}]})
+          :recall-batch-fn
+          (fn [_ctx endpoints _opts]
+            {:ok true
+             :recalls
+             (mapv #(hash-map :endpoint % :memories []) endpoints)})})]
+    (is (empty? (:candidates result)))))
