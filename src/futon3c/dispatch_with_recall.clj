@@ -467,11 +467,12 @@
     :mode "work"}
    30000))
 
-(defn- record-offered! [{:keys [base]} evidence]
-  ;; The :7073 evidence endpoint reads an EDN EvidenceEntry (namespaced keys)
-  ;; and requires a penholder header; JSON with bare keys is the
-  ;; silent-lost-writes defect class (traced 2026-07-26) — it 4xx/5xxs and
-  ;; the receipt never lands.
+(defn- record-offered! [{:keys [substrate-base]} evidence]
+  ;; Receipts persist in the authoritative substrate (:7073), NOT the agency
+  ;; base — posting to :base was the original silent failure. The substrate
+  ;; endpoint reads an EDN EvidenceEntry (namespaced keys) and requires a
+  ;; penholder header; JSON with bare keys is the silent-lost-writes defect
+  ;; class (traced 2026-07-26).
   (let [entry {:evidence/id (str "e-" (UUID/randomUUID))
                :evidence/subject (:subject evidence)
                :evidence/type (:type evidence)
@@ -481,7 +482,8 @@
                :evidence/session-id (str (:session-id evidence))
                :evidence/body (:body evidence)
                :evidence/tags (:tags evidence)}
-        response (http/post (str (trim-base base) "/api/alpha/evidence")
+        target (or substrate-base "http://127.0.0.1:7073")
+        response (http/post (str (trim-base target) "/api/alpha/evidence")
                             {:headers {"Content-Type" "application/edn"
                                        "Accept" "application/edn"
                                        "x-penholder" "api"}
@@ -491,7 +493,7 @@
     (if (<= 200 (long (:status response)) 299)
       (:evidence/id entry)
       (throw (ex-info "HTTP write failed"
-                      {:url (str (trim-base base) "/api/alpha/evidence")
+                      {:url (str (trim-base target) "/api/alpha/evidence")
                        :status (:status response)})))))
 
 (defn- require-input! [opts packet]
