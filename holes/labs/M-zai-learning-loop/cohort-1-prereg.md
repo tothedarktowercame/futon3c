@@ -24,3 +24,22 @@ Charter: holes/missions/M-zai-learning-loop.md.
 - **Observables:** all four levels. Leaf level live for the first time:
   surfaced-ids vs used-ids in receipts + arc evidence of effect. Zero
   leaf-hits remains publishable.
+
+## Amendment 1 (2026-07-26, before session-1 outcome known; Joe's direction)
+
+Session 1 surfaced recall-empty for a92-terrain: the current recall is
+lexically gated (description-less patterns, boilerplate query terms, no
+semantic lane). Rather than repeat memoryless behaviour five times, the
+memory system is being FIXED IN PARALLEL, targeted to come online mid-cohort:
+
+- **Each row now records :recall-system** — v0-lexical (as-dispatched today)
+  or v1-enriched (pattern descriptions + problem-file query terms +
+  embedding proposal lane if feasible). Sessions 1–2 expected v0; later
+  sessions v1 as fixes land (actual recorded, not assumed).
+- The cohort's comparison is now explicitly WITHIN-cohort: broken-by-design
+  vs working recall on comparable fresh problems, plus the a96A04 revisit
+  arm under v1.
+- Fix lanes: codex-6 (pattern descriptions from ground-control vocabulary +
+  query-term extraction from problem.md/proof-outline.md), codex-5
+  (embedding proposal lane feasibility via futon3a miniLM shared-corpus
+  infra; timeboxed — feasibility verdict acceptable if build is large).
