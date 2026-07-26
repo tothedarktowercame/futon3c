@@ -189,3 +189,64 @@ sustains pays rent on held-out problems.**
   shape directly? (Draft EDN is shaped to hand over as-is.)
 - How BPM turn-counts normalize across problem difficulty — flat count vs
   per-collection strata.
+
+## Learnings from the existing runs → S1 memory-creation design (2026-07-26)
+
+### What the corpus actually taught
+
+1. **Agents narrate their own rules at the moment of repair** (zai-1 mining):
+   distillation is mostly *binding* — attach scope, before/after, and
+   evidence ids to a diagnosis sentence the agent already wrote — not
+   inference. The error→fix arc span is the natural scope; levels
+   (tactic/plan/process) must be registered per rule.
+2. **Failure types each want a different memory kind** (batch 0):
+   round-budget death (1.7.1: 216 tool calls of API search) wants **API-map
+   memories**, minable from *unsuccessful* trajectories ("this region is
+   expensive; that lemma family is elsewhere"); self-termination (1.8.1)
+   wants **process rules** with a lexical signature (zero edits + long
+   prose); substrate kills want nothing — they are confounds to type, not
+   learn from.
+3. **Final summaries are near-ready memory bodies**: solved sessions state
+   problem-class → key lemma in one paragraph (`integral_pos`,
+   `lipschitzWith_of_nnnorm_deriv_le`, `exists_ratio_hasDerivAt_eq_ratio_slope`,
+   Cauchy MVT). Lemma-location memories are the cheapest, highest-precision
+   lane, and they are the connectivity food the retrieval operator needs
+   (shared lemma/tactic/problem-class nodes — see E-retrieval-flows v1).
+4. **The supervised-overrun machinery works; budgets are the constraint
+   surface**: wall-clock extensions engage, but tool-round budgets bind, and
+   quota contention between consumers can masquerade as capability failure.
+   Memories should carry conditions; batch design should own the substrate.
+
+### Boundary decision (flagged to operator)
+
+Batch-0 (BPM) sessions are held out: their MATHEMATICAL content is never
+mined into memories. Using their *failure shapes* to design the mechanism
+(this section) is permitted meta-learning — the line is content vs
+mechanism. The mineable corpus for actual memory formation = the APM
+sessions (a95/a96 series: 2 complete + ~14 partials as of 2026-07-26
+morning, all with turn-round evidence in the landscape).
+
+### S1 scribe design: three extraction lanes
+
+| Lane | Input | Output memory kind | Precision |
+|---|---|---|---|
+| **Solve-lane** | final summaries of solved/partial sessions | lemma-location + proof-pattern (problem-class → lemma/tactic) | high, near-mechanical |
+| **Arc-lane** | error→fix spans in turn-round streams | scoped rewrite rules (the six-rule shape: scope/before/after/level/confidence/evidence-ids) | medium, needs distillation |
+| **Trajectory-lane** | failed/expensive stretches (round burn, self-termination signatures) | negative/cost memories + process rules | medium, highest novelty |
+
+Every memory: name/body/subjects (store-enforced), turn-round evidence ids
+as provenance, level, confidence by instance count, authored by the scribe
+seat (author ≠ runner by construction). First scribe batches land as
+scribe-asserted; operator reviews in the store (the six-rule review is the
+acceptance template); librarian/challenge machinery takes over later.
+
+### Next steps (order)
+
+1. **S1 pilot**: codex scribe packet over the a95/a96 corpus → first
+   mathematics-domain memories recorded through the fixed memory_record
+   path. Target: the three lanes each produce ≥1 reviewable memory.
+2. **S0**: recall-at-dispatch, keyed on problem terrain (the bpm-starter
+   README terrain labels seed the pattern vocabulary).
+3. Provisioning: mathematics domain stamps for runner + scribe seats.
+4. Training cohort 1 (APM problems, scribe following per-session), then BPM
+   batch 1 against the accreted store.
