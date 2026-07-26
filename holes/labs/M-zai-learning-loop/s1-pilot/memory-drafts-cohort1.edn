@@ -447,4 +447,189 @@
   :confidence :single-instance
   :rationale
   "The session begins by reading the informal solution, independently locates the exact identity, completes the retained architecture, and explicitly characterizes the source as a useful template whose formal expansion was replaced."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "conditionally-convergent-series-use-ordered-partial-sums"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Formalize the value of a conditionally convergent real series such as the alternating harmonic series."
+   :gotcha
+   "Mathlib's default `HasSum f a` uses the `unconditional` summation filter: convergence of sums over arbitrary sufficiently large finite subsets, invariant under permutation. It is not the usual ordered-series convergence along initial segments of ℕ."
+   :explicit-library-warning
+   "`Mathlib.Topology.Algebra.InfiniteSum.Defs` explicitly names `fun n : ℕ => (-1 : ℝ)^n / (n + 1)` as a function that does not have a sum under the default definition, although it is summable for the conditional filter."
+   :wrong-formulation
+   "`HasSum (fun n : ℕ => (-1 : ℝ)^n / (n + 1)) (Real.log 2)` with the default filter is false, not merely difficult to prove."
+   :correct-formulation
+   "`Tendsto (fun n => ∑ i ∈ Finset.range n, (-1 : ℝ)^i / (i + 1)) atTop (𝓝 (Real.log 2))` records convergence in the natural order. An explicit conditional summation filter is another possible formulation when its API is desired."
+   :process-consequence
+   "Before using `HasSum`, `Summable`, or `tsum` for a non-absolutely-convergent series, inspect the summation filter. If the mathematics depends on term order, state the theorem with ordered partial sums or an explicit conditional filter."
+   :location
+   "`Mathlib.Topology.Algebra.InfiniteSum.Defs`, the documentation immediately above `HasProd`/`HasSum` (including the alternating harmonic non-example)."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :mathlib-definition, :id "HasSum"}
+   #:ref{:type :mathlib-file,
+         :id "Mathlib.Topology.Algebra.InfiniteSum.Defs"}]
+  :evidence
+  {:turn-round-ids
+   ["e-6802a1b3-0eb8-407c-b98d-680c4d2b73db"
+    "e-ad75ac9e-d209-47a5-9e6f-ca2bfc1c5105"
+    "e-ca4b627d-8147-4b65-9350-24fc1bac746e"
+    "e-28a0e2c3-e56d-43fb-8bee-8877d992a9ec"]
+   :commits
+   ["6840dc673e4ca3a3cac5fb2a7152a27c07db1eec"
+    "384ccab1c2f88b70cfa077e9a034a5b2263e57b1"
+    "e5158e76a79c2c4e0cab88aaff044e53ffc733c8"]
+   :problems ["a93J02"]}
+  :confidence :single-instance
+  :rationale
+  "The runner found the exact Mathlib documentation, changed the theorem statement from the false default-`HasSum` form to ordered partial-sum `Tendsto`, and retained that correction in the compiling partial artifact."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "leibniz-formula-template-for-abel-boundary-limits"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Identify the ordered sum of an alternating series by extending an interior power-series identity to the boundary of its convergence disk."
+   :template "`Real.tendsto_sum_pi_div_four`"
+   :location
+   "`Mathlib.Analysis.Real.Pi.Leibniz`; the theorem proves the Leibniz π/4 series using Abel's limit theorem."
+   :template-shape
+   ["Use an alternating-series theorem to obtain convergence of ordered partial sums to some l."
+    "Apply `tendsto_tsum_powerSeries_nhdsWithin_lt` to show the interior power series tends to l as the scalar tends to 1 from below."
+    "Identify the interior `tsum` with a closed-form analytic function."
+    "Prove that closed form tends to the desired boundary value."
+    "Use uniqueness of limits to identify l."]
+   :a93j02-instantiation
+   "Take coefficients `(-1)^n/(n+1)`. Inside `0 < x < 1`, transform `hasSum_pow_div_log_of_abs_lt_one` at `-x` into `Σ (-1)^n x^n/(n+1) = log(1+x)/x`; then let x tend to 1 from below."
+   :key-api
+   ["Antitone.tendsto_alternating_series_of_tendsto_zero"
+    "tendsto_tsum_powerSeries_nhdsWithin_lt"
+    "hasSum_pow_div_log_of_abs_lt_one"
+    "tendsto_nhds_unique"]
+   :boundary
+   "The template supplies the proof architecture, not the coefficient algebra. In a93J02 the remaining sorry is exactly the reindexing/sign/division conversion from the log power series to the required coefficient form."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :mathlib-lemma, :id "Real.tendsto_sum_pi_div_four"}
+   #:ref{:type :mathlib-lemma,
+         :id "tendsto_tsum_powerSeries_nhdsWithin_lt"}]
+  :evidence
+  {:turn-round-ids
+   ["e-8eb04dbf-2648-4d71-95cd-14840160715b"
+    "e-d32c4644-568d-4888-81ae-507a9b3cdcf8"
+    "e-f0e2e84a-712c-425b-9bbe-7bb5d45d0d4b"
+    "e-ca4b627d-8147-4b65-9350-24fc1bac746e"
+    "e-28a0e2c3-e56d-43fb-8bee-8877d992a9ec"]
+   :commits
+   ["6840dc673e4ca3a3cac5fb2a7152a27c07db1eec"
+    "384ccab1c2f88b70cfa077e9a034a5b2263e57b1"
+    "e5158e76a79c2c4e0cab88aaff044e53ffc733c8"]
+   :problems ["a93J02"]}
+  :confidence :single-instance
+  :rationale
+  "Rounds 41-43 show direct discovery and adaptation of the Leibniz proof; the final artifact implements alternating convergence and the Abel setup while honestly isolating the coefficient conversion as its one remaining sorry."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "translate-interval-integrals-with-integral-comp-add-right"
+  :level :lemma-location
+  :status :draft
+  :body
+  {:problem-class
+   "Evaluate an interval integral whose integrand is a translated standard function, such as `∫₀¹ 1/(1+x) dx`."
+   :lemma "`intervalIntegral.integral_comp_add_right`"
+   :use
+   "Instantiate `f := fun y : ℝ => y⁻¹`, interval endpoints 0 and 1, and translation 1. This rewrites the integral of `(x+1)⁻¹` over `[0,1]` as the integral of `x⁻¹` over `[1,2]`."
+   :completion
+   "Apply `integral_inv_of_pos` on `[1,2]`, then normalize `log (2/1)` to `log 2`."
+   :normalization-gotcha
+   "The source integrand may be written `1 / (1+x)` while the translation lemma produces `(x+1)⁻¹`; explicitly rewrite with `one_div` and commutativity before applying the lemma."
+   :result
+   "The a93J02 lemma `integral_inv_one_plus_x` compiles with zero sorries."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :mathlib-lemma,
+         :id "intervalIntegral.integral_comp_add_right"}
+   #:ref{:type :mathlib-lemma, :id "integral_inv_of_pos"}]
+  :evidence
+  {:turn-round-ids
+   ["e-88825788-562b-41f8-9c6e-bf3e66fdd2e0"
+    "e-6a1cdbfb-9624-496e-84d7-cab0b71865fd"
+    "e-f9a4ea77-fb59-4466-8c55-5aed3884851f"
+    "e-28a0e2c3-e56d-43fb-8bee-8877d992a9ec"]
+   :commits
+   ["6840dc673e4ca3a3cac5fb2a7152a27c07db1eec"
+    "e5158e76a79c2c4e0cab88aaff044e53ffc733c8"]
+   :problems ["a93J02"]}
+  :confidence :single-instance
+  :rationale
+  "The trace records the normalization failures and successful substitution, and the committed helper lemma is a complete application of this API chain."
+  :review {:verdict :pending-operator-review}}
+
+ {:name "record-reasoned-non-use-of-surfaced-memories"
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :live-dispatch-memory-use-outcome
+   :rule
+   "A surfaced memory is an offered hypothesis, not an obligation to cite or force into the proof. Inspect it, mark it unused when its preconditions or proof object do not match, and retain a short reason so honest non-use becomes recall-quality evidence."
+   :live-event
+   {:job-id "invoke-1785096421259-158-9638e22e"
+    :problem "a93J02"
+    :receipt-status :pending-outcome
+    :surfaced-count 3
+    :surfaced-levels [:strategy :strategy :strategy]
+    :surfaced
+    [{:memory-id "e-1ac936fb-04e8-460e-a710-37fac474401c"
+      :name "symmetric-interval-law-to-dyadic-differentiation"
+      :outcome :not-directly-applicable
+      :reason
+      "Its midpoint splitting and differentiation-basis architecture does not address an ordered scalar series or Abel boundary limit."}
+     {:memory-id "e-a9fc50f9-51a3-4908-a3d3-7ad0a8b46e3a"
+      :name "lacunary-series-three-layer-architecture"
+      :outcome :not-directly-applicable
+      :reason
+      "It separates M-test regularity, derivative interchange, and natural-boundary arguments for lacunary power series; a93J02 instead needs conditional ordered summation and evaluation at a boundary point."}
+     {:memory-id "e-b3f51bc2-7509-4bc8-9750-3afc57cfdbec"
+      :name "convergence-in-measure-through-bounded-transform"
+      :outcome :not-directly-applicable
+      :reason
+      "Its bad-set measure decomposition is unrelated to scalar partial sums and logarithmic power-series identities."}]
+    :outcome-source
+    "The dispatch receipt records the three offers as pending/unused; the runner's final summary explicitly names all three and reports each as not directly applicable."}
+   :level-mismatch
+   "All offered memories were strategy-level. The useful discoveries were lemma-location facts: the default-`HasSum` semantic trap, the `Real.tendsto_sum_pi_div_four` Abel template, and `integral_comp_add_right`."
+   :missed-pattern
+   {:pattern-id "math/series-evaluation-api"
+    :description-terms
+    ["tsum" "series evaluation" "zeta" "Basel" "index shift" "hasSum"
+     "summable" "geometric series" "uniform convergence" "M-test"
+     "power series continuity"]
+    :diagnosis
+    "The generated receipt query contained generic terms such as `convergence`, `dominated`, and `sum_`, but omitted `series`, `alternating`, `harmonic`, `log`, `HasSum`, and `tsum`; the proof-outline contributed only `apm-a93j02` and `select`, leaving too little lexical overlap for the series-evaluation pattern despite the actual terrain."}
+   :process-consequence
+   "Treat reasoned non-use as a successful receipt outcome, and use the miss diagnosis to improve recall terms or attachments rather than counting three unused offers as runner failure."}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :memory-use-receipt,
+         :id "e-33c1ea3a-3c12-4074-983a-61ccc25918d2"}
+   #:ref{:type :recall-pattern, :id "math/series-evaluation-api"}]
+  :evidence
+  {:turn-round-ids ["e-28a0e2c3-e56d-43fb-8bee-8877d992a9ec"]
+   :dispatch-receipt-ids
+   ["e-33c1ea3a-3c12-4074-983a-61ccc25918d2"]
+   :surfaced-memory-ids
+   ["e-1ac936fb-04e8-460e-a710-37fac474401c"
+    "e-a9fc50f9-51a3-4908-a3d3-7ad0a8b46e3a"
+    "e-b3f51bc2-7509-4bc8-9750-3afc57cfdbec"]
+   :pattern-description-ids
+   ["e-pattern-description-v1-series-evaluation-api"]
+   :commits ["e5158e76a79c2c4e0cab88aaff044e53ffc733c8"]
+   :problems ["a93J02"]}
+  :confidence :single-instance
+  :rationale
+  "This is the first live dispatch-surfacing event in the pilot: the store receipt identifies exactly what was offered and why, while the runner's final report supplies the discriminating non-use outcome."
   :review {:verdict :pending-operator-review}}]
