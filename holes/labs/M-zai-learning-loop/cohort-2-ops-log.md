@@ -7,3 +7,6 @@ register = countable events per charter.
 ⊸meter [store-at-open] 30 memories / 13 patterns / 6 offered-receipts / 1 outcome-receipt (2/2 used).
 ⊸win [seats] zai-5, codex-2, codex-6 all idle+ready at cohort open (2026-07-27).
 ⊸fix [misdispatch] C2-S1 (lib-young-convolution, job invoke-1785131793242-174) dispatched with one-line stub packet (shell error: echo not heredoc; no repo path / validation / summary contract). Never-kill: job runs. Row pre-typed :misdispatch if output unusable; re-dispatch with full packet ≠ retry (429-precedent: session never properly started). Register note: dispatch packets should go through a CLean-checkable template gate — this error class is lintable (⊸prop: packet-template check in dispatch_with_recall, refuse stdin < N chars without --allow-thin).
+⊸meter [S1] construction-partial: YoungL2.lean 525253b, exit 0 / 2 sorries / 0 errors (my re-run). Memory citation: surfaced missing-dependency pair confirmed-blocked status, redirected to statement-first. Packet-deficit visible in placement (repo root, not lib/).
+⊸win [S6] d4f0f5d verified: v1.1-receipt-ranked tag live, factor 1.5 on used pair (codex-6 differential demo), cold-start neutral, my re-runs clean. Stopword list also addresses the cohort-1 surfacing-miss terms.
+⊸prop [S1b] full-packet YoungL2 completion row added by prereg amendment 1.

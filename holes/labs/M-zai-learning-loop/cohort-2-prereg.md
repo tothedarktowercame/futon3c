@@ -34,3 +34,13 @@ Session 1 runs FIRST (session 6 depends on it). Counting: fresh rows join
 the capability series; construction/continuation rows are labeled and
 reported separately. No retries; batch-0 discipline otherwise. All sessions
 via dispatch_with_recall (receipts in-script).
+
+## Amendment 1 (2026-07-27, before rows 2+ run)
+
+S1 (lib-young) was misdispatched with a stub packet (ops log ⊸fix) yet
+produced a usable PARTIAL: YoungL2.lean (525253b), both statements
+formalized, 2 sorries, proof path documented (Hölder p=q=2 + Fubini +
+translation invariance). Row graded: construction-partial, packet-deficit
+noted. **S1b added**: full-packet continuation of YoungL2 (complete the 2
+sorries) before S6; S6's payoff test requires the proven lemma. Not a
+retry — a labeled continuation row, same class as rows 4/5.
