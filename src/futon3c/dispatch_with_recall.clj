@@ -89,6 +89,9 @@
         (= "--no-receipt-ranking" arg)
         (recur (next remaining) (assoc opts :receipt-ranking? false))
 
+        (= "--allow-thin" arg)
+        (recur (next remaining) (assoc opts :allow-thin? true))
+
         (contains? #{"--problem" "--to" "--from" "--base" "--mission"
                      "--subject" "--terrain" "--substrate-base" "--limit"
                      "--recall-timeout-ms" "--receipt-alpha"}
@@ -158,8 +161,20 @@
   (str (System/getProperty "user.dir")
        "/holes/labs/M-zai-learning-loop/bpm-starter/README.md"))
 
+(defn- normalize-math-text
+  "TeX-encoded mathematics defeats lexical extraction (meta-draft
+  expand-weak-convergence-trigger-vocabulary, 2026-07-27): L^2 / L² read as
+  bare letters, convergence arrows vanish. Normalize BEFORE tokenizing."
+  [text]
+  (-> text
+      (str/replace #"L\^?[\u00b22]" "L2 ")
+      (str/replace #"L\^?[p1\u00b9]" "Lp ")
+      (str/replace #"\\to|\\rightarrow|\u2192|\\longrightarrow" " convergence ")
+      (str/replace #"\\infty" " infinity ")
+      (str/replace #"\\int" " integral ")))
+
 (defn- text-keywords [text limit]
-  (->> (re-seq #"[A-Za-z][A-Za-z0-9_/-]{3,}" (str/lower-case text))
+  (->> (re-seq #"[A-Za-z][A-Za-z0-9_/-]{3,}" (str/lower-case (normalize-math-text text)))
        (remove stopwords)
        frequencies
        (sort-by (fn [[word count]] [(- count) word]))
@@ -713,7 +728,15 @@
   (when-not (:to opts)
     (throw (ex-info "--to is required" {})))
   (when (str/blank? packet)
-    (throw (ex-info "problem packet on stdin is empty" {}))))
+    (throw (ex-info "problem packet on stdin is empty" {})))
+  ;; Thin-packet gate (meta-draft reject-thin-dispatch-packets, 2026-07-27):
+  ;; a stub packet reaching Agency burns a runner job on an unactionable
+  ;; prompt. Require a real contract unless the operator says otherwise.
+  (when (and (not (:allow-thin? opts))
+             (< (count packet) 200))
+    (throw (ex-info (str "packet is implausibly thin (" (count packet)
+                         " chars); pass --allow-thin to override")
+                    {:length (count packet)}))))
 
 (defn run-dispatch!
   "Execute one CLI dispatch. Kept public for focused tests."
