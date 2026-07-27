@@ -69,4 +69,50 @@
   :confidence :single-instance
   :rationale
   "The receipt exposes the exact query vocabulary and the committed proof identifies the missing domain terms, making the proposed description/token-normalization change directly testable by replay."
+  :review {:verdict :pending-loop-review}}
+
+ {:name "recall-extraction-v1-3-strip-tex-fragments-and-packet-boilerplate"
+  :level :loop
+  :status :draft
+  :body
+  {:marker-kind :miss
+   :observed-miss
+   "The S4 receipt contained the useful normalized terms `convergence`, `weakly`, `hilbert`, and `liminf`, yet recall remained empty because TeX fragments and dispatch boilerplate diluted the specialized overlap."
+   :receipt-query
+   "a93A03 convergence infinity cdot langle lim_ rangle weakly converges sequence converge denote h_n-h hilbert inner apm-a93a03 select commit your part sorry they completion final liminf"
+   :exact-stopword-additions
+   ["cdot"
+    "langle"
+    "rangle"
+    "denote"
+    "select"
+    "sorry"
+    "commit"
+    "your"
+    "they"
+    "part"]
+   :tex-fragment-rule
+   "Before tokenization, strip standalone TeX command fragments and delimiter names produced by backslash commands (for example `cdot`, `langle`, and `rangle`), while retaining semantic normalizations such as `L^2`→`L2` and arrows→`convergence`."
+   :packet-rule
+   "Apply the exact packet-boilerplate stopwords above to stdin-derived terms so workflow instructions cannot outrank mathematical terrain."
+   :acceptance-replay
+   "Re-run the S4 receipt query after v1.3 extraction; `math/weak-convergence-hilbert` should enter the candidate set from weak/convergence/Hilbert/liminf terms, while the removed fragments contribute no score."
+   :boundary
+   "This proposal fixes candidate pollution only. S4 separately showed that the surfaced memory would still need scope rejection because its bounded-under construction does not solve cobounded-under."}
+  :subjects
+  [#:ref{:type :mission, :id "M-zai-learning-loop"}
+   #:ref{:type :loop-component, :id "recall-term-extraction"}
+   #:ref{:type :apm-problem, :id "a93A03"}]
+  :evidence
+  {:turn-round-ids
+   ["e-e36e37bd-68f9-4ec7-b53e-020a4c445112"
+    "e-3d6d4147-f1fe-4298-8acc-c6ddaa17602e"]
+   :commits ["26be1cb64f54724e803452daa60ac6b7398a045b"]
+   :problems ["a93A03"]
+   :jobs ["invoke-1785134502488-184-2b1ee924"]
+   :register-markers
+   ["⊸meter [S4]" "⊸miss [extraction-v1.3]"]}
+  :confidence :single-instance
+  :rationale
+  "The offered receipt provides the exact polluted query and the ops register supplies a deterministic correction vocabulary, so the change can be evaluated by direct replay rather than subjective relevance judgment."
   :review {:verdict :pending-loop-review}}]

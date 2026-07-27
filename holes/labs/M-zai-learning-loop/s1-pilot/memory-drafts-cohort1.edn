@@ -371,22 +371,15 @@
   "The exact identity was discovered in round 4; the runner then verified the square-root API and the committed theorem uses both leaves in a compiling, sorry-free proof."
   :review {:verdict :pending-operator-review}}
 
- {:name "liminf-eventual-lower-bound-api-side-conditions"
+ {:name "liminf-le-of-le-zero-lower-bound-side-condition"
   :level :lemma-location
-  :status :gap-resolved
+  :status :direction-scoped-resolution
   :body
   {:problem-class
-   "Discharge the boundedness side condition required by liminf lemmas for a nonnegative real-valued sequence."
+   "Discharge `IsBoundedUnder (· ≥ ·)` for `liminf_le_of_le` when the sequence is nonnegative."
    :gap-kind :resolved-side-condition
    :history
-   "In a93A03, both `le_liminf_of_le` and a `liminf_eq`/`le_csSup` route exposed an apparently missing boundedness package. The latter route was circular because `le_csSup` itself required the missing `BddAbove` fact."
-   :attempted-apis
-   [{:lemma "`le_liminf_of_le`"
-     :observed-requirement
-     "`IsCoboundedUnder (· ≥ ·) atTop u`; it was not derivable merely from the eventual-lower-bound helper in the attempted proof."}
-    {:lemma "`liminf_eq` followed by `le_csSup`"
-     :observed-requirement
-     "`BddAbove` for the set of eventual lower bounds; trying to obtain it from the contradiction hypothesis required the same supremum fact and became circular."}]
+   "The previous promoted version merged this construction with the opposite `le_liminf_of_le`/`IsCoboundedUnder` direction. S4 mechanically disproved that scope: the zero witness resolves only the bounded-under premise used by `liminf_le_of_le`."
    :resolution
    {:source-problem "a96A03"
     :exact-construction
@@ -396,37 +389,86 @@
     :use
     "Pass `h_bdd` to `liminf_le_of_le`, or construct the analogous zero-bound witness for another nonnegative sequence before invoking the relevant liminf API."
     :boundary
-    "This shortcut applies when the sequence is provably nonnegative and the side condition is `IsBoundedUnder (· ≥ ·)`. It does not discharge an actual upper-boundedness obligation or reverse-order variant."}
-   :negative-rule
-   "Do not try to manufacture `BddAbove` from `sSup S < c` using `le_csSup`: `le_csSup` already requires `BddAbove S`, so that route assumes the missing obligation."
+    "This shortcut applies only when the requested premise is `IsBoundedUnder (· ≥ ·)`: one eventual lower bound. It does not prove `IsCoboundedUnder (· ≥ ·)`, which uniformly bounds all eventual lower bounds and is required by `le_liminf_of_le`."}
+   :scope-challenge
+   {:source-problem "a93A03"
+    :runner-quote
+    "The prior session memory about resolving liminf blocks on a96A03 (using `IsBoundedUnder` via `⟨0, nonneg⟩`) was NOT applicable because this proof needs the OPPOSITE direction (`le_liminf_of_le` with `IsCoboundedUnder`, not `liminf_le_of_le` with `IsBoundedUnder`)."
+    :outcome
+    "The correction admits that the n=2 merged memory overclaimed; the opposite direction is now a separate open gap memory."}
    :classification
-   "A cross-problem API-resolution memory: a93A03 identified the gap, and a96A03 supplied a compiling construction that resolves it."}
+   "A direction-scoped API leaf with one compiling positive instance and one mechanically witnessed non-applicability boundary."}
   :subjects
-  [#:ref{:type :apm-problem, :id "a93A03"}
-   #:ref{:type :apm-problem, :id "a96A03"}
-   #:ref{:type :mathlib-lemma, :id "le_liminf_of_le"}
+  [#:ref{:type :apm-problem, :id "a96A03"}
    #:ref{:type :mathlib-lemma, :id "liminf_le_of_le"}
-   #:ref{:type :mathlib-lemma, :id "liminf_eq"}
-   #:ref{:type :formalization-bottleneck,
-         :id "liminf-coboundedness-side-condition"}]
+   #:ref{:type :formalization-pattern,
+         :id "zero-eventual-lower-bound"}]
   :evidence
   {:turn-round-ids
-   ["e-08eacba4-a1ae-442c-84b8-964d838aaedf"
-    "e-326e709a-64f2-4580-b884-57bab24253c7"
-    "e-8435a45b-9ed5-4bf4-894c-97a4e0458f07"
-    "e-cca77d7b-bbec-4a89-b359-f81c9bd60656"
-    "e-28a54c6e-8dd7-401b-8764-d66ea190b81a"
-    "e-ded3507e-b861-4afe-ae7c-8c112d4f63b2"
-    "e-0619e21d-72a8-4f40-be9a-7dec4c4bb7e1"
-    "e-d6d7a90c-2321-4f8b-9d80-ef2f74ee9c1a"]
+   ["e-0619e21d-72a8-4f40-be9a-7dec4c4bb7e1"
+    "e-d6d7a90c-2321-4f8b-9d80-ef2f74ee9c1a"
+    "e-3d6d4147-f1fe-4298-8acc-c6ddaa17602e"]
    :commits
-   ["a72683ad95a14ebc9875e66da317f8c524a69eb1"
-    "d93e7e0dbe7b24f14d12006cd93ae560ccbe7a33"]
+   ["d93e7e0dbe7b24f14d12006cd93ae560ccbe7a33"
+    "26be1cb64f54724e803452daa60ac6b7398a045b"]
    :problems ["a93A03" "a96A03"]}
-  :confidence :n-instances
-  :instance-count 2
+  :confidence :single-instance
+  :boundary-witness-count 1
   :rationale
-  "The original trace isolates the side-condition gap; a different problem later supplies the exact zero lower-bound witness in compiling code, converting the gap into a reusable resolution."
+  "a96A03 compiles with the exact zero-bound witness; S4 supplies direct negative evidence that the witness cannot be generalized to the opposite coboundedness premise."
+  :review
+  {:verdict :pudding-delegated
+   :warrant
+   "operator-delegated: in-use evaluation (proof-in-pudding, Joe 2026-07-26)"}}
+
+ {:name "le-liminf-is-cobounded-under-unbounded-above-gap"
+  :level :lemma-location
+  :status :gap-open
+  :body
+  {:problem-class
+   "Prove `c ≤ liminf u atTop` from an eventual-lower-bound argument when the real-valued sequence may be unbounded above."
+   :gap-kind :opposite-direction-coboundedness
+   :attempted-api
+   {:lemma "`le_liminf_of_le`"
+    :required-premise
+    "`Filter.IsCoboundedUnder (· ≥ ·) atTop u`"
+    :meaning
+    "There must be one `b` that bounds every eventual lower bound `a`: `∃ b, ∀ a, (∀ᶠ n, a ≤ u n) → a ≤ b`."
+    :failure
+    "For a sequence unbounded above, the eventual lower bounds can themselves be unbounded above, so this premise does not follow from nonnegativity or from one known eventual lower bound."}
+   :failed-alternative
+   {:route "`liminf_eq` followed by `le_csSup`"
+    :failure
+    "`le_csSup` requires `BddAbove` for the set of eventual lower bounds. Deriving that bound from the desired liminf inequality is circular."
+    :root-cause
+    "On the conditionally complete lattice ℝ, `csSup` has the junk value zero on an unbounded set; an inequality involving that value cannot recover the missing `BddAbove` premise."}
+   :negative-rule
+   "Do not reuse the `IsBoundedUnder (· ≥ ·)` zero-lower-bound witness here: `IsCoboundedUnder` is the opposite quantifier/direction and asks for a uniform upper bound on all eventual lower bounds."
+   :candidate-route
+   {:status :untested-suggestion
+    :source "ground-control cohort-2 ops log"
+    :architecture
+    "First prove weak convergence implies uniform norm boundedness, via the uniform boundedness principle; then derive `IsCoboundedUnder` non-circularly from that actual upper bound; finally apply `le_liminf_of_le`."
+    :caution
+    "No corpus commit or runner trace has yet located or validated the necessary Mathlib uniform-boundedness-to-norm-bound chain."}}
+  :subjects
+  [#:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :mathlib-lemma, :id "le_liminf_of_le"}
+   #:ref{:type :mathlib-definition,
+         :id "Filter.IsCoboundedUnder"}
+   #:ref{:type :formalization-bottleneck,
+         :id "liminf-coboundedness-unbounded-above"}]
+  :evidence
+  {:turn-round-ids ["e-3d6d4147-f1fe-4298-8acc-c6ddaa17602e"]
+   :commits ["26be1cb64f54724e803452daa60ac6b7398a045b"]
+   :problems ["a93A03"]
+   :register-markers
+   ["⊸meter [S4]"
+    "⊸prop [scope-challenge]"
+    "⊸meter [ground-control-math-note]"]}
+  :confidence :single-instance
+  :rationale
+  "The runner reached the exact premise in compiling one-sorry code, tested both available real-liminf routes, and documented the direction mismatch and csSup circularity. The proposed boundedness-first discharge remains explicitly untested."
   :review
   {:verdict :pudding-delegated
    :warrant
@@ -818,7 +860,7 @@
 
  {:name "young-l2-holder-fubini-translation-api-map"
   :level :lemma-location
-  :status :dependency-map-partial
+  :status :dependency-map-blocked
   :body
   {:problem-class
    "Prove the L² Young convolution bounds `‖f ⋆ g‖₂ ≤ ‖f‖₁ ‖g‖₂` and its symmetric L²/L¹ variant on ℝ."
@@ -841,20 +883,31 @@
      "Convert the squared integral estimate back to the L² norm inequality."}]
    :symmetric-case
    "Obtain the L²/L¹ orientation by the same calculation with f and g exchanged, or by convolution commutativity once its hypotheses are available."
+   :continuation-result
+   {:session "S1b"
+    :outcome "Honest zero progress: the file still compiles with two sorries and no new commit."
+    :main-theorem-blocker
+    "The proof still needs a coherent Fubini/Tonelli assembly around the weighted Cauchy–Schwarz estimate and translation invariance."
+    :corollary-blocker
+    "Deriving the probability-kernel corollary additionally needs `Integrable g` from nonnegativity plus `∫ g = 1`; the attempt did not close `HasFiniteIntegral`/`AEStronglyMeasurable` for arbitrary g, nor the scalar-action and ENNReal normalization details."
+    :lesson
+    "The statement-first map remains valid, but its named leaves are not yet an executable proof chain; future work should isolate the integrability and measure-preserving translation sublemmas before returning to the top theorem."}
    :boundary
-   "This is a located dependency map, not a completed proof: commit 525253b retains two theorem-body sorries, so theorem signatures and leaf names must be rechecked during S1b."}
+   "This is a blocked dependency map, not a completed proof. S1b validated the statements and blockers but did not reduce either theorem-body sorry."}
   :subjects
   [#:ref{:type :apm-problem, :id "lib-young"}
    #:ref{:type :apm-problem, :id "a96A04"}
    #:ref{:type :mathlib-lemma,
          :id "MeasureTheory.integral_mul_le_Lp_mul_Lq_of_nonneg"}]
   :evidence
-  {:turn-round-ids ["e-2f56155d-6a39-46bd-9bda-6dcdc6c4f3dd"]
+  {:turn-round-ids
+   ["e-2f56155d-6a39-46bd-9bda-6dcdc6c4f3dd"
+    "e-5c8b38e1-d6b1-444b-bc76-4a4919d8e0d0"]
    :commits ["525253b68eb882de1eb2db2b2a2eb91e8c5ceedc"]
    :problems ["lib-young" "a96A04"]}
   :confidence :single-instance
   :rationale
-  "The compiling construction fixes the target signatures, and its final summary records the exact analytic decomposition and the principal Hölder leaf for the follow-on proof."
+  "The compiling construction fixes the target signatures; the S1b continuation independently confirms that the unresolved work is the Fubini/integrability assembly rather than statement design or a hidden existing theorem."
   :review
   {:verdict :pudding-delegated
    :warrant

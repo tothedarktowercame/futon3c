@@ -122,11 +122,11 @@
     :name "norm-sub-square-to-norm-limit-api-chain"
     :pattern-id "math/weak-convergence-hilbert"
     :review-warrant pudding-review-warrant}
-   {:memory-id "e-ba5a8bee-84ca-4894-8d2b-124ce931cea0"
-    :name "liminf-eventual-lower-bound-api-side-conditions"
+   {:memory-id "e-30e87097-f843-4341-81c0-a49ee7ce0ef4"
+    :name "liminf-le-of-le-zero-lower-bound-side-condition"
     :pattern-id "math/weak-convergence-hilbert"
     :review-id
-    "e-review-math-pudding-v2-liminf-eventual-lower-bound-api-side-conditions-resolution"
+    "e-review-math-pudding-v2-liminf-le-of-le-zero-lower-bound-scope-correction"
     :review-warrant pudding-review-warrant}
    {:memory-id "e-e5d809a6-3bfc-468a-888a-16e651bfe468"
     :name "use-informal-proof-architecture-with-leaf-level-verification"
@@ -160,12 +160,18 @@
     :name "normalize-integer-complex-casts-before-projections"
     :pattern-id "math/cast-normalization"
     :review-warrant pudding-review-warrant}
-   {:memory-id "e-d72a5bd6-a54d-4fbb-8daa-1bf8a3c32e51"
+   {:memory-id "e-bb16ffa8-e6da-4956-81c3-011e312d5302"
     :name "young-l2-holder-fubini-translation-api-map"
     :pattern-id "math/missing-dependency-protocol"
+    :review-id
+    "e-review-math-pudding-v2-young-l2-holder-fubini-translation-api-map-s1b"
     :review-warrant pudding-review-warrant}
    {:memory-id "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde"
     :name "fatou-lp-ae-limit-api-chain"
+    :pattern-id "math/weak-convergence-hilbert"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-0e4e32fe-54af-451b-b302-17aa521891fd"
+    :name "le-liminf-is-cobounded-under-unbounded-above-gap"
     :pattern-id "math/weak-convergence-hilbert"
     :review-warrant pudding-review-warrant}])
 
