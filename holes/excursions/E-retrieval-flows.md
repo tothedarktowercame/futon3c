@@ -143,3 +143,30 @@ provenance.
 - Show this note + the correspondence table to Rob; the Panopticon
   rule-rewriting conversation and this operator-evolution frame are
   plausibly the same object at different levels.
+
+## v2 (2026-07-27): the LIVE instantiation — theory objects → shipped code
+
+The M-zai-learning-loop recall stack (cohorts 1–2) is the first deployed
+shadow of the evolving-operator frame. The mapping, term by term:
+
+| theory object | live counterpart | where |
+|---|---|---|
+| `x_t` propagation over typed graph | pattern-mediated recall: FTS seed → reviewed memory/assert edge → pattern endpoint → attached memories | `memory_recall/propose-patterns-by-query` + `recall-by-endpoint` |
+| `Δ_θ` coupling structure (which edges conduct) | pattern attachments + pattern DESCRIPTIONS (lexical bridge rows); editing descriptions = editing conductances | `wire_math_memory_patterns.clj` (7776cfc, e382487) |
+| query source term `q` | problem-file term extraction (problem.md/proof-outline.md nouns, tuned stopwords) | `dispatch_with_recall/problem-term-sources` |
+| boundary conditions `B_t` | the warrant discipline: only REVIEWED edges conduct; descriptions/embeddings propose, never warrant | P1 acceptance rule; charter S5 |
+| **Ψ (the θ update — the "updating Laplacian")** | **S6 receipt-informed ranking: per-memory multiplier (1 + α·used/offered) from use-receipts; the first LIVE Ψ** | `dispatch_with_recall` receipt-stats (d4f0f5d); receipts as the observation channel |
+| forcing `F_t` (external drive) | curriculum lane: coverage map + memory-proposed construction targets select what the system experiences next | cohort-2 prereg (041a49f) |
+| widened proposal support | S5 semantic lane (MiniLM proposals, feasible-later) | charter §S5 |
+
+Honest deltas from the theory: live Ψ is a scalar per-memory reweighting,
+not the rung-2 per-edge-type operator update — θ_t currently has one
+coefficient per memory, not per relation type; the dark rungs (1–4 in
+E-dynamic-queries) remain the richer dynamics this deployment should grow
+toward. The observation channel, however, is exactly as drawn: receipts
+(offered/used/outcome) are the y_t that Ψ consumes, and they are live.
+
+Cross-refs: M-typed-memories (the store/dialogue-acts substrate this flows
+over) · M-zai-learning-loop charter §Second derivative (Ψ as the first
+outer-loop mechanism) · algorithms/zai-learning-loop.md (operational
+reproduction recipe).
