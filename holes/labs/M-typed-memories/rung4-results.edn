@@ -1,0 +1,29 @@
+{:status :frozen-dark-replay
+ :date "2026-07-27"
+ :expected-replay
+ {:phase4
+  {:typed-ranking
+   ["M-shared-memory-control-build-test"
+    "M-aif-policy-conditioned-eig"
+    "M-wm-aif-policy-grain-compliance"]
+   :termination :budget-exhausted
+   :steps-executed 3
+   :candidate-set-preserved? true
+   :selected-mission nil
+   :live-ordering-changed? false}
+  :confirmation-collapse
+  {:floor-off
+   {:top-mission "M-accidental-decoy"
+    :final-theta {:repairs-control 1.0
+                  :requires-control 0.0}
+    :challenge-reachable-every-step? true}
+   :floor-on
+   {:top-mission "M-planted-target"
+    :recovery-step 2
+    :final-theta {:repairs-control 0.2
+                  :requires-control 0.8}
+    :challenge-reachable-every-step? true}}
+  :control-rankings
+  {:endpoint ["M-accidental-decoy" "M-planted-target"]
+   :rung1-typed ["M-accidental-decoy" "M-planted-target"]}
+  :theta-semantics :search-heuristic-not-posterior}}
