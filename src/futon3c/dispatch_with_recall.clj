@@ -21,6 +21,11 @@
 (def default-mission "M-zai-learning-loop")
 (def default-problem-root "/home/joe/code/apm-lean/problems")
 (def recall-system :v1-enriched)
+(def receipt-ranked-system :v1.1-receipt-ranked)
+(def default-receipt-alpha 0.5)
+(def default-receipt-query-limit 200)
+(def default-receipt-stats-timeout-ms 5000)
+(def receipt-author "ground-control")
 
 (def ^:private stopwords
   #{"about" "after" "again" "against" "alist" "also" "apm" "attempt"
@@ -50,6 +55,17 @@
     (catch NumberFormatException _
       (throw (ex-info (str label " must be an integer") {:value value})))))
 
+(defn- bounded-double [label value lower upper]
+  (try
+    (let [parsed (Double/parseDouble value)]
+      (when-not (and (Double/isFinite parsed)
+                     (<= lower parsed upper))
+        (throw (ex-info (str label " must be between " lower " and " upper)
+                        {:value value})))
+      parsed)
+    (catch NumberFormatException _
+      (throw (ex-info (str label " must be a number") {:value value})))))
+
 (defn parse-args
   "Parse the deliberately small CLI without adding another dependency."
   [args]
@@ -59,6 +75,8 @@
                :base default-agency-base
                :mission default-mission
                :from "ground-control"
+               :receipt-ranking? true
+               :receipt-alpha default-receipt-alpha
                :subjects []}]
     (if-let [arg (first remaining)]
       (cond
@@ -68,9 +86,12 @@
         (= "--help" arg)
         (recur (next remaining) (assoc opts :help? true))
 
+        (= "--no-receipt-ranking" arg)
+        (recur (next remaining) (assoc opts :receipt-ranking? false))
+
         (contains? #{"--problem" "--to" "--from" "--base" "--mission"
                      "--subject" "--terrain" "--substrate-base" "--limit"
-                     "--recall-timeout-ms"}
+                     "--recall-timeout-ms" "--receipt-alpha"}
                    arg)
         (let [value (second remaining)]
           (when (or (nil? value) (str/starts-with? value "--"))
@@ -87,6 +108,9 @@
              "--terrain" (assoc opts :terrain value)
              "--substrate-base" (assoc opts :substrate-base value)
              "--limit" (assoc opts :limit (positive-int arg value))
+             "--receipt-alpha"
+             (assoc opts :receipt-alpha
+                    (bounded-double arg value 0.0 1.0))
              "--recall-timeout-ms"
              (assoc opts :recall-timeout-ms (positive-int arg value)))))
 
@@ -103,6 +127,8 @@
    "  --subject TEXT            additional recall subject; repeatable\n"
    "  --terrain TEXT            explicit terrain override\n"
    "  --recall-timeout-ms N     total recall budget (default 30000)\n"
+   "  --receipt-alpha N         use-rate boost weight, 0..1 (default 0.5)\n"
+   "  --no-receipt-ranking      disable use-receipt ranking\n"
    "  --substrate-base URL      authoritative substrate override\n"
    "  --base URL                Agency base (default http://localhost:7070)\n"
    "  --from ID                 dispatch/receipt author (default ground-control)\n"
@@ -259,10 +285,140 @@
   [recall-timeout-ms]
   (max 250 recall-timeout-ms))
 
+(defn- receipt-entries
+  [base timeout-ms]
+  (let [response
+        (request-edn
+         :get
+         (str (trim-base base)
+              "/api/alpha/evidence?type=pattern-outcome&author="
+              (encode receipt-author)
+              "&limit=" default-receipt-query-limit)
+         {:timeout timeout-ms})]
+    (vec (or (:entries response) response []))))
+
+(defn- memory-patterns
+  [memory]
+  (->> (concat (:memory/pattern-ids memory)
+               (when (str/starts-with?
+                      (or (:dispatch/endpoint memory) "")
+                      "math/")
+                 [(:dispatch/endpoint memory)]))
+       (filter string?)
+       distinct
+       vec))
+
+(defn- empty-use-stat []
+  {:offered-count 0
+   :used-count 0
+   :outcome-count 0
+   :outcome-quality {}})
+
+(defn- bump-use-stat
+  [stat phase classification]
+  (cond-> (or stat (empty-use-stat))
+    (= :offered phase)
+    (update :offered-count inc)
+
+    (= :used phase)
+    (update :used-count inc)
+
+    (= :used phase)
+    (update :outcome-count inc)
+
+    (and (= :used phase) classification)
+    (update-in [:outcome-quality classification] (fnil inc 0))))
+
+(defn aggregate-use-receipts
+  "Aggregate offered/outcome halves for only the current candidate batch.
+  Pattern counts are per receipt, not the sum of member-memory counts."
+  [entries memories]
+  (let [candidate-ids (set (map :memory/id memories))
+        patterns-by-memory
+        (into {} (map (juxt :memory/id memory-patterns) memories))]
+    (reduce
+     (fn [stats entry]
+       (let [body (:evidence/body entry)
+             receipt (:memory-use body)]
+         (if (and (= :memory-use (:event body))
+                  (map? receipt))
+           (let [phase (:phase body)
+                 classification (get-in body [:outcome :classification])
+                 memory-ids
+                 (set
+                  (filter
+                   candidate-ids
+                   (case phase
+                     :offered (:memory-use/surfaced-ids receipt)
+                     :outcome (:memory-use/used-ids receipt)
+                     [])))
+                 stat-phase (case phase :offered :offered :outcome :used nil)
+                 pattern-ids
+                 (set (mapcat patterns-by-memory memory-ids))]
+             (if stat-phase
+               (-> stats
+                   (update :memories
+                           (fn [memory-stats]
+                             (reduce
+                              #(update %1 %2 bump-use-stat
+                                       stat-phase classification)
+                              memory-stats memory-ids)))
+                   (update :patterns
+                           (fn [pattern-stats]
+                             (reduce
+                              #(update %1 %2 bump-use-stat
+                                       stat-phase classification)
+                              pattern-stats pattern-ids))))
+               stats))
+           stats)))
+     {:memories {} :patterns {}}
+     entries)))
+
+(defn- scored-use-stat
+  [stat alpha]
+  (let [{:keys [offered-count used-count]}
+        (merge (empty-use-stat) stat)
+        use-rate (if (pos? offered-count)
+                   (/ (double used-count) offered-count)
+                   0.0)]
+    (assoc (merge (empty-use-stat) stat)
+           :use-rate use-rate
+           :ranking-factor
+           (if (pos? offered-count)
+             (+ 1.0 (* alpha use-rate))
+             1.0))))
+
+(defn rank-memories
+  "Apply a bounded receipt boost to the existing deterministic order.
+  The base score decays gently with the pre-receipt rank; cold memories keep
+  exactly the neutral factor 1.0."
+  [memories memory-stats alpha]
+  (->> memories
+       (map-indexed
+        (fn [index memory]
+          (let [stat (scored-use-stat
+                      (get memory-stats (:memory/id memory))
+                      alpha)
+                base-score (/ 1.0 (+ 1.0 (* 0.05 index)))]
+            (assoc memory
+                   :dispatch/pre-receipt-rank (inc index)
+                   :dispatch/base-score base-score
+                   :dispatch/receipt-stats stat
+                   :dispatch/ranking-score
+                   (* base-score (:ranking-factor stat))))))
+       (sort-by (juxt (comp - :dispatch/ranking-score)
+                      :dispatch/pre-receipt-rank
+                      :memory/id))
+       vec))
+
 (defn- recall-now
-  [{:keys [problem subjects limit substrate-base recall-timeout-ms] :as opts}
+  [{:keys [problem subjects limit substrate-base recall-timeout-ms
+           receipt-ranking? receipt-alpha]
+    :or {receipt-ranking? true receipt-alpha default-receipt-alpha}
+    :as opts}
    packet]
-  (let [trace-id (str "dispatch-recall-" (UUID/randomUUID))
+  (let [started-ns (System/nanoTime)
+        trace-id (str "dispatch-recall-" (UUID/randomUUID))
         terrain-map (read-bpm-terrains (default-terrain-readme))
         query-data (recall-query opts packet terrain-map)
         substrate-base (or substrate-base (substrate/configured-url))
@@ -301,7 +457,7 @@
              :fetch-components projection
              :fetch-entry entry}))
          endpoints)
-        memories
+        candidates
         (->> recalls
              (mapcat
               (fn [recall]
@@ -313,10 +469,63 @@
                   acc
                   {:seen (conj seen (:memory/id memory))
                    :items (conj items memory)}))
-              {:seen #{} :items []})
+             {:seen #{} :items []})
              :items
-             (take limit)
-             vec)]
+             vec)
+        elapsed-ms (/ (double (- (System/nanoTime) started-ns)) 1000000.0)
+        stats-timeout-ms
+        (long
+         (max 0
+              (min default-receipt-stats-timeout-ms
+                   (- recall-timeout-ms elapsed-ms 500.0))))
+        receipt-stats
+        (if (and receipt-ranking?
+                 (seq candidates)
+                 (>= stats-timeout-ms 250))
+          (try
+            (aggregate-use-receipts
+             (receipt-entries substrate-base stats-timeout-ms)
+             candidates)
+            (catch Throwable _
+              {:memories {} :patterns {}}))
+          {:memories {} :patterns {}})
+        stats-found?
+        (boolean
+         (some (fn [[_ stat]]
+                 (or (pos? (:offered-count stat))
+                     (pos? (:used-count stat))))
+               (:memories receipt-stats)))
+        ranked
+        (if (and receipt-ranking? stats-found?)
+          (rank-memories candidates (:memories receipt-stats) receipt-alpha)
+          candidates)
+        scored-memory-stats
+        (when stats-found?
+          (into (sorted-map)
+                (map (fn [memory]
+                       (let [memory-id (:memory/id memory)]
+                         [memory-id
+                          (scored-use-stat
+                           (get-in receipt-stats [:memories memory-id])
+                           receipt-alpha)])))
+                candidates))
+        ranking-audit
+        (cond-> {:enabled receipt-ranking?
+                 :alpha receipt-alpha
+                 :stats-found? stats-found?}
+          stats-found?
+          (assoc :per-memory scored-memory-stats
+                 :per-pattern (into (sorted-map)
+                                    (:patterns receipt-stats))))
+        active-system
+        (if (and receipt-ranking? stats-found?)
+          receipt-ranked-system
+          recall-system)
+        query-data
+        (assoc query-data
+               :recall-system active-system
+               :receipt-ranking ranking-audit)
+        memories (vec (take limit ranked))]
     {:status (if (seq memories) :ok :recall-empty)
      :trace-id trace-id
      :query query-data
@@ -430,7 +639,9 @@
      :session-id session-id
      :body (cond-> {:event :memory-use
                     :phase :offered
-                    :recall-system recall-system
+                    :recall-system
+                    (or (get-in recall-result [:query :recall-system])
+                        recall-system)
                     :problem problem
                     :job-id job-id
                     :recall-status (:status recall-result)
