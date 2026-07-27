@@ -262,7 +262,24 @@
                           {:pattern-id pattern-id
                            :before unrelated-before
                            :after unrelated-after})))
-        (if before :described :minted)))))
+        (let [result (if before :described :minted)]
+          ;; Routemap "mint receipts": pattern creation is itself a typed,
+          ;; replayable event (deterministic id keeps the script idempotent).
+          (when (= :minted result)
+            (post-edn! "/api/alpha/evidence"
+                       {:evidence/id (str "e-pattern-mint-" (.replace ^String pattern-id "/" "-"))
+                        :evidence/subject {:ref/type :pattern :ref/id pattern-id}
+                        :evidence/type :reflection
+                        :evidence/claim-type :observation
+                        :evidence/at (str (Instant/now))
+                        :evidence/author "ground-control"
+                        :evidence/body {:event :pattern-mint
+                                        :pattern-id pattern-id
+                                        :kind :trigger-class
+                                        :warrant "ground-control vocabulary design; wired by wire_math_memory_patterns"
+                                        :description (get pattern-descriptions pattern-id)}
+                        :evidence/tags [:memory :pattern-mint]}))
+          result)))))
 
 (defn- description-evidence-id [pattern-id]
   (str "e-pattern-description-v1-"

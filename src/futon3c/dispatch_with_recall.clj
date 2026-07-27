@@ -670,7 +670,13 @@
                     :recall-query (:query recall-result)
                     :memory-use receipt}
              (:reason recall-result)
-             (assoc :recall-reason (:reason recall-result)))
+             (assoc :recall-reason (:reason recall-result))
+             ;; Routemap "reason-bearing none": an empty recall names the
+             ;; terms that matched nothing — the mint lane's work queue.
+             (= :recall-empty (:status recall-result))
+             (assoc :mint-candidates
+                    (vec (take 8 (remove #(str/starts-with? % "apm-")
+                                         (get-in recall-result [:query :terms] []))))))
      :tags (cond-> [:memory :memory-use :memory-offered]
              (= :recall-empty (:status recall-result))
              (conj :recall-empty))}))
