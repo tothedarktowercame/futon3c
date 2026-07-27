@@ -1,0 +1,72 @@
+[{:name "reject-thin-dispatch-packets-before-agency-invoke"
+  :level :loop
+  :status :draft
+  :body
+  {:marker-kind :misdispatch
+   :observation
+   "The cohort-2 S1 register records that a one-line stub reached an Agency invoke because an echo-style dispatch did not preserve the intended multiline packet. The job received no repository, validation command, deliverable contract, or final-summary requirement."
+   :proposed-rule
+   "`dispatch_with_recall` should reject implausibly short stdin or packets missing required contract fields before invoking Agency, unless the operator explicitly supplies `--allow-thin`."
+   :required-fields
+   ["repository or working directory"
+    "task/deliverable"
+    "validation or acceptance criterion"
+    "completion/reporting instruction"]
+   :expected-effect
+   "Turn a silent shell-packet truncation into an immediate, typed dispatch error instead of spending an agent job on an unactionable prompt."}
+  :subjects
+  [#:ref{:type :mission, :id "M-zai-learning-loop"}
+   #:ref{:type :loop-component, :id "dispatch_with_recall"}]
+  :evidence
+  {:turn-round-ids []
+   :commits []
+   :problems ["lib-young"]
+   :register-markers ["⊸fix [misdispatch]"]
+   :jobs ["invoke-1785131793242-174"]}
+  :confidence :single-instance
+  :rationale
+  "The typed operations register makes the cause and missing packet fields deterministic; a pre-invoke structural check is cheaper and more reliable than detecting the failure from the resulting session."
+  :review {:verdict :pending-loop-review}}
+
+ {:name "expand-weak-convergence-trigger-vocabulary-from-receipt-miss"
+  :level :loop
+  :status :draft
+  :body
+  {:marker-kind :prop
+   :observed-miss
+   "The S2 receipt did not offer `math/weak-convergence-hilbert` for a96A03 even though the problem concerns convergence and boundedness in L² terrain."
+   :receipt-query-terms
+   ["a96A03"
+    "infty"
+    "function"
+    "measure"
+    "almost"
+    "belongs"
+    "bounded"
+    "continuous"
+    "everywhere"
+    "interval"
+    "lebesgue"]
+   :diagnosis
+   "The extracted query omitted `weak`, `convergence`, `Hilbert`, `L2`, and `Fatou`: the source expressed L² and convergence largely through TeX notation (`L^2`, arrows, and indexed functions), while the current lexical extraction retained generic prose terms that overlapped unrelated bounded-function memories."
+   :proposed-description
+   "weak convergence Hilbert space, Kadec Klee, norm convergence implies strong convergence, norm_sub_sq_real, continuous sqrt, liminf side conditions; almost everywhere limit, Lebesgue measure, Lp L2 norm, Fatou, bounded function sequence, integral against test functions, continuous compact support"
+   :proposed-stopword-fix
+   "Preserve or normalize mathematical tokens such as `L^2`→`L2` and convergence arrows→`convergence` before stopword filtering; do not let generic terms such as `function`, `bounded`, and `continuous` dominate specialized pattern overlap."
+   :receipt-outcome
+   "The offered memories were Liouville/complex-analysis memories whose generic bounded-function vocabulary matched, while the semantically closer weak-convergence pattern did not enter the candidate set."}
+  :subjects
+  [#:ref{:type :mission, :id "M-zai-learning-loop"}
+   #:ref{:type :pattern, :id "math/weak-convergence-hilbert"}
+   #:ref{:type :apm-problem, :id "a96A03"}]
+  :evidence
+  {:turn-round-ids
+   ["e-dee0e588-4ca5-4b61-b30e-427c6237efba"
+    "e-d6d7a90c-2321-4f8b-9d80-ef2f74ee9c1a"]
+   :commits ["d93e7e0dbe7b24f14d12006cd93ae560ccbe7a33"]
+   :problems ["a96A03"]
+   :jobs ["invoke-1785132489867-176-174d5c40"]}
+  :confidence :single-instance
+  :rationale
+  "The receipt exposes the exact query vocabulary and the committed proof identifies the missing domain terms, making the proposed description/token-normalization change directly testable by replay."
+  :review {:verdict :pending-loop-review}}]

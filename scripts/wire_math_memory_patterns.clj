@@ -122,9 +122,11 @@
     :name "norm-sub-square-to-norm-limit-api-chain"
     :pattern-id "math/weak-convergence-hilbert"
     :review-warrant pudding-review-warrant}
-   {:memory-id "e-0b423578-4fa5-4bf8-95d9-1af599f78f04"
+   {:memory-id "e-ba5a8bee-84ca-4894-8d2b-124ce931cea0"
     :name "liminf-eventual-lower-bound-api-side-conditions"
     :pattern-id "math/weak-convergence-hilbert"
+    :review-id
+    "e-review-math-pudding-v2-liminf-eventual-lower-bound-api-side-conditions-resolution"
     :review-warrant pudding-review-warrant}
    {:memory-id "e-e5d809a6-3bfc-468a-888a-16e651bfe468"
     :name "use-informal-proof-architecture-with-leaf-level-verification"
@@ -157,6 +159,14 @@
    {:memory-id "e-6b5dd8cb-1f6d-403b-af5b-f0953ef2a7d1"
     :name "normalize-integer-complex-casts-before-projections"
     :pattern-id "math/cast-normalization"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-d72a5bd6-a54d-4fbb-8daa-1bf8a3c32e51"
+    :name "young-l2-holder-fubini-translation-api-map"
+    :pattern-id "math/missing-dependency-protocol"
+    :review-warrant pudding-review-warrant}
+   {:memory-id "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde"
+    :name "fatou-lp-ae-limit-api-chain"
+    :pattern-id "math/weak-convergence-hilbert"
     :review-warrant pudding-review-warrant}])
 
 (def pattern-ids
@@ -352,10 +362,11 @@
                           {:memory-id memory-id :pattern-id pattern-id})))
         :attached))))
 
-(defn- review-id [{:keys [name review-warrant]}]
-  (str "e-review-math-"
-       (when review-warrant "pudding-v2-")
-       name))
+(defn- review-id [{:keys [name review-id review-warrant]}]
+  (or review-id
+      (str "e-review-math-"
+           (when review-warrant "pudding-v2-")
+           name)))
 
 (defn- review-entry
   [{:keys [memory-id pattern-id review-warrant] :as attachment}]
