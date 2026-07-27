@@ -38,7 +38,11 @@
     "needed" "oriented" "outline" "over" "overview" "problem" "proof"
     "prove" "rightarrow" "root" "runner" "should" "solution" "source"
     "statement" "that" "their" "then" "there" "these" "this" "through"
-    "using" "validate" "where" "which" "with" "would"})
+    "using" "validate" "where" "which" "with" "would"
+    ;; v1.3 additions (S4 receipt e-e36e37bd evidence): TeX fragments that
+    ;; survive stripping in already-tokenized text + packet boilerplate.
+    "cdot" "langle" "rangle" "denote" "select" "sorry" "commit" "your"
+    "they" "part"})
 
 (defn- encode [value]
   (URLEncoder/encode (str value) "UTF-8"))
@@ -171,7 +175,10 @@
       (str/replace #"L\^?[p1\u00b9]" "Lp ")
       (str/replace #"\\to|\\rightarrow|\u2192|\\longrightarrow" " convergence ")
       (str/replace #"\\infty" " infinity ")
-      (str/replace #"\\int" " integral ")))
+      (str/replace #"\\int" " integral ")
+      ;; v1.3 (meta-draft, 1342dee): strip remaining TeX command fragments
+      ;; so cdot/langle/rangle etc never become query tokens.
+      (str/replace #"\\[a-zA-Z]+" " ")))
 
 (defn- text-keywords [text limit]
   (->> (re-seq #"[A-Za-z][A-Za-z0-9_/-]{3,}" (str/lower-case (normalize-math-text text)))
