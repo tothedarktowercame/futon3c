@@ -588,11 +588,25 @@
   (let [text
         (cond
           (string? value) value
-          (map? value) (or (:problem-class value)
-                           (:rule value)
-                           (:use value)
-                           (:rationale value)
-                           (pr-str value))
+          ;; Actionable payload FIRST: MT1 (2026-07-27) showed a surfaced
+          ;; lemma-location memory whose rendered summary described the
+          ;; memory without carrying the lemma names — the runner could not
+          ;; use it without opening the store. Names before narration.
+          (map? value)
+          (let [c (if (map? (:content value)) (:content value) value)
+                payload
+                (->> [(:lemma c)
+                      (when-let [s (seq (:supporting-lemmas c))]
+                        (str "supporting: " (str/join ", " s)))
+                      (:location c)
+                      (:use c)
+                      (:problem-class c)
+                      (:rule c)
+                      (:rationale value)
+                      (:summary value)]
+                     (remove #(or (nil? %) (= "" %)))
+                     (str/join " — "))]
+            (if (str/blank? payload) (pr-str value) payload))
           (nil? value) ""
           :else (pr-str value))
         single-line (str/replace (str/trim text) #"\s+" " ")]
