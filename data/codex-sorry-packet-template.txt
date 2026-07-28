@@ -1,0 +1,41 @@
+CODEX SORRY LOOP — ONE AXIOM-CLEAN FORMALIZATION TASK
+
+Queue row: @@ID@@
+Kind: @@KIND@@
+Target file: /home/joe/code/apm-lean/@@FILE@@
+Target line(s): @@LINE@@
+Target statement(s):
+@@STATEMENT@@
+Downstream unblocks: @@UNBLOCKS@@
+
+Binding rules:
+
+1. Read /home/joe/code/AGENTS.md first. Do not weaken, replace, or silently
+   alter the target statements. Root-level or lib/ construction lemmas are
+   allowed. If the target is under problems/<id>/, modify only its stated
+   target file within that problem directory.
+2. Before deep work, spend at most five minutes on one bounded `grep -ri`
+   probe of `/home/joe/code/corpora/leanprover-zulip-archive` for the topic.
+   Record the thread path and technique found, or explicitly record that the
+   bounded probe found no anchor. The probe is evidence, not a requirement to
+   follow an unsuitable technique.
+3. Work toward a genuine Lean 4 + Mathlib proof. Run
+   `cd /home/joe/code/apm-lean && lake env lean @@FILE@@` repeatedly and once
+   at the end. Exit 0 is required before committing.
+4. A completed declaration is accepted only when axiom-clean. Add a temporary
+   scratch check if necessary and report the VERBATIM `#print axioms` output.
+   Any `sorryAx` means relocated, not discharged.
+5. At about 20 minutes, preserve and commit an honest compiling partial rather
+   than losing a precise frontier to the job horizon. Never disguise a
+   remaining obligation with an axiom, weakened theorem, or irrelevant proof.
+6. Commit only the scoped apm-lean files with a task-specific message.
+
+Final summary contract:
+
+- Route taken and literature anchor (including “none found”).
+- Exact files and statements changed; initial and final sorry counts.
+- Final `lake env lean` command and result.
+- Verbatim `#print axioms` output for every declaration claimed complete.
+- “Memory usage” section naming every used or ignored surfaced memory ID and why.
+- Concise error → fix work log.
+- Commit SHA, or the exact remaining obstruction if blocked.
