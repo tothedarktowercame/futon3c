@@ -118,3 +118,14 @@ eLpNorm_two_sub_right. S6 consequences:
   missing-dependency protocol operating.
 - RECEIPT DEDUPE RULE for the backfill pass (from claude-6, OOM-window
   duplicate): earliest receipt per job-id wins; apply uniformly.
+
+## Amendment 3 (2026-07-28, supersedes Amendment 2's conditional semantics)
+
+YoungL2 is DISCHARGED at ce77d41 (codex-6, jobs -230/-233; claude-6
+independently verified: lake exit 0, 0 sorries, #print axioms clean on all
+four declarations, statements unchanged). S6 dispatch will find
+young_convolution_inequality_L2 PROVEN and the L2 contraction corollary
+UNCONDITIONAL — a96A04(b) may cite it with no transitive-sorry bookkeeping.
+Row records builder provenance only: {:runner-model :codex :seat codex-6
+:commits [8208ca7 ce77d41]}. Amendment 2's axiom-level check still runs at
+verification (cheap, and now expected to pass trivially).
