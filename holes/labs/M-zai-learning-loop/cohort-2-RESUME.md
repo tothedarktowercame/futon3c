@@ -100,3 +100,21 @@ cohort-2 counting. Also at close: backfill 12 outcome halves (claude-6 WS3:
 outcome-half completion is the calibration binding constraint) + typed
 supersedes/resolves edges for the liminf chain (WS2: second edge type), then
 run holes/labs/M-typed-memories/connectivity_meter.bb into the meta-meters.
+
+## Amendment 2 (2026-07-28, YoungL2 pilot-row-1 state)
+
+YoungL2 at 8208ca7 (codex-6, witnessed by claude-6): corollary
+convolution_L2_contraction_of_probability_kernel PROVEN but CONDITIONAL on
+the still-sorried main theorem (sorryAx flows through); new unconditional
+eLpNorm_two_sub_right. S6 consequences:
+- zai-5 MAY cite the corollary for a96A04(b); the row then records
+  :transitive-sorry-dependency true. Local sorry count is NOT the whole
+  witness — at S6 verification also check axiom-level soundness of the
+  main theorem chain (#print axioms / sorryAx presence) so "fewer sorries"
+  is counted honestly (a moved sorry is not a discharged sorry).
+- Remaining frontier, runner-named: integral Minkowski for eLpNorm
+  (Bochner form) — same leaf as the Young absence-memory. If S6 cites the
+  memory AND the frontier statement, that is instance n=3 of the
+  missing-dependency protocol operating.
+- RECEIPT DEDUPE RULE for the backfill pass (from claude-6, OOM-window
+  duplicate): earliest receipt per job-id wins; apply uniformly.
