@@ -86,3 +86,17 @@ On completion or at budget: update problems/a96A04/status.json, commit, and end 
   :recall-system tags at cohort boundaries only.
 - Charter: M-zai-learning-loop.md §Second derivative. Reproduction recipe:
   ~/code/algorithms/zai-learning-loop.md.
+
+## Amendment (2026-07-28, M-codex-sorry-loop coordination)
+
+claude-6's codex sorry-loop lane may prove YoungL2's sorries before S6 runs.
+At S6 dispatch: CHECK YoungL2.lean state (lake, sorry count, git log for the
+proving commit + runner). If proven by the codex lane, S6's row records
+:younglemma-provenance {:built-by <runner-model> :commit <sha>} and the row
+reads as the cross-lane payoff test (memory -> construction target -> codex
+build -> zai consumption) — a BETTER test than the original, recorded
+honestly as an amended precondition, not silently. Codex rows never enter
+cohort-2 counting. Also at close: backfill 12 outcome halves (claude-6 WS3:
+outcome-half completion is the calibration binding constraint) + typed
+supersedes/resolves edges for the liminf chain (WS2: second edge type), then
+run holes/labs/M-typed-memories/connectivity_meter.bb into the meta-meters.
