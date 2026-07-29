@@ -22,13 +22,21 @@ Binding rules:
 3. Work toward a genuine Lean 4 + Mathlib proof. Run
    `cd /home/joe/code/apm-lean && lake env lean @@FILE@@` repeatedly and once
    at the end. Exit 0 is required before committing.
-4. A completed declaration is accepted only when axiom-clean. Add a temporary
+4. ON COMPILE ERRORS: before broad Mathlib searching, run
+   `bb /home/joe/code/futon3c/scripts/error_recall.bb --row @@ID@@ "<error text>"`.
+   If a surfaced rule applies, use it and cite its memory id. The row id is the
+   local log key because the Agency job id does not exist when this packet is
+   assembled; ground control joins row to job from the queue. For additional
+   declaration search, consult https://loogle.lean-lang.org (pattern/type
+   search) and https://leansearch.net (natural-language search) before
+   unbounded source grepping.
+5. A completed declaration is accepted only when axiom-clean. Add a temporary
    scratch check if necessary and report the VERBATIM `#print axioms` output.
    Any `sorryAx` means relocated, not discharged.
-5. At about 20 minutes, preserve and commit an honest compiling partial rather
+6. At about 20 minutes, preserve and commit an honest compiling partial rather
    than losing a precise frontier to the job horizon. Never disguise a
    remaining obligation with an axiom, weakened theorem, or irrelevant proof.
-6. Commit only the scoped apm-lean files with a task-specific message.
+7. Commit only the scoped apm-lean files with a task-specific message.
 
 Final summary contract:
 
@@ -36,6 +44,7 @@ Final summary contract:
 - Exact files and statements changed; initial and final sorry counts.
 - Final `lake env lean` command and result.
 - Verbatim `#print axioms` output for every declaration claimed complete.
-- “Memory usage” section naming every used or ignored surfaced memory ID and why.
+- “Memory usage” section naming every used or ignored dispatch-time and
+  error-time surfaced memory ID and why.
 - Concise error → fix work log.
 - Commit SHA, or the exact remaining obstruction if blocked.
