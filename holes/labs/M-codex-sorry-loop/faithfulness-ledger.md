@@ -14,6 +14,20 @@ collects instances found en route.
 
 | 3 | a00J05 | `cauchyTransform_not_extendable_to_entire`, `cauchyTransform_differentiableAt` | **FALSE AS STATED** — a new class, and the most serious yet. `variable (K) (hK_compact) (hK_measure)` at line 54 are NOT auto-included: only `K` is mentioned in the declarations, so neither hypothesis reaches the statements. Ground control re-derived the real signatures by its own `#check` and then MACHINE-CHECKED the refutation: taking the theorem's statement as a hypothesis and instantiating `K = ∅`, `g = 0` yields `False` (compiles, exit 0, `/tmp/a00J05_refute.lean`). Unlike #1 and #2, which proved *less* than they appeared to, this cannot be proved at all | restore the hypotheses to the declarations (explicit parameters or `include hK_compact hK_measure`) — a STATEMENT CHANGE, so it needs Joe's authorization; then the real analytic content | cron row hard-problems-a00j05, runner REFUSED to commit and named the counterexample unprompted, 2026-07-29 |
 
+| 4 | a01A02 | `weakL2_implies_L1_bound` | **FALSE AS STATED**, by a mechanism distinct from #3. The weak-`L²` hypothesis is written `(volume {x | t < \|f x\|}).toReal ≤ C / t ^ 2` with no finiteness side-condition, and Mathlib defines `ENNReal.toReal ⊤ = 0` — so a function whose superlevel sets have INFINITE measure satisfies the hypothesis vacuously. Ground control MACHINE-CHECKED the refutation: taking the statement as a hypothesis at `α = ℝ`, `f ≡ 1`, `C = 1` and applying it to `Icc 0 (C₁²+1)` derives `False` (compiles, exit 0, `/tmp/a01A02_refute.lean`). Note the file asserted at line 35 that "the theorem statement is correct and captures the mathematical problem" | state the weak estimate in `ENNReal` (`volume {x \| t < \|f x\|} ≤ ENNReal.ofReal (C / t ^ 2)`), or keep the real-valued form and add finiteness of every positive-threshold superlevel measure. STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a02, runner REFUSED to commit and named the counterexample unprompted, 2026-07-29 |
+
+**Class note (#4) — the `toReal`-of-`⊤` trap, and why it is the most
+dangerous idiom found so far.** `ENNReal.toReal ⊤ = 0` is silent and
+total: it makes an unbounded quantity read as zero rather than
+erroring. Compare with #2: there an unconstrained quantity sat in the
+CONCLUSION, making the theorem trivially TRUE; here it sits in a
+HYPOTHESIS, making the theorem FALSE. Same root idiom, opposite
+effect, and only the second is detectable by trying to prove it. Both
+are greppable: `.toReal` applied to a measure inside a hypothesis
+without an accompanying `≠ ⊤` / `< ⊤` is a scan rule, and it should
+join the S9 checklist alongside stub definitions, unbound
+existentials, and #3's `variable` inclusion.
+
 **Class note (#3):** #1/#2 are *weak* statements; #3 is an *unprovable*
 one. The queue has no category for this: a row whose sorry can never be
 discharged without a statement change is not "hard", it is blocked on an
