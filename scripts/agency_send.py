@@ -42,11 +42,25 @@ ap.add_argument("--park-payload",
                 help="continuation payload for /api/alpha/park")
 ap.add_argument("--surface", default="emacs-repl",
                 help="park surface to resume on (default: emacs-repl)")
+# Bells carry substantial handoffs under the coding-handoff protocol, and the
+# server's 1800000 (30 min) cap DISCARDS the result rather than harvesting it:
+# the job goes state=failed with an empty result and the work is left uncommitted
+# in the working tree, invisible unless someone goes looking. That has now cost
+# four handoffs (see README-agency-cap.md). Making the generous value the DEFAULT
+# rather than an opt-in flag is what closes it: a fix you must remember to pass,
+# on every call, is not a fix.
+#
+# Whistles are synchronous and a caller is blocked on them, so they keep the
+# server default.
+BELL_DEFAULT_TIMEOUT_MS = 4 * 60 * 60 * 1000   # 4 hours
+
 ap.add_argument("--timeout-ms", type=int,
-                help="invoke timeout in ms (default: server's 1800000 = 30 min). "
-                     "Until the supervised-overrun fix lands, a turn hitting this "
-                     "is abandoned as state=failed and its result is lost — set "
-                     "generously for long packets.")
+                help="invoke timeout in ms. Defaults to %d (%d min) for --kind bell, "
+                     "which is deliberately far above the server's 1800000 (30 min): "
+                     "until the supervised-overrun fix reaches the codex relay route, "
+                     "a turn hitting the cap is abandoned as state=failed and its "
+                     "result is lost. Pass 0 to defer to the server default."
+                     % (BELL_DEFAULT_TIMEOUT_MS, BELL_DEFAULT_TIMEOUT_MS // 60000))
 ap.add_argument("--dry-run", action="store_true", help="print payload, do not send")
 a = ap.parse_args()
 
@@ -82,8 +96,11 @@ if a.mission:
     body["mission-id"] = a.mission
 if a.mode:
     body["mode"] = a.mode
+# Explicit --timeout-ms always wins; 0 means "defer to the server default".
 if a.timeout_ms:
     body["timeout-ms"] = a.timeout_ms
+elif a.timeout_ms is None and a.kind == "bell":
+    body["timeout-ms"] = BELL_DEFAULT_TIMEOUT_MS
 payload = json.dumps(body)
 
 
