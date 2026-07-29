@@ -27,15 +27,29 @@
     "invalid" "tactic" "goal" "unsolved" "line" "column"
     "requires" "require" "could" "would" "there" "where" "have"
     "with" "from" "into" "that" "this" "when" "then" "than"
-    "the" "and" "for" "not" "was" "were"})
+    "the" "and" "for" "not" "was" "were"
+    ;; file-path noise observed in first field data (sorry-0285.jsonl):
+    ;; error texts carry paths; their components are zero-signal.
+    "Main.lean" "Main" "lean" "problems" "prove" "need" "under"
+    "current" "imports" "constant" "syntax" "projection"})
 
 (def lean-token-pattern
   #"[A-Za-z_][A-Za-z0-9_']*(?:\.[A-Za-z_][A-Za-z0-9_']*)*")
 
+(defn path-noise?
+  "File-path components tokenize as identifiers but carry zero recall
+  signal AND dilute matching (first field data, sorry-0285: the
+  acceptance case stopped surfacing once path terms joined the query)."
+  [token]
+  (or (str/ends-with? token ".lean")
+      (re-matches #"(?i)a\d\d[a-z]\d\d" token)   ; problem ids
+      (contains? #{"Main" "problems" "ConstructionTargets" "lib"} token)))
+
 (defn identifier-like? [token]
-  (or (str/includes? token "_")
-      (str/includes? token ".")
-      (boolean (re-find #"[a-z][A-Z]" token))))
+  (and (not (path-noise? token))
+       (or (str/includes? token "_")
+           (str/includes? token ".")
+           (boolean (re-find #"[a-z][A-Z]" token)))))
 
 (defn extract-terms
   "Preserve Lean identifiers exactly; lowercase only ordinary vocabulary."
@@ -46,6 +60,7 @@
                     :let [word (str/lower-case token)]
                     :when (and (>= (count word) 4)
                                (not (identifier-like? token))
+                               (not (path-noise? token))
                                (not (error-stopwords word)))]
                 word)]
     (->> (concat identifiers words)
