@@ -307,9 +307,32 @@ def instantiate_packet(row: dict[Any, Any], template: str) -> str:
     return template
 
 
-def subject_for(row: dict[Any, Any]) -> str:
-    hint = re.sub(r"\s+", " ", str(row_value(row, "statement-hint"))).strip()
-    return hint[:240] or str(row_value(row, "id"))
+SUBJECT_STOPWORDS = {
+    # generic prose that carries no recall signal (observed polluting the
+    # rouche row's offered half, 2026-07-29: one giant unsplit phrase term)
+    "build", "reusable", "theorem", "under", "strict", "with", "that",
+    "this", "from", "into", "over", "the", "and", "for", "case",
+    "prove", "proof", "statement", "exact", "target", "final", "found",
+    "only", "probe", "work", "anchor", "file", "lemma", "main",
+}
+
+
+def subjects_for(row: dict[Any, Any]) -> list[str]:
+    """Tokenized mathematical vocabulary from the statement hint.
+
+    Recall matches pattern descriptions lexically; an unsplit sentence
+    matches nothing (rouche row, receipt e-99ba9b71: :recall-empty while
+    'holomorphic'/'disk' sat unmatched inside one phrase term).
+    """
+    hint = str(row_value(row, "statement-hint"))
+    words = re.findall(r"[A-Za-z][A-Za-z'-]{3,}", hint)
+    terms: list[str] = []
+    for word in words:
+        lowered = word.lower()
+        if lowered in SUBJECT_STOPWORDS or lowered in terms:
+            continue
+        terms.append(lowered)
+    return terms[:12] or [str(row_value(row, "id"))]
 
 
 def dispatch(row: dict[Any, Any], runner: str, packet: str) -> str:
@@ -322,12 +345,16 @@ def dispatch(row: dict[Any, Any], runner: str, packet: str) -> str:
         "--to",
         runner,
         "--from",
-        "claude-6",
+        # Ground-control seat for this loop. Was claude-6 (Fable) until the
+        # 2026-07-29 succession; the nick is a routing address (nick ->
+        # /tmp/futon-session-id-<nick> -> resumed pouch), so completion bells
+        # follow whichever seat is named here.
+        "claude-9",
         "--mission",
         "M-codex-sorry-loop",
-        "--subject",
-        subject_for(row),
     ]
+    for subject in subjects_for(row):
+        command.extend(["--subject", subject])
     result = subprocess.run(
         command,
         cwd=FUTON3C_DIR,
