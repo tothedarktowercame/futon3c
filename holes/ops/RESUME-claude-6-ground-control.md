@@ -63,7 +63,10 @@ mission doc — follow it exactly):
    `cd holes/labs/M-codex-sorry-loop && bb rollout_harvester.bb
    --session <runner session-id from roster> --commit
    --allow-nonfixture` (idempotent). Also harvest
-   `.state/error-recall/<row-id>.jsonl` into the receipt.
+   `futon3c/.state/error-recall/<row-id>.jsonl` into the receipt — note
+   the path is under **futon3c**, not apm-lean (corrected 07-29 after
+   looking for it in the wrong place; absence of the file is itself the
+   evidence that error-recall was not invoked).
 4. SCRIBE: bell codex-5 (pass N+1; drafts only, no store writes,
    FULL receipt ids in the bell, evidence ids per draft, inference
    marked). Park on it.
