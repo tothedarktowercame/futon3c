@@ -18,6 +18,43 @@ collects instances found en route.
 
 | 5 | a01A03 | `convolution_identity_implies_indicator` | **DEGENERATE — vacuous either way, and the most dangerous entry so far because it still looks provable.** `g` is a parameter and the conclusion is POINTWISE (`∀ x, g x = …`), while `hidentity` constrains `g` only through integrals, i.e. only a.e. Ground control MACHINE-CHECKED (`/tmp/a01A03_probe.lean`, compiles exit 0) that the theorem IMPLIES no integrable `g` satisfies `hidentity`: modify a witness at `0`, integrals are unchanged by a.e. congruence, so the modified function is another witness whose pointwise conclusion fails. The converse is immediate (nothing satisfies the hypotheses → vacuously true), so **the theorem is EQUIVALENT to `hidentity` being unsatisfiable**. Either horn is bad: if some witness exists the theorem is FALSE; if none does it is TRUE but says nothing about indicators, and a runner could discharge it axiom-clean by deriving `False` from `hidentity` | make the conclusion an a.e. equality AND restrict the test-function class to one whose derivatives are integrable (e.g. smooth compactly supported). STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a03, runner blocked correctly but on an incomplete reason — see note | 2026-07-29 |
 
+| 6 | a01A04 | `ball_volume_superexponential_decay` (part c), `ball_volume_recursion` (part a) | **FALSE AS STATED — wrong ambient instance.** `Fin n → ℝ` carries Mathlib's **Pi sup-norm**, not the Euclidean norm, so `Metric.ball (0 : Fin n → ℝ) 1` is the open CUBE `(-1,1)ⁿ` of volume `2ⁿ`, not the Euclidean unit ball. Mathlib certifies this itself: `Real.volume_pi_ball` computes `(2r)^(card ι)`. Ground control MACHINE-CHECKED part (c) at `A = 1` (`/tmp/a01A04_refute.lean`, exit 0): the claim becomes `2ⁿ → 0`, refuted since `1 ≤ 2ⁿ`. Part (a) fails from the same root cause — at `n = 1` it asserts `4 = 2·∫₋₁¹√(1-t²) = π` (arithmetic not separately machine-checked; the shared root cause is). Part (b), about `ballSlice` alone, is genuinely valid | replace `Fin n → ℝ` with `EuclideanSpace ℝ (Fin n)` consistently in (a) and (c). Secondary: the `∃ f` in (a) is vestigial — the displayed equality hardcodes `ballSlice` instead of using the bound `f`. STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a04, runner blocked and named both contradictions unprompted, 2026-07-29 |
+
+**Class note (#6) — the fourth mechanism: a TYPE-LEVEL modelling
+error.** The others are local slips (a forgotten `include`, a missing
+`≠ ⊤`, a pointwise-vs-a.e. confusion). This one is different in kind:
+the statement is well-formed, compiles, reads correctly in English,
+and means something else entirely, because `Fin n → ℝ` silently
+supplies the sup-norm.
+
+**Scoped by measurement, not assumed (claude-9 corrected its own first
+estimate here).** A first pass grepped for `Fin n → ℝ` near any of
+`Metric.ball` / `‖·‖` / `dist` and flagged 5 files — an OVERCOUNT. Two
+of those (a94J01, a02J01) take norms of VALUES (`‖f x‖` with
+`f x : ℝ`) and use `volume` on `Fin n → ℝ`, which is the PRODUCT
+Lebesgue measure and therefore exactly right for ℝⁿ. The defect is
+specifically **metric geometry on POINTS of the domain type**. The
+precise scan — ball/closedBall/dist applied to a `Fin n → ℝ` point —
+returns **a01A04 alone, 3 sites**. The S9 rule must encode that
+distinction or it will flag correct measure-theoretic code across the
+corpus.
+
+**And the corpus already knows about this defect.** `problems/a95A03`
+carries a written §Statement repair: *"The auto-generated statements
+used `Fin 3 → ℝ` for ℝ³. We repair to `EuclideanSpace ℝ (Fin 3)`"*,
+citing the inner-product structure and Mathlib's ball-volume lemmas.
+So the repair is precedented and sanctioned, and the fix for a01A04 is
+the same move.
+
+**The deeper implication, which outranks this row.** a95A03 names the
+source: *auto-generated* statements. If the problem statements were
+machine-generated, then the defect rate in the 69 remaining hard rows
+is a property of THAT GENERATOR, not bad luck — which is why a static
+scan is the right instrument and row-by-row discovery is the wrong
+one. Ledger #3 (`variable` not included) and #6 (wrong ambient type)
+are both exactly the kind of error a generator makes systematically
+and a human reader does not.
+
 **Class note (#5) — where the runner was right, and where review
 added something.** The runner reached the correct DISPOSITION (block,
 needs statement repair) and its a.e.-modification construction is the
