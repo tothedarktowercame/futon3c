@@ -51,6 +51,10 @@ LOCK_PATH = Path(
 AGENCY_BASE = os.environ.get("CODEX_SORRY_AGENCY_BASE", "http://localhost:7070").rstrip(
     "/"
 )
+# The live futon1b store. Must be passed explicitly to the dispatch subprocess:
+# see the comment in dispatch(). :7071 (the substrate client's built-in default)
+# is the retired futon1a store and is dead.
+SUBSTRATE_URL = os.environ.get("FUTON_SUBSTRATE_URL", "http://127.0.0.1:7073").rstrip("/")
 MAX_USED_PERCENT = float(os.environ.get("CODEX_SORRY_MIN_HEADROOM_USED", "50"))
 MAX_OTHER_INVOKING = int(os.environ.get("CODEX_SORRY_MAX_OTHER_INVOKING", "1"))
 HTTP_TIMEOUT = float(os.environ.get("CODEX_SORRY_HTTP_TIMEOUT", "15"))
@@ -355,6 +359,19 @@ def dispatch(row: dict[Any, Any], runner: str, packet: str) -> str:
     ]
     for subject in subjects_for(row):
         command.extend(["--subject", subject])
+    # Cron runs with a minimal environment (no shell profile), so
+    # FUTON_SUBSTRATE_URL is unset here even though it is set in an interactive
+    # shell. substrate.client/configured-url then falls back to :7071 — the
+    # RETIRED futon1a store — every recall throws, and safe-recall records the
+    # result as {:recall-reason :store-unavailable :recall-status :recall-empty}.
+    # That is indistinguishable from a genuine empty result in the receipts,
+    # which is how it went unnoticed: every cron-lane "recall empty" datum from
+    # 2026-07-28 to 2026-07-29 was this bug, not a recall-semantics finding.
+    # Receipt WRITES were unaffected because record-offered! defaults to :7073
+    # explicitly, so offered halves kept landing while recall never ran.
+    env = dict(os.environ)
+    env.setdefault("FUTON_SUBSTRATE_URL", SUBSTRATE_URL)
+    env.setdefault("FUTON1A_URL", SUBSTRATE_URL)
     result = subprocess.run(
         command,
         cwd=FUTON3C_DIR,
@@ -363,6 +380,7 @@ def dispatch(row: dict[Any, Any], runner: str, packet: str) -> str:
         capture_output=True,
         timeout=180,
         check=False,
+        env=env,
     )
     if result.returncode:
         raise GateClosed(
