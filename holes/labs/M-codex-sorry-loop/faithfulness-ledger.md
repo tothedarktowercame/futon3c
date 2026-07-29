@@ -16,6 +16,26 @@ collects instances found en route.
 
 | 4 | a01A02 | `weakL2_implies_L1_bound` | **FALSE AS STATED**, by a mechanism distinct from #3. The weak-`L²` hypothesis is written `(volume {x | t < \|f x\|}).toReal ≤ C / t ^ 2` with no finiteness side-condition, and Mathlib defines `ENNReal.toReal ⊤ = 0` — so a function whose superlevel sets have INFINITE measure satisfies the hypothesis vacuously. Ground control MACHINE-CHECKED the refutation: taking the statement as a hypothesis at `α = ℝ`, `f ≡ 1`, `C = 1` and applying it to `Icc 0 (C₁²+1)` derives `False` (compiles, exit 0, `/tmp/a01A02_refute.lean`). Note the file asserted at line 35 that "the theorem statement is correct and captures the mathematical problem" | state the weak estimate in `ENNReal` (`volume {x \| t < \|f x\|} ≤ ENNReal.ofReal (C / t ^ 2)`), or keep the real-valued form and add finiteness of every positive-threshold superlevel measure. STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a02, runner REFUSED to commit and named the counterexample unprompted, 2026-07-29 |
 
+| 5 | a01A03 | `convolution_identity_implies_indicator` | **DEGENERATE — vacuous either way, and the most dangerous entry so far because it still looks provable.** `g` is a parameter and the conclusion is POINTWISE (`∀ x, g x = …`), while `hidentity` constrains `g` only through integrals, i.e. only a.e. Ground control MACHINE-CHECKED (`/tmp/a01A03_probe.lean`, compiles exit 0) that the theorem IMPLIES no integrable `g` satisfies `hidentity`: modify a witness at `0`, integrals are unchanged by a.e. congruence, so the modified function is another witness whose pointwise conclusion fails. The converse is immediate (nothing satisfies the hypotheses → vacuously true), so **the theorem is EQUIVALENT to `hidentity` being unsatisfiable**. Either horn is bad: if some witness exists the theorem is FALSE; if none does it is TRUE but says nothing about indicators, and a runner could discharge it axiom-clean by deriving `False` from `hidentity` | make the conclusion an a.e. equality AND restrict the test-function class to one whose derivatives are integrable (e.g. smooth compactly supported). STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a03, runner blocked correctly but on an incomplete reason — see note | 2026-07-29 |
+
+**Class note (#5) — where the runner was right, and where review
+added something.** The runner reached the correct DISPOSITION (block,
+needs statement repair) and its a.e.-modification construction is the
+same one used in the machine-checked probe. But its two stated reasons
+are in TENSION and it did not reconcile them: reason 1 ("only a.e.
+equality is provable, so the statement is false") presupposes a witness
+EXISTS, while reason 2 ("`hidentity` quantifies over every
+differentiable `f` without requiring an integrable derivative") is
+evidence that NO witness exists — in which case the theorem is
+vacuously TRUE, not false, and "blocked as false" would be the wrong
+verdict. The sharper characterisation replaces both. **Operational
+consequence, and the reason this entry matters more than #3/#4:** a
+false statement is self-defending — nobody can prove it. A DEGENERATE
+one is not. If this row is ever re-dispatched, a competent runner may
+well discharge it axiom-clean by deriving `False` from `hidentity`,
+and it would enter the corpus as a solved row. `:do-not-redispatch` is
+therefore load-bearing here in a way it is not for #3 and #4.
+
 **Class note (#4) — the `toReal`-of-`⊤` trap, and why it is the most
 dangerous idiom found so far.** `ENNReal.toReal ⊤ = 0` is silent and
 total: it makes an unbounded quantity read as zero rather than
