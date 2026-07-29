@@ -20,6 +20,23 @@ collects instances found en route.
 
 | 6 | a01A04 | `ball_volume_superexponential_decay` (part c), `ball_volume_recursion` (part a) | **FALSE AS STATED — wrong ambient instance.** `Fin n → ℝ` carries Mathlib's **Pi sup-norm**, not the Euclidean norm, so `Metric.ball (0 : Fin n → ℝ) 1` is the open CUBE `(-1,1)ⁿ` of volume `2ⁿ`, not the Euclidean unit ball. Mathlib certifies this itself: `Real.volume_pi_ball` computes `(2r)^(card ι)`. Ground control MACHINE-CHECKED part (c) at `A = 1` (`/tmp/a01A04_refute.lean`, exit 0): the claim becomes `2ⁿ → 0`, refuted since `1 ≤ 2ⁿ`. Part (a) fails from the same root cause — at `n = 1` it asserts `4 = 2·∫₋₁¹√(1-t²) = π` (arithmetic not separately machine-checked; the shared root cause is). Part (b), about `ballSlice` alone, is genuinely valid | replace `Fin n → ℝ` with `EuclideanSpace ℝ (Fin n)` consistently in (a) and (c). Secondary: the `∃ f` in (a) is vestigial — the displayed equality hardcodes `ballSlice` instead of using the bound `f`. STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a04, runner blocked and named both contradictions unprompted, 2026-07-29 |
 
+| 7 | a01A05 | `gramSchmidt_approximation` | **FALSE AS STATED — and unlike #3/#4/#6 this is a genuine MATHEMATICAL error, not a mechanical one.** The statement asserts `‖fₘ − eₘ‖ ≤ 2⁻ᵐ` from a per-PAIR hypothesis `\|⟨fₙ,fₘ⟩\| ≤ 2⁻ᵐ (n<m)`, but Gram–Schmidt error ACCUMULATES over all preceding vectors, so a per-pair bound cannot yield the same bound on the accumulated error. Minimal witness, in `ℓ²(ℕ)`: `f₀ = e₀`, `f₁ = ½e₀ + (√3/2)e₁`, `fₙ = eₙ (n≥2)`. All norms are 1; the hypothesis is satisfied — `⟨f₀,f₁⟩ = ½ = 2⁻¹` EXACTLY, i.e. admissible at the knife edge. Gram–Schmidt at m=1 returns `e₁`, and `‖f₁ − e₁‖ = √(2−√3) ≈ 0.5176 > 0.5 = 2⁻¹`. Ground control verified the structure by hand and MACHINE-CHECKED the deciding inequality `√(2−√3) > ½` (`/tmp/a01A05_num.lean`, exit 0); the `ℓ²` construction itself was NOT formalised (it needs infinitely many dimensions — no finite-dimensional witness exists, since near-orthogonality of the tail requires infinite dimension) | strengthen the pairwise hypothesis, or weaken the conclusion to an accumulated bound (e.g. `∑ₖ<ₘ 2⁻ᵏ`-style). STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a05, runner blocked and constructed the counterexample unprompted, 2026-07-29 |
+
+**Class note (#7) — THE HONEST LIMIT ON THE S9 RECOMMENDATION.**
+Mechanisms #3, #4 and #6 are mechanical and greppable: a `variable`
+not included, a `.toReal` with no `≠ ⊤`, a `Fin n → ℝ` used as a
+Euclidean space. A static scan finds all three for free. **#7 is not
+like that.** Nothing about `gramSchmidt_approximation` is
+syntactically suspicious — it is well-typed, well-scoped, uses the
+right ambient structures, and is simply MATHEMATICALLY FALSE by a
+margin of about 0.018. Finding it required attempting the proof and
+constructing a knife-edge counterexample in an infinite-dimensional
+space. So S9 reduces the cost of the tail; it does not eliminate the
+need to attempt rows. The realistic split on today's evidence: of 5
+statement defects, 4 were greppable and 1 was not — a scan would have
+caught most of the waste, and a runner is still required for the rest.
+Anyone quoting the S9 case should quote this limit with it.
+
 **Class note (#6) — the fourth mechanism: a TYPE-LEVEL modelling
 error.** The others are local slips (a forgotten `include`, a missing
 `≠ ⊤`, a pointwise-vs-a.e. confusion). This one is different in kind:
