@@ -1,0 +1,277 @@
+[{:name "prove-Laplace-analyticity-by-conjugate-Holder-and-local-derivative-domination"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:hook
+   "Put the decaying exponential kernel in the conjugate `L^q` space, obtain integrability by Hölder, then dominate the parameter derivative on a small complex ball and differentiate under the integral."
+   :how-to-apply
+   ["For `p > 1`, set `q = p.conjExponent` and prove the exponential kernel belongs to `MemLp q` on the positive half-line."
+    "Combine the input's `MemLp p` hypothesis with the kernel's `MemLp q` membership through `MemLp.integrable_mul`."
+    "At a parameter `z₀` with positive real part, choose a ball whose radius is strictly smaller than `z₀.re`."
+    "Bound both the Laplace integrand and its parameter derivative uniformly on that ball by an integrable exponential-decay function."
+    "Verify the pointwise derivative of `f(t) * exp(-t*z)`."
+    "Apply `hasDerivAt_integral_of_dominated_loc_of_deriv_le` and conclude analyticity pointwise on the right half-plane."]
+   :problem-class
+   "Prove that the Laplace transform of an `L^p` function on the positive half-line is analytic on the right half-plane."
+   :proof-shape
+   {:kernel-integrability
+    "`f ∈ L^p`, `exp(-re(z)t) ∈ L^q`, and conjugacy imply their product is integrable."
+    :local-domination
+    "A parameter ball staying inside `re(z)>0` supplies one exponential dominator for the integrand derivative."
+    :analyticity
+    "Locally dominated differentiation supplies a complex derivative at every point."}
+   :key-api
+   ["ENNReal.conjExponent"
+    "MemLp.integrable_mul"
+    "hasDerivAt_integral_of_dominated_loc_of_deriv_le"
+    "Complex.hasDerivAt_exp"
+    "Metric.ball_mem_nhds"]
+   :formalization-arcs
+   ["Normalize the kernel norm before establishing its `MemLp` power integral."
+    "Use the escaped measure identifier consistently; the earlier token was a lexer/API compatibility failure, not a changed measure."
+    "State entire analyticity with current Mathlib's `AnalyticOn ℂ f Set.univ`; the removed bare `Analytic` predicate is not a reason to weaken the theorem."]
+   :witness
+   {:declarations
+    ["laplace_integrand_integrable" "laplace_transform_analytic"]
+    :statement-integrity :lean-checked-current-api-equivalent
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For holomorphic parameter integrals with an `L^p` input, separate the proof into conjugate-exponent product integrability and a locally uniform derivative dominator."
+   :boundary
+   "The decay estimate requires the parameter's real part to stay positive. Entire analyticity needs the separate compact-support argument."
+   :capture-kind
+   :runner-proof-component-search-and-ground-control-full-namespace-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A09"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t043" "e-codexroll-019fa2c1-t044"]
+   :receipt-ids ["558c5f8f-8642-47f0-8c13-1df248d64282"]
+   :commits ["622a238329d7331fb72eeef35b85f12d3788e460"]
+   :problems ["a01A09-Laplace-transform"]
+   :artifacts
+   ["problems/a01A09/lean/Main.lean:laplace_integrand_integrable"
+    "problems/a01A09/lean/Main.lean:laplace_transform_analytic"]
+   :harvest-status
+   {:resolved ["e-codexroll-019fa2c1-t043"]
+    :local-dry-run-awaiting-store-harvest ["e-codexroll-019fa2c1-t044"]}}
+  :confidence :proof-and-full-namespace-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "split-compact-support-Laplace-entireness-on-integrability"
+  :lane :solve-lane
+  :level :formalization-semantics
+  :status :draft
+  :body
+  {:hook
+   "Compact support without measurability does not force Bochner integrability: prove the integrable branch by bounded-support domination, and show the nonintegrable branch makes every defining integral zero."
+   :how-to-apply
+   ["Split on `Integrable f` for the positive-half-line measure instead of silently assuming compact support supplies measurability."
+    "In the integrable branch, bound `t`, the exponential factor, and the derivative factor uniformly on the compact support."
+    "Use local dominated differentiation at each complex parameter to obtain entire analyticity."
+    "In the nonintegrable branch, prove multiplication by the nonvanishing exponential kernel cannot make the product integrable."
+    "Apply `integral_undef` at every parameter, rewrite the Laplace transform as the zero function, and use analyticity of constants."]
+   :problem-class
+   "Prove an integral-defined transform is entire from compact support when the statement does not separately assume measurability or integrability."
+   :semantic-split
+   {:integrable-branch
+    "Compact support supplies bounded derivative dominators; ordinary parametric integration carries the proof."
+    :nonintegrable-branch
+    "Mathlib's totalized Bochner integral makes every nonintegrable defining integral zero, so the transform is identically zero and hence analytic."}
+   :key-api
+   ["IsCompact.bddAbove"
+    "hasDerivAt_integral_of_dominated_loc_of_deriv_le"
+    "integral_undef"
+    "analyticOn_const"]
+   :witness
+   {:declaration "laplace_transform_entire_of_compact_support"
+    :statement
+    "`compactSupportOnHalfLine f → AnalyticOn ℂ (laplaceTransform f) Set.univ`"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When an integral transform theorem omits measurability, audit the totalized integral semantics explicitly: a proof may need an integrable/nonintegrable split rather than an illicit inferred hypothesis."
+   :boundary
+   "The nonintegrable branch proves the formal statement through Mathlib's zero convention; it does not claim the classical transform of a nonmeasurable function has analytic content."
+   :capture-kind :runner-integrability-split-and-ground-control-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A09"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t043" "e-codexroll-019fa2c1-t044"]
+   :receipt-ids ["558c5f8f-8642-47f0-8c13-1df248d64282"]
+   :commits ["622a238329d7331fb72eeef35b85f12d3788e460"]
+   :problems ["a01A09-Laplace-transform"]
+   :artifacts
+   ["problems/a01A09/lean/Main.lean:laplace_transform_entire_of_compact_support"]
+   :harvest-status
+   {:resolved ["e-codexroll-019fa2c1-t043"]
+    :local-dry-run-awaiting-store-harvest ["e-codexroll-019fa2c1-t044"]}}
+  :confidence :proof-and-full-namespace-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks"
+  :lane :solve-lane
+  :level :resolved-frontier
+  :status :draft
+  :body
+  {:hook
+   "Work pointwise on `closedBall x (R/2)`: the disk-area inequality makes the sequence uniformly Cauchy there, diskwise `L¹` plus continuity identifies its pointwise limit, and Mathlib packages these local limits over compact subsets."
+   :how-to-apply
+   ["For each `x ∈ Ω`, use openness to choose `R > 0` with `closedBall x R ⊆ Ω`."
+    "Apply the verified disk-area sub-mean inequality to `f m - f n` and bound its integral by the two outer-disk `L¹` errors."
+    "Deduce `UniformCauchySeqOn` on `closedBall x (R/2)`."
+    "Independently identify `f n x → F x`: combine continuity of `F` on a small disk with the constant-centred disk-area inequality and diskwise `L¹` convergence."
+    "Use `UniformCauchySeqOn.tendstoUniformlyOn_of_tendsto` to obtain uniform convergence on the half-radius disk."
+    "Assemble local uniform convergence with `tendstoLocallyUniformlyOn_of_forall_exists_nhds`."
+    "Convert to convergence on each compact subset with `tendstoLocallyUniformlyOn_iff_forall_isCompact`."
+    "Use the resulting locally uniform limit to discharge analyticity and derivative convergence through the existing Weierstrass APIs."]
+   :problem-class
+   "Upgrade diskwise `L¹` convergence of holomorphic functions to compact-uniform convergence, analyticity of the limit, and compact-uniform convergence of derivatives."
+   :route-choice
+   {:used "local concentric half-disks"
+    :avoided "constructing a global finite cover before proving the local estimate"
+    :reason
+    "The local-uniform API performs the global compact packaging once a neighbourhood estimate is available at every point."}
+   :key-api
+   ["UniformCauchySeqOn.tendstoUniformlyOn_of_tendsto"
+    "tendstoLocallyUniformlyOn_of_forall_exists_nhds"
+    "tendstoLocallyUniformlyOn_iff_forall_isCompact"
+    "TendstoLocallyUniformlyOn.differentiableOn"
+    "TendstoLocallyUniformlyOn.deriv"
+    "Measure.IsFiniteMeasureOnCompacts.map"]
+   :implementation-arcs
+   ["Derive `IsFiniteMeasureOnCompacts` for the file's mapped complex volume from the underlying homeomorphism; do not remove or bypass the custom measure instance."
+    "Prove closed-ball containment by the triangle inequality when a guessed `closedBall_mono` lemma does not exist."
+    "Give `setIntegral_mono_set` inequalities explicitly when `gcongr` infers their order incorrectly."
+    "Expose positivity of the disk-area denominator before field normalization."]
+   :frontier-provenance
+   {:used-memory
+    "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence"
+    :prerequisite-memory
+    "e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound"
+    :use
+    "The first memory's half-disk route carried the proof; the second prevented rebuilding the already verified polar disk-area bridge."}
+   :witness
+   {:declarations
+    ["uniformCauchySeqOn_closedBall_half"
+     "tendsto_of_L1ConvergesOnDisks_at"
+     "tendstoUniformlyOn_of_L1_on_disks"
+     "differentiableOn_of_L1_limit"
+     "tendstoUniformlyOn_deriv_of_L1"
+     "L1_disk_convergence_analytic_upgrade"]
+    :all-file-declarations 17
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When a convergence hypothesis is local on disks, prove uniform Cauchy convergence and pointwise identification on one smaller concentric disk at a time, then use the local-uniform API for compact globalization."
+   :boundary
+   "The proof relies on the already established disk-area sub-mean inequality and on local finiteness of the chosen complex volume."
+   :capture-kind
+   :frontier-memory-used-to-close-own-problem-and-ground-control-full-file-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A07"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :proposed-edges
+  [{:edge/type :resolves
+    :edge/to
+    #:ref{:type :memory,
+          :id
+          "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence"}
+    :status :pending-owner-review}
+   {:edge/type :uses
+    :edge/to
+    #:ref{:type :memory,
+          :id
+          "e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t045" "e-codexroll-019f9b12-t046"]
+   :receipt-ids
+   ["6ea3677b-5eed-4538-b59e-cbf01f8274ed"
+    "de5437c3-1f3d-417b-882a-e1d70883f242"]
+   :commits
+   ["c5f91b0"
+    "13b835c"
+    "01cf573"
+    "0c2ab50"
+    "d4e2318"
+    "13ce2ee4810cad8045f52cbb3a074d5a59844843"
+    "438f7055132a6031aceab2728e2a4538a6bdea57"
+    "81dccb351d0fdbb87e1bab8ee6c64110d2aa3c1c"
+    "8d547b44df126ab80f3910bf7e39e8636d70bdf4"
+    "1fad0c18f87f8139a82b39ebf7bfaf680628b4f7"]
+   :problems ["a01A07-L1-disk-convergence"]
+   :artifacts
+   ["problems/a01A07/lean/Main.lean:uniformCauchySeqOn_closedBall_half"
+    "problems/a01A07/lean/Main.lean:tendsto_of_L1ConvergesOnDisks_at"
+    "problems/a01A07/lean/Main.lean:tendstoUniformlyOn_of_L1_on_disks"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019f9b12-t045" "e-codexroll-019f9b12-t046"]}}
+  :confidence :frontier-consumed-proof-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "specialize-the-library-Gaussian-Fourier-transform-before-building-a-contour-proof"
+  :lane :solve-lane
+  :level :lemma-location-and-normalization
+  :status :draft
+  :body
+  {:hook
+   "For `∫ exp(i y x - x²)`, instantiate `fourierIntegral_gaussian` first; the remaining work is exponent normalization and the algebraic identity `I²=-1`, not a new contour argument."
+   :how-to-apply
+   ["Search the installed Gaussian/Fourier namespace before implementing the documented contour-shift plan."
+    "Instantiate `fourierIntegral_gaussian` with the real Gaussian coefficient specialized to one and the frequency coerced to `ℂ`."
+    "Rewrite the integrand into Mathlib's product and exponent conventions."
+    "Normalize the returned square-root and exponential factors."
+    "For the companion completion-of-the-square identity, expand polynomially and rewrite with `Complex.I_sq`."]
+   :problem-class
+   "Evaluate the Fourier transform of a Gaussian under a different sign, coercion, and normalization convention."
+   :key-api ["fourierIntegral_gaussian" "Complex.I_sq"]
+   :route-override
+   {:existing-memory-id
+    "e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another"
+    :use-status :used
+    :documented-route "Build a contour proof."
+    :implemented-route
+    "Specialize the existing Gaussian Fourier theorem and normalize its statement."
+    :paired-discipline
+    "The same evidence-based override rejected the separate Fresnel target once its Bochner semantics were machine-refuted."}
+   :witness
+   {:declarations ["gaussian_fourier_transform" "complete_square"]
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "Before constructing a classical contour proof, search for the theorem under the library's transform normalization and treat the task as an adapter when the mathematical result is already present."
+   :boundary
+   "This route evaluates the Gaussian transform only. It does not justify the nonintegrable Fresnel set integral, whose classical value requires an improper-limit statement."
+   :capture-kind
+   :runner-library-theorem-specialization-and-ground-control-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A10"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t045"]
+   :receipt-ids ["e625cf40-4eef-40ae-bc36-1bfa2a239dba"]
+   :commits ["b36ba73d02f99d7aa84d02952f61b2176610d942"]
+   :problems ["a01A10-Gaussian-Fresnel"]
+   :artifacts
+   ["problems/a01A10/lean/Main.lean:gaussian_fourier_transform"
+    "problems/a01A10/lean/Main.lean:complete_square"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019fa2c1-t045"]}}
+  :confidence :two-targets-ground-control-axiom-verified
+  :review {:verdict :pending-owner-review}}]
