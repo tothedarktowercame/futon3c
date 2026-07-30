@@ -272,11 +272,35 @@
         ;; including 2 directly relevant memories.
         ;; FOLLOW-UP: several short queries unioned would beat one short query;
         ;; this is the minimal measured fix, not the best possible one.
-        terms (->> (concat subjects
-                           (when terrain [terrain])
-                           source-terms)
+        ;; INTERLEAVE the two vocabularies instead of concatenating them.
+        ;;
+        ;; MEASURED 2026-07-30 on a01A07. `subjects` are extracted from the
+        ;; STATEMENT and are largely identifier names — norm, area, integral,
+        ;; differentiableon, closedball. `source-terms` come from the problem
+        ;; FILES and carry the MATHEMATICS — disk (x20), mean value, Weierstrass,
+        ;; polar, Fubini, Cauchy estimate, circleAverage. Memories are written in
+        ;; the second vocabulary, not the first: the query "norm area integral"
+        ;; returns 0 memories while "circleAverage" returns exactly the memory
+        ;; the runner then found by hand.
+        ;;
+        ;; Concatenating subjects-then-source-terms and truncating to 3 meant
+        ;; source-terms NEVER survived the cap — a regression introduced by the
+        ;; 3-term cap itself, which was added earlier the same day to fix a
+        ;; 36-term conjunction. Interleaving keeps both vocabularies inside the
+        ;; cap so the ladder can pair across them.
+        interleave-all
+        (fn [a b]
+          (loop [a (seq a) b (seq b) out []]
+            (cond (and (nil? a) (nil? b)) out
+                  (nil? a) (into out b)
+                  (nil? b) (into out a)
+                  :else (recur (next a) (next b)
+                               (conj out (first a) (first b))))))
+        terms (->> (concat (when terrain [terrain])
+                           (interleave-all subjects source-terms))
+                   (remove str/blank?)
                    distinct
-                   (take 3)
+                   (take 4)
                    vec)]
     {:terrain terrain
      :recall-system recall-system
