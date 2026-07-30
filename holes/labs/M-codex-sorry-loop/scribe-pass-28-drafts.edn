@@ -1,0 +1,79 @@
+[{:name "derive-the-unit-ball-volume-recursion-through-Wallis-parity-formulas"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:hook
+   "Turn the one-coordinate ball slice into `∫₀^π sin^(n+1)` with `t = -cos x`, then split the dimension parity so Wallis double-factorial identities meet Mathlib's exact even/odd Euclidean ball-volume formulas."
+   :how-to-apply
+   ["Express the slice kernel as `sqrt (1-t²)` on `[-1,1]` and zero outside; rewrite the whole-line integral as an interval integral using an indicator."
+    "Apply the interval substitution `t = -cos x` on `[0,π]`; its derivative contributes one additional sine factor, yielding `∫₀^π sin x^(n+1)`."
+    "Rewrite Mathlib's `integral_sin_pow_even` and `integral_sin_pow_odd` product formulas into double-factorial form."
+    "Split `n` with `Nat.even_or_odd'` so that the two adjacent ball dimensions match `InnerProductSpace.volume_ball_of_dim_even` and `InnerProductSpace.volume_ball_of_dim_odd`."
+    "Use `Nat.doubleFactorial_two_mul`, factorial nonzeroness, and field normalization to close each parity branch."
+    "Prefer the exact parity-specific volume API over manually reconciling a Gamma recurrence when those declarations are available in the installed Mathlib revision."]
+   :problem-class
+   "Prove the unit Euclidean ball-volume recursion by integrating one-dimensional slices."
+   :proof-shape
+   {:slice
+    "∫ t, ballSlice(t)^n = ∫ x in 0..π, sin(x)^(n+1)"
+    :parity
+    "Even and odd `n` select complementary exact ball-volume and Wallis formulas."
+    :normalization
+    "Factorial and double-factorial identities reduce both branches to field arithmetic."}
+   :key-api
+   ["intervalIntegral.integral_comp_mul_deriv"
+    "integral_sin_pow_even"
+    "integral_sin_pow_odd"
+    "InnerProductSpace.volume_ball_of_dim_even"
+    "InnerProductSpace.volume_ball_of_dim_odd"
+    "Nat.doubleFactorial_eq_prod_even"
+    "Nat.doubleFactorial_eq_prod_odd"
+    "Nat.doubleFactorial_two_mul"
+    "Nat.even_or_odd'"]
+   :formalization-arcs
+   ["Normalize the derivative of `-cos` explicitly: `-(-sin x)` must be simplified to `sin x` before the substitution theorem matches."
+    "Supply continuity and interval-integrability facts explicitly around `intervalIntegral.integral_comp_mul_deriv`."
+    "Watch rewrite orientation for `Finset.prod_div_distrib`; the Wallis products and double-factorial products may face opposite directions."
+    "Use `omega` to normalize the parity indices before rewriting the exact volume formulas."]
+   :route-improvement
+   {:classification :confirming-instance
+    :existing-memory-id
+    "e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another"
+    :observation
+    "The inherited route was followed through slicing and Wallis, but its proposed manual Gamma-recurrence reconciliation was replaced by the installed exact even/odd ball-volume API."
+    :boundary
+    "This confirms the existing route-override rule; it does not establish that Gamma-based proofs are generally inferior."}
+   :literature-anchor
+   {:source "leanprover-community Zulip archive"
+    :thread "Roadmap to high school geometry"
+    :use-status :api-pointer-used
+    :contribution
+    "The thread identified PR #19949 as adding the exact even/odd Euclidean ball-volume formulas that enabled the parity route."}
+   :witness
+   {:declaration "ApmCanaries.A01A04.ball_volume_recursion"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For Euclidean ball recursions obtained by slicing, use a trigonometric substitution to expose a Wallis integral, then align parity-specific integral identities with parity-specific exact volume declarations."
+   :boundary
+   "The route depends on the Euclidean norm and the installed exact ball-volume API; it does not apply unchanged to the earlier sup-norm statement that was repaired in this file."
+   :capture-kind
+   :runner-proof-ground-control-axiom-verification-and-literature-api-anchor}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A04"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t040"]
+   :receipt-ids ["639e3a13-dc0f-4673-86af-bbf1dbbfc7f7"]
+   :commits ["80af310905a3a3255df7f96e31d9a162da8c0ded"]
+   :problems ["a01A04-ball-volume-recursion"]
+   :artifacts
+   ["problems/a01A04/lean/Main.lean:ballSlice_integral_eq_sin_pow"
+    "problems/a01A04/lean/Main.lean:even_ball_volume_exact"
+    "problems/a01A04/lean/Main.lean:odd_ball_volume_exact"
+    "problems/a01A04/lean/Main.lean:ball_volume_recursion"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}]
