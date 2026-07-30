@@ -1,0 +1,177 @@
+[{:name "combine-Schwarz-rigidity-with-power-series-uniqueness"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Show that every coefficient above the linear term vanishes when a pointwise-summable disk power series defines a disk self-map tangent to the identity."
+   :coefficient-series
+   ["Set `c n = a (n+2)`."
+    "Encode `c` as `p = FormalMultilinearSeries.ofScalars ℂ c`."
+    "For every positive real radius `r < 1`, divide the assumed summable shifted series by `r²`."
+    "Summability makes the scaled coefficient terms tend to zero; apply `p.le_radius_of_tendsto` and then `ENNReal.le_of_forall_nnreal_lt` to prove `1 ≤ p.radius`."]
+   :analytic-construction
+   ["Use `p.hasFPowerSeriesOnBall` to obtain differentiability of `p.sum` on the unit disk."
+    "Prove `z² * p.sum z = ∑' n, a (n+2) * z^(n+2)` with `FormalMultilinearSeries.ofScalars_sum_eq`, `tsum_mul_left`, and `pow_add`."
+    "Define `f z = z + z² * p.sum z`."
+    "The hypotheses make `f` a differentiable disk self-map fixing zero; the product rule gives `deriv f 0 = 1`."
+    "Apply the equality case of Schwarz's lemma, here packaged as the local `disk_selfmap_deriv_one_eq_identity`, to obtain `f = id` on the disk."]
+   :coefficient-uniqueness
+   ["Away from zero, `z² * p.sum z = 0` implies `p.sum z = 0`."
+    "At zero, compare the punctured-neighbourhood zero limit with continuity of `p.sum` to fill the removable value."
+    "Turn local eventual equality to zero into `p = 0` with `HasFPowerSeriesAt.eq_zero_of_eventually`."
+    "Use `FormalMultilinearSeries.ofScalars_series_eq_zero` and undo the index shift to conclude `a n = 0` for every `n ≥ 2`."]
+   :key-api
+   ["FormalMultilinearSeries.le_radius_of_tendsto"
+    "FormalMultilinearSeries.hasFPowerSeriesOnBall"
+    "FormalMultilinearSeries.ofScalars_sum_eq"
+    "HasFPowerSeriesAt.eq_zero_of_eventually"
+    "FormalMultilinearSeries.ofScalars_series_eq_zero"]
+   :hypothesis-audit
+   "The proof uses the stated `Summable` hypothesis only to obtain termwise convergence after scaling. It does not replace it with absolute summability."
+   :witness
+   {:declaration "disk_selfmap_tangent_identity"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For a disk self-map expressed as identity plus a higher-order series, turn pointwise summability into a convergence-radius bound, use Schwarz rigidity to kill the summed tail, fill its value at the center by continuity, and invoke formal power-series uniqueness to kill its coefficients."
+   :capture-kind :runner-proof-route-faithfulness-check-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a92J04"}
+   #:ref{:type :proof-pattern,
+         :id "schwarz-rigidity-plus-power-series-uniqueness"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t018"]
+   :receipt-ids ["3f721b1a-fd45-4f05-8b88-94bf545609d5"]
+   :commits ["d8a7ce4737e7fc087602c054c068a850bf7ea5b1"]
+   :problems ["a92J04-schwarz-tangent"]
+   :artifacts
+   ["problems/a92J04/lean/Main.lean:disk_selfmap_tangent_identity"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "bound-the-interface-adapter-heuristic-with-genuine-construction-cases"
+  :lane :trajectory-lane
+  :level :epistemic-update
+  :status :draft
+  :body
+  {:prior-inference
+   {:memory-name
+    "look-for-an-interface-adapter-before-rebuilding-an-existing-theorem"
+    :basis
+    "Two rows, a01A07 and a92J03, were solved by matching a target interface to an existing library theorem."
+    :original-strength :two-instance-inference}
+   :disconfirming-observation
+   "The next row, a92J04, was not an interface adapter. The target theorem was not found in Mathlib, and the solution required a multi-stage analytic construction combining a convergence-radius argument, Schwarz rigidity, a removable-center argument, and power-series uniqueness."
+   :interpretation
+   {:classification :bounded-disconfirmation
+    :proposal
+    "Preserve the adapter heuristic as an early triage question, but do not extrapolate it into a claim that the remaining proof tail is mostly adapter work. If bounded search finds components but no end-to-end theorem, switch from adapter search to construction."}
+   :decision-rule
+   ["First compare target and library statement shapes for normalization, packaging, filter, and coercion mismatches."
+    "Require an identifiable end-to-end library theorem before classifying the task as adapter work."
+    "If search yields only constituent lemmas, treat that as construction evidence rather than forcing an adapter interpretation."]
+   :boundary
+   "This row does not negate the two witnessed adapter cases. It prevents their two-instance inference from being promoted to a tail-wide empirical claim."
+   :capture-kind :receipt-confirmed-negative-evidence-linked-to-prior-inference}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a92J04"}
+   #:ref{:type :process-pattern, :id "library-interface-adapter-triage"}]
+  :proposed-edges
+  [{:edge/type :bounds
+    :edge/to
+    #:ref{:type :draft-memory,
+          :id "look-for-an-interface-adapter-before-rebuilding-an-existing-theorem"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t018" "e-codexroll-019fa2c1-t017"]
+   :receipt-ids
+   ["3f721b1a-fd45-4f05-8b88-94bf545609d5"
+    "ea063199-3905-4b65-a752-ab5ed05d0d25"]
+   :commits
+   ["d8a7ce4737e7fc087602c054c068a850bf7ea5b1"
+    "316d3b61943ed889ed26ae71523bf02fa55e6c48"]
+   :problems ["a92J04-schwarz-tangent" "a92J03-riemann-lebesgue"]
+   :artifacts
+   ["problems/a92J04/lean/Main.lean:disk_selfmap_tangent_identity"
+    "holes/labs/M-codex-sorry-loop/scribe-pass-17-drafts.edn:look-for-an-interface-adapter-before-rebuilding-an-existing-theorem"]}
+  :confidence :one-disconfirmation-of-a-two-instance-inference
+  :review {:verdict :pending-owner-review}}
+
+ {:name "prefer-installed-source-search-when-the-library-namespace-is-guessable"
+  :lane :trajectory-lane
+  :level :search-policy
+  :status :draft
+  :body
+  {:observed-sequence
+   [{:problem "a03J08"
+     :local-search-targets
+     ["removable singularity" "punctured neighbourhood" "cocompact constancy"]
+     :outcome
+     "Local installed-source search found the finite-puncture and Liouville components; external declaration search did not carry the proof."}
+    {:problem "a92J03"
+     :local-search-targets
+     ["Real.tendsto_integral_exp_smul_cocompact"
+      "Filter.tendsto_cocompact_mul_left₀"
+      "Real.fourierChar_apply"]
+     :outcome
+     "Local installed-source search found the complete Riemann--Lebesgue adapter API; external results were irrelevant."}
+    {:problem "a92J04"
+     :local-search-targets
+     ["FormalMultilinearSeries"
+      "HasFPowerSeriesAt"
+      "ofScalars"
+      "radius"]
+     :outcome
+     "Local installed-source search found every power-series component; external results were again irrelevant."}]
+   :inference
+   {:classification :three-instance-operational-inference
+    :trigger
+    "The target can be translated into a plausible installed Mathlib namespace, structure name, or distinctive declaration fragment."
+    :policy
+    ["Search the installed Mathlib source first with those exact tokens and nearby operation words."
+     "Inspect neighbouring declarations and imports because the needed API often appears as a family rather than one semantic match."
+     "Use Loogle or LeanSearch when the namespace or declaration vocabulary is not yet guessable, or to widen the search after local component search stalls."]}
+   :relation-to-existing-policy
+   "This extends `order-proof-search-by-known-route-components-before-literature`: it supplies the operational trigger for choosing local component search first, but does not replace the broader conditional search ladder."
+   :boundary
+   "Three consecutive rows establish a useful lane-local trigger, not a global accuracy ranking of search tools. The observation concerns exact installed-revision APIs and guessable namespaces."
+   :capture-kind :three-row-search-surface-comparison-explicitly-inferred}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a92J04"}
+   #:ref{:type :process-pattern,
+         :id "guessable-namespace-local-source-first"}]
+  :proposed-edges
+  [{:edge/type :extends
+    :edge/to
+    #:ref{:type :draft-memory,
+          :id "order-proof-search-by-known-route-components-before-literature"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t018"
+    "e-codexroll-019fa2c1-t017"
+    "e-codexroll-019fa2c1-t016"]
+   :receipt-ids
+   ["3f721b1a-fd45-4f05-8b88-94bf545609d5"
+    "ea063199-3905-4b65-a752-ab5ed05d0d25"
+    "efe850d1-67b3-4a73-a745-4ea73f93f438"]
+   :commits
+   ["d8a7ce4737e7fc087602c054c068a850bf7ea5b1"
+    "316d3b61943ed889ed26ae71523bf02fa55e6c48"
+    "aece2ab19cac942682c514f0b962f5d52d224e0b"]
+   :problems
+   ["a92J04-schwarz-tangent"
+    "a92J03-riemann-lebesgue"
+    "a03J08-analytic-blowup"]
+   :artifacts
+   ["problems/a92J04/lean/Main.lean:disk_selfmap_tangent_identity"
+    "problems/a92J03/lean/Main.lean:fourierTransform_tendsto_zero"
+    "problems/a03J08/lean/Main.lean:analytic_blowup_surjective"]}
+  :confidence :three-consecutive-instance-inference-explicitly-marked
+  :review {:verdict :pending-owner-review}}]
