@@ -478,14 +478,45 @@ def run(dry_run: bool) -> int:
         return 0
 
 
+def _record_gate_streak(open_gate: bool) -> int:
+    """Track consecutive gate-closed fires. Returns the current streak."""
+    path = STATE_DIR / "gate-streak"
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        if open_gate:
+            path.write_text("0", encoding="utf-8")
+            return 0
+        try:
+            previous = int(path.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            previous = 0
+        streak = previous + 1
+        path.write_text(str(streak), encoding="utf-8")
+        return streak
+    except OSError:
+        return -1  # never let bookkeeping break the gate logic
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     try:
-        return run(args.dry_run)
+        result = run(args.dry_run)
+        if not args.dry_run:
+            _record_gate_streak(open_gate=True)
+        return result
     except GateClosed as exc:
-        emit(str(exc), dry_run=args.dry_run)
+        # Backpressure fails SAFE but historically failed SILENT: on 2026-07-29
+        # an unresolved row gate-closed four consecutive fires and the only
+        # trace was a repeated log line nobody was reading at 23:30. Carrying
+        # the consecutive count makes an unattended stall visible in the
+        # artifact the operator already has.
+        streak = _record_gate_streak(open_gate=False) if not args.dry_run else 1
+        suffix = f" consecutive-gate-closed={streak}"
+        if streak >= 3:
+            suffix += " STALLED-CHECK-GROUND-CONTROL"
+        emit(f"{exc}{suffix}", dry_run=args.dry_run)
         return 0
     except Exception as exc:
         emit(
