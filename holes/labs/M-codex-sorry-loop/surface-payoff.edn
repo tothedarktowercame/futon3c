@@ -171,4 +171,31 @@
                  :verdict :negative-information-absence-reported}
   :recall {:surfaced 0 :ran? true :query "ball volume recursion"
            :note "0 surfaced, cause KNOWN AND MINE: subjects_for takes the first 3 terms in statement order, and 'recursion' is rare, flooring a conjunctive search. My earlier 0-to-8-hits figure used a hand-picked term set and was a hypothetical. The tier ladder was committed AFTER this dispatch, so run 5 is the first genuine compounding test. The runner did not independently find the 2 relevant memories either."}
-  :receipt "af376f78-07cf-420b-9d7b-4d75b4e0b4c5"}]
+  :receipt "af376f78-07cf-420b-9d7b-4d75b4e0b4c5"}
+ {:run 8
+  :at "2026-07-30T16:24Z"
+  :problem "a02J05"
+  :declaration "dirichlet_integral (target) / integral_sinc_eq_cos_div_sub (support, proved)"
+  :area "math/measure-integration-api"
+  :outcome :blocked-with-axiom-clean-partial
+  :suggested-route nil
+  :suggested-route-source nil
+  :standard-result "Abel regularization of the Dirichlet integral; Dirichlet's test"
+  ;; THE ROW THIS LEDGER WAS BUILT FOR. Arm (c) fired for the FIRST time in eight
+  ;; runs, and for exactly the reason the cond specifies: the route was NOT known,
+  ;; because Mathlib lacks both the improper sinc integral and a usable Abel
+  ;; theorem, so there was nothing to assemble from components. Runs 2-7 all
+  ;; recorded arXiv as NOT NEEDED with a known route. The cond discriminates.
+  :arms-tried [:components :zulip :arxiv]
+  :arm-that-paid :components-partial
+  :not-needed []
+  ;; THIRD CATEGORY, distinct from :not-needed and from carrying the proof.
+  :arm-tried-and-empty [:arxiv]
+  :arxiv-detail {:queries ["dirichlet integral" "sinc integral" "Abelian theorem + Fourier integral"]
+                 :ids-returned ["0705.0976" "1404.5413" "1405.1265" "1510.03200" "2005.00477"]
+                 :verdict :background-only-no-construction-anchor}
+  :zulip-detail {:queries ["Dirichlet integral|integral of sinc|sin x / x|Jordan's lemma"]
+                 :verdict :no-anchor}
+  :recall {:surfaced 0 :ran? true
+           :note "interleave fix live; probed afterwards - sinc/Dirichlet integral/Abel regularization all return 0 memories, so a genuine COVERAGE gap"}
+  :receipt "f8586558-7882-4ce9-b2cf-29402de797b1"}]
