@@ -139,4 +139,36 @@
                  :verdict :corroborated-prior-run-obstruction}
   :recall {:surfaced 0 :ran? true :query "convolution identity indicator"
            :note "recall FIX live (id dropped, 3-term cap). 0 surfaced is an HONEST NEGATIVE, verified by probe: corpus has no convolution/Young-convolution/Fourier memory; control probe on covered terrain returns 2."}
-  :receipt "48e5fa15-7e47-49e6-b5c4-e37df132959a"}]
+  :receipt "48e5fa15-7e47-49e6-b5c4-e37df132959a"}
+ {:run 4
+  :at "2026-07-30T12:23Z"
+  :problem "a01A04"
+  :declaration "ballSlice_integral_tendsto_zero + ball_volume_superexponential_decay"
+  :area "math/measure-integration-api"
+  :outcome :axiom-clean-partial
+  :suggested-route nil
+  :suggested-route-source nil
+  ;; This run PRODUCED a suggested route for its own next attempt -- the first
+  ;; time rule 6's "leave a plan, not a puzzle" fed the :suggested-route field
+  ;; from a partial rather than from a file docstring.
+  :suggested-route-produced true
+  :standard-result "dominated convergence; Euclidean ball-volume formula; Gamma functional equation; exponential-over-factorial decay"
+  :arms-tried [:components :zulip]
+  :arm-that-paid :components
+  :not-needed [:arxiv]
+  :components-detail {:leansearch ["tendsto_integral_of_dominated_convergence"
+                                   "EuclideanSpace.volume_ball" "Real.Gamma_add_one"
+                                   "Real.Gamma_one_half_eq"
+                                   "FloorSemiring.tendsto_pow_div_factorial_atTop"
+                                   "Real.integral_sin_pow_even" "Real.integral_sin_pow_odd"]
+                      :verdict :carried-both-completed-proofs}
+  ;; NEGATIVE-INFORMATION HIT, worth distinguishing from a no-anchor: the thread
+  ;; told the runner what is NOT available (no measure-preserving Fin (n+1)
+  ;; product decomposition) and recommended an alternative method. An archive
+  ;; that reports absence is doing useful work, not failing.
+  :zulip-detail {:threads ["217875-Is-there-code-for-X%3F/Iterated.20integrals.json"
+                           "Circumference...surface area of a sphere.json"]
+                 :verdict :negative-information-absence-reported}
+  :recall {:surfaced 0 :ran? true :query "ball volume recursion"
+           :note "0 surfaced, cause KNOWN AND MINE: subjects_for takes the first 3 terms in statement order, and 'recursion' is rare, flooring a conjunctive search. My earlier 0-to-8-hits figure used a hand-picked term set and was a hypothetical. The tier ladder was committed AFTER this dispatch, so run 5 is the first genuine compounding test. The runner did not independently find the 2 relevant memories either."}
+  :receipt "af376f78-07cf-420b-9d7b-4d75b4e0b4c5"}]

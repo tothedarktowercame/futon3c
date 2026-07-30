@@ -143,9 +143,17 @@ def main() -> int:
         old_hint = str(r.get(K("statement-hint")))
         names = [RENAMES.get(n, n) for n in decl_names(old_hint)]
         found = [(n, signature_and_sorry(src, n)) for n in names]
-        missing = [n for n, v in found if v is None]
-        if missing:
-            print(f"  {rid[14:-15]:10s} SKIP - cannot locate {missing} in current file")
+        # A declaration with no sorry has been PROVED since the census, so it
+        # must be DROPPED from the hint rather than causing the row to be
+        # skipped. Before 2026-07-30 this skipped a01A04 entirely after a
+        # partial closed two of its three targets, leaving the packet pointing
+        # runners at work already done.
+        proved = [n for n, v in found if v is None]
+        found = [(n, v) for n, v in found if v is not None]
+        if proved:
+            print(f"  {rid[14:-15]:10s} dropping {len(proved)} PROVED decl(s) from hint: {proved}")
+        if not found:
+            print(f"  {rid[14:-15]:10s} SKIP - no sorried declaration remains")
             continue
         parts, lines = [], []
         for n, (sig, line) in found:
