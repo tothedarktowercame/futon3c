@@ -1,0 +1,99 @@
+[{:name "count-polynomial-lemniscate-components-by-roots-plus-one-exterior"
+  :lane :solve-lane
+  :level :construction
+  :status :draft
+  :body
+  {:hook
+   "For `{‖p‖ = 1}`, count complement components by injecting bounded `{‖p‖ < 1}` pieces into roots and proving all `{1 < ‖p‖}` pieces meet one path-connected exterior."
+   :how-to-apply
+   ["Represent each connected component of the complement as an open connected subset of the ambient plane, with frontier contained in the level set."
+    "Use connectedness and avoidance of the level set to classify each component entirely as `‖p(z)‖ < 1` or entirely as `1 < ‖p(z)‖`."
+    "For a sublevel component, use polynomial properness to make it bounded and the minimum-modulus argument for `1/p` to obtain a root inside it."
+    "For a superlevel component, rule out boundedness by maximum modulus."
+    "Use `‖p(z)‖ → ∞` to put the complement of a sufficiently large ball inside the superlevel set; prove that radial exterior path connected, so all superlevel components coincide."
+    "Inject components into `roots(p).toFinset ⊕ Unit`: a sublevel component maps to one chosen enclosed root, while the unique superlevel component maps to the unit marker."
+    "Bound the root side by `natDegree p` and add the single exterior marker."]
+   :problem-class
+   "Bound the number of connected components of the complement of the polynomial lemniscate `{z | ‖p(z)‖ = 1}` by `natDegree p + 1`."
+   :component-representation
+   {:purpose
+    "Move from quotient-valued `ConnectedComponents` to ambient subsets on which frontier, boundedness, and modulus arguments can be applied."
+    :properties
+    ["nonempty"
+     "contained in the lemniscate complement"
+     "connected"
+     "open"
+     "frontier contained in the lemniscate"]}
+   :superlevel-route
+   ["A superlevel component cannot be bounded: on its frontier `‖p‖ = 1`, while inside `‖p‖ > 1`, contradicting maximum modulus for a bounded component."
+    "`Polynomial.isProperMap_eval` and polynomial growth provide a radius `R` beyond which every point is superlevel."
+    "The strict radial exterior `{z | R < ‖z‖}` is path connected."
+    "Every unbounded superlevel component meets this common exterior, hence any two such components agree."]
+   :sublevel-route
+   ["Polynomial properness bounds the whole sublevel set, hence every sublevel component."
+    "If a bounded sublevel component contained no root, `1/p` would be analytic there, have boundary norm one, and have norm greater than one inside; maximum modulus gives a contradiction."
+    "Choose one enclosed root per sublevel component."
+    "If two components choose the same root, component maximality at their common point identifies the components, so root selection is injective."]
+   :final-count
+   "The component tag lands in the disjoint sum of the distinct roots and `Unit`; `Nat.card_le_card_of_injective` and the root-cardinality bound yield at most `natDegree p + 1`. Constant-polynomial cases are split off."
+   :key-api
+   ["isOpen_connectedComponent"
+    "IsEmbedding.closure_eq_preimage_closure_image"
+    "IsPathConnected.preimage_coe"
+    "Polynomial.isProperMap_eval"
+    "Polynomial.tendsto_norm_atTop"
+    "Nat.card_le_card_of_injective"
+    "Polynomial.card_roots'"]
+   :reuse-provenance
+   {:source-problem "a00J04"
+    :reuse-kind :character-identical-sibling-transplant
+    :verification
+    ["Ground control compared the two theorem statements character-for-character."
+     "`git show` deleted no theorem or lemma line."
+     "The transplanted construction compiled on the first attempt."
+     "The target declaration was re-elaborated independently from a scratch copy and contained no `sorryAx`."]
+    :caution-memory-used
+    "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases"
+    :classification
+    "The transplant is reusable proof construction, not evidence that the target is merely an interface adapter: it retains topology, polynomial properness, maximum/minimum-modulus reasoning, radial path connectedness, and a finite injection."}
+   :witness
+   {:declaration
+    "ApmCanaries.A01A08.connectedComponents_complement_lemniscate_le"
+    :statement-integrity :character-identical-to-proved-sibling
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false
+    :first-transplant-compile true}
+   :rule
+   "Count complementary components by separating bounded interior pieces from the common unbounded exterior: inject interior components into algebraic witnesses and reserve one marker for the exterior."
+   :boundary
+   "This construction uses the complex plane's connected radial exterior, polynomial properness, and the maximum/minimum modulus principles. It is not a general component-count theorem for arbitrary level sets or arbitrary noncompact spaces."
+   :capture-kind
+   :runner-sibling-transplant-ground-control-statement-comparison-and-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A08"}
+   #:ref{:type :proof-pattern,
+         :id "lemniscate-components-roots-plus-exterior"}]
+  :proposed-edges
+  [{:edge/type :resolves
+    :edge/to
+    #:ref{:type :memory,
+          :id "e-codexpilot-lemniscate-superlevel-preconnected"}
+    :status :pending-owner-review}
+   {:edge/type :resolves
+    :edge/to
+    #:ref{:type :memory,
+          :id "e-codexpilot-lemniscate-sublevel-components-inject-into-roots"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t034" "e-codexroll-019fa2c1-t035"]
+   :receipt-ids ["4c54c3ef-f51e-4207-b272-d8411eafd35b"]
+   :commits ["c512690e7fa996bb53cba54b56b40fe28b87a2d4"]
+   :problems ["a01A08-lemniscate-complement-components"]
+   :artifacts
+   ["problems/a01A08/lean/Main.lean:connectedComponents_complement_lemniscate_le"
+    "problems/a01A08/lean/Main.lean:component_eq_of_subset_superlevel"
+    "problems/a01A08/lean/Main.lean:exists_root_in_componentSet_of_subset_sublevel"]}
+  :confidence :single-transplant-ground-control-verified
+  :review {:verdict :pending-owner-review}}]
