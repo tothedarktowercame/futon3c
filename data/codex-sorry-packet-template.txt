@@ -7,6 +7,7 @@ Target line(s): @@LINE@@
 Target statement(s):
 @@STATEMENT@@
 Downstream unblocks: @@UNBLOCKS@@
+Available proved support: @@AVAILABLE@@
 
 Binding rules:
 

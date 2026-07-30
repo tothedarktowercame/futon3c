@@ -282,14 +282,24 @@ def row_problem_id(row: dict[Any, Any]) -> str | None:
 def choose_row(
     queue: list[dict[Any, Any]], busy_problem_ids: set[str]
 ) -> tuple[int, dict[Any, Any]]:
-    for index, row in enumerate(queue):
-        if status_name(row) != "untouched":
-            continue
-        problem_id = row_problem_id(row)
-        if problem_id and problem_id in busy_problem_ids:
-            continue
-        return index, row
-    raise GateClosed("queue-complete no-eligible-untouched-row")
+    # Rows carrying :priority go first (lower value = sooner), then queue
+    # order. Used for rows whose supporting lemma is already proved and
+    # importable — those are the highest-probability wins, and dispatching
+    # them promptly is what converts ConstructionTargets work into a
+    # movement in the problems/ sorry count. Ties and unprioritised rows
+    # keep their original census order (sort is stable).
+    eligible = [
+        (index, row)
+        for index, row in enumerate(queue)
+        if status_name(row) == "untouched"
+        and not (
+            (problem_id := row_problem_id(row)) and problem_id in busy_problem_ids
+        )
+    ]
+    if not eligible:
+        raise GateClosed("queue-complete no-eligible-untouched-row")
+    eligible.sort(key=lambda pair: row_value(pair[1], "priority", 1_000_000))
+    return eligible[0]
 
 
 def row_value(row: dict[Any, Any], name: str, default: Any = "") -> Any:
@@ -305,6 +315,11 @@ def instantiate_packet(row: dict[Any, Any], template: str) -> str:
         "@@LINE@@": str(row_value(row, "line")),
         "@@STATEMENT@@": str(row_value(row, "statement-hint")),
         "@@UNBLOCKS@@": ", ".join(map(str, unblocks)) if unblocks else "[none recorded]",
+        # Proved, importable lemmas that exist specifically for this row.
+        # Before 2026-07-30 ConstructionTargets was not on the module path at
+        # all, so runners could not have used it even if told; now they can,
+        # and the packet has to say so or the work stays unused.
+        "@@AVAILABLE@@": str(row_value(row, "available-support", "[none recorded]")),
     }
     for marker, value in replacements.items():
         template = template.replace(marker, value)
