@@ -64,7 +64,13 @@ def signature_and_sorry(src: str, name: str) -> tuple[str, int] | None:
     # Search from an ABSOLUTE position in src. Relative-offset arithmetic across
     # three nested slices was off by one for some declarations and not others.
     sig_end = m.start() + body.end()
-    s = re.compile(r"^[ \t]*sorry\b", re.M).search(src, sig_end)
+    # Bound the search to THIS declaration's body. Without the bound, a proved
+    # declaration picks up the `sorry` of a later one and is reported as still
+    # open — observed on a01A06, where distribution_polynomial_decay had been
+    # proved but inherited orlicz_bound_not_implies_L2's sorry.
+    nxt = re.compile(r"^(?:private\s+)?(?:noncomputable\s+)?(?:theorem|lemma)\s+", re.M).search(src, sig_end)
+    stop = nxt.start() if nxt else len(src)
+    s = re.compile(r"^[ \t]*sorry\b", re.M).search(src, sig_end, stop)
     if not s:
         return None
     return sig, src[: s.start()].count("\n") + 1
