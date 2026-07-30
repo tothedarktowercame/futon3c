@@ -1,0 +1,1 @@
+{:at "2026-07-28", :mode :commit, :patterns {}, :results [{:name "extend-eLpNorm-to-essential-supremum-from-probability-to-finite-measure", :pattern "math/measure-integration-api", :status :promoted}]}
