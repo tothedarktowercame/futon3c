@@ -1,0 +1,101 @@
+[{:name "transport-Riemann-Lebesgue-across-a-frequency-normalization"
+  :lane :arc-lane
+  :level :api-adapter
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :problem
+    "Apply Mathlib's Riemann--Lebesgue theorem when the target Fourier transform uses the unnormalized phase `exp (I*x*ξ)` rather than Mathlib's Fourier character."}
+   :source-theorem
+   "Real.tendsto_integral_exp_smul_cocompact"
+   :normalization
+   "`ξ ↦ -(2 * Real.pi)⁻¹ * ξ`"
+   :adapter
+   ["Prove a function equality between the target Fourier transform and Mathlib's normalized integral composed with the frequency scaling."
+    "Unfold `Circle.smul_def` and `Real.fourierChar_apply`; normalize scalar action to multiplication and discharge the exponent identity algebraically."
+    "Prove the scaling coefficient is nonzero from `Real.pi_ne_zero`."
+    "Use `Filter.tendsto_cocompact_mul_left₀` to show that multiplying frequency by this nonzero coefficient preserves the cocompact filter."
+    "Compose `Real.tendsto_integral_exp_smul_cocompact f` with that filter map and rewrite by the function equality."]
+   :key-api
+   ["Real.tendsto_integral_exp_smul_cocompact"
+    "Filter.tendsto_cocompact_mul_left₀"
+    "Real.fourierChar_apply"
+    "Circle.smul_def"]
+   :witness
+   {:declarations
+    ["fourierTransform_tendsto_zero" "fourier_maps_L1_to_C0"]
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When a Fourier limit theorem exists under a different phase convention, express the target as the library theorem composed with an explicit nonzero frequency scaling, prove preservation of the limit filter, and isolate the character identity as a separate function equality."
+   :boundary
+   "This adapter uses a nonzero scalar normalization on a real frequency line and the cocompact filter. It does not by itself cover nonlinear frequency changes or a scaling that can vanish."
+   :capture-kind :runner-api-adapter-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a92J03"}
+   #:ref{:type :mathlib-api,
+         :id "Real.tendsto_integral_exp_smul_cocompact"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t017"]
+   :receipt-ids ["ea063199-3905-4b65-a752-ab5ed05d0d25"]
+   :commits ["316d3b61943ed889ed26ae71523bf02fa55e6c48"]
+   :problems ["a92J03-riemann-lebesgue"]
+   :artifacts
+   ["problems/a92J03/lean/Main.lean:fourierTransform_tendsto_zero"
+    "problems/a92J03/lean/Main.lean:fourier_maps_L1_to_C0"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "look-for-an-interface-adapter-before-rebuilding-an-existing-theorem"
+  :lane :trajectory-lane
+  :level :proof-triage
+  :status :draft
+  :body
+  {:observed-instances
+   [{:problem "a92J03"
+     :target-shape "An unnormalized Fourier transform tends to zero."
+     :library-shape
+     "`Real.tendsto_integral_exp_smul_cocompact` under Mathlib's Fourier-character normalization."
+     :adapter
+     "A nonzero linear frequency rescaling plus an integrand identity."}
+    {:problem "a01A07"
+     :target-shape
+     "A derivative estimate from differentiability and a bound on a closed ball."
+     :library-shape
+     "`Complex.norm_deriv_le_of_forall_mem_sphere_norm_le` packaged through `DiffContOnCl`."
+     :adapter
+     "Separate differentiability on the open ball, continuity on its closed closure, and the sphere-local bound."}]
+   :inference
+   {:classification :two-instance-inference
+    :proposal
+    "When the mathematical theorem appears standard or already formalized, compare the target and library interfaces before constructing a proof from primitives. Check normalization, domain packaging, filter, coercion, and notation mismatches, then build the smallest explicit adapter."}
+   :triage-questions
+   ["Does the library theorem differ only by a normalization or invertible change of variables?"
+    "Are the same hypotheses bundled under a structure such as `DiffContOnCl`?"
+    "Is the target limit expressed through a different but preserved filter?"
+    "Can a function equality or a small packaging lemma expose the match?"]
+   :boundary
+   "This is an inference from two consecutive but mathematically different adapter rows. It is a triage heuristic, not evidence that every standard-looking target already exists in Mathlib."
+   :capture-kind :cross-row-adapter-pattern-explicitly-inferred}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a92J03"}
+   #:ref{:type :process-pattern, :id "library-interface-adapter-triage"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t017" "e-codexroll-019fa2c1-t013"]
+   :receipt-ids
+   ["ea063199-3905-4b65-a752-ab5ed05d0d25"
+    "dfaee970-084c-4b91-8498-7b6dd5faeb45"]
+   :commits
+   ["316d3b61943ed889ed26ae71523bf02fa55e6c48"
+    "1ad1ea34c93d4c8754853563ad527d8d9f8e8d64"]
+   :problems ["a92J03-riemann-lebesgue" "a01A07-l1-limits-holomorphic"]
+   :artifacts
+   ["problems/a92J03/lean/Main.lean:fourierTransform_tendsto_zero"
+    "holes/labs/M-codex-sorry-loop/scribe-pass-15-drafts.edn:package-closed-ball-holomorphicity-as-DiffContOnCl-for-Cauchy-estimates"]}
+  :confidence :two-instance-inference-explicitly-marked
+  :review {:verdict :pending-owner-review}}]
