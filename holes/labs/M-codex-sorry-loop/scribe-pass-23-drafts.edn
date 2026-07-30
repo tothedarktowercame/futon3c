@@ -1,0 +1,193 @@
+[{:name "propagate-local-analytic-vanishing-across-a-connected-domain"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Turn a boundary condition encoded by an auxiliary analytic product into global vanishing on a connected disk."
+   :route
+   ["Use the maximum modulus principle to show the auxiliary product vanishes throughout the disk."
+    "Fix `z` and suppose `f z ≠ 0`."
+    "Continuity makes the reflected factor `f (-w)` nonzero on a neighbourhood of `-z`."
+    "On that neighbourhood, the zero-product identity therefore forces `f w = 0`."
+    "Package differentiability as `AnalyticOnNhd` and propagate the local equality with zero across the preconnected disk using the analytic identity principle."]
+   :key-api
+   ["AnalyticOnNhd.eqOn_of_preconnected_of_eventuallyEq"
+    "AnalyticAt.eventually_eq_zero_or_eventually_ne_zero"
+    "DifferentiableOn.analyticOnNhd"
+    "convex_ball"]
+   :packaging-detail
+   "When `isPreconnected_ball` is unavailable through the current imports, `(convex_ball 0 1).isPreconnected` supplies the required connectedness witness."
+   :witness
+   {:declaration "eq_zero_of_vanishing_on_upper_arc"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "Do not read a pointwise zero-product identity as a globally coherent branch choice. First use continuity of one nonzero factor to obtain an open zero set for the other, then use analytic connectedness to propagate that local vanishing."
+   :boundary
+   "The propagation step needs an analytic function on a preconnected domain and genuine eventual equality on a neighbourhood; a pointwise disjunction alone is insufficient."
+   :capture-kind :runner-proof-route-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A05"}
+   #:ref{:type :proof-pattern,
+         :id "local-analytic-vanishing-to-connected-domain"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t027"]
+   :receipt-ids ["3de1e210-bf18-4bf6-8023-09028b0abfd4"]
+   :commits ["39eb54a51cb755ce72b4f3d7278a56691de6dd6f"]
+   :problems ["a95A05-boundary-arc-vanishing"]
+   :artifacts
+   ["problems/a95A05/lean/Main.lean:eq_zero_of_vanishing_on_upper_arc"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "bound-polynomial-sum-degree-by-a-common-summand-bound"
+  :lane :solve-lane
+  :level :component-route
+  :status :draft
+  :body
+  {:problem-class
+   "Bound the natural degree of a finite sum of monomials whose exponents share a common upper bound."
+   :route
+   ["Apply `Polynomial.natDegree_sum_le_of_forall_le`; it reduces the sum bound to one obligation per summand."
+    "Bound `C(a k) * X^k` by `k` with `Polynomial.natDegree_C_mul_X_pow_le`."
+    "Convert membership `k ∈ Finset.range (2*N+1)` into `k ≤ 2*N`."
+    "Compose the per-summand inequalities to close the common degree bound."]
+   :key-api
+   ["Polynomial.natDegree_sum_le_of_forall_le"
+    "Polynomial.natDegree_C_mul_X_pow_le"
+    "Finset.mem_range"]
+   :witness
+   {:declaration "algPoly_degree_le"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For a finite polynomial sum, search for the common-bound form of the degree-of-sum theorem before constructing a maximum degree explicitly; then discharge each monomial locally."
+   :scope-warning
+   "This witness establishes only the algebraic helper `algPoly_degree_le`. It does not validate the file's winding-number theorem: the deliberately opaque `windingNumber` definition and unused `hN`, `hz` hypotheses remain an open S9 vacuity concern."
+   :capture-kind :runner-component-route-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J03"}
+   #:ref{:type :proof-pattern,
+         :id "finite-polynomial-sum-common-degree-bound"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t028"]
+   :receipt-ids ["4d177bee-0203-42a8-bce4-5b260bafabd4"]
+   :commits ["1bf56f4dedcbcd07cd5826da25ac4591eb0287fb"]
+   :problems ["a95J03-polynomial-degree"]
+   :artifacts ["problems/a95J03/lean/Main.lean:algPoly_degree_le"]}
+  :confidence :single-instance-ground-control-verified-with-explicit-file-caveat
+  :review {:verdict :pending-owner-review}}
+
+ {:name "prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Derive weak `L²` convergence on an infinite measure space from almost-everywhere convergence and a uniform `L²` bound."
+   :route
+   ["Fix an arbitrary test function `h ∈ L²` and reduce the weak-convergence goal to convergence of the integrals of the products `fₙh`."
+    "Use Hölder to control the products in `L¹`."
+    "Prove uniform integrability on small-measure sets from the uniform `L²` bound and the fixed test function."
+    "Because the ambient measure is infinite, separately prove uniform tightness from the `L²` tail of `h`; small-set uniform integrability alone is not enough."
+    "Combine the a.e. convergence of `fₙh` to `gh` with both controls and apply the infinite-measure Vitali theorem `tendsto_Lp_of_tendsto_ae` in `L¹`."
+    "Translate the resulting `L¹` convergence into convergence of the pairings."]
+   :key-api
+   ["MeasureTheory.tendsto_Lp_of_tendsto_ae"
+    "MeasureTheory.UniformIntegrable"
+    "MeasureTheory.UniformIntegrableOn"
+    "Hölder inequality"]
+   :literature-anchor
+   {:kind :library-source-attribution
+    :citation "Dunford–Schwartz, Linear Operators, Part I, Theorem III.6.15"
+    :use
+    "Mathlib's source attributes the general infinite-measure Vitali theorem to this result; the installed theorem itself carried the formal proof."}
+   :alternative-considered
+   {:memory-id
+    "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness"
+    :decision
+    "The runner considered the density-plus-uniform-boundedness route but selected product-level Vitali because a.e. convergence and the installed infinite-measure theorem made it shorter and direct."
+    :inference
+    "This single comparison suggests a boundary, not yet a standalone general rule: prefer product-level Vitali when the hypotheses directly supply a.e. product convergence plus uniform integrability and tightness; retain dense-span extension when convergence is known only on a generating subspace."}
+   :witness
+   {:declaration "weak_convergence_of_ae_tendsto_L2_bounded"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "On an infinite measure space, prove weak convergence by applying Vitali to each product with a test function, but supply both local uniform integrability and escape-to-infinity control."
+   :boundary
+   "The infinite-measure form genuinely needs uniform tightness in addition to small-set uniform integrability. This route also relies on pointwise or a.e. convergence strong enough to pass to the products."
+   :capture-kind :runner-route-library-attribution-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a96A03"}
+   #:ref{:type :proof-pattern,
+         :id "infinite-measure-Vitali-for-weak-L2-convergence"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t029" "e-codexroll-019fa2c1-t030"]
+   :receipt-ids ["cf5de2ea-189e-4e37-9cb3-69b6f3a4424d"]
+   :commits ["bf1101b23858958b95d0ecd88dfbaa281fde9432"]
+   :problems ["a96A03-weak-convergence"]
+   :artifacts
+   ["problems/a96A03/lean/Main.lean:weak_convergence_of_ae_tendsto_L2_bounded"]}
+  :confidence :single-instance-ground-control-verified-with-explicit-route-selection-inference
+  :review {:verdict :pending-owner-review}}
+
+ {:name "descend-an-even-analytic-function-through-the-squaring-map"
+  :lane :solve-lane
+  :level :construction
+  :status :draft
+  :body
+  {:problem-class
+   "Construct an analytic factor `g` for an even analytic function `h`, with `h z = g (z²)`, across the branch point at zero."
+   :construction
+   ["Choose a square root only to define the pointwise factor; the selector itself need not be analytic because evenness makes the value independent of the sign."
+    "At zero, expand `h` as a formal power series, use vanishing of all odd coefficients, and reindex the even coefficients into a new series."
+    "Prove the reindexed series has positive radius using coefficient bounds inherited from the original series."
+    "Use `tsum_even_add_odd` and the zero odd part to identify the new series after composition with `z ↦ z²`."
+    "At a nonzero point, the derivative of the squaring map is nonzero; use `analyticAt_comp_iff_of_deriv_ne_zero` to descend analyticity through its local inverse."
+    "Combine the Taylor-germ argument at the branch point with the inverse-function argument away from it."]
+   :key-api
+   ["FormalMultilinearSeries.ofScalars"
+    "FormalMultilinearSeries.le_mul_pow_of_radius_pos"
+    "FormalMultilinearSeries.le_radius_of_bound"
+    "HasFPowerSeriesAt.eventually_hasSum"
+    "tsum_even_add_odd"
+    "analyticAt_comp_iff_of_deriv_ne_zero"]
+   :witness
+   {:declaration "apm_a96J10_even_factors"
+    :helpers
+    ["evenFactorRoot"
+     "evenFactorRoot_sq"
+     "evenFactorRoot_tendsto"
+     "evenCoefficients_radius_pos"
+     "evenCoefficients_sum"]
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For descent through a branched map, split the proof at the branch locus: reindex the invariant Taylor germ where the derivative vanishes, and use the analytic inverse-function theorem everywhere else."
+   :boundary
+   "Evenness is load-bearing for independence from the two square-root choices and for annihilating odd Taylor coefficients. The inverse-function step cannot cover zero because the derivative of `z ↦ z²` vanishes there."
+   :capture-kind :runner-multi-step-construction-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a96J10"}
+   #:ref{:type :proof-pattern,
+         :id "analytic-descent-through-branched-double-cover"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t031" "e-codexroll-019fa2c1-t032"]
+   :receipt-ids ["257b93d2-715c-4f9c-9cf2-8cd2ab7e50e2"]
+   :commits ["c3d61512f8f9c1e58619efc1e7b412fca2a943c1"]
+   :problems ["a96J10-even-analytic-descent"]
+   :artifacts ["problems/a96J10/lean/Main.lean:apm_a96J10_even_factors"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}]
