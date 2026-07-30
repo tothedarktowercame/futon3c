@@ -1,0 +1,473 @@
+[{:name "apply-radial-R3-integration-through-a-one-dimensional-profile"
+  :lane :solve-lane
+  :level :api-route
+  :status :draft
+  :body
+  {:problem-class
+   "Prove integrability and evaluate an integral on a three-dimensional real inner-product space when the integrand depends only on the norm."
+   :route
+   ["Import `ConstructionTargets.RadialIntegrationR3`."
+    "Express the integrand as `fun x => profile ‖x‖`, splitting `x = 0` when dependent rewriting inside the profile's conditional is ill-typed."
+    "Use `integrable_radial_R3_iff` to reduce three-dimensional integrability to the weighted one-dimensional radial density."
+    "Reduce the concrete density to Mathlib's `integrable_inv_one_add_sq`."
+    "Use `radial_integral_R3` directly for the integral identity."]
+   :key-api
+   ["ConstructionTargets.RadialIntegrationR3.integrable_radial_R3_iff"
+    "ConstructionTargets.RadialIntegrationR3.radial_integral_R3"
+    "integrable_inv_one_add_sq"]
+   :witness
+   {:declarations ["radial_integral_R3" "f_radial_integrable"]
+    :construction-target-used true
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For norm-radial functions on `R³`, route through the reusable radial reduction before rebuilding polar-coordinate measure theory in the problem file."
+   :capture-kind :runner-route-and-ground-control-verified-import-use}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A03"}
+   #:ref{:type :construction-target, :id "RadialIntegrationR3"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t032"]
+   :receipt-ids ["f1ca8e74-93de-4412-8e38-b100dc3a5887"]
+   :commits ["d4bcc810887391e1dcc596874cfa8d02d5ddc827"]
+   :problems ["a95A03-radial-integration"]
+   :artifacts
+   ["ConstructionTargets/RadialIntegrationR3.lean"
+    "problems/a95A03/lean/Main.lean:radial_integral_R3"
+    "problems/a95A03/lean/Main.lean:f_radial_integrable"]}
+  :confidence :receipt-confirmed-field-use
+  :review {:verdict :pending-owner-review}}
+
+ {:name "refute-essential-boundedness-at-a-singularity-on-a-positive-measure-ball"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Show that a function singular at the origin does not belong to `L∞`, even though changing the value at the singleton origin cannot witness failure of an a.e. bound."
+   :route
+   ["Assume `MemLp f ⊤` and extract an a.e. finite norm bound."
+    "Choose a sufficiently small radius from that bound."
+    "On the punctured ball around zero, prove the singular profile exceeds the alleged bound."
+    "Use positivity of the ball's volume and nullity of the singleton to obtain a positive-measure set on which the a.e. bound fails."]
+   :lean-arcs
+   ["Use `measure_singleton` rather than treating the singular point itself as positive-measure evidence."
+    "Normalize distance with `dist_zero_right`."
+    "Normalize reciprocal expressions through `one_div` and `div_eq_mul_inv` before closing the strict inequality."]
+   :witness
+   {:declaration "f_radial_not_memLp_top"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "To disprove an essential bound near a point singularity, thicken the violation to a positive-measure punctured neighbourhood; the exceptional point alone is invisible to `L∞`."
+   :capture-kind :runner-proof-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A03"}
+   #:ref{:type :proof-pattern, :id "positive-measure-essential-bound-contradiction"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t032"]
+   :receipt-ids ["f1ca8e74-93de-4412-8e38-b100dc3a5887"]
+   :commits ["d4bcc810887391e1dcc596874cfa8d02d5ddc827"]
+   :problems ["a95A03-radial-integration"]
+   :artifacts ["problems/a95A03/lean/Main.lean:f_radial_not_memLp_top"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "make-construction-targets-buildable-importable-and-advertised-before-counting-them"
+  :lane :trajectory-lane
+  :level :wiring-validation
+  :status :draft
+  :body
+  {:headline-observation
+   "The radial construction had been proved but could not help a problem runner until the directory gained a `lean_lib`, a root module, and packet-level discoverability; after those repairs the next runner imported and used both target lemmas and closed three sorries."
+   :observed-chain
+   ["construction theorem proved"
+    "namespace included in the build"
+    "module import succeeds and olean exists"
+    "support is advertised in the dispatch packet"
+    "runner imports and consumes the theorem"
+    "problem sorry closes axiom-clean"]
+   :rule
+   "Do not count a construction target as delivered when it is only present in source. Validate buildability, importability, dispatch discoverability, and a field use."
+   :boundary
+   "This is one end-to-end field validation. It does not establish that every construction target or every `:unblocks` annotation is usable."
+   :capture-kind :receipt-confirmed-end-to-end-wiring-event}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A03"}
+   #:ref{:type :process-pattern, :id "construction-target-delivery-chain"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t032"]
+   :receipt-ids ["f1ca8e74-93de-4412-8e38-b100dc3a5887"]
+   :commits
+   ["a270a2a" "d4bcc810887391e1dcc596874cfa8d02d5ddc827"]
+   :problems ["a95A03-radial-integration"]
+   :artifacts
+   ["ConstructionTargets/Root.lean"
+    "ConstructionTargets/RadialIntegrationR3.lean"
+    "problems/a95A03/lean/Main.lean"]}
+  :confidence :receipt-confirmed-first-field-validation
+  :review {:verdict :pending-owner-review}}
+
+ {:name "derive-circle-curve-length-from-the-average-of-the-derivative"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Lower-bound the integral of the norm of a holomorphic derivative around the unit circle from the derivative at the centre."
+   :route
+   ["Apply `DiffContOnCl.circleAverage` to `deriv f` so its circle average is `deriv f 0`."
+    "Apply the interval norm-of-integral inequality to bound the norm of that average by the average of `‖deriv f‖`."
+    "Use the normalized circle parameter and the centre-derivative hypothesis to obtain the `2π` lower bound."]
+   :key-api
+   ["DiffContOnCl.circleAverage"
+    "intervalIntegral.norm_integral_le_of_norm_le_const"]
+   :discarded-complexity
+   "The proof does not need the proposed Jensen/log route, injectivity, `f 0 = 0`, or the Schwarz equality construction."
+   :witness
+   {:declaration "curve_length_ge_two_pi"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When a curve-length target is an integral of `‖f'‖`, first compare it with the norm of the derivative's circle average; Cauchy's circle-average identity may remove global geometric hypotheses."
+   :capture-kind :runner-shorter-route-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A08"}
+   #:ref{:type :mathlib-api, :id "DiffContOnCl.circleAverage"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t035"]
+   :receipt-ids ["97a43b0a-9646-4b9a-81ba-45a116a61e4a"]
+   :commits ["11a70a0e1950588acea6e4335bc679c87146e102"]
+   :problems ["a95A08-curve-length-jensen"]
+   :artifacts ["problems/a95A08/lean/Main.lean:curve_length_ge_two_pi"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "prove-exponential-Jensen-with-integrable-log-and-set-averages"
+  :lane :solve-lane
+  :level :api-route
+  :status :draft
+  :body
+  {:problem-class
+   "Prove the exponential form of Jensen's inequality for a positive function on `[0,2π]`."
+   :required-precondition
+   "`IntegrableOn (fun θ => Real.log (g θ)) (Icc 0 (2 * π)) volume` is load-bearing; positivity and integrability of `g` alone do not suffice."
+   :route
+   ["Apply root-level `convexOn_exp.map_set_average_le` on `Icc 0 (2π)` to `Real.log ∘ g`."
+    "Use the log-integrability hypothesis to supply the measurable/integrable premises."
+    "Normalize the set averages by the explicit finite nonzero interval volume."
+    "Convert the restricted set integrals to interval integrals and simplify `exp (log (g θ))` using positivity."]
+   :failure-detector
+   "If log-integrability is absent, check `intervalIntegral.integral_undef`: Lean assigns zero to a non-integrable Bochner integral. The witnessed function `g(0)=1`, `g(θ)=exp(-1/θ)` otherwise makes the unrepaired statement false."
+   :witness
+   {:declaration "jensen_exp_circle"
+    :repair-hypothesis-used true
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "Before applying Jensen to `log ∘ g`, require integrability of the transformed function; Lean's junk value for a non-integrable integral can turn a missing premise into a false but plausible theorem."
+   :capture-kind :blocked-counterexample-repair-and-solved-proof}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95A08"}
+   #:ref{:type :mathlib-api, :id "convexOn_exp.map_set_average_le"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t033"
+    "e-codexroll-019f9b12-t034"
+    "e-codexroll-019f9b12-t035"]
+   :receipt-ids
+   ["93926277-6156-4ced-a788-d82783968a62"
+    "97a43b0a-9646-4b9a-81ba-45a116a61e4a"]
+   :commits ["11a70a0e1950588acea6e4335bc679c87146e102"]
+   :problems ["a95A08-jensen-circle"]
+   :references
+   [{:source "leanprover-community Zulip archive"
+     :path
+     "217875-Is-there-code-for-X?/Integrability.20of.20log.20in.20a.20closed.20interval.20containing.20zero.json"
+     :use-status :diagnostic-support}]
+   :artifacts ["problems/a95A08/lean/Main.lean:jensen_exp_circle"]}
+  :confidence :counterexample-and-repaired-proof-confirmed
+  :review {:verdict :pending-owner-review}}
+
+ {:name "transport-a-composition-derivative-through-local-eventual-equality"
+  :lane :arc-lane
+  :level :api-route
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "A function `f` agrees locally with `g ∘ h`, and derivatives of `g` and `h` are available at the point."}
+   :route
+   ["Build the derivative of `g ∘ h` with `HasDerivAt.comp`."
+    "Turn local equality of `f` and `g ∘ h` into an eventual equality at the point."
+    "Transport the derivative result to `f` with `HasDerivAt.congr_of_eventuallyEq`."]
+   :key-api ["HasDerivAt.comp" "HasDerivAt.congr_of_eventuallyEq"]
+   :witness
+   {:declaration "chain_rule_at_zero"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :boundary
+   "This closes the local chain-rule lemma. It does not construct the subordinate map or prove that a univalent holomorphic map has nonzero derivative."
+   :capture-kind :runner-api-route-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J01"}
+   #:ref{:type :mathlib-api, :id "HasDerivAt.congr_of_eventuallyEq"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t036"]
+   :receipt-ids ["249c3def-ed02-4369-9d45-8a17a4c44e65"]
+   :commits ["51b6bc00dcc1c6cfeaecc79cdcf0fc8d2b720f03"]
+   :problems ["a95J01-subordination"]
+   :artifacts ["problems/a95J01/lean/Main.lean:chain_rule_at_zero"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "analytic-order-at-least-two-implies-local-noninjectivity"
+  :lane :frontier-lane
+  :level :frontier
+  :status :open
+  :anchor :none
+  :demand 2
+  :body
+  {:frontier/kind :missing-proof
+   :statement
+   "theorem AnalyticAt.not_injOn_nhds_of_two_le_analyticOrderAt
+    {g : ℂ → ℂ} {z : ℂ}
+    (hg : AnalyticAt ℂ g z)
+    (horder : (2 : ℕ) ≤ analyticOrderAt (fun w => g w - g z) z) :
+    ∀ s ∈ 𝓝 z, ¬ Set.InjOn g s"
+   :interpretation
+   "A complex analytic germ of local degree at least two takes some nearby value at two distinct nearby points."
+   :route
+   ["Factor the centred germ at its analytic order."
+    "Construct a local analytic k-th root of the nonvanishing factor."
+    "Put the germ into a local `φ(w)^k` normal form."
+    "Use a nontrivial k-th root of unity to produce two distinct nearby preimages."]
+   :proved-prefix
+   "`two_le_analyticOrderAt_sub_self` is axiom-clean: derivative zero forces the centred germ's analytic order to be at least two."
+   :unblocks
+   [#:ref{:type :construction-target, :id "UnivalentDeriv"}
+    #:ref{:type :lean-theorem, :id "subordination_deriv_le"}]
+   :demand-note
+   "Demand 2: the local-degree theorem closes the parent univalent-derivative construction, which in turn gates the remaining a95J01 subordination result."
+   :boundary
+   "Searches found `analyticOrderAt` but no local normal-form or local k-to-one theorem in the installed Mathlib. No literature anchor was used."
+   :capture-kind :runner-verbatim-frontier-and-ground-control-gap-check}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J01"}
+   #:ref{:type :mathlib-gap, :id "analytic-local-degree-noninjectivity"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t037"]
+   :receipt-ids ["27a80e75-bf48-4df6-a696-d6ed7590d380"]
+   :commits ["5a51a251f995ed936eee0b13d13ac9a2f80f0039"]
+   :problems ["construction-deriv-ne-zero-of-injon"]
+   :artifacts
+   ["ConstructionTargets/UnivalentDeriv.lean:two_le_analyticOrderAt_sub_self"
+    "ConstructionTargets/UnivalentDeriv.lean:deriv_ne_zero_of_injOn"]}
+  :confidence :frontier-confirmed-single-session
+  :review {:verdict :pending-owner-review}}
+
+ {:name "bound-automatic-frontier-descent-when-a-leaf-recurses"
+  :lane :trajectory-lane
+  :level :orchestration
+  :status :draft
+  :body
+  {:headline-observation
+   "The frontier `univalent holomorphic implies nonzero derivative` recursed into a deeper missing local-degree theorem, whose proof itself requires a local normal form and analytic k-th root infrastructure."
+   :observed-chain
+   ["a95J01/subordination_deriv_le"
+    "univalent holomorphic implies derivative nonzero"
+    "analytic order at least two implies local noninjectivity"
+    "local normal form plus analytic k-th root"]
+   :cost
+   "Each automatically prioritised construction leaf consumes another runner and verification cycle, so unbounded descent can starve breadth across the remaining queue."
+   :policy
+   {:classification :inference
+    :proposal
+    "Automatically descend at most one newly exposed frontier level; after that, surface the full dependency chain for operator prioritisation."
+    :observed-action :stop-descending-and-deprioritise}
+   :boundary
+   "The mathematical claim remains classical and plausible; the correction concerns underestimated formal-library effort and orchestration depth, not its truth."
+   :capture-kind :receipt-confirmed-frontier-recursion-event}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "UnivalentDeriv"}
+   #:ref{:type :process-pattern, :id "frontier-recursion-depth-policy"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t037"]
+   :receipt-ids ["27a80e75-bf48-4df6-a696-d6ed7590d380"]
+   :commits ["5a51a251f995ed936eee0b13d13ac9a2f80f0039"]
+   :problems ["construction-deriv-ne-zero-of-injon"]
+   :artifacts ["ConstructionTargets/UnivalentDeriv.lean"]}
+  :confidence :receipt-confirmed-policy-inference-marked
+  :review {:verdict :pending-owner-review}}
+
+ {:name "differentiate-a-cauchy-transform-locally-under-the-integral"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Prove complex differentiability of a Cauchy transform away from the image of a compact real set."
+   :route
+   ["Use compactness of `(↑) '' K` to obtain positive distance from the evaluation point and choose a smaller ball disjoint from the image."
+    "Differentiate the kernel locally, where the denominator stays uniformly away from zero."
+    "Bound the derivative by a constant inverse-square distance bound throughout that ball."
+    "Use compactness again for strong measurability and `integrableOn_const hK_compact.measure_ne_top`."
+    "Apply dominated differentiation under the integral to obtain `DifferentiableAt`, then use `.differentiableWithinAt` pointwise for `DifferentiableOn`."]
+   :key-arcs
+   ["Orient the reciprocal estimate with `inv_le_inv₀` and the positive distance lower bound."
+    "A constant dominator is not automatically integrable; finite measure of the compact domain is the required premise."]
+   :witness
+   {:declarations
+    ["cauchyTransform_differentiableAt"
+     "cauchyTransform_differentiableOn"]
+    :restored-compactness-hypothesis-uses 6
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For parameter-dependent singular kernels away from compact support, first manufacture a neighbourhood with a uniform denominator bound; compactness supplies both separation and integrable domination."
+   :capture-kind :runner-route-repair-use-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a00J05"}
+   #:ref{:type :proof-pattern, :id "local-dominated-parametric-differentiation"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t038" "e-codexroll-019f9b12-t039"]
+   :receipt-ids ["70cd642f-5984-4eb7-bf0a-a968230114d0"]
+   :commits ["8c35117d11abc684292c4c3404089c67e317cd0c"]
+   :problems ["a00J05-cauchy-transform"]
+   :references
+   [{:source "leanprover-community Zulip archive"
+     :path "303200-sphere-eversion/Parametric.20integrals.json"
+     :use-status :supporting-route}]
+   :artifacts
+   ["problems/a00J05/lean/Main.lean:cauchyTransform_differentiableAt"
+    "problems/a00J05/lean/Main.lean:cauchyTransform_differentiableOn"]}
+  :confidence :partial-row-two-declarations-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "place-section-include-after-a-definition-to-repair-theorems-without-changing-the-definition"
+  :lane :trajectory-lane
+  :level :statement-repair
+  :status :draft
+  :body
+  {:headline-observation
+   "Section variables `hK_compact` and `hK_measure` were declared but omitted from later theorem signatures because they were not referenced; adding `include` after `cauchyTransform` repaired those theorems while preserving the definition's signature."
+   :failure
+   {:shape
+    "Theorems were quantified over arbitrary `K`; `K = ∅` refuted the intended non-extension conclusion."
+    :cause
+    "Lean does not automatically include unused section variables in a declaration."}
+   :repair
+   ["Keep `def cauchyTransform` before the `include` directive, preserving its signature."
+    "Place `include hK_compact hK_measure` before the theorem declarations that semantically require them."
+    "Verify the repaired hypotheses are load-bearing in the proof; `hK_compact` was used six times in the committed partial."]
+   :rule
+   "Treat section context as syntactic until declaration signatures are inspected. Position `include` at the narrowest declaration boundary so a repair strengthens the intended theorems without contaminating an independent definition."
+   :capture-kind :confirmed-falsehood-repair-and-load-bearing-proof-use}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a00J05"}
+   #:ref{:type :lean-mechanism, :id "section-include"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t038" "e-codexroll-019f9b12-t039"]
+   :receipt-ids ["70cd642f-5984-4eb7-bf0a-a968230114d0"]
+   :commits ["8c35117d11abc684292c4c3404089c67e317cd0c"]
+   :problems ["a00J05-cauchy-transform"]
+   :artifacts ["problems/a00J05/lean/Main.lean"]}
+  :confidence :repair-and-six-uses-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "derive-local-L1-from-weak-L2-by-layer-cake-and-optimized-splitting"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:standard-result
+   "Kolmogorov's inequality for weak `L^p`, specialized to `p=2`, `q=1`."
+   :problem-class
+   "Given the weak-`L²` distribution bound `μ{|f| > t} ≤ C/t²`, bound the `L¹` norm over a finite-measure set `E`."
+   :route
+   ["Use Cavalieri's principle / layer cake under `volume.restrict E`."
+    "Bound the low distribution tail by `μ(E)`."
+    "Bound the high tail by the weak-`L²` hypothesis `C/t²`."
+    "Split the layer-cake integral at `a = sqrt(C) / sqrt(μ(E))`."
+    "Evaluate the improper integral of `t⁻²`; both pieces equal `sqrt(C * μ(E))`."
+    "Return the explicit constant `C₁ = 2 * sqrt(C)`."]
+   :key-api
+   ["MeasureTheory.lintegral_eq_lintegral_meas_lt"
+    "integral_Ioi_rpow_of_lt"
+    "integrableOn_Ioi_rpow_of_lt"
+    "MeasureTheory.norm_integral_le_lintegral_norm"
+    "MeasureTheory.ofReal_integral_eq_lintegral_ofReal"
+    "MeasureTheory.integrable_toReal_of_lintegral_ne_top"]
+   :witness
+   {:declaration "weakL2_implies_L1_bound"
+    :explicit-constant "2 * Real.sqrt C"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For weak-`L²` to local-`L¹`, integrate the distribution function and optimize the split where the finite-set bound and weak tail bound meet."
+   :capture-kind :standard-result-component-search-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A02"}
+   #:ref{:type :proof-pattern, :id "kolmogorov-weak-Lp-layer-cake"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t005"]
+   :receipt-ids ["32759675-9dfe-4dd8-bc42-ba6ebfce8d2e"]
+   :commits ["01e8a15fb64125facbc8aad97a633a55fd4610c7"]
+   :problems ["a01A02-weak-L2-L1-bound"]
+   :artifacts ["problems/a01A02/lean/Main.lean:weakL2_implies_L1_bound"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "order-proof-search-by-known-route-components-before-literature"
+  :lane :trajectory-lane
+  :level :search-policy
+  :status :draft
+  :body
+  {:headline-observation
+   "For a01A02 the file already named the mathematical route, roughly eight local/web arXiv queries supplied no usable anchor, and Loogle/LeanSearch component search supplied the declarations that carried the proof."
+   :contrast
+   "In the earlier integral-Minkowski construction the route itself was unknown and a Schep literature anchor was necessary. These are different search states."
+   :policy
+   {:classification :inference
+    :proposal
+    ["If the route or standard theorem is already known, search Mathlib components first using its operations and intermediate objects."
+     "Use Zulip next for library-location and formalization precedent."
+     "Fall through to arXiv when the mathematical construction is unknown, component search stalls, or a literature warrant is required."]}
+   :observed-surfaces
+   {:route-known-from :source-docstring
+    :arxiv :eight-queries-no-usable-anchor
+    :zulip :explicit-no-anchor
+    :components :loogle-and-leansearch-carried-proof}
+   :boundary
+   "This is a two-case emerging model, not a settled ranking across all domains. The no-anchor report was correct behavior, not a search failure."
+   :capture-kind :receipt-confirmed-search-surface-comparison}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A02"}
+   #:ref{:type :process-pattern, :id "conditional-proof-search-order"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t005"]
+   :receipt-ids ["32759675-9dfe-4dd8-bc42-ba6ebfce8d2e"]
+   :commits ["01e8a15fb64125facbc8aad97a633a55fd4610c7"]
+   :problems ["a01A02-weak-L2-L1-bound"]
+   :cross-row-context
+   [{:problem "integral-minkowski"
+     :anchor "Schep"
+     :classification :contrast-reported-by-ground-control}]
+   :artifacts ["problems/a01A02/lean/Main.lean"]}
+  :confidence :two-case-inference-explicitly-marked
+  :review {:verdict :pending-owner-review}}]
