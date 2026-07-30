@@ -359,7 +359,16 @@
              rows (cond (sequential? resp) resp
                         (map? resp) (or (:results resp) (:evidence resp) (:data resp) [])
                         :else [])
-             memories (filter #(= :memory (or (:evidence/type %) (get % "evidence/type"))) rows)]
+             ;; Search rows are {:score _ :entry {...}} - the evidence document is
+             ;; NESTED under :entry. Reading :evidence/type at the top level
+             ;; returned nil for every row, so the filter matched nothing and the
+             ;; fallback below silently returned UNFILTERED results. Worse, that
+             ;; made every ladder tier non-empty, so the ladder never fell
+             ;; through to the shorter queries it exists to reach. Found
+             ;; 2026-07-30 by probing the seam directly rather than the endpoint.
+             memories (filter #(= :memory (or (get-in % [:entry :evidence/type])
+                                              (:evidence/type %)))
+                              rows)]
          ;; If the shape is not what we expect, fall back to the raw response
          ;; rather than silently returning nothing -- an empty seed is exactly
          ;; the failure mode this fix exists to remove.
