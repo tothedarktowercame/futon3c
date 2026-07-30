@@ -80,7 +80,25 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
+    # STOP CONDITIONS for the continuous loop (Joe, 2026-07-30): run until the
+    # queue is exhausted or Codex usage reaches 50%. Both are checked HERE so a
+    # continuous loop cannot overrun them by forgetting; the usage gate reuses
+    # the cron's own reader and threshold rather than a second implementation.
+    try:
+        snap = cron.newest_rate_limit()
+        cron.enforce_usage(snap)
+        print(f"usage gate OPEN: used={snap['used_percent']:g}% "
+              f"(stops at >={cron.MAX_USED_PERCENT:g}%)")
+    except Exception as exc:  # GateClosed or unavailable signal
+        print(f"STOP: {exc}", file=sys.stderr)
+        return 10
+
     rows = loads(QUEUE.read_text(encoding="utf-8"))
+    untouched = [r for r in rows if cron.status_name(r) == "untouched"]
+    if not untouched:
+        print("STOP: queue exhausted - no untouched rows remain", file=sys.stderr)
+        return 11
+    print(f"queue: {len(untouched)} untouched rows remain")
     busy = zai_busy()
     if args.row:
         cands = [r for r in rows if str(r.get(K("id"))) == args.row]
