@@ -218,10 +218,51 @@
               endpoints)})})]
     (is (= ["math-formalization/tactic-algebra-interference"]
            (mapv :pattern-id (:candidates result))))
+    (is (= ["e-original"]
+           (mapv :memory/id (:content-matches result))))
+    (is (= [:content-match]
+           (mapv :via (:content-matches result))))
     (is (= 2 (:checked-memory-count result)))
     (is (= 1 (count (filter #(= :batch (first %)) @calls))))
     (is (= ["e-original" "e-unreviewed"]
            (second (first (filter #(= :batch (first %)) @calls)))))))
+
+(deftest lexical-content-match-does-not-bypass-attachment-review
+  (let [memory-id "e-unreviewed-match"
+        entry (assoc original-entry :evidence/id memory-id)
+        edge (-> original-edge
+                 (assoc :hx/endpoints
+                        [memory-id
+                         "topology/old"
+                         "math-formalization/tactic-algebra-interference"])
+                 (assoc-in [:hx/props :roles :entry] memory-id)
+                 (assoc-in [:hx/props :attachment-status] :unreviewed))
+        result
+        (recall/propose-patterns-by-query
+         {:domain :mathematics}
+         "roots outside unit"
+         {:limit 5
+          :search-evidence
+          (fn [_ _]
+            {:results
+             [{:score -2.0
+               :entry entry}]})
+          :recall-batch-fn
+          (fn [ctx endpoints opts]
+            (recall/recall-by-endpoints
+             ctx endpoints
+             (assoc
+              opts
+              :fetch-components
+              (fn [requested _]
+                {:ok true
+                 :groups
+                 (mapv (fn [endpoint]
+                         {:endpoint endpoint
+                          :components [{:edge edge :entry entry}]})
+                       requested)}))))})]
+    (is (empty? (:content-matches result)))
+    (is (empty? (:candidates result)))))
 
 (deftest lexical-memory-proposal-falls-back-to-bounded-token-disjunction
   (let [queries (atom [])

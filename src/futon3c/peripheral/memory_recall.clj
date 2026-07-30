@@ -350,6 +350,30 @@
                             :trace-id trace-id}))
         recall-by-memory
         (into {} (map (juxt :endpoint identity)) (:recalls batch))
+        content-matches
+        (->> rows
+             (keep
+              (fn [{:keys [score entry]}]
+                (let [memory-id (:evidence/id entry)
+                      memory
+                      (some #(when (= memory-id (:memory/id %)) %)
+                            (:memories (get recall-by-memory memory-id)))]
+                  (when memory
+                    (cond-> (assoc memory
+                                   :via :content-match
+                                   :content-match/score score)
+                      (map? (:evidence/body entry))
+                      (assoc :memory/body (:evidence/body entry)))))))
+             (reduce
+              (fn [{:keys [seen items] :as acc} memory]
+                (if (contains? seen (:memory/id memory))
+                  acc
+                  {:seen (conj seen (:memory/id memory))
+                   :items (conj items memory)}))
+              {:seen #{} :items []})
+             :items
+             (take bounded-limit)
+             vec)
         proposals
         (reduce
          (fn [acc {:keys [score entry]}]
@@ -382,6 +406,7 @@
          {}
          rows)]
     {:proposals proposals
+     :content-matches content-matches
      :validation batch}))
 
 (defn- proposals-from-description-rows
@@ -445,6 +470,7 @@
          domain bounded-limit recall-batch-fn description-rows trace-id)]
     {:proposals (merge-proposals (:proposals memory-result)
                                  (:proposals description-result))
+     :content-matches (:content-matches memory-result)
      :memory-row-count (count memory-rows)
      :description-row-count (count description-rows)
      :validation {:memories (:validation memory-result)
@@ -458,12 +484,15 @@
                   :substrate :elapsed-ms :error])))
 
 (defn propose-patterns-by-query
-  "Bounded lexical proposal lane for pattern construction.
+  "Bounded lexical proposal lane for patterns and direct content matches.
 
-   The FTS result is not itself a warrant. Each candidate must lead through a
-   currently reviewed memory/assert edge to a pattern endpoint in DOMAIN.
-   This turns a task phrase into candidate pattern ids without an embedding
-   fallback or an unbounded graph scan."
+   The FTS result is not itself a warrant. Each memory match must project
+   through a currently reviewed memory/assert edge in DOMAIN; pattern proposals
+   additionally require a pattern endpoint on that edge. Reviewed matching
+   memories are returned as :content-matches so pattern arbitration cannot
+   discard them. This turns a task phrase into candidate pattern ids and
+   warranted memories without an embedding fallback or an unbounded graph
+   scan."
   ([ctx query] (propose-patterns-by-query ctx query {}))
   ([{:keys [domain]}
     query
@@ -493,8 +522,11 @@
          (proposals-from-search-rows
           domain bounded-limit recall-batch-fn primary-rows trace-id)
          primary-proposals (:proposals primary-result)
+         primary-content-matches (:content-matches primary-result)
+         primary-hit? (or (seq primary-proposals)
+                          (seq primary-content-matches))
          fallback-tokens
-         (when (empty? primary-proposals) (proposal-tokens query))
+         (when-not primary-hit? (proposal-tokens query))
          [fallback-result fallback-fts-ms]
          (when (seq fallback-tokens)
            (timed #(search-evidence
@@ -509,26 +541,28 @@
            (proposals-from-search-rows
             domain bounded-limit recall-batch-fn fallback-rows trace-id))
          proposals
-         (if (seq primary-proposals)
+         (if primary-hit?
            primary-proposals
-           (:proposals fallback-proposal-result))]
+           (:proposals fallback-proposal-result))
+         content-matches
+         (if primary-hit?
+           primary-content-matches
+           (:content-matches fallback-proposal-result))
+         selected-result
+         (if primary-hit? primary-result fallback-proposal-result)]
      {:ok true
       :trace-id trace-id
       :query query
       :limit bounded-limit
       :checked-memory-count
       (or (:memory-row-count
-           (if (seq primary-proposals)
-             primary-result
-             fallback-proposal-result))
+           selected-result)
           0)
       :checked-pattern-description-count
       (or (:description-row-count
-           (if (seq primary-proposals)
-             primary-result
-             fallback-proposal-result))
+           selected-result)
           0)
-      :query-strategy (if (seq primary-proposals)
+      :query-strategy (if primary-hit?
                         :full-query
                         :bounded-token-disjunction)
       :fallback-tokens (vec fallback-tokens)
@@ -558,6 +592,7 @@
                (keep :elapsed-ms
                      (vals (:validation fallback-proposal-result))))
        :proposal-total-ms (elapsed-ms started)}
+      :content-matches (vec (take bounded-limit content-matches))
       :candidates (->> (vals proposals)
                        (sort-by (comp str :pattern-id))
                        vec)})))

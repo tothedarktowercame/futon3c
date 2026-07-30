@@ -1,6 +1,7 @@
 (ns futon3c.peripheral.memory-recall-test
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.peripheral.memory-recall :as memory-recall]
             [futon3c.substrate.client :as substrate]))
@@ -326,3 +327,22 @@
              :recalls
              (mapv #(hash-map :endpoint % :memories []) endpoints)})})]
     (is (empty? (:candidates result)))))
+
+(deftest live-reviewed-content-match-survives-pattern-arbitration
+  (if (= "http://127.0.0.1:7073"
+         (some-> (System/getenv "FUTON_SUBSTRATE_URL")
+                 (str/replace #"/+$" "")))
+    (let [memory-id
+          "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count"
+          result
+          (memory-recall/propose-patterns-by-query
+           {:domain :mathematics}
+           "roots outside unit"
+           {:limit 10})]
+      (is (some #(= memory-id (:memory/id %))
+                (:content-matches result)))
+      (is (= :content-match
+             (:via (some #(when (= memory-id (:memory/id %)) %)
+                         (:content-matches result))))))
+    (is true
+        "Live regression requires FUTON_SUBSTRATE_URL=http://127.0.0.1:7073")))

@@ -322,11 +322,6 @@
       (throw (ex-info "substrate request failed"
                       {:url url :status (:status response) :body body})))))
 
-;; How much wider than the requested limit to fetch before filtering
-;; to memory documents. 5x was enough to lift memories past the
-;; receipt crowd in the measured cases; larger costs scan time.
-(def ^:private overfetch-factor 5)
-
 (defn- substrate-seams
   [base timeout-ms]
   (let [base (trim-base base)
@@ -553,6 +548,7 @@
                          (sort-by proposal-rank)
                          (map :pattern-id)
                          (take limit))
+        pattern-id-set (set pattern-ids)
         endpoints (->> (concat [problem] subjects pattern-ids)
                        (remove str/blank?)
                        distinct
@@ -570,11 +566,18 @@
              :fetch-entry entry}))
          endpoints)
         candidates
-        (->> recalls
-             (mapcat
-              (fn [recall]
-                (map #(assoc % :dispatch/endpoint (:endpoint recall))
-                     (:memories recall))))
+        (->> (concat
+              (:content-matches proposals)
+              (mapcat
+               (fn [recall]
+                 (map #(assoc %
+                              :via (if (contains? pattern-id-set
+                                                  (:endpoint recall))
+                                     :pattern
+                                     :endpoint)
+                              :dispatch/endpoint (:endpoint recall))
+                      (:memories recall)))
+               recalls))
              (reduce
               (fn [{:keys [seen items] :as acc} memory]
                 (if (contains? seen (:memory/id memory))
@@ -744,17 +747,23 @@
                       "reviewed attachment surfaced by terrain-conditioned dispatch recall"])
                    memory-ids))
         receipt
-        (memory-contract/use-receipt
-         {:decision-id job-id
-          :session-id session-id
-          :domain :mathematics
-          :surfaced-memory-ids memory-ids
-          :used-memory-ids []
-          :inclusion-reasons inclusion-reasons
-          :cascade-id (or (:trace-id recall-result)
-                          (str "dispatch-recall-empty-" (UUID/randomUUID)))
-          :surfaced-at surfaced-at
-          :recorded-at surfaced-at})]
+        (assoc
+         (memory-contract/use-receipt
+          {:decision-id job-id
+           :session-id session-id
+           :domain :mathematics
+           :surfaced-memory-ids memory-ids
+           :used-memory-ids []
+           :inclusion-reasons inclusion-reasons
+           :cascade-id (or (:trace-id recall-result)
+                           (str "dispatch-recall-empty-" (UUID/randomUUID)))
+           :surfaced-at surfaced-at
+           :recorded-at surfaced-at})
+         :memory-use/surfacing-via
+         (mapv (fn [memory]
+                 {:memory-id (:memory/id memory)
+                  :via (:via memory)})
+               (:memories recall-result)))]
     {:subject {:ref/type (if (str/starts-with? problem "bpm-")
                            :bpm-problem
                            :apm-problem)

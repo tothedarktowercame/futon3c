@@ -141,12 +141,15 @@
                {:status :ok
                 :trace-id "recall-1"
                 :query {:query "a95A04 interval integral"}
-                :memories [{:memory/id "e-memory-1"}]}
+                :memories [{:memory/id "e-memory-1"
+                            :via :content-match}]}
                "job-1" "session-1")
         receipt (get-in entry [:body :memory-use])]
     (is (= ["e-memory-1"] (:memory-use/surfaced-ids receipt)))
     (is (= [] (:memory-use/used-ids receipt)))
     (is (= ["e-memory-1"] (:memory-use/unused-ids receipt)))
+    (is (= [{:memory-id "e-memory-1" :via :content-match}]
+           (:memory-use/surfacing-via receipt)))
     (is (= "recall-1" (:memory-use/cascade-id receipt)))))
 
 (deftest offered-receipt-identifies-active-receipt-ranking
