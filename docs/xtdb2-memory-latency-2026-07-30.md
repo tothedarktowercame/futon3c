@@ -114,6 +114,60 @@ unverified explanation. We raised the client POST timeout to 120 s. Recovery was
 possible only because the writer uses deterministic ids and an existence check, so
 re-running resumed cleanly — a client-side property, not something the store did.
 
+## After the restart (operator-initiated, ~14:25Z)
+
+The restart is the natural test of which part of the degradation is
+*accumulated* and which part is *structural*, and it separates them — though not
+as cleanly as the pre-restart numbers implied. Fresh process, ~15 minutes warm,
+and by then the unrelated batch sweep had also finished, so the host went from
+23/30 GB used to 10/30 GB.
+
+| metric | 09:30Z (warm JVM, quiet host) | 14:15Z (warm JVM, loaded host) | post-restart (fresh JVM, quiet host) |
+|---|---|---|---|
+| RSS | 4.98 GB | 7.76 GB | **1.82 GB** |
+| Metaspace used | 331 MB | 957 MB | **122 MB** |
+| Metaspace committed | 482 MB | 1.65 GB | 148 MB |
+| G1 heap total | 2.33 GB | 4.19 GB | 1.19 GB |
+| G1 heap used | 845 MB | 2.07 GB | 668 MB |
+| `GET /evidence/<id>` | 0.18 s | 0.18 s | 0.15 s |
+| `GET /entity/<id>` | 0.25 s | 0.40 s | 0.39 s |
+| `?limit=1` | 1.76 s | 2.57 s | **2.14 s** |
+| `?limit=50` | — | 8.73 s | **5.66 s** |
+| `?limit=200` | 12.45 s | 23.96 s | **13.65 s** |
+| `text-search`, 1 term | — | 1.01 s | 0.81 s |
+
+**The finding that matters: the restart did not make list reads fast. It
+returned them to a baseline that was already slow.** `?limit=200` went
+24.0 s → 13.7 s, against 12.5 s at 09:30 on a 25-hour-old process. `?limit=1`
+went 2.57 s → 2.14 s, against 1.76 s. A brand-new process with a warm cache and
+a quiet host is still spending ~13 s on a 200-row list read and ~2 s on a
+one-row list read.
+
+So the list-scan cost decomposes into:
+
+- **a large structural baseline that survives restart** — this is the part worth
+  asking JUXT about, and it is not a leak;
+- **a session-accumulated component of roughly 10 s at `limit=200`** — which the
+  restart clears.
+
+**Correction to the pre-restart reading.** Before the restart we were inclined to
+attribute that accumulated component to the metaspace growth. The post-restart
+data does not support that inference, because the restart and the sweep's
+completion coincided: the fresh process was measured on a host with 20 GB
+available rather than 7.3 GB. Host memory pressure and JVM-internal accumulation
+are therefore **not separated** by this experiment, and the honest statement is
+that the 14:15Z figures reflect both. Separating them needs a restart taken while
+the host is *still* loaded, or a load run against a *warm* process on a *quiet*
+host.
+
+**What is not confounded** is the memory growth itself, which was measured on the
+store process directly: metaspace used went 331 MB → 957 MB over 4.75 hours and
+resets to 122 MB on restart. That is a property of the process, not of the host.
+
+**Point lookups never moved**, across a 30-hour-old degraded process and a fresh
+one: 0.15–0.18 s throughout. Whatever the list path is doing, the id path does
+not do it.
+
 ## Confounds and limits
 
 - **Single instance, single workload, no control.** No A/B, no comparison build,
@@ -124,9 +178,10 @@ re-running resumed cleanly — a client-side property, not something the store d
   upper bound and the comparison to 09:30Z is not clean. The *memory* figures for
   the store process are unaffected by this.
 - **Corpus size was not measured**, so the list-scan cost has no denominator here.
-- We have not tested whether restarting restores the latency profile; the restart
-  that follows these measurements is the natural test, and re-running the same
-  table afterwards would make the before/after complete.
+- The restart test was run (see above) but is **partially confounded**: the
+  unrelated batch sweep finished at about the same time, so the fresh process was
+  measured on a quiet host while the degraded one was measured on a loaded host.
+  JVM accumulation and host pressure are not separated by this data.
 
 ## Questions worth asking JUXT
 
@@ -134,8 +189,11 @@ re-running resumed cleanly — a client-side property, not something the store d
    there a cache or unloading path that we may be defeating with high query-shape
    variety?
 2. Is a multi-second floor on a `?limit=1` list read expected, and is it the scan
-   setup rather than row retrieval?
+   setup rather than row retrieval? Note this floor **survives a restart** — a
+   freshly started process still takes ~2.1 s — so it is structural rather than
+   accumulated.
 3. What is the recommended `-Xmx` to total-RSS ratio for an Arrow-backed store of
-   this shape, given we observe RSS at ~1.9× `-Xmx`?
+   this shape, given we observe RSS at ~1.9× `-Xmx` after 30 hours (and 0.45×
+   on a fresh process)?
 4. Is a long conjunctive full-text query expected to return zero rather than
    degrade gracefully to a ranked partial match?
