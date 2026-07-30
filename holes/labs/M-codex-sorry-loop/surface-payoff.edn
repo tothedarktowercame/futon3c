@@ -110,4 +110,33 @@
                  :verdict :corroborated-the-obstruction}
   :recall {:surfaced 0 :ran? true
            :note "recall RAN (run 1 had bypassed it); 0 surfaced is explained by the conjunctive query, measured 1 term = 5 hits, 29 terms = 0"}
-  :receipt "c142b663-5f34-4bd4-8ea8-026e3f0c9c3b"}]
+  :receipt "c142b663-5f34-4bd4-8ea8-026e3f0c9c3b"}
+ {:run 3
+  :at "2026-07-30T10:55Z"
+  :problem "a01A03"
+  :declaration "convolution_identity_implies_indicator"
+  :area "math/measure-integration-api"
+  :outcome :solved
+  :suggested-route nil
+  :suggested-route-source nil
+  ;; The file's own documentation proposed a Fourier-transform route. The runner
+  ;; evaluated it, found Mathlib's Fourier infrastructure offered "no comparably
+  ;; short direct route", and implemented the distributional argument instead --
+  ;; then updated the stale documentation. That is the packet's "a suggested
+  ;; route is a HYPOTHESIS to evaluate" clause doing real work.
+  :corpus-sketch-overridden "file proposed Fourier; distributional route used"
+  :standard-result "fundamental theorem of calculus; convolution differentiation; derivative-zero constancy; fundamental lemma of the calculus of variations"
+  :arms-tried [:components :zulip]
+  :arm-that-paid :components
+  :not-needed [:arxiv]
+  :components-detail {:leansearch ["ae_eq_zero_of_integral_contDiff_smul_eq_zero"
+                                   "intervalIntegral.integral_deriv_of_contDiffOn_uIcc"
+                                   "Integrable.integrable_convolution"
+                                   "HasCompactSupport.hasDerivAt_convolution_right"]
+                      :loogle ["HasCompactSupport (deriv ?f)" "fourierIntegral_convolution"]
+                      :verdict :carried-the-proof}
+  :zulip-detail {:thread "217875-Is-there-code-for-X%3F/Calculus.20counterexamples.json"
+                 :verdict :corroborated-prior-run-obstruction}
+  :recall {:surfaced 0 :ran? true :query "convolution identity indicator"
+           :note "recall FIX live (id dropped, 3-term cap). 0 surfaced is an HONEST NEGATIVE, verified by probe: corpus has no convolution/Young-convolution/Fourier memory; control probe on covered terrain returns 2."}
+  :receipt "48e5fa15-7e47-49e6-b5c4-e37df132959a"}]
