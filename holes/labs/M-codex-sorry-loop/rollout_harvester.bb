@@ -20,6 +20,16 @@
 (def root "/home/joe/code/futon3c/holes/labs/M-codex-sorry-loop")
 (def dryrun-path (str root "/harvest-dryrun-019f8b63.edn"))
 (def report-path (str root "/harvest-report-20260728.edn"))
+
+(defn session-paths
+  "Per-session artifact paths; the fixture keeps its original S1
+  acceptance filenames (owner lift, 2026-07-28)."
+  [session-id]
+  (if (= session-id fixture-session)
+    {:dryrun dryrun-path :report report-path}
+    (let [prefix (subs session-id 0 (min 8 (count session-id)))]
+      {:dryrun (str root "/harvest-dryrun-" prefix ".edn")
+       :report (str root "/harvest-report-" prefix ".edn")})))
 (def sessions-root (str (System/getProperty "user.home") "/.codex/sessions"))
 (def substrate-base "http://127.0.0.1:7073")
 (def append-url (str substrate-base "/api/alpha/evidence"))
@@ -52,6 +62,8 @@
                                     (catch Exception _ (usage!)))))
                     (usage!))
         "--commit" (recur (next xs) (assoc opts :commit? true))
+        "--allow-nonfixture" (recur (next xs)
+                                    (assoc opts :allow-nonfixture? true))
         (usage!))
       opts)))
 
@@ -462,25 +474,31 @@
                 :generated-at (str (Instant/now))}]
     (if (:commit? opts)
       (do
-        (when-not (= fixture-session (:session-id built))
-          (throw (ex-info "live acceptance is restricted to the fixture session"
+        ;; S1 acceptance was fixture-only; post-acceptance (owner lift,
+        ;; 2026-07-28) other sessions require the explicit flag. One
+        ;; session per invocation either way — bulk ingest stays a
+        ;; deliberate, store-RAM-aware act, never a default.
+        (when-not (or (= fixture-session (:session-id built))
+                      (:allow-nonfixture? opts))
+          (throw (ex-info "non-fixture commit requires --allow-nonfixture"
                           {:session-id (:session-id built)})))
-        (let [prior (when (.exists (io/file report-path))
-                      (edn/read-string (slurp report-path)))
+        (let [paths (session-paths (:session-id built))
+              prior (when (.exists (io/file (:report paths)))
+                      (edn/read-string (slurp (:report paths))))
               result (commit! entries)
               report (cond-> (merge common result)
                        prior (assoc :prior-run
                                     (dissoc prior :prior-run :writes)))]
-          (write-edn! report-path report)
+          (write-edn! (:report paths) report)
           (println (pr-str (dissoc report :writes :prior-run)))
           (when (seq (:errors report)) (System/exit 1))))
       (let [artifact (assoc common
                             :assertions {:row-count-equals-turn-context-count true
                                          :body-cap-respected true
                                          :deterministic-ids true}
-                            :entries entries)]
-        (when (= fixture-session (:session-id built))
-          (write-edn! dryrun-path artifact))
+                            :entries entries)
+            paths (session-paths (:session-id built))]
+        (write-edn! (:dryrun paths) artifact)
         (println (pr-str (dissoc artifact :entries)))))))
 
 (apply -main *command-line-args*)

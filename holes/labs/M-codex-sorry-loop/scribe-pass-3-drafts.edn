@@ -1,0 +1,258 @@
+[{:name "frontier-of-open-connected-component-lies-in-ambient-frontier"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Relate the ambient frontier of `connectedComponentIn U x` to the frontier of an open ambient subset `U` in a locally connected space."
+   :statement
+   "frontier (connectedComponentIn U x) ⊆ frontier U"
+   :preconditions
+   ["`LocallyConnectedSpace α`"
+    "`IsOpen U`"
+    "`x ∈ U`"]
+   :proof-shape
+   ["Use `hU.connectedComponentIn` to show the component is open, so its interior is itself."
+    "The component is contained in `U`, hence closure monotonicity supplies the closure half of frontier membership."
+    "Express the relative component as the image of `connectedComponent (⟨x,hx⟩ : U)` using `connectedComponentIn_eq_image hx`."
+    "Use closedness/maximality of the connected component in the subtype to show `U ↓∩ connectedComponentIn U x` is relatively closed."
+    "Transfer relative closedness with `isClosed_preimage_val.mp`; a putative frontier point lying in `U` would then lie back in the component, contradicting the frontier's non-interior half."]
+   :key-api
+   ["IsOpen.connectedComponentIn"
+    "connectedComponentIn_subset"
+    "connectedComponentIn_eq_image"
+    "isClosed_connectedComponent"
+    "isClosed_preimage_val"]
+   :witness
+   {:declaration
+    "ConstructionTargets.LemniscateComponents.frontier_connectedComponentIn_subset_frontier"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :boundary
+   "This helper closes the ambient-frontier API gap only. It does not prove connectedness of the polynomial superlevel or count sublevel components."
+   :capture-kind :runner-narrated-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target,
+         :id "connectedComponents_complement_lemniscate_le"}
+   #:ref{:type :topology-lemma,
+         :id "frontier_connectedComponentIn_subset_frontier"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t011"]
+   :commits ["5e1ca97"]
+   :problems ["a00J04" "a01A08"]
+   :artifacts
+   ["ConstructionTargets/LemniscateComponents.lean:frontier_connectedComponentIn_subset_frontier"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "zulip-general-topology-complement-connected-component-anchor"
+  :lane :solve-lane
+  :level :reference
+  :status :draft
+  :body
+  {:reference/type :literature-anchor
+   :source "leanprover-community Zulip archive"
+   :thread-title "General topology lemma (complement is connected)"
+   :use-status :used
+   :contribution
+   "The runner reports that the thread used connected-component maximality and `connectedComponentIn`; this anchored the elementary topology route used for the component-frontier helper."
+   :observed-event
+   "This is the cron lane's first runner-reported use of a literature/archive anchor."
+   :negative-scope
+   "The thread contained no polynomial-lemniscate formalization and does not anchor either remaining polynomial frontier."
+   :provenance-note
+   "The use classification is supplied by ground control and agrees with the runner's route report. No additional causal rationale is reconstructed from the thread."
+   :capture-kind :runner-narrated}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target,
+         :id "connectedComponents_complement_lemniscate_le"}
+   #:ref{:type :literature-thread,
+         :id "General topology lemma (complement is connected)"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t011"]
+   :commits ["5e1ca97"]
+   :problems ["a00J04" "a01A08"]
+   :references
+   [{:source "leanprover-community Zulip archive"
+     :title "General topology lemma (complement is connected)"}]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "open-set-notation-scope-before-relative-intersection"
+  :lane :arc-lane
+  :level :tactic
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "A topology proof uses the relative-intersection notation `U ↓∩ s`."}
+   :before
+   "Use `↓∩` after opening `Set`, producing `unexpected token '↓'`."
+   :after
+   "Add `open scoped Set.Notation` before using `U ↓∩ s`."
+   :rule
+   "The notation belongs to the `Set.Notation` scoped namespace; opening the `Set` namespace alone does not activate it."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target,
+         :id "connectedComponents_complement_lemniscate_le"}
+   #:ref{:type :lean-scope, :id "Set.Notation"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t011"]
+   :commits ["5e1ca97"]
+   :problems ["a00J04" "a01A08"]
+   :artifacts ["ConstructionTargets/LemniscateComponents.lean"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "turn-component-membership-into-interior-membership-via-openness"
+  :lane :arc-lane
+  :level :tactic
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "After unfolding `frontier`, the contradiction requires that a point in an open connected component belongs to its interior, but the available fact is only ordinary membership."}
+   :before
+   "Try to use component membership directly as membership in `interior (connectedComponentIn U x)`."
+   :after
+   "Prove `hcomponentOpen : IsOpen (connectedComponentIn U x) := hU.connectedComponentIn`, then rewrite with `hcomponentOpen.interior_eq` before destructuring frontier membership."
+   :rule
+   "For components of an open set in a locally connected space, expose component openness first; `interior_eq` then converts membership into the exact form frontier reasoning needs."
+   :capture-kind :runner-error-fix-log}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target,
+         :id "connectedComponents_complement_lemniscate_le"}
+   #:ref{:type :lean-lemma, :id "IsOpen.connectedComponentIn"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t011"]
+   :commits ["5e1ca97"]
+   :problems ["a00J04" "a01A08"]
+   :artifacts
+   ["ConstructionTargets/LemniscateComponents.lean:frontier_connectedComponentIn_subset_frontier"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "lemniscate-superlevel-preconnected"
+  :lane :frontier-lane
+  :level :frontier
+  :status :open
+  :anchor :none
+  :demand 2
+  :body
+  {:frontier/kind :missing-proof
+   :statement "IsPreconnected (superlevel p)"
+   :precondition "p is nonconstant"
+   :route
+   "Prove every superlevel component is unbounded and therefore meets the common connected exterior of a sufficiently large ball."
+   :unblocks
+   [#:ref{:type :apm-problem, :id "a00J04"}
+    #:ref{:type :apm-problem, :id "a01A08"}]
+   :serial
+   {:position 1
+    :next "lemniscate-sublevel-components-inject-into-roots"
+    :note
+    "The runner's remaining-work report places the root-selection injection after this frontier."}
+   :boundary
+   "The used Zulip topology anchor does not establish polynomial growth or this global preconnectedness statement."
+   :capture-kind :runner-narrated}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target,
+         :id "connectedComponents_complement_lemniscate_le"}
+   #:ref{:type :mathlib-gap, :id "lemniscate-superlevel-preconnected"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t011"]
+   :commits ["5e1ca97"]
+   :problems ["a00J04" "a01A08"]
+   :artifacts
+   ["ConstructionTargets/LemniscateComponents.lean:connectedComponents_complement_lemniscate_le"]}
+  :confidence :frontier-confirmed-single-session
+  :review {:verdict :pending-owner-review}}
+
+ {:name "lemniscate-sublevel-components-inject-into-roots"
+  :lane :frontier-lane
+  :level :frontier
+  :status :open
+  :anchor :none
+  :demand 2
+  :body
+  {:frontier/kind :missing-proof
+   :statement
+   "ConnectedComponents ↥(sublevel p) ↪ (Polynomial.roots p).toFinset"
+   :route
+   "Use the minimum-modulus argument to select a root in each sublevel component, then prove that distinct components select distinct roots."
+   :unblocks
+   [#:ref{:type :apm-problem, :id "a00J04"}
+    #:ref{:type :apm-problem, :id "a01A08"}]
+   :serial
+   {:position 2
+    :after "lemniscate-superlevel-preconnected"
+    :dependency-kind :campaign-assembly-order
+    :note
+    "Both frontiers are required by the final count. The transcript records this second in the work sequence but does not prove that the injection logically depends on superlevel preconnectedness."}
+   :boundary
+   "The committed component-frontier helper supplies a needed boundary fact but does not construct the root-selection function or its injectivity proof."
+   :capture-kind :runner-narrated}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target,
+         :id "connectedComponents_complement_lemniscate_le"}
+   #:ref{:type :mathlib-gap,
+         :id "lemniscate-sublevel-components-inject-into-roots"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t011"]
+   :commits ["5e1ca97"]
+   :problems ["a00J04" "a01A08"]
+   :artifacts
+   ["ConstructionTargets/LemniscateComponents.lean:connectedComponents_complement_lemniscate_le"]}
+  :confidence :frontier-confirmed-single-session
+  :review {:verdict :pending-owner-review}}
+
+ {:name "record-consecutive-recall-empty-terrain-gaps-as-curriculum-signal"
+  :lane :trajectory-lane
+  :level :process
+  :status :draft
+  :body
+  {:observation-kind :recall-empty
+   :current-row
+   {:target "connectedComponents_complement_lemniscate_le"
+    :terrain :topology
+    :surfaced-count 0
+    :runner-report "No memories were surfaced in this packet."}
+   :preceding-row
+   {:target "schwarz-equality-case"
+    :terrain :complex-analysis
+    :relevant-surfaced-count 0}
+   :curriculum-signal
+   "Two consecutive cron rows reached uncovered mathematical terrain. Promote the successful component-frontier and general-dslope memories, then review trigger vocabulary for topology and complex-analysis packets."
+   :inference
+   "The strengthening curriculum signal is inferred across two runner reports. It indicates missing relevant recall routes, not an exhaustive claim that the store contains no topology or complex-analysis memory."
+   :receipt
+   {:provided-prefix "e24c9016"
+    :read-status :unresolved
+    :detail
+    "Exact bounded GETs for `e24c9016` and `e-e24c9016` returned 404; no prefix search or store scan was performed."}
+   :capture-kind :runner-narrated-plus-cross-row-inference}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target,
+         :id "connectedComponents_complement_lemniscate_le"}
+   #:ref{:type :curriculum-terrain, :id "topology"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t011"
+    "e-codexroll-019fa2c1-t003"]
+   :commits ["5e1ca97" "61edb1161bb1000d84656bf6dc3b7e2988b0657d"]
+   :problems
+   ["connectedComponents_complement_lemniscate_le"
+    "schwarz-equality-case"]
+   :receipt-id-prefixes ["e24c9016"]}
+  :confidence :two-row-observation
+  :review {:verdict :pending-owner-review}}]

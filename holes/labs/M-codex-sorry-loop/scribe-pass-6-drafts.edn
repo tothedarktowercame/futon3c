@@ -1,0 +1,144 @@
+[{:name "poisson-ae-convergence-bridge"
+  :lane :frontier-lane
+  :level :frontier
+  :status :open
+  :anchor :literature
+  :demand 2
+  :body
+  {:frontier/kind :missing-proof
+   :statement
+   "Tendsto (fun r ↦ ⨍ t in closedBall x r, ‖f t - f x‖ ∂volume)
+    (𝓝[>] 0) (𝓝 0) →
+  MemLp f 2 volume →
+  Tendsto
+    (fun y ↦ ∫ t, poissonKernel y (x - t) * (f t - f x) ∂volume)
+    (𝓝[>] 0) (𝓝 0)"
+   :interpretation
+   "At a Lebesgue point of an `L²` function, the Poisson convolution error tends to zero as the height approaches zero from above."
+   :route
+   "Formalize the dyadic-annulus estimate for the near region, sum the annular bounds using the Lebesgue-point hypothesis, and control the far tail using `MemLp f 2 volume`; alternatively, provide suitable Poisson maximal-function control."
+   :literature
+   {:source "leanprover-community Zulip archive / Carleson project"
+    :thread
+    "442935-Carleson/Hardy-Littlewood maximal principle for countable many balls"
+    :archive-path
+    "442935-Carleson/Hardy-Littlewood.20maximal.20principle.20for.20countable.20many.20balls.json"
+    :use-status :found-and-used
+    :contribution
+    "The thread locates countable-family and weak/strong-type maximal-function infrastructure in the Carleson project rather than core Mathlib."}
+   :unblocks
+   [#:ref{:type :lean-theorem, :id "poissonConv_tendsto_ae"}
+    #:ref{:type :lean-theorem, :id "poissonConv_tendsto_L2"}]
+   :demand-note
+   "Ground control assigns demand 2 because the bridge gates the a.e. target and the campaign's preceding sorried `L²` convergence result."
+   :boundary
+   "Core Mathlib's compact-support approximate-identity theorem cannot establish this full-support Poisson statement, and the archived project does not supply a directly importable theorem at this interface."
+   :capture-kind :runner-verbatim-statement-and-literature-report}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a94J04"}
+   #:ref{:type :mathlib-gap, :id "poisson-ae-convergence-bridge"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t015"
+    "e-codexroll-019f9b12-t016"]
+   :receipt-ids ["13167309-920e-44a7-b276-e5db3e3e26e9"]
+   :problems ["a94J04"]
+   :references
+   [{:source "leanprover-community Zulip archive / Carleson project"
+     :path
+     "442935-Carleson/Hardy-Littlewood.20maximal.20principle.20for.20countable.20many.20balls.json"}]
+   :artifacts
+   ["problems/a94J04/lean/Main.lean:poissonConv_tendsto_ae"
+    "problems/a94J04/lean/Main.lean:poissonConv_tendsto_L2"]}
+  :confidence :frontier-confirmed-single-session
+  :review {:verdict :pending-owner-review}}
+
+ {:name "separate-compact-bump-convergence-from-full-support-poisson-kernels"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Determine whether Mathlib's generic a.e. convolution convergence theorem can prove convergence for the Poisson kernel."
+   :available-api
+   "`ContDiffBump.ae_convolution_tendsto_right_of_locallyIntegrable`"
+   :blocking-shape
+   "The theorem is built for normalized compactly supported bump kernels whose controlled supports shrink to `{0}`."
+   :target-shape
+   "Every positive-height Poisson kernel has full support, even though its mass concentrates near zero."
+   :rule
+   "Do not treat concentration or tail decay as if it discharged a compact-support hypothesis; inspect the kernel-support interface before attempting approximate-identity instantiation."
+   :attack-plan
+   ["Rewrite the convolution error as the Poisson-weighted difference `f t - f x`."
+    "Split space into dyadic annuli around the Lebesgue point."
+    "Use the Lebesgue-point average bound on the near annuli."
+    "Sum the annular Poisson bounds."
+    "Control the noncompact far tail using the `L²` hypothesis."]
+   :near-misses
+   ["Generic `convolution_tendsto_right` still requires supports tending to `{0}`."
+    "`ae_convolution_tendsto_right_of_locallyIntegrable` supplies the desired a.e. conclusion only for compact bumps."
+    "The preceding `poissonConv_tendsto_L2` cannot yield full continuum-parameter a.e. convergence and currently carries `sorryAx`."]
+   :boundary
+   "This record supplies the correct decomposition route, not a completed formal estimate."
+   :capture-kind :runner-api-investigation-and-route-report}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a94J04"}
+   #:ref{:type :proof-strategy,
+         :id "dyadic-poisson-annuli-plus-l2-tail"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t015"
+    "e-codexroll-019f9b12-t016"]
+   :receipt-ids ["13167309-920e-44a7-b276-e5db3e3e26e9"]
+   :problems ["a94J04"]
+   :artifacts
+   ["Mathlib/Analysis/Calculus/BumpFunction/Convolution.lean:ae_convolution_tendsto_right_of_locallyIntegrable"
+    "problems/a94J04/lean/Main.lean"]}
+  :confidence :single-instance
+  :review {:verdict :pending-owner-review}}
+
+ {:name "refuse-sorry-relocation-when-no-axiom-clean-partial-exists"
+  :lane :trajectory-lane
+  :level :decision
+  :status :draft
+  :body
+  {:headline-observation
+   "The runner declined to commit a syntactic partial because every available helper route would merely relocate or propagate `sorryAx`."
+   :situation
+   {:target "ApmCanaries.A94J04.poissonConv_tendsto_ae"
+    :initial-sorry-count 6
+    :final-sorry-count 6
+    :file-changes :none
+    :commit :none
+    :target-axioms
+    ["propext" "sorryAx" "Classical.choice" "Quot.sound"]}
+   :rejected-actions
+   ["Add a new pointwise-Poisson-at-Lebesgue-points helper whose proof is `sorry`."
+    "Prove the target through the preceding sorried `poissonConv_tendsto_L2`, inheriting `sorryAx`."
+    "Commit diagnostic-only scaffolding that does not reduce the trusted proof boundary."]
+   :decision-rule
+   "When a partial construction neither removes an axiom dependency nor isolates a proved reusable lemma, report the exact frontier and leave the source unchanged."
+   :exotype-phenotype
+   {:exotype
+    "The lane's axiom-clean invariant forbids presenting relocated `sorry` as progress."
+    :phenotype
+    "After verifying the API boundary and `sorryAx` propagation, the runner explicitly refused the commit and returned a named blocked frontier."}
+   :verification
+   {:baseline-build
+    "`lake env lean problems/a94J04/lean/Main.lean` exited 0 with six expected sorry warnings."
+    :ground-control
+    "The outcome receipt confirms unchanged HEAD `c5a90e0`, a clean tracked tree, no commit, and six sorries before and after."}
+   :capture-kind :runner-decision-and-receipt-confirmed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a94J04"}
+   #:ref{:type :process-pattern, :id "refuse-sorry-relocation"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t016"]
+   :receipt-ids ["13167309-920e-44a7-b276-e5db3e3e26e9"]
+   :problems ["a94J04"]
+   :artifacts ["problems/a94J04/lean/Main.lean"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}]

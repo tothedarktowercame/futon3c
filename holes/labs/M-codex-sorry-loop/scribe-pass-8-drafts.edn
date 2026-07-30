@@ -1,0 +1,125 @@
+[{:name "inspect-placeholder-definitions-before-claiming-mathematical-content"
+  :lane :trajectory-lane
+  :level :qa-discipline
+  :status :draft
+  :body
+  {:headline-observation
+   "The runner detected that the target's `windingNumber` is an irreducible placeholder defined as zero, proved the exact formal statement, and independently warned that this does not prove the announced analytic theorem."
+   :trigger
+   "A theorem appears to discharge a substantial mathematical claim much more cheaply than its prose, cited dependencies, or known library frontier suggests."
+   :inspection-rule
+   ["Inspect the definitions of the theorem's central semantic objects before treating closure of the theorem statement as closure of the mathematical problem."
+    "Distinguish a faithful proof of the encoded proposition from evidence that the encoding captures the intended mathematics."
+    "When a placeholder makes hypotheses irrelevant, leave that fact visible and report it before announcing mathematical success."]
+   :observed-case
+   {:problem "a95J03"
+    :announced-content
+    "Bound the winding number of a trigonometric polynomial by its degree."
+    :encoded-definition
+    "`@[irreducible] def windingNumber (_γ : ℝ → ℂ) (_z : ℂ) : ℤ := 0`"
+    :formal-proof
+    "`rw [windingNumber]` followed by `omega` proves `-N ≤ 0 ≤ N`."
+    :formal-status :axiom-clean
+    :mathematical-status :placeholder-vacuous
+    :statement-changed? false}
+   :runner-behavior
+   ["Flagged the semantic limitation before the final report and without being prompted."
+    "Changed only the proof and theorem commentary, not the theorem signature or placeholder definition."
+    "Left the unused `hN` and `hz` warnings visible because they diagnose the placeholder semantics."]
+   :result
+   "The file's sorry count fell from two to one, but the genuine winding-number theorem remains open behind the existing winding/argument-principle infrastructure frontier."
+   :capture-kind :runner-self-audit-and-receipt-confirmed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J03"}
+   #:ref{:type :process-pattern,
+         :id "placeholder-detection-before-mathematical-claim"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t018"]
+   :receipt-ids ["6582b2b4-153b-4be2-a2cd-9d3b0b16a324"]
+   :commits ["8e5912b363b2fbe3d62d1929413eb1ba53d6d7e1"]
+   :problems ["a95J03-winding-bounded"]
+   :artifacts
+   ["problems/a95J03/lean/Main.lean:windingNumber"
+    "problems/a95J03/lean/Main.lean:winding_number_bounded"
+    "holes/labs/M-codex-sorry-loop/faithfulness-ledger.md:entry-1"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}
+
+ {:name "remove-warning-only-proof-detours-instead-of-forcing-imports"
+  :lane :arc-lane
+  :level :proof-maintenance
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :context
+    "The exact proof does not use `hz` because `windingNumber` is the constant-zero placeholder, leaving an unused-hypothesis warning."}
+   :before
+   "Introduce `have hz₀ := hz 0 ...` solely to mark `hz` used, which creates an irrelevant obligation `0 ∈ Set.Icc 0 (2 * π)`."
+   :detour
+   ["`positivity` failed to prove `0 ≤ 2 * π` under the current imports."
+    "An explicit `Real.pi_pos` route was unavailable under those imports."
+    "Error recall was tried on each compile-error form and returned no applicable memory."]
+   :after
+   "Remove the warning-only detour and retain the direct `rw [windingNumber]; omega` proof without adding imports or suppressing the unused warning."
+   :rule
+   "Do not expand imports or proof obligations merely to consume a semantically irrelevant hypothesis. If an unused warning exposes a placeholder or weak specification, preserve it and explain the cause."
+   :boundary
+   "This rule applies to warning-only detours. It does not license ignoring a hypothesis that the intended or encoded proposition genuinely needs."
+   :capture-kind :runner-error-fix-log-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J03"}
+   #:ref{:type :process-pattern, :id "honest-warnings-over-suppression"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t018"]
+   :receipt-ids ["6582b2b4-153b-4be2-a2cd-9d3b0b16a324"]
+   :commits ["8e5912b363b2fbe3d62d1929413eb1ba53d6d7e1"]
+   :problems ["a95J03-winding-bounded"]
+   :artifacts
+   ["problems/a95J03/lean/Main.lean:winding_number_bounded"
+    ".state/error-recall/sorry-0285.jsonl"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}
+
+ {:name "record-first-error-recall-field-use-and-legitimate-empty-curriculum-signal"
+  :lane :trajectory-lane
+  :level :field-instrumentation
+  :status :draft
+  :body
+  {:observation-kind :error-time-recall
+   :field-use
+   {:row "sorry-0285"
+    :invocations 4
+    :hits 0
+    :log ".state/error-recall/sorry-0285.jsonl"
+    :adoption "The runner invoked error recall on each successive compile-error form during the first field row after the facility became available."}
+   :queries
+   [{:class :positivity
+     :count 2
+     :shape "Failure to prove positivity/nonnegativity/nonzeroness, including `0 ≤ 2 * π`."}
+    {:class :lemma-location-or-import
+     :count 2
+     :shape "Unknown `Real.pi_pos.le` / `Real.pi_pos` under the current imports."}]
+   :interpretation
+   "The zero-hit result is legitimate: the promoted corpus had no scoped arc memory for these positivity or current-import lemma-location failures."
+   :curriculum-signal
+   "Seed the error-time arc vocabulary with sign obligations around `π`, theorem-name/import availability, and the higher-level rule that warning-only detours should be removed rather than elaborated."
+   :negative-scope
+   "This is not evidence that error recall failed operationally. The four invocations were logged with extracted terms and empty surfaced-id vectors."
+   :inference
+   "The proposed curriculum additions are inferred from the four field misses and the successful resolution reported by the runner; no memory-use rationale is reconstructed."
+   :capture-kind :field-log-and-receipt-confirmed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a95J03"}
+   #:ref{:type :curriculum-terrain, :id "lean-error-time-arcs"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t018"]
+   :receipt-ids ["6582b2b4-153b-4be2-a2cd-9d3b0b16a324"]
+   :commits ["8e5912b363b2fbe3d62d1929413eb1ba53d6d7e1"]
+   :problems ["a95J03-winding-bounded"]
+   :artifacts [".state/error-recall/sorry-0285.jsonl"]}
+  :confidence :receipt-confirmed
+  :review {:verdict :pending-owner-review}}]
