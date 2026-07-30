@@ -26,24 +26,42 @@ Binding rules:
    went. Several are blocked on construction lemmas that are themselves still
    only partially proved. Budget accordingly.
 
-   These problems come from qualifying exams. A student sat them with no
-   library access, which means every result needed was STANDARD MATERIAL TAUGHT
-   IN THAT YEAR'S COURSES and expected to be memorised. So the thing you are
-   looking for is almost never a novel construction — it is a named, textbook
-   technique that Mathlib very likely has under a name you have not guessed
-   yet. Search for the STANDARD NAME of the method, not for the problem.
+   EXPECT THE RESULT TO BE ABSENT FROM MATHLIB. That is the typical finding on
+   these rows and the first cold pass has usually established it already, so do
+   not spend your budget re-litigating whether some Mathlib lemma states the
+   whole theorem. It generally does not.
 
-   Use all three surfaces at DESIGN time, before writing tactics:
-   - `grep -ri` over `/home/joe/code/corpora/leanprover-zulip-archive` for the
-     topic and for the standard technique name;
-   - https://loogle.lean-lang.org for pattern/type search when you can guess
-     the shape of the lemma you want;
-   - https://leansearch.net for natural-language search when you can only
-     describe it.
+   These problems come from qualifying exams sat with NO library access, so the
+   mathematics was standard material taught that year and expected to be
+   memorised. But standard-in-mathematics is NOT the same as present-in-Mathlib.
+   The gap you are filling is a FORMALIZATION gap, not a mathematical one: the
+   construction is known and written down somewhere, and your job is to find it
+   and carry it as your PLAN.
+
+   Worked precedent (S6, 2026-07-28): integral Minkowski is absent from Mathlib
+   — only the sum form is there — but has a classical short proof by duality +
+   Fubini + Hölder, with Schep's paper as the cleanest scaffold. The packet
+   carried that literature proof as its plan.
+
+   Search at DESIGN time, before writing tactics:
+   - **arXiv, for the construction itself.** Local manifest: 570k papers with
+     abstracts at
+     `/home/joe/code/storage/arxiv-manifest/arxiv_manifest.sqlite`, e.g.
+     `sqlite3 <db> "select arxiv_id, title from papers where primary_category
+     like 'math%' and (title like '%<topic>%' or abstract like '%<topic>%')
+     limit 20;"`. Look for the standard NAME of the technique and for papers
+     that prove the lemma you need as a step.
+   - `grep -ri` over `/home/joe/code/corpora/leanprover-zulip-archive` — for
+     how the construction has been FORMALIZED, and for known Mathlib obstacles.
+   - https://loogle.lean-lang.org (pattern/type) and https://leansearch.net
+     (natural language) — for the PIECES. Mathlib will not have your theorem
+     but it will have most of the components you assemble it from; that is
+     where these two earn their keep.
+
    Spend real time here when the target resists; a wrong route costs far more
-   than a thorough search. Record the thread path or declaration found, or
-   explicitly record that the search found no anchor. A probe is evidence, not
-   an obligation to follow an unsuitable technique.
+   than a thorough search. Record what you found — paper, thread, or
+   declaration — or explicitly record that the search found no anchor. A probe
+   is evidence, not an obligation to follow an unsuitable technique.
 
    Treat any in-file comment claiming something is "not in Mathlib" as a
    REVISION-SCOPED claim that may have been true when written and false now.
