@@ -220,6 +220,52 @@
                    "[dispatch-recall-outcome=completed-empty]"))
     (is (not= timeout-packet empty-packet))))
 
+(deftest non-transport-recall-exception-is-persisted-and-honestly-labelled
+  (let [result (atom nil)]
+    (with-out-str
+      (with-redefs
+        [dispatch/bounded-recall
+         (fn [_ _]
+           (throw
+            (IllegalStateException. "projection invariant exploded")))]
+        (reset!
+         result
+         (dispatch/run-dispatch!
+          {:problem "a-test"
+           :to "codex-test"
+           :from "ground-control"
+           :dry-run? true
+           :allow-thin? true}
+          "PROBLEM PACKET"))))
+    (is (= :recall-error
+           (get-in @result [:evidence :body :recall-reason])))
+    (is (= "projection invariant exploded"
+           (get-in @result [:evidence :body :recall-error-message])))
+    (is (.contains (:assembled-packet @result)
+                   "[dispatch-recall-outcome=recall-error]"))
+    (is (not (.contains (:assembled-packet @result)
+                        "[dispatch-recall-outcome=store-unavailable]")))
+    (is (.contains (:assembled-packet @result)
+                   "not classified as an HTTP or transport failure"))))
+
+(deftest evidenced-http-failure-remains-store-unavailable
+  (let [recall-result
+        (with-redefs
+          [dispatch/bounded-recall
+           (fn [_ _]
+             (throw
+              (ex-info "substrate request failed"
+                       {:url "http://substrate.test/api/alpha/evidence"
+                        :status 503})))]
+          (dispatch/safe-recall
+           {:problem "a-test" :recall-timeout-ms 1000}
+           "PROBLEM PACKET"))
+        packet (dispatch/assemble-packet "PROBLEM PACKET" recall-result)]
+    (is (= :store-unavailable (:reason recall-result)))
+    (is (.contains packet
+                   "[dispatch-recall-outcome=store-unavailable]"))
+    (is (.contains packet "HTTP or transport failure"))))
+
 (deftest standard-packet-query-excludes-operator-and-template-prose
   (let [packet
         (str "DURÉE PREAMBLE: report your search concretely; know the route.\n"

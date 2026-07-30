@@ -705,13 +705,45 @@
          :memories []})
       result)))
 
+(def ^:private max-recall-error-message-length 1000)
+
+(defn- throwable-chain
+  [error]
+  (take 16 (take-while some? (iterate #(.getCause ^Throwable %) error))))
+
+(defn- store-unavailable-error?
+  "Conservatively recognize evidenced HTTP or network transport failures."
+  [error]
+  (boolean
+   (some
+    (fn [cause]
+      (let [{:keys [url status]} (ex-data cause)]
+        (or (and (string? url) (some? status))
+            (instance? java.net.ConnectException cause)
+            (instance? java.net.NoRouteToHostException cause)
+            (instance? java.net.SocketTimeoutException cause)
+            (instance? java.net.UnknownHostException cause)
+            (instance? java.net.http.HttpTimeoutException cause)
+            (instance? java.io.EOFException cause)
+            (instance? javax.net.ssl.SSLException cause))))
+    (throwable-chain error))))
+
+(defn- bounded-error-message
+  [error]
+  (let [message (or (.getMessage ^Throwable error) (str error))]
+    (if (> (count message) max-recall-error-message-length)
+      (subs message 0 max-recall-error-message-length)
+      message)))
+
 (defn safe-recall [opts packet]
   (try
     (bounded-recall opts packet)
     (catch Throwable error
       {:status :recall-empty
-       :reason :store-unavailable
-       :error (or (.getMessage error) (str error))
+       :reason (if (store-unavailable-error? error)
+                 :store-unavailable
+                 :recall-error)
+       :error (bounded-error-message error)
        :query (recall-query opts packet
                             (read-bpm-terrains (default-terrain-readme)))
        :memories []})))
@@ -766,6 +798,7 @@
   (cond
     (= :timeout reason) :timeout
     (= :store-unavailable reason) :store-unavailable
+    (= :recall-error reason) :recall-error
     (= :ok status) :completed-with-memories
     :else :completed-empty))
 
@@ -781,8 +814,14 @@
             "unavailability, not evidence of a terrain or corpus gap.\n")
 
        :store-unavailable
-       (str "The recall store was UNAVAILABLE. This is infrastructure "
-            "unavailability, not evidence of a terrain or corpus gap.\n")
+       (str "An HTTP or transport failure prevented recall from reaching the "
+            "store successfully. This is infrastructure unavailability, not "
+            "evidence of a terrain or corpus gap.\n")
+
+       :recall-error
+       (str "Recall encountered an ERROR before completing. The cause was not "
+            "classified as an HTTP or transport failure. This is not evidence "
+            "of a terrain or corpus gap.\n")
 
        :completed-with-memories
        "Recall completed and supplied the reviewed memories below.\n"
@@ -791,8 +830,8 @@
        (str "Recall COMPLETED but found no reviewed memories to surface. "
             "Only this status is a genuine empty retrieval result.\n"))
      "OUTCOME-RECEIPT REQUIREMENT: copy the bracketed dispatch-recall-outcome "
-     "value verbatim into the final Memory usage section. Do not report "
-     "infrastructure unavailability as \"none surfaced\" or as a terrain gap."
+     "value verbatim into the final Memory usage section. Do not report an "
+     "incomplete recall as \"none surfaced\" or as a terrain gap."
      "\n")))
 
 (defn assemble-packet
@@ -860,6 +899,12 @@
                     :memory-use receipt}
              (:reason recall-result)
              (assoc :recall-reason (:reason recall-result))
+             (string? (:error recall-result))
+             (assoc :recall-error-message
+                    (subs (:error recall-result)
+                          0
+                          (min (count (:error recall-result))
+                               max-recall-error-message-length)))
              ;; Routemap "reason-bearing none": an empty recall names the
              ;; terms that matched nothing — the mint lane's work queue.
              (= :recall-empty (:status recall-result))
