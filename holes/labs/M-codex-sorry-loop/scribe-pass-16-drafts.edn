@@ -1,0 +1,188 @@
+[{:name "derive-a-sinc-tail-identity-by-differentiating-cosine-over-x"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Expose a Dirichlet-test tail estimate for `sinc` on a positive finite interval."
+   :statement
+   "For `0 < a ≤ b`,
+    ∫ x in a..b, Real.sinc x =
+      Real.cos a / a - Real.cos b / b -
+        ∫ x in a..b, Real.cos x / x ^ 2."
+   :route
+   ["On `uIcc a b`, use positivity of `a` to show every point is nonzero."
+    "Differentiate `fun x => Real.cos x / x`; its derivative is `-sin x/x - cos x/x²`."
+    "Use `intervalIntegral.integral_eq_sub_of_hasDerivAt` to integrate the derivative."
+    "Split the integral into the sine-over-`x` and cosine-over-`x²` terms."
+    "Replace `sin x/x` by `Real.sinc x` almost everywhere on the interval, using nonvanishing there."
+    "Rearrange the finite-interval identity."]
+   :key-api
+   ["intervalIntegral.integral_eq_sub_of_hasDerivAt"
+    "intervalIntegral.integral_congr_ae"
+    "Real.sinc_of_ne_zero"
+    "Set.uIcc_of_le"]
+   :witness
+   {:declaration "integral_sinc_eq_cos_div_sub"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :use
+   "The identity is the integration-by-parts input for Dirichlet tail bounds and for uniform removal of an Abel damping factor."
+   :rule
+   "For an oscillatory `sin x/x` tail, differentiate `cos x/x`: the resulting integrable `cos x/x²` remainder isolates the decaying boundary terms."
+   :capture-kind :runner-proof-route-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a02J05"}
+   #:ref{:type :proof-pattern, :id "sinc-dirichlet-tail-integration-by-parts"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t015"]
+   :receipt-ids ["f8586558-7882-4ce9-b2cf-29402de797b1"]
+   :commits ["87e4c53220e641323ec7f6f3270d6cabddd6f82e"]
+   :problems ["a02J05-dirichlet-integral"]
+   :artifacts ["problems/a02J05/lean/Main.lean:integral_sinc_eq_cos_div_sub"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "remove-Abel-regularization-from-the-Dirichlet-sinc-integral"
+  :lane :frontier-lane
+  :level :frontier
+  :status :open
+  :anchor :none
+  :demand 1
+  :body
+  {:frontier/kind :missing-proof
+   :target
+   "Filter.Tendsto
+      (fun R : ℝ => ∫ x in Set.Icc (-R) R, Real.sinc x ∂volume)
+      Filter.atTop (nhds Real.pi)"
+   :half-line-route
+   ["For damping parameter `a > 0`, prove
+     `∫₀∞ exp(-a*x) * sinc x dx = arctan(1/a)`."
+    "Represent `sinc x` as `∫₀¹ cos(t*x) dt`."
+    "Use Fubini and the exponential half-line integral to evaluate the damped integral."
+    "Let `a → 0+`; `arctan(1/a) → π/2`."
+    "Prove a damped analogue of `integral_sinc_eq_cos_div_sub`."
+    "Use the undamped and damped integration-by-parts identities to obtain a tail bound uniform in small `a`, removing the regularization."
+    "Use evenness of `Real.sinc` to pass from the half-line value `π/2` to the symmetric value `π`."]
+   :proved-prefix
+   "`integral_sinc_eq_cos_div_sub` supplies the undamped finite-interval identity axiom-clean."
+   :available-components
+   ["integral_exp_mul_complex_Ioi"
+    "integral_exp_mul_I_eq_sinc"
+    "integral_one_div_one_add_sq"
+    "Real.sinc_neg"]
+   :missing-bridge
+   "The installed Mathlib has neither the improper sinc evaluation nor a directly applicable Abel theorem for this conditionally convergent integral. The damped Fubini evaluation and uniform damping-removal estimate remain to be formalized."
+   :literature-search
+   {:status :background-only
+    :arxiv-ids
+    ["0705.0976" "1404.5413" "1405.1265" "1510.03200" "2005.00477"]
+    :use-status :no-construction-anchor}
+   :unblocks [#:ref{:type :lean-theorem, :id "dirichlet_integral_improper"}]
+   :boundary
+   "This records the assembled construction and exact missing bridge, not a completed Abel theorem or sinc evaluation."
+   :capture-kind :runner-frontier-with-axiom-clean-prefix}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a02J05"}
+   #:ref{:type :mathlib-gap, :id "abel-removal-for-dirichlet-sinc"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t014" "e-codexroll-019fa2c1-t015"]
+   :receipt-ids ["f8586558-7882-4ce9-b2cf-29402de797b1"]
+   :commits ["87e4c53220e641323ec7f6f3270d6cabddd6f82e"]
+   :problems ["a02J05-dirichlet-integral"]
+   :artifacts
+   ["problems/a02J05/lean/Main.lean:integral_sinc_eq_cos_div_sub"
+    "problems/a02J05/lean/Main.lean:dirichlet_integral_improper"]}
+  :confidence :frontier-confirmed-single-session
+  :review {:verdict :pending-owner-review}}
+
+ {:name "extend-a-reciprocal-across-finite-punctures-then-apply-Liouville"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Show that a holomorphic function on the complement of a finite set, blowing up at every puncture and at infinity, cannot omit a complex value."
+   :route
+   ["Assume a value `w₀` is omitted and form `(f - w₀)⁻¹` off the finite puncture set `F`."
+    "Extend the reciprocal by zero at every point of `F`."
+    "Use the given blow-up limit to prove the extension is continuous at each puncture."
+    "Apply `Complex.analyticAt_of_differentiable_on_punctured_nhds_of_continuousAt` at every puncture; off `F`, transfer differentiability from the reciprocal by eventual equality."
+    "Convert the reciprocal's norm tending to zero at infinity into convergence of the extension to zero along `cocompact ℂ`."
+    "Apply `Differentiable.eq_const_of_tendsto_cocompact`; the entire extension is identically zero."
+    "Choose a point outside the finite set. There the extension is a reciprocal of a nonzero value and hence nonzero, contradicting constancy."]
+   :standard-results
+   ["Riemann removable singularity theorem" "Liouville's theorem"]
+   :key-api
+   ["Complex.analyticAt_of_differentiable_on_punctured_nhds_of_continuousAt"
+    "continuousAt_iff_punctured_nhds"
+    "Filter.EventuallyEq.differentiableAt_iff"
+    "Differentiable.eq_const_of_tendsto_cocompact"
+    "Finset.isClosed"]
+   :witness
+   {:declaration "analytic_blowup_surjective"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When a holomorphic function blows up at finitely many punctures and infinity, invert an omitted-value translate: zero-fill the reciprocal, remove the singularities, and let Liouville turn decay at infinity into a contradiction."
+   :capture-kind :runner-classical-route-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a03J08"}
+   #:ref{:type :proof-pattern,
+         :id "zero-filled-reciprocal-removable-singularity-liouville"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t016"]
+   :receipt-ids ["efe850d1-67b3-4a73-a745-4ea73f93f438"]
+   :commits ["aece2ab19cac942682c514f0b962f5d52d224e0b"]
+   :problems ["a03J08-analytic-blowup"]
+   :artifacts ["problems/a03J08/lean/Main.lean:analytic_blowup_surjective"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "avoid-all-finite-punctures-with-erase-complement-and-punctured-nhds"
+  :lane :arc-lane
+  :level :filter-bookkeeping
+  :status :draft
+  :body
+  {:scope
+   {:language :lean4
+    :problem
+    "Near a chosen `z ∈ F`, show a zero-filled function agrees eventually on `𝓝[≠] z` with the original function defined on `Fᶜ`, without inducting over the finite set."}
+   :construction
+   ["`F.erase z` is finite and therefore closed."
+    "Because `z ∉ F.erase z`, the complement `((F.erase z : Finset ℂ) : Set ℂ)ᶜ` is a neighbourhood of `z`."
+    "Restrict that neighbourhood to the punctured filter `𝓝[≠] z`."
+    "A point in this intersection is neither `z` nor any point of `F.erase z`, hence is outside all of `F`."
+    "Use the resulting eventual non-membership to establish eventual equality with the reciprocal and transfer differentiability."]
+   :lean-shape
+   ["Obtain the neighbourhood with `(F.erase z).isClosed.isOpen_compl.mem_nhds`."
+    "Rewrite through `eventually_nhdsWithin_iff`."
+    "Discharge membership using `Finset.mem_erase.mpr ⟨hwz, hwF⟩`."
+    "Transfer differentiability with `Filter.EventuallyEq.differentiableAt_iff`."]
+   :key-api
+   ["Finset.isClosed"
+    "eventually_nhdsWithin_iff"
+    "Finset.mem_erase"
+    "Filter.EventuallyEq.differentiableAt_iff"]
+   :rule
+   "For a finite exceptional set, isolate one puncture by taking the complement of `F.erase z`, then intersect with `𝓝[≠] z`; this excludes the whole finite set at once and avoids induction."
+   :boundary
+   "The construction handles finite, topologically discrete punctures. It does not generalize unchanged to an exceptional set accumulating at `z`."
+   :capture-kind :runner-filter-construction-and-commit-witnessed}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a03J08"}
+   #:ref{:type :lean-pattern, :id "finite-puncture-eventual-exclusion"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t016"]
+   :receipt-ids ["efe850d1-67b3-4a73-a745-4ea73f93f438"]
+   :commits ["aece2ab19cac942682c514f0b962f5d52d224e0b"]
+   :problems ["a03J08-analytic-blowup"]
+   :artifacts ["problems/a03J08/lean/Main.lean:hg_entire"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}]
