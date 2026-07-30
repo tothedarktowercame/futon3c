@@ -31,7 +31,7 @@
    :literature-anchor
    {:kind :zulip-formalization-precedent
     :path
-    "217875-Is-there-code-for-X?/Bounds on alternating convergent series.json"
+    "217875-Is-there-code-for-X%3F/Bounds.20on.20alternating.20convergent.20series.json"
     :use-status :route-supplied
     :contribution
     "The thread explicitly combines an alternating-series theorem, a Taylor series, and Abel's theorem and records development of Mathlib's real Abel theorem."}

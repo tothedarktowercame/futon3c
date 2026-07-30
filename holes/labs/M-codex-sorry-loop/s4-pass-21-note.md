@@ -19,7 +19,7 @@ No new search-policy draft was added. The fetched promoted memory
 `e-codexpilot-order-proof-search-by-known-route-components-before-literature`
 already assigns Zulip the role of supplying library-location and formalization
 precedent. This row is the first strong positive instance in the durée lane:
-`217875-Is-there-code-for-X?/Bounds on alternating convergent series.json`
+`217875-Is-there-code-for-X%3F/Bounds.20on.20alternating.20convergent.20series.json`
 described the same alternating-test/Taylor-series/Abel composition that the
 runner implemented.
 
