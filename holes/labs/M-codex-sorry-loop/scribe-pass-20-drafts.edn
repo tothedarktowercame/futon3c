@@ -1,0 +1,51 @@
+[{:name "extend-local-absolute-continuity-to-an-endpoint-via-the-derivative-primitive"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Prove absolute continuity on `[0,1]` from continuity and bounded variation on `[0,1]` plus absolute continuity on every truncated interval `[a,1]` with `a > 0`."
+   :primitive-construction
+   ["Use `BoundedVariationOn.intervalIntegrable_deriv` to show that `deriv f` is interval-integrable on `[0,1]`."
+    "Define `g x = f 0 + ∫ t in 0..x, deriv f t`."
+    "Use `IntervalIntegrable.absolutelyContinuousOnInterval_intervalIntegral` and absolute continuity of constants to prove that `g` is absolutely continuous on `[0,1]`."]
+   :endpoint-identification
+   ["Fix `x ∈ (0,1]` and set `a n = x/n`, so `a n → 0` through `[0,1]`."
+    "For sufficiently large `n`, restrict the hypothesis on `[a n,1]` to `[a n,x]`."
+    "Apply `AbsolutelyContinuousOnInterval.integral_deriv_eq_sub` on `[a n,x]`."
+    "Split the primitive integral at `a n`; the local FTC identity makes `f (a n) - g (a n)` equal to the constant `f x - g x` eventually."
+    "Continuity of `f` and absolute continuity of `g` make the same difference tend to `f 0 - g 0 = 0` as `a n → 0`."
+    "Use uniqueness of limits to conclude `f x = g x`; the endpoint `x = 0` follows directly from the definition of `g`."]
+   :transfer
+   "Rewrite the epsilon-delta definition of absolute continuity for `f` by the pointwise equality `f = g` on `[0,1]` and apply absolute continuity of `g`."
+   :key-api
+   ["BoundedVariationOn.intervalIntegrable_deriv"
+    "AbsolutelyContinuousOnInterval.integral_deriv_eq_sub"
+    "IntervalIntegrable.absolutelyContinuousOnInterval_intervalIntegral"
+    "intervalIntegral.integral_add_adjacent_intervals"
+    "tendsto_const_div_atTop_nhds_zero_nat"
+    "tendsto_nhds_unique"]
+   :witness
+   {:declaration "ac_on_01_of_continuous_bv_ac_from_a"
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "To extend local absolute continuity across a missing endpoint, build the indefinite integral of the BV derivative, identify it with the original function on truncated intervals by FTC, and let the truncation endpoint approach the boundary using continuity and uniqueness of limits."
+   :boundary
+   "The argument uses bounded variation to obtain derivative integrability on the full closed interval and continuity to identify the primitive at the missing endpoint. Local absolute continuity alone does not supply either bridge."
+   :capture-kind :runner-proof-route-and-ground-control-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a93J01"}
+   #:ref{:type :proof-pattern,
+         :id "absolute-continuity-endpoint-extension-by-FTC"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t022"]
+   :receipt-ids ["e3b87e69-5233-49cf-984d-4add9c760961"]
+   :commits ["bd78524d3c914a29536edbeecd242b3d4db4c0d3"]
+   :problems ["a93J01-bv-absolute-continuity"]
+   :artifacts
+   ["problems/a93J01/lean/Main.lean:ac_on_01_of_continuous_bv_ac_from_a"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}]
