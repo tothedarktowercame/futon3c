@@ -32,16 +32,22 @@
 ;; Usage:  clojure -M scripts/review_codex_lane_attachments.clj [--commit] [--names-file F]
 ;; Default is a dry run listing what would be reviewed.
 
-(require '[clojure.string :as str]
+(require '[clojure.edn :as edn]
+         '[clojure.java.io :as io]
+         '[clojure.string :as str]
          '[futon3c.peripheral.memory-lifecycle :as lifecycle]
-         '[futon3c.peripheral.memory-write :as memory-write]
          '[futon3c.substrate.client :as substrate]
          '[futon3c.evidence.futon1b-backend :as f1b]
-         '[futon3c.evidence.store :as estore]
-         '[futon3c.evidence.boundary :as boundary])
+         '[futon3c.evidence.store :as estore])
 
 (def base-url (or (System/getenv "FUTON_SUBSTRATE_URL") "http://127.0.0.1:7073"))
-(def reviewer "claude-9")
+(def reviewer
+  (or (System/getenv "ATTACHMENT_REVIEWER") "claude-9"))
+(def review-evidence-prefix
+  ;; Preserve the historical backfill default.  Cross-author review jobs set
+  ;; this explicitly so the evidence id names the actual reviewer.
+  (or (System/getenv "ATTACHMENT_REVIEW_EVIDENCE_PREFIX")
+      "e-review-claude9-earlier-"))
 (def commit? (some #{"--commit"} *command-line-args*))
 
 (defn- memory-edge [memory-id]
@@ -51,8 +57,7 @@
                  (substrate/hyperedges-by-end memory-id {:limit 50}))))
 
 (defn- review-evidence-id [memory-name]
-  ;; claude-9-authored review, so author != reviewer holds.
-  (str "e-review-claude9-earlier-" memory-name))
+  (str review-evidence-prefix memory-name))
 
 (defn- pattern-ids-of [edge]
   (vec (or (get-in edge [:hx/props :roles :patterns])
@@ -61,45 +66,22 @@
 
 (def names-filter
   (when-let [f (second (drop-while #(not= "--names-file" %) *command-line-args*))]
-    (set (clojure.edn/read-string (slurp f)))))
+    (set (edn/read-string (slurp f)))))
 
 (defn- codex-lane-memory-ids []
   ;; Names come from the promotion reports, which are the authoritative record of
   ;; what this lane actually promoted; reading drafts would include unpromoted
   ;; ones.
-  (let [dir (clojure.java.io/file "holes/labs/M-codex-sorry-loop")
+  (let [dir (io/file "holes/labs/M-codex-sorry-loop")
         reports (filter #(re-find #"promotion-pass-.*-report\.edn" (.getName %))
                         (file-seq dir))]
     (->> reports
-         (mapcat #(:results (clojure.edn/read-string (slurp %))))
+         (mapcat #(:results (edn/read-string (slurp %))))
          (keep :name)
          distinct
          (filter #(or (nil? names-filter) (contains? names-filter %)))
          (map #(vector % (str "e-codexpilot-" %)))
          vec)))
-
-(defn- owner-review-evidence
-  "Review evidence authored by claude-9, satisfying author != reviewer."
-  [nm memory-id pattern-ids]
-  {:evidence/id (str "e-review-claude9-" nm)
-   :evidence/subject {:ref/type :memory :ref/id memory-id}
-   :evidence/type :reflection
-   :evidence/claim-type :observation
-   :evidence/author reviewer
-   :evidence/session-id "M-codex-sorry-loop/duree"
-   :evidence/tags [:memory :attachment-review]
-   :evidence/body
-   {:review/event :attachment-review
-    :review/memory-id memory-id
-    :review/pattern-ids (vec pattern-ids)
-    :review/verdict :approve
-    :review/witness-status :independently-witnessed
-    :review/provenance
-    (str "Owner review by claude-9 during the durée loop, 2026-07-30. The draft was "
-         "authored by codex-5 (scribe seat), read in full by claude-9, its cited "
-         "turn-round and receipt ids fetched and confirmed to resolve, and a written "
-         "review note recorded in the promotion report before the memory was promoted.")
-    :review/policy-verdict :approve}})
 
 (defn -main [& _]
   (let [evidence-store (f1b/make-futon1b-backend base-url)
