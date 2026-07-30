@@ -80,4 +80,34 @@
   :arxiv-detail {:anchor "Schep's paper"
                  :verdict :construction-found
                  :interpretation :absent-from-mathlib-so-fall-through-was-necessary}
-  :source "M-codex-sorry-loop.md:168-175 (not a durée run; recorded for contrast)"}]
+  :source "M-codex-sorry-loop.md:168-175 (not a durée run; recorded for contrast)"}
+ {:run 2
+  :at "2026-07-30T10:26Z"
+  :problem "a01A03"
+  :declaration "convolution_identity_implies_indicator"
+  :area "math/measure-integration-api"
+  :outcome :blocked-statement-false-then-repaired
+  :suggested-route nil
+  :suggested-route-source nil
+  :standard-result "fundamental lemma of the calculus of variations / distributions; analytic identity theorem"
+  :arms-tried [:components :zulip]
+  :arm-that-paid :components
+  ;; THE DATUM THIS LEDGER EXISTS FOR. arXiv was not run, and that is CORRECT
+  ;; rather than a miss: the packet's cond only falls through to (c) when there
+  ;; is no route, and here the route was known AND the statement was refuted
+  ;; during component assembly. First live confirmation that the cond
+  ;; discriminates instead of just listing surfaces. Recording it as NOT-NEEDED,
+  ;; never as a failure -- that distinction is the whole point (Joe, 2026-07-30).
+  :not-needed [:arxiv]
+  :components-detail {:leansearch ["ae_eq_zero_of_integral_contDiff_smul_eq_zero"
+                                   "HasCompactSupport.hasDerivAt_convolution_right"
+                                   "Integrable.integrable_convolution"
+                                   "intervalIntegral.integral_deriv_of_contDiffOn_uIcc"]
+                      :loogle ["HasCompactSupport (deriv ?f)" "fourierIntegral_convolution"]
+                      :web ["AnalyticOnNhd.eq_of_eventuallyEq"]
+                      :verdict :carried-the-route-and-exposed-the-defect}
+  :zulip-detail {:thread "217875-Is-there-code-for-X%3F/Calculus.20counterexamples.json"
+                 :verdict :corroborated-the-obstruction}
+  :recall {:surfaced 0 :ran? true
+           :note "recall RAN (run 1 had bypassed it); 0 surfaced is explained by the conjunctive query, measured 1 term = 5 hits, 29 terms = 0"}
+  :receipt "c142b663-5f34-4bd4-8ea8-026e3f0c9c3b"}]
