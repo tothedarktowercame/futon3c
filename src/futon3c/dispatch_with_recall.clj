@@ -235,11 +235,24 @@
                    #(vec (remove #{(str/lower-case problem)} %))))
          (problem-term-sources opts packet))
         source-terms (mapcat :terms term-sources)
-        terms (->> (concat [problem] subjects
+        ;; MEASURED 2026-07-30, not guessed. The text-search endpoint is
+        ;; CONJUNCTIVE: hits fall off a cliff as terms are added — 1 term = 5
+        ;; hits, 3 = 3, 7 = 2, 12 = 1, 29 = 0 — so a 36-term query returned
+        ;; NOTHING, every time, and every "recall empty" datum in this lane was
+        ;; this bug rather than a corpus or semantics finding.
+        ;; The problem id is the worst offender: it appears in almost no
+        ;; document, so including it in a conjunction floors the result set. It
+        ;; is already queried separately as a GRAPH endpoint (see :endpoints
+        ;; below), so it does not belong in the lexical query at all.
+        ;; With id dropped and a 3-term cap, a01A04 went 0 hits -> 8 hits
+        ;; including 2 directly relevant memories.
+        ;; FOLLOW-UP: several short queries unioned would beat one short query;
+        ;; this is the minimal measured fix, not the best possible one.
+        terms (->> (concat subjects
                            (when terrain [terrain])
                            source-terms)
                    distinct
-                   (take 36)
+                   (take 3)
                    vec)]
     {:terrain terrain
      :recall-system recall-system

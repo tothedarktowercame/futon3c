@@ -339,6 +339,13 @@ SUBJECT_STOPWORDS = {
     "this", "from", "into", "over", "the", "and", "for", "case",
     "prove", "proof", "statement", "exact", "target", "final", "found",
     "only", "probe", "work", "anchor", "file", "lemma", "main",
+    # Added 2026-07-30 after inspecting live subject sets: a01A03 produced
+    # "line convolution identity implies indicator ...", so the first terms —
+    # which are now the ONLY terms, under the measured 3-term cap — were junk.
+    # Junk is not merely diluting under a conjunctive search: each extra term
+    # is another filter that must be satisfied.
+    "line", "then", "implies", "given", "such", "every", "some", "when",
+    "where", "which", "there", "exists", "suppose", "hence", "thus",
 }
 
 
