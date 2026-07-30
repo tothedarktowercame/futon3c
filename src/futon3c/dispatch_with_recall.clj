@@ -194,6 +194,24 @@
         index (str/index-of text marker)]
     (if index (subs text index) text)))
 
+(defn- standard-packet-math-text
+  "Retain mathematical fields from the codex-sorry packet, excluding its
+  operator preamble and binding/search instructions."
+  [packet]
+  (when (str/includes? packet "CODEX SORRY LOOP")
+    (->> [["Target statement(s):" "Downstream unblocks:"]
+          ["Available proved support:" "Suggested route (if any):"]
+          ["Suggested route (if any):" "Binding rules:"]]
+         (keep
+          (fn [[start-marker end-marker]]
+            (let [start (str/index-of packet start-marker)
+                  end (when start
+                        (str/index-of packet end-marker
+                                      (+ start (count start-marker))))]
+              (when (and start end)
+                (subs packet (+ start (count start-marker)) end)))))
+         (str/join "\n"))))
+
 (defn- readable-file [path]
   (let [file (java.io.File. path)]
     (when (.isFile file) (slurp file))))
@@ -220,7 +238,14 @@
 
       true
       (conj {:source :stdin-packet
-             :terms (text-keywords packet 8)}))))
+             :scope (if (str/includes? packet "CODEX SORRY LOOP")
+                      :mathematical-fields
+                      :whole-packet-fallback)
+             :terms
+             (text-keywords
+              (or (not-empty (standard-packet-math-text packet))
+                  (problem-statement-text packet))
+              8)}))))
 
 (defn- query-ladder
   "Queries in DECREASING conjunctive strictness, for a conjunctive backend.
@@ -379,6 +404,13 @@
   recall as store-unavailable before the outer deadline expires."
   [recall-timeout-ms]
   (max 250 recall-timeout-ms))
+
+(defn proposal-hit?
+  "True when a lexical tier produced either arm that dispatch can surface."
+  [proposal]
+  (boolean
+   (or (seq (:candidates proposal))
+       (seq (:content-matches proposal)))))
 
 (defn- receipt-entries
   [base timeout-ms]
@@ -539,7 +571,7 @@
         ladder-hit
         (first (for [{:keys [tier q]} (query-ladder (:terms query-data))
                      :let [p (propose-with q)]
-                     :when (seq (:candidates p))]
+                     :when (proposal-hit? p)]
                  (assoc p :recall/tier tier :recall/query-used q)))
         proposals (or ladder-hit
                       (assoc (propose-with (:query query-data))
@@ -553,18 +585,14 @@
                        (remove str/blank?)
                        distinct
                        (take 20))
-        recalls
-        (mapv
-         (fn [endpoint]
-           (memory-recall/recall-by-endpoint
-            {:domain :mathematics}
-            endpoint
-            {:limit limit
-             :include-bodies? true
-             :trace-id trace-id
-             :fetch-components projection
-             :fetch-entry entry}))
-         endpoints)
+        recall-batch
+        (memory-recall/recall-by-endpoints
+         {:domain :mathematics}
+         endpoints
+         {:limit limit
+          :trace-id trace-id
+          :fetch-components projection})
+        recalls (:recalls recall-batch)
         candidates
         (->> (concat
               (:content-matches proposals)
@@ -640,7 +668,18 @@
         (assoc query-data
                :recall-system active-system
                :receipt-ranking ranking-audit)
-        memories (vec (take limit ranked))]
+        memories
+        (->> ranked
+             (keep
+              (fn [memory]
+                (if (map? (:memory/body memory))
+                  memory
+                  (when-let [full-entry (entry (:memory/id memory))]
+                    (when (map? (:evidence/body full-entry))
+                      (assoc memory
+                             :memory/body (:evidence/body full-entry)))))))
+             (take limit)
+             vec)]
     {:status (if (seq memories) :ok :recall-empty)
      :trace-id trace-id
      :query query-data
@@ -722,17 +761,54 @@
          "   memory-id: " (:memory/id memory) "\n"
          "   summary: " (summarize body))))
 
-(defn assemble-packet [packet memories]
-  (if (seq memories)
-    (str "POTENTIALLY RELEVANT MEMORIES "
-         "(from prior sessions — use your judgment)\n\n"
-         (str/join "\n\n" (map-indexed
-                           (fn [index memory]
-                             (render-memory (inc index) memory))
-                           memories))
-         "\n\n--- PROBLEM PACKET ---\n\n"
-         packet)
-    packet))
+(defn- recall-outcome-label
+  [{:keys [status reason]}]
+  (cond
+    (= :timeout reason) :timeout
+    (= :store-unavailable reason) :store-unavailable
+    (= :ok status) :completed-with-memories
+    :else :completed-empty))
+
+(defn- recall-status-block
+  [recall-result]
+  (let [outcome (recall-outcome-label recall-result)]
+    (str
+     "DISPATCH-TIME RECALL STATUS\n"
+     "[dispatch-recall-outcome=" (name outcome) "]\n"
+     (case outcome
+       :timeout
+       (str "Recall TIMED OUT before completing. This is infrastructure "
+            "unavailability, not evidence of a terrain or corpus gap.\n")
+
+       :store-unavailable
+       (str "The recall store was UNAVAILABLE. This is infrastructure "
+            "unavailability, not evidence of a terrain or corpus gap.\n")
+
+       :completed-with-memories
+       "Recall completed and supplied the reviewed memories below.\n"
+
+       :completed-empty
+       (str "Recall COMPLETED but found no reviewed memories to surface. "
+            "Only this status is a genuine empty retrieval result.\n"))
+     "OUTCOME-RECEIPT REQUIREMENT: copy the bracketed dispatch-recall-outcome "
+     "value verbatim into the final Memory usage section. Do not report "
+     "infrastructure unavailability as \"none surfaced\" or as a terrain gap."
+     "\n")))
+
+(defn assemble-packet
+  "Attach typed recall status and any warranted memories to the runner packet."
+  [packet recall-result]
+  (str (recall-status-block recall-result)
+       (when-let [memories (seq (:memories recall-result))]
+         (str "\nPOTENTIALLY RELEVANT MEMORIES "
+              "(from prior sessions — use your judgment)\n\n"
+              (str/join "\n\n"
+                        (map-indexed
+                         (fn [index memory]
+                           (render-memory (inc index) memory))
+                         memories))))
+       "\n\n--- PROBLEM PACKET ---\n\n"
+       packet))
 
 (defn offered-evidence
   "Build the persisted offered-half record using the shared use-receipt
@@ -869,7 +945,7 @@
   [opts packet]
   (require-input! opts packet)
   (let [recall-result (safe-recall opts packet)
-        assembled (assemble-packet packet (:memories recall-result))]
+        assembled (assemble-packet packet recall-result)]
     (if (:dry-run? opts)
       (let [evidence (offered-evidence
                       opts recall-result
@@ -878,7 +954,10 @@
         (println assembled)
         (println "\n=== OFFERED RECEIPT (DRY RUN; NOT WRITTEN) ===")
         (println (json/generate-string evidence {:pretty true}))
-        {:dry-run? true :recall recall-result :evidence evidence})
+        {:dry-run? true
+         :recall recall-result
+         :assembled-packet assembled
+         :evidence evidence})
       (let [dispatch-response (dispatch! opts assembled)
             job-id (or (:job-id dispatch-response)
                        (:job_id dispatch-response))
@@ -897,7 +976,10 @@
                          "offered receipt write failed:"
                          (or (.getMessage error) (str error))))))
           (println job-id)
-          {:job-id job-id :recall recall-result :evidence evidence})))))
+          {:job-id job-id
+           :recall recall-result
+           :assembled-packet assembled
+           :evidence evidence})))))
 
 (defn -main [& args]
   (try

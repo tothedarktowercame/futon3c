@@ -1,5 +1,6 @@
 (ns futon3c.dispatch-with-recall-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.dispatch-with-recall :as dispatch]))
 
 (deftest recall-query-uses-terrain-and-subjects
@@ -10,7 +11,8 @@
                {"1.5.1" "nonneg integral zero → zero"})]
     (is (= "nonneg integral zero → zero" (:terrain query)))
     (is (= :v1-enriched (:recall-system query)))
-    (is (some #{"bpm-1-5-1"} (:terms query)))
+    (is (not-any? #{"bpm-1-5-1"} (:terms query))
+        "problem ids are graph endpoints, not conjunctive lexical terms")
     (is (some #{"nonnegative integral"} (:terms query)))))
 
 (deftest recall-query-prioritizes-problem-files-and-records-sources
@@ -35,16 +37,23 @@
       (is (= [:problem-md :proof-outline-md :stdin-packet]
              (mapv :source sources)))
       (is (= (.getPath problem-file) (:path (first sources))))
-      (is (some #{"uniformly"} (:terms query)))
-      (is (some #{"cauchy"} (:terms query)))
-      (is (< (.indexOf (:terms query) "uniformly")
-             (.indexOf (:terms query) "generic"))))))
+      (is (= ["bound" "continuous" "epsilon" "quotient"]
+             (:terms query))
+          "the bounded lexical query is filled from the highest-priority source")
+      (is (not-any? #{"generic"} (:terms query))))))
 
 (deftest substrate-call-deadline-does-not-preempt-total-recall-budget
   (let [timeout-fn
         (ns-resolve 'futon3c.dispatch-with-recall 'per-call-timeout-ms)]
     (is (= 3000 (timeout-fn 3000)))
     (is (= 250 (timeout-fn 100)))))
+
+(deftest content-only-proposal-stops-the-query-ladder
+  (is (true? (dispatch/proposal-hit?
+              {:candidates []
+               :content-matches [{:memory/id "e-content"}]})))
+  (is (false? (dispatch/proposal-hit?
+               {:candidates [] :content-matches []}))))
 
 (deftest default-recall-budget-covers-corpus-projection
   (let [opts (dispatch/parse-args [])]
@@ -112,12 +121,129 @@
                 :memory/body {:name "integral positivity"
                               :body {:problem-class "Nonnegative integral."}}}]
     (testing "a surfaced memory is prepended"
-      (let [packet (dispatch/assemble-packet "PACKET" [memory])]
-        (is (.startsWith packet "POTENTIALLY RELEVANT MEMORIES"))
+      (let [packet (dispatch/assemble-packet
+                    "PACKET" {:status :ok :memories [memory]})]
+        (is (.startsWith packet "DISPATCH-TIME RECALL STATUS"))
         (is (.contains packet "e-memory-1"))
         (is (.endsWith packet "PACKET"))))
-    (testing "empty recall leaves the packet byte-for-byte unchanged"
-      (is (= "PACKET" (dispatch/assemble-packet "PACKET" []))))))
+    (testing "genuine empty recall is explicit"
+      (let [packet
+            (dispatch/assemble-packet
+             "PACKET" {:status :recall-empty :memories []})]
+        (is (.contains packet
+                       "[dispatch-recall-outcome=completed-empty]"))
+        (is (.contains packet "genuine empty retrieval result"))))))
+
+(deftest dispatch-path-surfaces-reviewed-content-match-in-packet
+  (let [reviewed-content
+        {:memory/id "e-reviewed-content"
+         :memory/attachment-status :reviewed
+         :memory/kind :feedback
+         :memory/body {:name "transfer the zero count"
+                       :body {:summary "Use the reviewed transfer argument."}}
+         :via :content-match}
+        output
+        (with-out-str
+          (with-redefs
+            [dispatch/safe-recall
+             (fn [_ _]
+               {:status :ok
+                :memories [reviewed-content]})]
+            (let [result
+                  (dispatch/run-dispatch!
+                   {:problem "a-test"
+                    :to "codex-test"
+                    :from "ground-control"
+                    :dry-run? true
+                    :allow-thin? true}
+                   "PROBLEM PACKET")]
+              (is (.contains (:assembled-packet result)
+                             "e-reviewed-content"))
+              (is (.contains (:assembled-packet result)
+                             "transfer the zero count")))))]
+    (is (.contains output "[dispatch-recall-outcome=completed-with-memories]"))))
+
+(deftest live-dispatch-path-surfaces-a92j05-content-match
+  (if (= "http://127.0.0.1:7073"
+         (some-> (System/getenv "FUTON_SUBSTRATE_URL")
+                 (str/replace #"/+$" "")))
+    (let [result (atom nil)]
+      (with-out-str
+        (reset!
+         result
+         (dispatch/run-dispatch!
+          {:problem "a92J05"
+           :problem-root "/definitely/not/a/problem/root"
+           :subjects ["roots outside unit"]
+           :to "codex-test"
+           :from "ground-control"
+           :substrate-base "http://127.0.0.1:7073"
+           :limit 5
+           :recall-timeout-ms dispatch/default-recall-timeout-ms
+           :receipt-ranking? true
+           :dry-run? true
+           :allow-thin? true}
+          "roots outside unit")))
+      (is (.contains
+           (:assembled-packet @result)
+           "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count"))
+      (is (.contains (:assembled-packet @result)
+                     "[dispatch-recall-outcome=completed-with-memories]")))
+    (is true
+        "Live regression requires FUTON_SUBSTRATE_URL=http://127.0.0.1:7073")))
+
+(deftest dispatch-timeout-is-runner-visible-and-distinct-from-empty
+  (let [run-with
+        (fn [recall-result]
+          (let [captured (atom nil)]
+            (with-out-str
+              (with-redefs
+                [dispatch/safe-recall (fn [_ _] recall-result)]
+                (reset!
+                 captured
+                 (:assembled-packet
+                  (dispatch/run-dispatch!
+                   {:problem "a-test"
+                    :to "codex-test"
+                    :from "ground-control"
+                    :dry-run? true
+                    :allow-thin? true}
+                   "PROBLEM PACKET")))))
+            @captured))
+        timeout-packet
+        (run-with {:status :recall-empty :reason :timeout :memories []})
+        empty-packet
+        (run-with {:status :recall-empty :memories []})]
+    (is (.contains timeout-packet "[dispatch-recall-outcome=timeout]"))
+    (is (.contains timeout-packet "not evidence of a terrain or corpus gap"))
+    (is (.contains empty-packet
+                   "[dispatch-recall-outcome=completed-empty]"))
+    (is (not= timeout-packet empty-packet))))
+
+(deftest standard-packet-query-excludes-operator-and-template-prose
+  (let [packet
+        (str "DURÉE PREAMBLE: report your search concretely; know the route.\n"
+             "--- standard packet follows ---\n"
+             "CODEX SORRY LOOP — ONE AXIOM-CLEAN FORMALIZATION TASK\n"
+             "Target statement(s):\n"
+             "prove CauchyTransform tendsto tendsto zero outside the disk\n"
+             "Downstream unblocks: none\n"
+             "Available proved support: tendsto_zero\n"
+             "Suggested route (if any): contour integral\n"
+             "Binding rules:\n"
+             "(a) DO YOU KNOW THE ROUTE? report search concretely\n")
+        query
+        (dispatch/recall-query
+         {:problem "a00J05"
+          :problem-root "/definitely/not/a/problem/root"
+          :subjects ["cauchytransform"]}
+         packet {})]
+    (is (= :mathematical-fields
+           (get-in query [:term-sources 0 :scope])))
+    (is (some #{"cauchytransform"} (:terms query)))
+    (is (some #{"tendsto"} (:terms query)))
+    (is (not-any? #{"route" "search" "report" "concretely"}
+                  (:terms query)))))
 
 (deftest empty-offered-receipt-matches-shared-contract
   (let [entry (dispatch/offered-evidence
