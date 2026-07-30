@@ -1,0 +1,112 @@
+[{:name "audit-the-hidden-typeclass-preconditions-of-the-proof-engine"
+  :lane :trajectory-lane
+  :level :statement-diagnosis
+  :status :draft
+  :body
+  {:observed-case
+   {:target
+    "Weak lower semicontinuity of the norm, stated for an arbitrary real inner-product space."
+    :intended-engine
+    "Banach--Steinhaus converts pointwise boundedness of the functionals `innerSL ℝ (h n)` into a uniform operator-norm bound."
+    :hidden-precondition
+    "`banach_steinhaus` requires `[CompleteSpace H]`, which the original theorem omitted."
+    :counterexample-shape
+    "In the incomplete pre-Hilbert space `c₀₀`, choose nonzero `x` and `h n = x + n • e n`. Every finitely supported test vector eventually misses `e n`, so `h n` converges weakly to `x`, while the norms are unbounded."
+    :formalization-effect
+    "For the resulting unbounded real sequence, the set of eventual lower bounds is unbounded; Mathlib's conditionally complete `sSup` convention makes the real `liminf` collapse to zero, so the claimed inequality fails."}
+   :diagnostic
+   {:classification :single-instance-generalization
+    :rule
+    "When a functional-analysis statement resists a standard proof, inspect the typeclass assumptions of the theorem that supplies the proof's compactness or boundedness engine. If it requires completeness, local compactness, finite measure, or reflexivity, verify that the target carries that hypothesis before treating the failure as an API gap."}
+   :test
+   ["Name the standard proof engine before editing tactics."
+    "Inspect its declaration for structural typeclass requirements."
+    "Remove each suspect requirement mathematically by testing the corresponding incomplete or noncompact model."
+    "Repair the statement only when the missing hypothesis is both required by the engine and load-bearing in the completed proof."]
+   :witness
+   {:repair "`[CompleteSpace H]` added to `norm_le_liminf_of_weak`"
+    :repair-load-bearing true
+    :validation
+    "The repaired proof invokes `banach_steinhaus` at its first construction step."}
+   :boundary
+   "A proof engine's assumptions are diagnostic evidence, not by themselves a proof that the theorem is false without them. Here the incomplete-space counterexample supplies that second half."
+   :capture-kind :runner-counterexample-ground-control-repair-and-proof-validation}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :process-pattern,
+         :id "proof-engine-typeclass-precondition-audit"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t020" "e-codexroll-019fa2c1-t021"]
+   :receipt-ids
+   ["1e916185-46ae-4ee0-ab1c-01a9759928d2"
+    "df9722e5-dc6f-435e-8ec1-8286f76505e7"]
+   :commits
+   ["032cfc147c0024b4a7daad46c11312d5f8e9aa63"
+    "d361f16f017f687d28842da68f451edcc4c50fcd"
+    "2f8bb4b4da96832e8783648db02c450d8c1beab8"]
+   :problems ["a93A03-weak-lsc-norm"]
+   :artifacts
+   ["problems/a93A03/lean/Main.lean:norm_le_liminf_of_weak"]}
+  :confidence :counterexample-repair-and-load-bearing-use-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Prove `‖x‖ ≤ liminf (fun n => ‖h n‖) atTop` from weak convergence `h n ⇀ x` in a complete real inner-product space."
+   :uniform-boundedness
+   ["Represent each `h n` by the continuous linear functional `innerSL ℝ (h n)`."
+    "For each fixed test vector `k`, weak convergence makes `innerSL ℝ (h n) k` converge, hence its range is metrically bounded."
+    "Apply `banach_steinhaus` to obtain one `C` with `‖innerSL ℝ (h n)‖ ≤ C` for every `n`."
+    "Rewrite with `innerSL_apply_norm` to obtain the uniform norm bound `‖h n‖ ≤ C`."]
+   :liminf-bridge
+   ["Turn the uniform upper bound into `IsCoboundedUnder (· ≥ ·) atTop (fun n => ‖h n‖)` using `isCoboundedUnder_ge_of_eventually_le`."
+    "For each `a < ‖x‖`, choose `b = (a + ‖x‖)/2`."
+    "The weak-convergence helper supplies `∀ᶠ n, b ≤ ‖h n‖`."
+    "Apply `le_liminf_of_le` with the coboundedness witness to get `b ≤ liminf ‖h n‖`, and conclude `a < liminf ‖h n‖`."
+    "Finish with `le_of_forall_lt`."]
+   :key-api
+   ["banach_steinhaus"
+    "Metric.isBounded_range_of_tendsto"
+    "innerSL_apply_norm"
+    "isCoboundedUnder_ge_of_eventually_le"
+    "Filter.le_liminf_of_le"]
+   :witness
+   {:declaration "norm_le_liminf_of_weak"
+    :statement-repair "`[CompleteSpace H]`"
+    :repair-load-bearing true
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For a real-valued liminf theorem on weakly convergent vectors, use Banach--Steinhaus to prove actual uniform norm boundedness before invoking `le_liminf_of_le`; this supplies the required `IsCoboundedUnder` premise without circular reasoning."
+   :boundary
+   "Nonnegativity supplies a lower bound but not the upper bound on eventual lower bounds required by `IsCoboundedUnder`. The proof therefore depends essentially on completeness through Banach--Steinhaus."
+   :capture-kind :runner-proof-route-and-ground-control-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a93A03"}
+   #:ref{:type :proof-pattern,
+         :id "weak-liminf-via-uniform-boundedness"}]
+  :proposed-edges
+  [{:edge/type :resolves
+    :edge/to
+    #:ref{:type :draft-memory,
+          :id "le-liminf-is-cobounded-under-unbounded-above-gap"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t021"]
+   :receipt-ids ["df9722e5-dc6f-435e-8ec1-8286f76505e7"]
+   :commits
+   ["d361f16f017f687d28842da68f451edcc4c50fcd"
+    "2f8bb4b4da96832e8783648db02c450d8c1beab8"]
+   :problems ["a93A03-weak-lsc-norm"]
+   :artifacts
+   ["problems/a93A03/lean/Main.lean:eventually_le_norm_of_weak"
+    "problems/a93A03/lean/Main.lean:norm_le_liminf_of_weak"]}
+  :confidence :repaired-statement-axiom-clean-ground-control-verified
+  :review {:verdict :pending-owner-review}}]
