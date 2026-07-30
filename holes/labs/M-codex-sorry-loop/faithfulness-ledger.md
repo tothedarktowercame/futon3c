@@ -22,6 +22,22 @@ collects instances found en route.
 
 | 7 | a01A05 | `gramSchmidt_approximation` | **FALSE AS STATED — and unlike #3/#4/#6 this is a genuine MATHEMATICAL error, not a mechanical one.** The statement asserts `‖fₘ − eₘ‖ ≤ 2⁻ᵐ` from a per-PAIR hypothesis `\|⟨fₙ,fₘ⟩\| ≤ 2⁻ᵐ (n<m)`, but Gram–Schmidt error ACCUMULATES over all preceding vectors, so a per-pair bound cannot yield the same bound on the accumulated error. Minimal witness, in `ℓ²(ℕ)`: `f₀ = e₀`, `f₁ = ½e₀ + (√3/2)e₁`, `fₙ = eₙ (n≥2)`. All norms are 1; the hypothesis is satisfied — `⟨f₀,f₁⟩ = ½ = 2⁻¹` EXACTLY, i.e. admissible at the knife edge. Gram–Schmidt at m=1 returns `e₁`, and `‖f₁ − e₁‖ = √(2−√3) ≈ 0.5176 > 0.5 = 2⁻¹`. Ground control verified the structure by hand and MACHINE-CHECKED the deciding inequality `√(2−√3) > ½` (`/tmp/a01A05_num.lean`, exit 0); the `ℓ²` construction itself was NOT formalised (it needs infinitely many dimensions — no finite-dimensional witness exists, since near-orthogonality of the tail requires infinite dimension) | strengthen the pairwise hypothesis, or weaken the conclusion to an accumulated bound (e.g. `∑ₖ<ₘ 2⁻ᵏ`-style). STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a05, runner blocked and constructed the counterexample unprompted, 2026-07-29 |
 
+| 8 | a01A06 | `orlicz_bound_implies_L2` AND `distribution_exponential_decay` | **BOTH FALSE AS STATED** — same family as #7, a genuine mathematical error. `OrliczBound` is `L log L` / ENTROPY control (Orlicz duality against the class `∫eᶠ ≤ 1`); both conclusions assert EXPONENTIAL-TAIL control, which entropy control does not imply. Counterexample `g(x) = x^(-3/4)` on `(0,1]`. Machine-checked: `∫₀¹ x^(-3/4) = 4` (so `g ∈ L¹` as required) and `x^(-3/2)` is NOT integrable on `Ioo 0 1` via `integrableOn_Ioo_rpow_iff` — the latter IS the refutation of the `L²` claim. Hand-verified (flagged as such): Young–Fenchel `gf ≤ eᶠ + g log g − g` gives `∫gf ≤ 1 + 12 − 4 = 9 < 10`, so `OrliczBound g 10` holds; and `μ{g>λ} = λ^(-4/3)`, which no `Ce^{-αλ}` bounds | strengthen to genuine exponential integrability of `g`, or weaken both conclusions to `L log L`/entropy and POLYNOMIAL-tail statements. STATEMENT CHANGE → Joe's authorization | cron row hard-problems-a01a06, runner found it by semantic inspection BEFORE implementing, 2026-07-29 |
+
+**Class note (#8) — the greppable/non-greppable split now stands at
+4–2.** #7 and #8 are both HYPOTHESIS-STRENGTH MISMATCHES: the
+hypothesis controls one functional quantity and the conclusion asserts
+a strictly stronger one (pairwise vs accumulated; entropy vs
+exponential tail). Neither is syntactically detectable — both files
+are well-typed, well-scoped and internally coherent. This is now a
+*named family*, not two one-offs, and it is the family S9 cannot
+reach. Worth noting how #8 was found: the runner detected it by
+SEMANTIC INSPECTION before writing any Lean, so error-recall never
+fired. A cheaper triage than a full proof attempt may therefore exist
+for this family — an inspection pass that asks only "what does the
+hypothesis actually control, and is the conclusion of that same
+strength?" — but it needs a model reading mathematics, not a grep.
+
 **Class note (#7) — THE HONEST LIMIT ON THE S9 RECOMMENDATION.**
 Mechanisms #3, #4 and #6 are mechanical and greppable: a `variable`
 not included, a `.toReal` with no `≠ ⊤`, a `Fin n → ℝ` used as a
