@@ -1,0 +1,185 @@
+[{:name "package-every-rouche-homotopy-slice-for-the-argument-principle"
+  :lane :solve-lane
+  :level :interface-package
+  :status :draft
+  :body
+  {:hook
+   "Before invoking zero-count invariance for `f + t·g`, package two facts for every `t ∈ [0,1]`: analyticity on the same closed-disk neighbourhood and nonvanishing on the boundary sphere."
+   :how-to-apply
+   ["Start from `hf : AnalyticOnNhd ℂ f s` and `hg : AnalyticOnNhd ℂ g s`."
+    "For a real parameter `t`, prove analyticity of `z ↦ f z + (t : ℂ) * g z` with closure of `AnalyticOnNhd` under addition and multiplication by an analytic constant."
+    "Use the strict boundary estimate `‖g z‖ < ‖f z‖` and `t ∈ [0,1]` to invoke the existing straight-line boundary-nonvanishing lemma."
+    "Return the analytic and boundary facts as one conjunction indexed by `t : Set.Icc (0 : ℝ) 1`."
+    "Pass this packaged family directly to an argument-principle or zero-count homotopy-invariance theorem, keeping routine closure facts out of the missing bridge."]
+   :problem-class
+   "Expose the exact analytic/topological input for Rouché's straight-line homotopy before attacking the argument-principle theorem."
+   :declarations
+   [{:name "ConstructionTargets.Rouche.rouche_homotopy_analyticOnNhd"
+     :statement-shape
+     "AnalyticOnNhd ℂ f s → AnalyticOnNhd ℂ g s → AnalyticOnNhd ℂ (fun z ↦ f z + (t : ℂ) * g z) s"}
+    {:name
+     "ConstructionTargets.Rouche.rouche_homotopy_analyticOnNhd_and_ne_zero"
+     :statement-shape
+     "For every `t ∈ [0,1]`, the slice is analytic near `closedBall c R` and nonzero on `sphere c R`."}]
+   :lean-detail
+   "`AnalyticOnNhd.const_mul` was unavailable at this Mathlib revision. The compiling construction is `hf.add (analyticOnNhd_const.mul hg)`."
+   :key-api
+   ["AnalyticOnNhd.add"
+    "AnalyticOnNhd.mul"
+    "analyticOnNhd_const"
+    "ConstructionTargets.Rouche.rouche_homotopy_ne_zero_on_sphere"]
+   :relation-to-existing
+   {:memory-id
+    "e-codexpilot-straight-line-rouche-homotopy-stays-nonzero-on-boundary"
+    :relation
+    "That memory proves the pointwise boundary half. This record adds the common-neighbourhood analyticity of every slice and packages both hypotheses at the interface required by the remaining argument-principle bridge."}
+   :axiom-audit
+   {:declarations
+    ["rouche_homotopy_analyticOnNhd"
+     "rouche_homotopy_analyticOnNhd_and_ne_zero"]
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "When a construction is blocked on a deep invariance theorem, first package all elementary hypotheses in the theorem's intended quantifier shape; this prevents the frontier from remaining entangled with routine analytic closure and boundary estimates."
+   :boundary
+   "The package does not prove zero-count invariance or Rouché's theorem. `zeroCountInClosedBall_add_eq` remains sorried."
+   :capture-kind :runner-axiom-clean-interface-package-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :mathlib-gap,
+         :id "zeroCountInClosedBall-homotopy-invariant"}]
+  :proposed-edges
+  [{:edge/type :extends
+    :edge/to
+    #:ref{:type :memory,
+          :id "e-codexpilot-straight-line-rouche-homotopy-stays-nonzero-on-boundary"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t041" "e-codexroll-019f9b12-t042"]
+   :receipt-ids ["4bef70c0-449e-4f92-b4bd-2694406c8697"]
+   :commits ["929e7cade198a20269e6010ea65974cee5bd5924"]
+   :problems ["rouche-root-count-transfer"]
+   :artifacts
+   ["ConstructionTargets/Rouche.lean:rouche_homotopy_analyticOnNhd"
+    "ConstructionTargets/Rouche.lean:rouche_homotopy_analyticOnNhd_and_ne_zero"]}
+  :confidence :blocked-row-with-two-ground-control-verified-axiom-clean-declarations
+  :review {:verdict :pending-owner-review}}
+
+ {:name "bridge-logarithmic-derivative-circle-integral-to-divisor-count"
+  :lane :frontier-lane
+  :level :frontier
+  :status :open
+  :anchor :literature
+  :demand 2
+  :body
+  {:hook
+   "Mathlib can transport the `dz/z` curve integral through a boundary-avoiding homotopy and can represent zeros by meromorphic divisors; the missing theorem identifies the circle integral of `f′/f` with `2πi` times the total divisor in the disk."
+   :how-to-apply
+   ["Import the Poincaré curve-integral module that exposes `ContinuousMap.Homotopy.curveIntegral_add_curveIntegral_eq_of_diffContOnCl`; `JensenFormula` alone does not import it."
+    "Use the packaged analytic/nonvanishing Rouché homotopy slices to build a homotopy of boundary loops in `ℂ \\ {0}`."
+    "Apply homotopy invariance of the closed one-form `dz/z` to show the logarithmic-derivative boundary integral is constant along the homotopy."
+    "Use `MeromorphicOn.extract_zeros_poles` to factor the function codiscretely into a nonvanishing analytic factor and a finite zero/pole product."
+    "Transport that factorization to an equality of logarithmic derivatives on the boundary circle, where the function is nonzero."
+    "Evaluate the finite product's circle integral term by term and identify the resulting multiplicity sum with `zeroCountInClosedBall` using the divisor support and restriction APIs."
+    "Conclude `zeroCountInClosedBall_add_eq`; downstream a92J05 and a94A10 can then consume the transfer theorem."]
+   :frontier/kind :missing-argument-principle-equation
+   :statement
+   "(hR : 0 < R) →\n(hf : AnalyticOnNhd ℂ f (closedBall c R)) →\n(∀ z ∈ sphere c R, f z ≠ 0) →\n∮ z in C(c, R), logDeriv f z =\n  (2 * π * Complex.I) * (zeroCountInClosedBall f c R : ℂ)"
+   :available-curve-integral-side
+   {:homotopy-theorem
+    "ContinuousMap.Homotopy.curveIntegral_add_curveIntegral_eq_of_diffContOnCl"
+    :use
+    "Apply it to the closed one-form `dz/z` on `ℂ \\ {0}` to replace the rejected covering-space lift with direct curve-integral homotopy invariance."
+    :import-boundary
+    "The theorem is in the Poincaré curve-integral development and is not brought in by `Mathlib.Analysis.Complex.JensenFormula`."}
+   :available-meromorphic-side
+   {:components
+    ["MeromorphicOn.divisor"
+     "MeromorphicOn.divisor_sphere_support_finite"
+     "MeromorphicOn.divisor_congr_codiscreteWithin"
+     "MeromorphicOn.divisor_apply"
+     "MeromorphicOn.extract_zeros_poles"
+     "logDeriv"]
+    :use
+    "These APIs provide divisor multiplicities, finite support, and codiscrete zero/pole factorization, but not the circle-integral equality."}
+   :missing-seam
+   "Transport the codiscrete factorization from `extract_zeros_poles` to a boundary equality for `logDeriv`, evaluate the finite product's circle integral, and identify its exponent sum with the disk divisor finsum."
+   :negative-search
+   {:loogle-query "circleIntegral (fun z => deriv f z / f z) c R"
+    :result-count 0
+    :other-queries
+    ["windingNumber"
+     "Rouche"
+     "argument principle number of zeros of a holomorphic function inside a circle"]
+    :finding
+    "Current search returns constituent circle-integral, divisor, and Cauchy APIs, but no packaged argument-principle equality."}
+   :confirmation-count 3
+   :confirmations
+   ["a92J05 run 24 isolated the Rouché/argument-principle zero-count transfer after completing all algebraic bookkeeping."
+    "a92J05 run 25 tested the covering-space lift and found no bridge from its endpoint integer to divisor multiplicity."
+    "The construction-target run at commit `929e7cad` found the Poincaré homotopy theorem but again found no logarithmic-derivative-integral-to-divisor equation."]
+   :corrected-route
+   {:prior-negative "Do not rebuild the bridge through a covering-space lift."
+    :new-positive
+    "Use Poincaré-style curve-integral homotopy invariance for `dz/z`, then prove the argument-principle equation through meromorphic factorization."
+    :evidence-kind
+    "Runner correction of the supplied route after inspecting current components."}
+   :relation-to-existing
+   [{:memory-id "e-codexpilot-zeroCountInClosedBall-homotopy-invariant"
+     :relation
+     "This record refines the general invariance frontier into the exact argument-principle equation and names both halves of the now-visible Mathlib seam."}
+    {:memory-id
+     "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count"
+     :relation
+     "That record fixes the a92J05 application and its residual root-cardinality goal. This record is the reusable library theorem whose absence blocks that application and a94A10."}]
+   :literature
+   {:sources
+    ["116395-maths/Argument.20principle.json"
+     "217875-Is-there-code-for-X?/Cauchy's residue theorem.json"
+     "Cauchy's residue theorem on punctured disk.json"
+     "winding number.json"]
+    :use-status :historical-gap-confirmation
+    :contribution
+    "The threads document the historical absence of residue, winding-number, and argument-principle infrastructure."
+    :boundary
+    "Current Mathlib now has relevant curve-integral and meromorphic components, so the archive describes history rather than the present component boundary; it does not supply the missing Lean equation."}
+   :unblocks
+   [#:ref{:type :lean-theorem, :id "zeroCountInClosedBall_add_eq"}
+    #:ref{:type :apm-problem, :id "a92J05"}
+    #:ref{:type :apm-problem, :id "a94A10"}]
+   :capture-kind :three-run-confirmed-frontier-with-corrected-component-route}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :construction-target, :id "rouche-root-count-transfer"}
+   #:ref{:type :mathlib-gap,
+         :id "zeroCountInClosedBall-homotopy-invariant"}]
+  :proposed-edges
+  [{:edge/type :refines
+    :edge/to
+    #:ref{:type :memory,
+          :id "e-codexpilot-zeroCountInClosedBall-homotopy-invariant"}
+    :status :pending-owner-review}
+   {:edge/type :unblocks
+    :edge/to
+    #:ref{:type :memory,
+          :id "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count"}
+    :status :pending-owner-review}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019f9b12-t041" "e-codexroll-019f9b12-t042"]
+   :receipt-ids ["4bef70c0-449e-4f92-b4bd-2694406c8697"]
+   :commits ["929e7cade198a20269e6010ea65974cee5bd5924"]
+   :problems ["rouche-root-count-transfer" "a92J05" "a94A10"]
+   :references
+   [{:source "leanprover-community Zulip archive"
+     :path "116395-maths/Argument.20principle.json"}
+    {:source "leanprover-community Zulip archive"
+     :path "217875-Is-there-code-for-X?/Cauchy's residue theorem.json"}]
+   :artifacts
+   ["ConstructionTargets/Rouche.lean:zeroCountInClosedBall"
+    "ConstructionTargets/Rouche.lean:zeroCountInClosedBall_add_eq"
+    "ConstructionTargets/Rouche.lean:rouche_homotopy_analyticOnNhd_and_ne_zero"]}
+  :confidence :three-independent-confirmations-with-exact-missing-equation
+  :review {:verdict :pending-owner-review}}]
