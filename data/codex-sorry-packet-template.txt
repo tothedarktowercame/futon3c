@@ -15,11 +15,39 @@ Binding rules:
    alter the target statements. Root-level or lib/ construction lemmas are
    allowed. If the target is under problems/<id>/, modify only its stated
    target file within that problem directory.
-2. Before deep work, spend at most five minutes on one bounded `grep -ri`
-   probe of `/home/joe/code/corpora/leanprover-zulip-archive` for the topic.
-   Record the thread path and technique found, or explicitly record that the
-   bounded probe found no anchor. The probe is evidence, not a requirement to
-   follow an unsuitable technique.
+2. YOU ARE IN THE CLOSER ROLE, AND LITERATURE SEARCH IS PART OF THE JOB, NOT A
+   FORMALITY. Read this rule before starting.
+
+   Do NOT assume a file with one remaining sorry is nearly done. Measured
+   2026-07-30 across the 19 single-sorry problems in this corpus: 16 were
+   AUTHORED with exactly one sorry, so the count reflects how the problem was
+   scaffolded, not how much of it is finished. Where we have evidence, the
+   remaining sorry is the HARD one — the residue left after the tractable parts
+   went. Several are blocked on construction lemmas that are themselves still
+   only partially proved. Budget accordingly.
+
+   These problems come from qualifying exams. A student sat them with no
+   library access, which means every result needed was STANDARD MATERIAL TAUGHT
+   IN THAT YEAR'S COURSES and expected to be memorised. So the thing you are
+   looking for is almost never a novel construction — it is a named, textbook
+   technique that Mathlib very likely has under a name you have not guessed
+   yet. Search for the STANDARD NAME of the method, not for the problem.
+
+   Use all three surfaces at DESIGN time, before writing tactics:
+   - `grep -ri` over `/home/joe/code/corpora/leanprover-zulip-archive` for the
+     topic and for the standard technique name;
+   - https://loogle.lean-lang.org for pattern/type search when you can guess
+     the shape of the lemma you want;
+   - https://leansearch.net for natural-language search when you can only
+     describe it.
+   Spend real time here when the target resists; a wrong route costs far more
+   than a thorough search. Record the thread path or declaration found, or
+   explicitly record that the search found no anchor. A probe is evidence, not
+   an obligation to follow an unsuitable technique.
+
+   Treat any in-file comment claiming something is "not in Mathlib" as a
+   REVISION-SCOPED claim that may have been true when written and false now.
+   Re-check it yourself before relying on it.
 3. Work toward a genuine Lean 4 + Mathlib proof. Run
    `cd /home/joe/code/apm-lean && lake env lean @@FILE@@` repeatedly and once
    at the end. Exit 0 is required before committing.
@@ -41,7 +69,10 @@ Binding rules:
 
 Final summary contract:
 
-- Route taken and literature anchor (including “none found”).
+- Route taken, and the literature anchor (including an explicit “none found”).
+  Name the STANDARD RESULT the route rests on, not just the Mathlib
+  declaration — that name is what makes the route reusable on the next
+  problem, and it is what a memory can be written against.
 - Exact files and statements changed; initial and final sorry counts.
 - Final `lake env lean` command and result.
 - Verbatim `#print axioms` output for every declaration claimed complete.
