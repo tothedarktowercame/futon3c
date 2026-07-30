@@ -52,7 +52,7 @@
 
 (defn- review-evidence-id [memory-name]
   ;; claude-9-authored review, so author != reviewer holds.
-  (str "e-review-claude9-v3-" memory-name))
+  (str "e-review-claude9-earlier-" memory-name))
 
 (defn- pattern-ids-of [edge]
   (vec (or (get-in edge [:hx/props :roles :patterns])
