@@ -1,0 +1,70 @@
+;; Pay-off per search surface, PER PROBLEM AREA.
+;;
+;; Design (Joe, 2026-07-30): "pay-off per surface would, in a more sophisticated
+;; model, be pay-off-per-surface per problem class. We have evidence that arXiv
+;; was useful before; the fact that it wasn't used this time presumably means it
+;; wasn't needed. More broadly arXiv is kind of the fall-through of a cond — if
+;; all else fails, the answer should be in there, even if it's potentially more
+;; expensive to search for it."
+;;
+;; The packet's rule 2 now encodes exactly that cond:
+;;   (a) components — Loogle / LeanSearch, when the route is already known
+;;   (b) Zulip archive — prior formalization and known Mathlib obstacles
+;;   (c) arXiv — FALL-THROUGH, for when there is no route at all
+;;
+;; CRITICAL DISTINCTION this ledger must preserve, and the reason a global
+;; hit-rate would mislead: a surface that was NOT NEEDED is not a surface that
+;; FAILED. Recording only "arXiv: no anchor" would slowly build a false case
+;; against the most expensive and most complete surface. So every row carries
+;; :arms-tried, :arm-that-paid, and :not-needed separately.
+;;
+;; :area is the terrain pattern the row sits in — the same 7 patterns the memory
+;; corpus is organised by — so this can be grouped by area once n is meaningful.
+;; It is NOT meaningful yet: n = 2.
+
+[{:run 1
+  :at "2026-07-30T09:26Z"
+  :problem "a01A02"
+  :declaration "weakL2_implies_L1_bound"
+  :area "math/measure-integration-api"
+  :outcome :solved
+  :route-known-at-start? true
+  :standard-result "Kolmogorov's inequality for weak L^p (p=2,q=1) + Cavalieri / layer-cake"
+  :arms-tried [:components :zulip :arxiv]
+  :arm-that-paid :components
+  :not-needed []
+  :arxiv-detail {:queries 8
+                 :ids-returned ["1007.4980" "math/0009072" "1206.5109" "1603.03211"
+                                "2003.04167" "1506.05241" "2402.04877" "2001.04018" "1212.1504"]
+                 :verdict :no-anchor
+                 :interpretation :route-already-known-so-fall-through-not-required}
+  :zulip-detail {:queries ["layer.?cake" "weak L2/Lp" "Lorentz space" "Cavalieri"]
+                 :verdict :no-anchor}
+  :components-detail {:loogle ["MeasureTheory.lintegral_eq_lintegral_meas_lt"
+                               "integral_Ioi_rpow_of_lt" "integrableOn_Ioi_rpow_of_lt"
+                               "MeasureTheory.norm_integral_le_lintegral_norm"
+                               "MeasureTheory.lintegral_mono" "ENNReal.toReal_le_toReal"]
+                      :leansearch ["MeasureTheory.ofReal_integral_eq_lintegral_ofReal"
+                                   "MeasureTheory.integrable_toReal_of_lintegral_ne_top"]
+                      :verdict :carried-the-proof}
+  :receipt "32759675-9dfe-4dd8-bc42-ba6ebfce8d2e"}
+
+ ;; Retrospective row, entered from the mission doc's S6 note rather than from a
+ ;; durée run, and marked as such: it is the standing evidence that arm (c) pays
+ ;; when the route is genuinely unknown, which is why one empty arXiv result
+ ;; must not be read as a verdict against it.
+ {:run :retrospective-s6
+  :at "2026-07-28"
+  :problem "integral-minkowski"
+  :declaration "integral Minkowski inequality"
+  :area "math/measure-integration-api"
+  :outcome :literature-anchored-plan
+  :route-known-at-start? false
+  :standard-result "integral Minkowski inequality; duality + Fubini + Holder"
+  :arms-tried [:mathlib-search :arxiv]
+  :arm-that-paid :arxiv
+  :not-needed []
+  :arxiv-detail {:anchor "Schep's paper"
+                 :verdict :construction-found
+                 :interpretation :absent-from-mathlib-so-fall-through-was-necessary}
+  :source "M-codex-sorry-loop.md:168-175 (not a durée run; recorded for contrast)"}]

@@ -43,25 +43,42 @@ Binding rules:
    Fubini + Hölder, with Schep's paper as the cleanest scaffold. The packet
    carried that literature proof as its plan.
 
-   Search at DESIGN time, before writing tactics:
-   - **arXiv, for the construction itself.** Local manifest: 570k papers with
-     abstracts at
-     `/home/joe/code/storage/arxiv-manifest/arxiv_manifest.sqlite`, e.g.
-     `sqlite3 <db> "select arxiv_id, title from papers where primary_category
-     like 'math%' and (title like '%<topic>%' or abstract like '%<topic>%')
-     limit 20;"`. Look for the standard NAME of the technique and for papers
-     that prove the lemma you need as a step.
-   - `grep -ri` over `/home/joe/code/corpora/leanprover-zulip-archive` — for
-     how the construction has been FORMALIZED, and for known Mathlib obstacles.
-   - https://loogle.lean-lang.org (pattern/type) and https://leansearch.net
-     (natural language) — for the PIECES. Mathlib will not have your theorem
-     but it will have most of the components you assemble it from; that is
-     where these two earn their keep.
+   SEARCH AT DESIGN TIME, BEFORE WRITING TACTICS — and search in this ORDER.
+   These surfaces are not a checklist to tick; they are a `cond`, and which arm
+   you need depends on whether you already have a mathematical route.
+
+   (a) DO YOU KNOW THE ROUTE? If you can already state the argument in prose —
+       "layer-cake, split at t0, bound each tail" — then what you are missing is
+       PIECES, not a plan. Use https://loogle.lean-lang.org (pattern/type
+       search) and https://leansearch.net (natural language). Mathlib will very
+       likely not state your theorem, but it will have most of the components
+       you assemble it from. This arm is the cheapest and it is often enough:
+       on a01A02 (2026-07-30) it carried the entire proof by itself.
+
+   (b) HAS IT BEEN FORMALIZED BEFORE, or is there a known Mathlib obstacle?
+       `grep -ri` over `/home/joe/code/corpora/leanprover-zulip-archive`. Cheap,
+       and it warns you about traps as well as supplying techniques.
+
+   (c) FALL-THROUGH — arXiv, FOR WHEN YOU DO NOT HAVE A ROUTE. Take this arm
+       when you cannot state the argument in prose, or when (a) and (b) came
+       back empty. It is the most expensive search and also the most likely to
+       hold the answer: the construction exists in the literature even when it
+       exists nowhere in Mathlib. Do NOT skip it on cost grounds when you are
+       genuinely without a plan — that is exactly the case it exists for.
+       Precedent: integral Minkowski is absent from Mathlib and its construction
+       came from Schep's paper, which then became the packet's plan.
+       Local manifest, 570k papers with abstracts:
+       `sqlite3 /home/joe/code/storage/arxiv-manifest/arxiv_manifest.sqlite
+       "select arxiv_id, title from papers where primary_category like 'math%'
+       and (title like '%<topic>%' or abstract like '%<topic>%') limit 20;"`
+       Search the standard NAME of the technique, not the problem statement.
 
    Spend real time here when the target resists; a wrong route costs far more
    than a thorough search. Record what you found — paper, thread, or
-   declaration — or explicitly record that the search found no anchor. A probe
-   is evidence, not an obligation to follow an unsuitable technique.
+   declaration — or explicitly record that a surface came back empty, AND state
+   WHICH ARM ACTUALLY CARRIED THE PROOF. That last datum is tracked per problem
+   area: "(a) was enough" and "(c) was necessary" are both valuable reports, and
+   a vague "searched everything" is not.
 
    Treat any in-file comment claiming something is "not in Mathlib" as a
    REVISION-SCOPED claim that may have been true when written and false now.
@@ -91,6 +108,10 @@ Final summary contract:
   Name the STANDARD RESULT the route rests on, not just the Mathlib
   declaration — that name is what makes the route reusable on the next
   problem, and it is what a memory can be written against.
+- WHICH SEARCH ARM CARRIED IT: (a) components, (b) Zulip, (c) arXiv, or none —
+  plus which arms you tried and came back empty. This is tracked per problem
+  area to learn where each surface pays; a surface that was not needed is a
+  different datum from a surface that failed, so distinguish them.
 - Exact files and statements changed; initial and final sorry counts.
 - Final `lake env lean` command and result.
 - Verbatim `#print axioms` output for every declaration claimed complete.
