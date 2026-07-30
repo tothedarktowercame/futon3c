@@ -332,49 +332,26 @@
   (let [base (trim-base base)
         common {:timeout timeout-ms}]
     {:search
-     ;; OVER-FETCH AND FILTER TO MEMORY DOCUMENTS.
-     ;;
-     ;; MEASURED 2026-07-30: the loop's own RECEIPTS were crowding memories out
-     ;; of the seed results. Receipts carry the full narrative -- routes,
-     ;; standard results, method names -- quoted verbatim in :detail, so they
-     ;; match exactly the queries a memory should answer, and there are now
-     ;; hundreds of them. Composition of a live query at limit=40: `zero` ->
-     ;; 40 receipts / 0 memories; `inner` -> 39 receipts / 1 memory. Recall
-     ;; seeds on ~20 results, so memories never reached the pattern proposer.
-     ;;
-     ;; The evidence we write to DOCUMENT the loop was drowning the memories the
-     ;; loop exists to produce. Tags cannot discriminate (receipts also carry
-     ;; :memory); `:evidence/type` can -- memories are :memory, receipts are
-     ;; :pattern-outcome. The endpoint ignores type params, so we over-fetch by
-     ;; OVERFETCH-FACTOR and filter client-side, keeping the requested limit.
+     ;; REVERTED 2026-07-30. I added an over-fetch-and-filter here to stop the
+     ;; loop's own receipts crowding memories out of the seed results. It was
+     ;; redundant AND destructive:
+     ;;   - memory-recall/proposal-search-rows ALREADY filters exactly this way,
+     ;;     retaining :evidence/type :memory OR typed pattern-description rows;
+     ;;   - my filter kept ONLY :memory, stripping the pattern-description rows
+     ;;     the proposer needs to map a query to a pattern;
+     ;;   - and it returned a VECTOR where the caller does (:results result),
+     ;;     so proposal-search-rows saw nil and produced zero candidates.
+     ;; Net effect: from the moment it landed, propose-patterns-by-query returned
+     ;; 0 candidates for EVERY query at EVERY ladder tier. Found by probing the
+     ;; proposal step directly instead of the endpoint or the seam.
      (fn [query {:keys [limit trace-id]}]
-       (let [want (long limit)
-             resp (request-edn
-                   :get
-                   (str base "/api/alpha/evidence/text-search?q=" (encode query)
-                        "&limit=" (* overfetch-factor want))
-                   (assoc common :headers
-                          (cond-> {"Accept" "application/edn"}
-                            trace-id (assoc "X-Trace-Id" trace-id))))
-             rows (cond (sequential? resp) resp
-                        (map? resp) (or (:results resp) (:evidence resp) (:data resp) [])
-                        :else [])
-             ;; Search rows are {:score _ :entry {...}} - the evidence document is
-             ;; NESTED under :entry. Reading :evidence/type at the top level
-             ;; returned nil for every row, so the filter matched nothing and the
-             ;; fallback below silently returned UNFILTERED results. Worse, that
-             ;; made every ladder tier non-empty, so the ladder never fell
-             ;; through to the shorter queries it exists to reach. Found
-             ;; 2026-07-30 by probing the seam directly rather than the endpoint.
-             memories (filter #(= :memory (or (get-in % [:entry :evidence/type])
-                                              (:evidence/type %)))
-                              rows)]
-         ;; If the shape is not what we expect, fall back to the raw response
-         ;; rather than silently returning nothing -- an empty seed is exactly
-         ;; the failure mode this fix exists to remove.
-         (if (seq memories)
-           (vec (take want memories))
-           (if (seq rows) (vec (take want rows)) resp))))
+       (request-edn
+        :get
+        (str base "/api/alpha/evidence/text-search?q=" (encode query)
+             "&limit=" (long limit))
+        (assoc common :headers
+               (cond-> {"Accept" "application/edn"}
+                 trace-id (assoc "X-Trace-Id" trace-id)))))
      :projection
      (fn [endpoints {:keys [limit trace-id valid-as-of system-as-of]}]
        (request-edn
