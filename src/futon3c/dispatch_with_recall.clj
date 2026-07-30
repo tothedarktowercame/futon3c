@@ -222,6 +222,30 @@
       (conj {:source :stdin-packet
              :terms (text-keywords packet 8)}))))
 
+(defn- query-ladder
+  "Queries in DECREASING conjunctive strictness, for a conjunctive backend.
+
+  MEASURED 2026-07-30 across five live rows: the 3-term query returned ZERO
+  memories for ALL FIVE, while falling back to 2-term pairs and then singles
+  surfaced a memory for THREE of them. The 3-term cap was itself a fix earlier
+  the same day (from 36 terms) and it was not enough, because term SELECTION is
+  by statement order rather than by signal: a01A04's third term is `recursion`,
+  a rare word that floors any conjunction containing it.
+
+  Ordered strictest-first so precision is preferred and breadth is only reached
+  when precision returns nothing. Singles are last and deliberately included:
+  offering a marginally relevant memory costs little, because the runner reports
+  whether it USED one, and that report is the measurement we actually want."
+  [terms]
+  (let [t (vec (take 3 (remove str/blank? terms)))]
+    (->> (concat (when (seq t) [{:tier :triple :q (str/join " " t)}])
+                 (for [[i j] [[0 1] [0 2] [1 2]]
+                       :when (and (< i (count t)) (< j (count t)))]
+                   {:tier :pair :q (str/join " " [(t i) (t j)])})
+                 (for [x t] {:tier :single :q x}))
+         (reduce (fn [acc m] (if (some #(= (:q %) (:q m)) acc) acc (conj acc m))) [])
+         )))
+
 (defn recall-query
   "Build a bounded lexical query from subject ids, preregistered terrain, and
   problem files, with packet terms retained as fallback. The exact problem id
@@ -464,14 +488,26 @@
         (fn [ctx endpoints recall-opts]
           (memory-recall/recall-by-endpoints
            ctx endpoints (assoc recall-opts :fetch-components projection)))
-        proposals
-        (memory-recall/propose-patterns-by-query
-         {:domain :mathematics}
-         (:query query-data)
-         {:limit (min 20 (* 2 limit))
-          :trace-id trace-id
-          :search-evidence search
-          :recall-batch-fn batch-recall})
+        propose-with
+        (fn [q]
+          (memory-recall/propose-patterns-by-query
+           {:domain :mathematics}
+           q
+           {:limit (min 20 (* 2 limit))
+            :trace-id trace-id
+            :search-evidence search
+            :recall-batch-fn batch-recall}))
+        ;; Walk the ladder strictest-first, stopping at the first tier that
+        ;; returns candidates. Records which tier fired so the offered half
+        ;; shows whether precision or breadth produced the result.
+        ladder-hit
+        (first (for [{:keys [tier q]} (query-ladder (:terms query-data))
+                     :let [p (propose-with q)]
+                     :when (seq (:candidates p))]
+                 (assoc p :recall/tier tier :recall/query-used q)))
+        proposals (or ladder-hit
+                      (assoc (propose-with (:query query-data))
+                             :recall/tier :none :recall/query-used (:query query-data)))
         pattern-ids (->> (:candidates proposals)
                          (sort-by proposal-rank)
                          (map :pattern-id)
