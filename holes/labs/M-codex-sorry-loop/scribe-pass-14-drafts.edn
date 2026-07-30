@@ -1,0 +1,132 @@
+[{:name "extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:standard-result
+   "A uniformly bounded sequence converges weakly to zero when its pairings converge to zero on a dense linear subspace."
+   :problem-class
+   "Prove `⟪g, f_m⟫ → 0` for every vector `g` from pairwise decay of a unit-vector sequence."
+   :route
+   ["For a fixed generator `f_n`, use the pairwise decay hypothesis once `m > n`."
+    "Extend convergence from generators to their algebraic span with `Submodule.span_induction` and linearity of the inner product."
+    "Extend from the span to its topological closure: approximate a target vector within `ε/2`, use `‖f_m‖ = 1`, and bound the approximation error by Cauchy–Schwarz via `norm_inner_le_norm`."
+    "Orthogonally project an arbitrary `g` onto the closed span."
+    "Use `Submodule.inner_orthogonalProjection_eq_of_mem_right` to discard the orthogonal component, whose pairing with every `f_m` is zero."]
+   :key-api
+   ["Submodule.span_induction"
+    "Metric.mem_closure_iff"
+    "Submodule.topologicalClosure_coe"
+    "norm_inner_le_norm"
+    "Submodule.inner_orthogonalProjection_eq_of_mem_right"]
+   :lean-arcs
+   ["Induct on the span-membership proof itself."
+    "For closure membership, unfold `Submodule.topologicalClosure_coe` and use `subset_closure`."
+    "Normalize the real inner-product norm with `Real.norm_eq_abs` before the `ε/2` estimate."]
+   :witness
+   {:declaration "inner_tendsto_zero"
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For weak convergence of a uniformly bounded sequence, prove convergence on generators, close under finite linear combinations, extend by a uniform norm bound to the closed span, and remove the orthogonal complement by projection."
+   :capture-kind :runner-proof-route-and-ground-control-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A05"}
+   #:ref{:type :proof-pattern, :id "dense-subspace-weak-convergence"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t010"]
+   :receipt-ids ["5a7a6fec-1783-4df9-9505-817eb5398920"]
+   :commits ["f4bf72c" "40d5da4"]
+   :problems ["a01A05-gram-schmidt"]
+   :artifacts ["problems/a01A05/lean/Main.lean:inner_tendsto_zero"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "spread-small-pairwise-correlations-across-growing-triangular-support"
+  :lane :solve-lane
+  :level :counterexample-construction
+  :status :draft
+  :body
+  {:target-class
+   "Refute a uniform-constant approximation estimate inferred only from small pairwise correlations."
+   :construction
+   {:ambient-space "`ℓ²(ℕ)` with coordinate basis `e_i`"
+    :coefficients
+    ["`a_m = 2^(-(m+1))`"
+     "`b_m = sqrt(1 - m * a_m^2)`"]
+    :vectors
+    "`f_m = a_m * ∑_{i<m} e_i + b_m * e_m`"}
+   :checks
+   [{:property :unit-norm
+     :calculation "`‖f_m‖² = m*a_m² + b_m² = 1`"}
+    {:property :pairwise-hypothesis
+     :calculation
+     "For `n < m`, `|⟪f_n,f_m⟫| = a_m * (n*a_n + b_n) ≤ (3/2)*a_m ≤ 2^(-m)`."}
+    {:property :gram-schmidt-output
+     :calculation
+     "The family is triangular with positive diagonal, so normalized Gram–Schmidt returns the coordinate basis vector `e_m` at stage `m`."}
+    {:property :aggregate-error
+     :calculation
+     "`‖f_m - e_m‖ ≥ sqrt(m)*a_m = (sqrt(m)/2)*2^(-m)`."}]
+   :contradiction
+   "A bound `‖f_m-e_m‖ ≤ C*2^(-m)` would force `C ≥ sqrt(m)/2` for every `m`, so no uniform constant exists."
+   :transferable-shape
+   "Distribute individually small off-diagonal coefficients over `m` earlier coordinates. The per-pair hypothesis remains small, while their aggregate `ℓ²` mass grows by a `sqrt(m)` factor."
+   :boundary
+   "The construction proves that any valid conclusion must permit at least the displayed `sqrt(m)` loss or impose stronger aggregate correlation control. It does not prove that a particular `C*sqrt(m)*2^(-m)` upper bound is sufficient."
+   :rule
+   "To test a uniform-constant claim derived from pairwise bounds, build a triangular family whose support grows with the index; compare the pairwise scale with the square-summed aggregate scale before attempting the proof."
+   :capture-kind :runner-counterexample-and-ground-control-checked-asymptotics}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A05"}
+   #:ref{:type :counterexample-pattern,
+         :id "triangular-growing-support-defeats-uniform-rate"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t010"]
+   :receipt-ids ["5a7a6fec-1783-4df9-9505-817eb5398920"]
+   :commits ["f4bf72c" "40d5da4"]
+   :problems ["a01A05-gram-schmidt"]
+   :artifacts
+   ["problems/a01A05/lean/Main.lean:gramSchmidt_approximation-counterexample-comment"]}
+  :confidence :construction-ground-control-checked-target-retired
+  :review {:verdict :pending-owner-review}}
+
+ {:name "use-finite-numerical-spot-checks-to-refute-not-characterize-asymptotics"
+  :lane :trajectory-lane
+  :level :measurement-discipline
+  :status :draft
+  :body
+  {:observed-case
+   {:initial-check
+    "A small-index numerical witness exceeded the proposed sharp bound by about `0.018`."
+    :premature-model
+    "The discrepancy was interpreted as evidence that a larger uniform constant would repair the rate."
+    :asymptotic-counterexample
+    "The triangular family forces the required constant to grow at least as `sqrt(m)/2`, with checked values `0.5, 1, 2, 4, 8, 16` at `m = 1, 4, 16, 64, 256, 1024`."}
+   :measurement-rule
+   "A finite spot-check can refute a universally quantified bound by producing one admissible counterexample. It cannot characterize whether the defect is a constant factor, polynomial loss, logarithmic loss, or different asymptotic rate."
+   :required-follow-up
+   ["After a numerical refutation, form a parameterized admissible family."
+    "Compute the ratio between the target error and proposed rate symbolically."
+    "Test whether that ratio remains bounded as the parameter grows before proposing a uniform-constant repair."]
+   :interpretation
+   {:classification :inference
+    :note
+    "The general workflow rule is inferred from the witnessed contrast between the small-index discrepancy and the explicit unbounded `sqrt(m)` ratio."}
+   :boundary
+   "Numerical checks remain valid refutation witnesses when their admissibility and deciding inequality are verified; the limitation concerns extrapolating the failure mode from finitely many small indices."
+   :capture-kind :receipt-confirmed-measurement-model-correction}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a01A05"}
+   #:ref{:type :process-pattern, :id "asymptotic-counterexample-discipline"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t010"]
+   :receipt-ids ["5a7a6fec-1783-4df9-9505-817eb5398920"]
+   :commits ["f4bf72c" "40d5da4"]
+   :problems ["a01A05-gram-schmidt"]
+   :artifacts ["problems/a01A05/lean/Main.lean"]}
+  :confidence :receipt-confirmed-inference-marked
+  :review {:verdict :pending-owner-review}}]
