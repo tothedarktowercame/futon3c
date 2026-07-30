@@ -17,7 +17,13 @@
 (def commit? (= "--commit" (first *command-line-args*)))
 (def pace-ms 400)   ;; store writes are slower under load (measured 2026-07-30)
 (def mission-id "M-codex-sorry-loop")
-(def reviewer "claude-6")
+(def reviewer "claude-9")   ;; the OWNER, who reviews
+(def drafter  "codex-5")    ;; the SCRIBE, who authored the draft
+;; The memory entry must be authored by the DRAFTER, not the reviewer.
+;; memory-lifecycle/review-attachment! refuses when the review evidence
+;; author equals the memory author, so authoring both as the owner makes
+;; the attachment permanently unreviewable — which is why every codex-lane
+;; memory has been invisible to recall. Found 2026-07-30.
 (def recall-system :v1.2-normalized)
 (def warrant "operator-delegated: in-use evaluation (proof-in-pudding; owner draft review claude-6 2026-07-28; Joe's standing direction)")
 
@@ -111,7 +117,7 @@
                        (remove str/blank?) distinct vec)]
     (post! "/api/alpha/evidence"
            {:evidence/id (:entry ids) :evidence/type :memory
-            :evidence/claim-type :assert :evidence/author reviewer
+            :evidence/claim-type :assert :evidence/author drafter
             :evidence/session-id session-id
             :evidence/subject (first (:subjects draft))
             :evidence/tags [:memory :mathematics :codex-pilot (:lane draft)]
