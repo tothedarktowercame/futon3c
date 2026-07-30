@@ -8,6 +8,7 @@ Target statement(s):
 @@STATEMENT@@
 Downstream unblocks: @@UNBLOCKS@@
 Available proved support: @@AVAILABLE@@
+Suggested route (if any): @@ROUTE@@
 
 Binding rules:
 
@@ -83,6 +84,14 @@ Binding rules:
    Treat any in-file comment claiming something is "not in Mathlib" as a
    REVISION-SCOPED claim that may have been true when written and false now.
    Re-check it yourself before relying on it.
+
+   IF THIS ROW CARRIES A SUGGESTED ROUTE, treat it as a HYPOTHESIS TO EVALUATE,
+   not as instructions. It may come from a previous session that ran out of time,
+   or from the file's own docstring, and it may simply be WRONG: a01A06's
+   informal solution confidently proposed a route resting on an invalid step, and
+   following it would have wasted the whole run. Read it, judge it, and say in
+   your report whether you followed it, corrected it, or discarded it and why.
+   If the row carries no route, that is the normal case — find one.
 3. Work toward a genuine Lean 4 + Mathlib proof. Run
    `cd /home/joe/code/apm-lean && lake env lean @@FILE@@` repeatedly and once
    at the end. Exit 0 is required before committing.
@@ -100,6 +109,13 @@ Binding rules:
 6. At about 20 minutes, preserve and commit an honest compiling partial rather
    than losing a precise frontier to the job horizon. Never disguise a
    remaining obligation with an axiom, weakened theorem, or irrelevant proof.
+   But a partial is a concession to the ~30-minute job cap, NOT a way to bank
+   visible progress. If you can close the target, close it — deferring work a
+   closer could have finished is a failure, not a hand-off. When you genuinely
+   must stop, leave the next session a PLAN rather than a puzzle: state the
+   remaining obligation precisely enough that it can be carried forward as a
+   suggested route, which is exactly where the “Suggested route” field above
+   gets populated from.
 7. Commit only the scoped apm-lean files with a task-specific message.
 
 Final summary contract:

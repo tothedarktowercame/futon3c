@@ -20,6 +20,18 @@
 ;;
 ;; :area is the terrain pattern the row sits in — the same 7 patterns the memory
 ;; corpus is organised by — so this can be grouped by area once n is meaningful.
+;; FIELD SHAPE (Joe, 2026-07-30): this began as a boolean :route-known-at-start?
+;; and that was the wrong shape. A closer MAY inherit a likely route from a
+;; previous session that ran out of time, but that should not be the typical
+;; case -- deferring work that could have been closed directly is lazy for a
+;; closer. So the field is :suggested-route, optional and free-text, carrying a
+;; route only when one genuinely exists, plus :suggested-route-source so we can
+;; tell an inherited plan from one the runner found itself.
+;;
+;; Note run 1's route came from the FILE's own docstring, not from a previous
+;; session -- the mechanism already works informally, which is an argument for
+;; wiring it explicitly rather than inventing it.
+;;
 ;; It is NOT meaningful yet: n = 2.
 
 [{:run 1
@@ -28,7 +40,8 @@
   :declaration "weakL2_implies_L1_bound"
   :area "math/measure-integration-api"
   :outcome :solved
-  :route-known-at-start? true
+  :suggested-route "layer cake applied to |f| restricted to E, split at t0 = sqrt(C/m(E)), bound each tail" 
+  :suggested-route-source :in-file-docstring
   :standard-result "Kolmogorov's inequality for weak L^p (p=2,q=1) + Cavalieri / layer-cake"
   :arms-tried [:components :zulip :arxiv]
   :arm-that-paid :components
@@ -59,7 +72,7 @@
   :declaration "integral Minkowski inequality"
   :area "math/measure-integration-api"
   :outcome :literature-anchored-plan
-  :route-known-at-start? false
+  :suggested-route nil :suggested-route-source nil
   :standard-result "integral Minkowski inequality; duality + Fubini + Holder"
   :arms-tried [:mathlib-search :arxiv]
   :arm-that-paid :arxiv

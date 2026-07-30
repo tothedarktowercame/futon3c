@@ -320,6 +320,12 @@ def instantiate_packet(row: dict[Any, Any], template: str) -> str:
         # all, so runners could not have used it even if told; now they can,
         # and the packet has to say so or the work stays unused.
         "@@AVAILABLE@@": str(row_value(row, "available-support", "[none recorded]")),
+        # An inherited plan, when one exists — e.g. a previous session that
+        # named a precise remaining obstruction before running out of time.
+        # Deliberately OPTIONAL rather than a boolean "route known?": a closer
+        # inheriting a route should not be the typical case, since deferring
+        # work that could have been closed directly is lazy for a closer.
+        "@@ROUTE@@": str(row_value(row, "suggested-route", "[none — find your own route]")),
     }
     for marker, value in replacements.items():
         template = template.replace(marker, value)
