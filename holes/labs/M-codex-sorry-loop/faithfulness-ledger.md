@@ -7,6 +7,46 @@ what genuine closure requires. The corpus-wide audit (every statement
 vs original exam text) runs before any announcement; this ledger
 collects instances found en route.
 
+## WHERE THE DEFECTS COME FROM (added 2026-07-30, on Joe's question)
+
+Joe asked the right question about a01A06: the exam asks *"what can
+you say about the measure"* — how does "the target theorem is false"
+answer that? Tracing every blocked row back through
+`problem.md` (original exam TeX) and `informal-solution.md` gives a
+**three-way split**, and it matters because the three have completely
+different remedies.
+
+**A. TRANSLATION defects — the mathematics was already correct and
+written down; the formaliser broke it. 4 of 6.**
+- **a00J05** — `variable (hK_compact) (hK_measure)` never included in the declarations.
+- **a01A02** — informal solution states the hypothesis as `m({|f|>λ}) ≤ Cλ⁻²`, a MEASURE bound, and requires `0 < m(E) < ∞`. The formaliser encoded it as `(volume …).toReal ≤ C/t^2`, and `toReal ⊤ = 0` is what makes it false.
+- **a01A03** — informal solution says `g = χ_{[-h,h]}` **a.e.**, twice explicitly (lines 11, 21). The formaliser wrote `∀ x, g x = …`, strengthening a.e. to pointwise.
+- **a01A04** — `Fin n → ℝ` where a Euclidean space was meant (and a95A03 already documents this exact repair).
+
+For these, repair is MECHANICAL and needs no new mathematics: restate
+the Lean faithfully to the informal solution.
+
+**B. INFORMAL-SOLUTION defect — the mathematics itself is wrong. 1 of 6.**
+- **a01A06.** The informal solution derives `m = O(1/λ)`, then `O(1/λ²)`, and states outright *"O(1/λ²) … is **not** enough for L²!"* — then overrides itself with an invalid step: it lower-bounds `(e^{λ/2}−1)δ > 1 − e^{-λ/2}` and uses that as an UPPER bound to conclude `log < log 2`. Assuming `δ` large makes both sides of the constraint large, so no contradiction follows. It then asserts exponential decay and "Yes, g ∈ L²". The formaliser was FAITHFUL to a wrong answer. Correct answers: (a) an entropy/`L log L` bound, `δ·log(1/δ) ≲ A'/λ`, i.e. roughly `m ≲ 1/(λ log λ)`; (b) **NO** — `g = x^{-3/4}` on `(0,1]` is in `L log L` but not `L²`. The exam's *"Why or why not?"* was signposting a negative answer.
+
+**C. EXAM defect — the original problem asks for something false. 1 of 6.**
+- **a01A05.** `problem.md` itself says *"Show that |f_m − e_m| ≤ 2⁻ᵐ"*, and that is narrowly false (margin ≈ 0.018 at the first index; it still fails under 1-indexing, ≈ 0.252 vs 0.25). No `informal-solution.md` exists for this row. The intended claim is presumably `O(2⁻ᵐ)`.
+
+**CONSEQUENCE — a better S9 than a grep.** Every bundle contains both
+a formal statement AND an informal solution stating the intended
+theorem. **Reconciling those two catches all four class-A defects**,
+including a01A03's a.e.→pointwise and a01A02's `toReal`, which NO
+static grep would find. That is a stronger and cheaper instrument than
+the syntactic scan I recommended yesterday, and it is work a model can
+do by reading. The grep rules remain useful as a fast first pass.
+
+**CONSEQUENCE FOR THE ANNOUNCEMENT GATE.** The gate's
+statement-faithfulness audit must reconcile against the ORIGINAL EXAM
+TEXT, not the informal solution — a01A06 shows the informal corpus can
+be confidently wrong, and a01A05 shows the exam can be wrong too, in
+which case the corrected claim must be stated openly rather than
+quietly formalised.
+
 | # | Problem | Declaration | Divergence | Genuine closure needs | Found |
 |---|---------|-------------|------------|----------------------|-------|
 | 1 | a95J03 | `winding_number_bounded` | `windingNumber` is a stub `:= 0` (documented in-file); theorem discharges trivially via `omega` | winding-number/argument-principle infrastructure (same frontier as Rouché: `zeroCountInClosedBall-homotopy-invariant` family) | cron row sorry-0285, runner self-flagged, receipt in store 2026-07-29 |
