@@ -1,0 +1,65 @@
+[{:name "evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form"
+  :lane :solve-lane
+  :level :strategy
+  :status :draft
+  :body
+  {:problem-class
+   "Evaluate a conditionally convergent boundary series when its associated power series has a known closed form only inside the open radius of convergence."
+   :composition
+   [{:stage :existence
+     :standard-result "Alternating series test"
+     :work
+     "Use `tendsto_alternating_series_of_tendsto_zero` to prove convergence of the boundary series to an initially unknown limit `l`."}
+    {:stage :boundary-identification
+     :standard-result "Abel's limit theorem"
+     :work
+     "Apply `tendsto_tsum_powerSeries_nhdsWithin_lt` to identify `l` with the one-sided radial limit of the associated power series as `x → 1⁻`."}
+    {:stage :evaluation
+     :standard-result "Mercator logarithm series"
+     :work
+     "Use `hasSum_pow_div_log_of_abs_lt_one` to prove that the radial power series equals `log (1+x)/x` for `0 < x < 1`, then take the one-sided limit to obtain `log 2`."}]
+   :formalization-arcs
+   ["Convert the Mercator `HasSum` term-by-term to the shifted alternating-harmonic coefficients with `HasSum.congr_fun`."
+    "Multiply the Abel limit by `x`, whose one-sided limit is one, so the radial expression becomes `log (1+x)` near the boundary."
+    "Compare the resulting limit with continuity of `log (1+x)` at `x = 1` and use `tendsto_nhds_unique`."]
+   :key-api
+   ["tendsto_alternating_series_of_tendsto_zero"
+    "tendsto_tsum_powerSeries_nhdsWithin_lt"
+    "hasSum_pow_div_log_of_abs_lt_one"
+    "HasSum.congr_fun"
+    "tendsto_nhds_unique"]
+   :literature-anchor
+   {:kind :zulip-formalization-precedent
+    :path
+    "217875-Is-there-code-for-X?/Bounds on alternating convergent series.json"
+    :use-status :route-supplied
+    :contribution
+    "The thread explicitly combines an alternating-series theorem, a Taylor series, and Abel's theorem and records development of Mathlib's real Abel theorem."}
+   :witness
+   {:declarations
+    ["tendsto_sum_alternating_harmonic"
+     "alternating_harmonic_eq_log_two"]
+    :statement-integrity :intact
+    :axioms ["propext" "Classical.choice" "Quot.sound"]
+    :sorryAx false}
+   :rule
+   "For a classical series at the boundary of a power-series disk, separate three jobs: establish convergence without knowing the value, use Abel to move the unknown sum to a radial limit, and evaluate that radial limit through an interior closed form."
+   :boundary
+   "The alternating-series test alone supplies no value, while the interior Taylor identity alone does not justify substitution at the boundary. Abel's theorem is the necessary bridge between them."
+   :capture-kind :runner-composed-route-zulip-anchor-and-ground-control-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a93J02"}
+   #:ref{:type :proof-pattern,
+         :id "boundary-series-via-Abel-and-closed-form"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019fa2c1-t023"]
+   :receipt-ids ["05bccf8d-213d-42b0-b924-76f52ec7c35c"]
+   :commits ["cda9ab91b1e127d840fffc52975bb6218f74aaa5"]
+   :problems ["a93J02-alternating-harmonic"]
+   :artifacts
+   ["problems/a93J02/lean/Main.lean:tsum_alternating_harmonic_mul_pow"
+    "problems/a93J02/lean/Main.lean:tendsto_sum_alternating_harmonic"
+    "problems/a93J02/lean/Main.lean:alternating_harmonic_eq_log_two"]}
+  :confidence :single-instance-ground-control-verified
+  :review {:verdict :pending-owner-review}}]
