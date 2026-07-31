@@ -12,6 +12,7 @@ performed.
 Run:
 
 ```sh
+python3 -m pip install -r holes/labs/E-futon-memories/requirements.txt
 python3 -m unittest holes/labs/E-futon-memories/test_s1_topology.py
 python3 holes/labs/E-futon-memories/s1_topology.py --nulls 200
 ```
