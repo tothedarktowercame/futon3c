@@ -152,6 +152,47 @@ class QueueGateTests(unittest.TestCase):
         self.assertNotIn(":scaffold", {str(item[K("kind")]) for item in queue})
 
 
+class SubjectRankingTests(unittest.TestCase):
+    def test_rarity_sort_drops_terms_over_one_third_and_caps_at_six(self):
+        terms = ["alpha", "bravo", "charlie", "delta", "echoes", "foxtrot", "golfing"]
+        frequencies = {
+            "alpha": 90,
+            "bravo": 2,
+            "charlie": 30,
+            "delta": 1,
+            "echoes": 4,
+            "foxtrot": 3,
+            "golfing": 5,
+        }
+        self.assertEqual(
+            ["delta", "bravo", "foxtrot", "echoes", "golfing", "charlie"],
+            cron.rank_subject_terms(terms, frequencies, 120),
+        )
+
+    def test_subjects_for_uses_one_df_result(self):
+        item = row()
+        item[K("statement-hint")] = "alpha bravo charlie delta"
+        with mock.patch.object(
+            cron,
+            "subject_document_frequencies",
+            return_value=({"alpha": 9, "bravo": 1, "charlie": 5, "delta": 2}, 30),
+        ) as fetch:
+            self.assertEqual(
+                ["bravo", "delta", "charlie", "alpha"], cron.subjects_for(item)
+            )
+            fetch.assert_called_once_with(["alpha", "bravo", "charlie", "delta"])
+
+    def test_subjects_for_df_failure_preserves_old_order_and_cap(self):
+        item = row()
+        item[K("statement-hint")] = " ".join(f"term{chr(97 + i)}" for i in range(15))
+        with mock.patch.object(
+            cron, "subject_document_frequencies", side_effect=TimeoutError()
+        ):
+            self.assertEqual(
+                [f"term{chr(97 + i)}" for i in range(12)], cron.subjects_for(item)
+            )
+
+
 class RuntimeDisciplineTests(unittest.TestCase):
     def test_flock_exclusivity_returns_without_evaluating_gates(self):
         with tempfile.TemporaryDirectory() as tmp:

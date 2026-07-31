@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
@@ -348,6 +349,41 @@ SUBJECT_STOPWORDS = {
     "where", "which", "there", "exists", "suppose", "hence", "thus",
 }
 
+SUBJECT_RARITY_CAP = 6
+SUBJECT_FALLBACK_CAP = 12
+SUBJECT_DF_TIMEOUT = 2.0
+SUBJECT_MAX_DF_SHARE_DENOMINATOR = 3
+
+
+def subject_document_frequencies(terms: list[str]) -> tuple[dict[str, int], int]:
+    """Fetch all term frequencies in one index-only request.
+
+    This is an advisory ranking read: callers must catch every failure and
+    preserve dispatch availability.
+    """
+    query = urllib.parse.urlencode({"df": ",".join(terms)})
+    url = f"{SUBSTRATE_URL}/api/alpha/evidence/text-search?{query}"
+    with urllib.request.urlopen(url, timeout=SUBJECT_DF_TIMEOUT) as response:
+        payload = loads(response.read().decode("utf-8"))
+    frequencies = payload.get(K("df"))
+    indexed = payload.get(K("indexed"))
+    if not isinstance(frequencies, dict) or not isinstance(indexed, int) or indexed <= 0:
+        raise ValueError("invalid df response")
+    normalized = {str(term): int(frequencies[term]) for term in terms}
+    return normalized, indexed
+
+
+def rank_subject_terms(terms: list[str], frequencies: dict[str, int], indexed: int) -> list[str]:
+    """Rarest first, stable on ties; discard terms matching over 1/3 of rows."""
+    positions = {term: position for position, term in enumerate(terms)}
+    useful = [
+        term
+        for term in terms
+        if frequencies[term] * SUBJECT_MAX_DF_SHARE_DENOMINATOR <= indexed
+    ]
+    useful.sort(key=lambda term: (frequencies[term], positions[term]))
+    return useful[:SUBJECT_RARITY_CAP]
+
 
 def subjects_for(row: dict[Any, Any]) -> list[str]:
     """Tokenized mathematical vocabulary from the statement hint.
@@ -364,7 +400,17 @@ def subjects_for(row: dict[Any, Any]) -> list[str]:
         if lowered in SUBJECT_STOPWORDS or lowered in terms:
             continue
         terms.append(lowered)
-    return terms[:12] or [str(row_value(row, "id"))]
+    fallback = terms[:SUBJECT_FALLBACK_CAP]
+    if not fallback:
+        return [str(row_value(row, "id"))]
+    try:
+        frequencies, indexed = subject_document_frequencies(fallback)
+        ranked = rank_subject_terms(fallback, frequencies, indexed)
+        return ranked or [str(row_value(row, "id"))]
+    except Exception:
+        # Recall ranking must never block or crash dispatch. Preserve the
+        # pre-rarity order and cap exactly on every HTTP/parse/schema failure.
+        return fallback or [str(row_value(row, "id"))]
 
 
 def dispatch(row: dict[Any, Any], runner: str, packet: str) -> str:
