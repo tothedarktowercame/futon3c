@@ -8,13 +8,12 @@
   (:require [clojure.string :as str]
             [futon2.aif.memory-contract :as memory-contract]
             [futon2.aif.mission-control-graph :as mission-graph]
-            [futon3c.evidence.store :as evidence-store]
+            [futon3c.peripheral.memory-lifecycle :as memory-lifecycle]
             [futon3c.peripheral.memory-recall :as memory-recall]
             [futon3c.peripheral.memory-write :as memory-write])
   (:import [java.util UUID]))
 
 (def episode-kinds #{:observation :intervention})
-(def external-witness-statuses #{:independently-witnessed :challenged})
 
 (defn- nonblank-string?
   [value]
@@ -85,98 +84,23 @@
      (episode-payload episode))))
 
 (defn decision-keyed-external-check-entry
-  "Construct an append-only WM external check keyed to one exact decision.
-
-   A mission, session, or timestamp is not a substitute join key. Checkers
-   must supply their own identity; this constructor never invents one."
-  [{:keys [evidence-id decision-id author session-id at outcome witness-status
-           checker]}]
-  (when-not (and (every? nonblank-string?
-                         [evidence-id decision-id author session-id at checker])
-                 (keyword? outcome)
-                 (contains? external-witness-statuses witness-status))
-    (throw (ex-info "invalid decision-keyed WM external check"
-                    {:evidence-id evidence-id
-                     :decision-id decision-id
-                     :author author
-                     :session-id session-id
-                     :at at
-                     :outcome outcome
-                     :witness-status witness-status
-                     :checker checker})))
-  {:evidence/id evidence-id
-   :evidence/subject {:ref/type :decision :ref/id decision-id}
-   :evidence/type :pattern-outcome
-   :evidence/claim-type :observation
-   :evidence/author author
-   :evidence/session-id session-id
-   :evidence/at at
-   :evidence/body {:outcome outcome
-                   :memory-outcome/witness-status witness-status
-                   :checker checker}
-   :evidence/tags [:war-machine :external-check]})
+  "Adapt a WM check request to the shared memory witness contract."
+  [check]
+  (memory-contract/decision-keyed-external-check-entry
+   (assoc check :domain :war-machine)))
 
 (defn record-decision-keyed-external-check!
-  "Append a decision-keyed external check to the supplied evidence store."
-  [{:keys [evidence-store]} check]
-  (when-not evidence-store
-    (throw (ex-info "WM external check requires an evidence store" {})))
-  (evidence-store/append*
-   evidence-store
-   (decision-keyed-external-check-entry check)))
-
-(defn- validated-decision-check
-  [check]
-  (let [decision-id (get-in check [:evidence/subject :ref/id])
-        witness-status (get-in check
-                               [:evidence/body
-                                :memory-outcome/witness-status])]
-    (when-not (and (= :decision (get-in check
-                                         [:evidence/subject :ref/type]))
-                   (nonblank-string? decision-id)
-                   (= :pattern-outcome (:evidence/type check))
-                   (= :observation (:evidence/claim-type check))
-                   (nonblank-string? (:evidence/id check))
-                   (nonblank-string? (:evidence/author check))
-                   (some #{:external-check} (:evidence/tags check))
-                   (keyword? (get-in check [:evidence/body :outcome]))
-                   (contains? external-witness-statuses witness-status))
-      (throw (ex-info
-              "WM external checks must carry an exact decision subject"
-              {:check-id (:evidence/id check)
-               :subject (:evidence/subject check)})))
-    check))
+  "Append a WM check through the shared memory lifecycle writer."
+  [ctx check]
+  (memory-lifecycle/record-decision-keyed-external-check!
+   (assoc ctx :domain :war-machine)
+   check))
 
 (defn witnessed-projection-triple
-  "Join offered -> projection-selected -> witnessed by decision identity only."
+  "Join a WM projection and check through the shared outcome contract."
   [projection-receipt external-check]
-  (let [external-check (validated-decision-check external-check)
-        projection-decision (:wm-projection/decision-id projection-receipt)
-        check-decision (get-in external-check [:evidence/subject :ref/id])
-        offered (:wm-projection/surfaced-ids projection-receipt)
-        selected (:wm-projection/projection-selected-ids projection-receipt)]
-    (when-not (= :algorithmic-selection
-                 (:wm-projection/signal projection-receipt))
-      (throw (ex-info "expected a typed WM projection receipt"
-                      {:receipt projection-receipt})))
-    (when-not (= projection-decision check-decision)
-      (throw (ex-info "WM projection and external check decision ids differ"
-                      {:projection-decision-id projection-decision
-                       :check-decision-id check-decision})))
-    (when-not (and (seq offered) (seq selected))
-      (throw (ex-info "witnessed WM projection requires offered and selected memories"
-                      {:offered offered :projection-selected selected})))
-    {:wm-outcome-triple/type :offered-projection-selected-witnessed
-     :wm-outcome-triple/decision-id projection-decision
-     :wm-outcome-triple/offered-ids offered
-     :wm-outcome-triple/projection-selected-ids selected
-     :wm-outcome-triple/witness-evidence-id (:evidence/id external-check)
-     :wm-outcome-triple/witness-status
-     (get-in external-check [:evidence/body
-                             :memory-outcome/witness-status])
-     :wm-outcome-triple/outcome
-     (get-in external-check [:evidence/body :outcome])
-     :wm-outcome-triple/checker (:evidence/author external-check)}))
+  (memory-contract/witnessed-memory-outcome-triple
+   projection-receipt external-check))
 
 (defn dark-candidate-projection
   "Recall full WM bodies for active p4ng endpoints and project dark candidates.

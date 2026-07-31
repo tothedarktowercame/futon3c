@@ -5,6 +5,7 @@
    edge is the bitemporal projection: it may become challenged, superseded, or
    end-valid-time retracted without deleting either episode."
   (:require [clojure.string :as str]
+            [futon2.aif.memory-contract :as memory-contract]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-write :as memory-write]
@@ -96,6 +97,18 @@
 (defn- nonblank-string?
   [x]
   (and (string? x) (not (str/blank? x))))
+
+(defn record-decision-keyed-external-check!
+  "Append a client-domain outcome check through the shared witness contract."
+  [{:keys [evidence-store domain]} check]
+  (when-not (and evidence-store (keyword? domain))
+    (throw (ex-info
+            "external memory check requires an evidence store and domain"
+            {:domain domain})))
+  (estore/append*
+   evidence-store
+   (memory-contract/decision-keyed-external-check-entry
+    (assoc check :domain domain))))
 
 (defn- exact-patterns?
   [expected actual]

@@ -107,16 +107,18 @@
           :outcome :pass
           :witness-status :independently-witnessed
           :checker "test-only independent checker fixture"})
-        triple (wm-memory/witnessed-projection-triple projection check)]
-    (is (= :offered-projection-selected-witnessed
-           (:wm-outcome-triple/type triple)))
+        triple
+        (wm-memory/witnessed-projection-triple projection check)]
+    (is (= :offered-selected-witnessed
+           (:memory-outcome-triple/type triple)))
     (is (= "wm-decision-20260731"
-           (:wm-outcome-triple/decision-id triple)))
-    (is (= ["e-wm-r15"] (:wm-outcome-triple/offered-ids triple)))
+           (:memory-outcome-triple/decision-id triple)))
     (is (= ["e-wm-r15"]
-           (:wm-outcome-triple/projection-selected-ids triple)))
+           (:memory-outcome-triple/offered-ids triple)))
+    (is (= ["e-wm-r15"]
+           (:memory-outcome-triple/selected-ids triple)))
     (is (= "e-wm-check-20260731"
-           (:wm-outcome-triple/witness-evidence-id triple)))
+           (:memory-outcome-triple/witness-evidence-id triple)))
     (testing "timestamp or session proximity cannot substitute for identity"
       (is (thrown-with-msg?
            clojure.lang.ExceptionInfo
@@ -128,7 +130,7 @@
     (testing "the append-only 2026-07-23 mission-keyed check stays unjoinable"
       (is (thrown-with-msg?
            clojure.lang.ExceptionInfo
-           #"exact decision subject"
+           #"exact decision and domain"
            (wm-memory/witnessed-projection-triple
             projection
             {:evidence/id "e-phase4-wm-r15-check-20260723"
@@ -166,7 +168,7 @@
            (:evidence/subject stored)))
     (is (thrown-with-msg?
          clojure.lang.ExceptionInfo
-         #"invalid decision-keyed"
+         #"invalid decision-keyed external memory check"
          (wm-memory/decision-keyed-external-check-entry
           (dissoc check :author))))))
 
