@@ -1,0 +1,190 @@
+[{:name "prove-Hurwitz-zero-persistence-through-quantitative-open-mapping"
+  :lane :solve-lane
+  :level :proof-architecture
+  :status :draft
+  :body
+  {:hook
+   "Put a positive norm margin on a small boundary circle, transfer that margin to the approximants by locally uniform convergence, then use quantitative open mapping to force each approximant to take the value zero inside."
+   :how-to-apply
+   ["Choose a closed disk contained in the domain whose boundary contains no zero of the limit function."
+    "Use compactness of the sphere and continuity to obtain a positive boundary minimum for `‖f‖`."
+    "Convert locally uniform convergence to uniform convergence on the sphere or closed disk and preserve boundary nonvanishing eventually."
+    "Apply `DiffContOnCl.ball_subset_image_closedBall` to the limit or perturbation with a radius controlled by the boundary margin."
+    "Show zero belongs to the image of the approximant on a smaller closed disk and extract a nearby zero."
+    "For the injective-or-constant corollary, apply zero persistence to `F n z - F n y` on a punctured neighbourhood; injectivity forbids the resulting second zero unless the limit is constant."]
+   :key-api
+   ["tendstoLocallyUniformlyOn_iff_forall_isCompact"
+    "tendstoUniformlyOn_iff"
+    "DiffContOnCl.ball_subset_image_closedBall"
+    "AnalyticAt.eventually_eq_zero_or_eventually_ne_zero"
+    "AnalyticOnNhd.eqOn_of_preconnected_of_eventuallyEq"]
+   :witness
+   {:declarations
+    ["hurwitz_eventually_nonvanishing_on_sphere"
+     "hurwitz_zero_persistence"
+     "locallyUniformLimit_injective_or_constant"]
+    :commit "b898439"
+    :all-file-declarations 3
+    :sorryAx false
+    :statement-integrity :intact}
+   :faithfulness-note
+   "An unused `hz0` in the sphere lemma is redundant because closed-disk containment already implies centre membership. It strengthens the formal theorem; it does not make the substantive nonvanishing conclusion vacuous."
+   :rule
+   "Formalize Hurwitz zero persistence by combining a compact boundary margin with quantitative open mapping; do not search for a monolithic Hurwitz theorem when those two interfaces are available."
+   :boundary
+   "The zero-persistence step assumes a finite-order isolated zero. The infinite-order case is handled separately by the analytic identity principle."
+   :capture-kind :runner-three-stage-Hurwitz-construction-and-owner-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a93J07"}
+   #:ref{:type :pattern, :id "math/holomorphic-disk-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t060"]
+   :receipt-ids ["f70ecf52-8e7c-463a-bb54-133d94387a33"]
+   :commits ["b898439"]
+   :problems ["a93J07-hurwitz"]
+   :artifacts
+   ["problems/a93J07/lean/Main.lean:hurwitz_eventually_nonvanishing_on_sphere"
+    "problems/a93J07/lean/Main.lean:hurwitz_zero_persistence"
+    "problems/a93J07/lean/Main.lean:locallyUniformLimit_injective_or_constant"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019f9b12-t060"]}}
+  :confidence :construction-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "derive-improper-integrability-from-a-monotone-antiderivative-limit"
+  :lane :solve-lane
+  :level :lemma-location
+  :status :draft
+  :body
+  {:hook
+   "For a nonnegative derivative on a half-line, a finite limit of its antiderivative can establish both integrability and the improper-integral value; no prior integrability hypothesis is needed."
+   :how-to-apply
+   ["Construct an explicit antiderivative `G` and prove `HasDerivAt G f x` on the positive half-line."
+    "Prove the integrand `f` is pointwise nonnegative there."
+    "Calculate the base value `G 0`."
+    "Prove `G → L` at `+∞`; normalize rational logarithm arguments by the highest power, use continuity of `log` at one, and compose the standard arctangent limit when needed."
+    "Apply `integral_Ioi_of_hasDerivAt_of_nonneg'` to obtain the half-line integral and its integrability from the derivative and finite-limit data."
+    "Finish by normalizing `L-G 0` algebraically."]
+   :key-api
+   ["integral_Ioi_of_hasDerivAt_of_nonneg'"
+    "tendsto_inv_atTop_zero"
+    "tendsto_pow_atTop"
+    "Real.continuousAt_log"
+    "Real.tendsto_arctan_atTop"]
+   :contrast
+   "Unlike a theorem that assumes a Bochner integral bound without integrability, this FTC interface proves integrability as an output before identifying the value and is therefore not vulnerable to `integral_undef`."
+   :witness
+   {:declarations ["tendsto_G_atTop" "integral_x7_over_1_plus_x12"]
+    :commit "42acf6dc98894566dfe1924adeafb49f097f8d16"
+    :all-file-declarations 10
+    :sorryAx false
+    :statement-integrity :intact}
+   :rule
+   "When evaluating a nonnegative improper integral, prefer an FTC theorem that derives integrability from a finite antiderivative limit over a route that first assumes or separately reconstructs Bochner integrability."
+   :boundary
+   "The interface requires a nonnegative derivative on the half-line and a finite antiderivative limit; sign-changing or conditionally convergent integrals need a different improper-integral formulation."
+   :capture-kind :runner-lemma-location-and-owner-full-file-axiom-verification}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a94A06"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}]
+  :evidence
+  {:turn-round-ids ["e-codexroll-019f9b12-t064"]
+   :receipt-ids ["b832f130-765b-4759-90e9-29bebf8c159c"]
+   :commits ["42acf6dc98894566dfe1924adeafb49f097f8d16"]
+   :problems ["a94A06-improper-integral"]
+   :artifacts
+   ["problems/a94A06/lean/Main.lean:tendsto_G_atTop"
+    "problems/a94A06/lean/Main.lean:integral_x7_over_1_plus_x12"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019f9b12-t064"]}}
+  :confidence :lemma-location-and-full-file-axiom-ground-control-verified
+  :review {:verdict :pending-owner-review}}
+
+ {:name "prove-general-probability-kernel-Lp-contraction-by-integral-Young"
+  :lane :frontier-lane
+  :level :missing-library-bridge
+  :status :draft
+  :body
+  {:hook
+   "Gaussian scaling has reduced the target to averaging `Lᵖ` translations against a fixed probability kernel; the missing bridge is the general finite-`p` Young/Minkowski bound, not translation continuity."
+   :frontier-status :gap-open
+   :exact-target
+   "For `1 ≤ p < ⊤`, an integrable nonnegative kernel `k` with `∫ k = 1`, and `f ∈ Lᵖ`, prove `eLpNorm (fun x ↦ ∫ z, k z * f (x-z)) p volume ≤ eLpNorm f p volume`."
+   :proved-prefix
+   [{:declaration "gaussKernel_integral_eq_one"
+     :axiom-clean true}
+    {:declaration "gaussKernel_integrable"
+     :axiom-clean true}
+    {:declaration "gaussKernel_scale"
+     :axiom-clean true}
+    {:declaration "gaussKernel_neg"
+     :axiom-clean true}
+    {:declaration "gaussConv_eq_integral_unitKernel"
+     :result
+     "`gaussConv t f x = ∫ z, gaussKernel 1 z * f (x-t*z)`"
+     :axiom-clean true}]
+   :candidate-route
+   ["Use the probability measure with density `k` and apply convexity/Jensen to the `p`-power of the averaged translation."
+    "Use Tonelli to exchange the spatial integral and kernel integral."
+    "Apply translation/dilation measure preservation to identify every translated `Lᵖ` norm with that of `f`."
+    "Convert the resulting `p`-power inequality back to `eLpNorm`."
+    "For approximate-identity convergence, dominate the translation difference by the contraction estimate and combine `Continuous.compMeasurePreservingLp` with dominated convergence in the kernel variable."]
+   :available-api
+   ["ConvexOn.map_integral_le"
+    "convexOn_rpow"
+    "Continuous.compMeasurePreservingLp"
+    "Measure.integral_comp_mul_left"
+    "integral_sub_left_eq_self"]
+   :dependency
+   {:problem "a95J08"
+    :declarations ["young_convolution_inequality" "convolution_memLp"]
+    :status :open-cross-problem-dependency
+    :effect "Closing these declarations may directly unblock the contraction and convergence targets in a94A03."}
+   :relation-to-existing
+   {:memory-id "e-codexpilot-integral-minkowski-eLpNorm-bochner"
+    :existing-scope "An integral-Minkowski bridge at exponent `2` for the YoungL2 construction."
+    :new-scope
+    "All finite `p ≥ 1`, with the Gaussian probability-kernel normalization and translation-continuity prefix already proved."
+    :relation :strict-generalization-not-duplicate}
+   :rule
+   "Do not rebuild Gaussian normalization or `Lᵖ` translation continuity; attack the general integral Young/Jensen–Tonelli bridge or import it from a95J08 once that dependency closes."
+   :boundary
+   "The candidate construction is untested in this row. The three new normalization declarations are axiom-clean, but both target theorems remain sorried."
+   :capture-kind :blocked-row-general-Lp-frontier-with-axiom-clean-normalization-prefix}
+  :subjects
+  [#:ref{:type :mission, :id "M-codex-sorry-loop"}
+   #:ref{:type :apm-problem, :id "a94A03"}
+   #:ref{:type :apm-problem, :id "a95J08"}
+   #:ref{:type :construction-target, :id "young-convolution-L1-L2"}
+   #:ref{:type :pattern, :id "math/measure-integration-api"}
+   #:ref{:type :pattern, :id "math/missing-dependency-protocol"}]
+  :evidence
+  {:turn-round-ids
+   ["e-codexroll-019fa2c1-t061"
+    "e-codexroll-019fa2c1-t062"
+    "e-codexroll-019f9b12-t062"]
+   :receipt-ids
+   ["530247de-a2dc-4207-92e6-ae6cea1b7282"
+    "6f43c013-0bc7-4634-9724-ab6513ebb917"]
+   :commits
+   ["0037b66921e80e68bb67e0845f297a6ce4c7975a"
+    "f7be9b7975eecf1a91a07335e954253cc1e08d72"]
+   :problems ["a94A03-gaussian-approximate-identity"]
+   :artifacts
+   ["problems/a94A03/lean/Main.lean:gaussKernel_integral_eq_one"
+    "problems/a94A03/lean/Main.lean:gaussKernel_integrable"
+    "problems/a94A03/lean/Main.lean:gaussKernel_scale"
+    "problems/a94A03/lean/Main.lean:gaussConv_eq_integral_unitKernel"
+    "problems/a94A03/lean/Main.lean:gaussConv_Lp_contraction"
+    "problems/a94A03/lean/Main.lean:gaussConv_tendsto_Lp"]
+   :harvest-status
+   {:local-dry-run-awaiting-store-harvest
+    ["e-codexroll-019fa2c1-t061"
+     "e-codexroll-019fa2c1-t062"
+     "e-codexroll-019f9b12-t062"]}}
+  :confidence :exact-frontier-and-axiom-clean-prefix-owner-verified
+  :review {:verdict :pending-owner-review}}]
