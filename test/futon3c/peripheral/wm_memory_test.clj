@@ -70,16 +70,105 @@
         candidate (get-in result [:projection :candidates 0])]
     (is (= :dark (:status result)))
     (is (= :shared-memory/recall-by-endpoint (:query-code result)))
-    (is (= :futon2.aif.memory-contract/use-receipt
+    (is (= :futon2.aif.memory-contract/wm-projection-receipt
            (:receipt-code result)))
     (is (= ["e-wm-r15"]
-           (get-in result [:memory-use-receipt :memory-use/used-ids])))
+           (get-in result
+                   [:projection-receipt
+                    :wm-projection/projection-selected-ids])))
+    (is (= :algorithmic-selection
+           (get-in result [:projection-receipt :wm-projection/signal])))
+    (is (not-any? #(= "used-ids" (name %))
+                  (keys (:projection-receipt result))))
     (is (false? (:live-ordering-changed? result)))
     (is (= mission (:mission-id candidate)))
     (is (= :mixed-policy-grain
            (get-in candidate
                    [:support-relations 0 :memories 0
                     :memory/body :observation])))))
+
+(deftest decision-identity-is-the-only-outcome-join-key
+  (let [projection
+        (:projection-receipt
+         (wm-memory/dark-candidate-projection
+          {:recall-fn
+           (fn [_ endpoint _]
+             {:ok true :endpoint endpoint :memories [memory]})}
+          [pattern] [edge]
+          {:decision-id "wm-decision-20260731"
+           :session-id "wm-session-20260731"}))
+        check
+        (wm-memory/decision-keyed-external-check-entry
+         {:evidence-id "e-wm-check-20260731"
+          :decision-id "wm-decision-20260731"
+          :author "wm/test-independent-checker"
+          :session-id "wm-check-session-20260731"
+          :at "2026-07-31T09:00:00Z"
+          :outcome :pass
+          :witness-status :independently-witnessed
+          :checker "test-only independent checker fixture"})
+        triple (wm-memory/witnessed-projection-triple projection check)]
+    (is (= :offered-projection-selected-witnessed
+           (:wm-outcome-triple/type triple)))
+    (is (= "wm-decision-20260731"
+           (:wm-outcome-triple/decision-id triple)))
+    (is (= ["e-wm-r15"] (:wm-outcome-triple/offered-ids triple)))
+    (is (= ["e-wm-r15"]
+           (:wm-outcome-triple/projection-selected-ids triple)))
+    (is (= "e-wm-check-20260731"
+           (:wm-outcome-triple/witness-evidence-id triple)))
+    (testing "timestamp or session proximity cannot substitute for identity"
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"decision ids differ"
+           (wm-memory/witnessed-projection-triple
+            projection
+            (assoc-in check [:evidence/subject :ref/id]
+                      "another-decision")))))
+    (testing "the append-only 2026-07-23 mission-keyed check stays unjoinable"
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"exact decision subject"
+           (wm-memory/witnessed-projection-triple
+            projection
+            {:evidence/id "e-phase4-wm-r15-check-20260723"
+             :evidence/subject
+             {:ref/type :mission
+              :ref/id "M-wm-strategic-mission-selection"}
+             :evidence/type :pattern-outcome
+             :evidence/claim-type :observation
+             :evidence/author "wm/independent-phase4-checker"
+             :evidence/session-id "wm-phase4-live-20260723"
+             :evidence/at "2026-07-23T12:40:00Z"
+             :evidence/body
+             {:outcome :pass
+              :memory-outcome/witness-status :independently-witnessed
+              :checker "phase4 dark projection review"}
+             :evidence/tags [:war-machine :external-check]}))))))
+
+(deftest decision-keyed-check-writer-does-not-invent-checker-identity
+  (let [store (atom {:entries {} :order []})
+        check {:evidence-id "e-wm-check-write"
+               :decision-id "wm-decision-write"
+               :author "wm/test-checker"
+               :session-id "wm-check-session"
+               :at "2026-07-31T09:05:00Z"
+               :outcome :pass
+               :witness-status :independently-witnessed
+               :checker "test checker fixture"}
+        result
+        (wm-memory/record-decision-keyed-external-check!
+         {:evidence-store store} check)
+        stored (get-in @store [:entries "e-wm-check-write"])]
+    (is (not (contains? result :error/code)))
+    (is (= "wm/test-checker" (:evidence/author stored)))
+    (is (= {:ref/type :decision :ref/id "wm-decision-write"}
+           (:evidence/subject stored)))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"invalid decision-keyed"
+         (wm-memory/decision-keyed-external-check-entry
+          (dissoc check :author))))))
 
 (deftest proposed-and-cross-domain-material-cannot-certify
   (let [cross-domain (assoc memory :memory/domain :mathematics)

@@ -291,7 +291,7 @@
   "Universal reference types for any artifact that can accumulate evidence."
   [:enum :pattern :mission :component :gate :session :agent :thread :evidence
    :proof-path :task :portfolio :arse-thread :library :problem :language :tool
-   :service :script :memory])
+   :service :script :memory :decision])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
