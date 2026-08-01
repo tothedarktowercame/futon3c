@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shlex
 import subprocess
 from collections import defaultdict
 from pathlib import Path
@@ -122,6 +123,9 @@ def candidate_census(clean: set[str]):
     ignored: dict[tuple[str, str], set[str]] = defaultdict(set)
     for jid in val(ledger, "job-order", []):
         job = jobs.get(jid, jobs.get(K(str(jid)), {}))
+        finished = str(val(job, "finished-at", ""))
+        if finished and finished[:19] > ROLLOUT_CUTOFF:
+            continue
         result = val(job, "result", "")
         if not isinstance(result, str) or "Memory usage" not in result:
             continue
@@ -151,11 +155,26 @@ def reachability_checks() -> list[dict]:
         cmd = ["git", "grep", "-n", "-i", "-E", pattern, BASE_REV, "--", scope]
         p = subprocess.run(cmd, cwd=APM, text=True, capture_output=True)
         assert p.returncode == 1 and not p.stdout
-        checks.append({"command": " ".join(cmd), "result": "no matches"})
+        checks.append({"command": shlex.join(cmd), "result": "no matches"})
     mathlib_cmd = ["rg", "-n", "-i", patterns[1], ".lake/packages/mathlib/Mathlib"]
     p = subprocess.run(mathlib_cmd, cwd=APM, text=True, capture_output=True)
     assert p.returncode == 1 and not p.stdout
-    checks.append({"command": " ".join(mathlib_cmd), "result": "no matches"})
+    checks.append({"command": shlex.join(mathlib_cmd), "result": "no matches"})
+    return checks
+
+
+def cancellation_checks() -> list[dict]:
+    commands = [
+        ["rg", "-n", "theorem integrable_of_integral_eq_one",
+         ".lake/packages/mathlib/Mathlib/MeasureTheory/Integral/Bochner/Basic.lean"],
+        ["rg", "-n", "contDiffWithinAt_omega_iff_analyticWithinAt|ContDiffWithinAt.*∞",
+         ".lake/packages/mathlib/Mathlib/Analysis/Calculus/ContDiff/Defs.lean"],
+    ]
+    checks = []
+    for cmd in commands:
+        p = subprocess.run(cmd, cwd=APM, text=True, capture_output=True)
+        assert p.returncode == 0 and p.stdout.strip()
+        checks.append({"command": shlex.join(cmd), "result": p.stdout.strip()})
     return checks
 
 
@@ -175,6 +194,7 @@ def main() -> None:
     clean = hole_free_problem_ids()
     pairs, ignored, jobs = candidate_census(clean)
     checks = reachability_checks()
+    rejected_checks = cancellation_checks()
 
     for rev in (BASE_REV, CLOSE_REV, "953a06fd734e3d0bab57c8776bdffa86b2498d6b"):
         run("git", "cat-file", "-e", f"{rev}^{{commit}}", cwd=APM)
@@ -232,6 +252,7 @@ def main() -> None:
             "reachability-checks": checks,
         },
         "candidate-adjudications": rows,
+        "worked-cancellation-checks": rejected_checks,
     }
     OUT_EDN.write_text(edn(artifact) + "\n")
 
@@ -300,9 +321,15 @@ This case has a real failure and later memory use, but fails criterion (a).
    `ContDiff ... ⊤` is analytic while `ContDiff ... ∞` is smooth. The operative
    content is therefore repository-searchable; this is not a strong isolation pair.
 
+The reproducer verifies those cancellation hits with:
+
+```text
+{chr(10).join('$ ' + c['command'] for c in rejected_checks)}
+```
+
 ## Incidental-arm candidates for the nominated problem
 
-The arrival receipt records the following surfaced-and-ignored memories on a95J01:
+The arrival/use receipts record the following surfaced-and-ignored memories on a95J01:
 
 {chr(10).join('- `' + x + '`' for x in in_side)}
 
