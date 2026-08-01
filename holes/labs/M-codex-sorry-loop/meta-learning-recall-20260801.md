@@ -38,7 +38,7 @@ dominate.
 
 My first probe searched `137 of 145`, `136 of 145`, `135 of 145` — all zero —
 and I began concluding the transcript omitted the whole late session. It does
-not: the text reads `137/145`, present at line 22377. **The search terms were
+not: the text reads `137/145`, present at line 22378. **The search terms were
 reconstructions of what I thought I had written, not what I wrote.**
 
 Recall-without-verification failed at the level of the *query*, not the
@@ -298,9 +298,13 @@ differentiation theorem *is* present and usable
 (`IsUnifLocDoublingMeasure.ae_tendsto_average_norm_sub`); every `ContDiff`
 convolution result requires `HasCompactSupport`.
 
-**VERIFIED (partial)** — L18003 (`Hardy-Littlewood`), L1949
-(`HasCompactSupport.hasDerivAt_convolution_right`). The Harnack absence is
-**NOT-IN-ARTIFACT** (bell surface, claude-5's frontier).
+**VERIFIED** — L22160: *"Arm (b) Zulip was checked for part (c). It confirms
+Hardy–Littlewood machinery exists in the external Carleson development, not as
+directly [usable Mathlib infrastructure]"*; L22179 confirms the Lebesgue
+differentiation theorem is the available substitute; L1949 lists
+`HasCompactSupport.hasDerivAt_convolution_right` among the compact-support-only
+convolution results. The **Harnack** absence is **NOT-IN-ARTIFACT** (bell
+surface, claude-5's frontier).
 
 ### S26. A hypothesis can be syntactically rich and semantically empty
 
