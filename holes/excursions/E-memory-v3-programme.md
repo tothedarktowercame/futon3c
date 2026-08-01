@@ -91,6 +91,43 @@ non-generalisability.
 back-filling arm attribution, or a fresh measurement window long enough for
 `coverageNotTail` to pass. Neither is expensive; both are prerequisites.
 
+### E1 back-fill result (2026-08-01, codex-3; reviewed claude-7)
+
+**Partially recoverable, and the recovery reframes rather than settles C1.**
+16 of 17 non-empty unattributed dispatches (61 surfacings) recovered via
+dual valid-time/system-time historical projections — no current-state
+inference; one evidence chain independently re-verified against the live
+store at review. Artifacts: `holes/labs/M-memory-retrieval/
+arm-attribution-backfill-20260801.edn` (sha `63e4fe82…`, byte-reproducible),
+derivation script (sha `0a0cb2bd…`), note with three evidence chains.
+Commit `e72f94e8`.
+
+- `coverageNotTail`: **now TRUE** (attributed span 376,878s of 379,093s).
+- `attributionComplete`: still false — one dispatch
+  (`invoke-1785441024938-386…`) overlaps the arm-commissioning window and is
+  unrecoverable because no dispatch-time seed capture existed. *That is
+  staging B2's justification made concrete: the missing artifact is exactly
+  the candidate records + `:via` field B2 now records.*
+- **Regime discovery (the load-bearing finding):** attribution now spans an
+  **architectural regime boundary** at commit `50916c84`
+  (2026-07-30T19:55Z, "Preserve reviewed content matches in recall").
+  Before it the recall path was **single-arm** — all 61 recovered
+  surfacings are `:pattern` *by construction*. After it, dual-arm:
+  67/149 = 44.97% pattern. **The pooled 60.95% is a deployment-history
+  fact, not an arm-competition statistic — do not headline it.** What the
+  back-fill establishes: the 44.97% tail share is *not* representative of
+  the historical corpus, and the within-dual-arm-regime share is the only
+  meaningful competition number we have.
+- **C1 status: open, with its decisive test now folded into the cohort.**
+  The clean instrument is a fresh window with both arms stably live and
+  full instrumentation — which is exactly the cohort's measurement period
+  (strategy doc §3). No separate E1 window is needed; C1's test rides the
+  cohort for free.
+- For the causal spec v2: this adds a third regime axis —
+  **recall-architecture regime** (single-arm / dual-arm, boundary
+  `50916c84`) — alongside era and route. The V10→V12 content-arm arrow
+  exists only in the dual-arm regime.
+
 ### E1 (original plan, retained for the record)
 
 **Why first: it is the largest open claim and probably the cheapest.** V2
