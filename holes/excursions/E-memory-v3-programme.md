@@ -247,6 +247,14 @@ a prose lane confounds model with instrumentation. Sequence last.
 
 **This section is the resumption point. Everything above is context.**
 
+> **Resourcing and strategy now live in `E-memory-resourcing-and-strategy.md`**
+> (2026-08-01, after zai unlock): the instrument-before-dispatch ordering
+> constraint, the 356-problem backlog run as a preregistered randomized
+> cohort (V3's headline result), E4/E6/C7 consolidated into subgroup
+> contrasts of that cohort, and lane reservation for E2. The table below
+> remains the per-experiment status ledger; that doc owns how the programme
+> shares runners, tokens and problems with the live loop.
+
 | | status | next action | blocked on |
 |---|---|---|---|
 | **E1** | **RUN.** `patternArmSubstantial` 44.97%, but both observables false — covers 6.57% of the corpus by elapsed time | back-fill arm attribution, or open a window long enough for `coverageNotTail` to pass | nothing — cheap, and it is what would settle C1 |
