@@ -28,6 +28,14 @@ STORE = "http://127.0.0.1:7073/api/alpha/evidence"
 EDN_OUT = HERE / "panel-cancellation-check-20260801.edn"
 MD_OUT = HERE / "panel-cancellation-check-20260801.md"
 HASH_OUT = HERE / "panel-cancellation-check-20260801.sha256"
+INPUTS = {
+    "candidate": HERE / "load-bearing-candidates-20260731.jsonl",
+    "candidate-report": HERE / "load-bearing-candidates-20260731-report.md",
+    "receipts": HERE / "receipts-export-20260731-all-authors.edn",
+    "queue": FUTON3C / "data/codex-sorry-queue.edn",
+    "staging": FUTON3C / "holes/excursions/E-memory-v3-staging.md",
+    "causal-spec": FUTON3C / "docs/memory-causal-graph-spec.json",
+}
 
 
 PAIRS = [
@@ -159,7 +167,8 @@ def archive_revision(revision: str, target: Path) -> None:
 
 
 def search(pattern: str, root: Path) -> str:
-    output = run(["rg", "--no-heading", "-n", "-m", "12", "-i", pattern, str(root)])
+    output = run(["rg", "--no-heading", "--sort", "path", "-n", "-m", "12", "-i",
+                  pattern, str(root)])
     if not output:
         return "(no hits)"
     return output.replace(str(root) + os.sep, "")
@@ -169,13 +178,16 @@ def q(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def render_edn() -> str:
+def render_edn(input_hashes: dict[str, str]) -> str:
     lines = [
         "{:schema-version 1",
         ' :generated-at "2026-08-01"',
         ' :candidate-source "holes/labs/M-memory-retrieval/load-bearing-candidates-20260731.jsonl"',
         ' :candidate-provenance :used-memory-candidates-not-adjudicated',
         ' :provenance-warning "The named source report explicitly says no adjudication was performed; LB/IN labels are unavailable."',
+        " :input-sha256 {" + " ".join(
+            f":{name} {q(digest)}" for name, digest in input_hashes.items()
+        ) + "}",
         " :pairs [",
     ]
     for p in PAIRS:
@@ -200,7 +212,8 @@ def render_edn() -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_markdown(searches: dict[tuple[str, str], dict[str, str]]) -> str:
+def render_markdown(searches: dict[tuple[str, str], dict[str, str]],
+                    input_hashes: dict[str, str]) -> str:
     rows = []
     for p in PAIRS:
         short = p["memory"].removeprefix("e-codexpilot-")
@@ -265,6 +278,7 @@ is a panel-construction gap, not evidence that any invented pair is incidental.
   futon3c prose for reachability.
 - Memory bodies were verified by read-only GETs on port 7073. No dispatch or
   store-write endpoint was called.
+- Frozen input hashes: {', '.join(f'`{name}` `{digest}`' for name, digest in input_hashes.items())}.
 - `:reachable-cheaply` means the base problem names the operative theorem or
   route under an obvious query. `:reachable-with-route-knowledge` follows G6:
   the hit exists, but only vocabulary from the successful route exposes it.
@@ -289,9 +303,18 @@ explicitly marked weak and without a predicted beneficial direction.
 
 
 def derive() -> None:
-    candidate_report = HERE / "load-bearing-candidates-20260731-report.md"
+    candidate_report = INPUTS["candidate-report"]
     if "No adjudication was performed" not in candidate_report.read_text():
         raise RuntimeError("candidate provenance warning changed")
+    candidate_rows = [json.loads(line) for line in INPUTS["candidate"].read_text().splitlines()]
+    for p in PAIRS:
+        if not any(row["memory id"] == p["memory"] and
+                   row["problem id"].lower().startswith(p["problem"].lower())
+                   for row in candidate_rows):
+            raise RuntimeError(f"unsupported pair: {p['problem']} / {p['memory']}")
+    if any(row["problem id"].lower().startswith("a93j07") for row in candidate_rows):
+        raise RuntimeError("a93J07 gap changed: candidate row now exists")
+    input_hashes = {name: sha256(path) for name, path in INPUTS.items()}
     searches: dict[tuple[str, str], dict[str, str]] = {}
     for p in PAIRS:
         verify_store(p["memory"])
@@ -309,8 +332,8 @@ def derive() -> None:
             if p.get("mathlib_query"):
                 evidence["mathlib"] = search(p["mathlib_query"], MATHLIB)
             searches[(p["problem"], p["memory"])] = evidence
-    EDN_OUT.write_text(render_edn())
-    MD_OUT.write_text(render_markdown(searches))
+    EDN_OUT.write_text(render_edn(input_hashes))
+    MD_OUT.write_text(render_markdown(searches, input_hashes))
     manifest = "".join(
         f"{sha256(path)}  {path.name}\n"
         for path in (EDN_OUT, MD_OUT, Path(__file__))
