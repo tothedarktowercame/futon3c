@@ -15,11 +15,11 @@
 (deftest trace-partitions-dispatches
   (let [document
         {:entries
-         [(offered "attributed" "attributed" :ok ["m1"]
+         [(offered "2026-01-01T00:00:00Z" "attributed" :ok ["m1"]
                    [{:memory-id "m1" :via :pattern}])
-          (offered "empty" "empty" :recall-empty [] [])
-          (offered "unattributed" "unattributed" :ok ["m2"] [])
-          (assoc-in (offered "unusable" "unusable" :recall-empty [] [])
+          (offered "2026-01-01T00:00:01Z" "empty" :recall-empty [] [])
+          (offered "2026-01-01T00:00:02Z" "unattributed" :ok ["m2"] [])
+          (assoc-in (offered "2026-01-01T00:00:03Z" "unusable" :recall-empty [] [])
                     [:evidence/body :recall-query] nil)]}
         trace (e1/extract-trace document)]
     (is (= ["empty"] (:empty-dispatches trace)))
@@ -29,6 +29,8 @@
            (:surfacings trace)))
     (is (= 0 (:earliest-attributed-index trace)))
     (is (= 4 (:total-dispatches trace)))
+    (is (= 3 (:corpus-span-seconds trace)))
+    (is (= 3 (:attributed-span-seconds trace)))
     (is (= ["unattributed"] (:unattributed-non-empty trace)))
     (is (= ["unusable"] (:unusable trace)))))
 
@@ -37,16 +39,16 @@
        clojure.lang.ExceptionInfo
        #"not every offered receipt"
        (e1/extract-trace
-        {:entries [(offered "bad" "bad" :ok [] [])]}))))
+        {:entries [(offered "2026-01-01T00:00:00Z" "bad" :ok [] [])]}))))
 
 (deftest observables-are-non-vacuous
   (testing "an unattributed non-empty dispatch fails attribution completeness"
     (is (false? (e1/attribution-complete?
                  {:unattributed-non-empty ["blind-spot"]}))))
-  (testing "a first attribution at index 99 of 129 fails the registered coverage check"
+  (testing "a 24,800 second window fails to cover half a 379,000 second corpus"
     (is (false? (e1/coverage-not-tail?
-                 {:earliest-attributed-index 99
-                  :total-dispatches 129})))))
+                 {:attributed-span-seconds 24800
+                  :corpus-span-seconds 379000})))))
 
 (deftest registered-classification-boundaries
   (testing "fewer than twenty surfacings is indeterminate"

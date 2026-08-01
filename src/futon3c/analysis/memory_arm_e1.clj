@@ -3,9 +3,10 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io])
   (:import [java.math BigInteger]
-           [java.security MessageDigest]))
+           [java.security MessageDigest]
+           [java.time Duration Instant]))
 
-(def extractor-version "2")
+(def extractor-version "3")
 
 (defn- sha256-file [path]
   (let [digest (MessageDigest/getInstance "SHA-256")]
@@ -22,8 +23,11 @@
   (->> (:entries document)
        (filter #(= :offered (get-in % [:evidence/body :phase])))
        (sort-by :evidence/at)
-       (map :evidence/body)
+       (map #(assoc (:evidence/body %) ::at (:evidence/at %)))
        vec))
+
+(defn- span-seconds [start end]
+  (.getSeconds (Duration/between (Instant/parse start) (Instant/parse end))))
 
 (defn- surfaced-ids [body]
   (get-in body [:memory-use :memory-use/surfaced-ids]))
@@ -75,6 +79,14 @@
                                    (when (attributed? body) index))
                                  bodies))
             (count bodies))
+        corpus-span-seconds
+        (if (seq bodies)
+          (span-seconds (::at (first bodies)) (::at (last bodies)))
+          0)
+        attributed-span-seconds
+        (if (seq attributed)
+          (span-seconds (::at (first attributed)) (::at (last bodies)))
+          0)
         classified-ids (concat (map :job-id attributed)
                                (map :job-id empty-dispatches)
                                (map :job-id unattributed-non-empty)
@@ -88,6 +100,8 @@
     (when-not (= (count classified-ids) (count (distinct classified-ids)))
       (throw (ex-info "trace dispositions overlap" {})))
     (sorted-map
+     :attributed-span-seconds attributed-span-seconds
+     :corpus-span-seconds corpus-span-seconds
      :empty-dispatches (mapv :job-id empty-dispatches)
      :earliest-attributed-index earliest-attributed-index
      :surfacings
@@ -107,8 +121,8 @@
   (empty? (:unattributed-non-empty trace)))
 
 (defn coverage-not-tail? [trace]
-  (< (* 3 (:earliest-attributed-index trace))
-     (* 2 (:total-dispatches trace))))
+  (<= (:corpus-span-seconds trace)
+      (* 2 (:attributed-span-seconds trace))))
 
 (defn classify [trace]
   (let [surfacings (:surfacings trace)
@@ -135,8 +149,10 @@
               :attribution-complete? (attribution-complete? trace)
               :attributed-dispatches
               (count (distinct (map :dispatch-id surfacings)))
+              :attributed-span-seconds (:attributed-span-seconds trace)
               :classification (classify trace)
               :content-match-surfacings content-count
+              :corpus-span-seconds (:corpus-span-seconds trace)
               :coverage-not-tail? (coverage-not-tail? trace)
               :empty-dispatches (count (:empty-dispatches trace))
               :earliest-attributed-index (:earliest-attributed-index trace)
