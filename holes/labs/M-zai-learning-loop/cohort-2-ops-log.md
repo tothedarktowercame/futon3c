@@ -31,3 +31,48 @@ register = countable events per charter.
 ⊸fix [rendering] summarize now payload-first: :content.lemma + supporting-lemmas + location + use render before narration. Verified: Basel dry-run summary now leads with Real.hasSum_zeta_two + both bridges. The store was never the gap — the last mile was.
 ⊸win [MT2] mint-seam micro-test: recall-empty receipt carries populated :mint-candidates (new b2b8c62 machinery) — the reason-bearing none is live. Candidates still include packet boilerplate for synthetic packets; acceptable, noted.
 ⊸meter [routemap] remainder status after today: mint receipts LANDED (wire + dispatch side); per-relation-type precision = ledger LANDED (S6 audit), application = claude-6 design boundary.
+
+## 2026-08-01 — scheduled resumption BLOCKED (claude-4, ground control)
+
+⊸meter [seats] **zai-5 is not on the roster, and there are NO zai seats at all.**
+27 agents registered (claude×8, codex×10, lon-/chi- proxies×9); zero zai. Both
+remaining rows (S3 a96J01, S6 a96A04) dispatch to zai-5. Verification step 1 of
+cohort-2-RESUME.md fails; nothing downstream can run. Seating is
+`scripts/zai-picker`, which drives the live Emacs via emacsclient — an operator
+surface, not a headless spawn. NOT run unilaterally on a Saturday morning.
+
+⊸meter [quota] **The weekly Claude pool has not reset.** cohort-2-RESUME.md
+records the reset as 2026-08-01 09:48, written 07-27 as an estimate. The live
+usage API says `weekly_all` resets **2026-08-01T14:00Z**; it is 09:06Z. The
+resumption bell fired ~5h early, on the written estimate rather than the meter.
+`five_hour` is 4.0% (ample); `weekly_all` utilization reports null, so the
+weekly pool cannot be confirmed to have room. Gate says wait.
+
+⊸win [precondition] YoungL2 Amendment 3 CONFIRMED against git, not memory:
+`ce77d41` ("prove L2 Young inequality via weighted Cauchy-Schwarz"), 0 sorries
+in file, chain 071e4de → 8208ca7 → ce77d41. S6's cross-lane payoff precondition
+holds. Amendment 2's axiom-level check still to run at S6 verification.
+
+⊸meter [store] :7073 evidence endpoint 200. :7074 not serving (000) — the
+RESUME doc's port is correct.
+
+⊸meter [tree] apm-lean clean but for one untracked `ApmCanaries/Current.lean.bak`;
+HEAD 9391029. problems/a96J01 and problems/a96A04 both present.
+
+⊸prop [dispatch-gate] The resumption bell carried a *written* reset time that was
+~4h wrong. A scheduled resumption should gate on the live usage meter, not on an
+estimate recorded days earlier — same class as the ⊸prop on packet-template
+checks: this error is lintable. Proposal: the resumption cron reads
+`five_hour` + `weekly_all` before firing, and re-arms rather than waking a
+ground-control seat that can only report back that it is too early.
+
+⊸miss [design] Cohort 2's remaining rows are single-seat-dependent with no
+recorded fallback. The prereg fixes zai as the subject (codex rows never enter
+cohort-2 counting), which is correct experimentally — but it means seat
+availability is an unmodelled precondition of the cohort completing at all, and
+nothing checks it until dispatch time. Worth a precondition row in future
+preregs.
+
+**State: cohort 2 remains at 2 rows outstanding (S3, S6). No rows attempted, no
+retries consumed, no quota spent on dispatch.** Re-arm after 14:00Z with a zai
+seat present.
