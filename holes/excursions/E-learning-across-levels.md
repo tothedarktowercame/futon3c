@@ -20,6 +20,26 @@ ground-control agent hand-wrote a close-out note. Classified by level:
 | **L2 — process/topology** | how the agents coordinate | triangle review — the runner leg carried the gate, both ground controls shipped false specs caught by neither reviewer (E1); job-cap/commit-incrementally (residual D1); park-surface trap (D2) | ops registers, CLAUDE.md edits, MEMORY.md — prose, unindexed, unsurfaced |
 | **L3 — norm/conative** | what counts as a problem at all | stale absence-prose blocks work (E4); write-side duplication invisible until the norm was authored (E8; staging §I3: *"the norm did not emerge from the encounters; it had to be written"*) | R1–R4 in construction-targets.md; the ⊸ register; nowhere queryable |
 
+**Taxonomy rulings (2026-08-01, from the recall pass's misfits — see
+`meta-learning-recall-20260801.md` §5):**
+
+- **Classification is by the level of the LESSON, not the defect** (M2). A
+  build fact (L0 defect) whose lesson is "proved-gated-unreachable is worth
+  nothing" classifies where the lesson lands.
+- **Cross-level edges are first-class** (M1): an L1 instrument fault
+  producing an L0 false claim reported to the operator is an *edge*, and
+  several of the session's worst moments were edges, not nodes. Record them
+  as `Lx→Ly` rather than forcing a node label.
+- **The meta-loop needs its own slot** (M3): findings about the apparatus
+  used to study learning (e.g. §0 of the recall artifact) are not L1 of the
+  loop. Marked `meta` pending a better name — leaving them unplaced would
+  repeat the L0-only blindness one level up.
+- **L4 — operator/strategic** (M4): operator-steering signals (a throughput
+  remark flipping serial→parallel; authorisation gating statement repair;
+  "no bells or whistles") are neither agent-authored norms nor inter-agent
+  coordination. Kept distinct because WM already has an operator-lane
+  concept this should eventually meet.
+
 Two structural observations:
 
 1. **Instrumentation coverage is monotone decreasing in level.** L0 has a
@@ -68,17 +88,25 @@ that generalizes off the compiler case.
 
 ## 4. Bounded next steps (no mission yet)
 
-1. **Recall pass over the claude-9 session** — dispatched 2026-08-01 to
-   claude-9 itself (whose continuity context held the session), against the
-   secured transcript
-   `holes/labs/M-codex-sorry-loop/claude-9-transcript-20260801.txt`
-   (22,402 lines, sha256 `51d7992f…`). Deliverable: recalled signals *not*
-   already in the residual's Part E, classified by level, each marked
-   verified-against-transcript or reconstruction. Per
-   [[feedback_reconstruct_not_reproduce]]: recall without verification is
-   reconstruction; the transcript is what makes it checkable.
-2. **Measure the level distribution** of what comes back. If L1–L2 dominate
-   (predicted), that is the quantitative case for the WM capability.
+1. **Recall pass over the claude-9 session** — **DONE 2026-08-01**
+   (`meta-learning-recall-20260801.md`, commits `fc32f385`/`00ef0cc7`;
+   reviewed by claude-7, three anchors independently re-verified). 27
+   signals, none overlapping Part E; **zero pure reconstructions** — every
+   signal either transcript-anchored (20) or verifiable in a named
+   committed file (7 `NOT-IN-ARTIFACT`).
+   *Instrument caveat, discovered by the pass itself:* the secured
+   transcript is **surface-partial** — emacs-repl only, no bell surface —
+   so it is systematically blind to inter-agent coordination, *which is
+   where L2 lives*. Six of the seven not-in-artifact signals are L2/L3.
+   The instrument secured to measure the level distribution under-samples
+   the level predicted to dominate — V2 §1.1's thesis, reproduced in the
+   meta-loop on its first outing. (Second instrument finding: recall
+   failed at the *query* — searching `137 of 145` for text that reads
+   `137/145` — one rung below where reconstruct≠reproduce usually bites.)
+2. **Measure the level distribution** — **DONE, prediction confirmed as a
+   floor**: L1 (11) + L2 (7) = **18 of 27 = 67%**, from an instrument that
+   under-samples L2 by construction. The quantitative case for the WM
+   capability is made; the honest number is "at least two-thirds."
 3. **Fold into the V3 cohort**: the cohort's receipts will capture L0. A
    cheap L1 addition — a `:defect-location {instrument|data}` field on
    experiment review findings — would start the L1 ledger for free, since

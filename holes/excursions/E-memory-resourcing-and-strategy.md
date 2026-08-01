@@ -122,7 +122,7 @@ problems" are not seven a95J08s waiting for memory to unlock them:
 |---|---|---|---|
 | A: statement defects | 6 rows | questions about what the problem *says* — await **Joe**, not a runner | case studies of *defect detection* (machine-checked refutations, the vacuity ladder), not of retrieval |
 | A2: a95A08 | 1 | **the one genuine frontier** — global analytic inverse on the disk, missing from Mathlib and Zulip | the only true "memory might unlock it" candidate; also a candidate ConstructionTarget |
-| B: held-out | 4 files | deliberately excluded evaluation set (`bpm-*`) — **do not touch** | an already-reserved hold-out; note for cohort design, do not spend |
+| B: held-out | 4 files | deliberately excluded evaluation set (`bpm-*`) — **do not touch** | an already-reserved hold-out; note for cohort design, do not spend. *Near-miss on record (recall S12): four BPM rows sat `:untouched` in the queue the selector reads while the hold-out norm lived only in mission prose — caught and made cron-unreachable in-session. The cohort's hold-outs must be excluded in the selector, not the doc.* |
 | C: dup-debt | 2 modules | copy-built library modules | **E7's ground truth, strengthened**: `LemniscateComponents` is duplication with *zero* delivered value (23/24 shared declarations, unique lemma referenced nowhere, target problem closed without it) — a sharper witness than LusinN |
 
 **The meta-lesson is itself a learning-across-levels datum**: a mature
