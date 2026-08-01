@@ -171,7 +171,11 @@ def search(pattern: str, root: Path) -> str:
                   pattern, str(root)])
     if not output:
         return "(no hits)"
-    return output.replace(str(root) + os.sep, "")
+    normalized = output.replace(str(root) + os.sep, "")
+    lines = normalized.splitlines()
+    if len(lines) > 12:
+        lines = lines[:12] + [f"... ({len(normalized.splitlines()) - 12} additional hits omitted)"]
+    return "\n".join(lines)
 
 
 def q(value: str) -> str:
