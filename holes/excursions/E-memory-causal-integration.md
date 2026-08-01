@@ -124,7 +124,9 @@ proceed regardless.
    (Q1 cohort identification, Q2 E2-under-surgery + mediation, Q3
    filter-equivalence d-separation on both topologies, with a falsifiable
    divergence prediction). Verified valid JSON and acyclic; roots = exogenous
-   contexts + interventions, sinks = the t+1 states. Awaiting their encoding.
+   contexts + interventions, sinks = the t+1 states. **Delivered 2026-08-01
+   via the Matrix federation-proof room (Ement): both files + an intro
+   message naming the three receipts as the ask.** Awaiting their encoding.
 3. Ask their side for the worked route-as-moderator example — **sharpened by
    §6.4**: the natural encodings are route-as-explicit-variable (their
    requirement 9-style context node) or route-as-regime (their transport
