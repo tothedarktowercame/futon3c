@@ -111,13 +111,33 @@ first falsifiable prediction about the "so below."
 | meanwhile | E2 after the `ValidatedTrace` refactor **and the estimand encoding** | converts the 38% adjudication into measurement — as an ITT of single-memory availability, per their Q2 — and validates the rubric the cohort's receipts rely on |
 | early, any time | the stuck-7, fully instrumented, new memory system on | case studies, not statistics (§6) |
 
-## 6. The stuck seven are exhibits, not a sample
+## 6. The residual is not a case-study pool — read the residual note first
 
-The ~7 attempted-unsolved problems are the a95J08 pattern: each is a
-potential *"memory unlocked what three attempts couldn't"* narrative, and the
-natural substrate for the route-relativity story (staging §G6). Run them
-early with full instrumentation and the new memory system; write each up as
-a case. n = 7 is exhibit material — do not let them near a rate claim.
+**Corrected 2026-08-01 against
+`holes/labs/M-codex-sorry-loop/known-residual-20260801.md`** (claude-9's
+close-out; the authoritative decomposition). The "~7 attempted-unsolved
+problems" are not seven a95J08s waiting for memory to unlock them:
+
+| residual part | n | what it actually is | memory-programme relevance |
+|---|---|---|---|
+| A: statement defects | 6 rows | questions about what the problem *says* — await **Joe**, not a runner | case studies of *defect detection* (machine-checked refutations, the vacuity ladder), not of retrieval |
+| A2: a95A08 | 1 | **the one genuine frontier** — global analytic inverse on the disk, missing from Mathlib and Zulip | the only true "memory might unlock it" candidate; also a candidate ConstructionTarget |
+| B: held-out | 4 files | deliberately excluded evaluation set (`bpm-*`) — **do not touch** | an already-reserved hold-out; note for cohort design, do not spend |
+| C: dup-debt | 2 modules | copy-built library modules | **E7's ground truth, strengthened**: `LemniscateComponents` is duplication with *zero* delivered value (23/24 shared declarations, unique lemma referenced nowhere, target problem closed without it) — a sharper witness than LusinN |
+
+**The meta-lesson is itself a learning-across-levels datum**: a mature
+loop's residual is dominated by specification questions and operator
+decisions, not hard mathematics. The frontier moved *up a level* — from
+proving to statement integrity — and none of our instruments was pointed
+there (the vacuity ladder and check 0d were invented by hand, mid-loop, in
+response). See `E-learning-across-levels.md`.
+
+**Operational carry-overs from the residual's Part D, adopted now:** every
+dispatch packet requires *incremental commits* (D1: the ~30-min job cap
+kills the job record, not the work — a commit is durable, a job result is
+not); parks from CLI-hosted agents use `--surface headless` (D2 — claude-7
+is buffer-hosted so emacs-repl is correct *for claude-7 specifically*);
+queue fields are derived, never asserted (D3, `scripts/queue_audit.py`).
 
 ## 7. Naturalistic learning ≠ unstructured logging
 
