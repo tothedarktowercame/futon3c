@@ -105,9 +105,10 @@ first falsifiable prediction about the "so below."
 | now | recording-side repairs A1, B2, B4, B5, A4, A3 | must precede any backlog dispatch (§2) |
 | now | **reserve 2–3 never-exposed lanes for E2** | lane freshness only degrades; every backlog dispatch spends it |
 | next | one bounded mining audit of the legacy meta-learning logs | informs the typed fields; see §7 |
-| next | preregister the cohort (arms per C1; Rob's predictions if ready) | the registration is the paper's spine |
+| next | **encode the DAG + measurement/missingness layer + estimands in Rob's engine** | added 08-01 from their reply (`E-memory-causal-integration.md`): "could genuinely alter what E2 identifies"; also supplies the cohort's mediation secondaries |
+| next | preregister the cohort (arms per C1; Rob's predictions if ready; **primary estimand = ITT of memory availability**) | the registration is the paper's spine |
 | then | run the backlog as the cohort; zai + codex both draw from it | E4, E6, C7 collapse into subgroup contrasts of one design (§8) |
-| meanwhile | E2 after the `ValidatedTrace` refactor | converts the 38% adjudication into measurement; validates the rubric the cohort's receipts rely on |
+| meanwhile | E2 after the `ValidatedTrace` refactor **and the estimand encoding** | converts the 38% adjudication into measurement — as an ITT of single-memory availability, per their Q2 — and validates the rubric the cohort's receipts rely on |
 | early, any time | the stuck-7, fully instrumented, new memory system on | case studies, not statistics (§6) |
 
 ## 6. The stuck seven are exhibits, not a sample

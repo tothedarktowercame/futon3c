@@ -258,7 +258,7 @@ a prose lane confounds model with instrumentation. Sequence last.
 | | status | next action | blocked on |
 |---|---|---|---|
 | **E1** | **RUN.** `patternArmSubstantial` 44.97%, but both observables false — covers 6.57% of the corpus by elapsed time | back-fill arm attribution, or open a window long enough for `coverageNotTail` to pass | nothing — cheap, and it is what would settle C1 |
-| **E2** | **designed, validated, builds clean; NOT run** | the `ValidatedTrace` refactor (staging §H6) | that refactor; then the runner-as-`apmablate` dispatch path |
+| **E2** | **designed, validated, builds clean; NOT run** | the `ValidatedTrace` refactor (staging §H6); then encode DAG + estimands with Rob's engine (`E-memory-causal-integration.md` §4 — estimand = ITT of single-memory availability, per their Q2) | that refactor; the estimand encoding; then the runner-as-`apmablate` dispatch path |
 | **E5** | not started | re-run the a95J08 route-vocabulary comparison with vocabularies chosen *blind* | nothing — cheap, and it discharges a contamination its own author declared |
 | **E7** | not started | duplicate detection over the Lean corpus, calibrated against the 17 `LusinN`/`a95A02` byte-identical proofs | nothing for H1; H2 needs the retrieval threshold to be adjustable |
 | **E3** | not started | build the declaration→module→reachable index | index construction |
