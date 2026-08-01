@@ -280,6 +280,32 @@ def row_problem_id(row: dict[Any, Any]) -> str | None:
     return match.group(1) if match else None
 
 
+def dispatch_blocked_reason(row: dict[Any, Any]) -> str | None:
+    """Why this row must not be dispatched, or None if it may be.
+
+    WHY THIS EXISTS (2026-07-31). `:do-not-redispatch true` is set on rows whose
+    frontier has been VERIFIED blocked -- and nothing consulted it. Neither this
+    selector nor ground control's ad-hoc selection checked the flag, so
+    `construction-deriv-ne-zero-of-injon` (chain-depth 3, frontier verified
+    against Mathlib, flag set) was dispatched anyway and burned a runner slot on
+    a known wall. There is no cancel endpoint, so a mis-dispatch cannot be undone.
+
+    The flag was defeated by a state conflict, not by malice: the row had been
+    REOPENED to `:untouched` because its file still held an executable sorry,
+    which made it selectable again while the guard still said "do not". Reopening
+    must not silently outrank a verified-frontier guard.
+
+    Every selection path must call this. A guard that each caller has to remember
+    is not a guard -- the same lesson count_sorries.sh records about counting
+    sorries by hand.
+    """
+    if row.get(K("do-not-redispatch")) is True:
+        return "do-not-redispatch flag set on the row"
+    if row.get(K("depends-on-problem")) is not None:
+        return "depends-on-problem %s" % row.get(K("depends-on-problem"))
+    return None
+
+
 def choose_row(
     queue: list[dict[Any, Any]], busy_problem_ids: set[str]
 ) -> tuple[int, dict[Any, Any]]:
@@ -293,6 +319,7 @@ def choose_row(
         (index, row)
         for index, row in enumerate(queue)
         if status_name(row) == "untouched"
+        and dispatch_blocked_reason(row) is None
         and not (
             (problem_id := row_problem_id(row)) and problem_id in busy_problem_ids
         )
@@ -376,13 +403,18 @@ def subject_document_frequencies(terms: list[str]) -> tuple[dict[str, int], int]
 def rank_subject_terms(terms: list[str], frequencies: dict[str, int], indexed: int) -> list[str]:
     """Rarest first, stable on ties; discard terms matching over 1/3 of rows."""
     positions = {term: position for position, term in enumerate(terms)}
+    ordered = sorted(terms, key=lambda term: (frequencies[term], positions[term]))
     useful = [
         term
-        for term in terms
+        for term in ordered
         if frequencies[term] * SUBJECT_MAX_DF_SHARE_DENOMINATOR <= indexed
     ]
-    useful.sort(key=lambda term: (frequencies[term], positions[term]))
-    return useful[:SUBJECT_RARITY_CAP]
+    # If EVERY term is too common the row still needs subjects. Returning
+    # nothing sends subjects_for to its bare-problem-id fallback, and the id
+    # appears in almost no document, so it floors any conjunction it enters
+    # (dispatch_with_recall.clj, measured 2026-07-30). Keep the rarest terms
+    # instead: a common term discriminates weakly, an absent one not at all.
+    return (useful or ordered)[:SUBJECT_RARITY_CAP]
 
 
 def subjects_for(row: dict[Any, Any]) -> list[str]:

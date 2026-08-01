@@ -76,3 +76,13 @@ preregs.
 **State: cohort 2 remains at 2 rows outstanding (S3, S6). No rows attempted, no
 retries consumed, no quota spent on dispatch.** Re-arm after 14:00Z with a zai
 seat present.
+
+⊸fix [reply-routing] The resumption bell's header said "To answer in-thread,
+bell/whistle ground-control with in-reply-to=<job>". That instruction is
+unfollowable: `ground-control` is a caller persona, not a registered recipient
+(POST to it returns HTTP 404; it is absent from the 27-agent roster). This is
+the documented agent-not-found class — for such callers the responding agent's
+turn text is the only reply channel, and they poll the job result. Had the bell
+been accepted-then-failed-async instead of 404ing, this report would have gone
+nowhere silently. ⊸prop: bells generated for non-roster callers should not emit
+in-thread reply instructions they cannot honour.

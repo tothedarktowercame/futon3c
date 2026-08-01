@@ -1,201 +1,80 @@
-;; Pay-off per search surface, PER PROBLEM AREA.
-;;
-;; Design (Joe, 2026-07-30): "pay-off per surface would, in a more sophisticated
-;; model, be pay-off-per-surface per problem class. We have evidence that arXiv
-;; was useful before; the fact that it wasn't used this time presumably means it
-;; wasn't needed. More broadly arXiv is kind of the fall-through of a cond — if
-;; all else fails, the answer should be in there, even if it's potentially more
-;; expensive to search for it."
-;;
-;; The packet's rule 2 now encodes exactly that cond:
-;;   (a) components — Loogle / LeanSearch, when the route is already known
-;;   (b) Zulip archive — prior formalization and known Mathlib obstacles
-;;   (c) arXiv — FALL-THROUGH, for when there is no route at all
-;;
-;; CRITICAL DISTINCTION this ledger must preserve, and the reason a global
-;; hit-rate would mislead: a surface that was NOT NEEDED is not a surface that
-;; FAILED. Recording only "arXiv: no anchor" would slowly build a false case
-;; against the most expensive and most complete surface. So every row carries
-;; :arms-tried, :arm-that-paid, and :not-needed separately.
-;;
-;; :area is the terrain pattern the row sits in — the same 7 patterns the memory
-;; corpus is organised by — so this can be grouped by area once n is meaningful.
-;; FIELD SHAPE (Joe, 2026-07-30): this began as a boolean :route-known-at-start?
-;; and that was the wrong shape. A closer MAY inherit a likely route from a
-;; previous session that ran out of time, but that should not be the typical
-;; case -- deferring work that could have been closed directly is lazy for a
-;; closer. So the field is :suggested-route, optional and free-text, carrying a
-;; route only when one genuinely exists, plus :suggested-route-source so we can
-;; tell an inherited plan from one the runner found itself.
-;;
-;; Note run 1's route came from the FILE's own docstring, not from a previous
-;; session -- the mechanism already works informally, which is an argument for
-;; wiring it explicitly rather than inventing it.
-;;
-;; It is NOT meaningful yet: n = 2.
-
-[{:run 1
-  :at "2026-07-30T09:26Z"
-  :problem "a01A02"
-  :declaration "weakL2_implies_L1_bound"
-  :area "math/measure-integration-api"
-  :outcome :solved
-  :suggested-route "layer cake applied to |f| restricted to E, split at t0 = sqrt(C/m(E)), bound each tail" 
-  :suggested-route-source :in-file-docstring
-  :standard-result "Kolmogorov's inequality for weak L^p (p=2,q=1) + Cavalieri / layer-cake"
-  :arms-tried [:components :zulip :arxiv]
-  :arm-that-paid :components
-  :not-needed []
-  :arxiv-detail {:queries 8
-                 :ids-returned ["1007.4980" "math/0009072" "1206.5109" "1603.03211"
-                                "2003.04167" "1506.05241" "2402.04877" "2001.04018" "1212.1504"]
-                 :verdict :no-anchor
-                 :interpretation :route-already-known-so-fall-through-not-required}
-  :zulip-detail {:queries ["layer.?cake" "weak L2/Lp" "Lorentz space" "Cavalieri"]
-                 :verdict :no-anchor}
-  :components-detail {:loogle ["MeasureTheory.lintegral_eq_lintegral_meas_lt"
-                               "integral_Ioi_rpow_of_lt" "integrableOn_Ioi_rpow_of_lt"
-                               "MeasureTheory.norm_integral_le_lintegral_norm"
-                               "MeasureTheory.lintegral_mono" "ENNReal.toReal_le_toReal"]
-                      :leansearch ["MeasureTheory.ofReal_integral_eq_lintegral_ofReal"
-                                   "MeasureTheory.integrable_toReal_of_lintegral_ne_top"]
-                      :verdict :carried-the-proof}
-  :receipt "32759675-9dfe-4dd8-bc42-ba6ebfce8d2e"}
-
- ;; Retrospective row, entered from the mission doc's S6 note rather than from a
- ;; durée run, and marked as such: it is the standing evidence that arm (c) pays
- ;; when the route is genuinely unknown, which is why one empty arXiv result
- ;; must not be read as a verdict against it.
- {:run :retrospective-s6
-  :at "2026-07-28"
-  :problem "integral-minkowski"
-  :declaration "integral Minkowski inequality"
-  :area "math/measure-integration-api"
-  :outcome :literature-anchored-plan
-  :suggested-route nil :suggested-route-source nil
-  :standard-result "integral Minkowski inequality; duality + Fubini + Holder"
-  :arms-tried [:mathlib-search :arxiv]
-  :arm-that-paid :arxiv
-  :not-needed []
-  :arxiv-detail {:anchor "Schep's paper"
-                 :verdict :construction-found
-                 :interpretation :absent-from-mathlib-so-fall-through-was-necessary}
-  :source "M-codex-sorry-loop.md:168-175 (not a durée run; recorded for contrast)"}
- {:run 2
-  :at "2026-07-30T10:26Z"
-  :problem "a01A03"
-  :declaration "convolution_identity_implies_indicator"
-  :area "math/measure-integration-api"
-  :outcome :blocked-statement-false-then-repaired
-  :suggested-route nil
-  :suggested-route-source nil
-  :standard-result "fundamental lemma of the calculus of variations / distributions; analytic identity theorem"
-  :arms-tried [:components :zulip]
-  :arm-that-paid :components
-  ;; THE DATUM THIS LEDGER EXISTS FOR. arXiv was not run, and that is CORRECT
-  ;; rather than a miss: the packet's cond only falls through to (c) when there
-  ;; is no route, and here the route was known AND the statement was refuted
-  ;; during component assembly. First live confirmation that the cond
-  ;; discriminates instead of just listing surfaces. Recording it as NOT-NEEDED,
-  ;; never as a failure -- that distinction is the whole point (Joe, 2026-07-30).
-  :not-needed [:arxiv]
-  :components-detail {:leansearch ["ae_eq_zero_of_integral_contDiff_smul_eq_zero"
-                                   "HasCompactSupport.hasDerivAt_convolution_right"
-                                   "Integrable.integrable_convolution"
-                                   "intervalIntegral.integral_deriv_of_contDiffOn_uIcc"]
-                      :loogle ["HasCompactSupport (deriv ?f)" "fourierIntegral_convolution"]
-                      :web ["AnalyticOnNhd.eq_of_eventuallyEq"]
-                      :verdict :carried-the-route-and-exposed-the-defect}
-  :zulip-detail {:thread "217875-Is-there-code-for-X%3F/Calculus.20counterexamples.json"
-                 :verdict :corroborated-the-obstruction}
-  :recall {:surfaced 0 :ran? true
-           :note "recall RAN (run 1 had bypassed it); 0 surfaced is explained by the conjunctive query, measured 1 term = 5 hits, 29 terms = 0"}
-  :receipt "c142b663-5f34-4bd4-8ea8-026e3f0c9c3b"}
- {:run 3
-  :at "2026-07-30T10:55Z"
-  :problem "a01A03"
-  :declaration "convolution_identity_implies_indicator"
-  :area "math/measure-integration-api"
-  :outcome :solved
-  :suggested-route nil
-  :suggested-route-source nil
-  ;; The file's own documentation proposed a Fourier-transform route. The runner
-  ;; evaluated it, found Mathlib's Fourier infrastructure offered "no comparably
-  ;; short direct route", and implemented the distributional argument instead --
-  ;; then updated the stale documentation. That is the packet's "a suggested
-  ;; route is a HYPOTHESIS to evaluate" clause doing real work.
-  :corpus-sketch-overridden "file proposed Fourier; distributional route used"
-  :standard-result "fundamental theorem of calculus; convolution differentiation; derivative-zero constancy; fundamental lemma of the calculus of variations"
-  :arms-tried [:components :zulip]
-  :arm-that-paid :components
-  :not-needed [:arxiv]
-  :components-detail {:leansearch ["ae_eq_zero_of_integral_contDiff_smul_eq_zero"
-                                   "intervalIntegral.integral_deriv_of_contDiffOn_uIcc"
-                                   "Integrable.integrable_convolution"
-                                   "HasCompactSupport.hasDerivAt_convolution_right"]
-                      :loogle ["HasCompactSupport (deriv ?f)" "fourierIntegral_convolution"]
-                      :verdict :carried-the-proof}
-  :zulip-detail {:thread "217875-Is-there-code-for-X%3F/Calculus.20counterexamples.json"
-                 :verdict :corroborated-prior-run-obstruction}
-  :recall {:surfaced 0 :ran? true :query "convolution identity indicator"
-           :note "recall FIX live (id dropped, 3-term cap). 0 surfaced is an HONEST NEGATIVE, verified by probe: corpus has no convolution/Young-convolution/Fourier memory; control probe on covered terrain returns 2."}
-  :receipt "48e5fa15-7e47-49e6-b5c4-e37df132959a"}
- {:run 4
-  :at "2026-07-30T12:23Z"
-  :problem "a01A04"
-  :declaration "ballSlice_integral_tendsto_zero + ball_volume_superexponential_decay"
-  :area "math/measure-integration-api"
-  :outcome :axiom-clean-partial
-  :suggested-route nil
-  :suggested-route-source nil
-  ;; This run PRODUCED a suggested route for its own next attempt -- the first
-  ;; time rule 6's "leave a plan, not a puzzle" fed the :suggested-route field
-  ;; from a partial rather than from a file docstring.
-  :suggested-route-produced true
-  :standard-result "dominated convergence; Euclidean ball-volume formula; Gamma functional equation; exponential-over-factorial decay"
-  :arms-tried [:components :zulip]
-  :arm-that-paid :components
-  :not-needed [:arxiv]
-  :components-detail {:leansearch ["tendsto_integral_of_dominated_convergence"
-                                   "EuclideanSpace.volume_ball" "Real.Gamma_add_one"
-                                   "Real.Gamma_one_half_eq"
-                                   "FloorSemiring.tendsto_pow_div_factorial_atTop"
-                                   "Real.integral_sin_pow_even" "Real.integral_sin_pow_odd"]
-                      :verdict :carried-both-completed-proofs}
-  ;; NEGATIVE-INFORMATION HIT, worth distinguishing from a no-anchor: the thread
-  ;; told the runner what is NOT available (no measure-preserving Fin (n+1)
-  ;; product decomposition) and recommended an alternative method. An archive
-  ;; that reports absence is doing useful work, not failing.
-  :zulip-detail {:threads ["217875-Is-there-code-for-X%3F/Iterated.20integrals.json"
-                           "Circumference...surface area of a sphere.json"]
-                 :verdict :negative-information-absence-reported}
-  :recall {:surfaced 0 :ran? true :query "ball volume recursion"
-           :note "0 surfaced, cause KNOWN AND MINE: subjects_for takes the first 3 terms in statement order, and 'recursion' is rare, flooring a conjunctive search. My earlier 0-to-8-hits figure used a hand-picked term set and was a hypothetical. The tier ladder was committed AFTER this dispatch, so run 5 is the first genuine compounding test. The runner did not independently find the 2 relevant memories either."}
-  :receipt "af376f78-07cf-420b-9d7b-4d75b4e0b4c5"}
- {:run 8
-  :at "2026-07-30T16:24Z"
-  :problem "a02J05"
-  :declaration "dirichlet_integral (target) / integral_sinc_eq_cos_div_sub (support, proved)"
-  :area "math/measure-integration-api"
-  :outcome :blocked-with-axiom-clean-partial
-  :suggested-route nil
-  :suggested-route-source nil
-  :standard-result "Abel regularization of the Dirichlet integral; Dirichlet's test"
-  ;; THE ROW THIS LEDGER WAS BUILT FOR. Arm (c) fired for the FIRST time in eight
-  ;; runs, and for exactly the reason the cond specifies: the route was NOT known,
-  ;; because Mathlib lacks both the improper sinc integral and a usable Abel
-  ;; theorem, so there was nothing to assemble from components. Runs 2-7 all
-  ;; recorded arXiv as NOT NEEDED with a known route. The cond discriminates.
-  :arms-tried [:components :zulip :arxiv]
-  :arm-that-paid :components-partial
-  :not-needed []
-  ;; THIRD CATEGORY, distinct from :not-needed and from carrying the proof.
-  :arm-tried-and-empty [:arxiv]
-  :arxiv-detail {:queries ["dirichlet integral" "sinc integral" "Abelian theorem + Fourier integral"]
-                 :ids-returned ["0705.0976" "1404.5413" "1405.1265" "1510.03200" "2005.00477"]
-                 :verdict :background-only-no-construction-anchor}
-  :zulip-detail {:queries ["Dirichlet integral|integral of sinc|sin x / x|Jordan's lemma"]
-                 :verdict :no-anchor}
-  :recall {:surfaced 0 :ran? true
-           :note "interleave fix live; probed afterwards - sinc/Dirichlet integral/Abel regularization all return 0 memories, so a genuine COVERAGE gap"}
-  :receipt "f8586558-7882-4ce9-b2cf-29402de797b1"}]
+;; GENERATED by scripts/build_surface_payoff.py from the run receipts.
+;; Do not hand-edit: the receipts are authoritative and this is a projection
+;; of them. Regenerate after each run's receipt is written.
+{:generated-from :run-receipts
+ :receipt-count 94
+ :rows 68
+ ;; These receipts predate the surface-payoff fields, so they contribute no
+ ;; row. Listed rather than dropped so the ledger's coverage is legible.
+ :receipts-without-arm-data [{:problem "rouche-root-count-transfer" :receipt "e339fa94-8b39-43d6-8dfd-8b2cda73c704"} {:problem "radial-integration-r3" :receipt "df80e646-a0d3-4b29-8cab-263bcc4a1481"} {:problem "a94J04" :receipt "13167309-920e-44a7-b276-e5db3e3e26e9"} {:problem "a95A01" :receipt "ec43ba1c-6e5d-47b0-856c-7139f427f99b"} {:problem "a95J03" :receipt "6582b2b4-153b-4be2-a2cd-9d3b0b16a324"} {:problem "a95J04" :receipt "61d889c8-523a-46d8-bc0a-0abf3b004d8d"} {:problem "a95J07" :receipt "1a77b36d-80e5-4ce9-8d1a-20299d45bd5e"} {:problem "a00J01" :receipt "18555ecc-223e-480d-a73e-5786874a1837"} {:problem "a00J05" :receipt "e524a75d-74b5-4001-8468-92b7756f3cca"} {:problem "a00J06" :receipt "3e28e68a-375d-4e0e-8a80-6fa5b0a102f9"} {:problem "a01A02" :receipt "a8e76b8b-ae37-4932-beb6-524a8bf0be17"} {:problem "a01A03" :receipt "e8519ffd-7812-49f2-ae82-a015f50a9251"} {:problem "a01A04" :receipt "7739e43a-f9cf-4c15-950f-5c787f7ed8e4"} {:problem "a01A05" :receipt "030fb37f-5e66-4b1d-abe0-e16032a3d414"} {:problem "a01A06" :receipt "5081ecbe-58cc-4958-9a23-fd33b2a52531"} {:problem "a01A07" :receipt "7b2dcbd5-0688-458e-9216-c82dda8f7662"} {:problem "a95A03" :receipt "f1ca8e74-93de-4412-8e38-b100dc3a5887"} {:problem "a95A08" :receipt "93926277-6156-4ced-a788-d82783968a62"} {:problem "a95A08" :receipt "97a43b0a-9646-4b9a-81ba-45a116a61e4a"} {:problem "a95J01" :receipt "249c3def-ed02-4369-9d45-8a17a4c44e65"} {:problem "UnivalentDeriv" :receipt "27a80e75-bf48-4df6-a696-d6ed7590d380"} {:problem "a00J05" :receipt "70cd642f-5984-4eb7-bf0a-a968230114d0"} {:problem "a01A02" :receipt "32759675-9dfe-4dd8-bc42-ba6ebfce8d2e"} {:problem "le-liminf-is-cobounded-under-unbounded-above-gap" :receipt "be23ef8b-20a0-4c21-9a1a-7f3e45a9f589"} {:problem "a92J05" :receipt "ae49c591-768a-4db4-a8da-e1cffbf8a7ab"} {:problem "a01J06" :receipt "8279ca0a-a275-4f1f-b628-f6d730fc0e6f"}]
+ :runs
+ [
+  {:problem-id "a01A03" :receipt "c142b663-5f34-4bd4-8ea8-026e3f0c9c3b" :at "2026-07-30T10:46:26.825153Z" :dispatch-mode ":duree" :runner "codex-7" :classification :blocked-then-repaired :arm-that-paid :components-then-zulip}
+  {:problem-id "a01A03" :receipt "48e5fa15-7e47-49e6-b5c4-e37df132959a" :at "2026-07-30T11:21:03.133937Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["convolution_identity_implies_indicator"] :classification :solved :arm-that-paid :components :commit "0b08172a"}
+  {:problem-id "a01A04" :receipt "af376f78-07cf-420b-9d7b-4d75b4e0b4c5" :at "2026-07-30T13:09:18.271824Z" :dispatch-mode ":duree" :runner "codex-7" :classification :partial :arm-that-paid :components}
+  {:problem-id "a01A05" :receipt "5a7a6fec-1783-4df9-9505-817eb5398920" :at "2026-07-30T13:57:03.085520Z" :dispatch-mode ":duree" :runner "codex-7" :classification :partial-then-wontfix :arm-that-paid :components}
+  {:problem-id "a01A06" :receipt "f0b58c54-47e9-4a72-b014-ecdd4edfba6b" :at "2026-07-30T14:14:23.908737Z" :dispatch-mode ":duree" :runner "codex-7" :classification :partial :arm-that-paid :components :commit "f9365a3b"}
+  {:problem-id "a01A07" :receipt "dfaee970-084c-4b91-8498-7b6dd5faeb45" :at "2026-07-30T14:22:54.266187Z" :dispatch-mode ":duree" :runner "codex-7" :classification :partial :arm-that-paid :components :commit "1ad1ea34"}
+  {:problem-id "a02J05" :receipt "f8586558-7882-4ce9-b2cf-29402de797b1" :at "2026-07-30T14:33:53.921327Z" :dispatch-mode ":duree" :runner "codex-7" :classification :blocked-with-axiom-clean-partial :arm-that-paid :components-partial :arm-tried-and-empty :arxiv :arxiv-arm-entered true :arxiv-verdict :background-only-no-construction-anchor :commit "87e4c532"}
+  {:problem-id "a03J08" :receipt "efe850d1-67b3-4a73-a745-4ea73f93f438" :at "2026-07-30T14:42:20.196900Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["analytic_blowup_surjective"] :classification :solved :arm-that-paid :components-local :commit "aece2ab1"}
+  {:problem-id "a92J03" :receipt "ea063199-3905-4b65-a752-ab5ed05d0d25" :at "2026-07-30T14:52:25.583408Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["fourierTransform_tendsto_zero" "fourier_maps_L1_to_C0"] :classification :solved :standard-result "Riemann-Lebesgue lemma (Real.tendsto_integral_exp_smul_cocompact)" :arm-that-paid :components-local :commit "316d3b61"}
+  {:problem-id "a92J04" :receipt "3f721b1a-fd45-4f05-8b88-94bf545609d5" :at "2026-07-30T15:01:35.139826Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["disk_selfmap_tangent_identity"] :classification :solved :arm-that-paid :components-local :commit "d8a7ce47"}
+  {:problem-id "a93A03" :receipt "1e916185-46ae-4ee0-ab1c-01a9759928d2" :at "2026-07-30T15:11:14.231931Z" :dispatch-mode ":duree" :runner "codex-7" :classification :blocked-then-repaired :arm-that-paid :components-and-zulip :commit "032cfc14"}
+  {:problem-id "a93A03" :receipt "df9722e5-dc6f-435e-8ec1-8286f76505e7" :at "2026-07-30T15:16:10.249255Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["norm_le_liminf_of_weak"] :classification :solved :arm-that-paid :components-loogle :commit "2f8bb4b4"}
+  {:problem-id "a93J01" :receipt "e3b87e69-5233-49cf-984d-4add9c760961" :at "2026-07-30T15:28:38.779401Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["ac_on_01_of_continuous_bv_ac_from_a"] :classification :solved :standard-result "FTC for absolutely continuous functions" :arm-that-paid :components-loogle-name-guessing :problems-closed-today 7 :commit "bd78524d"}
+  {:problem-id "a93J02" :receipt "05bccf8d-213d-42b0-b924-76f52ec7c35c" :at "2026-07-30T15:38:26.927002Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["tendsto_sum_alternating_harmonic" "alternating_harmonic_eq_log_two"] :classification :solved :arm-that-paid :components-plus-zulip-route :problems-closed-today 8 :commit "cda9ab91"}
+  {:problem-id "a93J04" :receipt "e67b14ab-df34-43b5-a9d4-88d46cbb29c8" :at "2026-07-30T15:52:41.161986Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["tendsto_eLpNorm_atTop"] :classification :solved :arm-that-paid :components :problems-closed-today 9 :commit "4d1dc9a2"}
+  {:problem-id "a95A01" :receipt "edc3eb55-dd32-4196-a552-9ef884916b76" :at "2026-07-30T15:59:52.647556Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["indicator_not_riemann_integrable"] :classification :solved :arm-that-paid :components :problems-closed-today 10 :commit "a0fc3e69"}
+  {:problem-id "a95A05" :receipt "3de1e210-bf18-4bf6-8023-09028b0abfd4" :at "2026-07-30T17:34:34.818907Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["eq_zero_of_vanishing_on_upper_arc"] :classification :solved :arm-that-paid :components :problems-closed-today 11 :commit "39eb54a5"}
+  {:problem-id "a95J03" :receipt "4d177bee-0203-42a8-bce4-5b260bafabd4" :at "2026-07-30T17:38:53.931565Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["algPoly_degree_le"] :classification :solved :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :problems-closed-today 12 :commit "1bf56f4d"}
+  {:problem-id "a96A03" :receipt "cf5de2ea-189e-4e37-9cb3-69b6f3a4424d" :at "2026-07-30T17:45:53.780023Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["weak_convergence_of_ae_tendsto_L2_bounded"] :classification :solved :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :problems-closed-today 13 :commit "bf1101b2"}
+  {:problem-id "a96J10" :receipt "257b93d2-715c-4f9c-9cf2-8cd2ab7e50e2" :at "2026-07-30T18:03:18.687993Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["apm_a96J10_even_factors"] :classification :solved :standard-result "descent of an even analytic function through the branched double cover z -> z^2" :arm-that-paid :components :arm-tried-and-empty :arxiv :arxiv-arm-entered true :arxiv-verdict :no-relevant-result :metric-3-memories-surfaced 0 :problems-closed-today 14 :commit "c3d61512"}
+  {:problem-id "a00J04" :receipt "903acb9a-d09b-4aa4-a970-6c69d05ef3d3" :at "2026-07-30T18:26:26.738161Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["connectedComponents_complement_lemniscate_le"] :classification :solved :standard-result "classical polynomial lemniscate component bound; one-endedness of the plane" :arm-that-paid :components :arxiv-arm-entered true :metric-3-memories-surfaced 5 :metric-3-memories-used 2 :problems-closed-today 15 :commit "3e9a506e"}
+  {:problem-id "a01A08" :receipt "4c54c3ef-f51e-4207-b272-d8411eafd35b" :at "2026-07-30T18:38:18.437379Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["connectedComponents_complement_lemniscate_le"] :classification :solved :standard-result "polynomial lemniscate complement component bound via max/min modulus, properness and one-endedness" :arm-that-paid :components :arm-tried-and-empty :arxiv :arxiv-arm-entered true :arxiv-verdict :background-only-no-construction-anchor :route-source :identical-proved-sibling-a00J04 :metric-3-memories-surfaced 5 :metric-3-memories-used 1 :problems-closed-today 16 :commit "c512690e7fa996bb53cba54b56b40fe28b87a2d4"}
+  {:problem-id "a92J05" :receipt "c08156bb-1537-472b-b5de-7a1823cc6906" :at "2026-07-30T19:22:36.326649Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["p_natDegree" "p_monic" "p_card_roots" "roots_inside_add_outside" "roots_outside_card_eq_of_inside_card_eq"] :classification :blocked-with-axiom-clean-partial :standard-result "Rouche's theorem / homotopy invariance of the argument-principle zero count" :arm-that-paid :components-partial :arm-tried-and-empty :arxiv :arxiv-arm-entered true :arxiv-verdict :background-only-no-construction-anchor :metric-3-memories-surfaced 0 :metric-3-memories-used 0 :problems-closed-today 16 :commit "e24093a9632d785093ada9c25cc3a5c744ed80fe"}
+  {:problem-id "a92J05" :receipt "7ed99fe8-c65b-4239-9c18-3c9f11ac82bd" :at "2026-07-30T19:40:55.317644Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["rouche_homotopy_ne_zero_on_circle"] :classification :blocked-with-axiom-clean-partial :standard-result "Rouche's theorem / homotopy invariance of the argument-principle zero count" :arm-that-paid :components-partial :arxiv-arm-entered false :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :problems-closed-today 16 :commit "0e976a25926d301ef9567e2f416e5903a3fd6420"}
+  {:problem-id "LemniscateComponents" :receipt "7fd3850e-959a-4c6c-85d9-f40aec83963d" :at "2026-07-30T19:49:03.593130Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["connectedComponents_complement_lemniscate_le" "frontier_connectedComponentIn_subset_frontier"] :classification :solved :standard-result "polynomial lemniscate component bound; sublevel components inject into roots, superlevel share one exterior" :arm-that-paid :components :arm-tried-and-empty :arxiv :arxiv-arm-entered true :arxiv-verdict :background-only-no-construction-anchor :metric-3-memories-surfaced 4 :metric-3-memories-used 4 :problems-closed-today 16 :commit "463a9dd7dcaf84db17295267899d0e57e2f2ff63"}
+  {:problem-id "a00J05" :receipt "c18f4fdb-edc2-47e8-86cb-4a76c9242ed1" :at "2026-07-30T20:26:25.585444Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["cauchyTransform_mul_z_tendsto" "cauchyTransform_not_extendable_to_entire"] :classification :solved :standard-result "compact-support uniform estimate with squeeze; Liouville via eventual agreement outside the compact image" :arm-that-paid :components :arm-tried-and-empty :arxiv :arxiv-arm-entered true :arxiv-verdict :background-only-no-construction-anchor :metric-3-memories-surfaced 0 :metric-3-memories-used 0 :problems-closed-today 17 :commit "2f24f492ae53cadf0345f07fbfcd0b54da6dfdf6"}
+  {:problem-id "a01A04" :receipt "639e3a13-dc0f-4673-86af-bbf1dbbfc7f7" :at "2026-07-30T21:27:18.739202Z" :dispatch-mode ":duree" :runner "codex-7" :declarations ["ball_volume_recursion"] :classification :solved :standard-result "trigonometric substitution, Wallis sine-power formulas, exact parity formulas for Euclidean ball volume" :arm-that-paid :components :arm-tried-and-empty :arxiv :arxiv-arm-entered true :arxiv-verdict :background-only-no-construction-anchor :problems-closed-today 18 :commit "80af310905a3a3255df7f96e31d9a162da8c0ded"}
+  {:problem-id "a01A07" :receipt "57ca09c6-cfd2-441e-a99b-c96f6c2fffaa" :at "2026-07-30T22:03:06.174686Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-with-partial :arm-that-paid :components :arxiv-arm-entered false :problems-closed-today 18}
+  {:problem-id "a01A06" :receipt "927e38e5-4296-468a-8631-909543486ceb" :at "2026-07-30T22:05:38.318655Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :declarations ["orlicz_bound_not_implies_L2"] :classification :solved :arm-that-paid :components :arxiv-arm-entered false :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :problems-closed-today 19 :commit "9ea0efdcf844292928590cf5cf20b94a16f96e75"}
+  {:problem-id "a01A09" :receipt "558c5f8f-8642-47f0-8c13-1df248d64282" :at "2026-07-30T22:29:43.030468Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :declarations ["laplace_integrand_integrable" "laplace_transform_analytic" "laplace_transform_entire_of_compact_support" "laplace_deriv_bound_integrable"] :classification :solved :arm-that-paid :components :arxiv-arm-entered false :metric-3-memories-surfaced 5 :metric-3-memories-used 1 :commit "622a238329d7331fb72eeef35b85f12d3788e460"}
+  {:problem-id "a01A07" :receipt "6ea3677b-5eed-4538-b59e-cbf01f8274ed" :at "2026-07-30T22:35:26.586848Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-with-partial :arm-that-paid :components :arxiv-arm-entered false}
+  {:problem-id "a01A10" :receipt "e625cf40-4eef-40ae-bc36-1bfa2a239dba" :at "2026-07-30T22:44:00.345768Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :partially-solved-target-false :arm-that-paid :components :arxiv-arm-entered false :metric-3-memories-surfaced 5 :metric-3-memories-used 1 :commit "b36ba73d02f99d7aa84d02952f61b2176610d942"}
+  {:problem-id "a01A07" :receipt "de5437c3-1f3d-417b-882a-e1d70883f242" :at "2026-07-30T22:53:26.609926Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :solved :arm-that-paid :components :arxiv-arm-entered false :metric-3-memories-surfaced 5 :metric-3-memories-used 2}
+  {:problem-id "a01A11" :receipt "69cc7fe1-3bee-4df0-8e46-2ef6a9b8bb9d" :at "2026-07-30T23:07:15.747761Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :declarations ["cauchyTransform_differentiableAt" "cauchyTransform_tendsto_neg_vol" "hasDerivAt_cauchyKernel"] :classification :solved :arm-that-paid :components :arxiv-arm-entered false}
+  {:problem-id "a02J05" :receipt "1a5d2232-4c2a-4e0c-a31b-155e635899da" :at "2026-07-30T23:13:57.247514Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-with-partial :arm-that-paid :components :arxiv-arm-entered true :arxiv-verdict :background-only-no-construction-anchor :metric-3-memories-surfaced 5 :metric-3-memories-used 2 :commit "0671018683aaccb36e727f0080b577a1bc446347"}
+  {:problem-id "a01A12" :receipt "4c90c60d-1040-4531-b154-e1bd159a567d" :at "2026-07-30T23:24:14.074260Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :declarations ["step2_image" "step4_to_wedge" "fourthRoot_not_mem_unitSegment" "conformalMap_maps_H_to_A"] :classification :solved :arm-that-paid :components :arxiv-arm-entered false}
+  {:problem-id "a02J05" :receipt "00cf1cdd-0bf5-47f3-ab5c-3b93c9ea331c" :at "2026-07-30T23:36:21.371145Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :solved :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 2 :commit "32c53bafff982b6dbfe5d4a59e0ceb31a447664d"}
+  {:problem-id "a01J02" :receipt "4f67ccb0-2721-43b4-8d9a-c164a6da8ffc" :at "2026-07-31T00:08:11.251112Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-statements-do-not-elaborate :arm-that-paid :components-diagnosis-only :metric-3-memories-surfaced 5 :metric-3-memories-used 0}
+  {:problem-id "a01J01" :receipt "319d80df-a964-43a6-960d-5311b3946a53" :at "2026-07-31T00:15:49.207150Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-with-partial-statement-defect-argued :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :commit "751352f8c876c2356b5e7e8ec6f8ef7657edaabd"}
+  {:problem-id "a02J02" :receipt "794ca242-3025-421a-b903-2101fd951874" :at "2026-07-31T01:07:44.695784Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-genuine-mathlib-frontier :arm-that-paid :components :arxiv-arm-entered false :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :commit "09515ef1ed40201358126532d1e83584f909b49a"}
+  {:problem-id "a02J07" :receipt "3a24af2e-921c-4ef0-8fd3-38d62bf504cd" :at "2026-07-31T01:13:53.583276Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-all-targets-false :arm-that-paid :components-diagnosis-only :arxiv-arm-entered false}
+  {:problem-id "a02J02" :receipt "c2f0f1b2-c261-4fa5-8ecb-bcb35aa9529f" :at "2026-07-31T01:30:31.734644Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :solved :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 1 :commit "040777917b9f583264023ee31e95dcbff0cb75f7"}
+  {:problem-id "a03J03" :receipt "8328dc04-c00a-49c0-ad0a-707dbb7f4345" :at "2026-07-31T01:33:29.384876Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-with-partial :arm-that-paid :components :commit "b45211fb0150f74d4b4eae8d1a95f194d3d227c5"}
+  {:problem-id "a92J07" :receipt "aab1e62e-e494-4437-85e6-ba24598cbdc6" :at "2026-07-31T01:39:30.906398Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-with-partial-target-false :arm-that-paid :components :commit "ca36debda16f5cf2158cfe3bff6b92a826300f8d"}
+  {:problem-id "a92J06" :receipt "adee5cd0-e7dc-4b63-8111-f137cf598c67" :at "2026-07-31T01:43:20.576157Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :declarations ["contour_integral_eval" "integral_inv_two_plus_cos"] :classification :solved :arm-that-paid :components-local :arxiv-arm-entered false :commit "146de41665ed60d3e0a5a43709e194e50c9c9e0d"}
+  {:problem-id "a93A02" :receipt "a037de1b-ad0d-4971-8641-57564ff71156" :at "2026-07-31T01:46:08.807642Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-all-targets-false :arm-that-paid :components-diagnosis-only}
+  {:problem-id "a03J03" :receipt "1693fc6c-4e50-4c1f-a898-292667f5cb73" :at "2026-07-31T01:50:33.918289Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :solved :arm-that-paid :components-local :commit "b5e5ddb"}
+  {:problem-id "a93J06" :receipt "380a7899-c60d-4550-8128-a2bf14a6bb49" :at "2026-07-31T01:58:20.246042Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :declarations ["deriv_norm_le_norm" "schwarz_second_order_bound"] :classification :solved :arm-that-paid :components-local :commit "b5c01ab"}
+  {:problem-id "a93A04" :receipt "2a8fa1b7-846d-4a71-b001-8f4fa244c5fa" :at "2026-07-31T02:02:01.434579Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-genuine-mathlib-frontier :arm-that-paid :components-local :commit "13a37c420e4cd812d5a8e3ee31e1e133a549a246"}
+  {:problem-id "a94A01" :receipt "68c00106-41f3-4284-96ce-314d24cb1882" :at "2026-07-31T02:09:04.361950Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :declarations ["ae_limit_indicator_eq_indicator" "tendsto_setIntegral_of_indicator_limit" "tendsto_eLpNorm_indicator_sub_iff_tendsto_measure_symmDiff"] :classification :solved :arm-that-paid :components-local :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :commit "c8e6f11cf0859c8691a3911b5c9d9d2ae0775153"}
+  {:problem-id "a93J07" :receipt "f70ecf52-8e7c-463a-bb54-133d94387a33" :at "2026-07-31T02:16:09.970843Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :declarations ["hurwitz_eventually_nonvanishing_on_sphere" "hurwitz_zero_persistence" "locallyUniformLimit_injective_or_constant"] :classification :solved :arm-that-paid :components-local :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :commit "b898439"}
+  {:problem-id "a94A03" :receipt "530247de-a2dc-4207-92e6-ae6cea1b7282" :at "2026-07-31T02:22:47.061422Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-genuine-mathlib-frontier :arm-that-paid :components-local :metric-3-memories-surfaced 5 :metric-3-memories-used 2 :commit "0037b66921e80e68bb67e0845f297a6ce4c7975a"}
+  {:problem-id "a93A04" :receipt "52a7728c-dc8e-45c1-a10a-04ab98047665" :at "2026-07-31T02:25:58.135696Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :solved :arm-that-paid :components-local :commit "56c337538c4bd866874ba6a9db68c284f7470352"}
+  {:problem-id "a94A04" :receipt "782070a0-17b3-478c-a5e6-243c797e73d2" :at "2026-07-31T02:28:52.410219Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-all-targets-false :arm-that-paid :components-diagnosis-only}
+  {:problem-id "a94A03" :receipt "6f43c013-0bc7-4634-9724-ab6513ebb917" :at "2026-07-31T02:34:10.333413Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-genuine-mathlib-frontier :arm-that-paid :components-local :metric-3-memories-surfaced 5 :metric-3-memories-used 1 :commit "f7be9b7975eecf1a91a07335e954253cc1e08d72"}
+  {:problem-id "a94A06" :receipt "b832f130-765b-4759-90e9-29bebf8c159c" :at "2026-07-31T02:38:00.203522Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :declarations ["tendsto_G_atTop" "integral_x7_over_1_plus_x12"] :classification :solved :arm-that-paid :components :commit "42acf6dc98894566dfe1924adeafb49f097f8d16"}
+  {:problem-id "a95J08" :receipt "afda168b-23c8-4766-aaac-66027a30ca36" :at "2026-07-31T02:41:14.824700Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-with-partial :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 2 :commit "f8bac9c9b06d3f64052cf857625c4797834ac6b4"}
+  {:problem-id "a94J02" :receipt "f74ec63f-b997-4606-9e4e-84e531d715cc" :at "2026-07-31T02:44:13.176425Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-with-partial-target-false :arm-that-paid :components :commit "bf2e4dd51cfbbf8929bc86f67f0c8ddf96014ca1"}
+  {:problem-id "a94J07" :receipt "e6b886ae-3fd4-41aa-94ef-1376dbfaa15c" :at "2026-07-31T02:54:14.823243Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :solved :arm-that-paid :components :commit "7ee9c60"}
+  {:problem-id "a94J02" :receipt "16e88b31-0d2d-4cc7-9fd9-ca5b6d5e969b" :at "2026-07-31T02:58:33.873637Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-with-partial-target-false :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :commit "b7704ad"}
+  {:problem-id "a95A02" :receipt "861fcb68-c043-484b-bc26-290d590ae79f" :at "2026-07-31T03:05:32.492485Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-with-partial :arm-that-paid :components-local :arxiv-arm-entered true :arxiv-verdict :no-rows :commit "bdaae46"}
+  {:problem-id "a95A04" :receipt "6fde0a2f-9d33-4682-98d9-3a9c2573b2e5" :at "2026-07-31T03:22:17.988622Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :declarations ["dyadic_integral_eq" "constant_of_symmetric_mean_value"] :classification :solved :arm-that-paid :components :commit "a77152a5e5cd6f3e1c1ddd024d431808b4469a06"}
+  {:problem-id "a95A02" :receipt "572dccfb-94e0-4d11-bea1-c9ce5c877860" :at "2026-07-31T03:25:06.364005Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-with-partial :arm-that-paid :components :commit "9be11e89eed7c871cb35fb98157506076c7ad201"}
+  {:problem-id "a95A06" :receipt "5bbd71c5-153d-4b0c-96ea-2d4a28843cc5" :at "2026-07-31T03:30:21.240246Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-with-partial-target-false :arm-that-paid :components :arxiv-arm-entered true :arxiv-verdict :background-only-no-construction-anchor :commit "0622f9ce4f5ab498d210475333c145753c42e0ef"}
+  {:problem-id "a95J08" :receipt "3dd86554-f329-40c1-a09e-1a06cb246b32" :at "2026-07-31T03:33:39.358513Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-with-partial :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 3 :commit "ced5121d7e12731049e2fd560c2019140b3302b7"}
+  {:problem-id "a95J02" :receipt "0e0cea25-b2e1-469c-b69a-a1bbdc19ea1b" :at "2026-07-31T03:37:45.791353Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :declarations ["f_zero_eq_zero" "normalizedQuotient_differentiable" "entire_lower_bound_is_monomial"] :classification :solved :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 0 :commit "a2d60dc77e2bc062f4f8362ee8ae432f7ef56dbb"}
+  {:problem-id "a95A02" :receipt "3f37429d-7696-44a6-8edb-63711373e8da" :at "2026-07-31T03:41:09.879860Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-7" :classification :blocked-with-partial :arm-that-paid :components-local :commit "87b7ecb4e5a3cc8777ea1ca989384998b1a11b24"}
+  {:problem-id "a95J08" :receipt "f2333f84-a915-40d3-b099-332a44e2ab6f" :at "2026-07-31T03:46:33.023113Z" :dispatch-mode ":duree-overnight-parallel" :runner "codex-6" :classification :blocked-mathlib-frontier-confirmed :arm-that-paid :components :metric-3-memories-surfaced 5 :metric-3-memories-used 3 :commit "3cefa103f6afabacd4d01e7ec14cfb3b2028a159"}
+ ]}

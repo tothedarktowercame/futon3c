@@ -93,6 +93,32 @@ finding for us:
   than in returning rows. And the per-row slope roughly doubled over the session
   while point lookups did not move.
 
+## Correction: the agent hot path is not list-scan bound (2026-07-30, late)
+
+An earlier reading of this document implied that the 2–24 s list-read cost was
+what our retrieval path pays. **It is not**, and the correction matters for
+which question is worth JUXT's time. Stage timings taken on the live dispatch
+path:
+
+| stage | measured |
+|---|---|
+| memory projection | **9–14 ms** — an in-memory indexed projection, not a store list scan |
+| receipt list read (the only list-shaped read on this path) | 1.10–1.50 s, under a 5 s client cap |
+| full-text ladder | ~15.8 s total; individual searches 0.75–3.71 s |
+
+So the dominant cost on our hot path is **full-text search**, not list scans,
+and the list-read figures earlier in this document — while accurate as
+measurements of the endpoint — should not be read as describing what our agent
+loop actually pays. A 30 s dispatch budget was breached not by store list
+latency but by client-side fan-out, which we removed rather than papering over
+with a larger timeout.
+
+The question this sharpens for JUXT is therefore about **full-text search
+latency and result-set behaviour**, not list-scan cost. Note also that the FTS
+surface in question is our own SQLite sidecar rather than XTDB (see the
+withdrawn question at the end of this document), so the part of the ladder cost
+attributable to XTDB specifically has not yet been isolated.
+
 ## What we changed on our side
 
 The degradation shaped our own code, and the fix is worth reporting because it
@@ -168,6 +194,51 @@ resets to 122 MB on restart. That is a property of the process, not of the host.
 one: 0.15–0.18 s throughout. Whatever the list path is doing, the id path does
 not do it.
 
+## Six hours after the restart: RSS regrows, metaspace does not
+
+A third snapshot of the *same fresh process*, taken 6 h 01 m after the
+operator restart, on a day of unusually heavy agent-loop traffic.
+
+| metric | pre-restart 09:30Z (25 h old) | pre-restart 14:15Z (30 h old) | post-restart +15 min | **post-restart +6 h** |
+|---|---|---|---|---|
+| RSS | 4.98 GB | 7.76 GB | 1.82 GB | **6.09 GB** |
+| Metaspace used | 331 MB | 957 MB | 122 MB | **191 MB** |
+| Metaspace committed | 482 MB | 1.65 GB | 148 MB | **481 MB** |
+| Class space used | 96 MB | 336 MB | — | **47 MB** |
+| Young GCs | 832 | 1515 | — | **1483** |
+| Total GC time | 43.4 s | 173.0 s | — | **178.8 s** |
+| Full GCs | 0 | 0 | — | **0** |
+
+**This dissociates the two growth curves, and it weakens the hypothesis
+this document opened with.** In six hours RSS regrew by **+4.27 GB**
+while metaspace used grew by only **+69 MB**. The pre-restart session
+had RSS +2.78 GB accompanied by metaspace +626 MB over a comparable
+4.75 h. So the process can put on multiple gigabytes of resident memory
+essentially *without* class-metadata growth: whatever drives RSS is
+predominantly heap or off-heap (Arrow buffers are the obvious
+candidate), **not** the per-query class generation we proposed as the
+leading explanation. Question 1 to JUXT stands as a question, but it
+should no longer be framed as our leading hypothesis for the RSS
+figures; it is at most an explanation for the *metaspace* series, and
+that series is the smaller effect.
+
+**The GC rate is the sharper anomaly.** 1483 young GCs and 178.8 s of
+GC in **six hours**, against 1515 young GCs and 173.0 s in **thirty
+hours** before the restart — a roughly fivefold increase in young-GC
+rate per unit time. Full GCs remain zero and total GC is still only
+~0.8 % of wall-clock, so this is not a pause problem; it is an
+allocation-rate signal. The honest reading is that today's workload is
+genuinely much heavier than the days preceding the earlier snapshots
+(a continuous dispatch loop, two full-corpus censuses of ~90 by-id
+reads each, and one `limit=5000` hyperedge query), so **allocation rate
+is confounded with workload and this comparison does not isolate a
+store property.** It is reported because the fivefold gap is large
+enough to be worth a question, not because it is controlled.
+
+What survives from the earlier sections unchanged: point lookups by id
+stay flat (~0.15–0.18 s) across every process age measured, and zero
+full GCs across all snapshots.
+
 ## Confounds and limits
 
 - **Single instance, single workload, no control.** No A/B, no comparison build,
@@ -197,3 +268,16 @@ not do it.
    on a fresh process)?
 4. Is a long conjunctive full-text query expected to return zero rather than
    degrade gracefully to a ranked partial match?
+
+**Withdrawn before the meeting (2026-07-30).** A fifth question was drafted
+here about hyphenated identifiers appearing to be indexed atomically. It has
+been removed rather than asked, because the premise was wrong on
+investigation: **the full-text surface in question is not XTDB at all.** It is
+an application-controlled SQLite FTS5 sidecar (`futon1bi.text-index`,
+`tokenize='unicode61'`), where hyphens are ordinary separators. The observed
+zero-result queries were bounded-result starvation plus body-only indexing —
+`:evidence/body` is indexed, the id column is `UNINDEXED`, and top-level
+subjects are not indexed. All of that is ours to fix and none of it is a
+question for JUXT. Recorded here so the mistake is visible rather than
+silently deleted; question 4 above concerns genuine XTDB text-search
+behaviour and still stands.

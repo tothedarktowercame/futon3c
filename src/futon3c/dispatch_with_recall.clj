@@ -16,7 +16,42 @@
            [java.util UUID]))
 
 (def default-limit 5)
-(def default-recall-timeout-ms 30000)
+
+;; RAISED 30000 -> 240000 on 2026-07-31 by claude-9, Joe-authorised.
+;;
+;; WHY. At 30s this budget was SMALLER THAN THE WORK IT HAD TO DO, so recall
+;; could not complete for most rows and metric-3 was systematically
+;; under-measured. Measured on 2026-07-31 (receipt
+;; 4f7eeadd-3072-41ab-94f2-effe22e62ae0):
+;;
+;;   * `/api/alpha/evidence/text-search` costs 9.1-16.2s per query on a HEALTHY
+;;     store (mean 14.2s), and recall issues ONE PER SUBJECT.
+;;   * `subjects_for` yields up to 12 subjects, so a worst-case row needs
+;;     ~170-195s of text-search alone, plus ~2.3s for receipt-entries.
+;;   * Cost tracks how COMMON a term is, not how many subjects there are:
+;;     construction-deriv timed out on 6 subjects (deriv/zero/isopen/
+;;     differentiableon) while a97A08 completed on 6 (count/outer/roots/...).
+;;
+;; 3 of the last 4 dispatches before this change recorded
+;; `[dispatch-recall-outcome=timeout]`, and across the whole corpus 46 of the
+;; 129 offered halves timed out -- ~45% of dispatches losing recall to
+;; infrastructure rather than to a genuine absence of memories.
+;;
+;; WHY NOT 120000, which was the value first proposed: it clears only ~8 common
+;; subjects (8 * 14.2 = 114s) and still fails 12-subject rows at ~171s. The
+;; failures it would leave are exactly the analysis-heavy rows the bias already
+;; falls hardest on, so it would look like a fix while preserving the skew.
+;; 240000 covers the measured worst case with roughly 20% headroom.
+;;
+;; THIS IS A MITIGATION, NOT THE FIX. The real cost is that text-search returns
+;; 200-460KB per query. The structural repairs are to rank/cap `subjects_for` by
+;; term rarity (common terms cost the most and discriminate least) and to index
+;; or paginate the endpoint. Both are out of scope for a budget change.
+;;
+;; NOTE the interaction with `per-call-timeout-ms` below: it returns the WHOLE
+;; budget for a single call, so one hung substrate call can still consume all of
+;; it. Raising this constant raises that exposure from 30s to 240s.
+(def default-recall-timeout-ms 240000)
 (def default-agency-base "http://localhost:7070")
 (def default-mission "M-zai-learning-loop")
 (def default-problem-root "/home/joe/code/apm-lean/problems")
@@ -133,7 +168,7 @@
    "  --limit N                 surfaced memories (default 5)\n"
    "  --subject TEXT            additional recall subject; repeatable\n"
    "  --terrain TEXT            explicit terrain override\n"
-   "  --recall-timeout-ms N     total recall budget (default 30000)\n"
+   "  --recall-timeout-ms N     total recall budget (default 240000)\n"
    "  --receipt-alpha N         use-rate boost weight, 0..1 (default 0.5)\n"
    "  --no-receipt-ranking      disable use-receipt ranking\n"
    "  --substrate-base URL      authoritative substrate override\n"

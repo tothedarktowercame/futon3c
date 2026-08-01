@@ -137,12 +137,45 @@ provenance.
 - v1 sweep on the combined graph (phase-4 + live bootstrap attachments + the
   six draft rewrite rules linked via shared trigger-class patterns and the
   a95A04 problem) — first graph dense enough for operator-dependence.
-- Spectral classification per \(\theta\) beside trajectory classes.
+- ~~Spectral classification per \(\theta\) beside trajectory classes.~~
+  **DONE 2026-07-28** (M-memory-retrieval WS2, Codex-4 `07aa3af`/`be93d0f`,
+  owner review PASS) — see §v3 below.
 - Wire the sustaining-band language into Rung 4's battery spec (the
   exploration-mass floor is the coefficient-space constraint).
-- Show this note + the correspondence table to Rob; the Panopticon
-  rule-rewriting conversation and this operator-evolution frame are
-  plausibly the same object at different levels.
+  [Rung 4 landed 2026-07-27 with the floor + collapse battery;
+  E-dynamic-queries §Rung 4 verification.]
+- Show this note + the correspondence table to Rob — being executed as the
+  M-memory-retrieval WS6 whitepaper (`docs/retrieval-whitepaper.md`);
+  the Panopticon rule-rewriting conversation and this operator-evolution
+  frame are plausibly the same object at different levels.
+
+## v3 (2026-07-28): spectra, the connectivity meter, and a stability lesson
+
+WS2 delivered (`retrieval_flow_sweep_v2.bb`, `connectivity_meter.bb`;
+results note `ws2-results-note.md`):
+
+- **The food problem in spectral form, literally**: v0's four components
+  are four zero modes of \(\Delta_\theta\) — no conductance choice moves
+  activation between them. v1's λ₂ by grid: uniform 0.185, hub-off 0.154,
+  prescribe-heavy 0.058, uses-heavy 0.058; spectra separate coefficient
+  choices, connectivity support still dominates.
+- **First live connectivity reading: `:component-limited`** (preregistered
+  criterion). 62 `:memory/assert` rows → 83 nodes, 51 pattern attachments
+  (45 current+reviewed); largest reviewed component = 6 nodes, ONE edge
+  type, λ₂ ≈ 1.0 (small stars mix internally; stars are isolated from
+  each other). This is the baseline against which cohort exhaust
+  ("operator food") is now measurable per cohort.
+- **A stability lesson with teeth.** The preregistered λ₂-vs-time check
+  FAILED at ε=0.3 (ρ = 0.0) — and the owner-review diagnosis shows why:
+  three of four grid points sit past the explicit-Euler stability
+  boundary ε < 2/λ_max, so their dynamics are power iteration
+  (concentration), not diffusion. The preregistered re-test at ε=0.1
+  (all points stable) CONFIRMED λ₂ ranking with ρ = −0.8
+  (`ws2-owner-stability-check.bb`). Consequence: **step size is part of
+  the operator** — ε must be reported against 2/λ_max, and the v1
+  ε=0.3 "sustained-structured" classes partly reflect the scheme's
+  concentration regime, not the graph alone. This feeds Rung 4's audit
+  discipline directly.
 
 ## v2 (2026-07-27): the LIVE instantiation — theory objects → shipped code
 

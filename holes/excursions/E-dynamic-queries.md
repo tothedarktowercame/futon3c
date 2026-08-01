@@ -5,8 +5,9 @@
 `M-typed-memories` and `M-shared-memory-control-build-test`.
 **Status:** RUNGS 1 + 3 IMPLEMENTED DARK; PHASE 5 CHECKPOINT INFORMATIVE;
 RUNG 2 ONE-OUTCOME OPERATOR UPDATE IMPLEMENTED DARK OVER PHASE 6,
-CALIBRATION GATE NOT MET (2026-07-23). RUNG 4 CHARTERED DARK 2026-07-24
-(Joe's direction), NOT IMPLEMENTED — see §Rung 4.
+CALIBRATION GATE NOT MET (2026-07-23). RUNG 4 IMPLEMENTED DARK +
+VERIFIED 2026-07-27 (Codex-4 `35f1fef`, owner review PASS; see §Rung 4
+verification) under M-memory-retrieval WS1.
 **Boundary:** this excursion may rank only inside the Phase 1–4 admissible
 dark subgraph. It cannot admit records, change domain/lifecycle/witness gates,
 mutate memory, alter shared receipts, or affect live mission ordering.
@@ -390,6 +391,38 @@ so the packet in flight is untouched.
 **Explicitly out of scope:** live-store reads; any effect on live ordering;
 multi-coordinate θ-learning promotion; consuming Rung 3 entropies as outcome
 probabilities; any relaxation of the Phase 6 calibration gate.
+
+#### Rung 4 verification, 2026-07-27
+
+Implemented by Codex-4 (`35f1fef`, dispatched under M-memory-retrieval
+WS1, packet `holes/CODEX-HANDOFF-rung4-coupled-propagation.md`); owner
+review (claude-6), author ≠ reviewer, all gates re-run independently:
+
+- Diff surface: exactly the five packet `:out` files, additions only;
+  Rung 1–3 namespaces, tests, demos, fixtures untouched.
+- Focused suite re-run: 12 tests, 71 assertions, 0 failures, 0 errors
+  (`dynamic-queries` + `dynamic-queries-rung4`). `clj-kondo` 0/0;
+  `check-parens` OK — all re-run by the reviewer.
+- Demo re-run (`run_dynamic_queries_rung4_demo.clj`): output matches the
+  frozen `rung4-results.edn` exactly.
+- θ lives on a lower-bounded simplex (mass ≥ ε per admitted relation,
+  n·ε ≤ 1 validated); the floor is mandatory input — omission throws.
+- k=1 identity: with ε=0, k=1 reproduces Rung 1's ranking exactly
+  (regression test asserts against a live Rung 1 call).
+- Confirmation-collapse battery (preregistered in
+  `rung4-collapse-battery.edn`): floor-off ablation collapses to the
+  decoy (θ → `{repairs 1.0, requires 0.0}`, planted target hidden);
+  floor-on (ε=0.2) recovers the planted target at step 2 with
+  θ → `{repairs 0.2, requires 0.8}`. Independently witnessed challenge
+  memories reachable at every step of every run.
+- Both control arms rank the decoy first on the battery case — the
+  floor-on recovery is earned by the iterated dynamics, not inherited
+  from a control arm.
+- Deterministic replay asserted; termination classified explicitly
+  (fixed-point / cycle / budget-exhausted); `:selected-mission nil`,
+  `:live-ordering-changed? false`, candidate set preserved in every
+  result; `:theta-semantics :search-heuristic-not-posterior` and the
+  untouched Phase 6 gate (`:promoted? false`) stamped in the output.
 
 ## Principal epistemic risk
 

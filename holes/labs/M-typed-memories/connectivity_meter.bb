@@ -24,8 +24,13 @@
 
 (def root "/home/joe/code/futon3c/holes/labs/M-typed-memories")
 (def base-url "http://127.0.0.1:7073")
-(def export-path (str root "/live-graph-export-20260727.edn"))
-(def meter-path (str root "/connectivity-meter-20260727.edn"))
+;; Paths are date-stamped and write-once: a rerun with these defaults re-meters
+;; the FROZEN 2026-07-27 export rather than reading the store, which is what
+;; makes that reading reproducible. METER_STAMP takes a fresh reading into new
+;; date-stamped files without disturbing the frozen pair. Added 2026-07-30.
+(def stamp (or (System/getenv "METER_STAMP") "20260727"))
+(def export-path (str root "/live-graph-export-" stamp ".edn"))
+(def meter-path (str root "/connectivity-meter-" stamp ".edn"))
 (def query-limit 5000)
 (def retry-backoff-ms 5000)
 (def jacobi-tolerance 1.0e-10)
