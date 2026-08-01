@@ -1,0 +1,81 @@
+{:schema-version 1
+ :generated-at "2026-08-01"
+ :candidate-source "holes/labs/M-memory-retrieval/load-bearing-candidates-20260731.jsonl"
+ :candidate-provenance :used-memory-candidates-not-adjudicated
+ :provenance-warning "The named source report explicitly says no adjudication was performed; LB/IN labels are unavailable."
+ :input-sha256 {:candidate "1a4e0ee9b3349fbe15f0d24c17cd33f5551d12232f1deac1607c2c2473c788c8" :candidate-report "1eb5cf97c2f40121f5e56734294b31d00594d49bb641d3c80cd7504b08a2c573" :receipts "0cc527e23c3678a4cc7d8053d6636d0cde556dab15fcc3ce69bedf0b659820b3" :queue "d6b61d04a90db54fb7e6f48bb38c414318ff0de6abfdfb57d6b9081107a5a3a7" :staging "5392f6262fb36a3b0a68e111fbe4bc4e52fda33103e80ee2ecaaead907c9a914" :causal-spec "a6d21a855d8de9d81f2981fe947a825c20f7308e4d60f4229cba05418590909c"}
+ :pairs [
+  {:problem "a01A07"
+   :base-revision "81dccb3"
+   :memory-id "e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound"
+   :source-label :unadjudicated-used-candidate
+   :memory-summary "Use the proved circle sub-mean inequality and polar coordinates/Fubini to bridge circle averages to the translated disk-area sub-mean bound."
+   :reachability :reachable-cheaply
+   :prior-failure-without-memory? true
+   :prior-failure-evidence "Attempts before the memory left the disk-area bridge open; queue receipt 57ca09c6-cfd2-441e-a99b-c96f6c2fffaa records a blocked partial."
+   :recommendation :exclude
+   :score-varies? "No: the base file already contains the proved circle and polar bridge declarations and names the same API, so withholding the memory does not withhold its operative content."}
+  {:problem "a01A07"
+   :base-revision "81dccb3"
+   :memory-id "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence"
+   :source-label :unadjudicated-used-candidate
+   :memory-summary "Work on a local half-radius disk, prove uniform Cauchy convergence from two diskwise L1 errors, then package it with the local-uniform/compact-uniform API."
+   :reachability :reachable-cheaply
+   :prior-failure-without-memory? true
+   :prior-failure-evidence "The queue records attempt 1 as blocked-with-partial (receipt 57ca09c6-cfd2-441e-a99b-c96f6c2fffaa) before the later memory-carrying close."
+   :recommendation :exclude
+   :score-varies? "No: the base theorem docstring spells out the local smaller-disk route, the uniform-Cauchy step, and the exact packaging declaration."}
+  {:problem "a02J05"
+   :base-revision "fddc86c"
+   :memory-id "e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x"
+   :source-label :unadjudicated-used-candidate
+   :memory-summary "Differentiate cos(x)/x to derive the finite-interval sinc identity and its 2/a Dirichlet tail bound."
+   :reachability :reachable-cheaply
+   :prior-failure-without-memory? true
+   :prior-failure-evidence "The first construction run proved the identity but remained blocked (receipt f8586558-7882-4ce9-b2cf-29402de797b1); later candidate rows 24 and 26 report the memory used."
+   :recommendation :exclude
+   :score-varies? "No: both the named identity and the derived uniform tail theorem are already proved in the base file."}
+  {:problem "a02J05"
+   :base-revision "fddc86c"
+   :memory-id "e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral"
+   :source-label :unadjudicated-used-candidate
+   :memory-summary "Evaluate the damped sinc integral by Fubini, send the damping to zero, and remove regularization with a uniform Dirichlet tail estimate."
+   :reachability :reachable-cheaply
+   :prior-failure-without-memory? true
+   :prior-failure-evidence "Receipt f8586558-7882-4ce9-b2cf-29402de797b1 is the blocked run from which the frontier was drafted; a later attempt remained blocked before the third-attempt close."
+   :recommendation :exclude
+   :score-varies? "No: the base file's remaining-obstruction comment gives the same Abel evaluation and uniform-removal plan."}
+  {:problem "a95J08"
+   :base-revision "61ddc05"
+   :memory-id "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses"
+   :source-label :unadjudicated-used-candidate
+   :memory-summary "Stop automatic construction-target descent after one newly exposed frontier level and return the dependency chain for operator prioritisation."
+   :reachability :unreachable
+   :prior-failure-without-memory? false
+   :prior-failure-evidence "All three recorded a95J08 candidate rows (jobs 445, 460, 463) report this memory used; the frozen receipts contain no a95J08 attempt known to lack it."
+   :recommendation :weak
+   :score-varies? "Possibly: the scope guard is absent from the base tree and Mathlib, but historical data provide no memory-free failure and it governed stopping rather than the successful proof route."}
+  {:problem "a95J08"
+   :base-revision "61ddc05"
+   :memory-id "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases"
+   :source-label :unadjudicated-used-candidate
+   :memory-summary "Require an end-to-end library theorem before calling a task adapter work; constituent lemmas without that theorem indicate genuine construction."
+   :reachability :unreachable
+   :prior-failure-without-memory? false
+   :prior-failure-evidence "Jobs 445, 460, and 463 all report this memory used as a scope guard; no frozen a95J08 failure without it was identified."
+   :recommendation :weak
+   :score-varies? "Possibly: its decision rule is not repository-searchable, but it only prevented a category error and did not supply the Hölder construction that eventually closed the theorem."}
+  {:problem "a95J08"
+   :base-revision "61ddc05"
+   :memory-id "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young"
+   :source-label :unadjudicated-used-candidate
+   :memory-summary "Reduce probability-kernel Lp contraction to a general integral Young/Jensen-Tonelli bridge after kernel normalization and translation continuity."
+   :reachability :reachable-with-route-knowledge
+   :prior-failure-without-memory? true
+   :prior-failure-evidence "The first a95J08 candidate row (job 445) failed without this memory; later jobs 460 and 463 used it and still failed at the Jensen/ENNReal frontier."
+   :recommendation :weak
+   :score-varies? "Yes, but direction is not preregistered safely: the base informal solution already exposes Hölder, while the memory steers toward Jensen; the eventual first-try close used Hölder and Mathlib's route-specific lintegral_mul_norm_pow_le."}
+ ]
+ :panel-gaps [{:problem "a93J07"
+               :reason "No used-memory candidate exists for this problem in the named frozen candidate artifact; its five surfaced memories were recorded as ignored. No pair was invented."}]
+ :verdict {:strong 0 :weak 3 :exclude 4 :unassessable-problems 1}}
