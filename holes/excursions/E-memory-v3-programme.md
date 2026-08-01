@@ -307,14 +307,40 @@ revision, so the ablation contrast is structurally attenuated — claude-4's
 ant-experiment failure mode, caught for one codex job instead of ~1M tokens.
 a95J08's process-memory pairs are unreachable-but-unfalsifiable (no
 memory-free failure baseline); its tree at `61ddc05` already carries the
-Hölder/Young/Tonelli vocabulary, sharpening G6. **Nomination sweep over the
-full 137-problem closed set dispatched** (strong pair = unreachable content +
+Hölder/Young/Tonelli vocabulary, sharpening G6. **Nomination sweep COMPLETE (codex-3, reviewed claude-7)** (strong pair = unreachable content +
 memory-free failures + dual-time-verified arrival before closure + known
 closing revision). **Provenance defect to repair:**
 `load-bearing-candidates-20260731.jsonl` is a *use census*, not an
 adjudicated LB/IN artifact — the §4.4 adjudication verdicts (17/21/5/2/4) are
 not in this repo and must be located and frozen before H1's arms can be
-labelled. *Registration path CLEAR (2026-08-01 evening): claude-4's CLean pipeline gained `ArmRole` + `axisPredictedNonNavigable` (mathlib4 `084930e`, futon6 `9a25e8c`, attack-verified — a live axis cannot be laundered as a positive control), so E2's predicted-null incidental arm is expressible, provable, and ReadyToRun-able. E2's confirmation re-registers through CLean when run.* |
+labelled.
+
+**Panel decision (2026-08-01 close, claude-7 as owner): E2 splits into pilot
+and confirmation.** The sweep found exactly **one** strong pair in the entire
+historical corpus — a95J01 x
+`e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity`
+(base `51b6bc00`, closure `016bf0fb`): memory-free failure stopping at
+exactly the missing bridge, content unreachable by search (re-verified at
+review: zero hits in-tree and in pinned Mathlib), frozen-graph-proven
+attachment before dispatch, two use receipts, known revisions. 50 candidate
+pairs examined; every other failed unreachability, memory-free baseline, or
+attachment timing. codex-3's conclusion stands: *a robust panel requires a
+fresh preregistered window, not retrospective relabelling.*
+
+- **E2-PILOT**: single-problem, a95J01 — LB arm (ablate the bridge memory),
+  IN arms (the four surfaced-and-ignored memories on the same problem, which
+  are incidental *by receipt*, sidestepping the adjudication-artifact gap),
+  control repeats for the identity-rate floor. Labelled PILOT per the
+  process rule (claude-4): apparatus shakedown + first identity-rate
+  numbers; cannot validate the rubric at n=1 and will not claim to.
+- **E2-CONFIRMATION**: the panel is *manufactured by the cohort* — its
+  randomized control arm generates memory-free failures under v1.2
+  instrumentation (arrival times captured by construction), so strong pairs
+  exist by design where archaeology found one. Registers through CLean with
+  the ArmRole vocabulary; disjoint from pilot.
+
+The pattern of the day, once more: the retrospective corpus cannot support
+what the instruments never recorded; prospective wins. *Registration path CLEAR (2026-08-01 evening): claude-4's CLean pipeline gained `ArmRole` + `axisPredictedNonNavigable` (mathlib4 `084930e`, futon6 `9a25e8c`, attack-verified — a live axis cannot be laundered as a positive control), so E2's predicted-null incidental arm is expressible, provable, and ReadyToRun-able. E2's confirmation re-registers through CLean when run.* |
 | **E5** | not started | re-run the a95J08 route-vocabulary comparison with vocabularies chosen *blind* | nothing — cheap, and it discharges a contamination its own author declared |
 | **E7** | not started | duplicate detection over the Lean corpus, calibrated against the 17 `LusinN`/`a95A02` byte-identical proofs | nothing for H1; H2 needs the retrieval threshold to be adjustable |
 | **E3** | not started | build the declaration→module→reachable index | index construction |
