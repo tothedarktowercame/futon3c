@@ -1,0 +1,275 @@
+{
+  "meta": {
+    "name": "apm-memory-retrieval-causal-graph",
+    "slug": "apm-memory-retrieval-v1",
+    "version": 1,
+    "date": "2026-08-01",
+    "authors": "Joe + Claude team (futon3c), for encoding by Rob's causal engine",
+    "purpose": "Structural template of the deployed agent-memory system studied in retrieval-whitepaper-v2.md, authored for encoding as a WorkedCausalGraph. Grain is component-scale, per their compiler-model discipline: one variable per mechanism or state owner, mediators preserved, measurement layer separate from causal structure, time-indexed loop edges instead of cycles.",
+    "format_note": "Field names here are ours; adapt to WorkedCausalGraphSpec as needed. 'observes' edges are measurement-layer sensor attachments and must NOT be encoded as causal arrows. Arrow 'status' follows their evidence discipline: 'evidenced' arrows cite code or measurement; 'conjectured' arrows are the hypotheses V3 exists to test and should be encodable but flagged; no arrow rests on narrative plausibility alone.",
+    "companion": "memory-causal-graph-spec.md",
+    "evidence_corpus": "futon3c docs/retrieval-whitepaper-v2.md (V2), holes/excursions/E-memory-v3-staging.md (staging), holes/excursions/E-memory-v3-programme.md (programme)"
+  },
+
+  "variables": [
+    { "id": "V01", "name": "problem_state_t", "kind": "exogenous_context",
+      "description": "The target problem at its pre-dispatch revision: statement, sorry count, problem family. Reconstructible to any historical revision from git (staging H3d).",
+      "values_note": "For finite encoding: problem family (categorical) x sorry count (bounded int)." },
+
+    { "id": "V02", "name": "corpus_state_t", "kind": "persistent_state",
+      "description": "The reviewed memory corpus at dispatch time: memory entries, pattern attachments, graph topology. Currently a star-forest (V2 4.6): schema supports multi-attachment, only single attachments were ever written.",
+      "values_note": "Key summaries: entry count, attachment topology class {star_forest, populated_graph}, composition per era_regime." },
+
+    { "id": "V03", "name": "repo_state_t", "kind": "persistent_state",
+      "description": "The apm-lean worktree: proved lemmas, ConstructionTargets modules, build stanzas. Owns the reachability axis (V2 5.1): a proved artifact is importable only if on the module path.",
+      "values_note": "Includes reachability of relevant lemmas {on_path, off_path, absent}." },
+
+    { "id": "V04", "name": "runner_lane", "kind": "exogenous_context",
+      "description": "Which runner model and lane attempts the dispatch (codex vs zai), plus session freshness. Confounded with receipt instrumentation until staging A3 ships (structured vs prose receipts)." },
+
+    { "id": "V05", "name": "era_regime", "kind": "regime_selector",
+      "description": "advice_era vs artifact_era. In advice_era (V2's frozen corpus) memories are prose advice with no importable referents; in artifact_era, Lean proofs and ConstructionTargets pointers are a main memory source. Affects the composition of corpus_state_t and its overlap with repo_state_t. Per Rob's Q4: model as separate regimes, never silently update V2's frozen-baseline claims." },
+
+    { "id": "V06", "name": "recall_enabled", "kind": "decision_intervention",
+      "description": "Whether the recall pipeline runs for this dispatch. THE COHORT'S INTERVENTION TARGET: randomized at dispatch over ~356 fresh problems, do(recall_enabled in {on, off}). Identifies the ITT of memory-system availability." },
+
+    { "id": "V07", "name": "withheld_ids", "kind": "decision_intervention",
+      "description": "Set of memory ids experimentally withheld; default empty. E2'S INTERVENTION TARGET: do(withheld_ids = {M}). Two candidate mechanisms with different edge targets: (a) removal from corpus_state_t (ship different database); (b) filter at surfaced_set (filter at dispatch). Their equivalence is requested receipt Q3." },
+
+    { "id": "V08", "name": "route_intent", "kind": "endogenous",
+      "description": "The proof route the runner is attempting AT QUERY TIME (Jensen-shaped vs Hoelder-shaped etc.). Explicit variable, not memory metadata, per Rob's reply. Determines query vocabulary (staging G6: 'the search vocabulary is determined by the proof you are trying to build'). Route revision across attempts is time-indexed inside the trajectory, not a cycle here." },
+
+    { "id": "V09", "name": "query_terms", "kind": "mechanism",
+      "description": "Query construction: dispatch packet to ~8 query terms via the 3-term/pairs/singles ladder. Implementation: dispatch_with_recall.clj. Sensor: S06 (planned, staging B5).",
+      "values_note": "DF band of terms {rare, mid, common}; ladder rung fired." },
+
+    { "id": "V10", "name": "lexical_candidates", "kind": "mechanism",
+      "description": "FTS5 candidate set: text-index matches for query_terms over the corpus index. The index has no temporal capability (staging B2), which is why sensor S07 must capture the seed at dispatch time.",
+      "values_note": "candidate count; empty vs non-empty." },
+
+    { "id": "V11", "name": "pattern_projection", "kind": "mechanism",
+      "description": "THE ATTACHMENT LAYER. Text matches reach pattern endpoints; surfaced memories are the patterns' reviewed attachments. C1 (the paper's central open conjecture) locates the emptiness bottleneck here: 'empty' means no MEMORIES surfaced, not no text matched. Three converging measurements, no direct test (V2 5.2)." },
+
+    { "id": "V12", "name": "surfaced_set", "kind": "mechanism",
+      "description": "The offered set (ordered top-5) delivered to the runner: union of content-match arm (from V10) and pattern arm (from V11). E1 measured pattern-arm share at 44.97% on the attributed tail. Sensor S01 (reliable) records the offered ids; S02 records which arm delivered each." },
+
+    { "id": "V13", "name": "info_channel", "kind": "mechanism",
+      "description": "SUBSTITUTIVE channel: content from surfaced memories entering the runner's available information (facts, interface bridges, lemma names). The channel used_ids actually observes." },
+
+    { "id": "V14", "name": "policy_channel", "kind": "mechanism",
+      "description": "REGULATIVE channel: surfaced memories modifying the runner's policy - route preference, stopping rules, cautions, search bounds. Five of seven observed use-modes act here (V2 4.4); use rates 45-54% vs substitutive 15%. Structurally unobserved until B4 (sensor S05) exists. Per Rob: Memory -> Policy/Route/StoppingDecision -> Decision." },
+
+    { "id": "V15", "name": "repo_search", "kind": "mechanism",
+      "description": "The runner's direct repository/library search (grep, module browsing). A second information channel PARALLEL to recall: in the a96A04 natural experiment, repository grep found the unblocking lemma when recall had no entry for it (V2 5.1). Search vocabulary inherits from route_intent - the same route-relativity that binds recall." },
+
+    { "id": "V16", "name": "runner_trajectory", "kind": "mechanism",
+      "description": "The attempt sequence: decompositions tried, edits, searches, route revisions, stopping decisions. The phenomenon most memories act on (regulatively) and the node the adjudication rubric failed to have a category for (V2 4.4)." },
+
+    { "id": "V17", "name": "lean_witness", "kind": "outcome_witness",
+      "description": "The Lean compiler's verdict on the trajectory's artifacts. The system's independent witness (V2 sect 2): outside the memory system, decision-keyed, cannot be contaminated by self-report." },
+
+    { "id": "V18", "name": "outcome", "kind": "outcome",
+      "description": "Dispatch outcome: one-shot closure (cohort DV), final sorry count, attempts-to-close (E2 DV per its validated registration - on a solved panel closure has no variance, attempts do)." },
+
+    { "id": "V19", "name": "corpus_state_t1", "kind": "persistent_state",
+      "description": "corpus_state at t+1: harvest/scribe writes new memories and attachments from the trajectory and outcome. Time-indexed loop edge per their discipline (state[t] -> run -> state[t+1]); no cycle." },
+
+    { "id": "V20", "name": "repo_state_t1", "kind": "persistent_state",
+      "description": "repo_state at t+1: commits from the trajectory (proofs landed, ConstructionTargets promoted). This edge is how 'the loop consumes its own experimental subjects' (staging H3d) enters the model formally." }
+  ],
+
+  "arrows": [
+    { "from": "V01", "to": "V08", "status": "evidenced",
+      "mechanism": "Problem statement and family shape which routes are natural.",
+      "evidence": "staging G6: a95J08 route history." },
+    { "from": "V04", "to": "V08", "status": "evidenced",
+      "mechanism": "Different runners prefer different attack shapes; an outside reviewer (codex-10) proposed the route change that closed a95J08.",
+      "evidence": "staging G6." },
+    { "from": "V01", "to": "V09", "status": "evidenced",
+      "mechanism": "Query terms are constructed from the dispatch packet.",
+      "evidence": "dispatch_with_recall.clj term ladder." },
+    { "from": "V08", "to": "V09", "status": "evidenced",
+      "mechanism": "Route determines search vocabulary; changing intended route changes the terms and hence the DF band the query lands in.",
+      "evidence": "staging G6 and its claude-2 note: route-library alignment is upstream of the term-level U-curve." },
+    { "from": "V06", "to": "V09", "status": "evidenced",
+      "mechanism": "Gate: with recall disabled the query pipeline does not run.",
+      "evidence": "cohort design; trivially mechanical." },
+    { "from": "V09", "to": "V10", "status": "evidenced",
+      "mechanism": "FTS5 match of terms against the corpus text index.",
+      "evidence": "V2 4.2; staging F (the 281MB fts5-evidence.db)." },
+    { "from": "V02", "to": "V10", "status": "evidenced",
+      "mechanism": "The candidate universe is the indexed corpus; corpus composition bounds what any query can match (rare term with no referent = coverage failure, V2 4.2.1).",
+      "evidence": "V2 4.2.1 (Weeber extension)." },
+    { "from": "V07", "to": "V02", "status": "evidenced",
+      "mechanism": "E2 ablation mechanism (a): withheld ids removed from the shipped corpus/store.",
+      "evidence": "staging H3 (a); apmablate infrastructure." },
+    { "from": "V10", "to": "V11", "status": "evidenced",
+      "mechanism": "Text matches project to pattern endpoints.",
+      "evidence": "V2 5.2: recall is query -> text match -> pattern endpoint -> attached memories." },
+    { "from": "V02", "to": "V11", "status": "evidenced",
+      "mechanism": "The pattern -> reviewed-attachment edges ARE corpus structure; on the current star-forest most patterns have few or no reviewed attachments (19 runner reports of a pattern surfacing with none behind it).",
+      "evidence": "V2 4.6, 5.2." },
+    { "from": "V11", "to": "V12", "status": "evidenced",
+      "mechanism": "Pattern arm contributes attached memories to the offered set: 67 of 149 attributed surfacings (44.97%) on the attributed tail.",
+      "evidence": "E1 result, programme sect 3." },
+    { "from": "V10", "to": "V12", "status": "evidenced",
+      "mechanism": "Content-match arm contributes direct text matches: 82 of 149 attributed surfacings.",
+      "evidence": "E1 result." },
+    { "from": "V07", "to": "V12", "status": "evidenced",
+      "mechanism": "E2 ablation mechanism (b): withheld ids filtered from the surfaced set at dispatch; identical from the runner's view iff Q3 holds.",
+      "evidence": "staging H3 (b)." },
+    { "from": "V12", "to": "V13", "status": "evidenced",
+      "mechanism": "Surfaced content enters the runner's available information.",
+      "evidence": "V2 4.4 substitutive uses (interface bridge; decomposition fix)." },
+    { "from": "V12", "to": "V14", "status": "evidenced",
+      "mechanism": "Surfaced regulative memories modify runner policy: stopping rules, route cautions, search bounds. 'Kept API reconnaissance bounded'; 'searched components first, then Zulip; arXiv was unnecessary'.",
+      "evidence": "V2 4.4; staging G8 (counter-pressure memory fired-and-cleared)." },
+    { "from": "V13", "to": "V16", "status": "evidenced",
+      "mechanism": "Information shapes what the trajectory can attempt (per Rob: Memory -> AvailableInformation -> Decision).",
+      "evidence": "V2 4.4 load-bearing substitutive cases." },
+    { "from": "V14", "to": "V16", "status": "evidenced",
+      "mechanism": "Policy shapes how the trajectory proceeds (per Rob: Memory -> Policy -> Decision). Route revisions across attempts live here, time-indexed.",
+      "evidence": "V2 4.4: five rows changed what the runner did without changing what was achieved." },
+    { "from": "V08", "to": "V15", "status": "evidenced",
+      "mechanism": "Route vocabulary determines repository search terms - searching Jensen/probability-measure will never surface ENNReal.lintegral_mul_norm_pow_le.",
+      "evidence": "staging G6." },
+    { "from": "V03", "to": "V15", "status": "evidenced",
+      "mechanism": "Repository search can only find what is present and reachable; adding a build stanza made two modules' lemmas findable, consumed within 80 minutes.",
+      "evidence": "V2 5.1 natural experiment." },
+    { "from": "V15", "to": "V16", "status": "evidenced",
+      "mechanism": "Found artifacts enter the trajectory (the grep channel that beat recall on inputs, n=1).",
+      "evidence": "V2 5.1, stated with its inputs caveat." },
+    { "from": "V01", "to": "V16", "status": "evidenced",
+      "mechanism": "The problem itself bounds the trajectory.",
+      "evidence": "definitional." },
+    { "from": "V04", "to": "V16", "status": "evidenced",
+      "mechanism": "Runner model capability and session state shape the trajectory.",
+      "evidence": "V2 sect 6 scope: one runner model, untested transfer (C7)." },
+    { "from": "V16", "to": "V17", "status": "evidenced",
+      "mechanism": "Trajectory artifacts are compiled by Lean.",
+      "evidence": "definitional; the witness contract (V2 sect 2)." },
+    { "from": "V03", "to": "V17", "status": "evidenced",
+      "mechanism": "Compilation depends on what the repo makes importable (module path).",
+      "evidence": "V2 5.1: off-path lemmas fail imports that on-path lemmas satisfy." },
+    { "from": "V17", "to": "V18", "status": "evidenced",
+      "mechanism": "Closure and sorry count are read off witness verdicts.",
+      "evidence": "definitional." },
+    { "from": "V16", "to": "V18", "status": "evidenced",
+      "mechanism": "Attempts-to-close is a trajectory property (E2's DV).",
+      "evidence": "programme E2 design corrections." },
+    { "from": "V02", "to": "V19", "status": "evidenced",
+      "mechanism": "State carry-forward.",
+      "evidence": "time-indexing discipline." },
+    { "from": "V16", "to": "V19", "status": "evidenced",
+      "mechanism": "Harvest/scribe writes new memories and attachments from the trajectory.",
+      "evidence": "M-codex-sorry-loop per-row protocol." },
+    { "from": "V18", "to": "V19", "status": "evidenced",
+      "mechanism": "Outcomes gate promotion (what gets written as a reviewed memory).",
+      "evidence": "review-attachment! lifecycle." },
+    { "from": "V03", "to": "V20", "status": "evidenced",
+      "mechanism": "State carry-forward.",
+      "evidence": "time-indexing discipline." },
+    { "from": "V16", "to": "V20", "status": "evidenced",
+      "mechanism": "Trajectory commits proofs and promotes ConstructionTargets; this is the edge by which the loop consumed three of four E2 candidate problems (staging H3d).",
+      "evidence": "staging H3d table." },
+    { "from": "V05", "to": "V02", "status": "evidenced",
+      "mechanism": "Regime determines corpus composition: advice-only vs artifact-pointing entries.",
+      "evidence": "V2 5.1 frozen-baseline claim + Rob Q4 two-regime requirement." },
+    { "from": "V05", "to": "V03", "status": "evidenced",
+      "mechanism": "Artifact era adds ConstructionTargets modules and their reachability.",
+      "evidence": "construction-targets.md; staging I." },
+
+    { "from": "V11", "to": "V12", "status": "conjectured", "duplicate_of_evidenced_edge": true,
+      "id": "C1-bottleneck",
+      "mechanism": "C1, THE CENTRAL CONJECTURE, as a claim about this edge's dominance: sparse attachments at V11 - not lexical failure at V09/V10 - generate the 64% empty-surfacing rate. Three converging measurements (80/90 empty candidate baselines; 62% of slots to never-used memories; 19 no-attachment reports), no direct test. E1's coverage back-fill is the test.",
+      "evidence": "V2 5.2; programme C1/E1." }
+  ],
+
+  "leak_edges": {
+    "description": "Backdoor paths that exist WITHOUT the E2 isolation surgery and are severed BY it. Encode as removable edges so the engine can verify identification with and without surgery. Every one is a path from post-solution knowledge into the trajectory that bypasses do(withheld_ids).",
+    "edges": [
+      { "id": "L1", "from": "repo git object database (post-solution revisions)", "to": "V15",
+        "mechanism": "git log --all / git show from any historical checkout reaches the solved file; runners demonstrably search the repository.",
+        "severed_by": "history truncated at target revision (re-git-init from historical tree).",
+        "evidence": "staging H3e, verified 2026-08-01." },
+      { "id": "L2", "from": "futon3c lab artifacts describing routes and outcomes", "to": "V15",
+        "mechanism": "Three lab files carry runner prose describing the winning routes for candidate problems.",
+        "severed_by": "no read access to /home/joe.",
+        "evidence": "staging H3e." },
+      { "id": "L3", "from": "runner persistent state (~/.codex history, cache)", "to": "V16",
+        "mechanism": "A runner recalling its own prior exposure to the problem from its persistent store.",
+        "severed_by": "separate user account excludes ~/.codex by construction; residual: verify what a fresh agent inherits (staging H3g - NOT cleared).",
+        "evidence": "staging H3g first pass." },
+      { "id": "L4", "from": "session continuity (same agent, earlier repeats)", "to": "V16",
+        "mechanism": "K repeats sharing a session understate run-to-run variance; the same agent remembers earlier attempts.",
+        "severed_by": "fresh session per run, enforced as a typed guard (sessionId invariant, found at review pass 10).",
+        "evidence": "staging H3c item 2; H6 defect table." }
+    ]
+  },
+
+  "measurement_layer": {
+    "description": "Sensors observe nodes; observes-edges are NOT causal arrows. Missingness per sensor must itself be modeled (Rob's requirement): every currently-populated sensor is a recency-biased tail, not a random sample, and absent values are not evidence of event absence. The Phase-0 repairs (strategy doc sect 2) are precisely: one sensor per unsensed node.",
+    "sensors": [
+      { "id": "S01", "name": "offered_receipts", "observes": "V12",
+        "status": "live, reliable", "missingness": "effectively complete on offered halves; the one good sensor." },
+      { "id": "S02", "name": "surfacing_via", "observes": "arm attribution of V10/V11 into V12",
+        "status": "live since 2026-07-30T21 only", "missingness": "30/129 dispatches; covers final 6.57% of corpus by elapsed time; onset-biased exactly where the interesting comparison (attachment accumulation) would start. Repair A4 extends to all paths." },
+      { "id": "S03", "name": "used_ids", "observes": "V13 ONLY (not V14)",
+        "status": "live, no code writer for outcome half", "missingness": "~16% of outcome receipts; biased: dropped uses were 67% load-bearing vs 30% for kept (n=6, blind subset n=2). Wrong causal level for 5 of 7 use-modes. Repair A1 adds record-outcome! + backfill from ~130 job results on disk." },
+      { "id": "S04", "name": "rejection_reasons", "observes": "decline reasoning at the V12-to-V16 interface",
+        "status": "live, near-empty", "missingness": "7/129 non-empty; taxonomy recovered from runner prose at 66% coverage with directional undercount of topical mismatch." },
+      { "id": "S05", "name": "memory_use_kind", "observes": "channel split V13 vs V14",
+        "status": "PLANNED (staging B4)", "missingness": "does not exist; prerequisite for path-specific estimands and for lane-scoped retrieval (E4)." },
+      { "id": "S06", "name": "ladder_rung", "observes": "V09 mechanism (which rung fired)",
+        "status": "PLANNED (staging B5)", "missingness": "does not exist; P1's H2 was untestable without it." },
+      { "id": "S07", "name": "seed_capture", "observes": "V10 (candidate ids + scores + index-as-of)",
+        "status": "PLANNED (staging B2)", "missingness": "does not exist; without it no historical replay is possible, ever - the binding argument for instrument-before-dispatch." },
+      { "id": "S08", "name": "lean_witness_log", "observes": "V17",
+        "status": "live, complete, independent", "missingness": "none known; the trust-boundary anchor." },
+      { "id": "S09", "name": "runner_prose", "observes": "V16",
+        "status": "live, unstructured", "missingness": "near-complete narratively but lexically coded at 66% coverage; six uses appeared here that S03 dropped." }
+    ]
+  },
+
+  "regimes": {
+    "era": {
+      "values": ["advice_era", "artifact_era"],
+      "selector": "V05",
+      "note": "V2's frozen corpus is entirely advice_era. The prospective cohort runs entirely in artifact_era. Cross-regime comparisons are transport questions, not pooled estimates."
+    },
+    "route": {
+      "values": ["example: jensen_shaped", "example: hoelder_shaped"],
+      "attaches_to": "V08",
+      "note": "For route-relativity queries (C6/E5): does the effect of memory availability on outcome transport across route regimes? a95J08 is the characterized instance: three failed attempts under one route, first-try close under the other, with the unblocking lemma present in Mathlib throughout."
+    }
+  },
+
+  "interventions": [
+    { "id": "I_cohort", "target": "V06", "operation": "do(recall_enabled = on/off), randomized at dispatch",
+      "population": "~356 never-attempted problems, artifact_era, fully instrumented (S05-S07 shipped first)",
+      "primary_estimand": "ITT of memory-system availability on one-shot closure (V18)",
+      "secondary_estimands": "mediated effects through V13 vs V14 (needs S05); lane contrast by V04 (needs A3 to deconfound instrumentation); attempts-to-close" },
+    { "id": "I_E2", "target": "V07", "operation": "do(withheld_ids = {M}) for M adjudicated load-bearing vs incidental, on closed problems re-run from pre-solution state",
+      "population": "4 staged problems at pre-solution revisions under apmablate isolation (L1-L4 severed)",
+      "primary_estimand": "ITT of single-memory availability on closure/attempts (Rob's Q2 correction)",
+      "purpose": "H1 design: validates whether the load-bearing adjudication rubric tracks interventional effects at all - tests our instrument, not just the memory" }
+  ],
+
+  "requested_receipts": [
+    { "id": "Q1",
+      "question": "What does I_cohort identify? Confirm the randomization of V06 identifies the total effect on V18 without adjustment; state what additional conditioning (if any) the lane-subgroup contrast (V04) and problem-family subgroups require; flag any backdoor we have missed.",
+      "expected_shape": "identification receipt with adjustment sets (expected: empty set for the primary) + any refusals." },
+    { "id": "Q2",
+      "question": "What does I_E2 identify, given the isolation surgery? Verify identification of the availability effect requires severing L1-L4 (i.e., exhibit the backdoor paths each leak edge opens when present); state the mediation decomposition through V13 vs V14 that becomes identifiable once sensor S05 exists, and what remains unidentifiable without it.",
+      "expected_shape": "identification with surgery-conditional validity + NDE/NIE preconditions per their effect algebra." },
+    { "id": "Q3",
+      "question": "Filter-equivalence d-separation: is V18 independent of membership of M in V02, given the realized V12 (surfaced set)? Run on BOTH corpus topologies: star_forest (current) and populated_graph (post multi-attachment repair). Our prediction: holds on star_forest (so E2 mechanism (b) filter-at-dispatch is a valid cheap substitute for (a) ship-different-databases), and FAILS on populated_graph (removing M then changes what else surfaces through shared patterns, so (a) and (b) diverge). A confirmed divergence is itself a finding about the graph-population repair and would be preregistered as such.",
+      "expected_shape": "two d-separation receipts, one per topology, with the separating/connecting paths named." }
+  ],
+
+  "out_of_scope_v1": [
+    "The goal-level conative graph (queue blocking relations, :blocked-on/:unblocks). Per Rob's Q1 these are dependency relations that become causal arrows only when interventions on blockers have defined downstream consequences - deferred to v2 of this spec after one such intervention is characterized.",
+    "Statistical estimation and the missingness weighting model - stays on our side (integration doc sect 6.5); this spec carries only measurement-layer structure.",
+    "Duplicate-detection / write-side identity (C8/E7) - separate small graph if useful later."
+  ]
+}

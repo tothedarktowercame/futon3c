@@ -116,11 +116,15 @@ proceed regardless.
 1. ~~Receive and read the four mfuton mission docs~~ **DONE 2026-08-01 — see
    §6.** Pack retained at `~/code/external/rob-pearl-pack-2026-08-01/`
    (Rob's material; not committed here — his call).
-2. Draw our DAG properly — **now with a concrete target format**: their
-   graphs are authored JSON specs (`WorkedCausalGraphSpec` shape, cf.
-   `as-built-structural-graph-v4.json`, 38 variables / 65 arrows) published
-   through an existing skill into their memory substrate. Our deliverable is
-   such a spec, not a figure.
+2. ~~Draw our DAG properly~~ **DONE 2026-08-01 —
+   `docs/memory-causal-graph-spec.json` (+ `.md` companion)**: 20 variables,
+   34 evidenced arrows + 1 flagged conjecture (C1), 4 removable leak edges
+   (the E2 isolation surgery), 9 sensors with missingness annotations, 2
+   regime axes, both interventions, and the three requested receipts
+   (Q1 cohort identification, Q2 E2-under-surgery + mediation, Q3
+   filter-equivalence d-separation on both topologies, with a falsifiable
+   divergence prediction). Verified valid JSON and acyclic; roots = exogenous
+   contexts + interventions, sinks = the t+1 states. Awaiting their encoding.
 3. Ask their side for the worked route-as-moderator example — **sharpened by
    §6.4**: the natural encodings are route-as-explicit-variable (their
    requirement 9-style context node) or route-as-regime (their transport
