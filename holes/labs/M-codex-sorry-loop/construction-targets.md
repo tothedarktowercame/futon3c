@@ -63,3 +63,65 @@ in `a95A03`. Use `ConstructionTargets/RadialIntegrationR3.lean`, extending the
 existing Euclidean volume/integrability API. It has only one direct problem,
 but outranks the other one-off gaps because both downstream statements and
 the proved one-dimensional integral building block are explicit.
+
+---
+
+# Rules for building a ConstructionTarget
+
+Added 2026-08-01 by claude-9. Every rule below is a defect this loop actually
+hit, not a precaution. Include all four in the dispatch packet.
+
+## R1. It must be in the build graph, or it is worthless
+
+Until 2026-07-30 there was no `lean_lib` stanza for `ConstructionTargets`, so
+the modules were not on the module path: `import ConstructionTargets.X` failed
+with "unknown module prefix" and no oleans were ever produced. Lemmas were
+proved, gated, and reported clean while being **unreachable from the problems
+they were built for**. `YoungL2` had the identical defect and a94J04's runner
+hit it on 2026-07-31.
+
+**Gate:** `lake build ConstructionTargets.<Module>` must exit 0 *and* the
+packet must require confirming the `[[lean_lib]]` stanza plus the existence of
+`.lake/build/lib/lean/ConstructionTargets/<Module>.olean`. A module that
+compiles standalone but is outside the build graph looks clean and is invisible.
+
+## R2. MOVE declarations, do not COPY them
+
+`ConstructionTargets/LusinN.lean` was created by copying
+`problems/a95A02/lean/Main.lean`. The result: **17 shared declaration names,
+all 17 with byte-identical proofs, and a95A02 does not import LusinN.** Two
+independent copies, so a fix applied to one silently does not reach the other.
+Its file docstring still opens "APM a95A02", which is how the copy is
+detectable.
+
+**Gate:** before committing, grep every new top-level name against the other
+ConstructionTargets modules *and* against the source problem file. If the
+source problem keeps its own copy, the target has not been extracted — it has
+been duplicated. Preserve statement text byte-for-byte by `open`ing the shared
+namespace rather than qualifying names, so consumer statements do not change.
+
+## R3. Prove the general theorem is true before asking for it
+
+Ground control dispatched a radial-majorant a.e. convergence theorem under
+`LocallyIntegrable f`. It is **false**: `exp(x²)` is locally integrable and its
+Poisson convolution diverges, because the Poisson kernel decays only like
+`1/t²`. The runner refuted it in one line and stopped there, correctly.
+
+**Gate:** state the hypothesis the *consumer actually has* (here `MemLp f 2`)
+rather than the weakest-looking one. If a packet proposes a bound, name where
+the bound comes from; "sup A is finite" was assumed, not derived, and that is
+exactly where the statement was false.
+
+## R4. Prose asserting absence goes stale, and stale absence blocks work
+
+Six times this session a problem file asserted a theorem was missing from
+Mathlib when it was present, or missing from the repo when a ConstructionTarget
+had since supplied it: a94A03's Young, a92J05's and a97A08's Rouché comments,
+a95J08's Minkowski belief, a94J04's Lebesgue-differentiation claim, and
+a96A04's compact-support note. Runners correctly declined to edit those
+comments without earning the claim.
+
+**Gate:** the packet should name the current state of the library explicitly
+("VERIFIED ABSENT", "VERIFIED PRESENT at <file>:<line>") so the runner does not
+have to trust in-file prose. A dependency edge asserted in a comment is not
+evidence; a94A10 was recorded as Rouché-blocked all day and never was.
