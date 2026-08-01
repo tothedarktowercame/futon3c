@@ -10,7 +10,7 @@
                "A continuous function has integral zero."
                {"1.5.1" "nonneg integral zero → zero"})]
     (is (= "nonneg integral zero → zero" (:terrain query)))
-    (is (= :v1-enriched (:recall-system query)))
+    (is (= :v1.2-receipt-instrumented (:recall-system query)))
     (is (not-any? #{"bpm-1-5-1"} (:terms query))
         "problem ids are graph endpoints, not conjunctive lexical terms")
     (is (some #{"nonnegative integral"} (:terms query)))))
@@ -57,7 +57,7 @@
 
 (deftest default-recall-budget-covers-corpus-projection
   (let [opts (dispatch/parse-args [])]
-    (is (= 30000 (:recall-timeout-ms opts)))
+    (is (= dispatch/default-recall-timeout-ms (:recall-timeout-ms opts)))
     (is (= 0.5 (:receipt-alpha opts)))
     (is (true? (:receipt-ranking? opts))))
   (is (false? (:receipt-ranking?
@@ -301,7 +301,8 @@
                "job-1" "session-1")
         receipt (get-in entry [:body :memory-use])]
     (is (= :pattern-outcome (:type entry)))
-    (is (= :v1-enriched (get-in entry [:body :recall-system])))
+    (is (= :v1.2-receipt-instrumented
+           (get-in entry [:body :recall-system])))
     (is (= :recall-empty (get-in entry [:body :recall-status])))
     (is (= [] (:memory-use/surfaced-ids receipt)))
     (is (= :pending-outcome (:memory-use/status receipt)))
@@ -313,6 +314,10 @@
                {:status :ok
                 :trace-id "recall-1"
                 :query {:query "a95A04 interval integral"}
+                :lexical-seed [{:evidence-id "e-seed" :score -7.5}]
+                :index-as-of "2026-08-01T12:00:00Z"
+                :ladder-rung :pair
+                :ladder-query "interval integral"
                 :memories [{:memory/id "e-memory-1"
                             :via :content-match}]}
                "job-1" "session-1")
@@ -322,6 +327,13 @@
     (is (= ["e-memory-1"] (:memory-use/unused-ids receipt)))
     (is (= [{:memory-id "e-memory-1" :via :content-match}]
            (:memory-use/surfacing-via receipt)))
+    (is (= [{:evidence-id "e-seed" :score -7.5}]
+           (get-in entry [:body :recall-lexical-seed])))
+    (is (= "2026-08-01T12:00:00Z"
+           (get-in entry [:body :recall-index-as-of])))
+    (is (= :pair (get-in entry [:body :recall-ladder-rung])))
+    (is (= "interval integral"
+           (get-in entry [:body :recall-ladder-query])))
     (is (= "recall-1" (:memory-use/cascade-id receipt)))))
 
 (deftest offered-receipt-identifies-active-receipt-ranking
@@ -329,8 +341,8 @@
         (dispatch/offered-evidence
          {:problem "a96A04" :from "ground-control"}
          {:status :ok
-          :query {:recall-system :v1.1-receipt-ranked}
+          :query {:recall-system :v1.2-receipt-ranked-instrumented}
           :memories [{:memory/id "e-used"}]}
          "job-1" "session-1")]
-    (is (= :v1.1-receipt-ranked
+    (is (= :v1.2-receipt-ranked-instrumented
            (get-in entry [:body :recall-system])))))

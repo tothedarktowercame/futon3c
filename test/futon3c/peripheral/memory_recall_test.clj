@@ -273,7 +273,10 @@
           :description "rw rewrite motive is not type correct"
           :recall-system :v1-enriched}}
         search-result
-        {:results [{:score -9.0 :entry description-entry}]
+        {:results [{:score -9.0 :entry description-entry}
+                   {:score -4.0
+                    :entry {:evidence/id "e-transcript-seed"
+                            :evidence/type :chat-transcript}}]
          :index-as-of "now"}
         calls (atom [])
         recall-batch
@@ -301,7 +304,15 @@
     (is (= ["math/rewrite-orientation"]
            (mapv :pattern-id (:candidates result))))
     (is (= :reviewed-pattern-description-lexical-proposal
-           (get-in result [:candidates 0 :source])))))
+           (get-in result [:candidates 0 :source])))
+    (is (= "now" (:index-as-of result)))
+    (is (= [{:evidence-id "e-pattern-description-v1-rewrite-orientation"
+             :evidence-type :reflection
+             :score -9.0}
+            {:evidence-id "e-transcript-seed"
+             :evidence-type :chat-transcript
+             :score -4.0}]
+           (:lexical-seed result)))))
 
 (deftest typed-pattern-description-with-empty-neighborhood-is-not-a-warrant
   (let [result

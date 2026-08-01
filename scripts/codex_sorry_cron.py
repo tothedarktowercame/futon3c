@@ -56,6 +56,7 @@ AGENCY_BASE = os.environ.get("CODEX_SORRY_AGENCY_BASE", "http://localhost:7070")
 # see the comment in dispatch(). :7071 (the substrate client's built-in default)
 # is the retired futon1a store and is dead.
 SUBSTRATE_URL = os.environ.get("FUTON_SUBSTRATE_URL", "http://127.0.0.1:7073").rstrip("/")
+OUTCOME_SWEEPER = FUTON3C_DIR / "scripts/memory_outcome_sweeper.py"
 MAX_USED_PERCENT = float(os.environ.get("CODEX_SORRY_MIN_HEADROOM_USED", "50"))
 MAX_OTHER_INVOKING = int(os.environ.get("CODEX_SORRY_MAX_OTHER_INVOKING", "1"))
 HTTP_TIMEOUT = float(os.environ.get("CODEX_SORRY_HTTP_TIMEOUT", "15"))
@@ -510,6 +511,47 @@ def append_progress(record: dict[str, Any]) -> None:
         stream.write(json.dumps(record, separators=(",", ":")) + "\n")
 
 
+def sweep_memory_outcomes(dry_run: bool) -> dict[str, Any] | None:
+    """Run the append-only receipt sweeper before evaluating dispatch gates.
+
+    Receipt recording is best-effort and must not disable scheduling when the
+    store is briefly unavailable; failures are visible in the cron log.
+    """
+    command = [sys.executable, str(OUTCOME_SWEEPER)]
+    if dry_run:
+        command.append("--dry-run")
+    env = dict(os.environ)
+    env.setdefault("FUTON_SUBSTRATE_URL", SUBSTRATE_URL)
+    result = subprocess.run(
+        command,
+        cwd=FUTON3C_DIR,
+        text=True,
+        capture_output=True,
+        timeout=180,
+        check=False,
+        env=env,
+    )
+    if result.returncode:
+        emit(
+            f"outcome-sweep-failed exit={result.returncode} stderr={result.stderr[-500:]}",
+            dry_run=dry_run,
+        )
+        return None
+    try:
+        summary = json.loads(result.stdout)
+    except ValueError:
+        emit("outcome-sweep-failed invalid-summary", dry_run=dry_run)
+        return None
+    emit(
+        "outcome-sweep "
+        f"written={summary.get('written', 0)} "
+        f"existing={summary.get('skipped_existing', 0)} "
+        f"unrecoverable={summary.get('unrecoverable', 0)}",
+        dry_run=dry_run,
+    )
+    return summary
+
+
 def run(dry_run: bool) -> int:
     LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     with LOCK_PATH.open("a+", encoding="utf-8") as lock:
@@ -519,6 +561,7 @@ def run(dry_run: bool) -> int:
             emit(f"already-running lock={LOCK_PATH}", dry_run=dry_run)
             return 0
 
+        sweep_memory_outcomes(dry_run)
         usage = newest_rate_limit()
         enforce_usage(usage)
         roster = get_json(f"{AGENCY_BASE}/api/alpha/agents")

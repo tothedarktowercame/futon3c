@@ -326,6 +326,13 @@
        (take limit)
        vec))
 
+(defn- lexical-seed-row
+  "Bounded replay datum from one FTS row; excludes the full evidence payload."
+  [row]
+  {:evidence-id (get-in row [:entry :evidence/id])
+   :evidence-type (get-in row [:entry :evidence/type])
+   :score (:score row)})
+
 (defn- proposal-tokens
   [query]
   (->> (re-seq #"[A-Za-z0-9_/-]+" (str/lower-case query))
@@ -549,7 +556,11 @@
            primary-content-matches
            (:content-matches fallback-proposal-result))
          selected-result
-         (if primary-hit? primary-result fallback-proposal-result)]
+         (if primary-hit? primary-result fallback-proposal-result)
+         selected-rows
+         (vec (:results (if primary-hit? search-result fallback-result)))
+         selected-search-result
+         (if primary-hit? search-result fallback-result)]
      {:ok true
       :trace-id trace-id
       :query query
@@ -566,7 +577,9 @@
                         :full-query
                         :bounded-token-disjunction)
       :fallback-tokens (vec fallback-tokens)
-      :index-as-of (:index-as-of search-result)
+      :index-as-of (or (:index-as-of selected-search-result)
+                       (:index-as-of search-result))
+      :lexical-seed (mapv lexical-seed-row selected-rows)
       :validation
       {:primary
        {:memories

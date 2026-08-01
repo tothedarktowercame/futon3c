@@ -89,6 +89,22 @@ class UsageGateTests(unittest.TestCase):
                 cron.newest_rate_limit(Path(tmp), datetime.now(timezone.utc))
 
 
+class OutcomeSweepTests(unittest.TestCase):
+    def test_cron_invokes_dry_run_sweeper(self):
+        completed = mock.Mock(
+            returncode=0,
+            stdout=json.dumps({"written": 0, "skipped_existing": 3, "unrecoverable": 2}),
+            stderr="",
+        )
+        with (
+            mock.patch.object(cron.subprocess, "run", return_value=completed) as run,
+            mock.patch.object(cron, "emit"),
+        ):
+            summary = cron.sweep_memory_outcomes(True)
+        self.assertEqual(0, summary["written"])
+        self.assertIn("--dry-run", run.call_args.args[0])
+
+
 class AgencyGateTests(unittest.TestCase):
     @staticmethod
     def agent(status="restored", ready=True):
@@ -229,6 +245,7 @@ class RuntimeDisciplineTests(unittest.TestCase):
                 ),
                 mock.patch.object(cron, "get_json", return_value=roster),
                 mock.patch.object(cron, "load_queue", return_value=queue),
+                mock.patch.object(cron, "sweep_memory_outcomes", return_value={}),
                 mock.patch.object(cron, "save_queue") as save,
                 mock.patch.object(cron, "append_progress") as progress,
                 mock.patch.object(cron, "dispatch") as dispatch,

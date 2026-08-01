@@ -55,8 +55,8 @@
 (def default-agency-base "http://localhost:7070")
 (def default-mission "M-zai-learning-loop")
 (def default-problem-root "/home/joe/code/apm-lean/problems")
-(def recall-system :v1-enriched)
-(def receipt-ranked-system :v1.1-receipt-ranked)
+(def recall-system :v1.2-receipt-instrumented)
+(def receipt-ranked-system :v1.2-receipt-ranked-instrumented)
 (def default-receipt-alpha 0.5)
 (def default-receipt-query-limit 200)
 (def default-receipt-stats-timeout-ms 5000)
@@ -719,6 +719,10 @@
      :trace-id trace-id
      :query query-data
      :proposal-count (count (:candidates proposals))
+     :lexical-seed (:lexical-seed proposals)
+     :index-as-of (:index-as-of proposals)
+     :ladder-rung (:recall/tier proposals)
+     :ladder-query (:recall/query-used proposals)
      :pattern-ids (vec pattern-ids)
      :endpoints (vec endpoints)
      :memories memories}))
@@ -937,6 +941,10 @@
                     :job-id job-id
                     :recall-status (:status recall-result)
                     :recall-query (:query recall-result)
+                    :recall-lexical-seed (vec (or (:lexical-seed recall-result) []))
+                    :recall-index-as-of (:index-as-of recall-result)
+                    :recall-ladder-rung (or (:ladder-rung recall-result) :unavailable)
+                    :recall-ladder-query (:ladder-query recall-result)
                     :memory-use receipt}
              (:reason recall-result)
              (assoc :recall-reason (:reason recall-result))
