@@ -728,6 +728,12 @@
                   :domain (:memory-domain config)
                   :surfaced-at (now-str)
                   :surfaced-memory-ids surfaced-ids
+                  :memory-use-kinds
+                  (into {}
+                        (keep (fn [memory]
+                                (when-let [kind (:memory-use/kind memory)]
+                                  [(:memory/id memory) kind])))
+                        memories)
                   :inclusion-reasons inclusion-reasons
                   :recall-audit (dissoc recall :memories)})
           {:ok true
@@ -886,6 +892,8 @@
                     :rejected-memory-ids (vec (keys rejection-reasons))
                     :inclusion-reasons
                     (or (:inclusion-reasons memory-context) {})
+                    :memory-use-kinds
+                    (or (:memory-use-kinds memory-context) {})
                     :rejection-reasons rejection-reasons
                     :pattern-id pattern-id
                     :outcome-id outcome-id

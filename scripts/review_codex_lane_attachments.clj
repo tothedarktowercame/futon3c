@@ -29,8 +29,15 @@
 ;; would be exactly the false attestation this guard exists to prevent. They are
 ;; reported and left for an operator decision.
 ;;
-;; Usage:  clojure -M scripts/review_codex_lane_attachments.clj [--commit] [--names-file F]
-;; Default is a dry run listing what would be reviewed.
+;; Usage:
+;;   clojure -M scripts/review_codex_lane_attachments.clj [--commit] [--names-file F]
+;;   clojure -M scripts/review_codex_lane_attachments.clj [--commit]
+;;     --memory-id ID --review-evidence-id ID --pattern-id ID
+;;
+;; The explicit form is the forward promotion seam: a promotion invokes it
+;; immediately after appending the separately authored review evidence.  The
+;; batch form remains for historical reconciliation.  Default is a genuine
+;; dry run; only --commit may apply a review projection.
 
 (require '[clojure.edn :as edn]
          '[clojure.java.io :as io]
@@ -50,6 +57,9 @@
       "e-review-claude9-earlier-"))
 (def commit? (some #{"--commit"} *command-line-args*))
 
+(defn- arg-value [flag]
+  (second (drop-while #(not= flag %) *command-line-args*)))
+
 (defn- memory-edge [memory-id]
   (first (filter #(= memory-id (get-in % [:hx/props :roles :entry]))
                  ;; The default limit of 10000 is rejected by the server with HTTP 400;
@@ -65,8 +75,24 @@
                     (get-in edge [:hx/props :roles :subjects] [])))))
 
 (def names-filter
-  (when-let [f (second (drop-while #(not= "--names-file" %) *command-line-args*))]
+  (when-let [f (arg-value "--names-file")]
     (set (edn/read-string (slurp f)))))
+
+(def explicit-target
+  (let [memory-id (arg-value "--memory-id")
+        review-id (arg-value "--review-evidence-id")
+        pattern-id (arg-value "--pattern-id")]
+    (when (some some? [memory-id review-id pattern-id])
+      (when-not (every? #(and (string? %) (not (str/blank? %)))
+                        [memory-id review-id pattern-id])
+        (throw (ex-info "explicit review requires memory, review-evidence, and pattern ids"
+                        {:memory-id memory-id
+                         :review-evidence-id review-id
+                         :pattern-id pattern-id})))
+      {:name memory-id
+       :memory-id memory-id
+       :review-evidence-id review-id
+       :pattern-ids [pattern-id]})))
 
 (defn- codex-lane-memory-ids []
   ;; Names come from the promotion reports, which are the authoritative record of
@@ -80,7 +106,9 @@
          (keep :name)
          distinct
          (filter #(or (nil? names-filter) (contains? names-filter %)))
-         (map #(vector % (str "e-codexpilot-" %)))
+         (map (fn [name]
+                {:name name
+                 :memory-id (str "e-codexpilot-" name)}))
          vec)))
 
 (defn -main [& _]
@@ -89,20 +117,27 @@
              :session-id "M-codex-sorry-loop/duree"
              :domain :mathematics
              :evidence-store evidence-store}
-        targets (codex-lane-memory-ids)
+        targets (if explicit-target [explicit-target]
+                    (codex-lane-memory-ids))
         results
         (mapv
-         (fn [[nm memory-id]]
+         (fn [{:keys [name memory-id pattern-ids] :as target}]
            (let [edge (memory-edge memory-id)
-                 rev-id (review-evidence-id nm)
-                 pats (pattern-ids-of edge)
+                 rev-id (or (:review-evidence-id target)
+                            (review-evidence-id name))
+                 pats (or pattern-ids (pattern-ids-of edge))
                  status (get-in edge [:hx/props :attachment-status])]
              (cond
-               (nil? edge) {:name nm :result :no-edge}
-               (= :reviewed status) {:name nm :result :existing}
-               (empty? pats) {:name nm :result :no-pattern-ids}
+               (nil? edge) {:name name :result :no-edge}
+               (= :reviewed status) {:name name :result :existing}
+               (empty? pats) {:name name :result :no-pattern-ids}
                (nil? (estore/get-entry* evidence-store rev-id))
-               {:name nm :result :no-review-evidence :expected rev-id}
+               {:name name :result :no-review-evidence :expected rev-id}
+
+               (not commit?)
+               {:name name :result :would-review
+                :memory-id memory-id :review-evidence-id rev-id
+                :pattern-ids pats}
 
                :else
                (let [r (lifecycle/review-attachment!
@@ -111,7 +146,8 @@
                          :review-evidence-id rev-id
                          :verdict :approve
                          :pattern-ids pats})]
-                 {:name nm :result (if (:ok r) :reviewed :failed) :detail (when-not (:ok r) r)}))))
+                 {:name name :result (if (:ok r) :reviewed :failed)
+                  :detail (when-not (:ok r) r)}))))
          targets)]
     (prn {:ok true
           :commit? (boolean commit?)

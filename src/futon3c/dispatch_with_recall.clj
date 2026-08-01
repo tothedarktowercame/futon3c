@@ -905,6 +905,12 @@
            :surfaced-memory-ids memory-ids
            :used-memory-ids []
            :inclusion-reasons inclusion-reasons
+           :memory-use-kinds
+           (into {}
+                 (keep (fn [memory]
+                         (when-let [kind (:memory-use/kind memory)]
+                           [(:memory/id memory) kind])))
+                 (:memories recall-result))
            :cascade-id (or (:trace-id recall-result)
                            (str "dispatch-recall-empty-" (UUID/randomUUID)))
            :surfaced-at surfaced-at

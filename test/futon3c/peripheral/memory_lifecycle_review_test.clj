@@ -24,6 +24,8 @@
   ([id verdict]
    (review-entry id verdict "claude-4" [pattern-id]))
   ([id verdict reviewer patterns]
+   (review-entry id verdict reviewer patterns nil))
+  ([id verdict reviewer patterns memory-use-kind]
    {:evidence/id id
     :evidence/subject {:ref/type :memory :ref/id memory-id}
     :evidence/type :memory
@@ -31,14 +33,17 @@
     :evidence/author reviewer
     :evidence/at "2026-07-24T10:05:00Z"
     :evidence/body
-    {:review/event :memory-attachment-review
-     :review/memory-id memory-id
-     :review/pattern-ids patterns
-     :review/verdict verdict
-     :review/witness-status :independently-witnessed
-     :review/provenance
-     {:kind :independent-check
-      :evidence ["test output" "trace artifact"]}}}))
+    (cond->
+     {:review/event :memory-attachment-review
+      :review/memory-id memory-id
+      :review/pattern-ids patterns
+      :review/verdict verdict
+      :review/witness-status :independently-witnessed
+      :review/provenance
+      {:kind :independent-check
+       :evidence ["test output" "trace artifact"]}}
+      (some? memory-use-kind)
+      (assoc :memory-use/kind memory-use-kind))}))
 
 (def proposed-edge
   {:hx/id "hx-memory"
@@ -211,3 +216,42 @@
     (is (= :cache-postcondition (:stage result)))
     (is (= :stale-after-successful-repost
            (:cache-postcondition result)))))
+
+(deftest memory-use-kind-is-optional-reviewed-metadata
+  (testing "an adjudicated kind is validated, projected, and recalled"
+    (let [graph (graph-fixture proposed-edge)
+          entries {memory-id memory-entry
+                   review-id (review-entry review-id :approve "claude-4"
+                                           [pattern-id] :regulative)}
+          result (lifecycle/review-attachment! ctx request
+                                               (opts graph entries))
+          projection (recall/recall-by-endpoint
+                      (assoc ctx :evidence-store nil) pattern-id
+                      {:fetch-hyperedges (:fetch graph)
+                       :fetch-entry #(get entries %)})]
+      (is (true? (:ok result)))
+      (is (= :regulative (:memory-use/kind result)))
+      (is (= :regulative
+             (:memory-use/kind (first (:memories projection)))))))
+  (testing "an unadjudicated memory remains valid and unmarked"
+    (let [graph (graph-fixture proposed-edge)
+          entries {memory-id memory-entry
+                   review-id (review-entry review-id :approve)}
+          result (lifecycle/review-attachment! ctx request
+                                               (opts graph entries))]
+      (is (true? (:ok result)))
+      (is (nil? (:memory-use/kind result)))
+      (is (not (contains? (first @(:posts graph)) :memory-use/kind)))
+      (is (not (contains? (get-in (first @(:posts graph)) [:hx/props])
+                          :memory-use/kind)))))
+  (testing "the vocabulary is closed at write time"
+    (let [graph (graph-fixture proposed-edge)]
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"invalid memory-use kind"
+           (lifecycle/review-attachment!
+            ctx request
+            (opts graph
+                  {memory-id memory-entry
+                   review-id (review-entry review-id :approve "claude-4"
+                                           [pattern-id] :both)})))))))

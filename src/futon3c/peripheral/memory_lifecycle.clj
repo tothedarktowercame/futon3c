@@ -123,7 +123,8 @@
   (let [body (:evidence/body review-entry)
         reviewer (:evidence/author review-entry)
         author (:evidence/author memory-entry)
-        reviewed-patterns (:review/pattern-ids body)]
+        reviewed-patterns (:review/pattern-ids body)
+        memory-use-kind (:memory-use/kind body)]
     (when-not memory-entry
       (throw (ex-info "memory evidence entry not found"
                       {:memory-id memory-id})))
@@ -158,8 +159,16 @@
       (throw (ex-info "approval must state its supported witness status"
                       {:memory-id memory-id
                        :witness-status (:review/witness-status body)})))
+    (when-not (or (nil? memory-use-kind)
+                  (contains? memory-contract/memory-use-kinds
+                             memory-use-kind))
+      (throw (ex-info "review states an invalid memory-use kind"
+                      {:memory-id memory-id
+                       :memory-use/kind memory-use-kind
+                       :allowed memory-contract/memory-use-kinds})))
     {:reviewer reviewer
-     :witness-status (:review/witness-status body)}))
+     :witness-status (:review/witness-status body)
+     :memory-use/kind memory-use-kind}))
 
 (defn- review-visible?
   [memory-id review-evidence-id attachment-status fetch-hyperedges]
@@ -172,6 +181,10 @@
 
 (defn review-attachment!
   "Review one proposed pattern attachment using separately authored evidence.
+
+   Review evidence may classify the memory with :memory-use/kind.  The closed
+   vocabulary is validated here and projected only after approval; absence is
+   retained as unknown rather than guessed from the lane or memory prose.
 
    The Futon1b hyperedge POST synchronously invalidates its query cache.  This
    operation additionally performs a fresh endpoint read and refuses success
@@ -197,7 +210,7 @@
          edge-patterns (get-in edge [:hx/props :roles :patterns])
          memory-entry (fetch-entry memory-id)
          review-entry (fetch-entry review-evidence-id)
-         {:keys [reviewer witness-status]}
+         {:keys [reviewer witness-status memory-use/kind]}
          (validate-review! memory-id pattern-ids verdict memory-entry
                            review-entry)
          existing-review (get-in edge [:hx/props :review])
@@ -216,7 +229,8 @@
                         :state (get-in edge [:hx/props :state])})))
      (if (= review-evidence-id (:evidence-id existing-review))
        (if (and (= verdict (:verdict existing-review))
-                (exact-patterns? pattern-ids (:pattern-ids existing-review)))
+                (exact-patterns? pattern-ids (:pattern-ids existing-review))
+                (= kind (:memory-use/kind existing-review)))
          {:ok (review-visible? memory-id review-evidence-id
                                attachment-status fetch-hyperedges)
           :memory-id memory-id
@@ -230,11 +244,12 @@
                           :existing-review existing-review
                           :request request})))
        (let [reviewed-at (:evidence/at review-entry)
-             review {:evidence-id review-evidence-id
-                     :reviewer reviewer
-                     :verdict verdict
-                     :pattern-ids pattern-ids
-                     :reviewed-at reviewed-at}
+             review (cond-> {:evidence-id review-evidence-id
+                             :reviewer reviewer
+                             :verdict verdict
+                             :pattern-ids pattern-ids
+                             :reviewed-at reviewed-at}
+                      (some? kind) (assoc :memory-use/kind kind))
              updated
              (cond-> (-> edge
                          (assoc-in [:hx/props :attachment-status]
@@ -244,7 +259,10 @@
                                     (fnil conj []) review)
                          (assoc-in [:hx/props :system-time] reviewed-at))
                (= :approve verdict)
-               (assoc-in [:hx/props :witness-status] witness-status))
+               (assoc-in [:hx/props :witness-status] witness-status)
+
+               (and (= :approve verdict) (some? kind))
+               (assoc-in [:hx/props :memory-use/kind] kind))
              projection (post-hyperedge ctx updated)]
          (if-not (:ok projection)
            {:ok false
@@ -261,6 +279,7 @@
               :review-evidence-id review-evidence-id
               :attachment-status attachment-status
               :witness-status (when (= :approve verdict) witness-status)
+              :memory-use/kind (when (= :approve verdict) kind)
               :reviewer reviewer
               :cache-postcondition
               (if visible?
