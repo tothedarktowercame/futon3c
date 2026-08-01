@@ -18,8 +18,10 @@ durable Agency invoke-job ledger and the authoritative substrate at
   written.
 
 The pre-write store snapshot contained 150 `:phase :outcome` rows (146 unique
-job ids). The sweeper itself had 0 rows before the run and 126 after it. All
-126 writes were append-only; existing outcome rows were not mutated.
+job ids); the post-write snapshot contained 276 outcome rows, including 126
+written by the sweeper. The sweeper itself had 0 rows before the run and 126
+after it. All 126 writes were append-only; existing outcome rows were not
+mutated.
 
 ## Result
 
