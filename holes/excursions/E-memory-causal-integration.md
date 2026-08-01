@@ -113,15 +113,123 @@ proceed regardless.
 
 ## 5. Open items
 
-1. Receive and read the four mfuton mission docs (zip accepted).
-2. Draw our DAG properly — one figure, nodes as above, measurement layer
-   distinguished — as the shared artifact both sides revise. First concrete
-   deliverable of the collaboration.
-3. Ask their side for the worked route-as-moderator example (their own
-   flagged unverified item).
-4. Decide where the missingness model lives (their engine vs our analysis
-   code) — for the historical corpus it is load-bearing; for the
-   instrumented cohort it should shrink toward bookkeeping.
+1. ~~Receive and read the four mfuton mission docs~~ **DONE 2026-08-01 — see
+   §6.** Pack retained at `~/code/external/rob-pearl-pack-2026-08-01/`
+   (Rob's material; not committed here — his call).
+2. Draw our DAG properly — **now with a concrete target format**: their
+   graphs are authored JSON specs (`WorkedCausalGraphSpec` shape, cf.
+   `as-built-structural-graph-v4.json`, 38 variables / 65 arrows) published
+   through an existing skill into their memory substrate. Our deliverable is
+   such a spec, not a figure.
+3. Ask their side for the worked route-as-moderator example — **sharpened by
+   §6.4**: the natural encodings are route-as-explicit-variable (their
+   requirement 9-style context node) or route-as-regime (their transport
+   machinery); which one their public surface makes convenient is exactly
+   their own flagged unverified item.
+4. Decide where the missingness model lives — **partly settled by §6.6**:
+   their engine does exact finite inference and identification, not
+   statistical estimation, so the missingness *model* (MNAR weighting etc.)
+   stays in our analysis code; what their engine contributes is the
+   measurement layer's *structure* (which sensor observes which node) and
+   d-separation checks that a given analysis is licensed.
+
+## 6. The pack, read — what their system actually is (2026-08-01)
+
+Four mission docs, ~5,200 lines. The short version: **this is not a
+framework that could express our problem; it is an operational discipline
+with live machinery, and large parts of V3 can adopt it nearly wholesale.**
+
+**6.1 The substrate.** A typed memory store (Neo4j + pgvector, MCP-served)
+in which *The Book of Why itself* is a provenance-preserving hierarchy:
+2,673 immutable source atoms, L1–L4 summary layers, page + editorial-index
+graph, 8,274 typed relations, live-audited. The causal engine's semantics
+were derived from 82 source obligations read off that hierarchy and
+dispositioned to zero missing/partial — 36 live typed operations plus 3
+source-justified refusals, 505 tests, every operation persisted with a
+stable id and **replay-verified with zero writes**. Their receipts
+discipline is at least as strict as ours.
+
+**6.2 The engine's capability surface** (all live): query-rung
+classification and refusal of causal-direction-from-association;
+d-separation, backdoor enumeration, Markov-equivalence bounds, variable-role
+classification; belief propagation; observational-vs-interventional regime
+comparison; Cornfield sensitivity; do-calculus Rules 1–3 with
+machine-readable mutilation/side-condition receipts; full identification
+including sequential policies, surrogates, **transport across regimes, data
+fusion, selection-bias recovery**; structural counterfactuals (potential
+outcomes, treatment-on-treated, edge/path/split interventions); the full
+mediation family (**TE/CDE/NDE/NIE/path-specific**); linear + LATE; and
+causal-explanation projection. Typed refusals are preserved wherever a side
+condition fails — guessing is a type error, which is DarkTower's own ethic.
+
+**6.3 The application discipline (the Lean compiler model) is the template
+for modeling *our* system.** Three linked levels, and the correspondence is
+exact:
+
+| their level | ours |
+|---|---|
+| structural template (component mechanisms, state, artifact mediators, versioned) | the recall pipeline: query construction → FTS candidates → arm projection → surfacing → use → outcome |
+| execution episode (`state[t] → run → state[t+1]`, time-indexed, no hidden feedback) | a dispatch, with receipts as its observations — and corpus growth as the `state[t+1]` edge, which is how "the loop consumes its own subjects" (staging §H3d) gets modeled instead of lamented |
+| inquiry/repair episode (prediction recorded *before* the change, disconfirming counterfactual, model revised from evidence) | our experiments; DarkTower preregistration already is this layer |
+
+Their **live-model synchronization loop** (consult graph before intervening,
+record predicted impact cone + disconfirming outcome, change only the
+authoritative mechanism, update the model in the same wave) is the
+repair-wave discipline our Phase-0..cohort work should adopt as-is.
+
+**6.4 Concrete correspondences that upgrade V3 designs:**
+
+- **ITT vs mediated, executable.** Their effect algebra makes the reply's Q2
+  precise: cohort/E2 primary = total effect of availability; the
+  information-channel vs policy-channel split (needs B4) = **natural
+  indirect / path-specific effects** through two different mediator sets.
+  The estimand vocabulary for the preregistrations can be *their* vocabulary.
+- **Route-relativity has two native encodings**: route as an explicit
+  variable with arrows into trajectory (effect heterogeneity by
+  conditioning), or route as a **regime label with transport formulas** —
+  "does the memory effect transport from the Jensen-route regime to the
+  Hölder-route regime" is literally their Figures-10.x machinery. The same
+  machinery handles the **advice-era vs artifact-era split** (their Q4):
+  two regimes, fusion where licensed, non-transportability witness where not.
+- **E2's isolation design becomes machine-checkable.** The H3e leak
+  inventory (git object DB, lab artifacts, `~/.codex`) is a set of backdoor
+  paths; the `apmablate` design is graph surgery; "no read access to
+  `/home/joe`" is a d-separation claim we can have the engine verify against
+  the authored graph rather than assert in prose. Likewise staging §H3's
+  argument that filter-at-dispatch ≡ ship-different-databases on a
+  star-forest is a d-separation claim — *outcome ⫫ withheld-memory content
+  given the surfaced set* — now stateable and checkable.
+- **Their component-quality audit is V2's instrument critique, formalized.**
+  Their "bad component" = one that locally manufactures what an upstream
+  mechanism should have produced, making downstream tests pass while the
+  real cause stays broken — exactly our "a term-selection repair that does
+  not move the empty rate would look like a fix" (staging §A2b), and their
+  `architecture_fit` / `implementation_fit` split is the right vocabulary
+  for our sensor-at-the-wrong-causal-level findings (`used-ids` watching the
+  information channel). Their d-separation demo — two semantic routes
+  indistinguishable downstream of a shared surface, so downstream success
+  tests cannot identify the producer — is structurally identical to V2's
+  "empty means no memories surfaced, not no text matched."
+
+**6.5 The division of labor, now precise.** Their engine does exact finite
+probability and **identification** — estimand derivation with machine-checked
+side conditions, refusals where unidentified. It does not do statistical
+estimation from samples. So: **they own "what does this design identify,
+under which assumptions"; we own the data and the estimates** (frozen
+corpus, receipts, cohort statistics, DarkTower registrations). The joint
+artifact is the authored graph plus derived estimands; the joint discipline
+is that a preregistration cites the engine's identification receipt before
+tokens are spent.
+
+**6.6 Next concrete deliverable (unchanged, sharpened).** Author the
+memory-system causal graph as a spec in their format — structural template
+at component grain (V2's pipeline stages, ~15–20 variables), the
+measurement layer as sensor nodes with explicit
+which-sensor-observes-which-node edges, the two regimes labeled, E2 and the
+cohort as intervention nodes — and send it back for encoding. Then ask for
+three engine receipts against it: (1) what the cohort randomization
+identifies; (2) what E2's ablation identifies, given the isolation
+surgery; (3) the filter≡ship d-separation check.
 
 ---
 
