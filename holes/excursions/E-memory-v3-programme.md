@@ -295,7 +295,26 @@ a prose lane confounds model with instrumentation. Sequence last.
 | | status | next action | blocked on |
 |---|---|---|---|
 | **E1** | **RUN.** `patternArmSubstantial` 44.97%, but both observables false — covers 6.57% of the corpus by elapsed time | back-fill arm attribution, or open a window long enough for `coverageNotTail` to pass | nothing — cheap, and it is what would settle C1 |
-| **E2** | **designed, validated, builds clean; NOT run** | the `ValidatedTrace` refactor (staging §H6); then encode DAG + estimands with Rob's engine (`E-memory-causal-integration.md` §4 — estimand = ITT of single-memory availability, per their Q2) | that refactor; the estimand encoding; then the runner-as-`apmablate` dispatch path — **wrapper BUILT and fail-closed as of 2026-08-01 evening** (`scripts/e2_ablation_dispatch.sh`, `6d1106d1`; design note `e2-runner-boundary-design.md`, `e65d834a`): probes/UID/receipt all inside the apmablate boundary, codex invocations policed for `--ephemeral --ignore-user-config --ignore-rules`, per-run `CODEX_HOME` = `auth.json` only (H3g settled: `config.toml` is leak-bearing; a fresh session under an existing `CODEX_HOME` is not a fresh state boundary). Refusal path live-verified by reviewer (exit 78, receipt absent). **Awaiting one operator action: sudo authorization for joe→apmablate non-interactive entry.** *Registration path CLEAR (2026-08-01 evening): claude-4's CLean pipeline gained `ArmRole` + `axisPredictedNonNavigable` (mathlib4 `084930e`, futon6 `9a25e8c`, attack-verified — a live axis cannot be laundered as a positive control), so E2's predicted-null incidental arm is expressible, provable, and ReadyToRun-able. E2's confirmation re-registers through CLean when run.* |
+| **E2** | **designed, validated, builds clean; NOT run** | the `ValidatedTrace` refactor (staging §H6); then encode DAG + estimands with Rob's engine (`E-memory-causal-integration.md` §4 — estimand = ITT of single-memory availability, per their Q2) | that refactor; the estimand encoding; then the runner-as-`apmablate` dispatch path — **wrapper BUILT and fail-closed as of 2026-08-01 evening** (`scripts/e2_ablation_dispatch.sh`, `6d1106d1`; design note `e2-runner-boundary-design.md`, `e65d834a`): probes/UID/receipt all inside the apmablate boundary, codex invocations policed for `--ephemeral --ignore-user-config --ignore-rules`, per-run `CODEX_HOME` = `auth.json` only (H3g settled: `config.toml` is leak-bearing; a fresh session under an existing `CODEX_HOME` is not a fresh state boundary). Refusal path live-verified by reviewer (exit 78, receipt absent). **Awaiting one operator action: sudo authorization for joe→apmablate non-interactive entry.**
+
+**Panel status (2026-08-01 evening, codex-5's cancellation pre-check, reviewed
+claude-7): the staged four-problem panel is NOT run-ready** — 0 strong / 3
+weak / 4 excluded / 1 unassessable (`panel-cancellation-check-20260801.*`,
+hashes verified, both evidence chains independently re-checked by git grep at
+the historical revisions). The a01A07/a02J05 pairs fail on cancellation: their
+memories' operative content is grep-reachable in the problem tree at the base
+revision, so the ablation contrast is structurally attenuated — claude-4's
+ant-experiment failure mode, caught for one codex job instead of ~1M tokens.
+a95J08's process-memory pairs are unreachable-but-unfalsifiable (no
+memory-free failure baseline); its tree at `61ddc05` already carries the
+Hölder/Young/Tonelli vocabulary, sharpening G6. **Nomination sweep over the
+full 137-problem closed set dispatched** (strong pair = unreachable content +
+memory-free failures + dual-time-verified arrival before closure + known
+closing revision). **Provenance defect to repair:**
+`load-bearing-candidates-20260731.jsonl` is a *use census*, not an
+adjudicated LB/IN artifact — the §4.4 adjudication verdicts (17/21/5/2/4) are
+not in this repo and must be located and frozen before H1's arms can be
+labelled. *Registration path CLEAR (2026-08-01 evening): claude-4's CLean pipeline gained `ArmRole` + `axisPredictedNonNavigable` (mathlib4 `084930e`, futon6 `9a25e8c`, attack-verified — a live axis cannot be laundered as a positive control), so E2's predicted-null incidental arm is expressible, provable, and ReadyToRun-able. E2's confirmation re-registers through CLean when run.* |
 | **E5** | not started | re-run the a95J08 route-vocabulary comparison with vocabularies chosen *blind* | nothing — cheap, and it discharges a contamination its own author declared |
 | **E7** | not started | duplicate detection over the Lean corpus, calibrated against the 17 `LusinN`/`a95A02` byte-identical proofs | nothing for H1; H2 needs the retrieval threshold to be adjustable |
 | **E3** | not started | build the declaration→module→reachable index | index construction |
