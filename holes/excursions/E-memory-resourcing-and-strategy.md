@@ -47,6 +47,18 @@ lost forever. Therefore:
 > (`:memory-use/kind`), B5 (ladder rung fired), A4 (`surfacing-via` on all
 > paths), A3 (lane routed through `review-attachment!`).
 
+**STATUS 2026-08-01, end of day: ALL SHIPPED — Phase-0 closed, backlog
+dispatch unblocked.** B4+A3 `d48d2000` (+futon2 `b48e463d`); B2+B5+A1
+`dadff8da` (A1 as an offline cron-side sweeper, not a serving-JVM hook —
+idempotent on deterministic evidence ids, backfill recovered 126/151
+historical outcomes, 25 refused with reasons). E1 back-fill `e72f94e8`
+closed the coverage observable and found the recall-architecture regime
+boundary. Receipt version: `:v1.2-receipt-instrumented`. Pending at next
+cohort-boundary reload: in-process (WM compact) kind propagation; optional
+real-time finalize hook remains unwritten. Next critical path: the cohort
+preregistration (against claude-4's CLean machinery when its generator
+lands; five format extensions already negotiated).
+
 All six are recording-side, not behaviour-side — they change what is
 *written*, not what the system *does* — so they contaminate no measurement.
 A3 additionally un-confounds the zai lane (staging §C3's objection), which
