@@ -5,7 +5,7 @@
   (:import [java.math BigInteger]
            [java.security MessageDigest]))
 
-(def extractor-version "1")
+(def extractor-version "2")
 
 (defn- sha256-file [path]
   (let [digest (MessageDigest/getInstance "SHA-256")]
@@ -20,9 +20,9 @@
 
 (defn- offered-bodies [document]
   (->> (:entries document)
+       (filter #(= :offered (get-in % [:evidence/body :phase])))
+       (sort-by :evidence/at)
        (map :evidence/body)
-       (filter #(= :offered (:phase %)))
-       (sort-by :job-id)
        vec))
 
 (defn- surfaced-ids [body]
@@ -31,16 +31,22 @@
 (defn- surfacing-via [body]
   (get-in body [:memory-use :memory-use/surfacing-via]))
 
+(defn- unusable? [body]
+  (nil? (:recall-query body)))
+
 (defn- attributed? [body]
-  (seq (surfacing-via body)))
+  (and (not (unusable? body))
+       (seq (surfacing-via body))))
 
 (defn- empty-dispatch? [body]
-  (and (= :recall-empty (:recall-status body))
+  (and (not (unusable? body))
+       (= :recall-empty (:recall-status body))
        (empty? (surfaced-ids body))
        (empty? (surfacing-via body))))
 
-(defn- unusable? [body]
-  (and (= :ok (:recall-status body))
+(defn- unattributed-non-empty? [body]
+  (and (not (unusable? body))
+       (= :ok (:recall-status body))
        (seq (surfaced-ids body))
        (empty? (surfacing-via body))))
 
@@ -62,9 +68,16 @@
   (let [bodies (offered-bodies document)
         attributed (filterv attributed? bodies)
         empty-dispatches (filterv empty-dispatch? bodies)
+        unattributed-non-empty (filterv unattributed-non-empty? bodies)
         unusable (filterv unusable? bodies)
+        earliest-attributed-index
+        (or (first (keep-indexed (fn [index body]
+                                   (when (attributed? body) index))
+                                 bodies))
+            (count bodies))
         classified-ids (concat (map :job-id attributed)
                                (map :job-id empty-dispatches)
+                               (map :job-id unattributed-non-empty)
                                (map :job-id unusable))]
     (doseq [body attributed]
       (validate-attributed! body))
@@ -76,6 +89,7 @@
       (throw (ex-info "trace dispositions overlap" {})))
     (sorted-map
      :empty-dispatches (mapv :job-id empty-dispatches)
+     :earliest-attributed-index earliest-attributed-index
      :surfacings
      (->> attributed
           (mapcat (fn [body]
@@ -85,7 +99,16 @@
                                        :via-pattern (= :pattern via)))
                          (surfacing-via body))))
           vec)
+     :total-dispatches (count bodies)
+     :unattributed-non-empty (mapv :job-id unattributed-non-empty)
      :unusable (mapv :job-id unusable))))
+
+(defn attribution-complete? [trace]
+  (empty? (:unattributed-non-empty trace)))
+
+(defn coverage-not-tail? [trace]
+  (< (* 3 (:earliest-attributed-index trace))
+     (* 2 (:total-dispatches trace))))
 
 (defn classify [trace]
   (let [surfacings (:surfacings trace)
@@ -109,17 +132,19 @@
      :frozen-input (sorted-map :path input-path
                                :sha256 (sha256-file input-path))
      :result (sorted-map
+              :attribution-complete? (attribution-complete? trace)
               :attributed-dispatches
               (count (distinct (map :dispatch-id surfacings)))
               :classification (classify trace)
               :content-match-surfacings content-count
+              :coverage-not-tail? (coverage-not-tail? trace)
               :empty-dispatches (count (:empty-dispatches trace))
-              :offered-dispatches
-              (+ (count (distinct (map :dispatch-id surfacings)))
-                 (count (:empty-dispatches trace))
-                 (count (:unusable trace)))
+              :earliest-attributed-index (:earliest-attributed-index trace)
+              :offered-dispatches (:total-dispatches trace)
               :pattern-surfacings pattern-count
               :surfacing-denominator (count surfacings)
+              :unattributed-non-empty-dispatches
+              (count (:unattributed-non-empty trace))
               :unusable-dispatches (count (:unusable trace)))
      :trace trace)))
 
@@ -127,4 +152,3 @@
   (when-not (and input-path output-path)
     (throw (ex-info "usage: INPUT.edn OUTPUT.edn" {})))
   (spit output-path (str (pr-str (analyze input-path)) "\n")))
-
