@@ -84,9 +84,13 @@ covered by the frozen file; the invoke artifact was copied to durable storage
 and committed; nothing deleted. Note the assembly actually ran 2026-08-01
 10:20–10:23Z — `20260731` names the frozen *corpus*, not the assembly date.
 
-**Follow-up (open):** the assembly script and provenance report live only on
-lucy-joe's checkout. They are committed and durable *there* (not the /tmp
-hazard the verdicts faced), but should be mirrored into this master when
-lucy-joe next syncs, so the full chain is anchored in one tree. Until then:
-input+output hashes and the faithful-projection check above anchor the
-reproduction here; the script anchors the *method* there.
+**Follow-up (CLOSED 2026-08-02, sync via whistle):** lon-codex-2 pushed its
+three commits to `refs/heads/lon-codex-2/p2-assembly-provenance` (namespaced,
+master untouched); cherry-picked onto this master (pure adds, `a5d5443` /
+`def3f20` / `b7062bdd`). The landed `assemble-load-bearing-candidates.clj` has
+sha256 `b06bb3d5…` as stated, and **re-running it here against the local
+inputs (redirected output, frozen file untouched) reproduces `1a4e0ee9…`
+byte-identically** — 49 rows, 43 used-ids / 6 prose-only. The full chain is
+now anchored in one tree with an execution check at both legs: input
+`ef1258ef`+`0cc527e2` → script `b06bb3d5` → output `1a4e0ee9` → verdicts
+`a6f87b84`.
