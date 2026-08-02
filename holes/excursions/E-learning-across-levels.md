@@ -40,6 +40,26 @@ ground-control agent hand-wrote a close-out note. Classified by level:
   coordination. Kept distinct because WM already has an operator-lane
   concept this should eventually meet.
 
+**Finding — the last gate is judgement, and that locates the residual
+(2026-08-02).** Registering E2-pilot against claude-4's CLean format, the
+render refused at the seed plan (it hardwired seedable simulation formulas;
+E2's runs are non-seedable). The registration *could* have passed by
+fabricating three meaningless seed formulas. Four automated gates stood
+behind that point — the render gate, the type gate (`ValidatedTrace`), the
+malli config gate, the core.logic checker — and none of them would have
+caught fabricated-but-well-formed values; the only thing that did was an
+agent declining to launder. This is an **L1→meta edge**: the apparatus that
+measures whether a mechanism helps has a residual failure mode (a
+well-formed lie) whose last line of defence is judgement, not a check. It is
+the same class the whole programme is named after — *semantics living where
+enforcement isn't* — turned on the enforcement machinery itself. Recorded
+because it is not comfortable: the format's safety is real but not total,
+and this names exactly where the gap sits. claude-4's fix (parameterise the
+replicate index type; make `:seedable? false` *owe* a floor endpoint rather
+than be exempted) closes this specific instance by converting the launderable
+gate into a proof obligation — the general repair for the class is always the
+same, move the semantics into the type.
+
 Two structural observations:
 
 1. **Instrumentation coverage is monotone decreasing in level.** L0 has a
