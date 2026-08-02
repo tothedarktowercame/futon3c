@@ -101,6 +101,30 @@ simulation-shaped surface was exactly two loci (fixed trace fields, the cell
 grid), not spread across the format — enumerating to bound, the same move as
 the four-path inertness precondition.
 
+**Method principle — reading/proving vs measuring, and the cheap-question
+trap (Joe, 2026-08-02, via the ant excursion).** Every defect in claude-4's
+ant excursion was a *code-level conformance gap* — the forward model computes
+per-channel variance and the observation function discards it; argmax
+annihilates the temperature (Lean-proved); the advertised mode posterior is
+reachable only through dead code — and *none of it needed an experiment*.
+Three sweeps were run to answer what the source already answered. The rule
+that survived: **for whether machinery is FAITHFUL, reading and proving beat
+measuring; for whether it HELPS, measuring is unavoidable.** The tell:
+across the day, every *measurement* was confounded (a grid too easy, a grid
+too lethal, an assumption against the wrong failure mode), while the one
+quantity that was *proved* inert was inert in every environment. Applied to
+V3: E2's core ("does memory availability change the run?") is a does-it-help
+question, so measurement is right there. But sub-questions must be sorted
+first — the star-forest mechanism-equivalence is a *store query*, not an
+experiment (already a runtime discharge check, not a cohort arm), and a
+**live read-not-measure candidate**: the receipt-ranking boost
+(`rank-memories`, `dispatch_with_recall.clj`) applies a factor 1.0–1.5 that
+*can* reorder, but whether it changes *which* memories SURFACE or only the
+ORDER of an already-selected set the runner reads wholesale is the ants'
+discarded-variance analog — settleable by tracing where the ranked output
+flows, **before** any cohort registers a receipt-ranking arm. Buying an
+experiment for that would be the expensive instrument on the cheap question.
+
 Two structural observations:
 
 1. **Instrumentation coverage is monotone decreasing in level.** L0 has a
