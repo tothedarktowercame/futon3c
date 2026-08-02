@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from edn_format import Keyword as K, dumps
+
 
 SCRIPT = Path(__file__).with_name("runner_gate.py")
 SPEC = importlib.util.spec_from_file_location("runner_gate_tested", SCRIPT)
@@ -93,12 +95,27 @@ class RunnerGateTests(unittest.TestCase):
         self.assertEqual("review-required", result["verdict"])
         self.assertFalse(result["counts_toward_endpoints"])
 
-    def test_frozen_receipts_audit_is_reconstructible(self):
-        artifact = SCRIPT.parent.parent / "holes/labs/M-memory-retrieval/receipts-export-20260731-all-authors.edn"
-        result = gate.audit_receipts_export(artifact)
-        self.assertEqual(72, result["applicable_receipt_rows"])
-        self.assertEqual(58, result["rows_with_no_recorded_use"])
-        self.assertEqual(68, result["rows_incomplete_under_used_or_rejected_coverage"])
+    def test_receipts_audit_counts_use_and_coverage_separately(self):
+        fixture = {
+            K("entries"): [
+                {K("evidence/body"): {K("memory-use"): {
+                    K("memory-use/surfaced-ids"): ["e-one000", "e-two000"],
+                    K("memory-use/used-ids"): [], K("memory-use/rejected-ids"): [],
+                }}},
+                {K("evidence/body"): {K("memory-use"): {
+                    K("memory-use/surfaced-ids"): ["e-three00"],
+                    K("memory-use/used-ids"): ["e-three00"],
+                    K("memory-use/rejected-ids"): [],
+                }}},
+            ]
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "receipts.edn"
+            artifact.write_text(dumps(fixture), encoding="utf-8")
+            result = gate.audit_receipts_export(artifact)
+        self.assertEqual(2, result["applicable_receipt_rows"])
+        self.assertEqual(1, result["rows_with_no_recorded_use"])
+        self.assertEqual(1, result["rows_incomplete_under_used_or_rejected_coverage"])
 
 
 if __name__ == "__main__":
