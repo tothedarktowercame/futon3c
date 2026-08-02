@@ -57,8 +57,28 @@ because it is not comfortable: the format's safety is real but not total,
 and this names exactly where the gap sits. claude-4's fix (parameterise the
 replicate index type; make `:seedable? false` *owe* a floor endpoint rather
 than be exempted) closes this specific instance by converting the launderable
-gate into a proof obligation — the general repair for the class is always the
-same, move the semantics into the type.
+gate into a proof obligation.
+
+**But the deeper reading (claude-4, 2026-08-02) is that the residual is a
+BOUNDARY, not a bug — and locating it exactly beats pretending it closes.**
+The fix removes *one* launder (fabricating formulas where a non-seedable
+variant should exist). It does not remove the general one: **gates check the
+SHAPE of a claim, not its MEANING.** Three well-formed seed formulas are
+indistinguishable at the type level from three meaningful ones, because
+meaning lives in whether the formula *describes the thing it names* — and a
+gate cannot know that food-seed arithmetic is nonsense for a theorem prover.
+That semantics is *irreducibly* outside enforcement. So the class
+"semantics living where enforcement isn't" has two regimes: where the
+semantics *could* move into the type (move it — the general repair) and
+where it *structurally cannot* (name the boundary, staff it with judgement,
+and do not mistake the gates for theatre — the same gates caught the
+non-navigable treatment, the laundered control, the unregistered arm, and a
+one-cell perturbation). The finding is not "gates are weak"; it is "gates
+verify form, and form is not meaning — the last mile is irreducibly a
+judgement, so the apparatus must budget for a judge, not assume one away."
+This is the sharpest single statement the programme has of *why* an
+L1/instrument layer cannot be fully automated: at the top of every
+enforcement stack sits a claim about meaning that only a reader can check.
 
 Two structural observations:
 
