@@ -1,0 +1,28 @@
+{
+  "tool_versions": {
+    "R": "4.3.3",
+    "dagitty": "0.3.4"
+  },
+  "dagitty_implications": {
+    "checked": 209,
+    "agreements": 209,
+    "disagreements": []
+  },
+  "dagitty_converse": {
+    "emitted": 1382,
+    "basis_file": "dagitty-basis.json"
+  },
+  "q3": {
+    "verdicts": {
+      "populated-graph": {
+        "marginal_separated": false,
+        "v18_separated_given_v12_minus_m": true
+      },
+      "star-forest": {
+        "marginal_separated": true,
+        "v18_separated_given_v12_minus_m": true
+      }
+    },
+    "disagreements": []
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "identification": {
+    "Q1": {
+      "conditions": [],
+      "encoding": "all exported variables observed; directed arcs only; no latent/bidirected arcs",
+      "identifiable": true,
+      "query": {
+        "outcome": "V18",
+        "treatment": "V06"
+      }
+    },
+    "R1-ID": {
+      "conditions": [],
+      "encoding": "all exported variables observed; directed arcs only; no latent/bidirected arcs",
+      "identifiable": true,
+      "query": {
+        "outcome": "P16",
+        "treatment": "P20"
+      }
+    },
+    "R1-IDC": {
+      "conditions": [
+        "P01",
+        "P10-pre"
+      ],
+      "encoding": "all exported variables observed; directed arcs only; no latent/bidirected arcs",
+      "identifiable": true,
+      "query": {
+        "outcome": "P16",
+        "treatment": "P20"
+      }
+    }
+  },
+  "networkx-implications": {
+    "agreements": 209,
+    "checked": 209,
+    "disagreements": []
+  },
+  "q3": {
+    "disagreements": [],
+    "verdicts": {
+      "populated-graph": {
+        "marginal-separated": false,
+        "v18-separated-given-v12-minus-m": true
+      },
+      "star-forest": {
+        "marginal-separated": true,
+        "v18-separated-given-v12-minus-m": true
+      }
+    }
+  },
+  "source-spec-counts": {
+    "lean-arrows": 31,
+    "lean-variables": 20,
+    "memory-arrows": 34,
+    "memory-variables": 20
+  },
+  "tool-versions": {
+    "dowhy": "0.14",
+    "networkx": "3.6.1",
+    "pandas": "3.0.5",
+    "python": "3.12.3",
+    "y0": "0.2.11"
+  }
+}

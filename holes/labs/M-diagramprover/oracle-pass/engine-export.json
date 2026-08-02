@@ -1,0 +1,1559 @@
+{
+  "implied-independencies" : [ {
+    "given" : [ ],
+    "x" : "V01",
+    "y" : "V02"
+  }, {
+    "given" : [ ],
+    "x" : "V01",
+    "y" : "V03"
+  }, {
+    "given" : [ ],
+    "x" : "V01",
+    "y" : "V04"
+  }, {
+    "given" : [ ],
+    "x" : "V01",
+    "y" : "V05"
+  }, {
+    "given" : [ ],
+    "x" : "V01",
+    "y" : "V06"
+  }, {
+    "given" : [ ],
+    "x" : "V01",
+    "y" : "V07"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V01",
+    "y" : "V10"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V01",
+    "y" : "V11"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V01",
+    "y" : "V11"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V01",
+    "y" : "V12"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V01",
+    "y" : "V12"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V01",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V01",
+    "y" : "V13"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V01",
+    "y" : "V13"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V01",
+    "y" : "V14"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V01",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V01",
+    "y" : "V14"
+  }, {
+    "given" : [ "V08" ],
+    "x" : "V01",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V01",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V01",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V01",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V01",
+    "y" : "V20"
+  }, {
+    "given" : [ "V05" ],
+    "x" : "V02",
+    "y" : "V03"
+  }, {
+    "given" : [ ],
+    "x" : "V02",
+    "y" : "V04"
+  }, {
+    "given" : [ ],
+    "x" : "V02",
+    "y" : "V06"
+  }, {
+    "given" : [ ],
+    "x" : "V02",
+    "y" : "V08"
+  }, {
+    "given" : [ ],
+    "x" : "V02",
+    "y" : "V09"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V02",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V02",
+    "y" : "V14"
+  }, {
+    "given" : [ "V03" ],
+    "x" : "V02",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05" ],
+    "x" : "V02",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V02",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V02",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V02",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V02",
+    "y" : "V20"
+  }, {
+    "given" : [ ],
+    "x" : "V03",
+    "y" : "V04"
+  }, {
+    "given" : [ ],
+    "x" : "V03",
+    "y" : "V06"
+  }, {
+    "given" : [ ],
+    "x" : "V03",
+    "y" : "V07"
+  }, {
+    "given" : [ ],
+    "x" : "V03",
+    "y" : "V08"
+  }, {
+    "given" : [ ],
+    "x" : "V03",
+    "y" : "V09"
+  }, {
+    "given" : [ "V02" ],
+    "x" : "V03",
+    "y" : "V10"
+  }, {
+    "given" : [ "V05" ],
+    "x" : "V03",
+    "y" : "V10"
+  }, {
+    "given" : [ "V02" ],
+    "x" : "V03",
+    "y" : "V11"
+  }, {
+    "given" : [ "V05" ],
+    "x" : "V03",
+    "y" : "V11"
+  }, {
+    "given" : [ "V05" ],
+    "x" : "V03",
+    "y" : "V12"
+  }, {
+    "given" : [ "V02", "V07" ],
+    "x" : "V03",
+    "y" : "V12"
+  }, {
+    "given" : [ "V05" ],
+    "x" : "V03",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V03",
+    "y" : "V13"
+  }, {
+    "given" : [ "V02", "V07" ],
+    "x" : "V03",
+    "y" : "V13"
+  }, {
+    "given" : [ "V05" ],
+    "x" : "V03",
+    "y" : "V14"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V03",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V07" ],
+    "x" : "V03",
+    "y" : "V14"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V03",
+    "y" : "V18"
+  }, {
+    "given" : [ ],
+    "x" : "V04",
+    "y" : "V05"
+  }, {
+    "given" : [ ],
+    "x" : "V04",
+    "y" : "V06"
+  }, {
+    "given" : [ ],
+    "x" : "V04",
+    "y" : "V07"
+  }, {
+    "given" : [ "V01", "V08" ],
+    "x" : "V04",
+    "y" : "V09"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V04",
+    "y" : "V10"
+  }, {
+    "given" : [ "V01", "V08" ],
+    "x" : "V04",
+    "y" : "V10"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V04",
+    "y" : "V11"
+  }, {
+    "given" : [ "V01", "V08" ],
+    "x" : "V04",
+    "y" : "V11"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V04",
+    "y" : "V11"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V04",
+    "y" : "V12"
+  }, {
+    "given" : [ "V01", "V08" ],
+    "x" : "V04",
+    "y" : "V12"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V04",
+    "y" : "V12"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V04",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V04",
+    "y" : "V13"
+  }, {
+    "given" : [ "V01", "V08" ],
+    "x" : "V04",
+    "y" : "V13"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V04",
+    "y" : "V13"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V04",
+    "y" : "V14"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V04",
+    "y" : "V14"
+  }, {
+    "given" : [ "V01", "V08" ],
+    "x" : "V04",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V04",
+    "y" : "V14"
+  }, {
+    "given" : [ "V08" ],
+    "x" : "V04",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V04",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V04",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V04",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V04",
+    "y" : "V20"
+  }, {
+    "given" : [ ],
+    "x" : "V05",
+    "y" : "V06"
+  }, {
+    "given" : [ ],
+    "x" : "V05",
+    "y" : "V07"
+  }, {
+    "given" : [ ],
+    "x" : "V05",
+    "y" : "V08"
+  }, {
+    "given" : [ ],
+    "x" : "V05",
+    "y" : "V09"
+  }, {
+    "given" : [ "V02" ],
+    "x" : "V05",
+    "y" : "V10"
+  }, {
+    "given" : [ "V02" ],
+    "x" : "V05",
+    "y" : "V11"
+  }, {
+    "given" : [ "V02", "V07" ],
+    "x" : "V05",
+    "y" : "V12"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V05",
+    "y" : "V13"
+  }, {
+    "given" : [ "V02", "V07" ],
+    "x" : "V05",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V05",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V07" ],
+    "x" : "V05",
+    "y" : "V14"
+  }, {
+    "given" : [ "V03" ],
+    "x" : "V05",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V05",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V05",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V05",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V05",
+    "y" : "V20"
+  }, {
+    "given" : [ ],
+    "x" : "V06",
+    "y" : "V07"
+  }, {
+    "given" : [ ],
+    "x" : "V06",
+    "y" : "V08"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V06",
+    "y" : "V10"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V06",
+    "y" : "V11"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V06",
+    "y" : "V11"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V06",
+    "y" : "V12"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V06",
+    "y" : "V12"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V06",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V06",
+    "y" : "V13"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V06",
+    "y" : "V13"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V06",
+    "y" : "V14"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V06",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V06",
+    "y" : "V14"
+  }, {
+    "given" : [ ],
+    "x" : "V06",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V06",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V06",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V06",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V06",
+    "y" : "V20"
+  }, {
+    "given" : [ ],
+    "x" : "V07",
+    "y" : "V08"
+  }, {
+    "given" : [ ],
+    "x" : "V07",
+    "y" : "V09"
+  }, {
+    "given" : [ "V02" ],
+    "x" : "V07",
+    "y" : "V10"
+  }, {
+    "given" : [ "V02" ],
+    "x" : "V07",
+    "y" : "V11"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V07",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V07",
+    "y" : "V14"
+  }, {
+    "given" : [ ],
+    "x" : "V07",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V07",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V07",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V07",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V07",
+    "y" : "V20"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V08",
+    "y" : "V10"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V08",
+    "y" : "V11"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V08",
+    "y" : "V11"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V08",
+    "y" : "V12"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V08",
+    "y" : "V12"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V08",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V08",
+    "y" : "V13"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V08",
+    "y" : "V13"
+  }, {
+    "given" : [ "V09" ],
+    "x" : "V08",
+    "y" : "V14"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V08",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V08",
+    "y" : "V14"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V08",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V08",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V08",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V08",
+    "y" : "V20"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V09",
+    "y" : "V11"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V09",
+    "y" : "V12"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V09",
+    "y" : "V13"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V09",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V09",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V09",
+    "y" : "V14"
+  }, {
+    "given" : [ "V08" ],
+    "x" : "V09",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V09",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V09",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V09",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V09",
+    "y" : "V20"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V10",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V10",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V08" ],
+    "x" : "V10",
+    "y" : "V15"
+  }, {
+    "given" : [ "V02", "V09" ],
+    "x" : "V10",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V08" ],
+    "x" : "V10",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V09" ],
+    "x" : "V10",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V08" ],
+    "x" : "V10",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V09" ],
+    "x" : "V10",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V10",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V10",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V10",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V10",
+    "y" : "V20"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V11",
+    "y" : "V13"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V11",
+    "y" : "V14"
+  }, {
+    "given" : [ "V02", "V08" ],
+    "x" : "V11",
+    "y" : "V15"
+  }, {
+    "given" : [ "V02", "V09" ],
+    "x" : "V11",
+    "y" : "V15"
+  }, {
+    "given" : [ "V02", "V10" ],
+    "x" : "V11",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V08" ],
+    "x" : "V11",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V09" ],
+    "x" : "V11",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V08" ],
+    "x" : "V11",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V09" ],
+    "x" : "V11",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V11",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V11",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V11",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V11",
+    "y" : "V20"
+  }, {
+    "given" : [ "V03", "V08" ],
+    "x" : "V12",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V09" ],
+    "x" : "V12",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V08" ],
+    "x" : "V12",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V09" ],
+    "x" : "V12",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V12",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V12",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V12",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V12",
+    "y" : "V20"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V13",
+    "y" : "V14"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V13",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V08" ],
+    "x" : "V13",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V09" ],
+    "x" : "V13",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V08" ],
+    "x" : "V13",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V09" ],
+    "x" : "V13",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V13",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V13",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V13",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V13",
+    "y" : "V20"
+  }, {
+    "given" : [ "V12" ],
+    "x" : "V14",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V08" ],
+    "x" : "V14",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V09" ],
+    "x" : "V14",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V08" ],
+    "x" : "V14",
+    "y" : "V15"
+  }, {
+    "given" : [ "V05", "V09" ],
+    "x" : "V14",
+    "y" : "V15"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V14",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V14",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V14",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V14",
+    "y" : "V20"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V15",
+    "y" : "V17"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V15",
+    "y" : "V18"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V15",
+    "y" : "V18"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V15",
+    "y" : "V20"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V17",
+    "y" : "V20"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V18",
+    "y" : "V20"
+  }, {
+    "given" : [ "V16", "V17" ],
+    "x" : "V18",
+    "y" : "V20"
+  }, {
+    "given" : [ "V03", "V16" ],
+    "x" : "V19",
+    "y" : "V20"
+  } ],
+  "lean-graph" : {
+    "arrows" : [ {
+      "from" : "P01",
+      "to" : "P06"
+    }, {
+      "from" : "P01",
+      "to" : "P07"
+    }, {
+      "from" : "P01",
+      "to" : "P08"
+    }, {
+      "from" : "P01",
+      "to" : "P16"
+    }, {
+      "from" : "P02",
+      "to" : "P06"
+    }, {
+      "from" : "P02",
+      "to" : "P08"
+    }, {
+      "from" : "P03",
+      "to" : "P04"
+    }, {
+      "from" : "P03",
+      "to" : "P09"
+    }, {
+      "from" : "P03",
+      "to" : "P10"
+    }, {
+      "from" : "P04",
+      "to" : "P08"
+    }, {
+      "from" : "P05",
+      "to" : "P08"
+    }, {
+      "from" : "P05",
+      "to" : "P15"
+    }, {
+      "from" : "P06",
+      "to" : "P08"
+    }, {
+      "from" : "P06",
+      "to" : "P09"
+    }, {
+      "from" : "P07",
+      "to" : "P06"
+    }, {
+      "from" : "P08",
+      "to" : "P09"
+    }, {
+      "from" : "P09",
+      "to" : "P10"
+    }, {
+      "from" : "P09",
+      "to" : "P11"
+    }, {
+      "from" : "P09",
+      "to" : "P16"
+    }, {
+      "from" : "P09",
+      "to" : "P18"
+    }, {
+      "from" : "P10",
+      "to" : "P16"
+    }, {
+      "from" : "P11",
+      "to" : "P13"
+    }, {
+      "from" : "P11",
+      "to" : "P15"
+    }, {
+      "from" : "P12",
+      "to" : "P13"
+    }, {
+      "from" : "P13",
+      "to" : "P14"
+    }, {
+      "from" : "P14",
+      "to" : "P15"
+    }, {
+      "from" : "P14",
+      "to" : "P17"
+    }, {
+      "from" : "P15",
+      "to" : "P17"
+    }, {
+      "from" : "P16",
+      "to" : "P17"
+    }, {
+      "from" : "P19",
+      "to" : "P03"
+    }, {
+      "from" : "P20",
+      "to" : "P03"
+    } ],
+    "variables" : [ "P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12", "P13", "P14", "P15", "P16", "P17", "P18", "P19", "P20" ]
+  },
+  "memory-graph" : {
+    "arrows" : [ {
+      "from" : "V01",
+      "to" : "V08"
+    }, {
+      "from" : "V01",
+      "to" : "V09"
+    }, {
+      "from" : "V01",
+      "to" : "V16"
+    }, {
+      "from" : "V02",
+      "to" : "V10"
+    }, {
+      "from" : "V02",
+      "to" : "V11"
+    }, {
+      "from" : "V02",
+      "to" : "V19"
+    }, {
+      "from" : "V03",
+      "to" : "V15"
+    }, {
+      "from" : "V03",
+      "to" : "V17"
+    }, {
+      "from" : "V03",
+      "to" : "V20"
+    }, {
+      "from" : "V04",
+      "to" : "V08"
+    }, {
+      "from" : "V04",
+      "to" : "V16"
+    }, {
+      "from" : "V05",
+      "to" : "V02"
+    }, {
+      "from" : "V05",
+      "to" : "V03"
+    }, {
+      "from" : "V06",
+      "to" : "V09"
+    }, {
+      "from" : "V07",
+      "to" : "V02"
+    }, {
+      "from" : "V07",
+      "to" : "V12"
+    }, {
+      "from" : "V08",
+      "to" : "V09"
+    }, {
+      "from" : "V08",
+      "to" : "V15"
+    }, {
+      "from" : "V09",
+      "to" : "V10"
+    }, {
+      "from" : "V10",
+      "to" : "V11"
+    }, {
+      "from" : "V10",
+      "to" : "V12"
+    }, {
+      "from" : "V11",
+      "to" : "V12"
+    }, {
+      "from" : "V11",
+      "to" : "V12"
+    }, {
+      "from" : "V12",
+      "to" : "V13"
+    }, {
+      "from" : "V12",
+      "to" : "V14"
+    }, {
+      "from" : "V13",
+      "to" : "V16"
+    }, {
+      "from" : "V14",
+      "to" : "V16"
+    }, {
+      "from" : "V15",
+      "to" : "V16"
+    }, {
+      "from" : "V16",
+      "to" : "V17"
+    }, {
+      "from" : "V16",
+      "to" : "V18"
+    }, {
+      "from" : "V16",
+      "to" : "V19"
+    }, {
+      "from" : "V16",
+      "to" : "V20"
+    }, {
+      "from" : "V17",
+      "to" : "V18"
+    }, {
+      "from" : "V18",
+      "to" : "V19"
+    } ],
+    "variables" : [ "V01", "V02", "V03", "V04", "V05", "V06", "V07", "V08", "V09", "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20" ]
+  },
+  "q3-variants" : {
+    "populated-graph" : {
+      "arrows" : [ {
+        "from" : "M-in-store",
+        "to" : "M-own-star"
+      }, {
+        "from" : "M-in-store",
+        "to" : "shared-patterns"
+      }, {
+        "from" : "V01",
+        "to" : "V08"
+      }, {
+        "from" : "V01",
+        "to" : "V09"
+      }, {
+        "from" : "V01",
+        "to" : "V16"
+      }, {
+        "from" : "V02",
+        "to" : "V10"
+      }, {
+        "from" : "V02",
+        "to" : "V11"
+      }, {
+        "from" : "V02",
+        "to" : "V19"
+      }, {
+        "from" : "V03",
+        "to" : "V15"
+      }, {
+        "from" : "V03",
+        "to" : "V17"
+      }, {
+        "from" : "V03",
+        "to" : "V20"
+      }, {
+        "from" : "V04",
+        "to" : "V08"
+      }, {
+        "from" : "V04",
+        "to" : "V16"
+      }, {
+        "from" : "V05",
+        "to" : "V02"
+      }, {
+        "from" : "V05",
+        "to" : "V03"
+      }, {
+        "from" : "V06",
+        "to" : "V09"
+      }, {
+        "from" : "V07",
+        "to" : "V02"
+      }, {
+        "from" : "V07",
+        "to" : "V12"
+      }, {
+        "from" : "V08",
+        "to" : "V09"
+      }, {
+        "from" : "V08",
+        "to" : "V15"
+      }, {
+        "from" : "V09",
+        "to" : "V10"
+      }, {
+        "from" : "V10",
+        "to" : "V11"
+      }, {
+        "from" : "V10",
+        "to" : "V12"
+      }, {
+        "from" : "V11",
+        "to" : "V12"
+      }, {
+        "from" : "V11",
+        "to" : "V12"
+      }, {
+        "from" : "V12",
+        "to" : "V13"
+      }, {
+        "from" : "V12",
+        "to" : "V14"
+      }, {
+        "from" : "V12-minus-M",
+        "to" : "V13"
+      }, {
+        "from" : "V13",
+        "to" : "V16"
+      }, {
+        "from" : "V14",
+        "to" : "V16"
+      }, {
+        "from" : "V15",
+        "to" : "V16"
+      }, {
+        "from" : "V16",
+        "to" : "V17"
+      }, {
+        "from" : "V16",
+        "to" : "V18"
+      }, {
+        "from" : "V16",
+        "to" : "V19"
+      }, {
+        "from" : "V16",
+        "to" : "V20"
+      }, {
+        "from" : "V17",
+        "to" : "V18"
+      }, {
+        "from" : "V18",
+        "to" : "V19"
+      }, {
+        "from" : "shared-patterns",
+        "to" : "V12-minus-M"
+      } ],
+      "variables" : [ "M-in-store", "M-own-star", "V01", "V02", "V03", "V04", "V05", "V06", "V07", "V08", "V09", "V10", "V11", "V12", "V12-minus-M", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "shared-patterns" ]
+    },
+    "star-forest" : {
+      "arrows" : [ {
+        "from" : "M-in-store",
+        "to" : "M-own-star"
+      }, {
+        "from" : "V01",
+        "to" : "V08"
+      }, {
+        "from" : "V01",
+        "to" : "V09"
+      }, {
+        "from" : "V01",
+        "to" : "V16"
+      }, {
+        "from" : "V02",
+        "to" : "V10"
+      }, {
+        "from" : "V02",
+        "to" : "V11"
+      }, {
+        "from" : "V02",
+        "to" : "V19"
+      }, {
+        "from" : "V03",
+        "to" : "V15"
+      }, {
+        "from" : "V03",
+        "to" : "V17"
+      }, {
+        "from" : "V03",
+        "to" : "V20"
+      }, {
+        "from" : "V04",
+        "to" : "V08"
+      }, {
+        "from" : "V04",
+        "to" : "V16"
+      }, {
+        "from" : "V05",
+        "to" : "V02"
+      }, {
+        "from" : "V05",
+        "to" : "V03"
+      }, {
+        "from" : "V06",
+        "to" : "V09"
+      }, {
+        "from" : "V07",
+        "to" : "V02"
+      }, {
+        "from" : "V07",
+        "to" : "V12"
+      }, {
+        "from" : "V08",
+        "to" : "V09"
+      }, {
+        "from" : "V08",
+        "to" : "V15"
+      }, {
+        "from" : "V09",
+        "to" : "V10"
+      }, {
+        "from" : "V10",
+        "to" : "V11"
+      }, {
+        "from" : "V10",
+        "to" : "V12"
+      }, {
+        "from" : "V11",
+        "to" : "V12"
+      }, {
+        "from" : "V11",
+        "to" : "V12"
+      }, {
+        "from" : "V12",
+        "to" : "V13"
+      }, {
+        "from" : "V12",
+        "to" : "V14"
+      }, {
+        "from" : "V12-minus-M",
+        "to" : "V13"
+      }, {
+        "from" : "V13",
+        "to" : "V16"
+      }, {
+        "from" : "V14",
+        "to" : "V16"
+      }, {
+        "from" : "V15",
+        "to" : "V16"
+      }, {
+        "from" : "V16",
+        "to" : "V17"
+      }, {
+        "from" : "V16",
+        "to" : "V18"
+      }, {
+        "from" : "V16",
+        "to" : "V19"
+      }, {
+        "from" : "V16",
+        "to" : "V20"
+      }, {
+        "from" : "V17",
+        "to" : "V18"
+      }, {
+        "from" : "V18",
+        "to" : "V19"
+      } ],
+      "variables" : [ "M-in-store", "M-own-star", "V01", "V02", "V03", "V04", "V05", "V06", "V07", "V08", "V09", "V10", "V11", "V12", "V12-minus-M", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20" ]
+    }
+  },
+  "r1-selection" : {
+    "arrows" : [ {
+      "from" : "P01",
+      "to" : "P06"
+    }, {
+      "from" : "P01",
+      "to" : "P07"
+    }, {
+      "from" : "P01",
+      "to" : "P08"
+    }, {
+      "from" : "P01",
+      "to" : "P16"
+    }, {
+      "from" : "P01",
+      "to" : "P20"
+    }, {
+      "from" : "P02",
+      "to" : "P06"
+    }, {
+      "from" : "P02",
+      "to" : "P08"
+    }, {
+      "from" : "P03",
+      "to" : "P04"
+    }, {
+      "from" : "P03",
+      "to" : "P09"
+    }, {
+      "from" : "P03",
+      "to" : "P10"
+    }, {
+      "from" : "P04",
+      "to" : "P08"
+    }, {
+      "from" : "P05",
+      "to" : "P08"
+    }, {
+      "from" : "P05",
+      "to" : "P15"
+    }, {
+      "from" : "P06",
+      "to" : "P08"
+    }, {
+      "from" : "P06",
+      "to" : "P09"
+    }, {
+      "from" : "P07",
+      "to" : "P06"
+    }, {
+      "from" : "P08",
+      "to" : "P09"
+    }, {
+      "from" : "P09",
+      "to" : "P10"
+    }, {
+      "from" : "P09",
+      "to" : "P11"
+    }, {
+      "from" : "P09",
+      "to" : "P16"
+    }, {
+      "from" : "P09",
+      "to" : "P18"
+    }, {
+      "from" : "P10",
+      "to" : "P16"
+    }, {
+      "from" : "P10-pre",
+      "to" : "P10"
+    }, {
+      "from" : "P10-pre",
+      "to" : "P20"
+    }, {
+      "from" : "P11",
+      "to" : "P13"
+    }, {
+      "from" : "P11",
+      "to" : "P15"
+    }, {
+      "from" : "P12",
+      "to" : "P13"
+    }, {
+      "from" : "P13",
+      "to" : "P14"
+    }, {
+      "from" : "P14",
+      "to" : "P15"
+    }, {
+      "from" : "P14",
+      "to" : "P17"
+    }, {
+      "from" : "P15",
+      "to" : "P17"
+    }, {
+      "from" : "P16",
+      "to" : "P17"
+    }, {
+      "from" : "P19",
+      "to" : "P03"
+    }, {
+      "from" : "P20",
+      "to" : "P03"
+    } ],
+    "variables" : [ "P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10", "P10-pre", "P11", "P12", "P13", "P14", "P15", "P16", "P17", "P18", "P19", "P20" ]
+  },
+  "receipts" : [ {
+    "adjustment-sets" : [ [ ] ],
+    "id" : "Q1",
+    "question" : "What does I_cohort identify? Confirm the randomization of V06 identifies the total effect on V18 without adjustment; state what additional conditioning (if any) the lane-subgroup contrast (V04) and problem-family subgroups require; flag any backdoor we have missed.",
+    "refusals" : [ ],
+    "subgroup-conditioning" : [ [ "V04" ] ],
+    "verdicts" : [ {
+      "claim" : "randomized-primary-total-effect",
+      "graph" : "base",
+      "holds?" : true,
+      "method" : "backdoor",
+      "paths" : [ ]
+    }, {
+      "claim" : "lane-subgroup-is-pre-treatment",
+      "graph" : "base",
+      "holds?" : true,
+      "method" : "descendant-check",
+      "paths" : [ ]
+    }, {
+      "claim" : "lane-conditioned-backdoors-blocked",
+      "graph" : "base",
+      "holds?" : true,
+      "method" : "backdoor",
+      "paths" : [ ]
+    }, {
+      "claim" : "no-surviving-backdoor",
+      "graph" : "cut-outgoing-V06",
+      "holds?" : true,
+      "method" : "surgery",
+      "paths" : [ ],
+      "paths-truncated?" : false
+    } ]
+  }, {
+    "adjustment-sets" : [ [ ] ],
+    "id" : "Q2",
+    "leaks" : [ {
+      "leak" : "L1",
+      "opens-path" : [ [ "L1", "V15", "V16", "V17", "V18" ] ],
+      "path-count-lower-bound" : 1,
+      "paths-truncated?" : true,
+      "severed-blocks?" : true
+    }, {
+      "leak" : "L2",
+      "opens-path" : [ [ "L2", "V15", "V16", "V17", "V18" ] ],
+      "path-count-lower-bound" : 1,
+      "paths-truncated?" : true,
+      "severed-blocks?" : true
+    }, {
+      "leak" : "L3",
+      "opens-path" : [ [ "L3", "V16", "V17", "V18" ] ],
+      "path-count-lower-bound" : 1,
+      "paths-truncated?" : true,
+      "severed-blocks?" : true
+    }, {
+      "leak" : "L4",
+      "opens-path" : [ [ "L4", "V16", "V17", "V18" ] ],
+      "path-count-lower-bound" : 1,
+      "paths-truncated?" : true,
+      "severed-blocks?" : true
+    } ],
+    "mediation" : {
+      "channel-separation-given-treatment?" : false,
+      "channels" : [ {
+        "channel" : "V13",
+        "outcome-independent-given-treatment?" : false,
+        "paths" : [ [ "V13", "V12", "V10", "V02", "V05", "V03", "V15", "V16", "V17", "V18" ] ],
+        "paths-truncated?" : true
+      }, {
+        "channel" : "V14",
+        "outcome-independent-given-treatment?" : false,
+        "paths" : [ [ "V14", "V12", "V10", "V02", "V05", "V03", "V15", "V16", "V17", "V18" ] ],
+        "paths-truncated?" : true
+      } ],
+      "outcome" : "V18",
+      "sensor" : "S05",
+      "sensor-present?" : false,
+      "treatment" : "V07"
+    },
+    "question" : "What does I_E2 identify, given the isolation surgery? Verify identification of the availability effect requires severing L1-L4 (i.e., exhibit the backdoor paths each leak edge opens when present); state the mediation decomposition through V13 vs V14 that becomes identifiable once sensor S05 exists, and what remains unidentifiable without it.",
+    "refusals" : [ {
+      "claim" : "nde-nie-by-channel",
+      "failed-independencies" : [ {
+        "channel" : "V13",
+        "outcome-independent-given-treatment?" : false,
+        "paths" : [ [ "V13", "V12", "V10", "V02", "V05", "V03", "V15", "V16", "V17", "V18" ] ]
+      }, {
+        "channel" : "V14",
+        "outcome-independent-given-treatment?" : false,
+        "paths" : [ [ "V14", "V12", "V10", "V02", "V05", "V03", "V15", "V16", "V17", "V18" ] ]
+      } ],
+      "reason" : "mediator-channel-unobserved",
+      "sensor" : "S05"
+    } ],
+    "verdicts" : [ {
+      "claim" : "isolated-primary-effect",
+      "graph" : "without-leaks",
+      "holds?" : true,
+      "method" : "backdoor",
+      "paths" : [ ]
+    }, {
+      "claim" : "all-leaks-open-outcome-routes",
+      "graph" : "with-leaks",
+      "holds?" : true,
+      "method" : "d-sep",
+      "paths" : [ [ [ "L1", "V15", "V16", "V17", "V18" ] ], [ [ "L2", "V15", "V16", "V17", "V18" ] ], [ [ "L3", "V16", "V17", "V18" ] ], [ [ "L4", "V16", "V17", "V18" ] ] ]
+    } ]
+  }, {
+    "adjustment-sets" : [ ],
+    "encoding" : {
+      "filtered-surface" : "V12-minus-M",
+      "realized-surface-conditioning" : [ "V12-minus-M" ],
+      "treatment" : "M-in-store"
+    },
+    "id" : "Q3",
+    "question" : "Filter-equivalence d-separation: is V18 independent of membership of M in V02, given the realized V12 (surfaced set)? Run on BOTH corpus topologies: star_forest (current) and populated_graph (post multi-attachment repair). Our prediction: holds on star_forest (so E2 mechanism (b) filter-at-dispatch is a valid cheap substitute for (a) ship-different-databases), and FAILS on populated_graph (removing M then changes what else surfaces through shared patterns, so (a) and (b) diverge). A confirmed divergence is itself a finding about the graph-population repair and would be preregistered as such.",
+    "refusals" : [ ],
+    "verdicts" : [ {
+      "claim" : "filter-equivalence",
+      "graph" : "star-forest",
+      "holds?" : true,
+      "method" : "d-sep",
+      "path-count-lower-bound" : 0,
+      "paths" : [ ],
+      "paths-truncated?" : false,
+      "v18-independent-given-realized-surfaced-set?" : true,
+      "v18-paths" : [ ],
+      "v18-paths-truncated?" : false
+    }, {
+      "claim" : "filter-equivalence",
+      "graph" : "populated-graph",
+      "holds?" : false,
+      "method" : "d-sep",
+      "path-count-lower-bound" : 1,
+      "paths" : [ [ "M-in-store", "shared-patterns", "V12-minus-M" ] ],
+      "paths-truncated?" : true,
+      "v18-independent-given-realized-surfaced-set?" : true,
+      "v18-paths" : [ ],
+      "v18-paths-truncated?" : false
+    } ]
+  }, {
+    "adjustment-sets" : [ [ ], [ "P01", "P10-pre" ] ],
+    "confounders" : [ {
+      "role" : "problem-difficulty",
+      "variable" : "P01"
+    }, {
+      "derived-from" : "P10",
+      "role" : "recorded-need",
+      "variable" : "P10-pre"
+    } ],
+    "id" : "R1",
+    "question" : "What does I_ext identify, given that the natural experiment (E7) chose which module to build based on recorded dependency sets (confounding by need and by problem difficulty)? State the adjustment set for the controlled version, and what the uncontrolled four-closure observation does and does not license.",
+    "refusals" : [ {
+      "claim" : "causal-reading-of-four-closures",
+      "paths" : [ [ "P20", "P01", "P06", "P08", "P09", "P10", "P16" ] ],
+      "paths-truncated?" : true,
+      "reason" : "open-selection-backdoors"
+    } ],
+    "verdicts" : [ {
+      "claim" : "controlled-extension-effect",
+      "graph" : "controlled",
+      "holds?" : true,
+      "method" : "backdoor",
+      "paths" : [ ]
+    }, {
+      "claim" : "uncontrolled-observation-identifies-effect",
+      "graph" : "e7-selection",
+      "holds?" : false,
+      "method" : "backdoor",
+      "paths" : [ [ "P20", "P01", "P06", "P08", "P09", "P10", "P16" ] ],
+      "paths-truncated?" : true
+    }, {
+      "claim" : "selection-adjustment-blocks-backdoors",
+      "graph" : "e7-selection",
+      "holds?" : true,
+      "method" : "backdoor",
+      "paths" : [ ]
+    } ]
+  } ],
+  "schema-version" : 1
+}
