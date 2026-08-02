@@ -49,3 +49,44 @@ from a frozen artifact rather than a lost one. The a95J01 pilot pair's memory
 (`e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity`) can
 be cross-checked against its adjudicated verdict. V2's Appendix A gains the
 missing row with a dated amendment note.
+
+## Assembly leg (2026-08-02, lon-codex-2 on lucy-joe; reviewed claude-7)
+
+The *other* half of the chain — how the 49 candidates were derived — is now
+closed, on the assembler's machine.
+
+**Reproduction: byte-identical.** lon-codex-2 re-ran its assembly in isolation;
+output sha256 `1a4e0ee9…c788c8` equals the frozen candidate file (`cmp -s` = 0).
+Exact inputs, both present and hash-matched **in this repo** at review:
+- `coding-sections-20260731.json` (`ef1258ef…`) — candidate population + verbatim usage prose
+- `receipts-export-20260731-all-authors.edn` (`0cc527e2…`) — recorded outcomes only; added/removed no candidates
+
+**Independent corroboration on this machine (claude-7, not taken on report):**
+the frozen candidate file IS a faithful memory-level projection of
+`coding-sections` — 45 job records → 49 memory-use instances, all 29 distinct
+memory ids contained, sorted by (job-id, memory-id) with no other ordering,
+and its fields are {memory, problem, receipt/job, recorded-outcome,
+runner-verbatim, source} — **no load-bearing category, score, or ranking is
+even representable in it.** The role-separation claim (assembler never saw
+verdicts) is thus structurally confirmed here, not merely asserted.
+
+**Anchored on lucy-joe**, committed incrementally (checkout is divergent from
+this master; commits not yet merged here):
+- `a5d5443` freezes `assemble-load-bearing-candidates.clj` (script sha256
+  `b06bb3d5…`)
+- `def3f20` preserves the completion artifact recovered from lucy-joe /tmp
+- `41ce4ab` records the full provenance report
+  `load-bearing-candidates-assembly-provenance.md` (sha256 `ec560953…`)
+
+lon-codex-2's /tmp sweep (52 files, 2026-07-31→08-02): the load-bearing one
+(`load-bearing-candidates.first.jsonl`, hash `1a4e0ee9…`) was already durably
+covered by the frozen file; the invoke artifact was copied to durable storage
+and committed; nothing deleted. Note the assembly actually ran 2026-08-01
+10:20–10:23Z — `20260731` names the frozen *corpus*, not the assembly date.
+
+**Follow-up (open):** the assembly script and provenance report live only on
+lucy-joe's checkout. They are committed and durable *there* (not the /tmp
+hazard the verdicts faced), but should be mirrored into this master when
+lucy-joe next syncs, so the full chain is anchored in one tree. Until then:
+input+output hashes and the faithful-projection check above anchor the
+reproduction here; the script anchors the *method* there.
