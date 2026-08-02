@@ -309,7 +309,7 @@ a95J08's process-memory pairs are unreachable-but-unfalsifiable (no
 memory-free failure baseline); its tree at `61ddc05` already carries the
 Hölder/Young/Tonelli vocabulary, sharpening G6. **Nomination sweep COMPLETE (codex-3, reviewed claude-7)** (strong pair = unreachable content +
 memory-free failures + dual-time-verified arrival before closure + known
-closing revision). **Provenance defect to repair:**
+closing revision). **Provenance defect REPAIRED 2026-08-02** (verdicts recovered from the adjudicator's /tmp working file via ledger + mtime sweep; frozen `a6f87b84…`, five-point verification; see `adjudication-verdicts-provenance.md` — E2-confirmation's arm labels unblocked). Original statement:
 `load-bearing-candidates-20260731.jsonl` is a *use census*, not an
 adjudicated LB/IN artifact — the §4.4 adjudication verdicts (17/21/5/2/4) are
 not in this repo and must be located and frozen before H1's arms can be

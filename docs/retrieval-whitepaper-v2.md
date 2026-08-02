@@ -901,6 +901,7 @@ are, and the load-bearing prior art there is Weeber et al. (2000).
 | `psi-v2-replay-results-20260728.edn` | `2b9f6e28…` |
 | `cooccurrence-table-20260801.json` | `97c73d9b…` |
 | `load-bearing-candidates-20260731.jsonl` | `1a4e0ee9…` |
+| `adjudication-verdicts-p2-20260801.json` | `a6f87b84…` *(added 2026-08-02: the audit found the per-instance verdicts had never been frozen — recovered from the adjudicator's working file, verified against the ledger summary and the candidate set; see `holes/labs/M-memory-retrieval/adjudication-verdicts-provenance.md`)* |
 | S1 corpus / results | `777e2376…` / `9636fcd7…` |
 | P1b results | `2c3a8c36…` |
 | P3 scale fixture / results | `4d684c1a…` / `b82cc571…` |
