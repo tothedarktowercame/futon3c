@@ -108,7 +108,7 @@
             (is (some #{"--json"} cmd))
             (is (some #{"-"} cmd))
             (is (= "hello codex" prompt))
-            (is (= 1800000 (:timeout-ms opts)))
+            (is (= 3600000 (:timeout-ms opts)))
             (is (= "/tmp" (:cwd opts))))))))
   (testing "placeholder tool narration does not leak as final response text"
     (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"

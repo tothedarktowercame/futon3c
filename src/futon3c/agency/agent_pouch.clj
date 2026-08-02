@@ -17,7 +17,7 @@
 (defonce ^:private !pouches (atom {}))
 (defonce ^:private !registry-lock (Object.))
 
-(def ^:private default-timeout-ms (* 30 60 1000))
+(def ^:private default-timeout-ms (* 60 60 1000))
 (def ^:private default-idle-ttl-ms (* 30 60 1000))
 (def ^:private default-max-warm 8)
 

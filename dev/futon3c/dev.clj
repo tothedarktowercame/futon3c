@@ -33,7 +33,7 @@
                         — codex approval policy (default: never)
      CODEX_REASONING_EFFORT
                        — codex reasoning effort override (for example: low|medium|high)
-     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 1800000)
+     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 3600000)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
      FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
@@ -3478,7 +3478,7 @@ RESPOND WITH ONLY:
      :agent-id         — agent identifier (default \"claude\")
      :session-file     — path to session ID file for persistence (optional)
      :session-id-atom  — atom holding current session ID (optional)
-     :timeout-ms       — hard process timeout in ms (default 1800000 = 30 min).
+     :timeout-ms       — hard process timeout in ms (default 3600000 = 60 min).
                          Set high because Emacs sessions replace the CLI and should
                          not be arbitrarily killed. IRC relay enforces its own
                          shorter timeout (120s) via invoke-timeout-ms.
@@ -3486,7 +3486,7 @@ RESPOND WITH ONLY:
                          When nil, uses the CLI default."
   [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model cwd]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
-         timeout-ms 1800000}}]
+         timeout-ms 3600000}}]
   (if-let [codex-opts (mfuton-invoke-override/claude-role-codex-opts
                        {:agent-id agent-id
                         :session-file session-file
@@ -4209,7 +4209,7 @@ RESPOND WITH ONLY:
       :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :reasoning-effort   — override reasoning effort (optional)
-     :timeout-ms         — hard timeout for codex process (default 1800000)
+     :timeout-ms         — hard timeout for codex process (default 3600000)
      :cwd                — working directory (default user.dir)
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
@@ -4217,7 +4217,7 @@ RESPOND WITH ONLY:
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
             session-file session-id-atom memory-domain]
     :or {codex-bin "codex" sandbox "danger-full-access"
-         approval-policy "never" timeout-ms 1800000 agent-id "codex"}}]
+         approval-policy "never" timeout-ms 3600000 agent-id "codex"}}]
   (let [aid-val (str agent-id)
         provisioned-domain
         (or memory-domain
@@ -4627,9 +4627,9 @@ RESPOND WITH ONLY:
      :channel     — IRC channel (default \"#futon\")
      :from-nick   — nick to send as (default \"tickle-1\")
      :poll-ms     — poll interval in ms (default 3000)
-     :timeout-ms  — max wait for response (default 1800000 = 30 min)"
+     :timeout-ms  — max wait for response (default 3600000 = 60 min)"
   [{:keys [channel from-nick poll-ms timeout-ms]
-    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 1800000}}]
+    :or {channel "#futon" from-nick "tickle-1" poll-ms 3000 timeout-ms 3600000}}]
   (fn [prompt _session-id]
     (let [prompt-str (cond
                        (string? prompt) prompt
@@ -4939,7 +4939,7 @@ RESPOND WITH ONLY:
     :or {agent-id "claude-1" nick "claude"
          channel "#futon"
          invoke-timeout-ms 600000
-         invoke-hard-timeout-ms 1800000}}]
+         invoke-hard-timeout-ms 3600000}}]
   (when (and relay-bridge irc-server)
     ((:join-agent! relay-bridge) agent-id nick channel
      (fn [data]
@@ -4997,7 +4997,7 @@ RESPOND WITH ONLY:
                                                      (and invoke-hard-timeout-ms (pos? (long invoke-hard-timeout-ms)))
                                                      (long invoke-hard-timeout-ms)
                                                      soft-timeout-ms soft-timeout-ms
-                                                     :else 1800000)
+                                                     :else 3600000)
                                    invoke-fut (future
                                                 (coordination/invoke-with-edge!
                                                  {:from sender

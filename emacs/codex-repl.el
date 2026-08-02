@@ -3908,7 +3908,7 @@ CALLBACK receives the final response text."
 	           (make-process
             :name "codex-repl-stream"
             :buffer outbuf
-            :command (list "curl" "-N" "-sS" "--max-time" "1800"
+            :command (list "curl" "-N" "-sS" "--max-time" "3660"
                            "-H" "Content-Type: application/json"
                            "-d" json-body url)
             :noquery t

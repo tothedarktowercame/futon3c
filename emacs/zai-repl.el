@@ -246,7 +246,7 @@ the id is display-only, so a failed read must never break buffer setup."
             (make-process
              :name "zai-repl-curl"
              :buffer outbuf
-             :command (list "curl" "-sS" "--max-time" "1800"
+             :command (list "curl" "-sS" "--max-time" "3660"
                             "-H" "Content-Type: application/json"
                             "-H" (concat "Authorization: Bearer " key)
                             "-d" (concat "@" body-file)
@@ -380,7 +380,7 @@ the id is display-only, so a failed read must never break buffer setup."
     (make-process
      :name "zai-repl-stream"
      :buffer outbuf
-     :command (list "curl" "-N" "-sS" "--max-time" "1800"
+     :command (list "curl" "-N" "-sS" "--max-time" "3660"
                     "-H" "Content-Type: application/json"
                     "-d" json-body url)
      :noquery t

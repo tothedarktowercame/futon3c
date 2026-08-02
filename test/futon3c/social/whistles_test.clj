@@ -149,7 +149,7 @@
                        :prompt "status?"
                        :author "joe"})]
           (is (true? (:whistle/ok result)))
-          (is (= 1800000 @captured-timeout)))))))
+          (is (= 3600000 @captured-timeout)))))))
 
 (deftest whistle-records-delivery-when-invoke-trace-id-present
   (testing "whistle! records delivery receipt for trace-id-bearing invokes"

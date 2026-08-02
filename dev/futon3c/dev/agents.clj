@@ -174,7 +174,7 @@
                     :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
                                          (config/env "CODEX_APPROVAL" "never"))
                     :reasoning-effort (config/env "CODEX_REASONING_EFFORT")
-                    :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
+                    :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 3600000) 3600000)
                     :cwd (config/configured-codex-cwd)
                     :agent-id agent-id
                     :session-file session-file
@@ -300,7 +300,7 @@
         codex-agent-id (config/configured-codex-agent-id)
         codex-relay-nick (config/configured-codex-relay-nick)
         relay-invoke-timeout-ms (or (config/env-int "FUTON3C_RELAY_INVOKE_TIMEOUT_MS" 600000) 600000)
-        relay-invoke-hard-timeout-ms (or (config/env-int "FUTON3C_RELAY_INVOKE_HARD_TIMEOUT_MS" 1800000) 1800000)
+        relay-invoke-hard-timeout-ms (or (config/env-int "FUTON3C_RELAY_INVOKE_HARD_TIMEOUT_MS" 3600000) 3600000)
         codex-ws-bridge? (config/env-bool "FUTON3C_CODEX_WS_BRIDGE" (= role :laptop))
         codex-remote-origin (or (some-> (config/env "FUTON3C_CODEX_REMOTE_BASE") config/normalize-http-base)
                                 (some-> (config/env "FUTON3C_LAPTOP_URL") config/normalize-http-base)
@@ -397,7 +397,7 @@
                            :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
                                                 (config/env "CODEX_APPROVAL" "never"))
                           :reasoning-effort (config/env "CODEX_REASONING_EFFORT")
-                          :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 1800000) 1800000)
+                          :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 3600000) 3600000)
                           :cwd (config/configured-codex-cwd)
                           :agent-id codex-agent-id
                           :session-file session-file

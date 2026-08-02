@@ -1243,7 +1243,7 @@
       true)))
 
 (def ^:private default-async-invoke-timeout-ms
-  (* 30 60 1000))
+  (* 60 60 1000))
 
 (defn- supervise-invoke-future!
   "Run INVOKE-FN once and supervise its future for a durable async job.
@@ -3828,7 +3828,7 @@
 
 (defn- handle-bell
   "POST /api/alpha/bell — asynchronous fire-and-forget invoke.
-   Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":1800000}
+   Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":3600000}
    Returns immediately with accepted job-id while execution proceeds on invoke-executor."
   [request config]
   (let [payload (parse-json-map (read-body request))]
@@ -4328,7 +4328,7 @@
 
 (defn- handle-whistle
   "POST /api/alpha/whistle — synchronous request-response to a registered agent.
-   Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 1800000}
+   Body: {\"agent-id\": \"codex-1\", \"prompt\": \"...\", \"timeout-ms\": 3600000}
    Uses the canonical supervised invoke-job engine. At the strict response
    timeout the caller receives a pollable overrun job instead of losing it."
   [request config]

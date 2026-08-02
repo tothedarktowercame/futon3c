@@ -43,7 +43,7 @@ ap.add_argument("--park-payload",
 ap.add_argument("--surface", default="emacs-repl",
                 help="park surface to resume on (default: emacs-repl)")
 # Bells carry substantial handoffs under the coding-handoff protocol, and the
-# server's 1800000 (30 min) cap DISCARDS the result rather than harvesting it:
+# server's former 1800000 (30 min) cap discarded the result rather than harvesting it:
 # the job goes state=failed with an empty result and the work is left uncommitted
 # in the working tree, invisible unless someone goes looking. That has now cost
 # four handoffs (see README-agency-cap.md). Making the generous value the DEFAULT
@@ -56,7 +56,7 @@ BELL_DEFAULT_TIMEOUT_MS = 4 * 60 * 60 * 1000   # 4 hours
 
 ap.add_argument("--timeout-ms", type=int,
                 help="invoke timeout in ms. Defaults to %d (%d min) for --kind bell, "
-                     "which is deliberately far above the server's 1800000 (30 min): "
+                     "which is deliberately far above the server's 3600000 (60 min): "
                      "until the supervised-overrun fix reaches the codex relay route, "
                      "a turn hitting the cap is abandoned as state=failed and its "
                      "result is lost. Pass 0 to defer to the server default."

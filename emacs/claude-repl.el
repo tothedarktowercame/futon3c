@@ -902,7 +902,7 @@ CALLBACK is called with the final response text on completion."
            (make-process
             :name "futon3c-invoke-stream"
             :buffer outbuf
-            :command (list "curl" "-N" "-sS" "--max-time" "1800"
+            :command (list "curl" "-N" "-sS" "--max-time" "3660"
                            "-H" "Content-Type: application/json"
                            "-d" json-body url)
             :noquery t

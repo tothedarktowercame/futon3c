@@ -26,7 +26,7 @@ Environment variables:
                     (default: false)         — when enabled, Matrix-backed
                     clean-output evolver replies use full IRC-safe line
                     splitting instead of bridge-level clipping/cap notices
-    INVOKE_TIMEOUT_SECONDS (default: 1800)   — invoke hard-timeout in seconds
+    INVOKE_TIMEOUT_SECONDS (default: 3600)   — invoke hard-timeout in seconds
     INVOKE_QUEUE_MAX       (default: 20)     — max queued invokes per bot
     CMD_TIMEOUT_SECONDS    (default: 30)     — !command timeout in seconds
 """
@@ -258,9 +258,9 @@ MAX_IRC_LINE = 400  # safe limit for PRIVMSG content (512 minus overhead)
 RECONNECT_DELAY = 5
 INVOKE_TIMEOUT_SECONDS = int_env(
     "INVOKE_TIMEOUT_SECONDS",
-    int_env("INVOKE_TIMEOUT", 1800, minimum=60),
+    int_env("INVOKE_TIMEOUT", 3600, minimum=60),
     minimum=60,
-)  # seconds; aligns with futon3c hard invoke timeout (30 min)
+)  # seconds; aligns with futon3c hard invoke timeout (60 min)
 INVOKE_CLIENT_TIMEOUT_SECONDS = int_env(
     "INVOKE_CLIENT_TIMEOUT_SECONDS",
     INVOKE_TIMEOUT_SECONDS + 15,

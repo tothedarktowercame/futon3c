@@ -1,4 +1,4 @@
-# The 30-minute invoke cap — a bell without `--timeout-ms` silently discards its result
+# The invoke cap — raised from 30 to 60 minutes as a stopgap
 
 *(Written up 2026-07-27 after a live loss: job `invoke-1785165682706-208-826bd944`.)*
 
@@ -25,15 +25,16 @@ have looked like a total loss.
 
 ## The cause
 
-The cap is **not** removed and is **not** raised server-side:
+At the time of the incident, the cap was neither removed nor raised server-side:
 
 | where | default |
 |---|---|
-| `dev/futon3c/dev/agents.clj:177`, `:400` — `CODEX_INVOKE_TIMEOUT_MS` | `1800000` (30 min) |
-| `dev/futon3c/dev/agents.clj:303` — `FUTON3C_RELAY_INVOKE_HARD_TIMEOUT_MS` | `1800000` (30 min) |
+| `dev/futon3c/dev/agents.clj` — `CODEX_INVOKE_TIMEOUT_MS` | `3600000` (60 min) |
+| `dev/futon3c/dev/agents.clj` — `FUTON3C_RELAY_INVOKE_HARD_TIMEOUT_MS` | `3600000` (60 min) |
 
-Neither env var was set on the running server (checked via `/proc/<pid>/environ`),
-so both defaults were live.
+The defaults were raised to 60 minutes on 2026-08-02 as an explicit stopgap.
+Running JVMs retain their old values until restarted; this document still records
+the original failure because the architectural repair remains open.
 
 `scripts/agency_send.py` accepts `--timeout-ms`, but it is **opt-in** — the
 payload only carries it when the flag is passed:
@@ -121,8 +122,8 @@ discarded. The machinery exists and works on the pouch/zai route
 makes the default — has never been wired to it. Until that lands, a long enough
 timeout only makes the cliff rarer; it does not remove it.
 
-Note also that the cap is not one constant. At least six independent 30-minute
-defaults exist (`codex_cli.clj:462`, `agent_pouch.clj:20` and `:21`,
-`transport/http.clj:1246`, `transport/ws/invoke.clj:9`,
-`social/whistles.clj:113`), none derived from a shared value — which is why
+Note also that the cap is not one constant. The invocation-related defaults in
+`codex_cli.clj`, `agent_pouch.clj`, `transport/http.clj`,
+`transport/ws/invoke.clj`, and `social/whistles.clj` were all raised together,
+but still are not derived from a shared value — which is why
 "we fixed the 30-minute cap" has been true and unhelpful more than once.
