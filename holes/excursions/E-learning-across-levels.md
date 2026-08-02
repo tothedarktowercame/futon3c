@@ -80,6 +80,27 @@ This is the sharpest single statement the programme has of *why* an
 L1/instrument layer cannot be fully automated: at the top of every
 enforcement stack sits a claim about meaning that only a reader can check.
 
+**Complement — enforcement can be too LOOSE as well as too tight
+(2026-08-02, ABI audit).** The three CLean-format extensions (index
+individuation, replication burden, abandon condition) were all one root
+cause: a simulation-first ABI with *fixed* structures that bent when a
+non-simulation design met them. But auditing the whole ABI against the E2
+design to predict further bends found the opposite failure in three other
+slots: `:environment` is read zero times, endpoint value-type is never
+checked, the decision table is generic — so a corpus-and-revision
+environment, an identity-rate endpoint, and operational decision keys all
+*pass*, not because they fit but because nothing inspects them. Two failure
+modes, one diagnosis: **the format's enforcement matches its semantics in
+neither direction — too rigid where it hardcoded simulation (bends), too
+permissive where it under-specified (gaps).** The bends are loud (a refusal);
+the gaps are silent (a nonsense value renders clean). This is the same class
+as the whole programme — enforcement not tracking meaning — and it says the
+repair is not "add more gates" but "make each gate's rigidity match how much
+the thing it checks actually varies." The audit *bounded* the work: the
+simulation-shaped surface was exactly two loci (fixed trace fields, the cell
+grid), not spread across the format — enumerating to bound, the same move as
+the four-path inertness precondition.
+
 Two structural observations:
 
 1. **Instrumentation coverage is monotone decreasing in level.** L0 has a
