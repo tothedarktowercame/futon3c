@@ -44,21 +44,21 @@ if a.timeout_ms:
     body["timeout-ms"] = a.timeout_ms
 ```
 
-Omit the flag and you inherit the server's 30 minutes. The flag's own help text
+Omit the flag and you inherit the server's current 60-minute stopgap. The flag's own help text
 already documents this exact outcome:
 
 > *"Until the supervised-overrun fix lands, a turn hitting this is abandoned as
 > state=failed and its result is lost — set generously for long packets."*
 
-## Why "we fixed the 30-minute cap" is misleading
+## Why raising the cap is only a stopgap
 
 Supervised-overrun machinery exists and **does** work — `holes/labs/M-zai-learning-loop/bpm-batch-0-results.md:35`
 records a wall-clock extension engaging at 35m, with tool-round budget rather
 than wall clock as the binding constraint.
 
 But that is the **zai learning-loop path**. A codex relay invoke still dies hard
-at the 30-minute mark, as this job did. Do not assume the overrun machinery
-covers your route.
+at its configured deadline — now 60 minutes by default — rather than harvesting
+a late result. Do not assume the overrun machinery covers your route.
 
 ## The rule
 
@@ -101,9 +101,8 @@ dispatch.
 
 The second of the two options below is now done: `agency_send.py` defaults
 `--kind bell` to **4 hours** (`BELL_DEFAULT_TIMEOUT_MS`), far above the server's
-30-minute cap. Whistles are unchanged, since a caller is synchronously blocked on
-them. `--timeout-ms 0` defers to the server default if you want the old
-behaviour.
+current 60-minute default. Whistles are unchanged, since a caller is synchronously blocked on
+them. `--timeout-ms 0` defers to the server default.
 
 This was done after the cap took three more handoffs on 2026-07-29 — codex-6 and
 codex-5 twice — each time leaving completed work uncommitted in the working tree
