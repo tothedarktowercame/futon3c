@@ -21,6 +21,13 @@
                             (get-in causal-dag
                                     [:metadata :requested_receipts])))))
 
+(defn- witnesses
+  "Return one named active path, avoiding exhaustive negative enumeration."
+  [causal-dag x y given]
+  (if (dsep/d-connected? causal-dag x y given)
+    (dsep/connecting-paths causal-dag x y given {:limit 1})
+    {:paths [] :count 0 :truncated? false}))
+
 (defn q1
   "Identification receipt for randomized recall availability."
   ([] (q1 (dag/load-spec memory-spec-path)))
@@ -28,7 +35,7 @@
    (let [target :V06
          outcome :V18
          cut (surgery/cut-outgoing memory target)
-         missed (dsep/connecting-paths cut target outcome #{} {:limit 4})
+         missed (witnesses cut target outcome #{})
          lane-descendant? (contains? (dag/descendants memory target) :V04)
          primary? (dsep/backdoor-adjustment? memory target outcome #{})
          lane? (dsep/backdoor-adjustment? memory target outcome #{:V04})]
@@ -68,7 +75,7 @@
          leak-verdicts
          (mapv
           (fn [{:keys [id]}]
-            (let [opened (dsep/connecting-paths leaked id :V18 #{} {:limit 3})
+            (let [opened (witnesses leaked id :V18 #{})
                   isolated (sever-one-leak leaked id)
                   closed? (dsep/d-separated? isolated id :V18 #{})]
               {:leak id
@@ -80,8 +87,7 @@
          channel-verdicts
          (mapv
           (fn [channel]
-            (let [paths (dsep/connecting-paths severed channel :V18 #{:V07}
-                                               {:limit 2})]
+            (let [paths (witnesses severed channel :V18 #{:V07})]
               {:channel channel
                :outcome-independent-given-treatment?
                (dsep/d-separated? severed channel :V18 #{:V07})
@@ -166,15 +172,13 @@
           (fn [[graph-name causal-dag]]
             (let [separated? (dsep/d-separated? causal-dag
                                                   :M-in-store :V12-minus-M #{})
-                  upstream (dsep/connecting-paths causal-dag
-                                                   :M-in-store :V12-minus-M #{}
-                                                   {:limit 2})
+                  upstream (witnesses causal-dag
+                                      :M-in-store :V12-minus-M #{})
                   downstream-separated?
                   (dsep/d-separated? causal-dag :M-in-store :V18
                                      #{:V12-minus-M})
-                  downstream (dsep/connecting-paths
-                              causal-dag :M-in-store :V18 #{:V12-minus-M}
-                              {:limit 2})]
+                  downstream (witnesses causal-dag :M-in-store :V18
+                                        #{:V12-minus-M})]
               {:graph graph-name
                :claim :filter-equivalence
                :holds? separated?
@@ -226,9 +230,8 @@
          selected-adjustment #{:P01 :P10-pre}
          adjusted? (dsep/backdoor-adjustment? selection :P20 :P16
                                                 selected-adjustment)
-         backdoors (dsep/connecting-paths
-                    (surgery/cut-outgoing selection :P20)
-                    :P20 :P16 #{} {:limit 4})]
+         backdoors (witnesses (surgery/cut-outgoing selection :P20)
+                              :P20 :P16 #{})]
      {:id "R1"
       :question (question lean "R1")
       :verdicts
