@@ -39,39 +39,62 @@ def main():
     py = load("python-results.json")
     rr = load("r-results.json")
     converse = load("engine-converse.json")
+    dosearch = load("dosearch-results.json")
     export = load("engine-export.json")
     nx_ci = py["networkx-implications"]
+    nx_lean_ci = py["networkx-lean-implications"]
     r_ci = rr["dagitty_implications"]
+    r_lean_ci = rr["dagitty_lean_implications"]
     disagreement_count = (
         len(nx_ci["disagreements"])
+        + len(nx_lean_ci["disagreements"])
         + len(r_ci["disagreements"])
-        + len(converse["disagreements"])
+        + len(r_lean_ci["disagreements"])
+        + len(converse["memory"]["disagreements"])
+        + len(converse["lean"]["disagreements"])
         + len(py["q3"]["disagreements"])
         + len(rr["q3"]["disagreements"])
+        + len(py["r2"]["disagreements"])
+        + len(rr["r2"]["disagreements"])
+        + len(py["r3"]["disagreements"])
+        + len(rr["r3"]["disagreements"])
     )
     deferrals = [
         "dagitty localTests: deferred — data-dependent; requires M-memory-retrieval cohort data.",
         "DoWhy gcm.falsify_graph: deferred — data-dependent; requires M-memory-retrieval cohort data.",
-        "Q2 mediation-under-surgery: deferred — no independent structure-level oracle was specified or available (priced-in limit).",
+        "dosearch Q2 boundary: deferred — dosearch 1.0.12 doubles 18 faithful ancestral variables into 36 internal intervention nodes, exceeding its hard limit of 30; both without-S05 and with-S05 queries were rejected before identification search.",
+        "Q2 NDE/NIE decomposition: deferred — dosearch has no path-specific intervention syntax; the attempted query was the joint channel/outcome response P(V13,V14,V18 | do(V07)), not an NDE/NIE proxy.",
     ]
     identification = py["identification"]
     summary = {
-        "schema-version": 1,
-        "engine-implications": len(export["implied-independencies"]),
+        "schema-version": 2,
+        "memory-engine-implications": len(export["implied-independencies"]),
+        "lean-engine-implications": len(export["lean-implied-independencies"]),
         "networkx": nx_ci,
+        "networkx-lean": nx_lean_ci,
         "dagitty": r_ci,
+        "dagitty-lean": r_lean_ci,
         "dagitty-converse": converse,
         "q3-networkx": py["q3"],
         "q3-dagitty": rr["q3"],
+        "r2-networkx": py["r2"],
+        "r2-dagitty": rr["r2"],
+        "r3-networkx": py["r3"],
+        "r3-dagitty": rr["r3"],
+        "dosearch": dosearch,
         "identification": identification,
         "disagreement-count": disagreement_count,
         "deferrals": deferrals,
-        "tool-versions": {**py["tool-versions"], **rr["tool_versions"]},
+        "tool-versions": {
+            **py["tool-versions"],
+            **rr["tool_versions"],
+            "dosearch": dosearch["tool_version"],
+        },
     }
     (HERE / "report.edn").write_text(edn(summary) + "\n", encoding="utf-8")
 
     q3 = py["q3"]["verdicts"]
-    report = f"""# M-diagramprover D2 oracle falsification pass
+    report = f"""# M-diagramprover D2/D3 oracle falsification pass
 
 ## Result
 
@@ -79,11 +102,18 @@ No structure-level disagreements were found.
 
 | Check | Agreements | Disagreements |
 |---|---:|---:|
-| Engine implications × NetworkX | {nx_ci['agreements']} | {len(nx_ci['disagreements'])} |
-| Engine implications × dagitty | {r_ci['agreements']} | {len(r_ci['disagreements'])} |
-| dagitty implied-CI converse (verdict level) | {converse['agreements']} | {len(converse['disagreements'])} |
+| Memory implications × NetworkX | {nx_ci['agreements']} | {len(nx_ci['disagreements'])} |
+| Memory implications × dagitty | {r_ci['agreements']} | {len(r_ci['disagreements'])} |
+| Lean implications × NetworkX | {nx_lean_ci['agreements']} | {len(nx_lean_ci['disagreements'])} |
+| Lean implications × dagitty | {r_lean_ci['agreements']} | {len(r_lean_ci['disagreements'])} |
+| Memory dagitty converse × engine | {converse['memory']['agreements']} | {len(converse['memory']['disagreements'])} |
+| Lean dagitty converse × engine | {converse['lean']['agreements']} | {len(converse['lean']['disagreements'])} |
 | Q3 pair + V18 corollaries × NetworkX | 4 | {len(py['q3']['disagreements'])} |
 | Q3 pair + V18 corollaries × dagitty | 4 | {len(rr['q3']['disagreements'])} |
+| R2 key verdicts × NetworkX | 3 | {len(py['r2']['disagreements'])} |
+| R2 key verdicts × dagitty | 3 | {len(rr['r2']['disagreements'])} |
+| R3 key verdicts × NetworkX | 2 | {len(py['r3']['disagreements'])} |
+| R3 key verdicts × dagitty | 2 | {len(rr['r3']['disagreements'])} |
 
 Named disagreements (verbatim): `[]`.
 
@@ -95,6 +125,18 @@ separation is `{str(q3['populated-graph']['marginal-separated']).lower()}`. Both
 `V18 ⟂ M-in-store | V12-minus-M`. The receipt's populated witness remains
 `[M-in-store shared-patterns V12-minus-M]`; oracle verdicts independently confirm
 the dependence rather than relying on that engine-generated path.
+
+## R2/R3 Lean receipts
+
+Both independent oracles reproduce R2: module withholding has no outcome channel
+in the copied-class topology, has one in the extracted-class topology, and the
+separate copied-content removal has an outcome channel. They also reproduce both
+R3 verdicts as `false`.
+
+Headline structural finding: hypothetical T05 does **not** screen off T04 in the
+specified DAG encoding. T05 is a measurement child of P10, so conditioning on it
+does not block `T04-at-k <- P16-at-k <- P10-at-k -> P16-at-k+1`. Consequently the
+preregistered case for retiring hole count is not confirmed by structure alone.
 
 ## Identification × y0
 
@@ -117,6 +159,38 @@ separate computed backdoor claims, not conclusions inferred from y0's formula.
 - pandas {py['tool-versions']['pandas']}
 - R {rr['tool_versions']['R']}
 - dagitty {rr['tool_versions']['dagitty']}
+- dosearch {dosearch['tool_version']}
+
+## dosearch Q2 boundary
+
+The intended path-specific V13/V14 mediation decomposition does not map to
+dosearch's query language. The faithful query attempted instead was the joint
+channel/outcome response on the exact 18-node ancestral reduction. Both runs were
+rejected before search: `{dosearch['without_s05']['status']}` without S05 and
+`{dosearch['with_s05']['status']}` with S05. dosearch creates 36 internal nodes
+after adding intervention nodes, above its hard limit of 30.
+
+Without S05 — exact arguments:
+
+```text
+data = {dosearch['without_s05']['data']}
+query = {dosearch['without_s05']['query']}
+graph =
+{dosearch['without_s05']['graph']}
+```
+
+With S05 — exact arguments:
+
+```text
+data = {dosearch['with_s05']['data']}
+query = {dosearch['with_s05']['query']}
+graph =
+{dosearch['with_s05']['graph']}
+```
+
+Exact error for both: `{dosearch['without_s05']['error']}` No identifying or
+non-identifying verdict was returned, so Q2's pure computed refusal is not
+upgraded to a proved dosearch boundary in this slice.
 
 ## Deferred with reason
 

@@ -1,5 +1,12 @@
 {
-  "agreements" : 1382,
-  "checked" : 1382,
-  "disagreements" : [ ]
+  "lean" : {
+    "agreements" : 426,
+    "checked" : 426,
+    "disagreements" : [ ]
+  },
+  "memory" : {
+    "agreements" : 1382,
+    "checked" : 1382,
+    "disagreements" : [ ]
+  }
 }

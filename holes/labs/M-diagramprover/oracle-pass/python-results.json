@@ -36,6 +36,11 @@
     "checked": 209,
     "disagreements": []
   },
+  "networkx-lean-implications": {
+    "agreements": 202,
+    "checked": 202,
+    "disagreements": []
+  },
   "q3": {
     "disagreements": [],
     "verdicts": {
@@ -47,6 +52,21 @@
         "marginal-separated": true,
         "v18-separated-given-v12-minus-m": true
       }
+    }
+  },
+  "r2": {
+    "disagreements": [],
+    "verdicts": {
+      "content-removal-effect": true,
+      "copied-class": false,
+      "extracted-class": true
+    }
+  },
+  "r3": {
+    "disagreements": [],
+    "verdicts": {
+      "current-sensors": false,
+      "with-hypothetical-t05": false
     }
   },
   "source-spec-counts": {

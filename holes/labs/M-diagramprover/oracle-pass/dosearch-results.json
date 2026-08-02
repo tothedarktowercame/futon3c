@@ -1,0 +1,25 @@
+{
+  "tool_version": "1.0.12",
+  "encoding": "Joint channel/outcome response on the exact ancestral reduction; not an NDE/NIE or other path-specific estimand.",
+  "node_count": 18,
+  "internal_node_count": 36,
+  "package_node_limit": 30,
+  "without_s05": {
+    "data": "p(V01,V02,V03,V04,V05,V06,V07,V08,V09,V10,V11,V12,V15,V16,V17,V18)",
+    "query": "p(V13,V14,V18|do(V07))",
+    "graph": "V01 -> V08\nV01 -> V09\nV01 -> V16\nV02 -> V10\nV02 -> V11\nV03 -> V15\nV03 -> V17\nV04 -> V08\nV04 -> V16\nV05 -> V02\nV05 -> V03\nV06 -> V09\nV07 -> V02\nV07 -> V12\nV08 -> V09\nV08 -> V15\nV09 -> V10\nV10 -> V11\nV10 -> V12\nV11 -> V12\nV11 -> V12\nV12 -> V13\nV12 -> V14\nV13 -> V16\nV14 -> V16\nV15 -> V16\nV16 -> V17\nV16 -> V18\nV17 -> V18",
+    "status": "rejected-size-limit",
+    "identifiable": null,
+    "formula": null,
+    "error": "The inputs imply a graph with more than 30 nodes."
+  },
+  "with_s05": {
+    "data": "p(V01,V02,V03,V04,V05,V06,V07,V08,V09,V10,V11,V12,V13,V14,V15,V16,V17,V18)",
+    "query": "p(V13,V14,V18|do(V07))",
+    "graph": "V01 -> V08\nV01 -> V09\nV01 -> V16\nV02 -> V10\nV02 -> V11\nV03 -> V15\nV03 -> V17\nV04 -> V08\nV04 -> V16\nV05 -> V02\nV05 -> V03\nV06 -> V09\nV07 -> V02\nV07 -> V12\nV08 -> V09\nV08 -> V15\nV09 -> V10\nV10 -> V11\nV10 -> V12\nV11 -> V12\nV11 -> V12\nV12 -> V13\nV12 -> V14\nV13 -> V16\nV14 -> V16\nV15 -> V16\nV16 -> V17\nV16 -> V18\nV17 -> V18",
+    "status": "rejected-size-limit",
+    "identifiable": null,
+    "formula": null,
+    "error": "The inputs imply a graph with more than 30 nodes."
+  }
+}

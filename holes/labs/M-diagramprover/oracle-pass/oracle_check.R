@@ -22,19 +22,27 @@ dagitty_graph <- function(data) {
 }
 
 memory <- dagitty_graph(export$`memory-graph`)
-implication_results <- lapply(export$`implied-independencies`, function(ci) {
-  given <- unlist(ci$given, use.names = FALSE)
-  holds <- dseparated(memory, ci$x, ci$y, given)
-  list(x = ci$x, y = ci$y, given = given, holds = isTRUE(holds))
-})
-implication_disagreements <- Filter(function(item) !item$holds, implication_results)
+lean <- dagitty_graph(export$`lean-graph`)
+check_implications <- function(graph, implications) {
+  results <- lapply(implications, function(ci) {
+    given <- unlist(ci$given, use.names = FALSE)
+    holds <- dseparated(graph, ci$x, ci$y, given)
+    list(x = ci$x, y = ci$y, given = given, holds = isTRUE(holds))
+  })
+  disagreements <- Filter(function(item) !item$holds, results)
+  list(checked = length(results),
+       agreements = length(results) - length(disagreements),
+       disagreements = disagreements)
+}
+memory_implications <- check_implications(memory, export$`implied-independencies`)
+lean_implications <- check_implications(lean, export$`lean-implied-independencies`)
 
 # Converse is verdict-level only: dagitty's basis enumeration intentionally
 # differs from the engine's minimal-set enumeration.
-basis <- impliedConditionalIndependencies(memory)
-basis_results <- lapply(basis, function(ci) {
+basis_records <- function(graph) lapply(impliedConditionalIndependencies(graph), function(ci) {
   list(x = ci$X, y = ci$Y, given = unlist(ci$Z, use.names = FALSE))
 })
+basis_results <- list(memory = basis_records(memory), lean = basis_records(lean))
 write_json(basis_results, file.path(here, "dagitty-basis.json"), pretty = TRUE,
            auto_unbox = TRUE, null = "null")
 
@@ -57,28 +65,72 @@ q3_expected <- list(
 q3_disagreements <- Filter(function(name) !identical(q3[[name]], q3_expected[[name]]),
                            names(q3))
 
+receipt_by_id <- function(id) {
+  Filter(function(item) identical(item$id, id), export$receipts)[[1]]
+}
+r2_receipt <- receipt_by_id("R2")
+r2_expected <- setNames(
+  lapply(r2_receipt$verdicts, function(item) item[["holds?"]]),
+  vapply(r2_receipt$verdicts, function(item) item$graph, character(1))
+)
+r2_expected$`content-removal-effect` <-
+  r2_receipt$`duplication-debt`[["content-removal-effect?"]]
+r2_copied <- dagitty_graph(export$`r2-variants`$`copied-class`)
+r2_extracted <- dagitty_graph(export$`r2-variants`$`extracted-class`)
+r2 <- list(
+  `copied-class` = !isTRUE(dseparated(r2_copied, "P19", "P16")),
+  `extracted-class` = !isTRUE(dseparated(r2_extracted, "P19", "P16")),
+  `content-removal-effect` =
+    !isTRUE(dseparated(r2_copied, "remove-content", "P16"))
+)
+r2_disagreements <- Filter(function(name) !identical(r2[[name]], r2_expected[[name]]),
+                           names(r2))
+
+r3_receipt <- receipt_by_id("R3")
+r3_expected <- setNames(
+  lapply(r3_receipt$verdicts, function(item) item[["holds?"]]),
+  vapply(r3_receipt$verdicts, function(item) item$graph, character(1))
+)
+r3_current <- dagitty_graph(export$`r3-variants`$`current-sensors`)
+r3_hypothetical <- dagitty_graph(
+  export$`r3-variants`$`with-hypothetical-t05`
+)
+r3 <- list(
+  `current-sensors` = isTRUE(dseparated(
+    r3_current, "P16-at-k+1", "P10-at-k", "T04-at-k"
+  )),
+  `with-hypothetical-t05` = isTRUE(dseparated(
+    r3_hypothetical, "P16-at-k+1", "T04-at-k", "T05-at-k"
+  ))
+)
+r3_disagreements <- Filter(function(name) !identical(r3[[name]], r3_expected[[name]]),
+                           names(r3))
+
 result <- list(
   tool_versions = list(R = paste(R.version$major, R.version$minor, sep = "."),
                        dagitty = as.character(packageVersion("dagitty"))),
-  dagitty_implications = list(
-    checked = length(implication_results),
-    agreements = length(implication_results) - length(implication_disagreements),
-    disagreements = implication_disagreements
-  ),
+  dagitty_implications = memory_implications,
+  dagitty_lean_implications = lean_implications,
   dagitty_converse = list(
-    emitted = length(basis_results),
+    memory_emitted = length(basis_results$memory),
+    lean_emitted = length(basis_results$lean),
     basis_file = "dagitty-basis.json"
   ),
-  q3 = list(verdicts = q3, disagreements = q3_disagreements)
+  q3 = list(verdicts = q3, disagreements = q3_disagreements),
+  r2 = list(verdicts = r2, disagreements = r2_disagreements),
+  r3 = list(verdicts = r3, disagreements = r3_disagreements)
 )
 write_json(result, file.path(here, "r-results.json"), pretty = TRUE,
            auto_unbox = TRUE, null = "null")
 
-if (length(implication_disagreements) || length(q3_disagreements)) {
+if (length(memory_implications$disagreements) ||
+    length(lean_implications$disagreements) || length(q3_disagreements) ||
+    length(r2_disagreements) || length(r3_disagreements)) {
   stop("dagitty disagreement; inspect r-results.json")
 }
-cat(sprintf("dagitty implications: %d agreements, 0 disagreements\n",
-            length(implication_results)))
-cat(sprintf("dagitty converse: emitted %d CIs for engine verification\n",
-            length(basis_results)))
+cat(sprintf("dagitty memory/Lean implications: %d/%d agreements, 0 disagreements\n",
+            memory_implications$agreements, lean_implications$agreements))
+cat(sprintf("dagitty converse: emitted memory/Lean %d/%d CIs\n",
+            length(basis_results$memory), length(basis_results$lean)))
 cat("Q3: 4/4 verdicts agree\n")
+cat("R2/R3: 3/3 and 2/2 verdicts agree\n")

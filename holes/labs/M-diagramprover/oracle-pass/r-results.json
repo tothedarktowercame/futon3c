@@ -8,8 +8,14 @@
     "agreements": 209,
     "disagreements": []
   },
+  "dagitty_lean_implications": {
+    "checked": 202,
+    "agreements": 202,
+    "disagreements": []
+  },
   "dagitty_converse": {
-    "emitted": 1382,
+    "memory_emitted": 1382,
+    "lean_emitted": 426,
     "basis_file": "dagitty-basis.json"
   },
   "q3": {
@@ -22,6 +28,21 @@
         "marginal_separated": true,
         "v18_separated_given_v12_minus_m": true
       }
+    },
+    "disagreements": []
+  },
+  "r2": {
+    "verdicts": {
+      "copied-class": false,
+      "extracted-class": true,
+      "content-removal-effect": true
+    },
+    "disagreements": []
+  },
+  "r3": {
+    "verdicts": {
+      "current-sensors": false,
+      "with-hypothetical-t05": false
     },
     "disagreements": []
   }

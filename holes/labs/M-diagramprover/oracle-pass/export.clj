@@ -27,20 +27,45 @@
                 (sort-by (juxt :from :to))
                 vec)})
 
+(defn- induced-dag [causal-dag nodes]
+  (let [node-set (set nodes)]
+    (dag/validate
+     (-> causal-dag
+         (update :variables select-keys node-set)
+         (update :arrows
+                 #(into [] (filter (fn [{:keys [from to]}]
+                                     (and (node-set from) (node-set to))) %)))))))
+
 (defn build-export []
   (let [memory (dag/load-spec receipts/memory-spec-path)
         lean (dag/load-spec receipts/lean-spec-path)
-        q3 (receipts/q3-variants memory)]
-    {:schema-version 1
+        q3 (receipts/q3-variants memory)
+        r2 (receipts/r2-variants lean)
+        r3 (receipts/r3-variants lean)
+        mediation-query-nodes #{:V07 :V13 :V14 :V18}
+        mediation-nodes (into mediation-query-nodes
+                              (dag/ancestors memory mediation-query-nodes))]
+    {:schema-version 2
      :receipts (receipts/all-receipts)
      :memory-graph (graph-export memory)
      :lean-graph (graph-export lean)
+     :memory-mediation-graph
+     (graph-export (induced-dag memory mediation-nodes))
      :implied-independencies
      (dsep/implied-independencies memory {:max-conditioning 2})
+     :lean-implied-independencies
+     (dsep/implied-independencies lean {:max-conditioning 2})
      :q3-variants
      {:star-forest (graph-export (:star-forest q3))
       :populated-graph (graph-export (:populated-graph q3))}
-     :r1-selection (graph-export (receipts/r1-selection-variant lean))}))
+     :r1-selection (graph-export (receipts/r1-selection-variant lean))
+     :r2-variants
+     {:copied-class (graph-export (:copied-class r2))
+      :extracted-class (graph-export (:extracted-class r2))}
+     :r3-variants
+     {:current-sensors (graph-export (:current-sensors r3))
+      :with-hypothetical-t05
+      (graph-export (:with-hypothetical-t05 r3))}}))
 
 (defn -main [& _]
   (let [payload (build-export)
@@ -50,39 +75,51 @@
     (spit json-path (str (json/generate-string (plain payload)
                                                {:pretty true}) "\n"))
     (spit edn-path (str (pr-str payload) "\n"))
-    (println "exported" (count (:implied-independencies payload))
-             "engine implications to" (.getPath json-path))))
+    (println "exported memory/Lean implications"
+             (count (:implied-independencies payload)) "/"
+             (count (:lean-implied-independencies payload))
+             "to" (.getPath json-path))))
 
-(defn verify-converse
-  "Evaluate dagitty's emitted CI basis with the Clojure engine itself."
-  [& _]
-  (let [memory (dag/load-spec receipts/memory-spec-path)
-        basis-path (io/file output-directory "dagitty-basis.json")
-        output-path (io/file output-directory "engine-converse.json")
-        parsed-basis (json/parse-string (slurp basis-path) true)
-        basis (if (map? parsed-basis)
-                (->> parsed-basis
-                     (sort-by (comp parse-long name key))
-                     (mapv val))
-                parsed-basis)
-        verdicts
+(defn- numbered-values [value]
+  (if (map? value)
+    (->> value
+         (sort-by (comp parse-long name key))
+         (mapv val))
+    value))
+
+(defn- converse-result [causal-dag basis]
+  (let [verdicts
         (mapv (fn [{:keys [x y given] :as ci}]
                 (assoc ci :holds
                        (dsep/d-separated?
-                        memory (keyword x) (keyword y)
+                        causal-dag (keyword x) (keyword y)
                         (into #{} (map keyword)
                               (cond
                                 (nil? given) []
                                 (string? given) [given]
                                 :else given)))))
-              basis)
-        disagreements (into [] (remove :holds) verdicts)
-        result {:checked (count verdicts)
-                :agreements (- (count verdicts) (count disagreements))
-                :disagreements disagreements}]
+              (numbered-values basis))
+        disagreements (into [] (remove :holds) verdicts)]
+    {:checked (count verdicts)
+     :agreements (- (count verdicts) (count disagreements))
+     :disagreements disagreements}))
+
+(defn verify-converse
+  "Evaluate dagitty's emitted CI basis with the Clojure engine itself."
+  [& _]
+  (let [memory (dag/load-spec receipts/memory-spec-path)
+        lean (dag/load-spec receipts/lean-spec-path)
+        basis-path (io/file output-directory "dagitty-basis.json")
+        output-path (io/file output-directory "engine-converse.json")
+        parsed-basis (json/parse-string (slurp basis-path) true)
+        result {:memory (converse-result memory (:memory parsed-basis))
+                :lean (converse-result lean (:lean parsed-basis))}
+        disagreements (mapcat :disagreements (vals result))]
     (spit output-path
           (str (json/generate-string (plain result) {:pretty true}) "\n"))
-    (println "engine converse:" (:agreements result) "agreements,"
+    (println "engine converse: memory/Lean"
+             (get-in result [:memory :agreements]) "/"
+             (get-in result [:lean :agreements]) "agreements,"
              (count disagreements) "disagreements")
     (when (seq disagreements)
       (throw (ex-info "Engine disagrees with dagitty CI basis"
