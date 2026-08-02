@@ -38,6 +38,46 @@
         (is (str/includes? @seen-url "/api/alpha/evidence/count?"))
         (is (str/includes? @seen-url "tags=open"))))))
 
+(deftest repeated-bounded-query-is-cached-and-write-invalidates
+  (let [gets (atom 0)
+        posts (atom 0)
+        store (sut/make-futon1b-backend "http://store.test"
+                                        {:query-cache-ttl-ms 30000})
+        params {:query/type :coordination :query/limit 100}
+        entry {:evidence/id "e-cache-invalidation"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "test"
+               :evidence/at "2026-08-02T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags []}]
+    (with-redefs [http/get (fn [_ _]
+                             (swap! gets inc)
+                             (delay {:status 200
+                                     :body "{:entries [{:evidence/id \"cached\", :evidence/type :coordination, :evidence/at \"2026-08-01T00:00:00Z\"}]}"}))
+                  http/post (fn [_ _]
+                              (swap! posts inc)
+                              (delay {:status 201 :body (pr-str {:entry entry})}))]
+      (is (= ["cached"] (mapv :evidence/id (backend/-query store params))))
+      (is (= ["cached"] (mapv :evidence/id (backend/-query store params))))
+      (is (= 1 @gets) "identical reads within the TTL share one store scan")
+      (is (:ok (backend/-append store entry)))
+      (is (= 1 @posts))
+      (is (= ["cached"] (mapv :evidence/id (backend/-query store params))))
+      (is (= 2 @gets) "a successful write invalidates cached reads"))))
+
+(deftest expired-query-cache-is-refreshed
+  (let [gets (atom 0)
+        store (sut/make-futon1b-backend "http://store.test"
+                                        {:query-cache-ttl-ms 1})]
+    (with-redefs [http/get (fn [_ _]
+                             (swap! gets inc)
+                             (delay {:status 200 :body "{:entries []}"}))]
+      (backend/-query store {:query/limit 10})
+      (Thread/sleep 5)
+      (backend/-query store {:query/limit 10})
+      (is (= 2 @gets) "external writes become visible after bounded staleness"))))
+
 (deftest unbounded-protocol-query-pages-through-server-cursors
   (testing "-all never asks the store JVM for an unbounded response"
     (let [seen-urls (atom [])
