@@ -43,6 +43,7 @@ TARGETS=(
   "a02J05:fddc86c"
   "a01A07:81dccb3"
   "a93J07:c8e6f11"
+  "a95J01:51b6bc00"   # E2-PILOT target: memory-free-failure base (chain rule done, bridge missing); closes at 016bf0fb with the bridge memory
 )
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
