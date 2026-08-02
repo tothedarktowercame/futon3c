@@ -339,6 +339,38 @@ fresh preregistered window, not retrospective relabelling.*
   exist by design where archaeology found one. Registers through CLean with
   the ArmRole vocabulary; disjoint from pilot.
 
+### Cohort data-generation REQUIREMENT: enforced per-memory use-attribution (Joe, 2026-08-02)
+
+**The receipt-ranking inertness finding (`receipt-ranking-inertness-20260802.md`)
+diagnoses a starvation, and it dictates a cohort-run requirement.** The boost was
+inert because `used-count ≈ 0` everywhere — memories are *offered* but almost
+never marked *used*. That is not a ranking bug; it is a data-generation gap, and
+the cohort will reproduce it unless attribution is ENFORCED. Confirmed in the
+dispatch path: the prompt (`dispatch_with_recall.clj:871`) asks for a free-prose
+"Memory usage" section and to echo the outcome bracket, but never requires a
+*per-surfaced-memory* verdict, and the outcome sweeper marks a botched section
+"unrecoverable" while still **recording the run**. Requested, not gated. Joe's
+rule: *the runners follow discipline when it is enforced and drift when it is
+not* — the whole day's thesis (semantics living where enforcement isn't) pointed
+at data generation.
+
+**Requirement for every cohort-bound run:**
+1. The dispatch prompt requires, for EACH surfaced id (known from the offered
+   receipt), exactly one structured verdict — `USED <id>: <one-line mechanism>`
+   or `IGNORED <id>: <one-line reason>` — not a free-prose paragraph.
+2. Completion is GATED against the offered receipt's `surfaced-ids`: every
+   surfaced id must carry exactly one verdict. The gate is checkable by the
+   harness (it knows the offered set), so it does not trust the runner to list
+   the ids it accounts for.
+3. A run missing a verdict for any surfaced id is `:attribution-incomplete` —
+   excluded from the use/mediation endpoints and re-queued for attribution, NOT
+   silently accepted with `used-count = 0` (which is exactly what poisoned the
+   retrospective corpus).
+4. In CLean terms this is the use-attribution sensor's coverage-precondition
+   (extension 1) ENFORCED at the completion gate, with coverage-check →
+   `:incomplete` — the outcome-half twin of the pilot's offered-half manipulation
+   check (`withheld id ∉ surfaced`). The cohort registration must carry it.
+
 The pattern of the day, once more: the retrospective corpus cannot support
 what the instruments never recorded; prospective wins. *Registration path CLEAR (2026-08-01 evening): claude-4's CLean pipeline gained `ArmRole` + `axisPredictedNonNavigable` (mathlib4 `084930e`, futon6 `9a25e8c`, attack-verified — a live axis cannot be laundered as a positive control), so E2's predicted-null incidental arm is expressible, provable, and ReadyToRun-able. E2's confirmation re-registers through CLean when run.* |
 | **E5** | not started | re-run the a95J08 route-vocabulary comparison with vocabularies chosen *blind* | nothing — cheap, and it discharges a contamination its own author declared |
