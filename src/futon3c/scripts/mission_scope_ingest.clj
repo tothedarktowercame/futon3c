@@ -24,7 +24,19 @@
    "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"
    "operator-gate"])
 (def ^:private archival-binders #{"operator-gate"})
-(def ^:private substrate-page-limit 1000)
+;; Must stay at or below futon1b's max-result-limit (5000, futon1b_server.clj:313)
+;; and at or above the largest hyperedge population this ingest reads, because
+;; `hyperedges-by-type` fails closed on truncation rather than reading a partial
+;; window.  It sat at 1000 against a mission-scope/loose-section population that
+;; reached 1002, so from ~2026-07 EVERY scope reingest threw "futon1b hyperedge
+;; result truncated" and no mission's scope surface could land — which is why the
+;; futon1b scope surface holds ~1/9th of what futon1a's did.
+;;
+;; 5000 is a ceiling, not a fix: futon1b exposes no cursor, so once any single
+;; type exceeds 5000 this fails closed again with nowhere left to go.  The real
+;; repair is pagination in futon1b (see TN-futon1a-sweep-2026-08-02.md §2).
+(def ^:private substrate-page-limit
+  (or (some-> (System/getenv "FUTON3C_SUBSTRATE_PAGE_LIMIT") parse-long) 5000))
 (def ^:private pattern-library-limit substrate-page-limit)
 (def ^:private !pattern-library-cache (atom nil))
 
