@@ -890,8 +890,12 @@
        "Recall completed and supplied the reviewed memories below.\n"
 
        :completed-empty
-       (str "Recall COMPLETED but found no reviewed memories to surface. "
-            "Only this status is a genuine empty retrieval result.\n"))
+       (if (= :all-surfaced-memories-withheld (:reason recall-result))
+         (str "Recall COMPLETED, but every matched memory was removed by the "
+              "registered dispatch-time withholding intervention. This is not "
+              "evidence of a terrain or corpus gap.\n")
+         (str "Recall COMPLETED but found no reviewed memories to surface. "
+              "Only this status is a genuine empty retrieval result.\n")))
      "OUTCOME-RECEIPT REQUIREMENT: copy the bracketed dispatch-recall-outcome "
      "value verbatim into the final Memory usage section. Do not report an "
      "incomplete recall as \"none surfaced\" or as a terrain gap. When memories "

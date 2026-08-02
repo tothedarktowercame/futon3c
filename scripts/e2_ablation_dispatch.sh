@@ -148,11 +148,23 @@ inner_main() {
   printf 'checkout-base-revision\ttrue\t0\tcanonical tree hash matches source revision\n' \
     >>"$probe_file"
 
+  # The staged input deliberately has no object database: future commits must
+  # be unreachable.  After that invariant has been checked, create a new local
+  # history containing only the verified baseline tree.  Tag it with the
+  # registered revision name so the decision-trace extractor can use the
+  # preregistered `--base 51b6bc00` while exposing no later source objects.
+  git -C "$run_dir" init -q
+  git -C "$run_dir" config user.name 'E2 isolated runner'
+  git -C "$run_dir" config user.email 'e2-runner@example.invalid'
+  git -C "$run_dir" add -A
+  git -C "$run_dir" commit -q -m "E2 isolated baseline $revision"
+  git -C "$run_dir" tag "$revision"
+
   runner_display=$(printf '%q ' "$@")
   printf 'E2 isolation passed; starting runner as uid=%s at revision=%s\n' \
     "$actual_uid" "$revision" >&2
   set +e
-  "$@"
+  (cd "$run_dir" && "$@")
   runner_rc=$?
   set -e
 
