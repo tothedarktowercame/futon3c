@@ -246,6 +246,15 @@ def edits_for_commit(repo: Path, commit: str) -> CommitEdits:
     if len(parent_line) != 2:
         raise TraceError(f"attempt commit must have exactly one parent: {commit}")
     parent = parent_line[1]
+    changed_paths = _git(
+        repo, "diff", "--name-only", "--no-renames", parent, commit,
+    ).stdout.splitlines()
+    unsupported = [path for path in changed_paths if not path.endswith(".lean")]
+    if unsupported:
+        raise TraceError(
+            "attempt changes files outside the registered Lean trace domain: "
+            + ", ".join(sorted(unsupported))
+        )
     paths = _git(
         repo, "diff", "--name-only", "--no-renames", "--diff-filter=ADM",
         parent, commit, "--", "*.lean",
@@ -322,6 +331,9 @@ class LeanOutcomeEvaluator:
         if checkout.returncode != 0:
             return "error"
         saw_sorry = _source_has_sorry(self.worktree, commit.lean_paths)
+        if not commit.lean_paths:
+            result = _run(("lake", "build"), cwd=self.worktree, check=False)
+            return "error" if result.returncode else ("sorry-present" if saw_sorry else "success")
         for path in commit.lean_paths:
             exit_code, output = _axiom_probe(self.worktree, path)
             if exit_code != 0:

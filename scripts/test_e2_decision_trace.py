@@ -102,23 +102,35 @@ theorem beta : True := by
             repo = Path(temporary)
             history = History(repo)
             base = history.commit(BASE, "baseline")
-            alpha_commit = history.commit(BASE.replace("  rfl", "  exact Eq.refl n"), "alpha")
-            history.commit(BASE.replace("  trivial", "  exact True.intro"), "beta")
+            alpha_source = BASE.replace("  rfl", "  exact Eq.refl n")
+            alpha_commit = history.commit(alpha_source, "alpha")
+            history.commit(alpha_source.replace("  trivial", "  exact True.intro"), "beta")
             alpha_then_beta = trace.extract_trace(
                 repo, base, outcome_provider=self.outcome("success"))
             alpha_only = trace.extract_trace(
                 repo, base, alpha_commit, outcome_provider=self.outcome("success"))
             self.assertNotEqual(alpha_only["sha256"], alpha_then_beta["sha256"])
+            self.assertEqual(
+                [["alpha", "modify-body", "success"],
+                 ["beta", "modify-body", "success"]],
+                alpha_then_beta["sequence"],
+            )
 
         with tempfile.TemporaryDirectory() as reverse_tmp:
             reverse = Path(reverse_tmp)
             history = History(reverse)
             reverse_base = history.commit(BASE, "baseline")
-            history.commit(BASE.replace("  trivial", "  exact True.intro"), "beta")
-            history.commit(BASE.replace("  rfl", "  exact Eq.refl n"), "alpha")
+            beta_source = BASE.replace("  trivial", "  exact True.intro")
+            history.commit(beta_source, "beta")
+            history.commit(beta_source.replace("  rfl", "  exact Eq.refl n"), "alpha")
             beta_then_alpha = trace.extract_trace(
                 reverse, reverse_base, outcome_provider=self.outcome("success"))
             self.assertNotEqual(alpha_then_beta["sha256"], beta_then_alpha["sha256"])
+            self.assertEqual(
+                [["beta", "modify-body", "success"],
+                 ["alpha", "modify-body", "success"]],
+                beta_then_alpha["sequence"],
+            )
 
     def test_build_outcome_is_structurally_sensitive(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -140,6 +152,19 @@ theorem beta : True := by
     def test_import_removal_fails_closed(self) -> None:
         with self.assertRaisesRegex(trace.TraceError, "no remove-import category"):
             trace.structural_edits("Main.lean", "import Mathlib\n", "")
+
+    def test_non_lean_changes_cannot_forge_the_build_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            history = History(repo)
+            base = history.commit(BASE, "baseline")
+            (repo / "lakefile.toml").write_text("# forged build control\n", encoding="utf-8")
+            (repo / "Main.lean").write_text(BASE.replace("  rfl", "  exact Eq.refl n"),
+                                             encoding="utf-8")
+            run(repo, "git", "add", "Main.lean", "lakefile.toml")
+            run(repo, "git", "commit", "-q", "-m", "mixed attempt")
+            with self.assertRaisesRegex(trace.TraceError, "outside the registered Lean trace domain"):
+                trace.extract_trace(repo, base, outcome_provider=self.outcome("success"))
 
 
 if __name__ == "__main__":
