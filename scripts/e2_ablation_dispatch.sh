@@ -63,8 +63,13 @@ inner_main() {
   fi
 
   local run_dir=$RUNS_ROOT/$problem
-  local expected_uid actual_uid actual_hash probe_file receipt_json runner_display runner_rc
-  local credential_home runtime_codex_home
+  local expected_uid actual_uid actual_hash receipt_json runner_display runner_rc
+  local credential_home
+  # probe_file / runtime_codex_home are deliberately NOT local: the EXIT trap
+  # runs after function scope unwinds, and a local here crashes the trap under
+  # set -u (found on first live boundary entry, 2026-08-01).
+  probe_file=""
+  runtime_codex_home=""
   local home_denied artifacts_denied codex_denied source_denied no_future own_clean
   expected_uid=$(id -u "$ACCOUNT")
   actual_uid=$(id -u)
@@ -81,7 +86,7 @@ inner_main() {
 
   probe_file=$(mktemp /tmp/e2-probes.XXXXXX)
   runtime_codex_home=$(mktemp -d /tmp/e2-codex-home.XXXXXX)
-  trap 'rm -f -- "$probe_file"; rm -rf -- "$runtime_codex_home"' EXIT
+  trap 'if [[ -n "${probe_file:-}" ]]; then rm -f -- "$probe_file"; fi; if [[ -n "${runtime_codex_home:-}" ]]; then rm -rf -- "$runtime_codex_home"; fi' EXIT
 
   denied_probe() {
     local name=$1 command=$2 err rc passed=false
@@ -115,6 +120,8 @@ inner_main() {
   printf 'no-future-commits\ttrue\t%s\tgit -C RUN_DIR log --all\n' \
     "$git_log_rc" >>"$probe_file"
 
+  [[ -d $credential_home ]] \
+    || die "credential home missing: provision $credential_home/auth.json (auth.json ONLY, per the H3g minimal-credential design)"
   local unexpected_store
   unexpected_store=$(find "$credential_home" -mindepth 1 -maxdepth 1 \
     ! -name auth.json ! -name config.toml -printf '%f\n' | sort)
