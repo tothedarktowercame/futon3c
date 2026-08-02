@@ -60,6 +60,10 @@
     (is (= dispatch/default-recall-timeout-ms (:recall-timeout-ms opts)))
     (is (= 0.5 (:receipt-alpha opts)))
     (is (true? (:receipt-ranking? opts))))
+  (is (= ["e-one" "e-two"]
+         (:withhold-ids
+          (dispatch/parse-args
+           ["--withhold" "e-one" "--withhold" "e-two"]))))
   (is (false? (:receipt-ranking?
                (dispatch/parse-args ["--no-receipt-ranking"]))))
   (is (= 0.25 (:receipt-alpha
@@ -164,6 +168,35 @@
               (is (.contains (:assembled-packet result)
                              "transfer the zero count")))))]
     (is (.contains output "[dispatch-recall-outcome=completed-with-memories]"))))
+
+(deftest withholding-is-applied-before-packet-and-offered-receipt
+  (let [withheld {:memory/id "e-withheld"
+                  :memory/body {:name "withheld" :body {:summary "do not show"}}}
+        retained {:memory/id "e-retained"
+                  :memory/body {:name "retained" :body {:summary "show this"}}}
+        result (atom nil)]
+    (with-out-str
+      (with-redefs [dispatch/safe-recall
+                    (fn [_ _] {:status :ok :memories [withheld retained]})]
+        (reset! result
+                (dispatch/run-dispatch!
+                 {:problem "a-test"
+                  :to "codex-test"
+                  :from "ground-control"
+                  :dry-run? true
+                  :allow-thin? true
+                  :withhold-ids ["e-withheld"]}
+                 "PROBLEM PACKET"))))
+    (is (not (.contains (:assembled-packet @result) "e-withheld")))
+    (is (.contains (:assembled-packet @result) "e-retained"))
+    (is (= ["e-retained"]
+           (get-in @result [:evidence :body :memory-use
+                            :memory-use/surfaced-ids])))
+    (is (= ["e-withheld"]
+           (get-in @result [:evidence :body :memory-use
+                            :memory-use/withheld-ids])))
+    (is (= ["e-withheld"]
+           (get-in @result [:evidence :body :withholding-delivered-ids])))))
 
 (deftest live-dispatch-path-surfaces-a92j05-content-match
   (if (= "http://127.0.0.1:7073"

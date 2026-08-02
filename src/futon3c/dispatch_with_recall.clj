@@ -116,6 +116,7 @@
                :from "ground-control"
                :receipt-ranking? true
                :receipt-alpha default-receipt-alpha
+               :withhold-ids []
                :subjects []}]
     (if-let [arg (first remaining)]
       (cond
@@ -133,7 +134,7 @@
 
         (contains? #{"--problem" "--to" "--from" "--base" "--mission"
                      "--subject" "--terrain" "--substrate-base" "--limit"
-                     "--recall-timeout-ms" "--receipt-alpha"}
+                     "--recall-timeout-ms" "--receipt-alpha" "--withhold"}
                    arg)
         (let [value (second remaining)]
           (when (or (nil? value) (str/starts-with? value "--"))
@@ -147,6 +148,7 @@
              "--base" (assoc opts :base value)
              "--mission" (assoc opts :mission value)
              "--subject" (update opts :subjects conj value)
+             "--withhold" (update opts :withhold-ids conj value)
              "--terrain" (assoc opts :terrain value)
              "--substrate-base" (assoc opts :substrate-base value)
              "--limit" (assoc opts :limit (positive-int arg value))
@@ -167,6 +169,7 @@
    "Options:\n"
    "  --limit N                 surfaced memories (default 5)\n"
    "  --subject TEXT            additional recall subject; repeatable\n"
+   "  --withhold MEMORY-ID      omit a surfaced memory; repeatable (ablation)\n"
    "  --terrain TEXT            explicit terrain override\n"
    "  --recall-timeout-ms N     total recall budget (default 240000)\n"
    "  --receipt-alpha N         use-rate boost weight, 0..1 (default 0.5)\n"
@@ -787,6 +790,27 @@
                             (read-bpm-terrains (default-terrain-readme)))
        :memories []})))
 
+(defn apply-withholding
+  "Apply an explicit dispatch-time ablation after recall and before packet
+  assembly. Preserve the requested ids even when they were not candidates so
+  the offered receipt can distinguish a delivered intervention from a miss."
+  [recall-result withhold-ids]
+  (let [requested (vec (distinct (remove str/blank? withhold-ids)))
+        withheld? (set requested)
+        memories (vec (remove #(contains? withheld? (:memory/id %))
+                              (:memories recall-result)))
+        removed (->> (:memories recall-result)
+                     (map :memory/id)
+                     (filter withheld?)
+                     vec)]
+    (cond-> (assoc recall-result
+                   :memories memories
+                   :withheld-memory-ids requested
+                   :withholding-delivered-ids removed)
+      (and (= :ok (:status recall-result)) (empty? memories))
+      (assoc :status :recall-empty
+             :reason :all-surfaced-memories-withheld))))
+
 (defn- summarize [value]
   (let [text
         (cond
@@ -896,6 +920,7 @@
   contract. With no memories this is still a valid recall-empty receipt."
   [{:keys [problem from]} recall-result job-id session-id]
   (let [memory-ids (mapv :memory/id (:memories recall-result))
+        withheld-ids (vec (:withheld-memory-ids recall-result))
         surfaced-at (str (Instant/now))
         inclusion-reasons
         (into {}
@@ -926,7 +951,8 @@
          (mapv (fn [memory]
                  {:memory-id (:memory/id memory)
                   :via (:via memory)})
-               (:memories recall-result)))]
+               (:memories recall-result))
+         :memory-use/withheld-ids withheld-ids)]
     {:subject {:ref/type (if (str/starts-with? problem "bpm-")
                            :bpm-problem
                            :apm-problem)
@@ -948,6 +974,9 @@
                     :recall-index-as-of (:index-as-of recall-result)
                     :recall-ladder-rung (or (:ladder-rung recall-result) :unavailable)
                     :recall-ladder-query (:ladder-query recall-result)
+                    :withheld-memory-ids withheld-ids
+                    :withholding-delivered-ids
+                    (vec (:withholding-delivered-ids recall-result))
                     :memory-use receipt}
              (:reason recall-result)
              (assoc :recall-reason (:reason recall-result))
@@ -1041,7 +1070,9 @@
   "Execute one CLI dispatch. Kept public for focused tests."
   [opts packet]
   (require-input! opts packet)
-  (let [recall-result (safe-recall opts packet)
+  (let [recall-result (apply-withholding
+                       (safe-recall opts packet)
+                       (:withhold-ids opts))
         assembled (assemble-packet packet recall-result)]
     (if (:dry-run? opts)
       (let [evidence (offered-evidence
