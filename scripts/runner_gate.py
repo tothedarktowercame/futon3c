@@ -1,39 +1,58 @@
 #!/usr/bin/env python3
-"""Learning-loop gates for the runner contract (Joe's design, 2026-08-02).
+"""Production learning-loop gates for completed runner reports.
 
-A gate is not a filter, it is a TEACHER. On a violation it does four things:
-  1. REJECT the run (it does not count toward the cohort's endpoints);
-  2. PUSH BACK structured feedback so the agent learns its behaviour was wrong;
-  3. RECORD the violation against that agent in an append-only ledger;
-  4. on REPEAT violations of the same norm, STOP THE LINE for that agent and
-     raise a meta-learning event -- the memory is not landing, which is a
-     higher-order problem than any single run.
+The Type-B use-attribution gate checks the final report against the surfaced
+ids from the *offered* receipt.  State is durable, per-agent, and idempotent by
+job id.  A gate failure never turns into a clean outcome: unexpected errors
+are recorded as review-required and remain excluded from endpoints.
 
-The feedback body IS a candidate correction-memory: a gate violation is the
-dual of the fixes we store as memories (error->fix). Type A gates (re-verify,
-don't trust the paste) teach VERIFICATION-discipline memories; Type B gates
-(gate the coverage) teach REPORTING-discipline memories. Once the memory lands
-and the agent stops violating, re-verification can be SAMPLED rather than run
-every time -- the violation rate is the control signal, which is how the loop
-avoids becoming makework.
-
-Run the demonstration:  python3 scripts/runner_gate.py --demo
+Operator commands:
+  python3 scripts/runner_gate.py --demo
+  python3 scripts/runner_gate.py --status AGENT
+  python3 scripts/runner_gate.py --clear-stop AGENT --operator NAME
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
 import sys
-from dataclasses import dataclass, field
+import tempfile
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
-STATE_DIR = Path(os.environ.get("RUNNER_GATE_STATE_DIR",
-                                Path(__file__).resolve().parent.parent
-                                / ".state/runner-gate"))
-LEDGER = STATE_DIR / "violations.jsonl"
+DEFAULT_STATE_DIR = Path(__file__).resolve().parent.parent / ".state/runner-gate"
+STATE_DIR = Path(os.environ.get("RUNNER_GATE_STATE_DIR", DEFAULT_STATE_DIR))
 STOP_THE_LINE_THRESHOLD = int(os.environ.get("RUNNER_GATE_STOP_THRESHOLD", "3"))
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _safe(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", value)
+
+
+def _job_key(job_id: str) -> str:
+    return hashlib.sha256(job_id.encode("utf-8")).hexdigest()[:24]
+
+
+def _atomic_json(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
+def _append_jsonl(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(value, sort_keys=True) + "\n")
 
 
 @dataclass
@@ -42,164 +61,255 @@ class Violation:
     norm: str
     run_id: str
     detail: str
+    missing_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
 class Run:
-    """The minimal facts a gate needs about a completed run."""
     agent: str
     run_id: str
     report: str
-    surfaced_ids: list = field(default_factory=list)   # from the offered receipt
+    surfaced_ids: list[str] = field(default_factory=list)
 
-
-# --------------------------------------------------------------------------
-# Gates. Each declares the fix-memory it teaches, so the feedback pushed back
-# to the agent is exactly the correction that would be stored as a memory.
-# --------------------------------------------------------------------------
 
 class UseAttributionGate:
-    """TYPE B -- gate the coverage. Every surfaced id must carry exactly one
-    USED/IGNORED verdict, checked against the offered receipt's surfaced set."""
+    """Every offered id requires an explicit USED/IGNORED verdict."""
+
     norm = "use-attribution"
-    teaches = ("Emit `USED <id>: <mechanism>` or `IGNORED <id>: <reason>` for "
-               "every surfaced memory id. A surfaced id with no verdict starves "
-               "the use/ignore witness the whole retrieval result depends on.")
+    teaches = (
+        "Emit `USED <id>: <mechanism>` or `IGNORED <id>: <reason>` for every "
+        "surfaced memory id. A missing verdict destroys the retrieval-to-use witness."
+    )
+    _verdict = re.compile(r"^\s*(?:[-*]\s*)?(USED|IGNORED)\s+`?(e-[A-Za-z0-9_-]+)`?\s*:", re.MULTILINE)
 
-    _verdict = re.compile(r"^\s*(USED|IGNORED)\s+(\S+?):", re.MULTILINE)
-
-    def check(self, run: Run) -> list:
-        attributed = {m.group(2) for m in self._verdict.finditer(run.report)}
-        missing = [i for i in run.surfaced_ids if i not in attributed]
+    def check(self, run: Run) -> list[Violation]:
+        attributed = {match.group(2) for match in self._verdict.finditer(run.report)}
+        missing = sorted(set(run.surfaced_ids) - attributed)
         if not missing:
             return []
-        return [Violation(run.agent, self.norm, run.run_id,
-                          f"{len(missing)} surfaced id(s) with no verdict: "
-                          f"{', '.join(missing)}")]
+        return [Violation(
+            run.agent,
+            self.norm,
+            run.run_id,
+            f"{len(missing)} surfaced id(s) with no verdict: {', '.join(missing)}",
+            missing,
+        )]
 
 
 class AxiomReverifyGate:
-    """TYPE A -- re-verify, don't trust the paste. Placeholder for the wired
-    version that RE-RUNS `#print axioms` on each claimed-complete decl rather
-    than trusting the runner's pasted output. Shown here so both enforcement
-    types visibly share the one learning loop; the demo exercises Type B."""
+    """Type-A interface reserved for a later increment."""
+
     norm = "axiom-cleanliness"
-    teaches = ("Re-run `#print axioms` before claiming complete; a stale olean "
-               "reports a false-clean, and a pasted axiom block is not evidence "
-               "the file is actually sorryAx-free.")
 
-    def check(self, run: Run) -> list:   # pragma: no cover - placeholder
-        raise NotImplementedError("wire to: lake env lean + #print axioms re-run")
+    def check(self, run: Run) -> list[Violation]:  # pragma: no cover
+        raise NotImplementedError("Type-A axiom re-verification is not wired")
 
 
-# --------------------------------------------------------------------------
-# The learning loop.
-# --------------------------------------------------------------------------
+def feedback(violation: Violation, gate: UseAttributionGate) -> str:
+    return (
+        f"RUN REJECTED ({violation.norm}). {violation.detail}\n"
+        f"WHY IT MATTERS / WHAT TO LEARN: {gate.teaches}\n"
+        "The correction is reviewed and will be supplied on your next dispatch."
+    )
 
-def _prior_count(agent: str, norm: str) -> int:
-    if not LEDGER.exists():
+
+def _paths(state_dir: Path, agent: str, run_id: str) -> dict[str, Path]:
+    agent_dir = state_dir / "agents" / _safe(agent)
+    return {
+        "agent_dir": agent_dir,
+        "ledger": agent_dir / "violations.jsonl",
+        "corrections": agent_dir / "corrections.jsonl",
+        "adjudication": state_dir / "adjudications" / f"{_job_key(run_id)}.json",
+        "review": state_dir / "review-required" / f"{_job_key(run_id)}.json",
+        "stop": state_dir / "stop-the-line" / f"{_safe(agent)}.json",
+        "meta": state_dir / "meta-learning.jsonl",
+    }
+
+
+def prior_count(agent: str, norm: str, *, state_dir: Path = STATE_DIR) -> int:
+    ledger = _paths(state_dir, agent, "unused")["ledger"]
+    if not ledger.exists():
         return 0
-    n = 0
-    for line in LEDGER.read_text().splitlines():
+    count = 0
+    for line in ledger.read_text(encoding="utf-8").splitlines():
         try:
-            rec = json.loads(line)
+            record = json.loads(line)
         except ValueError:
             continue
-        if rec.get("agent") == agent and rec.get("norm") == norm:
-            n += 1
-    return n
+        if record.get("norm") == norm:
+            count += 1
+    return count
 
 
-def _record(v: Violation) -> None:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    with LEDGER.open("a") as fh:
-        fh.write(json.dumps({"agent": v.agent, "norm": v.norm,
-                             "run_id": v.run_id, "detail": v.detail}) + "\n")
+def is_stopped(agent: str, *, state_dir: Path = STATE_DIR) -> bool:
+    return _paths(state_dir, agent, "unused")["stop"].exists()
 
 
-def feedback(v: Violation, gate) -> str:
-    """The push-back message -- and the body of the candidate correction-memory."""
-    return (f"RUN REJECTED ({v.norm}). {v.detail}\n"
-            f"WHY IT MATTERS / WHAT TO LEARN: {gate.teaches}\n"
-            f"Resubmit with the correction; this feedback is stored as a memory "
-            f"and will surface on your next dispatch.")
+def stop_record(agent: str, *, state_dir: Path = STATE_DIR) -> dict | None:
+    path = _paths(state_dir, agent, "unused")["stop"]
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
-def adjudicate(run: Run, gates, *, persist: bool = True) -> dict:
-    """Run the gates over one run and return a verdict with feedback."""
-    violations, messages, stop = [], [], False
-    meta_learning = None
-    for gate in gates:
-        vs = gate.check(run)
-        for v in vs:
-            violations.append(v)
-            if persist:
-                _record(v)
-            repeats = _prior_count(v.agent, v.norm) if persist else 0
-            messages.append(feedback(v, gate))
-            if repeats >= STOP_THE_LINE_THRESHOLD:
-                stop = True
-                meta_learning = (
-                    f"STOP THE LINE: {v.agent} has {repeats} prior "
-                    f"{v.norm} violations. The correction-memory is not landing "
-                    f"-- escalate to meta-learning (is it surfacing? is the "
-                    f"contract wrong? is this agent the problem?). Halt dispatch "
-                    f"to {v.agent} until resolved.")
-    if not violations:
-        return {"verdict": "accept", "counts_toward_endpoints": True}
-    return {"verdict": "stop-the-line" if stop else "reject-push-back",
+def clear_stop(agent: str, operator: str, *, state_dir: Path = STATE_DIR) -> bool:
+    paths = _paths(state_dir, agent, "operator-clear")
+    existed = paths["stop"].exists()
+    paths["stop"].unlink(missing_ok=True)
+    _append_jsonl(paths["meta"], {
+        "at": now_iso(), "event": "stop-the-line-cleared", "agent": agent,
+        "operator": operator, "flag_existed": existed,
+    })
+    return existed
+
+
+def pending_corrections(agent: str, *, state_dir: Path = STATE_DIR) -> list[dict]:
+    path = _paths(state_dir, agent, "unused")["corrections"]
+    if not path.exists():
+        return []
+    latest: dict[str, dict] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        record = json.loads(line)
+        job_id = record.get("job_id")
+        if job_id:
+            latest[job_id] = record
+    return [record for record in latest.values() if not record.get("delivered_at")]
+
+
+def correction_packet(agent: str, *, state_dir: Path = STATE_DIR) -> str:
+    pending = pending_corrections(agent, state_dir=state_dir)
+    if not pending:
+        return ""
+    blocks = ["LEARNING-LOOP CORRECTIONS (reviewed; act on these in this run)"]
+    for record in pending:
+        blocks.append(
+            f"[correction-memory={record.get('memory_id', 'deposit-pending')}]\n"
+            f"{record['feedback']}"
+        )
+    return "\n\n".join(blocks) + "\n\n"
+
+
+def mark_corrections_delivered(agent: str, dispatch_job_id: str,
+                               *, state_dir: Path = STATE_DIR) -> None:
+    path = _paths(state_dir, agent, "unused")["corrections"]
+    for record in pending_corrections(agent, state_dir=state_dir):
+        delivered = dict(record)
+        delivered.update({"delivered_at": now_iso(), "delivered_on_job": dispatch_job_id})
+        _append_jsonl(path, delivered)
+
+
+Deposit = Callable[[Violation, str], dict]
+
+
+def adjudicate(run: Run, gates, *, state_dir: Path = STATE_DIR,
+               deposit: Deposit | None = None) -> dict:
+    """Adjudicate exactly once per run id; all non-accept paths fail safe."""
+    paths = _paths(state_dir, run.agent, run.run_id)
+    if paths["adjudication"].exists():
+        result = json.loads(paths["adjudication"].read_text(encoding="utf-8"))
+        result["idempotent_replay"] = True
+        return result
+    try:
+        violations = [violation for gate in gates for violation in gate.check(run)]
+    except Exception as error:  # fail safe: exclude and flag, never crash/accept
+        result = {
+            "verdict": "review-required",
+            "run_status": "attribution-gate-error",
             "counts_toward_endpoints": False,
-            "feedback": messages,
-            "meta_learning": meta_learning}
+            "agent": run.agent,
+            "run_id": run.run_id,
+            "error": f"{type(error).__name__}: {error}",
+            "adjudicated_at": now_iso(),
+        }
+        _atomic_json(paths["review"], result)
+        _atomic_json(paths["adjudication"], result)
+        return result
+    if not violations:
+        result = {
+            "verdict": "accept", "run_status": "attribution-complete",
+            "counts_toward_endpoints": True, "agent": run.agent,
+            "run_id": run.run_id, "missing_ids": [], "adjudicated_at": now_iso(),
+        }
+        _atomic_json(paths["adjudication"], result)
+        return result
+
+    messages: list[str] = []
+    deposit_results: list[dict] = []
+    stop = False
+    meta = None
+    for violation in violations:
+        gate = next(item for item in gates if item.norm == violation.norm)
+        message = feedback(violation, gate)
+        messages.append(message)
+        record = asdict(violation) | {"at": now_iso()}
+        _append_jsonl(paths["ledger"], record)
+        correction = {"at": now_iso(), "job_id": run.run_id, "norm": violation.norm,
+                      "feedback": message, "missing_ids": violation.missing_ids}
+        if deposit is not None:
+            try:
+                deposited = deposit(violation, message)
+                correction.update(deposited)
+                deposit_results.append(deposited)
+            except Exception as error:
+                correction["deposit_error"] = f"{type(error).__name__}: {error}"
+                _atomic_json(paths["review"], correction)
+        _append_jsonl(paths["corrections"], correction)
+        count = prior_count(run.agent, violation.norm, state_dir=state_dir)
+        if count >= STOP_THE_LINE_THRESHOLD:
+            stop = True
+            meta = {
+                "at": now_iso(), "event": "repeated-norm-violation",
+                "agent": run.agent, "norm": violation.norm, "count": count,
+                "run_id": run.run_id,
+                "detail": "Correction memory is not changing behaviour; operator review required.",
+            }
+            _atomic_json(paths["stop"], meta)
+            _append_jsonl(paths["meta"], meta)
+    missing = sorted({item for violation in violations for item in violation.missing_ids})
+    result = {
+        "verdict": "stop-the-line" if stop else "reject-push-back",
+        "run_status": "attribution-incomplete",
+        "counts_toward_endpoints": False,
+        "agent": run.agent, "run_id": run.run_id, "missing_ids": missing,
+        "feedback": messages, "deposits": deposit_results,
+        "meta_learning": meta, "adjudicated_at": now_iso(),
+    }
+    _atomic_json(paths["adjudication"], result)
+    return result
 
 
 def _demo() -> int:
-    surfaced = ["e-alpha", "e-beta", "e-gamma"]
-    gates = [UseAttributionGate()]
-    print(f"[demo uses an isolated ledger; threshold={STOP_THE_LINE_THRESHOLD}]\n")
-
-    print("=== 1. Compliant run: every surfaced id has a verdict ===")
-    ok = Run("codex-9", "run-1", surfaced_ids=surfaced, report=(
-        "Memory usage:\n"
-        "USED e-alpha: carried the Holder split.\n"
-        "IGNORED e-beta: wrong route (Jensen).\n"
-        "USED e-gamma: named the covering lemma.\n"))
-    print(json.dumps(adjudicate(ok, gates), indent=2), "\n")
-
-    print("=== 2. Violating run: two surfaced ids unaccounted ===")
-    bad = Run("codex-7", "run-2", surfaced_ids=surfaced, report=(
-        "Memory usage: used the first one, the others weren't relevant.\n"))
-    r = adjudicate(bad, gates)
-    print(json.dumps({k: v for k, v in r.items() if k != "feedback"}, indent=2))
-    print("--- feedback pushed back to codex-7 (and stored as a memory) ---")
-    print(r["feedback"][0], "\n")
-
-    print("=== 3. Repeat violations by the same agent -> stop-the-line ===")
-    for k in range(3, 3 + STOP_THE_LINE_THRESHOLD):
-        r = adjudicate(Run("codex-7", f"run-{k}", surfaced_ids=surfaced,
-                           report="Memory usage: n/a\n"), gates)
-    print(f"after {STOP_THE_LINE_THRESHOLD} more codex-7 violations: "
-          f"verdict={r['verdict']}")
-    print(r["meta_learning"])
+    with tempfile.TemporaryDirectory(prefix="runner-gate-demo-") as tmp:
+        state = Path(tmp)
+        gates = [UseAttributionGate()]
+        surfaced = ["e-alpha00", "e-beta000", "e-gamma00"]
+        ok = Run("codex-9", "run-1", "USED e-alpha00: route\nIGNORED e-beta000: mismatch\nUSED e-gamma00: API\n", surfaced)
+        print(json.dumps(adjudicate(ok, gates, state_dir=state), indent=2))
+        bad = Run("codex-7", "run-2", "Memory usage: none attributed\n", surfaced)
+        print(json.dumps(adjudicate(bad, gates, state_dir=state), indent=2))
+        for index in range(3, STOP_THE_LINE_THRESHOLD + 2):
+            result = adjudicate(Run("codex-7", f"run-{index}", "n/a", surfaced), gates, state_dir=state)
+        print(json.dumps(result, indent=2))
     return 0
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--demo", action="store_true", help="run the worked demonstration")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--demo", action="store_true")
+    parser.add_argument("--status")
+    parser.add_argument("--clear-stop")
+    parser.add_argument("--operator")
+    args = parser.parse_args()
     if args.demo:
-        # isolate the demo ledger so it never pollutes real state
-        global STATE_DIR, LEDGER
-        import tempfile
-        STATE_DIR = Path(tempfile.mkdtemp(prefix="runner-gate-demo-"))
-        LEDGER = STATE_DIR / "violations.jsonl"
-        rc = _demo()
-        for p in (LEDGER,):
-            p.unlink(missing_ok=True)
-        STATE_DIR.rmdir()
-        return rc
-    ap.print_help()
+        return _demo()
+    if args.status:
+        print(json.dumps({"agent": args.status, "stop": stop_record(args.status),
+                          "pending_corrections": pending_corrections(args.status)}, indent=2))
+        return 0
+    if args.clear_stop:
+        if not args.operator:
+            parser.error("--clear-stop requires --operator")
+        print(json.dumps({"cleared": clear_stop(args.clear_stop, args.operator)}))
+        return 0
+    parser.print_help()
     return 0
 
 

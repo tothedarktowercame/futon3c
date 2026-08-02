@@ -139,6 +139,13 @@ class AgencyGateTests(unittest.TestCase):
         ):
             cron.choose_agent(agents)
 
+    def test_stop_the_line_agent_is_skipped(self):
+        agents = {"codex-6": self.agent(), "codex-7": self.agent()}
+        with mock.patch.object(
+            cron.runner_gate, "is_stopped", side_effect=lambda agent: agent == "codex-6"
+        ):
+            self.assertEqual(("codex-7", 0), cron.choose_agent(agents))
+
 
 class QueueGateTests(unittest.TestCase):
     def test_backpressure_blocks_any_dispatched_row(self):

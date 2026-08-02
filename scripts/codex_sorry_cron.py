@@ -24,6 +24,9 @@ from typing import Any, Iterator
 
 from edn_format import Keyword, dumps, loads
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import runner_gate  # noqa: E402
+
 
 FUTON3C_DIR = Path(os.environ.get("FUTON3C_DIR", "/home/joe/code/futon3c"))
 QUEUE_PATH = Path(
@@ -226,6 +229,7 @@ def choose_agent(agents: dict[str, dict[str, Any]]) -> tuple[str, int]:
         and agent.get("invoke-ready?") is True
         and agent.get("invoke-route") == "local"
         and not (agent.get("metadata") or {}).get("proxy?")
+        and not runner_gate.is_stopped(agent_id)
     ]
     if not candidates:
         raise GateClosed("concurrency-gate-closed no-idle-codex-runner")
@@ -570,7 +574,7 @@ def run(dry_run: bool) -> int:
         enforce_backpressure(queue)
         row_index, row = choose_row(queue, zai_busy_problem_ids(roster))
         template = TEMPLATE_PATH.read_text(encoding="utf-8")
-        packet = instantiate_packet(row, template)
+        packet = runner_gate.correction_packet(agent_id) + instantiate_packet(row, template)
         gate_summary = (
             f"gates-open used={usage['used_percent']:g} "
             f"age-seconds={usage['age_seconds']:.0f} "
@@ -586,6 +590,7 @@ def run(dry_run: bool) -> int:
             return 0
 
         job_id = dispatch(row, agent_id, packet)
+        runner_gate.mark_corrections_delivered(agent_id, job_id)
         updated = dict(row)
         updated.update(
             {
