@@ -30,7 +30,8 @@
       ;; load. Verify by id through the bounded endpoint read before declaring
       ;; failure; never retry blindly and create a second semantic write.
       (let [visible (first
-                     (filter #(= (:hx/id hyperedge) (:hx/id %))
+                     (filter #(and (= (:hx/id hyperedge) (:hx/id %))
+                                   (= (:hx/props hyperedge) (:hx/props %)))
                              (substrate/hyperedges-by-end
                               (first (:hx/endpoints hyperedge))
                               {:limit 50 :timeout-ms 120000})))]
@@ -58,7 +59,8 @@
 
 (defn- ensure-hyperedge! [base-url hyperedge]
   (let [visible (first
-                 (filter #(= (:hx/id hyperedge) (:hx/id %))
+                 (filter #(and (= (:hx/id hyperedge) (:hx/id %))
+                               (= (:hx/props hyperedge) (:hx/props %)))
                          (substrate/hyperedges-by-end
                           (first (:hx/endpoints hyperedge))
                           {:limit 50 :timeout-ms 120000})))]
