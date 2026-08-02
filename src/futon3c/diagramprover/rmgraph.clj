@@ -205,7 +205,7 @@
                     (sort-by key)
                     (mapv (comp vec val)))
         candidates (map #(candidate graph %) (orderings groups))]
-    (apply min-key structural-key candidates)))
+    (first (sort-by structural-key candidates))))
 
 (defn canonical?
   "True when the graph is already its canonical RM representative."
