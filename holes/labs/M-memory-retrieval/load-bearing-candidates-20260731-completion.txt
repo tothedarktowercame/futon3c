@@ -1,0 +1,11 @@
+Assembly complete.
+
+- Exact population: **49 uses**
+- Split: **43 `used-ids` / 6 `prose-only`**
+- Candidate: `/home/joe/code/futon3c/holes/labs/M-memory-retrieval/load-bearing-candidates-20260731.jsonl`
+- SHA-256 and rerun hash: `1a4e0ee9b3349fbe15f0d24c17cd33f5551d12232f1deac1607c2c2473c788c8`
+- Report: `/home/joe/code/futon3c/holes/labs/M-memory-retrieval/load-bearing-candidates-20260731-report.md`
+- No adjudication, evaluative labels, scores, or rankings were added.
+- Both input hashes were verified before and after assembly and remained unchanged.
+
+Found but not fixed: sparse `used-ids`, statement-order selection, missing lane-scoped rarity ranking, duplicate job-448 outcome receipts, and job 167’s title-based rather than ID-based prose references.
