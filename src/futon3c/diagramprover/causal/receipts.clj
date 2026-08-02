@@ -258,7 +258,186 @@
                :paths (:paths backdoors)
                :paths-truncated? (:truncated? backdoors)}))})))
 
+(defn- remove-arrow [causal-dag from to]
+  (update causal-dag :arrows
+          #(into [] (remove (fn [arrow]
+                              (and (= from (:from arrow))
+                                   (= to (:to arrow)))) %))))
+
+(defn r2-variants
+  "Encode the two provenance regimes named by R2.
+
+  Both variants replace the aggregate P19 -> P03 arrow with a class-specific
+  channel. In `:copied-class`, K2-byte-copy is an independently available copy
+  feeding proof search; withholding the module (P19) has no import edge, while
+  the distinct `:remove-content` decision reaches that copy. In
+  `:extracted-class`, P19 reaches proof search through a real module-import
+  node and there is no byte-copy node. Thus module removal and content removal
+  are intentionally different surgery targets only in the copied regime."
+  [lean]
+  (let [without-aggregate (remove-arrow lean :P19 :P03)
+        copied (-> without-aggregate
+                   (assoc-in [:variables :K2-byte-copy]
+                             {:id :K2-byte-copy
+                              :name "independent byte-identical content copy"
+                              :kind :provenance-channel})
+                   (assoc-in [:variables :remove-content]
+                             {:id :remove-content
+                              :name "remove duplicated module content"
+                              :kind :decision-intervention})
+                   (update :arrows into
+                           [{:from :remove-content :to :K2-byte-copy
+                             :status :r2-encoding}
+                            {:from :K2-byte-copy :to :P09
+                             :status :r2-encoding}])
+                   dag/validate)
+        extracted (-> without-aggregate
+                      (assoc-in [:variables :module-import]
+                                {:id :module-import
+                                 :name "extracted module import"
+                                 :kind :provenance-channel})
+                      (update :arrows into
+                              [{:from :P19 :to :module-import
+                                :status :r2-encoding}
+                               {:from :module-import :to :P09
+                                :status :r2-encoding}])
+                      dag/validate)]
+    {:copied-class copied :extracted-class extracted}))
+
+(defn r2
+  "Withholding-validity receipt across leak and provenance regimes."
+  ([] (r2 (dag/load-spec lean-spec-path)))
+  ([lean]
+   (let [leaked (dag/with-leaks lean)
+         leak-verdicts
+         (mapv (fn [{:keys [id]}]
+                 (let [opened (witnesses leaked id :P16 #{})
+                       isolated (sever-one-leak leaked id)]
+                   {:leak id
+                    :opens-path (:paths opened)
+                    :path-count-lower-bound (:count opened)
+                    :paths-truncated? (:truncated? opened)
+                    :severed-blocks?
+                    (dsep/d-separated? isolated id :P16 #{})}))
+               (:leak-edges lean))
+         variants (r2-variants lean)
+         copied-do (surgery/do-intervention (:copied-class variants) :P19)
+         copied-survival (witnesses copied-do :K2-byte-copy :P16 #{})
+         content-do (surgery/do-intervention (:copied-class variants)
+                                             :remove-content)
+         content-effect (witnesses content-do :remove-content :P16 #{})
+         extracted-do (surgery/do-intervention (:extracted-class variants)
+                                               :P19)
+         extracted-effect (witnesses extracted-do :P19 :P16 #{})]
+     {:id "R2"
+      :question (question lean "R2")
+      :leaks leak-verdicts
+      :verdicts
+      [{:graph :copied-class
+        :claim :module-withholding-affects-consumer
+        :holds? (dsep/d-connected? copied-do :P19 :P16 #{})
+        :method :surgery :paths []
+        :content-survives-via (:paths copied-survival)
+        :content-paths-truncated? (:truncated? copied-survival)}
+       {:graph :extracted-class
+        :claim :module-withholding-affects-consumer
+        :holds? (dsep/d-connected? extracted-do :P19 :P16 #{})
+        :method :surgery :paths (:paths extracted-effect)
+        :paths-truncated? (:truncated? extracted-effect)}]
+      :duplication-debt
+      {:module-withholding-effect?
+       (dsep/d-connected? copied-do :P19 :P16 #{})
+       :content-removal-effect?
+       (dsep/d-connected? content-do :remove-content :P16 #{})
+       :content-removal-paths (:paths content-effect)
+       :paths-truncated? (:truncated? content-effect)
+       :contrast? (not=
+                   (dsep/d-connected? copied-do :P19 :P16 #{})
+                   (dsep/d-connected? content-do :remove-content :P16 #{}))}
+      :adjustment-sets []
+      :refusals []})))
+
+(defn- sensor [lean id]
+  (first (filter #(= id (:id %)) (:sensors lean))))
+
+(defn r3-variants
+  "Materialize time-indexed sensor variants for R3.
+
+  T04 follows its declared `observes P16` field: P10-at-k determines the
+  contemporaneous outcome projection P16-at-k, which T04-at-k reads. CJ1's
+  stated progress edge is P10-at-k -> P16-at-k+1. The hypothetical variant
+  additionally materializes T05-at-k from its declared `observes P10` field;
+  it remains a measurement child, never a cause of progress."
+  [lean]
+  (let [t04 (sensor lean :T04)
+        t05 (sensor lean :T05)
+        current (-> lean
+                    (assoc-in [:variables :P10-at-k]
+                              {:id :P10-at-k :name "dependency set at round k"
+                               :kind :time-indexed-state})
+                    (assoc-in [:variables :P16-at-k]
+                              {:id :P16-at-k :name "outcome projection at round k"
+                               :kind :time-indexed-state})
+                    (assoc-in [:variables :P16-at-k+1]
+                              {:id :P16-at-k+1 :name "outcome at round k+1"
+                               :kind :time-indexed-outcome})
+                    (assoc-in [:variables :T04-at-k]
+                              {:id :T04-at-k :name (:name t04)
+                               :kind :measurement
+                               :sensor/observes (:observes t04)})
+                    (update :arrows into
+                            [{:from :P10-at-k :to :P16-at-k
+                              :status :r3-time-index}
+                             {:from :P16-at-k :to :T04-at-k
+                              :status :r3-measurement}
+                             {:from :P10-at-k :to :P16-at-k+1
+                              :status :CJ1}])
+                    dag/validate)
+        with-t05 (-> current
+                     (assoc-in [:variables :T05-at-k]
+                               {:id :T05-at-k :name (:name t05)
+                                :kind :measurement
+                                :sensor/observes (:observes t05)
+                                :sensor/status (:status t05)})
+                     (update :arrows conj
+                             {:from :P10-at-k :to :T05-at-k
+                              :status :r3-hypothetical-measurement})
+                     dag/validate)]
+    {:current-sensors current :with-hypothetical-t05 with-t05}))
+
+(defn r3
+  "Hole-count and hypothetical dependency-sensor sufficiency receipt."
+  ([] (r3 (dag/load-spec lean-spec-path)))
+  ([lean]
+   (let [variants (r3-variants lean)
+         current (:current-sensors variants)
+         hypothetical (:with-hypothetical-t05 variants)
+         current-paths (witnesses current :P16-at-k+1 :P10-at-k
+                                  #{:T04-at-k})
+         t05-paths (witnesses hypothetical :P16-at-k+1 :T04-at-k
+                              #{:T05-at-k})]
+     {:id "R3"
+      :question (question lean "R3")
+      :verdicts
+      [{:graph :current-sensors
+        :claim :hole-count-sufficient-for-progress
+        :holds? (dsep/d-separated? current :P16-at-k+1 :P10-at-k
+                                   #{:T04-at-k})
+        :method :d-sep :given #{:T04-at-k}
+        :paths (:paths current-paths)
+        :paths-truncated? (:truncated? current-paths)}
+       {:graph :with-hypothetical-t05
+        :claim :dependency-sensor-screens-off-hole-count
+        :holds? (dsep/d-separated? hypothetical :P16-at-k+1 :T04-at-k
+                                   #{:T05-at-k})
+        :method :d-sep :given #{:T05-at-k}
+        :paths (:paths t05-paths)
+        :paths-truncated? (:truncated? t05-paths)}]
+      :adjustment-sets []
+      :refusals []})))
+
 (defn all-receipts []
   (let [memory (dag/load-spec memory-spec-path)
         lean (dag/load-spec lean-spec-path)]
-    [(q1 memory) (q2 memory) (q3 memory) (r1 lean)]))
+    [(q1 memory) (q2 memory) (q3 memory)
+     (r1 lean) (r2 lean) (r3 lean)]))
