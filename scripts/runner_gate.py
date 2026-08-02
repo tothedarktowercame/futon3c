@@ -14,6 +14,7 @@ Operator commands:
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import os
@@ -24,6 +25,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
+
+from edn_format import Keyword, loads
 
 DEFAULT_STATE_DIR = Path(__file__).resolve().parent.parent / ".state/runner-gate"
 STATE_DIR = Path(os.environ.get("RUNNER_GATE_STATE_DIR", DEFAULT_STATE_DIR))
@@ -83,16 +86,17 @@ class UseAttributionGate:
     _verdict = re.compile(r"^\s*(?:[-*]\s*)?(USED|IGNORED)\s+`?(e-[A-Za-z0-9_-]+)`?\s*:", re.MULTILINE)
 
     def check(self, run: Run) -> list[Violation]:
-        attributed = {match.group(2) for match in self._verdict.finditer(run.report)}
-        missing = sorted(set(run.surfaced_ids) - attributed)
-        if not missing:
+        counts = Counter(match.group(2) for match in self._verdict.finditer(run.report))
+        invalid = sorted(memory_id for memory_id in set(run.surfaced_ids)
+                         if counts[memory_id] != 1)
+        if not invalid:
             return []
         return [Violation(
             run.agent,
             self.norm,
             run.run_id,
-            f"{len(missing)} surfaced id(s) with no verdict: {', '.join(missing)}",
-            missing,
+            f"{len(invalid)} surfaced id(s) without exactly one verdict: {', '.join(invalid)}",
+            invalid,
         )]
 
 
@@ -171,7 +175,11 @@ def pending_corrections(agent: str, *, state_dir: Path = STATE_DIR) -> list[dict
         job_id = record.get("job_id")
         if job_id:
             latest[job_id] = record
-    return [record for record in latest.values() if not record.get("delivered_at")]
+    return [
+        record for record in latest.values()
+        if not record.get("delivered_at")
+        and record.get("attachment_status") in {"reviewed", ":reviewed"}
+    ]
 
 
 def correction_packet(agent: str, *, state_dir: Path = STATE_DIR) -> str:
@@ -194,6 +202,33 @@ def mark_corrections_delivered(agent: str, dispatch_job_id: str,
         delivered = dict(record)
         delivered.update({"delivered_at": now_iso(), "delivered_on_job": dispatch_job_id})
         _append_jsonl(path, delivered)
+
+
+def audit_receipts_export(path: Path) -> dict:
+    """Audit the frozen receipt rows without pretending they contain reports."""
+    payload = loads(path.read_text(encoding="utf-8"))
+    entries = payload.get(Keyword("entries"), [])
+    applicable = no_recorded_use = strict_incomplete = 0
+    for entry in entries:
+        body = entry.get(Keyword("evidence/body"), {})
+        receipt = body.get(Keyword("memory-use"), {})
+        surfaced = set(map(str, receipt.get(Keyword("memory-use/surfaced-ids"), [])))
+        if not surfaced:
+            continue
+        applicable += 1
+        used = set(map(str, receipt.get(Keyword("memory-use/used-ids"), [])))
+        ignored = set(map(str, receipt.get(Keyword("memory-use/rejected-ids"), [])))
+        if not used:
+            no_recorded_use += 1
+        if not surfaced.issubset(used | ignored):
+            strict_incomplete += 1
+    return {
+        "artifact": str(path),
+        "applicable_receipt_rows": applicable,
+        "rows_with_no_recorded_use": no_recorded_use,
+        "rows_incomplete_under_used_or_rejected_coverage": strict_incomplete,
+        "caveat": "The export contains receipt fields, not raw runner reports; exact USED/IGNORED syntax cannot be reconstructed.",
+    }
 
 
 Deposit = Callable[[Violation, str], dict]
@@ -231,6 +266,17 @@ def adjudicate(run: Run, gates, *, state_dir: Path = STATE_DIR,
         _atomic_json(paths["adjudication"], result)
         return result
 
+    # Claim the job before any append or external deposit. If the process is
+    # killed mid-flight, replay remains excluded and cannot double-count; the
+    # operator can inspect the durable processing marker and review-required
+    # record rather than receiving a second violation.
+    invalid_ids = sorted({item for violation in violations for item in violation.missing_ids})
+    _atomic_json(paths["adjudication"], {
+        "verdict": "processing", "run_status": "attribution-incomplete",
+        "counts_toward_endpoints": False, "agent": run.agent,
+        "run_id": run.run_id, "missing_ids": invalid_ids,
+        "adjudicated_at": now_iso(),
+    })
     messages: list[str] = []
     deposit_results: list[dict] = []
     stop = False
@@ -263,12 +309,11 @@ def adjudicate(run: Run, gates, *, state_dir: Path = STATE_DIR,
             }
             _atomic_json(paths["stop"], meta)
             _append_jsonl(paths["meta"], meta)
-    missing = sorted({item for violation in violations for item in violation.missing_ids})
     result = {
         "verdict": "stop-the-line" if stop else "reject-push-back",
         "run_status": "attribution-incomplete",
         "counts_toward_endpoints": False,
-        "agent": run.agent, "run_id": run.run_id, "missing_ids": missing,
+        "agent": run.agent, "run_id": run.run_id, "missing_ids": invalid_ids,
         "feedback": messages, "deposits": deposit_results,
         "meta_learning": meta, "adjudicated_at": now_iso(),
     }
@@ -297,6 +342,7 @@ def main() -> int:
     parser.add_argument("--status")
     parser.add_argument("--clear-stop")
     parser.add_argument("--operator")
+    parser.add_argument("--audit-export", type=Path)
     args = parser.parse_args()
     if args.demo:
         return _demo()
@@ -308,6 +354,9 @@ def main() -> int:
         if not args.operator:
             parser.error("--clear-stop requires --operator")
         print(json.dumps({"cleared": clear_stop(args.clear_stop, args.operator)}))
+        return 0
+    if args.audit_export:
+        print(json.dumps(audit_receipts_export(args.audit_export), indent=2))
         return 0
     parser.print_help()
     return 0

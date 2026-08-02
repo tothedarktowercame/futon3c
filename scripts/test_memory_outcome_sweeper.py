@@ -121,6 +121,28 @@ class SweepTests(unittest.TestCase):
         self.assertEqual(0, second["written"])
         self.assertEqual(1, second["skipped_existing"])
 
+    def test_completed_run_is_gated_before_clean_outcome(self):
+        job = {
+            K("state"): "done",
+            K("agent-id"): "codex-2",
+            K("finished-at"): "2026-08-02T14:00:00Z",
+            K("result"): "[dispatch-recall-outcome=completed-with-memories]\nMemory usage: vague",
+        }
+        adjudication = {
+            "verdict": "reject-push-back", "run_status": "attribution-incomplete",
+            "counts_toward_endpoints": False, "agent": "codex-2", "run_id": "invoke-1",
+            "missing_ids": ["e-memory-one"],
+        }
+        with (
+            mock.patch.object(sweeper, "offered_surfaced_ids", return_value=["e-memory-one"]),
+            mock.patch.object(sweeper.runner_gate, "adjudicate", return_value=adjudication) as gate,
+        ):
+            result = sweeper.adjudicate_job("invoke-1", job, base="http://store")
+        self.assertEqual("attribution-incomplete", result["run_status"])
+        self.assertFalse(result["counts_toward_endpoints"])
+        self.assertEqual(["e-memory-one"], result["missing_ids"])
+        gate.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

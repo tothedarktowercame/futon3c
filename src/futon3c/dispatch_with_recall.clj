@@ -870,7 +870,10 @@
             "Only this status is a genuine empty retrieval result.\n"))
      "OUTCOME-RECEIPT REQUIREMENT: copy the bracketed dispatch-recall-outcome "
      "value verbatim into the final Memory usage section. Do not report an "
-     "incomplete recall as \"none surfaced\" or as a terrain gap."
+     "incomplete recall as \"none surfaced\" or as a terrain gap. When memories "
+     "are supplied, give EACH surfaced memory id exactly one line in that section: "
+     "`USED <id>: <mechanism>` or `IGNORED <id>: <reason>`. Missing per-id "
+     "attribution makes the outcome incomplete and excludes it from use endpoints."
      "\n")))
 
 (defn assemble-packet

@@ -13,7 +13,10 @@ import hashlib
 import json
 import os
 import re
+import subprocess
+import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
@@ -24,11 +27,17 @@ from typing import Any
 
 from edn_format import Keyword, dumps, loads
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import runner_gate  # noqa: E402
+
 
 K = Keyword
 LEDGER_PATH = Path(os.environ.get("FUTON3C_INVOKE_JOBS_FILE", "/tmp/futon3c-invoke-jobs.edn"))
 SUBSTRATE_URL = os.environ.get("FUTON_SUBSTRATE_URL", "http://127.0.0.1:7073").rstrip("/")
 ROLLOUT_AT = datetime.fromisoformat("2026-08-01T15:10:00+00:00")
+ATTRIBUTION_GATE_ROLLOUT_AT = datetime.fromisoformat(
+    os.environ.get("RUNNER_GATE_ROLLOUT_AT", "2026-08-02T13:56:00+00:00")
+)
 TERMINAL_STATES = {"done", "failed", "timeout", "cancelled", "deduped"}
 NO_MEMORY_OUTCOMES = {"completed-empty", "timeout", "store-unavailable", "recall-error"}
 MEMORY_ID_RE = re.compile(r"\be-[A-Za-z0-9][A-Za-z0-9_-]{5,}\b")
@@ -72,6 +81,78 @@ def parse_time(raw: Any) -> datetime | None:
 def deterministic_evidence_id(job_id: str) -> str:
     digest = hashlib.sha256(job_id.encode("utf-8")).hexdigest()[:24]
     return f"e-memory-outcome-sweeper-{digest}"
+
+
+def deterministic_gate_evidence_id(job_id: str) -> str:
+    digest = hashlib.sha256(job_id.encode("utf-8")).hexdigest()[:24]
+    return f"e-use-attribution-gate-{digest}"
+
+
+def offered_surfaced_ids(job_id: str, base: str = SUBSTRATE_URL) -> list[str]:
+    """Resolve the offered receipt by its dispatch session, then verify job-id."""
+    query = urllib.parse.urlencode({"session-id": job_id, "limit": 50, "sort": "desc"})
+    request = urllib.request.Request(
+        f"{base}/api/alpha/evidence?{query}", headers={"Accept": "application/edn"}
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        payload = loads(response.read().decode("utf-8"))
+    for entry in value(payload, "entries", []):
+        body = value(entry, "evidence/body", {})
+        if value(body, "phase") == K("offered") and value(body, "job-id") == job_id:
+            receipt = value(body, "memory-use", {})
+            return [str(item) for item in value(receipt, "memory-use/surfaced-ids", [])]
+    raise LookupError(f"offered receipt not found for job {job_id}")
+
+
+def deposit_correction(violation: runner_gate.Violation, message: str,
+                       base: str = SUBSTRATE_URL) -> dict[str, Any]:
+    """Deposit and review through memory-write + memory-lifecycle, not raw rows."""
+    payload = {
+        K("agent"): violation.agent,
+        K("job-id"): violation.run_id,
+        K("missing-ids"): violation.missing_ids,
+        K("feedback"): message,
+        K("substrate-url"): base,
+    }
+    process = subprocess.run(
+        ["clojure", "-M", "scripts/deposit_runner_gate_memory.clj"],
+        cwd=Path(__file__).resolve().parent.parent,
+        input=dumps(payload), text=True, capture_output=True, timeout=180, check=False,
+        env={**os.environ, "FUTON_SUBSTRATE_URL": base},
+    )
+    if process.returncode:
+        raise RuntimeError(process.stderr[-1000:] or process.stdout[-1000:])
+    result = loads(process.stdout.strip().splitlines()[-1])
+    return {
+        "memory_id": str(value(result, "memory-id")),
+        "attachment_status": str(value(result, "attachment-status")),
+        "review_evidence_id": str(value(result, "review-evidence-id")),
+    }
+
+
+def gate_evidence_entry(job_id: str, agent: str, adjudication: dict[str, Any],
+                        swept_at: str) -> dict[Any, Any]:
+    evidence_id = deterministic_gate_evidence_id(job_id)
+    return {
+        K("evidence/id"): evidence_id,
+        K("evidence/subject"): {K("ref/type"): K("agency-job"), K("ref/id"): job_id},
+        K("evidence/type"): K("pattern-outcome"),
+        K("evidence/claim-type"): K("observation"),
+        K("evidence/at"): swept_at,
+        K("evidence/author"): "runner-use-attribution-gate",
+        K("evidence/session-id"): job_id,
+        K("evidence/body"): {
+            K("event"): K("memory-use"), K("phase"): K("outcome"),
+            K("job-id"): job_id, K("agent"): agent,
+            K("writer"): K("runner-use-attribution-gate"),
+            K("memory-use/status"): K(adjudication["run_status"]),
+            K("counts-toward-endpoints"): False,
+            K("missing-ids"): adjudication.get("missing_ids", []),
+            K("verdict"): K(adjudication["verdict"]),
+            K("adjudication"): json.dumps(adjudication, sort_keys=True),
+        },
+        K("evidence/tags"): [K("memory-use"), K("attribution-incomplete"), K("runner-gate")],
+    }
 
 
 def classify_memory_lines(result: str) -> tuple[set[str], set[str], set[str]]:
@@ -269,12 +350,77 @@ def post_entry(entry: dict[Any, Any], base: str = SUBSTRATE_URL) -> None:
         pass
 
 
+def entry_exists(evidence_id: str, base: str = SUBSTRATE_URL) -> bool:
+    request = urllib.request.Request(
+        f"{base}/api/alpha/evidence/{evidence_id}", headers={"Accept": "application/edn"}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10):
+            return True
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return False
+        raise
+
+
+def adjudicate_job(job_id: str, job: Any, *, base: str = SUBSTRATE_URL,
+                   deposit_fn=deposit_correction) -> dict[str, Any] | None:
+    """Return None when the run is outside the Type-B gate's applicability."""
+    result = value(job, "result")
+    state = str(value(job, "state", ""))
+    if state not in TERMINAL_STATES or not isinstance(result, str):
+        return None
+    marker = OUTCOME_RE.search(result)
+    if marker is None or marker.group(1) != "completed-with-memories":
+        return None
+    finished = parse_time(value(job, "finished-at"))
+    if finished is not None and finished < ATTRIBUTION_GATE_ROLLOUT_AT:
+        return None
+    agent = str(value(job, "agent-id", "unknown-agent"))
+    try:
+        surfaced = offered_surfaced_ids(job_id, base)
+    except Exception as error:
+        class OfferedReceiptGate:
+            norm = "use-attribution"
+
+            def check(self, _run):
+                raise RuntimeError(f"offered-receipt-resolution failed: {error}")
+
+        return runner_gate.adjudicate(
+            runner_gate.Run(agent, job_id, result, []), [OfferedReceiptGate()]
+        )
+    return runner_gate.adjudicate(
+        runner_gate.Run(agent, job_id, result, surfaced),
+        [runner_gate.UseAttributionGate()],
+        deposit=lambda violation, message: deposit_fn(violation, message, base),
+    )
+
+
 def sweep(*, dry_run: bool = False, base: str = SUBSTRATE_URL,
-          ledger_path: Path = LEDGER_PATH) -> dict[str, Any]:
+          ledger_path: Path = LEDGER_PATH, gate: bool = True) -> dict[str, Any]:
     extracted: list[dict[str, Any]] = []
     unrecoverable: list[dict[str, Any]] = []
+    gate_results: list[dict[str, Any]] = []
     reasons: Counter[str] = Counter()
     for job_id, job in load_jobs(ledger_path):
+        adjudication = adjudicate_job(job_id, job, base=base) if gate and not dry_run else None
+        if adjudication is not None and not adjudication["counts_toward_endpoints"]:
+            gate_results.append(adjudication)
+            reason = adjudication["run_status"]
+            reasons[reason] += 1
+            unrecoverable.append({
+                "job_id": job_id,
+                "reason": reason,
+                "finished_at": value(job, "finished-at"),
+                "missing_ids": adjudication.get("missing_ids", []),
+            })
+            gate_id = deterministic_gate_evidence_id(job_id)
+            if not dry_run and not entry_exists(gate_id, base):
+                post_entry(
+                    gate_evidence_entry(job_id, adjudication["agent"], adjudication, now_iso()),
+                    base,
+                )
+            continue
         outcome = extract_outcome(job_id, job)
         if outcome.get("recoverable"):
             extracted.append(outcome)
@@ -332,6 +478,16 @@ def sweep(*, dry_run: bool = False, base: str = SUBSTRATE_URL,
         "written": 0 if dry_run else len(written),
         "per_day": {day: dict(counts) for day, counts in sorted(per_day.items())},
         "samples": written[:3],
+        "attribution_gate": {
+            "checked": len(gate_results),
+            "incomplete": sum(
+                result["run_status"] == "attribution-incomplete" for result in gate_results
+            ),
+            "review_required": sum(
+                result["run_status"] == "attribution-gate-error" for result in gate_results
+            ),
+            "samples": gate_results[:3],
+        },
     }
 
 

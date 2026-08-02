@@ -125,6 +125,8 @@
                     "PACKET" {:status :ok :memories [memory]})]
         (is (.startsWith packet "DISPATCH-TIME RECALL STATUS"))
         (is (.contains packet "e-memory-1"))
+        (is (.contains packet "USED <id>: <mechanism>"))
+        (is (.contains packet "IGNORED <id>: <reason>"))
         (is (.endsWith packet "PACKET"))))
     (testing "genuine empty recall is explicit"
       (let [packet

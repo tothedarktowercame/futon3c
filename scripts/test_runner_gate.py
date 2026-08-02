@@ -62,6 +62,22 @@ class RunnerGateTests(unittest.TestCase):
             self.assertTrue(gate.is_stopped("codex-3", state_dir=state))
             self.assertTrue((state / "meta-learning.jsonl").exists())
 
+    def test_reviewed_correction_is_supplied_once_on_next_dispatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            gate.adjudicate(
+                gate.Run("codex-5", "bad-job", "n/a", ["e-alpha00"]),
+                [gate.UseAttributionGate()], state_dir=state,
+                deposit=lambda _v, _m: {
+                    "memory_id": "e-correction00", "attachment_status": ":reviewed"
+                },
+            )
+            packet = gate.correction_packet("codex-5", state_dir=state)
+            gate.mark_corrections_delivered("codex-5", "next-job", state_dir=state)
+            after = gate.correction_packet("codex-5", state_dir=state)
+        self.assertIn("e-correction00", packet)
+        self.assertEqual("", after)
+
     def test_gate_error_fails_safe_without_crashing(self):
         class Broken:
             norm = "use-attribution"
@@ -76,6 +92,13 @@ class RunnerGateTests(unittest.TestCase):
             )
         self.assertEqual("review-required", result["verdict"])
         self.assertFalse(result["counts_toward_endpoints"])
+
+    def test_frozen_receipts_audit_is_reconstructible(self):
+        artifact = SCRIPT.parent.parent / "holes/labs/M-memory-retrieval/receipts-export-20260731-all-authors.edn"
+        result = gate.audit_receipts_export(artifact)
+        self.assertEqual(72, result["applicable_receipt_rows"])
+        self.assertEqual(58, result["rows_with_no_recorded_use"])
+        self.assertEqual(68, result["rows_incomplete_under_used_or_rejected_coverage"])
 
 
 if __name__ == "__main__":
