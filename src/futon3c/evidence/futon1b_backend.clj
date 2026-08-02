@@ -62,7 +62,7 @@
   (or (some-> (System/getenv "FUTON1B_APPEND_TIMEOUT_MS") parse-long)
       30000))
 
-(def ^:private default-query-cache-ttl-ms
+(def query-cache-ttl-ms
   ;; The War Machine and AIF stack are read-mostly projections. Their HTTP
   ;; handlers can ask the same bounded question several times per scheduler
   ;; tick, so a short cache prevents each surface from independently occupying
@@ -70,7 +70,18 @@
   ;; invalidate immediately; external writers are visible after this bounded
   ;; interval.
   (or (some-> (System/getenv "FUTON1B_QUERY_CACHE_TTL_MS") parse-long)
-      30000))
+      60000))
+
+(defonce ^:private !query-cache
+  (atom {:generation 0 :entries {}}))
+
+(defonce ^:private !query-locks (atom {}))
+
+(defn- invalidate-query-cache! []
+  (swap! !query-cache
+         (fn [{:keys [generation]}]
+           {:generation (inc (long (or generation 0)))
+            :entries {}})))
 
 (defn- api-url [base-url path]
   (str (str/replace base-url #"/$" "") path))
@@ -83,7 +94,13 @@
   [s]
   (let [s (if (string? s) s (some-> s slurp))]
     (when (seq (str s))
-      (edn/read-string {:default (fn [_tag v] v)} s))))
+      (let [value (edn/read-string {:default (fn [_tag v] v)} s)]
+        ;; Successful append responses contain singular :entry. Invalidate
+        ;; here, rather than only in the defrecord method, so a Drawbridge
+        ;; reload also updates already-constructed serving backend instances.
+        (when (and (map? value) (contains? value :entry))
+          (invalidate-query-cache!))
+        value))))
 
 (defn- social-error
   [code message & {:as context}]
@@ -230,7 +247,7 @@
           (throw (ex-info "futon1b evidence query failed"
                           {:status status :body body :url url})))))))
 
-(defn- fetch-entries
+(defn- fetch-entries-uncached
   "Fetch exact query semantics through futon1b's bounded cursor protocol.
   A caller limit may span multiple server pages; protocol operations such as
   -all page until exhaustion without asking the store JVM for an unbounded
@@ -259,18 +276,18 @@
     (when (< now-ms (long (or (:expires-at-ms entry) 0)))
       entry)))
 
-(defn- fetch-entries-cached
+(defn- fetch-entries
   "Cache one exact bounded evidence query for a short interval.
 
   A per-query lock supplies single-flight behaviour for concurrent copies of the same
   surface request. A generation check prevents a read begun before a successful
   append from repopulating stale data after that append invalidates the cache."
-  [base-url params query-cache query-locks ttl-ms]
-  (let [key params
+  [base-url params]
+  (let [key [base-url params]
         now-ms (System/currentTimeMillis)]
-    (if-let [entry (fresh-cache-entry @query-cache key now-ms)]
+    (if-let [entry (fresh-cache-entry @!query-cache key now-ms)]
       (:value entry)
-      (let [lock-object (get (swap! query-locks
+      (let [lock-object (get (swap! !query-locks
                                     #(if (contains? % key)
                                        %
                                        (assoc % key (Object.))))
@@ -278,12 +295,13 @@
         (try
           (locking lock-object
             (let [now-ms (System/currentTimeMillis)]
-              (if-let [entry (fresh-cache-entry @query-cache key now-ms)]
+              (if-let [entry (fresh-cache-entry @!query-cache key now-ms)]
                 (:value entry)
-                (let [generation (:generation @query-cache)
-                      value (fetch-entries base-url params)
-                      expires-at-ms (+ (System/currentTimeMillis) ttl-ms)]
-                  (swap! query-cache
+                (let [generation (:generation @!query-cache)
+                      value (fetch-entries-uncached base-url params)
+                      expires-at-ms (+ (System/currentTimeMillis)
+                                       query-cache-ttl-ms)]
+                  (swap! !query-cache
                          (fn [state]
                            (if (= generation (:generation state))
                              (assoc state :entries
@@ -299,16 +317,9 @@
                              state)))
                   value))))
           (finally
-            (swap! query-locks dissoc key)))))))
+            (swap! !query-locks dissoc key)))))))
 
-(defn- invalidate-query-cache!
-  [query-cache]
-  (swap! query-cache
-         (fn [{:keys [generation]}]
-           {:generation (inc (long (or generation 0)))
-            :entries {}})))
-
-(defrecord Futon1bBackend [base-url query-cache query-locks query-cache-ttl-ms]
+(defrecord Futon1bBackend [base-url]
   backend/EvidenceBackend
 
   (-append [_ validated]
@@ -343,11 +354,9 @@
                           :detail (str error))
 
             (= 201 status)
-            (do
-              (invalidate-query-cache! query-cache)
-              {:ok true
-               :entry (or (:entry parsed) validated)
-               :trace-id trace-id})
+            {:ok true
+             :entry (or (:entry parsed) validated)
+             :trace-id trace-id}
 
             (and (= 409 status) (= :reply-not-found (:error parsed)))
             (social-error :reply-not-found
@@ -379,10 +388,7 @@
     (some? (backend/-get this evidence-id)))
 
   (-query [_ params]
-    (backend/filter-and-sort-entries
-     (fetch-entries-cached base-url params query-cache query-locks
-                           query-cache-ttl-ms)
-     params))
+    (backend/filter-and-sort-entries (fetch-entries base-url params) params))
 
   (-count [_ params]
     ;; Futon1b's projected count path implements every supported filter. Never
@@ -423,11 +429,4 @@
   "Construct the backend. base-url default: FUTON1B_URL env, then
    http://localhost:7074 (lucy's port — nginx owns :7073 there)."
   ([] (make-futon1b-backend (or (System/getenv "FUTON1B_URL") default-url)))
-  ([base-url]
-   (make-futon1b-backend base-url {}))
-  ([base-url {:keys [query-cache-ttl-ms]
-              :or {query-cache-ttl-ms default-query-cache-ttl-ms}}]
-   (->Futon1bBackend base-url
-                     (atom {:generation 0 :entries {}})
-                     (atom {})
-                     query-cache-ttl-ms)))
+  ([base-url] (->Futon1bBackend base-url)))

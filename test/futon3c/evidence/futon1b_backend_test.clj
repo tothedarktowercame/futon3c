@@ -41,8 +41,7 @@
 (deftest repeated-bounded-query-is-cached-and-write-invalidates
   (let [gets (atom 0)
         posts (atom 0)
-        store (sut/make-futon1b-backend "http://store.test"
-                                        {:query-cache-ttl-ms 30000})
+        store (sut/make-futon1b-backend "http://cache-store.test")
         params {:query/type :coordination :query/limit 100}
         entry {:evidence/id "e-cache-invalidation"
                :evidence/type :coordination
@@ -68,9 +67,9 @@
 
 (deftest expired-query-cache-is-refreshed
   (let [gets (atom 0)
-        store (sut/make-futon1b-backend "http://store.test"
-                                        {:query-cache-ttl-ms 1})]
-    (with-redefs [http/get (fn [_ _]
+        store (sut/make-futon1b-backend "http://expiry-store.test")]
+    (with-redefs [sut/query-cache-ttl-ms 1
+                  http/get (fn [_ _]
                              (swap! gets inc)
                              (delay {:status 200 :body "{:entries []}"}))]
       (backend/-query store {:query/limit 10})
