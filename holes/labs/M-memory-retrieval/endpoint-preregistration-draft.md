@@ -26,6 +26,48 @@ dispatch time:
 - **(one-shot)** `sha-post` was committed by the dispatched session
   before cap or termination, with no operator continuation (see §3).
 
+## 1b. Statement fidelity (claude-12 edit — the endpoint as drafted scores a weakened statement as a win)
+
+**The gap.** `(post)` requires `lake` exit 0, sorry count 0, and axiom-clean on
+the named declarations. A runner that *weakens the statement* and proves the
+weaker thing satisfies all three. `T_d` freezes which declarations are targets,
+not what they assert — so a name-preserving edit to the statement passes
+unnoticed. This is the classic failure mode in Lean formalization, and every
+cohort-2 packet warned against it in prose ("Do NOT weaken any statement",
+"without weakening or changing its statement") precisely because nothing
+mechanical was checking.
+
+It has not bitten us yet only because it was caught by hand: S3's statement was
+verified by an operator reading `problem.md` against the Lean existential and
+confirming the `¬ Summable` conjunct made it non-vacuous. That does not scale to
+a randomized cohort, and a weakened success is worse than a failure because it
+enters the numerator.
+
+**Split by dispatch kind, because only one half is mechanizable:**
+
+- **Continuations** (statement pre-exists at `sha-pre`): add a fourth conjunct.
+  Freeze the *statement text* of each t ∈ T_d at dispatch — normalized and
+  hashed — and require the `sha-post` statement to hash identically. Mechanical,
+  cheap, and it closes the case completely. Anything that changes a target's
+  statement voids the row rather than scoring it.
+- **Fresh formalizations** (no pre-existing statement): fidelity to the informal
+  problem is **irreducibly a judgement**, and the preregistration must say so
+  rather than imply a mechanical check exists. Requires a named adjudication
+  step, ideally blind to arm, with the adjudicator distinct from the dispatcher
+  (the author≠reviewer discipline the memory system already enforces in code).
+
+**Failed fidelity VOIDS the row; it does not score 0.** A weakened-statement
+proof and an honest failure are different events, and pooling them corrupts both
+the numerator and the denominator. `statement-altered` and
+`fidelity-adjudication-failed` are their own classes, counted and reported,
+never silently absorbed.
+
+**Consequence for §5:** the capture schema needs `statement-hash-pre` and
+`statement-hash-post` per target, and a `fidelity-verdict` field with its
+adjudicator and timestamp for fresh rows. Without those the class is
+unrecoverable from the record — the same defect this whole document exists to
+fix, one level up.
+
 ## 2. Mechanically swept, never runner-reported (constraint 2: S3-first)
 
 The witness is EXECUTED by the sweeper, not read from the transcript:
@@ -59,7 +101,9 @@ every report (observed twice in one day; it is not rare).
 
 ## 4. What this endpoint does NOT measure (stated at preregistration)
 
-Partial progress (sorry-count reduction short of zero), proof quality,
+Partial progress (sorry-count reduction short of zero), proof quality
+(note: statement *fidelity* is NOT proof quality — see §1b; it is a validity
+condition on the endpoint itself, not a nicety deferred to secondaries),
 memory contribution (that's the arms' job to contrast), and anything
 about problems whose T_d was mis-frozen. Secondary endpoints, if
 wanted, are separate preregistrations — this document defines only the
