@@ -1,0 +1,26 @@
+{
+  "example_id": "john-snow-instrumental-variable",
+  "title": "John Snow cholera instrumental variable",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 7.8 adds Water Company as an exogenous instrument that changes Water Purity, is independent of hidden local conditions, and has no route to Cholera except through Water Purity.",
+  "variables": [
+    {"key": "u", "name": "Miasma, Poverty, etc.", "content": "The unobserved common causes of water purity and cholera.", "observed": false},
+    {"key": "z", "name": "Water Company", "content": "The proposed instrumental variable."},
+    {"key": "x", "name": "Water Purity", "content": "The treatment affected by water company."},
+    {"key": "y", "name": "Cholera", "content": "The health outcome."}
+  ],
+  "arrows": [
+    {"source": "z", "target": "x", "because": "Figure 7.8 makes Water Company determine Water Purity."},
+    {"source": "u", "target": "x", "because": "Figure 7.8 preserves hidden local causes of Water Purity."},
+    {"source": "u", "target": "y", "because": "Figure 7.8 preserves hidden local causes of Cholera."},
+    {"source": "x", "target": "y", "because": "Figure 7.8 preserves the Water Purity-to-Cholera effect."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:6ebe9fb7affac6a1",
+    "ta-book-of-why-2018:9a70735742d6b765",
+    "ta-book-of-why-2018:5043bfd720608bd8",
+    "ta-book-of-why-2018:27bfff1af3592117",
+    "ta-book-of-why-2018:8a5cf5d4f63d297a"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0260"]
+}

@@ -1,0 +1,42 @@
+{
+  "arrows" : [ {
+    "from" : "vaccination",
+    "to" : "reaction"
+  }, {
+    "from" : "vaccination",
+    "to" : "smallpox"
+  }, {
+    "from" : "reaction",
+    "to" : "death"
+  }, {
+    "from" : "smallpox",
+    "to" : "death"
+  } ],
+  "id" : "vaccination",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "finite probability tables are preserved only in the frozen source" ],
+    "source-file" : "vaccination.json"
+  },
+  "variables" : [ {
+    "id" : "vaccination",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Vaccination"
+  }, {
+    "id" : "reaction",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Reaction"
+  }, {
+    "id" : "smallpox",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Smallpox"
+  }, {
+    "id" : "death",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Death"
+  } ]
+}

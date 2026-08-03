@@ -1,0 +1,38 @@
+{
+  "arrows" : [ {
+    "from" : "z",
+    "to" : "s"
+  }, {
+    "from" : "d",
+    "to" : "p"
+  }, {
+    "from" : "d",
+    "to" : "s"
+  }, {
+    "from" : "s",
+    "to" : "p"
+  } ],
+  "id" : "wright-supply-to-price-reduced-form",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "numeric edge coefficients are graph-only" ],
+    "source-file" : "wright-supply-to-price-reduced-form.json"
+  },
+  "variables" : [ {
+    "id" : "d",
+    "kind" : "observed",
+    "name" : "Demand"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Yield per Acre"
+  }, {
+    "id" : "s",
+    "kind" : "observed",
+    "name" : "Supply"
+  }, {
+    "id" : "p",
+    "kind" : "observed",
+    "name" : "Price"
+  } ]
+}

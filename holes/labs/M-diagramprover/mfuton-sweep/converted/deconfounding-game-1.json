@@ -1,0 +1,35 @@
+{
+  "arrows" : [ {
+    "from" : "smoking",
+    "to" : "abnormality"
+  }, {
+    "from" : "abnormality",
+    "to" : "future_miscarriage"
+  }, {
+    "from" : "abnormality",
+    "to" : "prior_miscarriage"
+  } ],
+  "id" : "deconfounding-game-1",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "deconfounding-game-1.json"
+  },
+  "variables" : [ {
+    "id" : "smoking",
+    "kind" : "observed",
+    "name" : "Smoking (X)"
+  }, {
+    "id" : "abnormality",
+    "kind" : "observed",
+    "name" : "Underlying Abnormality (A)"
+  }, {
+    "id" : "future_miscarriage",
+    "kind" : "observed",
+    "name" : "Future Miscarriage (Y)"
+  }, {
+    "id" : "prior_miscarriage",
+    "kind" : "observed",
+    "name" : "Prior Miscarriage (B)"
+  } ]
+}

@@ -1,0 +1,94 @@
+{
+  "arrows" : [ {
+    "from" : "a",
+    "to" : "x"
+  }, {
+    "from" : "a",
+    "to" : "b"
+  }, {
+    "from" : "c",
+    "to" : "b"
+  }, {
+    "from" : "c",
+    "to" : "y"
+  }, {
+    "from" : "b",
+    "to" : "x"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  }, {
+    "from" : "d",
+    "to" : "a"
+  }, {
+    "from" : "d",
+    "to" : "c"
+  }, {
+    "from" : "c",
+    "to" : "e"
+  }, {
+    "from" : "e",
+    "to" : "x"
+  }, {
+    "from" : "e",
+    "to" : "y"
+  }, {
+    "from" : "f",
+    "to" : "c"
+  }, {
+    "from" : "f",
+    "to" : "x"
+  }, {
+    "from" : "f",
+    "to" : "y"
+  }, {
+    "from" : "g",
+    "to" : "x"
+  }, {
+    "from" : "g",
+    "to" : "y"
+  } ],
+  "id" : "forbes-smoking-adult-asthma",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "forbes-smoking-adult-asthma.json"
+  },
+  "variables" : [ {
+    "id" : "a",
+    "kind" : "observed",
+    "name" : "Parental Smoking (A)"
+  }, {
+    "id" : "b",
+    "kind" : "observed",
+    "name" : "Childhood Asthma (B)"
+  }, {
+    "id" : "c",
+    "kind" : "latent-unobserved",
+    "name" : "Asthma Predisposition (C)"
+  }, {
+    "id" : "d",
+    "kind" : "observed",
+    "name" : "Parental Asthma (D)"
+  }, {
+    "id" : "e",
+    "kind" : "observed",
+    "name" : "Chronic Bronchitis (E)"
+  }, {
+    "id" : "f",
+    "kind" : "observed",
+    "name" : "Sex (F)"
+  }, {
+    "id" : "g",
+    "kind" : "observed",
+    "name" : "Socioeconomic Status (G)"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Smoking (X)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Adult Asthma (Y)"
+  } ]
+}

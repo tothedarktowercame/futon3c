@@ -1,0 +1,72 @@
+{
+  "arrows" : [ {
+    "from" : "soil-fertility",
+    "to" : "fertilizer"
+  }, {
+    "from" : "soil-fertility",
+    "to" : "yield"
+  }, {
+    "from" : "texture",
+    "to" : "fertilizer"
+  }, {
+    "from" : "texture",
+    "to" : "yield"
+  }, {
+    "from" : "drainage",
+    "to" : "fertilizer"
+  }, {
+    "from" : "drainage",
+    "to" : "yield"
+  }, {
+    "from" : "microflora",
+    "to" : "fertilizer"
+  }, {
+    "from" : "microflora",
+    "to" : "yield"
+  }, {
+    "from" : "other",
+    "to" : "fertilizer"
+  }, {
+    "from" : "other",
+    "to" : "yield"
+  }, {
+    "from" : "fertilizer",
+    "to" : "yield"
+  } ],
+  "id" : "fertilizer-improper-control",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "non-Boolean value domains are graph-only: categorical" ],
+    "source-file" : "fertilizer-improper-control.json"
+  },
+  "variables" : [ {
+    "id" : "soil-fertility",
+    "kind" : "observed",
+    "name" : "Soil Fertility"
+  }, {
+    "id" : "texture",
+    "kind" : "observed",
+    "name" : "Texture"
+  }, {
+    "id" : "drainage",
+    "kind" : "observed",
+    "name" : "Drainage"
+  }, {
+    "id" : "microflora",
+    "kind" : "observed",
+    "name" : "Microflora"
+  }, {
+    "id" : "other",
+    "kind" : "observed",
+    "name" : "Other"
+  }, {
+    "id" : "fertilizer",
+    "kind" : "observed",
+    "mfuton_value_domain" : "categorical",
+    "name" : "Fertilizer"
+  }, {
+    "id" : "yield",
+    "kind" : "observed",
+    "name" : "Yield"
+  } ]
+}

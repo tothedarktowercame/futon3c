@@ -1,0 +1,56 @@
+{
+  "arrows" : [ {
+    "from" : "court-order",
+    "to" : "captain"
+  }, {
+    "from" : "captain",
+    "to" : "soldier-a"
+  }, {
+    "from" : "captain",
+    "to" : "soldier-b"
+  }, {
+    "from" : "soldier-a",
+    "to" : "death"
+  }, {
+    "from" : "soldier-b",
+    "to" : "death"
+  } ],
+  "id" : "firing-squad",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "firing-squad.json"
+  },
+  "structural_equations" : {
+    "captain" : "court-order",
+    "death" : "soldier-a or soldier-b",
+    "soldier-a" : "captain",
+    "soldier-b" : "captain"
+  },
+  "variables" : [ {
+    "id" : "court-order",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Court Order (CO)"
+  }, {
+    "id" : "captain",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Captain (C)"
+  }, {
+    "id" : "soldier-a",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Soldier A (A)"
+  }, {
+    "id" : "soldier-b",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Soldier B (B)"
+  }, {
+    "id" : "death",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Death (D)"
+  } ]
+}

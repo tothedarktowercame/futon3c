@@ -1,0 +1,28 @@
+{
+  "example_id": "climate-change-probabilities-of-causation",
+  "title": "Climate change probabilities of necessity and sufficiency",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 8.4 models Climate Response as listening to Greenhouse Gases, Natural Forcing, and Internal Variability. The source assumes exogeneity and no protection and reports PN=0.9 and PS=0.0072 from Hannart's external climate simulations.",
+  "variables": [
+    {"key": "greenhouse", "name": "Greenhouse Gases", "content": "The top-level binary exposure contrasting current and preindustrial greenhouse-gas levels.", "value_domain": "boolean"},
+    {"key": "natural", "name": "Natural Forcing", "content": "Natural forcing that contributes to climate response."},
+    {"key": "variability", "name": "Internal Variability", "content": "Internal climate variability that contributes to climate response."},
+    {"key": "response", "name": "Climate Response", "content": "The binary severe-heat-wave response event used for PN and PS.", "value_domain": "boolean"}
+  ],
+  "arrows": [
+    {"source": "greenhouse", "target": "response", "because": "Figure 8.4 makes Climate Response listen to Greenhouse Gases."},
+    {"source": "natural", "target": "response", "because": "Figure 8.4 makes Climate Response listen to Natural Forcing."},
+    {"source": "variability", "target": "response", "because": "Figure 8.4 makes Climate Response listen to Internal Variability."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:9791dddec27d37b1",
+    "ta-book-of-why-2018:0744239f6e55658f",
+    "ta-book-of-why-2018:09fac79c2431c393",
+    "ta-book-of-why-2018:23dc5ef40c715ce1",
+    "ta-book-of-why-2018:93b46cb7525296f9",
+    "ta-book-of-why-2018:764072943d84301d",
+    "ta-book-of-why-2018:8df04c0be11d2eab",
+    "ta-book-of-why-2018:4b48776e029b473c"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0306"]
+}

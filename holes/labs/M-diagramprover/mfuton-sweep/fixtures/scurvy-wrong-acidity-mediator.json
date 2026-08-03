@@ -1,0 +1,22 @@
+{
+  "example_id": "scurvy-wrong-acidity-mediator",
+  "title": "The historically wrong acidity mediator for scurvy",
+  "topology_basis": "explicit_textual_edge_list",
+  "content": "The book identifies this as the historically believed but unproved model: Citrus Fruits act on Scurvy entirely through Acidity. Its chain topology is coherent, but its mediator identity is scientifically wrong.",
+  "variables": [
+    {"key": "citrus", "name": "Citrus Fruits", "content": "The preventive treatment whose mechanism was misunderstood."},
+    {"key": "acidity", "name": "Acidity", "content": "The historically presumed mediator, which the source marks as incorrect."},
+    {"key": "scurvy", "name": "Scurvy", "content": "The disease outcome prevented by the treatment."}
+  ],
+  "arrows": [
+    {"source": "citrus", "target": "acidity", "because": "The historical model attributed the action of citrus fruits to their acidity."},
+    {"source": "acidity", "target": "scurvy", "because": "The historical model treated acidity as the complete mediator of scurvy prevention."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:6f6c222e7e81f22e",
+    "ta-book-of-why-2018:877be0504b865485",
+    "ta-book-of-why-2018:af91f751bb4252f6",
+    "ta-book-of-why-2018:6d760551f1b19f59"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0315"]
+}

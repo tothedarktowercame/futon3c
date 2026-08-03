@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "bag-on-plane",
+    "to" : "bag-on-carousel"
+  }, {
+    "from" : "elapsed-time",
+    "to" : "bag-on-carousel"
+  } ],
+  "id" : "airport-bag-posterior",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "non-Boolean value domains are graph-only: categorical", "finite probability tables are preserved only in the frozen source" ],
+    "source-file" : "airport-bag-posterior.json"
+  },
+  "variables" : [ {
+    "id" : "bag-on-plane",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Bag on Plane"
+  }, {
+    "id" : "elapsed-time",
+    "kind" : "observed",
+    "mfuton_value_domain" : "categorical",
+    "name" : "Elapsed Time"
+  }, {
+    "id" : "bag-on-carousel",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Bag on Carousel"
+  } ]
+}

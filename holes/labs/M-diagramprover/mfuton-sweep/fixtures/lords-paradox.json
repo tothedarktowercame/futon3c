@@ -1,0 +1,32 @@
+{
+  "example_id": "lords-paradox",
+  "title": "Lord's paradox",
+  "topology_basis": "printed_diagram",
+  "content": "Sex affects both initial and final weight, and initial weight also affects final weight. Gain is deterministically Final Weight minus Initial Weight. Initial Weight is therefore a mediator of the total Sex-to-Gain effect and must not be adjusted for.",
+  "variables": [
+    {"key": "s", "name": "Sex", "content": "The exposure whose total effect on weight gain is sought."},
+    {"key": "wi", "name": "Initial Weight", "content": "Initial weight, a mediator of the Sex-to-Gain effect."},
+    {"key": "wf", "name": "Final Weight", "content": "Final weight after the study period."},
+    {"key": "y", "name": "Gain", "content": "The deterministic outcome Y = Final Weight - Initial Weight."}
+  ],
+  "arrows": [
+    {"source": "s", "target": "wi", "because": "Figure 6.8 states that Sex affects Initial Weight."},
+    {"source": "s", "target": "wf", "because": "Figure 6.8 states that Sex affects Final Weight."},
+    {"source": "wi", "target": "wf", "because": "Figure 6.8 states that Initial Weight affects Final Weight."},
+    {"source": "wi", "target": "y", "because": "Gain is deterministically Y = Final Weight - Initial Weight, so this arrow has coefficient -1."},
+    {"source": "wf", "target": "y", "because": "Gain is deterministically Y = Final Weight - Initial Weight, so this arrow has coefficient +1."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:5d6ab6eaeba0a985",
+    "ta-book-of-why-2018:b6f6f3dada62454c",
+    "ta-book-of-why-2018:8a54c906ed9750c4",
+    "ta-book-of-why-2018:bcfc25601e2aad59",
+    "ta-book-of-why-2018:d2604012266db1d3",
+    "ta-book-of-why-2018:de0c04c3d0b93cd3",
+    "ta-book-of-why-2018:8d88b4098136e65b"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0227",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0228"
+  ]
+}

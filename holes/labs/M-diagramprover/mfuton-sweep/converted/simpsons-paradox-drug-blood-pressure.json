@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "d",
+    "to" : "b"
+  }, {
+    "from" : "b",
+    "to" : "h"
+  }, {
+    "from" : "d",
+    "to" : "h"
+  } ],
+  "id" : "simpsons-paradox-drug-blood-pressure",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "simpsons-paradox-drug-blood-pressure.json"
+  },
+  "variables" : [ {
+    "id" : "d",
+    "kind" : "observed",
+    "name" : "Drug"
+  }, {
+    "id" : "b",
+    "kind" : "observed",
+    "name" : "Blood Pressure"
+  }, {
+    "id" : "h",
+    "kind" : "observed",
+    "name" : "Heart Attack"
+  } ]
+}

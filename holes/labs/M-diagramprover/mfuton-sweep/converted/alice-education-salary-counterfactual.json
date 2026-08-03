@@ -1,0 +1,34 @@
+{
+  "arrows" : [ {
+    "from" : "education",
+    "to" : "experience"
+  }, {
+    "from" : "education",
+    "to" : "salary"
+  }, {
+    "from" : "experience",
+    "to" : "salary"
+  } ],
+  "id" : "alice-education-salary-counterfactual",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "non-Boolean value domains are graph-only: rational", "affine equations are outside the Boolean SCM evaluator", "numeric edge coefficients are graph-only" ],
+    "source-file" : "alice-education-salary-counterfactual.json"
+  },
+  "variables" : [ {
+    "id" : "education",
+    "kind" : "observed",
+    "mfuton_value_domain" : "rational",
+    "name" : "Education"
+  }, {
+    "id" : "experience",
+    "kind" : "observed",
+    "mfuton_value_domain" : "rational",
+    "name" : "Experience"
+  }, {
+    "id" : "salary",
+    "kind" : "observed",
+    "mfuton_value_domain" : "rational",
+    "name" : "Salary"
+  } ]
+}

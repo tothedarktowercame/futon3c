@@ -1,0 +1,119 @@
+{
+  "example_id": "firing-squad",
+  "title": "Firing-squad intervention and counterfactual",
+  "topology_basis": "printed_diagram",
+  "content": "Pearl's Boolean firing-squad structural model. The court order causes the captain's signal; the signal causes both soldiers to shoot; either shot causes the prisoner's death.",
+  "variables": [
+    {
+      "key": "court-order",
+      "name": "Court Order (CO)",
+      "content": "Whether the court issued the execution order.",
+      "value_domain": "boolean"
+    },
+    {
+      "key": "captain",
+      "name": "Captain (C)",
+      "content": "Whether the captain signaled the firing squad to fire.",
+      "value_domain": "boolean",
+      "structural_expression": {
+        "kind": "variable",
+        "variable": "court-order"
+      }
+    },
+    {
+      "key": "soldier-a",
+      "name": "Soldier A (A)",
+      "content": "Whether Soldier A fired.",
+      "value_domain": "boolean",
+      "structural_expression": {
+        "kind": "variable",
+        "variable": "captain"
+      }
+    },
+    {
+      "key": "soldier-b",
+      "name": "Soldier B (B)",
+      "content": "Whether Soldier B fired.",
+      "value_domain": "boolean",
+      "structural_expression": {
+        "kind": "variable",
+        "variable": "captain"
+      }
+    },
+    {
+      "key": "death",
+      "name": "Death (D)",
+      "content": "Whether the prisoner died.",
+      "value_domain": "boolean",
+      "structural_expression": {
+        "kind": "or",
+        "operands": [
+          {
+            "kind": "variable",
+            "variable": "soldier-a"
+          },
+          {
+            "kind": "variable",
+            "variable": "soldier-b"
+          }
+        ]
+      }
+    }
+  ],
+  "arrows": [
+    {
+      "source": "court-order",
+      "target": "captain",
+      "because": "The captain signals only after receiving the court's order."
+    },
+    {
+      "source": "captain",
+      "target": "soldier-a",
+      "because": "Soldier A is obedient and fires only on the captain's command."
+    },
+    {
+      "source": "captain",
+      "target": "soldier-b",
+      "because": "Soldier B is obedient and fires only on the captain's command."
+    },
+    {
+      "source": "soldier-a",
+      "target": "death",
+      "because": "Soldier A is an expert marksman, so his shot kills the prisoner."
+    },
+    {
+      "source": "soldier-b",
+      "target": "death",
+      "because": "Soldier B is an expert marksman, so his shot kills the prisoner."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:dd7f60fd8f43ec9e",
+    "ta-book-of-why-2018:b37183546fdacdff",
+    "ta-book-of-why-2018:3f309f2024bb47ea",
+    "ta-book-of-why-2018:80fe73ceb4a2be06",
+    "ta-book-of-why-2018:6bf2d54b65eb3177",
+    "ta-book-of-why-2018:9cba2ee013a4c00b",
+    "ta-book-of-why-2018:1db10374d4be71aa",
+    "ta-book-of-why-2018:4425ff883918eda6",
+    "ta-book-of-why-2018:6df0150696d56e9b",
+    "ta-book-of-why-2018:691a81ed16f974c4",
+    "ta-book-of-why-2018:a9f9e68120ccb97d",
+    "ta-book-of-why-2018:716c701fb287563b",
+    "ta-book-of-why-2018:d4330d08f056e444",
+    "ta-book-of-why-2018:8614115bb6a67e9a",
+    "ta-book-of-why-2018:e300007cbb943c1b",
+    "ta-book-of-why-2018:07da9b4fc5ef738f",
+    "ta-book-of-why-2018:8126a323541ac075",
+    "ta-book-of-why-2018:275226f34d641dc0",
+    "ta-book-of-why-2018:b3c177199a444e8a",
+    "ta-book-of-why-2018:a108aa5969ea9711"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0051",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0052",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0053",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0054",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0055"
+  ]
+}

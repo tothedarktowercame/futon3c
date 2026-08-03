@@ -1,0 +1,36 @@
+{
+  "example_id": "wermuth-cox-sequential-treatment",
+  "title": "Wermuth-Cox sequential treatment",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 7.6 models two treatment periods. X is randomized, W responds to X, Z is assigned in response to W, and hidden health status U confounds W and Y. The target jointly intervenes on X and Z.",
+  "variables": [
+    {"key": "u", "name": "U", "content": "The unobserved health status that causes W and Y.", "observed": false},
+    {"key": "x", "name": "X", "content": "The randomized first treatment."},
+    {"key": "w", "name": "W", "content": "The intermediate outcome observed after X."},
+    {"key": "z", "name": "Z", "content": "The second treatment assigned in response to W."},
+    {"key": "y", "name": "Y", "content": "The final outcome."}
+  ],
+  "arrows": [
+    {"source": "x", "target": "w", "because": "Figure 7.6 makes the intermediate outcome depend on Treatment 1."},
+    {"source": "x", "target": "y", "because": "Figure 7.6 gives Treatment 1 a direct arrow into the outcome."},
+    {"source": "w", "target": "z", "because": "Figure 7.6 assigns Treatment 2 in response to the intermediate outcome."},
+    {"source": "z", "target": "y", "because": "Figure 7.6 gives Treatment 2 an arrow into the outcome."},
+    {"source": "u", "target": "w", "because": "Figure 7.6 makes hidden health status a cause of the intermediate outcome."},
+    {"source": "u", "target": "y", "because": "Figure 7.6 makes hidden health status a cause of the final outcome."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:a9eaa4639eb2594d",
+    "ta-book-of-why-2018:2961d86a0f5f0399",
+    "ta-book-of-why-2018:9611bbdc39059e8a",
+    "ta-book-of-why-2018:792786458701ec8f",
+    "ta-book-of-why-2018:a8f3cfc109798ea9",
+    "ta-book-of-why-2018:243b15b994c97be6",
+    "ta-book-of-why-2018:fbd30715870b68c2",
+    "ta-book-of-why-2018:7bbec80a04fea035",
+    "ta-book-of-why-2018:c19a4cf57a17842b",
+    "ta-book-of-why-2018:c4b869b72eff8e49"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0253"
+  ]
+}

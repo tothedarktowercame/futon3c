@@ -1,0 +1,26 @@
+{
+  "example_id": "berksons-paradox",
+  "title": "Berkson's paradox",
+  "topology_basis": "printed_diagram",
+  "content": "Two otherwise unrelated diseases both cause hospitalization. Restricting a study to hospitalized patients conditions on their common effect and induces a spurious association between the diseases.",
+  "variables": [
+    {"key": "d1", "name": "Disease 1", "content": "The first disease in Berkson's hospital-selection example."},
+    {"key": "d2", "name": "Disease 2", "content": "The second disease, independent of Disease 1 in the general population."},
+    {"key": "h", "name": "Hospitalization", "content": "The selection variable and collider."}
+  ],
+  "arrows": [
+    {"source": "d1", "target": "h", "because": "Disease 1 contributes to hospitalization."},
+    {"source": "d2", "target": "h", "because": "Disease 2 contributes to hospitalization."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:bbc5027769f10d6c",
+    "ta-book-of-why-2018:cf5afadad58cb5d0",
+    "ta-book-of-why-2018:efa96f060aa869e2",
+    "ta-book-of-why-2018:d0d06baf6e3813fe",
+    "ta-book-of-why-2018:6a4b9656985254fb"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0209",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0210"
+  ]
+}

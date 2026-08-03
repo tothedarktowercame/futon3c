@@ -1,0 +1,37 @@
+{
+  "arrows" : [ {
+    "from" : "greenhouse",
+    "to" : "response"
+  }, {
+    "from" : "natural",
+    "to" : "response"
+  }, {
+    "from" : "variability",
+    "to" : "response"
+  } ],
+  "id" : "climate-change-probabilities-of-causation",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "climate-change-probabilities-of-causation.json"
+  },
+  "variables" : [ {
+    "id" : "greenhouse",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Greenhouse Gases"
+  }, {
+    "id" : "natural",
+    "kind" : "observed",
+    "name" : "Natural Forcing"
+  }, {
+    "id" : "variability",
+    "kind" : "observed",
+    "name" : "Internal Variability"
+  }, {
+    "id" : "response",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Climate Response"
+  } ]
+}

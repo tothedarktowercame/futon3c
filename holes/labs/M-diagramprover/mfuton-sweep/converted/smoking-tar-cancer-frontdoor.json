@@ -1,0 +1,38 @@
+{
+  "arrows" : [ {
+    "from" : "g",
+    "to" : "s"
+  }, {
+    "from" : "g",
+    "to" : "c"
+  }, {
+    "from" : "s",
+    "to" : "t"
+  }, {
+    "from" : "t",
+    "to" : "c"
+  } ],
+  "id" : "smoking-tar-cancer-frontdoor",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "smoking-tar-cancer-frontdoor.json"
+  },
+  "variables" : [ {
+    "id" : "g",
+    "kind" : "latent-unobserved",
+    "name" : "Smoking Gene"
+  }, {
+    "id" : "s",
+    "kind" : "observed",
+    "name" : "Smoking"
+  }, {
+    "id" : "t",
+    "kind" : "observed",
+    "name" : "Tar"
+  }, {
+    "id" : "c",
+    "kind" : "observed",
+    "name" : "Cancer"
+  } ]
+}

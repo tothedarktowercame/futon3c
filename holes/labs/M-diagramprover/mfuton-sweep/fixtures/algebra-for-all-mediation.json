@@ -1,0 +1,51 @@
+{
+  "example_id": "algebra-for-all-mediation",
+  "title": "Algebra for All mediation",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 9.10 models classroom Environment as a mediator between Algebra for All and Learning while retaining a direct policy-to-learning path. Hong reports a roughly +2.7 point direct effect and a -2.3 point indirect effect through environment, for a modest net +0.4 point effect. These are aggregate reported effects, not edge coefficients.",
+  "variables": [
+    {
+      "key": "algebra_for_all",
+      "name": "Algebra for All",
+      "content": "The 1997 policy requiring all ninth graders to take college-preparatory algebra."
+    },
+    {
+      "key": "environment",
+      "name": "Environment",
+      "content": "The classroom environment, measured by the median skill level of the students in the classroom."
+    },
+    {
+      "key": "learning",
+      "name": "Learning",
+      "content": "The students' learning outcome, represented by test scores in the adjacent analysis."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "algebra_for_all",
+      "target": "environment",
+      "because": "Figure 9.10 draws Algebra for All as a cause of classroom Environment."
+    },
+    {
+      "source": "environment",
+      "target": "learning",
+      "because": "Figure 9.10 draws Environment as a cause of Learning."
+    },
+    {
+      "source": "algebra_for_all",
+      "target": "learning",
+      "because": "Figure 9.10 retains a direct Algebra for All to Learning arrow."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:b5820281b0e6d7e8",
+    "ta-book-of-why-2018:d0d8f8ebc6e442a9",
+    "ta-book-of-why-2018:3fd0776d966e109e",
+    "ta-book-of-why-2018:d156c80f18ccf976",
+    "ta-book-of-why-2018:ec165ad2f022dc43"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0349",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0350"
+  ]
+}

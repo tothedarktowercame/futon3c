@@ -1,0 +1,42 @@
+{
+  "example_id": "daisy-house-training",
+  "title": "Daisy's house-training mediation model",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 9.6 separates a direct Other Pets -> House Training hypothesis from an indirect Other Pets -> Crating/Supervision -> House Training hypothesis. The attempted nested-counterfactual experiment was inconclusive, so the graph carries no manufactured outcome value.",
+  "variables": [
+    {"key": "pets", "name": "Other Pets", "content": "The presence or absence of foster kittens."},
+    {"key": "supervision", "name": "Crating/Supervision", "content": "The mediator changed when kittens were present."},
+    {"key": "training", "name": "House Training", "content": "Daisy's house-training outcome."}
+  ],
+  "arrows": [
+    {"source": "pets", "target": "supervision", "because": "Kittens caused Daisy to be crated or supervised more closely."},
+    {"source": "supervision", "target": "training", "because": "Crating and supervision could mediate improved house training."},
+    {"source": "pets", "target": "training", "because": "Figure 9.6 retains the direct pack-psychology hypothesis."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:796fcbd7213ef734",
+    "ta-book-of-why-2018:bfa70536dd7370ee",
+    "ta-book-of-why-2018:67412c0c4671d4d5",
+    "ta-book-of-why-2018:0d01ee895ab11b32",
+    "ta-book-of-why-2018:d0594f2566790721",
+    "ta-book-of-why-2018:46f74d7af15b3112",
+    "ta-book-of-why-2018:d241544e57342ba6",
+    "ta-book-of-why-2018:a1c44639356c342c",
+    "ta-book-of-why-2018:9cde1d3ae4a8587e",
+    "ta-book-of-why-2018:db5423eb2be24012",
+    "ta-book-of-why-2018:5b9dcaf34328e226",
+    "ta-book-of-why-2018:4bb421ff0afc05d6",
+    "ta-book-of-why-2018:c5d7dadd3d5f3041",
+    "ta-book-of-why-2018:dab6e5b385982d90",
+    "ta-book-of-why-2018:c704a1fa0d4b0a79",
+    "ta-book-of-why-2018:0a39570994d20c39",
+    "ta-book-of-why-2018:025da9bd424eae6e",
+    "ta-book-of-why-2018:53da0f22e5131eb1"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0331",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0332",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0333",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0334"
+  ]
+}

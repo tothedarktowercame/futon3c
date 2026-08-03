@@ -1,0 +1,46 @@
+{
+  "arrows" : [ {
+    "from" : "z",
+    "to" : "x"
+  }, {
+    "from" : "z",
+    "to" : "y"
+  }, {
+    "from" : "x",
+    "to" : "w"
+  }, {
+    "from" : "w",
+    "to" : "y"
+  }, {
+    "from" : "s",
+    "to" : "w"
+  } ],
+  "id" : "transport-san-francisco-clicks",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "selection/regime annotations are graph-only" ],
+    "source-file" : "transport-san-francisco-clicks.json"
+  },
+  "variables" : [ {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Advertisement (X)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Purchase Decision (Y)"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Age (Z)"
+  }, {
+    "id" : "w",
+    "kind" : "observed",
+    "name" : "Click-through Rate (W)"
+  }, {
+    "id" : "s",
+    "kind" : "observed",
+    "mfuton_selection" : true,
+    "name" : "Population Difference (S)"
+  } ]
+}

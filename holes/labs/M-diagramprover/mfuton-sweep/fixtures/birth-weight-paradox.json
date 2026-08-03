@@ -1,0 +1,41 @@
+{
+  "example_id": "birth-weight-paradox",
+  "title": "Birth-weight paradox",
+  "topology_basis": "printed_diagram",
+  "content": "Smoking and birth defects both lower birth weight, making birth weight a collider. Restricting analysis to low-birth-weight babies opens a noncausal path from smoking through birth defect to infant mortality.",
+  "variables": [
+    {"key": "s", "name": "Smoking", "content": "Maternal smoking during pregnancy."},
+    {"key": "w", "name": "Birth Weight", "content": "The child's birth weight and the collider in Figure 5.4."},
+    {"key": "d", "name": "Birth Defect", "content": "Serious congenital causes that can lower birth weight and increase mortality."},
+    {"key": "m", "name": "Mortality of Child", "content": "Infant mortality, the outcome in the paradox."}
+  ],
+  "arrows": [
+    {"source": "s", "target": "w", "because": "Maternal smoking can lower birth weight."},
+    {"source": "s", "target": "m", "because": "The figure includes the direct harmful effect whose estimate is biased."},
+    {"source": "w", "target": "m", "because": "Figure 5.4 includes low birth weight as a cause of mortality."},
+    {"source": "d", "target": "w", "because": "Serious birth defects can cause low birth weight."},
+    {"source": "d", "target": "m", "because": "Serious birth defects can increase infant mortality."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:4b3f4c3181b8326f",
+    "ta-book-of-why-2018:2c69cf6efad8a838",
+    "ta-book-of-why-2018:80436151a5afb3c1",
+    "ta-book-of-why-2018:2f5c6be01625ef0e",
+    "ta-book-of-why-2018:48f3e7de89a6667d",
+    "ta-book-of-why-2018:a9af4ef67525f2a5",
+    "ta-book-of-why-2018:95bd873a69b32909",
+    "ta-book-of-why-2018:ef6d6b1a05538a06",
+    "ta-book-of-why-2018:7cbf439939e4a131",
+    "ta-book-of-why-2018:cb9dc8a39e7c4f8c",
+    "ta-book-of-why-2018:6485cedbf97d4ed3",
+    "ta-book-of-why-2018:5ba09fc76583430e",
+    "ta-book-of-why-2018:f08c941a637d8f9b",
+    "ta-book-of-why-2018:c80859ee328a9152",
+    "ta-book-of-why-2018:d5dbc49683b17d6e"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0196",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0197",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0198"
+  ]
+}

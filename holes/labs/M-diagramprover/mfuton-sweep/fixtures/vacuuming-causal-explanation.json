@@ -1,0 +1,26 @@
+{
+  "example_id": "vacuuming-causal-explanation",
+  "title": "Vacuuming, waking, and a bounded causal explanation",
+  "topology_basis": "source_statement",
+  "content": "Vacuuming makes noise, the noise wakes a child, and waking can make the child unhappy. The explanation is local to the factual context and does not license a blanket prohibition on vacuuming.",
+  "variables": [
+    {"key": "vacuuming", "name": "Vacuuming", "content": "Whether the vacuum cleaner is running upstairs.", "value_domain": "boolean"},
+    {"key": "noise", "name": "Vacuum Noise", "content": "Whether the vacuuming produces audible noise.", "value_domain": "boolean", "structural_expression": {"kind": "variable", "variable": "vacuuming"}},
+    {"key": "awake", "name": "Child Awake", "content": "Whether the child is awakened by the noise.", "value_domain": "boolean", "structural_expression": {"kind": "variable", "variable": "noise"}},
+    {"key": "unhappy", "name": "Child Unhappy", "content": "Whether the awakened child is unhappy.", "value_domain": "boolean", "structural_expression": {"kind": "variable", "variable": "awake"}}
+  ],
+  "arrows": [
+    {"source": "vacuuming", "target": "noise", "because": "The vacuum cleaner produces noise while running."},
+    {"source": "noise", "target": "awake", "because": "The noise can wake the child."},
+    {"source": "awake", "target": "unhappy", "because": "Being awakened can make the child unhappy."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:f978723c58eb7dc2",
+    "ta-book-of-why-2018:e7f58f5864c97ad7",
+    "ta-book-of-why-2018:8efe1b80ec12425a"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0373",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0374"
+  ]
+}

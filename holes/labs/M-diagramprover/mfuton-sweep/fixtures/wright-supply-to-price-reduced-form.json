@@ -1,0 +1,25 @@
+{
+  "example_id": "wright-supply-to-price-reduced-form",
+  "title": "Wright supply-to-price reduced form",
+  "topology_basis": "source_statement",
+  "content": "Figure 7.10's simultaneous system reduced in the direction stated by the source: Demand-to-Price-to-Supply is replaced by Demand-to-Supply, so Yield per Acre instruments Supply for the effect of Supply on Price.",
+  "variables": [
+    {"key": "d", "name": "Demand", "content": "The exogenous demand shifter."},
+    {"key": "z", "name": "Yield per Acre", "content": "The exogenous supply instrument."},
+    {"key": "s", "name": "Supply", "content": "The treatment in this direction-specific reduction."},
+    {"key": "p", "name": "Price", "content": "The outcome in this direction-specific reduction."}
+  ],
+  "arrows": [
+    {"source": "z", "target": "s", "coefficient": "yield_to_supply", "because": "Figure 7.10 and its prose make Yield per Acre directly affect Supply."},
+    {"source": "d", "target": "p", "coefficient": "demand_to_price", "because": "Figure 7.10 makes Demand directly affect Price."},
+    {"source": "d", "target": "s", "coefficient": "demand_to_supply", "because": "The source explicitly replaces Demand-to-Price-to-Supply by this reduced-form arrow."},
+    {"source": "s", "target": "p", "coefficient": "supply_to_price", "because": "This directional reduction retains the Supply-to-Price causal coefficient."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:c3893f8908cfeb09",
+    "ta-book-of-why-2018:4e5792f93b522c46",
+    "ta-book-of-why-2018:7528d578970d1f83",
+    "ta-book-of-why-2018:01f2d151899becac"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0263"]
+}

@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "gender",
+    "to" : "department"
+  }, {
+    "from" : "department",
+    "to" : "outcome"
+  }, {
+    "from" : "gender",
+    "to" : "outcome"
+  } ],
+  "id" : "berkeley-admissions-simple",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "berkeley-admissions-simple.json"
+  },
+  "variables" : [ {
+    "id" : "gender",
+    "kind" : "observed",
+    "name" : "Gender"
+  }, {
+    "id" : "department",
+    "kind" : "observed",
+    "name" : "Department"
+  }, {
+    "id" : "outcome",
+    "kind" : "observed",
+    "name" : "Outcome"
+  } ]
+}

@@ -1,0 +1,550 @@
+{
+  "counterfactual-enumeration": {
+    "agreements": 2,
+    "checked": 2
+  },
+  "discrepancies": [],
+  "fixtures": [
+    {
+      "counterfactual-oracle": null,
+      "example-id": "airport-bag-posterior",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "algebra-for-all-mediation",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "alice-education-salary-counterfactual",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "basic-confounding-backdoor",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "berkeley-admissions-kruskal",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "berkeley-admissions-simple",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "berksons-paradox",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "birth-weight-paradox",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "burks-nature-nurture",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "cholestyramine-noncompliance",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": false
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "climate-change-probabilities-of-causation",
+      "networkx-checked": 3,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "daisy-house-training",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "deconfounding-game-1",
+      "networkx-checked": 3,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "deconfounding-game-2",
+      "networkx-checked": 16,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "deconfounding-game-3",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": false
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "deconfounding-game-4",
+      "networkx-checked": 6,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "deconfounding-game-5",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "fertilizer-improper-control",
+      "networkx-checked": 10,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "fertilizer-randomized",
+      "networkx-checked": 21,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "fertilizer-target-intervention",
+      "networkx-checked": 15,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": {
+        "answer": true,
+        "method": "deterministic-scm"
+      },
+      "example-id": "firing-squad",
+      "networkx-checked": 4,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "forbes-smoking-adult-asthma",
+      "networkx-checked": 14,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "freedman-child-age-fork",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "generic-frontdoor",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "generic-linear-instrumental-variable",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": false
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "inheritance-galton-board",
+      "networkx-checked": 6,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "inheritance-genetic",
+      "networkx-checked": 27,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "john-snow-before-instrument",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": false
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "john-snow-instrumental-variable",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": false
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "jtpa-job-training",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "linear-mediation-path-diagram",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "lords-paradox-wainer-brown",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "lords-paradox",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "mendelian-randomization-hdl",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "monty-hall-fake-a-deal",
+      "networkx-checked": 2,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "monty-hall-make-a-deal",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "new-napkin-problem",
+      "networkx-checked": 3,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "nonlinear-threshold-mediation",
+      "networkx-checked": 2,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "scurvy-vitamin-c-mediator",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "scurvy-wrong-acidity-mediator",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "simpsons-paradox-drug-blood-pressure",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "simpsons-paradox-drug-gender",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "simpsons-paradox-exercise-age-cholesterol",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "smoking-gene-two-readings",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "smoking-tar-cancer-frontdoor",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "tourniquet-selection-mediation",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "transport-arkansas-target",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "transport-boston-car-ownership",
+      "networkx-checked": 9,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "transport-honolulu-outcome",
+      "networkx-checked": 6,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "transport-los-angeles-age",
+      "networkx-checked": 5,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "transport-san-francisco-clicks",
+      "networkx-checked": 3,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "transport-toronto-randomized-clicks",
+      "networkx-checked": 6,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "vaccination",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": {
+        "answer": false,
+        "method": "deterministic-scm"
+      },
+      "example-id": "vacuuming-causal-explanation",
+      "networkx-checked": 4,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "walking-age-mortality",
+      "networkx-checked": 0,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "wermuth-cox-sequential-treatment",
+      "networkx-checked": 3,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "wright-guinea-pig-coat-color",
+      "networkx-checked": 156,
+      "networkx-disagreements": [],
+      "y0": null
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "wright-price-to-supply-reduced-form",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "wright-puppy-birth-weight",
+      "networkx-checked": 6,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    },
+    {
+      "counterfactual-oracle": null,
+      "example-id": "wright-supply-to-price-reduced-form",
+      "networkx-checked": 1,
+      "networkx-disagreements": [],
+      "y0": {
+        "identifiable?": true
+      }
+    }
+  ],
+  "networkx": {
+    "agreements": 350,
+    "checked": 350
+  },
+  "tool-versions": {
+    "networkx": "3.6.1",
+    "python": "3.12.3",
+    "y0": "0.2.11"
+  },
+  "y0": {
+    "agreements": 51,
+    "checked": 51
+  }
+}

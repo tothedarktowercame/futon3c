@@ -1,0 +1,31 @@
+{
+  "example_id": "deconfounding-game-4",
+  "title": "Deconfounding Game 4: M-bias",
+  "topology_basis": "printed_diagram",
+  "content": "Smoking and lung disease are unconfounded in the M-graph until seat-belt usage is conditioned upon. Seat-belt usage is a collider reflecting two distinct attitude families, so adjustment opens rather than closes the noncausal path.",
+  "variables": [
+    {"key": "a", "name": "Societal-Norm Attitudes (A)", "content": "Attitudes that influence both smoking and seat-belt use.", "observed": false},
+    {"key": "x", "name": "Smoking (X)", "content": "The proposed exposure."},
+    {"key": "b", "name": "Seat-Belt Usage (B)", "content": "An observed collider influenced by both attitude families."},
+    {"key": "c", "name": "Safety and Health Attitudes (C)", "content": "Attitudes and measures influencing seat-belt use and lung disease.", "observed": false},
+    {"key": "y", "name": "Lung Disease (Y)", "content": "The outcome; this simplified graph contains no causal path from X."}
+  ],
+  "arrows": [
+    {"source": "a", "target": "x", "because": "Societal-norm attitudes can influence smoking behavior."},
+    {"source": "a", "target": "b", "because": "The same attitudes can influence seat-belt usage."},
+    {"source": "c", "target": "b", "because": "Safety and health attitudes also influence seat-belt usage."},
+    {"source": "c", "target": "y", "because": "Some health-related attitudes or traits affect susceptibility to lung disease."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:c59dd4670b02b5f7",
+    "ta-book-of-why-2018:a860e83f907544de",
+    "ta-book-of-why-2018:5330293c117c6225",
+    "ta-book-of-why-2018:5e8df4462b2e3b0d",
+    "ta-book-of-why-2018:af4f52a92cb9fb28",
+    "ta-book-of-why-2018:9df5ffc535ae8926"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0173",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0174"
+  ]
+}

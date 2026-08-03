@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "treatment",
+    "to" : "mediator"
+  }, {
+    "from" : "mediator",
+    "to" : "outcome"
+  }, {
+    "from" : "treatment",
+    "to" : "outcome"
+  } ],
+  "id" : "linear-mediation-path-diagram",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "numeric edge coefficients are graph-only" ],
+    "source-file" : "linear-mediation-path-diagram.json"
+  },
+  "variables" : [ {
+    "id" : "treatment",
+    "kind" : "observed",
+    "name" : "Treatment"
+  }, {
+    "id" : "mediator",
+    "kind" : "observed",
+    "name" : "Mediator"
+  }, {
+    "id" : "outcome",
+    "kind" : "observed",
+    "name" : "Outcome"
+  } ]
+}

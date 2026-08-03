@@ -1,0 +1,287 @@
+{
+  "example_id": "wright-guinea-pig-coat-color",
+  "title": "Figure 2.7: Wright's guinea-pig coat-color path diagram",
+  "topology_basis": "printed_diagram",
+  "content": "Sewall Wright's first path diagram. Parental heredity and chance select gametes; paired parental gametes determine each offspring's heredity; developmental, environmental, and hereditary factors determine the displayed coat-color phenotypes. The two offspring share their post-birth environmental factor but have separate developmental histories.",
+  "variables": [
+    {
+      "key": "sire-d",
+      "name": "Sire D",
+      "content": "The sire's developmental factors before birth."
+    },
+    {
+      "key": "sire-e",
+      "name": "Sire E",
+      "content": "The sire's post-birth environmental factors."
+    },
+    {
+      "key": "sire-h",
+      "name": "Sire H''",
+      "content": "The sire's combined hereditary factors."
+    },
+    {
+      "key": "sire-phenotype",
+      "name": "Sire phenotype",
+      "content": "The sire's displayed coat-color phenotype."
+    },
+    {
+      "key": "chance",
+      "name": "Chance",
+      "content": "The displayed random component in the selection of parental gametes."
+    },
+    {
+      "key": "sire-g-o",
+      "name": "Sire gamete for O (G)",
+      "content": "The sire's genetic contribution to offspring O."
+    },
+    {
+      "key": "sire-g-o-prime",
+      "name": "Sire gamete for O' (G')",
+      "content": "The sire's separate genetic contribution to offspring O'."
+    },
+    {
+      "key": "dam-d",
+      "name": "Dam D",
+      "content": "The dam's developmental factors before birth."
+    },
+    {
+      "key": "dam-e",
+      "name": "Dam E",
+      "content": "The dam's post-birth environmental factors."
+    },
+    {
+      "key": "dam-h",
+      "name": "Dam H'''",
+      "content": "The dam's combined hereditary factors."
+    },
+    {
+      "key": "dam-phenotype",
+      "name": "Dam phenotype",
+      "content": "The dam's displayed coat-color phenotype."
+    },
+    {
+      "key": "dam-g-o",
+      "name": "Dam gamete for O (G'')",
+      "content": "The dam's genetic contribution to offspring O."
+    },
+    {
+      "key": "dam-g-o-prime",
+      "name": "Dam gamete for O' (G''')",
+      "content": "The dam's separate genetic contribution to offspring O'."
+    },
+    {
+      "key": "offspring-o-h",
+      "name": "Offspring O heredity (H)",
+      "content": "The combined hereditary factors of offspring O."
+    },
+    {
+      "key": "offspring-o-prime-h",
+      "name": "Offspring O' heredity (H')",
+      "content": "The combined hereditary factors of offspring O'."
+    },
+    {
+      "key": "offspring-o-d",
+      "name": "Offspring O D",
+      "content": "The developmental history specific to offspring O."
+    },
+    {
+      "key": "offspring-o-prime-d",
+      "name": "Offspring O' D",
+      "content": "The distinct developmental history specific to offspring O'."
+    },
+    {
+      "key": "offspring-shared-e",
+      "name": "Shared offspring E",
+      "content": "The post-birth environmental factor shared by offspring O and O'."
+    },
+    {
+      "key": "offspring-o",
+      "name": "Offspring O",
+      "content": "The displayed coat-color phenotype of offspring O."
+    },
+    {
+      "key": "offspring-o-prime",
+      "name": "Offspring O'",
+      "content": "The displayed coat-color phenotype of offspring O'."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "sire-d",
+      "target": "sire-phenotype",
+      "coefficient": "d",
+      "because": "Figure 2.7 shows the sire's developmental factors entering his phenotype with coefficient d."
+    },
+    {
+      "source": "sire-e",
+      "target": "sire-phenotype",
+      "coefficient": "e",
+      "because": "Figure 2.7 shows the sire's environmental factors entering his phenotype with coefficient e."
+    },
+    {
+      "source": "sire-h",
+      "target": "sire-phenotype",
+      "coefficient": "h",
+      "because": "Figure 2.7 shows the sire's heredity entering his phenotype with coefficient h."
+    },
+    {
+      "source": "sire-h",
+      "target": "sire-g-o",
+      "coefficient": "b",
+      "because": "Figure 2.7 shows the sire's heredity determining his gamete for offspring O with coefficient b."
+    },
+    {
+      "source": "sire-h",
+      "target": "sire-g-o-prime",
+      "coefficient": "b",
+      "because": "Figure 2.7 shows the sire's heredity determining his separate gamete for offspring O' with coefficient b."
+    },
+    {
+      "source": "chance",
+      "target": "sire-g-o",
+      "coefficient": "c",
+      "because": "Figure 2.7 shows chance entering selection of the sire's gamete for offspring O with coefficient c."
+    },
+    {
+      "source": "chance",
+      "target": "sire-g-o-prime",
+      "coefficient": "c",
+      "because": "Figure 2.7 shows chance entering selection of the sire's gamete for offspring O' with coefficient c."
+    },
+    {
+      "source": "dam-d",
+      "target": "dam-phenotype",
+      "coefficient": "d",
+      "because": "Figure 2.7 shows the dam's developmental factors entering her phenotype with coefficient d."
+    },
+    {
+      "source": "dam-e",
+      "target": "dam-phenotype",
+      "coefficient": "e",
+      "because": "Figure 2.7 shows the dam's environmental factors entering her phenotype with coefficient e."
+    },
+    {
+      "source": "dam-h",
+      "target": "dam-phenotype",
+      "coefficient": "h",
+      "because": "Figure 2.7 shows the dam's heredity entering her phenotype with coefficient h."
+    },
+    {
+      "source": "dam-h",
+      "target": "dam-g-o",
+      "coefficient": "b",
+      "because": "Figure 2.7 shows the dam's heredity determining her gamete for offspring O with coefficient b."
+    },
+    {
+      "source": "dam-h",
+      "target": "dam-g-o-prime",
+      "coefficient": "b",
+      "because": "Figure 2.7 shows the dam's heredity determining her separate gamete for offspring O' with coefficient b."
+    },
+    {
+      "source": "chance",
+      "target": "dam-g-o",
+      "coefficient": "c",
+      "because": "Figure 2.7 shows chance entering selection of the dam's gamete for offspring O with coefficient c."
+    },
+    {
+      "source": "chance",
+      "target": "dam-g-o-prime",
+      "coefficient": "c",
+      "because": "Figure 2.7 shows chance entering selection of the dam's gamete for offspring O' with coefficient c."
+    },
+    {
+      "source": "sire-g-o",
+      "target": "offspring-o-h",
+      "coefficient": "a",
+      "because": "Figure 2.7 combines the sire's gamete for O into O's heredity with coefficient a."
+    },
+    {
+      "source": "dam-g-o",
+      "target": "offspring-o-h",
+      "coefficient": "a",
+      "because": "Figure 2.7 combines the dam's gamete for O into O's heredity with coefficient a."
+    },
+    {
+      "source": "sire-g-o-prime",
+      "target": "offspring-o-prime-h",
+      "coefficient": "a",
+      "because": "Figure 2.7 combines the sire's gamete for O' into O-prime's heredity with coefficient a."
+    },
+    {
+      "source": "dam-g-o-prime",
+      "target": "offspring-o-prime-h",
+      "coefficient": "a",
+      "because": "Figure 2.7 combines the dam's gamete for O' into O-prime's heredity with coefficient a."
+    },
+    {
+      "source": "offspring-o-h",
+      "target": "offspring-o",
+      "coefficient": "h",
+      "because": "Figure 2.7 shows O-prime's heredity entering O-prime's phenotype with coefficient h."
+    },
+    {
+      "source": "offspring-o-prime-h",
+      "target": "offspring-o-prime",
+      "coefficient": "h",
+      "because": "Figure 2.7 shows O's heredity entering O's phenotype with coefficient h."
+    },
+    {
+      "source": "offspring-o-d",
+      "target": "offspring-o",
+      "coefficient": "d",
+      "because": "Figure 2.7 shows O-prime's distinct developmental factors entering O-prime's phenotype with coefficient d."
+    },
+    {
+      "source": "offspring-o-prime-d",
+      "target": "offspring-o-prime",
+      "coefficient": "d",
+      "because": "Figure 2.7 shows O's distinct developmental factors entering O's phenotype with coefficient d."
+    },
+    {
+      "source": "offspring-shared-e",
+      "target": "offspring-o",
+      "coefficient": "e",
+      "because": "Figure 2.7 shows the shared offspring environment entering O-prime's phenotype with coefficient e."
+    },
+    {
+      "source": "offspring-shared-e",
+      "target": "offspring-o-prime",
+      "coefficient": "e",
+      "because": "Figure 2.7 shows the shared offspring environment entering O's phenotype with coefficient e."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:24ee1092ecd26c7c",
+    "ta-book-of-why-2018:882b67d265aefac8",
+    "ta-book-of-why-2018:f351cb9f7b5eb536",
+    "ta-book-of-why-2018:0d156cdd728aa5c5",
+    "ta-book-of-why-2018:496094948a44f633",
+    "ta-book-of-why-2018:4b1543c321b70220",
+    "ta-book-of-why-2018:fd8d7c734570ee4c",
+    "ta-book-of-why-2018:1746ab19c60575bd",
+    "ta-book-of-why-2018:f4f7984cefeff961",
+    "ta-book-of-why-2018:f3d02b8f2c044327",
+    "ta-book-of-why-2018:71c01495df0698c4",
+    "ta-book-of-why-2018:300accbde86fab8d",
+    "ta-book-of-why-2018:edc68ad0964b0958",
+    "ta-book-of-why-2018:a8c83dee476c5961",
+    "ta-book-of-why-2018:97b497734112ce4c",
+    "ta-book-of-why-2018:0baf7948c1ed3397",
+    "ta-book-of-why-2018:1ae0e954d7ae3c58",
+    "ta-book-of-why-2018:80dbdd39a086c25f",
+    "ta-book-of-why-2018:41422470e1ed1c9e",
+    "ta-book-of-why-2018:460bf576cd106588",
+    "ta-book-of-why-2018:f1302e1ce7a5ac60",
+    "ta-book-of-why-2018:5777b76dd7ef53e2",
+    "ta-book-of-why-2018:686749e56c2613ae",
+    "ta-book-of-why-2018:4caa206edf56a723"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0085",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0086",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0087",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0088",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0089"
+  ]
+}

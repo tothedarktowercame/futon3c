@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "z",
+    "to" : "x"
+  }, {
+    "from" : "z",
+    "to" : "y"
+  }, {
+    "from" : "x",
+    "to" : "y"
+  } ],
+  "id" : "basic-confounding-backdoor",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "basic-confounding-backdoor.json"
+  },
+  "variables" : [ {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Treatment or Cause (X)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Outcome (Y)"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Confounder (Z)"
+  } ]
+}

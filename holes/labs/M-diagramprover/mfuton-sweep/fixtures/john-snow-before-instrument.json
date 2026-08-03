@@ -1,0 +1,23 @@
+{
+  "example_id": "john-snow-before-instrument",
+  "title": "John Snow cholera graph before the instrument",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 7.7 shows why the observed Water Purity-Cholera association is confounded before Water Company is introduced: hidden miasma, poverty, and related conditions cause both water purity and cholera.",
+  "variables": [
+    {"key": "u", "name": "Miasma, Poverty, etc.", "content": "The unobserved common causes of water purity and cholera.", "observed": false},
+    {"key": "x", "name": "Water Purity", "content": "The treatment whose causal effect is sought."},
+    {"key": "y", "name": "Cholera", "content": "The health outcome."}
+  ],
+  "arrows": [
+    {"source": "u", "target": "x", "because": "Figure 7.7 makes hidden local conditions a cause of water purity."},
+    {"source": "u", "target": "y", "because": "Figure 7.7 makes hidden local conditions a cause of cholera."},
+    {"source": "x", "target": "y", "because": "Figure 7.7 posits the causal effect of water purity on cholera."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:8caca6f691136ecb",
+    "ta-book-of-why-2018:d91f6d359fa2b2f0",
+    "ta-book-of-why-2018:18dc9731108f57f3",
+    "ta-book-of-why-2018:625989f1cdcc0c55"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0259"]
+}

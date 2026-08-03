@@ -1,0 +1,46 @@
+{
+  "example_id": "forbes-smoking-adult-asthma",
+  "title": "Andrew Forbes's smoking and adult-asthma model",
+  "topology_basis": "printed_diagram",
+  "content": "Forbes's full model embeds Deconfounding Game 5 and adds parental asthma, chronic bronchitis, sex, and socioeconomic status. The observed set A, B, E, F, and G is sufficient for estimating the effect of smoking on adult asthma.",
+  "variables": [
+    {"key": "a", "name": "Parental Smoking (A)", "content": "Parental smoking affects childhood asthma and later smoking."},
+    {"key": "b", "name": "Childhood Asthma (B)", "content": "Childhood asthma affects later smoking."},
+    {"key": "c", "name": "Asthma Predisposition (C)", "content": "An unobservable asthma predisposition.", "observed": false},
+    {"key": "d", "name": "Parental Asthma (D)", "content": "Parental asthma affects parental smoking and inherited predisposition."},
+    {"key": "e", "name": "Chronic Bronchitis (E)", "content": "Chronic bronchitis affects smoking and adult asthma."},
+    {"key": "f", "name": "Sex (F)", "content": "Sex affects predisposition, smoking, and adult asthma."},
+    {"key": "g", "name": "Socioeconomic Status (G)", "content": "Socioeconomic status affects smoking and adult asthma."},
+    {"key": "x", "name": "Smoking (X)", "content": "The exposure whose causal effect is sought."},
+    {"key": "y", "name": "Adult Asthma (Y)", "content": "The outcome."}
+  ],
+  "arrows": [
+    {"source": "a", "target": "x", "because": "Game 5 relationship embedded unchanged."},
+    {"source": "a", "target": "b", "because": "Game 5 relationship embedded unchanged."},
+    {"source": "c", "target": "b", "because": "Game 5 relationship embedded unchanged."},
+    {"source": "c", "target": "y", "because": "Game 5 relationship embedded unchanged."},
+    {"source": "b", "target": "x", "because": "Game 5 relationship embedded unchanged."},
+    {"source": "x", "target": "y", "because": "The proposed smoking effect."},
+    {"source": "d", "target": "a", "because": "The rendered graph links parental asthma to parental smoking."},
+    {"source": "d", "target": "c", "because": "The rendered graph links parental asthma to predisposition."},
+    {"source": "c", "target": "e", "because": "Predisposition affects chronic bronchitis."},
+    {"source": "e", "target": "x", "because": "Chronic bronchitis affects smoking."},
+    {"source": "e", "target": "y", "because": "Chronic bronchitis affects adult asthma."},
+    {"source": "f", "target": "c", "because": "Sex affects asthma predisposition."},
+    {"source": "f", "target": "x", "because": "Sex affects smoking."},
+    {"source": "f", "target": "y", "because": "Sex affects adult asthma."},
+    {"source": "g", "target": "x", "because": "Socioeconomic status affects smoking."},
+    {"source": "g", "target": "y", "because": "Socioeconomic status affects adult asthma."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:d4e7978231c34b4b",
+    "ta-book-of-why-2018:6b2cdbfd3f716e47",
+    "ta-book-of-why-2018:b0e56e1b57800392",
+    "ta-book-of-why-2018:344dbc1699a066ee",
+    "ta-book-of-why-2018:cecedc674efcaf84"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0175",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0176"
+  ]
+}

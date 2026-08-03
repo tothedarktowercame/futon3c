@@ -1,0 +1,61 @@
+{
+  "example_id": "walking-age-mortality",
+  "title": "Walking, age, and mortality",
+  "topology_basis": "printed_diagram",
+  "content": "Pearl's Figure 4.2 models age as a confounder of the proposed effect of walking on mortality. The reported Honolulu study rates are source evidence, while the graph identifies age as an admissible back-door adjustment variable.",
+  "variables": [
+    {
+      "key": "age",
+      "name": "Age",
+      "content": "Age influences both walking intensity and mortality risk."
+    },
+    {
+      "key": "walking",
+      "name": "Walking",
+      "content": "Daily walking intensity is the proposed cause or treatment."
+    },
+    {
+      "key": "mortality",
+      "name": "Mortality",
+      "content": "Mortality over the study period is the outcome."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "age",
+      "target": "walking",
+      "because": "The source explains that younger men may be more willing to walk vigorously."
+    },
+    {
+      "source": "age",
+      "target": "mortality",
+      "because": "The source explains that younger men are also less likely to die."
+    },
+    {
+      "source": "walking",
+      "target": "mortality",
+      "because": "This is the proposed causal effect investigated by the study."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:995730d6d1b10673",
+    "ta-book-of-why-2018:dd4f1198ad711ff7",
+    "ta-book-of-why-2018:b490591a65f74cab",
+    "ta-book-of-why-2018:2d59a7642f20a25e",
+    "ta-book-of-why-2018:49cac241350a0084",
+    "ta-book-of-why-2018:63a90c890af2ee05",
+    "ta-book-of-why-2018:a90b5e2ccec7aad2",
+    "ta-book-of-why-2018:a0c99c31ff2e94e2",
+    "ta-book-of-why-2018:32de0fe4af887323",
+    "ta-book-of-why-2018:47a1abf4d884fe95",
+    "ta-book-of-why-2018:17b0a760248693d6",
+    "ta-book-of-why-2018:fb42dd20218b854f",
+    "ta-book-of-why-2018:ef30b995c7503337",
+    "ta-book-of-why-2018:ad64777f2b9e3bdc"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0153",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0154",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0155"
+  ]
+}

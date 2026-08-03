@@ -1,0 +1,63 @@
+{
+  "arrows" : [ {
+    "from" : "talent-0",
+    "to" : "talent-1"
+  }, {
+    "from" : "talent-1",
+    "to" : "talent-2"
+  }, {
+    "from" : "talent-0",
+    "to" : "success-0"
+  }, {
+    "from" : "talent-1",
+    "to" : "success-1"
+  }, {
+    "from" : "luck-1",
+    "to" : "success-1"
+  }, {
+    "from" : "talent-2",
+    "to" : "success-2"
+  }, {
+    "from" : "luck-2",
+    "to" : "success-2"
+  } ],
+  "id" : "inheritance-genetic",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "inheritance-genetic.json"
+  },
+  "variables" : [ {
+    "id" : "talent-0",
+    "kind" : "observed",
+    "name" : "Talent 0"
+  }, {
+    "id" : "success-0",
+    "kind" : "observed",
+    "name" : "Success 0"
+  }, {
+    "id" : "talent-1",
+    "kind" : "observed",
+    "name" : "Talent 1"
+  }, {
+    "id" : "luck-1",
+    "kind" : "observed",
+    "name" : "Luck 1"
+  }, {
+    "id" : "success-1",
+    "kind" : "observed",
+    "name" : "Success 1"
+  }, {
+    "id" : "talent-2",
+    "kind" : "observed",
+    "name" : "Talent 2"
+  }, {
+    "id" : "luck-2",
+    "kind" : "observed",
+    "name" : "Luck 2"
+  }, {
+    "id" : "success-2",
+    "kind" : "observed",
+    "name" : "Success 2"
+  } ]
+}

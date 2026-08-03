@@ -1,0 +1,5140 @@
+{
+  "agreement-counts": {
+    "counterfactual-enumeration": {
+      "agreements": 2,
+      "checked": 2
+    },
+    "dagitty": {
+      "agreements": 350,
+      "checked": 350
+    },
+    "networkx": {
+      "agreements": 350,
+      "checked": 350
+    },
+    "y0": {
+      "agreements": 51,
+      "checked": 51
+    }
+  },
+  "discrepancies": [],
+  "dispositions": {
+    "converted-fully": 40,
+    "graph-only": 20,
+    "skipped": 0
+  },
+  "fixture-count": 60,
+  "fixtures": [
+    {
+      "arrow-count": 2,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "airport-bag-posterior",
+      "identification": {
+        "adjustment-sets": [
+          [],
+          [
+            "elapsed-time"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "bag-on-plane",
+          "y": "elapsed-time"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "bag-on-carousel",
+        "treatment": "bag-on-plane",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "non-Boolean value domains are graph-only: categorical; finite probability tables are preserved only in the frozen source",
+      "round-trip?": true,
+      "source-file": "airport-bag-posterior.json",
+      "title": "Where Is My Bag? posterior inference",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "algebra-for-all-mediation",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "learning",
+        "treatment": "algebra_for_all",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "algebra-for-all-mediation.json",
+      "title": "Algebra for All mediation",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "alice-education-salary-counterfactual",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "salary",
+        "treatment": "education",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "non-Boolean value domains are graph-only: rational; affine equations are outside the Boolean SCM evaluator; numeric edge coefficients are graph-only",
+      "round-trip?": true,
+      "source-file": "alice-education-salary-counterfactual.json",
+      "title": "Alice's education and salary counterfactual",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "basic-confounding-backdoor",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "basic-confounding-backdoor.json",
+      "title": "The most basic version of confounding",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "berkeley-admissions-kruskal",
+      "identification": {
+        "adjustment-sets": [
+          [],
+          [
+            "state"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "gender",
+          "y": "state"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "outcome",
+        "treatment": "gender",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "berkeley-admissions-kruskal.json",
+      "title": "Berkeley admissions paradox, Kruskal's model",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "berkeley-admissions-simple",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "outcome",
+        "treatment": "gender",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "berkeley-admissions-simple.json",
+      "title": "Berkeley admissions paradox, simple model",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 2,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "berksons-paradox",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "d1",
+          "y": "d2"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "berksons-paradox.json",
+      "title": "Berkson's paradox",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "birth-weight-paradox",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "d",
+          "y": "s"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "birth-weight-paradox.json",
+      "title": "Birth-weight paradox",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "burks-nature-nurture",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "parental",
+          "y": "x"
+        }
+      ],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "child",
+        "treatment": "parental",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "burks-nature-nurture.json",
+      "title": "Barbara Burks's nature-versus-nurture graph",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "cholestyramine-noncompliance",
+      "identification": {
+        "identifiable?": false,
+        "method": "refusal",
+        "proof-status": "proved-impossible",
+        "reason": "not-identifiable"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "u",
+          "y": "z"
+        }
+      ],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "numeric observational distributions are not evaluated",
+      "round-trip?": true,
+      "source-file": "cholestyramine-noncompliance.json",
+      "title": "Cholestyramine randomized trial with noncompliance",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "climate-change-probabilities-of-causation",
+      "identification": {
+        "adjustment-sets": [
+          [],
+          [
+            "natural"
+          ],
+          [
+            "variability"
+          ],
+          [
+            "natural",
+            "variability"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "greenhouse",
+          "y": "natural"
+        },
+        {
+          "given": [],
+          "x": "greenhouse",
+          "y": "variability"
+        },
+        {
+          "given": [],
+          "x": "natural",
+          "y": "variability"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "response",
+        "treatment": "greenhouse",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "climate-change-probabilities-of-causation.json",
+      "title": "Climate change probabilities of necessity and sufficiency",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "daisy-house-training",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "training",
+        "treatment": "pets",
+        "why": "unique observed DAG source and sink"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "daisy-house-training.json",
+      "title": "Daisy's house-training mediation model",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "deconfounding-game-1",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [
+            "abnormality"
+          ],
+          "x": "future_miscarriage",
+          "y": "prior_miscarriage"
+        },
+        {
+          "given": [
+            "abnormality"
+          ],
+          "x": "future_miscarriage",
+          "y": "smoking"
+        },
+        {
+          "given": [
+            "abnormality"
+          ],
+          "x": "prior_miscarriage",
+          "y": "smoking"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "deconfounding-game-1.json",
+      "title": "Deconfounding Game 1: smoking and miscarriage",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 7,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "deconfounding-game-2",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [
+            "prior_abnormality"
+          ],
+          "x": "current_abnormality",
+          "y": "prior_miscarriage"
+        },
+        {
+          "given": [
+            "current_smoking"
+          ],
+          "x": "current_abnormality",
+          "y": "prior_smoking"
+        },
+        {
+          "given": [
+            "current_abnormality"
+          ],
+          "x": "current_smoking",
+          "y": "future_miscarriage"
+        },
+        {
+          "given": [],
+          "x": "current_smoking",
+          "y": "physiology"
+        },
+        {
+          "given": [
+            "prior_smoking"
+          ],
+          "x": "current_smoking",
+          "y": "prior_abnormality"
+        },
+        {
+          "given": [
+            "prior_abnormality"
+          ],
+          "x": "current_smoking",
+          "y": "prior_miscarriage"
+        },
+        {
+          "given": [
+            "prior_smoking"
+          ],
+          "x": "current_smoking",
+          "y": "prior_miscarriage"
+        },
+        {
+          "given": [
+            "current_abnormality"
+          ],
+          "x": "future_miscarriage",
+          "y": "physiology"
+        },
+        {
+          "given": [
+            "current_abnormality"
+          ],
+          "x": "future_miscarriage",
+          "y": "prior_abnormality"
+        },
+        {
+          "given": [
+            "current_abnormality"
+          ],
+          "x": "future_miscarriage",
+          "y": "prior_miscarriage"
+        },
+        {
+          "given": [
+            "prior_abnormality"
+          ],
+          "x": "future_miscarriage",
+          "y": "prior_miscarriage"
+        },
+        {
+          "given": [
+            "current_abnormality"
+          ],
+          "x": "future_miscarriage",
+          "y": "prior_smoking"
+        },
+        {
+          "given": [
+            "current_smoking"
+          ],
+          "x": "future_miscarriage",
+          "y": "prior_smoking"
+        },
+        {
+          "given": [
+            "prior_abnormality"
+          ],
+          "x": "physiology",
+          "y": "prior_miscarriage"
+        },
+        {
+          "given": [],
+          "x": "physiology",
+          "y": "prior_smoking"
+        },
+        {
+          "given": [
+            "prior_abnormality"
+          ],
+          "x": "prior_miscarriage",
+          "y": "prior_smoking"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "deconfounding-game-2.json",
+      "title": "Deconfounding Game 2: smoking across two pregnancies",
+      "variable-count": 7
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "deconfounding-game-3",
+      "identification": {
+        "identifiable?": false,
+        "method": "refusal",
+        "proof-status": "proved-impossible",
+        "reason": "not-identifiable"
+      },
+      "implied-independencies": [],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "deconfounding-game-3.json",
+      "title": "Deconfounding Game 3: an unobserved confounder and its proxy",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "deconfounding-game-4",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "a",
+          "y": "c"
+        },
+        {
+          "given": [],
+          "x": "a",
+          "y": "y"
+        },
+        {
+          "given": [
+            "a"
+          ],
+          "x": "b",
+          "y": "x"
+        },
+        {
+          "given": [
+            "c"
+          ],
+          "x": "b",
+          "y": "y"
+        },
+        {
+          "given": [],
+          "x": "c",
+          "y": "x"
+        },
+        {
+          "given": [],
+          "x": "x",
+          "y": "y"
+        }
+      ],
+      "latent-count": 2,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "deconfounding-game-4.json",
+      "title": "Deconfounding Game 4: M-bias",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 6,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "deconfounding-game-5",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "a",
+            "b"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "a",
+          "y": "c"
+        }
+      ],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "deconfounding-game-5.json",
+      "title": "Deconfounding Game 5: extended M-bias",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 11,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "fertilizer-improper-control",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "soil-fertility",
+            "texture"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "microflora"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "other"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "other"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "other",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "other",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "soil-fertility",
+          "y": "texture"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "yield",
+        "treatment": "fertilizer",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "non-Boolean value domains are graph-only: categorical",
+      "round-trip?": true,
+      "source-file": "fertilizer-improper-control.json",
+      "title": "Fertilizer Model 1: improperly controlled experiment",
+      "variable-count": 7
+    },
+    {
+      "arrow-count": 7,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "fertilizer-randomized",
+      "identification": {
+        "adjustment-sets": [
+          [],
+          [
+            "drainage"
+          ],
+          [
+            "microflora"
+          ],
+          [
+            "drainage",
+            "microflora"
+          ],
+          [
+            "other"
+          ],
+          [
+            "drainage",
+            "other"
+          ],
+          [
+            "microflora",
+            "other"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other"
+          ],
+          [
+            "random-card"
+          ],
+          [
+            "drainage",
+            "random-card"
+          ],
+          [
+            "microflora",
+            "random-card"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "random-card"
+          ],
+          [
+            "other",
+            "random-card"
+          ],
+          [
+            "drainage",
+            "other",
+            "random-card"
+          ],
+          [
+            "microflora",
+            "other",
+            "random-card"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "random-card"
+          ],
+          [
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "soil-fertility"
+          ],
+          [
+            "microflora",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "soil-fertility"
+          ],
+          [
+            "other",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "other",
+            "soil-fertility"
+          ],
+          [
+            "microflora",
+            "other",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "soil-fertility"
+          ],
+          [
+            "random-card",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "random-card",
+            "soil-fertility"
+          ],
+          [
+            "microflora",
+            "random-card",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "random-card",
+            "soil-fertility"
+          ],
+          [
+            "other",
+            "random-card",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "other",
+            "random-card",
+            "soil-fertility"
+          ],
+          [
+            "microflora",
+            "other",
+            "random-card",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "random-card",
+            "soil-fertility"
+          ],
+          [
+            "texture"
+          ],
+          [
+            "drainage",
+            "texture"
+          ],
+          [
+            "microflora",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "texture"
+          ],
+          [
+            "other",
+            "texture"
+          ],
+          [
+            "drainage",
+            "other",
+            "texture"
+          ],
+          [
+            "microflora",
+            "other",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "texture"
+          ],
+          [
+            "random-card",
+            "texture"
+          ],
+          [
+            "drainage",
+            "random-card",
+            "texture"
+          ],
+          [
+            "microflora",
+            "random-card",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "random-card",
+            "texture"
+          ],
+          [
+            "other",
+            "random-card",
+            "texture"
+          ],
+          [
+            "drainage",
+            "other",
+            "random-card",
+            "texture"
+          ],
+          [
+            "microflora",
+            "other",
+            "random-card",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "random-card",
+            "texture"
+          ],
+          [
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "microflora",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "other",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "other",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "microflora",
+            "other",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "random-card",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "random-card",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "microflora",
+            "random-card",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "random-card",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "other",
+            "random-card",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "other",
+            "random-card",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "microflora",
+            "other",
+            "random-card",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "random-card",
+            "soil-fertility",
+            "texture"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "fertilizer"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "microflora"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "other"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "random-card"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "fertilizer",
+          "y": "microflora"
+        },
+        {
+          "given": [],
+          "x": "fertilizer",
+          "y": "other"
+        },
+        {
+          "given": [],
+          "x": "fertilizer",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "fertilizer",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "other"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "random-card"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "other",
+          "y": "random-card"
+        },
+        {
+          "given": [],
+          "x": "other",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "other",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "random-card",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "random-card",
+          "y": "texture"
+        },
+        {
+          "given": [
+            "fertilizer"
+          ],
+          "x": "random-card",
+          "y": "yield"
+        },
+        {
+          "given": [],
+          "x": "soil-fertility",
+          "y": "texture"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "yield",
+        "treatment": "fertilizer",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "non-Boolean value domains are graph-only: categorical",
+      "round-trip?": true,
+      "source-file": "fertilizer-randomized.json",
+      "title": "Fertilizer Model 3: randomized controlled trial",
+      "variable-count": 8
+    },
+    {
+      "arrow-count": 6,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "fertilizer-target-intervention",
+      "identification": {
+        "adjustment-sets": [
+          [],
+          [
+            "drainage"
+          ],
+          [
+            "microflora"
+          ],
+          [
+            "drainage",
+            "microflora"
+          ],
+          [
+            "other"
+          ],
+          [
+            "drainage",
+            "other"
+          ],
+          [
+            "microflora",
+            "other"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other"
+          ],
+          [
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "soil-fertility"
+          ],
+          [
+            "microflora",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "soil-fertility"
+          ],
+          [
+            "other",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "other",
+            "soil-fertility"
+          ],
+          [
+            "microflora",
+            "other",
+            "soil-fertility"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "soil-fertility"
+          ],
+          [
+            "texture"
+          ],
+          [
+            "drainage",
+            "texture"
+          ],
+          [
+            "microflora",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "texture"
+          ],
+          [
+            "other",
+            "texture"
+          ],
+          [
+            "drainage",
+            "other",
+            "texture"
+          ],
+          [
+            "microflora",
+            "other",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "texture"
+          ],
+          [
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "microflora",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "other",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "other",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "microflora",
+            "other",
+            "soil-fertility",
+            "texture"
+          ],
+          [
+            "drainage",
+            "microflora",
+            "other",
+            "soil-fertility",
+            "texture"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "fertilizer"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "microflora"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "other"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "drainage",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "fertilizer",
+          "y": "microflora"
+        },
+        {
+          "given": [],
+          "x": "fertilizer",
+          "y": "other"
+        },
+        {
+          "given": [],
+          "x": "fertilizer",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "fertilizer",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "other"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "microflora",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "other",
+          "y": "soil-fertility"
+        },
+        {
+          "given": [],
+          "x": "other",
+          "y": "texture"
+        },
+        {
+          "given": [],
+          "x": "soil-fertility",
+          "y": "texture"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "yield",
+        "treatment": "fertilizer",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "non-Boolean value domains are graph-only: categorical",
+      "round-trip?": true,
+      "source-file": "fertilizer-target-intervention.json",
+      "title": "Fertilizer Model 2: do(Fertilizer=1)",
+      "variable-count": 7
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": {
+        "engine": {
+          "abduction": {
+            "assignments": [
+              {
+                "court-order": true
+              }
+            ],
+            "consistent-count": 1,
+            "evidence": {
+              "death": true
+            },
+            "step": "abduction"
+          },
+          "action": {
+            "intervention": {
+              "soldier-a": false
+            },
+            "replaced-equations": [
+              "soldier-a"
+            ],
+            "step": "action"
+          },
+          "answer": true,
+          "method": "deterministic-scm",
+          "prediction": {
+            "all-agree?": true,
+            "outcome": "death",
+            "step": "prediction",
+            "worlds": [
+              {
+                "assignment": {
+                  "court-order": true
+                },
+                "value": true
+              }
+            ]
+          },
+          "query-type": "counterfactual"
+        },
+        "query": {
+          "evidence": {
+            "death": true
+          },
+          "intervention": {
+            "soldier-a": false
+          },
+          "outcome": "death",
+          "rob-expectation": "boolean_model_test.py: conclusion is true"
+        },
+        "rob-expected-value": true
+      },
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "firing-squad",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "captain"
+          ],
+          [
+            "captain",
+            "court-order"
+          ],
+          [
+            "soldier-b"
+          ],
+          [
+            "captain",
+            "soldier-b"
+          ],
+          [
+            "court-order",
+            "soldier-b"
+          ],
+          [
+            "captain",
+            "court-order",
+            "soldier-b"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "captain"
+          ],
+          "x": "court-order",
+          "y": "death"
+        },
+        {
+          "given": [
+            "captain"
+          ],
+          "x": "court-order",
+          "y": "soldier-a"
+        },
+        {
+          "given": [
+            "captain"
+          ],
+          "x": "court-order",
+          "y": "soldier-b"
+        },
+        {
+          "given": [
+            "captain"
+          ],
+          "x": "soldier-a",
+          "y": "soldier-b"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "death",
+        "treatment": "soldier-a",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph and complete fixed-grammar Boolean SCM converted",
+      "round-trip?": true,
+      "source-file": "firing-squad.json",
+      "title": "Firing-squad intervention and counterfactual",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 16,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "forbes-smoking-adult-asthma",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "a",
+            "b",
+            "e",
+            "f",
+            "g"
+          ],
+          [
+            "a",
+            "b",
+            "d",
+            "e",
+            "f",
+            "g"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "d"
+          ],
+          "x": "a",
+          "y": "c"
+        },
+        {
+          "given": [
+            "c"
+          ],
+          "x": "a",
+          "y": "e"
+        },
+        {
+          "given": [
+            "d"
+          ],
+          "x": "a",
+          "y": "e"
+        },
+        {
+          "given": [],
+          "x": "a",
+          "y": "f"
+        },
+        {
+          "given": [],
+          "x": "a",
+          "y": "g"
+        },
+        {
+          "given": [
+            "c"
+          ],
+          "x": "b",
+          "y": "e"
+        },
+        {
+          "given": [],
+          "x": "b",
+          "y": "g"
+        },
+        {
+          "given": [],
+          "x": "c",
+          "y": "g"
+        },
+        {
+          "given": [
+            "c"
+          ],
+          "x": "d",
+          "y": "e"
+        },
+        {
+          "given": [],
+          "x": "d",
+          "y": "f"
+        },
+        {
+          "given": [],
+          "x": "d",
+          "y": "g"
+        },
+        {
+          "given": [
+            "c"
+          ],
+          "x": "e",
+          "y": "f"
+        },
+        {
+          "given": [],
+          "x": "e",
+          "y": "g"
+        },
+        {
+          "given": [],
+          "x": "f",
+          "y": "g"
+        }
+      ],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "forbes-smoking-adult-asthma.json",
+      "title": "Andrew Forbes's smoking and adult-asthma model",
+      "variable-count": 9
+    },
+    {
+      "arrow-count": 2,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "freedman-child-age-fork",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "age-of-child"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "age-of-child"
+          ],
+          "x": "reading-ability",
+          "y": "shoe-size"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "reading-ability",
+        "treatment": "shoe-size",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "freedman-child-age-fork.json",
+      "title": "Shoe Size, Age of Child, and Reading Ability",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "generic-frontdoor",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "c"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "x"
+          ],
+          "x": "c",
+          "y": "m"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "generic-frontdoor.json",
+      "title": "Basic front-door criterion",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "generic-linear-instrumental-variable",
+      "identification": {
+        "identifiable?": false,
+        "method": "refusal",
+        "proof-status": "proved-impossible",
+        "reason": "not-identifiable"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "u",
+          "y": "z"
+        }
+      ],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "numeric edge coefficients are graph-only",
+      "round-trip?": true,
+      "source-file": "generic-linear-instrumental-variable.json",
+      "title": "Generic linear instrumental variable",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "inheritance-galton-board",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "luck-1",
+          "y": "luck-2"
+        },
+        {
+          "given": [],
+          "x": "luck-1",
+          "y": "success-0"
+        },
+        {
+          "given": [
+            "success-1"
+          ],
+          "x": "luck-1",
+          "y": "success-2"
+        },
+        {
+          "given": [],
+          "x": "luck-2",
+          "y": "success-0"
+        },
+        {
+          "given": [],
+          "x": "luck-2",
+          "y": "success-1"
+        },
+        {
+          "given": [
+            "success-1"
+          ],
+          "x": "success-0",
+          "y": "success-2"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "inheritance-galton-board.json",
+      "title": "Figure 2.4(a): Galton board inheritance model",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 7,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "inheritance-genetic",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "luck-1",
+          "y": "luck-2"
+        },
+        {
+          "given": [],
+          "x": "luck-1",
+          "y": "success-0"
+        },
+        {
+          "given": [],
+          "x": "luck-1",
+          "y": "success-2"
+        },
+        {
+          "given": [],
+          "x": "luck-1",
+          "y": "talent-0"
+        },
+        {
+          "given": [],
+          "x": "luck-1",
+          "y": "talent-1"
+        },
+        {
+          "given": [],
+          "x": "luck-1",
+          "y": "talent-2"
+        },
+        {
+          "given": [],
+          "x": "luck-2",
+          "y": "success-0"
+        },
+        {
+          "given": [],
+          "x": "luck-2",
+          "y": "success-1"
+        },
+        {
+          "given": [],
+          "x": "luck-2",
+          "y": "talent-0"
+        },
+        {
+          "given": [],
+          "x": "luck-2",
+          "y": "talent-1"
+        },
+        {
+          "given": [],
+          "x": "luck-2",
+          "y": "talent-2"
+        },
+        {
+          "given": [
+            "talent-0"
+          ],
+          "x": "success-0",
+          "y": "success-1"
+        },
+        {
+          "given": [
+            "talent-1"
+          ],
+          "x": "success-0",
+          "y": "success-1"
+        },
+        {
+          "given": [
+            "talent-0"
+          ],
+          "x": "success-0",
+          "y": "success-2"
+        },
+        {
+          "given": [
+            "talent-1"
+          ],
+          "x": "success-0",
+          "y": "success-2"
+        },
+        {
+          "given": [
+            "talent-2"
+          ],
+          "x": "success-0",
+          "y": "success-2"
+        },
+        {
+          "given": [
+            "talent-0"
+          ],
+          "x": "success-0",
+          "y": "talent-1"
+        },
+        {
+          "given": [
+            "talent-0"
+          ],
+          "x": "success-0",
+          "y": "talent-2"
+        },
+        {
+          "given": [
+            "talent-1"
+          ],
+          "x": "success-0",
+          "y": "talent-2"
+        },
+        {
+          "given": [
+            "talent-1"
+          ],
+          "x": "success-1",
+          "y": "success-2"
+        },
+        {
+          "given": [
+            "talent-2"
+          ],
+          "x": "success-1",
+          "y": "success-2"
+        },
+        {
+          "given": [
+            "talent-1"
+          ],
+          "x": "success-1",
+          "y": "talent-0"
+        },
+        {
+          "given": [
+            "talent-1"
+          ],
+          "x": "success-1",
+          "y": "talent-2"
+        },
+        {
+          "given": [
+            "talent-1"
+          ],
+          "x": "success-2",
+          "y": "talent-0"
+        },
+        {
+          "given": [
+            "talent-2"
+          ],
+          "x": "success-2",
+          "y": "talent-0"
+        },
+        {
+          "given": [
+            "talent-2"
+          ],
+          "x": "success-2",
+          "y": "talent-1"
+        },
+        {
+          "given": [
+            "talent-1"
+          ],
+          "x": "talent-0",
+          "y": "talent-2"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "inheritance-genetic.json",
+      "title": "Figure 2.4(b): Genetic inheritance model",
+      "variable-count": 8
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "john-snow-before-instrument",
+      "identification": {
+        "identifiable?": false,
+        "method": "refusal",
+        "proof-status": "proved-impossible",
+        "reason": "not-identifiable"
+      },
+      "implied-independencies": [],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "john-snow-before-instrument.json",
+      "title": "John Snow cholera graph before the instrument",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "john-snow-instrumental-variable",
+      "identification": {
+        "identifiable?": false,
+        "method": "refusal",
+        "proof-status": "proved-impossible",
+        "reason": "not-identifiable"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "u",
+          "y": "z"
+        }
+      ],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "john-snow-instrumental-variable.json",
+      "title": "John Snow cholera instrumental variable",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "jtpa-job-training",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "m"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "e",
+        "treatment": "s",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "jtpa-job-training.json",
+      "title": "JTPA job-training study",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "linear-mediation-path-diagram",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "outcome",
+        "treatment": "treatment",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "numeric edge coefficients are graph-only",
+      "round-trip?": true,
+      "source-file": "linear-mediation-path-diagram.json",
+      "title": "Linear mediation path diagram",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "lords-paradox-wainer-brown",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "wi"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "d",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "lords-paradox-wainer-brown.json",
+      "title": "Lord's paradox: Wainer-Brown revision",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "lords-paradox",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "s",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "lords-paradox.json",
+      "title": "Lord's paradox",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "mendelian-randomization-hdl",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "lifestyle"
+          ],
+          [
+            "gene",
+            "lifestyle"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "gene",
+          "y": "lifestyle"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "attack",
+        "treatment": "hdl",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "mendelian-randomization-hdl.json",
+      "title": "Mendelian randomization for HDL and heart attack",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 1,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "monty-hall-fake-a-deal",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "c",
+          "y": "o"
+        },
+        {
+          "given": [],
+          "x": "c",
+          "y": "y"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "monty-hall-fake-a-deal.json",
+      "title": "Monty Hall: Let's Fake a Deal",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 2,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "monty-hall-make-a-deal",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "c",
+          "y": "y"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "monty-hall-make-a-deal.json",
+      "title": "Monty Hall: Let's Make a Deal",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 7,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "new-napkin-problem",
+      "identification": {
+        "identifiable?": true,
+        "method": "general-id"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "u1",
+          "y": "u2"
+        },
+        {
+          "given": [
+            "w"
+          ],
+          "x": "u1",
+          "y": "z"
+        },
+        {
+          "given": [
+            "w"
+          ],
+          "x": "u2",
+          "y": "z"
+        }
+      ],
+      "latent-count": 2,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "new-napkin-problem.json",
+      "title": "New Napkin Problem",
+      "variable-count": 6
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "nonlinear-threshold-mediation",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "salary"
+          ],
+          "x": "education",
+          "y": "outcome"
+        },
+        {
+          "given": [
+            "salary"
+          ],
+          "x": "outcome",
+          "y": "skill"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "outcome",
+        "treatment": "education",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "non-Boolean value domains are graph-only: rational; affine equations are outside the Boolean SCM evaluator; numeric edge coefficients are graph-only; structural expression exceeds fixed Boolean grammar; all equations skipped",
+      "round-trip?": true,
+      "source-file": "nonlinear-threshold-mediation.json",
+      "title": "Mediation with a threshold effect",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 2,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "scurvy-vitamin-c-mediator",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "vitamin_c"
+          ],
+          "x": "citrus",
+          "y": "scurvy"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "scurvy",
+        "treatment": "citrus",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "scurvy-vitamin-c-mediator.json",
+      "title": "The corrected vitamin C mediator for scurvy",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 2,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "scurvy-wrong-acidity-mediator",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "acidity"
+          ],
+          "x": "citrus",
+          "y": "scurvy"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "scurvy",
+        "treatment": "citrus",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "scurvy-wrong-acidity-mediator.json",
+      "title": "The historically wrong acidity mediator for scurvy",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "simpsons-paradox-drug-blood-pressure",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "h",
+        "treatment": "d",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "simpsons-paradox-drug-blood-pressure.json",
+      "title": "Simpson's paradox: drug and blood pressure",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "simpsons-paradox-drug-gender",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "g"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "h",
+        "treatment": "d",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "simpsons-paradox-drug-gender.json",
+      "title": "Simpson's paradox: drug and gender",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "simpsons-paradox-exercise-age-cholesterol",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "a"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "c",
+        "treatment": "e",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "simpsons-paradox-exercise-age-cholesterol.json",
+      "title": "Simpson's paradox: exercise, age, and cholesterol",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "smoking-gene-two-readings",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "smoking_gene"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "lung_cancer",
+        "treatment": "smoking",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "smoking-gene-two-readings.json",
+      "title": "Smoking gene confounding and mediation readings",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "smoking-tar-cancer-frontdoor",
+      "identification": {
+        "identifiable?": true,
+        "mediators": [
+          "t"
+        ],
+        "method": "front-door"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "s"
+          ],
+          "x": "g",
+          "y": "t"
+        }
+      ],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "c",
+        "treatment": "s",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "smoking-tar-cancer-frontdoor.json",
+      "title": "Smoking, tar, and cancer front-door model",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 6,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "tourniquet-selection-mediation",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "injury_severity"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "post_admission_survival",
+        "treatment": "tourniquet_use",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "non-Boolean value domains are graph-only: categorical; numeric observational distributions are not evaluated",
+      "round-trip?": true,
+      "source-file": "tourniquet-selection-mediation.json",
+      "title": "Tourniquet selection on pre-admission survival",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "transport-arkansas-target",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "x"
+          ],
+          "x": "w",
+          "y": "z"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "transport-arkansas-target.json",
+      "title": "Transportability target population: Arkansas",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 6,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "transport-boston-car-ownership",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "z"
+          ],
+          [
+            "s",
+            "z"
+          ],
+          [
+            "v",
+            "z"
+          ],
+          [
+            "s",
+            "v",
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "s",
+          "y": "w"
+        },
+        {
+          "given": [],
+          "x": "s",
+          "y": "x"
+        },
+        {
+          "given": [],
+          "x": "s",
+          "y": "y"
+        },
+        {
+          "given": [],
+          "x": "s",
+          "y": "z"
+        },
+        {
+          "given": [
+            "x"
+          ],
+          "x": "v",
+          "y": "w"
+        },
+        {
+          "given": [
+            "z"
+          ],
+          "x": "v",
+          "y": "w"
+        },
+        {
+          "given": [
+            "z"
+          ],
+          "x": "v",
+          "y": "x"
+        },
+        {
+          "given": [
+            "z"
+          ],
+          "x": "v",
+          "y": "y"
+        },
+        {
+          "given": [
+            "x"
+          ],
+          "x": "w",
+          "y": "z"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "selection/regime annotations are graph-only",
+      "round-trip?": true,
+      "source-file": "transport-boston-car-ownership.json",
+      "title": "Transportability from Boston: irrelevant car ownership",
+      "variable-count": 6
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "transport-honolulu-outcome",
+      "identification": {
+        "adjustment-sets": [
+          [],
+          [
+            "s"
+          ],
+          [
+            "z"
+          ],
+          [
+            "s",
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "s",
+          "y": "w"
+        },
+        {
+          "given": [],
+          "x": "s",
+          "y": "x"
+        },
+        {
+          "given": [],
+          "x": "s",
+          "y": "z"
+        },
+        {
+          "given": [],
+          "x": "w",
+          "y": "z"
+        },
+        {
+          "given": [
+            "w"
+          ],
+          "x": "x",
+          "y": "y"
+        },
+        {
+          "given": [],
+          "x": "x",
+          "y": "z"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "selection/regime annotations are graph-only",
+      "round-trip?": true,
+      "source-file": "transport-honolulu-outcome.json",
+      "title": "Transportability from Honolulu: different outcome mechanism",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "transport-los-angeles-age",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "z"
+          ],
+          [
+            "s",
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "x"
+          ],
+          "x": "s",
+          "y": "w"
+        },
+        {
+          "given": [
+            "z"
+          ],
+          "x": "s",
+          "y": "w"
+        },
+        {
+          "given": [
+            "z"
+          ],
+          "x": "s",
+          "y": "x"
+        },
+        {
+          "given": [
+            "z"
+          ],
+          "x": "s",
+          "y": "y"
+        },
+        {
+          "given": [
+            "x"
+          ],
+          "x": "w",
+          "y": "z"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "selection/regime annotations are graph-only",
+      "round-trip?": true,
+      "source-file": "transport-los-angeles-age.json",
+      "title": "Transportability from Los Angeles: different age distribution",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 5,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "transport-san-francisco-clicks",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "z"
+          ],
+          [
+            "s",
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "s",
+          "y": "x"
+        },
+        {
+          "given": [],
+          "x": "s",
+          "y": "z"
+        },
+        {
+          "given": [
+            "x"
+          ],
+          "x": "w",
+          "y": "z"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "selection/regime annotations are graph-only",
+      "round-trip?": true,
+      "source-file": "transport-san-francisco-clicks.json",
+      "title": "Transportability from San Francisco: different click-through rate",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "transport-toronto-randomized-clicks",
+      "identification": {
+        "adjustment-sets": [
+          [],
+          [
+            "s"
+          ],
+          [
+            "z"
+          ],
+          [
+            "s",
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "s",
+          "y": "x"
+        },
+        {
+          "given": [
+            "w"
+          ],
+          "x": "s",
+          "y": "y"
+        },
+        {
+          "given": [],
+          "x": "s",
+          "y": "z"
+        },
+        {
+          "given": [],
+          "x": "w",
+          "y": "z"
+        },
+        {
+          "given": [
+            "w"
+          ],
+          "x": "x",
+          "y": "y"
+        },
+        {
+          "given": [],
+          "x": "x",
+          "y": "z"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "selection/regime annotations are graph-only",
+      "round-trip?": true,
+      "source-file": "transport-toronto-randomized-clicks.json",
+      "title": "Transportability from Toronto: randomized trial and different click-through rate",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "vaccination",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "vaccination"
+          ],
+          "x": "reaction",
+          "y": "smallpox"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "death",
+        "treatment": "vaccination",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "finite probability tables are preserved only in the frozen source",
+      "round-trip?": true,
+      "source-file": "vaccination.json",
+      "title": "Smallpox vaccination policy counterfactual",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": {
+        "engine": {
+          "abduction": {
+            "assignments": [
+              {
+                "vacuuming": true
+              }
+            ],
+            "consistent-count": 1,
+            "evidence": {
+              "unhappy": true,
+              "vacuuming": true
+            },
+            "step": "abduction"
+          },
+          "action": {
+            "intervention": {
+              "vacuuming": false
+            },
+            "replaced-equations": [
+              "vacuuming"
+            ],
+            "step": "action"
+          },
+          "answer": false,
+          "method": "deterministic-scm",
+          "prediction": {
+            "all-agree?": true,
+            "outcome": "unhappy",
+            "step": "prediction",
+            "worlds": [
+              {
+                "assignment": {
+                  "vacuuming": true
+                },
+                "value": false
+              }
+            ]
+          },
+          "query-type": "counterfactual"
+        },
+        "query": {
+          "evidence": {
+            "unhappy": true,
+            "vacuuming": true
+          },
+          "intervention": {
+            "vacuuming": false
+          },
+          "outcome": "unhappy",
+          "rob-expectation": "causal_explanation_test.py: alternative target value is false"
+        },
+        "rob-expected-value": false
+      },
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "vacuuming-causal-explanation",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [
+            "noise"
+          ],
+          "x": "awake",
+          "y": "vacuuming"
+        },
+        {
+          "given": [
+            "awake"
+          ],
+          "x": "noise",
+          "y": "unhappy"
+        },
+        {
+          "given": [
+            "awake"
+          ],
+          "x": "unhappy",
+          "y": "vacuuming"
+        },
+        {
+          "given": [
+            "noise"
+          ],
+          "x": "unhappy",
+          "y": "vacuuming"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "unhappy",
+        "treatment": "vacuuming",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph and complete fixed-grammar Boolean SCM converted",
+      "round-trip?": true,
+      "source-file": "vacuuming-causal-explanation.json",
+      "title": "Vacuuming, waking, and a bounded causal explanation",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 3,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "walking-age-mortality",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "age"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "mortality",
+        "treatment": "walking",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "walking-age-mortality.json",
+      "title": "Walking, age, and mortality",
+      "variable-count": 3
+    },
+    {
+      "arrow-count": 6,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "converted-fully",
+      "example-id": "wermuth-cox-sequential-treatment",
+      "identification": {
+        "adjustment-sets": [
+          []
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "u",
+          "y": "x"
+        },
+        {
+          "given": [
+            "w"
+          ],
+          "x": "u",
+          "y": "z"
+        },
+        {
+          "given": [
+            "w"
+          ],
+          "x": "x",
+          "y": "z"
+        }
+      ],
+      "latent-count": 1,
+      "pair": {
+        "outcome": "y",
+        "treatment": "x",
+        "why": "fixture uses the conventional observed X/Y effect pair"
+      },
+      "reason": "graph schema fully represented; no evaluator payload declared",
+      "round-trip?": true,
+      "source-file": "wermuth-cox-sequential-treatment.json",
+      "title": "Wermuth-Cox sequential treatment",
+      "variable-count": 5
+    },
+    {
+      "arrow-count": 24,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "wright-guinea-pig-coat-color",
+      "identification": null,
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "chance",
+          "y": "dam-d"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "dam-e"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "dam-h"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "dam-phenotype"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "chance",
+          "y": "offspring-o"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "offspring-o-d"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "chance",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "chance",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "dam-e"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "dam-g-o"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "dam-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "dam-h"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "offspring-o"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "offspring-o-d"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "offspring-o-h"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "offspring-o-prime-h"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "dam-d",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "dam-g-o"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "dam-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "dam-h"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "offspring-o"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "offspring-o-d"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "offspring-o-h"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "offspring-o-prime-h"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "dam-e",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [
+            "dam-h"
+          ],
+          "x": "dam-g-o",
+          "y": "dam-phenotype"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "dam-g-o",
+          "y": "offspring-o"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o",
+          "y": "offspring-o-d"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "dam-g-o",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o",
+          "y": "sire-e"
+        },
+        {
+          "given": [
+            "chance"
+          ],
+          "x": "dam-g-o",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [
+            "chance"
+          ],
+          "x": "dam-g-o",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [
+            "dam-h"
+          ],
+          "x": "dam-g-o-prime",
+          "y": "dam-phenotype"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "dam-g-o-prime",
+          "y": "offspring-o"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o-prime",
+          "y": "offspring-o-d"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "dam-g-o-prime",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o-prime",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o-prime",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o-prime",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o-prime",
+          "y": "sire-e"
+        },
+        {
+          "given": [
+            "chance"
+          ],
+          "x": "dam-g-o-prime",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [
+            "chance"
+          ],
+          "x": "dam-g-o-prime",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o-prime",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "dam-g-o-prime",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "dam-h",
+          "y": "offspring-o"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "offspring-o-d"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "dam-h",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "dam-h",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [
+            "dam-h"
+          ],
+          "x": "dam-phenotype",
+          "y": "offspring-o"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "dam-phenotype",
+          "y": "offspring-o"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "offspring-o-d"
+        },
+        {
+          "given": [
+            "dam-h"
+          ],
+          "x": "dam-phenotype",
+          "y": "offspring-o-h"
+        },
+        {
+          "given": [
+            "dam-h"
+          ],
+          "x": "dam-phenotype",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "dam-phenotype",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [
+            "dam-h"
+          ],
+          "x": "dam-phenotype",
+          "y": "offspring-o-prime-h"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "dam-phenotype",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "offspring-o",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "offspring-o",
+          "y": "offspring-o-prime-h"
+        },
+        {
+          "given": [],
+          "x": "offspring-o",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-o",
+          "y": "sire-e"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "offspring-o",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "offspring-o",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "offspring-o",
+          "y": "sire-h"
+        },
+        {
+          "given": [
+            "offspring-o-h"
+          ],
+          "x": "offspring-o",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [
+            "sire-h"
+          ],
+          "x": "offspring-o",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "offspring-o-h"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "offspring-o-prime-h"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-d",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "offspring-o-h",
+          "y": "offspring-o-prime"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-h",
+          "y": "offspring-o-prime-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-h",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-h",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-h",
+          "y": "sire-e"
+        },
+        {
+          "given": [
+            "sire-h"
+          ],
+          "x": "offspring-o-h",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime",
+          "y": "sire-e"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "offspring-o-prime",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "offspring-o-prime",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "offspring-o-prime",
+          "y": "sire-h"
+        },
+        {
+          "given": [
+            "offspring-o-prime-h"
+          ],
+          "x": "offspring-o-prime",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [
+            "sire-h"
+          ],
+          "x": "offspring-o-prime",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-d",
+          "y": "offspring-o-prime-h"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-d",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-d",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-d",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-d",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-d",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-d",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-d",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-h",
+          "y": "offspring-shared-e"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-h",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-o-prime-h",
+          "y": "sire-e"
+        },
+        {
+          "given": [
+            "sire-h"
+          ],
+          "x": "offspring-o-prime-h",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "offspring-shared-e",
+          "y": "sire-d"
+        },
+        {
+          "given": [],
+          "x": "offspring-shared-e",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "offspring-shared-e",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "offspring-shared-e",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "offspring-shared-e",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "offspring-shared-e",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [],
+          "x": "sire-d",
+          "y": "sire-e"
+        },
+        {
+          "given": [],
+          "x": "sire-d",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "sire-d",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "sire-d",
+          "y": "sire-h"
+        },
+        {
+          "given": [],
+          "x": "sire-e",
+          "y": "sire-g-o"
+        },
+        {
+          "given": [],
+          "x": "sire-e",
+          "y": "sire-g-o-prime"
+        },
+        {
+          "given": [],
+          "x": "sire-e",
+          "y": "sire-h"
+        },
+        {
+          "given": [
+            "sire-h"
+          ],
+          "x": "sire-g-o",
+          "y": "sire-phenotype"
+        },
+        {
+          "given": [
+            "sire-h"
+          ],
+          "x": "sire-g-o-prime",
+          "y": "sire-phenotype"
+        }
+      ],
+      "latent-count": 0,
+      "pair": null,
+      "reason": "numeric edge coefficients are graph-only",
+      "round-trip?": true,
+      "source-file": "wright-guinea-pig-coat-color.json",
+      "title": "Figure 2.7: Wright's guinea-pig coat-color path diagram",
+      "variable-count": 20
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "wright-price-to-supply-reduced-form",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "z"
+          ],
+          [
+            "d",
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "d",
+          "y": "z"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "s",
+        "treatment": "p",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "numeric edge coefficients are graph-only",
+      "round-trip?": true,
+      "source-file": "wright-price-to-supply-reduced-form.json",
+      "title": "Wright price-to-supply reduced form",
+      "variable-count": 4
+    },
+    {
+      "arrow-count": 6,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "wright-puppy-birth-weight",
+      "identification": {
+        "adjustment-sets": [
+          [],
+          [
+            "other-gestation-causes"
+          ],
+          [
+            "other-growth-causes"
+          ],
+          [
+            "other-gestation-causes",
+            "other-growth-causes"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "gestation-period",
+          "y": "other-growth-causes"
+        },
+        {
+          "given": [
+            "litter-size"
+          ],
+          "x": "gestation-period",
+          "y": "prenatal-growth-rate"
+        },
+        {
+          "given": [],
+          "x": "litter-size",
+          "y": "other-gestation-causes"
+        },
+        {
+          "given": [],
+          "x": "litter-size",
+          "y": "other-growth-causes"
+        },
+        {
+          "given": [],
+          "x": "other-gestation-causes",
+          "y": "other-growth-causes"
+        },
+        {
+          "given": [],
+          "x": "other-gestation-causes",
+          "y": "prenatal-growth-rate"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "birth-weight",
+        "treatment": "litter-size",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "numeric edge coefficients are graph-only; numeric linear correlations are not evaluated",
+      "round-trip?": true,
+      "source-file": "wright-puppy-birth-weight.json",
+      "title": "Figure 2.8: Wright's puppy birth-weight path diagram",
+      "variable-count": 6
+    },
+    {
+      "arrow-count": 4,
+      "canonical-render?": true,
+      "counterfactual": null,
+      "dag-valid?": true,
+      "disposition": "graph-only",
+      "example-id": "wright-supply-to-price-reduced-form",
+      "identification": {
+        "adjustment-sets": [
+          [
+            "d"
+          ],
+          [
+            "d",
+            "z"
+          ]
+        ],
+        "identifiable?": true,
+        "method": "backdoor"
+      },
+      "implied-independencies": [
+        {
+          "given": [],
+          "x": "d",
+          "y": "z"
+        }
+      ],
+      "latent-count": 0,
+      "pair": {
+        "outcome": "p",
+        "treatment": "s",
+        "why": "fixture title/content gives the named cause and outcome"
+      },
+      "reason": "numeric edge coefficients are graph-only",
+      "round-trip?": true,
+      "source-file": "wright-supply-to-price-reduced-form.json",
+      "title": "Wright supply-to-price reduced form",
+      "variable-count": 4
+    }
+  ],
+  "oracle-fixtures": {
+    "dagitty": [
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "airport-bag-posterior"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "algebra-for-all-mediation"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "alice-education-salary-counterfactual"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "basic-confounding-backdoor"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "berkeley-admissions-kruskal"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "berkeley-admissions-simple"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "berksons-paradox"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "birth-weight-paradox"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "burks-nature-nurture"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "cholestyramine-noncompliance"
+      },
+      {
+        "checked": 3,
+        "discrepancies": [],
+        "example_id": "climate-change-probabilities-of-causation"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "daisy-house-training"
+      },
+      {
+        "checked": 3,
+        "discrepancies": [],
+        "example_id": "deconfounding-game-1"
+      },
+      {
+        "checked": 16,
+        "discrepancies": [],
+        "example_id": "deconfounding-game-2"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "deconfounding-game-3"
+      },
+      {
+        "checked": 6,
+        "discrepancies": [],
+        "example_id": "deconfounding-game-4"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "deconfounding-game-5"
+      },
+      {
+        "checked": 10,
+        "discrepancies": [],
+        "example_id": "fertilizer-improper-control"
+      },
+      {
+        "checked": 21,
+        "discrepancies": [],
+        "example_id": "fertilizer-randomized"
+      },
+      {
+        "checked": 15,
+        "discrepancies": [],
+        "example_id": "fertilizer-target-intervention"
+      },
+      {
+        "checked": 4,
+        "discrepancies": [],
+        "example_id": "firing-squad"
+      },
+      {
+        "checked": 14,
+        "discrepancies": [],
+        "example_id": "forbes-smoking-adult-asthma"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "freedman-child-age-fork"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "generic-frontdoor"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "generic-linear-instrumental-variable"
+      },
+      {
+        "checked": 6,
+        "discrepancies": [],
+        "example_id": "inheritance-galton-board"
+      },
+      {
+        "checked": 27,
+        "discrepancies": [],
+        "example_id": "inheritance-genetic"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "john-snow-before-instrument"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "john-snow-instrumental-variable"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "jtpa-job-training"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "linear-mediation-path-diagram"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "lords-paradox-wainer-brown"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "lords-paradox"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "mendelian-randomization-hdl"
+      },
+      {
+        "checked": 2,
+        "discrepancies": [],
+        "example_id": "monty-hall-fake-a-deal"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "monty-hall-make-a-deal"
+      },
+      {
+        "checked": 3,
+        "discrepancies": [],
+        "example_id": "new-napkin-problem"
+      },
+      {
+        "checked": 2,
+        "discrepancies": [],
+        "example_id": "nonlinear-threshold-mediation"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "scurvy-vitamin-c-mediator"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "scurvy-wrong-acidity-mediator"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "simpsons-paradox-drug-blood-pressure"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "simpsons-paradox-drug-gender"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "simpsons-paradox-exercise-age-cholesterol"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "smoking-gene-two-readings"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "smoking-tar-cancer-frontdoor"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "tourniquet-selection-mediation"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "transport-arkansas-target"
+      },
+      {
+        "checked": 9,
+        "discrepancies": [],
+        "example_id": "transport-boston-car-ownership"
+      },
+      {
+        "checked": 6,
+        "discrepancies": [],
+        "example_id": "transport-honolulu-outcome"
+      },
+      {
+        "checked": 5,
+        "discrepancies": [],
+        "example_id": "transport-los-angeles-age"
+      },
+      {
+        "checked": 3,
+        "discrepancies": [],
+        "example_id": "transport-san-francisco-clicks"
+      },
+      {
+        "checked": 6,
+        "discrepancies": [],
+        "example_id": "transport-toronto-randomized-clicks"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "vaccination"
+      },
+      {
+        "checked": 4,
+        "discrepancies": [],
+        "example_id": "vacuuming-causal-explanation"
+      },
+      {
+        "checked": 0,
+        "discrepancies": [],
+        "example_id": "walking-age-mortality"
+      },
+      {
+        "checked": 3,
+        "discrepancies": [],
+        "example_id": "wermuth-cox-sequential-treatment"
+      },
+      {
+        "checked": 156,
+        "discrepancies": [],
+        "example_id": "wright-guinea-pig-coat-color"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "wright-price-to-supply-reduced-form"
+      },
+      {
+        "checked": 6,
+        "discrepancies": [],
+        "example_id": "wright-puppy-birth-weight"
+      },
+      {
+        "checked": 1,
+        "discrepancies": [],
+        "example_id": "wright-supply-to-price-reduced-form"
+      }
+    ],
+    "python": [
+      {
+        "counterfactual-oracle": null,
+        "example-id": "airport-bag-posterior",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "algebra-for-all-mediation",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "alice-education-salary-counterfactual",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "basic-confounding-backdoor",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "berkeley-admissions-kruskal",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "berkeley-admissions-simple",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "berksons-paradox",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "birth-weight-paradox",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "burks-nature-nurture",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "cholestyramine-noncompliance",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": false
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "climate-change-probabilities-of-causation",
+        "networkx-checked": 3,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "daisy-house-training",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "deconfounding-game-1",
+        "networkx-checked": 3,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "deconfounding-game-2",
+        "networkx-checked": 16,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "deconfounding-game-3",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": false
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "deconfounding-game-4",
+        "networkx-checked": 6,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "deconfounding-game-5",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "fertilizer-improper-control",
+        "networkx-checked": 10,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "fertilizer-randomized",
+        "networkx-checked": 21,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "fertilizer-target-intervention",
+        "networkx-checked": 15,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": {
+          "answer": true,
+          "method": "deterministic-scm"
+        },
+        "example-id": "firing-squad",
+        "networkx-checked": 4,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "forbes-smoking-adult-asthma",
+        "networkx-checked": 14,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "freedman-child-age-fork",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "generic-frontdoor",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "generic-linear-instrumental-variable",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": false
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "inheritance-galton-board",
+        "networkx-checked": 6,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "inheritance-genetic",
+        "networkx-checked": 27,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "john-snow-before-instrument",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": false
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "john-snow-instrumental-variable",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": false
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "jtpa-job-training",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "linear-mediation-path-diagram",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "lords-paradox-wainer-brown",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "lords-paradox",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "mendelian-randomization-hdl",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "monty-hall-fake-a-deal",
+        "networkx-checked": 2,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "monty-hall-make-a-deal",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "new-napkin-problem",
+        "networkx-checked": 3,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "nonlinear-threshold-mediation",
+        "networkx-checked": 2,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "scurvy-vitamin-c-mediator",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "scurvy-wrong-acidity-mediator",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "simpsons-paradox-drug-blood-pressure",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "simpsons-paradox-drug-gender",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "simpsons-paradox-exercise-age-cholesterol",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "smoking-gene-two-readings",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "smoking-tar-cancer-frontdoor",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "tourniquet-selection-mediation",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "transport-arkansas-target",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "transport-boston-car-ownership",
+        "networkx-checked": 9,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "transport-honolulu-outcome",
+        "networkx-checked": 6,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "transport-los-angeles-age",
+        "networkx-checked": 5,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "transport-san-francisco-clicks",
+        "networkx-checked": 3,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "transport-toronto-randomized-clicks",
+        "networkx-checked": 6,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "vaccination",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": {
+          "answer": false,
+          "method": "deterministic-scm"
+        },
+        "example-id": "vacuuming-causal-explanation",
+        "networkx-checked": 4,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "walking-age-mortality",
+        "networkx-checked": 0,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "wermuth-cox-sequential-treatment",
+        "networkx-checked": 3,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "wright-guinea-pig-coat-color",
+        "networkx-checked": 156,
+        "networkx-disagreements": [],
+        "y0": null
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "wright-price-to-supply-reduced-form",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "wright-puppy-birth-weight",
+        "networkx-checked": 6,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      },
+      {
+        "counterfactual-oracle": null,
+        "example-id": "wright-supply-to-price-reduced-form",
+        "networkx-checked": 1,
+        "networkx-disagreements": [],
+        "y0": {
+          "identifiable?": true
+        }
+      }
+    ]
+  },
+  "schema-version": 1,
+  "tool-versions": {
+    "R": "4.3.3",
+    "dagitty": "0.3.4",
+    "networkx": "3.6.1",
+    "python": "3.12.3",
+    "y0": "0.2.11"
+  }
+}

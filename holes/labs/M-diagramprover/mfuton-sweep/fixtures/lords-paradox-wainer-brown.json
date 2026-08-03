@@ -1,0 +1,31 @@
+{
+  "example_id": "lords-paradox-wainer-brown",
+  "title": "Lord's paradox: Wainer-Brown revision",
+  "topology_basis": "printed_diagram",
+  "content": "Initial Weight affects Diet assignment and Final Weight, while Diet affects Final Weight. Gain is deterministically Final Weight minus Initial Weight. Initial Weight is therefore a confounder of the Diet-to-Gain effect and must be adjusted for.",
+  "variables": [
+    {"key": "d", "name": "Diet", "content": "The treatment whose total effect on weight gain is sought."},
+    {"key": "wi", "name": "Initial Weight", "content": "The common cause of Diet assignment and Gain."},
+    {"key": "wf", "name": "Final Weight", "content": "Final weight after the diet period."},
+    {"key": "y", "name": "Gain", "content": "The deterministic outcome Y = Final Weight - Initial Weight."}
+  ],
+  "arrows": [
+    {"source": "wi", "target": "d", "because": "Figure 6.9(b) reverses treatment selection: Initial Weight affects Diet assignment."},
+    {"source": "wi", "target": "wf", "because": "Figure 6.9(b) states that Initial Weight affects Final Weight."},
+    {"source": "d", "target": "wf", "because": "Figure 6.9(b) states that Diet affects Final Weight."},
+    {"source": "wi", "target": "y", "because": "Gain is deterministically Y = Final Weight - Initial Weight, so this arrow has coefficient -1."},
+    {"source": "wf", "target": "y", "because": "Gain is deterministically Y = Final Weight - Initial Weight, so this arrow has coefficient +1."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:08b19caaa63ba6e4",
+    "ta-book-of-why-2018:ab7210b3906ab02f",
+    "ta-book-of-why-2018:f2ef5b5b8fd82f78",
+    "ta-book-of-why-2018:e5c2689f80adf067",
+    "ta-book-of-why-2018:a3ad4e01b6629a88",
+    "ta-book-of-why-2018:b2527eebc4fbcf82"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0228",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0229"
+  ]
+}

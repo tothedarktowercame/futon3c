@@ -1,0 +1,63 @@
+{
+  "example_id": "tourniquet-selection-mediation",
+  "title": "Tourniquet selection on pre-admission survival",
+  "topology_basis": "printed_diagram",
+  "content": "Table 9.1 contains only soldiers who survived to hospital admission. Figure 9.13 shows Injury Severity confounding Tourniquet Use, Pre-Admission Survival, and Post-Admission Survival. Conditioning on Injury Severity is necessary, but the hospital cohort also conditions on the mediator Pre-Admission Survival and therefore blocks the possible indirect benefit of tourniquets. The dashed direct arrow is hypothetical and unsupported by the table; its estimated effect is essentially zero.",
+  "variables": [
+    {"key": "injury_severity", "name": "Injury Severity", "content": "Injury severity category 3, 4, or 5.", "value_domain": "categorical", "domain_values": [3, 4, 5]},
+    {"key": "tourniquet_use", "name": "Tourniquet Use", "content": "Whether a tourniquet was applied before hospital arrival.", "value_domain": "boolean"},
+    {"key": "pre_admission_survival", "name": "Pre-Admission Survival", "content": "Whether the soldier survived long enough to reach the hospital.", "value_domain": "boolean"},
+    {"key": "post_admission_survival", "name": "Post-Admission Survival", "content": "Whether the admitted patient survived after hospital admission.", "value_domain": "boolean"}
+  ],
+  "arrows": [
+    {"source": "injury_severity", "target": "tourniquet_use", "because": "Figure 9.13 draws Injury Severity as a cause of Tourniquet Use."},
+    {"source": "injury_severity", "target": "pre_admission_survival", "because": "Figure 9.13 draws Injury Severity as a cause of Pre-Admission Survival."},
+    {"source": "injury_severity", "target": "post_admission_survival", "because": "Figure 9.13 draws Injury Severity as a cause of Post-Admission Survival."},
+    {"source": "tourniquet_use", "target": "pre_admission_survival", "because": "Figure 9.13 includes the hypothesized route by which tourniquets may help soldiers reach the hospital alive."},
+    {"source": "pre_admission_survival", "target": "post_admission_survival", "because": "Figure 9.13 draws Pre-Admission Survival as the mediator leading to Post-Admission Survival."},
+    {"source": "tourniquet_use", "target": "post_admission_survival", "because": "Figure 9.13 draws this as a dashed hypothetical direct causal effect explicitly not supported by the data."}
+  ],
+  "observational_distributions": [
+    {
+      "key": "table-9-1-by-severity",
+      "content": "Table 9.1 post-admission survival frequencies within each injury-severity and tourniquet stratum, conditional on pre-admission survival.",
+      "table": {
+        "kind": "conditional_joint",
+        "rows": [
+          {"given": {"injury_severity": 3, "tourniquet_use": false, "pre_admission_survival": true}, "probabilities": [{"event": {"post_admission_survival": false}, "probability": {"numerator": 53, "denominator": 555}}, {"event": {"post_admission_survival": true}, "probability": {"numerator": 502, "denominator": 555}}]},
+          {"given": {"injury_severity": 3, "tourniquet_use": true, "pre_admission_survival": true}, "probabilities": [{"event": {"post_admission_survival": false}, "probability": {"numerator": 49, "denominator": 465}}, {"event": {"post_admission_survival": true}, "probability": {"numerator": 416, "denominator": 465}}]},
+          {"given": {"injury_severity": 4, "tourniquet_use": false, "pre_admission_survival": true}, "probabilities": [{"event": {"post_admission_survival": false}, "probability": {"numerator": 15, "denominator": 111}}, {"event": {"post_admission_survival": true}, "probability": {"numerator": 96, "denominator": 111}}]},
+          {"given": {"injury_severity": 4, "tourniquet_use": true, "pre_admission_survival": true}, "probabilities": [{"event": {"post_admission_survival": false}, "probability": {"numerator": 36, "denominator": 248}}, {"event": {"post_admission_survival": true}, "probability": {"numerator": 212, "denominator": 248}}]},
+          {"given": {"injury_severity": 5, "tourniquet_use": false, "pre_admission_survival": true}, "probabilities": [{"event": {"post_admission_survival": false}, "probability": {"numerator": 11, "denominator": 27}}, {"event": {"post_admission_survival": true}, "probability": {"numerator": 16, "denominator": 27}}]},
+          {"given": {"injury_severity": 5, "tourniquet_use": true, "pre_admission_survival": true}, "probabilities": [{"event": {"post_admission_survival": false}, "probability": {"numerator": 3, "denominator": 7}}, {"event": {"post_admission_survival": true}, "probability": {"numerator": 4, "denominator": 7}}]}
+        ]
+      }
+    },
+    {
+      "key": "table-9-1-aggregate",
+      "content": "Table 9.1 aggregate post-admission survival frequencies by tourniquet use, conditional on pre-admission survival.",
+      "table": {
+        "kind": "conditional_joint",
+        "rows": [
+          {"given": {"tourniquet_use": false, "pre_admission_survival": true}, "probabilities": [{"event": {"post_admission_survival": false}, "probability": {"numerator": 79, "denominator": 693}}, {"event": {"post_admission_survival": true}, "probability": {"numerator": 614, "denominator": 693}}]},
+          {"given": {"tourniquet_use": true, "pre_admission_survival": true}, "probabilities": [{"event": {"post_admission_survival": false}, "probability": {"numerator": 88, "denominator": 720}}, {"event": {"post_admission_survival": true}, "probability": {"numerator": 632, "denominator": 720}}]}
+        ]
+      }
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:b9ed6bca147f96bc",
+    "ta-book-of-why-2018:29080d4ecd723a1c",
+    "ta-book-of-why-2018:76464725cb12ddc3",
+    "ta-book-of-why-2018:b6bff2c48adba214",
+    "ta-book-of-why-2018:a634a4c6b6e7e817",
+    "ta-book-of-why-2018:451b1477235716dc",
+    "ta-book-of-why-2018:59d04da6cc33dbeb",
+    "ta-book-of-why-2018:eb04a891d74806b6",
+    "ta-book-of-why-2018:db14994caf2a5f15",
+    "ta-book-of-why-2018:f0b100135a19420d",
+    "ta-book-of-why-2018:f6f90761a7a55192",
+    "ta-book-of-why-2018:3c3b020b084bb65e"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0357", "ta-page:BOOK-OF-WHY-2018:pdf-0358"]
+}

@@ -1,0 +1,59 @@
+{
+  "arrows" : [ {
+    "from" : "prior_smoking",
+    "to" : "prior_abnormality"
+  }, {
+    "from" : "prior_abnormality",
+    "to" : "prior_miscarriage"
+  }, {
+    "from" : "prior_smoking",
+    "to" : "current_smoking"
+  }, {
+    "from" : "physiology",
+    "to" : "prior_abnormality"
+  }, {
+    "from" : "physiology",
+    "to" : "current_abnormality"
+  }, {
+    "from" : "current_smoking",
+    "to" : "current_abnormality"
+  }, {
+    "from" : "current_abnormality",
+    "to" : "future_miscarriage"
+  } ],
+  "id" : "deconfounding-game-2",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "deconfounding-game-2.json"
+  },
+  "variables" : [ {
+    "id" : "prior_smoking",
+    "kind" : "observed",
+    "name" : "Prior Smoking (A)"
+  }, {
+    "id" : "prior_abnormality",
+    "kind" : "observed",
+    "name" : "Prior Abnormality (B)"
+  }, {
+    "id" : "prior_miscarriage",
+    "kind" : "observed",
+    "name" : "Prior Miscarriage (C)"
+  }, {
+    "id" : "physiology",
+    "kind" : "observed",
+    "name" : "Other Physiological Causes (D)"
+  }, {
+    "id" : "current_smoking",
+    "kind" : "observed",
+    "name" : "Current Smoking (X)"
+  }, {
+    "id" : "current_abnormality",
+    "kind" : "observed",
+    "name" : "Current Abnormality (E)"
+  }, {
+    "id" : "future_miscarriage",
+    "kind" : "observed",
+    "name" : "Future Miscarriage (Y)"
+  } ]
+}

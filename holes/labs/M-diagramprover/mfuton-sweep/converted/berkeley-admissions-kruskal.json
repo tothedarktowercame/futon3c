@@ -1,0 +1,41 @@
+{
+  "arrows" : [ {
+    "from" : "gender",
+    "to" : "department"
+  }, {
+    "from" : "department",
+    "to" : "outcome"
+  }, {
+    "from" : "gender",
+    "to" : "outcome"
+  }, {
+    "from" : "state",
+    "to" : "department"
+  }, {
+    "from" : "state",
+    "to" : "outcome"
+  } ],
+  "id" : "berkeley-admissions-kruskal",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "berkeley-admissions-kruskal.json"
+  },
+  "variables" : [ {
+    "id" : "gender",
+    "kind" : "observed",
+    "name" : "Gender"
+  }, {
+    "id" : "department",
+    "kind" : "observed",
+    "name" : "Department"
+  }, {
+    "id" : "state",
+    "kind" : "observed",
+    "name" : "State of Residence"
+  }, {
+    "id" : "outcome",
+    "kind" : "observed",
+    "name" : "Outcome"
+  } ]
+}

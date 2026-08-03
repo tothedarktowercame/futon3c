@@ -1,0 +1,61 @@
+{
+  "example_id": "smoking-gene-two-readings",
+  "title": "Smoking gene confounding and mediation readings",
+  "topology_basis": "printed_diagram",
+  "content": "Figures 9.11 and 9.12 contain the same three arrows in different layouts. For the Smoking-to-Lung-Cancer question, Smoking Gene is a confounder. For the Smoking-Gene-to-Lung-Cancer question, Smoking is a mediator. The adjacent analysis reports an indirect effect of only 1 to 3 percent, CDE(0) essentially zero, and a strong gene effect among smokers; those empirical interaction claims are not structural equations.",
+  "variables": [
+    {
+      "key": "smoking_gene",
+      "name": "Smoking Gene",
+      "content": "The high-risk genetic variant associated with smoking behavior and lung cancer."
+    },
+    {
+      "key": "smoking",
+      "name": "Smoking",
+      "content": "Smoking behavior, read either as the exposure of interest or as a mediator of the gene's effect."
+    },
+    {
+      "key": "lung_cancer",
+      "name": "Lung Cancer",
+      "content": "The lung-cancer outcome."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "smoking_gene",
+      "target": "smoking",
+      "because": "Both Figures 9.11 and 9.12 draw Smoking Gene as a cause of Smoking."
+    },
+    {
+      "source": "smoking_gene",
+      "target": "lung_cancer",
+      "because": "Both figures draw a direct Smoking Gene to Lung Cancer arrow."
+    },
+    {
+      "source": "smoking",
+      "target": "lung_cancer",
+      "because": "Both figures draw Smoking as a cause of Lung Cancer."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:d884e6c2feea77e2",
+    "ta-book-of-why-2018:fe057328a038473f",
+    "ta-book-of-why-2018:44936d9665f74de5",
+    "ta-book-of-why-2018:30bc438d5fb39e74",
+    "ta-book-of-why-2018:f6b74da1dd3a1d8e",
+    "ta-book-of-why-2018:761e43e1960b33ec",
+    "ta-book-of-why-2018:afa8f72727ced51e",
+    "ta-book-of-why-2018:a94dc41253793823",
+    "ta-book-of-why-2018:ad87cdc2b2be3f77",
+    "ta-book-of-why-2018:6d6c243275db41ac",
+    "ta-book-of-why-2018:8b6622a4df7eaad7",
+    "ta-book-of-why-2018:2958ed7a71017829",
+    "ta-book-of-why-2018:b0b0a1fc3e1f2fe1",
+    "ta-book-of-why-2018:d8516cf15976c793"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0353",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0354",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0355"
+  ]
+}

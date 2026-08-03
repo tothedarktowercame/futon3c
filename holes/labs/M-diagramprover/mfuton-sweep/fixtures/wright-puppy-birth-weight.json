@@ -1,0 +1,107 @@
+{
+  "example_id": "wright-puppy-birth-weight",
+  "title": "Figure 2.8: Wright's puppy birth-weight path diagram",
+  "topology_basis": "printed_diagram",
+  "content": "Wright's birth-weight model separates the direct effect of gestation period from the noncausal association induced by litter size through prenatal growth rate.",
+  "variables": [
+    {
+      "key": "other-growth-causes",
+      "name": "Other causes of growth rate (A)",
+      "content": "Unobserved exogenous causes of prenatal growth rate other than litter size."
+    },
+    {
+      "key": "litter-size",
+      "name": "Litter size (L)",
+      "content": "The measured number of pups sharing the pregnancy."
+    },
+    {
+      "key": "other-gestation-causes",
+      "name": "Other causes of gestation period (C)",
+      "content": "Unobserved exogenous causes of gestation period other than litter size."
+    },
+    {
+      "key": "prenatal-growth-rate",
+      "name": "Prenatal growth rate (Q)",
+      "content": "The unobserved rate at which the pup grows in utero."
+    },
+    {
+      "key": "gestation-period",
+      "name": "Gestation period (P)",
+      "content": "The measured length of time the pup spends in utero."
+    },
+    {
+      "key": "birth-weight",
+      "name": "Birth weight (X)",
+      "content": "The pup's measured weight at birth."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "other-growth-causes",
+      "target": "prenatal-growth-rate",
+      "coefficient": "a",
+      "because": "Figure 2.8 shows unobserved causes A entering prenatal growth rate Q with coefficient a."
+    },
+    {
+      "source": "litter-size",
+      "target": "prenatal-growth-rate",
+      "coefficient": "l",
+      "because": "Figure 2.8 shows litter size L entering prenatal growth rate Q with coefficient l."
+    },
+    {
+      "source": "litter-size",
+      "target": "gestation-period",
+      "coefficient": "l'",
+      "because": "Figure 2.8 shows litter size L entering gestation period P with coefficient l-prime."
+    },
+    {
+      "source": "other-gestation-causes",
+      "target": "gestation-period",
+      "coefficient": "c",
+      "because": "Figure 2.8 shows unobserved causes C entering gestation period P with coefficient c."
+    },
+    {
+      "source": "prenatal-growth-rate",
+      "target": "birth-weight",
+      "coefficient": "q",
+      "because": "Figure 2.8 shows prenatal growth rate Q entering birth weight X with coefficient q."
+    },
+    {
+      "source": "gestation-period",
+      "target": "birth-weight",
+      "coefficient": "p",
+      "because": "Figure 2.8 shows gestation period P entering birth weight X with direct-effect coefficient p."
+    }
+  ],
+  "linear_correlations": [
+    {
+      "key": "gestation-birth-correlation",
+      "content": "The source reports that one additional gestation day is associated with 5.66 grams of birth weight, while warning that this observed correlation is not the direct effect.",
+      "left": "gestation-period",
+      "right": "birth-weight",
+      "value": {"numerator": 283, "denominator": 50}
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:5be36272569ee9fa",
+    "ta-book-of-why-2018:007b0a26f1507be9",
+    "ta-book-of-why-2018:6ffc8d38f412c41f",
+    "ta-book-of-why-2018:47e5802b9e95779d",
+    "ta-book-of-why-2018:60b68303b6560d9a",
+    "ta-book-of-why-2018:e329b024262a464e",
+    "ta-book-of-why-2018:c933ce01251c3693",
+    "ta-book-of-why-2018:8c6e3befe96f9796",
+    "ta-book-of-why-2018:093f21c5a9c2652c",
+    "ta-book-of-why-2018:3684237d9de95525",
+    "ta-book-of-why-2018:ba60fb09be85ee4c",
+    "ta-book-of-why-2018:a4490a3d69a26e89",
+    "ta-book-of-why-2018:9c5ea7a5aadf2938",
+    "ta-book-of-why-2018:538523dd4a905cc2",
+    "ta-book-of-why-2018:8f3883b131e3f8a1"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0094",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0095",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0096"
+  ]
+}

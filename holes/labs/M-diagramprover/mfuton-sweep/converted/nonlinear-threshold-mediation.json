@@ -1,0 +1,42 @@
+{
+  "arrows" : [ {
+    "from" : "education",
+    "to" : "skill"
+  }, {
+    "from" : "education",
+    "to" : "salary"
+  }, {
+    "from" : "skill",
+    "to" : "salary"
+  }, {
+    "from" : "salary",
+    "to" : "outcome"
+  } ],
+  "id" : "nonlinear-threshold-mediation",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "non-Boolean value domains are graph-only: rational", "affine equations are outside the Boolean SCM evaluator", "numeric edge coefficients are graph-only", "structural expression exceeds fixed Boolean grammar; all equations skipped" ],
+    "source-file" : "nonlinear-threshold-mediation.json"
+  },
+  "variables" : [ {
+    "id" : "education",
+    "kind" : "observed",
+    "mfuton_value_domain" : "rational",
+    "name" : "Education"
+  }, {
+    "id" : "skill",
+    "kind" : "observed",
+    "mfuton_value_domain" : "rational",
+    "name" : "Skill"
+  }, {
+    "id" : "salary",
+    "kind" : "observed",
+    "mfuton_value_domain" : "rational",
+    "name" : "Salary"
+  }, {
+    "id" : "outcome",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Outcome"
+  } ]
+}

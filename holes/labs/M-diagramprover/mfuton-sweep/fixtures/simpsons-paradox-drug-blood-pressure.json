@@ -1,0 +1,29 @@
+{
+  "example_id": "simpsons-paradox-drug-blood-pressure",
+  "title": "Simpson's paradox: drug and blood pressure",
+  "topology_basis": "printed_diagram",
+  "content": "Drug B lowers blood pressure, which in turn affects heart-attack risk. Blood Pressure is a mediator rather than a confounder, so the total drug effect requires no adjustment for it.",
+  "variables": [
+    {"key": "d", "name": "Drug", "content": "Drug B, the treatment."},
+    {"key": "b", "name": "Blood Pressure", "content": "The mediator affected by Drug B."},
+    {"key": "h", "name": "Heart Attack", "content": "The outcome."}
+  ],
+  "arrows": [
+    {"source": "d", "target": "b", "because": "Drug B is intended to lower blood pressure."},
+    {"source": "b", "target": "h", "because": "Blood pressure affects heart-attack risk."},
+    {"source": "d", "target": "h", "because": "Figure 6.5 includes a direct drug-to-outcome path."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:7288b375f6f6fc01",
+    "ta-book-of-why-2018:762b540a66469691",
+    "ta-book-of-why-2018:f890999fa12ebf97",
+    "ta-book-of-why-2018:af526e75890167e0",
+    "ta-book-of-why-2018:ec062c8425c09d32",
+    "ta-book-of-why-2018:ff9f41a435ba832e",
+    "ta-book-of-why-2018:b75d5bbb36251004"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0220",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0221"
+  ]
+}

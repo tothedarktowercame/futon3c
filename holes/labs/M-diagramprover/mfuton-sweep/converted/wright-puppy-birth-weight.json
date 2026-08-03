@@ -1,0 +1,52 @@
+{
+  "arrows" : [ {
+    "from" : "other-growth-causes",
+    "to" : "prenatal-growth-rate"
+  }, {
+    "from" : "litter-size",
+    "to" : "prenatal-growth-rate"
+  }, {
+    "from" : "litter-size",
+    "to" : "gestation-period"
+  }, {
+    "from" : "other-gestation-causes",
+    "to" : "gestation-period"
+  }, {
+    "from" : "prenatal-growth-rate",
+    "to" : "birth-weight"
+  }, {
+    "from" : "gestation-period",
+    "to" : "birth-weight"
+  } ],
+  "id" : "wright-puppy-birth-weight",
+  "mfuton_conversion" : {
+    "disposition" : "graph-only",
+    "reasons" : [ "numeric edge coefficients are graph-only", "numeric linear correlations are not evaluated" ],
+    "source-file" : "wright-puppy-birth-weight.json"
+  },
+  "variables" : [ {
+    "id" : "other-growth-causes",
+    "kind" : "observed",
+    "name" : "Other causes of growth rate (A)"
+  }, {
+    "id" : "litter-size",
+    "kind" : "observed",
+    "name" : "Litter size (L)"
+  }, {
+    "id" : "other-gestation-causes",
+    "kind" : "observed",
+    "name" : "Other causes of gestation period (C)"
+  }, {
+    "id" : "prenatal-growth-rate",
+    "kind" : "observed",
+    "name" : "Prenatal growth rate (Q)"
+  }, {
+    "id" : "gestation-period",
+    "kind" : "observed",
+    "name" : "Gestation period (P)"
+  }, {
+    "id" : "birth-weight",
+    "kind" : "observed",
+    "name" : "Birth weight (X)"
+  } ]
+}

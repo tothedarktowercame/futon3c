@@ -1,0 +1,41 @@
+{
+  "arrows" : [ {
+    "from" : "m",
+    "to" : "s"
+  }, {
+    "from" : "m",
+    "to" : "u"
+  }, {
+    "from" : "m",
+    "to" : "e"
+  }, {
+    "from" : "s",
+    "to" : "u"
+  }, {
+    "from" : "u",
+    "to" : "e"
+  } ],
+  "id" : "jtpa-job-training",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "jtpa-job-training.json"
+  },
+  "variables" : [ {
+    "id" : "m",
+    "kind" : "observed",
+    "name" : "Motivation"
+  }, {
+    "id" : "s",
+    "kind" : "observed",
+    "name" : "Signed Up"
+  }, {
+    "id" : "u",
+    "kind" : "observed",
+    "name" : "Showed Up"
+  }, {
+    "id" : "e",
+    "kind" : "observed",
+    "name" : "Earnings"
+  } ]
+}

@@ -1,0 +1,44 @@
+{
+  "arrows" : [ {
+    "from" : "vacuuming",
+    "to" : "noise"
+  }, {
+    "from" : "noise",
+    "to" : "awake"
+  }, {
+    "from" : "awake",
+    "to" : "unhappy"
+  } ],
+  "id" : "vacuuming-causal-explanation",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "vacuuming-causal-explanation.json"
+  },
+  "structural_equations" : {
+    "awake" : "noise",
+    "noise" : "vacuuming",
+    "unhappy" : "awake"
+  },
+  "variables" : [ {
+    "id" : "vacuuming",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Vacuuming"
+  }, {
+    "id" : "noise",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Vacuum Noise"
+  }, {
+    "id" : "awake",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Child Awake"
+  }, {
+    "id" : "unhappy",
+    "kind" : "observed",
+    "mfuton_value_domain" : "boolean",
+    "name" : "Child Unhappy"
+  } ]
+}

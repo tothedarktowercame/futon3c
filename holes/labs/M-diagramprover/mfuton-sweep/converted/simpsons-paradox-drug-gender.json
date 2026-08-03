@@ -1,0 +1,31 @@
+{
+  "arrows" : [ {
+    "from" : "g",
+    "to" : "d"
+  }, {
+    "from" : "g",
+    "to" : "h"
+  }, {
+    "from" : "d",
+    "to" : "h"
+  } ],
+  "id" : "simpsons-paradox-drug-gender",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "simpsons-paradox-drug-gender.json"
+  },
+  "variables" : [ {
+    "id" : "g",
+    "kind" : "observed",
+    "name" : "Gender"
+  }, {
+    "id" : "d",
+    "kind" : "observed",
+    "name" : "Drug"
+  }, {
+    "id" : "h",
+    "kind" : "observed",
+    "name" : "Heart Attack"
+  } ]
+}

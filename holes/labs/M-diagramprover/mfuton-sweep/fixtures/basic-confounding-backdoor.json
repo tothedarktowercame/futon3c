@@ -1,0 +1,72 @@
+{
+  "example_id": "basic-confounding-backdoor",
+  "title": "The most basic version of confounding",
+  "topology_basis": "printed_diagram",
+  "content": "Pearl's Figure 4.1 separates the proposed causal path X -> Y from the spurious back-door fork X <- Z -> Y. Measured Z is an admissible adjustment set because it is not descended from X and blocks the only path entering X.",
+  "variables": [
+    {
+      "key": "x",
+      "name": "Treatment or Cause (X)",
+      "content": "The proposed cause or treatment whose causal effect on Y is sought."
+    },
+    {
+      "key": "y",
+      "name": "Outcome (Y)",
+      "content": "The outcome affected by X and by the common cause Z."
+    },
+    {
+      "key": "z",
+      "name": "Confounder (Z)",
+      "content": "The lurking common cause that influences both treatment selection X and outcome Y."
+    }
+  ],
+  "arrows": [
+    {
+      "source": "z",
+      "target": "x",
+      "because": "The confounder influences who receives or exhibits X."
+    },
+    {
+      "source": "z",
+      "target": "y",
+      "because": "The same confounder independently influences Y."
+    },
+    {
+      "source": "x",
+      "target": "y",
+      "because": "This is the proposed causal effect whose estimate is mixed with the back-door association."
+    }
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:1c58347b6c882449",
+    "ta-book-of-why-2018:7044810d7cbfcb86",
+    "ta-book-of-why-2018:334606dcc8d93091",
+    "ta-book-of-why-2018:6888992e8865440e",
+    "ta-book-of-why-2018:61c61c6168588a57",
+    "ta-book-of-why-2018:bc868a4febc779ec",
+    "ta-book-of-why-2018:6a92fbdb84b8738d",
+    "ta-book-of-why-2018:ff456c8a007deb5f",
+    "ta-book-of-why-2018:00000930e50acec3",
+    "ta-book-of-why-2018:cd21959b47e28b5e",
+    "ta-book-of-why-2018:f613127a1bed7a0b",
+    "ta-book-of-why-2018:0de5f7a5c8ba0ff7",
+    "ta-book-of-why-2018:e19f53a915ddb5e6",
+    "ta-book-of-why-2018:346c5d47ca9b690b",
+    "ta-book-of-why-2018:ef995d859c3d5bde",
+    "ta-book-of-why-2018:cb0e6005c5543d6e",
+    "ta-book-of-why-2018:b2f4969f88aec46a",
+    "ta-book-of-why-2018:22562f3af0620f50",
+    "ta-book-of-why-2018:644a26a164f52bed",
+    "ta-book-of-why-2018:e5d5cac1870702db",
+    "ta-book-of-why-2018:0b34f742e81f9b9c",
+    "ta-book-of-why-2018:c1dc660a65dc7be4"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0149",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0150",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0151",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0169",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0170",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0171"
+  ]
+}

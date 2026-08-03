@@ -1,0 +1,34 @@
+{
+  "example_id": "berkeley-admissions-kruskal",
+  "title": "Berkeley admissions paradox, Kruskal's model",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 9.5 extends the simple admissions model with State of Residence as a cause of both Department and Outcome. Conditioning on Department blocks the mediated path but opens the collider path Gender -> Department <- State of Residence -> Outcome.",
+  "variables": [
+    {"key": "gender", "name": "Gender", "content": "The applicant attribute whose direct effect is the discrimination question."},
+    {"key": "department", "name": "Department", "content": "A mediator and collider receiving Gender and State of Residence."},
+    {"key": "state", "name": "State of Residence", "content": "Kruskal's mediator-outcome confounder."},
+    {"key": "outcome", "name": "Outcome", "content": "The admissions decision."}
+  ],
+  "arrows": [
+    {"source": "gender", "target": "department", "because": "Figure 9.5 retains the gender-to-department path."},
+    {"source": "department", "target": "outcome", "because": "Figure 9.5 retains the department-to-outcome path."},
+    {"source": "gender", "target": "outcome", "because": "Figure 9.5 retains the direct discrimination path."},
+    {"source": "state", "target": "department", "because": "State of Residence affects department choice in Kruskal's counterexample."},
+    {"source": "state", "target": "outcome", "because": "State of Residence also affects admissions outcome."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:c0b93e545579ee8a",
+    "ta-book-of-why-2018:82d0299c469bfc4c",
+    "ta-book-of-why-2018:555eb967a323eea5",
+    "ta-book-of-why-2018:44f96423402ae7cb",
+    "ta-book-of-why-2018:7afcb2d6ec683115",
+    "ta-book-of-why-2018:e1f0e990b183cd3f",
+    "ta-book-of-why-2018:44c0f0e1d1d93fa6",
+    "ta-book-of-why-2018:e551b57606907659",
+    "ta-book-of-why-2018:a45e054b4724a01d"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0325",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0326"
+  ]
+}

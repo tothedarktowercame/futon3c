@@ -1,0 +1,33 @@
+{
+  "example_id": "monty-hall-make-a-deal",
+  "title": "Monty Hall: Let's Make a Deal",
+  "topology_basis": "printed_diagram",
+  "content": "The contestant's door and the car location are independent causes of the door Monty opens. Observing the opened door conditions on their common effect and makes the two causes dependent.",
+  "variables": [
+    {"key": "y", "name": "Your Door", "content": "The contestant's initial door choice."},
+    {"key": "c", "name": "Location of Car", "content": "The independently chosen location of the car."},
+    {"key": "o", "name": "Door Opened", "content": "The door Monty opens after consulting both other variables."}
+  ],
+  "arrows": [
+    {"source": "y", "target": "o", "because": "Monty must not open the contestant's chosen door."},
+    {"source": "c", "target": "o", "because": "In the real game Monty must not open the door containing the car."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:88547567b25f107a",
+    "ta-book-of-why-2018:66e1e1016503c098",
+    "ta-book-of-why-2018:c84a82e64268e054",
+    "ta-book-of-why-2018:27480b1aa2b2bd33",
+    "ta-book-of-why-2018:9822c95402935f30",
+    "ta-book-of-why-2018:f407ac123848563e",
+    "ta-book-of-why-2018:e5dcec8f9ef61495",
+    "ta-book-of-why-2018:0b986b2578ddc274",
+    "ta-book-of-why-2018:84037472bfde37d4",
+    "ta-book-of-why-2018:dde79d300cc5ff52"
+  ],
+  "source_page_ids": [
+    "ta-page:BOOK-OF-WHY-2018:pdf-0203",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0204",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0205",
+    "ta-page:BOOK-OF-WHY-2018:pdf-0206"
+  ]
+}

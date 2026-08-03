@@ -1,0 +1,38 @@
+{
+  "arrows" : [ {
+    "from" : "c",
+    "to" : "x"
+  }, {
+    "from" : "c",
+    "to" : "y"
+  }, {
+    "from" : "x",
+    "to" : "m"
+  }, {
+    "from" : "m",
+    "to" : "y"
+  } ],
+  "id" : "generic-frontdoor",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "generic-frontdoor.json"
+  },
+  "variables" : [ {
+    "id" : "c",
+    "kind" : "observed",
+    "name" : "C"
+  }, {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "X"
+  }, {
+    "id" : "m",
+    "kind" : "observed",
+    "name" : "M"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Y"
+  } ]
+}

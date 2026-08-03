@@ -1,0 +1,313 @@
+{
+  "tool_versions": {
+    "R": "4.3.3",
+    "dagitty": "0.3.4"
+  },
+  "dagitty": {
+    "checked": 350,
+    "agreements": 350
+  },
+  "fixtures": [
+    {
+      "example_id": "airport-bag-posterior",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "algebra-for-all-mediation",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "alice-education-salary-counterfactual",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "basic-confounding-backdoor",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "berkeley-admissions-kruskal",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "berkeley-admissions-simple",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "berksons-paradox",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "birth-weight-paradox",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "burks-nature-nurture",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "cholestyramine-noncompliance",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "climate-change-probabilities-of-causation",
+      "checked": 3,
+      "discrepancies": []
+    },
+    {
+      "example_id": "daisy-house-training",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "deconfounding-game-1",
+      "checked": 3,
+      "discrepancies": []
+    },
+    {
+      "example_id": "deconfounding-game-2",
+      "checked": 16,
+      "discrepancies": []
+    },
+    {
+      "example_id": "deconfounding-game-3",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "deconfounding-game-4",
+      "checked": 6,
+      "discrepancies": []
+    },
+    {
+      "example_id": "deconfounding-game-5",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "fertilizer-improper-control",
+      "checked": 10,
+      "discrepancies": []
+    },
+    {
+      "example_id": "fertilizer-randomized",
+      "checked": 21,
+      "discrepancies": []
+    },
+    {
+      "example_id": "fertilizer-target-intervention",
+      "checked": 15,
+      "discrepancies": []
+    },
+    {
+      "example_id": "firing-squad",
+      "checked": 4,
+      "discrepancies": []
+    },
+    {
+      "example_id": "forbes-smoking-adult-asthma",
+      "checked": 14,
+      "discrepancies": []
+    },
+    {
+      "example_id": "freedman-child-age-fork",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "generic-frontdoor",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "generic-linear-instrumental-variable",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "inheritance-galton-board",
+      "checked": 6,
+      "discrepancies": []
+    },
+    {
+      "example_id": "inheritance-genetic",
+      "checked": 27,
+      "discrepancies": []
+    },
+    {
+      "example_id": "john-snow-before-instrument",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "john-snow-instrumental-variable",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "jtpa-job-training",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "linear-mediation-path-diagram",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "lords-paradox-wainer-brown",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "lords-paradox",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "mendelian-randomization-hdl",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "monty-hall-fake-a-deal",
+      "checked": 2,
+      "discrepancies": []
+    },
+    {
+      "example_id": "monty-hall-make-a-deal",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "new-napkin-problem",
+      "checked": 3,
+      "discrepancies": []
+    },
+    {
+      "example_id": "nonlinear-threshold-mediation",
+      "checked": 2,
+      "discrepancies": []
+    },
+    {
+      "example_id": "scurvy-vitamin-c-mediator",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "scurvy-wrong-acidity-mediator",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "simpsons-paradox-drug-blood-pressure",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "simpsons-paradox-drug-gender",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "simpsons-paradox-exercise-age-cholesterol",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "smoking-gene-two-readings",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "smoking-tar-cancer-frontdoor",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "tourniquet-selection-mediation",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "transport-arkansas-target",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "transport-boston-car-ownership",
+      "checked": 9,
+      "discrepancies": []
+    },
+    {
+      "example_id": "transport-honolulu-outcome",
+      "checked": 6,
+      "discrepancies": []
+    },
+    {
+      "example_id": "transport-los-angeles-age",
+      "checked": 5,
+      "discrepancies": []
+    },
+    {
+      "example_id": "transport-san-francisco-clicks",
+      "checked": 3,
+      "discrepancies": []
+    },
+    {
+      "example_id": "transport-toronto-randomized-clicks",
+      "checked": 6,
+      "discrepancies": []
+    },
+    {
+      "example_id": "vaccination",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "vacuuming-causal-explanation",
+      "checked": 4,
+      "discrepancies": []
+    },
+    {
+      "example_id": "walking-age-mortality",
+      "checked": 0,
+      "discrepancies": []
+    },
+    {
+      "example_id": "wermuth-cox-sequential-treatment",
+      "checked": 3,
+      "discrepancies": []
+    },
+    {
+      "example_id": "wright-guinea-pig-coat-color",
+      "checked": 156,
+      "discrepancies": []
+    },
+    {
+      "example_id": "wright-price-to-supply-reduced-form",
+      "checked": 1,
+      "discrepancies": []
+    },
+    {
+      "example_id": "wright-puppy-birth-weight",
+      "checked": 6,
+      "discrepancies": []
+    },
+    {
+      "example_id": "wright-supply-to-price-reduced-form",
+      "checked": 1,
+      "discrepancies": []
+    }
+  ],
+  "discrepancies": []
+}

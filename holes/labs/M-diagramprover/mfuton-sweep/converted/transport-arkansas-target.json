@@ -1,0 +1,38 @@
+{
+  "arrows" : [ {
+    "from" : "z",
+    "to" : "x"
+  }, {
+    "from" : "z",
+    "to" : "y"
+  }, {
+    "from" : "x",
+    "to" : "w"
+  }, {
+    "from" : "w",
+    "to" : "y"
+  } ],
+  "id" : "transport-arkansas-target",
+  "mfuton_conversion" : {
+    "disposition" : "converted-fully",
+    "reasons" : [ ],
+    "source-file" : "transport-arkansas-target.json"
+  },
+  "variables" : [ {
+    "id" : "x",
+    "kind" : "observed",
+    "name" : "Advertisement (X)"
+  }, {
+    "id" : "y",
+    "kind" : "observed",
+    "name" : "Purchase Decision (Y)"
+  }, {
+    "id" : "z",
+    "kind" : "observed",
+    "name" : "Age (Z)"
+  }, {
+    "id" : "w",
+    "kind" : "observed",
+    "name" : "Click-through Rate (W)"
+  } ]
+}

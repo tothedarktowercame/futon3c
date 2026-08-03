@@ -1,0 +1,24 @@
+{
+  "example_id": "berkeley-admissions-simple",
+  "title": "Berkeley admissions paradox, simple model",
+  "topology_basis": "printed_diagram",
+  "content": "Figure 9.4 separates the mediated Gender -> Department -> Outcome path from the direct Gender -> Outcome path. For the discrimination question, fixing Department disables the indirect path so the direct effect remains.",
+  "variables": [
+    {"key": "gender", "name": "Gender", "content": "The applicant attribute whose direct effect is the discrimination question."},
+    {"key": "department", "name": "Department", "content": "The applicant's department choice and mediator."},
+    {"key": "outcome", "name": "Outcome", "content": "The admissions decision."}
+  ],
+  "arrows": [
+    {"source": "gender", "target": "department", "because": "Figure 9.4 includes gender-related differences in department choice."},
+    {"source": "department", "target": "outcome", "because": "Department affects admissions outcome."},
+    {"source": "gender", "target": "outcome", "because": "Figure 9.4 includes the direct path representing discrimination."}
+  ],
+  "source_atom_ids": [
+    "ta-book-of-why-2018:6c43715e604527c1",
+    "ta-book-of-why-2018:c498f73938ab8bc3",
+    "ta-book-of-why-2018:756324c06548a721",
+    "ta-book-of-why-2018:e8dea0f1b431c7c2",
+    "ta-book-of-why-2018:1fdfbe0214a6bfb0"
+  ],
+  "source_page_ids": ["ta-page:BOOK-OF-WHY-2018:pdf-0324"]
+}
