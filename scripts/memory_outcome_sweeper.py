@@ -15,6 +15,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -23,7 +24,7 @@ from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from edn_format import Keyword, dumps, loads
 
@@ -54,6 +55,17 @@ POSITIVE_MARKERS = (
     "used", "useful", "applied", "guided", "carried", "influenced",
     "prevented", "prompted", "directly", "conceptually", "relied",
 )
+ENDPOINT_SWEEPER_VERSION = "mechanical-witness/v1"
+LEAN_DECL_RE = re.compile(
+    r"(?m)^\s*(?:private\s+|protected\s+)?(?:theorem|lemma)\s+"
+    r"([A-Za-z_][A-Za-z0-9_'.]*)\b"
+)
+SHA_PRE_RE = re.compile(
+    r"(?im)^\s*(?:endpoint/sha-pre|sha-pre|registered base|base revision)\s*:\s*"
+    r"([0-9a-f]{7,40})\s*$"
+)
+TARGET_FILE_RE = re.compile(r"(?im)^\s*Target file\s*:\s*`?([^`\r\n]+?)`?\s*$")
+REPOSITORY_RE = re.compile(r"(?im)^\s*Repository\s*:\s*`?([^`\r\n]+?)`?\s*$")
 
 
 def now_iso() -> str:
@@ -76,6 +88,350 @@ def parse_time(raw: Any) -> datetime | None:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def run_process(args: Sequence[str], *, cwd: Path | None = None,
+                timeout: int = 600) -> subprocess.CompletedProcess[str]:
+    """Run a witness command and retain its actual exit code and output."""
+    return subprocess.run(
+        list(args), cwd=cwd, text=True, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, timeout=timeout, check=False,
+    )
+
+
+def prompt_text(job: Any) -> str:
+    """Return the raw caller packet persisted in this dispatch's event stream."""
+    prompts = [
+        value(event, "text")
+        for event in value(job, "events", [])
+        if str(value(event, "type", "")) == "prompt"
+        and isinstance(value(event, "text"), str)
+    ]
+    return prompts[-1] if prompts else ""
+
+
+def _target_declarations(packet: str) -> list[str]:
+    """Read declaration names only from the packet's target-statement block."""
+    marker = re.search(r"(?im)^\s*Target statement\(s\)\s*:\s*$", packet)
+    if marker is None:
+        return []
+    tail = packet[marker.end():]
+    stop = re.search(
+        r"(?im)^\s*(?:Downstream unblocks|Available proved support|"
+        r"Suggested route|Binding rules)\s*:", tail,
+    )
+    block = tail[:stop.start()] if stop else tail
+    return list(dict.fromkeys(LEAN_DECL_RE.findall(block)))
+
+
+def endpoint_packet(job: Any) -> dict[str, Any] | None:
+    """Recover the endpoint inputs frozen in the dispatch, never its final reply.
+
+    New dispatchers may store the fields directly on the job.  Existing cohort
+    packets spell them as ``Registered base``/``Target file`` lines, so that
+    durable raw prompt is the compatibility source.  A reusable seat session id
+    is intentionally absent from the join: the caller passes the job-id separately.
+    """
+    packet = prompt_text(job)
+    sha_pre = value(job, "endpoint/sha-pre")
+    if not sha_pre:
+        match = SHA_PRE_RE.search(packet)
+        sha_pre = match.group(1) if match else None
+    raw_targets = value(job, "endpoint/target-set")
+    declarations = _target_declarations(packet)
+    if raw_targets:
+        if isinstance(raw_targets, Mapping) or isinstance(raw_targets, (str, Path)):
+            raw_targets = [raw_targets]
+        targets = []
+        for target in raw_targets:
+            if isinstance(target, Mapping):
+                module = value(target, "module", value(target, "path"))
+                names = value(target, "declarations", [])
+                targets.append({"module": str(module),
+                                "declarations": [str(name) for name in names]})
+            else:
+                targets.append({"module": str(target), "declarations": declarations})
+    else:
+        modules = [match.strip() for match in TARGET_FILE_RE.findall(packet)]
+        targets = [
+            {"module": module, "declarations": declarations}
+            for module in dict.fromkeys(modules)
+        ]
+    if not sha_pre or not targets:
+        return None
+    repository = value(job, "endpoint/repository")
+    if not repository:
+        match = REPOSITORY_RE.search(packet)
+        repository = match.group(1).strip() if match else None
+    if not repository:
+        absolute = Path(targets[0]["module"]).expanduser()
+        if absolute.is_absolute():
+            probe = run_process(["git", "-C", str(absolute.parent),
+                                 "rev-parse", "--show-toplevel"], timeout=30)
+            if probe.returncode == 0:
+                repository = probe.stdout.strip()
+    repository = str(repository or "/home/joe/code/apm-lean")
+    return {"sha_pre": str(sha_pre), "targets": targets, "repository": repository}
+
+
+def strip_lean_comments_and_literals(source: str) -> str:
+    """Blank Lean comments and literals while preserving token boundaries.
+
+    Block comments nest in Lean.  Keeping newlines/spacing makes this suitable
+    both for module-wide lexical counting and declaration-span extraction.
+    """
+    out: list[str] = []
+    index = 0
+    block_depth = 0
+    line_comment = False
+    quote: str | None = None
+    escaped = False
+    while index < len(source):
+        current = source[index]
+        following = source[index:index + 2]
+        if line_comment:
+            if current == "\n":
+                line_comment = False
+                out.append("\n")
+            else:
+                out.append(" ")
+        elif block_depth:
+            if following == "/-":
+                block_depth += 1
+                out.extend("  ")
+                index += 1
+            elif following == "-/":
+                block_depth -= 1
+                out.extend("  ")
+                index += 1
+            else:
+                out.append("\n" if current == "\n" else " ")
+        elif quote:
+            out.append("\n" if current == "\n" else " ")
+            if escaped:
+                escaped = False
+            elif current == "\\":
+                escaped = True
+            elif current == quote:
+                quote = None
+        elif following == "--":
+            line_comment = True
+            out.extend("  ")
+            index += 1
+        elif following == "/-":
+            block_depth = 1
+            out.extend("  ")
+            index += 1
+        # Apostrophes are legal and common in Lean identifiers (x', h').
+        # Only double-quoted strings can contain the token `sorry` as prose.
+        elif current == '"':
+            quote = current
+            out.append(" ")
+        else:
+            out.append(current)
+        index += 1
+    return "".join(out)
+
+
+def lexical_sorry_count(source: str) -> int:
+    return len(re.findall(r"\bsorry\b", strip_lean_comments_and_literals(source)))
+
+
+def declaration_open(source: str, declaration: str) -> bool:
+    stripped = strip_lean_comments_and_literals(source)
+    declarations = list(LEAN_DECL_RE.finditer(stripped))
+    for position, match in enumerate(declarations):
+        if match.group(1) == declaration:
+            end = declarations[position + 1].start() if position + 1 < len(declarations) else len(stripped)
+            return bool(re.search(r"\bsorry\b", stripped[match.start():end]))
+    # A fresh-formalization target need not exist yet at sha-pre.  Absence is
+    # mechanically open/unproved; treating it as closed would recreate the
+    # stale-assignment bug for precisely the fresh rows.
+    return True
+
+
+def _repo_relative(repo: Path, module: str) -> str:
+    path = Path(module).expanduser()
+    if path.is_absolute():
+        try:
+            path = path.resolve().relative_to(repo.resolve())
+        except ValueError as error:
+            raise ValueError(f"target is outside repository: {module}") from error
+    if ".." in path.parts:
+        raise ValueError(f"unsafe target path: {module}")
+    return path.as_posix()
+
+
+def _git_text(repo: Path, sha: str, path: str) -> str:
+    result = run_process(["git", "-C", str(repo), "show", f"{sha}:{path}"], timeout=60)
+    if result.returncode:
+        raise RuntimeError(f"git show failed for {sha}:{path}: {result.stdout[-500:]}")
+    return result.stdout
+
+
+def resolve_dispatch_post_sha(repo: Path, sha_pre: str, targets: Sequence[dict[str, Any]],
+                              started_at: Any, finished_at: Any) -> tuple[str, str | None]:
+    """Resolve the final target-touching commit from Git, not runner testimony."""
+    pre = run_process(["git", "-C", str(repo), "rev-parse", f"{sha_pre}^{{commit}}"], timeout=30)
+    if pre.returncode:
+        raise RuntimeError(f"sha-pre is not a commit: {sha_pre}")
+    pre_sha = pre.stdout.strip()
+    if not started_at or not finished_at:
+        return pre_sha, None
+    paths = [_repo_relative(repo, target["module"]) for target in targets]
+    history = run_process(
+        ["git", "-C", str(repo), "log", "--all", "--format=%H%x1f%cI",
+         f"--since={started_at}", f"--until={finished_at}", "--", *paths],
+        timeout=60,
+    )
+    candidates: list[tuple[datetime, str]] = []
+    for line in history.stdout.splitlines():
+        try:
+            sha, timestamp = line.split("\x1f", 1)
+            committed = parse_time(timestamp)
+        except ValueError:
+            continue
+        ancestor = run_process(
+            ["git", "-C", str(repo), "merge-base", "--is-ancestor", pre_sha, sha],
+            timeout=30,
+        )
+        if committed is not None and ancestor.returncode == 0:
+            candidates.append((committed, sha))
+    candidates.sort()
+    return pre_sha, candidates[-1][1] if candidates else None
+
+
+def execute_endpoint_checks(packet: dict[str, Any], job: Any) -> dict[str, Any]:
+    """Execute every endpoint check in a detached worktree at sha-post."""
+    repo = Path(packet["repository"]).expanduser().resolve()
+    sha_pre, sha_post = resolve_dispatch_post_sha(
+        repo, packet["sha_pre"], packet["targets"],
+        value(job, "started-at", value(job, "created-at")), value(job, "finished-at"),
+    )
+    targets = [
+        {"module": _repo_relative(repo, target["module"]),
+         "declarations": list(target.get("declarations", []))}
+        for target in packet["targets"]
+    ]
+    pre_open: dict[str, bool] = {}
+    for target in targets:
+        source = _git_text(repo, sha_pre, target["module"])
+        names = target["declarations"]
+        if names:
+            for name in names:
+                pre_open[f"{target['module']}#{name}"] = declaration_open(source, name)
+        else:
+            pre_open[target["module"]] = lexical_sorry_count(source) > 0
+    if sha_post is None:
+        return {"sha_pre": sha_pre, "sha_post": None, "targets": targets,
+                "pre_open": pre_open, "lake_exit": None, "sorry_counts": {},
+                "axiom_verdicts": {}}
+    with tempfile.TemporaryDirectory(prefix="endpoint-sweep-") as temporary:
+        worktree = Path(temporary) / "tree"
+        added = run_process(["git", "-C", str(repo), "worktree", "add", "--detach",
+                             str(worktree), sha_post], timeout=120)
+        if added.returncode:
+            raise RuntimeError("could not create endpoint worktree: " + added.stdout[-500:])
+        try:
+            packages = repo / ".lake" / "packages"
+            if packages.exists():
+                (worktree / ".lake").mkdir(exist_ok=True)
+                (worktree / ".lake" / "packages").symlink_to(packages)
+            lake_exit = 0
+            sorry_counts: dict[str, int] = {}
+            axiom_verdicts: dict[str, Any] = {}
+            for target in targets:
+                module = target["module"]
+                module_path = worktree / module
+                source = module_path.read_text(encoding="utf-8")
+                sorry_counts[module] = lexical_sorry_count(source)
+                lake = run_process(["lake", "env", "lean", module], cwd=worktree, timeout=900)
+                if lake.returncode and lake_exit == 0:
+                    lake_exit = int(lake.returncode)
+                for declaration in target["declarations"]:
+                    module_path.write_text(source + f"\n#print axioms {declaration}\n",
+                                           encoding="utf-8")
+                    checked = run_process(["lake", "env", "lean", module],
+                                          cwd=worktree, timeout=900)
+                    output = checked.stdout[-4000:]
+                    clean = checked.returncode == 0 and "sorryAx" not in output
+                    axiom_verdicts[declaration] = {
+                        "exit": int(checked.returncode), "clean?": clean,
+                        "verdict": "clean" if clean else "not-clean",
+                        "output": output,
+                    }
+                    module_path.write_text(source, encoding="utf-8")
+            return {"sha_pre": sha_pre, "sha_post": sha_post, "targets": targets,
+                    "pre_open": pre_open, "lake_exit": lake_exit,
+                    "sorry_counts": sorry_counts, "axiom_verdicts": axiom_verdicts}
+        finally:
+            run_process(["git", "-C", str(repo), "worktree", "remove", "--force",
+                         str(worktree)], timeout=120)
+
+
+def capture_mechanical_witness(
+    job_id: str, job: Any, swept_at: str,
+    executor: Callable[[dict[str, Any], Any], dict[str, Any]] = execute_endpoint_checks,
+) -> dict[Any, Any] | None:
+    """Build the mechanical endpoint witness for one dispatch (job-id join)."""
+    packet = endpoint_packet(job)
+    if packet is None:
+        return None
+    continuation = bool(value(job, "endpoint/continuation?", False))
+    if not continuation:
+        continuation = bool(re.search(
+            r"(?im)^\s*(?:Operator continuation|Continuation of)\s*:\s*(?:true|invoke-)",
+            prompt_text(job),
+        ))
+    cap_death = str(value(job, "state", "")) == "timeout" or str(
+        value(job, "terminal-code", "")
+    ) in {"job-ceiling-exceeded", "timeout"}
+    try:
+        executed = executor(packet, job)
+        pre_open = executed["pre_open"]
+        stale = bool(pre_open) and not all(pre_open.values())
+        if stale:
+            row_class = "stale-assignment"
+        elif executed["sha_post"] is None:
+            row_class = "no-committed-work"
+        elif continuation:
+            row_class = "continuation-closure"
+        else:
+            row_class = "eligible-one-shot"
+        return {
+            K("endpoint/sha-pre"): executed["sha_pre"],
+            K("endpoint/sha-post"): executed["sha_post"],
+            K("endpoint/target-set"): executed["targets"],
+            K("endpoint/pre-open?"): pre_open,
+            K("endpoint/lake-exit"): executed["lake_exit"],
+            K("endpoint/sorry-counts"): executed["sorry_counts"],
+            K("endpoint/axiom-verdicts"): executed["axiom_verdicts"],
+            K("endpoint/one-shot?"): not cap_death and not continuation,
+            K("endpoint/continuation?"): continuation,
+            K("endpoint/class"): K(row_class),
+            K("endpoint/counts-toward-denominator?"): not stale,
+            K("endpoint/swept-at"): swept_at,
+            K("endpoint/sweeper-version"): ENDPOINT_SWEEPER_VERSION,
+            K("endpoint/dispatch-id"): job_id,
+        }
+    except Exception as error:
+        return {
+            K("endpoint/sha-pre"): packet["sha_pre"],
+            K("endpoint/sha-post"): None,
+            K("endpoint/target-set"): packet["targets"],
+            K("endpoint/pre-open?"): {},
+            K("endpoint/lake-exit"): None,
+            K("endpoint/sorry-counts"): {},
+            K("endpoint/axiom-verdicts"): {},
+            K("endpoint/one-shot?"): not cap_death and not continuation,
+            K("endpoint/continuation?"): continuation,
+            K("endpoint/class"): K("witness-error"),
+            K("endpoint/counts-toward-denominator?"): False,
+            K("endpoint/swept-at"): swept_at,
+            K("endpoint/sweeper-version"): ENDPOINT_SWEEPER_VERSION,
+            K("endpoint/dispatch-id"): job_id,
+            K("endpoint/error"): str(error),
+        }
 
 
 def deterministic_evidence_id(job_id: str) -> str:
@@ -295,7 +651,8 @@ def fetch_existing_outcome_jobs(
         return {job_id for job_id in pool.map(present, job_ids) if job_id}
 
 
-def evidence_entry(outcome: dict[str, Any], swept_at: str) -> dict[Any, Any]:
+def evidence_entry(outcome: dict[str, Any], swept_at: str,
+                   job: Any | None = None) -> dict[Any, Any]:
     job_id = outcome["job_id"]
     evidence_id = deterministic_evidence_id(job_id)
     finished = parse_time(outcome.get("finished_at"))
@@ -331,6 +688,26 @@ def evidence_entry(outcome: dict[str, Any], swept_at: str) -> dict[Any, Any]:
         K("memory-use/outcome-id"): evidence_id,
         K("memory-use/recorded-at"): swept_at,
     }
+    endpoint = capture_mechanical_witness(job_id, job, swept_at) if job is not None else None
+    body = {
+        K("event"): K("memory-use"),
+        K("phase"): K("outcome"),
+        K("recall-system"): K("v1.2-receipt-instrumented"),
+        K("job-id"): job_id,
+        K("problem"): problem,
+        K("writer"): K("outcome-sweeper"),
+        K("backfill"): backfill,
+        K("recall-outcome"): K(outcome["recall_outcome"]),
+        K("memory-use"): receipt,
+        K("provenance"): {
+            K("job-id"): job_id,
+            K("ledger-path"): str(LEDGER_PATH),
+            K("extraction-method"): K(outcome["extraction_method"]),
+            K("swept-at"): swept_at,
+        },
+    }
+    if endpoint:
+        body.update(endpoint)
     return {
         K("evidence/id"): evidence_id,
         K("evidence/subject"): subject,
@@ -339,23 +716,7 @@ def evidence_entry(outcome: dict[str, Any], swept_at: str) -> dict[Any, Any]:
         K("evidence/at"): swept_at,
         K("evidence/author"): "outcome-sweeper",
         K("evidence/session-id"): outcome["session_id"],
-        K("evidence/body"): {
-            K("event"): K("memory-use"),
-            K("phase"): K("outcome"),
-            K("recall-system"): K("v1.2-receipt-instrumented"),
-            K("job-id"): job_id,
-            K("problem"): problem,
-            K("writer"): K("outcome-sweeper"),
-            K("backfill"): backfill,
-            K("recall-outcome"): K(outcome["recall_outcome"]),
-            K("memory-use"): receipt,
-            K("provenance"): {
-                K("job-id"): job_id,
-                K("ledger-path"): str(LEDGER_PATH),
-                K("extraction-method"): K(outcome["extraction_method"]),
-                K("swept-at"): swept_at,
-            },
-        },
+        K("evidence/body"): body,
         K("evidence/tags"): tags,
     }
 
@@ -427,7 +788,9 @@ def sweep(*, dry_run: bool = False, base: str = SUBSTRATE_URL,
     unrecoverable: list[dict[str, Any]] = []
     gate_results: list[dict[str, Any]] = []
     reasons: Counter[str] = Counter()
+    jobs_by_id: dict[str, Any] = {}
     for job_id, job in load_jobs(ledger_path):
+        jobs_by_id[job_id] = job
         adjudication = adjudicate_job(job_id, job, base=base) if gate and not dry_run else None
         if adjudication is not None and not adjudication["counts_toward_endpoints"]:
             gate_results.append(adjudication)
@@ -476,7 +839,7 @@ def sweep(*, dry_run: bool = False, base: str = SUBSTRATE_URL,
             skipped_existing += 1
             per_day[day]["existing"] += 1
             continue
-        entry = evidence_entry(outcome, swept_at)
+        entry = evidence_entry(outcome, swept_at, jobs_by_id.get(outcome["job_id"]))
         if not dry_run:
             post_entry(entry, base)
         written.append({

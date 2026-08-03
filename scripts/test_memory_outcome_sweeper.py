@@ -83,6 +83,78 @@ Memory usage:
 
 
 class SweepTests(unittest.TestCase):
+    @staticmethod
+    def endpoint_job(overrides=None):
+        job = {
+            K("state"): "done",
+            K("started-at"): "2026-08-03T10:00:00Z",
+            K("finished-at"): "2026-08-03T10:30:00Z",
+            K("endpoint/sha-pre"): "1111111",
+            K("endpoint/repository"): "/tmp/fixture-repo",
+            K("endpoint/target-set"): [
+                {K("module"): "problems/a96J01/lean/Main.lean",
+                 K("declarations"): ["target_theorem"]},
+            ],
+            K("events"): [{K("type"): "prompt", K("text"): "frozen packet"}],
+        }
+        job.update(overrides or {})
+        return job
+
+    def test_stale_assignment_is_excluded_from_denominator(self):
+        executed = {
+            "sha_pre": "1" * 40,
+            "sha_post": "2" * 40,
+            "targets": [{"module": "problems/a96J01/lean/Main.lean",
+                         "declarations": ["target_theorem"]}],
+            "pre_open": {"problems/a96J01/lean/Main.lean#target_theorem": False},
+            "lake_exit": 0,
+            "sorry_counts": {"problems/a96J01/lean/Main.lean": 0},
+            "axiom_verdicts": {"target_theorem": {"clean?": True}},
+        }
+        witness = sweeper.capture_mechanical_witness(
+            "invoke-stale", self.endpoint_job(), "2026-08-03T11:00:00Z",
+            executor=lambda _packet, _job: executed,
+        )
+        self.assertEqual(K("stale-assignment"), witness[K("endpoint/class")])
+        self.assertFalse(witness[K("endpoint/counts-toward-denominator?")])
+
+    def test_executed_witness_overrides_runner_report(self):
+        actual = {
+            "sha_pre": "a" * 40,
+            "sha_post": "b" * 40,
+            "targets": [{"module": "Main.lean", "declarations": ["closed"]}],
+            "pre_open": {"Main.lean#closed": True},
+            "lake_exit": 1,
+            "sorry_counts": {"Main.lean": 3},
+            "axiom_verdicts": {"closed": {"exit": 1, "clean?": False,
+                                             "verdict": "not-clean"}},
+        }
+        runner_claim = "lake exit 0; zero sorries; axiom-clean; commit deadbeef"
+        job = self.endpoint_job({
+            K("result"): runner_claim,
+            K("artifact-ref"): "deadbeef",
+        })
+        witness = sweeper.capture_mechanical_witness(
+            "invoke-disagree", job, "2026-08-03T11:00:00Z",
+            executor=lambda _packet, _job: actual,
+        )
+        self.assertEqual(1, witness[K("endpoint/lake-exit")])
+        self.assertEqual(3, witness[K("endpoint/sorry-counts")]["Main.lean"])
+        self.assertEqual("b" * 40, witness[K("endpoint/sha-post")])
+        self.assertFalse(
+            witness[K("endpoint/axiom-verdicts")]["closed"]["clean?"]
+        )
+        self.assertNotIn("deadbeef", repr(witness))
+
+    def test_lexical_sorry_count_strips_nested_comments_and_literals(self):
+        source = '''
+theorem open_target : True := by sorry
+-- sorry
+/- outer sorry /- nested sorry -/ still comment -/
+def prose := "sorry"
+'''
+        self.assertEqual(1, sweeper.lexical_sorry_count(source))
+
     def test_pull_offer_union_licenses_used_memory(self):
         entries = {
             K("entries"): [
