@@ -18,7 +18,7 @@
 (def default-limit 5)
 (def default-query-term-limit 4)
 (def default-memory-channel :push)
-(def memory-pull-invitation-version "memory-pull-invitation-v1")
+(def memory-pull-invitation-version "memory-pull-invitation-v2")
 
 (def ^:private memory-channels
   #{:push :push+pull :pull-only :none})
@@ -28,7 +28,7 @@
    "MID-SESSION MEMORY RETRIEVAL\n"
    "[memory-pull-invitation-version=" memory-pull-invitation-version "]\n"
    "The memory store is searchable during this run with memory_search, "
-   "pattern_memory, evidence_graph, library_search, psr_search, and "
+   "pattern_memory, evidence_graph, psr_search, and "
    "memory_record. Search when you lack a lemma or an approach, including "
    "after work has begun, rather than treating dispatch-time recall as the "
    "only retrieval point. In the final Memory usage section, give exactly "
@@ -663,9 +663,6 @@
          (contains? memory :dispatch/base-score)
          (assoc :base-score (:dispatch/base-score memory))
 
-         (contains? memory :content-match/score)
-         (assoc :content-match-score (:content-match/score memory))
-
          (:via memory)
          (assoc :via (:via memory))
 
@@ -676,7 +673,8 @@
 
 (defn- recall-now
   [{:keys [problem subjects limit substrate-base recall-timeout-ms
-           receipt-ranking? receipt-alpha include-pre-cutoff-ranking?]
+           receipt-ranking? receipt-alpha include-pre-cutoff-ranking?
+           ranking-receipt-entries]
     :or {receipt-ranking? true receipt-alpha default-receipt-alpha}
     :as opts}
    packet]
@@ -758,15 +756,22 @@
               (min default-receipt-stats-timeout-ms
                    (- recall-timeout-ms elapsed-ms 500.0))))
         receipt-stats
-        (if (and receipt-ranking?
-                 (seq candidates)
-                 (>= stats-timeout-ms 250))
+        (cond
+          (and receipt-ranking? (seq candidates)
+               (some? ranking-receipt-entries))
+          (aggregate-use-receipts ranking-receipt-entries candidates)
+
+          (and receipt-ranking?
+               (seq candidates)
+               (>= stats-timeout-ms 250))
           (try
             (aggregate-use-receipts
              (receipt-entries substrate-base stats-timeout-ms)
              candidates)
             (catch Throwable _
               {:memories {} :patterns {}}))
+
+          :else
           {:memories {} :patterns {}})
         stats-found?
         (boolean

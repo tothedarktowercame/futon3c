@@ -18,10 +18,10 @@ The code implements **two independent ways** a memory can reach a runner:
 | channel | mechanism | who initiates |
 |---|---|---|
 | **push** | recall at dispatch renders memories into the prompt | ground control, before the runner starts |
-| **pull** | `memory_search` / `pattern_memory` / `evidence_graph` / `library_search` tool calls | the runner, mid-session |
+| **pull** | `memory_search` / `pattern_memory` / `evidence_graph` / `psr_search` tool calls | the runner, mid-session |
 
 The pull channel is real: `zai_api.clj` defines `memory_record`, `memory_search`,
-`pattern_memory`, `evidence_graph`, `tool_history` plus `library_search` /
+`pattern_memory`, `evidence_graph`, `tool_history` plus `psr_search` /
 `psr_record` / `pur_record`, and `specs-for-mode` can strip that family per
 `:memory-mode` (`:full` / `:files` / `:none` — the M-custom-harness §8.4
 conditions). The Agency invoke path (`transport/http.clj:2490`) never passes
@@ -230,3 +230,23 @@ Authors: claude-9 200, claude-6 136, codex-5 55, joe 55, codex-2 40, codex-4 11,
 zai-3 8, runner-gate 7, claude-4 5. Dates 2026-07-22 … 2026-08-02, peaking
 07-30. The zai lane contributes 8 of 522 entries (4 distinct memories, recorded
 twice each).
+
+
+---
+
+## Correction (2026-08-03)
+
+This document originally named a zai tool **`library_search`**. **No such tool
+exists** — `grep '"library_search"' src/futon3c/agents/zai_api.clj` returns
+zero. The tool that searches the pattern library and "returns scored candidates
+plus bounded hooks for reviewed attached memories" is **`psr_search`**
+(`zai_api.clj:150`); I attributed its description to a name I invented.
+
+The error propagated into the V3 arm design and into the spec codex-6 built
+from, so the shipped `:push+pull` / `:pull-only` invitation named a tool that
+does not exist. Corrected in `dispatch_with_recall.clj` with the invitation
+version bumped `v1` → `v2`; no dispatch had used v1, so no receipt is affected.
+Recorded here rather than silently fixed, because the wrong name reached
+experimental material — a runner told to call a nonexistent tool could
+reasonably conclude the memory tools are broken, which is precisely the
+behaviour the pull arm is trying to measure.

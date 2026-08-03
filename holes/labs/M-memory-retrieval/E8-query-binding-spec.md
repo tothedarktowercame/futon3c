@@ -282,3 +282,56 @@ instrument could show it.
 The `:v1.2-receipt-ranked` Ψ factor is confirmed live: `e-9751e537` carries
 `score 1.5, score-kind receipt-ranked`. It exists and fires; it simply did not
 surface that memory at dispatch during S6.
+
+---
+
+## Determinism check — FAILS, for a reason worth more than the freeze
+
+Re-ran the harness under an operator shell (no Agency cap) with the store
+snapshot **byte-identical** to run 1 — same `memory-entry-count` 527, same
+`memory-snapshot-sha256`, same `ranking-receipt-snapshot-sha256`. So inputs were
+held; the outputs still differ:
+
+    run 1  adb67b134646ff3e7ed01a0b4d73c791b3b48cd066dbdd6a55a3447211cc06cc
+    run 2  ff9b36823bbe52be207cd7b6469205ea04fe6cc8e223500daa9934e6facf8df1
+
+**The artifact is therefore NOT frozen and must not be cited as byte-reproducible.**
+
+### What is stable, checked cell by cell
+
+2 of 30 (case × arm) cells differ, both in case 5. Everything load-bearing is
+identical across the two runs:
+
+- all hit/miss verdicts,
+- all pre-cutoff candidate counts (19/16/13/6/19 under arm A),
+- all aggregate rates (A 40%, B8/B12/B16 40%, C 40%, D 80%),
+- **case 4's classification — the one claude-10's delta v3 rests on**:
+  `e-dfea2de9` `present-in-candidates: false`, `rank: null` in *both* runs.
+
+The two differing cells are same-set, different-order surfaced lists.
+
+So every claim reported from this experiment is **replicated across two
+independent runs**, which is a better warrant than a single run plus a byte
+freeze. The findings stand; the freeze does not.
+
+### The substantive instability, which is a finding about the system
+
+Case 5, arm D, `e-9751e537` — same rank (1), same presence, **different scoring
+path**:
+
+    run 1   score 1.0   score-kind "deterministic-base-order"
+    run 2   score 1.5   score-kind "receipt-ranked"
+
+**Receipt-ranking is intermittent.** The Ψ use-history factor fired in one run
+and silently fell back to base ordering in the other, against an identical store
+snapshot. The harness logs `retry after store busy` and the evidence endpoint
+returns `:expensive-read-busy` under load, so the likely mechanism is that the
+ranking-stats fetch fails under backpressure and degrades to unranked without
+saying so. That is consistent with S6's live receipt recording
+`receipt-ranking {enabled true, alpha 0.5, stats-found? false}`.
+
+This qualifies a claim I made earlier today. "The Ψ factor is confirmed live" is
+too strong: it fires *sometimes*. Any Ψ-dependent measurement is unreliable
+until the fallback is made loud rather than silent — a ranker that quietly
+degrades under load will produce arm differences that are really load
+differences.

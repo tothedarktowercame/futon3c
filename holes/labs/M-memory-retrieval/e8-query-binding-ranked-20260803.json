@@ -73,7 +73,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 19,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -16.747543153393227,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 1,
@@ -82,7 +81,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -15.898113279834256,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus",
           "position" : 2,
@@ -91,7 +89,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -14.855968969576761,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville",
           "position" : 3,
@@ -100,7 +97,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -13.315239418264056,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 4,
@@ -109,7 +105,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -13.102183469980258,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate",
           "position" : 5,
@@ -272,7 +267,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 19,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -16.747543153393227,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 1,
@@ -281,7 +275,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -15.898113279834256,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus",
           "position" : 2,
@@ -290,7 +283,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -14.855968969576761,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville",
           "position" : 3,
@@ -299,7 +291,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -13.315239418264056,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 4,
@@ -308,7 +299,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -13.102183469980258,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate",
           "position" : 5,
@@ -471,7 +461,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 19,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -16.747543153393227,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 1,
@@ -480,7 +469,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -15.898113279834256,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus",
           "position" : 2,
@@ -489,7 +477,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -14.855968969576761,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville",
           "position" : 3,
@@ -498,7 +485,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -13.315239418264056,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 4,
@@ -507,7 +493,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -13.102183469980258,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate",
           "position" : 5,
@@ -670,7 +655,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 19,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -16.747543153393227,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 1,
@@ -679,7 +663,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -15.898113279834256,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus",
           "position" : 2,
@@ -688,7 +671,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -14.855968969576761,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville",
           "position" : 3,
@@ -697,7 +679,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -13.315239418264056,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 4,
@@ -706,7 +687,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -13.102183469980258,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate",
           "position" : 5,
@@ -944,7 +924,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 8,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -30.84652744419826,
           "cutoff-position" : 5,
           "memory-id" : "e-30e87097-f843-4341-81c0-a49ee7ce0ef4",
           "position" : 1,
@@ -953,7 +932,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -21.983136499333682,
           "cutoff-position" : 5,
           "memory-id" : "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde",
           "position" : 2,
@@ -1103,7 +1081,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 16,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -12.544865507847351,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali",
           "position" : 1,
@@ -1112,7 +1089,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -12.27232686954464,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks",
           "position" : 2,
@@ -1121,7 +1097,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -11.997567869145303,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 3,
@@ -1314,7 +1289,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 16,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -12.544865507847351,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali",
           "position" : 1,
@@ -1323,7 +1297,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -12.27232686954464,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks",
           "position" : 2,
@@ -1332,7 +1305,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -11.997567869145303,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 3,
@@ -1525,7 +1497,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 16,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -12.544865507847351,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali",
           "position" : 1,
@@ -1534,7 +1505,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -12.27232686954464,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks",
           "position" : 2,
@@ -1543,7 +1513,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -11.997567869145303,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 3,
@@ -1736,7 +1705,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 16,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -12.544865507847351,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-general-Lp-Radon-Riesz-by-Scheffe-and-Vitali",
           "position" : 1,
@@ -1745,7 +1713,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -12.27232686954464,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks",
           "position" : 2,
@@ -1754,7 +1721,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -11.997567869145303,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 3,
@@ -2065,7 +2031,6 @@
         "pre-cutoff-candidate-count" : 20,
         "pre-cutoff-candidates" : [ {
           "base-score" : 1.0,
-          "content-match-score" : -24.856087689570725,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-evaluate-a-boundary-series-by-alternating-convergence-Abel-and-a-closed-form",
           "position" : 1,
@@ -2076,7 +2041,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9523809523809523,
-          "content-match-score" : -18.71174879375191,
           "cutoff-position" : 5,
           "memory-id" : "e-95c49e49-5982-4c66-abc0-7bba11a5be35",
           "position" : 2,
@@ -2087,7 +2051,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9090909090909091,
-          "content-match-score" : -17.85981461616472,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness",
           "position" : 3,
@@ -2098,7 +2061,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.8695652173913044,
-          "content-match-score" : -17.434988205671907,
           "cutoff-position" : 5,
           "memory-id" : "e-ab5afad3-4c0b-4718-9d9b-a3bc5290cd08",
           "position" : 4,
@@ -2375,7 +2337,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 13,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -22.316963302036946,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 1,
@@ -2384,7 +2345,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -20.82958099975727,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville",
           "position" : 2,
@@ -2559,7 +2519,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 13,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -22.316963302036946,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 1,
@@ -2568,7 +2527,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -20.82958099975727,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville",
           "position" : 2,
@@ -2743,7 +2701,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 13,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -22.316963302036946,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 1,
@@ -2752,7 +2709,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -20.82958099975727,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville",
           "position" : 2,
@@ -2927,7 +2883,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 13,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -22.316963302036946,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 1,
@@ -2936,7 +2891,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -20.82958099975727,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-a-reciprocal-across-finite-punctures-then-apply-Liouville",
           "position" : 2,
@@ -3205,7 +3159,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 22,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -20.86244059441573,
           "cutoff-position" : 5,
           "memory-id" : "e-afb1eae8-284f-4551-8c49-d0babd83a780",
           "position" : 1,
@@ -3214,7 +3167,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -18.805944995012254,
           "cutoff-position" : 5,
           "memory-id" : "e-ff95cfd3-c645-4b64-afa1-46605015bb00",
           "position" : 2,
@@ -3223,7 +3175,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -18.540788614688847,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 3,
@@ -3232,7 +3183,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -17.7212771604896,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus",
           "position" : 4,
@@ -3241,7 +3191,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -15.828350734661068,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate",
           "position" : 5,
@@ -3250,7 +3199,6 @@
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "content-match-score" : -14.092322363721285,
           "cutoff-position" : 5,
           "memory-id" : "e-e5d809a6-3bfc-468a-888a-16e651bfe468",
           "position" : 6,
@@ -3464,7 +3412,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 6,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -16.68054519701466,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young",
           "position" : 1,
@@ -3555,7 +3502,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 6,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -16.68054519701466,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young",
           "position" : 1,
@@ -3646,7 +3592,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 6,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -16.68054519701466,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young",
           "position" : 1,
@@ -3737,7 +3682,6 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 6,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -16.68054519701466,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young",
           "position" : 1,
@@ -3829,7 +3773,6 @@
         "pre-cutoff-candidate-count" : 17,
         "pre-cutoff-candidates" : [ {
           "base-score" : 1.0,
-          "content-match-score" : -12.514464958495402,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-reduce-probability-kernel-L2-contraction-to-young",
           "position" : 1,
@@ -3840,7 +3783,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9523809523809523,
-          "content-match-score" : -7.1049502848955495,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
           "position" : 2,
@@ -3851,7 +3793,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9090909090909091,
-          "content-match-score" : -7.081641397573696,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-integral-minkowski-eLpNorm-bochner",
           "position" : 3,
@@ -4055,7 +3996,6 @@
         "pre-cutoff-candidate-count" : 7,
         "pre-cutoff-candidates" : [ {
           "base-score" : 1.0,
-          "content-match-score" : -19.25334701711742,
           "cutoff-position" : 5,
           "memory-id" : "e-9751e537-f5b7-4c40-a857-0c0b699b93a2",
           "position" : 1,
@@ -4066,7 +4006,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9523809523809523,
-          "content-match-score" : -13.651305655004858,
           "cutoff-position" : 5,
           "memory-id" : "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
           "position" : 2,
@@ -4192,7 +4131,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 1.0,
-          "content-match-score" : -12.656892503007597,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails",
           "position" : 2,
@@ -4203,7 +4141,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9523809523809523,
-          "content-match-score" : -11.335807157941215,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 3,
@@ -4214,7 +4151,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9090909090909091,
-          "content-match-score" : -10.682126454303987,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 4,
@@ -4429,7 +4365,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 1.0,
-          "content-match-score" : -12.656892503007597,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails",
           "position" : 2,
@@ -4440,7 +4375,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9523809523809523,
-          "content-match-score" : -11.335807157941215,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 3,
@@ -4451,7 +4385,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9090909090909091,
-          "content-match-score" : -10.682126454303987,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 4,
@@ -4666,7 +4599,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 1.0,
-          "content-match-score" : -12.656892503007597,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails",
           "position" : 2,
@@ -4677,7 +4609,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9523809523809523,
-          "content-match-score" : -11.335807157941215,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 3,
@@ -4688,7 +4619,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9090909090909091,
-          "content-match-score" : -10.682126454303987,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 4,
@@ -4903,7 +4833,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 1.0,
-          "content-match-score" : -12.656892503007597,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails",
           "position" : 2,
@@ -4914,7 +4843,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9523809523809523,
-          "content-match-score" : -11.335807157941215,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
           "position" : 3,
@@ -4925,7 +4853,6 @@
           "within-cutoff?" : true
         }, {
           "base-score" : 0.9090909090909091,
-          "content-match-score" : -10.682126454303987,
           "cutoff-position" : 5,
           "memory-id" : "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
           "position" : 4,
@@ -5128,35 +5055,41 @@
         "ladder-rung" : "none",
         "pre-cutoff-candidate-count" : 3,
         "pre-cutoff-candidates" : [ {
-          "cutoff-position" : 5,
-          "endpoint" : "a96A04",
-          "memory-id" : "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
-          "position" : 1,
-          "score" : 1.0,
-          "score-kind" : "deterministic-base-order",
-          "via" : "endpoint",
-          "within-cutoff?" : true
-        }, {
-          "cutoff-position" : 5,
-          "endpoint" : "a96A04",
-          "memory-id" : "e-codexpilot-integral-minkowski-eLpNorm-bochner",
-          "position" : 2,
-          "score" : 0.9523809523809523,
-          "score-kind" : "deterministic-base-order",
-          "via" : "endpoint",
-          "within-cutoff?" : true
-        }, {
+          "base-score" : 0.9090909090909091,
           "cutoff-position" : 5,
           "endpoint" : "a96A04",
           "memory-id" : "e-dfea2de9-8979-4f8f-9343-caabb48487e6",
+          "position" : 1,
+          "pre-receipt-rank" : 3,
+          "score" : 1.3636363636363635,
+          "score-kind" : "receipt-ranked",
+          "via" : "endpoint",
+          "within-cutoff?" : true
+        }, {
+          "base-score" : 1.0,
+          "cutoff-position" : 5,
+          "endpoint" : "a96A04",
+          "memory-id" : "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
+          "position" : 2,
+          "pre-receipt-rank" : 1,
+          "score" : 1.0,
+          "score-kind" : "receipt-ranked",
+          "via" : "endpoint",
+          "within-cutoff?" : true
+        }, {
+          "base-score" : 0.9523809523809523,
+          "cutoff-position" : 5,
+          "endpoint" : "a96A04",
+          "memory-id" : "e-codexpilot-integral-minkowski-eLpNorm-bochner",
           "position" : 3,
-          "score" : 0.9090909090909091,
-          "score-kind" : "deterministic-base-order",
+          "pre-receipt-rank" : 2,
+          "score" : 0.9523809523809523,
+          "score-kind" : "receipt-ranked",
           "via" : "endpoint",
           "within-cutoff?" : true
         } ],
         "query" : "mathlib.measuretheory.function.lpseminorm.defs mathlib.measuretheory.function.l2space mathlib.measuretheory.function.lpspace.continuouscompmeasurepreserving mathlib.measuretheory.integral.bochner.basic mathlib.measuretheory.integral.dominatedconvergence mathlib.measuretheory.measure.lebesgue.basic mathlib.analysis.calculus.contdiff.basic mathlib.analysis.calculus.contdiff.deriv mathlib.analysis.calculus.parametricintegral mathlib.analysis.specialfunctions.gaussian.gaussianintegral mathlib.ringtheory.polynomial.hermite.gaussian constructiontargets.l2translation constructiontargets.lprepresentative constructiontargets.youngconvolution youngl2 item",
-        "surfaced-ids" : [ "e-bb16ffa8-e6da-4956-81c3-011e312d5302", "e-codexpilot-integral-minkowski-eLpNorm-bochner", "e-dfea2de9-8979-4f8f-9343-caabb48487e6" ],
+        "surfaced-ids" : [ "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-bb16ffa8-e6da-4956-81c3-011e312d5302", "e-codexpilot-integral-minkowski-eLpNorm-bochner" ],
         "surfaced-set-size" : 3,
         "terms" : [ "mathlib.measuretheory.function.lpseminorm.defs", "mathlib.measuretheory.function.l2space", "mathlib.measuretheory.function.lpspace.continuouscompmeasurepreserving", "mathlib.measuretheory.integral.bochner.basic", "mathlib.measuretheory.integral.dominatedconvergence", "mathlib.measuretheory.measure.lebesgue.basic", "mathlib.analysis.calculus.contdiff.basic", "mathlib.analysis.calculus.contdiff.deriv", "mathlib.analysis.calculus.parametricintegral", "mathlib.analysis.specialfunctions.gaussian.gaussianintegral", "mathlib.ringtheory.polynomial.hermite.gaussian", "constructiontargets.l2translation", "constructiontargets.lprepresentative", "constructiontargets.youngconvolution", "youngl2", "item" ]
       },
@@ -5170,8 +5103,8 @@
             "present-in-candidates" : true,
             "rank" : 1,
             "residual" : "surfaced",
-            "score" : 1.0,
-            "score-kind" : "deterministic-base-order",
+            "score" : 1.5,
+            "score-kind" : "receipt-ranked",
             "surfaced" : true
           }
         },
@@ -5185,89 +5118,106 @@
         "ladder-rung" : "triple",
         "pre-cutoff-candidate-count" : 9,
         "pre-cutoff-candidates" : [ {
-          "content-match-score" : -33.513778491219675,
+          "base-score" : 1.0,
           "cutoff-position" : 5,
           "memory-id" : "e-9751e537-f5b7-4c40-a857-0c0b699b93a2",
           "position" : 1,
-          "score" : 1.0,
-          "score-kind" : "deterministic-base-order",
+          "pre-receipt-rank" : 1,
+          "score" : 1.5,
+          "score-kind" : "receipt-ranked",
           "via" : "content-match",
           "within-cutoff?" : true
         }, {
-          "cutoff-position" : 5,
-          "endpoint" : "a96A04",
-          "memory-id" : "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
-          "position" : 2,
-          "score" : 0.9523809523809523,
-          "score-kind" : "deterministic-base-order",
-          "via" : "endpoint",
-          "within-cutoff?" : true
-        }, {
-          "cutoff-position" : 5,
-          "endpoint" : "a96A04",
-          "memory-id" : "e-codexpilot-integral-minkowski-eLpNorm-bochner",
-          "position" : 3,
-          "score" : 0.9090909090909091,
-          "score-kind" : "deterministic-base-order",
-          "via" : "endpoint",
-          "within-cutoff?" : true
-        }, {
+          "base-score" : 0.8695652173913044,
           "cutoff-position" : 5,
           "endpoint" : "a96A04",
           "memory-id" : "e-dfea2de9-8979-4f8f-9343-caabb48487e6",
-          "position" : 4,
-          "score" : 0.8695652173913044,
-          "score-kind" : "deterministic-base-order",
+          "position" : 2,
+          "pre-receipt-rank" : 4,
+          "score" : 1.3043478260869565,
+          "score-kind" : "receipt-ranked",
           "via" : "endpoint",
           "within-cutoff?" : true
         }, {
+          "base-score" : 0.9523809523809523,
+          "cutoff-position" : 5,
+          "endpoint" : "a96A04",
+          "memory-id" : "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
+          "position" : 3,
+          "pre-receipt-rank" : 2,
+          "score" : 0.9523809523809523,
+          "score-kind" : "receipt-ranked",
+          "via" : "endpoint",
+          "within-cutoff?" : true
+        }, {
+          "base-score" : 0.9090909090909091,
+          "cutoff-position" : 5,
+          "endpoint" : "a96A04",
+          "memory-id" : "e-codexpilot-integral-minkowski-eLpNorm-bochner",
+          "position" : 4,
+          "pre-receipt-rank" : 3,
+          "score" : 0.9090909090909091,
+          "score-kind" : "receipt-ranked",
+          "via" : "endpoint",
+          "within-cutoff?" : true
+        }, {
+          "base-score" : 0.8333333333333334,
           "cutoff-position" : 5,
           "endpoint" : "math/missing-dependency-protocol",
           "memory-id" : "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
           "position" : 5,
+          "pre-receipt-rank" : 5,
           "score" : 0.8333333333333334,
-          "score-kind" : "deterministic-base-order",
+          "score-kind" : "receipt-ranked",
           "via" : "pattern",
           "within-cutoff?" : true
         }, {
+          "base-score" : 0.8,
           "cutoff-position" : 5,
           "endpoint" : "math/missing-dependency-protocol",
           "memory-id" : "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
           "position" : 6,
+          "pre-receipt-rank" : 6,
           "score" : 0.8,
-          "score-kind" : "deterministic-base-order",
+          "score-kind" : "receipt-ranked",
           "via" : "pattern",
           "within-cutoff?" : false
         }, {
+          "base-score" : 0.7692307692307692,
           "cutoff-position" : 5,
           "endpoint" : "math/missing-dependency-protocol",
           "memory-id" : "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count",
           "position" : 7,
+          "pre-receipt-rank" : 7,
           "score" : 0.7692307692307692,
-          "score-kind" : "deterministic-base-order",
+          "score-kind" : "receipt-ranked",
           "via" : "pattern",
           "within-cutoff?" : false
         }, {
+          "base-score" : 0.7407407407407407,
           "cutoff-position" : 5,
           "endpoint" : "math/missing-dependency-protocol",
           "memory-id" : "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count",
           "position" : 8,
+          "pre-receipt-rank" : 8,
           "score" : 0.7407407407407407,
-          "score-kind" : "deterministic-base-order",
+          "score-kind" : "receipt-ranked",
           "via" : "pattern",
           "within-cutoff?" : false
         }, {
+          "base-score" : 0.7142857142857143,
           "cutoff-position" : 5,
           "endpoint" : "math/missing-dependency-protocol",
           "memory-id" : "e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap",
           "position" : 9,
+          "pre-receipt-rank" : 9,
           "score" : 0.7142857142857143,
-          "score-kind" : "deterministic-base-order",
+          "score-kind" : "receipt-ranked",
           "via" : "pattern",
           "within-cutoff?" : false
         } ],
         "query" : "assembly a95j04 a96a01 dependency lemmas theorem analytic family first ladder leaf local process review rule a3b3f26bdcf8faa2652d1311c1eb7e4e6d6a61fa",
-        "surfaced-ids" : [ "e-9751e537-f5b7-4c40-a857-0c0b699b93a2", "e-bb16ffa8-e6da-4956-81c3-011e312d5302", "e-codexpilot-integral-minkowski-eLpNorm-bochner", "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses" ],
+        "surfaced-ids" : [ "e-9751e537-f5b7-4c40-a857-0c0b699b93a2", "e-dfea2de9-8979-4f8f-9343-caabb48487e6", "e-bb16ffa8-e6da-4956-81c3-011e312d5302", "e-codexpilot-integral-minkowski-eLpNorm-bochner", "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses" ],
         "surfaced-set-size" : 5,
         "terms" : [ "assembly", "a95j04", "a96a01", "dependency", "lemmas", "theorem", "analytic", "family", "first", "ladder", "leaf", "local", "process", "review", "rule", "a3b3f26bdcf8faa2652d1311c1eb7e4e6d6a61fa" ]
       }
