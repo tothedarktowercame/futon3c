@@ -11,15 +11,20 @@ args <- commandArgs(trailingOnly = FALSE)
 file_arg <- sub("^--file=", "", args[grep("^--file=", args)])
 here <- dirname(normalizePath(file_arg))
 export <- fromJSON(file.path(here, "engine-export.json"), simplifyVector = FALSE)
-mediation <- export$`memory-mediation-graph`
+mediation <- export$`memory-mediation-projection`
 
-# The faithful ancestral reduction for {V07,V13,V14,V18} has 18 variables.
-# This asks for the joint post-intervention channel/outcome distribution. It is
-# not an NDE/NIE query: dosearch has no path-specific intervention syntax.
+# The Clojure export computes the ancestral subgraph, marks every non-kept node
+# latent, and reuses admg/latent-project. This asks for the same joint
+# post-intervention channel/outcome distribution as before. It is not an
+# NDE/NIE query: dosearch has no path-specific intervention syntax.
 query_string <- "p(V13,V14,V18|do(V07))"
-graph_string <- paste(vapply(mediation$arrows, function(edge) {
+directed_edges <- vapply(mediation$arrows, function(edge) {
   paste(edge$from, "->", edge$to)
-}, character(1)), collapse = "\n")
+}, character(1))
+bidirected_edges <- vapply(mediation$bidirected, function(edge) {
+  paste(edge[[1]], "<->", edge[[2]])
+}, character(1))
+graph_string <- paste(c(directed_edges, bidirected_edges), collapse = "\n")
 with_variables <- unlist(mediation$variables, use.names = FALSE)
 without_variables <- setdiff(with_variables, c("V13", "V14"))
 without_data <- paste0("p(", paste(without_variables, collapse = ","), ")")
@@ -44,9 +49,12 @@ run_query <- function(data_string) {
 result <- list(
   tool_version = as.character(packageVersion("dosearch")),
   encoding = paste(
-    "Joint channel/outcome response on the exact ancestral reduction;",
-    "not an NDE/NIE or other path-specific estimand."
+    "Joint channel/outcome response after admg/latent-project of the exact",
+    "ancestral reduction; not an NDE/NIE or other path-specific estimand."
   ),
+  kept_set = unlist(mediation$`kept-set`, use.names = FALSE),
+  ancestral_nodes = unlist(mediation$`ancestral-nodes`, use.names = FALSE),
+  projected_away = unlist(mediation$`projected-away`, use.names = FALSE),
   node_count = length(with_variables),
   internal_node_count = 2L * length(with_variables),
   package_node_limit = 30L,
@@ -57,7 +65,7 @@ result <- list(
 )
 write_json(result, file.path(here, "dosearch-results.json"), pretty = TRUE,
            auto_unbox = TRUE, null = "null")
-cat(sprintf("dosearch without/with S05: %s / %s (ancestral nodes %d; internal %d; limit %d)\n",
+cat(sprintf("dosearch without/with S05: %s / %s (projected nodes %d; internal %d; limit %d)\n",
             result$without_s05$status, result$with_s05$status,
             result$node_count, result$internal_node_count,
             result$package_node_limit))

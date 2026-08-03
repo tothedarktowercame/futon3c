@@ -64,7 +64,6 @@ def main():
     deferrals = [
         "dagitty localTests: deferred — data-dependent; requires M-memory-retrieval cohort data.",
         "DoWhy gcm.falsify_graph: deferred — data-dependent; requires M-memory-retrieval cohort data.",
-        "dosearch Q2 boundary: deferred — dosearch 1.0.12 doubles 18 faithful ancestral variables into 36 internal intervention nodes, exceeding its hard limit of 30; both without-S05 and with-S05 queries were rejected before identification search.",
         "Q2 NDE/NIE decomposition: deferred — dosearch has no path-specific intervention syntax; the attempted query was the joint channel/outcome response P(V13,V14,V18 | do(V07)), not an NDE/NIE proxy.",
     ]
     identification = py["identification"]
@@ -101,6 +100,13 @@ def main():
         },
     }
     (HERE / "report.edn").write_text(edn(summary) + "\n", encoding="utf-8")
+
+    def dosearch_outcome(run):
+        if run["status"] == "identifiable":
+            return f"identifiable; formula: `{run['formula']}`"
+        if run["status"] == "non-identifiable":
+            return "non-identifiable; no formula returned"
+        return f"{run['status']}; error: `{run['error']}`"
 
     q3 = py["q3"]["verdicts"]
     report = f"""# M-diagramprover D2/D3 oracle falsification pass
@@ -195,14 +201,21 @@ separate computed backdoor claims, not conclusions inferred from y0's formula.
 - dagitty {rr['tool_versions']['dagitty']}
 - dosearch {dosearch['tool_version']}
 
-## dosearch Q2 boundary
+## dosearch Q2 latent projection
 
 The intended path-specific V13/V14 mediation decomposition does not map to
 dosearch's query language. The faithful query attempted instead was the joint
-channel/outcome response on the exact 18-node ancestral reduction. Both runs were
-rejected before search: `{dosearch['without_s05']['status']}` without S05 and
-`{dosearch['with_s05']['status']}` with S05. dosearch creates 36 internal nodes
-after adding intervention nodes, above its hard limit of 30.
+channel/outcome response after latent-projecting the exact ancestral reduction.
+Identifiability is preserved under latent projection onto a superset of the query
+variables; the auditable kept set is
+`{{{', '.join(dosearch['kept_set'])}}}`. The projection has
+{dosearch['node_count']} observed nodes and {dosearch['internal_node_count']}
+dosearch internal nodes, below the package limit of
+{dosearch['package_node_limit']}.
+
+The without-S05 result is {dosearch_outcome(dosearch['without_s05'])}. The
+with-S05 result is {dosearch_outcome(dosearch['with_s05'])}. These are
+identification-search verdicts, not size-limit rejections.
 
 Without S05 — exact arguments:
 
@@ -222,9 +235,8 @@ graph =
 {dosearch['with_s05']['graph']}
 ```
 
-Exact error for both: `{dosearch['without_s05']['error']}` No identifying or
-non-identifying verdict was returned, so Q2's pure computed refusal is not
-upgraded to a proved dosearch boundary in this slice.
+The `<->` lines are bidirected arcs induced by the shared latent ancestry removed
+by `admg/latent-project`. No proxy estimand was substituted.
 
 ## Deferred with reason
 

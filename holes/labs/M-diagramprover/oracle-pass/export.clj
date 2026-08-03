@@ -2,6 +2,8 @@
   "Side-effecting export harness for the otherwise pure causal layer."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.set :as set]
+            [futon3c.diagramprover.causal.admg :as admg]
             [futon3c.diagramprover.causal.bow :as bow]
             [futon3c.diagramprover.causal.dag :as dag]
             [futon3c.diagramprover.causal.dsep :as dsep]
@@ -37,6 +39,27 @@
                  #(into [] (filter (fn [{:keys [from to]}]
                                      (and (node-set from) (node-set to))) %)))))))
 
+(defn- mediation-projection [causal-dag kept]
+  (let [ancestral-nodes (into kept (dag/ancestors causal-dag kept))
+        ancestral-dag (induced-dag causal-dag ancestral-nodes)
+        projected-away (set/difference ancestral-nodes kept)
+        marked-dag
+        (reduce (fn [result node]
+                  (assoc-in result [:variables node :kind] :latent-unobserved))
+                ancestral-dag projected-away)
+        projection (admg/latent-project marked-dag)]
+    {:variables (vec (sort (:nodes projection)))
+     :arrows (->> (:directed projection)
+                  (map (fn [[from to]] {:from from :to to}))
+                  (sort-by (juxt :from :to))
+                  vec)
+     :bidirected (->> (:bidirected projection)
+                      (map (comp vec sort))
+                      sort vec)
+     :kept-set (vec (sort kept))
+     :ancestral-nodes (vec (sort ancestral-nodes))
+     :projected-away (vec (sort projected-away))}))
+
 (defn build-export []
   (let [memory (dag/load-spec receipts/memory-spec-path)
         lean (dag/load-spec receipts/lean-spec-path)
@@ -44,6 +67,7 @@
         r2 (receipts/r2-variants lean)
         r3 (receipts/r3-variants lean)
         mediation-query-nodes #{:V07 :V13 :V14 :V18}
+        mediation-projection-nodes #{:V07 :V12 :V13 :V14 :V16 :V17 :V18}
         bow-graphs (into (sorted-map)
                          (map (fn [[id path]] [id (dag/load-spec path)]))
                          bow/fixture-paths)
@@ -67,6 +91,8 @@
      :lean-graph (graph-export lean)
      :memory-mediation-graph
      (graph-export (induced-dag memory mediation-nodes))
+     :memory-mediation-projection
+     (mediation-projection memory mediation-projection-nodes)
      :implied-independencies
      (dsep/implied-independencies memory {:max-conditioning 2})
      :lean-implied-independencies

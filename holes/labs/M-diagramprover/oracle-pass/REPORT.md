@@ -90,98 +90,67 @@ separate computed backdoor claims, not conclusions inferred from y0's formula.
 - dagitty 0.3.4
 - dosearch 1.0.12
 
-## dosearch Q2 boundary
+## dosearch Q2 latent projection
 
 The intended path-specific V13/V14 mediation decomposition does not map to
 dosearch's query language. The faithful query attempted instead was the joint
-channel/outcome response on the exact 18-node ancestral reduction. Both runs were
-rejected before search: `rejected-size-limit` without S05 and
-`rejected-size-limit` with S05. dosearch creates 36 internal nodes
-after adding intervention nodes, above its hard limit of 30.
+channel/outcome response after latent-projecting the exact ancestral reduction.
+Identifiability is preserved under latent projection onto a superset of the query
+variables; the auditable kept set is
+`{V07, V12, V13, V14, V16, V17, V18}`. The projection has
+7 observed nodes and 14
+dosearch internal nodes, below the package limit of
+30.
+
+The without-S05 result is non-identifiable; no formula returned. The
+with-S05 result is non-identifiable; no formula returned. These are
+identification-search verdicts, not size-limit rejections.
 
 Without S05 — exact arguments:
 
 ```text
-data = p(V01,V02,V03,V04,V05,V06,V07,V08,V09,V10,V11,V12,V15,V16,V17,V18)
+data = p(V07,V12,V16,V17,V18)
 query = p(V13,V14,V18|do(V07))
 graph =
-V01 -> V08
-V01 -> V09
-V01 -> V16
-V02 -> V10
-V02 -> V11
-V03 -> V15
-V03 -> V17
-V04 -> V08
-V04 -> V16
-V05 -> V02
-V05 -> V03
-V06 -> V09
-V07 -> V02
 V07 -> V12
-V08 -> V09
-V08 -> V15
-V09 -> V10
-V10 -> V11
-V10 -> V12
-V11 -> V12
-V11 -> V12
 V12 -> V13
 V12 -> V14
 V13 -> V16
 V14 -> V16
-V15 -> V16
 V16 -> V17
 V16 -> V18
 V17 -> V18
+V12 <-> V16
+V12 <-> V17
+V16 <-> V17
 ```
 
 With S05 — exact arguments:
 
 ```text
-data = p(V01,V02,V03,V04,V05,V06,V07,V08,V09,V10,V11,V12,V13,V14,V15,V16,V17,V18)
+data = p(V07,V12,V13,V14,V16,V17,V18)
 query = p(V13,V14,V18|do(V07))
 graph =
-V01 -> V08
-V01 -> V09
-V01 -> V16
-V02 -> V10
-V02 -> V11
-V03 -> V15
-V03 -> V17
-V04 -> V08
-V04 -> V16
-V05 -> V02
-V05 -> V03
-V06 -> V09
-V07 -> V02
 V07 -> V12
-V08 -> V09
-V08 -> V15
-V09 -> V10
-V10 -> V11
-V10 -> V12
-V11 -> V12
-V11 -> V12
 V12 -> V13
 V12 -> V14
 V13 -> V16
 V14 -> V16
-V15 -> V16
 V16 -> V17
 V16 -> V18
 V17 -> V18
+V12 <-> V16
+V12 <-> V17
+V16 <-> V17
 ```
 
-Exact error for both: `The inputs imply a graph with more than 30 nodes.` No identifying or
-non-identifying verdict was returned, so Q2's pure computed refusal is not
-upgraded to a proved dosearch boundary in this slice.
+The `<->` lines are bidirected arcs induced by the shared latent ancestry removed
+by `admg/latent-project`. No proxy estimand was substituted.
 
 ## Deferred with reason
 
 - dagitty localTests: deferred — data-dependent; requires M-memory-retrieval cohort data.
 - DoWhy gcm.falsify_graph: deferred — data-dependent; requires M-memory-retrieval cohort data.
-- dosearch Q2 boundary: deferred — dosearch 1.0.12 doubles 18 faithful ancestral variables into 36 internal intervention nodes, exceeding its hard limit of 30; both without-S05 and with-S05 queries were rejected before identification search.
 - Q2 NDE/NIE decomposition: deferred — dosearch has no path-specific intervention syntax; the attempted query was the joint channel/outcome response P(V13,V14,V18 | do(V07)), not an NDE/NIE proxy.
 
 ## Reproduce
