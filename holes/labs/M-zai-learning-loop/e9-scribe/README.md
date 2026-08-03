@@ -1,7 +1,9 @@
 # E9 scribe pass: a96J04
 
-Operator-review drafts from the single zai-1 session for APM problem
-`a96J04`. Nothing in this directory has been written to the memory store.
+Reviewed memories from the single zai-1 session for APM problem `a96J04`, plus
+the separately evidenced closer addendum. The five entries were promoted on
+2026-08-03 after claude-10's owner review/commission; their pattern attachments
+remain proposed for a separately authored attachment review.
 
 ## Corpus boundary and method
 
@@ -27,12 +29,44 @@ The returned evidence range is
 
 ## Drafts
 
-| File | Requested level | Confidence | Review state |
+| File | Requested level | Confidence | Memory ID |
 | --- | --- | --- | --- |
-| [open-set-interval-decomposition-gap.md](open-set-interval-decomposition-gap.md) | lemma-location | single instance (`n=1`) | pending Joe |
-| [monotone-image-interval-containment.md](monotone-image-interval-containment.md) | tactic | single instance (`n=1`) | pending Joe |
-| [null-image-via-open-cover-and-finite-ac.md](null-image-via-open-cover-and-finite-ac.md) | strategy | single instance (`n=1`) | pending Joe |
-| [localize-an-observed-blocker-at-one-sorry.md](localize-an-observed-blocker-at-one-sorry.md) | process | single instance (`n=1`) | pending Joe |
+| [open-set-interval-decomposition-gap.md](open-set-interval-decomposition-gap.md) | lemma-location | single instance (`n=1`) | `e-e9-a96j04-open-set-interval-decomposition-gap` |
+| [monotone-image-interval-containment.md](monotone-image-interval-containment.md) | tactic | single instance (`n=1`) | `e-e9-a96j04-monotone-image-interval-containment` |
+| [null-image-via-open-cover-and-finite-ac.md](null-image-via-open-cover-and-finite-ac.md) | strategy | single instance (`n=1`) | `e-e9-a96j04-null-image-via-open-cover-and-finite-ac` |
+| [localize-an-observed-blocker-at-one-sorry.md](localize-an-observed-blocker-at-one-sorry.md) | process | single instance (`n=1`) | `e-e9-a96j04-localize-an-observed-blocker-at-one-sorry` |
+| [closer-open-component-decomposition.md](closer-open-component-decomposition.md) | lemma-location | single instance (`n=1`) | `e-e9-a96j04-closer-open-component-decomposition` |
+
+The first four evidence bodies contain the reviewed Markdown byte-for-byte.
+The fifth cites closer commit
+`33575db8ea2271641c75b1eda91c78ab72606150` and job
+`invoke-1785770371655-945-fa70bee1`.
+
+## Proposed attachment table
+
+| Memory | Proposed pattern | Justification |
+| --- | --- | --- |
+| `open-set-interval-decomposition-gap` | `math/missing-dependency-protocol` | A bounded Mathlib search exposed a missing theorem/API bridge and an explicit local-construction frontier. |
+| `monotone-image-interval-containment` | `math/measure-integration-api` | The compiled helper is an interval-image step used inside a Lebesgue-null image argument. |
+| `null-image-via-open-cover-and-finite-ac` | `math/measure-integration-api` | The record is explicitly a measure/integration proof architecture using null covers and finite absolute continuity. |
+| `localize-an-observed-blocker-at-one-sorry` | `math/missing-dependency-protocol` | The process rule governs how to preserve a compiling frontier when a searched dependency is missing. |
+| `closer-open-component-decomposition` | `math/missing-dependency-protocol` | The closer turns the same missing packaged dependency into a concrete local construction recipe. |
+
+All five `memory/assert` edges read back with `:attachment-status :proposed`.
+The exact cross-author review commands are in
+[APPROVALS.md](APPROVALS.md).
+
+## Tag verification
+
+The promotion report records memory-search-equivalent AND queries over the
+durable evidence tags. Every query returned its expected entry or entries:
+
+| Tags | Returned new memories |
+| --- | --- |
+| `[open-set interval-decomposition Lebesgue null-set]` | decomposition gap; closer addendum |
+| `[monotone interval-image MonotoneOn Icc]` | monotone interval containment |
+| `[Lebesgue null-set absolute-continuity finite-intervals]` | open-cover/finite-AC strategy |
+| `[Lean sorry proof-boundary dependency-blocker]` | honest-boundary process |
 
 ## Near-duplicate findings
 
@@ -54,6 +88,6 @@ entries.
   is related but not a duplicate: it rejects moving `sorryAx` without a proved
   reusable leaf, whereas a96J04 did produce two compiling reusable helpers.
 
-No current memory matched the monotone interval-image helper or the complete
-open-cover/finite-AC proof architecture. The four files remain drafts awaiting
-operator judgment; this pass performed no evidence or memory writes.
+No pre-existing memory matched the monotone interval-image helper or the
+complete open-cover/finite-AC proof architecture. The near-duplicate findings
+above therefore remain unchanged by promotion.
