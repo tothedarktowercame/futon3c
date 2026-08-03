@@ -90,9 +90,20 @@ dispatched and reviewed on 2026-08-03 through
 - **Register marks.** ⊸win 10 · ⊸meter 18 · ⊸prop 6 · ⊸fix 5 · ⊸miss 6.
   Register violations: 0 — both resumed rows were logged in the typed register
   at review time.
-- **Extraction yield (drafts/session from scribe reports).** **Not computed —
-  the scribe has not run.** `scribe-lag` stands as a typed failure for both
-  resumed rows. Packet ready at `s3-scribe-packet.md`.
+- **Extraction yield (drafts/session from scribe reports).** **5 memories from
+  1 mined session** (S3). Store `type=memory` moved 522 → 527, corroborating
+  the count independently of the scribe's own report. Three solve-lane
+  (`summable_nat_add_iff` shift; `hasSum_single` for at-most-one support;
+  `f_tail_le` by witness/no-witness case split), one arc-lane (three verified
+  final-assembly error→fix rules), one trajectory-lane (checkpoint a compiling
+  lemma layer before cap-risk assembly). All authored by `codex-2`, all
+  `:assert`, all first-attempt writes. `scribe-lag` is discharged for S3; S6
+  was not mined (the row was already closed, so there was no work to distil).
+
+  The three solve-lane memories are **the content the runner lost** when its
+  own `memory_record` calls were refused this morning. Recovered by a
+  different author, which is the separation of powers working as designed
+  rather than as a slogan.
 - **Time-to-first-reuse.** Not computed: requires outcome receipts joined to
   offered receipts, and the one use this cohort has no independently witnessed
   outcome record.

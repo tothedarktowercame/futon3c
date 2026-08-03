@@ -116,3 +116,17 @@ So: 1 of 2 predicted memories surfaced, ranking system live, the specific factor
 ⊸win [S6-first-use] **first USED memory of the resumed cohort.** `e-bb16ffa8-…` (Young L² lemma-location map) was surfaced and used: *"told me immediately the dependency was available without re-searching."* Confirmatory rather than load-bearing — it saved a search on a problem already solved — but it is a real use, correctly attributed, and the only one across S3+S6.
 
 ⊸meter [S6-attribution] per-id attribution complete: 5 surfaced, 5 verdict lines (1 USED, 4 IGNORED), `dispatch-recall-outcome` marker copied verbatim. No `memory-write-rejected` recurrence this row — the runner made no `memory_record` calls.
+
+## Scribe pass — S3 (codex-2, 2026-08-03)
+
+⊸win [scribe-S3] five memories recorded, all first-attempt, all authored by `codex-2`, all `:assert`. Verified by direct id fetch, not from the report: `e-93deab18` (shift-harmonic-divergence-with-summable-nat-add-iff), `e-88d6074a` (use-hasSum-single-for-at-most-one-nonzero), `e-965e7644` (bound-a-one-support-series-tail-by-its-witness-index), `e-5af536f1` (repair-final-series-assembly-with-semantic-fixes), `e-c924ebba` (checkpoint-a-compiling-lemma-layer-before-cap-risk-assembly). Store `type=memory` moved 522 → 527 — an independent corroboration of the count. Subjects are `:problem` ×4 and `:task` ×1; no `bpm` string anywhere in the five, so the held-out discipline held.
+
+⊸win [scribe-recovery] the three solve-lane memories are the content the runner lost this morning when its own `memory_record` calls were refused. Recovered by a different author. That is the author≠runner separation doing work rather than being asserted.
+
+⊸meter [meta-lane] typed-register parsing was **fully deterministic**: one anchored regex over 45 marks, zero rejects, six S3 markers selected, no model pass. The mission's meta-lane claim ("the scribe meta-lane parses the typed register deterministically — zero re-mining") is discharged on its first real test.
+
+⊸fix [session-id-reuse] **session-id is per-SEAT, not per-DISPATCH — and it is therefore not a valid join key.** zai-1's roster session-id is unchanged from S3 through S6, so both rows' evidence commingles under `zai-bec940299024470eb815607f8b13b650`. Measured: four distinct `turn-id`s under that one session-id, with `a96J01` and `a96A04` both present in a single 600-entry window. codex-2 caught this while recovering the S3 corpus and scoped by turn-id (646 + 22 = 668 entries), excluding 289 later ones — which is why their extraction is trustworthy.
+
+  **Consequence for the cohort:** arm assignment is per-dispatch. Any analysis that joins on session-id will conflate arms across dispatches on the same seat. The join key must be the job-id or the turn-id. This is the same failure family as V2's four re-counted denominators, caught before it produced a number.
+
+⊸meter [store-backpressure] `/api/alpha/evidence` returns `{:ok false :error :expensive-read-busy :retry-after-seconds 1}` under load. A naive reader parses that as **zero entries** and reports an empty result as a finding. Any analysis script reading the store must check `:ok` before counting; noted after nearly reporting "0 entries" for a session that has hundreds.
