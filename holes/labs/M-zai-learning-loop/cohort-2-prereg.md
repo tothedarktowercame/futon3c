@@ -44,3 +44,79 @@ translation invariance). Row graded: construction-partial, packet-deficit
 noted. **S1b added**: full-packet continuation of YoungL2 (complete the 2
 sorries) before S6; S6's payoff test requires the proven lemma. Not a
 retry — a labeled continuation row, same class as rows 4/5.
+
+---
+
+# Results — cohort 2 closed 2026-08-03
+
+Cohort 2 paused 2026-07-27 with S3 and S6 unrun (weekly quota). Both were
+dispatched and reviewed on 2026-08-03 through
+`dispatch_with_recall.clj --to zai-1`. Full narrative in
+`cohort-2-ops-log.md`; this section reports the meters only.
+
+## Row outcomes
+
+| row | target | outcome | witness |
+|---|---|---|---|
+| S1 | lib-young construction | construction-partial | YoungL2.lean `525253b`, 2 sorries (since closed at `ce77d41`) |
+| S1b | YoungL2 completion | zero-progress honest partial | blockers documented in file |
+| S2 | a96A03 fresh | partial, 1 sorry | `d93e7e0` |
+| S4 | a93A03 continuation | zero-progress-instructive | `26be1cb` |
+| S5 | a93J02 continuation | failed-cap, dirty tree reverted | `e5158e7` stands |
+| **S3** | a96J01 fresh | **complete** | `d1606d0`; exit 0, 0 sorries, axiom-clean (operator re-run) |
+| **S6** | a96A04 continuation | **void as a capability test — row already closed** | `e7f07c9` (status.json only); proofs predate dispatch |
+
+## META-METERS
+
+- **Surfacing precision (used/offered).** S3 0/5, S6 1/5 → **1/10** across the
+  resumed rows. The single use (`e-bb16ffa8`, Young L² lemma-location) was
+  confirmatory: it saved a search, it did not unlock work.
+- **Query cleanliness by `:recall-system`.** S3 `v1.2-receipt-instrumented`,
+  query `"sequence convergence infinity only"` — four frequency-ranked terms,
+  one a stopword-list survivor, against a sup-norm/harmonic-series problem.
+  S6 `v1.2-receipt-ranked-instrumented`. Both rows show the same failure
+  family as S4/S5: generic-term dilution, not absence. Root cause is now
+  located in code — `dispatch_with_recall.clj` builds the retrieval key as a
+  bag of at most four frequency-ranked words (`text-keywords` + `(take 4)`);
+  see `holes/labs/M-memory-retrieval/memory-system-static-analysis-20260803.md`.
+- **Ψ-weighted surfacing (the cohort's one preregistered prediction).**
+  Partially confirmed: 1 of the 2 predicted pair members surfaced
+  (`e-dfea2de9` yes, `e-9751e537` no); receipt-ranking is live but under
+  `:v1.2-receipt-ranked-instrumented` rather than the predicted
+  `:v1.1-receipt-ranked`; **no use-history factor of 1.5 is visible in the
+  receipt**. Recorded as predicted-vs-actual rather than adjusted after the
+  fact.
+- **Post-hoc misses.** Ops log `⊸miss` count: 6.
+- **Register marks.** ⊸win 10 · ⊸meter 18 · ⊸prop 6 · ⊸fix 5 · ⊸miss 6.
+  Register violations: 0 — both resumed rows were logged in the typed register
+  at review time.
+- **Extraction yield (drafts/session from scribe reports).** **Not computed —
+  the scribe has not run.** `scribe-lag` stands as a typed failure for both
+  resumed rows. Packet ready at `s3-scribe-packet.md`.
+- **Time-to-first-reuse.** Not computed: requires outcome receipts joined to
+  offered receipts, and the one use this cohort has no independently witnessed
+  outcome record.
+- **Coverage growth.** Store at open: 30 memories / 13 patterns / 6
+  offered-receipts / 1 outcome-receipt. Store at close: 522 `type=memory`
+  entries (212 `:assert`, 305 `:observation`, 5 `:challenge`) — but that is the
+  whole store across all lanes and domains, not this cohort's contribution, and
+  the two figures are not comparable. Stated rather than silently differenced.
+- **Supersession chain.** liminf memory at 3 generations
+  (`e-0b423578` → `e-ba5a8bee` → `e-30e87097`, plus `e-0e4e32fe` as a separate
+  IsCoboundedUnder gap). Unchanged by the resumed rows.
+- **Outer-loop cycle count.** 2 full cycles applied same-day (cohort-1 close).
+
+## Findings the cohort produced about itself
+
+1. **A pacing instruction is not a forcing function.** S5 and S3-first both died
+   at the ~30-minute cap with work uncommitted, against a packet that asked in
+   as many words for an honest compiling partial commit. Two occurrences is a
+   mechanism problem, not a runner problem.
+2. **`memory-write-rejected` is real and costly.** S3's runner reached for
+   `memory_record` unprompted and was refused twice with
+   `:invalid-entry` / "EvidenceEntry did not conform to shape", losing distilled
+   solve-lane content (the `hasSum_single` route, the `f_tail_le` case-split).
+   The write path, not the runner's willingness, is what failed.
+3. **Rows must be re-derived at dispatch, not read from a snapshot.** S6 was
+   dispatched against a 07-27 assertion of "3 sorries" that had been false since
+   08-01. The dispatcher owns this one.
