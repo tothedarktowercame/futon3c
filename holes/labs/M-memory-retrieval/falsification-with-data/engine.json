@@ -1,0 +1,62 @@
+{
+  "sample-size" : 129,
+  "complete-used-set" : 106,
+  "measured" : [ "offered-set", "pollution", "query-cardinality", "query-vocabulary", "surfaced-set", "used-set" ],
+  "projection" : {
+    "nodes" : [ "offered-set", "pollution", "query-cardinality", "query-vocabulary", "surfaced-set", "used-set" ],
+    "directed" : [ [ "offered-set", "used-set" ], [ "pollution", "offered-set" ], [ "pollution", "surfaced-set" ], [ "query-cardinality", "surfaced-set" ], [ "query-vocabulary", "surfaced-set" ], [ "surfaced-set", "offered-set" ] ],
+    "bidirected" : [ ]
+  },
+  "implied-cis" : [ {
+    "x" : "offered-set",
+    "y" : "query-cardinality",
+    "given" : [ "pollution", "surfaced-set" ]
+  }, {
+    "x" : "offered-set",
+    "y" : "query-vocabulary",
+    "given" : [ "pollution", "surfaced-set" ]
+  }, {
+    "x" : "pollution",
+    "y" : "query-cardinality",
+    "given" : [ ]
+  }, {
+    "x" : "pollution",
+    "y" : "query-vocabulary",
+    "given" : [ ]
+  }, {
+    "x" : "pollution",
+    "y" : "used-set",
+    "given" : [ "offered-set" ]
+  }, {
+    "x" : "query-cardinality",
+    "y" : "query-vocabulary",
+    "given" : [ ]
+  }, {
+    "x" : "query-cardinality",
+    "y" : "used-set",
+    "given" : [ "offered-set" ]
+  }, {
+    "x" : "query-cardinality",
+    "y" : "used-set",
+    "given" : [ "pollution", "surfaced-set" ]
+  }, {
+    "x" : "query-vocabulary",
+    "y" : "used-set",
+    "given" : [ "offered-set" ]
+  }, {
+    "x" : "query-vocabulary",
+    "y" : "used-set",
+    "given" : [ "pollution", "surfaced-set" ]
+  }, {
+    "x" : "surfaced-set",
+    "y" : "used-set",
+    "given" : [ "offered-set" ]
+  } ],
+  "column-support" : {
+    "offered-set" : 6,
+    "pollution" : 6,
+    "query-cardinality" : 18,
+    "surfaced-set" : 6,
+    "used-set" : 5
+  }
+}

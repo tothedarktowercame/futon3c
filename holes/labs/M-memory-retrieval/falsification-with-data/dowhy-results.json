@@ -1,0 +1,14 @@
+{
+  "complete_case_n": 106,
+  "constant_columns": [
+    "query-vocabulary"
+  ],
+  "dowhy_version": "0.14",
+  "missing_columns": [
+    "used-set"
+  ],
+  "permutations_requested": 20,
+  "random_seed": 20260803,
+  "status": "tested-complete-case",
+  "summary": "+-------------------------------------------------------------------------------------------------------+\n|                                         Falsification Summary                                         |\n+-------------------------------------------------------------------------------------------------------+\n| The given DAG is informative because 0 / 20 of the permutations lie in the Markov                     |\n| equivalence class of the given DAG (p-value: 0.00).                                                   |\n| The given DAG violates 0/12 LMCs and is better than 95.0% of the permuted DAGs (p-value: 0.05).       |\n| Based on the provided significance level (0.05) and because the DAG is informative,                   |\n| we do not reject the DAG.                                                                             |\n+-------------------------------------------------------------------------------------------------------+"
+}
