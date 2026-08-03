@@ -299,13 +299,19 @@ def resolve_dispatch_post_sha(repo: Path, sha_pre: str, targets: Sequence[dict[s
         if committed is not None and ancestor.returncode == 0:
             candidates.append((committed, sha))
     candidates.sort()
-    return pre_sha, candidates[-1][1] if candidates else None
+    # Record HOW MANY target-touching commits were in the window, not just the
+    # winner. apm-lean is a shared repo with concurrent lanes; if a cohort
+    # dispatch overlaps another agent touching the same target module, the
+    # latest commit wins silently and the ambiguity is unrecoverable at
+    # analysis time. Recording the count makes the row auditable: >1 means the
+    # attribution had a choice, and the analyst can see that it did.
+    return pre_sha, (candidates[-1][1] if candidates else None), len(candidates)
 
 
 def execute_endpoint_checks(packet: dict[str, Any], job: Any) -> dict[str, Any]:
     """Execute every endpoint check in a detached worktree at sha-post."""
     repo = Path(packet["repository"]).expanduser().resolve()
-    sha_pre, sha_post = resolve_dispatch_post_sha(
+    sha_pre, sha_post, sha_post_candidate_count = resolve_dispatch_post_sha(
         repo, packet["sha_pre"], packet["targets"],
         value(job, "started-at", value(job, "created-at")), value(job, "finished-at"),
     )
@@ -324,7 +330,8 @@ def execute_endpoint_checks(packet: dict[str, Any], job: Any) -> dict[str, Any]:
         else:
             pre_open[target["module"]] = lexical_sorry_count(source) > 0
     if sha_post is None:
-        return {"sha_pre": sha_pre, "sha_post": None, "targets": targets,
+        return {"sha_post_candidate_count": sha_post_candidate_count,
+                "sha_pre": sha_pre, "sha_post": None, "targets": targets,
                 "pre_open": pre_open, "lake_exit": None, "sorry_counts": {},
                 "axiom_verdicts": {}}
     with tempfile.TemporaryDirectory(prefix="endpoint-sweep-") as temporary:
@@ -362,7 +369,8 @@ def execute_endpoint_checks(packet: dict[str, Any], job: Any) -> dict[str, Any]:
                         "output": output,
                     }
                     module_path.write_text(source, encoding="utf-8")
-            return {"sha_pre": sha_pre, "sha_post": sha_post, "targets": targets,
+            return {"sha_post_candidate_count": sha_post_candidate_count,
+                "sha_pre": sha_pre, "sha_post": sha_post, "targets": targets,
                     "pre_open": pre_open, "lake_exit": lake_exit,
                     "sorry_counts": sorry_counts, "axiom_verdicts": axiom_verdicts}
         finally:
@@ -402,6 +410,12 @@ def capture_mechanical_witness(
         return {
             K("endpoint/sha-pre"): executed["sha_pre"],
             K("endpoint/sha-post"): executed["sha_post"],
+            # >1 means several target-touching commits sat in the dispatch
+            # window and the latest was chosen; the row is still scoreable but
+            # its attribution was not forced. Recorded so an analyst can see
+            # that rather than having to re-derive it from git.
+            K("endpoint/sha-post-candidate-count"):
+                executed.get("sha_post_candidate_count"),
             K("endpoint/target-set"): executed["targets"],
             K("endpoint/pre-open?"): pre_open,
             K("endpoint/lake-exit"): executed["lake_exit"],
