@@ -50,3 +50,35 @@ lands.
   within-surfaced is useless under a top-5 view) and
   endpoint-relative absence reporting (starvation is a property of
   (memory, endpoint), never of the memory).
+
+## Round 3 (same day, sequencing-pass consumption + rerun evidence)
+
+- **SEQ-0.1 independently confirmed and adopted as their Stage 0**,
+  blocking every arm incl. control: the sweeper writes memory-use
+  attribution but NO mechanical witness (no lake exit code, sorry
+  count, sha, or axiom check) — today's outcomes exist because an
+  operator hand-ran those. Their formulation, worth keeping: "naming
+  an endpoint is not the same as being able to compute it"; the
+  mission's 'free, incorruptible' mechanical witness "is free, and it
+  is not captured."
+- **Schema-hygiene finding for the join-key family**: the sweeper
+  stores the RIGHT unit under the WRONG-named key
+  (`evidence/session-id: job_id`) — join-on-name conflates seats with
+  dispatches even though join-on-value is sound. In codex-5's
+  dispatch-key threading scope. The cohort guard's collision check
+  would NOT catch this (values unique); it is a rename/schema item,
+  not a guard item.
+- **SEQ-2 adopted with the right distinction**: E8 closed axis 2
+  empirically (levels don't work); SEQ-2 closes it structurally (the
+  contrast doesn't exist in :pull-only) — structural flagged stronger
+  in their design, difficulty-confounding warning recorded with path.
+- **Delta-v3 evidence arrived, VERIFIED-UNFROZEN** (their codex-3
+  overran the job cap; work survived as b42b2db3; artifact awaits
+  determinism + sha before adoption): case 4 arm D — 7 pre-cutoff
+  candidates for 5 slots, e-dfea2de9 ABSENT FROM THE CANDIDATE LIST
+  (not drowned at the cutoff), residual labeled endpoint-relative.
+  Resolves case 4 toward the attachment FAMILY in pair-indexed form
+  (v3), against both static-§5.2 and pollution readings. Ψ confirmed
+  firing (score 1.5, receipt-ranked). v3/v4 spec deltas stay
+  registered-not-applied until the artifact freezes.
+- **SEQ-0.4 already being paid down** (codex-5, pull-side receipts).
