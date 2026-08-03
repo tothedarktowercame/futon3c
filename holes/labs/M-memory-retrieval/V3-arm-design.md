@@ -54,6 +54,24 @@ invoke. `:push+pull` is a packet paragraph plus a mode that records which
 paragraph was sent. That cheapness is itself a reason to test rather than
 assume.
 
+**Denominator gap: CLOSED 2026-08-03** (`a5c3f8bf`). Every `memory_search` /
+`pattern_memory` / `evidence_graph` / `psr_search` call now writes a pull-offer
+receipt carrying the returned ids, the args, the round, the timestamp, and a
+**dispatch key** — the Agency job-id threaded through to the tool site, with an
+explicit dispatch→turn binding, never `session-id`. Verified end-to-end by
+operator: two pulls at rounds 4 and 11 produce a derivable union, rounds are
+preserved per call, and `cohort-guard` licenses the arm when the field is
+populated and refuses with `[:denominator-recorded]` when it is not.
+
+**Residual, and it is narrow.** `psr_search` returns **pattern-ids, not memory
+ids** (`pull_receipts.clj:21`), so its contribution to the pull-offered set is a
+set of patterns. A runner that goes `psr_search` → `psr_select` reaches memories
+whose ids are never recorded as offered — `psr_select` is a record step and is
+deliberately not in `pull-tool-names`. So the pull denominator is complete for
+direct memory retrieval and incomplete for the pattern→memory route. Small
+today, because nothing exercises that route; worth closing before any arm
+depends on pattern-mediated retrieval.
+
 `:pull-only` is included because it is the arm that separates *retrieval
 quality* from *retrieval timing*. If `:pull-only` beats `:push`, the query
 builder was never the binding constraint — the dispatch moment was.
