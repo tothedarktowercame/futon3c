@@ -209,3 +209,68 @@ shipped term-selection never got there.
 
 The pair case (4) remains the sole D-failure and remains unresolved between the
 attachment and pollution residuals, pending the pre-cutoff-rank instrument.
+
+---
+
+# Rank-instrumented rerun (2026-08-03) — reviewed by claude-12
+
+Producing job `invoke-1785752055856-894-d82e96b4` **overran the ~30-min cap**
+before committing. The instrument change landed (`b42b2db3`); the artifact was
+left untracked on disk and is committed here after review. **Caveat: byte-level
+determinism was NOT re-verified** — the producing job died before it could
+re-run and bless its own output. sha256 recorded so any later re-run can check:
+`adb67b134646ff3e7ed01a0b4d73c791b3b48cd066dbdd6a55a3447211cc06cc`. The original
+run's artifact is untouched (`07be2f39…`, re-verified).
+
+## Review checks
+
+- **Ranks are genuinely pre-cutoff.** Arm A candidate depths are 19 / 16 / 13 /
+  6 / 19 against a cutoff of 5, so the list extends past truncation and the
+  absent-vs-drowned split is operable. (Arm C's depths are 5/5/3/17/3 — its
+  queries generated almost no candidates at all, which is itself why C did not
+  beat baseline: it was a *narrower* query, not a better one.)
+- Shipped `default-query-term-limit 4` unchanged; zero store writes in the diff.
+- clj-kondo 0/0; check-parens OK; focused suite 24 tests / 115 assertions with
+  the 2 known pre-existing `live-dispatch-path-surfaces-a92j05-content-match`
+  failures (independently reproduced at `dfe78c60` and its parent earlier today,
+  so not a regression from this commit).
+
+## The result: failure is at candidate generation, not at ranking
+
+**Under arm A, not one specifically-named target is present in the candidate
+list at all:**
+
+| case | arm-A candidates | named target | present? |
+|---|---:|---|---|
+| 1 a93A03 | 19 | `e-30e87097…` | **no** |
+| 4 lib-young | 6 | `e-9751e537…` and `e-dfea2de9…` | **no, neither** |
+| 5 a96A04 | 19 | `e-9751e537…` | **no** |
+
+Nineteen candidates, and the wanted memory is not among them. So this is not
+"ranking too coarse" and not "cutoff too tight": **widening the cutoff from 5 to
+19 would have changed nothing.** The failure is upstream of ranking entirely, at
+candidate generation. That kills an entire class of remedy — re-ranking, score
+tuning, cutoff widening — none of which can reach a memory that was never a
+candidate.
+
+**This corrects a contemporaneous diagnosis.** Case 1 is cohort-2's S4, logged
+at the time as *"v1.2 normalization firing … but drowned by TeX fragments +
+packet boilerplate — pollution not absence"*. The rank data says the opposite:
+the target is absent from 19 candidates. It was **absence, not pollution**. The
+loop's own real-time reading of its failure was wrong, and only the pre-cutoff
+instrument could show it.
+
+## The clean split, which differs by arm
+
+- **Arm A absence** (all three named targets) → the shipped query never
+  generated them as candidates. Query-side.
+- **Arm D recovery** (cases 1 and 5 become hits) → oracle vocabulary reaches
+  them, confirming those two failures were query-side.
+- **Arm D absence** (case 4's `e-dfea2de9`, 7 candidates for 5 slots) → even its
+  own vocabulary does not generate it. Downstream of the query —
+  `endpoint-relative-candidate-absence`, and endpoint-relative because that same
+  memory is rank 0 for a96A04 under the shipped four-term query.
+
+The `:v1.2-receipt-ranked` Ψ factor is confirmed live: `e-9751e537` carries
+`score 1.5, score-kind receipt-ranked`. It exists and fires; it simply did not
+surface that memory at dispatch during S6.
