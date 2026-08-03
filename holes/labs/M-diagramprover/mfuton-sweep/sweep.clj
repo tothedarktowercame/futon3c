@@ -13,6 +13,79 @@
 (def fixture-directory (str here "/fixtures"))
 (def converted-directory (str here "/converted"))
 
+(def semantic-kind-decisions
+  {"burks-nature-nurture"
+   {"social" {:kind :observed
+              :source-prose (str "A mediator caused by Parental Intelligence "
+                                 "and also a collider receiving unmeasured causes.")
+              :judgment (str "the mediator is observed; unmeasured modifies "
+                             "its incoming causes, not the mediator")}
+    "child" {:kind :observed
+             :source-prose (str "The outcome receiving direct, mediated, and "
+                                "unmeasured influences.")
+             :judgment (str "the outcome is observed; unmeasured modifies "
+                            "its influences, not the outcome")}}
+   "deconfounding-game-1"
+   {"abnormality" {:kind :latent-unobserved
+                   :source-prose (str "An unobservable abnormality induced by "
+                                      "smoking and capable of causing miscarriage.")
+                   :judgment "the variable itself is explicitly unobservable"}}
+   "deconfounding-game-2"
+   {"prior_abnormality" {:kind :latent-unobserved
+                         :source-prose (str "An unobservable abnormality in "
+                                            "the first pregnancy.")
+                         :judgment "the variable itself is explicitly unobservable"}
+    "current_abnormality" {:kind :latent-unobserved
+                           :source-prose (str "An unobservable abnormality in "
+                                              "the second pregnancy.")
+                           :judgment "the variable itself is explicitly unobservable"}}
+   "generic-frontdoor"
+   {"c" {:kind :latent-unobserved
+         :source-prose "The unobserved confounder of X and Y."
+         :judgment "the variable itself is explicitly unobserved"}}
+   "jtpa-job-training"
+   {"m" {:kind :latent-unobserved
+         :source-prose (str "The unobserved common cause affecting "
+                            "participation and earnings.")
+         :judgment "the variable itself is explicitly unobserved"}}
+   "wright-puppy-birth-weight"
+   {"other-growth-causes"
+    {:kind :latent-unobserved
+     :source-prose (str "Unobserved exogenous causes of prenatal growth rate "
+                        "other than litter size.")
+     :judgment "the variable itself denotes unobserved exogenous causes"}
+    "other-gestation-causes"
+    {:kind :latent-unobserved
+     :source-prose (str "Unobserved exogenous causes of gestation period "
+                        "other than litter size.")
+     :judgment "the variable itself denotes unobserved exogenous causes"}
+    "prenatal-growth-rate"
+    {:kind :latent-unobserved
+     :source-prose "The unobserved rate at which the pup grows in utero."
+     :judgment "the variable itself is explicitly unobserved"}}})
+
+(def prior-review-verdicts
+  {"burks-nature-nurture"
+   {:pair {:treatment :parental :outcome :child}
+    :identification {:method :backdoor :identifiable? true
+                     :adjustment-sets [#{}]}}
+   "deconfounding-game-1" {:pair nil :identification nil}
+   "deconfounding-game-2" {:pair nil :identification nil}
+   "generic-frontdoor"
+   {:pair {:treatment :x :outcome :y}
+    :identification {:method :backdoor :identifiable? true
+                     :adjustment-sets [#{:c}]}}
+   "jtpa-job-training"
+   {:pair {:treatment :s :outcome :e}
+    :identification {:method :backdoor :identifiable? true
+                     :adjustment-sets [#{:m}]}}
+   "wright-puppy-birth-weight"
+   {:pair {:treatment :litter-size :outcome :birth-weight}
+    :identification
+    {:method :backdoor :identifiable? true
+     :adjustment-sets [#{} #{:other-gestation-causes} #{:other-growth-causes}
+                       #{:other-gestation-causes :other-growth-causes}]}}})
+
 (def semantic-pairs
   {"airport-bag-posterior" [:bag-on-plane :bag-on-carousel]
    "algebra-for-all-mediation" [:algebra_for_all :learning]
@@ -21,6 +94,8 @@
    "berkeley-admissions-simple" [:gender :outcome]
    "burks-nature-nurture" [:parental :child]
    "climate-change-probabilities-of-causation" [:greenhouse :response]
+   "deconfounding-game-1" [:smoking :future_miscarriage]
+   "deconfounding-game-2" [:current_smoking :future_miscarriage]
    "fertilizer-improper-control" [:fertilizer :yield]
    "fertilizer-randomized" [:fertilizer :yield]
    "fertilizer-target-intervention" [:fertilizer :yield]
@@ -128,6 +203,12 @@
     (when (and (seq equations) (= endogenous (set (keys equations))))
       equations)))
 
+(defn- converted-kind [raw variable]
+  (or (get-in semantic-kind-decisions
+              [(:example_id raw) (:key variable) :kind])
+      (when (false? (:observed variable)) :latent-unobserved)
+      :observed))
+
 (defn- converted-spec [raw disposition reasons equations]
   (cond->
    {:id (:example_id raw)
@@ -135,8 +216,7 @@
     (mapv (fn [variable]
             (cond-> {:id (:key variable)
                      :name (:name variable)
-                     :kind (if (false? (:observed variable))
-                             "latent-unobserved" "observed")}
+                     :kind (name (converted-kind raw variable))}
               (:value_domain variable)
               (assoc :mfuton_value_domain (:value_domain variable))
               (contains? variable :selection)
@@ -222,7 +302,9 @@
                        "graph schema fully represented; no evaluator payload declared"))
          :variable-count (count (:variables raw))
          :arrow-count (count (:arrows raw))
-         :latent-count (count (filter #(false? (:observed %)) (:variables raw)))
+         :latent-count (count (filter #(= :latent-unobserved
+                                          (converted-kind raw %))
+                                      (:variables raw)))
          :dag-valid? true
          :canonical-render? (diagram/canonical? rendered)
          :round-trip? (= causal-dag (diagram/diagram->dag rendered))
@@ -252,6 +334,18 @@
         results (mapv evaluate-one fixtures)
         output {:schema-version 1
                 :fixture-count (count results)
+                :semantic-kind-decisions semantic-kind-decisions
+                :review-deltas
+                (mapv (fn [[example-id before]]
+                        (let [after (first (filter #(= example-id (:example-id %))
+                                                   results))]
+                          {:example-id example-id
+                           :before before
+                           :after {:pair (when-let [pair (:pair after)]
+                                           (select-keys pair
+                                                        [:treatment :outcome]))
+                                   :identification (:identification after)}}))
+                      (sort-by key prior-review-verdicts))
                 :fixtures results}]
     (when-not (= 60 (count results))
       (throw (ex-info "Frozen mfuton fixture corpus is incomplete"

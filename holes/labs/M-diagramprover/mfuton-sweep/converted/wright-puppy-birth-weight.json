@@ -26,7 +26,7 @@
   },
   "variables" : [ {
     "id" : "other-growth-causes",
-    "kind" : "observed",
+    "kind" : "latent-unobserved",
     "name" : "Other causes of growth rate (A)"
   }, {
     "id" : "litter-size",
@@ -34,11 +34,11 @@
     "name" : "Litter size (L)"
   }, {
     "id" : "other-gestation-causes",
-    "kind" : "observed",
+    "kind" : "latent-unobserved",
     "name" : "Other causes of gestation period (C)"
   }, {
     "id" : "prenatal-growth-rate",
-    "kind" : "observed",
+    "kind" : "latent-unobserved",
     "name" : "Prenatal growth rate (Q)"
   }, {
     "id" : "gestation-period",

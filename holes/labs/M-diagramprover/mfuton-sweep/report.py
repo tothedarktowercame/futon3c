@@ -62,6 +62,8 @@ def main():
             "counterfactual-enumeration": python["counterfactual-enumeration"],
         },
         "discrepancies": discrepancies,
+        "semantic-kind-decisions": engine["semantic-kind-decisions"],
+        "review-deltas": engine["review-deltas"],
         "fixtures": fixtures,
         "oracle-fixtures": {
             "python": python["fixtures"],
@@ -86,6 +88,24 @@ def main():
         f"{item['reason']} |"
         for item in fixtures
     )
+
+    override_rows = []
+    for fixture, decisions in sorted(engine["semantic-kind-decisions"].items()):
+        for variable, decision in sorted(decisions.items()):
+            override_rows.append(
+                f"| `{fixture}` | `{variable}` | `{decision['kind']}` | "
+                f"“{decision['source-prose']}” | {decision['judgment']} |"
+            )
+
+    delta_rows = []
+    for delta in engine["review-deltas"]:
+        before = json.dumps(delta["before"], sort_keys=True, separators=(",", ":"))
+        after = json.dumps(delta["after"], sort_keys=True, separators=(",", ":"))
+        changed = before != after
+        delta_rows.append(
+            f"| `{delta['example-id']}` | `{str(changed).lower()}` | "
+            f"`{before}` | `{after}` |"
+        )
 
     evaluation_rows = []
     for item in fixtures:
@@ -149,6 +169,28 @@ evaluator omission is named below.
 
 Totals: converted fully {dispositions['converted-fully']}; graph-only
 {dispositions['graph-only']}; skipped {dispositions['skipped']}.
+
+## Curated semantic-kind overrides
+
+This literal table is the conversion authority when the source marks
+observability only in prose. It is intentionally not a regex classifier. The
+Burks `social` and `child` rows pin the reviewed false-positive judgments;
+Burks `x` already carries explicit `observed: false` and needs no override.
+
+| Fixture | Variable | Converted kind | Source prose, verbatim | Judgment |
+|---|---|---|---|---|
+{chr(10).join(override_rows)}
+
+## Reviewed identification delta
+
+The before column is the committed pre-correction sweep verdict. The after
+column is the corrected verdict, serialized verbatim from `engine-results.json`.
+`deconfounding-game-1` and `deconfounding-game-2` now run their evident
+smoking/miscarriage pairs instead of recording no guessed pair.
+
+| Fixture | Changed? | Before | After |
+|---|---|---|---|
+{chr(10).join(delta_rows)}
 
 ## Per-fixture engine sweep
 

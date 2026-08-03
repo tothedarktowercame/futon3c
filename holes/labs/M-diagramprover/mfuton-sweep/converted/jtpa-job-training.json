@@ -23,7 +23,7 @@
   },
   "variables" : [ {
     "id" : "m",
-    "kind" : "observed",
+    "kind" : "latent-unobserved",
     "name" : "Motivation"
   }, {
     "id" : "s",

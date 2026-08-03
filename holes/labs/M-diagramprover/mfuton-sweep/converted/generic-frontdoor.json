@@ -20,7 +20,7 @@
   },
   "variables" : [ {
     "id" : "c",
-    "kind" : "observed",
+    "kind" : "latent-unobserved",
     "name" : "C"
   }, {
     "id" : "x",

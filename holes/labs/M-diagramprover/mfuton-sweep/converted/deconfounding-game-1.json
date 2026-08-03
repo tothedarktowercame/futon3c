@@ -21,7 +21,7 @@
     "name" : "Smoking (X)"
   }, {
     "id" : "abnormality",
-    "kind" : "observed",
+    "kind" : "latent-unobserved",
     "name" : "Underlying Abnormality (A)"
   }, {
     "id" : "future_miscarriage",

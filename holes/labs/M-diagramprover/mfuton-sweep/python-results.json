@@ -114,14 +114,18 @@
       "example-id": "deconfounding-game-1",
       "networkx-checked": 3,
       "networkx-disagreements": [],
-      "y0": null
+      "y0": {
+        "identifiable?": true
+      }
     },
     {
       "counterfactual-oracle": null,
       "example-id": "deconfounding-game-2",
       "networkx-checked": 16,
       "networkx-disagreements": [],
-      "y0": null
+      "y0": {
+        "identifiable?": true
+      }
     },
     {
       "counterfactual-oracle": null,
@@ -263,7 +267,7 @@
       "networkx-checked": 0,
       "networkx-disagreements": [],
       "y0": {
-        "identifiable?": true
+        "identifiable?": false
       }
     },
     {
@@ -544,7 +548,7 @@
     "y0": "0.2.11"
   },
   "y0": {
-    "agreements": 51,
-    "checked": 51
+    "agreements": 53,
+    "checked": 53
   }
 }

@@ -316,7 +316,11 @@
     "dag-valid?" : true,
     "disposition" : "converted-fully",
     "example-id" : "deconfounding-game-1",
-    "identification" : null,
+    "identification" : {
+      "adjustment-sets" : [ [ ] ],
+      "identifiable?" : true,
+      "method" : "backdoor"
+    },
     "implied-independencies" : [ {
       "given" : [ "abnormality" ],
       "x" : "future_miscarriage",
@@ -330,8 +334,12 @@
       "x" : "prior_miscarriage",
       "y" : "smoking"
     } ],
-    "latent-count" : 0,
-    "pair" : null,
+    "latent-count" : 1,
+    "pair" : {
+      "outcome" : "future_miscarriage",
+      "treatment" : "smoking",
+      "why" : "fixture title/content gives the named cause and outcome"
+    },
     "reason" : "graph schema fully represented; no evaluator payload declared",
     "round-trip?" : true,
     "source-file" : "deconfounding-game-1.json",
@@ -344,7 +352,11 @@
     "dag-valid?" : true,
     "disposition" : "converted-fully",
     "example-id" : "deconfounding-game-2",
-    "identification" : null,
+    "identification" : {
+      "adjustment-sets" : [ [ ], [ "physiology" ], [ "physiology", "prior_miscarriage" ], [ "prior_smoking" ], [ "physiology", "prior_smoking" ], [ "prior_miscarriage", "prior_smoking" ], [ "physiology", "prior_miscarriage", "prior_smoking" ] ],
+      "identifiable?" : true,
+      "method" : "backdoor"
+    },
     "implied-independencies" : [ {
       "given" : [ "prior_abnormality" ],
       "x" : "current_abnormality",
@@ -410,8 +422,12 @@
       "x" : "prior_miscarriage",
       "y" : "prior_smoking"
     } ],
-    "latent-count" : 0,
-    "pair" : null,
+    "latent-count" : 2,
+    "pair" : {
+      "outcome" : "future_miscarriage",
+      "treatment" : "current_smoking",
+      "why" : "fixture title/content gives the named cause and outcome"
+    },
     "reason" : "graph schema fully represented; no evaluator payload declared",
     "round-trip?" : true,
     "source-file" : "deconfounding-game-2.json",
@@ -975,16 +991,16 @@
     "disposition" : "converted-fully",
     "example-id" : "generic-frontdoor",
     "identification" : {
-      "adjustment-sets" : [ [ "c" ] ],
       "identifiable?" : true,
-      "method" : "backdoor"
+      "mediators" : [ "m" ],
+      "method" : "front-door"
     },
     "implied-independencies" : [ {
       "given" : [ "x" ],
       "x" : "c",
       "y" : "m"
     } ],
-    "latent-count" : 0,
+    "latent-count" : 1,
     "pair" : {
       "outcome" : "y",
       "treatment" : "x",
@@ -1250,12 +1266,13 @@
     "disposition" : "converted-fully",
     "example-id" : "jtpa-job-training",
     "identification" : {
-      "adjustment-sets" : [ [ "m" ] ],
-      "identifiable?" : true,
-      "method" : "backdoor"
+      "identifiable?" : false,
+      "method" : "refusal",
+      "proof-status" : "proved-impossible",
+      "reason" : "not-identifiable"
     },
     "implied-independencies" : [ ],
-    "latent-count" : 0,
+    "latent-count" : 1,
     "pair" : {
       "outcome" : "e",
       "treatment" : "s",
@@ -2796,7 +2813,7 @@
     "disposition" : "graph-only",
     "example-id" : "wright-puppy-birth-weight",
     "identification" : {
-      "adjustment-sets" : [ [ ], [ "other-gestation-causes" ], [ "other-growth-causes" ], [ "other-gestation-causes", "other-growth-causes" ] ],
+      "adjustment-sets" : [ [ ] ],
       "identifiable?" : true,
       "method" : "backdoor"
     },
@@ -2825,7 +2842,7 @@
       "x" : "other-gestation-causes",
       "y" : "prenatal-growth-rate"
     } ],
-    "latent-count" : 0,
+    "latent-count" : 3,
     "pair" : {
       "outcome" : "birth-weight",
       "treatment" : "litter-size",
@@ -2865,5 +2882,201 @@
     "title" : "Wright supply-to-price reduced form",
     "variable-count" : 4
   } ],
-  "schema-version" : 1
+  "review-deltas" : [ {
+    "after" : {
+      "identification" : {
+        "adjustment-sets" : [ [ ] ],
+        "identifiable?" : true,
+        "method" : "backdoor"
+      },
+      "pair" : {
+        "outcome" : "child",
+        "treatment" : "parental"
+      }
+    },
+    "before" : {
+      "identification" : {
+        "adjustment-sets" : [ [ ] ],
+        "identifiable?" : true,
+        "method" : "backdoor"
+      },
+      "pair" : {
+        "outcome" : "child",
+        "treatment" : "parental"
+      }
+    },
+    "example-id" : "burks-nature-nurture"
+  }, {
+    "after" : {
+      "identification" : {
+        "adjustment-sets" : [ [ ] ],
+        "identifiable?" : true,
+        "method" : "backdoor"
+      },
+      "pair" : {
+        "outcome" : "future_miscarriage",
+        "treatment" : "smoking"
+      }
+    },
+    "before" : {
+      "identification" : null,
+      "pair" : null
+    },
+    "example-id" : "deconfounding-game-1"
+  }, {
+    "after" : {
+      "identification" : {
+        "adjustment-sets" : [ [ ], [ "physiology" ], [ "physiology", "prior_miscarriage" ], [ "prior_smoking" ], [ "physiology", "prior_smoking" ], [ "prior_miscarriage", "prior_smoking" ], [ "physiology", "prior_miscarriage", "prior_smoking" ] ],
+        "identifiable?" : true,
+        "method" : "backdoor"
+      },
+      "pair" : {
+        "outcome" : "future_miscarriage",
+        "treatment" : "current_smoking"
+      }
+    },
+    "before" : {
+      "identification" : null,
+      "pair" : null
+    },
+    "example-id" : "deconfounding-game-2"
+  }, {
+    "after" : {
+      "identification" : {
+        "identifiable?" : true,
+        "mediators" : [ "m" ],
+        "method" : "front-door"
+      },
+      "pair" : {
+        "outcome" : "y",
+        "treatment" : "x"
+      }
+    },
+    "before" : {
+      "identification" : {
+        "adjustment-sets" : [ [ "c" ] ],
+        "identifiable?" : true,
+        "method" : "backdoor"
+      },
+      "pair" : {
+        "outcome" : "y",
+        "treatment" : "x"
+      }
+    },
+    "example-id" : "generic-frontdoor"
+  }, {
+    "after" : {
+      "identification" : {
+        "identifiable?" : false,
+        "method" : "refusal",
+        "proof-status" : "proved-impossible",
+        "reason" : "not-identifiable"
+      },
+      "pair" : {
+        "outcome" : "e",
+        "treatment" : "s"
+      }
+    },
+    "before" : {
+      "identification" : {
+        "adjustment-sets" : [ [ "m" ] ],
+        "identifiable?" : true,
+        "method" : "backdoor"
+      },
+      "pair" : {
+        "outcome" : "e",
+        "treatment" : "s"
+      }
+    },
+    "example-id" : "jtpa-job-training"
+  }, {
+    "after" : {
+      "identification" : {
+        "adjustment-sets" : [ [ ] ],
+        "identifiable?" : true,
+        "method" : "backdoor"
+      },
+      "pair" : {
+        "outcome" : "birth-weight",
+        "treatment" : "litter-size"
+      }
+    },
+    "before" : {
+      "identification" : {
+        "adjustment-sets" : [ [ ], [ "other-gestation-causes" ], [ "other-growth-causes" ], [ "other-gestation-causes", "other-growth-causes" ] ],
+        "identifiable?" : true,
+        "method" : "backdoor"
+      },
+      "pair" : {
+        "outcome" : "birth-weight",
+        "treatment" : "litter-size"
+      }
+    },
+    "example-id" : "wright-puppy-birth-weight"
+  } ],
+  "schema-version" : 1,
+  "semantic-kind-decisions" : {
+    "burks-nature-nurture" : {
+      "child" : {
+        "judgment" : "the outcome is observed; unmeasured modifies its influences, not the outcome",
+        "kind" : "observed",
+        "source-prose" : "The outcome receiving direct, mediated, and unmeasured influences."
+      },
+      "social" : {
+        "judgment" : "the mediator is observed; unmeasured modifies its incoming causes, not the mediator",
+        "kind" : "observed",
+        "source-prose" : "A mediator caused by Parental Intelligence and also a collider receiving unmeasured causes."
+      }
+    },
+    "deconfounding-game-1" : {
+      "abnormality" : {
+        "judgment" : "the variable itself is explicitly unobservable",
+        "kind" : "latent-unobserved",
+        "source-prose" : "An unobservable abnormality induced by smoking and capable of causing miscarriage."
+      }
+    },
+    "deconfounding-game-2" : {
+      "current_abnormality" : {
+        "judgment" : "the variable itself is explicitly unobservable",
+        "kind" : "latent-unobserved",
+        "source-prose" : "An unobservable abnormality in the second pregnancy."
+      },
+      "prior_abnormality" : {
+        "judgment" : "the variable itself is explicitly unobservable",
+        "kind" : "latent-unobserved",
+        "source-prose" : "An unobservable abnormality in the first pregnancy."
+      }
+    },
+    "generic-frontdoor" : {
+      "c" : {
+        "judgment" : "the variable itself is explicitly unobserved",
+        "kind" : "latent-unobserved",
+        "source-prose" : "The unobserved confounder of X and Y."
+      }
+    },
+    "jtpa-job-training" : {
+      "m" : {
+        "judgment" : "the variable itself is explicitly unobserved",
+        "kind" : "latent-unobserved",
+        "source-prose" : "The unobserved common cause affecting participation and earnings."
+      }
+    },
+    "wright-puppy-birth-weight" : {
+      "other-gestation-causes" : {
+        "judgment" : "the variable itself denotes unobserved exogenous causes",
+        "kind" : "latent-unobserved",
+        "source-prose" : "Unobserved exogenous causes of gestation period other than litter size."
+      },
+      "other-growth-causes" : {
+        "judgment" : "the variable itself denotes unobserved exogenous causes",
+        "kind" : "latent-unobserved",
+        "source-prose" : "Unobserved exogenous causes of prenatal growth rate other than litter size."
+      },
+      "prenatal-growth-rate" : {
+        "judgment" : "the variable itself is explicitly unobserved",
+        "kind" : "latent-unobserved",
+        "source-prose" : "The unobserved rate at which the pup grows in utero."
+      }
+    }
+  }
 }

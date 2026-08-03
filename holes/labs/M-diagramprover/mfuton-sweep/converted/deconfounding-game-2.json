@@ -33,7 +33,7 @@
     "name" : "Prior Smoking (A)"
   }, {
     "id" : "prior_abnormality",
-    "kind" : "observed",
+    "kind" : "latent-unobserved",
     "name" : "Prior Abnormality (B)"
   }, {
     "id" : "prior_miscarriage",
@@ -49,7 +49,7 @@
     "name" : "Current Smoking (X)"
   }, {
     "id" : "current_abnormality",
-    "kind" : "observed",
+    "kind" : "latent-unobserved",
     "name" : "Current Abnormality (E)"
   }, {
     "id" : "future_miscarriage",
