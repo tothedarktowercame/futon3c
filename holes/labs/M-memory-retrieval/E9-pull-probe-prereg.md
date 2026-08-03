@@ -109,3 +109,9 @@ the boundary note" — which is the talk-vs-walk structural lesson
 (instructions don't change behavior; gates do) applied to the
 runner's own memory use. Designated second probe (a96J07) should test
 the gate variant against this invitation baseline.
+
+- Bellback (post-hoc, verdicts unchanged): zai's final summary matches
+  the receipts read — exit 0, 1 sorry, classification Partial, commit
+  `1d01493`. The summary itself contains no mention of memory tools,
+  consistent with never-called. Two proven helper lemmas banked
+  (monotone_image_interval, monotone_image_Icc).
