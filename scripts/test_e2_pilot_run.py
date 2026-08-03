@@ -88,6 +88,19 @@ class E2PilotTest(unittest.TestCase):
                                   reset_fn=lambda *_: None)
             self.assertFalse(output.exists(), "invalid isolation must never become data")
 
+    def test_double_emitted_final_report_still_attributes(self) -> None:
+        one = f"USED {pilot.LB_MEMORY}: applied\nIGNORED {pilot.INC_MEMORY}: unrelated\n"
+        # codex exec prints its final message twice; the gate must not read that
+        # as two verdicts per id.
+        self.assertTrue(
+            pilot.attribution_check(pilot.dedupe_verdict_lines("noise\n" + one + "noise\n" + one),
+                                    [pilot.LB_MEMORY, pilot.INC_MEMORY])["passed"])
+        conflicting = f"USED {pilot.LB_MEMORY}: applied\nIGNORED {pilot.LB_MEMORY}: no\n"
+        self.assertFalse(
+            pilot.attribution_check(pilot.dedupe_verdict_lines(conflicting),
+                                    [pilot.LB_MEMORY])["passed"],
+            "contradictory verdicts for one id must still fail")
+
     def test_runner_command_keeps_the_os_as_the_only_sandbox(self) -> None:
         command = pilot.wrapper_command("a95J01", "51b6bc00", "PACKET", Path("/tmp/r.json"))
         for flag in ("exec", "--ephemeral", "--ignore-user-config", "--ignore-rules"):

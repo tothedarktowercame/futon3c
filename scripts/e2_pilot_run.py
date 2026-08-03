@@ -124,6 +124,29 @@ def validate_isolation_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_VERDICT_RE = re.compile(r"^(?:USED|IGNORED)\s+\S+")
+
+
+def dedupe_verdict_lines(report: str) -> str:
+    """Drop exactly-repeated attribution lines before the gate reads them.
+
+    `codex exec` emits its final message twice -- once in the streamed
+    transcript, once as the final output -- so a runner that attributes every
+    surfaced id correctly still yields two verdict lines per id, and the gate
+    reports "not exactly one verdict".  Only exact repeats are dropped:
+    conflicting verdicts for one id are different lines and still fail.
+    """
+    seen: set[str] = set()
+    kept: list[str] = []
+    for line in report.splitlines():
+        if _VERDICT_RE.match(line.strip()):
+            if line.strip() in seen:
+                continue
+            seen.add(line.strip())
+        kept.append(line)
+    return "\n".join(kept)
+
+
 def attribution_check(report: str, offered: list[str]) -> dict[str, Any]:
     gate = runner_gate.UseAttributionGate()
     violations = gate.check(runner_gate.Run("e2-apmablate", "e2-local", report, offered))
@@ -313,7 +336,8 @@ def run_one(problem: str, base: str, arm: str, output: Path,
                 + wrapped.stdout[-1500:]
             )
         trace, stable = extract_trace_twice(RUNS_ROOT / problem, base, extractor)
-        record = build_record(arm, delivery.receipt, isolation, wrapped.stdout, trace, stable,
+        record = build_record(arm, delivery.receipt, isolation,
+                              dedupe_verdict_lines(wrapped.stdout), trace, stable,
                               wrapper_exit=wrapped.returncode, runner_exit=runner_exit)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(canonical_json(record) + b"\n")
