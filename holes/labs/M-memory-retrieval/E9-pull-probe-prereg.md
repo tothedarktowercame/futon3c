@@ -273,3 +273,48 @@ the working memory channel (a92J06 -> a96J07), consumed as ordinary
 work practice under a license that framed consultation as part of the
 job. Note codex has NO memory-store instructions in its harness (Joe,
 ~/CODEX-INFO) - repo-native memory needs none.
+
+## E10 COMPLETE: the two-part instruction (Joe's design) - final cells
+
+**Phase A (recon-only):** 13 memory-tool calls, 6 real hints with
+accurate rationales, honest documentation of empty/noise queries.
+First live positive for the fix-4 tags (an e9 memory surfaced and was
+correctly graded marginal). Verified against turn stream.
+
+**Phase B (solve + event-anchored interleave):** a96J08 honest partial
+- 1 sorry (gate: build exit 0, sorries 1 comment-stripped, sorryAx
+present as expected; fidelity ADJUDICATED-APPROVED, coupled-delta PV
+formalization faithful). The interleave RAN and OVER-delivered vs its
+own testimony: turn stream shows memory_search x4 + psr_search x3 +
+psr_select x1 mid-solve (report listed fewer - honest direction). The
+boundary comment is exemplary and contains the consultation trail IN
+THE ARTIFACT. All 6 phase-A hints DROPPED with correct reasons; all
+mid-solve lookups honest zeros; blocker = a genuinely new Mathlib gap
+(residue theorem for rectangular contours; only zero-residue
+Cauchy-Goursat exists).
+
+**Design verdicts:**
+- The banal two-part instruction CLOSES the propensity gap completely
+  (same agent: 0 calls under E9's invitation -> 21 calls under the
+  two-part frame). Joe's deflationary thesis vindicated at the
+  compliance layer.
+- Retrieval CONTENT did not help this problem - but every discard was
+  correct and cheap, and the trail is auditable. The store's job now
+  is coverage (tag backfill; more artifacts), not elicitation.
+- PHASE-A MISMATCH FINDING: recon ran before route selection, so
+  hints matched the problem's PROSE (circle-integral-flavored), not
+  the rectangular-contour route chosen later - all 6 dropped. The
+  event-anchored mid-solve lookups are the load-bearing half of the
+  interleave; phase-A recon is cheap but route-blind.
+- WITH INSTRUCTIONS EQUALIZED, the lane difference collapses to
+  blocker weight: zai-with-instructions behaved exactly like
+  codex-on-J04 (honest partial at a real gap, exemplary boundary,
+  plus the consultation trail). J08's gap is heavier than J04's was.
+
+**Factorial, final:** E9 zai/invitation: partial, 0 lookups. J04
+codex/closer: closed (relay via artifact). J07 codex/raw/desk-research:
+closed (relay via neighbor artifact, 16 consultations). E10-A
+zai/recon-only: 13 lookups, 6 hints. E10-B zai/two-part+interleave:
+partial at a genuinely new gap, 8 mid-solve lookups, all-honest
+discards. Next natural leg: codex closer on J08's sorry (the relay,
+fourth instance; heavier than J04's).
