@@ -521,6 +521,16 @@
          {:timeout timeout-ms})]
     (vec (or (:entries response) response []))))
 
+(defn- ranking-fetch-failure-reason
+  [error]
+  (if (some (fn [cause]
+              (or (instance? java.net.SocketTimeoutException cause)
+                  (instance? java.net.http.HttpTimeoutException cause)))
+            (take 16 (take-while some?
+                                 (iterate #(.getCause ^Throwable %) error))))
+    :stats-fetch-timeout
+    :stats-fetch-failed))
+
 (defn- memory-patterns
   [memory]
   (->> (concat (:memory/pattern-ids memory)
@@ -598,6 +608,40 @@
      {:memories {} :patterns {}}
      entries)))
 
+(defn load-receipt-ranking-stats
+  "Load receipt-ranking statistics without changing the ranking decision.
+  The returned status distinguishes a successful empty result from a failed
+  fetch so the offered receipt can make fallback ordering observable."
+  [{:keys [enabled? candidates supplied-entries timeout-ms fetch-entries]}]
+  (cond
+    (not enabled?)
+    {:status :disabled
+     :reason :ranking-disabled-by-flag
+     :stats {:memories {} :patterns {}}}
+
+    (empty? candidates)
+    {:status :not-applicable
+     :reason :no-candidates
+     :stats {:memories {} :patterns {}}}
+
+    (some? supplied-entries)
+    {:status :ok
+     :stats (aggregate-use-receipts supplied-entries candidates)}
+
+    (< timeout-ms 250)
+    {:status :failed
+     :reason :stats-fetch-budget-exhausted
+     :stats {:memories {} :patterns {}}}
+
+    :else
+    (try
+      {:status :ok
+       :stats (aggregate-use-receipts (fetch-entries) candidates)}
+      (catch Throwable error
+        {:status :failed
+         :reason (ranking-fetch-failure-reason error)
+         :stats {:memories {} :patterns {}}}))))
+
 (defn- scored-use-stat
   [stat alpha]
   (let [{:keys [offered-count used-count]}
@@ -635,6 +679,30 @@
                       :memory/id))
        vec))
 
+(defn receipt-ranking-audit
+  "Describe which ranking mode ran without influencing that choice."
+  [{:keys [enabled? alpha candidates ranking-load stats-found?
+           scored-memory-stats receipt-stats]}]
+  (let [mode (cond
+               (not enabled?) :disabled-by-flag
+               (empty? candidates) :not-applicable-no-candidates
+               stats-found? :receipt-ranked
+               :else :deterministic-base-order)
+        reason (when-not stats-found?
+                 (or (:reason ranking-load) :stats-absent))]
+    (cond-> {:enabled enabled?
+             :alpha alpha
+             :stats-found? stats-found?
+             :mode mode
+             :degraded? (= :failed (:status ranking-load))}
+      reason
+      (assoc :reason reason)
+
+      stats-found?
+      (assoc :per-memory scored-memory-stats
+             :per-pattern (into (sorted-map)
+                                (:patterns receipt-stats))))))
+
 (defn pre-cutoff-ranking-audit
   "Describe the complete ranked candidate vector before the surfaced-memory
   cutoff. This is opt-in analysis instrumentation; it does not alter ranking or
@@ -670,6 +738,16 @@
          (assoc :endpoint (:dispatch/endpoint memory)))))
    (range)
    ranked))
+
+(defn surfaced-ranking-score-kinds
+  "Record the ranking score actually used for each surfaced memory."
+  [memories]
+  (mapv (fn [memory]
+          {:memory-id (:memory/id memory)
+           :score-kind (if (contains? memory :dispatch/ranking-score)
+                         :receipt-ranked
+                         :deterministic-base-order)})
+        memories))
 
 (defn- recall-now
   [{:keys [problem subjects limit substrate-base recall-timeout-ms
@@ -755,24 +833,14 @@
          (max 0
               (min default-receipt-stats-timeout-ms
                    (- recall-timeout-ms elapsed-ms 500.0))))
-        receipt-stats
-        (cond
-          (and receipt-ranking? (seq candidates)
-               (some? ranking-receipt-entries))
-          (aggregate-use-receipts ranking-receipt-entries candidates)
-
-          (and receipt-ranking?
-               (seq candidates)
-               (>= stats-timeout-ms 250))
-          (try
-            (aggregate-use-receipts
-             (receipt-entries substrate-base stats-timeout-ms)
-             candidates)
-            (catch Throwable _
-              {:memories {} :patterns {}}))
-
-          :else
-          {:memories {} :patterns {}})
+        ranking-load
+        (load-receipt-ranking-stats
+         {:enabled? receipt-ranking?
+          :candidates candidates
+          :supplied-entries ranking-receipt-entries
+          :timeout-ms stats-timeout-ms
+          :fetch-entries #(receipt-entries substrate-base stats-timeout-ms)})
+        receipt-stats (:stats ranking-load)
         stats-found?
         (boolean
          (some (fn [[_ stat]]
@@ -794,13 +862,14 @@
                            receipt-alpha)])))
                 candidates))
         ranking-audit
-        (cond-> {:enabled receipt-ranking?
-                 :alpha receipt-alpha
-                 :stats-found? stats-found?}
-          stats-found?
-          (assoc :per-memory scored-memory-stats
-                 :per-pattern (into (sorted-map)
-                                    (:patterns receipt-stats))))
+        (receipt-ranking-audit
+         {:enabled? receipt-ranking?
+          :alpha receipt-alpha
+          :candidates candidates
+          :ranking-load ranking-load
+          :stats-found? stats-found?
+          :scored-memory-stats scored-memory-stats
+          :receipt-stats receipt-stats})
         active-system
         (if (and receipt-ranking? stats-found?)
           receipt-ranked-system
@@ -1060,9 +1129,18 @@
   "Build the persisted offered-half record using the shared use-receipt
   contract. With no memories this is still a valid recall-empty receipt."
   [{:keys [problem from memory-channel]} recall-result job-id session-id]
-  (let [memory-ids (mapv :memory/id (:memories recall-result))
+  (let [memories (:memories recall-result)
+        memory-ids (mapv :memory/id memories)
         withheld-ids (vec (:withheld-memory-ids recall-result))
         surfaced-at (str (Instant/now))
+        ranking-audit
+        (assoc (or (get-in recall-result [:query :receipt-ranking])
+                   {:enabled nil
+                    :mode :unavailable
+                    :degraded? false
+                    :reason :ranking-observation-unavailable})
+               :per-surfaced-memory
+               (surfaced-ranking-score-kinds memories))
         inclusion-reasons
         (into {}
               (map (fn [memory-id]
@@ -1110,6 +1188,7 @@
                     :recall-system
                     (or (get-in recall-result [:query :recall-system])
                         recall-system)
+                    :receipt-ranking ranking-audit
                     :problem problem
                     :job-id job-id
                     :recall-status (:status recall-result)

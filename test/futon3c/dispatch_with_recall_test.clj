@@ -156,6 +156,118 @@
            (:score-kind (last audit))))
     (is (= 2 (:cutoff-position (last audit))))))
 
+(deftest receipt-ranking-fetch-failure-is-loud-without-changing-fallback-order
+  (let [candidates [{:memory/id "e-first"} {:memory/id "e-second"}]
+        load (dispatch/load-receipt-ranking-stats
+              {:enabled? true
+               :candidates candidates
+               :timeout-ms 1000
+               :fetch-entries #(throw (java.net.SocketTimeoutException.
+                                        "receipt stats timed out"))})
+        fallback (if (seq (get-in load [:stats :memories]))
+                   (dispatch/rank-memories
+                    candidates (get-in load [:stats :memories]) 0.5)
+                   candidates)
+        audit (dispatch/receipt-ranking-audit
+               {:enabled? true
+                :alpha 0.5
+                :candidates candidates
+                :ranking-load load
+                :stats-found? false
+                :receipt-stats (:stats load)})
+        entry (dispatch/offered-evidence
+               {:problem "a-test" :from "ground-control"}
+               {:status :ok
+                :query {:receipt-ranking audit}
+                :memories candidates}
+               "job-1" "session-1")]
+    (is (= ["e-first" "e-second"] (mapv :memory/id fallback))
+        "a failed stats fetch leaves deterministic candidate order untouched")
+    (is (true? (get-in entry [:body :receipt-ranking :degraded?])))
+    (is (= :stats-fetch-timeout
+           (get-in entry [:body :receipt-ranking :reason])))
+    (is (= [:deterministic-base-order :deterministic-base-order]
+           (mapv :score-kind
+                 (get-in entry [:body :receipt-ranking
+                                :per-surfaced-memory]))))))
+
+(deftest successful-receipt-ranking-records-ranked-score-kind
+  (let [candidate {:memory/id "e-used"}
+        entries [{:evidence/body
+                  {:event :memory-use
+                   :phase :offered
+                   :memory-use {:memory-use/surfaced-ids ["e-used"]}}}
+                 {:evidence/body
+                  {:event :memory-use
+                   :phase :outcome
+                   :memory-use {:memory-use/used-ids ["e-used"]}}}]
+        load (dispatch/load-receipt-ranking-stats
+              {:enabled? true
+               :candidates [candidate]
+               :supplied-entries entries
+               :timeout-ms 1000})
+        ranked (dispatch/rank-memories
+                [candidate] (get-in load [:stats :memories]) 0.5)
+        audit (dispatch/receipt-ranking-audit
+               {:enabled? true
+                :alpha 0.5
+                :candidates [candidate]
+                :ranking-load load
+                :stats-found? true
+                :scored-memory-stats {}
+                :receipt-stats (:stats load)})
+        entry (dispatch/offered-evidence
+               {:problem "a-test" :from "ground-control"}
+               {:status :ok
+                :query {:receipt-ranking audit}
+                :memories ranked}
+               "job-1" "session-1")]
+    (is (false? (get-in entry [:body :receipt-ranking :degraded?])))
+    (is (= :receipt-ranked
+           (get-in entry [:body :receipt-ranking :mode])))
+    (is (= :receipt-ranked
+           (get-in entry [:body :receipt-ranking
+                          :per-surfaced-memory 0 :score-kind])))))
+
+(deftest disabled-receipt-ranking-is-deliberate-not-degraded
+  (let [called? (atom false)
+        candidates [{:memory/id "e-first"}]
+        load (dispatch/load-receipt-ranking-stats
+              {:enabled? false
+               :candidates candidates
+               :timeout-ms 1000
+               :fetch-entries #(reset! called? true)})
+        audit (dispatch/receipt-ranking-audit
+               {:enabled? false
+                :alpha 0.5
+                :candidates candidates
+                :ranking-load load
+                :stats-found? false
+                :receipt-stats (:stats load)})]
+    (is (false? @called?))
+    (is (= :disabled-by-flag (:mode audit)))
+    (is (= :ranking-disabled-by-flag (:reason audit)))
+    (is (false? (:degraded? audit)))))
+
+(deftest absent-receipt-stats-are-not-a-fetch-degradation
+  (let [candidates [{:memory/id "e-cold"}]
+        load (dispatch/load-receipt-ranking-stats
+              {:enabled? true
+               :candidates candidates
+               :timeout-ms 1000
+               :fetch-entries (constantly [])})
+        audit (dispatch/receipt-ranking-audit
+               {:enabled? true
+                :alpha 0.5
+                :candidates candidates
+                :ranking-load load
+                :stats-found? false
+                :receipt-stats (:stats load)})]
+    (is (= :ok (:status load)))
+    (is (= :deterministic-base-order (:mode audit)))
+    (is (= :stats-absent (:reason audit)))
+    (is (false? (:degraded? audit)))))
+
 (deftest packet-injection-is-conditional
   (let [memory {:memory/id "e-memory-1"
                 :memory/kind :lemma-location
