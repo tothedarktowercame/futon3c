@@ -156,3 +156,52 @@ Secondary check: the runner's "not available as a packaged lemma in
 Mathlib" boundary claim was grep-probed (not exhaustively): no direct
 packaged form found; claim plausible though a countable-basis route
 around it was not investigated. Left open.
+
+## EXIT INTERVIEW (testimony, clearly marked as such; all checkable
+claims verified against the record)
+
+Interview job invoke-1785769354670-942-b98c938a. Testimony aligned
+with the record on EVERY checkable point (zero calls; memory_search's
+metadata-only shape accurately described; the single generic-search
+call matches its "one targeted grep" account; psr_search awareness
+consistent with the system prompt). No confabulation detected —
+high-quality testimony.
+
+**Classification: H-propensity primary, H-framing secondary.**
+
+- PROPENSITY (its own words): the invitation "read as informational
+  context, not as an instruction to actively query"; the blocker was
+  framed as "a genuine Mathlib gap to document, not as something a
+  prior session might have already partially addressed"; "I should
+  have had that thought. I didn't." The missing move is a FRAME SHIFT
+  (world-fact -> repo-history-fact), which an invitation does not
+  force and a gate would.
+- FRAMING (the discovery): the runner KNEW psr_search and correctly
+  understood its self-description — "consulted before adopting a
+  library pattern" — and therefore rationally did not reach for it at
+  an OBSTACLE ("didn't feel like a reusable pattern... one-off proof
+  attempt"). The right tool exists, was known, and its own
+  description miscues the pull use case.
+- Its ranked options at the blocker (prove from scratch / avoid /
+  one Mathlib grep / commit honestly) are exactly right EXCEPT for
+  the absent memory step, which it named itself unprompted.
+
+**Q5 verification — even its own hypothetical queries fail:** its two
+verbatim psr_search phrasings return org-process patterns (plus
+tangential math-informal hits); its imagined memory_search tags
+["open-set" "interval-decomposition" "Lebesgue" "null-set"] return 0
+items — no such tag vocabulary exists in the store.
+
+## THE COMPLETE ANATOMY (one problem-spend + one interview)
+
+Four distinguishable mechanisms, each evidenced, each with a cheap fix:
+1. Propensity — invitation != trigger → process GATE (probe 2, a96J07).
+2. psr_search framing — self-description excludes the obstacle case →
+   one-line description change ("also when blocked: search for prior
+   obstacles").
+3. memory_search affordance — no vocabulary parameter → add a query
+   param or route content queries to psr_search.
+4. Index/tag reach — blocker vocabulary and even the runner's natural
+   tags resolve to nothing; densest endpoint lexically camouflaged →
+   math hotwords/tags on endpoints and memories (metadata work, not
+   code).
