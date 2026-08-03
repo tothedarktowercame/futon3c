@@ -1,0 +1,24 @@
+{
+ "arm": "control",
+ "attempt-commit": "48e4c6c",
+ "base": "51b6bc00",
+ "note": "First real E2-pilot attempt (control arm, a95J01@51b6bc00), preserved before the staged tree is reset. The runner had no Lean toolchain on PATH for this run (lake exited 127), so it committed an attempt it could not verify; both outcomes are genuine build errors, confirmed after the extractor gained a working package cache and a baseline-compiles guard.",
+ "problem": "a95J01",
+ "trace": {
+  "attempt-count": 1,
+  "schema": "e2-decision-sequence/v1",
+  "sequence": [
+   [
+    "subordination_function_exists",
+    "add-decl",
+    "error"
+   ],
+   [
+    "subordination_deriv_le",
+    "sorry-removed",
+    "error"
+   ]
+  ],
+  "sha256": "9ef90fceaad4c5537d3fb3a93b42c1babbb9c31504769951b249f59fd527f822"
+ }
+}

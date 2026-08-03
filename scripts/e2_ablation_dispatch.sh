@@ -237,7 +237,7 @@ outer_main() {
   set +e
   sudo -n -u "$ACCOUNT" env -i \
     HOME="$ACCOUNT_HOME" CODEX_HOME="$ACCOUNT_HOME/.codex" \
-    PATH="$ACCOUNT_HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin" \
+    PATH="$ACCOUNT_HOME/.npm-global/bin:$ACCOUNT_HOME/.elan/bin:/usr/local/bin:/usr/bin:/bin" \
     E2_SABOTAGE_READABLE_PATH="${E2_SABOTAGE_READABLE_PATH-}" \
     bash -s -- --inner "$problem" "$revision" "$expected_hash" -- "$@" \
     <"$0" 2>&1 | tee "$log"

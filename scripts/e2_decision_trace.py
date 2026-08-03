@@ -25,6 +25,9 @@ EDIT_KINDS = frozenset({
     "remove-decl", "sorry-introduced", "sorry-removed",
 })
 BUILD_OUTCOMES = frozenset({"success", "error", "sorry-present"})
+# Operator-side Lean packages, at the revision the staged manifest pins.  The
+# extractor rebuilds every commit itself, so it needs a package cache it owns.
+OPERATOR_PACKAGES = Path("/home/joe/code/apm-lean/.lake/packages")
 
 _DECL_RE = re.compile(
     r"(?m)^[ \t]*(?P<mods>(?:(?:private|protected|noncomputable|unsafe|partial)\s+)*)"
@@ -335,9 +338,30 @@ class LeanOutcomeEvaluator:
         if result.returncode != 0:
             self.close()
             raise TraceError(f"isolated clone failed:\n{result.stdout}")
-        lake_cache = self.source_repo / ".lake"
-        if lake_cache.is_dir() and not (self.worktree / ".lake").exists():
-            (self.worktree / ".lake").symlink_to(lake_cache, target_is_directory=True)
+        # Build against the OPERATOR's package cache, not the staged tree's.
+        # The staged tree's .lake/packages belongs to the isolated account and is
+        # read-only here, and lake's first move is to delete and re-clone a
+        # package whose URL it cannot confirm -- which fails, and every commit
+        # then scores "error" whatever it actually does.  Only `packages` is
+        # shared; .lake itself must stay writable for build output.
+        packages = OPERATOR_PACKAGES
+        if packages.is_dir():
+            (self.worktree / ".lake").mkdir(parents=True, exist_ok=True)
+            (self.worktree / ".lake" / "packages").symlink_to(
+                packages, target_is_directory=True)
+
+    def baseline_builds(self, base: str) -> tuple[bool, str]:
+        """Does the registered baseline compile in this environment?
+
+        If it does not, every attempt scores "error" for reasons that have
+        nothing to do with the attempt, and the trace reads as a solver that
+        broke everything it touched.  Checked before any attempt is scored.
+        """
+        checkout = _git(self.worktree, "checkout", "--quiet", "--detach", base, check=False)
+        if checkout.returncode != 0:
+            return False, checkout.stdout
+        result = _run(("lake", "build"), cwd=self.worktree, check=False)
+        return result.returncode == 0, result.stdout
 
     def close(self) -> None:
         self._temporary.cleanup()
@@ -382,6 +406,14 @@ def extract_trace(
     owned_evaluator: LeanOutcomeEvaluator | None = None
     if outcome_provider is None:
         owned_evaluator = LeanOutcomeEvaluator(repo)
+        builds, detail = owned_evaluator.baseline_builds(base)
+        if not builds:
+            owned_evaluator.close()
+            raise TraceError(
+                "the build environment cannot compile the registered baseline, so "
+                "outcome labels would record the environment rather than the run:\n"
+                + detail[-2000:]
+            )
         outcome_provider = owned_evaluator
     try:
         sequence: list[list[str]] = []
