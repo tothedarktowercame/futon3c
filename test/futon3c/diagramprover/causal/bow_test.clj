@@ -49,13 +49,31 @@
   (let [receipt (bow/firing-squad-receipt)]
     (is (true? (get-in receipt [:verdicts 0 :holds?])))
     (is (= [[:soldier-A :death]] (get-in receipt [:verdicts 0 :paths])))
-    (is (= :deterministic-scm (get-in receipt [:counterfactual :method])))
-    (is (= 1 (get-in receipt [:counterfactual :abduction :consistent-count])))
-    (is (= :abduction (get-in receipt [:counterfactual :abduction :step])))
-    (is (= :action (get-in receipt [:counterfactual :action :step])))
-    (is (= :prediction (get-in receipt [:counterfactual :prediction :step])))
-    (is (true? (get-in receipt [:counterfactual :answer])))
+    (is (= {:method :deterministic-scm
+            :query-type :counterfactual
+            :abduction {:step :abduction
+                        :evidence {:death true}
+                        :consistent-count 1
+                        :assignments [{:court-order true}]}
+            :action {:step :action
+                     :intervention {:soldier-A false}
+                     :replaced-equations #{:soldier-A}}
+            :prediction {:step :prediction
+                         :outcome :death
+                         :worlds [{:assignment {:court-order true}
+                                   :value true}]
+                         :all-agree? true}
+            :answer true}
+           (:counterfactual receipt)))
     (is (empty? (:refusals receipt)))))
+
+(deftest firing-squad-without-equations-keeps-capability-refusal
+  (let [causal-dag (update (bow/load-fixture :firing-squad)
+                           :metadata dissoc :structural_equations)
+        receipt (bow/firing-squad-receipt causal-dag)]
+    (is (= :counterfactual-identification
+           (get-in receipt [:refusals 0 :missing-capability])))
+    (is (= :refusal (get-in receipt [:counterfactual :method])))))
 
 (deftest deterministic-receipts
   (is (= (bow/all-bow-receipts) (bow/all-bow-receipts))))
