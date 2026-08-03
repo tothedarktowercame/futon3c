@@ -75,3 +75,37 @@ anything outcome-shaped is observational context only.
 - Dispatched: job invoke-1785765468643-936-8155fcf8 to zai-1, park
   park-129aa0f7 (deadline 50 min; zai ~30-min cap is SOFT, overrun is
   not stuckness).
+
+## RESULTS (read from receipts 2026-08-03 ~14:20Z, pre-bellback)
+
+Job completed (~16 min). Proof outcome (context only, not scored):
+honest partial — 1 sorry at a genuinely-missing Mathlib dependency
+(open ⊆ ℝ as countable disjoint-interval union), boundary documented.
+
+- **P1: CONFIRMED — the memory tools were NEVER called.** Transcript
+  evidence (store, zai-1 turn-round entries, rounds 1–55): 24 tool
+  calls captured = run_shell 11, edit_file 5, write_file 4, read_file
+  3, generic code search 1; memory_search 0, pattern_memory 0. All
+  memory_search strings in the store window are coordination echoes
+  of our own planning messages. No pull-side surfacing receipts
+  exist for the job (consistent: nothing was called).
+- **P2: UNTESTED** — conditional on a call that never happened. The
+  two named memories were never given the chance to surface.
+- **P3: receipts readable, trivially** — and NOT a v9 event: this is
+  never-called, not called-and-starved.
+- **The sharpening irony, recorded:** the runner ended blocked on a
+  MISSING DEPENDENCY — the canonical situation the memory system
+  exists for, and the densest endpoint in the corpus
+  (missing-dependency-protocol, 40) — and never once consulted the
+  store it was explicitly invited to use.
+
+**Reading:** replicates S3's observation under preregistration. The
+binding constraint on the pull channel is TOOL-CALLING PROPENSITY,
+not retrieval quality. A passive invitation paragraph is insufficient
+elicitation. Design consequence for axis 1: pull arms need a process
+GATE, not an invitation — e.g. "before declaring a blocker you MUST
+run one memory_search on the obstacle terms and cite its result in
+the boundary note" — which is the talk-vs-walk structural lesson
+(instructions don't change behavior; gates do) applied to the
+runner's own memory use. Designated second probe (a96J07) should test
+the gate variant against this invitation baseline.
