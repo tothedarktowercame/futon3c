@@ -58,20 +58,46 @@ assume.
 quality* from *retrieval timing*. If `:pull-only` beats `:push`, the query
 builder was never the binding constraint — the dispatch moment was.
 
-### Axis 2 — query construction (`:recall-query-mode`)
+### Axis 2 — query construction (`:recall-query-mode`) — **RESOLVED BY E8, NO BUILDABLE LEVEL**
 
-| mode | meaning | status |
+E8 ran (`E8-query-binding-spec.md`, frozen artifact `e8-query-binding-20260803.json`,
+sha256 `07be2f39…`). Both proposed levels are now refuted:
+
+| mode | E8 result | status |
 |---|---|---|
-| `:frequency-4` | shipped builder, `(take 4)` — **default** | built |
-| `:frequency-N` | same rule, wider cut | trivial |
-| `:structure-aware` | terms from mathematical identifiers (declaration names, Mathlib module paths, operator names) rather than prose frequency | to build |
+| `:frequency-4` | 2/5, 40% | shipped baseline |
+| `:frequency-N` (8/12/16) | 2/5, 40% at every cap | **DEAD — do not build** |
+| `:structure-aware` (arm C) | 2/5, 40%, changed no case verdict | **refuted as operationalised** |
+| oracle vocabulary (arm D) | 4/5, 80% | not available at dispatch, by definition |
 
-**Conditional on E8** (`E8-query-binding-spec.md`, running as
-`invoke-1785743331119-872-a736b34a`). If E8 shows the known-item hit rate flat
-across the cardinality sweep and the oracle arm succeeding, this axis collapses
-to one level and the cohort saves a dimension. **Do not build
-`:structure-aware` before E8 reports** — that is the one place waiting is
-cheaper than building.
+**My cardinality hypothesis was wrong, and it was wrong twice over.** Widening
+the cap moves nothing, because `query-ladder` does `(take 3 …)` — the ladder
+truncates to three terms regardless of the builder's cap, so the fourth term was
+already dead code. "A bag of at most four frequency-ranked words" was both the
+wrong number and the wrong lever. The code had already said so: that ladder's
+docstring records a 2026-07-30 measurement and names the cause — *"term
+SELECTION is by statement order rather than by signal."*
+
+**What survives is the vocabulary finding, and it points away from this axis.**
+Oracle vocabulary doubles the hit rate, so *which* terms are chosen is decisive.
+But oracle vocabulary requires knowing the answer, and the one structure-aware
+construction we tested scored at baseline. So axis 2 currently has **no
+buildable level** — not "collapses toward `:structure-aware`", which would
+over-read arm C's 40%.
+
+Reopening it needs a *different* construction of dispatch-time vocabulary than
+arm C's, and that is a research question, not a build item. Until someone has
+one, this axis is closed.
+
+**Where the finding goes instead.** If vocabulary is decisive and cannot be
+known before the work starts, the treatment with a mechanism behind it is the
+channel that retrieves *during* the work, where the runner supplies the
+vocabulary itself. E8 was designed to test axis 2 and its main effect is to
+strengthen axis 1.
+
+One case (lib-young) failed even under oracle vocabulary, and remains unresolved
+between attachment starvation and pollution at the cutoff pending the
+rank-instrumented rerun. That case is axis 3's live evidence.
 
 ### Axis 3 — graph population (C1's treatment)
 
