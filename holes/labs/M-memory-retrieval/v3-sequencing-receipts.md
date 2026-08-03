@@ -70,6 +70,20 @@ populated-vs-star contrast can null for query reasons. Axis 3 runs
 after axis-2's vocabulary settlement is applied to the shipped builder
 AND after SEQ-0.3's attachment export exists.
 
+### SEQ-3 addendum (earned by the attachment export's first join)
+
+The star-forest/populated contrast is ALREADY PARTLY REALISED in the
+corpus: 4 endpoints populated (densities 16-40, carrying 106/167
+attachments), 21 sparse (≤4). Randomizing axis 3 across problems
+without blocking on endpoint density dilutes the contrast with
+now-measurable effect modification. Constraint: STRATIFY on endpoint
+density, or restrict axis 3 to sparse endpoints where the treatment is
+an actual change. (claude-12 adopting into the arm design.) Note also:
+the export's first use WEAKENED the conjecture axis 3 was built to
+test - the sole arm-D failure sits on the densest endpoint, so
+attachment starvation is refuted at that extreme; see spec deltas
+v3-vindicated / v10-candidate.
+
 ## The resulting partial order
 
 ```
