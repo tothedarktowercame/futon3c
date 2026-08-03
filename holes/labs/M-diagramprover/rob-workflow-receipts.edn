@@ -1,0 +1,12 @@
+;; Computed 2026-08-03 by the causal engine (dag/dsep/surgery/identify)
+;; from rob-workflow-spec.json — the agent-compiler workflow model.
+{:rw1 {:acknowledgment-causes-behavior? false
+       :correlation-without-causation-path
+       [[:acknowledgment :U-propensity :per-file-hand-check]]}
+ :rw2 {:instruction-severed-by-context-loss? true
+       :gate-path-survives-context-loss? true
+       :gate-surviving-path
+       [[:gate-installed :harness-verdict-prev :per-file-hand-check]]}
+ :rw3 {:method :backdoor
+       :primary-adjustment-set #{}
+       :note "gate-installed is exogenous in-model; empty set identifies"}}

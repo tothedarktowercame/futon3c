@@ -1,0 +1,37 @@
+{
+  "id": "rob-agent-compiler-workflow",
+  "description": "Causal model of the agent-compiler workflow failure Rob described: agents verbally acknowledge process rules ('YOU ARE RIGHT!') then revert to instance-wise behavior (hand-compiling per test file). Encodes the hypothesis that talk and walk are CONFOUNDED (shared latent propensity), not causally connected, and that gate-installation reaches behavior through a context-decay-immune path while re-instruction does not.",
+  "variables": [
+    {"id": "U-propensity", "kind": "latent-unobserved", "name": "trained propensity toward instance-wise work and agreeable acknowledgment"},
+    {"id": "rule-stated", "kind": "observed", "name": "operator states the process rule this session"},
+    {"id": "context-pressure", "kind": "observed", "name": "context length / eviction pressure"},
+    {"id": "rule-in-context", "kind": "observed", "name": "rule live in the agent's active context"},
+    {"id": "acknowledgment", "kind": "observed", "name": "verbal acknowledgment of the rule"},
+    {"id": "gate-installed", "kind": "observed", "name": "corpus-quantified harness gate exists"},
+    {"id": "harness-verdict-prev", "kind": "observed", "name": "previous cycle's harness verdict"},
+    {"id": "per-file-hand-check", "kind": "observed", "name": "instance-wise behavior this cycle"},
+    {"id": "artifact-general", "kind": "observed", "name": "general mechanism built/extended this cycle"},
+    {"id": "harness-verdict", "kind": "observed", "name": "corpus-level verdict at HEAD this cycle"},
+    {"id": "closure-rate", "kind": "observed", "name": "corpus progress over cycles"}
+  ],
+  "arrows": [
+    {"from": "rule-stated", "to": "rule-in-context"},
+    {"from": "context-pressure", "to": "rule-in-context"},
+    {"from": "rule-stated", "to": "acknowledgment"},
+    {"from": "U-propensity", "to": "acknowledgment"},
+    {"from": "U-propensity", "to": "per-file-hand-check"},
+    {"from": "rule-in-context", "to": "per-file-hand-check"},
+    {"from": "gate-installed", "to": "harness-verdict-prev"},
+    {"from": "harness-verdict-prev", "to": "per-file-hand-check"},
+    {"from": "per-file-hand-check", "to": "artifact-general"},
+    {"from": "artifact-general", "to": "harness-verdict"},
+    {"from": "gate-installed", "to": "harness-verdict"},
+    {"from": "artifact-general", "to": "closure-rate"},
+    {"from": "per-file-hand-check", "to": "closure-rate"}
+  ],
+  "requested_receipts": [
+    {"id": "RW-1", "question": "Does acknowledgment cause behavior? Prediction: no directed path exists; the observed acknowledgment/behavior correlation routes entirely through the latent propensity (name the path). This is the structural form of 'YOU ARE RIGHT! then reversion'."},
+    {"id": "RW-2", "question": "Instruction fragility vs gate robustness: severing rule-in-context (context loss) must disconnect rule-stated from behavior entirely, while gate-installed must remain connected via the harness-verdict path. Name both paths. This is the falsifiable core: re-instruction's entire influence rides a decaying mediator; the gate's does not."},
+    {"id": "RW-3", "question": "Is P(closure-rate | do(gate-installed)) identifiable from observables? Expected: yes, empty adjustment set (gate installation is an operator decision, exogenous in-model) - installing a gate is a clean experiment on the workflow."}
+  ]
+}

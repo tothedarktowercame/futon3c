@@ -1,0 +1,23 @@
+;; Computed 2026-08-03 by the causal engine from retrieval-stage-causal-spec.json (v2).
+;; RS-2/RS-3 computed earlier this morning; RS-1/RS-4 this block.
+{:rs1 {:question "What does E8 arm-D failure actually localize?"
+       :surfaced-set-parents [:attachment-density :pattern-endpoints :pollution :reachability]
+       :causes-independent-of-query [:attachment-density :pollution :reachability]
+       :after-e8-controls [:attachment-density :pollution]
+       :consequence "Arm-D failure does NOT uniquely support V2 §5.2: after E8's reachability control and store-presence verification, the residual causes are attachment-density AND pollution-at-the-surfacing-cutoff (spec delta v2). E8's preregistered interpretation 'D fails => bottleneck downstream, §5.2 supported' is too strong as written."
+       :free-discriminator "CORRECTED by claude-12 against E8 frozen data (2026-08-03): NOT free as claimed. (a) the frozen artifact records ranks: null - the harness captured membership, not position; (b) deeper: with a hard top-5 cutoff, present-but-drowned is unobservable BY CONSTRUCTION - rank 6 and never-retrieved both read as absent. The discriminator requires rank over the PRE-cutoff candidate list (instrument change; cheap on frozen data). Until then E8's one D-failure (case 4) is UNRESOLVED between the two residuals, not resolved toward §5.2. Structural basis of the split stands: attachment acts only on surfaced-set; pollution also at text-match-set and offered-set."
+       :named-vs-needed "ADDED from claude-12's decomposition of the frozen E8 JSON (their 0750f5ec): arm A's 40% baseline is carried ENTIRELY by set-valued cases (any-of-five sufficing); every specifically-named target (two singletons + one pair) missed under the shipped query, and both singletons convert under oracle vocabulary. Distinction the spec conflates: retrieving A relevant memory vs retrieving THE needed one - candidate delta v4 (registered not applied): split surfaced-set into relevant-surfaced and named-target-surfaced, or index the outcome by target kind."
+       :discharged "RS-2 held against E8's frozen-data results (STAGE NAMED PRECISELY per claude-12's correction: E8 read a live store but ran no dispatches/runners/tokens - this is frozen-data analysis, not a live experiment; the prediction was validated on frozen data): cardinality inert (A=B8=B12=B16=40%), vocabulary is the lever (oracle 40%->80%) - the C1 arm would have run starved; sequencing constraint vindicated. Note the confound was narrower than modeled: query-ladder truncates to 3 terms, so the take-4 cap was never the operative lever - a query-cardinality mechanism refinement for any v3 delta."}
+ :rs2 {:attachment-effect-route-exists? true
+       :query-stage-is-independent-bottleneck? true
+       :consequence "C1's populated-vs-star arm under the shipped (take 4) query can produce an attachment-null that is actually a query-starvation null - E8-before-C1 is a computed sequencing constraint."}
+ :rs3 {:total-effect-of-reachability :identifiable-empty-set
+       :channel-decomposition :path-specific-effect-outside-total-effect-machinery
+       :naive-conditioning-backfires
+       [[:reachability :grep-channel :corpus-coverage :text-match-set :pattern-endpoints :surfaced-set :offered-set :used-set :runner-outcome]]
+       :with-artifact-index :decomposition-becomes-computable
+       :consequence "V2 §5.1's 'needs a different instrument' holds as a two-sided receipt: no conditioning trick on existing receipt fields yields the grep-vs-recall split (collider opens, path shown); the artifact-index instrument makes it standard mediation."}
+ :rs4 {:total-effect {:method :backdoor :primary-adjustment-set #{}}
+       :active-channels [[:reachability :grep-channel :runner-outcome]
+                         [:reachability :surfaced-set :offered-set :used-set :runner-outcome]]
+       :n=1-licenses "existence of an active reachability->outcome route (witnessed), NOT magnitude, NOT channel share (see :rs3)"}}

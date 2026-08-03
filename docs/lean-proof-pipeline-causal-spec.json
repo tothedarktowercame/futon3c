@@ -1,0 +1,271 @@
+{
+  "meta": {
+    "name": "lean-proof-pipeline-causal-graph",
+    "slug": "lean-proof-pipeline-v1",
+    "version": 1,
+    "date": "2026-08-02",
+    "authors": "Joe + Claude team (futon3c). Example #2 for the diagram engine (M-diagramprover WS-C); same discipline as apm-memory-retrieval-v1.",
+    "purpose": "Structural template of the M-codex-sorry-loop proof pipeline: one dispatch round of one problem through statement audit, dispatch, proof search, verification, review, and record-keeping. Grain is component-scale: one variable per mechanism or state owner, mediators preserved, measurement layer separate from causal structure, time-indexed loop edges instead of cycles.",
+    "format_note": "Same conventions as apm-memory-retrieval-v1: 'observes' edges are sensors, never causal arrows; arrow status 'evidenced' cites the campaign record, 'conjectured' flags the hypotheses this spec exists to test. Evidence citations 'residual A1..E8' refer to sections of known-residual-20260801.md; 'CT-R1..R4' to construction-targets.md rules.",
+    "companion": "lean-proof-pipeline-causal-spec.md",
+    "evidence_corpus": "futon3c holes/labs/M-codex-sorry-loop/known-residual-20260801.md; construction-targets.md; scripts/queue_audit.py; campaign 100->137 of 145 closed"
+  },
+
+  "variables": [
+    { "id": "P01", "name": "problem_statement_t", "kind": "exogenous_context",
+      "description": "The committed Lean statement of the target problem, including its (unknown-at-dispatch) defect class. The campaign's residual is dominated by statement defects, not search failures: 6 of the final 8 non-held-out holes sit behind statement decisions (residual Part A).",
+      "values_note": "defect class {sound, vacuous_hypothesis, under_strength_guard, false_statement, modelling_mismatch} x hole count." },
+
+    { "id": "P02", "name": "queue_row_t", "kind": "persistent_state",
+      "description": "The queue row at dispatch: status, named obligations, recorded dead ends from prior rounds. Named obligations are what travels between rounds (residual E5: rows closed by executing the route their previous attempt recorded; recorded dead ends each saved a round)." },
+
+    { "id": "P03", "name": "library_state_t", "kind": "persistent_state",
+      "description": "ConstructionTargets modules + Mathlib at dispatch: what is proved, what is importable (reachability), and the duplication debt (byte-identical copies of module content living inside problem files - residual C1/C2). Duplication matters causally: content can be 'available' through a copy even when the module is absent.",
+      "values_note": "per relevant module: {on_path, off_path, absent} x provenance {extracted, copied} (CT-R2)." },
+
+    { "id": "P04", "name": "doc_prose_t", "kind": "persistent_state",
+      "description": "The library's self-description: consumer columns, absence claims, module status prose. Distinct from P03 because it goes stale: ConstructionTargets.lean listed three sorry-free modules as partial and named a wrong consumer, misrouting dispatches for a day (residual E4; fixed d6b1bc3 by deriving the consumer column by grep)." },
+
+    { "id": "P05", "name": "runner_lane", "kind": "exogenous_context",
+      "description": "Which runner/model attempts the round, and session freshness. The runner leg is also the strongest review leg (residual E1): both false specs shipped by ground controls were caught by runners, neither by the other reviewer." },
+
+    { "id": "P06", "name": "dispatch_packet", "kind": "mechanism",
+      "description": "The ground-control-authored packet: target, route guidance carried from P02, gates to clear. Itself a defect source: two false theorem statements were dispatched by ground control during the campaign (residual E1)." },
+
+    { "id": "P07", "name": "statement_audit", "kind": "mechanism",
+      "description": "The vacuity ladder run against the statement before/at dispatch: 0a/0b/0c contentful-conclusion checks, vacuity (hypothesis class inhabited?), non-triviality (inhabited non-degenerately?), proposed 0d (does a weak property already imply a hypothesis?). Checked by compiling witnesses, not eyeballing (residual E2). I_audit's target: the ladder is currently applied unevenly.",
+      "values_note": "{not_run, partial(0a-0c), full(+vacuity+nontriv), full+0d} x verdict." },
+
+    { "id": "P08", "name": "route_selection", "kind": "endogenous",
+      "description": "The decomposition/route the runner commits to, shaped by the statement, the packet's carried obligations, the library docs, and runner identity. The analogue of route_intent in the memory-system spec." },
+
+    { "id": "P09", "name": "proof_search", "kind": "mechanism",
+      "description": "The attempt trajectory: edits, lemma search, decompositions tried, dead ends hit, commits made. Commit-as-you-go is load-bearing: a commit is durable, a job result is not (residual D1)." },
+
+    { "id": "P10", "name": "dependency_set", "kind": "endogenous",
+      "description": "The unproved dependency set of the target - THE VARIABLE WITH A DERIVATIVE (residual E6). a96A04 read 1->1->1 on hole count across three rounds, scored as three failures, while its dependency set went 'compact-support API unusable' -> 'uniform envelope' -> 'absolute-coefficient bound' -> closed. Currently sensed only through prose (T05 absent)." },
+
+    { "id": "P11", "name": "build_verdict", "kind": "outcome_witness",
+      "description": "Lean's verdict on the committed artifacts: lake build + #print axioms. The independent witness; cannot be contaminated by self-report." },
+
+    { "id": "P12", "name": "build_env_state", "kind": "exogenous_context",
+      "description": "The verification environment's health: stale oleans, early-closed namespaces, misremembered identifiers. The corrupting input to readout: a stale olean produces a false sorryAx, a wrong namespace produces unknownIdentifier - each reads as the strongest possible evidence of failure (residual E3)." },
+
+    { "id": "P13", "name": "verification_readout", "kind": "mechanism",
+      "description": "The runner's READING of the verdict - f(P11, P12), not P11 itself. Alarm-shaped failures live here: negatives that are actually evidence about the setup. The rule 're-derive the name or rebuild before believing a negative' is an intervention on this node. The within-round feedback (a false negative sends the NEXT search step down repair paths for working code, residual E3) is time-indexed INSIDE P09's trajectory, per the same discipline as route revision in the memory-system spec - no cycle drawn." },
+
+    { "id": "P14", "name": "reported_outcome", "kind": "mechanism",
+      "description": "The runner's report as delivered: summary, claimed sha/holes. Distinct from what happened (P16): the ~30-min job cap can kill the delivery channel after the work landed (residual D1: state=failed with five commits and the theorem proved)." },
+
+    { "id": "P15", "name": "review_verdict", "kind": "mechanism",
+      "description": "The review triangle's verdict: ground control + second reviewer + runner leg, with corrections recorded. Twelve cross-agent corrections in the campaign; the runner leg carried the most weight (residual E1)." },
+
+    { "id": "P16", "name": "outcome_t", "kind": "outcome",
+      "description": "Ground truth after the round, measured by the audit discipline: holes at committed HEAD with comments stripped, closure status, dependency-set delta (residual 'how the numbers were measured')." },
+
+    { "id": "P17", "name": "queue_row_t1", "kind": "persistent_state",
+      "description": "The queue row after the round: status updates, new named obligations, recorded dead ends. Time-indexed loop edge; queue_audit.py (T01) exists because every field here was asserted and checked by nothing until 2026-08-01 (residual D3)." },
+
+    { "id": "P18", "name": "library_state_t1", "kind": "persistent_state",
+      "description": "Library after the round: modules committed or extended. When CT-R2 (move-don't-copy) is violated this is also where duplication debt accrues (C1: a module whose net delivered value was zero because its problem closed without importing it)." },
+
+    { "id": "P19", "name": "withheld_modules", "kind": "decision_intervention",
+      "description": "Set of ConstructionTargets modules experimentally withheld from the import path at dispatch; default empty. I_withhold's target. NOTE: withholding a module is NOT withholding its content when byte-identical copies exist in problem files (leak K2) - the point of receipt R2." },
+
+    { "id": "P20", "name": "extension_added", "kind": "decision_intervention",
+      "description": "A ConstructionTargets module added/promoted before dispatch. I_ext's target. The natural experiment already ran: four problems closed same-day by consuming a module built that day, detached-first per Joe's sequencing rule (residual E7)." }
+  ],
+
+  "arrows": [
+    { "from": "P01", "to": "P06", "status": "evidenced",
+      "mechanism": "The packet is authored from the statement and its file.",
+      "evidence": "packet template, M-codex-sorry-loop ops." },
+    { "from": "P01", "to": "P07", "status": "evidenced",
+      "mechanism": "The audit reads the statement; defect class determines what the ladder can catch (0a-0c cannot catch under-strength guards - that is what motivated 0d).",
+      "evidence": "residual A1 note on 0d." },
+    { "from": "P01", "to": "P08", "status": "evidenced",
+      "mechanism": "Statement and family shape which decompositions are natural.",
+      "evidence": "campaign routes per family; memory-spec analogue V01->V08." },
+    { "from": "P01", "to": "P16", "status": "evidenced",
+      "mechanism": "Defect ceiling: a false or vacuous statement cannot close regardless of search quality. This direct edge is why statement class is a regime axis.",
+      "evidence": "residual Part A: 6 of final 8 holes are statement decisions; machine-checked refutations A1/A3/A6." },
+    { "from": "P02", "to": "P06", "status": "evidenced",
+      "mechanism": "Named obligations and dead ends from prior rounds are carried into the packet.",
+      "evidence": "residual E5: a95J06 interval-cover and a96A04 compact-support dead ends each saved a round." },
+    { "from": "P02", "to": "P08", "status": "evidenced",
+      "mechanism": "Recorded obligations steer the route chosen this round.",
+      "evidence": "residual E5: rows closed by executing the recorded route." },
+    { "from": "P03", "to": "P09", "status": "evidenced",
+      "mechanism": "Importable proved artifacts enter the search as usable moves.",
+      "evidence": "residual E7; CT-R1 build-graph." },
+    { "from": "P03", "to": "P10", "status": "evidenced",
+      "mechanism": "Library content determines what remains unproved: adding a module removes members of the dependency set for its consumers.",
+      "evidence": "residual E7: four same-day closures; three theorems absent from Mathlib delivered." },
+    { "from": "P03", "to": "P04", "status": "evidenced",
+      "mechanism": "Docs describe the library - with lag; staleness is divergence between this arrow's endpoints.",
+      "evidence": "residual E4: absence prose went stale six times." },
+    { "from": "P04", "to": "P08", "status": "evidenced",
+      "mechanism": "Consumer columns and status prose route dispatches; wrong prose misroutes them.",
+      "evidence": "residual E4: wrong Rouche consumer edge misrouted dispatches for a day; fix d6b1bc3 derives the column by grep." },
+    { "from": "P05", "to": "P08", "status": "evidenced",
+      "mechanism": "Different runners prefer different attack shapes.",
+      "evidence": "campaign; memory-spec analogue V04->V08 (codex-10's route change)." },
+    { "from": "P05", "to": "P15", "status": "evidenced",
+      "mechanism": "The runner is a review leg, and empirically the strongest one.",
+      "evidence": "residual E1: both ground-control false specs caught by runners only." },
+    { "from": "P06", "to": "P08", "status": "evidenced",
+      "mechanism": "Packet guidance (including false guidance) shapes the route.",
+      "evidence": "residual E1: two false specs dispatched and attempted." },
+    { "from": "P06", "to": "P09", "status": "evidenced",
+      "mechanism": "Gates in the packet (kondo, parens, tests, commit discipline) bound the trajectory.",
+      "evidence": "packet template; AGENTS.md gates." },
+    { "from": "P07", "to": "P06", "status": "evidenced",
+      "mechanism": "Audit verdict gates dispatch: defective statements are held for Joe rather than dispatched.",
+      "evidence": "residual Part A: six rows held at Joe's instruction." },
+    { "from": "P08", "to": "P09", "status": "evidenced",
+      "mechanism": "The route is what the search executes.",
+      "evidence": "trivially mechanical; route revisions are time-indexed inside P09." },
+    { "from": "P09", "to": "P10", "status": "evidenced",
+      "mechanism": "Search discharges obligations (or discovers new ones): the dependency set's derivative is the search's work.",
+      "evidence": "residual E6: a96A04's three-round shrinkage." },
+    { "from": "P09", "to": "P11", "status": "evidenced",
+      "mechanism": "Committed artifacts are what the compiler judges.",
+      "evidence": "build discipline; commit-as-you-go." },
+    { "from": "P09", "to": "P16", "status": "evidenced",
+      "mechanism": "Commits on problem files determine holes at HEAD.",
+      "evidence": "residual measurement discipline: count at git show HEAD." },
+    { "from": "P09", "to": "P18", "status": "evidenced",
+      "mechanism": "Library commits land from the trajectory; copy-not-move commits are where duplication debt enters.",
+      "evidence": "residual C1/C2; CT-R2." },
+    { "from": "P10", "to": "P16", "status": "evidenced",
+      "mechanism": "Closure is the dependency set reaching empty; holes-at-HEAD is a lossy projection of this.",
+      "evidence": "residual E6." },
+    { "from": "P11", "to": "P13", "status": "evidenced",
+      "mechanism": "The verdict is an input to the readout.",
+      "evidence": "trivially mechanical." },
+    { "from": "P12", "to": "P13", "status": "evidenced",
+      "mechanism": "Stale oleans and namespace state corrupt the readout: false sorryAx, spurious unknownIdentifier - negatives that are evidence about the setup.",
+      "evidence": "residual E3; memory feedback_alarm_shaped_verification_failures." },
+    { "from": "P13", "to": "P14", "status": "evidenced",
+      "mechanism": "The report is written from the readout.",
+      "evidence": "trivially mechanical." },
+    { "from": "P14", "to": "P15", "status": "evidenced",
+      "mechanism": "Review reads the report - and must re-derive rather than trust it (review-the-artifact discipline).",
+      "evidence": "residual D1: state=failed while the work was complete; recovery is to read git, not the ledger." },
+    { "from": "P11", "to": "P15", "status": "evidenced",
+      "mechanism": "The review's independent leg re-runs the build directly.",
+      "evidence": "review protocol; CLAUDE.md review gate." },
+    { "from": "P15", "to": "P17", "status": "evidenced",
+      "mechanism": "Review corrections and verdicts are recorded to the queue.",
+      "evidence": "campaign: twelve cross-agent corrections recorded." },
+    { "from": "P14", "to": "P17", "status": "evidenced",
+      "mechanism": "Reported obligations and dead ends become the next round's named obligations.",
+      "evidence": "residual E5." },
+    { "from": "P16", "to": "P17", "status": "evidenced",
+      "mechanism": "Audited ground truth restatuses the row; disagreements between assertion and repo are exactly what queue_audit.py repairs.",
+      "evidence": "residual D3: stale :line found on first clean run; five duplicate-row files." },
+    { "from": "P19", "to": "P03", "status": "evidenced",
+      "mechanism": "Withholding removes modules from the import path at dispatch (intervention mechanics analogous to E2's ship-different-store).",
+      "evidence": "apmablate infrastructure; not yet run on modules." },
+    { "from": "P20", "to": "P03", "status": "evidenced",
+      "mechanism": "Adding/promoting a module changes the library the round dispatches against.",
+      "evidence": "residual E7: the natural experiment's mechanism." }
+  ],
+
+  "conjectures": [
+    { "id": "CJ1", "claim": "Full mediation of library interventions through the dependency set: do(P20) affects P16 only via P10 (no residual direct path), and hole-count trajectories carry no signal about eventual closure beyond what dependency-set state carries.",
+      "status": "conjectured",
+      "why_it_matters": "This is 'sorry count is the wrong meter' (residual E6) promoted to a checkable exclusion restriction. If the engine confirms the structure, T05 (a dependency-set sensor) is justified as the pipeline's missing primary instrument, and hole-count-based progress metrics are formally lossy.",
+      "test": "Mediation decomposition of I_ext once T05 exists; observationally, a96A04-shaped trajectories (flat hole count, moving dependency set) are the diagnostic instances." }
+  ],
+
+  "leak_edges": {
+    "description": "Backdoor paths that exist WITHOUT isolation surgery for I_withhold and are severed BY it. Same role as L1-L4 in the memory-system spec: paths by which withheld content reaches the trajectory anyway.",
+    "edges": [
+      { "id": "K1", "from": "repo git history (module content at prior revisions)", "to": "P09",
+        "mechanism": "git show reaches any withheld module's content from history; runners demonstrably search the repository.",
+        "severed_by": "history truncated at a revision before the module existed.",
+        "evidence": "memory-spec L1; same repo, same mechanism." },
+      { "id": "K2", "from": "byte-identical declaration copies inside problem files", "to": "P09",
+        "mechanism": "THE CAMPAIGN-SPECIFIC LEAK: copied-provenance modules (CT-R2 violations) have their content duplicated in problem files, so removing the module does not remove the content. LusinN: 17-18 declarations byte-identical with a95A02, which does not import it - two independent copies.",
+        "severed_by": "restricting I_withhold to extracted-provenance modules (BanachZarecki-class: 39 declarations, zero overlap), or de-duplicating first.",
+        "evidence": "residual C1/C2; the audit across all 15 modules." },
+      { "id": "K3", "from": "runner session continuity (prior rounds on the same problem)", "to": "P09",
+        "mechanism": "A continued session remembers the module's API from earlier use.",
+        "severed_by": "fresh session per run (typed sessionId guard, as in E2).",
+        "evidence": "memory-spec L4." },
+      { "id": "K4", "from": "doc prose describing the withheld module's API", "to": "P08",
+        "mechanism": "Consumer columns and library docs leak the module's existence and shape even when the import is blocked; a runner can reconstruct from description.",
+        "severed_by": "withholding the doc entry alongside the module (P04 surgery must accompany P03 surgery).",
+        "evidence": "residual E4: prose is load-bearing enough to misroute; therefore load-bearing enough to leak." }
+    ]
+  },
+
+  "measurement_layer": {
+    "description": "Sensors observe nodes; observes-edges are not causal arrows. The pipeline's sensor suite is asymmetric: ground truth (T01) is excellent, the progress variable (P10) has NO structured sensor, and two channels (T02, T06) have characterized corruption modes that must be modeled, not averaged over.",
+    "sensors": [
+      { "id": "T01", "name": "queue_audit", "observes": "P16 and P17 consistency",
+        "status": "live since 2026-08-01, derived not asserted", "missingness": "none for audited predicates: seven predicates re-derived from committed HEAD with comment stripping. The trust-boundary anchor, analogous to S08." },
+      { "id": "T02", "name": "job_result", "observes": "P14",
+        "status": "live, corrupted at the tail", "missingness": "~30-min job cap kills delivery after work lands: state=failed with zero-length result while five commits and the proved theorem sat in git (residual D1). Bias: exactly the longest (hardest) rounds lose their reports. state=failed means the JOB died, not the work." },
+      { "id": "T03", "name": "runner_report_prose", "observes": "P09",
+        "status": "live, unstructured", "missingness": "narratively rich; dead ends and obligations recoverable but lexically uncoded - the S09 analogue." },
+      { "id": "T04", "name": "hole_count", "observes": "P16 (holes projection only)",
+        "status": "live, reliable AS a hole counter", "missingness": "validity caveat rather than missingness: counts holes, not the dependency set; flat readings over moving progress (a96A04). Counting discipline required: committed HEAD, comments stripped, opaque-without-definition counts (residual 'how the numbers were measured')." },
+      { "id": "T05", "name": "dependency_set_sensor", "observes": "P10",
+        "status": "ABSENT - the pipeline's missing primary instrument", "missingness": "total; P10 currently lives only in prose (T03). CJ1 is the argument for building it: if mediation holds, this is the sensor that carries the signal T04 loses." },
+      { "id": "T06", "name": "axioms_check", "observes": "P11 via P13",
+        "status": "live", "missingness": "corruption not missingness: reads through the readout, so P12 states (stale olean, wrong namespace) produce confident false negatives. Interpretation rule: re-derive the name or rebuild before believing a negative (residual E3)." },
+      { "id": "T07", "name": "doc_consumer_columns", "observes": "P03 via P04",
+        "status": "live, derived-by-grep since d6b1bc3", "missingness": "pre-fix readings (before 2026-08-01) are assertion-based and include six known-stale instances; post-fix, derived. Treat pre/post as different sensors." }
+    ]
+  },
+
+  "regimes": {
+    "statement_class": {
+      "values": ["sound", "defective"],
+      "selector": "P01 defect class",
+      "note": "Pooling across this axis is invalid: defective statements have a closure ceiling independent of everything downstream (the P01->P16 direct edge). The campaign's endgame is the regime boundary becoming visible: search-limited failures were exhausted, leaving statement-limited ones."
+    },
+    "module_provenance": {
+      "values": ["extracted", "copied"],
+      "attaches_to": "P03 (per module)",
+      "note": "Determines whether I_withhold is an intervention on content availability (extracted: yes; copied: no, K2 open). BanachZarecki vs LusinN is the characterized contrast pair (residual Part C)."
+    }
+  },
+
+  "interventions": [
+    { "id": "I_ext", "target": "P20", "operation": "do(add ConstructionTarget module M) before dispatching M's candidate consumers",
+      "population": "open problems whose recorded dependency sets name content M would supply",
+      "primary_estimand": "effect of module availability on closure and attempts-to-close across consumers",
+      "secondary_estimands": "mediation through P10 (CJ1's test, needs T05); contrast by module_provenance regime",
+      "note": "The uncontrolled version already ran (residual E7: four same-day closures). The controlled version randomizes WHICH eligible module is built first among comparable candidates." },
+    { "id": "I_withhold", "target": "P19", "operation": "do(withheld_modules = {M}) on closed problems re-run from pre-solution state, K1-K4 severed",
+      "population": "closed consumers of extracted-provenance modules (module_provenance regime restriction, per K2)",
+      "primary_estimand": "ITT of module availability on closure/attempts - the library-side mirror of the memory system's E2",
+      "note": "Restriction to extracted modules is load-bearing: for copied modules the intervention does not manipulate content availability at all." },
+    { "id": "I_audit", "target": "P07", "operation": "do(statement_audit = full ladder incl. vacuity/non-triviality witnesses) vs current uneven practice, at dispatch",
+      "population": "not-yet-attempted statements",
+      "primary_estimand": "effect on rounds-wasted-before-defect-detection (defective regime) and on false-hold rate (sound regime)",
+      "note": "A1's under-strength guard passed 0a-0c by construction; 0d exists because of it. The audit is cheap relative to a wasted dispatch round." }
+  ],
+
+  "requested_receipts": [
+    { "id": "R1",
+      "question": "What does I_ext identify, given that the natural experiment (E7) chose which module to build based on recorded dependency sets (confounding by need and by problem difficulty)? State the adjustment set for the controlled version, and what the uncontrolled four-closure observation does and does not license.",
+      "expected_shape": "identification receipt with adjustment sets + an explicit statement about the natural experiment's confounding." },
+    { "id": "R2",
+      "question": "Withholding validity by provenance regime: exhibit the backdoor paths K1-K4 open when present, and confirm that under full severance, do(withhold M) identifies the availability effect for EXTRACTED modules only. Falsifiable divergence prediction: do(withhold LusinN) has NO effect on a95A02 (independent byte-copies, K2 structurally open, no import edge), while do(withhold BanachZarecki) has a NONZERO effect on a95J06 (extraction-provenance, zero overlap, real import edge). If the engine confirms the asymmetry, duplication debt becomes a measured causal quantity: the difference between removing a module and removing its content.",
+      "expected_shape": "two intervention receipts, one per provenance class, with the K2 path named in the copied case." },
+    { "id": "R3",
+      "question": "Sufficiency of the hole-count sensor: is P16-at-round-k+1 independent of P10-at-round-k given T04's reading at round k? Prediction: NO (T04 is not a sufficient statistic for progress; a96A04 is the witness trajectory). And under CJ1, does conditioning on a T05 reading (once built) screen off T04 entirely? A confirmed screening-off is the preregistered case for building T05 and retiring hole-count as a progress meter.",
+      "expected_shape": "two conditional-independence receipts (current sensors; with hypothetical T05), with connecting paths named." }
+  ],
+
+  "out_of_scope_v1": [
+    "Joe's statement-repair decision process for the Part A rows (which repair to choose is an operator decision, not pipeline mechanism; the repairs' downstream effects re-enter as a new P01).",
+    "The held-out evaluation files (residual Part B) - excluded from any population by design.",
+    "Statistical estimation and sensor-bias weighting - stays in analysis code; this spec carries structure only.",
+    "Cross-pipeline edges to the memory system (recall during proof search). Real but deferred: v2 can join this graph to apm-memory-retrieval-v1 at P09 <- surfaced_set once both specs are stable."
+  ]
+}

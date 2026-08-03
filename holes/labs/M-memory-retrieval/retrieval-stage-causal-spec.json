@@ -1,0 +1,48 @@
+{
+  "id": "retrieval-stage-causal-model",
+  "description": "Stage-level causal model of the recall pipeline, authored to make V2/V3's bottleneck debate computable. Distinct from memory-causal-graph-spec.json (which models the memory system's role in the whole loop): this models the retrieval pipeline's INTERNAL stages, so that E8's arms, C1's cohort treatment, and V2 section 5's two conjectures (5.1 reachable-vs-retrievable, 5.2 attachment bottleneck) are each an intervention or a structural claim on a named node/edge. Revision contract: deltas, not silent edits. v1 2026-08-03 (claude-10). DELTA v2 (2026-08-03, same day): added pollution -> surfaced-set — E8 case 1's contemporaneous diagnosis ('surfaced but drowned by TeX fragments') locates a pollution effect at the surfacing/ranking cutoff itself, not only at text-match and packet-offer; without this edge the RS-1 receipt would wrongly treat arm-D failure as excluding the lexical-pollution mechanism. CANDIDATE DELTA v3 (2026-08-03, claude-12, from E8 frozen data, n=1 - registered NOT applied): attachment-density cannot be a static per-memory node - e-dfea2de9 is attachment-starved at the lib-young endpoint under its own oracle vocabulary (arm D, case 4) yet surfaces at position 0 for the a96A04 endpoint under the weakest query (arm A, case 5); the node should be indexed by (memory, endpoint) or (memory, query-neighbourhood). Application awaits the rank-instrumented E8 rerun. CANDIDATE DELTA v4 (2026-08-03, claude-12, frozen E8 JSON): the model conflates retrieving-a-relevant-memory with retrieving-the-needed-one - arm A's hits are all set-valued cases; every named target missed under the shipped query. Candidate restructure: split surfaced-set by target kind. Batch with v3 decision after the rank rerun.",
+  "variables": [
+    {"id": "problem-difficulty", "kind": "latent-unobserved", "name": "intrinsic difficulty/obscurity of the dispatched problem - confounds query quality and outcome"},
+    {"id": "query-cardinality", "kind": "observed", "name": "number of query terms (the take-4 rule; E8 arm B varies this)"},
+    {"id": "query-vocabulary", "kind": "observed", "name": "term-selection rule: prose-frequency vs structure-aware vs oracle (E8 arms A/C/D)"},
+    {"id": "corpus-coverage", "kind": "latent-unobserved", "name": "whether an entry for the needed artifact exists in the corpus at all - unmeasured; section 5.1's index gap"},
+    {"id": "pollution", "kind": "observed", "name": "TeX-fragment/boilerplate density competing in the match pool (E8 case-1 diagnosis: pollution not absence)"},
+    {"id": "text-match-set", "kind": "observed", "name": "v1.2-normalized text-match candidates"},
+    {"id": "pattern-endpoints", "kind": "observed", "name": "patterns reached from text matches"},
+    {"id": "attachment-density", "kind": "observed", "name": "reviewed memory attachments behind reached patterns (C1's treatment variable; star-forest vs populated-graph)"},
+    {"id": "reachability", "kind": "observed", "name": "target carries current memory/assert edge with reviewed attachment the projection can reach (E8's control; axis 1 of section 5.1)"},
+    {"id": "surfaced-set", "kind": "observed", "name": "memories surfaced by recall (retrievability outcome; axis 2)"},
+    {"id": "offered-set", "kind": "observed", "name": "what reaches the runner packet - every receipt field is closed over this set"},
+    {"id": "used-set", "kind": "observed", "name": "memories the runner used"},
+    {"id": "use-mode", "kind": "observed", "name": "regulative vs substitutive use (coded post hoc in V2 section 4.4)"},
+    {"id": "grep-channel", "kind": "latent-unobserved", "name": "runner finds artifacts by repository search, bypassing recall - visible only anecdotally (section 5.1 natural experiment); unmeasured by receipt fields"},
+    {"id": "runner-outcome", "kind": "observed", "name": "closure/progress on the dispatched problem"}
+  ],
+  "arrows": [
+    {"from": "problem-difficulty", "to": "query-vocabulary", "mechanism": "obscure problems yield unrepresentative prose-frequency terms"},
+    {"from": "problem-difficulty", "to": "runner-outcome", "mechanism": "difficulty affects closure regardless of recall - the confounder that makes observational 'recall helped' claims suspect"},
+    {"from": "query-cardinality", "to": "text-match-set", "mechanism": "more terms, wider match pool (E8 arm B)"},
+    {"from": "query-vocabulary", "to": "text-match-set", "mechanism": "term selection determines what can match (E8 arms C/D)"},
+    {"from": "corpus-coverage", "to": "text-match-set", "mechanism": "cannot match an entry that does not exist"},
+    {"from": "pollution", "to": "text-match-set", "mechanism": "boilerplate crowds the candidate pool"},
+    {"from": "text-match-set", "to": "pattern-endpoints", "mechanism": "matches resolve to pattern endpoints"},
+    {"from": "pattern-endpoints", "to": "surfaced-set", "mechanism": "patterns project to their attached memories"},
+    {"from": "attachment-density", "to": "surfaced-set", "mechanism": "section 5.2 conjecture: sparse attachment starves surfacing regardless of match quality"},
+    {"from": "reachability", "to": "surfaced-set", "mechanism": "unreachable targets cannot surface under ANY query (E8 control)"},
+    {"from": "surfaced-set", "to": "offered-set", "mechanism": "ranking/truncation into the packet"},
+    {"from": "pollution", "to": "surfaced-set", "mechanism": "DELTA v2: pollution competes at the surfacing/ranking cutoff - target matched but drowned (E8 case 1)"},
+    {"from": "pollution", "to": "offered-set", "mechanism": "pollution also acts at ranking: target surfaced but drowned (E8 case 1)"},
+    {"from": "offered-set", "to": "used-set", "mechanism": "runner selects from what is offered"},
+    {"from": "used-set", "to": "runner-outcome", "mechanism": "used memories shape the run"},
+    {"from": "use-mode", "to": "runner-outcome", "mechanism": "regulative uses change what the runner does, not what it holds"},
+    {"from": "corpus-coverage", "to": "grep-channel", "mechanism": "artifacts findable by repo search exist independent of corpus entries"},
+    {"from": "reachability", "to": "grep-channel", "mechanism": "the build-stanza repair made lemmas findable to grep (section 5.1 natural experiment)"},
+    {"from": "grep-channel", "to": "runner-outcome", "mechanism": "the other channel: artifacts consumed without recall"}
+  ],
+  "requested_receipts": [
+    {"id": "RS-1", "question": "E8 arm semantics: formalize each arm as an intervention on query-cardinality/query-vocabulary and verify the preregistered interpretation table - in particular, does arm-D failure really localize the fault downstream of the query, or does the pollution->offered-set edge leak (target surfaced under D but drowned at ranking)? State exactly what D-failure does and does not rule out."},
+    {"id": "RS-2", "question": "The expensive-null receipt: is the attachment-density -> surfaced-set effect identifiable from a C1 cohort that randomizes attachment (populated vs star) while the query stage remains at its shipped default? Exhibit the masking structure: under a binding query constraint, the intervention's effect on surfaced-set is blocked upstream at text-match-set - name the path along which the null would be produced and state the E8-first sequencing consequence."},
+    {"id": "RS-3", "question": "The different-instrument theorem: with corpus-coverage and grep-channel latent (receipt fields are closed over offered-set), is the channel decomposition of do(reachability-repair) on runner-outcome - grep-channel share vs recall-channel share - identifiable? Expected: refusal. Then the variant: add the artifact-index instrument (corpus-coverage and grep-channel become observed) and show the decomposition becomes identifiable. This is V2 section 5.1's 'measuring it needs a different instrument' as a computed pair."},
+    {"id": "RS-4", "question": "The natural-experiment receipt: what does the build-stanza repair (do(reachability)) identify about runner-outcome given the observables, and what does the n=1 anecdote license? Selection caveats in the R1 style."}
+  ]
+}
