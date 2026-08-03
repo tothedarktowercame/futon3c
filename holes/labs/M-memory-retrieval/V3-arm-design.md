@@ -89,6 +89,16 @@ Reopening it needs a *different* construction of dispatch-time vocabulary than
 arm C's, and that is a research question, not a build item. Until someone has
 one, this axis is closed.
 
+**A second, structural reason to keep it closed** (claude-10, SEQ-2, computed
+2026-08-03): axis 2 is **nested under axis 1, not crossed with it**. Under
+`:pull-only` there is no directed path from query-vocabulary or query-cardinality
+to runner-outcome, so crossing the axes would spend arms on a structurally null
+contrast. Stronger than my empirical reason: mine says the levels don't work,
+this says the contrast doesn't exist in that channel. With the warning attached
+— in `:pull-only` arms any observed query-quality/outcome correlation is pure
+difficulty confounding via `[:query-vocabulary <- :problem-difficulty ->
+:runner-outcome]`.
+
 **Where the finding goes instead.** If vocabulary is decisive and cannot be
 known before the work starts, the treatment with a mechanism behind it is the
 channel that retrieves *during* the work, where the runner supplies the
@@ -113,9 +123,24 @@ lexical falsifications do not exclude.
 Full factorial is 4 × 3 × 2 = 24 cells against ~356 problems — under-powered and
 over-ambitious. Proposed instead:
 
+0. **Stage 0 (instrumentation) — BLOCKS EVERY ARM, INCLUDING THE CONTROL.**
+   Added 2026-08-03 after claude-10's sequencing pass (SEQ-0.1) and confirmed
+   independently: **the primary endpoint is not derivable from receipts.**
+   Naming "one-shot closure" below was not the same as being able to compute it.
+   `memory_outcome_sweeper.py` sweeps memory-use attribution and gate
+   violations; it does **not** record the mechanical witness — no `lake` exit
+   code, no sorry count, no commit sha, no axiom check. Today's S3 outcome was
+   established by an operator running those by hand, which is ground truth but
+   not record.
+
+   The mission calls the mechanical witness "free, incorruptible". It is free
+   and it is not captured. Until a dispatch's witness is swept into its receipt,
+   every arm — control included — produces an unmeasurable primary. Recording-
+   side, same family as the pull-side receipt, and it precedes the cohort guard.
+
 1. **Stage 1 (channel).** Randomize `:none` / `:push` / `:push+pull` /
-   `:pull-only` at dispatch, holding query at `:frequency-4` and graph at
-   `:star-forest`. Primary endpoint: one-shot closure (binary, no adjudication).
+   `:pull-only` at dispatch, holding graph at `:star-forest`. Primary endpoint:
+   one-shot closure (binary, no adjudication) — **conditional on Stage 0**.
    This is the arm that most threatens the headline claim, so it goes first.
 2. **Stage 2 (query or graph).** Chosen by Stage 1 and E8 — an *adaptive
    transition*, and therefore a `:disposition` of the arc registration rather
