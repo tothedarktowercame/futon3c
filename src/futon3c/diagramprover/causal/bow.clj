@@ -2,10 +2,12 @@
   "Computed Book-of-Why fixture receipts at the current capability frontier.
 
    Identification delegates to the observed-only exhaustive identifier.
-   Counterfactual queries remain classified and refused explicitly."
+   Counterfactual fixtures with validated deterministic equations use finite
+   SCM abduction/action/prediction; unspecified SCMs remain explicit refusals."
   (:require [futon3c.diagramprover.causal.dag :as dag]
             [futon3c.diagramprover.causal.dsep :as dsep]
             [futon3c.diagramprover.causal.identify :as identify]
+            [futon3c.diagramprover.causal.scm :as scm]
             [futon3c.diagramprover.causal.surgery :as surgery]))
 
 (def fixture-directory "docs/bow-fixtures")
@@ -118,7 +120,10 @@
          treatment :soldier-A outcome :death
          intervened (surgery/do-intervention causal-dag treatment)
          path (witness intervened treatment outcome #{})
-         query-type (keyword (get-in r3-question [:query :type]))]
+         query-type (keyword (get-in r3-question [:query :type]))
+         counterfactual (if (= :counterfactual query-type)
+                          (scm/counterfactual causal-dag (:query r3-question))
+                          (scm/capability-refusal (:query r3-question)))]
      {:id "BOW-FIRING-SQUAD"
       :question [(:question r2-question) (:question r3-question)]
       :verdicts [{:claim :rung-2-intervention-has-outcome-route
@@ -127,12 +132,10 @@
                   (keyword (get-in r2-question [:query :type]))
                   :paths (:paths path)}]
       :adjustment-sets []
+      :counterfactual counterfactual
       :refusals
-      (if (= :counterfactual query-type)
-        [{:claim :individual-counterfactual
-          :query-type query-type
-          :reason :unsupported-query-type
-          :missing-capability :counterfactual-identification}]
+      (if (= :refusal (:method counterfactual))
+        [(assoc counterfactual :claim :individual-counterfactual)]
         [])})))
 
 (defn all-bow-receipts []

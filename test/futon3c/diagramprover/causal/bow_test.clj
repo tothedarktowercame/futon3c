@@ -45,12 +45,17 @@
     (is (= [[:choice :host-opens :prize]]
            (get-in receipt [:verdicts 1 :paths])))))
 
-(deftest firing-squad-boundary
+(deftest firing-squad-deterministic-counterfactual
   (let [receipt (bow/firing-squad-receipt)]
     (is (true? (get-in receipt [:verdicts 0 :holds?])))
     (is (= [[:soldier-A :death]] (get-in receipt [:verdicts 0 :paths])))
-    (is (= :counterfactual-identification
-           (get-in receipt [:refusals 0 :missing-capability])))))
+    (is (= :deterministic-scm (get-in receipt [:counterfactual :method])))
+    (is (= 1 (get-in receipt [:counterfactual :abduction :consistent-count])))
+    (is (= :abduction (get-in receipt [:counterfactual :abduction :step])))
+    (is (= :action (get-in receipt [:counterfactual :action :step])))
+    (is (= :prediction (get-in receipt [:counterfactual :prediction :step])))
+    (is (true? (get-in receipt [:counterfactual :answer])))
+    (is (empty? (:refusals receipt)))))
 
 (deftest deterministic-receipts
   (is (= (bow/all-bow-receipts) (bow/all-bow-receipts))))

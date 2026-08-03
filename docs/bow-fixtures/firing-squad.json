@@ -14,6 +14,12 @@
     {"from": "soldier-A", "to": "death"},
     {"from": "soldier-B", "to": "death"}
   ],
+  "structural_equations": {
+    "captain": "court-order",
+    "soldier-A": "captain",
+    "soldier-B": "captain",
+    "death": "soldier-A or soldier-B"
+  },
   "interventions": [
     {"id": "do-soldier-A", "target": "soldier-A"}
   ],
