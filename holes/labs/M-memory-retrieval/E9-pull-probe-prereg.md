@@ -205,3 +205,39 @@ Four distinguishable mechanisms, each evidenced, each with a cheap fix:
    tags resolve to nothing; densest endpoint lexically camouflaged →
    math hotwords/tags on endpoints and memories (metadata work, not
    code).
+
+## COMPARISON RUN: the a96J04 closer (same problem, same blocker)
+
+codex-12 under the sorry-loop closer protocol CLOSED it: commit
+33575db, ~20 min total, the "too-time-consuming" decomposition proved
+locally in ~15 (open connected components in (0,1), injected into ℚ,
+identified as (sInf C, sSup C), finite families feeding the frozen AC
+hypothesis). Reviewer ran the full 6-step gate independently: build
+exit 0; comment-stripped sorries 0; statement extraction IDENTICAL
+across 1d01493 -> 33575db; hypotheses intact; axioms verbatim
+[propext, Classical.choice, Quot.sound].
+
+**Three-factor hypothesis, assessed against what happened:**
+- LICENSING: CONFIRMED operative. The closer attempted exactly what
+  the starter dismissed; the packets differ in precisely that license
+  (partial-as-valid vs closure-or-classified).
+- BUDGET: REFRAMED. The constraint was never the actual budget - the
+  construction fit comfortably inside even zai's window. It was zai's
+  ESTIMATE of the cost that killed the attempt; whether that estimate
+  was accurate for zai's own capability is unknown (the zai-variant
+  runs will inform). Caps act through anticipation before they act
+  through collision.
+- TASK-SHAPE: partly - with the round's best finding inside it: **the
+  relay worked through the artifact.** The closer's 15-minute path
+  was paved by the starter's boundary comment (exact unblock plan +
+  searched APIs, in the file). The honest partial was load-bearing
+  documentation. The two-lane relay succeeded with the REPO as the
+  memory channel, while the memory STORE went unconsulted by both
+  lanes. The artifact is the memory that worked.
+
+**Scribe-draft status:** the decomposition-gap draft survives exactly
+as bounded - the packaged Mathlib lemma still does not exist; the gap
+is now PROVEN routable-by-local-construction (~15 min). Its honesty
+bound ("observed-blocking, not proven-unroutable") anticipated this
+outcome precisely. A closer-addendum draft (the construction recipe as
+lemma-location content) is warranted at promotion.
