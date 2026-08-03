@@ -2,6 +2,7 @@
   "Side-effecting export harness for the otherwise pure causal layer."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [futon3c.diagramprover.causal.bow :as bow]
             [futon3c.diagramprover.causal.dag :as dag]
             [futon3c.diagramprover.causal.dsep :as dsep]
             [futon3c.diagramprover.causal.receipts :as receipts]))
@@ -43,10 +44,25 @@
         r2 (receipts/r2-variants lean)
         r3 (receipts/r3-variants lean)
         mediation-query-nodes #{:V07 :V13 :V14 :V18}
+        bow-graphs (into (sorted-map)
+                         (map (fn [[id path]] [id (dag/load-spec path)]))
+                         bow/fixture-paths)
         mediation-nodes (into mediation-query-nodes
                               (dag/ancestors memory mediation-query-nodes))]
     {:schema-version 2
      :receipts (receipts/all-receipts)
+     :bow-receipts (bow/all-bow-receipts)
+     :bow-graphs (into (sorted-map)
+                       (map (fn [[id causal-dag]]
+                              [id (assoc (graph-export causal-dag)
+                                         :latent-variables
+                                         (->> (:variables causal-dag)
+                                              (keep (fn [[node variable]]
+                                                      (when (= :latent-unobserved
+                                                               (keyword (:kind variable)))
+                                                        node)))
+                                              sort vec))]))
+                       bow-graphs)
      :memory-graph (graph-export memory)
      :lean-graph (graph-export lean)
      :memory-mediation-graph

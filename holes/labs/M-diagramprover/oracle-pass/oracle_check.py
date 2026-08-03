@@ -51,6 +51,47 @@ def implication_check(graph, implications):
     }
 
 
+def bow_checks(export):
+    """Independent NetworkX verdicts for every fixture d-sep claim."""
+    graphs = {name: graph_from_export(data) for name, data in export["bow-graphs"].items()}
+    queries = [
+        ("simpson-marginal", "simpson", "treatment", "recovery", [], False, True),
+        ("simpson-adjusted", "simpson", "treatment", "recovery", ["severity"], True, True),
+        ("sprinkler-marginal", "sprinkler", "rain", "sprinkler", [], True, False),
+        ("sprinkler-conditioned", "sprinkler", "rain", "sprinkler", ["wet-grass"], False, False),
+        ("monty-marginal", "monty", "choice", "prize", [], True, False),
+        ("monty-conditioned", "monty", "choice", "prize", ["host-opens"], False, False),
+        ("firing-rung2", "firing-squad", "soldier-A", "death", [], False, False),
+    ]
+    verdicts = []
+    for claim, fixture, x, y, given, expected, cut_outgoing in queries:
+        graph = graphs[fixture].copy()
+        if cut_outgoing:
+            graph.remove_edges_from(list(graph.out_edges(x)))
+        actual = separated(graph, x, y, given)
+        verdicts.append({"claim": claim, "separated": actual, "expected": expected})
+    disagreements = [item for item in verdicts if item["separated"] != item["expected"]]
+    return {"checked": len(verdicts), "agreements": len(verdicts) - len(disagreements),
+            "disagreements": disagreements, "verdicts": verdicts}
+
+
+def bow_frontdoor_y0():
+    """Latent projection: U becomes the smoking<->cancer bidirected edge."""
+    smoking, tar, cancer = map(Variable, ["smoking", "tar", "cancer"])
+    graph = NxMixedGraph.from_edges(
+        nodes=[smoking, tar, cancer],
+        directed=[(smoking, tar), (tar, cancer)],
+        undirected=[(smoking, cancer)],
+    )
+    expression = identify_outcomes(graph, treatments=smoking, outcomes=cancer)
+    return {
+        "identifiable": expression is not None,
+        "query": "P(cancer | do(smoking))",
+        "encoding": "U latent-projected as smoking <-> cancer; smoking -> tar -> cancer",
+        "frontier-marker": "engine refuses observed-only backdoor; y0 ID succeeds",
+    }
+
+
 def receipt(export, receipt_id):
     return next(item for item in export["receipts"] if item["id"] == receipt_id)
 
@@ -168,6 +209,8 @@ def main():
     r1_idc = y0_identification(
         export["r1-selection"], "P20", "P16", ["P01", "P10-pre"]
     )
+    bow = bow_checks(export)
+    bow_y0 = bow_frontdoor_y0()
 
     result = {
         "tool-versions": {
@@ -189,6 +232,7 @@ def main():
         "r2": {"verdicts": r2_actual, "disagreements": r2_disagreements},
         "r3": {"verdicts": r3_actual, "disagreements": r3_disagreements},
         "identification": {"Q1": q1_id, "R1-ID": r1_id, "R1-IDC": r1_idc},
+        "bow": {"networkx": bow, "frontdoor-y0": bow_y0},
     }
     with (HERE / "python-results.json").open("w", encoding="utf-8") as stream:
         json.dump(result, stream, indent=2, sort_keys=True)
@@ -200,11 +244,14 @@ def main():
         + q3_disagreements
         + r2_disagreements
         + r3_disagreements
+        + bow["disagreements"]
     )
     if structural_disagreements:
         raise SystemExit("oracle disagreement; inspect python-results.json")
     if not all(item["identifiable"] for item in result["identification"].values()):
         raise SystemExit("y0 identification failure; inspect python-results.json")
+    if not bow_y0["identifiable"]:
+        raise SystemExit("y0 did not identify the front-door fixture")
     print(
         "NetworkX memory/Lean implications: "
         f"{memory_implications['agreements']}/{lean_implications['agreements']} "
@@ -213,6 +260,8 @@ def main():
     print("Q3: 4/4 verdicts agree")
     print("R2/R3: 3/3 and 2/2 verdicts agree")
     print("y0: Q1 ID, R1 ID, and R1 conditional IDC identifiable")
+    print(f"Book-of-Why NetworkX: {bow['agreements']}/{bow['checked']} agreements")
+    print("Book-of-Why y0: front-door identifiable (deliberate frontier marker)")
 
 
 if __name__ == "__main__":

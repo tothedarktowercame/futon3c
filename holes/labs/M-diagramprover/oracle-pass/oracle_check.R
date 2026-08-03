@@ -106,6 +106,26 @@ r3 <- list(
 r3_disagreements <- Filter(function(name) !identical(r3[[name]], r3_expected[[name]]),
                            names(r3))
 
+# Fixture 3: U is explicitly latent, so dagitty may only return observed sets.
+bow_frontdoor <- dagitty(paste0(
+  "dag { U [latent]; smoking; tar; cancer; ",
+  "U -> smoking; U -> cancer; smoking -> tar; tar -> cancer }"
+))
+bow_adjustment_sets <- adjustmentSets(
+  bow_frontdoor, exposure = "smoking", outcome = "cancer", type = "all"
+)
+bow_adjustment_vectors <- lapply(bow_adjustment_sets, as.character)
+bow_observed_sets <- Filter(function(nodes) !any(nodes %in% c("U")),
+                            bow_adjustment_vectors)
+bow_frontdoor_result <- list(
+  dagitty_sets = bow_adjustment_vectors,
+  rejected_latent_sets = Filter(function(nodes) any(nodes %in% c("U")),
+                                bow_adjustment_vectors),
+  observed_candidate_sets = bow_observed_sets,
+  candidate_set_count = length(bow_observed_sets),
+  refusal_agrees = identical(length(bow_observed_sets), 0L)
+)
+
 result <- list(
   tool_versions = list(R = paste(R.version$major, R.version$minor, sep = "."),
                        dagitty = as.character(packageVersion("dagitty"))),
@@ -118,14 +138,16 @@ result <- list(
   ),
   q3 = list(verdicts = q3, disagreements = q3_disagreements),
   r2 = list(verdicts = r2, disagreements = r2_disagreements),
-  r3 = list(verdicts = r3, disagreements = r3_disagreements)
+  r3 = list(verdicts = r3, disagreements = r3_disagreements),
+  bow = list(frontdoor_adjustment = bow_frontdoor_result)
 )
 write_json(result, file.path(here, "r-results.json"), pretty = TRUE,
            auto_unbox = TRUE, null = "null")
 
 if (length(memory_implications$disagreements) ||
     length(lean_implications$disagreements) || length(q3_disagreements) ||
-    length(r2_disagreements) || length(r3_disagreements)) {
+    length(r2_disagreements) || length(r3_disagreements) ||
+    !bow_frontdoor_result$refusal_agrees) {
   stop("dagitty disagreement; inspect r-results.json")
 }
 cat(sprintf("dagitty memory/Lean implications: %d/%d agreements, 0 disagreements\n",
@@ -134,3 +156,5 @@ cat(sprintf("dagitty converse: emitted memory/Lean %d/%d CIs\n",
             length(basis_results$memory), length(basis_results$lean)))
 cat("Q3: 4/4 verdicts agree\n")
 cat("R2/R3: 3/3 and 2/2 verdicts agree\n")
+cat(sprintf("Book-of-Why dagitty: %d observed adjustment sets; refusal agrees\n",
+            bow_frontdoor_result$candidate_set_count))

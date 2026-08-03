@@ -18,8 +18,26 @@ No structure-level disagreements were found.
 | R2 key verdicts × dagitty | 3 | 0 |
 | R3 key verdicts × NetworkX | 2 | 0 |
 | R3 key verdicts × dagitty | 2 | 0 |
+| Book-of-Why d-sep verdicts × NetworkX | 7 | 0 |
+| Smoking observed adjustment refusal × dagitty | 1 | 0 |
 
 Named disagreements (verbatim): `[]`.
+
+## Book-of-Why coverage
+
+| Fixture | Receipt status | Oracle agreement | Boundary |
+|---|---|---|---|
+| Simpson / kidney stones | computed | NetworkX agrees (2/2) | — |
+| Sprinkler collider | computed | NetworkX agrees (2/2) | — |
+| Smoking → tar → cancer | refused | dagitty agrees no observed adjustment set; y0 identifies via front-door | `:front-door-identification` |
+| Monty Hall collider | computed | NetworkX agrees (2/2) | — |
+| Firing squad rung 2 | computed | NetworkX agrees (1/1) | — |
+| Firing squad rung 3 | refused | query classification agrees with fixture; no counterfactual oracle attempted | `:counterfactual-identification` |
+
+The y0 success on the smoking fixture is a deliberate frontier marker, not an
+engine/oracle disagreement: the engine exhaustively refuses **backdoor**
+identification using observed variables, while y0's general ID succeeds on the
+latent projection by front-door identification.
 
 ## Q3 divergence
 

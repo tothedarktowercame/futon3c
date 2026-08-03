@@ -1,4 +1,54 @@
 {
+  "bow": {
+    "frontdoor-y0": {
+      "encoding": "U latent-projected as smoking <-> cancer; smoking -> tar -> cancer",
+      "frontier-marker": "engine refuses observed-only backdoor; y0 ID succeeds",
+      "identifiable": true,
+      "query": "P(cancer | do(smoking))"
+    },
+    "networkx": {
+      "agreements": 7,
+      "checked": 7,
+      "disagreements": [],
+      "verdicts": [
+        {
+          "claim": "simpson-marginal",
+          "expected": false,
+          "separated": false
+        },
+        {
+          "claim": "simpson-adjusted",
+          "expected": true,
+          "separated": true
+        },
+        {
+          "claim": "sprinkler-marginal",
+          "expected": true,
+          "separated": true
+        },
+        {
+          "claim": "sprinkler-conditioned",
+          "expected": false,
+          "separated": false
+        },
+        {
+          "claim": "monty-marginal",
+          "expected": true,
+          "separated": true
+        },
+        {
+          "claim": "monty-conditioned",
+          "expected": false,
+          "separated": false
+        },
+        {
+          "claim": "firing-rung2",
+          "expected": false,
+          "separated": false
+        }
+      ]
+    }
+  },
   "identification": {
     "Q1": {
       "conditions": [],

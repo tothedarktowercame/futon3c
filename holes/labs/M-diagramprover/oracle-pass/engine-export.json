@@ -1,4 +1,181 @@
 {
+  "bow-graphs" : {
+    "firing-squad" : {
+      "arrows" : [ {
+        "from" : "captain",
+        "to" : "soldier-A"
+      }, {
+        "from" : "captain",
+        "to" : "soldier-B"
+      }, {
+        "from" : "court-order",
+        "to" : "captain"
+      }, {
+        "from" : "soldier-A",
+        "to" : "death"
+      }, {
+        "from" : "soldier-B",
+        "to" : "death"
+      } ],
+      "latent-variables" : [ ],
+      "variables" : [ "captain", "court-order", "death", "soldier-A", "soldier-B" ]
+    },
+    "front-door" : {
+      "arrows" : [ {
+        "from" : "U",
+        "to" : "cancer"
+      }, {
+        "from" : "U",
+        "to" : "smoking"
+      }, {
+        "from" : "smoking",
+        "to" : "tar"
+      }, {
+        "from" : "tar",
+        "to" : "cancer"
+      } ],
+      "latent-variables" : [ "U" ],
+      "variables" : [ "U", "cancer", "smoking", "tar" ]
+    },
+    "monty" : {
+      "arrows" : [ {
+        "from" : "choice",
+        "to" : "host-opens"
+      }, {
+        "from" : "prize",
+        "to" : "host-opens"
+      } ],
+      "latent-variables" : [ ],
+      "variables" : [ "choice", "host-opens", "prize" ]
+    },
+    "simpson" : {
+      "arrows" : [ {
+        "from" : "severity",
+        "to" : "recovery"
+      }, {
+        "from" : "severity",
+        "to" : "treatment"
+      }, {
+        "from" : "treatment",
+        "to" : "recovery"
+      } ],
+      "latent-variables" : [ ],
+      "variables" : [ "recovery", "severity", "treatment" ]
+    },
+    "sprinkler" : {
+      "arrows" : [ {
+        "from" : "rain",
+        "to" : "wet-grass"
+      }, {
+        "from" : "season",
+        "to" : "rain"
+      }, {
+        "from" : "sprinkler",
+        "to" : "wet-grass"
+      } ],
+      "latent-variables" : [ ],
+      "variables" : [ "rain", "season", "sprinkler", "wet-grass" ]
+    }
+  },
+  "bow-receipts" : [ {
+    "adjustment-sets" : [ [ "severity" ] ],
+    "id" : "BOW-SIMPSON",
+    "question" : "Does severity adjustment block the treatment-recovery backdoor?",
+    "refusals" : [ ],
+    "verdicts" : [ {
+      "claim" : "marginal-identifies-effect",
+      "given" : [ ],
+      "holds?" : false,
+      "method" : "backdoor",
+      "paths" : [ [ "treatment", "severity", "recovery" ] ]
+    }, {
+      "claim" : "severity-adjustment-identifies-effect",
+      "given" : [ "severity" ],
+      "holds?" : true,
+      "method" : "backdoor",
+      "paths" : [ ]
+    } ]
+  }, {
+    "adjustment-sets" : [ ],
+    "id" : "BOW-SPRINKLER",
+    "question" : "Are rain and sprinkler independent before, but dependent after, conditioning on wet grass?",
+    "refusals" : [ ],
+    "verdicts" : [ {
+      "claim" : "marginal-independence",
+      "given" : [ ],
+      "holds?" : true,
+      "method" : "d-sep",
+      "paths" : [ ]
+    }, {
+      "claim" : "conditional-independence",
+      "given" : [ "wet-grass" ],
+      "holds?" : false,
+      "method" : "d-sep",
+      "paths" : [ [ "rain", "wet-grass", "sprinkler" ] ]
+    } ]
+  }, {
+    "adjustment-sets" : [ ],
+    "id" : "BOW-FRONTDOOR",
+    "question" : "Is P(cancer | do(smoking)) identifiable by observed-only backdoor adjustment?",
+    "refusals" : [ {
+      "candidate-attempts" : [ {
+        "given" : [ ],
+        "holds?" : false,
+        "paths-truncated?" : true,
+        "surviving-paths" : [ [ "smoking", "U", "cancer" ] ]
+      }, {
+        "given" : [ "tar" ],
+        "holds?" : false,
+        "paths-truncated?" : true,
+        "surviving-paths" : [ [ "smoking", "U", "cancer" ] ]
+      } ],
+      "candidate-set-count" : 2,
+      "claim" : "identify-total-effect",
+      "missing-capability" : "front-door-identification",
+      "reason" : "observed-backdoor-exhausted"
+    } ],
+    "verdicts" : [ {
+      "candidate-set-count" : 2,
+      "claim" : "observed-backdoor-adjustment-exists",
+      "holds?" : false,
+      "method" : "exhaustive-observed-backdoor-search"
+    } ]
+  }, {
+    "adjustment-sets" : [ ],
+    "id" : "BOW-MONTY",
+    "question" : "Are choice and prize independent marginally but dependent after observing the host?",
+    "refusals" : [ ],
+    "verdicts" : [ {
+      "claim" : "marginal-independence",
+      "given" : [ ],
+      "holds?" : true,
+      "method" : "d-sep",
+      "paths" : [ ]
+    }, {
+      "claim" : "conditional-independence",
+      "given" : [ "host-opens" ],
+      "holds?" : false,
+      "method" : "d-sep",
+      "paths" : [ [ "choice", "host-opens", "prize" ] ]
+    } ]
+  }, {
+    "adjustment-sets" : [ ],
+    "id" : "BOW-FIRING-SQUAD",
+    "question" : [ "Does do(soldier-A) retain a directed route to death?", "Had soldier A not fired, would death still have occurred given that it did occur?" ],
+    "refusals" : [ {
+      "claim" : "individual-counterfactual",
+      "missing-capability" : "counterfactual-identification",
+      "query-type" : "counterfactual",
+      "reason" : "unsupported-query-type"
+    } ],
+    "verdicts" : [ {
+      "claim" : "rung-2-intervention-has-outcome-route",
+      "holds?" : true,
+      "method" : "surgery",
+      "paths" : [ [ "soldier-A", "death" ] ],
+      "query-type" : "intervention"
+    } ]
+  } ],
   "implied-independencies" : [ {
     "given" : [ ],
     "x" : "V01",

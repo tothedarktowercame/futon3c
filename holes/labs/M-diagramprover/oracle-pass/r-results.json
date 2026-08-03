@@ -45,5 +45,18 @@
       "with-hypothetical-t05": false
     },
     "disagreements": []
+  },
+  "bow": {
+    "frontdoor_adjustment": {
+      "dagitty_sets": [
+        "U"
+      ],
+      "rejected_latent_sets": [
+        "U"
+      ],
+      "observed_candidate_sets": [],
+      "candidate_set_count": 0,
+      "refusal_agrees": true
+    }
   }
 }
