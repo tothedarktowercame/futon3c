@@ -115,3 +115,44 @@ the gate variant against this invitation baseline.
   `1d01493`. The summary itself contains no mention of memory tools,
   consistent with never-called. Two proven helper lemmas banked
   (monotone_image_interval, monotone_image_Icc).
+
+## COUNTERFACTUAL ANALYSIS (post-hoc, computed 2026-08-03 ~14:45Z)
+
+Joe's question: had it used the memory, better chance? Answered by
+running the tools ourselves rather than speculating. **The pull
+channel fails at THREE stacked layers, each independently
+sufficient:**
+
+1. **Propensity (P1, confirmed):** no memory tool was ever called.
+2. **Affordance:** the invited tools cannot express the need —
+   memory_search takes METADATA FILTERS ONLY (no query string;
+   verified in zai_api.clj), pattern_memory takes tags only. The one
+   vocabulary-capable tool is psr_search (query + top_k, "search the
+   futon pattern library... bounded hooks for reviewed attached
+   memories") — present in the tool set but named in NO invitation,
+   and the arm-design's phantom "library_search" is almost certainly
+   a garbling of it.
+3. **Index reach:** counterfactual psr_search runs (same backend
+   resolution as the harness): the blocker's actual vocabulary
+   ("decompose open subset ... countable disjoint intervals") returns
+   five org-process patterns, zero math. "missing dependency
+   protocol" — the DENSEST endpoint's exact name — returns
+   stop-the-line/logging/coordination patterns, zero math (its name
+   tokens are org-generic; lexically camouflaged). Generic math
+   vocabulary ("lintegral measure integration Mathlib lemma") DOES
+   reach the math-formalization family — so coverage exists, but
+   neither blocker-specific nor protocol-name queries resolve to the
+   memories that matter.
+
+**Verdict on the counterfactual: NO — with the tools as they stand,
+even perfect propensity would have hit layers 2-3.** The
+missing-dependency-protocol memories (the ones on point for the
+actual blocker class) were unreachable via any plausible query. This
+extends v9's candidate-generation locus to the pull channel: pull
+fails at generation too, one layer per mechanism, all three
+co-present in one 16-minute session.
+
+Secondary check: the runner's "not available as a packaged lemma in
+Mathlib" boundary claim was grep-probed (not exhaustively): no direct
+packaged form found; claim plausible though a countable-basis route
+around it was not investigated. Left open.
