@@ -635,9 +635,48 @@
                       :memory/id))
        vec))
 
+(defn pre-cutoff-ranking-audit
+  "Describe the complete ranked candidate vector before the surfaced-memory
+  cutoff. This is opt-in analysis instrumentation; it does not alter ranking or
+  the production recall result unless `recall-now` is explicitly asked to
+  include it. Positions and cutoff are one-based."
+  [ranked cutoff]
+  (mapv
+   (fn [index memory]
+     (let [receipt-ranked? (contains? memory :dispatch/ranking-score)
+           base-score (or (:dispatch/base-score memory)
+                          (/ 1.0 (+ 1.0 (* 0.05 index))))]
+       (cond->
+        {:memory-id (:memory/id memory)
+         :position (inc index)
+         :score (if receipt-ranked?
+                  (:dispatch/ranking-score memory)
+                  base-score)
+         :score-kind (if receipt-ranked?
+                       :receipt-ranked
+                       :deterministic-base-order)
+         :cutoff-position cutoff
+         :within-cutoff? (< index cutoff)}
+         (contains? memory :dispatch/pre-receipt-rank)
+         (assoc :pre-receipt-rank (:dispatch/pre-receipt-rank memory))
+
+         (contains? memory :dispatch/base-score)
+         (assoc :base-score (:dispatch/base-score memory))
+
+         (contains? memory :content-match/score)
+         (assoc :content-match-score (:content-match/score memory))
+
+         (:via memory)
+         (assoc :via (:via memory))
+
+         (:dispatch/endpoint memory)
+         (assoc :endpoint (:dispatch/endpoint memory)))))
+   (range)
+   ranked))
+
 (defn- recall-now
   [{:keys [problem subjects limit substrate-base recall-timeout-ms
-           receipt-ranking? receipt-alpha]
+           receipt-ranking? receipt-alpha include-pre-cutoff-ranking?]
     :or {receipt-ranking? true receipt-alpha default-receipt-alpha}
     :as opts}
    packet]
@@ -777,17 +816,21 @@
                              :memory/body (:evidence/body full-entry)))))))
              (take limit)
              vec)]
-    {:status (if (seq memories) :ok :recall-empty)
-     :trace-id trace-id
-     :query query-data
-     :proposal-count (count (:candidates proposals))
-     :lexical-seed (:lexical-seed proposals)
-     :index-as-of (:index-as-of proposals)
-     :ladder-rung (:recall/tier proposals)
-     :ladder-query (:recall/query-used proposals)
-     :pattern-ids (vec pattern-ids)
-     :endpoints (vec endpoints)
-     :memories memories}))
+    (cond->
+     {:status (if (seq memories) :ok :recall-empty)
+      :trace-id trace-id
+      :query query-data
+      :proposal-count (count (:candidates proposals))
+      :lexical-seed (:lexical-seed proposals)
+      :index-as-of (:index-as-of proposals)
+      :ladder-rung (:recall/tier proposals)
+      :ladder-query (:recall/query-used proposals)
+      :pattern-ids (vec pattern-ids)
+      :endpoints (vec endpoints)
+      :memories memories}
+      include-pre-cutoff-ranking?
+      (assoc :pre-cutoff-ranking
+             (pre-cutoff-ranking-audit ranked limit)))))
 
 (defn bounded-recall
   "Run recall under one total wall-clock budget. Every failure is converted to

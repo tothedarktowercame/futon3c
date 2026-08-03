@@ -139,6 +139,23 @@
            (get-in (first cold)
                    [:dispatch/receipt-stats :ranking-factor])))))
 
+(deftest pre-cutoff-ranking-audit-retains-below-cutoff-candidates
+  (let [ranked [{:memory/id "e-ranked"
+                 :dispatch/pre-receipt-rank 2
+                 :dispatch/base-score 0.95
+                 :dispatch/ranking-score 1.14}
+                {:memory/id "e-cold"}
+                {:memory/id "e-below-cutoff"}]
+        audit (dispatch/pre-cutoff-ranking-audit ranked 2)]
+    (is (= 3 (count audit)))
+    (is (= [1 2 3] (mapv :position audit)))
+    (is (= [true true false] (mapv :within-cutoff? audit)))
+    (is (= 1.14 (:score (first audit))))
+    (is (= :receipt-ranked (:score-kind (first audit))))
+    (is (= :deterministic-base-order
+           (:score-kind (last audit))))
+    (is (= 2 (:cutoff-position (last audit))))))
+
 (deftest packet-injection-is-conditional
   (let [memory {:memory/id "e-memory-1"
                 :memory/kind :lemma-location

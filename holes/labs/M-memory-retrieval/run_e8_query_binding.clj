@@ -15,10 +15,11 @@
 (def problem-root "/home/joe/code/apm-lean/problems")
 (def apm-root "/home/joe/code/apm-lean")
 (def output-path
-  "holes/labs/M-memory-retrieval/e8-query-binding-20260803.json")
+  "holes/labs/M-memory-retrieval/e8-query-binding-ranked-20260803.json")
 (def store-limit 1000)
 (def surfaced-limit 5)
 (def recall-timeout-ms 240000)
+(def max-read-attempts 120)
 
 (defn- request-edn [method url opts]
   (loop [attempt 1]
@@ -31,7 +32,7 @@
         (<= 200 (long (:status response)) 299)
         (edn/read-string (:body response))
 
-        (and (= 503 (:status response)) (< attempt 20))
+        (and (= 503 (:status response)) (< attempt max-read-attempts))
         (do (Thread/sleep 1000) (recur (inc attempt)))
 
         :else
@@ -172,7 +173,8 @@
                    :substrate-base store-base
                    :limit surfaced-limit
                    :recall-timeout-ms recall-timeout-ms
-                   :receipt-ranking? true}
+                   :receipt-ranking? true
+                   :include-pre-cutoff-ranking? true}
                   (dissoc opts :arm))
            packet)]
       (cond
@@ -180,7 +182,8 @@
                         (:reason result)))
         result
 
-        (and (= :store-unavailable (:reason result)) (< attempt 20))
+        (and (= :store-unavailable (:reason result))
+             (< attempt max-read-attempts))
         (do
           (binding [*out* *err*]
             (println "E8 retry after store busy" problem (:arm opts) attempt))
@@ -195,6 +198,8 @@
 (defn- compact-result [result expected-ids match-rule baseline-ids execution]
   (let [surfaced (mapv :memory/id (:memories result))
         surfaced-set (set surfaced)
+        candidate-list (:pre-cutoff-ranking result)
+        candidate-by-id (into {} (map (juxt :memory-id identity)) candidate-list)
         expected-set (set expected-ids)
         hit-ids (vec (filter expected-set surfaced))
         hit? (case match-rule
@@ -202,7 +207,24 @@
                :any (boolean (seq hit-ids)))
         rank-by-id (zipmap surfaced (range 1 (inc (count surfaced))))
         union (set/union (set baseline-ids) surfaced-set)
-        intersection (set/intersection (set baseline-ids) surfaced-set)]
+        intersection (set/intersection (set baseline-ids) surfaced-set)
+        expected-candidates
+        (into
+         (sorted-map)
+         (for [id expected-ids
+               :let [candidate (get candidate-by-id id)
+                     rank (:position candidate)
+                     cutoff (:cutoff-position candidate surfaced-limit)]]
+           [id {:present-in-candidates (boolean candidate)
+                :rank rank
+                :score (:score candidate)
+                :score-kind (:score-kind candidate)
+                :cutoff-position cutoff
+                :surfaced (contains? surfaced-set id)
+                :residual (cond
+                            (contains? surfaced-set id) :surfaced
+                            candidate :cutoff-pollution
+                            :else :endpoint-relative-candidate-absence)}]))]
     {:terms (get-in result [:query :terms])
      :query (get-in result [:query :query])
      :ladder-rung (:ladder-rung result)
@@ -211,6 +233,10 @@
      :hit hit?
      :hit-ids hit-ids
      :hit-ranks (into (sorted-map) (map (juxt identity rank-by-id)) hit-ids)
+     :expected-target-candidates expected-candidates
+     :pre-cutoff-candidate-count (count candidate-list)
+     :pre-cutoff-candidates candidate-list
+     :cutoff-position surfaced-limit
      :surfaced-ids surfaced
      :surfaced-set-size (count surfaced)
      :empty-recall (empty? surfaced)
@@ -353,7 +379,7 @@
                              :receipt-after receipt-sha-after})))
         arms ["a" "b8" "b12" "b16" "c" "d"]
         output
-        {:experiment "E8-query-binding"
+        {:experiment "E8-query-binding-ranked"
          :analysis-date "2026-08-03"
          :read-only true
          :store {:base store-base
