@@ -188,10 +188,20 @@ P3. Corollary we already believe but should see fail-or-hold: the
   structure from the corrected fixture), deconfounding pairs became
   computable, wright-puppy lost its latent adjustment sets. Oracles
   re-agreed 755/755. Reviewer re-ran byte-identical.
-- **Probe leg (pending):** next conversion-shaped dispatch with
-  prose-carried semantics, unhinted. Note: agent is codex-12 (not
-  cycle-1's codex-1) — cycles are per-seat; cycle 2 measures the
-  fresh seat.
+- **Probe leg — COMPLETE 2026-08-03. Classification: `held-in-context`
+  (R-C, codex-12, ~1.5h after correction, same day).** The measurement
+  dispatch was falsification-with-data (`046b6fb6`; bell verified free
+  of R-C restatement). The variable-mapping table — conversion-shaped
+  work with prose-carried semantics throughout — showed the corrected
+  discipline unprompted: all 15 nodes accounted, exact per-node
+  derivations (field paths quoted), articulated semantic judgments on
+  the hard calls ("surfacing-via=:pattern is a route label, not the
+  endpoint set/count named by this node"; use-mode at 6/129 = "sparse
+  free labels do not define a panel column"), no regex shortcuts, no
+  silent drops. Not `promoted` (no durable artifact again — across
+  both cycles the artifact-level ratchet remains unexercised, so P2
+  stays untested; the reviewer-side gate ratchet (P3) continues to
+  carry the guarantee).
 
 ## Gate on external advice
 

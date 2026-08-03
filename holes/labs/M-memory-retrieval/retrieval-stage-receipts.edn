@@ -20,4 +20,20 @@
  :rs4 {:total-effect {:method :backdoor :primary-adjustment-set #{}}
        :active-channels [[:reachability :grep-channel :runner-outcome]
                          [:reachability :surfaced-set :offered-set :used-set :runner-outcome]]
-       :n=1-licenses "existence of an active reachability->outcome route (witnessed), NOT magnitude, NOT channel share (see :rs3)"}}
+       :n=1-licenses "existence of an active reachability->outcome route (witnessed), NOT magnitude, NOT channel share (see :rs3)"}
+ :data-contact
+ {:run "falsification-with-data 046b6fb6, frozen 129-dispatch corpus (hash-verified), 2026-08-03"
+  :mapping "6/15 nodes measurable (query-cardinality, query-vocabulary CONSTANT, pollution PROXY, surfaced/offered sets, used-set 106/129); 9 unmeasured incl. RUNNER-OUTCOME (no preregistered common endpoint in the corpus - itself a headline instrumentation finding)"
+  :ci-verdicts {:survived 4 :survived-vacuous 5 :violated 2 :untestable 0}
+  :vacuous-discipline "constant/thin columns flagged per-CI; thin-data survivals explicitly not corroboration"
+  :violations
+  [{:ci "offered-set _||_ query-cardinality | {pollution, surfaced-set}" :p 0.012 :n 129
+    :readings ["graph defect: missing query-cardinality -> offered-set edge (cardinality reaches offer beyond surfacing)"
+               "measurement mismatch: inclusion-reasons proxy for offered-set carries query-size artifacts"]
+    :status :candidate-delta-v5-registered-not-applied}
+   {:ci "surfaced-set _||_ used-set | {offered-set}" :p 2.38e-9 :n 106
+    :readings ["graph defect: direct surfaced -> used dependence (runner consumes beyond the offer)"
+               "measurement mismatch: the offered NODE is not what inclusion-reasons measures - the V2 pattern (instrument field != phenomenon) recurring"]
+    :status :candidate-delta-v6-registered-not-applied}]
+  :dowhy "complete-case n=106, 20 permutations, not rejected; does NOT override exact dagitty violations (stated)"
+  :consequence "The spec survived first whole-corpus contact on every testable edge EXCEPT the offer-stage mediation chain, which is exactly where claude-12's requirement-2 (denominator/measurement checks) already pointed. The two violations + the runner-outcome gap are the V3 instrumentation agenda, derived from data."}}
