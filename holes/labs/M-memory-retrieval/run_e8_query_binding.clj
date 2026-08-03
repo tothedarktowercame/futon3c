@@ -248,10 +248,11 @@
        (= (take 3 (get-in baseline-result [:query :terms]))
           (take 3 (:terms candidate-query)))))
 
-(defn- run-case [case memory-by-id]
+(defn- run-case [case memory-by-id ranking-receipt-entries]
   (let [{:keys [problem expected-ids match-rule]} case
         {:keys [packet structure-texts source]} (case-source problem)
-        base-opts {:arm :a :query-term-limit 4}
+        base-opts {:arm :a :query-term-limit 4
+                   :ranking-receipt-entries ranking-receipt-entries}
         a (run-recall problem packet base-opts)
         baseline-ids (mapv :memory/id (:memories a))
         a-compact (compact-result a expected-ids match-rule baseline-ids :live-run)
@@ -259,6 +260,9 @@
         (into (sorted-map)
               (for [n [8 12 16]
                     :let [opts {:arm (keyword (str "b" n)) :query-term-limit n}
+                          opts (assoc opts
+                                      :ranking-receipt-entries
+                                      ranking-receipt-entries)
                           query (dispatch/recall-query
                                  (merge {:problem problem :subjects []
                                          :problem-root problem-root} opts)
@@ -276,9 +280,11 @@
         d-terms (dispatch/query-keywords
                  (memory-text memory-by-id expected-ids) 16)
         c (run-recall problem packet
-                      {:arm :c :query-term-limit 16 :query-terms c-terms})
+                      {:arm :c :query-term-limit 16 :query-terms c-terms
+                       :ranking-receipt-entries ranking-receipt-entries})
         d (run-recall problem packet
-                      {:arm :d :query-term-limit 16 :query-terms d-terms})]
+                      {:arm :d :query-term-limit 16 :query-terms d-terms
+                       :ranking-receipt-entries ranking-receipt-entries})]
     (assoc case
            :source source
            :structure-terms c-terms
@@ -361,7 +367,7 @@
         ;; Keep the serving JVM load bounded. Parallel queries caused avoidable
         ;; memory pressure in the first dry run and are not part of the ablation.
         results (mapv #(if (:scoreable %)
-                         (run-case % memory-by-id)
+                         (run-case % memory-by-id (:entries receipts-before))
                          %)
                       cases)
         mem-after (memories-snapshot)

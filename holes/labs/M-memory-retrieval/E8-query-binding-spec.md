@@ -210,6 +210,68 @@ shipped term-selection never got there.
 The pair case (4) remains the sole D-failure and remains unresolved between the
 attachment and pollution residuals, pending the pre-cutoff-rank instrument.
 
+## Ranked-candidate rerun — 2026-08-03
+
+This later run supersedes only the freeze-status conclusion in the failed
+determinism check immediately above.  That failed check remains recorded: it
+identified the intermittent receipt fetch that this rerun now controls by
+freezing the ranking inputs as the design requires.
+
+The bounded rerun instruments the existing recall path immediately after its
+final ranking step and before hydration and the `take 5` surfacing cutoff.  It
+records the complete candidate vector produced by that stage, one-based
+position, final ranking score, score kind, and the cutoff in effect.  This is
+the full output of the ranking stage, not a whole-store enumeration: all
+upstream search and projection limits remain exactly as shipped.
+
+The run read 527 `:memory` entries.  The canonical memory snapshot hash was
+`e9a1f680c0ae9666556feae1c97942df3ce030ff867707d784a4c5add3abe677`; the
+ground-control ranking-receipt snapshot hash remained
+`25860bf6bcc4a110ee892782c29c3fafe983c380230391f2ea8d1f3b0f5d6bbf`.
+Both snapshots were unchanged within each run.  The frozen artifact is
+`e8-query-binding-ranked-20260803.json`, SHA-256
+`ff9b36823bbe52be207cd7b6469205ea04fe6cc8e223500daa9934e6facf8df1`.
+Two complete reruns against those same hashes produced byte-identical output.
+
+The first reproducibility check exposed two latency-dependent diagnostics: raw
+FTS scores jittered below the rank-relevant precision, and a late receipt
+fetch could time out and select fallback ordering.  The accepted instrument
+therefore records the final ranking score rather than the auxiliary raw FTS
+score and supplies the receipt snapshot already frozen at the start of the run
+to the existing receipt-ranking function.  This holds ranking fixed; it does
+not reimplement it.  Both behaviours are opt-in analysis parameters, and the
+shipped four-term query default and ordinary dispatch result remain unchanged.
+
+### The case-4 discriminator
+
+Under case 4's D arm, the ranking stage produced seven candidates.  The target
+`e-9751e537-f5b7-4c40-a857-0c0b699b93a2` was rank 1 (receipt-ranked score
+1.5) and surfaced.  `e-dfea2de9-8979-4f8f-9343-caabb48487e6` was absent from
+all seven, so its failure is **not cutoff pollution**: it is endpoint-relative
+candidate starvation upstream of the final rank/cutoff.
+
+The qualifier matters.  The same `e-dfea2de9…` memory is present under case
+5/A at rank 1 (receipt-ranked score 1.2) and surfaces, via the direct `a96A04`
+endpoint.  Thus the result says that the lib-young D query/projection did not
+deliver this memory to ranking; it does not say that the memory is globally
+unattached or globally unreachable.  This resolves the registered case-4
+residual in favour of the endpoint-relative attachment/projection side of V2
+§5.2, not pollution at the position-5 cutoff.
+
+### Named targets under arm A
+
+None of the specifically labelled targets was a near miss.  The case-1 target,
+both case-4 pair members, and the case-5 target were each absent from arm A's
+complete pre-cutoff candidate vector (null rank and score), rather than sitting
+at rank 6 or below.  The original post-hoc finding therefore sharpens: arm A's
+two hits are still entirely the any-of-five cases, and all named-target misses
+occur before final ranking/cutoff.  Cutoff pollution does occur elsewhere in
+the run (for example among non-winning members of the set-valued cases), but it
+does not explain any named-target A miss or the case-4 D failure.
+
+The aggregate arm outcomes are unchanged from the first run: A, B8, B12, B16,
+and C each score 2/5 (40%), while D scores 4/5 (80%).
+
 ---
 
 # Rank-instrumented rerun (2026-08-03) — reviewed by claude-12
