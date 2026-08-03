@@ -121,14 +121,40 @@ over-ambitious. Proposed instead:
    transition*, and therefore a `:disposition` of the arc registration rather
    than a free choice made after seeing the data.
 
-Preregistered dispositions, written now:
+Preregistered dispositions — **revised 2026-08-03 after E8, and the revision
+is itself disclosed rather than silently applied.**
 
-- E8 says query binding **and** `:push+pull` ≈ `:push` → Stage 2 tests
-  `:structure-aware`.
-- `:push+pull` or `:pull-only` beats `:push` → Stage 2 tests channel depth, and
-  the query axis collapses.
-- Both flat → Stage 2 tests `:populated` graph; V2 §5.2 survives its rivals and
-  the original C1 treatment is vindicated by elimination.
+The original set was written before E8 reported and is preserved here, struck
+through, because a disposition edited after seeing data is exactly the
+forking-path hazard preregistration exists to prevent:
+
+> ~~E8 says query binding **and** `:push+pull` ≈ `:push` → Stage 2 tests
+> `:structure-aware`.~~
+> ~~`:push+pull` or `:pull-only` beats `:push` → Stage 2 tests channel depth.~~
+> ~~Both flat → Stage 2 tests `:populated` graph.~~
+
+**Why this revision is legitimate and not a forking path:** the stale branch is
+conditioned on "E8 says query binding", and E8 was *designed and run precisely
+to settle that condition*, on frozen data, before any cohort dispatch. Its
+answer eliminates a Stage-2 option rather than selecting one on the basis of
+cohort outcomes. No cohort data exists yet; nothing about the primary endpoint
+has been observed. Had E8 come out the other way, the original branch would
+have fired unchanged.
+
+Revised set, with axis 2 closed:
+
+- `:push+pull` or `:pull-only` beats `:push` → Stage 2 tests **channel depth**
+  (invitation strength, pull-only vs push+pull separation).
+- All channel arms flat → Stage 2 tests **`:populated` graph**; V2 §5.2 survives
+  its rivals and C1's treatment is vindicated by elimination rather than by
+  assumption.
+- Either way, axis 2 stays closed unless someone produces a dispatch-time
+  vocabulary construction that beats arm C's baseline result. Reopening it
+  requires a new construction, not a new cohort.
+
+The rank-instrumented E8 rerun feeds axis 3's evidence, not Stage 1's: it
+classifies the one oracle-failure between attachment starvation and pollution at
+the cutoff.
 
 ## Non-negotiables carried from prior findings
 
