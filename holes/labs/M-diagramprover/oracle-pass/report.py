@@ -206,8 +206,7 @@ separate computed backdoor claims, not conclusions inferred from y0's formula.
 The intended path-specific V13/V14 mediation decomposition does not map to
 dosearch's query language. The faithful query attempted instead was the joint
 channel/outcome response after latent-projecting the exact ancestral reduction.
-Identifiability is preserved under latent projection onto a superset of the query
-variables; the auditable kept set is
+The auditable kept set is
 `{{{', '.join(dosearch['kept_set'])}}}`. The projection has
 {dosearch['node_count']} observed nodes and {dosearch['internal_node_count']}
 dosearch internal nodes, below the package limit of
@@ -216,6 +215,25 @@ dosearch internal nodes, below the package limit of
 The without-S05 result is {dosearch_outcome(dosearch['without_s05'])}. The
 with-S05 result is {dosearch_outcome(dosearch['with_s05'])}. These are
 identification-search verdicts, not size-limit rejections.
+
+**Epistemic status of these verdicts (review correction, 2026-08-03):**
+the projection marked OBSERVED variables as latent to fit dosearch's node
+budget, which discards their observational data. Such a projection is
+sound in one direction only: an *identifiable* verdict would transfer to
+the full query; a *non-identifiable* verdict does NOT — the discarded
+observed ancestors (e.g. V01, V10, V11, V15) may serve as adjustment
+variables in the full-data problem. The reviewer additionally probed
+larger keep-sets through the same `admg/latent-project`: a 15-observed
+encoding (30 internal nodes, exactly at the package limit, 4 residual
+bidirected arcs from the still-dropped {{V03, V05, V06, V08}}) did not
+complete within a 10-minute compute budget, and the full 18-observed
+ancestral encoding is rejected at the node limit outright. Conclusion:
+**dosearch cannot settle this query for a graph of this shape** — the
+fitting projection's negative verdict is inconclusive, the faithful
+encodings are infeasible, and the Q2 mediation identifiability question
+remains answered only by the engine's piecewise computed receipts. This
+maps the missingness-oracle boundary precisely rather than closing the
+question.
 
 Without S05 — exact arguments:
 
