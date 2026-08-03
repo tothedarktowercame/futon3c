@@ -42,6 +42,26 @@
           "the bounded lexical query is filled from the highest-priority source")
       (is (not-any? #{"generic"} (:terms query))))))
 
+(deftest recall-query-term-cap-is-parameterised-with-shipped-default-preserved
+  (let [base {:problem "a-test"
+              :subjects []
+              :problem-root "/definitely/not/a/problem/root"
+              :query-terms ["one" "two" "three" "four" "five"
+                            "six" "seven" "eight" "nine"]}
+        default-query (dispatch/recall-query base "packet" {})
+        eight-query (dispatch/recall-query
+                     (assoc base :query-term-limit 8) "packet" {})]
+    (is (= dispatch/default-query-term-limit 4))
+    (is (= ["one" "two" "three" "four"] (:terms default-query)))
+    (is (= ["one" "two" "three" "four" "five" "six" "seven" "eight"]
+           (:terms eight-query)))
+    (is (= :explicit-analysis-terms
+           (get-in eight-query [:term-sources 0 :source])))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"positive integer"
+         (dispatch/recall-query (assoc base :query-term-limit 0) "packet" {})))))
+
 (deftest substrate-call-deadline-does-not-preempt-total-recall-budget
   (let [timeout-fn
         (ns-resolve 'futon3c.dispatch-with-recall 'per-call-timeout-ms)]

@@ -16,6 +16,7 @@
            [java.util UUID]))
 
 (def default-limit 5)
+(def default-query-term-limit 4)
 (def default-memory-channel :push)
 (def memory-pull-invitation-version "memory-pull-invitation-v1")
 
@@ -256,6 +257,17 @@
        (take limit)
        vec))
 
+(defn query-keywords
+  "Return the shipped normalized, stopword-filtered frequency vocabulary.
+
+  This public analysis seam lets frozen-data experiments construct explicit
+  query vocabularies without copying the production tokenizer."
+  [text limit]
+  (when-not (and (integer? limit) (pos? limit))
+    (throw (ex-info "query keyword limit must be a positive integer"
+                    {:limit limit})))
+  (text-keywords text limit))
+
 (defn- problem-statement-text [text]
   (let [marker "## Problem Statement"
         index (str/index-of text marker)]
@@ -341,8 +353,20 @@
 (defn recall-query
   "Build a bounded lexical query from subject ids, preregistered terrain, and
   problem files, with packet terms retained as fallback. The exact problem id
-  is also queried as a graph endpoint."
-  [{:keys [problem subjects terrain] :as opts} packet terrain-map]
+  is also queried as a graph endpoint.
+
+  `:query-term-limit` parameterises the shipped four-term cap for frozen-data
+  analysis while preserving four as the production default. `:query-terms` is
+  an analysis seam for an explicitly constructed vocabulary; it still passes
+  through the same ladder, search, reviewed-attachment projection, and ranking
+  path as the shipped query."
+  [{:keys [problem subjects terrain query-term-limit query-terms]
+    :or {query-term-limit default-query-term-limit}
+    :as opts}
+   packet terrain-map]
+  (when-not (and (integer? query-term-limit) (pos? query-term-limit))
+    (throw (ex-info "query-term-limit must be a positive integer"
+                    {:query-term-limit query-term-limit})))
   (let [terrain (or terrain (some-> problem bpm-source-id terrain-map))
         term-sources
         (mapv
@@ -388,15 +412,21 @@
                   (nil? b) (into out a)
                   :else (recur (next a) (next b)
                                (conj out (first a) (first b))))))
-        terms (->> (concat (when terrain [terrain])
-                           (interleave-all subjects source-terms))
+        generated-terms (concat (when terrain [terrain])
+                                (interleave-all subjects source-terms))
+        selected-terms (if (seq query-terms)
+                         (map (comp str/trim str) query-terms)
+                         generated-terms)
+        terms (->> selected-terms
                    (remove str/blank?)
                    distinct
-                   (take 4)
+                   (take query-term-limit)
                    vec)]
     {:terrain terrain
      :recall-system recall-system
-     :term-sources term-sources
+     :term-sources (if (seq query-terms)
+                     [{:source :explicit-analysis-terms :terms terms}]
+                     term-sources)
      :terms terms
      :query (str/join " " terms)}))
 
