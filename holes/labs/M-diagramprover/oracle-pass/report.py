@@ -139,14 +139,17 @@ Named disagreements (verbatim): `[]`.
 | Bow graph | PROVED-IMPOSSIBLE | y0 agrees non-identifiable | `:not-identifiable` (failing recursive subproblem witness) |
 | Monty Hall collider | computed | NetworkX agrees (2/2) | — |
 | Firing squad rung 2 | computed | NetworkX agrees (1/1); y0 identifies | — |
-| Firing squad rung 3 | refused-capability | query classification agrees with fixture; no counterfactual oracle attempted | `:counterfactual-identification` |
+| Firing squad rung 3 | computed (deterministic SCM) | exhaustive Boolean-world enumeration re-derives the three-step semantics; no independent counterfactual oracle installed | stochastic/unspecified-SCM counterfactuals remain `:counterfactual-identification` refusals |
 
 Across every identification-shaped Book-of-Why fixture, the engine and y0 now
 agree at the identifiability-verdict level. Formula equivalence with y0 is out of
 scope for this pass. The smoking effect retains the cheaper front-door receipt;
 napkin uses general ID; and the confounded bow graph is proved non-identifiable
-with a failing-recursive-subproblem witness. Only the rung-3 counterfactual remains
-a capability refusal.
+with a failing-recursive-subproblem witness. The firing-squad rung-3 answer is
+checked by exhaustive enumeration of every exogenous Boolean world. That is a
+deterministic-SCM semantic re-derivation, not an independent oracle; reviewer
+hand-verification remains required. Counterfactual fixtures without structural
+equations retain the capability refusal.
 
 ## Q3 divergence
 

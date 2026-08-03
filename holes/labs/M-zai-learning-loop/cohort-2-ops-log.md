@@ -98,3 +98,21 @@ in-thread reply instructions they cannot honour.
 ⊸fix [S3-memory-write] **`memory-write-rejected` ×2**: the runner spontaneously called `memory_record` (round 214, unprompted — the packet never asks for recording) and both calls were refused by the store with `:error/code :invalid-entry`, `"EvidenceEntry did not conform to shape"`. It retried once with a corrected shape and was refused again, then proceeded to the final summary. This is the "bounce-learn" hazard the mission names under provisioning. The distilled content it tried to store was substantive (the `hasSum_single` route over `hasSum_sum_of_ne_finset_zero`, and the `f_tail_le` case-split) — that is exactly solve-lane material, and it was lost to a shape error.
 
 ⊸meter [S3-tools] session tool tally: `run_shell` 111, `edit_file` 66, `read_file` 37, `list_files` 8, `write_file` 4, `memory_record` 2 (both rejected), `search` 2, `run_readonly` 2, `boot_context` 1. The memory family is reachable and was reached; the write path is what failed.
+
+## S6 — a96A04 (zai-1, recall-live, Ψ-weighted surfacing test, 2026-08-03)
+
+⊸miss [S6-stale-row] **the row was already closed before dispatch.** a96A04's three sorries were shut by commits `a354e5b`–`7efabc0` on 07-31/08-01; `YoungL2.lean` reached 0 sorries at `ce77d41` (07-28). The RESUME doc asserted "3 sorries" and "YoungL2.lean … with 2 sorries" from its 07-27 snapshot, and I dispatched the packet verbatim without re-deriving either. That is D3 — queue fields are derived, never asserted (`scripts/queue_audit.py`) — violated by the dispatcher, not the runner. **S6 is void as a capability test**: there was no work left for memory to unlock.
+
+⊸win [S6-honesty] the runner read the files, found the sorries already closed, verified with `lake env lean` rather than trusting `status.json`, corrected the stale metadata, and reported "all work was done in prior commits" instead of claiming the close. Operator re-run confirms: exit 0, 0 sorries, and all three targets axiom-clean (`heatConv_contDiff`, `heatConv_L2_le`, `heatConv_tendsto_L2` → `[propext, Classical.choice, Quot.sound]`). Its only commit, `e7f07c9`, touches `status.json` alone (3 → 0 sorries, partial → complete).
+
+⊸meter [S6-Ψ] **the preregistered surfacing prediction, partially confirmed.** Predicted: the missing-dependency pair `e-dfea2de9` + `e-9751e537` surfaces, receipt tagged `:v1.1-receipt-ranked` with use-history factor 1.5. Actual, from the offered receipt:
+- surfaced (5): `e-dfea2de9-…` ✓, `e-bb16ffa8-…`, and three `e-codexpilot-*` (Dirichlet sinc, weak-L² Vitali, dense-span extension);
+- `e-9751e537` **did not surface** — its only occurrences in the window are my own wake-checklist text, echoed into the store as a chat-turn (a grep for the id "hits" and means nothing; worth knowing for anyone auditing this way);
+- `recall-system :v1.2-receipt-ranked-instrumented` — receipt-ranking is live, under the successor tag rather than the predicted `:v1.1-receipt-ranked`;
+- **no use-history factor of 1.5 is visible in the receipt.**
+
+So: 1 of 2 predicted memories surfaced, ranking system live, the specific factor unevidenced.
+
+⊸win [S6-first-use] **first USED memory of the resumed cohort.** `e-bb16ffa8-…` (Young L² lemma-location map) was surfaced and used: *"told me immediately the dependency was available without re-searching."* Confirmatory rather than load-bearing — it saved a search on a problem already solved — but it is a real use, correctly attributed, and the only one across S3+S6.
+
+⊸meter [S6-attribution] per-id attribution complete: 5 surfaced, 5 verdict lines (1 USED, 4 IGNORED), `dispatch-recall-outcome` marker copied verbatim. No `memory-write-rejected` recurrence this row — the runner made no `memory_record` calls.

@@ -328,14 +328,42 @@
     } ]
   }, {
     "adjustment-sets" : [ ],
+    "counterfactual" : {
+      "abduction" : {
+        "assignments" : [ {
+          "court-order" : true
+        } ],
+        "consistent-count" : 1,
+        "evidence" : {
+          "death" : true
+        },
+        "step" : "abduction"
+      },
+      "action" : {
+        "intervention" : {
+          "soldier-A" : false
+        },
+        "replaced-equations" : [ "soldier-A" ],
+        "step" : "action"
+      },
+      "answer" : true,
+      "method" : "deterministic-scm",
+      "prediction" : {
+        "all-agree?" : true,
+        "outcome" : "death",
+        "step" : "prediction",
+        "worlds" : [ {
+          "assignment" : {
+            "court-order" : true
+          },
+          "value" : true
+        } ]
+      },
+      "query-type" : "counterfactual"
+    },
     "id" : "BOW-FIRING-SQUAD",
     "question" : [ "Does do(soldier-A) retain a directed route to death?", "Had soldier A not fired, would death still have occurred given that it did occur?" ],
-    "refusals" : [ {
-      "claim" : "individual-counterfactual",
-      "missing-capability" : "counterfactual-identification",
-      "query-type" : "counterfactual",
-      "reason" : "unsupported-query-type"
-    } ],
+    "refusals" : [ ],
     "verdicts" : [ {
       "claim" : "rung-2-intervention-has-outcome-route",
       "holds?" : true,
