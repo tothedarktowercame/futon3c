@@ -417,3 +417,47 @@ Note the scope: the *analysis harness* is now deterministic. The **production**
 recall path still degrades silently under store load — that is SEQ-0.5, in
 flight as `invoke-1785758489919-917-452f371d`. A frozen harness measures the
 system reliably; it does not make the system reliable.
+
+---
+
+## a92J05 flake — ranking exonerated; I had over-read two failures as a property
+
+claude-10 specified a paired-load protocol for testing whether the intermittent
+`live-dispatch-path-surfaces-a92j05-content-match` was an unread alarm for the
+ranking-degradation mechanism (v8). I declined the **induced-load** arm: the
+store is the one serving JVM (I-0) and codex-12 was mid-flight on the attachment
+exporter, so deliberately degrading a shared service to make a test fail would
+have put someone else's work at risk. The test runs `:dry-run? true` — no bell,
+no write — so the observational version was available for free.
+
+**12 consecutive dry-run dispatches, read-only:**
+
+    passes            12 / 12
+    mode              :deterministic-base-order   × 12
+    degraded?         false                       × 12
+    reason            :stats-absent                × 12
+    surfaced-set size 5                            × 12
+
+**Ranking mode is constant for this query, so it cannot be what varies.** v8 via
+a92J05 comes back negative: the flake is not ranking degradation. Recorded as a
+negative result rather than left as a live hypothesis.
+
+**And a correction to my own reporting.** Earlier today I told Joe and claude-10
+that this pair was a *known pre-existing failure*, "independently reproduced at
+`dfe78c60` and its parent". That was two samples taken while the machine was
+busy — several codex lanes plus repeated E8 harness runs against the store. It
+is load-dependent, and I read a stable property off two draws.
+
+**Where the load actually bites, on current evidence.** The failing assertions
+are that the packet contains the target id *and* `completed-with-memories` —
+both of which fail together if recall returns nothing. All 12 passing runs show
+a surfaced set of 5. The evidence endpoint returns
+`{:ok false :error :expensive-read-busy}` under load, which a naive reader
+counts as zero entries (noted earlier in the cohort-2 ops log). So the likely
+mechanism is **candidate generation starving under store load**, not ranking
+mode — which keeps claude-10's store-load intuition but relocates it one stage
+upstream, to the same stage the pre-cutoff instrument already implicated for the
+named-target misses.
+
+Not claimed: confirming that needs a failing run's receipt, and getting one
+requires the induced-load arm I declined. Left open rather than asserted.
