@@ -63,3 +63,16 @@
                                         config)]
     (is (false? (:licensed? verdict)))
     (is (true? (-> verdict :checks second :absent?)))))
+
+(deftest empty-prior-batch-is-flagged-vacuous
+  ;; claude-12's gap: an empty batch silently passes the collision
+  ;; check; the verdict must make that auditable
+  (let [verdict (guard/dispatch-verdict good-record config)
+        jk (-> verdict :checks second)]
+    (is (true? (:vacuous? jk)))
+    (is (zero? (:prior-batch-size jk))))
+  (let [jk (-> (guard/dispatch-verdict
+                good-record (assoc config :prior-key-values ["d-000"]))
+               :checks second)]
+    (is (false? (:vacuous? jk)))
+    (is (= 1 (:prior-batch-size jk)))))

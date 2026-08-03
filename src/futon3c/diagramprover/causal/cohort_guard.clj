@@ -27,13 +27,17 @@
   [record join-key & [prior-key-values]]
   (let [value (get record join-key ::absent)
         absent? (= ::absent value)
-        collision? (boolean (and (not absent?)
-                                 (some #{value} (or prior-key-values []))))]
+        batch (or prior-key-values [])
+        collision? (boolean (and (not absent?) (some #{value} batch)))]
     {:check :join-key-identifies-unit
      :join-key join-key
      :ok? (and (not absent?) (not collision?))
      :absent? absent?
-     :collision? collision?}))
+     :collision? collision?
+     ;; an empty batch makes this check vacuous - the field makes the
+     ;; caller's batch-supply discipline auditable from the receipt
+     :prior-batch-size (count batch)
+     :vacuous? (zero? (count batch))}))
 
 (defn denominator-check
   "Arm-conditional required fields: for each estimand the arm feeds,
