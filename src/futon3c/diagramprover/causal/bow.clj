@@ -14,6 +14,7 @@
    :sprinkler (str fixture-directory "/sprinkler-collider.json")
    :front-door (str fixture-directory "/smoking-tar-cancer.json")
    :napkin (str fixture-directory "/napkin.json")
+   :bow-graph (str fixture-directory "/bow-graph.json")
    :monty (str fixture-directory "/monty-hall.json")
    :firing-squad (str fixture-directory "/firing-squad.json")})
 
@@ -90,13 +91,23 @@
       :verdicts []
       :identification result
       :adjustment-sets []
+      :refusals []})))
+
+(defn bow-graph-receipt
+  ([] (bow-graph-receipt (load-fixture :bow-graph)))
+  ([causal-dag]
+   (let [result (identify/identify causal-dag :X :Y)]
+     {:id "BOW-IMPOSSIBLE"
+      :question (:question (question causal-dag "BOW-IMPOSSIBLE"))
+      :verdicts []
+      :identification result
+      :adjustment-sets []
       :refusals
       (if (= :refusal (:method result))
         [{:claim :identify-total-effect
-          :reason :backdoor-and-front-door-exhausted
-          :missing-capability (:missing-capability result)
-          :backdoor-exhaustion (:backdoor-exhaustion result)
-          :front-door-exhaustion (:front-door-exhaustion result)}]
+          :reason (:reason result)
+          :proof-status (:proof-status result)
+          :witness (:witness result)}]
         [])})))
 
 (defn firing-squad-receipt
@@ -126,4 +137,5 @@
 
 (defn all-bow-receipts []
   [(simpson-receipt) (sprinkler-receipt) (front-door-receipt) (napkin-receipt)
+   (bow-graph-receipt)
    (monty-receipt) (firing-squad-receipt)])

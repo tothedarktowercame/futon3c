@@ -23,17 +23,20 @@
     (is (every? :holds? (:verdicts receipt)))
     (is (empty? (:refusals receipt)))))
 
-(deftest napkin-refuses-after-both-exhaustions
-  (let [receipt (bow/napkin-receipt)
+(deftest napkin-is-general-id
+  (let [receipt (bow/napkin-receipt)]
+    (is (= :general-id (get-in receipt [:identification :method])))
+    (is (map? (get-in receipt [:identification :estimand :expression])))
+    (is (string? (get-in receipt [:identification :estimand :formula])))
+    (is (= receipt (bow/napkin-receipt)))))
+
+(deftest bow-graph-is-proved-impossible
+  (let [receipt (bow/bow-graph-receipt)
         refusal (first (:refusals receipt))]
     (is (= :refusal (get-in receipt [:identification :method])))
-    (is (= :do-calculus-identification (:missing-capability refusal)))
-    (is (pos? (get-in refusal [:backdoor-exhaustion :candidate-set-count])))
-    (is (pos? (get-in refusal [:front-door-exhaustion :candidate-set-count])))
-    (is (every? seq
-                (map :failed-conditions
-                     (get-in refusal
-                             [:front-door-exhaustion :candidate-attempts]))))))
+    (is (= :not-identifiable (:reason refusal)))
+    (is (= :proved-impossible (:proof-status refusal)))
+    (is (map? (:witness refusal)))))
 
 (deftest monty-collider
   (let [receipt (bow/monty-receipt)]

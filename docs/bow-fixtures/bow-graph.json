@@ -1,0 +1,16 @@
+{
+  "id": "bow-graph",
+  "variables": [
+    {"id": "U", "kind": "latent-unobserved"},
+    {"id": "X", "kind": "observed"},
+    {"id": "Y", "kind": "observed"}
+  ],
+  "arrows": [
+    {"from": "U", "to": "X"},
+    {"from": "U", "to": "Y"},
+    {"from": "X", "to": "Y"}
+  ],
+  "requested_receipts": [
+    {"id": "BOW-IMPOSSIBLE", "question": "Identify P(Y | do(X)) in the confounded bow graph."}
+  ]
+}

@@ -8,7 +8,9 @@
    exactly paths entering Z while blocking them by X. Failure paths are
    witnessed lower bounds, never claims of exhaustive path enumeration."
   (:require [futon3c.diagramprover.causal.dag :as dag]
+            [futon3c.diagramprover.causal.admg :as admg]
             [futon3c.diagramprover.causal.dsep :as dsep]
+            [futon3c.diagramprover.causal.idalg :as idalg]
             [futon3c.diagramprover.causal.surgery :as surgery]))
 
 (def front-door-formula
@@ -110,9 +112,20 @@
            :conditions (:conditions identified)
            :estimand {:type :front-door :formula front-door-formula
                       :mediator-set (:mediators identified)}}
-          {:method :refusal
-           :backdoor-exhaustion {:candidate-set-count (count backdoor-attempts)
-                                 :candidate-attempts backdoor-attempts}
-           :front-door-exhaustion {:candidate-set-count (count attempts)
-                                   :candidate-attempts attempts}
-           :missing-capability :do-calculus-identification})))))
+          (let [general (idalg/identify-effect
+                         (admg/latent-project causal-dag) treatment outcome)]
+            (if (:identifiable? general)
+              {:method :general-id
+               :estimand {:type :general-id
+                          :expression (:estimand general)
+                          :formula (idalg/formula (:estimand general))}}
+              {:method :refusal
+               :reason :not-identifiable
+               :witness (:witness general)
+               :proof-status :proved-impossible
+               :backdoor-exhaustion
+               {:candidate-set-count (count backdoor-attempts)
+                :candidate-attempts backdoor-attempts}
+               :front-door-exhaustion
+               {:candidate-set-count (count attempts)
+                :candidate-attempts attempts}})))))))

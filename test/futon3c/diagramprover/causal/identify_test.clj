@@ -1,7 +1,8 @@
 (ns futon3c.diagramprover.causal.identify-test
   (:require [clojure.test :refer [deftest is]]
             [futon3c.diagramprover.causal.dag :as dag]
-            [futon3c.diagramprover.causal.identify :as identify]))
+            [futon3c.diagramprover.causal.identify :as identify]
+            [futon3c.diagramprover.causal.bow :as bow]))
 
 (defn graph [arrows & [latent]]
   (let [nodes (set (mapcat (juxt :from :to) arrows))]
@@ -45,3 +46,17 @@
     (is (= #{:Z} (:mediators result)))
     (is (every? :holds? (:conditions result)))
     (is (= result (identify/identify g :X :Y)))))
+
+(deftest fixture-method-priority
+  (is (= :backdoor
+         (:method (identify/identify (bow/load-fixture :simpson)
+                                    :treatment :recovery))))
+  (is (= :front-door
+         (:method (identify/identify (bow/load-fixture :front-door)
+                                    :smoking :cancer))))
+  (is (= :general-id
+         (:method (identify/identify (bow/load-fixture :napkin) :X :Y))))
+  (let [result (identify/identify (bow/load-fixture :bow-graph) :X :Y)]
+    (is (= :refusal (:method result)))
+    (is (= :proved-impossible (:proof-status result)))
+    (is (map? (:witness result)))))
