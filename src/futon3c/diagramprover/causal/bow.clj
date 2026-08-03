@@ -1,12 +1,11 @@
 (ns futon3c.diagramprover.causal.bow
   "Computed Book-of-Why fixture receipts at the current capability frontier.
 
-   This fixture runner deliberately restricts adjustment candidates to observed
-   non-treatment, non-outcome variables and exhaustively checks their power set.
-   Front-door and counterfactual queries are classified and refused explicitly;
-   they are not approximated by backdoor or rung-2 surgery."
+   Identification delegates to the observed-only exhaustive identifier.
+   Counterfactual queries remain classified and refused explicitly."
   (:require [futon3c.diagramprover.causal.dag :as dag]
             [futon3c.diagramprover.causal.dsep :as dsep]
+            [futon3c.diagramprover.causal.identify :as identify]
             [futon3c.diagramprover.causal.surgery :as surgery]))
 
 (def fixture-directory "docs/bow-fixtures")
@@ -14,6 +13,7 @@
   {:simpson (str fixture-directory "/simpson-kidney-stones.json")
    :sprinkler (str fixture-directory "/sprinkler-collider.json")
    :front-door (str fixture-directory "/smoking-tar-cancer.json")
+   :napkin (str fixture-directory "/napkin.json")
    :monty (str fixture-directory "/monty-hall.json")
    :firing-squad (str fixture-directory "/firing-squad.json")})
 
@@ -70,49 +70,34 @@
    (collider-receipt causal-dag "BOW-MONTY"
                      :choice :prize :host-opens)))
 
-(defn- subsets [items]
-  (reduce (fn [sets item]
-            (into sets (map #(conj % item) sets)))
-          [#{}] items))
-
-(defn observed-adjustment-search
-  "Exhaustively test every observed candidate subset for backdoor adjustment."
-  [causal-dag treatment outcome]
-  (let [candidates
-        (->> (:variables causal-dag)
-             (keep (fn [[id variable]]
-                     (when (and (= :observed (keyword (:kind variable)))
-                                (not (#{treatment outcome} id))) id)))
-             sort vec)]
-    (mapv (fn [given]
-            (let [holds? (dsep/backdoor-adjustment?
-                          causal-dag treatment outcome given)
-                  paths (if holds? {:paths [] :truncated? false}
-                            (witness (surgery/cut-outgoing causal-dag treatment)
-                                     treatment outcome given))]
-              {:given given :holds? holds? :surviving-paths (:paths paths)
-               :paths-truncated? (:truncated? paths)}))
-          (subsets candidates))))
-
 (defn front-door-receipt
   ([] (front-door-receipt (load-fixture :front-door)))
   ([causal-dag]
-   (let [attempts (observed-adjustment-search causal-dag :smoking :cancer)
-         valid (filterv :holds? attempts)]
+   (let [result (identify/identify causal-dag :smoking :cancer)]
      {:id "BOW-FRONTDOOR"
       :question (:question (question causal-dag "BOW-FRONTDOOR"))
-      :verdicts [{:claim :observed-backdoor-adjustment-exists
-                  :holds? (boolean (seq valid))
-                  :method :exhaustive-observed-backdoor-search
-                  :candidate-set-count (count attempts)}]
-      :adjustment-sets (mapv :given valid)
+      :verdicts (:conditions result)
+      :identification result
+      :adjustment-sets []
+      :refusals []})))
+
+(defn napkin-receipt
+  ([] (napkin-receipt (load-fixture :napkin)))
+  ([causal-dag]
+   (let [result (identify/identify causal-dag :X :Y)]
+     {:id "BOW-NAPKIN"
+      :question (:question (question causal-dag "BOW-NAPKIN"))
+      :verdicts []
+      :identification result
+      :adjustment-sets []
       :refusals
-      (if (seq valid) []
-          [{:claim :identify-total-effect
-            :reason :observed-backdoor-exhausted
-            :missing-capability :front-door-identification
-            :candidate-set-count (count attempts)
-            :candidate-attempts attempts}])})))
+      (if (= :refusal (:method result))
+        [{:claim :identify-total-effect
+          :reason :backdoor-and-front-door-exhausted
+          :missing-capability (:missing-capability result)
+          :backdoor-exhaustion (:backdoor-exhaustion result)
+          :front-door-exhaustion (:front-door-exhaustion result)}]
+        [])})))
 
 (defn firing-squad-receipt
   ([] (firing-squad-receipt (load-fixture :firing-squad)))
@@ -140,5 +125,5 @@
         [])})))
 
 (defn all-bow-receipts []
-  [(simpson-receipt) (sprinkler-receipt) (front-door-receipt)
+  [(simpson-receipt) (sprinkler-receipt) (front-door-receipt) (napkin-receipt)
    (monty-receipt) (firing-squad-receipt)])

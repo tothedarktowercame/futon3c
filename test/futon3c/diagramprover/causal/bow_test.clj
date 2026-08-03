@@ -16,15 +16,24 @@
     (is (= [[:rain :wet-grass :sprinkler]]
            (get-in receipt [:verdicts 1 :paths])))))
 
-(deftest observed-only-front-door-refusal-is-exhaustive
-  (let [receipt (bow/front-door-receipt)
+(deftest smoking-front-door-is-identified
+  (let [receipt (bow/front-door-receipt)]
+    (is (= :front-door (get-in receipt [:identification :method])))
+    (is (= #{:tar} (get-in receipt [:identification :mediators])))
+    (is (every? :holds? (:verdicts receipt)))
+    (is (empty? (:refusals receipt)))))
+
+(deftest napkin-refuses-after-both-exhaustions
+  (let [receipt (bow/napkin-receipt)
         refusal (first (:refusals receipt))]
-    (is (false? (get-in receipt [:verdicts 0 :holds?])))
-    (is (= :front-door-identification (:missing-capability refusal)))
-    (is (= 2 (:candidate-set-count refusal)))
-    (is (= [#{} #{:tar}] (mapv :given (:candidate-attempts refusal))))
-    (is (every? #(= [[:smoking :U :cancer]] (:surviving-paths %))
-                (:candidate-attempts refusal)))))
+    (is (= :refusal (get-in receipt [:identification :method])))
+    (is (= :do-calculus-identification (:missing-capability refusal)))
+    (is (pos? (get-in refusal [:backdoor-exhaustion :candidate-set-count])))
+    (is (pos? (get-in refusal [:front-door-exhaustion :candidate-set-count])))
+    (is (every? seq
+                (map :failed-conditions
+                     (get-in refusal
+                             [:front-door-exhaustion :candidate-attempts]))))))
 
 (deftest monty-collider
   (let [receipt (bow/monty-receipt)]
