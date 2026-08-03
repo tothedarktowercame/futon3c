@@ -78,7 +78,14 @@ def _run(args: Sequence[str], *, cwd: Path, check: bool = True) -> subprocess.Co
 
 
 def _git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return _run(("git", "-c", "core.hooksPath=/dev/null", *args), cwd=repo, check=check)
+    # The staged tree belongs to the isolated account and is read from the
+    # operator's side, so git's dubious-ownership guard would refuse it.  Scope
+    # the exemption to this one repository with -c; never write a git config.
+    return _run(
+        ("git", "-c", "core.hooksPath=/dev/null",
+         "-c", f"safe.directory={Path(repo).resolve()}", *args),
+        cwd=repo, check=check,
+    )
 
 
 def _masked(source: str) -> str:
@@ -305,7 +312,8 @@ class LeanOutcomeEvaluator:
         self._temporary = tempfile.TemporaryDirectory(prefix="e2-decision-trace-")
         self.worktree = Path(self._temporary.name) / "repo"
         result = subprocess.run(
-            ["git", "-c", "core.hooksPath=/dev/null", "clone", "--quiet",
+            ["git", "-c", "core.hooksPath=/dev/null",
+             "-c", f"safe.directory={self.source_repo}", "clone", "--quiet",
              "--no-hardlinks", "--no-checkout", str(self.source_repo), str(self.worktree)],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
         )

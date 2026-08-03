@@ -229,8 +229,24 @@ def extract_trace_twice(run_dir: Path, base: str,
     return trace, outputs[0] == outputs[1]
 
 
+def persist_wrapper_output(output: Path, text: str) -> Path:
+    """Keep the runner transcript beside the record, even if the run is rejected.
+
+    A defect that leaves nothing readable cannot be diagnosed: the 2026-08-03
+    control run failed during extraction and its transcript died with the
+    process, so "no commits" and "the runner never started" were
+    indistinguishable after the fact.
+    """
+    output.parent.mkdir(parents=True, exist_ok=True)
+    transcript = output.with_name(output.name + ".wrapper.log")
+    transcript.write_text(text, encoding="utf-8")
+    return transcript
+
+
 def build_record(arm: str, offered: dict[str, Any], isolation: dict[str, Any],
-                 report: str, trace: dict[str, Any], stable: bool) -> dict[str, Any]:
+                 report: str, trace: dict[str, Any], stable: bool,
+                 *, wrapper_exit: int | None = None,
+                 runner_exit: int | None = None) -> dict[str, Any]:
     isolation_result = validate_isolation_receipt(isolation)
     manipulation = manipulation_check(arm, offered)
     attribution = attribution_check(report, surfaced_ids(offered))
@@ -240,6 +256,7 @@ def build_record(arm: str, offered: dict[str, Any], isolation: dict[str, Any],
         "isolation-receipt": isolation_result,
         "trace-hash": trace.get("sha256"), "trace": trace,
         "extractor-stable": stable,
+        "wrapper-exit": wrapper_exit, "runner-exit-code": runner_exit,
         "attribution": attribution, "manipulation": manipulation,
         "accepted": bool(stable and trace.get("attempt-count", 0) >= 1
                          and attribution["passed"] and manipulation["passed"]),
@@ -264,10 +281,26 @@ def run_one(problem: str, base: str, arm: str, output: Path,
                 + wrapped.stdout[-1500:]
             )
         isolation = json.loads(isolation_path.read_text(encoding="utf-8"))
-        # This check intentionally precedes trace extraction and output creation.
-        validate_isolation_receipt(isolation)
+        # This check intentionally precedes the transcript, trace extraction and
+        # output creation: a run that was not isolated never becomes anything.
+        try:
+            validate_isolation_receipt(isolation)
+        except PilotError as error:
+            raise PilotError(f"{error}; wrapper output: {wrapped.stdout[-1500:]}") from error
+        transcript = persist_wrapper_output(output, wrapped.stdout)
+        runner_exit = isolation.get("runner-exit-code")
+        if wrapped.returncode or runner_exit != 0:
+            # Without this the runner's failure is silently laundered into an
+            # empty trace, and the gate reports "no attempts" instead of "the
+            # solver never ran".
+            raise PilotError(
+                f"isolated runner failed (wrapper exit {wrapped.returncode}, "
+                f"runner exit {runner_exit!r}); full transcript at {transcript}\n"
+                + wrapped.stdout[-1500:]
+            )
         trace, stable = extract_trace_twice(RUNS_ROOT / problem, base, extractor)
-        record = build_record(arm, delivery.receipt, isolation, wrapped.stdout, trace, stable)
+        record = build_record(arm, delivery.receipt, isolation, wrapped.stdout, trace, stable,
+                              wrapper_exit=wrapped.returncode, runner_exit=runner_exit)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(canonical_json(record) + b"\n")
     return record
