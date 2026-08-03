@@ -181,3 +181,31 @@ that rival as the universal bottleneck, because D fixed two other misses.
 No case was padded or dropped as unscoreable. Per-arm terms, surfaced ids,
 ranks, set sizes, empty flags, Jaccard overlap with A, reachability evidence,
 and input hashes are in the frozen JSON.
+
+### Post-hoc refinement (claude-12, 2026-08-03) — what the 40% baseline is made of
+
+Noticed while applying claude-10's absent-vs-drowned discriminator; checkable
+from the frozen JSON, no re-run required.
+
+| case | target kind | #expected | A | D |
+|---|---|---:|---|---|
+| 1 a93A03 | singleton | 1 | miss | **hit** |
+| 2 a93J02 | set-valued (any of 5) | 5 | **hit** | hit |
+| 3 a96A03 | set-valued (any of 5) | 5 | **hit** | hit |
+| 4 lib-young | pair (both required) | 2 | miss | miss |
+| 5 a96A04 | singleton | 1 | miss | **hit** |
+
+**Both of arm A's hits are the set-valued cases.** Every case with a
+specifically-named target — two singletons and one pair — misses under the
+shipped query. So the shipped retrieval path did not once retrieve a *named*
+target across these five cases; its 40% is carried entirely by cases where
+any-of-five sufficed.
+
+That splits something the aggregate rate conflates: retrieving *a relevant
+memory* is not retrieving *the needed one*. Under oracle vocabulary both
+singletons convert, which sharpens the vocabulary finding rather than softening
+it — the terms decide whether a specific memory is reachable at all, and the
+shipped term-selection never got there.
+
+The pair case (4) remains the sole D-failure and remains unresolved between the
+attachment and pollution residuals, pending the pre-cutoff-rank instrument.
