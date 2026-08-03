@@ -17,6 +17,10 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
+            ;; used at write-defer-manifest; absent from this list at HEAD, so
+            ;; the ns only loaded when something else had already pulled pprint
+            ;; in — full-suite runs worked, isolated runs of this ns did not.
+            [clojure.pprint]
             [clojure.string :as str]
             [futon3c.peripheral.tools :as tools]
             [futon3c.peripheral.street-sweeper-shapes :as sss]))
@@ -226,12 +230,29 @@
     (catch Throwable t
       {:ok false :error (str "bell-emit failed: " (.getMessage t))})))
 
+(defn- post-consent-gate-bell!
+  "Default transport: POST the intent-handshake bell to the live Agency."
+  [body]
+  (http/post (str futon3c-base "/api/alpha/bell")
+             {:headers {"Content-Type" "application/json"}
+              :body (json/generate-string body)}))
+
 (defn consent-gate-emit
   "Emits an intent-handshake bell + returns a :consent-gate-event-id, AND
    registers the cg-id → {repo, files-allowed, bound-at} binding so INV-1
    can structurally verify that subsequent substantive tool calls match
-   the bound repo + are within the bound file allowlist."
-  [{:keys [repo intent files commit-message-draft success-criteria] :as payload}]
+   the bound repo + are within the bound file allowlist.
+
+   The bell transport is injectable via `:post-bell`, defaulting to the live
+   POST. Tests MUST inject a no-op: the recipient is a hardcoded live agent,
+   so an unmocked call from the suite delivers real bells to a real inbox
+   every time anyone runs the full peripheral suite (12 such bells reached
+   claude-10 on 2026-08-03 before this was found). Injection follows the
+   house idiom for side-effecting deps — cf. memory_lifecycle.clj's
+   {:keys [fetch-hyperedges post-hyperedge] :or {...}}."
+  ([payload] (consent-gate-emit payload {}))
+  ([{:keys [repo intent files commit-message-draft success-criteria] :as payload}
+    {:keys [post-bell] :or {post-bell post-consent-gate-bell!}}]
   (cond
     (not (valid-repo? repo))
     {:ok false :error (str "consent-gate-emit: invalid repo " (pr-str repo))
@@ -250,9 +271,7 @@
                     :sweeper-event :sweeper/consent-gate-emit
                     :consent-gate-event-id event-id
                     :consent-gate-payload payload}
-              resp (try (http/post (str futon3c-base "/api/alpha/bell")
-                                   {:headers {"Content-Type" "application/json"}
-                                    :body (json/generate-string body)})
+              resp (try (post-bell body)
                         (catch Throwable t
                           ;; Bell-emit failure does not undo binding registration:
                           ;; the cg-id is locally bound for this cycle even if the
@@ -268,7 +287,7 @@
                              :ttl-ms sss/cg-binding-ttl-ms
                              :payload payload}})
         (catch Throwable t
-          {:ok false :error (str "consent-gate-emit failed: " (.getMessage t))})))))
+          {:ok false :error (str "consent-gate-emit failed: " (.getMessage t))}))))))
 
 ;; =============================================================================
 ;; Stage-time invariant application
