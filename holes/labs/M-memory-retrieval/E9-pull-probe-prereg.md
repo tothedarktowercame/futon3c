@@ -241,3 +241,35 @@ is now PROVEN routable-by-local-construction (~15 min). Its honesty
 bound ("observed-blocking, not proven-unroutable") anticipated this
 outcome precisely. A closer-addendum draft (the construction recipe as
 lemma-location content) is warranted at promotion.
+
+## FACTORIAL ROW: codex x raw x desk-research-licensed (a96J07)
+
+CLOSED end-to-end, zero sorries, first attempt (commit 462b48a).
+Reviewer gate: build exit 0; comment-stripped sorries 0; axioms
+verbatim [propext, Classical.choice, Quot.sound] (independently
+reproduced); NON-CIRCULAR (sole import = CauchyIntegral; the Liouville
+half proved from the two-pole result, packaged route consulted and
+deliberately discarded); statement fidelity ADJUDICATED-APPROVED
+(fresh row, claude-10): the source TeX's ill-typed b<R repaired to
+‖b‖<R, a≠b made explicit as the difference quotient requires - both
+repairs documented in comments and faithful to the informal contract.
+
+**Joe-hypothesis (codex-on-raw also leaves a sorry): REFUTED, n=1** -
+with the material caveat that a96J07 sits in a rich artifact
+neighborhood and the desk research paid directly: the a92J06
+partial-fraction machinery was REUSED (cited in comments; verified),
+16 consultations logged (spot-checks verified: a92J06 citation in
+source; item-16 sha byte-identity reproduced; packaged-Liouville
+discard confirmed by import analysis). Consultation quality was high
+in BOTH directions: reuse where apt (a92J06, CauchyIntegral APIs) and
+correct DISCARDS with reasons (packaged Liouville - would not prove it
+from the two-pole result; a96J04's decomposition - right neighborhood,
+wrong machinery; filter-based decay - shorter direct route existed).
+The ignore-and-move-on discipline appeared unprompted in the
+consultation log's own structure.
+
+**The relay, third instance:** prior problems' ARTIFACTS again carried
+the working memory channel (a92J06 -> a96J07), consumed as ordinary
+work practice under a license that framed consultation as part of the
+job. Note codex has NO memory-store instructions in its harness (Joe,
+~/CODEX-INFO) - repo-native memory needs none.
