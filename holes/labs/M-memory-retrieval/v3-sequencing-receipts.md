@@ -28,6 +28,16 @@ Companion EDN: `v3-sequencing-receipts.edn`.
    offer analysis: both exact CI violations (v5: p=0.012; v6:
    p=2.4e-9) sit on the surfaced→offered→used chain, with
    "instrument field ≠ node" as a live reading for each.
+5. **Loud ranking fallback (added post-rank-rerun):** receipt-ranking
+   (Ψ) is INTERMITTENT — under store backpressure the ranking-stats
+   fetch degrades silently to base ordering against an identical
+   snapshot (two-run evidence, same store sha, different score-kind).
+   Until the fallback is loud in the receipt, any Ψ-dependent arm
+   difference is confounded with store load — a nuisance NO earlier
+   sequencing receipt carried. Silent degradation is worse than
+   absence: absence shows in a receipt, degradation does not.
+   (Spec-side: candidate delta v8, store-load as latent cause of
+   ranking-mode, registered pending this instrument.)
 
 ## SEQ-1 — Settled by E8 (frozen data; no arms to spend)
 
