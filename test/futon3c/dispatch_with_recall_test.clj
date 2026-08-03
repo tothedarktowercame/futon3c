@@ -140,6 +140,106 @@
                        "[dispatch-recall-outcome=completed-empty]"))
         (is (.contains packet "genuine empty retrieval result"))))))
 
+(deftest memory-channel-push-preserves-pre-channel-packet-bytes
+  (let [recall-result {:status :recall-empty :memories []}
+        expected
+        (str
+         "DISPATCH-TIME RECALL STATUS\n"
+         "[dispatch-recall-outcome=completed-empty]\n"
+         "Recall COMPLETED but found no reviewed memories to surface. "
+         "Only this status is a genuine empty retrieval result.\n"
+         "OUTCOME-RECEIPT REQUIREMENT: copy the bracketed "
+         "dispatch-recall-outcome value verbatim into the final Memory usage "
+         "section. Do not report an incomplete recall as \"none surfaced\" or "
+         "as a terrain gap. When memories are supplied, give EACH surfaced "
+         "memory id exactly one line in that section: `USED <id>: <mechanism>` "
+         "or `IGNORED <id>: <reason>`. Missing per-id attribution makes the "
+         "outcome incomplete and excludes it from use endpoints.\n\n\n"
+         "--- PROBLEM PACKET ---\n\nPACKET")
+        default-channel (:memory-channel (dispatch/parse-args []))
+        explicit-channel
+        (:memory-channel
+         (dispatch/parse-args ["--memory-channel" ":push"]))]
+    (is (= :push default-channel explicit-channel))
+    (is (= expected (dispatch/assemble-packet "PACKET" recall-result)))
+    (is (= expected
+           (dispatch/assemble-packet
+            "PACKET" recall-result explicit-channel)))))
+
+(deftest memory-channel-packet-shapes-and-receipts-are-recorded
+  (let [memory {:memory/id "e-channel-memory"
+                :memory/body {:name "channel memory"
+                              :body {:summary "channel summary"}}}
+        recall-result {:status :ok
+                       :query {:query "channel query"}
+                       :memories [memory]}
+        packets
+        (into {}
+              (map (fn [channel]
+                     [channel
+                      (dispatch/assemble-packet
+                       "PACKET" recall-result channel)]))
+              [:push :push+pull :pull-only :none])]
+    (is (str/includes? (:push packets) "e-channel-memory"))
+    (is (not (str/includes? (:push packets)
+                            dispatch/memory-pull-invitation-version)))
+    (is (str/includes? (:push+pull packets) "e-channel-memory"))
+    (is (str/includes? (:push+pull packets)
+                       dispatch/memory-pull-invitation-version))
+    (is (not (str/includes? (:pull-only packets)
+                            "DISPATCH-TIME RECALL STATUS")))
+    (is (not (str/includes? (:pull-only packets) "e-channel-memory")))
+    (is (str/includes? (:pull-only packets)
+                       dispatch/memory-pull-invitation-version))
+    (is (= "PACKET" (:none packets)))
+    (doseq [channel [:push :push+pull :pull-only :none]]
+      (let [entry
+            (dispatch/offered-evidence
+             {:problem "a-test"
+              :from "ground-control"
+              :memory-channel channel}
+             (if (contains? #{:push :push+pull} channel)
+               recall-result
+               {:status :not-invoked
+                :reason :memory-channel-no-push
+                :query {:query "channel query"}
+                :memories []})
+             "job-1" "session-1")]
+        (is (= channel (get-in entry [:body :memory-channel])))
+        (is (= dispatch/memory-pull-invitation-version
+               (get-in entry
+                       [:body :memory-pull-invitation-version])))))))
+
+(deftest dry-run-exercises-every-memory-channel-without-dispatch
+  (let [recall-calls (atom [])]
+    (with-out-str
+      (with-redefs [dispatch/safe-recall
+                    (fn [opts _]
+                      (swap! recall-calls conj (:memory-channel opts))
+                      {:status :recall-empty :memories []})]
+        (doseq [channel [:push :push+pull :pull-only :none]]
+          (let [result
+                (dispatch/run-dispatch!
+                 {:problem "a-test"
+                  :problem-root "/definitely/not/a/problem/root"
+                  :to "codex-test"
+                  :from "ground-control"
+                  :memory-channel channel
+                  :dry-run? true
+                  :allow-thin? true}
+                 "PROBLEM PACKET")]
+            (is (true? (:dry-run? result)))
+            (is (= channel
+                   (get-in result [:evidence :body :memory-channel])))))))
+    (is (= [:push :push+pull] @recall-calls)
+        "no-push arms do not execute dispatch-time retrieval")))
+
+(deftest memory-channel-cli-rejects-unknown-arms
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"must be one of"
+       (dispatch/parse-args ["--memory-channel" ":improvised"]))))
+
 (deftest dispatch-path-surfaces-reviewed-content-match-in-packet
   (let [reviewed-content
         {:memory/id "e-reviewed-content"

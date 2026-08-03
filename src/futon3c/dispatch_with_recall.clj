@@ -16,6 +16,22 @@
            [java.util UUID]))
 
 (def default-limit 5)
+(def default-memory-channel :push)
+(def memory-pull-invitation-version "memory-pull-invitation-v1")
+
+(def ^:private memory-channels
+  #{:push :push+pull :pull-only :none})
+
+(def memory-pull-invitation
+  (str
+   "MID-SESSION MEMORY RETRIEVAL\n"
+   "[memory-pull-invitation-version=" memory-pull-invitation-version "]\n"
+   "The memory store is searchable during this run with memory_search, "
+   "pattern_memory, evidence_graph, library_search, psr_search, and "
+   "memory_record. Search when you lack a lemma or an approach, including "
+   "after work has begun, rather than treating dispatch-time recall as the "
+   "only retrieval point. In the final Memory usage section, give exactly "
+   "one USED or IGNORED line for every memory id surfaced by these operations."))
 
 ;; RAISED 30000 -> 240000 on 2026-07-31 by claude-9, Joe-authorised.
 ;;
@@ -105,12 +121,21 @@
     (catch NumberFormatException _
       (throw (ex-info (str label " must be a number") {:value value})))))
 
+(defn- parse-memory-channel [value]
+  (let [channel (keyword (str/replace value #"^:" ""))]
+    (when-not (contains? memory-channels channel)
+      (throw (ex-info
+              "--memory-channel must be one of :push, :push+pull, :pull-only, :none"
+              {:value value})))
+    channel))
+
 (defn parse-args
   "Parse the deliberately small CLI without adding another dependency."
   [args]
   (loop [remaining args
          opts {:limit default-limit
                :recall-timeout-ms default-recall-timeout-ms
+               :memory-channel default-memory-channel
                :base default-agency-base
                :mission default-mission
                :from "ground-control"
@@ -134,7 +159,8 @@
 
         (contains? #{"--problem" "--to" "--from" "--base" "--mission"
                      "--subject" "--terrain" "--substrate-base" "--limit"
-                     "--recall-timeout-ms" "--receipt-alpha" "--withhold"}
+                     "--recall-timeout-ms" "--receipt-alpha" "--withhold"
+                     "--memory-channel"}
                    arg)
         (let [value (second remaining)]
           (when (or (nil? value) (str/starts-with? value "--"))
@@ -149,6 +175,8 @@
              "--mission" (assoc opts :mission value)
              "--subject" (update opts :subjects conj value)
              "--withhold" (update opts :withhold-ids conj value)
+             "--memory-channel"
+             (assoc opts :memory-channel (parse-memory-channel value))
              "--terrain" (assoc opts :terrain value)
              "--substrate-base" (assoc opts :substrate-base value)
              "--limit" (assoc opts :limit (positive-int arg value))
@@ -174,6 +202,7 @@
    "  --recall-timeout-ms N     total recall budget (default 240000)\n"
    "  --receipt-alpha N         use-rate boost weight, 0..1 (default 0.5)\n"
    "  --no-receipt-ranking      disable use-receipt ranking\n"
+   "  --memory-channel MODE     :push (default), :push+pull, :pull-only, or :none\n"
    "  --substrate-base URL      authoritative substrate override\n"
    "  --base URL                Agency base (default http://localhost:7070)\n"
    "  --from ID                 dispatch/receipt author (default ground-control)\n"
@@ -904,8 +933,7 @@
      "attribution makes the outcome incomplete and excludes it from use endpoints."
      "\n")))
 
-(defn assemble-packet
-  "Attach typed recall status and any warranted memories to the runner packet."
+(defn- assemble-push-packet
   [packet recall-result]
   (str (recall-status-block recall-result)
        (when-let [memories (seq (:memories recall-result))]
@@ -919,10 +947,41 @@
        "\n\n--- PROBLEM PACKET ---\n\n"
        packet))
 
+(defn assemble-packet
+  "Assemble the selected memory-channel packet.
+
+  The two-argument arity and `:push` branch preserve the pre-channel packet
+  bytes exactly. Pull invitations are fixed, versioned experimental material."
+  ([packet recall-result]
+   (assemble-packet packet recall-result default-memory-channel))
+  ([packet recall-result memory-channel]
+   (case memory-channel
+     :push (assemble-push-packet packet recall-result)
+     :push+pull
+     (str (recall-status-block recall-result)
+          (when-let [memories (seq (:memories recall-result))]
+            (str "\nPOTENTIALLY RELEVANT MEMORIES "
+                 "(from prior sessions — use your judgment)\n\n"
+                 (str/join "\n\n"
+                           (map-indexed
+                            (fn [index memory]
+                              (render-memory (inc index) memory))
+                            memories))))
+          "\n\n" memory-pull-invitation
+          "\n\n--- PROBLEM PACKET ---\n\n"
+          packet)
+     :pull-only
+     (str memory-pull-invitation
+          "\n\n--- PROBLEM PACKET ---\n\n"
+          packet)
+     :none packet
+     (throw (ex-info "unsupported memory channel"
+                     {:memory-channel memory-channel})))))
+
 (defn offered-evidence
   "Build the persisted offered-half record using the shared use-receipt
   contract. With no memories this is still a valid recall-empty receipt."
-  [{:keys [problem from]} recall-result job-id session-id]
+  [{:keys [problem from memory-channel]} recall-result job-id session-id]
   (let [memory-ids (mapv :memory/id (:memories recall-result))
         withheld-ids (vec (:withheld-memory-ids recall-result))
         surfaced-at (str (Instant/now))
@@ -967,6 +1026,9 @@
      :session-id session-id
      :body (cond-> {:event :memory-use
                     :phase :offered
+                    :memory-channel (or memory-channel default-memory-channel)
+                    :memory-pull-invitation-version
+                    memory-pull-invitation-version
                     :recall-system
                     (or (get-in recall-result [:query :recall-system])
                         recall-system)
@@ -1070,14 +1132,26 @@
                          " chars); pass --allow-thin to override")
                     {:length (count packet)}))))
 
+(defn- no-push-recall-result
+  [opts packet]
+  {:status :not-invoked
+   :reason :memory-channel-no-push
+   :query (recall-query opts packet
+                        (read-bpm-terrains (default-terrain-readme)))
+   :memories []})
+
 (defn run-dispatch!
   "Execute one CLI dispatch. Kept public for focused tests."
   [opts packet]
   (require-input! opts packet)
-  (let [recall-result (apply-withholding
-                       (safe-recall opts packet)
-                       (:withhold-ids opts))
-        assembled (assemble-packet packet recall-result)]
+  (let [memory-channel (or (:memory-channel opts) default-memory-channel)
+        recall-result
+        (if (contains? #{:push :push+pull} memory-channel)
+          (apply-withholding
+           (safe-recall opts packet)
+           (:withhold-ids opts))
+          (no-push-recall-result opts packet))
+        assembled (assemble-packet packet recall-result memory-channel)]
     (if (:dry-run? opts)
       (let [evidence (offered-evidence
                       opts recall-result
