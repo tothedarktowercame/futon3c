@@ -311,10 +311,25 @@ class LeanOutcomeEvaluator:
         self.source_repo = source_repo.resolve()
         self._temporary = tempfile.TemporaryDirectory(prefix="e2-decision-trace-")
         self.worktree = Path(self._temporary.name) / "repo"
+        # `git clone <local path>` runs upload-pack as a child that does not
+        # inherit the scoped safe.directory exemption, so cloning the isolated
+        # account's tree directly is refused however the exemption is passed.
+        # Bundle the history out with a single git process — which does honour
+        # it — and clone from the operator-owned bundle instead.  The bundle
+        # carries the baseline tag the extractor resolves --base against.
+        bundle = Path(self._temporary.name) / "history.bundle"
+        bundled = _run(
+            ("git", "-c", "core.hooksPath=/dev/null",
+             "-c", f"safe.directory={self.source_repo}",
+             "bundle", "create", str(bundle), "--all"),
+            cwd=self.source_repo, check=False,
+        )
+        if bundled.returncode != 0:
+            self.close()
+            raise TraceError(f"could not bundle the staged history:\n{bundled.stdout}")
         result = subprocess.run(
-            ["git", "-c", "core.hooksPath=/dev/null",
-             "-c", f"safe.directory={self.source_repo}", "clone", "--quiet",
-             "--no-hardlinks", "--no-checkout", str(self.source_repo), str(self.worktree)],
+            ["git", "-c", "core.hooksPath=/dev/null", "clone", "--quiet",
+             "--no-checkout", str(bundle), str(self.worktree)],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
         )
         if result.returncode != 0:
