@@ -1591,3 +1591,109 @@ not scope. Census: `deep-research-census.md`, same directory.
 
 Ownership: architecture + review = Claude owner; substantial coding
 slices = Codex via bell+park; specs and gates per AGENTS.md.
+
+## Application to theorem-proving capability construction (2026-08-03, Joe + claude-10)
+
+M-diagramprover's machinery is not only for proving APM/BPM theorems —
+it is the right frame for holding the whole "co-proof" programme
+together, because the programme's own capability claim is itself a
+theorem to be proved **by construction**.
+
+### The top-level claim, read constructively
+
+Take the premise "**all APM problems are solved**." Read
+constructively (BHK), this is not a census of solved problems — it is
+the claim that a PROCEDURE exists which, handed any APM problem,
+produces a solution, together with witnesses that each component of
+the procedure does its job. The relay pipeline (starter → boundary
+artifact → closer chain, with memory and desk research in the loop)
+is the constructive content of the claim. The proof updates as
+certificates land; it is never re-argued, only re-certified.
+
+### The skeleton: sub-claims as typed holes with contracts
+
+The high-level proof is deliberately small (~a dozen nodes). Each
+sub-claim is a hole with a contract: a statement, a current warrant,
+attached certificates, and a named upgrade path. Initial skeleton with
+the certificates already banked on 2026-08-03:
+
+1. **Extra resources can fill Mathlib holes.** Witnesses: a96J04
+   (interval-decomposition gap, proved locally in ~15 min, commit
+   33575db, 6-step gate); a96J07 (local Liouville from the two-pole
+   result, commit 462b48a, non-circularity verified by import
+   analysis). Open instance: a96J08 (rectangular-contour residue
+   theorem; boundary documented, commit 37192e1). Warrant: n=2
+   positive, 1 open hole.
+2. **Work transports between agents.** Mechanism: the
+   boundary-comment artifact (the relay's transport layer). Witnesses:
+   E9→J04 (the closer's 15-minute path was paved by the starter's
+   boundary comment), a92J06→a96J07 (cross-problem reuse, cited in
+   source), protocol now specified in the store
+   (e-e9-a96j04-localize-an-observed-blocker-at-one-sorry). Warrant:
+   n=3.
+3. **The memory store records learning.** Witnesses: 12 reviewed,
+   tagged, attached memories from one day's runs; scribe protocol with
+   hunger audit (demand-side tagging); approval discipline
+   (author≠reviewer, operator approval retired 08-03). Warrant:
+   write-side strong; consumption-side n=1 (one retrieval correctly
+   graded marginal in E10 phase A).
+4. **Agents consult memory when instructed.** Witness: E10 (same
+   agent: 0 lookups under invitation, 21 under the two-part frame —
+   the propensity gap closes with task framing). Warrant: n=1
+   controlled contrast, preregistered (E9-pull-probe-prereg.md).
+5. **Retrieval serves the need when consulted.** Current warrant:
+   WEAK — the four-layer anatomy (propensity/framing/affordance/
+   index-reach) shows layers 2–4 are mechanical; repairs 2–4 in
+   claude-12's queue; hunger audit + demand-side tagging are the
+   upgrade path. Honest state: the relay currently runs on
+   repo-memory; the store amortizes ACROSS chains, not within them.
+6. **Capability transports from APM to held-out BPM.** This is the
+   headline meter and it is formally a TRANSPORTABILITY claim
+   (selection diagrams; E-book-of-why-complete B1, promoted 08-03).
+   Warrant: none yet; identification requirement named.
+7. **Outcomes are mechanically scoreable.** Contract =
+   endpoint-preregistration-draft.md (delta-form endpoint,
+   executed-witness-only, statement-fidelity with voiding); capture in
+   flight (§5 fields). Warrant: designed, capture pending.
+8. **The process learns at the ability level.** Mechanism: practice
+   memories → packet-template deltas (the delta contract generalized
+   from specs to behavior). Warrant: designed 08-03, not yet built;
+   today's ability transfers (event-anchored lookups, ignore-and-
+   move-on, boundary protocol) all traveled through hand-authored
+   packets.
+
+### Heterogeneous warrants are the point, not a defect
+
+Some nodes are discharged mechanically (lake exit 0, axiom-clean);
+some by replication (the E8 rank rerun — "frozen and replicated
+license different things"); some by scientific induction with honesty
+bounds (n=1/n=2 markers); some are registered candidates; some are
+refusals (proved-impossible vs not-yet-capable, kept distinct). A
+capability proof whose nodes carry graded warrants is not a weaker
+proof — it is an honest one (the etik reading: the document marks
+absence of certification precisely). Inductions enter the
+construction AS constructions, with their evidence grade on their
+sleeve.
+
+### The engine's role
+
+The claim-dependency structure is a DAG spec in the same interchange
+format as the retrieval-stage spec; certificate updates follow the
+deltas-not-silent-edits revision contract (the retrieval spec's
+ten-delta trail on 2026-08-03 is the working preview of a capability
+proof revising itself under evidence); causal sub-claims (arm
+contrasts, transport, mediation) get their identification receipts
+from the engine, with its refusal discipline. The sequencing receipts
+(v3-sequencing-receipts.md) are this section's method applied to the
+experiment plan itself: instruments before arms, ordered by computed
+constraint.
+
+### Update discipline
+
+As runs land, their receipts attach to the relevant nodes; a node's
+warrant upgrades only by certificate, never by narrative. The
+pipeline generates certificates as a byproduct of ordinary work (the
+chase and the cohort are the same instrumented process). The document
+that instantiates this section — the capability-proof skeleton with
+live certificate links — is the next M-diagramprover artifact
+(queued 2026-08-03; the morning opener).
