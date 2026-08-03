@@ -179,3 +179,39 @@
     (let [status (zai/transcript-persistence-status)]
       (is (= (inc before) (:failure-count status)))
       (is (string? (:last-error status))))))
+
+(deftest refused-memory-record-persists-full-violation-reason
+  (let [reason (str "EvidenceEntry subject ref/type rejected: "
+                    (apply str (repeat 400 "x")) " END-OF-REASON")
+        result {:ok false
+                :error {:error/code :invalid-entry
+                        :error/message "EvidenceEntry did not conform to shape"
+                        :error/context
+                        {:receipt
+                         {:ok false
+                          :error/code :invalid-entry
+                          :invariant/violation
+                          {:invariant "I-evidence-per-turn"
+                           :kind :shape
+                           :reason reason}}}}}
+        agent-content (#'zai/result-string result)
+        executed [{:error? true
+                   :result result
+                   :message {:content agent-content}}]
+        calls (#'zai/transcript-calls
+               [{:name "memory_record" :input {:name "bad-ref"}}]
+               executed)
+        store (atom {:entries {} :order []})]
+    (#'zai/persist-round!
+     {:evidence-store store :agent-id "zai-1" :sid "sid-refusal"
+      :turn-id "turn-refusal" :profile :zai :round 1 :text "" :calls calls})
+    (let [entry (get-in @store [:entries (first (:order @store))])
+          call (get-in entry [:evidence/body :calls 0])]
+      ;; The model-facing result uses the 12k cap, not the 240-char transcript
+      ;; preview, so this incident's diagnostic reached the agent in full.
+      (is (str/includes? agent-content "END-OF-REASON"))
+      (is (str/includes? (get-in call [:result :preview]) "…[+"))
+      ;; The durable record separately preserves the structured refusal.
+      (is (= :invalid-entry (get-in call [:refusal :error/code])))
+      (is (= :shape (get-in call [:refusal :invariant/violation :kind])))
+      (is (= reason (get-in call [:refusal :invariant/violation :reason]))))))

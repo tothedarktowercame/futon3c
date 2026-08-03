@@ -693,6 +693,35 @@
      :chars (count s)
      :preview (transcript-truncate s transcript-preview-cap)}))
 
+(defn- refusal-diagnostic
+  "Keep structured refusal facts outside the display-grade result preview.
+   Success records remain digest-only; this is deliberately error-path-only."
+  [result]
+  (let [error-map (when (map? (:error result)) (:error result))
+        context (:error/context error-map)
+        receipt (:receipt context)
+        violation (or (:invariant/violation result)
+                      (:invariant/violation error-map)
+                      (:invariant/violation context)
+                      (:invariant/violation receipt))
+        fields (or (:fields context)
+                   (get-in receipt [:error/context :fields]))
+        code (or (:error/code result)
+                 (:error/code error-map)
+                 (:error/code receipt))
+        message (or (:error/message result)
+                    (:error/message error-map)
+                    (:error/message receipt)
+                    (when (string? (:error result)) (:error result)))]
+    (cond-> {}
+      code (assoc :error/code code)
+      message (assoc :error/message message)
+      fields (assoc :fields fields)
+      violation
+      (assoc :invariant/violation
+             (select-keys violation
+                          [:invariant :kind :reason :idempotent?])))))
+
 (defonce ^:private !transcript-persistence-status
   (atom {:ok-count 0 :failure-count 0 :last-error nil :last-evidence-id nil}))
 
@@ -844,14 +873,16 @@ CALLS contains maps of tool name, arguments, and result digest."
   [details executed]
   (mapv (fn [detail ex]
           (let [error? (:error? ex)
-                result-map (:result ex)]
+                result-map (:result ex)
+                refusal (when error? (refusal-diagnostic result-map))]
             (cond-> {:tool (:name detail)
                      :args (transcript-truncate (pr-str (:input detail)) transcript-args-cap)
                      :result (transcript-digest (get-in ex [:message :content]))}
               error? (assoc :error? true
                             :error-text (transcript-truncate
                                          (str (or (:error result-map) "unknown error"))
-                                         transcript-preview-cap)))))
+                                         transcript-preview-cap))
+              (seq refusal) (assoc :refusal refusal))))
         details executed))
 
 (def ^:private tool-round-budget

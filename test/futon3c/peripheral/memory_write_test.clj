@@ -271,3 +271,29 @@
     (let [r (call {:name "valid" :body "valid content"
                    :subjects [{:ref/type "mission" :ref/id "M-typed-memories"}]})]
       (is (true? (:ok r)) (pr-str (:error r))))))
+
+(deftest rejected-zai-memory-payload-names-invalid-artifact-ref
+  ;; Exact 2026-08-03 a96J01 payload. Structurally present fields are not
+  ;; enough: :git-commit is outside EvidenceEntry's ArtifactRefType enum.
+  (let [store (empty-store)
+        receipt
+        (memory-write/record-memory!
+         (assoc test-ctx :agent-id "zai-1"
+                         :session-id "zai-bec940299024470eb815607f8b13b650"
+                         :evidence-store store)
+         {:name "a96j01-tent-disjoint-counterexample"
+          :kind "feedback"
+          :body "...via summable_nat_add_iff. Commit: d1606d0."
+          :hook "APM a96J01 or Weierstrass M-test converse formalization in Lean 4"
+          :why "Prior candidate sessions (6 of them) all left sorries; ..."
+          :subjects [{:ref/id "d1606d0" :ref/type "git-commit"}]})
+        fields (get-in receipt [:error :error/context :fields])
+        subject-error (some #(when (= :subjects (:field %)) %) fields)]
+    (is (false? (:ok receipt)))
+    (is (= :invalid-memory-payload (get-in receipt [:error :error/code])))
+    (is (some? subject-error))
+    (is (str/includes? (:want subject-error) "ArtifactRef"))
+    (is (= :git-commit
+           (get-in subject-error [:got 0 :subject :ref/type])))
+    (is (contains? (get-in subject-error [:got 0 :validation]) :ref/type))
+    (is (empty? (:entries @store)))))

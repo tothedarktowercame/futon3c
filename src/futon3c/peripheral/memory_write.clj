@@ -7,6 +7,7 @@
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.social.shapes :as shapes]
             [org.httpkit.client :as http])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -66,37 +67,84 @@
   [payload]
   (select-keys payload [:name :hook :kind :body :why :how-to-apply]))
 
-(defn- valid-subject?
-  [subject]
-  (and (map? subject)
-       (keyword? (:ref/type subject))
-       (string? (:ref/id subject))
-       (not (str/blank? (:ref/id subject)))))
+(defn- memory-entry
+  [{:keys [agent-id session-id]} payload evidence-id]
+  (cond-> {:evidence/id evidence-id
+           :evidence/subject (first (:subjects payload))
+           :evidence/type :memory
+           :evidence/claim-type :assert
+           :evidence/at (now-str)
+           :evidence/body (entry-body payload)
+           :evidence/tags [:memory :memory/assert]}
+    agent-id (assoc :evidence/author (str agent-id))
+    session-id (assoc :evidence/session-id (str session-id))))
+
+(defn- validation-messages
+  [validation-error]
+  (->> (tree-seq coll? seq validation-error)
+       (filter string?)
+       distinct
+       (str/join "; ")))
+
+(defn- subject-contract-errors
+  [subjects]
+  (let [bad (keep-indexed
+             (fn [index subject]
+               (when-let [validation (or (:error (shapes/validate shapes/ArtifactRef
+                                                                   subject))
+                                         (when (and (map? subject)
+                                                    (string? (:ref/id subject))
+                                                    (str/blank? (:ref/id subject)))
+                                           {:ref/id ["should be a non-blank string"]}))]
+                 {:index index :subject subject :validation validation}))
+             subjects)]
+    (when (seq bad)
+      [{:field :subjects
+        :want (str "every subject must satisfy EvidenceEntry's ArtifactRef contract: "
+                   (validation-messages (mapv :validation bad)))
+        :got (vec bad)}])))
+
+(defn- entry-contract-errors
+  [entry]
+  (let [validation (:error (shapes/validate shapes/EvidenceEntry entry))]
+    (->> validation
+         ;; Subject errors are reported against every payload subject above;
+         ;; the EvidenceEntry itself stores only the primary subject.
+         (remove (fn [[field _]] (= :evidence/subject field)))
+         (mapv (fn [[field error]]
+                 {:field (case field
+                           :evidence/author :context/agent-id
+                           :evidence/body :body
+                           :evidence/id :internal/evidence-id
+                           field)
+                  :want (str "must satisfy EvidenceEntry contract: "
+                             (validation-messages error))
+                  :got (get entry field)})))))
 
 (defn- payload-errors
-  "Field-level validation BEFORE minting any write. The store's EvidenceEntry
-   shape requires a non-nil :evidence/subject, and a memory without :name or
-   :body is unusable at recall time — but until 2026-07-25 a payload missing
-   these reached the store and bounced as an opaque
+  "Field-level validation BEFORE issuing any write. Validate the exact entry
+   against shapes/EvidenceEntry (including ArtifactRef), then add the memory
+   interface's recall-time requirements for :name, :body, and :subjects.
+
+   Until 2026-07-25 a payload missing these reached the store and bounced as an opaque
    \"EvidenceEntry did not conform to shape\" (zai-1, 2026-07-24T21:50Z),
    which the recording agent cannot act on. Return the missing fields so the
    agent can self-correct in its next call."
-  [{:keys [name body subjects]}]
-  (cond-> []
-    (not (and (string? name) (not (str/blank? name))))
-    (conj {:field :name :want "non-blank string — short recall handle"})
+  [ctx {:keys [name body subjects] :as payload} evidence-id]
+  (let [interface-errors
+        (cond-> []
+          (not (and (string? name) (not (str/blank? name))))
+          (conj {:field :name :want "non-blank string — short recall handle"})
 
-    (or (nil? body) (and (string? body) (str/blank? body)))
-    (conj {:field :body :want "the memory content (non-blank string or map)"})
+          (or (nil? body) (and (string? body) (str/blank? body)))
+          (conj {:field :body :want "the memory content (non-blank string or map)"})
 
-    (not (seq subjects))
-    (conj {:field :subjects
-           :want "at least one {:ref/type <keyword> :ref/id <string>} naming what the memory is about"})
-
-    (and (seq subjects) (not (every? valid-subject? subjects)))
-    (conj {:field :subjects
-           :want "every subject needs :ref/type (keyword) and non-blank :ref/id (string)"
-           :got (vec (remove valid-subject? subjects))})))
+          (not (seq subjects))
+          (conj {:field :subjects
+                 :want "at least one EvidenceEntry ArtifactRef {:ref/type <allowed keyword> :ref/id <string>}"}))
+        subject-errors (when (seq subjects) (subject-contract-errors subjects))
+        contract-errors (entry-contract-errors (memory-entry ctx payload evidence-id))]
+    (vec (concat interface-errors subject-errors contract-errors))))
 
 (defn- resolve-distill
   [{:keys [turn-id round]} distill]
@@ -217,7 +265,7 @@
         ;; creation, and any later repair can therefore reproduce this id.
         hx-id (str "hx-mem-" (subs evidence-id 2))
         payload (normalize-payload raw-payload)
-        field-errors (payload-errors payload)]
+        field-errors (payload-errors ctx payload evidence-id)]
     (if (seq field-errors)
       {:ok false
        :id evidence-id
@@ -232,20 +280,11 @@
       (record-memory-validated! ctx payload evidence-id hx-id))))
 
 (defn- record-memory-validated!
-  [{:keys [agent-id session-id evidence-store] :as ctx} payload evidence-id hx-id]
-  (let [primary-subject (first (:subjects payload))
-        ;; Never assoc nil identity keys: EvidenceEntry rejects present-but-nil
+  [{:keys [evidence-store] :as ctx} payload evidence-id hx-id]
+  (let [;; Never assoc nil identity keys: EvidenceEntry rejects present-but-nil
         ;; (live failure 2026-07-22 — nil session-id killed all 8 of zai-3's
         ;; memory_record attempts). Absent keys pass; nil values do not.
-        entry (cond-> {:evidence/id evidence-id
-                       :evidence/subject primary-subject
-                       :evidence/type :memory
-                       :evidence/claim-type :assert
-                       :evidence/at (now-str)
-                       :evidence/body (entry-body payload)
-                       :evidence/tags [:memory :memory/assert]}
-                agent-id (assoc :evidence/author (str agent-id))
-                session-id (assoc :evidence/session-id (str session-id)))
+        entry (memory-entry ctx payload evidence-id)
         entry-start (System/nanoTime)
         entry-receipt (boundary/append! evidence-store entry)
         entry-ms (elapsed-ms entry-start)]
