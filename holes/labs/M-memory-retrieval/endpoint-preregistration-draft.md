@@ -123,6 +123,9 @@ Per dispatch, written by the sweeper at sweep time:
 :endpoint/axiom-verdicts     per named declaration (§1's naming rule)
 :endpoint/one-shot?          true iff no cap-death, no operator continuation
 :endpoint/continuation?      true iff operator-continued lineage (§3)
+:endpoint/statement-hash-pre  per target: normalized statement-text hash frozen at dispatch (§1b; continuations)
+:endpoint/statement-hash-post per target: same normalization at sha-post; mismatch => class statement-altered, row VOID
+:endpoint/fidelity-verdict   fresh rows only: adjudicator id + timestamp + verdict, blind to arm (§1b); failed => fidelity-adjudication-failed, row VOID
 :endpoint/swept-at           timestamp; :endpoint/sweeper-version
 ```
 
