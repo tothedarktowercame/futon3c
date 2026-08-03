@@ -86,3 +86,15 @@ turn text is the only reply channel, and they poll the job result. Had the bell
 been accepted-then-failed-async instead of 404ing, this report would have gone
 nowhere silently. ⊸prop: bells generated for non-roster callers should not emit
 in-thread reply instructions they cannot honour.
+
+## S3 — a96J01 (zai-1, recall-live, 2026-08-03)
+
+⊸win [S3] **complete**: a96J01 proven from scratch. `lake env lean problems/a96J01/lean/Main.lean` exit 0, 0 sorries, axiom-clean (`propext, Classical.choice, Quot.sound` only — operator re-run, not runner report). Commits `d1606d0` (proof) + `8b42eac` (proof-outline). Statement faithful: existential over `f : ℕ → ℝ → ℝ` with continuity, nonnegativity on `Icc 0 1`, `TendstoUniformlyOn` of partial sums, and `¬ Summable (⨆ x : Icc 0 1, f n x)` — the sup-series divergence is a genuine negative claim, not weakened. Construction: disjointly-supported tent functions, peak `1/(n+1)`.
+
+⊸meter [S3-cap] first dispatch hit the ~30-min cap at 320 events with the work uncommitted and a non-compiling tail (3 errors in the final assembly, 0 sorries). Operator "continue" recovered it. The packet's pacing instruction ("COMMIT an honest compiling partial rather than running out of time") did not survive contact with a proof that was going well — second occurrence after S5. A pacing *instruction* is not a forcing function; artifact preserved at `holes/labs/M-zai-learning-loop/s3-artifact/`.
+
+⊸miss [S3-recall] 5 memories surfaced, **0 used** — and correctly so. All five were `e-codexpilot-*` analysis memories (weak L² convergence, Vitali on products, dense-span extension, Liouville across punctures, radial R³ integration) against a problem about sup-norms and harmonic-series divergence. Recall query was `"sequence convergence infinity only"` — four frequency-ranked terms, one a stopword-list survivor. Per-id attribution complete: 5 surfaced ids, 5 `IGNORED` lines, `dispatch-recall-outcome` marker copied verbatim. Offered receipt persisted at `v1.2-receipt-instrumented` with `recall-query` and `recall-ladder-rung`. Pollution class: generic-term dilution, not absence — same family as S4/S5.
+
+⊸fix [S3-memory-write] **`memory-write-rejected` ×2**: the runner spontaneously called `memory_record` (round 214, unprompted — the packet never asks for recording) and both calls were refused by the store with `:error/code :invalid-entry`, `"EvidenceEntry did not conform to shape"`. It retried once with a corrected shape and was refused again, then proceeded to the final summary. This is the "bounce-learn" hazard the mission names under provisioning. The distilled content it tried to store was substantive (the `hasSum_single` route over `hasSum_sum_of_ne_finset_zero`, and the `f_tail_le` case-split) — that is exactly solve-lane material, and it was lost to a shape error.
+
+⊸meter [S3-tools] session tool tally: `run_shell` 111, `edit_file` 66, `read_file` 37, `list_files` 8, `write_file` 4, `memory_record` 2 (both rejected), `search` 2, `run_readonly` 2, `boot_context` 1. The memory family is reachable and was reached; the write path is what failed.
