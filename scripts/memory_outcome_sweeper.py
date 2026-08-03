@@ -88,20 +88,45 @@ def deterministic_gate_evidence_id(job_id: str) -> str:
     return f"e-use-attribution-gate-{digest}"
 
 
-def offered_surfaced_ids(job_id: str, base: str = SUBSTRATE_URL) -> list[str]:
-    """Resolve the offered receipt by its dispatch session, then verify job-id."""
-    query = urllib.parse.urlencode({"session-id": job_id, "limit": 50, "sort": "desc"})
+def dispatch_evidence_entries(job_id: str, base: str = SUBSTRATE_URL) -> list[Any]:
+    """Read evidence explicitly keyed to one Agency dispatch."""
+    query = urllib.parse.urlencode({"session-id": job_id, "limit": 500, "sort": "desc"})
     request = urllib.request.Request(
         f"{base}/api/alpha/evidence?{query}", headers={"Accept": "application/edn"}
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         payload = loads(response.read().decode("utf-8"))
-    for entry in value(payload, "entries", []):
+    return list(value(payload, "entries", []))
+
+
+def pull_surfaced_ids(job_id: str, base: str = SUBSTRATE_URL) -> list[str]:
+    """Union per-call pull offers for exactly one dispatch."""
+    offered: set[str] = set()
+    for entry in dispatch_evidence_entries(job_id, base):
+        body = value(entry, "evidence/body", {})
+        if (value(body, "event") == K("memory-pull-offer")
+                and value(body, "dispatch-id") == job_id):
+            offered.update(str(item) for item in value(body, "pull-surfaced-ids", []))
+    return sorted(offered)
+
+
+def offered_surfaced_ids(job_id: str, base: str = SUBSTRATE_URL) -> list[str]:
+    """Return the complete push-union-pull offered set for one dispatch."""
+    offered: set[str] = set()
+    found = False
+    for entry in dispatch_evidence_entries(job_id, base):
         body = value(entry, "evidence/body", {})
         if value(body, "phase") == K("offered") and value(body, "job-id") == job_id:
             receipt = value(body, "memory-use", {})
-            return [str(item) for item in value(receipt, "memory-use/surfaced-ids", [])]
-    raise LookupError(f"offered receipt not found for job {job_id}")
+            offered.update(str(item) for item in value(receipt, "memory-use/surfaced-ids", []))
+            found = True
+        elif (value(body, "event") == K("memory-pull-offer")
+              and value(body, "dispatch-id") == job_id):
+            offered.update(str(item) for item in value(body, "pull-surfaced-ids", []))
+            found = True
+    if not found:
+        raise LookupError(f"offered receipt not found for job {job_id}")
+    return sorted(offered)
 
 
 def deposit_correction(violation: runner_gate.Violation, message: str,

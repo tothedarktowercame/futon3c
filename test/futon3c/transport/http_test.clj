@@ -948,7 +948,7 @@
                                              :caller "test"
                                              :surface "emacs-repl"})]
       (with-redefs [http/invoke-agent-with-session-recovery!
-                    (fn [agent-id _prompt _timeout-ms]
+                    (fn [agent-id _prompt _timeout-ms _dispatch-id]
                       (reset! seen-during-turn
                               (clock-store/current-clock agent-id "real-session"))
                       {:ok true :result "ok" :session-id "real-session"})

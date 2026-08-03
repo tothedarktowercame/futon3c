@@ -12,6 +12,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-backend :as memory-backend]
+            [futon3c.peripheral.pull-receipts :as pull-receipts]
             [futon3c.peripheral.real-backend :as real-backend]
             [futon3c.peripheral.tools :as tools])
   (:import [java.net URI]
@@ -360,12 +361,17 @@
 
 (defn- execute-tool
   [backend {:keys [irc-send-fn irc-recent-fn agent-id cwd session-id-atom
-                   evidence-store turn-id round profile session-id-fallback]
+                   evidence-store dispatch-id turn-id round profile session-id-fallback]
             :as ctx}
    tool-call]
   (let [name (get-in tool-call [:function :name])
         args (parse-arguments (get-in tool-call [:function :arguments]))
         fail (fn [msg] {:ok false :error msg})
+        memory-ctx {:agent-id agent-id
+                    :session-id (some-> session-id-atom deref)
+                    :dispatch-id dispatch-id
+                    :turn-id turn-id
+                    :cwd cwd}
         result
         (cond
           (:__unparseable_arguments args)
@@ -473,7 +479,7 @@
 
           "memory_search"
           (memory-backend/memory-search
-           {:agent-id agent-id :session-id (some-> session-id-atom deref) :cwd cwd}
+           memory-ctx
            (cond-> {}
              (:subject args) (assoc :subject (:subject args))
              (:type args) (assoc :type (:type args))
@@ -491,7 +497,7 @@
 
           "evidence_graph"
           (memory-backend/evidence-graph
-           {:agent-id agent-id :cwd cwd}
+           memory-ctx
            (cond-> {}
              (:mode args) (assoc :mode (:mode args))
              (:subject_ref args) (assoc :subject-ref (:subject_ref args))
@@ -510,7 +516,7 @@
 
           "pattern_memory"
           (memory-backend/pattern-memory
-           {:agent-id agent-id :cwd cwd}
+           memory-ctx
            (cond-> {}
              (seq (:tags args)) (assoc :tags (vec (:tags args)))
              (:limit args) (assoc :limit (:limit args))))
@@ -599,7 +605,28 @@
               (catch Throwable t (fail (.getMessage t))))
             (fail "IRC sender is not configured"))
 
-          (fail (str "Unknown tool: " name))))]
+          (fail (str "Unknown tool: " name))))
+        _pull-receipt
+        (when (contains? pull-receipts/pull-tool-names name)
+          (try
+            (let [receipt (pull-receipts/record-pull-offer!
+                           {:evidence-store evidence-store
+                            :agent-id agent-id
+                            :session-id (or (some-> session-id-atom deref)
+                                            session-id-fallback)
+                            :dispatch-id dispatch-id
+                            :turn-id turn-id
+                            :round round}
+                           name args result)]
+              (when-not (:ok receipt)
+                (binding [*out* *err*]
+                  (println (str "[pull-receipt] write refused: "
+                                (pr-str (dissoc receipt :entry)))))))
+            (catch Throwable t
+              ;; Recording is observational. A receipt failure is loud but
+              ;; cannot rewrite the search result seen by the runner.
+              (binding [*out* *err*]
+                (println (str "[pull-receipt] write failed: " (.getMessage t)))))))]
 
     {:detail (tool-call-detail tool-call args)
      :message {:role "tool"
@@ -795,14 +822,17 @@
 
 (defn- persist-turn-start!
   "Persist the exact model-facing PROMPT before a ZAI/ZAIF turn begins."
-  [{:keys [evidence-store agent-id sid turn-id profile prompt]}]
+  [{:keys [evidence-store agent-id sid dispatch-id turn-id profile prompt]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-start
      :body {:prompt (str prompt)
-            :prompt-chars (count (str prompt))}})))
+            :prompt-chars (count (str prompt))
+            ;; Explicit join: Agency dispatch id -> this generated turn id.
+            :dispatch-id (str dispatch-id)
+            :turn-id (str turn-id)}})))
 
 (defn- persist-round!
   "Append one durable, turn-addressable round record.
@@ -1043,6 +1073,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                         !repeats tc
                                         (try (execute-tool backend
                                                            (assoc tool-opts
+                                                                  :dispatch-id (:dispatch-id ctx)
                                                                   :turn-id (:turn-id ctx)
                                                                   :round round-n
                                                                   :profile (:profile ctx)
@@ -1177,10 +1208,17 @@ CALLS contains maps of tool name, arguments, and result digest."
                    :evidence-store evidence-store
                    :memory-domain memory-domain*
                    :session-id-atom !session-id}]
-    (fn [prompt incoming-session-id]
-      (let [key* (or key (resolve-api-key))
+    (fn invoke
+      ([prompt incoming-session-id]
+       (invoke prompt incoming-session-id {}))
+      ([prompt incoming-session-id invoke-context]
+       (let [key* (or key (resolve-api-key))
             sid (or incoming-session-id @!session-id sid0)
             turn-id (str "zai-turn-" (UUID/randomUUID))
+            ;; Agency supplies its job id through the three-arity invoke seam.
+            ;; Direct calls have no Agency job, so their generated turn id is
+            ;; the dispatch id and the turn-start record binds them explicitly.
+            dispatch-id (str (or (:dispatch-id invoke-context) turn-id))
             ;; stuck-means-signal detector (mistakes-ledger §11): consecutive
             ;; identical tool calls with identical results get a warning
             ;; injected at 3 and a stop-and-bell instruction at 5. Fresh per
@@ -1216,6 +1254,7 @@ CALLS contains maps of tool name, arguments, and result digest."
         (persist-turn-start! {:evidence-store evidence-store
                               :agent-id agent-id
                               :sid sid
+                              :dispatch-id dispatch-id
                               :turn-id turn-id
                               :profile profile*
                               :prompt prompt})
@@ -1228,9 +1267,10 @@ CALLS contains maps of tool name, arguments, and result digest."
                            :tool-opts tool-opts
                            :agent-id agent-id
                            :sid sid
+                           :dispatch-id dispatch-id
                            :turn-id turn-id
                            :evidence-store evidence-store
                            :!repeats !repeats
                            :profile profile*
                            :zaif-inputs-fn zaif-inputs-fn
-                           :auto-continue-max auto-continue-max})))))))
+                           :auto-continue-max auto-continue-max}))))))))

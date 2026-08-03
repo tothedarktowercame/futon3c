@@ -3350,13 +3350,14 @@
    The retry is intentionally narrow. File/incoming session precedence remains
    unchanged for normal invokes; only the Claude CLI's authoritative
    \"No conversation found\" response clears backing continuity."
-  [agent-id prompt timeout-ms]
+  [agent-id prompt timeout-ms dispatch-id]
   (let [aid (str agent-id)
-        first-result (reg/invoke-agent! aid prompt timeout-ms)]
+        invoke-options {:timeout-ms timeout-ms :dispatch-id (str dispatch-id)}
+        first-result (reg/invoke-agent! aid prompt invoke-options)]
     (if (claude-missing-conversation-result? aid first-result)
       (let [reset-result (reg/reset-session! aid)]
         (if (:ok reset-result)
-          (let [retry-result (reg/invoke-agent! aid prompt timeout-ms)]
+          (let [retry-result (reg/invoke-agent! aid prompt invoke-options)]
             (cond-> retry-result
               (map? retry-result)
               (assoc :session-recovery
@@ -3402,7 +3403,8 @@
       (register-job-worker! job-id (Thread/currentThread) nil)
       (preclock-dispatch! agent-id mission-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
-            raw-result (invoke-agent-with-session-recovery! (str agent-id) effective-prompt timeout-ms)
+            raw-result (invoke-agent-with-session-recovery!
+                        (str agent-id) effective-prompt timeout-ms job-id)
             result (maybe-route-surface-writes agent-id raw-result)
             result (enrich-result-with-stream-execution job-id result)
             sid (:session-id result)
@@ -3499,7 +3501,8 @@
             raw-result (try
                          (supervise-invoke-future!
                           job-id timeout-ms
-                          #(invoke-agent-with-session-recovery! aid effective-prompt nil))
+                          #(invoke-agent-with-session-recovery!
+                            aid effective-prompt nil job-id))
                          (finally
                            (if prev-sink
                              (reg/set-invoke-event-sink! aid prev-sink)

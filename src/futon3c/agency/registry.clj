@@ -124,6 +124,22 @@
     (keyword? typed-id) (name typed-id)
     :else              (str typed-id)))
 
+(defn- declares-arity?
+  "True when F is a Clojure fn that declares an invoke method of arity N.
+
+   Structural, not exception-driven: probing by catching ArityException from
+   the call itself cannot distinguish 'this fn takes fewer args' from 'the
+   body threw ArityException', and retrying in the second case dispatches the
+   turn twice. Non-AFunction callables (vars, proxies, mocks) return false and
+   take the legacy fallback chain."
+  [f n]
+  (boolean
+   (when (instance? clojure.lang.AFunction f)
+     (some (fn [^java.lang.reflect.Method m]
+             (and (= "invoke" (.getName m))
+                  (= (int n) (.getParameterCount m))))
+           (.getDeclaredMethods (class f))))))
+
 (defn- make-social-error
   "Create a SocialError map (R4)."
   [code message & {:as context}]
@@ -785,13 +801,17 @@
      {:ok false :error SocialError} on failure (R4: typed error with component)."
   ([typed-id prompt]
    (invoke-agent! typed-id prompt nil))
-  ([typed-id prompt timeout-ms]
-   (let [aid-val (agent-id-value typed-id)]
+  ([typed-id prompt invoke-options]
+   (let [invoke-options (if (map? invoke-options)
+                          invoke-options
+                          {:timeout-ms invoke-options})
+         aid-val (agent-id-value typed-id)]
      (if-let [agent (get @!registry aid-val)]
        (let [invoke-fn (:agent/invoke-fn agent)
              routing-info (invoke-routing-info aid-val agent)
              current-session (:agent/session-id agent)
-             timeout-ms (when (and timeout-ms (pos? (long timeout-ms))) (long timeout-ms))
+             timeout-ms (some-> (:timeout-ms invoke-options) long)
+             timeout-ms (when (and timeout-ms (pos? timeout-ms)) timeout-ms)
              prompt-preview (let [s (str prompt)]
                               (subs s 0 (min 120 (count s))))
              _trace (when (not= "false" (System/getProperty "FUTON3C_INVOKE_TRACE"))
@@ -861,10 +881,16 @@
              (cond
                invoke-fn
                      (let [call-invoke (fn []
-                                   (try
-                                     (invoke-fn prompt current-session)
-                                     (catch clojure.lang.ArityException _
-                                       (invoke-fn prompt))))
+                                   ;; Prefer the 3-arity contract so the caller's
+                                   ;; deadline reaches the process itself, not just
+                                   ;; the layers that give up waiting for it.
+                                   (if (declares-arity? invoke-fn 3)
+                                     (invoke-fn prompt current-session
+                                                (assoc invoke-options :timeout-ms timeout-ms))
+                                     (try
+                                       (invoke-fn prompt current-session)
+                                       (catch clojure.lang.ArityException _
+                                         (invoke-fn prompt)))))
                      result-map (if timeout-ms
                                   (let [f (future (call-invoke))
                                         v (deref f timeout-ms ::timeout)]
