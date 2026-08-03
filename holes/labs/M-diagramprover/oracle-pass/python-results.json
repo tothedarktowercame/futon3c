@@ -1,5 +1,20 @@
 {
   "bow": {
+    "bow-impossible-y0": {
+      "agreement": "engine and y0 both return non-identifiable",
+      "encoding": "U latent-projected as X <-> Y plus X -> Y",
+      "identifiable": false,
+      "query": "P(Y | do(X))"
+    },
+    "firing-rung2-y0": {
+      "conditions": [],
+      "encoding": "all exported variables observed; directed arcs only; no latent/bidirected arcs",
+      "identifiable": true,
+      "query": {
+        "outcome": "death",
+        "treatment": "soldier-A"
+      }
+    },
     "frontdoor-y0": {
       "agreement": "engine and y0 both identify by front-door-capable methods",
       "encoding": "U latent-projected as smoking <-> cancer; smoking -> tar -> cancer",
@@ -7,8 +22,8 @@
       "query": "P(cancer | do(smoking))"
     },
     "napkin-y0": {
+      "agreement": "engine and y0 both identify by general ID",
       "encoding": "U1 latent-projected as W <-> X; U2 as W <-> Y; W -> Z -> X -> Y",
-      "frontier-marker": "engine refuses after backdoor/front-door exhaustion; y0 ID succeeds",
       "identifiable": true,
       "query": "P(Y | do(X))"
     },
@@ -68,6 +83,15 @@
           "separated": true
         }
       ]
+    },
+    "simpson-y0": {
+      "conditions": [],
+      "encoding": "all exported variables observed; directed arcs only; no latent/bidirected arcs",
+      "identifiable": true,
+      "query": {
+        "outcome": "recovery",
+        "treatment": "treatment"
+      }
     }
   },
   "identification": {

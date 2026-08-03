@@ -87,8 +87,11 @@ def main():
         "identification": identification,
         "bow": {"networkx": py["bow"]["networkx"],
                 "dagitty-frontdoor": rr["bow"]["frontdoor_adjustment"],
+                "y0-simpson": py["bow"]["simpson-y0"],
                 "y0-frontdoor": py["bow"]["frontdoor-y0"],
-                "y0-napkin": py["bow"]["napkin-y0"]},
+                "y0-napkin": py["bow"]["napkin-y0"],
+                "y0-firing-rung2": py["bow"]["firing-rung2-y0"],
+                "y0-bow-impossible": py["bow"]["bow-impossible-y0"]},
         "disagreement-count": disagreement_count,
         "deferrals": deferrals,
         "tool-versions": {
@@ -129,18 +132,21 @@ Named disagreements (verbatim): `[]`.
 
 | Fixture | Receipt status | Oracle agreement | Boundary |
 |---|---|---|---|
-| Simpson / kidney stones | computed | NetworkX agrees (2/2) | — |
+| Simpson / kidney stones | computed | NetworkX agrees (2/2); y0 identifies | — |
 | Sprinkler collider | computed | NetworkX agrees (2/2) | — |
 | Smoking → tar → cancer | computed | NetworkX agrees FD1/FD2/FD3; dagitty agrees backdoor exhausted; y0 identifies | — |
-| Napkin problem | refused | y0 identifies by general ID (deliberate frontier marker) | `:do-calculus-identification` |
+| Napkin problem | computed | y0 agrees at the identifiability-verdict level | — |
+| Bow graph | PROVED-IMPOSSIBLE | y0 agrees non-identifiable | `:not-identifiable` (failing recursive subproblem witness) |
 | Monty Hall collider | computed | NetworkX agrees (2/2) | — |
-| Firing squad rung 2 | computed | NetworkX agrees (1/1) | — |
-| Firing squad rung 3 | refused | query classification agrees with fixture; no counterfactual oracle attempted | `:counterfactual-identification` |
+| Firing squad rung 2 | computed | NetworkX agrees (1/1); y0 identifies | — |
+| Firing squad rung 3 | refused-capability | query classification agrees with fixture; no counterfactual oracle attempted | `:counterfactual-identification` |
 
-The engine and y0 now agree that the smoking effect is identifiable. The engine
-computes the three front-door conditions and symbolic estimand after exhausting
-backdoor adjustment. The deliberate frontier marker has moved to napkin: the
-engine exhausts backdoor and front-door while y0's general ID succeeds.
+Across every identification-shaped Book-of-Why fixture, the engine and y0 now
+agree at the identifiability-verdict level. Formula equivalence with y0 is out of
+scope for this pass. The smoking effect retains the cheaper front-door receipt;
+napkin uses general ID; and the confounded bow graph is proved non-identifiable
+with a failing-recursive-subproblem witness. Only the rung-3 counterfactual remains
+a capability refusal.
 
 ## Q3 divergence
 

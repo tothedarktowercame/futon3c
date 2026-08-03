@@ -120,7 +120,21 @@ def bow_napkin_y0():
         "identifiable": expression is not None,
         "query": "P(Y | do(X))",
         "encoding": "U1 latent-projected as W <-> X; U2 as W <-> Y; W -> Z -> X -> Y",
-        "frontier-marker": "engine refuses after backdoor/front-door exhaustion; y0 ID succeeds",
+        "agreement": "engine and y0 both identify by general ID",
+    }
+
+
+def bow_impossible_y0():
+    x, y = map(Variable, ["X", "Y"])
+    graph = NxMixedGraph.from_edges(
+        nodes=[x, y], directed=[(x, y)], undirected=[(x, y)]
+    )
+    expression = identify_outcomes(graph, treatments=x, outcomes=y)
+    return {
+        "identifiable": expression is not None,
+        "query": "P(Y | do(X))",
+        "encoding": "U latent-projected as X <-> Y plus X -> Y",
+        "agreement": "engine and y0 both return non-identifiable",
     }
 
 
@@ -244,6 +258,13 @@ def main():
     bow = bow_checks(export)
     bow_y0 = bow_frontdoor_y0()
     napkin_y0 = bow_napkin_y0()
+    impossible_y0 = bow_impossible_y0()
+    simpson_y0 = y0_identification(
+        export["bow-graphs"]["simpson"], "treatment", "recovery"
+    )
+    firing_y0 = y0_identification(
+        export["bow-graphs"]["firing-squad"], "soldier-A", "death"
+    )
 
     result = {
         "tool-versions": {
@@ -265,8 +286,14 @@ def main():
         "r2": {"verdicts": r2_actual, "disagreements": r2_disagreements},
         "r3": {"verdicts": r3_actual, "disagreements": r3_disagreements},
         "identification": {"Q1": q1_id, "R1-ID": r1_id, "R1-IDC": r1_idc},
-        "bow": {"networkx": bow, "frontdoor-y0": bow_y0,
-                "napkin-y0": napkin_y0},
+        "bow": {
+            "networkx": bow,
+            "simpson-y0": simpson_y0,
+            "frontdoor-y0": bow_y0,
+            "napkin-y0": napkin_y0,
+            "firing-rung2-y0": firing_y0,
+            "bow-impossible-y0": impossible_y0,
+        },
     }
     with (HERE / "python-results.json").open("w", encoding="utf-8") as stream:
         json.dump(result, stream, indent=2, sort_keys=True)
@@ -288,6 +315,10 @@ def main():
         raise SystemExit("y0 did not identify the front-door fixture")
     if not napkin_y0["identifiable"]:
         raise SystemExit("y0 did not identify the napkin fixture")
+    if impossible_y0["identifiable"]:
+        raise SystemExit("y0 unexpectedly identified the bow graph")
+    if not simpson_y0["identifiable"] or not firing_y0["identifiable"]:
+        raise SystemExit("y0 missed an identifiable Book-of-Why fixture")
     print(
         "NetworkX memory/Lean implications: "
         f"{memory_implications['agreements']}/{lean_implications['agreements']} "
@@ -297,7 +328,10 @@ def main():
     print("R2/R3: 3/3 and 2/2 verdicts agree")
     print("y0: Q1 ID, R1 ID, and R1 conditional IDC identifiable")
     print(f"Book-of-Why NetworkX: {bow['agreements']}/{bow['checked']} agreements")
-    print("Book-of-Why y0: smoking front-door agreement; napkin frontier marker")
+    print(
+        "Book-of-Why y0: Simpson/smoking/napkin/firing-rung2 identifiable; "
+        "bow graph non-identifiable"
+    )
 
 
 if __name__ == "__main__":

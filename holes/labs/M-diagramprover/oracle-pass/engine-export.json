@@ -1,5 +1,19 @@
 {
   "bow-graphs" : {
+    "bow-graph" : {
+      "arrows" : [ {
+        "from" : "U",
+        "to" : "X"
+      }, {
+        "from" : "U",
+        "to" : "Y"
+      }, {
+        "from" : "X",
+        "to" : "Y"
+      } ],
+      "latent-variables" : [ "U" ],
+      "variables" : [ "U", "X", "Y" ]
+    },
     "firing-squad" : {
       "arrows" : [ {
         "from" : "captain",
@@ -195,156 +209,53 @@
     "adjustment-sets" : [ ],
     "id" : "BOW-NAPKIN",
     "identification" : {
-      "backdoor-exhaustion" : {
-        "candidate-attempts" : [ {
-          "given" : [ ],
-          "holds?" : false,
-          "paths-truncated?" : true,
-          "surviving-paths" : [ [ "X", "Z", "W", "U2", "Y" ] ]
-        }, {
-          "given" : [ "W" ],
-          "holds?" : false,
-          "paths-truncated?" : true,
-          "surviving-paths" : [ [ "X", "U1", "W", "U2", "Y" ] ]
-        }, {
-          "given" : [ "Z" ],
-          "holds?" : false,
-          "paths-truncated?" : true,
-          "surviving-paths" : [ [ "X", "U1", "W", "U2", "Y" ] ]
-        }, {
-          "given" : [ "W", "Z" ],
-          "holds?" : false,
-          "paths-truncated?" : true,
-          "surviving-paths" : [ [ "X", "U1", "W", "U2", "Y" ] ]
-        } ],
-        "candidate-set-count" : 4
+      "estimand" : {
+        "expression" : {
+          "given" : [ "X" ],
+          "op" : "cond",
+          "source" : {
+            "expr" : {
+              "op" : "product",
+              "terms" : [ {
+                "given" : [ ],
+                "op" : "cond",
+                "variable" : "W"
+              }, {
+                "given" : [ "W", "Z" ],
+                "op" : "cond",
+                "variable" : "X"
+              }, {
+                "given" : [ "W", "Z", "X" ],
+                "op" : "cond",
+                "variable" : "Y"
+              } ]
+            },
+            "op" : "sum",
+            "variables" : [ "W" ]
+          },
+          "variable" : "Y"
+        },
+        "formula" : "Cond[Y | X]{sum_{W} (P(W) * P(X | W,Z) * P(Y | W,Z,X))}",
+        "type" : "general-id"
       },
-      "front-door-exhaustion" : {
-        "candidate-attempts" : [ {
-          "conditions" : [ {
-            "claim" : "mediators-intercept-all-directed-paths",
-            "condition" : "FD1",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "Y" ] ],
-            "paths-truncated?" : false
-          }, {
-            "claim" : "no-unblocked-treatment-mediator-backdoor",
-            "condition" : "FD2",
-            "holds?" : true,
-            "offending-paths" : [ ],
-            "paths-truncated?" : false
-          }, {
-            "claim" : "treatment-blocks-all-mediator-outcome-backdoors",
-            "condition" : "FD3",
-            "holds?" : true,
-            "offending-paths" : [ ],
-            "paths-truncated?" : false
-          } ],
-          "failed-conditions" : [ "FD1" ],
-          "holds?" : false,
-          "mediators" : [ ]
-        }, {
-          "conditions" : [ {
-            "claim" : "mediators-intercept-all-directed-paths",
-            "condition" : "FD1",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "Y" ] ],
-            "paths-truncated?" : false
-          }, {
-            "claim" : "no-unblocked-treatment-mediator-backdoor",
-            "condition" : "FD2",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "U1", "W" ] ],
-            "paths-truncated?" : true
-          }, {
-            "claim" : "treatment-blocks-all-mediator-outcome-backdoors",
-            "condition" : "FD3",
-            "holds?" : false,
-            "offending-paths" : [ [ "W", "U2", "Y" ] ],
-            "paths-truncated?" : true
-          } ],
-          "failed-conditions" : [ "FD1", "FD2", "FD3" ],
-          "holds?" : false,
-          "mediators" : [ "W" ]
-        }, {
-          "conditions" : [ {
-            "claim" : "mediators-intercept-all-directed-paths",
-            "condition" : "FD1",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "Y" ] ],
-            "paths-truncated?" : false
-          }, {
-            "claim" : "no-unblocked-treatment-mediator-backdoor",
-            "condition" : "FD2",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "U1", "W", "Z" ] ],
-            "paths-truncated?" : true
-          }, {
-            "claim" : "treatment-blocks-all-mediator-outcome-backdoors",
-            "condition" : "FD3",
-            "holds?" : false,
-            "offending-paths" : [ [ "Z", "W", "U2", "Y" ] ],
-            "paths-truncated?" : true
-          } ],
-          "failed-conditions" : [ "FD1", "FD2", "FD3" ],
-          "holds?" : false,
-          "mediators" : [ "Z" ]
-        }, {
-          "conditions" : [ {
-            "claim" : "mediators-intercept-all-directed-paths",
-            "condition" : "FD1",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "Y" ] ],
-            "paths-truncated?" : false
-          }, {
-            "claim" : "no-unblocked-treatment-mediator-backdoor",
-            "condition" : "FD2",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "U1", "W" ] ],
-            "paths-truncated?" : true
-          }, {
-            "claim" : "treatment-blocks-all-mediator-outcome-backdoors",
-            "condition" : "FD3",
-            "holds?" : false,
-            "offending-paths" : [ [ "W", "U2", "Y" ] ],
-            "paths-truncated?" : true
-          } ],
-          "failed-conditions" : [ "FD1", "FD2", "FD3" ],
-          "holds?" : false,
-          "mediators" : [ "W", "Z" ]
-        } ],
-        "candidate-set-count" : 4
-      },
-      "method" : "refusal",
-      "missing-capability" : "do-calculus-identification"
+      "method" : "general-id"
     },
     "question" : "Identify P(Y | do(X)) in the napkin graph.",
-    "refusals" : [ {
+    "refusals" : [ ],
+    "verdicts" : [ ]
+  }, {
+    "adjustment-sets" : [ ],
+    "id" : "BOW-IMPOSSIBLE",
+    "identification" : {
       "backdoor-exhaustion" : {
         "candidate-attempts" : [ {
           "given" : [ ],
           "holds?" : false,
           "paths-truncated?" : true,
-          "surviving-paths" : [ [ "X", "Z", "W", "U2", "Y" ] ]
-        }, {
-          "given" : [ "W" ],
-          "holds?" : false,
-          "paths-truncated?" : true,
-          "surviving-paths" : [ [ "X", "U1", "W", "U2", "Y" ] ]
-        }, {
-          "given" : [ "Z" ],
-          "holds?" : false,
-          "paths-truncated?" : true,
-          "surviving-paths" : [ [ "X", "U1", "W", "U2", "Y" ] ]
-        }, {
-          "given" : [ "W", "Z" ],
-          "holds?" : false,
-          "paths-truncated?" : true,
-          "surviving-paths" : [ [ "X", "U1", "W", "U2", "Y" ] ]
+          "surviving-paths" : [ [ "X", "U", "Y" ] ]
         } ],
-        "candidate-set-count" : 4
+        "candidate-set-count" : 1
       },
-      "claim" : "identify-total-effect",
       "front-door-exhaustion" : {
         "candidate-attempts" : [ {
           "conditions" : [ {
@@ -369,80 +280,32 @@
           "failed-conditions" : [ "FD1" ],
           "holds?" : false,
           "mediators" : [ ]
-        }, {
-          "conditions" : [ {
-            "claim" : "mediators-intercept-all-directed-paths",
-            "condition" : "FD1",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "Y" ] ],
-            "paths-truncated?" : false
-          }, {
-            "claim" : "no-unblocked-treatment-mediator-backdoor",
-            "condition" : "FD2",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "U1", "W" ] ],
-            "paths-truncated?" : true
-          }, {
-            "claim" : "treatment-blocks-all-mediator-outcome-backdoors",
-            "condition" : "FD3",
-            "holds?" : false,
-            "offending-paths" : [ [ "W", "U2", "Y" ] ],
-            "paths-truncated?" : true
-          } ],
-          "failed-conditions" : [ "FD1", "FD2", "FD3" ],
-          "holds?" : false,
-          "mediators" : [ "W" ]
-        }, {
-          "conditions" : [ {
-            "claim" : "mediators-intercept-all-directed-paths",
-            "condition" : "FD1",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "Y" ] ],
-            "paths-truncated?" : false
-          }, {
-            "claim" : "no-unblocked-treatment-mediator-backdoor",
-            "condition" : "FD2",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "U1", "W", "Z" ] ],
-            "paths-truncated?" : true
-          }, {
-            "claim" : "treatment-blocks-all-mediator-outcome-backdoors",
-            "condition" : "FD3",
-            "holds?" : false,
-            "offending-paths" : [ [ "Z", "W", "U2", "Y" ] ],
-            "paths-truncated?" : true
-          } ],
-          "failed-conditions" : [ "FD1", "FD2", "FD3" ],
-          "holds?" : false,
-          "mediators" : [ "Z" ]
-        }, {
-          "conditions" : [ {
-            "claim" : "mediators-intercept-all-directed-paths",
-            "condition" : "FD1",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "Y" ] ],
-            "paths-truncated?" : false
-          }, {
-            "claim" : "no-unblocked-treatment-mediator-backdoor",
-            "condition" : "FD2",
-            "holds?" : false,
-            "offending-paths" : [ [ "X", "U1", "W" ] ],
-            "paths-truncated?" : true
-          }, {
-            "claim" : "treatment-blocks-all-mediator-outcome-backdoors",
-            "condition" : "FD3",
-            "holds?" : false,
-            "offending-paths" : [ [ "W", "U2", "Y" ] ],
-            "paths-truncated?" : true
-          } ],
-          "failed-conditions" : [ "FD1", "FD2", "FD3" ],
-          "holds?" : false,
-          "mediators" : [ "W", "Z" ]
         } ],
-        "candidate-set-count" : 4
+        "candidate-set-count" : 1
       },
-      "missing-capability" : "do-calculus-identification",
-      "reason" : "backdoor-and-front-door-exhausted"
+      "method" : "refusal",
+      "proof-status" : "proved-impossible",
+      "reason" : "not-identifiable",
+      "witness" : {
+        "district" : [ "Y" ],
+        "graph-district" : [ "X", "Y" ],
+        "intervened" : [ "X" ],
+        "outcome" : [ "Y" ],
+        "type" : "failing-recursive-subproblem"
+      }
+    },
+    "question" : "Identify P(Y | do(X)) in the confounded bow graph.",
+    "refusals" : [ {
+      "claim" : "identify-total-effect",
+      "proof-status" : "proved-impossible",
+      "reason" : "not-identifiable",
+      "witness" : {
+        "district" : [ "Y" ],
+        "graph-district" : [ "X", "Y" ],
+        "intervened" : [ "X" ],
+        "outcome" : [ "Y" ],
+        "type" : "failing-recursive-subproblem"
+      }
     } ],
     "verdicts" : [ ]
   }, {
