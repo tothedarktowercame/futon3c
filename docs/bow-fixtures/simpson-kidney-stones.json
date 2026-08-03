@@ -1,0 +1,16 @@
+{
+  "id": "simpson-kidney-stones",
+  "variables": [
+    {"id": "severity", "kind": "observed"},
+    {"id": "treatment", "kind": "observed"},
+    {"id": "recovery", "kind": "observed"}
+  ],
+  "arrows": [
+    {"from": "severity", "to": "treatment"},
+    {"from": "severity", "to": "recovery"},
+    {"from": "treatment", "to": "recovery"}
+  ],
+  "requested_receipts": [
+    {"id": "BOW-SIMPSON", "question": "Does severity adjustment block the treatment-recovery backdoor?"}
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "firing-squad",
+  "variables": [
+    {"id": "court-order", "kind": "observed"},
+    {"id": "captain", "kind": "observed"},
+    {"id": "soldier-A", "kind": "observed"},
+    {"id": "soldier-B", "kind": "observed"},
+    {"id": "death", "kind": "observed"}
+  ],
+  "arrows": [
+    {"from": "court-order", "to": "captain"},
+    {"from": "captain", "to": "soldier-A"},
+    {"from": "captain", "to": "soldier-B"},
+    {"from": "soldier-A", "to": "death"},
+    {"from": "soldier-B", "to": "death"}
+  ],
+  "interventions": [
+    {"id": "do-soldier-A", "target": "soldier-A"}
+  ],
+  "requested_receipts": [
+    {"id": "BOW-FIRING-R2", "question": "Does do(soldier-A) retain a directed route to death?", "query": {"type": "intervention", "treatment": "soldier-A", "outcome": "death"}},
+    {"id": "BOW-FIRING-R3", "question": "Had soldier A not fired, would death still have occurred given that it did occur?", "query": {"type": "counterfactual", "intervention": {"soldier-A": false}, "evidence": {"death": true}, "outcome": "death"}}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "smoking-tar-cancer",
+  "variables": [
+    {"id": "U", "kind": "latent-unobserved"},
+    {"id": "smoking", "kind": "observed"},
+    {"id": "tar", "kind": "observed"},
+    {"id": "cancer", "kind": "observed"}
+  ],
+  "arrows": [
+    {"from": "U", "to": "smoking"},
+    {"from": "U", "to": "cancer"},
+    {"from": "smoking", "to": "tar"},
+    {"from": "tar", "to": "cancer"}
+  ],
+  "requested_receipts": [
+    {"id": "BOW-FRONTDOOR", "question": "Is P(cancer | do(smoking)) identifiable by observed-only backdoor adjustment?"}
+  ]
+}
