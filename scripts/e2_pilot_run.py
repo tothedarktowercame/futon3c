@@ -199,6 +199,11 @@ In the final report give exactly one `USED <id>: <mechanism>` or
 
 def invoke_wrapper(problem: str, base: str, packet: str,
                    isolation_path: Path) -> subprocess.CompletedProcess[str]:
+    # The wrapper runs AS JOE and self-drops to apmablate for the inner: outer_main
+    # reads the source repo + computes the expected tree hash (joe can), then
+    # `sudo -u apmablate env -i … bash -s -- --inner … < "$0"` runs the probes +
+    # runner as apmablate, and writes the receipt back as joe. So invoke it as
+    # joe — live-verified: runner uid=1001, cannot read /home/joe, all probes pass.
     codex = "/home/apmablate/.npm-global/bin/codex"
     command = [str(ROOT / "scripts/e2_ablation_dispatch.sh"),
                "--problem", problem, "--base-revision", base,
@@ -249,6 +254,8 @@ def run_one(problem: str, base: str, arm: str, output: Path,
     delivery = recall_fn(problem, arm)
     reset_fn(problem, base)
     with tempfile.TemporaryDirectory(prefix="e2-pilot-") as temporary:
+        # The wrapper's outer_main (joe) writes the receipt, so a joe-owned temp
+        # dir is correct — no widening needed.
         isolation_path = Path(temporary) / "isolation.json"
         wrapped = wrapper_fn(problem, base, delivery.packet, isolation_path)
         if not isolation_path.is_file():
