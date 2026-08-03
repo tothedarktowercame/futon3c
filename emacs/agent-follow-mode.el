@@ -277,6 +277,37 @@ Never touches the progress line while the REPL streams its own turn."
            job-id caller (equal state "running")
            (agent-follow--last-tool-preview events)))))))
 
+(defun agent-follow--fetch-pinned-job (buffer job-id)
+  "Fetch pinned JOB-ID and render its current state into BUFFER."
+  (let ((url (format "%s/api/alpha/invoke/jobs/%s"
+                     (agent-follow--agency-url) job-id))
+        (outbuf (generate-new-buffer " *agent-follow-pin*")))
+    (make-process
+     :name "agent-follow-pin"
+     :buffer outbuf
+     :command (list "curl" "-sS" "--max-time" "10" url)
+     :noquery t
+     :sentinel
+     (lambda (process _event)
+       (unless (process-live-p process)
+         (let* ((process-buffer (process-buffer process))
+                (out (when (buffer-live-p process-buffer)
+                       (with-current-buffer process-buffer (buffer-string)))))
+           (when (buffer-live-p process-buffer)
+             (kill-buffer process-buffer))
+           (when (and out (buffer-live-p buffer))
+             (with-current-buffer buffer
+               (condition-case nil
+                   (let* ((data (json-parse-string
+                                 out :object-type 'alist
+                                 :array-type 'list
+                                 :null-object nil
+                                 :false-object nil))
+                          (job (alist-get 'job data)))
+                     (when job
+                       (agent-follow--render-jobs (list job))))
+                 (error nil))))))))))
+
 (defun agent-follow--fetch-pinned-missing (buffer present-ids)
   "Individually fetch pinned live jobs absent from PRESENT-IDS.
 Capped-but-alive jobs drop out of the windowed poll as newer jobs arrive;
@@ -286,7 +317,8 @@ three fetches per poll."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
       (when agent-follow--live-jobs
-        (let ((now (float-time)) (fetched 0))
+        (let ((now (float-time))
+              (fetched 0))
           (maphash
            (lambda (job-id last-event-at)
              (cond
@@ -296,35 +328,8 @@ three fetches per poll."
               ((>= fetched 3) nil)
               (t
                (setq fetched (1+ fetched))
-               (let ((url (format "%s/api/alpha/invoke/jobs/%s"
-                                  (agent-follow--agency-url) job-id))
-                     (outbuf (generate-new-buffer " *agent-follow-pin*")))
-                 (make-process
-                  :name "agent-follow-pin"
-                  :buffer outbuf
-                  :command (list "curl" "-sS" "--max-time" "10" url)
-                  :noquery t
-                  :sentinel
-                  (lambda (p _event)
-                    (when (memq (process-status p) '(exit signal))
-                      (let ((out (when (buffer-live-p (process-buffer p))
-                                   (with-current-buffer (process-buffer p)
-                                     (buffer-string)))))
-                        (when (buffer-live-p (process-buffer p))
-                          (kill-buffer (process-buffer p)))
-                        (when (and out (buffer-live-p buffer))
-                          (with-current-buffer buffer
-                            (condition-case nil
-                                (let* ((data (json-parse-string
-                                              out :object-type 'alist
-                                              :array-type 'list
-                                              :null-object nil
-                                              :false-object nil))
-                                       (job (alist-get 'job data)))
-                                  (when job
-                                    (agent-follow--render-jobs (list job))))
-                              (error nil)))))))))))
-           agent-follow--live-jobs)))))))
+               (agent-follow--fetch-pinned-job buffer job-id))))
+           agent-follow--live-jobs))))))
 
 (defun agent-follow--handle-response (buffer json-string)
   "Parse JSON-STRING and render into BUFFER."
@@ -343,53 +348,99 @@ three fetches per poll."
         (error nil)))))
 
 (defvar-local agent-follow--inflight nil
-  "Non-nil while a poll's curl is in flight for this buffer.
-SINGLE-FLIGHT: polls are skipped while set (found live 2026-07-05:
-doorbell bursts stacked 726 concurrent curls — 'too many open files').")
+  "The live curl process for this buffer's current poll, or nil.
+SINGLE-FLIGHT: polls are skipped while this process is live (found live
+2026-07-05: doorbell bursts stacked 726 concurrent curls — `too many open
+files'.  Storing the process, rather than a Boolean latch, lets later polls
+recover when process creation or sentinel delivery is lost.")
 
 (defvar-local agent-follow--queued nil
   "Non-nil when a poll was requested while one was in flight;
 exactly one follow-up poll runs on completion so no events are missed.")
 
+(defun agent-follow--finish-poll (buffer process)
+  "Render and release PROCESS's completed poll for BUFFER.
+Only PROCESS may release its single-flight slot; a late completion from an
+orphaned process must not disturb a replacement poll."
+  (let* ((process-buffer (process-buffer process))
+         (out (when (buffer-live-p process-buffer)
+                (with-current-buffer process-buffer (buffer-string)))))
+    (when (buffer-live-p process-buffer)
+      (kill-buffer process-buffer))
+    ;; Release the slot and run a queued follow-up regardless of render errors.
+    (unwind-protect
+        (when out
+          (condition-case nil
+              (agent-follow--handle-response buffer out)
+            (error nil)))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer
+          (when (or (eq agent-follow--inflight process)
+                    (eq agent-follow--inflight 'starting))
+            (setq agent-follow--inflight nil)
+            (when agent-follow--queued
+              (setq agent-follow--queued nil)
+              (run-at-time 0.3 nil #'agent-follow--poll buffer))))))))
+
 (defun agent-follow--poll (buffer)
   "Fetch recent invoke jobs and render new events into BUFFER.
-Single-flight: if a poll is already running, queue ONE follow-up."
+Single-flight: if a poll is already running, queue ONE follow-up.
+An in-flight value without a live process is orphaned state and is replaced
+by this poll, so a lost sentinel cannot wedge the buffer indefinitely."
   (when (buffer-live-p buffer)
-    (if (buffer-local-value 'agent-follow--inflight buffer)
-        (with-current-buffer buffer (setq agent-follow--queued t))
-      (with-current-buffer buffer
-        (setq agent-follow--inflight t
-              agent-follow--last-poll-at (float-time)))
-      (let ((url (format "%s/api/alpha/invoke/jobs?limit=%d"
-                         (with-current-buffer buffer (agent-follow--agency-url))
-                         agent-follow-jobs-limit))
-            (outbuf (generate-new-buffer " *agent-follow*")))
-        (make-process
-         :name "agent-follow"
-         :buffer outbuf
-         :command (list "curl" "-sS" "--max-time" "10" url)
-         :noquery t
-         :sentinel
-         (lambda (p _event)
-           (when (memq (process-status p) '(exit signal))
-             (let ((out (when (buffer-live-p (process-buffer p))
-                          (with-current-buffer (process-buffer p)
-                            (buffer-string)))))
-               (when (buffer-live-p (process-buffer p))
-                 (kill-buffer (process-buffer p)))
-               ;; Clear inflight and run any queued follow-up REGARDLESS of
-               ;; render errors — a stuck flag would silence the buffer.
-               (unwind-protect
-                   (when out
-                     (condition-case nil
-                         (agent-follow--handle-response buffer out)
-                       (error nil)))
-                 (when (buffer-live-p buffer)
-                   (with-current-buffer buffer
-                     (setq agent-follow--inflight nil)
-                     (when agent-follow--queued
-                       (setq agent-follow--queued nil)
-                       (run-at-time 0.3 nil #'agent-follow--poll buffer)))))))))))))
+    (let* ((process (buffer-local-value 'agent-follow--inflight buffer))
+           (live? (and (processp process) (process-live-p process))))
+      (if live?
+          (with-current-buffer buffer (setq agent-follow--queued t))
+        (with-current-buffer buffer
+          ;; A stale transport cannot support a truthful progress display.
+          ;; Clear both halves of the state before starting the recovery poll.
+          (when (or process agent-follow--queued)
+            (setq agent-follow--progress-jobs nil)
+            (unless (and (boundp 'agent-chat--streaming-started)
+                         agent-chat--streaming-started)
+              (when (fboundp 'agent-chat-remove-thinking)
+                (condition-case nil
+                    (agent-chat-remove-thinking)
+                  (error nil)))))
+          ;; `starting' owns the slot until `make-process' returns.  Clear a
+          ;; stale queued bit here: this poll is the requested recovery poll.
+          (setq agent-follow--inflight 'starting
+                agent-follow--queued nil
+                agent-follow--last-poll-at (float-time)))
+        (let (outbuf)
+          (condition-case err
+              (let* ((url (format "%s/api/alpha/invoke/jobs?limit=%d"
+                                  (with-current-buffer buffer
+                                    (agent-follow--agency-url))
+                                  agent-follow-jobs-limit))
+                     (_ (setq outbuf
+                              (generate-new-buffer " *agent-follow*")))
+                     (process
+                      (make-process
+                       :name "agent-follow"
+                       :buffer outbuf
+                       :command (list "curl" "-sS" "--max-time" "10" url)
+                       :noquery t
+                       :sentinel
+                       (lambda (p _event)
+                         (unless (process-live-p p)
+                           (agent-follow--finish-poll buffer p))))))
+                ;; A very short-lived process may finish before control returns
+                ;; from `make-process'.  Its sentinel then owns and clears the
+                ;; `starting' slot; do not resurrect the completed process.
+                (when (buffer-live-p buffer)
+                  (with-current-buffer buffer
+                    (when (eq agent-follow--inflight 'starting)
+                      (setq agent-follow--inflight process)))))
+            (error
+             (when (buffer-live-p outbuf)
+               (kill-buffer outbuf))
+             (when (buffer-live-p buffer)
+               (with-current-buffer buffer
+                 (when (eq agent-follow--inflight 'starting)
+                   (setq agent-follow--inflight nil))))
+             (signal (car err) (cdr err)))))))))
 
 (defun agent-follow--mark-history-seen ()
   "Mark all finished jobs as fully seen so enabling the mode replays only
