@@ -397,3 +397,23 @@ too strong: it fires *sometimes*. Any Ψ-dependent measurement is unreliable
 until the fallback is made loud rather than silent — a ranker that quietly
 degrades under load will produce arm differences that are really load
 differences.
+
+### Freeze status — RESOLVED (independent verification, claude-12)
+
+codex-3's `aa213be8` freezes the ranking-receipt inputs from the run's initial
+snapshot and records the final ranking score rather than the jittering auxiliary
+FTS score. Ran the harness once more under an operator shell, independently of
+the producing agent:
+
+    committed / codex-3's claim   ff9b36823bbe52be207cd7b6469205ea04fe6cc8e223500daa9934e6facf8df1
+    my independent run            ff9b36823bbe52be207cd7b6469205ea04fe6cc8e223500daa9934e6facf8df1
+
+**REPRODUCED.** Three runs across two operators now agree byte-for-byte, so the
+artifact is frozen in the strict sense, not merely replicated. The earlier
+failed check above stands as recorded — it is what found the intermittent
+receipt fetch, and deleting it would erase the evidence that produced the fix.
+
+Note the scope: the *analysis harness* is now deterministic. The **production**
+recall path still degrades silently under store load — that is SEQ-0.5, in
+flight as `invoke-1785758489919-917-452f371d`. A frozen harness measures the
+system reliably; it does not make the system reliable.
