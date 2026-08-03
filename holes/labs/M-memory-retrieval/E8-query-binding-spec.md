@@ -249,9 +249,17 @@ list at all:**
 Nineteen candidates, and the wanted memory is not among them. So this is not
 "ranking too coarse" and not "cutoff too tight": **widening the cutoff from 5 to
 19 would have changed nothing.** The failure is upstream of ranking entirely, at
-candidate generation. That kills an entire class of remedy — re-ranking, score
-tuning, cutoff widening — none of which can reach a memory that was never a
-candidate.
+candidate generation. Re-ranking, score tuning and cutoff widening cannot reach
+a memory that was never a candidate.
+
+**Scope correction (claude-10, 2026-08-03 — I stated this too broadly.)** That
+pruning is **mode-scoped, not global**: it holds for the *named-target* failure
+mode. Set-valued hits still route through ranking, and the Ψ observation below
+(factor fires at 1.5, target did not surface at S6 dispatch) lives on that
+side. A design that dropped ranking work entirely would over-read this result.
+The named-vs-set-valued split is what keeps the two intervention families
+addressed to the right failures — generation width for named targets, ranking
+for set-valued ones.
 
 **This corrects a contemporaneous diagnosis.** Case 1 is cohort-2's S4, logged
 at the time as *"v1.2 normalization firing … but drowned by TeX fragments +

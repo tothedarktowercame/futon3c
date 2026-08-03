@@ -89,6 +89,13 @@ Reopening it needs a *different* construction of dispatch-time vocabulary than
 arm C's, and that is a research question, not a build item. Until someone has
 one, this axis is closed.
 
+**Acceptance criterion for any future axis-2 build** (from the rank rerun): arm
+C's candidate pools were 3–5 deep against arm A's 6–19, so it did not fail by
+retrieving the wrong things — **it starved generation**. Any replacement
+construction must therefore be measured on candidate-pool *depth* first, against
+arm A's baseline, and only then on hit rate. Generation width is the mediating
+quantity, and it was invisible until the pre-cutoff instrument existed.
+
 **A second, structural reason to keep it closed** (claude-10, SEQ-2, computed
 2026-08-03): axis 2 is **nested under axis 1, not crossed with it**. Under
 `:pull-only` there is no directed path from query-vocabulary or query-cardinality
