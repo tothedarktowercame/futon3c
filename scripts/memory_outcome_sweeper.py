@@ -57,7 +57,8 @@ POSITIVE_MARKERS = (
 )
 ENDPOINT_SWEEPER_VERSION = "mechanical-witness/v1"
 LEAN_DECL_RE = re.compile(
-    r"(?m)^\s*(?:private\s+|protected\s+)?(?:theorem|lemma)\s+"
+    r"(?m)^\s*(?:Line\s+\d+\s*:\s*)?"
+    r"(?:private\s+|protected\s+)?(?:theorem|lemma)\s+"
     r"([A-Za-z_][A-Za-z0-9_'.]*)\b"
 )
 SHA_PRE_RE = re.compile(

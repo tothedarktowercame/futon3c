@@ -155,6 +155,23 @@ def prose := "sorry"
 '''
         self.assertEqual(1, sweeper.lexical_sorry_count(source))
 
+    def test_packet_line_prefix_preserves_named_axiom_targets(self):
+        job = {
+            K("events"): [{
+                K("type"): "prompt",
+                K("text"): """Registered base: abcdef1
+Target file: problems/a96J01/lean/Main.lean
+Target statement(s):
+Line 121: theorem roots_outside_unit_disk : True := by sorry
+Downstream unblocks: [none]
+""",
+            }],
+        }
+        packet = sweeper.endpoint_packet(job)
+        self.assertEqual(
+            ["roots_outside_unit_disk"], packet["targets"][0]["declarations"]
+        )
+
     def test_pull_offer_union_licenses_used_memory(self):
         entries = {
             K("entries"): [
