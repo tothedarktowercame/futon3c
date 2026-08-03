@@ -123,7 +123,7 @@ bow_frontdoor_result <- list(
                                 bow_adjustment_vectors),
   observed_candidate_sets = bow_observed_sets,
   candidate_set_count = length(bow_observed_sets),
-  refusal_agrees = identical(length(bow_observed_sets), 0L)
+  backdoor_exhaustion_agrees = identical(length(bow_observed_sets), 0L)
 )
 
 result <- list(
@@ -147,7 +147,7 @@ write_json(result, file.path(here, "r-results.json"), pretty = TRUE,
 if (length(memory_implications$disagreements) ||
     length(lean_implications$disagreements) || length(q3_disagreements) ||
     length(r2_disagreements) || length(r3_disagreements) ||
-    !bow_frontdoor_result$refusal_agrees) {
+    !bow_frontdoor_result$backdoor_exhaustion_agrees) {
   stop("dagitty disagreement; inspect r-results.json")
 }
 cat(sprintf("dagitty memory/Lean implications: %d/%d agreements, 0 disagreements\n",
@@ -156,5 +156,5 @@ cat(sprintf("dagitty converse: emitted memory/Lean %d/%d CIs\n",
             length(basis_results$memory), length(basis_results$lean)))
 cat("Q3: 4/4 verdicts agree\n")
 cat("R2/R3: 3/3 and 2/2 verdicts agree\n")
-cat(sprintf("Book-of-Why dagitty: %d observed adjustment sets; refusal agrees\n",
+cat(sprintf("Book-of-Why dagitty: %d observed adjustment sets; backdoor exhaustion agrees\n",
             bow_frontdoor_result$candidate_set_count))

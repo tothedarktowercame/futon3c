@@ -56,7 +56,7 @@
       ],
       "observed_candidate_sets": [],
       "candidate_set_count": 0,
-      "refusal_agrees": true
+      "backdoor_exhaustion_agrees": true
     }
   }
 }

@@ -70,6 +70,21 @@ def bow_checks(export):
             graph.remove_edges_from(list(graph.out_edges(x)))
         actual = separated(graph, x, y, given)
         verdicts.append({"claim": claim, "separated": actual, "expected": expected})
+    smoking = graphs["front-door"]
+    without_tar = smoking.copy()
+    without_tar.remove_node("tar")
+    fd1 = not nx.has_path(without_tar, "smoking", "cancer")
+    cut_smoking = smoking.copy()
+    cut_smoking.remove_edges_from(list(cut_smoking.out_edges("smoking")))
+    fd2 = separated(cut_smoking, "smoking", "tar")
+    cut_tar = smoking.copy()
+    cut_tar.remove_edges_from(list(cut_tar.out_edges("tar")))
+    fd3 = separated(cut_tar, "tar", "cancer", ["smoking"])
+    verdicts.extend([
+        {"claim": "smoking-FD1", "separated": fd1, "expected": True},
+        {"claim": "smoking-FD2", "separated": fd2, "expected": True},
+        {"claim": "smoking-FD3", "separated": fd3, "expected": True},
+    ])
     disagreements = [item for item in verdicts if item["separated"] != item["expected"]]
     return {"checked": len(verdicts), "agreements": len(verdicts) - len(disagreements),
             "disagreements": disagreements, "verdicts": verdicts}
@@ -88,7 +103,24 @@ def bow_frontdoor_y0():
         "identifiable": expression is not None,
         "query": "P(cancer | do(smoking))",
         "encoding": "U latent-projected as smoking <-> cancer; smoking -> tar -> cancer",
-        "frontier-marker": "engine refuses observed-only backdoor; y0 ID succeeds",
+        "agreement": "engine and y0 both identify by front-door-capable methods",
+    }
+
+
+def bow_napkin_y0():
+    """Latent projection: U1 gives W<->X and U2 gives W<->Y."""
+    w, z, x, y = map(Variable, ["W", "Z", "X", "Y"])
+    graph = NxMixedGraph.from_edges(
+        nodes=[w, z, x, y],
+        directed=[(w, z), (z, x), (x, y)],
+        undirected=[(w, x), (w, y)],
+    )
+    expression = identify_outcomes(graph, treatments=x, outcomes=y)
+    return {
+        "identifiable": expression is not None,
+        "query": "P(Y | do(X))",
+        "encoding": "U1 latent-projected as W <-> X; U2 as W <-> Y; W -> Z -> X -> Y",
+        "frontier-marker": "engine refuses after backdoor/front-door exhaustion; y0 ID succeeds",
     }
 
 
@@ -211,6 +243,7 @@ def main():
     )
     bow = bow_checks(export)
     bow_y0 = bow_frontdoor_y0()
+    napkin_y0 = bow_napkin_y0()
 
     result = {
         "tool-versions": {
@@ -232,7 +265,8 @@ def main():
         "r2": {"verdicts": r2_actual, "disagreements": r2_disagreements},
         "r3": {"verdicts": r3_actual, "disagreements": r3_disagreements},
         "identification": {"Q1": q1_id, "R1-ID": r1_id, "R1-IDC": r1_idc},
-        "bow": {"networkx": bow, "frontdoor-y0": bow_y0},
+        "bow": {"networkx": bow, "frontdoor-y0": bow_y0,
+                "napkin-y0": napkin_y0},
     }
     with (HERE / "python-results.json").open("w", encoding="utf-8") as stream:
         json.dump(result, stream, indent=2, sort_keys=True)
@@ -252,6 +286,8 @@ def main():
         raise SystemExit("y0 identification failure; inspect python-results.json")
     if not bow_y0["identifiable"]:
         raise SystemExit("y0 did not identify the front-door fixture")
+    if not napkin_y0["identifiable"]:
+        raise SystemExit("y0 did not identify the napkin fixture")
     print(
         "NetworkX memory/Lean implications: "
         f"{memory_implications['agreements']}/{lean_implications['agreements']} "
@@ -261,7 +297,7 @@ def main():
     print("R2/R3: 3/3 and 2/2 verdicts agree")
     print("y0: Q1 ID, R1 ID, and R1 conditional IDC identifiable")
     print(f"Book-of-Why NetworkX: {bow['agreements']}/{bow['checked']} agreements")
-    print("Book-of-Why y0: front-door identifiable (deliberate frontier marker)")
+    print("Book-of-Why y0: smoking front-door agreement; napkin frontier marker")
 
 
 if __name__ == "__main__":

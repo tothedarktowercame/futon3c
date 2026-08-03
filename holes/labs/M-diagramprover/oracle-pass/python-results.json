@@ -1,14 +1,20 @@
 {
   "bow": {
     "frontdoor-y0": {
+      "agreement": "engine and y0 both identify by front-door-capable methods",
       "encoding": "U latent-projected as smoking <-> cancer; smoking -> tar -> cancer",
-      "frontier-marker": "engine refuses observed-only backdoor; y0 ID succeeds",
       "identifiable": true,
       "query": "P(cancer | do(smoking))"
     },
+    "napkin-y0": {
+      "encoding": "U1 latent-projected as W <-> X; U2 as W <-> Y; W -> Z -> X -> Y",
+      "frontier-marker": "engine refuses after backdoor/front-door exhaustion; y0 ID succeeds",
+      "identifiable": true,
+      "query": "P(Y | do(X))"
+    },
     "networkx": {
-      "agreements": 7,
-      "checked": 7,
+      "agreements": 10,
+      "checked": 10,
       "disagreements": [],
       "verdicts": [
         {
@@ -45,6 +51,21 @@
           "claim": "firing-rung2",
           "expected": false,
           "separated": false
+        },
+        {
+          "claim": "smoking-FD1",
+          "expected": true,
+          "separated": true
+        },
+        {
+          "claim": "smoking-FD2",
+          "expected": true,
+          "separated": true
+        },
+        {
+          "claim": "smoking-FD3",
+          "expected": true,
+          "separated": true
         }
       ]
     }
