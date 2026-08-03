@@ -197,20 +197,34 @@ In the final report give exactly one `USED <id>: <mechanism>` or
     return parse_recall_dry_run(result.stdout)
 
 
-def invoke_wrapper(problem: str, base: str, packet: str,
-                   isolation_path: Path) -> subprocess.CompletedProcess[str]:
+def wrapper_command(problem: str, base: str, packet: str,
+                    isolation_path: Path) -> list[str]:
     # The wrapper runs AS JOE and self-drops to apmablate for the inner: outer_main
     # reads the source repo + computes the expected tree hash (joe can), then
     # `sudo -u apmablate env -i … bash -s -- --inner … < "$0"` runs the probes +
     # runner as apmablate, and writes the receipt back as joe. So invoke it as
     # joe — live-verified: runner uid=1001, cannot read /home/joe, all probes pass.
+    #
+    # --sandbox danger-full-access per setup-ablation-account.sh: the OS account
+    # is the sandbox, and the probes have just shown its permissions exclude
+    # every path to the answer.  Codex's own bwrap sandbox is a redundant second
+    # layer that cannot start on this host at all (AppArmor
+    # kernel.apparmor_restrict_unprivileged_userns=1 -> "bwrap: loopback: Failed
+    # RTM_NEWADDR"), and it fails identically for joe, so this is not a cost of
+    # the isolation.  Without the flag every shell command inside the run fails
+    # before it starts while codex still exits 0.
     codex = "/home/apmablate/.npm-global/bin/codex"
-    command = [str(ROOT / "scripts/e2_ablation_dispatch.sh"),
-               "--problem", problem, "--base-revision", base,
-               "--receipt", str(isolation_path), "--", codex, "exec",
-               "--ephemeral", "--ignore-user-config", "--ignore-rules",
-               "--cd", str(RUNS_ROOT / problem), packet]
-    return run_command(command, cwd=ROOT)
+    return [str(ROOT / "scripts/e2_ablation_dispatch.sh"),
+            "--problem", problem, "--base-revision", base,
+            "--receipt", str(isolation_path), "--", codex, "exec",
+            "--ephemeral", "--ignore-user-config", "--ignore-rules",
+            "--sandbox", "danger-full-access",
+            "--cd", str(RUNS_ROOT / problem), packet]
+
+
+def invoke_wrapper(problem: str, base: str, packet: str,
+                   isolation_path: Path) -> subprocess.CompletedProcess[str]:
+    return run_command(wrapper_command(problem, base, packet, isolation_path), cwd=ROOT)
 
 
 def extract_trace_twice(run_dir: Path, base: str,

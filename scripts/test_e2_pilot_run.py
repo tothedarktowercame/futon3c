@@ -88,6 +88,15 @@ class E2PilotTest(unittest.TestCase):
                                   reset_fn=lambda *_: None)
             self.assertFalse(output.exists(), "invalid isolation must never become data")
 
+    def test_runner_command_keeps_the_os_as_the_only_sandbox(self) -> None:
+        command = pilot.wrapper_command("a95J01", "51b6bc00", "PACKET", Path("/tmp/r.json"))
+        for flag in ("exec", "--ephemeral", "--ignore-user-config", "--ignore-rules"):
+            self.assertIn(flag, command, "the dispatch wrapper refuses runs without this")
+        index = command.index("--sandbox")
+        self.assertEqual("danger-full-access", command[index + 1],
+                         "codex's own bwrap sandbox cannot start on this host; the "
+                         "isolated account's permissions are the sandbox")
+
     def test_failed_runner_is_named_not_laundered_into_an_empty_trace(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
