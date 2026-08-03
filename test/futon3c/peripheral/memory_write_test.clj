@@ -272,9 +272,13 @@
                    :subjects [{:ref/type "mission" :ref/id "M-typed-memories"}]})]
       (is (true? (:ok r)) (pr-str (:error r))))))
 
-(deftest rejected-zai-memory-payload-names-invalid-artifact-ref
-  ;; Exact 2026-08-03 a96J01 payload. Structurally present fields are not
-  ;; enough: :git-commit is outside EvidenceEntry's ArtifactRefType enum.
+(deftest rejected-memory-payload-names-invalid-artifact-ref
+  ;; Structurally present fields are not enough: a :ref/type outside
+  ;; EvidenceEntry's ArtifactRefType enum must be NAMED, not bounced as an
+  ;; opaque "did not conform to shape". Originally written against the exact
+  ;; 2026-08-03 a96J01 payload, whose :git-commit subject was invalid at the
+  ;; time; :git-commit was admitted to the enum the same day, so the
+  ;; diagnosability regression now runs against a type that is still invalid.
   (let [store (empty-store)
         receipt
         (memory-write/record-memory!
@@ -286,14 +290,35 @@
           :body "...via summable_nat_add_iff. Commit: d1606d0."
           :hook "APM a96J01 or Weierstrass M-test converse formalization in Lean 4"
           :why "Prior candidate sessions (6 of them) all left sorries; ..."
-          :subjects [{:ref/id "d1606d0" :ref/type "git-commit"}]})
+          :subjects [{:ref/id "d1606d0" :ref/type "git-blob"}]})
         fields (get-in receipt [:error :error/context :fields])
         subject-error (some #(when (= :subjects (:field %)) %) fields)]
     (is (false? (:ok receipt)))
     (is (= :invalid-memory-payload (get-in receipt [:error :error/code])))
     (is (some? subject-error))
     (is (str/includes? (:want subject-error) "ArtifactRef"))
-    (is (= :git-commit
+    (is (= :git-blob
            (get-in subject-error [:got 0 :subject :ref/type])))
     (is (contains? (get-in subject-error [:got 0 :validation]) :ref/type))
     (is (empty? (:entries @store)))))
+
+(deftest the-2026-08-03-refused-memory-can-now-be-recorded
+  ;; The incident closed, not merely diagnosable. This is the exact payload
+  ;; zai-1 sent mid-session on a96J01 and had refused twice; the content it
+  ;; carried (the hasSum_single route) was lost to the write path. With
+  ;; :git-commit in ArtifactRefType a runner can name the commit that
+  ;; witnessed its own proof, which is what it was trying to do.
+  (let [store (empty-store)
+        receipt
+        (memory-write/record-memory!
+         (assoc test-ctx :agent-id "zai-1"
+                         :session-id "zai-bec940299024470eb815607f8b13b650"
+                         :evidence-store store)
+         {:name "a96j01-tent-disjoint-counterexample"
+          :kind "feedback"
+          :body "...via summable_nat_add_iff. Commit: d1606d0."
+          :hook "APM a96J01 or Weierstrass M-test converse formalization in Lean 4"
+          :why "Prior candidate sessions (6 of them) all left sorries; ..."
+          :subjects [{:ref/id "d1606d0" :ref/type "git-commit"}]})]
+    (is (true? (:ok receipt)) (pr-str (:error receipt)))
+    (is (seq (:entries @store)))))

@@ -288,10 +288,18 @@
    :assert :challenge :agree :define :retract :suggest :request :query])
 
 (def ArtifactRefType
-  "Universal reference types for any artifact that can accumulate evidence."
+  "Universal reference types for any artifact that can accumulate evidence.
+
+   :git-commit added 2026-08-03. A runner recording what worked wants to name
+   the commit that witnessed it — zai-1 tried exactly that on a96J01 and the
+   write was refused, because the nearest available types (:evidence,
+   :proof-path, :script) all misdescribe a commit. E-futon-memories makes this
+   load-bearing rather than convenient: its corpus IS the stack's git history,
+   so mapping commits onto another type would put a false ref-type on every
+   memory in it and corrupt the provenance its benchmark depends on."
   [:enum :pattern :mission :component :gate :session :agent :thread :evidence
    :proof-path :task :portfolio :arse-thread :library :problem :language :tool
-   :service :script :memory :decision])
+   :service :script :memory :decision :git-commit])
 
 (def ArtifactRef
   "Universal reference to any artifact (Table 24's overloaded X)."
