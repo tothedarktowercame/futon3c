@@ -36,4 +36,11 @@
                "measurement mismatch: the offered NODE is not what inclusion-reasons measures - the V2 pattern (instrument field != phenomenon) recurring"]
     :status :candidate-delta-v6-registered-not-applied}]
   :dowhy "complete-case n=106, 20 permutations, not rejected; does NOT override exact dagitty violations (stated)"
-  :consequence "The spec survived first whole-corpus contact on every testable edge EXCEPT the offer-stage mediation chain, which is exactly where claude-12's requirement-2 (denominator/measurement checks) already pointed. The two violations + the runner-outcome gap are the V3 instrumentation agenda, derived from data."}}
+  :rank-rerun-resolution
+ {:status "reviewed-not-frozen (adb67b13; producing job overran cap, determinism unverified)"
+  :headline "ALL THREE named targets ABSENT from arm-A candidate lists (depths 19/16/13/6/19 vs cutoff 5) - failure is at CANDIDATE GENERATION, upstream of ranking; re-ranking/score-tuning/cutoff interventions are structurally null for the named-target failure mode (set-valued hits still route through ranking, so the pruning is mode-scoped, not global)"
+  :rs1-residual-split-resolved "arm-A absence = query-side (oracle vocabulary recovers cases 1+5); arm-D absence (case 4) = downstream, endpoint-relative attachment family; the two residuals separate cleanly and neither reduces to the other"
+  :pollution-correction "S4's 'pollution not absence' log line REFUTED - candidate-list absence, not drowning; spec delta v7 registered withdrawing the v2 edge's support; RS-1's pollution residual loses its only witnessed instance"
+  :arm-c-reread "structure-aware arm failed via NARROWER candidate pools (depths 3-5), not wrong vocabulary in principle - evidence against that construction, not the axis-2 level"
+  :psi "confirmed live (score 1.5 receipt-ranked); did not surface the target at S6 dispatch"}
+ :consequence "The spec survived first whole-corpus contact on every testable edge EXCEPT the offer-stage mediation chain, which is exactly where claude-12's requirement-2 (denominator/measurement checks) already pointed. The two violations + the runner-outcome gap are the V3 instrumentation agenda, derived from data."}}
