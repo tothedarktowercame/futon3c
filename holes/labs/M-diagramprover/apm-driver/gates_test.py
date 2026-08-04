@@ -238,3 +238,19 @@ theorem demo : True := by
         result = gates.boundary_conformance(self.SOURCE)
         self.assertTrue(result["conforming"])
         self.assertTrue(result["docstring-conforming"])
+
+
+class DiscoveryFailureClassifiesTest(unittest.TestCase):
+    """Chain-5 fix: no-main-statement gates defective, never raises."""
+
+    def test_gate_path_returns_defective_on_multi_theorem(self, ):
+        import tempfile, pathlib
+        src = ("theorem helper_one : True := trivial\n"
+               "theorem helper_two : True := by\n  sorry\n")
+        with tempfile.TemporaryDirectory() as d:
+            f = pathlib.Path(d) / "Main.lean"
+            f.write_text(src)
+            r = gates.gate_path(f, problem_id="a96X01")
+        self.assertEqual("defective", r["outcome"])
+        self.assertTrue(any("statement-discovery-failed" in x
+                            for x in r["gate-results"]["reasons"]))

@@ -387,7 +387,23 @@ def gate_path(
     """Run all gates for a Lean file and return driver.py's exact payload."""
 
     source = lean_file.read_text(encoding="utf-8")
-    theorem_name, _normalized_statement, digest = statement_hash(source, problem_id)
+    try:
+        theorem_name, _normalized_statement, digest = statement_hash(source, problem_id)
+    except GateError as exc:
+        # A file we cannot locate a main statement in is a DEFECTIVE
+        # classification, not a driver crash (chain-5 fix).
+        return {
+            "outcome": "defective",
+            "statement-hash": "sha256:" + "0" * 64,
+            "gate-results": {
+                "build": {"exit-code": None},
+                "sorries": count_sorries(source),
+                "boundary-conforming": False,
+                "axioms": {"exit-code": None, "line": None},
+                "theorem-name": None,
+                "reasons": [f"statement-discovery-failed: {exc}"],
+            },
+        }
     sorry_count = count_sorries(source)
     boundary = boundary_conformance(source)
     build_raw = _run_lean(
