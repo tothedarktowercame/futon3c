@@ -150,3 +150,72 @@ a second path — memory → artifact import → outcome — whose middle step i
 observable in a way the direct path is not. That is a candidate delta (v12),
 registered here, not applied: I would want claude-10's read on whether it is a
 new node or a refinement of the existing use edge.
+
+---
+
+## 6. Backfill alone is a blip — the missed-promotion gap, measured
+
+Joe, 2026-08-04: *"if we only backfill and don't add the capability (and indeed
+requirement) to record future constructions of this nature, the backfill will be
+a one-off blip."*
+
+Measured against the frozen corpus. Helper declarations proved **independently in
+two different problem files** — i.e. the same construction built twice, where one
+promotion would have served both:
+
+| helpers | problems | domain |
+|---:|---|---|
+| **6** | a00J04 ↔ a01A08 | lemniscate machinery (`isClosed_lemniscate`, `connectedComponents_complement_lemniscate_le`, `card_roots_le_degree`, `isPreconnected_subset_superlevel_or_sublevel`, and two superlevel-frontier lemmas) |
+| 1 | a92J05 ↔ a97A08 | `zeroCountInClosedBall_aeval_eq_card_filter` |
+| 1 | a00J05 ↔ a01A11 | `cauchyTransform_differentiableAt` |
+
+**The a92J05 ↔ a97A08 pair is a controlled comparison and it settles the
+question.** Those two problems *already share a ConstructionTarget*: both import
+`ConstructionTargets.Rouche` and both use `zeroCountInClosedBall_add_eq`. So the
+promotion route was known, available, and demonstrably used by these very
+problems — and a **second** shared lemma was still duplicated inline. Promotion
+is not gated by ignorance of the mechanism. It is gated by nothing at all: it
+happens when someone thinks of it.
+
+The a00J04 ↔ a01A08 pair is the same failure at scale — six lemmas, effectively
+an unpromoted ConstructionTargets module.
+
+**This is why backfill alone is a blip, stated as evidence rather than
+prediction.** Backfill addresses the 165 declarations already in
+ConstructionTargets and the reused ones with no memory. It does nothing about
+the *next* duplicate, and the corpus shows duplicates arising even between
+problems that were already amortizing successfully.
+
+### What the requirement has to be
+
+Two halves, and the second is the one that lasts:
+
+1. **Capability** — detect it. A declaration in a problem file that is stated
+   over general objects (does not mention the problem's specific data) is a
+   promotion candidate. Crude proxy today: 707 of 752 problem-file declarations
+   are not named after their problem, against 165 already promoted. The
+   name-based proxy over-counts badly; the *duplicate-name* signal above does
+   not, and it is a floor, not an estimate — it only catches collisions where
+   two agents independently chose the same name.
+
+2. **Requirement** — gate it. Same shape as the `USED`/`IGNORED` attribution
+   line that already exists in the packet contract: a session that proves a
+   general helper must either promote it to `ConstructionTargets/` **or** state
+   why it is problem-specific. Untyped silence is what the memory contract
+   already refuses elsewhere (`use-receipt` will not accept a surfaced memory
+   without an inclusion reason); this applies the same discipline to
+   constructions.
+
+### Where the DAG earns its keep (Joe's argument, restated)
+
+The value is **not** documentation. It is that a top-down decomposition of the
+proof says *where a construction is called for* — at which node the agent has
+reason to build a reusable object rather than an inline one. That converts
+promotion from "someone thought of it" into a checkable obligation at a named
+site.
+
+And it is testable on frozen data before anything is built: the 15 CT-importing
+problems record where constructions actually arose, and the 8 duplicated helpers
+record where they should have. **A decomposition that predicts those 23 sites is
+doing real work; one that does not is documentation.** That is a cheap
+falsification test and it needs no Zai.
