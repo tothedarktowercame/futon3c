@@ -127,10 +127,16 @@ CLAUDE REVIEW ONLY where judgment is irreducible (fresh-statement
 fidelity adjudication; anomalies) → scribe + hunger audit + promotion
 → capability-proof update (this document) → next problem.
 Certificates: every component exercised by hand 2026-08-03 (the full
-factorial IS the hand-run of this loop). Warrant: **designed;
-components inductive-n≥1 each; composition unwitnessed**. Upgrade
-path: driver v0 on this box (2026-08-04 build), supervised trial
-(2–3 problems), then widen. zone-joe migration = copy of this
+factorial IS the hand-run of this loop); driver v0 built 2026-08-04
+(six modules, six adversarial reviews); supervised trial COMPLETE
+same day — chain 1 witnessed the safety branch (defective→anomaly→
+abandon, two instrument fixes harvested), chain 2 witnessed the full
+relay (partial→closer→closed→fidelity→scribe→promotion→self-updating
+capability log; Steinhaus banked, commit 318160d8). Warrant:
+**inductive-n=2 chains, both branches composition-witnessed**.
+Upgrade path: continuous mode under a durable parent; ams-* seat
+retarget when Zone's Agency lands; the v1 salvage path for truncated
+sessions. zone-joe migration = copy of this
 workflow (Joe, separate session).
 
 ---
@@ -152,3 +158,4 @@ workflow (Joe, separate session).
   on-point for the problem, cited in the docstring by the runner).
   v1 need registered: salvage path for truncated sessions;
   capability-update append on verdict-folded closes.
+- 2026-08-04 — chain apm-a96J02-b2567506a05d; problem a96J02; outcome closed; hops 1; commits ce07348, 318160d89257eab8482e8066e284afb91a7ec6ac, eb9fe1eeb5de945f63b94070d1ff5af4e0b1cc14.
