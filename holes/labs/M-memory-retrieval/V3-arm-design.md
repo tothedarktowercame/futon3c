@@ -138,8 +138,15 @@ lexical falsifications do not exclude.
 
 ## Assignment
 
-Full factorial is 4 × 3 × 2 = 24 cells against ~356 problems — under-powered and
-over-ambitious. Proposed instead:
+**Arithmetic revised 2026-08-04**, since the axis rebuild changed it: axis 1 now
+has 5 modes, axis 2 is **closed** (no buildable level), axis 3 has 2. So the
+factorial is 5 × 1 × 2 = **10 cells**, not the 24 this section previously
+claimed. Still staged rather than factorial — but the reason is now power and
+sequencing, not combinatorial explosion. Recorded rather than quietly corrected,
+because a stale denominator in a design doc is how a plan gets sized against a
+number nobody re-derived.
+
+Proposed instead:
 
 0. **Stage 0 (instrumentation) — BLOCKS EVERY ARM, INCLUDING THE CONTROL.**
    Added 2026-08-03 after claude-10's sequencing pass (SEQ-0.1) and confirmed
