@@ -1,0 +1,4 @@
+{"verdict": "abandon",
+ "reviewer": "claude-10",
+ "at": "2026-08-04T14:52:00+01:00",
+ "notes": "Phase-B zai session died at 43min (soft-cap territory), job state failed, 216 tool events executed. Artifact is a mid-work snapshot: build exit 1, 2 bare sorries, no boundary comments - correctly gated DEFECTIVE. Not resumable by re-gating (nothing changed). Abandon per v0 semantics; the truncated-session class is the first real anomaly and motivates a v1 salvage path (continuation re-dispatch or defective->closer with approval). NOTE for the record: the artifact docstring cites e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails - the FIRST organic memory citation in an artifact, on-point (a96A08 IS the Dirichlet integral), surfaced by driver-rendered phase-A recon."}

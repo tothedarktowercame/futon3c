@@ -356,17 +356,22 @@ class Runner:
                     if checkpoint == "anomaly":
                         return self._state(chain_id)
             elif state == "AWAITING_REVIEW":
-                if chain["review-checkpoint"] == "anomaly":
-                    return chain
+                # Watch whichever checkpoint is pending. Anomaly verdicts
+                # (resume/abandon) must be consumable on restart too —
+                # review-fix 2026-08-04: the early return here orphaned them.
+                pending = chain["review-checkpoint"]
                 watched = dict(self.deps.checkpoint_watch(
                     chain_id=chain_id,
-                    checkpoint="fidelity",
+                    checkpoint=pending,
                     ledger_path=self.ledger,
                     verdicts_dir=Path(self.config["verdicts"]),
                 ))
                 if watched["status"] == "error":
-                    raise RunError(f"malformed fidelity verdict: {watched.get('error')}")
+                    raise RunError(
+                        f"malformed {pending} verdict: {watched.get('error')}")
                 if watched["status"] != "applied":
+                    if pending == "anomaly":
+                        return chain
                     self.deps.sleep(float(self.config["review_poll_seconds"]))
             elif state == "SCRIBE":
                 if chain["last-poll-status"] == "done":
