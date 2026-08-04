@@ -222,8 +222,25 @@ def boundary_conformance(source: str) -> dict[str, Any]:
             and detail["has-protocol-word"]
         )
         details.append(detail)
+    conforming = all(detail["conforming"] for detail in details)
+    # A conforming protocol write-up in the main declaration's docstring
+    # also counts (trial chain 2, 2026-08-04: the runner put the full
+    # bridge/APIs-searched/routes account in the theorem docstring — the
+    # WHERE was too rigid, not the work).
+    docstring_conforming = False
+    if not conforming and details:
+        for doc_body in re.findall(r"/--(.*?)-/", source, re.S):
+            doc_lines = [l for l in doc_body.splitlines() if l.strip()]
+            if (
+                len(doc_lines) >= 5
+                and MATHLIB_IDENTIFIER_RE.search(doc_body)
+                and PROTOCOL_WORD_RE.search(doc_body)
+            ):
+                docstring_conforming = True
+                break
     return {
-        "conforming": all(detail["conforming"] for detail in details),
+        "conforming": conforming or docstring_conforming,
+        "docstring-conforming": docstring_conforming,
         "sites": details,
     }
 

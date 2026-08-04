@@ -167,3 +167,27 @@ class HistoricalIntegrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DocstringBoundaryTest(unittest.TestCase):
+    """Trial chain 2 shape: full protocol in the theorem docstring."""
+
+    SOURCE = '''/-- **Steinhaus's theorem**: statement summary here.
+
+**Boundary (1 sorry):** the remaining bridge is L1 translation
+continuity. APIs searched: `Continuous.convolution`,
+`tendsto_integral_of_dominated_convergence`.
+Routes tried: direct DCT (blocked). Routes NOT investigated:
+`Convolution` namespace with bilinear maps. -/
+theorem demo (A : Set Real) : True := by
+  sorry
+'''
+
+    def test_docstring_protocol_conforms(self):
+        result = gates.boundary_conformance(self.SOURCE)
+        self.assertTrue(result["conforming"])
+        self.assertTrue(result["docstring-conforming"])
+
+    def test_bare_sorry_without_docstring_still_fails(self):
+        bare = "theorem demo : True := by\n  sorry\n"
+        self.assertFalse(gates.boundary_conformance(bare)["conforming"])
