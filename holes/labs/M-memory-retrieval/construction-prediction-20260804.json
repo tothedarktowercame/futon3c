@@ -1,6 +1,6 @@
 {
   "schema": "construction-prediction/2026-08-04",
-  "phase": "scored-after-blind-prediction-freeze",
+  "phase": "scored-but-invalidated-for-prior-context-contamination",
   "generated_at": "2026-08-04T17:27:05Z",
   "model": "OpenAI Codex (GPT-5)",
   "reasoning_effort": "default/inherited; exact effort label not exposed to the agent",
@@ -9,6 +9,11 @@
   "blind_snapshot_commit": "ae2730318aa79ddb3a559850ec05e124c0508a32",
   "blind_snapshot_file_sha256": "611dca55b074041af17d5f2b4ae400c96e1b2091c7d54574a1f2118c2622939e",
   "decision_rule": "From problem.md alone, answer yes iff proving the statement appears to require a general-purpose lemma stated over general objects and plausibly reusable by a different problem.",
+  "validity": {
+    "status": "invalid_for_primary_inference",
+    "reason": "Filesystem blinding succeeded, but the predictor's pre-existing conversation context contained earlier APM task packets naming ConstructionTargets for several cohort problems. A directory containing only problem.md files does not erase model context, so the predictor did not satisfy the requirement that it see problem.md ONLY.",
+    "disposition": "Retain predictions and scores as a frozen diagnostic, but do not interpret sensitivity or specificity as evidence for or against predictive content; rerun once in a fresh context seeded only with the sanitized 38-file corpus."
+  },
   "blinding": {
     "method": "A temporary directory was populated with exactly the 38 problem.md files, flattened as <problem-id>.md; the prediction pass read only that directory.",
     "temporary_corpus": "/tmp/construction-prediction-only-problem-md.CuTo4t",
@@ -245,7 +250,7 @@
     },
     "predicted_yes_count": 26,
     "predicted_no_count": 12,
-    "conclusion": "The statement-only decomposition had discriminative content in this frozen test: it found 17 of 19 construction sites while correctly rejecting 10 of 19 controls. Specificity is only moderate, so this supports prediction as a triage signal rather than as a sufficient hard promotion gate.",
+    "conclusion": "Diagnostic only, not an experimental result: the frozen calls yield 17 of 19 positives and 10 of 19 controls, but prior-context contamination invalidates any inference about statement-only predictive content.",
     "rows": [
       {"problem_id": "a00J04", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
       {"problem_id": "a00J05", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
