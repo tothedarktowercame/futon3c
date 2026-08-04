@@ -161,6 +161,48 @@ on the need, when such memories are in the store.
   mechanical and open; psr index noise reproduced twice; E10 phase-A tag
   queries empty in contour vocabulary.
 
+**LIVE CERTIFICATE, 2026-08-04 — the first real pull-call data, and it
+refutes my own hypothesis.** After finding that `memory_search :type` shipped
+wrong example values (`observation`, `claim` — neither is an `EvidenceType`), I
+predicted some fraction of recorded `recall-empty` was **bad filters suggested
+by our own schema** rather than retrieval missing. The pull-offer receipts
+(`a5c3f8bf`) record args per call, so it is checkable. Ten real receipts from a
+live zai-1 session:
+
+| round | tool | surfaced | args |
+|---|---|---:|---|
+| 9 | memory_search | **0** | `:tags ["measure-integration-api"]` |
+| 7 | memory_search | **0** | `:tags ["measure-theory" "lebesgue"]` |
+| 10 | memory_search | 1 | `:tags ["contour-integral"]` |
+| 9 | memory_search | **10** | `:type "memory" :tags ["mathematics"]` |
+| 6,6,7,8,11,117 | psr_search | **0** ×6 | natural-language queries |
+
+**Hypothesis refuted:** exactly **one** call used a `type=` filter at all, and
+its value (`"memory"`) is valid. **Zero invalid EvidenceType filters.** The
+schema defect was real and worth fixing (`d2d001fa`), but it is not what is
+emptying these queries — runners barely use the field.
+
+**What the data shows instead, which is sharper:**
+
+1. **Tag specificity is the discriminator.** `["measure-integration-api"]` → 0.
+   `["measure-theory" "lebesgue"]` → 0. `["contour-integral"]` → 1. The single
+   rich result came from the *broadest* tag in the set, `["mathematics"]` → 10.
+   Specific tags — the ones an asker naturally reaches for at a blocker — return
+   nothing. This corroborates E10's "phase-A tag queries empty in contour
+   vocabulary" from an independent channel and puts a number on it.
+2. **`psr_search` returned nothing on 6 of 6 natural-language queries.**
+3. **8 of 10 pull calls returned nothing at all.**
+
+That 80% is M4's binding constraint in *live traffic*, not in a designed probe —
+and it is the pull channel, the one E10 showed runners will actually use when
+framed to.
+
+**Honesty bounds:** one session, one agent, ten calls, drawn from a 1000-entry
+coordination sample that may not contain every receipt. Not a corpus estimate.
+The direction agrees with E8's frozen result (failure at candidate generation,
+not ranking) via a completely different instrument, which is the reason to take
+it seriously at n=10.
+
 **Certificates FOR.** fix-4 first positive (an e9 memory surfaced for a
 neighbouring problem, correctly graded *marginal*); demand-side tagging closed
 the E10 mid-solve hunger exactly.
