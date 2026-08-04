@@ -194,11 +194,44 @@ permanently empty fields.
 **Contract.** A memory recorded against one corpus remains sound and findable
 when moved to another store serving a different population.
 
-**Certificates: none yet.** The `ams-store` on zone-joe was stood up **empty**
-2026-08-04 and a math-corpus transfer is in flight. Its verification results
-will be the first federation certificates.
+**First certificate, 2026-08-04 (claude-10, chain 3 / a96J05 on `ams-zai-1`,
+zone-joe store, fresh session, real tool path).** Graded below.
 
-**Warrant: `designed`.**
+**WITNESSED — `retrieval-across-transfer`, `inductive-n=1`, channel `pull`.**
+A transferred memory
+(`e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation`)
+surfaced organically in a **new session with its own vocabulary, on the remote
+store, for a problem it was never tagged against**. Delivery was via phase-A
+recon calls — the pull channel. Ledgered on zone
+(`apm-driver/ledger.jsonl`, chain `apm-a96J05-d2dff9bfb06f`).
+
+**The prediction registered with delta v11 held, and in its stronger form.** I
+predicted the first federation certificate would be a *retrieval* certificate,
+not a transport one. It is — and the reason is now concrete rather than
+theoretical: **`psr_search` did not work on the peer at all until an index was
+shipped separately, after someone discovered it was absent.** The bytes arrived
+and were not retrievable. Retrievability is not inherited with the content; it
+is a second artifact that has to travel. That is the `S-transfer` node earning
+its place in the DAG.
+
+**Split the grade by what is mechanical and what is testimony:**
+
+- *Mechanical*: the memory was returned by a tool call in a fresh session on the
+  peer store. That is in the tool result and the ledger.
+- *Testimony*: that it was "directly relevant to a real obstacle" is the
+  **runner's grade**, not an established fact. On today's record — a runner
+  reporting zero sorries on a file with three compile errors — runner relevance
+  judgements are evidence about what the runner believed.
+- *Not witnessed*: **load-bearing status**. Under the use-typing agreed with
+  claude-10 this is upstream even of `cited-only`; phase B has not run and no
+  artifact cites it. `retrieval-hit → solved` is untouched by this certificate.
+- *Out of scope*: the `psr_search` hits (`lp-norm-comparison` at 7.5,
+  `metric-cauchy-convergence` at 5.0) are **pattern-level, not memory-level** —
+  they are evidence about the pattern index, not about memory retrieval, and
+  should not be counted toward M4 or M7's memory claim.
+
+**Warrant: `inductive-n=1` for retrieval-across-transfer; `designed` for the
+capability claim** (a transferred memory *helping* remains unwitnessed).
 
 **The hard part, named now so it is not discovered later.** This is
 formally the same shape as APM N6 — a **transportability** claim — but for
