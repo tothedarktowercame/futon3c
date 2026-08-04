@@ -117,6 +117,84 @@ class RunnerGateTests(unittest.TestCase):
         self.assertEqual(1, result["rows_with_no_recorded_use"])
         self.assertEqual(1, result["rows_incomplete_under_used_or_rejected_coverage"])
 
+    def test_artifact_reconciliation_covers_all_four_report_citation_cells(self):
+        report = (
+            "USED e-used-cited: informed the proof\n"
+            "USED e-used-uncited: claimed use without trace\n"
+            "IGNORED e-ignored-cited: claimed off-route\n"
+            "IGNORED e-ignored-uncited: correctly discarded\n"
+        )
+        offered = [
+            "e-used-cited", "e-used-uncited",
+            "e-ignored-cited", "e-ignored-uncited",
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "Main.lean"
+            artifact.write_text(
+                "-- (Memory: e-used-cited)\n"
+                "-- older free-form citation e-ignored-cited\n",
+                encoding="utf-8",
+            )
+            run = gate.Run("codex-1", "four-cells", report, offered, artifact)
+            reconciliation = gate.UseAttributionGate().reconcile(run)
+            result = gate.adjudicate(
+                run, [gate.UseAttributionGate()], state_dir=Path(tmp) / "state"
+            )
+
+        by_id = {entry["memory_id"]: entry
+                 for entry in reconciliation["entries"]}
+        self.assertEqual("used-and-cited",
+                         by_id["e-used-cited"]["classification"])
+        self.assertEqual("exact", by_id["e-used-cited"]["form"])
+        self.assertEqual("used-but-uncited",
+                         by_id["e-used-uncited"]["classification"])
+        self.assertEqual("cited-but-ignored",
+                         by_id["e-ignored-cited"]["classification"])
+        self.assertEqual("free", by_id["e-ignored-cited"]["form"])
+        self.assertEqual("ignored-and-uncited",
+                         by_id["e-ignored-uncited"]["classification"])
+        self.assertNotIn(
+            "e-ignored-uncited",
+            {entry["memory_id"] for entry in reconciliation["findings"]},
+            "an offered-but-ignored uncited memory must not manufacture a citation",
+        )
+        self.assertEqual("accept", result["verdict"])
+        self.assertFalse(result["artifact_reconciliations"][0]["strict"])
+
+    def test_duplicate_exact_citations_are_counted_without_duplicate_findings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "Main.lean"
+            artifact.write_text(
+                "-- (Memory: e-twice000)\n"
+                "theorem helper : True := by\n"
+                "  -- (Memory: e-twice000)\n"
+                "  trivial\n",
+                encoding="utf-8",
+            )
+            reconciliation = gate.UseAttributionGate().reconcile(
+                gate.Run(
+                    "codex-1", "twice", "USED e-twice000: two sites\n",
+                    ["e-twice000"], artifact,
+                )
+            )
+        self.assertEqual("consistent", reconciliation["status"])
+        self.assertEqual(2, reconciliation["entries"][0]["citation_count"])
+        self.assertEqual(2, reconciliation["entries"][0]["exact_citation_count"])
+        self.assertEqual([], reconciliation["findings"])
+
+    def test_strict_mode_can_refuse_findings_but_defaults_to_verdict_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "Main.lean"
+            artifact.write_text("theorem uncited : True := by trivial\n", encoding="utf-8")
+            run = gate.Run(
+                "codex-1", "strict", "USED e-missing00: route\n",
+                ["e-missing00"], artifact,
+            )
+            self.assertEqual([], gate.UseAttributionGate().check(run))
+            strict_violations = gate.UseAttributionGate(strict=True).check(run)
+        self.assertEqual(1, len(strict_violations))
+        self.assertIn("used-but-uncited", strict_violations[0].detail)
+
 
 if __name__ == "__main__":
     unittest.main()

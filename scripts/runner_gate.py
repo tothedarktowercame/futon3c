@@ -73,10 +73,15 @@ class Run:
     run_id: str
     report: str
     surfaced_ids: list[str] = field(default_factory=list)
+    artifact_path: Path | None = None
 
 
 class UseAttributionGate:
-    """Every offered id requires an explicit USED/IGNORED verdict."""
+    """Reconcile offered-memory verdicts with citations in the work artifact.
+
+    Attribution coverage remains mandatory.  Artifact inconsistencies are
+    reported but do not refuse a run unless ``strict=True`` is requested.
+    """
 
     norm = "use-attribution"
     teaches = (
@@ -85,19 +90,106 @@ class UseAttributionGate:
     )
     _verdict = re.compile(r"^\s*(?:[-*]\s*)?(USED|IGNORED)\s+`?(e-[A-Za-z0-9_-]+)`?\s*:", re.MULTILINE)
 
+    def __init__(self, *, strict: bool = False):
+        self.strict = strict
+
+    def _reported_verdicts(self, report: str) -> list[tuple[str, str]]:
+        return [(match.group(2), match.group(1).lower())
+                for match in self._verdict.finditer(report)]
+
+    def reconcile(self, run: Run, artifact_path: Path | None = None) -> dict:
+        """Return the report/artifact consistency verdict without refusing."""
+        path = artifact_path or run.artifact_path
+        if path is None:
+            return {
+                "status": "not-checked",
+                "reason": "artifact-path-not-provided",
+                "strict": self.strict,
+                "entries": [],
+                "findings": [],
+            }
+        path = Path(path)
+        try:
+            artifact = path.read_text(encoding="utf-8")
+        except OSError as error:
+            return {
+                "status": "not-checked",
+                "reason": "artifact-unreadable",
+                "error": f"{type(error).__name__}: {error}",
+                "artifact": str(path),
+                "strict": self.strict,
+                "entries": [],
+                "findings": [],
+            }
+
+        entries = []
+        for memory_id, reported in self._reported_verdicts(run.report):
+            exact = f"-- (Memory: {memory_id})"
+            exact_count = artifact.count(exact)
+            bare_count = len(re.findall(
+                rf"(?<![A-Za-z0-9_-]){re.escape(memory_id)}(?![A-Za-z0-9_-])",
+                artifact,
+            ))
+            cited = bare_count > 0
+            form = "exact" if exact_count else ("free" if cited else None)
+            classification = (
+                "used-and-cited" if reported == "used" and cited else
+                "used-but-uncited" if reported == "used" else
+                "cited-but-ignored" if cited else
+                "ignored-and-uncited"
+            )
+            entries.append({
+                "memory_id": memory_id,
+                "reported": reported,
+                "classification": classification,
+                "cited": cited,
+                "form": form,
+                "citation_count": bare_count,
+                "exact_citation_count": exact_count,
+            })
+        findings = [entry for entry in entries if entry["classification"] in {
+            "used-but-uncited", "cited-but-ignored",
+        }]
+        return {
+            "status": "findings" if findings else "consistent",
+            "artifact": str(path),
+            "strict": self.strict,
+            "entries": entries,
+            "findings": findings,
+            "finding_counts": dict(Counter(
+                entry["classification"] for entry in findings
+            )),
+        }
+
     def check(self, run: Run) -> list[Violation]:
-        counts = Counter(match.group(2) for match in self._verdict.finditer(run.report))
+        counts = Counter(memory_id for memory_id, _ in self._reported_verdicts(run.report))
         invalid = sorted(memory_id for memory_id in set(run.surfaced_ids)
                          if counts[memory_id] != 1)
-        if not invalid:
-            return []
-        return [Violation(
-            run.agent,
-            self.norm,
-            run.run_id,
-            f"{len(invalid)} surfaced id(s) without exactly one verdict: {', '.join(invalid)}",
-            invalid,
-        )]
+        violations = []
+        if invalid:
+            violations.append(Violation(
+                run.agent,
+                self.norm,
+                run.run_id,
+                f"{len(invalid)} surfaced id(s) without exactly one verdict: {', '.join(invalid)}",
+                invalid,
+            ))
+        if self.strict and run.artifact_path is not None:
+            reconciliation = self.reconcile(run)
+            findings = reconciliation["findings"]
+            if findings:
+                finding_ids = sorted({entry["memory_id"] for entry in findings})
+                classes = ", ".join(sorted({entry["classification"]
+                                             for entry in findings}))
+                violations.append(Violation(
+                    run.agent,
+                    self.norm,
+                    run.run_id,
+                    f"artifact citation inconsistency ({classes}): "
+                    f"{', '.join(finding_ids)}",
+                    finding_ids,
+                ))
+        return violations
 
 
 class AxiomReverifyGate:
@@ -242,7 +334,11 @@ def adjudicate(run: Run, gates, *, state_dir: Path = STATE_DIR,
         result = json.loads(paths["adjudication"].read_text(encoding="utf-8"))
         result["idempotent_replay"] = True
         return result
+    reconciliations = []
     try:
+        if run.artifact_path is not None:
+            reconciliations = [gate.reconcile(run) for gate in gates
+                               if hasattr(gate, "reconcile")]
         violations = [violation for gate in gates for violation in gate.check(run)]
     except Exception as error:  # fail safe: exclude and flag, never crash/accept
         result = {
@@ -254,6 +350,8 @@ def adjudicate(run: Run, gates, *, state_dir: Path = STATE_DIR,
             "error": f"{type(error).__name__}: {error}",
             "adjudicated_at": now_iso(),
         }
+        if reconciliations:
+            result["artifact_reconciliations"] = reconciliations
         _atomic_json(paths["review"], result)
         _atomic_json(paths["adjudication"], result)
         return result
@@ -263,6 +361,8 @@ def adjudicate(run: Run, gates, *, state_dir: Path = STATE_DIR,
             "counts_toward_endpoints": True, "agent": run.agent,
             "run_id": run.run_id, "missing_ids": [], "adjudicated_at": now_iso(),
         }
+        if reconciliations:
+            result["artifact_reconciliations"] = reconciliations
         _atomic_json(paths["adjudication"], result)
         return result
 
@@ -271,12 +371,15 @@ def adjudicate(run: Run, gates, *, state_dir: Path = STATE_DIR,
     # operator can inspect the durable processing marker and review-required
     # record rather than receiving a second violation.
     invalid_ids = sorted({item for violation in violations for item in violation.missing_ids})
-    _atomic_json(paths["adjudication"], {
+    processing = {
         "verdict": "processing", "run_status": "attribution-incomplete",
         "counts_toward_endpoints": False, "agent": run.agent,
         "run_id": run.run_id, "missing_ids": invalid_ids,
         "adjudicated_at": now_iso(),
-    })
+    }
+    if reconciliations:
+        processing["artifact_reconciliations"] = reconciliations
+    _atomic_json(paths["adjudication"], processing)
     messages: list[str] = []
     deposit_results: list[dict] = []
     stop = False
@@ -317,6 +420,8 @@ def adjudicate(run: Run, gates, *, state_dir: Path = STATE_DIR,
         "feedback": messages, "deposits": deposit_results,
         "meta_learning": meta, "adjudicated_at": now_iso(),
     }
+    if reconciliations:
+        result["artifact_reconciliations"] = reconciliations
     _atomic_json(paths["adjudication"], result)
     return result
 
