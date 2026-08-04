@@ -239,8 +239,23 @@
     :description "Search the evidence store by filters (type, claim-type, author, since, tags). Returns the memory envelope {:frame :query :items}. Read-only."
     :parameters (json-schema
                  {:subject {:type "object" :description "ArtifactRef {:ref/type :ref/id} to scope the search to one subject."}
-                  :type {:type "string" :description "EvidenceType keyword, e.g. observation|claim|pattern-outcome."}
-                  :claim_type {:type "string" :description "ClaimType keyword, e.g. goal|conjecture|conclusion."}
+                  :type {:type "string"
+                         :description (str "EvidenceType. Note this is NOT the same vocabulary as "
+                                           "claim_type -- 'observation' is a ClaimType, not an "
+                                           "EvidenceType. A value outside this list matches nothing "
+                                           "and returns an empty result WITHOUT an error.")
+                         :enum ["coordination" "gate-traversal" "pattern-selection"
+                                "pattern-outcome" "reflection" "forum-post"
+                                "mode-transition" "presence-event" "correction"
+                                "conjecture" "arse-qa" "memory"]}
+                  :claim_type {:type "string"
+                               :description (str "ClaimType. A value outside this list matches "
+                                                 "nothing and returns an empty result WITHOUT an "
+                                                 "error.")
+                               :enum ["goal" "step" "evidence" "conclusion" "question"
+                                      "observation" "tension" "correction" "conjecture"
+                                      "assert" "challenge" "agree" "define" "retract"
+                                      "suggest" "request" "query"]}
                   :author {:type "string"}
                   :since {:type "string" :description "ISO-8601 timestamp lower bound (inclusive)."}
                   :tags {:type "array" :items {:type "string"} :description "Tag keywords to filter by."}
@@ -253,7 +268,9 @@
    {:name "evidence_graph"
     :description "Project evidence into graphs. Modes: thread (needs subject-ref), reply-chain (needs evidence-id), forks (needs evidence-id), neighborhood (needs end-id). Returns the memory envelope. Read-only."
     :parameters (json-schema
-                 {:mode {:type "string" :description "thread | reply-chain | forks | neighborhood. Default thread."}
+                 {:mode {:type "string"
+                         :description "Default thread."
+                         :enum ["thread" "reply-chain" "forks" "neighborhood"]}
                   :subject_ref {:type "object" :description "{:ref/type :ref/id} ArtifactRef for thread mode."}
                   :evidence_id {:type "string" :description "EvidenceEntry id for reply-chain/forks modes."}
                   :end_id {:type "string" :description "Endpoint id (string or UUID) for neighborhood mode."}
