@@ -177,3 +177,4 @@ workflow (Joe, separate session).
   contradiction rule scoped. Migration shakeout: seats via env,
   elan PATH, apm-lean git history, informal corpus, psr index — five
   gaps, each caught by a refusal, none by a wrong result.
+- 2026-08-04 — chain apm-a97J01-99e979e08fa7; problem a97J01; outcome closed; hops 1; commits 054b5e3fde71a784a6de368abd21305c923e3318, 9435997fcf4e083eb3c0a2574a77f3d462923be7. (Zone-driver append reconciled to canonical: FIRST REMOTE FULL-RELAY CLOSE — ams-zai-1 starter with exemplary /-! boundary, ams-codex-1 first closer hop closed the 3-step MCT bridge in ~4 min, statement-repair fidelity adjudicated-approved (circular source conclusion verified against problem.md), 4 mechanical pattern citations. N1 → n=3 closer instances; N9 remote branch composition-witnessed. Third gate miss-mode fixed (block-comment flavors). a97J01 scribe promotion batch queued for claude drain.)
