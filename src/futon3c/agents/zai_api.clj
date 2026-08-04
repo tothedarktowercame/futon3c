@@ -206,10 +206,23 @@
                   :how_to_apply {:type "string" :description "Retrieval predicate or application condition."}
                   :subjects {:type "array"
                              :minItems 1
-                             :description "At least one; first is the primary subject."
+                             :description (str "REQUIRED. At least one; first is the primary "
+                                               "subject. Example: "
+                                               "[{\"ref/type\": \"problem\", \"ref/id\": \"a96J05\"}]. "
+                                               "For a lemma or commit use "
+                                               "{\"ref/type\": \"git-commit\", \"ref/id\": \"<sha>\"}.")
                              :items {:type "object"
-                                     :properties {:ref/type {:type "string"}
-                                                  :ref/id {:type "string"}}
+                                     :properties {:ref/type
+                                                  {:type "string"
+                                                   :description "What kind of thing the memory is about."
+                                                   :enum ["problem" "pattern" "mission" "component"
+                                                          "gate" "session" "agent" "thread" "evidence"
+                                                          "proof-path" "task" "portfolio" "arse-thread"
+                                                          "library" "language" "tool" "service" "script"
+                                                          "memory" "decision" "git-commit"]}
+                                                  :ref/id
+                                                  {:type "string"
+                                                   :description "Identifier of that thing, e.g. the problem id or a commit sha."}}
                                      :required ["ref/type" "ref/id"]
                                      :additionalProperties false}}
                   :distills {:type "array" :items {:type "string"}
