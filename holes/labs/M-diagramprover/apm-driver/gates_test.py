@@ -108,15 +108,18 @@ end Outer.Inner
             )
             self.assertEqual("defective", outcome)
             self.assertEqual(["sorry-count-axiom-contradiction"], reasons)
-        with self.subTest("sorries-without-sorryAx"):
+        with self.subTest("sorries-without-sorryAx-is-not-a-contradiction"):
+            # Chain-3 fix: a sorried helper with a clean main theorem is a
+            # partial, not a contradiction (discovery guarantees the checked
+            # theorem is the problem statement).
             outcome, reasons = gates._classify(
                 build,
                 1,
                 boundary,
                 {"exit-code": 0, "line": "'demo' depends on axioms: [propext]"},
             )
-            self.assertEqual("defective", outcome)
-            self.assertEqual(["sorry-count-axiom-contradiction"], reasons)
+            self.assertEqual("partial", outcome)
+            self.assertEqual([], reasons)
 
 
 class HistoricalIntegrationTests(unittest.TestCase):
@@ -191,3 +194,24 @@ theorem demo (A : Set Real) : True := by
     def test_bare_sorry_without_docstring_still_fails(self):
         bare = "theorem demo : True := by\n  sorry\n"
         self.assertFalse(gates.boundary_conformance(bare)["conforming"])
+
+
+class MainTheoremDiscoveryTest(unittest.TestCase):
+    """Chain-3 fix: problem-named theorem wins; multi-theorem without one raises."""
+
+    def test_problem_named_theorem_wins_over_first(self):
+        src = ("theorem helper_lemma : True := trivial\n"
+               "theorem apm_a96X01 (n : Nat) : n = n := rfl\n")
+        name, _ = gates.extract_main_statement(src, "a96X01")
+        self.assertEqual("apm_a96X01", name)
+
+    def test_single_theorem_needs_no_name_match(self):
+        src = "theorem anything_at_all : True := trivial\n"
+        name, _ = gates.extract_main_statement(src, "a96X01")
+        self.assertEqual("anything_at_all", name)
+
+    def test_multi_theorem_without_problem_name_raises(self):
+        src = ("theorem helper_one : True := trivial\n"
+               "theorem helper_two : True := trivial\n")
+        with self.assertRaisesRegex(gates.GateError, "no-main-statement"):
+            gates.extract_main_statement(src, "a96X01")

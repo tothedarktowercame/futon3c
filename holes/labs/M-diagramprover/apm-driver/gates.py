@@ -135,13 +135,32 @@ def count_sorries(source: str) -> int:
     return len(sorry_sites(source))
 
 
-def extract_main_statement(source: str) -> tuple[str, str]:
-    """Return the first theorem name and declaration through its first ``:=``."""
+def extract_main_statement(source: str, problem_id: str | None = None) -> tuple[str, str]:
+    """Return the main theorem name and declaration through its first ``:=``.
+
+    Discovery (chain-3 fix, 2026-08-04): a theorem whose name contains the
+    problem id wins; else a file with exactly one ``theorem`` uses it; a
+    multi-theorem file with no problem-named theorem has NO identifiable
+    main statement and raises — the statement-first contract, mechanized.
+    """
 
     stripped = strip_comments(source)
-    match = THEOREM_RE.search(stripped)
-    if not match:
+    matches = list(THEOREM_RE.finditer(stripped))
+    if not matches:
         raise GateError("no theorem declaration found")
+    match = None
+    if problem_id:
+        wanted = problem_id.lower()
+        for candidate in matches:
+            if wanted in candidate.group(1).lower():
+                match = candidate
+                break
+    if match is None:
+        if len(matches) == 1:
+            match = matches[0]
+        else:
+            raise GateError(
+                "no-main-statement: multiple theorems, none named for the problem")
     declaration_end = stripped.find(":=", match.end())
     if declaration_end < 0:
         raise GateError(f"theorem {match.group(1)} has no := delimiter")
@@ -150,10 +169,10 @@ def extract_main_statement(source: str) -> tuple[str, str]:
     return match.group(1), normalized
 
 
-def statement_hash(source: str) -> tuple[str, str, str]:
+def statement_hash(source: str, problem_id: str | None = None) -> tuple[str, str, str]:
     """Return theorem name, normalized declaration, and prefixed SHA-256."""
 
-    theorem_name, normalized = extract_main_statement(source)
+    theorem_name, normalized = extract_main_statement(source, problem_id)
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
     return theorem_name, normalized, f"sha256:{digest}"
 
@@ -338,9 +357,13 @@ def _classify(
     if axioms["exit-code"] != 0 or axioms["line"] is None:
         reasons.append("axiom-probe-failed")
     if sorry_count == 0 and has_sorry_axiom:
+        # The impossible direction: a clean source cannot depend on sorryAx.
         reasons.append("sorry-count-axiom-contradiction")
-    if sorry_count > 0 and axioms["line"] is not None and not has_sorry_axiom:
-        reasons.append("sorry-count-axiom-contradiction")
+    # NOTE (chain-3 fix): sorries>0 with a sorryAx-free main theorem is NOT
+    # a contradiction — the sorry may live in a helper the main theorem
+    # does not use. Discovery now guarantees the checked theorem IS the
+    # problem statement, so a clean main + sorried helpers classifies by
+    # sorry count and boundary conformance like any partial.
 
     if reasons:
         return "defective", reasons
@@ -356,11 +379,12 @@ def gate_path(
     *,
     repo_root: Path = DEFAULT_REPO,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    problem_id: str | None = None,
 ) -> dict[str, Any]:
     """Run all gates for a Lean file and return driver.py's exact payload."""
 
     source = lean_file.read_text(encoding="utf-8")
-    theorem_name, _normalized_statement, digest = statement_hash(source)
+    theorem_name, _normalized_statement, digest = statement_hash(source, problem_id)
     sorry_count = count_sorries(source)
     boundary = boundary_conformance(source)
     build_raw = _run_lean(
@@ -408,6 +432,7 @@ def gate_fn(
         lean_file,
         repo_root=repo_root,
         timeout_seconds=timeout_seconds,
+        problem_id=problem_id,
     )
 
 
