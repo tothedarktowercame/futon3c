@@ -291,9 +291,13 @@ class AgencyIdentity:
 
         roster = self._roster()
         agents = roster["agents"]
-        connected = set(roster.get("ws-connected") or [])
-        if AGENT_ID in agents and AGENT_ID in connected:
-            raise AgencyError("apm-driver is already WS-connected; refusing identity claim-jump")
+        # Liveness signal: the roster has no ws-connected field (live-smoke
+        # finding 2026-08-04); a live self shows activity on its entry.
+        entry = agents.get(AGENT_ID) or {}
+        if AGENT_ID in agents and (
+            entry.get("status") == "invoking" or entry.get("running-jobs")
+        ):
+            raise AgencyError("apm-driver appears live; refusing identity claim-jump")
         if AGENT_ID in agents:
             status, _body = _response(
                 self.fetcher,
@@ -324,10 +328,11 @@ class AgencyIdentity:
                 self.ws_url, AGENT_ID, self.session_id, self.timeout
             )
             verified = self._roster()
-            if AGENT_ID not in verified["agents"] or AGENT_ID not in set(
-                verified.get("ws-connected") or []
-            ):
-                raise AgencyError("apm-driver failed roster/WS verification")
+            # WS liveness is proven by the completed readiness handshake in
+            # connect_identity (it raises otherwise); the roster exposes no
+            # ws-connected field, so verify registration only.
+            if AGENT_ID not in verified["agents"]:
+                raise AgencyError("apm-driver failed roster verification")
         except Exception:
             if self.connection is not None:
                 self.connection.close()

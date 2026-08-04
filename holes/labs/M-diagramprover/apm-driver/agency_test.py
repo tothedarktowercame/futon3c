@@ -114,8 +114,7 @@ class IdentityTests(unittest.TestCase):
                     "status": 200,
                     "body": {
                         "ok": True,
-                        "agents": {"apm-driver": {}},
-                        "ws-connected": ["apm-driver"],
+                        "agents": {"apm-driver": {"status": "invoking"}},
                     },
                 }
             ]
@@ -123,6 +122,21 @@ class IdentityTests(unittest.TestCase):
         with self.assertRaisesRegex(agency.AgencyError, "claim-jump"):
             agency.AgencyIdentity(fetcher=fetcher).start()
         self.assertEqual(1, len(fetcher.calls))
+
+    def test_live_self_with_running_jobs_is_not_claim_jumped(self):
+        fetcher = ScriptedFetcher(
+            [
+                {
+                    "status": 200,
+                    "body": {
+                        "ok": True,
+                        "agents": {"apm-driver": {"running-jobs": 1}},
+                    },
+                }
+            ]
+        )
+        with self.assertRaisesRegex(agency.AgencyError, "claim-jump"):
+            agency.AgencyIdentity(fetcher=fetcher).start()
 
 
 class DispatchTests(unittest.TestCase):
