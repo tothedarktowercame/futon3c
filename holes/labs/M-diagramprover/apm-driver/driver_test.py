@@ -119,22 +119,22 @@ class StateMachineTests(unittest.TestCase):
         self.assertEqual("VOID", state["state"])
         self.assertEqual("statement-altered", state["outcome"])
         self.assertEqual("sha256:statement", state["statement-hash"])
-        fixture.add("review-request", {"checkpoint": "statement-altered"})
+        fixture.add("review-request", {"checkpoint": "anomaly", "resume-state": "gate"})
         awaiting = driver.fold_ledger(fixture.records)[fixture.chain]
         self.assertEqual("AWAITING_REVIEW", awaiting["state"])
         self.assertEqual("VOID", awaiting["review-origin"])
 
     def test_defective_awaits_review(self):
         fixture = Fixture().starter("defective")
-        fixture.add("review-request", {"checkpoint": "gate-anomaly"})
+        fixture.add("review-request", {"checkpoint": "anomaly", "resume-state": "gate"})
         state = driver.fold_ledger(fixture.records)[fixture.chain]
         self.assertEqual("AWAITING_REVIEW", state["state"])
         self.assertEqual("DEFECTIVE", state["review-origin"])
-        self.assertEqual("review:gate-anomaly", state["waiting-on"])
+        self.assertEqual("review:anomaly", state["waiting-on"])
 
     def test_verdict_resumes_defective_chain(self):
         fixture = Fixture().starter("defective")
-        fixture.add("review-request", {"checkpoint": "gate-anomaly"})
+        fixture.add("review-request", {"checkpoint": "anomaly", "resume-state": "gate"})
         fixture.add("verdict", {"verdict": "resume", "resume-state": "gate"})
         state = driver.fold_ledger(fixture.records)[fixture.chain]
         self.assertEqual("GATE", state["state"])
@@ -152,6 +152,35 @@ class StateMachineTests(unittest.TestCase):
             },
         )
         self.assertEqual("PARTIAL", driver.fold_ledger(fixture.records)[fixture.chain]["state"])
+
+    def test_fidelity_reject_closes_as_banked_outcome(self):
+        fixture = Fixture().starter("closed")
+        fixture.add("review-request", {"checkpoint": "fidelity"})
+        fixture.add("verdict", {"verdict": "reject"})
+        state = driver.fold_ledger(fixture.records)[fixture.chain]
+        self.assertEqual("DONE", state["state"])
+        self.assertEqual("fidelity-rejected", state["outcome"])
+
+    def test_anomaly_abandon_closes_as_banked_outcome(self):
+        fixture = Fixture().starter("defective")
+        fixture.add("review-request", {"checkpoint": "anomaly", "resume-state": "gate"})
+        fixture.add("verdict", {"verdict": "abandon"})
+        state = driver.fold_ledger(fixture.records)[fixture.chain]
+        self.assertEqual("DONE", state["state"])
+        self.assertEqual("abandoned", state["outcome"])
+
+    def test_illegal_verdict_kinds_raise(self):
+        fidelity = Fixture().starter("closed")
+        fidelity.add("review-request", {"checkpoint": "fidelity"})
+        fidelity.add("verdict", {"verdict": "resume", "resume-state": "gate"})
+        with self.assertRaisesRegex(driver.LedgerError, "invalid for fidelity"):
+            driver.fold_ledger(fidelity.records)
+
+        anomaly = Fixture().starter("defective")
+        anomaly.add("review-request", {"checkpoint": "anomaly", "resume-state": "gate"})
+        anomaly.add("verdict", {"verdict": "approve"})
+        with self.assertRaisesRegex(driver.LedgerError, "invalid for review origin"):
+            driver.fold_ledger(anomaly.records)
 
     def test_partial_requires_conforming_boundary(self):
         fixture = Fixture().starter("closed")
@@ -185,7 +214,7 @@ class StateMachineTests(unittest.TestCase):
 class StatusTests(unittest.TestCase):
     def richest_fixture(self):
         fixture = Fixture().starter("partial").hop(1, "partial").hop(2, "defective")
-        fixture.add("review-request", {"checkpoint": "boundary-conformance"})
+        fixture.add("review-request", {"checkpoint": "anomaly", "resume-state": "gate"})
         return fixture
 
     def test_status_rich_fixture(self):
@@ -199,8 +228,10 @@ class StatusTests(unittest.TestCase):
                     "chain-id": "chain-rich",
                     "problem-id": "a96J09",
                     "state": "AWAITING_REVIEW",
+                    "status": "AWAITING_REVIEW",
+                    "review-stale": False,
                     "hops": 2,
-                    "waiting-on": "review:boundary-conformance",
+                    "waiting-on": "review:anomaly",
                     "age-seconds": 1200,
                     "state-age-seconds": 480,
                     "statement-hash": "sha256:statement",
@@ -210,7 +241,7 @@ class StatusTests(unittest.TestCase):
         )
         rendered = driver.render_status(rows)
         self.assertIn("AWAITING_REVIEW", rendered)
-        self.assertIn("review:boundary-conformance", rendered)
+        self.assertIn("review:anomaly", rendered)
 
     def test_status_cli_json(self):
         fixture = self.richest_fixture()

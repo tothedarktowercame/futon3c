@@ -36,6 +36,7 @@ TERMINAL_POLL_STATUSES = frozenset({"done", "failed", "cancelled", "timed-out"})
 POLLABLE_STATES = frozenset({"DISPATCH_A", "DISPATCH_B", "CLOSER_HOP", "SCRIBE"})
 TERMINAL_STATES = frozenset({"DONE"})
 MAX_CLOSER_HOPS = 3
+REVIEW_STALE_SECONDS = 12 * 60 * 60
 DEFAULT_LEDGER = Path(__file__).with_name("ledger.jsonl")
 
 
@@ -114,6 +115,7 @@ def _new_chain(record: Mapping[str, Any]) -> dict[str, Any]:
         "last-poll-status": None,
         "review-origin": None,
         "review-checkpoint": None,
+        "review-resume-state": None,
         "fidelity-approved": False,
         "outcome": None,
     }
@@ -264,11 +266,23 @@ def _apply_transition(chain: Mapping[str, Any], record: Mapping[str, Any]) -> di
     elif transition == "review-request":
         _require_state(result, transition, "CLOSED", "DEFECTIVE", "VOID")
         checkpoint = _require(payload, "checkpoint", transition)
+        origin = result["state"]
+        if origin == "CLOSED":
+            if checkpoint != "fidelity":
+                raise LedgerError("closed chain requires fidelity checkpoint")
+            resume_state = None
+        else:
+            if checkpoint != "anomaly":
+                raise LedgerError("defective/void chain requires anomaly checkpoint")
+            resume_state = _require(payload, "resume-state", transition).upper().replace("-", "_")
+            if resume_state not in {"GATE", "PARTIAL", "CLOSED"}:
+                raise LedgerError(f"invalid anomaly resume-state: {resume_state!r}")
         result.update(
             {
                 "state": "AWAITING_REVIEW",
-                "review-origin": result["state"],
+                "review-origin": origin,
                 "review-checkpoint": checkpoint,
+                "review-resume-state": resume_state,
                 "waiting-on": f"review:{checkpoint}",
             }
         )
@@ -277,20 +291,41 @@ def _apply_transition(chain: Mapping[str, Any], record: Mapping[str, Any]) -> di
         _require_state(result, transition, "AWAITING_REVIEW")
         verdict = _require(payload, "verdict", transition)
         origin = result["review-origin"]
-        if origin == "CLOSED" and verdict == "approve":
-            result.update(
-                {
-                    "state": "CLOSED",
-                    "fidelity-approved": True,
-                    "waiting-on": "scribe",
-                    "review-origin": None,
-                    "review-checkpoint": None,
-                }
-            )
-        elif origin in {"DEFECTIVE", "VOID"} and verdict == "resume":
+        checkpoint = result["review-checkpoint"]
+        if checkpoint == "fidelity" and origin == "CLOSED":
+            if verdict == "approve":
+                result.update(
+                    {
+                        "state": "CLOSED",
+                        "fidelity-approved": True,
+                        "waiting-on": "scribe",
+                        "review-origin": None,
+                        "review-checkpoint": None,
+                        "review-resume-state": None,
+                    }
+                )
+            elif verdict == "reject":
+                result.update(
+                    {
+                        "state": "DONE",
+                        "outcome": "fidelity-rejected",
+                        "waiting-on": None,
+                        "review-origin": None,
+                        "review-checkpoint": None,
+                        "review-resume-state": None,
+                    }
+                )
+            else:
+                raise LedgerError(f"verdict {verdict!r} is invalid for fidelity review")
+        elif checkpoint == "anomaly" and origin in {"DEFECTIVE", "VOID"} and verdict == "resume":
             resume_state = _require(payload, "resume-state", transition).upper().replace("-", "_")
             if resume_state not in {"GATE", "PARTIAL", "CLOSED"}:
                 raise LedgerError(f"invalid resume-state: {resume_state!r}")
+            if resume_state != result["review-resume-state"]:
+                raise LedgerError(
+                    f"resume-state {resume_state!r} does not match requested "
+                    f"state {result['review-resume-state']!r}"
+                )
             result.update(
                 {
                     "state": resume_state,
@@ -302,6 +337,18 @@ def _apply_transition(chain: Mapping[str, Any], record: Mapping[str, Any]) -> di
                 }[resume_state],
                     "review-origin": None,
                     "review-checkpoint": None,
+                    "review-resume-state": None,
+                }
+            )
+        elif checkpoint == "anomaly" and origin in {"DEFECTIVE", "VOID"} and verdict == "abandon":
+            result.update(
+                {
+                    "state": "DONE",
+                    "outcome": "abandoned",
+                    "waiting-on": None,
+                    "review-origin": None,
+                    "review-checkpoint": None,
+                    "review-resume-state": None,
                 }
             )
         else:
@@ -450,6 +497,12 @@ def _parse_time(value: str) -> dt.datetime:
     return parsed.astimezone(dt.timezone.utc)
 
 
+def _format_age(seconds: int) -> str:
+    hours, remainder = divmod(seconds, 3600)
+    minutes = remainder // 60
+    return f"{hours}h {minutes}m"
+
+
 def active_status(
     chains: Mapping[str, Mapping[str, Any]],
     *,
@@ -465,15 +518,24 @@ def active_status(
             continue
         started = _parse_time(chain["started-at"])
         updated = _parse_time(chain["updated-at"])
+        state_age = max(0, int((current - updated).total_seconds()))
+        stale_review = chain["state"] == "AWAITING_REVIEW" and state_age > REVIEW_STALE_SECONDS
+        review_status = (
+            f"STALE-REVIEW ({_format_age(state_age)})"
+            if stale_review
+            else chain["state"]
+        )
         rows.append(
             {
                 "chain-id": chain_id,
                 "problem-id": chain["problem-id"],
                 "state": chain["state"],
+                "status": review_status,
+                "review-stale": stale_review,
                 "hops": chain["hops"],
                 "waiting-on": chain["waiting-on"],
                 "age-seconds": max(0, int((current - started).total_seconds())),
-                "state-age-seconds": max(0, int((current - updated).total_seconds())),
+                "state-age-seconds": state_age,
                 "statement-hash": chain["statement-hash"],
             }
         )
@@ -491,7 +553,7 @@ def render_status(rows: Iterable[Mapping[str, Any]]) -> str:
         (
             row["chain-id"],
             row["problem-id"],
-            row["state"],
+            row.get("status", row["state"]),
             str(row["hops"]),
             row["waiting-on"] or "-",
             f"{row['age-seconds']}s",
