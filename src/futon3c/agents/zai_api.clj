@@ -222,7 +222,12 @@
                                                           "memory" "decision" "git-commit"]}
                                                   :ref/id
                                                   {:type "string"
-                                                   :description "Identifier of that thing, e.g. the problem id or a commit sha."}}
+                                                   :description (str "Stable identifier of that thing. Must RESOLVE LATER: "
+                                                                     "use a concrete value, never a moving reference. "
+                                                                     "For git-commit give the full sha, not HEAD or a "
+                                                                     "branch name -- HEAD names a different commit "
+                                                                     "tomorrow, so the subject becomes unresolvable. "
+                                                                     "For problem give the problem id, e.g. a96J05.")}}
                                      :required ["ref/type" "ref/id"]
                                      :additionalProperties false}}
                   :distills {:type "array" :items {:type "string"}
