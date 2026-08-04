@@ -1,11 +1,13 @@
 {
   "schema": "construction-prediction/2026-08-04",
-  "phase": "blind-predictions-frozen-before-ground-truth-reveal",
+  "phase": "scored-after-blind-prediction-freeze",
   "generated_at": "2026-08-04T17:27:05Z",
   "model": "OpenAI Codex (GPT-5)",
   "reasoning_effort": "default/inherited; exact effort label not exposed to the agent",
   "prediction_payload_sha256": "ff4513c2d6a0e2263ca89238648b31b167a8d111deba904a33a455c33da11741",
   "prediction_payload_hash_definition": "sha256 of jq -cS '.predictions' over this artifact",
+  "blind_snapshot_commit": "ae2730318aa79ddb3a559850ec05e124c0508a32",
+  "blind_snapshot_file_sha256": "611dca55b074041af17d5f2b4ae400c96e1b2091c7d54574a1f2118c2622939e",
   "decision_rule": "From problem.md alone, answer yes iff proving the statement appears to require a general-purpose lemma stated over general objects and plausibly reusable by a different problem.",
   "blinding": {
     "method": "A temporary directory was populated with exactly the 38 problem.md files, flattened as <problem-id>.md; the prediction pass read only that directory.",
@@ -211,5 +213,180 @@
       "prediction": "yes",
       "object": "A reusable open-and-closed reachability lemma is needed to show that the points joinable to a base point by paths fill a connected locally Euclidean space."
     }
-  ]
+  ],
+  "ground_truth": {
+    "revealed_at": "2026-08-04T17:30:16Z",
+    "source": "holes/labs/M-memory-retrieval/construction-prediction-sites-20260804.txt",
+    "source_sha256": "2703d237e0b88fa13f14d228758cfc28f1ee321da2f3a09aaffa13df77ebac7c",
+    "positive_count": 19,
+    "negative_count": 19
+  },
+  "primary_scoring": {
+    "confusion_matrix": {
+      "true_positive": 17,
+      "false_negative": 2,
+      "true_negative": 10,
+      "false_positive": 9
+    },
+    "sensitivity": {
+      "numerator": 17,
+      "denominator": 19,
+      "value": 0.8947368421052632
+    },
+    "specificity": {
+      "numerator": 10,
+      "denominator": 19,
+      "value": 0.5263157894736842
+    },
+    "accuracy": {
+      "numerator": 27,
+      "denominator": 38,
+      "value": 0.7105263157894737
+    },
+    "predicted_yes_count": 26,
+    "predicted_no_count": 12,
+    "conclusion": "The statement-only decomposition had discriminative content in this frozen test: it found 17 of 19 construction sites while correctly rejecting 10 of 19 controls. Specificity is only moderate, so this supports prediction as a triage signal rather than as a sufficient hard promotion gate.",
+    "rows": [
+      {"problem_id": "a00J04", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a00J05", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a00J06", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "a01A03", "prediction": "yes", "actual": "negative", "outcome": "false_positive"},
+      {"problem_id": "a01A05", "prediction": "yes", "actual": "negative", "outcome": "false_positive"},
+      {"problem_id": "a01A08", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a01A09", "prediction": "yes", "actual": "negative", "outcome": "false_positive"},
+      {"problem_id": "a01A11", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a01J01", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "a01J02", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "a02J03", "prediction": "yes", "actual": "negative", "outcome": "false_positive"},
+      {"problem_id": "a02J05", "prediction": "no", "actual": "positive", "outcome": "false_negative"},
+      {"problem_id": "a92J04", "prediction": "yes", "actual": "negative", "outcome": "false_positive"},
+      {"problem_id": "a92J05", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a93J07", "prediction": "yes", "actual": "negative", "outcome": "false_positive"},
+      {"problem_id": "a94A03", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a94A10", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a94J01", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "a94J02", "prediction": "yes", "actual": "negative", "outcome": "false_positive"},
+      {"problem_id": "a94J04", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a94J06", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "a95A03", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a95A08", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a95J01", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a95J05", "prediction": "yes", "actual": "negative", "outcome": "false_positive"},
+      {"problem_id": "a95J06", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a95J08", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a96A04", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a96A08", "prediction": "no", "actual": "positive", "outcome": "false_negative"},
+      {"problem_id": "a96J10", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "a97A04", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "a97A06", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a97A07", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "a97A08", "prediction": "yes", "actual": "positive", "outcome": "true_positive"},
+      {"problem_id": "t91A04", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "t91J04", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "t92J02", "prediction": "no", "actual": "negative", "outcome": "true_negative"},
+      {"problem_id": "t94A05", "prediction": "yes", "actual": "negative", "outcome": "false_positive"}
+    ]
+  },
+  "secondary_object_match": {
+    "status": "judgement_not_measurement",
+    "rubric": "hit means the predicted mathematical object identifies the actual promoted declaration or duplicated helper; partial means it identifies a neighboring reusable ingredient but not the exact object; miss means it names a different object or predicts none.",
+    "counts": {"hit": 11, "partial": 3, "miss": 5},
+    "rows": [
+      {
+        "problem_id": "a00J04",
+        "grade": "hit",
+        "actual": "Duplicated lemniscate machinery: isClosed_lemniscate, connectedComponents_complement_lemniscate_le, card_roots_le_degree, isPreconnected_subset_superlevel_or_sublevel, not_bounded_isOpen_superlevel_frontier_lemniscate, exists_root_in_bounded_isOpen_sublevel_frontier_lemniscate."
+      },
+      {
+        "problem_id": "a00J05",
+        "grade": "hit",
+        "actual": "Duplicated helper cauchyTransform_differentiableAt."
+      },
+      {
+        "problem_id": "a01A08",
+        "grade": "hit",
+        "actual": "The same six duplicated lemniscate declarations as a00J04."
+      },
+      {
+        "problem_id": "a01A11",
+        "grade": "hit",
+        "actual": "Duplicated helper cauchyTransform_differentiableAt."
+      },
+      {
+        "problem_id": "a02J05",
+        "grade": "miss",
+        "actual": "ConstructionTargets.Sinc.dirichlet_integral_improper."
+      },
+      {
+        "problem_id": "a92J05",
+        "grade": "hit",
+        "actual": "ConstructionTargets.Rouche.zeroCountInClosedBall_add_eq, plus duplicated helper zeroCountInClosedBall_aeval_eq_card_filter."
+      },
+      {
+        "problem_id": "a94A03",
+        "grade": "hit",
+        "actual": "ConstructionTargets.YoungConvolution.young_convolution_inequality and convolution_memLp; ConstructionTargets.LpRepresentative.hasFiniteIntegral_indicator_lift and toLp_integral_eq_integral."
+      },
+      {
+        "problem_id": "a94A10",
+        "grade": "miss",
+        "actual": "ConstructionTargets.HerglotzRigidity.affine_of_entire_pick and affine_of_entire_pick_neg."
+      },
+      {
+        "problem_id": "a94J04",
+        "grade": "partial",
+        "actual": "ConstructionTargets.RadialMajorantAE.poissonConv_tendsto_ae_of_memLp and poissonKernel_eq_formula; ConstructionTargets.LpRepresentative.hasFiniteIntegral_indicator_lift and toLp_integral_eq_integral."
+      },
+      {
+        "problem_id": "a95A03",
+        "grade": "hit",
+        "actual": "ConstructionTargets.RadialIntegrationR3.radial_integral_R3, integrable_radial_R3_iff, and memLp_radial_R3_iff."
+      },
+      {
+        "problem_id": "a95A08",
+        "grade": "partial",
+        "actual": "ConstructionTargets.SchwarzEquality.exists_unit_mul and ConstructionTargets.UnivalentDeriv.deriv_ne_zero_of_injOn."
+      },
+      {
+        "problem_id": "a95J01",
+        "grade": "hit",
+        "actual": "ConstructionTargets.SchwarzEquality.exists_rotation and ConstructionTargets.UnivalentDeriv.deriv_ne_zero_of_injOn."
+      },
+      {
+        "problem_id": "a95J06",
+        "grade": "partial",
+        "actual": "ConstructionTargets.BanachZarecki.banachZarecki_monotone and ConstructionTargets.LusinN.absolutelyContinuousOnInterval_maps_null_to_null."
+      },
+      {
+        "problem_id": "a95J08",
+        "grade": "hit",
+        "actual": "ConstructionTargets.YoungConvolution.young_convolution_inequality."
+      },
+      {
+        "problem_id": "a96A04",
+        "grade": "hit",
+        "actual": "ConstructionTargets.YoungConvolution.convolution_memLp; ConstructionTargets.LpRepresentative.hasFiniteIntegral_indicator_lift and toLp_integral_eq_integral."
+      },
+      {
+        "problem_id": "a96A08",
+        "grade": "miss",
+        "actual": "ConstructionTargets.Sinc.tendsto_integral_sinc_pi_div_two."
+      },
+      {
+        "problem_id": "a97A06",
+        "grade": "miss",
+        "actual": "ConstructionTargets.Sinc.tendsto_integral_sinc_pi_div_two."
+      },
+      {
+        "problem_id": "a97A07",
+        "grade": "miss",
+        "actual": "ConstructionTargets.CircleParam.unitParam_eq_circleIntegral."
+      },
+      {
+        "problem_id": "a97A08",
+        "grade": "hit",
+        "actual": "ConstructionTargets.Rouche.zeroCountInClosedBall_add_eq, plus duplicated helper zeroCountInClosedBall_aeval_eq_card_filter."
+      }
+    ]
+  }
 }
