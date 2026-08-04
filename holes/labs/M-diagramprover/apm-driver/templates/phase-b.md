@@ -2,9 +2,11 @@ PHASE B - now solve apm-{{problem_id}} end-to-end (same session as
 your phase-A reconnaissance; your hint list is your starting
 context).
 
-1. Use your phase-A hints where they genuinely help. CITE in Lean
-   comments every memory whose content you actually use (by id). If
-   a hint turns out not to help, drop it without ceremony.
+1. Use your phase-A hints where they genuinely help. CITE every
+   memory whose content you actually use, with the exact comment
+   form `-- (Memory: <id>)` placed adjacent to the code it informed
+   (this form is machine-checked; free-form citations are missed).
+   If a hint turns out not to help, drop it without ceremony.
 2. CONTINUE looking things up at these moments, mid-solve: whenever
    a Mathlib search comes back empty, and BEFORE writing any
    boundary comment or declaring any blocker - one memory lookup
