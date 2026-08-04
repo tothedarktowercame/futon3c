@@ -248,7 +248,10 @@ def boundary_conformance(source: str) -> dict[str, Any]:
     # WHERE was too rigid, not the work).
     docstring_conforming = False
     if not conforming and details:
-        for doc_body in re.findall(r"/--(.*?)-/", source, re.S):
+        # Any block comment counts: /-- docstrings, /-! module docs, and
+        # plain /- blocks (chain-4 fix: the conforming boundary lived in a
+        # /-! header the /-- -only scan missed).
+        for doc_body in re.findall(r"/-[-!]?(.*?)-/", source, re.S):
             doc_lines = [l for l in doc_body.splitlines() if l.strip()]
             if (
                 len(doc_lines) >= 5

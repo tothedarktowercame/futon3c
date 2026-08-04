@@ -215,3 +215,26 @@ class MainTheoremDiscoveryTest(unittest.TestCase):
                "theorem helper_two : True := trivial\n")
         with self.assertRaisesRegex(gates.GateError, "no-main-statement"):
             gates.extract_main_statement(src, "a96X01")
+
+
+class ModuleBlockBoundaryTest(unittest.TestCase):
+    """Chain-4 fix: a conforming boundary in a /-! module block counts."""
+
+    SOURCE = '''/-!
+# Header
+
+## Boundary: remaining bridge
+
+APIs searched: `lintegral_iSup_ae` FOUND, `lintegral_indicator` FOUND.
+Routes tried: direct `ofReal_integral_eq_lintegral_ofReal` — requires
+integrability on each piece; assembly did not compose smoothly.
+Routes NOT investigated: inner regularity.
+-/
+theorem demo : True := by
+  sorry
+'''
+
+    def test_module_block_boundary_conforms(self):
+        result = gates.boundary_conformance(self.SOURCE)
+        self.assertTrue(result["conforming"])
+        self.assertTrue(result["docstring-conforming"])
