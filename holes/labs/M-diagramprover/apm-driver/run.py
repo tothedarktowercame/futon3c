@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import importlib.util
 import json
+import os
 import re
 import signal
 import sys
@@ -36,8 +37,8 @@ CONFIG = {
     "agency_base": agency.DEFAULT_AGENCY_BASE,
     "agency_ws": agency.DEFAULT_WS_URL,
     "quota_url": agency.QUOTA_URL,
-    "zai_seat": "zai-1",
-    "codex_seat": "codex-12",
+    "zai_seat": os.environ.get("APM_ZAI_SEAT", "zai-1"),
+    "codex_seat": os.environ.get("APM_CODEX_SEAT", "codex-12"),
     "poll_seconds": 60,
     "review_poll_seconds": 60,
     "phase_a_excerpt_chars": 4000,
