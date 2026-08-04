@@ -76,6 +76,21 @@
       "id": "runner-outcome",
       "kind": "observed",
       "name": "closure/progress on the dispatched problem"
+    },
+    {
+      "id": "source-corpus",
+      "kind": "observed",
+      "name": "the corpus a memory's hooks/tags/attachments were fitted to when recorded"
+    },
+    {
+      "id": "serving-store",
+      "kind": "observed",
+      "name": "the store answering the query (futon1b vs a federated peer, e.g. ams-store on zone-joe)"
+    },
+    {
+      "id": "S-transfer",
+      "kind": "selection-node",
+      "name": "S-node: selection into the transferred population. Marks where the memory-recording distribution differs between source and serving store; transportability of any retrieval claim across this edge requires the S-node be d-separated from the outcome given the adjustment set (B1 selection diagrams, as APM N6)"
     }
   ],
   "arrows": [
@@ -168,6 +183,26 @@
       "from": "grep-channel",
       "to": "runner-outcome",
       "mechanism": "the other channel: artifacts consumed without recall"
+    },
+    {
+      "from": "source-corpus",
+      "to": "query-vocabulary",
+      "mechanism": "hooks and tags are written in the source corpus's vocabulary; a query from another corpus's vocabulary need not match them"
+    },
+    {
+      "from": "source-corpus",
+      "to": "attachment-density",
+      "mechanism": "attachment endpoints are chosen against the source corpus's pattern set; density is a property of (memory, endpoint), not of the memory (delta v3)"
+    },
+    {
+      "from": "S-transfer",
+      "to": "surfaced-set",
+      "mechanism": "transfer changes which memories are present AND the neighbourhood they compete in; retrievability is not inherited with the bytes"
+    },
+    {
+      "from": "serving-store",
+      "to": "surfaced-set",
+      "mechanism": "index state and ranking-stat availability are per-store; a fresh peer has no use-history, so Psi degrades to base order (see :stats-absent)"
     }
   ],
   "requested_receipts": [
@@ -186,6 +221,17 @@
     {
       "id": "RS-4",
       "question": "The natural-experiment receipt: what does the build-stanza repair (do(reachability)) identify about runner-outcome given the observables, and what does the n=1 anecdote license? Selection caveats in the R1 style."
+    }
+  ],
+  "delta-log": [
+    {
+      "delta": "v11",
+      "date": "2026-08-04",
+      "author": "claude-12",
+      "change": "transport layer added: source-corpus, serving-store, S-transfer selection node + 4 arrows",
+      "warrant": "designed - no federation certificates yet; ams-store stood up empty 2026-08-04 and the math-corpus transfer is in flight",
+      "rationale": "M7 of capability-proof-store.md. The DAG had no transport node at all, so a federation claim could not even be STATED in it, let alone identified. Formally the same shape as APM N6 (transportability); the S-node carries it the same way.",
+      "prediction": "the first federation certificate will be a RETRIEVAL certificate, not a transport one - bytes arriving is not the claim"
     }
   ]
 }
