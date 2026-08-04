@@ -56,6 +56,43 @@ fetch and corroborated independently by the store count moving 522 → 527. Thre
 of those five recovered content the runner had **lost** to a refused write —
 the separation of powers doing work rather than being asserted.
 
+**Certificate: the write path was unusable, and the repair has a same-day
+before/after (2026-08-04).**
+
+| | zai-2, pre-fix | zai-3, post-fix |
+|---|---|---|
+| tool trace | `[memory_record]` → ✗ → `[memory_record]` | `[memory_record]` — one call |
+| failure | *"missing required fields: subjects"* | none |
+| result | deferred to PAR time | `e-61165a7e…`, verified in store by direct id fetch |
+
+The runner had been **omitting `subjects` entirely**. The schema already marked
+it required, so this was not a missing constraint but an *unanswerable* one:
+`ref/type` was typed `{:type "string"}` with no enum and no example, while
+`:kind` directly above it carried a four-value enum. A model that does not know
+the vocabulary omits the field rather than guessing.
+
+After exposing the 21-value `ArtifactRefType` enum plus an example
+(`bbcaee8c`), zai-3 succeeded first try — and its reasoning names the cause:
+*"The natural subject is a git commit, which is exactly what the new enum value
+enables."* So the enum drove the choice; the success is not incidental.
+
+Same tool, same store, same day, one changed variable. **Warrant on the repair:
+`inductive-n=1 before/after`, not controlled** — nothing was randomized and the
+two runners are different sessions.
+
+**And the test found a second instance of the same defect.** zai-3 used
+`ref/id: "HEAD"` and flagged, unprompted, that if concrete shas were intended
+*"that constraint wasn't surfaced."* Correct: HEAD names a different commit
+tomorrow, so the subject is unresolvable at read time — worse in a bitemporal
+store, where the entry is permanent and the reference drifts. Fixed in
+`ca309f94`.
+
+Two fields, one failure shape: **a validator that knows the answer and a schema
+that does not tell the caller.** That is M6's asymmetry — every gate is a
+refusal, none is a supply — appearing at the *tool* boundary rather than the
+store boundary. Any tool-schema field typed `{:type "string"}` where the server
+validates against a closed set is a silent-omission bug waiting to happen.
+
 **Warrant: `inductive-n=4 sessions`** (S3 + the three 08-03 passes). Extraction
 held without correction across all four.
 
