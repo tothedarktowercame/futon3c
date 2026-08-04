@@ -151,13 +151,13 @@ held without correction; hunger audit ran unattended\\[3pt]
 N4 Agents consult memory when instructed & inductive-$n{=}1$
 (controlled) & same agent, same store: 0 lookups under a passive
 invitation vs.\ 21 under a two-part task frame\\[3pt]
-N5 Retrieval serves the need & \textbf{weak} (step-level
-$n{=}1$) & a four-layer failure anatomy (propensity / framing /
-affordance / index-reach); one \emph{step-level} witness --- an
-on-point memory cited in a proof body above the lemma that closes the
-step, the enclosing theorem \texttt{sorry}-free and error-free under
-an executed check; problem-level still open. Detail lives in the
-sibling store proof (node M4)\\[3pt]
+N5 Retrieval serves the need & \textbf{weak} & a four-layer
+failure anatomy (propensity / framing / affordance / index-reach); the
+one candidate use-witness is \emph{cited-only} --- the memory is cited
+in a proof body, but the citing theorem does not compile (12 errors
+under an executed check), so no step or problem is yet witnessed as
+closed by a retrieved memory. Detail lives in the sibling store proof
+(node M4)\\[3pt]
 N6 Capability transports to held-out problems & designed & stated as
 a formal transportability claim; no witnesses yet\\[3pt]
 N7 Outcomes are mechanically scoreable & designed$\to$mechanical &
@@ -216,8 +216,8 @@ record: a query the corpus could not answer, banked as demand.
 
 \draw[wit] (frame) -- node[lab, above=0.5mm] {$do(\textrm{frame})$\\$0\to21$ calls} (consult);
 \draw[wit, thin] (consult) -- node[lab, above=0.5mm] {$n{=}1$ on-point} (hit);
-\draw[wit, thin] (hit) -- node[lab, above=0.5mm] {$n{=}1$ cited\\\&\,proved} (step);
-\draw[unwit] (step) -- node[lab, above, sloped] {assembly} (solved);
+\draw[unwit] (hit) -- node[lab, above=0.5mm] {cited, \emph{not}\\proved} (step);
+\draw[unwit] (step) -- node[lab, above, sloped] {unwitnessed} (solved);
 \draw[wit] (boundary) -- node[lab, below=0.5mm] {relay $n{=}4$} (neighbor.west |- boundary.east);
 \draw[wit] (neighbor) -- node[lab, below=0.5mm] {reuse cited} (closer);
 \draw[wit] (closer.east) -- node[lab, below, sloped] {gate-certified} (solved.south west);
@@ -241,15 +241,18 @@ record: a query the corpus could not answer, banked as demand.
 \end{minipage}
 \caption{\textbf{Left:} the mechanism DAG as currently witnessed.
 Solid edges carry certificates (labels). The retrieval edge is
-now \emph{split by granularity}: a hit has been witnessed to close a
-proof \emph{step} (a96A08, 2026-08-04 --- the runner cited an
-on-point memory in the proof body immediately above the lemma
-application, and the enclosing theorem carries no \texttt{sorry} and
-no error under \texttt{lake env lean}), while the step-to-problem
-edge remains the honest gap: that session's assembly was left
-unfinished downstream of the memory-assisted lemma. The earlier
-reading --- that every hint was correctly discarded as off-route ---
-no longer holds. The $do(\cdot)$ edge is the programme's one true
+split by granularity, and \emph{both halves remain dashed}. A
+candidate step-level witness (a96A08) was examined on 2026-08-04: the
+runner did cite an on-point memory in the proof body immediately above
+the lemma application --- so the citation is real, and the earlier
+claim that every hint was discarded as off-route no longer holds ---
+but the enclosing theorem \textbf{does not compile}. An executed
+\texttt{lake env lean} reports 12 errors, the first at line 136,
+inside the cited theorem itself. The claim that it was proved was
+withdrawn the same day: it rested on reading the tail of a truncated
+compiler log, which showed only the last two of twelve diagnostics.
+Citation without a compiling artifact is a \emph{cited-only} witness,
+not a use-witness. The $do(\cdot)$ edge is the programme's one true
 intervention: a preregistered controlled contrast on the task
 frame. The lower path is the relay: boundary artifacts and
 neighbouring solved problems feed closer success ($n{=}4$

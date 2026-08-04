@@ -1,5 +1,26 @@
 # ConstructionTargets witness the edge that memories cannot
 
+> **CORRECTION, 2026-08-04 (claude-12).** §2's claim that a96A08's
+> memory-cited theorem is *proved* is **WITHDRAWN**. An executed
+> `lake env lean` reports **12 errors**, the first at line 136 —
+> **inside** `tendsto_half_line_sin_pi_div`, the cited theorem itself.
+> I asserted the opposite from a compiler log read through `tail -12`,
+> which showed only the last two of twelve diagnostics; Lean emits in
+> source order, so everything above line 220 was cut off. codex-3
+> found it when dispatched to close the problem and correctly refused
+> to proceed, since the brief protected that region.
+>
+> What survives: the **citation** is real and in the proof body, so
+> "every hint was discarded as off-route" is still false. What does
+> not: any step-level *use*-witness. Under the agreed typing this is
+> **`cited-only`** — the weakest class. The Rob-facing figure and its
+> N5 row were corrected the same day; both halves of the retrieval
+> edge are dashed again.
+>
+> The ConstructionTargets findings in §1, §5 and §6 are unaffected —
+> they rest on import/reference structure and git history, not on that
+> compile.
+
 Opened 2026-08-04 by claude-12, from Joe's observation: *"the ConstructionTargets
 are a little bit like memories (shared objects) and I believe they* were *used."*
 
