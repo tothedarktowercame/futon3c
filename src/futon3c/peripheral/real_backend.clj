@@ -49,6 +49,21 @@
       f
       (io/file cwd path))))
 
+(defn- tool-error
+  "Surface a caught exception WITH its ex-data details.
+   `gate-shapes/validate!` throws \"Invalid evidence shape\" carrying
+   {:details (me/humanize ...)} -- a field-level explanation of exactly what was
+   wrong. Catching with only (.getMessage e) discards it, leaving the calling
+   agent an opaque string it cannot act on. Observed live 2026-08-04: zai-2 got
+   \"psr-select failed: Invalid evidence shape\" twice and deferred the recording,
+   with the naming detail one accessor away. Same defect class as the
+   2026-08-03 memory_record incident (fixed in 3d86cf1d)."
+  [label e]
+  (let [details (:details (ex-data e))]
+    (cond-> {:ok false :error (str label " failed: " (.getMessage e))}
+      (some? details) (assoc :details details))))
+
+
 (defn- tool-read
   "Read file contents. Args: [file-path] or [file-path {:offset N :limit N}]."
   [cwd args]
@@ -671,7 +686,7 @@
                                   :substrate :elapsed-ms :error])
                     :candidates candidates}})
         (catch Exception e
-          {:ok false :error (str "psr-search failed: " (.getMessage e))})))))
+          (tool-error "psr-search" e))))))
 
 (defn- tool-psr-select
   [discipline-state config args]
@@ -750,7 +765,7 @@
                        :pattern-id pattern-id
                        :error (:error recall)})}})
         (catch Exception e
-          {:ok false :error (str "psr-select failed: " (.getMessage e))})))))
+          (tool-error "psr-select" e))))))
 
 (defn- normalize-memory-rejections
   [xs]
@@ -924,7 +939,7 @@
                                  :result result})
           {:ok true :result result})
         (catch Exception e
-          {:ok false :error (str "pur-update failed: " (.getMessage e))})))))
+          (tool-error "pur-update" e))))))
 
 (defn- tool-pur-mark-pivot
   [discipline-state evidence-store args]
@@ -955,7 +970,7 @@
                   :psr gap-psr
                   :proof persisted}})
       (catch Exception e
-        {:ok false :error (str "pur-mark-pivot failed: " (.getMessage e))}))))
+        (tool-error "pur-mark-pivot" e)))))
 
 (defn- tool-par-punctuate
   [discipline-state evidence-store args]
@@ -984,7 +999,7 @@
          :result {:par par
                   :proof persisted}})
       (catch Exception e
-        {:ok false :error (str "par-punctuate failed: " (.getMessage e))}))))
+        (tool-error "par-punctuate" e)))))
 
 ;; =============================================================================
 ;; RealBackend
