@@ -1,0 +1,215 @@
+{
+  "schema": "construction-prediction/2026-08-04",
+  "phase": "blind-predictions-frozen-before-ground-truth-reveal",
+  "generated_at": "2026-08-04T17:27:05Z",
+  "model": "OpenAI Codex (GPT-5)",
+  "reasoning_effort": "default/inherited; exact effort label not exposed to the agent",
+  "prediction_payload_sha256": "ff4513c2d6a0e2263ca89238648b31b167a8d111deba904a33a455c33da11741",
+  "prediction_payload_hash_definition": "sha256 of jq -cS '.predictions' over this artifact",
+  "decision_rule": "From problem.md alone, answer yes iff proving the statement appears to require a general-purpose lemma stated over general objects and plausibly reusable by a different problem.",
+  "blinding": {
+    "method": "A temporary directory was populated with exactly the 38 problem.md files, flattened as <problem-id>.md; the prediction pass read only that directory.",
+    "temporary_corpus": "/tmp/construction-prediction-only-problem-md.CuTo4t",
+    "file_count": 38,
+    "non_markdown_file_count": 0,
+    "forbidden_during_prediction": [
+      "problems/<id>/lean/Main.lean",
+      "ConstructionTargets/",
+      "git log and commit messages",
+      "status, ledger, and receipt files",
+      "class labels in construction-prediction-sites-20260804.txt"
+    ]
+  },
+  "predictions": [
+    {
+      "problem_id": "a00J04",
+      "prediction": "yes",
+      "object": "A general component-counting lemma is needed that injects bounded complementary components of a polynomial lemniscate into roots while isolating the unbounded component."
+    },
+    {
+      "problem_id": "a00J05",
+      "prediction": "yes",
+      "object": "A reusable parameter-integral lemma is needed to prove holomorphy and asymptotics of Cauchy transforms of finite measures away from their support."
+    },
+    {
+      "problem_id": "a00J06",
+      "prediction": "no",
+      "object": "The proof can specialize positivity of the coefficients and the power-series identity directly, without introducing a separate general construction lemma."
+    },
+    {
+      "problem_id": "a01A03",
+      "prediction": "yes",
+      "object": "A general distributional-uniqueness lemma is needed to identify an L1 convolution kernel from its action on derivatives of test functions."
+    },
+    {
+      "problem_id": "a01A05",
+      "prediction": "yes",
+      "object": "A reusable Hilbert-space lemma is needed to extend weak convergence from an almost-orthogonal sequence or its dense linear span to every test vector."
+    },
+    {
+      "problem_id": "a01A08",
+      "prediction": "yes",
+      "object": "A general component-counting lemma is needed that bounds complementary components of a polynomial lemniscate by the polynomial degree plus one."
+    },
+    {
+      "problem_id": "a01A09",
+      "prediction": "yes",
+      "object": "A reusable dominated-parameter-integral lemma is needed to prove analyticity of Laplace transforms from local derivative domination."
+    },
+    {
+      "problem_id": "a01A11",
+      "prediction": "yes",
+      "object": "A reusable Cauchy-transform lemma is needed for holomorphy off a compact support, nonextendability, and the limit at infinity."
+    },
+    {
+      "problem_id": "a01J01",
+      "prediction": "no",
+      "object": "The uniform absolute-continuity estimate follows directly from Holder's inequality and an explicit concentrating counterexample."
+    },
+    {
+      "problem_id": "a01J02",
+      "prediction": "no",
+      "object": "Both claims are direct applications of completion and almost-everywhere Borel representative facts rather than a new reusable construction."
+    },
+    {
+      "problem_id": "a02J03",
+      "prediction": "yes",
+      "object": "A general oscillatory-averaging lemma is needed to pass from controlled rectangle averages to convergence against arbitrary L1 test functions."
+    },
+    {
+      "problem_id": "a02J05",
+      "prediction": "no",
+      "object": "The integral is handled by a problem-specific contour and residue estimate without a distinct reusable construction lemma."
+    },
+    {
+      "problem_id": "a92J04",
+      "prediction": "yes",
+      "object": "A reusable Schwarz-equality and power-series-uniqueness bridge is needed to turn disk-map rigidity into vanishing higher coefficients."
+    },
+    {
+      "problem_id": "a92J05",
+      "prediction": "yes",
+      "object": "A general Rouche zero-count transfer lemma is needed to compare polynomial root multisets inside a circle under a boundary norm inequality."
+    },
+    {
+      "problem_id": "a93J07",
+      "prediction": "yes",
+      "object": "A reusable Hurwitz zero-persistence lemma is needed for locally uniform limits of holomorphic zero-free functions."
+    },
+    {
+      "problem_id": "a94A03",
+      "prediction": "yes",
+      "object": "A general Lp convolution contraction and approximate-identity lemma is needed for normalized Gaussian kernels."
+    },
+    {
+      "problem_id": "a94A10",
+      "prediction": "yes",
+      "object": "A reusable local theorem is needed that an injective holomorphic function on a neighborhood has nonzero derivative."
+    },
+    {
+      "problem_id": "a94J01",
+      "prediction": "no",
+      "object": "The result is the standard absolute continuity of the integral and can be applied directly without constructing an intermediate general lemma."
+    },
+    {
+      "problem_id": "a94J02",
+      "prediction": "yes",
+      "object": "A reusable positive-measure nowhere-dense set construction is needed to build an absolutely continuous strictly increasing primitive whose derivative vanishes on that set."
+    },
+    {
+      "problem_id": "a94J04",
+      "prediction": "yes",
+      "object": "A general probability-kernel L2 convolution contraction and approximate-identity convergence lemma is needed for the Poisson kernels."
+    },
+    {
+      "problem_id": "a94J06",
+      "prediction": "no",
+      "object": "The answer follows from the circle identity for conjugation and a direct Cauchy-integral case split specific to the given integrand."
+    },
+    {
+      "problem_id": "a95A03",
+      "prediction": "yes",
+      "object": "A reusable radial-integration theorem in three-dimensional Euclidean space and an L1-L2 convolution bound are needed."
+    },
+    {
+      "problem_id": "a95A08",
+      "prediction": "yes",
+      "object": "A general circle-length lower bound from the center derivative of a holomorphic map is needed, together with a reusable equality-rigidity lemma."
+    },
+    {
+      "problem_id": "a95J01",
+      "prediction": "yes",
+      "object": "A reusable Schwarz lemma equality case is needed after factoring one univalent disk map through the inverse of the other."
+    },
+    {
+      "problem_id": "a95J05",
+      "prediction": "yes",
+      "object": "A general bounded-transform criterion is needed to characterize convergence in measure by vanishing integrals of a continuous function that detects zero."
+    },
+    {
+      "problem_id": "a95J06",
+      "prediction": "yes",
+      "object": "A reusable gluing lemma is needed to promote absolute continuity on the complementary intervals of a null closed set to absolute continuity on the full interval."
+    },
+    {
+      "problem_id": "a95J08",
+      "prediction": "yes",
+      "object": "A general integral Young convolution inequality from L1 times Lp to Lp is needed."
+    },
+    {
+      "problem_id": "a96A04",
+      "prediction": "yes",
+      "object": "Reusable convolution lemmas are needed for smoothness under differentiated Gaussian kernels, L2 contraction, and approximate-identity convergence."
+    },
+    {
+      "problem_id": "a96A08",
+      "prediction": "no",
+      "object": "The computation uses a contour tailored to the displayed rational-trigonometric integrand rather than a separate broadly reusable construction."
+    },
+    {
+      "problem_id": "a96J10",
+      "prediction": "no",
+      "object": "The supplied problem.md contains no mathematical statement, so no general-purpose lemma can be identified from the permitted input."
+    },
+    {
+      "problem_id": "a97A04",
+      "prediction": "no",
+      "object": "The convergence set can be expressed directly by countable unions and intersections of measurable pairwise-distance conditions."
+    },
+    {
+      "problem_id": "a97A06",
+      "prediction": "yes",
+      "object": "A reusable removable-singularity lemma is needed to package the entire extension of the contour integrand at zero."
+    },
+    {
+      "problem_id": "a97A07",
+      "prediction": "yes",
+      "object": "A general divided-difference polynomial construction and Cauchy interpolation lemma are needed for the integral formula."
+    },
+    {
+      "problem_id": "a97A08",
+      "prediction": "yes",
+      "object": "A reusable Rouche root-count transfer theorem on disks is needed at the two radii."
+    },
+    {
+      "problem_id": "t91A04",
+      "prediction": "no",
+      "object": "The fixed point follows from the direct geometric estimate on the iterate sequence and completeness, with no auxiliary reusable construction required."
+    },
+    {
+      "problem_id": "t91J04",
+      "prediction": "no",
+      "object": "The nested-interval conclusion follows directly by choosing endpoints and using completeness of the reals."
+    },
+    {
+      "problem_id": "t92J02",
+      "prediction": "no",
+      "object": "The two elementary topology claims follow directly from the definitions of compactness, Hausdorffness, and continuity."
+    },
+    {
+      "problem_id": "t94A05",
+      "prediction": "yes",
+      "object": "A reusable open-and-closed reachability lemma is needed to show that the points joinable to a base point by paths fill a connected locally Euclidean space."
+    }
+  ]
+}
