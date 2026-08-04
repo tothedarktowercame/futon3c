@@ -203,6 +203,40 @@ The direction agrees with E8's frozen result (failure at candidate generation,
 not ranking) via a completely different instrument, which is the reason to take
 it seriously at n=10.
 
+**DENOMINATOR CORRECTION, 2026-08-04 — the star forest is not sparse, it is
+almost entirely empty.** The attachment export reports 25 endpoints, density
+min 1 / median 3 / max 40, and `zero-count: 0`. I read `zero-count: 0` as "no
+pattern has zero attachments". It does not mean that: **the export covers only
+patterns that already have an attachment**, so zero-count is zero by
+construction.
+
+Measured against the full library in the running JVM
+(`futon3b.query.relations/pattern-ids`):
+
+    total patterns in library              1193
+    patterns with >=1 reviewed attachment    25   (2.1%)
+    patterns with none                     1168   (97.9%)
+
+A live instance arrived the same hour: zai-4's planted `psr_select` on
+`agency/loud-failure` — a real, findable pattern — returned
+`attached-memories []` with `memory-hole {:kind :no-reviewed-attachment}` and
+`edge-count 0`.
+
+**Consequence for axis 3, correcting what I told claude-10.** I described the
+`:star-forest` vs `:populated` contrast as diluted because *"four endpoints are
+populated, twenty-one are not"*. The real ratio is **25 attached against 1168
+unattached**. A problem drawn at random almost certainly lands on a pattern with
+no memories at all, so the axis-3 treatment is not a weak contrast — for most
+problems there is nothing to contrast. Stratifying on endpoint density is not a
+refinement; without it the arm is largely undefined.
+
+**And it relocates M4's failure once more.** A query that reaches the right
+endpoint still returns nothing 97.9% of the time, because nothing is attached
+there. That is neither retrieval (M4) nor query vocabulary — it is the **M1
+recording gap** again, now with a denominator: the same conclusion the
+ConstructionTargets analysis reached from the artifact side, arrived at
+independently from the store side.
+
 **Certificates FOR.** fix-4 first positive (an e9 memory surfaced for a
 neighbouring problem, correctly graded *marginal*); demand-side tagging closed
 the E10 mid-solve hunger exactly.
