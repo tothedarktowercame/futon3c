@@ -135,7 +135,7 @@ this), not aspirations.
 
 \begin{center}
 \small
-\begin{tabular}{p{0.34\textwidth} p{0.17\textwidth} p{0.38\textwidth}}
+\begin{tabular}{p{0.33\textwidth} p{0.16\textwidth} p{0.37\textwidth}}
 \textbf{Sub-claim} & \textbf{Warrant} & \textbf{Key certificates}\\[2pt]
 \hline\\[-8pt]
 N1 Extra resources fill Mathlib holes & inductive-$n{=}3$ &
@@ -192,53 +192,61 @@ record: a query the corpus could not answer, banked as demand.
 
 \begin{figure}[t]
 \centering
+\begin{minipage}[c]{0.64\textwidth}
+\centering
 \begin{tikzpicture}[
-  every node/.style={font=\small},
-  var/.style={draw, ellipse, minimum height=7mm, inner sep=2pt, align=center},
+  every node/.style={font=\footnotesize},
+  var/.style={draw, ellipse, minimum height=6mm, inner sep=1.5pt, align=center},
   wit/.style={-{Stealth}, thick},
   unwit/.style={-{Stealth}, thick, dashed},
-  lab/.style={font=\scriptsize\itshape, midway, align=center}]
+  lab/.style={font=\tiny\itshape, align=center}]
 
-\node[var] (frame) {task frame};
-\node[var, right=16mm of frame] (consult) {memory\\consultation};
-\node[var, right=16mm of consult] (hit) {retrieval\\hit};
-\node[var, below=11mm of frame] (boundary) {boundary\\artifact};
-\node[var, right=14mm of boundary] (neighbor) {neighbouring\\artifacts};
-\node[var, right=14mm of neighbor] (closer) {closer\\success};
-\node[var, right=15mm of hit, yshift=-9.5mm] (solved) {problem\\solved};
+\node[var] (frame) {task\\frame};
+\node[var, right=11mm of frame] (consult) {memory\\consultation};
+\node[var, right=11mm of consult] (hit) {retrieval\\hit};
+\node[var, below=13mm of frame] (boundary) {boundary\\artifact};
+\node[var, right=10mm of boundary] (neighbor) {neighbouring\\artifacts};
+\node[var, right=10mm of neighbor] (closer) {closer\\success};
+\node[var, below right=1mm and 8mm of hit] (solved) {problem\\solved};
 
-\draw[wit] (frame) -- node[lab, above] {$do(\textrm{frame})$:\\$0\to21$ calls} (consult);
-\draw[wit, thin] (consult) -- node[lab, above] {$n{=}1$ on-point;\\4-layer diagnosis} (hit);
+\draw[wit] (frame) -- node[lab, above=0.5mm] {$do(\textrm{frame})$\\$0\to21$ calls} (consult);
+\draw[wit, thin] (consult) -- node[lab, above=0.5mm] {$n{=}1$ on-point} (hit);
 \draw[unwit] (hit) -- node[lab, above, sloped] {unwitnessed} (solved);
-\draw[wit] (boundary) -- node[lab, below] {relay, $n{=}4$} (closer);
-\draw[wit] (neighbor) -- node[lab, above, yshift=1pt] {reuse cited} (closer);
-\draw[wit] (closer) -- node[lab, below, sloped] {gate-certified} (solved);
+\draw[wit] (boundary) -- node[lab, below=0.5mm] {relay $n{=}4$} (neighbor.west |- boundary.east);
+\draw[wit] (neighbor) -- node[lab, below=0.5mm] {reuse cited} (closer);
+\draw[wit] (closer.east) -- node[lab, below, sloped] {gate-certified} (solved.south west);
 \end{tikzpicture}
-\hspace{8mm}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\textwidth}
+\centering
 \begin{tikzpicture}[
-  every node/.style={font=\small},
-  var/.style={draw, ellipse, minimum height=7mm, inner sep=2pt, align=center},
-  sel/.style={draw, rectangle, minimum height=6mm, inner sep=3pt},
+  every node/.style={font=\footnotesize},
+  var/.style={draw, ellipse, minimum height=6mm, inner sep=1.5pt, align=center},
+  sel/.style={draw, rectangle, minimum height=5mm, inner sep=3pt},
   wit/.style={-{Stealth}, thick}]
 \node[sel] (S) {$S$};
-\node[var, below=9mm of S] (dist) {problem\\distribution};
-\node[var, below=10mm of dist] (solve) {solved};
-\node[var, left=11mm of solve] (pipe) {pipeline};
+\node[var, below=8mm of S] (dist) {problem\\distribution};
+\node[var, below=9mm of dist] (solve) {solved};
+\node[var, left=9mm of solve] (pipe) {pipeline};
 \draw[wit] (S) -- (dist);
 \draw[wit] (dist) -- (solve);
 \draw[wit] (pipe) -- (solve);
 \end{tikzpicture}
+\end{minipage}
 \caption{\textbf{Left:} the mechanism DAG as currently witnessed.
 Solid edges carry certificates (labels); the dashed edge is the
 honest gap --- retrieval hits have not yet been shown to cause
 solutions (every hint so far was correctly discarded as
 off-route). The $do(\cdot)$ edge is the programme's one true
 intervention: a preregistered controlled contrast on the task
-frame. \textbf{Right:} the transport question N6 as a selection
-diagram: $S$ switches the problem distribution (APM vs.\ held-out
-BPM); the claim ``the pipeline works on BPM'' is identified only if
-the $S$-dependence can be separated from the pipeline edge ---
-which is a derivation obligation, not an extrapolation.}
+frame. The lower path is the relay: boundary artifacts and
+neighbouring solved problems feed closer success ($n{=}4$
+witnessed hops), which the mechanical gate certifies into
+solutions. \textbf{Right:} the transport question N6 as a
+selection diagram: $S$ switches the problem distribution (APM
+vs.\ held-out BPM); ``the pipeline works on BPM'' is identified
+only if the $S$-dependence can be separated from the pipeline
+edge --- a derivation obligation, not an extrapolation.}
 \label{fig:dag}
 \end{figure}
 
