@@ -162,3 +162,18 @@ workflow (Joe, separate session).
   v1 need registered: salvage path for truncated sessions;
   capability-update append on verdict-folded closes.
 - 2026-08-04 — chain apm-a96J02-b2567506a05d; problem a96J02; outcome closed; hops 1; commits ce07348, 318160d89257eab8482e8066e284afb91a7ec6ac, eb9fe1eeb5de945f63b94070d1ff5af4e0b1cc14.
+- 2026-08-04 18:1x — TRIAL CHAIN 3 (apm-a96J05-d2dff9bfb06f, a96J05,
+  ams-* cast on zone-joe): outcome ABANDONED — honest bottom-up
+  partial with NO MAIN THEOREM STATED (statement-first was a request,
+  not a gate: the law's 4th instance, now mechanized as the
+  no-main-statement gate). N9 witness: the full loop composed on a
+  SECOND MACHINE (select→A→B→gate→checkpoint→verdict→close). M7
+  witness: first federation retrieval positive — a transferred memory
+  surfaced organically in phase-A recon (pull channel, graded by
+  claude-12 inductive-n=1); its influence on the artifact is
+  suggestive-unattributable (general-instantiation signatures match
+  the memory's advice; no citation) — the citation gate's motivating
+  case. Instrument fixes: theorem discovery (problem-named wins),
+  contradiction rule scoped. Migration shakeout: seats via env,
+  elan PATH, apm-lean git history, informal corpus, psr index — five
+  gaps, each caught by a refusal, none by a wrong result.
