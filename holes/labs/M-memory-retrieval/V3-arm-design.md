@@ -32,49 +32,42 @@ mistake.
 
 ## The three axes
 
-### Axis 1 — channel (`:memory-channel`)
+### Axis 1 — consultation framing (`:memory-frame`) — **REBUILT 2026-08-04**
 
-| mode | meaning | status |
+**The original axis was refuted by E10, and the refuted thing was my
+manipulation.** Axis 1 was built as `:push` / `:push+pull` / `:pull-only`, where
+the pull arms differ by an *invitation* — the versioned text
+`memory-pull-invitation-v2` in `dispatch_with_recall.clj`. E10 measured that
+manipulation directly: **same agent, same store, 0 lookups under invitation (E9)
+vs 21 under the two-part task frame** (13 recon + 8 mid-solve at event anchors),
+preregistered in `E9-pull-probe-prereg.md`.
+
+So the invitation is inert and the live contrast is **invitation vs task
+framing**, not push vs pull. Recorded as a delta rather than silently patched.
+
+| mode | meaning | role |
 |---|---|---|
 | `:none` | no memories, no tools | control |
-| `:push` | recall-at-dispatch only — **today's behaviour, the default** | built |
-| `:push+pull` | push, plus the packet explicitly invites `memory_search` / `pattern_memory` / `library_search` mid-session | **to build** (packet-level) |
-| `:pull-only` | tools invited, no dispatch-time injection | to build |
+| `:push` | dispatch-time recall only — today's shipped default | control |
+| `:push+invited` | push, plus the `v2` invitation text | **negative control** |
+| `:push+framed` | push, plus the two-part task frame (recon + mid-solve anchors) | **treatment** |
+| `:framed-only` | task frame, no dispatch-time injection | treatment, isolates timing |
 
-**Rationale.** Push fires at minimum information — before any work, from problem
-prose. Pull is available at maximum information — mid-proof, when the runner
-knows what it lacks. S3 is the demonstration: at dispatch nobody could know the
-problem needed harmonic-series divergence; by round 214 the runner was hunting
-`not_summable_one_div_natCast` with `memory_search` unused in its tool list.
-No improvement to the query builder reaches this, because the information does
-not exist at dispatch time.
+**Keep the invitation arm — demoted, not deleted.** It becomes a **negative
+control with a preregistered prediction**: `:push+invited` should behave like
+`:push` on consultation count. If it ever shows lookups, E10 has failed to
+replicate and we learn that from the cohort rather than from assumption. A
+manipulation known to be inert is worth more as a check than as a treatment.
 
-**Build cost is near zero** — the tools already ship at `:full` on every zai
-invoke. `:push+pull` is a packet paragraph plus a mode that records which
-paragraph was sent. That cheapness is itself a reason to test rather than
-assume.
+**E9 + E10 are the pilot.** Same agent, same store, same corpus, n=1 each side,
+preregistered — that is a pilot of exactly this contrast, and the rebuilt arms
+cite it for effect size rather than guessing at one (claude-10, 08-04).
 
-**Denominator gap: CLOSED 2026-08-03** (`a5c3f8bf`). Every `memory_search` /
-`pattern_memory` / `evidence_graph` / `psr_search` call now writes a pull-offer
-receipt carrying the returned ids, the args, the round, the timestamp, and a
-**dispatch key** — the Agency job-id threaded through to the tool site, with an
-explicit dispatch→turn binding, never `session-id`. Verified end-to-end by
-operator: two pulls at rounds 4 and 11 produce a derivable union, rounds are
-preserved per call, and `cohort-guard` licenses the arm when the field is
-populated and refuses with `[:denominator-recorded]` when it is not.
-
-**Residual, and it is narrow.** `psr_search` returns **pattern-ids, not memory
-ids** (`pull_receipts.clj:21`), so its contribution to the pull-offered set is a
-set of patterns. A runner that goes `psr_search` → `psr_select` reaches memories
-whose ids are never recorded as offered — `psr_select` is a record step and is
-deliberately not in `pull-tool-names`. So the pull denominator is complete for
-direct memory retrieval and incomplete for the pattern→memory route. Small
-today, because nothing exercises that route; worth closing before any arm
-depends on pattern-mediated retrieval.
-
-`:pull-only` is included because it is the arm that separates *retrieval
-quality* from *retrieval timing*. If `:pull-only` beats `:push`, the query
-builder was never the binding constraint — the dispatch moment was.
+**What survives from the original build.** The `:push` control is
+byte-identical to shipped (`dfe78c60`, pinned by test), and the pull-side
+receipts (`a5c3f8bf`) record offers per call with a dispatch key — so the
+denominator work was not wasted by the refutation. Only the *text* was the wrong
+manipulation; the recording it required stands.
 
 ### Axis 2 — query construction (`:recall-query-mode`) — **RESOLVED BY E8, NO BUILDABLE LEVEL**
 
