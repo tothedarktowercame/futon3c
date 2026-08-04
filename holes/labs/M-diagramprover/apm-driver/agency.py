@@ -530,6 +530,7 @@ def fetch_and_enforce_quota(
     fetcher: Fetcher = url_fetch,
     logger: Callable[[str], None] = log,
     key: str | None = None,
+    url: str = QUOTA_URL,
     timeout: float = HTTP_TIMEOUT,
 ) -> list[dict[str, float | int]]:
     """Fetch, normalize, log, and enforce the production Z.AI quota gate."""
@@ -538,7 +539,7 @@ def fetch_and_enforce_quota(
         status, body = _response(
             fetcher,
             "GET",
-            QUOTA_URL,
+            url,
             headers={
                 "Authorization": key or api_key(),
                 "Accept-Language": "en-US,en",
@@ -547,9 +548,9 @@ def fetch_and_enforce_quota(
             timeout=timeout,
         )
     except AgencyError as exc:
-        raise GateClosed(f"request-failed url={QUOTA_URL} error={exc}") from exc
+        raise GateClosed(f"request-failed url={url} error={exc}") from exc
     if status != 200:
-        raise GateClosed(f"request-failed url={QUOTA_URL} status={status}")
+        raise GateClosed(f"request-failed url={url} status={status}")
     limits = quota_snapshot(body)
     enforce_quota(limits, logger=logger)
     return limits

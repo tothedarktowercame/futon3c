@@ -32,7 +32,9 @@ TRANSITIONS = frozenset(
         "chain-close",
     }
 )
-TERMINAL_POLL_STATUSES = frozenset({"done", "failed", "cancelled", "timed-out"})
+# ``agency.poll_fn`` deliberately normalizes failed remote jobs to ``error``.
+# Keep that transport value terminal when the modules are composed.
+TERMINAL_POLL_STATUSES = frozenset({"done", "error", "failed", "cancelled", "timed-out"})
 POLLABLE_STATES = frozenset({"DISPATCH_A", "DISPATCH_B", "CLOSER_HOP", "SCRIBE"})
 TERMINAL_STATES = frozenset({"DONE"})
 MAX_CLOSER_HOPS = 3
