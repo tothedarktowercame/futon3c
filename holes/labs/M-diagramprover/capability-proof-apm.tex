@@ -9,6 +9,8 @@
 \hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue!50!black}
 \usepackage{enumitem}
 \setlist{nosep}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric}
 
 \title{A Capability Proof, by Construction:\\
 \large Automated theorem-proving on a qualifying-exam corpus,\\
@@ -188,8 +190,60 @@ record: a query the corpus could not answer, banked as demand.
 
 \section{The causal layer}
 
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  var/.style={draw, ellipse, minimum height=7mm, inner sep=2pt, align=center},
+  wit/.style={-{Stealth}, thick},
+  unwit/.style={-{Stealth}, thick, dashed},
+  lab/.style={font=\scriptsize\itshape, midway, align=center}]
+
+\node[var] (frame) {task frame};
+\node[var, right=16mm of frame] (consult) {memory\\consultation};
+\node[var, right=16mm of consult] (hit) {retrieval\\hit};
+\node[var, below=11mm of frame] (boundary) {boundary\\artifact};
+\node[var, right=14mm of boundary] (neighbor) {neighbouring\\artifacts};
+\node[var, right=14mm of neighbor] (closer) {closer\\success};
+\node[var, right=15mm of hit, yshift=-9.5mm] (solved) {problem\\solved};
+
+\draw[wit] (frame) -- node[lab, above] {$do(\textrm{frame})$:\\$0\to21$ calls} (consult);
+\draw[wit, thin] (consult) -- node[lab, above] {$n{=}1$ on-point;\\4-layer diagnosis} (hit);
+\draw[unwit] (hit) -- node[lab, above, sloped] {unwitnessed} (solved);
+\draw[wit] (boundary) -- node[lab, below] {relay, $n{=}4$} (closer);
+\draw[wit] (neighbor) -- node[lab, above, yshift=1pt] {reuse cited} (closer);
+\draw[wit] (closer) -- node[lab, below, sloped] {gate-certified} (solved);
+\end{tikzpicture}
+\hspace{8mm}
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  var/.style={draw, ellipse, minimum height=7mm, inner sep=2pt, align=center},
+  sel/.style={draw, rectangle, minimum height=6mm, inner sep=3pt},
+  wit/.style={-{Stealth}, thick}]
+\node[sel] (S) {$S$};
+\node[var, below=9mm of S] (dist) {problem\\distribution};
+\node[var, below=10mm of dist] (solve) {solved};
+\node[var, left=11mm of solve] (pipe) {pipeline};
+\draw[wit] (S) -- (dist);
+\draw[wit] (dist) -- (solve);
+\draw[wit] (pipe) -- (solve);
+\end{tikzpicture}
+\caption{\textbf{Left:} the mechanism DAG as currently witnessed.
+Solid edges carry certificates (labels); the dashed edge is the
+honest gap --- retrieval hits have not yet been shown to cause
+solutions (every hint so far was correctly discarded as
+off-route). The $do(\cdot)$ edge is the programme's one true
+intervention: a preregistered controlled contrast on the task
+frame. \textbf{Right:} the transport question N6 as a selection
+diagram: $S$ switches the problem distribution (APM vs.\ held-out
+BPM); the claim ``the pipeline works on BPM'' is identified only if
+the $S$-dependence can be separated from the pipeline edge ---
+which is a derivation obligation, not an extrapolation.}
+\label{fig:dag}
+\end{figure}
+
 ``The memory system helps'' is a causal claim, and we treat it with
-the same discipline as the theorems. Contrasts are designed before
+the same discipline as the theorems (Figure~\ref{fig:dag}). Contrasts are designed before
 they are run (the $n{=}1$ controlled contrast in N4 was
 preregistered, with its predictions written down and two of them
 subsequently refuted by the data --- refuted predictions being
