@@ -151,9 +151,13 @@ held without correction; hunger audit ran unattended\\[3pt]
 N4 Agents consult memory when instructed & inductive-$n{=}1$
 (controlled) & same agent, same store: 0 lookups under a passive
 invitation vs.\ 21 under a two-part task frame\\[3pt]
-N5 Retrieval serves the need & \textbf{weak} & a four-layer failure
-anatomy (propensity / framing / affordance / index-reach) with one
-positive instance; repairs identified and queued\\[3pt]
+N5 Retrieval serves the need & \textbf{weak} (step-level
+$n{=}1$) & a four-layer failure anatomy (propensity / framing /
+affordance / index-reach); one \emph{step-level} witness --- an
+on-point memory cited in a proof body above the lemma that closes the
+step, the enclosing theorem \texttt{sorry}-free and error-free under
+an executed check; problem-level still open. Detail lives in the
+sibling store proof (node M4)\\[3pt]
 N6 Capability transports to held-out problems & designed & stated as
 a formal transportability claim; no witnesses yet\\[3pt]
 N7 Outcomes are mechanically scoreable & designed$\to$mechanical &
@@ -207,11 +211,13 @@ record: a query the corpus could not answer, banked as demand.
 \node[var, below=13mm of frame] (boundary) {boundary\\artifact};
 \node[var, right=10mm of boundary] (neighbor) {neighbouring\\artifacts};
 \node[var, right=10mm of neighbor] (closer) {closer\\success};
-\node[var, below right=1mm and 8mm of hit] (solved) {problem\\solved};
+\node[var, right=9mm of hit] (step) {step\\closed};
+\node[var, below right=1mm and 8mm of step] (solved) {problem\\solved};
 
 \draw[wit] (frame) -- node[lab, above=0.5mm] {$do(\textrm{frame})$\\$0\to21$ calls} (consult);
 \draw[wit, thin] (consult) -- node[lab, above=0.5mm] {$n{=}1$ on-point} (hit);
-\draw[unwit] (hit) -- node[lab, above, sloped] {unwitnessed} (solved);
+\draw[wit, thin] (hit) -- node[lab, above=0.5mm] {$n{=}1$ cited\\\&\,proved} (step);
+\draw[unwit] (step) -- node[lab, above, sloped] {assembly} (solved);
 \draw[wit] (boundary) -- node[lab, below=0.5mm] {relay $n{=}4$} (neighbor.west |- boundary.east);
 \draw[wit] (neighbor) -- node[lab, below=0.5mm] {reuse cited} (closer);
 \draw[wit] (closer.east) -- node[lab, below, sloped] {gate-certified} (solved.south west);
@@ -234,10 +240,16 @@ record: a query the corpus could not answer, banked as demand.
 \end{tikzpicture}
 \end{minipage}
 \caption{\textbf{Left:} the mechanism DAG as currently witnessed.
-Solid edges carry certificates (labels); the dashed edge is the
-honest gap --- retrieval hits have not yet been shown to cause
-solutions (every hint so far was correctly discarded as
-off-route). The $do(\cdot)$ edge is the programme's one true
+Solid edges carry certificates (labels). The retrieval edge is
+now \emph{split by granularity}: a hit has been witnessed to close a
+proof \emph{step} (a96A08, 2026-08-04 --- the runner cited an
+on-point memory in the proof body immediately above the lemma
+application, and the enclosing theorem carries no \texttt{sorry} and
+no error under \texttt{lake env lean}), while the step-to-problem
+edge remains the honest gap: that session's assembly was left
+unfinished downstream of the memory-assisted lemma. The earlier
+reading --- that every hint was correctly discarded as off-route ---
+no longer holds. The $do(\cdot)$ edge is the programme's one true
 intervention: a preregistered controlled contrast on the task
 frame. The lower path is the relay: boundary artifacts and
 neighbouring solved problems feed closer success ($n{=}4$
