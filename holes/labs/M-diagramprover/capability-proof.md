@@ -82,9 +82,12 @@ psr index noise reproduced twice. Certificates FOR: fix-4 first
 positive (e9 memory surfaced for a neighboring problem, correctly
 graded marginal); demand-side tagging closed the E10 mid-solve
 hunger exactly. Warrant: **WEAK — inductive-n=1 positive against a
-4-layer diagnosis**. Upgrade path: repairs 2–4 (psr description line,
-memory_search query param, tag backfill from hunger logs — claude-12
-queue); hunger audit per scribe pass.
+REPLICATED mechanical negative** (per the store proof's M4, which this
+node now CITES rather than restates: E8 frozen across three runs/two
+operators; failure locus = candidate generation, not ranking; see
+holes/labs/M-memory-retrieval/capability-proof-store.md). Upgrade
+path: repairs 2–4 (claude-12 queue); hunger audit per scribe pass;
+warrant upgrades flow FROM M4's certificates.
 
 ## N6 — Capability transports APM → held-out BPM
 
