@@ -140,3 +140,15 @@ workflow (Joe, separate session).
 - 2026-08-04 09:1x — document created; certificates through 08-03
   attached; N7 upgraded (1a capture verified landed); N9 build begins
   this session.
+- 2026-08-04 14:5x — TRIAL CHAIN 1 (apm-a96A08-43faa622afcd, a96A08):
+  outcome ABANDONED via the anomaly path — phase-B session died at
+  43min/216 tool events; gate correctly classified the mid-work
+  snapshot DEFECTIVE (build-failed, nonconforming boundaries);
+  anomaly checkpoint belled claude-10; abandon verdict folded on
+  restart (run.py anomaly-consumption fix 2a8532be). N9 witness: the
+  SAFETY rails composed correctly end-to-end (select→dispatch→poll→
+  gate→checkpoint→verdict→close, all ledgered). N4/N5 note: first
+  ORGANIC memory citation in an artifact (Dirichlet-sinc memory,
+  on-point for the problem, cited in the docstring by the runner).
+  v1 need registered: salvage path for truncated sessions;
+  capability-update append on verdict-folded closes.
