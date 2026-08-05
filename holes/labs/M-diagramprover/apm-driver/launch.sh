@@ -7,6 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 exec systemd-run --user --unit apm-driver \
+  --nice="${APM_NICE:-10}" \
   --setenv=PATH="$HOME/.elan/bin:/usr/bin:/bin" \
   --setenv=APM_ZAI_SEAT="${APM_ZAI_SEAT:-zai-1}" \
   --setenv=APM_CODEX_SEAT="${APM_CODEX_SEAT:-codex-12}" \
