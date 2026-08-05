@@ -507,8 +507,16 @@ def main(argv: list[str] | None = None) -> int:
                 runner.run_chain(problem)
                 handled.add(problem)
             except agency.GateClosed as exc:
+                # Continuous mode waits out the gate ("usage permitting"
+                # means resume when usage permits); a pinned --problem run
+                # still exits, matching --once's honest stop.
                 print(f"quota gate closed: {exc}", file=sys.stderr)
-                break
+                if args.problem:
+                    break
+                self_wait = 900
+                print(f"waiting {self_wait}s for the usage window", file=sys.stderr)
+                time.sleep(self_wait)
+                continue
             if args.problem:
                 break
     return 0
