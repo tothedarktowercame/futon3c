@@ -135,7 +135,8 @@ def count_sorries(source: str) -> int:
     return len(sorry_sites(source))
 
 
-def extract_main_statement(source: str, problem_id: str | None = None) -> tuple[str, str]:
+def extract_main_statement(source: str, problem_id: str | None = None,
+                           expected_name: str | None = None) -> tuple[str, str]:
     """Return the main theorem name and declaration through its first ``:=``.
 
     Discovery (chain-3 fix, 2026-08-04): a theorem whose name contains the
@@ -149,7 +150,18 @@ def extract_main_statement(source: str, problem_id: str | None = None) -> tuple[
     if not matches:
         raise GateError("no theorem declaration found")
     match = None
-    if problem_id:
+    if expected_name:
+        # A frozen chain knows its main theorem by name (hop-0 freeze);
+        # re-discovery must not be confused by helper theorems a closer
+        # legitimately adds (chain-6 fix).
+        for candidate in matches:
+            if candidate.group(1) == expected_name:
+                match = candidate
+                break
+        if match is None:
+            raise GateError(
+                f"frozen main theorem {expected_name!r} not found in source")
+    if match is None and problem_id:
         wanted = problem_id.lower()
         for candidate in matches:
             if wanted in candidate.group(1).lower():
@@ -169,10 +181,11 @@ def extract_main_statement(source: str, problem_id: str | None = None) -> tuple[
     return match.group(1), normalized
 
 
-def statement_hash(source: str, problem_id: str | None = None) -> tuple[str, str, str]:
+def statement_hash(source: str, problem_id: str | None = None,
+                   expected_name: str | None = None) -> tuple[str, str, str]:
     """Return theorem name, normalized declaration, and prefixed SHA-256."""
 
-    theorem_name, normalized = extract_main_statement(source, problem_id)
+    theorem_name, normalized = extract_main_statement(source, problem_id, expected_name)
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
     return theorem_name, normalized, f"sha256:{digest}"
 
@@ -383,12 +396,14 @@ def gate_path(
     repo_root: Path = DEFAULT_REPO,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     problem_id: str | None = None,
+    expected_name: str | None = None,
 ) -> dict[str, Any]:
     """Run all gates for a Lean file and return driver.py's exact payload."""
 
     source = lean_file.read_text(encoding="utf-8")
     try:
-        theorem_name, _normalized_statement, digest = statement_hash(source, problem_id)
+        theorem_name, _normalized_statement, digest = statement_hash(
+            source, problem_id, expected_name)
     except GateError as exc:
         # A file we cannot locate a main statement in is a DEFECTIVE
         # classification, not a driver crash (chain-5 fix).
@@ -443,6 +458,7 @@ def gate_fn(
     *,
     repo_root: Path = DEFAULT_REPO,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    expected_name: str | None = None,
 ) -> dict[str, Any]:
     """H1 injection implementation: mechanically gate one APM problem."""
 
@@ -452,6 +468,7 @@ def gate_fn(
         repo_root=repo_root,
         timeout_seconds=timeout_seconds,
         problem_id=problem_id,
+        expected_name=expected_name,
     )
 
 

@@ -74,6 +74,16 @@ def chain_records(ledger_path: Path, chain_id: str) -> list[dict[str, Any]]:
     return [record for record in driver.read_ledger(ledger_path) if record["chain-id"] == chain_id]
 
 
+def frozen_theorem_name(records: list[Mapping[str, Any]]) -> str | None:
+    """The main theorem name recorded at the hop-0 freeze, if any."""
+
+    for record in records:
+        if record["transition"] == "gate":
+            name = record["payload"].get("gate-results", {}).get("theorem-name")
+            return str(name) if name else None
+    return None
+
+
 def latest_payload(records: list[Mapping[str, Any]], transition: str) -> dict[str, Any]:
     for record in reversed(records):
         if record["transition"] == transition:
@@ -232,7 +242,8 @@ def production_dependencies(config: Mapping[str, Any]) -> Dependencies:
     return Dependencies(
         dispatch=lambda seat, packet: agency.dispatch_fn(seat, packet, base_url=base),
         poll=lambda job_id: agency.poll_fn(job_id, base_url=base),
-        gate=lambda problem_id: gates.gate_fn(problem_id, repo_root=repo),
+        gate=lambda problem_id, expected_name=None: gates.gate_fn(
+            problem_id, repo_root=repo, expected_name=expected_name),
         quota=lambda: agency.fetch_and_enforce_quota(url=str(config["quota_url"])),
         statement=lambda problem_id: lean_statement_verbatim(problem_id, repo),
         boundary=lambda problem_id, payload: boundary_excerpt(problem_id, payload, repo),
@@ -299,12 +310,14 @@ class Runner:
                     self._poll_once(chain)
             elif state in {"DISPATCH_B", "CLOSER_HOP"}:
                 if chain["last-poll-status"] in driver.TERMINAL_POLL_STATUSES:
-                    payload = dict(self.deps.gate(problem_id))
+                    payload = dict(self.deps.gate(
+                        problem_id, expected_name=frozen_theorem_name(records)))
                     _append(self.ledger, chain, "gate", payload)
                 else:
                     self._poll_once(chain)
             elif state == "GATE":
-                payload = dict(self.deps.gate(problem_id))
+                payload = dict(self.deps.gate(
+                    problem_id, expected_name=frozen_theorem_name(records)))
                 _append(self.ledger, chain, "gate", payload)
             elif state == "PARTIAL":
                 gate_payload = latest_payload(records, "gate")

@@ -48,7 +48,7 @@ class Harness:
             }
         return {"status": "done", "result": f"Commit SHA: abcdef{self.next_job}"}
 
-    def gate(self, _problem):
+    def gate(self, _problem, expected_name=None):
         return self.gates.pop(0)
 
     def checkpoint_request(self, **kwargs):

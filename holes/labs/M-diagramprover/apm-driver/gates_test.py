@@ -254,3 +254,39 @@ class DiscoveryFailureClassifiesTest(unittest.TestCase):
         self.assertEqual("defective", r["outcome"])
         self.assertTrue(any("statement-discovery-failed" in x
                             for x in r["gate-results"]["reasons"]))
+
+
+class FrozenNameDiscoveryTest(unittest.TestCase):
+    """Chain-6 fix: re-gates find the frozen main theorem among helpers."""
+
+    SOURCE = ("theorem helper_added_by_closer : True := trivial\n"
+              "theorem the_main_one (n : Nat) : n = n := rfl\n"
+              "theorem another_helper : True := trivial\n")
+
+    def test_frozen_name_wins_over_ambiguity(self):
+        name, _ = gates.extract_main_statement(
+            self.SOURCE, "a97X99", expected_name="the_main_one")
+        self.assertEqual("the_main_one", name)
+
+    def test_missing_frozen_name_raises(self):
+        with self.assertRaisesRegex(gates.GateError, "frozen main theorem"):
+            gates.extract_main_statement(
+                self.SOURCE, "a97X99", expected_name="vanished_theorem")
+
+
+class FrozenNameDiscoveryTest(unittest.TestCase):
+    """Chain-6 fix: re-gates find the frozen main theorem among helpers."""
+
+    SOURCE = ("theorem helper_added_by_closer : True := trivial\n"
+              "theorem the_main_one (n : Nat) : n = n := rfl\n"
+              "theorem another_helper : True := trivial\n")
+
+    def test_frozen_name_wins_over_ambiguity(self):
+        name, _ = gates.extract_main_statement(
+            self.SOURCE, "a97X99", expected_name="the_main_one")
+        self.assertEqual("the_main_one", name)
+
+    def test_missing_frozen_name_raises(self):
+        with self.assertRaisesRegex(gates.GateError, "frozen main theorem"):
+            gates.extract_main_statement(
+                self.SOURCE, "a97X99", expected_name="vanished_theorem")
