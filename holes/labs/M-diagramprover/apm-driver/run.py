@@ -429,6 +429,7 @@ def select_problem(
     *,
     ledger_path: Path | None = None,
     excluded: set[str] | None = None,
+    allow_new: bool = True,
 ) -> str:
     if explicit:
         return explicit
@@ -442,6 +443,11 @@ def select_problem(
         for chain in active:
             if chain["problem-id"] not in skipped:
                 return str(chain["problem-id"])
+    if not allow_new:
+        # A bare resume launch must never silently start fresh work
+        # (2026-08-04 night: a racing relaunch began a new chain).
+        raise RunError(
+            "no pending chain to resume; pass --problem <id> or --new to start one")
     candidates = [problem for problem in candidate_problem_ids() if problem not in skipped]
     if not candidates:
         raise RunError("candidate queue is empty")
@@ -455,6 +461,8 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--continuous", action="store_true")
     parser.add_argument("--problem")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--new", action="store_true",
+                        help="allow --once to start a fresh chain when none is pending")
     args = parser.parse_args(argv)
     runner = Runner()
     if args.dry_run:
@@ -471,7 +479,8 @@ def main(argv: list[str] | None = None) -> int:
         ws_url=str(CONFIG["agency_ws"]),
     ):
         if args.once:
-            result = runner.run_chain(select_problem(args.problem, ledger_path=runner.ledger))
+            result = runner.run_chain(select_problem(
+                args.problem, ledger_path=runner.ledger, allow_new=args.new))
             print(json.dumps(result, indent=2, sort_keys=True))
             return 0
         handled: set[str] = set()

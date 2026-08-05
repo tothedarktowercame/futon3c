@@ -222,3 +222,11 @@ class CapabilityUpdateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ResumeDoesNotStartFreshTest(unittest.TestCase):
+    """2026-08-04 night fix: bare --once resume never begins new work."""
+
+    def test_no_pending_chain_and_no_new_flag_raises(self):
+        with self.assertRaisesRegex(run.RunError, "no pending chain"):
+            run.select_problem(None, ledger_path=None, allow_new=False)
