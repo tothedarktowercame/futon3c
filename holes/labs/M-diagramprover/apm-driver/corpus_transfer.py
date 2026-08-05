@@ -41,7 +41,7 @@ DEFAULT_REMOTE_STORE = "http://127.0.0.1:7074"
 DEFAULT_SSH_HOST = "zone-joe"
 PAGE_LIMIT = 500
 MAX_COMMITTED_DUMP = 1_000_000
-FAMILY_PREFIXES = ("e-e9-", "e-j07-", "e-e10-", "e-j02-")
+FAMILY_PREFIXES = ("e-e9-", "e-j07-", "e-e10-", "e-j02-", "e-a97j01-", "e-a97j02-")
 REPRESENTATIVE_ID = "e-j02-translation-symmdiff-preimage-api"
 TAG_PROBE = ("open-set", "interval-decomposition")
 
@@ -570,16 +570,19 @@ def read_dump(path: Path) -> list[tuple[str, str, str]]:
     return records
 
 
-def assert_remote_import_target(store_url: str) -> None:
+def assert_remote_import_target(store_url: str, allow_local_write: bool = False) -> None:
     parsed = urllib.parse.urlsplit(store_url)
     if parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
         raise TransferError("import target must be loopback-only")
-    if parsed.port == 7073:
-        raise TransferError("refusing to POST to the local read-only futon1b port 7073")
+    if parsed.port == 7073 and not allow_local_write:
+        raise TransferError(
+            "refusing to POST to the local futon1b port 7073 "
+            "(pass --allow-local-write for an explicit reverse mirror)")
 
 
-def import_dump(store_url: str, dump_path: Path, manifest_path: Path) -> None:
-    assert_remote_import_target(store_url)
+def import_dump(store_url: str, dump_path: Path, manifest_path: Path,
+                allow_local_write: bool = False) -> None:
+    assert_remote_import_target(store_url, allow_local_write)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     raw = dump_path.read_bytes()
     if sha256_bytes(raw) != manifest["dump"]["sha256"]:
@@ -784,6 +787,7 @@ def build_parser() -> argparse.ArgumentParser:
     import_parser.add_argument("--store", default=DEFAULT_REMOTE_STORE)
     import_parser.add_argument("--dump", type=Path, required=True)
     import_parser.add_argument("--manifest", type=Path, required=True)
+    import_parser.add_argument("--allow-local-write", action="store_true")
 
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("--store", default=DEFAULT_REMOTE_STORE)
@@ -808,7 +812,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"counts={json.dumps(manifest['counts'], sort_keys=True)}"
         )
     elif args.command == "import":
-        import_dump(args.store, args.dump, args.manifest)
+        import_dump(args.store, args.dump, args.manifest,
+                    allow_local_write=args.allow_local_write)
     elif args.command == "verify":
         verify_remote(args.store, args.manifest)
     elif args.command == "transfer":
