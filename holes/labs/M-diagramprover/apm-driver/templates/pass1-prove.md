@@ -39,7 +39,9 @@ For EACH problem in your set, in order:
    spent. Total set budget: do not exceed the job window.
 
 Report: one line per problem — outcome, sorry count, axioms (if
-proved), memories cited (ids), blocker (if not proved) — then a
+proved), memories cited (ids, each tagged SUPPLIED / CONFIRMED /
+UNCLEAR for whether it changed your plan or corroborated one you
+already had), blocker (if not proved) — then a
 closing note listing any statement you believe is WRONG as stated,
 with your reason (this feeds statement review; it does not authorize
 you to change it).
