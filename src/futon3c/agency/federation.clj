@@ -168,11 +168,30 @@
           not-empty))
 
 (defn agent-id-home-site
-  "Infer a site code from a site-qualified agent id like lon-claude-1."
+  "Infer a site code from a site-qualified agent id.
+
+   Two recognizers: the type-anchored form (lon-claude-1 — any site code,
+   known or not), and a KNOWN-site prefix on any agent name (ams-air-1,
+   oxf-apm-driver). The second closes the 2026-08-06 prefix-echo bug:
+   names outside the type whitelist were invisible here, so every
+   federation hop re-qualified them (oxf-apm-driver → oxf-oxf-apm-driver →
+   …). Known sites come from config only (own site, peer-sites, the
+   url→site map) — never from registry inference, which would recurse
+   through known-remote-home-sites."
   [agent-id]
-  (when-let [[_ site] (re-matches #"(?i)^([a-z][a-z0-9]*)-(?:claude|codex|zai|tickle)-\d+$"
-                                  (str agent-id))]
-    (str/lower-case site)))
+  (let [s (str/lower-case (str agent-id))]
+    (or (when-let [[_ site] (re-matches #"(?i)^([a-z][a-z0-9]*)-(?:claude|codex|zai|tickle)-\d+$" s)]
+          (str/lower-case site))
+        (let [cfg @!config
+              sites (into (or (:peer-sites cfg) #{})
+                          (remove nil? (cons (site-prefix)
+                                             (vals (:peer-site-by-url cfg)))))]
+          (some (fn [site]
+                  (when (and site
+                             (str/starts-with? s (str site "-"))
+                             (> (count s) (inc (count site))))
+                    site))
+                sites)))))
 
 (defn- parse-home-site
   [x]
@@ -509,7 +528,13 @@
   (if (agent-id-home-site remote-id)
     remote-id
     (if-let [hs (proxy-home-site origin-url remote-id agent-info)]
-      (str hs "-" remote-id)
+      (if (str/starts-with? (str/lower-case (str remote-id)) (str hs "-"))
+        ;; Echo guard (2026-08-06): the id already carries its declared
+        ;; home-site prefix even though agent-id-home-site couldn't prove it
+        ;; (unknown site code on this node). Prefixing again is what built
+        ;; ams-ams-air-1 / oxf-oxf-oxf-apm-driver across hops.
+        remote-id
+        (str hs "-" remote-id))
       remote-id)))
 
 (defn- proxy-metadata
