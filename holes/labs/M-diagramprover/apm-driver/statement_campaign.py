@@ -228,19 +228,20 @@ def main() -> int:
             print("no approved statements")
             return 1
         seats = args.seats.split(",")
-        sets = [approved[i:i + args.set_size]
-                for i in range(0, len(approved), args.set_size)]
         template = (HERE / "templates" / "pass1-prove.md").read_text(encoding="utf-8")
         stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M")
-        for i, chunk in enumerate(sets):
+        # One job per problem: a multi-problem set overruns the job cap;
+        # per-problem jobs queue per seat and each fits comfortably.
+        for i, pid in enumerate(approved):
             seat = seats[i % len(seats)]
-            listing = "\n".join(f"- `{p}`" for p in chunk)
-            packet = template.replace("{problem_list}", "\n" + listing)
+            packet = template.replace("{problem_list}", f"\n- `{pid}`")
             job = agency.dispatch_fn(seat, packet)["job-id"]
-            append_jsonl(LEDGER, {"at": now_iso(), "batch": f"pass1-{stamp}-{i:02d}",
+            append_jsonl(LEDGER, {"at": now_iso(), "batch": f"pass1-{stamp}-{i:03d}",
                                   "transition": "pass1-dispatch", "seat": seat,
-                                  "problems": chunk, "job-id": job})
-            print(f"set {i}: {len(chunk)} problems -> {seat} ({job})")
+                                  "problems": [pid], "job-id": job})
+        from collections import Counter
+        per_seat = Counter(seats[i % len(seats)] for i in range(len(approved)))
+        print(f"dispatched {len(approved)} pass-1 jobs: {dict(per_seat)}")
         return 0
     if args.cmd == "status":
         state = manifest_state()
