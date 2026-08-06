@@ -210,6 +210,9 @@ def main() -> int:
     runp.add_argument("--batch-size", type=int, default=3)
     runp.add_argument("--seats", default="codex-13,codex-14")
     statusp = sub.add_parser("status")  # noqa: F841
+    passp = sub.add_parser("pass1")
+    passp.add_argument("--seats", default="zai-1")
+    passp.add_argument("--set-size", type=int, default=10)
     reviewp = sub.add_parser("review")
     reviewp.add_argument("problem")
     reviewp.add_argument("--approve", action="store_true")
@@ -218,6 +221,27 @@ def main() -> int:
 
     if args.cmd == "review":
         return cmd_review(args)
+    if args.cmd == "pass1":
+        state = manifest_state()
+        approved = [p for p, st in sorted(state.items()) if st == "approved"]
+        if not approved:
+            print("no approved statements")
+            return 1
+        seats = args.seats.split(",")
+        sets = [approved[i:i + args.set_size]
+                for i in range(0, len(approved), args.set_size)]
+        template = (HERE / "templates" / "pass1-prove.md").read_text(encoding="utf-8")
+        stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M")
+        for i, chunk in enumerate(sets):
+            seat = seats[i % len(seats)]
+            listing = "\n".join(f"- `{p}`" for p in chunk)
+            packet = template.replace("{problem_list}", "\n" + listing)
+            job = agency.dispatch_fn(seat, packet)["job-id"]
+            append_jsonl(LEDGER, {"at": now_iso(), "batch": f"pass1-{stamp}-{i:02d}",
+                                  "transition": "pass1-dispatch", "seat": seat,
+                                  "problems": chunk, "job-id": job})
+            print(f"set {i}: {len(chunk)} problems -> {seat} ({job})")
+        return 0
     if args.cmd == "status":
         state = manifest_state()
         from collections import Counter
