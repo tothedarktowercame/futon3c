@@ -18,8 +18,12 @@ For EACH problem in your set, in order:
 2. Consult `memory_search` and `psr_search` for routes (tags in your
    own vocabulary; the store holds routes from prior closed problems).
 3. Attempt the proof, replacing ONLY the `sorry`. Cite every memory
-   whose content you actually use with `-- (Memory: <id>)` adjacent to
-   the informed code (machine-checked form).
+   whose content you actually use with `-- (Memory: e-<id>)` adjacent
+   to the informed code, and every PATTERN whose content you use with
+   `-- (Pattern: <ns>/<name>)`. The forms are machine-checked and
+   distinct: `Memory:` is ONLY for store memory ids (they begin
+   `e-`); `Pattern:` is ONLY for pattern-library ids. Single `--`,
+   exact spacing.
 4. HONEST OUTCOMES, pick one per problem:
    - PROVED: zero sorries, `lake env lean` exit 0. Run
      `#print axioms` for the theorem and include the output.

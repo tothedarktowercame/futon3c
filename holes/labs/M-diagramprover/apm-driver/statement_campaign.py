@@ -86,6 +86,19 @@ def conclusion_lint(source: str, theorem_name: str) -> list[str]:
     return flags
 
 
+def citation_lint(source: str) -> list[str]:
+    """Memory: markers must carry e- ids; pattern ids belong in Pattern:."""
+
+    flags = []
+    for m in re.findall(r"\(Memory: ([^)]+)\)", source):
+        if not m.strip().startswith("e-"):
+            flags.append(f"memory-marker-carries-non-memory-id:{m.strip()[:40]}")
+    for m in re.findall(r"\(Pattern: ([^)]+)\)", source):
+        if m.strip().startswith("e-"):
+            flags.append(f"pattern-marker-carries-memory-id:{m.strip()[:40]}")
+    return flags
+
+
 def statement_gate(problem_id: str) -> dict:
     lean_file = REPO / "problems" / problem_id / "lean" / "Main.lean"
     if not lean_file.exists():

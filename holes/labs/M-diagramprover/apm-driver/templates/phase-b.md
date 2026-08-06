@@ -3,9 +3,11 @@ your phase-A reconnaissance; your hint list is your starting
 context).
 
 1. Use your phase-A hints where they genuinely help. CITE every
-   memory whose content you actually use, with the exact comment
-   form `-- (Memory: <id>)` placed adjacent to the code it informed
-   (this form is machine-checked; free-form citations are missed).
+   memory whose content you actually use, with the exact comment form
+   `-- (Memory: e-<id>)` adjacent to the informed code, and every
+   PATTERN used with `-- (Pattern: <ns>/<name>)`. The forms are
+   machine-checked and distinct: `Memory:` only for store ids
+   (beginning `e-`); `Pattern:` only for pattern-library ids.
    If a hint turns out not to help, drop it without ceremony.
 2. CONTINUE looking things up at these moments, mid-solve: whenever
    a Mathlib search comes back empty, and BEFORE writing any
