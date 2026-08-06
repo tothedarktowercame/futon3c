@@ -225,7 +225,11 @@ def main() -> int:
         return 0
 
     state = manifest_state()
-    todo = [p for p in candidate_problems() if p not in state][: args.n]
+    # missing/defective are RETRYABLE (e.g. a network-killed batch);
+    # only settled statuses exclude a problem from selection.
+    settled = ("approved", "pending-review")
+    todo = [p for p in candidate_problems()
+            if not str(state.get(p, "")).startswith(settled)][: args.n]
     if not todo:
         print("nothing to do")
         return 0
