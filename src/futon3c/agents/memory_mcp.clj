@@ -1,5 +1,5 @@
 (ns futon3c.agents.memory-mcp
-  "Small stdio MCP server exposing the trusted memory_record write seam.
+  "Small stdio MCP server exposing trusted memory read and write seams.
 
    Identity and domain are process configuration supplied by the Codex
    controller, never tool arguments supplied by the model."
@@ -7,6 +7,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.evidence.futon1b-backend :as f1b]
+            [futon3c.evidence.store :as store]
             [futon3c.peripheral.memory-write :as memory-write])
   (:gen-class))
 
@@ -42,6 +43,58 @@
    :required ["name" "body" "subjects"]
    :additionalProperties false})
 
+(def memory-search-description
+  (str "Search the evidence store by subject, type, claim type, author, "
+       "timestamp, or tags. Returns matching evidence entries. Read-only."))
+
+(def memory-search-schema
+  {:type "object"
+   :properties
+   {:subject
+    {:type "object"
+     :description "ArtifactRef {ref/type, ref/id} to scope the search."
+     :properties
+     {"ref/type" {:type "string"}
+      "ref/id" {:type "string" :minLength 1}}
+     :required ["ref/type" "ref/id"]
+     :additionalProperties false}
+    :type {:type "string" :description "EvidenceType filter."}
+    :claim_type {:type "string" :description "ClaimType filter."}
+    :author {:type "string"}
+    :since {:type "string" :description "ISO-8601 timestamp lower bound (inclusive)."}
+    :tags {:type "array" :items {:type "string"}
+           :description "Tag keywords to filter by."}
+    :limit {:type "integer" :description "Max items (default 20, max 100)."}
+    :include_ephemeral {:type "boolean"}}
+   :additionalProperties false})
+
+(defn- clamp-limit
+  [n]
+  (let [n (cond
+            (int? n) n
+            (string? n) (try (Long/parseLong n) (catch Throwable _ 20))
+            :else 20)]
+    (max 1 (min 100 (int n)))))
+
+(defn- ->keyword
+  [x]
+  (if (keyword? x) x (keyword x)))
+
+(defn- search-query
+  [{:keys [subject type claim_type author since tags limit include_ephemeral]}]
+  (let [subject (when (and (map? subject)
+                           (:ref/type subject)
+                           (:ref/id subject))
+                  (update subject :ref/type ->keyword))]
+    (cond-> {:query/limit (clamp-limit limit)}
+      subject (assoc :query/subject subject)
+      type (assoc :query/type (->keyword type))
+      claim_type (assoc :query/claim-type (->keyword claim_type))
+      author (assoc :query/author author)
+      since (assoc :query/since since)
+      (seq tags) (assoc :query/tags (mapv ->keyword tags))
+      (true? include_ephemeral) (assoc :query/include-ephemeral? true))))
+
 (defn- session-id
   [session-file]
   (or (when (and session-file (.exists (io/file session-file)))
@@ -66,21 +119,33 @@
       {:jsonrpc "2.0" :id id
        :result {:tools [{:name "memory_record"
                          :description memory-record-description
-                         :inputSchema memory-record-schema}]}}
+                         :inputSchema memory-record-schema}
+                        {:name "memory_search"
+                         :description memory-search-description
+                         :inputSchema memory-search-schema}]}}
 
       "tools/call"
-      (if (= "memory_record" (:name params))
-        (let [receipt
-              (record-memory-fn
-               {:agent-id agent-id
-                :session-id (session-id session-file)
-                :domain domain
-                :evidence-store evidence-store}
-               (or (:arguments params) {}))]
+      (case (:name params)
+        "memory_record"
+        (let [receipt (record-memory-fn
+                       {:agent-id agent-id
+                        :session-id (session-id session-file)
+                        :domain domain
+                        :evidence-store evidence-store}
+                       (or (:arguments params) {}))]
           {:jsonrpc "2.0" :id id
            :result {:content [{:type "text"
                                :text (json/generate-string receipt)}]
                     :isError (not (:ok receipt))}})
+
+        "memory_search"
+        (let [items (store/query* evidence-store
+                                  (search-query (or (:arguments params) {})))]
+          {:jsonrpc "2.0" :id id
+           :result {:content [{:type "text"
+                               :text (json/generate-string items)}]
+                    :isError false}})
+
         {:jsonrpc "2.0" :id id
          :error {:code -32602 :message "Unknown tool"}})
 
