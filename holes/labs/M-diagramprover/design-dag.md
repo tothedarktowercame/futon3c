@@ -9,7 +9,7 @@ deterministic path yields all-thin; real matches need the Tier-1 verify) as
 evidence against the feature.
 
 The design is older and larger than the implementation. It lives in the
-readiness cards — 37 of them in five layers — and the implemented pipeline is a
+readiness cards — 38 of them in five layers — and the implemented pipeline is a
 *subgraph*. Deciding what can be dropped is a question about the design graph,
 not the implementation graph, and it is the kind of question M-diagramprover
 exists to answer: **which nodes can be retracted while the terminal claim
@@ -97,7 +97,7 @@ the same questions against both graphs:
 | **A3: "98/98 graphs gated PASS"** — verification is complete | The ladder has four rungs. Measured on the corpus: rung-0 (argcheck) **98/98**, rung-1 (substance) **98/98**, rung-2 (semcheck) **49/98**, rung-3 deterministic half only. So the true claim is *"passes rungs 0–1 of 4 corpus-wide, rung 2 on half"*. The count was never wrong; "gated" meant something narrower than a reader would take it to mean | **yes — weakens** |
 | **CAS-SEL is not needed** | Load-bearing: the genealogical select is the only cross-paper inheritance mechanism in the design, so no other node supplies what it supplies | **yes — reverses** |
 | **The APM structure-match tail is deprecated** | Also retractable here: it consumes another programme's inputs and has no path to any question this corpus can answer | no — **both graphs agree**, which is the evidence that call was right |
-| **A12: "12/12 stages ledgered"** | 12 stages is the implementation; the design has 37 cards. The integration claim is over a subgraph and should say which | **yes — weakens** |
+| **A12: "12/12 stages ledgered"** | 12 stages is the implementation; the design has 38 cards. The integration claim is over a subgraph and should say which | **yes — weakens** |
 | **The two open gaps were accounting, not capability** | A third category appears that the implementation graph cannot express: *built, reviewed, and never run* (CAS-SEL's Tier-1 verify). Neither an accounting gap nor a missing capability — an unexecuted experiment | **yes — adds a category** |
 | Entropy gate 0.02 · 5 archetypes · curve rising · 58% missing-warrant | Unchanged. These are measurements over artifacts | no |
 
