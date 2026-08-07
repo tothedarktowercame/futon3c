@@ -20,7 +20,7 @@ with graded warrants and a hazard ledger}
 runs described here were executed on a CPU-only host (``Zone'') against a
 locally served GLM-4.5-Air; the human's role was direction, the scoping
 decisions marked as such, and review.}}
-\date{7 August 2026 --- working note, v1}
+\date{August 2026}
 
 \newcommand{\warrant}[1]{\textsl{#1}}
 \newcommand{\hz}[1]{\textsf{#1}}
@@ -38,10 +38,10 @@ scale'': the constructive content is a twelve-stage pipeline; the claim
 decomposes into stage-level sub-claims with contracts; and each sub-claim
 carries a \emph{graded warrant} backed by certificates --- gate exits, ledger
 entries, oracle agreement, census counts --- rather than narrative. The
-pipeline has now been executed end-to-end (S1--S12, $12/12$ stages ledgered) on
-a sixteen-paper corpus on a host nobody was watching, which is the condition
-under which its real failure modes appear. Twenty-one such failures were found
-and recorded as a hazard ledger (\hz{H1}--\hz{H21}); twenty are closed. The
+The pipeline has been executed end-to-end (S1--S12, $12/12$ stages ledgered) on
+a sixteen-paper corpus on an unattended host --- the condition under which its
+characteristic failure modes become observable. Twenty-two such failure modes
+are enumerated as a hazard ledger and all are closed. The
 intended contribution is less the corpus coverage than the epistemic form: a
 mining programme whose own readiness claim is held to the same standard as the
 structures it extracts, and whose remaining gaps are drawn rather than
@@ -58,18 +58,18 @@ expository region, and (ii) corpus-level findings that accumulate across
 papers, together with witnesses that each component of the procedure does its
 job \emph{on a machine other than the one it was written on}.
 
-That last clause is the whole content of this note. Before 6 August 2026 the
-pipeline had only ever run where its author was watching its terminal. Under
-that condition a stage that prints its findings and persists nothing is
-indistinguishable from a stage that works. Running it elsewhere collapses the
-distinction, and did: of the twenty-one hazards below, six concern outputs that
-do not survive the run, four concern parameters that silently default to a
-different corpus, three concern artifacts that pass one gate and are then
-unreadable by the next stage, and one concerns artifacts that do not point where
-they claim to.
+That last clause carries most of the weight. A pipeline developed where its
+operator watches the terminal cannot distinguish a stage that works from a stage
+that prints its findings and persists nothing; the distinction only becomes
+observable on an unattended host. Executing it under that condition exposes a
+class of failure invisible to ordinary testing, and the hazard ledger
+(\S\ref{sec:hazards}) enumerates twenty-two instances: six outputs that do not
+survive the run, four parameters that silently default to a different corpus,
+three artifacts that pass one gate and are unreadable by the next, one that does
+not point where it claims to, and the remainder that halt the run outright.
 
 The corpus percentage is the odometer. The pipeline is the proof object, and
-the hazard ledger is the record of what had to be true for it to be one.
+the hazard ledger is the record of what must hold for it to be one.
 
 \section{Warrants, certificates, hazards}
 
@@ -143,13 +143,13 @@ level down, inside a stage, where the ledger could not see it.
 \section{Current warrant state}
 
 Corpus \texttt{math-ct-e2e-16}: sixteen citation-ranked \texttt{math.CT} papers
-(including \emph{Higher Topos Theory}) --- twelve mined to completion and four
-partially, the latter inherited from the top-100 shard run that shared the
-output directory. 98 proof graphs, 280 expository regions. \emph{The corpus was
-declared as twelve until the replay harness (\S\ref{sec:replay}) observed that
-$58$ of the $98$ graphs came from papers outside the manifest; the label, not
-the artifacts, was wrong, and it is corrected here.} Executed on Zone (CPU-only, GLM-4.5-Air Q4 at ${\sim}4.2$ tok/s
-single-stream, $1.58\times$ on two shards --- measured, not assumed).
+(including \emph{Higher Topos Theory}), twelve mined to completion and four
+partially, yielding 98 proof graphs and 280 expository regions. Executed on a
+CPU-only host, GLM-4.5-Air Q4 served locally at ${\sim}4.2$ tok/s single-stream
+and $1.58\times$ aggregate on two shards (measured, not assumed). Corpus
+membership is asserted by manifest and checked mechanically
+(\S\ref{sec:replay}, check \texttt{I1}), because a shared output directory
+otherwise admits artifacts from a neighbouring run.
 
 \begin{center}
 \small
@@ -196,15 +196,16 @@ $732$ distinct entries over $737$ moves; $62$ relation types with a Zipf
 head (\emph{because} $161$, \emph{implies} $69$); mean anchor confidence
 $0.43$; now \emph{persisted} (\hz{H15})\\[3pt]
 A10 Structural archetypes are censusable (S11) & mechanical &
-Now persists \texttt{structural-canon.json}: $5$ shapes, $10$ paper
-signatures, paper-twin similarity mean $0.75$ (range $0.37$--$0.88$) ---
-papers cluster by argument shape, not topic\\[3pt]
+\texttt{structural-canon.json}: $5$ proof shapes, $10$ paper signatures,
+paper-twin similarity mean $0.75$ (range $0.37$--$0.88$) --- papers cluster by
+argument shape, not topic. \texttt{structural-canon-defs.json}: $97$
+definitions over $77$ canonical shapes, $0$ SFC coverage gaps\\[3pt]
 A11 Metrics rise with corpus size (S12) & mechanical &
 proof-move grounding $0.118 \to 0.272$ ($+0.154$), \texttt{rising=True};
 expository-move recognition $0.033 \to 0.094$. Both measured on the
 \emph{run's} corpus for the first time (\hz{H19})\\[3pt]
 A12 The pipeline runs unattended off the dev box & inductive-$n{=}1$ &
-S1--S12 ledgered $12/12$; $21$ hazards found, $20$ closed; a fast replay
+S1--S12 ledgered $12/12$; $22$ hazards found, all closed; a fast replay
 harness re-checks the accounting invariants in $0.5$\,s
 (\S\ref{sec:replay})\\[3pt]
 A12$'$ The extraction answers questions & inductive-$n{=}16$ &
@@ -297,17 +298,16 @@ down, if convergence exists at all. That is a starting point, not a finding.
 \caption{\textbf{Left:} the mining mechanism as currently witnessed, terminating
 in \emph{questions answerable} rather than in an anatomy delivered --- a
 capability claim should end in what the artifacts let you ask. Solid edges carry
-certificates (labels name the gate, the count, or the hazard whose repair the
-edge depends on); \emph{dashed edges are what is not yet witnessed}. Two edges
-that were dashed on 6 August are now solid: S5 comprehension (\hz{H13} --- its
-strategy half had no producer in the DAG, and both producers turned out to
-exist and be deterministic) and S11's canon (which computed a shape census and
-discarded it). What remains dashed is the ArSE/memory edge: the argument graphs
-carry premises, warrants and declared holes, which is the shape an adversarial
-exchange or a retrieval stage needs, but nothing consumes them yet. Note that
-the \emph{learning} path (S3 $\to$ S10 $\to$ S12) became solid only after
-\hz{H14}, \hz{H15}, \hz{H18} and \hz{H19} were closed --- before that it either
-aborted on an id, printed into a void, or measured a different corpus.
+certificates: the label names the gate, the count, or the hazard class whose
+closure the edge depends on. \emph{The dashed edge is what is not yet
+witnessed} --- the argument graphs carry premises, warrants and declared holes,
+which is the shape an adversarial exchange or a retrieval stage requires, but
+nothing consumes them. The labelled dependencies on the learning path
+(S3 $\to$ S10 $\to$ S12) are load-bearing rather than decorative: each names a
+hazard class whose closure that edge requires, and the three failure modes they
+represent --- aborting on an id family, emitting to stdout only, and measuring a
+fixture corpus --- are silent, so an unlabelled diagram would show this path as
+sound whether or not it is.
 \textbf{Right:} A13 as a selection diagram. $S$ switches corpus scale (16
 papers $\to$ the full field); ``the pipeline completes at field scale'' is
 identified only if the $S$-dependence can be separated from the pipeline edge.
@@ -346,7 +346,7 @@ several implementations the abstraction wants to be shared.
 \section{The hazard ledger, in shape}
 \label{sec:hazards}
 
-Twenty-one hazards; twenty closed. Grouped by what they cost, because the groups
+Twenty-two hazards, all closed. Grouped by what they cost, because the groups
 argue for different remedies:
 
 \begin{center}
@@ -395,8 +395,8 @@ One remains: the structural canon computes and discards. See \S\ref{sec:open}.\\
 \section{Honest boundaries and the open gaps}
 \label{sec:open}
 
-\textbf{\hz{H13} --- CLOSED 7 August, and the way it closed is the point.}
-It looked like the expensive gap: S5's rung-3 half reads
+\textbf{\hz{H13} --- the expensive-looking gap that was not one.}
+S5's rung-3 half reads
 \texttt{data/rung3-technique/<pid>.technique.json}, and the obvious reading was
 that producing it needed a mining run. It did not. Both producers already
 existed and are explicitly \emph{deterministic} --- \texttt{cas\_segment.py}
@@ -410,13 +410,14 @@ $0 \to 202$ grounded / $564$ thin / $52$ ungrounded, and the verdict
 distribution from uniformly \texttt{no-structure} to $\{$well-formed $6$,
 partial $82$, weak-extraction $10\}$. Total cost: two CPU minutes.
 
-\emph{The generalisable form:} both of this note's ``open gaps'' turned out to
-be accounting rather than capability --- information the pipeline had already
-computed and failed to carry across a seam. That is the same shape as
-\hz{H15}/\hz{H16} (computed, printed, discarded) and \hz{H19} (computed against
-the wrong inputs). It is worth asking of any remaining gap whether it is a
-missing capability or a missing connection, because the second is two orders of
-magnitude cheaper and, here, was the answer four times out of four.
+\emph{The generalisable form.} Four of this pipeline's gaps are accounting
+rather than capability --- information already computed and not carried across a
+seam --- as are \hz{H15}/\hz{H16} (computed, printed, discarded) and \hz{H19}
+(computed against the wrong inputs). \hz{H22} is the counterexample: its blocker
+was a dependency absent from the host, which no wiring would have supplied.
+\emph{Is this a missing capability or a missing connection?} is therefore a
+productive first question rather than a rule, and the second answer is roughly
+two orders of magnitude cheaper where it holds.
 
 \emph{The original diagnosis, retained:}
 Comprehension is defined as R2d $\oplus$ rung-3, and the rung-3 half reads
@@ -431,20 +432,32 @@ trace the producers of its \texttt{--steps-dir}/\texttt{--cas-select} inputs),
 or restate S5's criterion as what the pipeline can actually compute. Deferred
 deliberately to the operator.
 
-\textbf{\hz{S11} --- PARTLY CLOSED 7 August; what remains is smaller and
-sharper.} The gap was that S11 computed a shape census and whole-paper
-signatures and then printed both. \texttt{clean\_paper\_signature} now persists
-\texttt{<run-dir>/structural-canon.json} in the shape the annex fixture
-proposed: one record per shape with population and exemplars, one signature per
-paper, and the paper-twin similarities ($5$ shapes, $10$ signatures, twin-sim
-mean $0.75$). Learning goals \#3 and \#4 therefore survive teardown.
+\textbf{\hz{S11} --- a stage that reported success without executing.} S11
+chains two scripts. The first, \texttt{sfc\_struct\_canon}, canonicalises
+definition formulae; its input file had no producer anywhere in the pipeline,
+and the transducer that would build one shells to \texttt{latexmlmath}, which
+was absent from the host. Because the stage joined its sub-steps with
+\texttt{;}, the resulting \texttt{FileNotFoundError} was discarded and the stage
+recorded PASS on every run while half of it had never executed.
 
-What is \emph{not} closed: \texttt{sfc\_struct\_canon}, which canonicalises
-\emph{definition} shapes rather than proof shapes, still writes no file. Left
-alone deliberately --- its natural artifact is a canonical-form table whose key
-schema we have not settled, and inventing one that nothing reads would repeat
-the mistake \hz{H16} punished. Unlike the original gap, this one is precisely
-scoped: one script, one output, one schema decision.
+Three repairs, in the order they matter. The stage now joins with
+\texttt{\&\&}, so a sub-step failure fails the stage. \texttt{sfc\_struct\_canon}
+records an explicit refusal artifact --- \texttt{\{"measured": false, "reason":
+\dots\}} --- when it cannot run, on the principle that a durable statement of
+what was \emph{not} measured is worth more than an exception nobody reads; this
+is the \warrant{refused} warrant class applied to a stage rather than a claim.
+And \texttt{def\_formulae\_extract} supplies the missing input from the
+definition-snippet substrate, scoped to the run manifest. The canon consequently
+runs: $97$ definitions reduce to $77$ canonical shapes with no coverage gaps,
+and the merges are structural rather than lexical --- \texttt{f:K}$\to$\texttt{L} and \texttt{F:D}$\to$\texttt{E} collapse to a single shape under
+$\alpha$-renaming.
+
+\emph{The dependency was not undocumented.} It is recorded in the project's own
+readiness dashboard as MARK7-DEPS, marked ready, with an installer written for
+it and the exact silent-no-op failure mode described in its notes. What was
+missing was any check that the installer had been applied to \emph{this} host.
+A setup script states an intention; only a preflight states a fact
+(\S\ref{sec:replay}).
 
 \textbf{What is not claimed.} $n{=}16$ papers is a pilot; every
 inductive warrant above is small. The accretion rise is \emph{recognition}
@@ -486,7 +499,7 @@ and obvious on the first paper anyone reads.
 \label{sec:replay}
 
 The slow run establishes that the stages \emph{compute}. Almost none of the
-twenty-one hazards were compute failures --- they were accounting failures, and
+twenty-two hazards were compute failures --- they were accounting failures, and
 accounting is checkable in half a second against artifacts that already exist.
 So the ledger is now a regression suite: eleven checks, one per hazard class,
 asserting \emph{conservation} (every proof has a steps file; every graph is
@@ -508,13 +521,15 @@ gate actionable --- \textsc{fail} (artifacts violate an invariant: abort),
 not-yet-applicable. Provenance noise must never be a reason to abandon a
 window; artifact corruption must always be.
 
-Its first run found two defects, one of them \emph{ours}: $58$ of the $98$
-graphs came from four papers outside the declared manifest --- leftovers from
-the top-100 shard run in a shared output directory, which every downstream stage
-was then pointed at. Every corpus-level number in this note is therefore over a
-sixteen-paper mixture, and said so only after a harness we wrote to catch
-corpus-identity errors caught ours. The stage-mechanics claims are unaffected;
-the corpus label was corrected rather than the artifacts discarded.
+The harness earns its place on the class of defect it catches rather than the
+count. Its corpus-identity check (\texttt{I1}) established that $58$ of the
+$98$ proof graphs originated from four papers outside the declared manifest ---
+residue of a prior sharded run sharing the output directory, which every
+downstream stage then consumed. The stage-mechanics claims are unaffected by
+this, but every corpus-level figure is over a sixteen-paper set rather than the
+twelve originally declared, and the corpus label is stated accordingly
+throughout. A directory is not a corpus; only a manifest is, and only a check
+makes the difference observable.
 
 \input{by-the-numbers}
 

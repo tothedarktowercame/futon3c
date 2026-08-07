@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.31)  7 AUG 2026 15:10
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.31)  7 AUG 2026 15:40
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -864,16 +864,6 @@ LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <10> on input line 33.
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <7> on input line 33.
-LaTeX Font Info:    Trying to load font information for T1+lmss on input line 4
-4.
-
-(/usr/local/texlive/2025/texmf-dist/tex/latex/lm/t1lmss.fd
-File: t1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)
-Package microtype Info: Loading generic protrusion settings for font family
-(microtype)             `lmss' (encoding: T1).
-(microtype)             For optimal results, create family-specific settings.
-(microtype)             See the microtype manual for details.
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <10.95> on input line 79.
 
@@ -892,6 +882,15 @@ Overfull \hbox (56.0827pt too wide) in paragraph at lines 84--92
 95 (-20) ;
  []
 
+LaTeX Font Info:    Trying to load font information for T1+lmss on input line 1
+08.
+(/usr/local/texlive/2025/texmf-dist/tex/latex/lm/t1lmss.fd
+File: t1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+)
+Package microtype Info: Loading generic protrusion settings for font family
+(microtype)             `lmss' (encoding: T1).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
 
 
 [2]
@@ -901,7 +900,7 @@ Underfull \hbox (badness 1337) in paragraph at lines 178--182
  []
 
 
-Underfull \hbox (badness 1033) in paragraph at lines 203--205
+Underfull \hbox (badness 1033) in paragraph at lines 204--206
 []|\T1/lmr/m/n/10 (+20) proof-move ground-ing $\OT1/lmr/m/n/10 (+20) 0\OML/lmm/
 m/it/10 :\OT1/lmr/m/n/10 (+20) 118 \OMS/lmsy/m/n/10 ! \OT1/lmr/m/n/10 (+20) 0\O
 ML/lmm/m/it/10 :\OT1/lmr/m/n/10 (+20) 272$
@@ -910,12 +909,12 @@ ML/lmm/m/it/10 :\OT1/lmr/m/n/10 (+20) 272$
 
 
 [3]
-Overfull \vbox (157.32487pt too high) has occurred while \output is active []
+Overfull \vbox (181.32487pt too high) has occurred while \output is active []
 
 
 
 [4]
-Overfull \hbox (14.25487pt too wide) in paragraph at lines 295--296
+Overfull \hbox (14.25487pt too wide) in paragraph at lines 296--297
  [][] 
  []
 
@@ -937,6 +936,13 @@ Underfull \hbox (badness 10000) in paragraph at lines 368--368
 
 
 [5]
+Overfull \hbox (155.55818pt too wide) in paragraph at lines 398--412
+\T1/lmss/bx/n/10.95 (-20) H13 \T1/lmr/bx/n/10.95 (-20) --- the expensive-lookin
+g gap that was not one. \T1/lmr/m/n/10.95 (-20) S5's rung-3 half reads \T1/lmtt
+/m/n/10.95 data/rung3-technique/<pid>.technique.json\T1/lmr/m/n/10.95 (-20) ,
+ []
+
+
 
 [6]
 
@@ -949,7 +955,7 @@ Package microtype Info: Character `029' is missing
 [8]
 
 [9]
-Overfull \hbox (30.38182pt too wide) in paragraph at lines 118--122
+Overfull \hbox (30.38182pt too wide) in paragraph at lines 117--121
 \T1/lmr/m/n/10.95 (-20) per pa-per; a pa-per full of \T1/lmtt/m/n/10.95 difficu
 lty-assessment \T1/lmr/m/n/10.95 (-20) whose proofs are all \T1/lmtt/m/n/10.95 
 reduce-to-known-result
@@ -1146,13 +1152,13 @@ Package rerunfilecheck Info: File `capability-proof-arxiv.out' has not changed.
 (rerunfilecheck)             Checksum: F667F36205D051A0202748DAE7CA61B1;2541.
  ) 
 Here is how much of TeX's memory you used:
- 24682 strings out of 467747
- 459688 string characters out of 5426947
- 913635 words of memory out of 5000000
+ 24676 strings out of 467747
+ 459612 string characters out of 5426947
+ 911518 words of memory out of 5000000
  52480 multiletter control sequences out of 15000+600000
- 755752 words of font info for 311 fonts, out of 8000000 for 9000
+ 755308 words of font info for 308 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 102i,11n,107p,1887b,917s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 102i,11n,107p,1726b,917s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></usr/lo
 cal/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/local/texliv
 e/2025/texmf-dist/fonts/type1/public/lm/lmbx7.pfb></usr/local/texlive/2025/texm
@@ -1177,10 +1183,10 @@ sr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmtk10.pfb></usr/local/t
 exlive/2025/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/local/texlive/202
 5/texmf-dist/fonts/type1/public/lm/lmtt9.pfb></usr/local/texlive/2025/texmf-dis
 t/fonts/type1/public/lm/lmtti10.pfb>
-Output written on capability-proof-arxiv.pdf (16 pages, 585559 bytes).
+Output written on capability-proof-arxiv.pdf (16 pages, 586104 bytes).
 PDF statistics:
- 344 PDF objects out of 1000 (max. 8388607)
- 263 compressed objects within 3 object streams
+ 346 PDF objects out of 1000 (max. 8388607)
+ 265 compressed objects within 3 object streams
  59 named destinations out of 1000 (max. 500000)
  74869 words of extra memory for PDF output out of 89155 (max. 10000000)
 
