@@ -161,6 +161,10 @@ substrate-corpus match now \emph{measured}: $12/12$ run ids present
 A3 Proof arguments reconstruct as gated DAGs (S3) & mechanical &
 $98/98$ graphs gated PASS (argcheck $+$ substance, per graph); $48\%$ needed
 $\ge 1$ retry --- honesty bound on first-pass quality\\[3pt]
+A3$'$ \dots\ and their anchors are trustworthy & \textbf{weak} &
+Content faithful (\S\ref{sec:annex}), \emph{coordinates} not: $41\%$ of node
+anchors cover their own text's line, median drift $3$. Repaired by numbering
+the prompt window (\hz{H21}); re-mine validation in flight\\[3pt]
 A4 Expository structure reconstructs (S4) & mechanical &
 $280/280$ gated PASS. First pass $238/280$; all $42$ failures were one
 serialization defect and \emph{all} recovered after \hz{H18}\\[3pt]
@@ -355,6 +359,13 @@ class: it neither crashes nor loses data, it returns plausible numbers.\\[3pt]
 \hz{H20} &
 Harmless at pilot size, fatal at field size. The class that a pilot cannot
 detect by succeeding.\\[3pt]
+\emph{Unfaithful} &
+\hz{H21} &
+Artifacts that do not point where they say they point. The prompt gave the
+model the passage as bare text, so \texttt{:source} anchors were \emph{counted}
+rather than read: $41\%$ cover the line their own text came from, median drift
+$3$ lines. Content faithful, coordinates not. Found only by reading a paper
+against its source (\S\ref{sec:annex}).\\[3pt]
 \emph{Open} &
 \hz{H13} \hz{S11} &
 See \S\ref{sec:open}.\\
@@ -410,7 +421,17 @@ warrants. This note adds the observation that for a pipeline, the warrants are
 not enough --- because a stage can satisfy its contract while printing into a
 void, or while measuring a fixture. What closes that gap is not more testing
 but a different question, asked stage by stage: \emph{if this stage were
-silently wrong, what would I see?} Six of the twenty hazards were found by
+silently wrong, what would I see?} Six of the twenty-one hazards were found by
 asking it, and the two open gaps are the places where the answer is still
 ``nothing''.
+
+There is one further move, which \hz{H21} argues for and the annex performs:
+after asking what a silent failure would look like, \emph{read one artifact
+against its source}. The census counts many things approximately; a worked
+example checks a few things exactly. \hz{H21} --- anchors naming the wrong line
+while glossing the right text --- is invisible to every aggregate check we run,
+and obvious on the first paper anyone reads.
+
+\input{annex-worked-example}
+
 \end{document}
