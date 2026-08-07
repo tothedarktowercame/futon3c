@@ -4,8 +4,12 @@
 
 Figure~\ref{fig:dag}'s edges say \emph{that} each stage delivers. This section
 says \emph{how much}, because a witness with no weight behind it is an anecdote.
-All counts are over \texttt{math-ct-e2e-16} and were re-derived from the
-artifacts, not lifted from the logs that produced them.
+All counts are over \texttt{math-ct-e2e-16}, re-derived from the artifacts
+rather than lifted from the logs that produced them, and independently
+reproduced by a second reviewer. Reproducing them requires filtering to the
+frozen 16-id manifest: the census script scans a mutable output directory by
+default, which is the same corpus-identity hazard the harness checks for
+(\S\ref{sec:replay}).
 
 \begin{center}
 \small
@@ -38,8 +42,10 @@ across \textbf{20 distinct scope kinds}: \emph{connection/example-source} $112$
 \emph{connection/transfer} $15$ · \emph{universal-property/characterizes} $13$ ·
 \emph{difficulty-assessment} $8$\\[3pt]
 S4 filled slots & \textbf{222} &
-\emph{example} $83$ · \emph{other-structure} $34$ · \emph{prior-result} $22$ ·
-\emph{auxiliary} $13$ · \emph{characterizing-property} $11$\\[3pt]
+typed: \emph{example} $83$ · \emph{other-structure} $34$ ·
+\emph{prior-result} $22$ · \emph{auxiliary} $13$ ·
+\emph{characterizing-property} $11$ ($163$ total); plus $59$ carrying the
+generic \texttt{slot} key\\[3pt]
 S7 typed boxes & \textbf{358} &
 over $88$ typed proofs, in $8$ methods: \emph{reduce-to-known-result} $204$ ·
 \emph{construct-auxiliary-object} $100$ · \emph{transport-along-symmetry} $16$ ·
@@ -55,8 +61,8 @@ S10 move lexicon & \textbf{732} &
 distinct entries over $737$ moves; mean anchor confidence $0.43$ ($197$ high,
 $298$ low)\\[3pt]
 S11 canon & \textbf{5 shapes} &
-$10$ paper signatures; paper-twin similarity mean $0.75$ (range $0.37$--$0.88$)
---- papers cluster by argument-shape composition, not topic\\[3pt]
+$9$ paper signatures (papers with $\ge 2$ proofs); and $97$ definitions
+reducing to $77$ canonical shapes with no coverage gaps\\[3pt]
 S12 curve & \textbf{9 checkpoints} &
 proof-move grounding $0.118 \to 0.272$, rising\\
 \hline
@@ -69,9 +75,10 @@ $85\%$ of typed boxes fall into one of two methods. The \textbf{$58\%$
 missing-warrant rate} holds from $n{=}22$ to $n{=}98$ and is the quantified form
 of the Lakatos observation --- published mathematics deletes its scaffolding,
 and the IATC layer's task is to record the deletion rather than repair it. And
-\textbf{paper-twin similarity of $0.75$} indicates the structural signature
-discriminates on something real: papers on unrelated topics resemble each other
-by argument shape, which is the proposition S11 exists to support.
+\textbf{$97$ definitions reducing to $77$ shapes} is a compression ratio of
+only $1.26\times$: at this corpus size definitions almost never repeat
+structurally. Whether that ratio climbs with scale is the sharpest test of the
+structural-canon idea (\S\ref{sec:prereg}).
 
 \section{What can be asked of it}
 \label{sec:queries}
@@ -102,8 +109,7 @@ the standoff anchors, which is the annex's own query.
 \paragraph{Light inference (a join or a traversal).}
 \begin{itemize}
 \item \emph{Which two papers argue most alike despite being on different
-topics?} --- paper-twin similarity over structural signatures ($0.75$ mean),
-already computed by S11.
+topics?} --- nearest neighbour over the S11 structural signatures.
 \item \emph{Which elided justifications recur across papers?} --- group
 \texttt{:wanted} keys across the $410$ holes; a recurring hole is a candidate
 lemma the field keeps assuming.

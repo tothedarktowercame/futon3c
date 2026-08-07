@@ -798,6 +798,7 @@ def main() -> int:
     runp.add_argument("--n", type=int, default=5)
     runp.add_argument("--batch-size", type=int, default=3)
     runp.add_argument("--seats", default="codex-13,codex-14")
+    runp.add_argument("--problems", default="", help="comma-separated; overrides candidate selection")
     statusp = sub.add_parser("status")  # noqa: F841
     passp = sub.add_parser("pass1")
     passp.add_argument("--seats", default="zai-1")
@@ -899,8 +900,14 @@ def main() -> int:
     # missing/defective are RETRYABLE (e.g. a network-killed batch);
     # only settled statuses exclude a problem from selection.
     settled = ("approved", "pending-review")
-    todo = [p for p in candidate_problems()
-            if not str(state.get(p, "")).startswith(settled)][: args.n]
+    if args.problems:
+        # Targeted re-formalization. candidate_problems() only offers bundles
+        # with NO artifact, so it cannot see a bundle whose Main.lean exists but
+        # is empty scaffolding (24 such "clean" stubs found 2026-08-07).
+        todo = [p for p in args.problems.split(",") if p]
+    else:
+        todo = [p for p in candidate_problems()
+                if not str(state.get(p, "")).startswith(settled)][: args.n]
     if not todo:
         print("nothing to do")
         return 0
