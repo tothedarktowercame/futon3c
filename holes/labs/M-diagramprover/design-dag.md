@@ -29,10 +29,10 @@ Two structures were lost in the collapse, and both are load-bearing:
 
 **The ladder is a ladder.** rung-0 → rung-1 → rung-2 (R2a–R2d) → rung-3 is
 increasing verification depth, each rung presupposing the last. Figure 1 shows a
-single "gated" edge, which cannot express that rung-2 is currently *failing
-corpus-wide* (the `iatc_semcheck` composer defect) while rung-0 and rung-1 pass.
-A diagram in which those are one edge cannot represent partial verification —
-and partial verification is the actual state.
+single "gated" edge, which cannot express that rung-2 passes on only half the
+corpus while rung-0 and rung-1 pass on all of it. A diagram in which those are
+one edge cannot represent partial verification — and partial verification is the
+actual state.
 
 **The cascade is a selector, not a stage.** CAS-SEL's purpose is that each proof
 gets *its own* check menu, derived from its sorry-topology. In the
@@ -94,7 +94,7 @@ the same questions against both graphs:
 
 | conclusion drawn from the implementation graph | under the design graph | moved? |
 |---|---|---|
-| **A3: "98/98 graphs gated PASS"** — verification is complete | The ladder has four rungs. Measured on the corpus right now: rung-0 (argcheck) **PASS**, rung-1 (substance) **PASS**, rung-2 (semcheck) **FAIL on every graph**, rung-3 deterministic half only. So the true claim is *"passes rungs 0–1 of 4"*. The count was never wrong; "gated" meant something narrower than a reader would take it to mean | **yes — weakens** |
+| **A3: "98/98 graphs gated PASS"** — verification is complete | The ladder has four rungs. Measured on the corpus: rung-0 (argcheck) **98/98**, rung-1 (substance) **98/98**, rung-2 (semcheck) **49/98**, rung-3 deterministic half only. So the true claim is *"passes rungs 0–1 of 4 corpus-wide, rung 2 on half"*. The count was never wrong; "gated" meant something narrower than a reader would take it to mean | **yes — weakens** |
 | **CAS-SEL is not needed** | Load-bearing: the genealogical select is the only cross-paper inheritance mechanism in the design, so no other node supplies what it supplies | **yes — reverses** |
 | **The APM structure-match tail is deprecated** | Also retractable here: it consumes another programme's inputs and has no path to any question this corpus can answer | no — **both graphs agree**, which is the evidence that call was right |
 | **A12: "12/12 stages ledgered"** | 12 stages is the implementation; the design has 37 cards. The integration claim is over a subgraph and should say which | **yes — weakens** |
@@ -112,3 +112,42 @@ Which gives the operational rule: **census claims can be made from artifacts,
 but sufficiency claims must be made from the design graph**, and the
 implementation graph is evidence about neither — it records what was built
 first.
+
+## Rung-2 measured, and a correction
+
+The first pass at the table above recorded rung-2 as failing corpus-wide. That
+was an artifact of the measuring apparatus, not a property of the corpus:
+`iatc_semcheck.bb` invoked bare `python3` rather than the repo venv's
+interpreter, so R2d's `edn_format` import raised `ModuleNotFoundError`, the
+composer caught a nonzero exit and declared the whole graph failed. Every graph
+failed for the same reason, which is the signature of an apparatus fault rather
+than a finding — a corpus does not fail uniformly. Same class as the LaTeXML
+gap: the dependency was installed, but not on the path the caller searched.
+
+With the interpreter corrected, rung-2 over all 98 graphs:
+
+| sub-check | PASS | FAIL | what it tests |
+|---|---:|---:|---|
+| **R2a** anchor-faithfulness | 84 | 14 | do node texts match their cited source lines |
+| **R2b** closure | 58 | 40 | is every node reachable in the inference structure |
+| **R2c** warrant-resolution | 98 | 0 | do resolved warrants point at real support |
+| **R2d** concept-coverage | 92 | 0 | are the concepts used actually defined |
+
+**49/98 graphs pass rung-2 overall.** Three things in that table matter more
+than the headline:
+
+- **R2b is the binding constraint** — 40 of the 49 failures are orphan nodes:
+  extracted claims that never join the inference structure. That is a substantive
+  finding about extraction, not a defect. It is also exactly what the 58%
+  missing-warrant census rate looks like from the other side.
+- **R2c's clean sweep is partly vacuous.** 31 of its 98 passes are at
+  `rate=0.000` — no resolved warrant edges to check. A check that passes because
+  it had nothing to do should not be counted the same as one that passed on
+  evidence, and the current reporting does not distinguish them.
+- **R2d emitted no verdict on 6 graphs**, neither pass nor fail. Silent
+  abstention inflates the pass rate of whatever aggregates it.
+
+So A3 weakens, as the design graph predicted — but less than the first
+measurement suggested, and for a reason the first measurement had backwards.
+The lesson generalises: a uniform failure across a heterogeneous corpus is
+evidence about the harness before it is evidence about the corpus.
