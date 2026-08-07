@@ -16,6 +16,7 @@ HELPER_RE = re.compile(
 )
 IMPORT_RE = re.compile(r"(?m)^\s*(?:public\s+)?import\s+[^\n]*(?:\n|$)")
 PROBLEM_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+OPEN_RE = re.compile(r"^\s*(?:open\b|set_option\b)")
 
 
 def _module_id(problem_id: str) -> str:
@@ -37,7 +38,11 @@ def _main_theorem_span(source: str, problem_id: str, theorem_name: str) -> tuple
             f"expected one declaration of {theorem_name!r}, found {len(matches)}"
         )
     match = matches[0]
-    declaration_end = stripped.find(":=", match.end())
+    # NOT stripped.find(":="): a named argument like `(Ω := Ω)` inside the
+    # statement would truncate here, leaving statement text stranded at the
+    # head of the proof tail (m01J04, m99A05). Same depth-aware rule the hash
+    # extractor uses.
+    declaration_end = gates._declaration_delimiter(stripped, match.end())
     if declaration_end < 0:
         raise gates.GateError(f"theorem {theorem_name} has no := delimiter")
     return match.start(), declaration_end + 2
@@ -109,6 +114,27 @@ def _with_newline(text: str) -> str:
     return text if not text or text.endswith("\n") else text + "\n"
 
 
+SECTION_RE = re.compile(r"(?m)^\s*(?:noncomputable\s+)?section\b")
+NAMESPACE_RE = re.compile(r"(?m)^\s*namespace\b")
+END_RE = re.compile(r"(?m)^\s*end\b[^\n]*$")
+
+
+def _open_scopes(prefix: str) -> int:
+    """Scopes the header opens and does not itself close.
+
+    a00J02/a03J05/a94A09 open `noncomputable section` BEFORE the theorem and
+    close it AFTER, so a naive split leaves the statement module with an
+    unclosed section and Main.lean with an orphan `end`. `namespace` is refused
+    rather than handled: moving a theorem out of a namespace would rename it.
+    """
+
+    code = gates.strip_comments(prefix)
+    if NAMESPACE_RE.search(code):
+        raise gates.GateError(
+            "main theorem sits inside a namespace; splitting would rename it")
+    return len(SECTION_RE.findall(code)) - len(END_RE.findall(code))
+
+
 def split_source(source: str, problem_id: str) -> dict[str, str]:
     """Purely split one unsplit Lean source file.
 
@@ -133,22 +159,43 @@ def split_source(source: str, problem_id: str) -> dict[str, str]:
 
     prefix = source[:theorem_start]
     proof_tail = source[declaration_end:]
-    helper = HELPER_RE.search(gates.strip_comments(prefix))
-    header_end = helper.start() if helper else len(prefix)
-    header = prefix[:header_end]
-    main_header = IMPORT_RE.sub("", header).lstrip("\n")
+    # Main.lean carries ONLY what the PROOF needs: the import and the notation
+    # opens. Copying the whole header duplicated helper *theorems* into both
+    # files (a00J02: "`ftc_a00j02` has already been declared") and stranded
+    # references to bank-side names (m01J04: "Unknown identifier `Ω`").
+    # Everything else reaches the prover through the import.
+    main_header = "\n".join(
+        line for line in gates.strip_comments(prefix).splitlines()
+        if OPEN_RE.match(line)
+    )
 
     statement_rhs = f"∀ {binders}, {conclusion}" if binders else conclusion
+
+    # Balance scopes across the cut: close what the header opened, and drop the
+    # matching trailing `end`s that would otherwise be orphaned in Main.lean.
+    # 140 banked files leave a `noncomputable section` open at EOF and build
+    # fine, so an unclosed scope is NOT an error and the statement module keeps
+    # the original's shape. Only an `end` stranded in Main.lean is a problem.
+    open_scopes = _open_scopes(prefix)
+    if open_scopes < 0:
+        raise gates.GateError("header closes more scopes than it opens")
+    orphaned = min(open_scopes, len(END_RE.findall(gates.strip_comments(proof_tail))))
+    for _ in range(orphaned):
+        proof_tail = END_RE.sub("", proof_tail, count=1)
+    closers = ""
+
     statement_module = (
         _with_newline(prefix).rstrip()
         + f"\n\ndef {theorem_name}_stmt : Prop := {statement_rhs}\n"
+        + closers
     )
     main_file = (
         import_line
         + "\n\n"
         + _with_newline(main_header).rstrip()
         + f"\n\ntheorem {theorem_name} : {theorem_name}_stmt :="
-        + proof_tail
+        + proof_tail.rstrip()
+        + "\n"
     )
     return {
         "statement_module": statement_module,

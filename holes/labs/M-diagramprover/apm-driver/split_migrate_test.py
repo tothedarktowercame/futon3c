@@ -83,3 +83,38 @@ def test_migrate_dry_run_writes_nothing(tmp_path: Path):
     assert result["main_path"] == main
     assert not (tmp_path / "ApmStatements" / "X00A01.lean").exists()
     assert main.read_text(encoding="utf-8") == RICH_SOURCE
+
+
+def test_section_opened_before_the_theorem_is_closed_in_the_statement_module():
+    """a00J02/a03J05/a94A09 open `noncomputable section` before the theorem and
+    close it after; a naive split orphans the `end` in Main.lean."""
+
+    source = (
+        "import Mathlib\n\n"
+        "noncomputable section\n\n"
+        "def helper : Nat := 1\n\n"
+        "theorem apm_x00a01 (n : Nat) : n = n := by\n"
+        "  rfl\n\n"
+        "end\n"
+    )
+    out = split_migrate.split_source(source, "x00A01")
+    # the original leaves the section open at EOF; we keep that shape
+    assert "noncomputable section" in out["statement_module"]
+    assert "\nend" not in out["main_file"], out["main_file"]
+    assert "theorem apm_x00a01 : apm_x00a01_stmt :=" in out["main_file"]
+
+
+def test_namespace_is_refused_because_it_would_rename_the_theorem():
+    source = (
+        "import Mathlib\n\n"
+        "namespace Foo\n\n"
+        "theorem apm_x00a01 (n : Nat) : n = n := by\n"
+        "  rfl\n\n"
+        "end Foo\n"
+    )
+    try:
+        split_migrate.split_source(source, "x00A01")
+    except gates.GateError as exc:
+        assert "namespace" in str(exc)
+    else:
+        raise AssertionError("expected GateError for a namespaced theorem")

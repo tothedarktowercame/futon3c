@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -135,6 +136,38 @@ def count_sorries(source: str) -> int:
     return len(sorry_sites(source))
 
 
+_DECL_OPEN = {"(": ")", "[": "]", "{": "}", "⟨": "⟩", "⦃": "⦄"}
+_DECL_CLOSE = set(_DECL_OPEN.values())
+
+
+def _declaration_delimiter(stripped: str, start: int) -> int:
+    """Index OF the ``:`` in the ``:=`` that ends a theorem's declaration.
+
+    Same contract as the ``str.find(":=")`` it replaces: the caller adds 2.
+
+    NOT simply the first ``:=``. Lean named-argument syntax puts one INSIDE the
+    statement — `M99A05WeaklyConverges (𝕜 := ℂ) …`, `apm_m01J04_… (Ω := Ω) …` —
+    and `let x := …` does too. Cutting at the first occurrence truncated the
+    declaration for 15 of 269 banked problems, so their statement hash covered
+    only a prefix: on 2026-08-06 an entire conclusion clause of m99A05 was
+    replaced by `True` without moving its hash. Only a ``:=`` at bracket depth
+    zero ends the declaration.
+    """
+
+    depth = 0
+    i = start
+    while i < len(stripped):
+        char = stripped[i]
+        if char in _DECL_OPEN:
+            depth += 1
+        elif char in _DECL_CLOSE:
+            depth -= 1
+        elif char == ":" and stripped[i + 1:i + 2] == "=" and depth == 0:
+            return i
+        i += 1
+    return -1
+
+
 def extract_main_statement(source: str, problem_id: str | None = None,
                            expected_name: str | None = None) -> tuple[str, str]:
     """Return the main theorem name and declaration through its first ``:=``.
@@ -173,7 +206,7 @@ def extract_main_statement(source: str, problem_id: str | None = None,
         else:
             raise GateError(
                 "no-main-statement: multiple theorems, none named for the problem")
-    declaration_end = stripped.find(":=", match.end())
+    declaration_end = _declaration_delimiter(stripped, match.end())
     if declaration_end < 0:
         raise GateError(f"theorem {match.group(1)} has no := delimiter")
     declaration = stripped[match.start() : declaration_end + 2]
@@ -291,6 +324,22 @@ def _run_lean(
     timeout_seconds: int,
 ) -> dict[str, Any]:
     command = ["lake", "env", "lean", str(lean_file)]
+
+    def _cap_child() -> None:
+        # Bound the CHILD's address space so a pathological artifact fails
+        # itself instead of taking the gate down with it. b00J02 proves
+        # `Fintype.card (GL (Fin 3) (ZMod 4)) = 86016` by `native_decide`,
+        # which enumerates 4^9 matrices: it hit 48G and the cgroup OOM killer
+        # killed the whole run three times, recording zero outcomes each time.
+        # An RLIMIT makes Lean die with an allocation failure, which surfaces
+        # as a normal non-zero build exit and lets the gate carry on.
+        try:
+            import resource
+            cap = int(os.environ.get("APM_LEAN_MEM_CAP_BYTES", 12 * 1024 ** 3))
+            resource.setrlimit(resource.RLIMIT_AS, (cap, cap))
+        except Exception:
+            pass
+
     try:
         completed = subprocess.run(
             command,
@@ -299,6 +348,7 @@ def _run_lean(
             text=True,
             timeout=timeout_seconds,
             check=False,
+            preexec_fn=_cap_child,
         )
         return {
             "exit-code": completed.returncode,

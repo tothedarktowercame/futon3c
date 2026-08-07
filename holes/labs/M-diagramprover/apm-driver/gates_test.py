@@ -290,3 +290,32 @@ class FrozenNameDiscoveryTest(unittest.TestCase):
         with self.assertRaisesRegex(gates.GateError, "frozen main theorem"):
             gates.extract_main_statement(
                 self.SOURCE, "a97X99", expected_name="vanished_theorem")
+
+
+def test_named_argument_colon_equals_does_not_end_the_declaration():
+    """m99A05, 2026-08-06: `(𝕜 := ℂ)` inside a statement truncated the
+    declaration, so the hash covered only a prefix and tampering past the cut
+    was invisible."""
+
+    source = (
+        "import Mathlib\n"
+        "theorem apm_x00a01 (X : Type) :\n"
+        "    (Foo (k := 1) X) ∧ (Bar X) := by\n"
+        "  sorry\n"
+    )
+    _name, decl = gates.extract_main_statement(source, "x00A01")
+    assert "Bar X" in decl, decl
+    assert decl.count("(") == decl.count(")"), decl
+
+
+def test_tampering_after_a_named_argument_moves_the_hash():
+    base = (
+        "import Mathlib\n"
+        "theorem apm_x00a01 (X : Type) :\n"
+        "    (Foo (k := 1) X) ∧ (Bar X) := by\n"
+        "  sorry\n"
+    )
+    tampered = base.replace("(Bar X)", "True")
+    _n, _x, h1 = gates.statement_hash(base, "x00A01")
+    _n, _x, h2 = gates.statement_hash(tampered, "x00A01")
+    assert h1 != h2

@@ -19,8 +19,9 @@ PROTOCOL:
    dependency (prior searches were bounded, not exhaustive); prove
    it locally as helper lemmas; or route AROUND it via machinery the
    boundary comment lists as uninvestigated. DESK RESEARCH IS PART
-   OF THE JOB: consult Mathlib source, PRIOR SOLVED PROBLEMS in
-   problems/*/ (several may be in this problem's mathematical
+   OF THE JOB: consult LEMMA-INDEX.md at the repo root (1037 already-proved
+   helper lemmas with signatures - grep it before re-deriving),
+   Mathlib source, PRIOR SOLVED PROBLEMS in problems/*/ (several may be in this problem's mathematical
    neighborhood), git history, and boundary comments in partial
    artifacts. Cite what you reuse in comments. If a consultation
    returns nothing useful, note it and move on.

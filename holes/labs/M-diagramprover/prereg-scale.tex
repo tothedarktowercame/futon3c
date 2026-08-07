@@ -1,0 +1,111 @@
+% Preregistration section for capability-proof-arxiv.tex — included via \input{}.
+\section{Preregistration: what scale is supposed to buy}
+\label{sec:prereg}
+
+The operator's reading, which this section takes as its null hypothesis: 4{,}616
+\texttt{math.CT} papers differ from our 16 \emph{in scale, not in kind}, and
+500{,}000 arXiv papers differ again in scale only --- so the effect of scale is
+to put a $\forall$ in front of propositions that currently carry an $\exists$.
+That is mostly right, and where it is right, preregistration is close to
+vacuous: nobody learns anything from predicting that a stage which typed 88
+graphs will type 8{,}800.
+
+It is worth separating the propositions by what scale actually does to them,
+because only one of the three classes is a real bet.
+
+\paragraph{Class A --- $\exists \to \forall$ (scale is quantifier strength).}
+Coverage and capability claims: \emph{the pipeline recovers a gated argument DAG
+for this proof} becomes \emph{\dots\ for every proof}. The mechanism is
+witnessed; scale extends the domain. Nothing to preregister, and the only
+threat is engineering (see Class C$'$).
+
+\paragraph{Class B --- $\forall$-shaped already; scale buys \emph{estimation}.}
+Distributional facts about the field --- the missing-warrant rate, the archetype
+mix, the Zipf exponent of the relation grammar. These are already universally
+quantified; our 16-paper values are point estimates with wide, unstated error
+bars. Scale narrows them. Preregistering an interval here is a genuine, if
+modest, bet.
+
+\paragraph{Class C --- emergent; \emph{no small-$n$ shadow at all}.}
+The propositions that are not merely imprecise at $n{=}16$ but \emph{not
+stateable}. Convergence is the clearest: at our scale the move lexicon holds
+$732$ distinct entries over $737$ moves --- a distinct-per-move ratio of
+$0.993$, i.e.\ effectively \emph{zero reuse}. ``The field's reasoning repertoire
+saturates'' has no $\exists$-form to upgrade; a curve's shape is the object, and
+shape needs scale. Likewise cross-paper structure (backbone saturation, variant
+detection, dependency depth) does not exist in a 16-paper corpus, and retrieval
+quality cannot be assessed against a store with nothing worth retrieving. This
+is the class where ``scale, not kind'' might actually fail, and therefore the
+only class where being wrong is informative.
+
+\paragraph{Class C$'$ --- the engineering caveat, which we have already
+falsified once.} \hz{H20} was a defect whose \emph{severity} is scale-dependent:
+a $23\times$ waste at $n{=}12$, ${\sim}138$k redundant rebuilds and
+non-termination at $n{=}4616$. So the pipeline at field scale is not the
+pipeline at pilot scale unless the scale-dependent hazard class is empty --- and
+that class is by definition the one a successful pilot cannot detect. This is
+the $S$-to-outcome path in Figure~\ref{fig:dag} (right) that does not pass
+through the pipeline edge.
+
+\subsection*{Preregistered predictions}
+
+Stated now, from the 16-paper demo, before any larger run. Each names what would
+falsify it. Registered 7 August 2026.
+
+\begin{center}
+\small
+\begin{tabular}{p{0.04\textwidth} p{0.42\textwidth} p{0.20\textwidth} p{0.24\textwidth}}
+\textbf{\#} & \textbf{Prediction at 4{,}616 papers} & \textbf{Demo value} & \textbf{Falsified if}\\[2pt]
+\hline\\[-8pt]
+P1 \emph{(B)} & Missing-warrant rate on inference edges stays in $[50\%, 65\%]$ &
+$58\%$, stable across $n{=}22 \to 98$ ($4.5\times$) & outside the interval\\[3pt]
+P2a \emph{(C)} & The \textbf{relation grammar saturates}: fewer than $150$
+distinct relation types & $62$ types, Zipf head (\emph{because} $161$,
+\emph{implies} $69$) & $\ge 150$ types, or no flattening\\[3pt]
+P2b \emph{(C)} & The \textbf{phrase lexicon does \emph{not} saturate}:
+distinct-per-move ratio stays above $0.5$ & $0.993$ ($732/737$) & ratio falls
+below $0.5$\\[3pt]
+P3 \emph{(B)} & Macro archetypes stay under $15$, and
+\emph{reduce-to-known} remains the plurality ($>40\%$) & $5$ macros, $67\%$
+reduce-to-known & $\ge 15$ macros or plurality lost\\[3pt]
+P4 \emph{(C)} & \textbf{Backbone saturation}: the citation-ranked top $10\%$ of
+papers carry $\ge 50\%$ of distinct relation types & \emph{not stateable at
+$n{=}16$} & top decile carries $<50\%$\\[3pt]
+P5 \emph{(C$'$)} & At least one \emph{new} scale-dependent hazard appears
+between $100$ and $4{,}616$ papers that the prefix gate cannot detect &
+\hz{H20} was one such, found by accident & the full run is hazard-free\\[3pt]
+P6 \emph{(C)} & On the three-arm exam, mined-contents (arm 1) beats raw-text
+retrieval (arm 2) only \emph{above} some corpus size; at $n{\approx}16$ arm 2
+ties or wins & \emph{not yet run} & arm 1 wins at $n{=}16$, or never wins\\
+\hline
+\end{tabular}
+\end{center}
+
+\medskip
+\textbf{P2a/P2b are the pair worth the ink}, because together they are a claim
+about what the lexicon \emph{is}. Our harvest currently records instantiated
+claims (``$l$ is an exact localization functor''), not abstract move types ---
+which is why its reuse is nil. The relation grammar is the move-\emph{type}
+layer, and it is small and heavy-headed. If P2a and P2b both hold, ``the field's
+reasoning repertoire'' is the grammar, the phrase lexicon is an index rather
+than a vocabulary, and the S10 metric should be re-read accordingly. If P2b
+fails --- if phrases do start repeating at scale --- then mathematical prose is
+more formulaic than we think, which would be the more interesting result.
+
+\textbf{P5 is the prediction we would bet on hardest}, and it is the one that
+makes the operator's null hypothesis conditional rather than free: ``scale, not
+kind'' holds for the \emph{claims} and fails intermittently for the
+\emph{machinery}. That is precisely why the abort gate exists at a prefix, and
+why it cannot be trusted to catch everything.
+
+\subsection*{What ``complete'' might change, if anything}
+
+One residual possibility deserves naming rather than dismissing. A
+\emph{complete} field --- every \texttt{math.CT} paper, not a sample --- admits
+questions a sample cannot answer even in principle: whether a given argument
+pattern is \emph{unique} to a paper, whether a definition has a first
+occurrence, whether a proof technique is \emph{absent} from a subfield. These
+are $\neg\exists$ claims, and negative existentials over a sample are worthless
+while over a complete corpus they are evidence. If scale changes kind anywhere,
+it is here: not in what the pipeline extracts, but in which questions the
+extraction can be asked.

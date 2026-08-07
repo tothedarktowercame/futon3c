@@ -39,9 +39,9 @@ decomposes into stage-level sub-claims with contracts; and each sub-claim
 carries a \emph{graded warrant} backed by certificates --- gate exits, ledger
 entries, oracle agreement, census counts --- rather than narrative. The
 pipeline has now been executed end-to-end (S1--S12, $12/12$ stages ledgered) on
-a twelve-paper corpus on a host nobody was watching, which is the condition
-under which its real failure modes appear. Twenty such failures were found and
-recorded as a hazard ledger (\hz{H1}--\hz{H20}); seventeen are closed. The
+a sixteen-paper corpus on a host nobody was watching, which is the condition
+under which its real failure modes appear. Twenty-one such failures were found
+and recorded as a hazard ledger (\hz{H1}--\hz{H21}); twenty are closed. The
 intended contribution is less the corpus coverage than the epistemic form: a
 mining programme whose own readiness claim is held to the same standard as the
 structures it extracts, and whose remaining gaps are drawn rather than
@@ -62,10 +62,11 @@ That last clause is the whole content of this note. Before 6 August 2026 the
 pipeline had only ever run where its author was watching its terminal. Under
 that condition a stage that prints its findings and persists nothing is
 indistinguishable from a stage that works. Running it elsewhere collapses the
-distinction, and did: of the twenty hazards below, six concern outputs that do
-not survive the run, four concern parameters that silently default to a
-different corpus, and three concern artifacts that pass one gate and are then
-unreadable by the next stage.
+distinction, and did: of the twenty-one hazards below, six concern outputs that
+do not survive the run, four concern parameters that silently default to a
+different corpus, three concern artifacts that pass one gate and are then
+unreadable by the next stage, and one concerns artifacts that do not point where
+they claim to.
 
 The corpus percentage is the odometer. The pipeline is the proof object, and
 the hazard ledger is the record of what had to be true for it to be one.
@@ -112,9 +113,9 @@ substance gate, with feedback retry.
 \item \textbf{S4 expository} --- per expository region, a classified scope
 graph (motivation, heuristic, strategy), capped per paper and self-gated.
 \item \textbf{S5 comprehension} --- R2d noun grounding $\oplus$ rung-3 strategy
-grounding, verdict separating weak-extraction from weak-proof. \emph{See
-\hz{H13}: the second half of this is not computable by the pipeline as it
-stands.}
+grounding, verdict separating weak-extraction from weak-proof. S5 now
+\emph{builds} its rung-3 half from two deterministic producers that were absent
+from the DAG entirely (\hz{H13}).
 \item \textbf{S6 paper-graph} --- proofs attach to their statements; orphans
 flagged.
 \item \textbf{S7 CLean typing + structure embedding} --- box-typing of each
@@ -141,9 +142,13 @@ level down, inside a stage, where the ledger could not see it.
 
 \section{Current warrant state}
 
-Corpus \texttt{math-ct-e2e-12}: twelve citation-ranked \texttt{math.CT} papers
-(including \emph{Higher Topos Theory}), 98 proof graphs, 280 expository
-regions. Executed on Zone (CPU-only, GLM-4.5-Air Q4 at ${\sim}4.2$ tok/s
+Corpus \texttt{math-ct-e2e-16}: sixteen citation-ranked \texttt{math.CT} papers
+(including \emph{Higher Topos Theory}) --- twelve mined to completion and four
+partially, the latter inherited from the top-100 shard run that shared the
+output directory. 98 proof graphs, 280 expository regions. \emph{The corpus was
+declared as twelve until the replay harness (\S\ref{sec:replay}) observed that
+$58$ of the $98$ graphs came from papers outside the manifest; the label, not
+the artifacts, was wrong, and it is corrected here.} Executed on Zone (CPU-only, GLM-4.5-Air Q4 at ${\sim}4.2$ tok/s
 single-stream, $1.58\times$ on two shards --- measured, not assumed).
 
 \begin{center}
@@ -168,11 +173,12 @@ the prompt window (\hz{H21}); re-mine validation in flight\\[3pt]
 A4 Expository structure reconstructs (S4) & mechanical &
 $280/280$ gated PASS. First pass $238/280$; all $42$ failures were one
 serialization defect and \emph{all} recovered after \hz{H18}\\[3pt]
-A5 Comprehension is measurable (S5) & \textbf{weak} &
-$98/98$ graphs scored, but verdicts are
-$\{$weak-extraction $97$, partial-comprehension $1$, \textbf{no-structure
-$98\}$}: the strategy half has no producer in the pipeline, so
-\texttt{weak-proof} is unreachable by construction (\hz{H13}, OPEN)\\[3pt]
+A5 Comprehension is measurable (S5) & mechanical &
+Was degenerate --- all $98$ proofs \emph{no-structure}, \texttt{weak-proof}
+unreachable. Two deterministic producers were missing from the DAG, not from
+the codebase: strategy moves $0 \to$ \textbf{202 grounded / 564 thin / 52
+ungrounded}; verdicts now \textbf{well-formed $6$, partial $82$,
+weak-extraction $10$} (\hz{H13} closed, no GPU)\\[3pt]
 A6 Papers assemble into whole-paper objects (S6) & mechanical &
 ledgered; orphan check clean\\[3pt]
 A7 Proof structure is typable \emph{and discriminative} (S7) & mechanical &
@@ -197,8 +203,9 @@ proof-move grounding $0.118 \to 0.272$ ($+0.154$), \texttt{rising=True};
 expository-move recognition $0.033 \to 0.094$. Both measured on the
 \emph{run's} corpus for the first time (\hz{H19})\\[3pt]
 A12 The pipeline runs unattended off the dev box & inductive-$n{=}1$ &
-S1--S12 ledgered $12/12$ for \texttt{math-ct-e2e-12}; $20$ hazards found,
-$17$ closed\\[3pt]
+S1--S12 ledgered $12/12$; $21$ hazards found, $20$ closed; a fast replay
+harness re-checks the accounting invariants in $0.5$\,s
+(\S\ref{sec:replay})\\[3pt]
 A13 Capability transports to the full field & designed &
 stated as a scale-transport claim; no witnesses. See
 Fig.~\ref{fig:dag} (right)\\[3pt]
@@ -367,8 +374,8 @@ rather than read: $41\%$ cover the line their own text came from, median drift
 $3$ lines. Content faithful, coordinates not. Found only by reading a paper
 against its source (\S\ref{sec:annex}).\\[3pt]
 \emph{Open} &
-\hz{H13} \hz{S11} &
-See \S\ref{sec:open}.\\
+\hz{S11} &
+One remains: the structural canon computes and discards. See \S\ref{sec:open}.\\
 \hline
 \end{tabular}
 \end{center}
@@ -376,7 +383,30 @@ See \S\ref{sec:open}.\\
 \section{Honest boundaries and the open gaps}
 \label{sec:open}
 
-\textbf{\hz{H13} --- S5's criterion is not computable by the pipeline.}
+\textbf{\hz{H13} --- CLOSED 7 August, and the way it closed is the point.}
+It looked like the expensive gap: S5's rung-3 half reads
+\texttt{data/rung3-technique/<pid>.technique.json}, and the obvious reading was
+that producing it needed a mining run. It did not. Both producers already
+existed and are explicitly \emph{deterministic} --- \texttt{cas\_segment.py}
+turns gated graphs into proof steps, \texttt{rung3\_technique.py} turns those
+into technique gap maps --- and neither appeared in any stage of the stepper.
+The one real defect was a granularity mismatch: \texttt{cas\_segment} named its
+output per \emph{paper} while S5 looked up per \emph{proof}, so every proof of a
+paper overwrote its siblings and $98$ graphs collapsed to $12$ files, which S5
+then failed to find at all. One line, plus the DAG wiring. Strategy moves went
+$0 \to 202$ grounded / $564$ thin / $52$ ungrounded, and the verdict
+distribution from uniformly \texttt{no-structure} to $\{$well-formed $6$,
+partial $82$, weak-extraction $10\}$. Total cost: two CPU minutes.
+
+\emph{The generalisable form:} both of this note's ``open gaps'' turned out to
+be accounting rather than capability --- information the pipeline had already
+computed and failed to carry across a seam. That is the same shape as
+\hz{H15}/\hz{H16} (computed, printed, discarded) and \hz{H19} (computed against
+the wrong inputs). It is worth asking of any remaining gap whether it is a
+missing capability or a missing connection, because the second is two orders of
+magnitude cheaper and, here, was the answer four times out of four.
+
+\emph{The original diagnosis, retained:}
 Comprehension is defined as R2d $\oplus$ rung-3, and the rung-3 half reads
 \texttt{data/rung3-technique/<pid>.technique.json}, produced by
 \texttt{rung3\_technique.py}, which appears in no stage of the stepper and no
@@ -431,6 +461,43 @@ against its source}. The census counts many things approximately; a worked
 example checks a few things exactly. \hz{H21} --- anchors naming the wrong line
 while glossing the right text --- is invisible to every aggregate check we run,
 and obvious on the first paper anyone reads.
+
+
+\section{The replay harness: the ledger, made executable}
+\label{sec:replay}
+
+The slow run establishes that the stages \emph{compute}. Almost none of the
+twenty-one hazards were compute failures --- they were accounting failures, and
+accounting is checkable in half a second against artifacts that already exist.
+So the ledger is now a regression suite: eleven checks, one per hazard class,
+asserting \emph{conservation} (every proof has a steps file; every graph is
+typed or logged-rejected), \emph{identity} (artifacts belong to this corpus;
+metrics carry its id; both arXiv id families parse), \emph{shape} (graphs load
+through the \emph{consuming} reader; refs resolve; anchors sit inside their
+passage), and \emph{persistence} (the run directory holds what RETRIEVE
+promises; twelve stages ledgered; the curve rises).
+
+Each check declares the earliest stage at which it is meaningful, which turns
+the suite into a \textbf{mid-run abort gate}. At \texttt{-{}-through S3} seven of
+the eleven apply and four are deferred; the seven include every check that
+catches a catastrophic hazard. That matters operationally: a cluster window is
+booked in one large block, but a run producing artifacts that violate these
+invariants will not repair itself downstream, so the honest move on a failed
+prefix is to abort and give the remaining hours back. Three severities keep the
+gate actionable --- \textsc{fail} (artifacts violate an invariant: abort),
+\textsc{warn} (provenance imperfect, artifacts sound: continue), and
+not-yet-applicable. Provenance noise must never be a reason to abandon a
+window; artifact corruption must always be.
+
+Its first run found two defects, one of them \emph{ours}: $58$ of the $98$
+graphs came from four papers outside the declared manifest --- leftovers from
+the top-100 shard run in a shared output directory, which every downstream stage
+was then pointed at. Every corpus-level number in this note is therefore over a
+sixteen-paper mixture, and said so only after a harness we wrote to catch
+corpus-identity errors caught ours. The stage-mechanics claims are unaffected;
+the corpus label was corrected rather than the artifacts discarded.
+
+\input{prereg-scale}
 
 \input{annex-worked-example}
 

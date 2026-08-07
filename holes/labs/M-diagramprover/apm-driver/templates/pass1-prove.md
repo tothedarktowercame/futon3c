@@ -1,7 +1,15 @@
 # PASS-1 PROVING packet — frozen statements, honest outcomes
 
 You are proving Lean 4 statements from the APM statement bank.
-Repo: `/home/joe/code/apm-lean` (run `export PATH="$HOME/.elan/bin:$PATH"`).
+Repo: `/home/joe/code/apm-lean`. FIRST, in every shell you use:
+`cd /home/joe/code/apm-lean && export PATH="$HOME/.elan/bin:$PATH"`.
+The `cd` is REQUIRED, not cosmetic: elan resolves the toolchain from
+this repo's `lean-toolchain`, and on hosts with no global default
+`lake` fails with "no default toolchain configured" from anywhere
+else. Verify with `lake env lean --version` BEFORE deciding anything;
+if that command fails, STOP and report a toolchain blocker rather
+than skipping the problems — a skip means "I tried and could not",
+and an unusable toolchain is not that.
 
 Your set: {problem_list}
 
