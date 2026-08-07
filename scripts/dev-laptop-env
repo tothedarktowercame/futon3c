@@ -53,6 +53,16 @@ export FUTON3C_KANGAROO_MONSTER_ALLOWLIST="${FUTON3C_KANGAROO_MONSTER_ALLOWLIST:
 # Validated by futon3c.agency.drainer-model-test. Activated 2026-06-10. Set "false"
 # to revert to the legacy invoke path (byte-for-byte). Takes effect on restart.
 export FUTON3C_DRAINER_V2="${FUTON3C_DRAINER_V2:-true}"
+# Pouch demultiplexer + unsolicited-turn routing (D6, E-unsolicited-pouch-turns).
+# One always-reading thread per pouch owns stdout for the process's life; feed-turn!
+# enqueues a waiter and gets ITS OWN turn's result, so drain-pending! is skipped
+# entirely on this path. A turn opening after a task_notification belongs to no
+# waiter and is routed to the REPL buffer marked "[AGENT-INITIATED - NOT A REPLY]"
+# instead of being discarded. WHY: on 2026-08-05 two claude-14 replies to Joe were
+# destroyed this way -- `[pouch] claude-14 drained 39 stale line(s) before turn`.
+# Enabled 2026-08-05 at Joe's request. Set "false" to revert to the legacy
+# synchronous read (byte-for-byte unchanged). Takes effect on restart.
+export FUTON3C_POUCH_DEMUX="${FUTON3C_POUCH_DEMUX:-true}"
 # Desktop Save Mode (M-agency-hardening W5): the registry roster is persisted to
 # disk continuously (always-on); this flag turns on RESTORE-on-boot, so a JVM
 # shutdown+restart brings the same agents back registered — and warm, since

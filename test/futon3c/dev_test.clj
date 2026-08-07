@@ -3,9 +3,9 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.agency.registry]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.registry :as registry]
             [futon3c.agents.mfuton-invoke-override]
             [futon3c.agents.tickle-work-queue]
             [futon3c.agency.turn-queue :as turn-queue]
@@ -15,6 +15,44 @@
             [futon3c.dev.invoke :as dev-invoke]
             [futon3c.dev.apm-conductor-v2 :as apm-v2]
             [futon3c.dev :as dev]))
+
+(deftest pouch-unsolicited-route-targets-the-existing-claude-repl
+  (let [call (atom nil)]
+    (with-redefs [registry/get-agent
+                  (fn [_]
+                    {:agent/metadata {:emacs-socket "test-socket"}})
+                  futon3c.blackboard/blackboard-eval!
+                  (fn [elisp opts]
+                    (reset! call {:elisp elisp :opts opts})
+                    {:ok true})]
+      (#'dev/deliver-pouch-unsolicited-to-repl!
+       {:agent-id "claude-14"
+        :session-id "session-14"
+        :speaker (str "claude-14 " agent-pouch/agent-initiated-marker)
+        :text "background result"})
+      (is (= {:emacs-socket "test-socket"} (:opts @call)))
+      (is (re-find #"claude-repl-find-buffer-by-session-id" (:elisp @call)))
+      (is (re-find #"agent-chat-insert-message" (:elisp @call)))
+      (is (re-find #"AGENT-INITIATED" (:elisp @call)))
+      (is (re-find #"NOT A REPLY" (:elisp @call)))
+      (is (re-find #"background result" (:elisp @call))))))
+
+(deftest pouch-unsolicited-route-installation-is-load-dark
+  (testing "OFF does not register or replace a sink"
+    (let [registrations (atom [])]
+      (with-redefs [agent-pouch/demux? (constantly false)
+                    agent-pouch/set-unsolicited-sink!
+                    #(swap! registrations conj %)]
+        (is (nil? (dev/install-pouch-unsolicited-repl-sink!)))
+        (is (empty? @registrations)))))
+  (testing "ON registers the REPL adapter"
+    (let [registrations (atom [])]
+      (with-redefs [agent-pouch/demux? (constantly true)
+                    agent-pouch/set-unsolicited-sink!
+                    #(swap! registrations conj %)]
+        (is (true? (dev/install-pouch-unsolicited-repl-sink!)))
+        (is (= 1 (count @registrations)))
+        (is (fn? (first @registrations)))))))
 
 (deftest compatible-codex-ws-bridge-agent-detection
   (testing "existing codex ws-bridge registrations are recognized as reusable"

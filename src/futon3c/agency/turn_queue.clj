@@ -242,16 +242,29 @@
   (let [entry* (normalized-entry entry)
         id (or (clean-str (:id entry*)) (str "turn-" (UUID/randomUUID)))
         waiter (promise)
+        waiter-installed? (atom false)
+        processor-installed? (atom false)
         result (atom nil)]
-    (swap! !waiters assoc id waiter)
+    ;; An exact-id retry must not steal the original turn's waiter/processor.
+    (swap! !waiters
+           (fn [m]
+             (if (contains? m id)
+               m
+               (do (reset! waiter-installed? true) (assoc m id waiter)))))
     (when-let [process-fn (:process-fn entry*)]
-      (swap! !processors assoc id process-fn))
+      (swap! !processors
+             (fn [m]
+               (if (contains? m id)
+                 m
+                 (do (reset! processor-installed? true)
+                     (assoc m id process-fn))))))
     (let [entry* (dissoc entry* :process-fn)]
       (swap-state!
        (fn [state]
          (let [to (:to entry*)
                msg-id (:msg-id entry*)
-               duplicate-id (get-in state [:msg-index to msg-id])
+               duplicate-id (or (get-in state [:msg-index to msg-id])
+                                (when (contains? (:entries state) id) id))
                accepted-at (now)]
            (if duplicate-id
              (let [original (get-in state [:entries duplicate-id])
@@ -281,7 +294,9 @@
         (deliver waiter {:result "[deduped turn: msg-id already accepted]"
                          :turn-queue/status :deduped
                          :turn-queue/entry (:entry @result)
-                         :turn-queue/reply-route (reply-route (:entry @result))}))
+                         :turn-queue/reply-route (reply-route (:entry @result))})
+        (when @waiter-installed? (swap! !waiters dissoc id))
+        (when @processor-installed? (swap! !processors dissoc id)))
       @result)))
 
 (defn- acquire-drain! [agent-id]
@@ -436,6 +451,13 @@
    invoke-fn accept-and-drain! does not re-queue the same turn."
   false)
 
+(def ^:dynamic *turn-id*
+  "Canonical id of the queue entry currently being processed. Transport
+   adapters bind this while invoking the agent so lower layers (notably the
+   warm-pouch waiter) can retain the same turn identity without changing the
+   agent-facing prompt. nil outside a queued turn."
+  nil)
+
 (defonce ^:private !finalizers (atom {}))   ;; id -> (fn [result] ...)
 (defonce ^:private !drainers (atom {}))      ;; agent-id -> {:lock Object :running atom :thread Thread}
 
@@ -521,13 +543,35 @@
    that never holds a shared invoke lane."
   [entry]
   (let [finalize-fn (:finalize-fn entry)
-        {:keys [status entry] :as r} (accept! (dissoc entry :finalize-fn))]
-    (when (not= :deduped status)
-      (when finalize-fn
-        (swap! !finalizers assoc (:id entry) finalize-fn))
-      (ensure-drainer! (:to entry))
-      (signal-drainer! (:to entry)))
-    r))
+        ;; Finalization must exist BEFORE accept! publishes the queue entry.
+        ;; A live drainer polls every 500 ms and can otherwise pop a fast turn,
+        ;; run it, and observe no finalizer in the gap between accept! returning
+        ;; and the old post-accept registration. That loses the SSE `done` event
+        ;; after all content has already streamed.
+        turn-id (or (clean-str (:id entry)) (str "turn-" (UUID/randomUUID)))
+        entry* (assoc (dissoc entry :finalize-fn) :id turn-id)
+        installed? (atom false)]
+    (when finalize-fn
+      ;; Do not overwrite an in-flight finalizer if an exact turn-id retry is
+      ;; deduped. Its original channel still owns that terminal event.
+      (swap! !finalizers
+             (fn [m]
+               (if (contains? m turn-id)
+                 m
+                 (do (reset! installed? true)
+                     (assoc m turn-id finalize-fn))))))
+    (try
+      (let [{:keys [status entry] :as r} (accept! entry*)]
+        (if (and (= :deduped status) @installed?)
+          (swap! !finalizers dissoc turn-id)
+          (when-not (= :deduped status)
+            (ensure-drainer! (:to entry))
+            (signal-drainer! (:to entry))))
+        r)
+      (catch Throwable t
+        (when @installed?
+          (swap! !finalizers dissoc turn-id))
+        (throw t)))))
 
 (defn accept-block!
   "Like accept-async! but blocks the CALLING thread on the turn's waiter and returns

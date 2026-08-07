@@ -33,7 +33,8 @@
                         — codex approval policy (default: never)
      CODEX_REASONING_EFFORT
                        — codex reasoning effort override (for example: low|medium|high)
-     CODEX_INVOKE_TIMEOUT_MS — hard timeout for codex exec (default: 3600000)
+     CODEX_INVOKE_TIMEOUT_MS — optional process bound for codex exec
+                               (default: unbounded; the job supervisor ends turns)
      CODEX_SESSION_FILE — path to codex session ID file (default: /tmp/futon-codex-session-id)
      FUTON3C_CODEX_WS_BRIDGE — enable codex WS bridge mode (default true on laptop role)
      FUTON3C_CODEX_WS_BASE   — override codex WS bridge base URL
@@ -55,6 +56,7 @@
             [futon3c.agents.tickle-work-queue :as ct-queue]
             [futon3c.agents.arse-work-queue :as arse-queue]
             [futon3c.agency.agent-pouch :as agent-pouch]
+            [futon3c.agency.job-tree :as job-tree]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.turn-queue :as turn-queue]
@@ -2608,6 +2610,45 @@ RESPOND WITH ONLY:
   []
   (dev-bootstrap/start-futon5! nonstarter-fn))
 
+(defn- deliver-pouch-unsolicited-to-repl!
+  "Insert an already-produced autonomous pouch turn into its Claude REPL.
+   This is display-only: it never sends the text back through the agent."
+  [{:keys [agent-id session-id speaker text]}]
+  (let [agent (reg/get-agent agent-id)
+        socket (get-in agent [:agent/metadata :emacs-socket])
+        q #(json/generate-string (str (or % "")))
+        elisp
+        (str "(let* ((agent " (q agent-id) ")"
+             " (session " (q session-id) ")"
+             " (buf (or (and (not (string-empty-p session))"
+             " (fboundp 'claude-repl-find-buffer-by-session-id)"
+             " (claude-repl-find-buffer-by-session-id session))"
+             " (and (fboundp 'claude-repl-find-buffer-by-agent-id)"
+             " (claude-repl-find-buffer-by-agent-id agent))"
+             " (get-buffer (format \"*claude-repl:%s*\" agent)))))"
+             " (unless (buffer-live-p buf)"
+             " (error \"No live Claude REPL buffer for %s\" agent))"
+             " (with-current-buffer buf"
+             " (agent-chat-insert-message " (q speaker) " " (q text) ")"
+             " (goto-char (point-max))"
+             " (agent-chat-scroll-to-bottom)) t)")
+        result (bb/blackboard-eval! elisp (cond-> {} socket (assoc :emacs-socket socket)))]
+    (when-not (:ok result)
+      (throw (ex-info "Claude REPL notification delivery failed"
+                      {:agent-id agent-id :session-id session-id
+                       :emacs-socket socket :result result})))
+    result))
+
+(defn install-pouch-unsolicited-repl-sink!
+  "Install D6's operator-surface route only when pouch demux is enabled.
+   The OFF path neither installs nor changes the existing sink."
+  []
+  (when (agent-pouch/demux?)
+    (agent-pouch/set-unsolicited-sink!
+     (agent-pouch/make-unsolicited-sink
+      #'deliver-pouch-unsolicited-to-repl!))
+    true))
+
 (defn start-futon3c!
   "Start futon3c transport HTTP+WS. Returns system map or nil if disabled.
 
@@ -2618,14 +2659,18 @@ RESPOND WITH ONLY:
      :irc-send-fn      — (fn [channel from text]) for explicit IRC posts (optional)
      :irc-send-base    — remote Agency base URL hint for IRC send fallback"
   [{:keys [xtdb-node evidence-store irc-interceptor irc-send-fn irc-send-base]}]
-  (dev-bootstrap/start-futon3c!
-   {:xtdb-node xtdb-node
-    :evidence-store evidence-store
-    :irc-interceptor irc-interceptor
-    :irc-send-fn irc-send-fn
-    :irc-send-base irc-send-base
-    :make-http-handler rt/make-http-handler
-    :make-ws-handler rt/make-ws-handler}))
+  (let [system (dev-bootstrap/start-futon3c!
+                {:xtdb-node xtdb-node
+                 :evidence-store evidence-store
+                 :irc-interceptor irc-interceptor
+                 :irc-send-fn irc-send-fn
+                 :irc-send-base irc-send-base
+                 :make-http-handler rt/make-http-handler
+                 :make-ws-handler rt/make-ws-handler})]
+    (when system
+      (install-pouch-unsolicited-repl-sink!)
+      (job-tree/start!))
+    system))
 
 (defn start-irc!
   "Start IRC server + WS relay bridge. Returns system map or nil if disabled.
@@ -3601,6 +3646,11 @@ RESPOND WITH ONLY:
                                     (when-not (str/blank? line)
                                       (try
                                         (let [parsed (json/parse-string line true)]
+                                          (job-tree/observe-event!
+                                           {:agent-id aid-val
+                                            :turn-id turn-queue/*turn-id*
+                                            :root-pid (.pid proc)
+                                            :event parsed})
                                           (case (:type parsed)
                                             "assistant"
                                             (let [content (get-in parsed [:message :content])
@@ -4209,7 +4259,9 @@ RESPOND WITH ONLY:
       :sandbox            — sandbox mode (default \"danger-full-access\")
      :approval-policy    — approval policy (default \"never\")
      :reasoning-effort   — override reasoning effort (optional)
-     :timeout-ms         — hard timeout for codex process (default 3600000)
+     :timeout-ms         — default process bound in ms; nil (the default) is
+                           unbounded. The job supervisor owns turn lifecycle;
+                           see codex-cli/process-timeout-ms.
      :cwd                — working directory (default user.dir)
      :agent-id           — agent identifier (default \"codex\")
      :session-file       — path to session ID file for persistence (optional)
@@ -4217,7 +4269,7 @@ RESPOND WITH ONLY:
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd agent-id
             session-file session-id-atom memory-domain]
     :or {codex-bin "codex" sandbox "danger-full-access"
-         approval-policy "never" timeout-ms 3600000 agent-id "codex"}}]
+         approval-policy "never" agent-id "codex"}}]
   (let [aid-val (str agent-id)
         provisioned-domain
         (or memory-domain
@@ -4356,9 +4408,16 @@ RESPOND WITH ONLY:
                                                       200))
                                nil))
                            (publish-runtime! @!runtime-state))
-        buf-name (str "*invoke: " agent-id "*")]
-    (fn [prompt session-id]
-      (let [prompt-str (cond
+        buf-name (str "*invoke: " agent-id "*")
+        invoke-once
+        (fn [prompt session-id call-opts]
+      ;; A per-call :timeout-ms overrides the registration default, so a
+      ;; caller's bound reaches the process instead of only making an outer
+      ;; layer stop waiting (README-agency-cap.md).
+      (let [timeout-ms (if (contains? call-opts :timeout-ms)
+                         (:timeout-ms call-opts)
+                         timeout-ms)
+            prompt-str (cond
                          (string? prompt) prompt
                          (map? prompt)    (or (:prompt prompt) (:text prompt)
                                               (json/generate-string prompt))
@@ -4608,7 +4667,11 @@ RESPOND WITH ONLY:
                         " tool-events=" tool-events
                         " command-events=" command-events))
           (flush)
-          (assoc result :invoke-trace-id invoke-trace-id))))))
+          (assoc result :invoke-trace-id invoke-trace-id))))]
+    (fn
+      ([prompt] (invoke-once prompt nil nil))
+      ([prompt session-id] (invoke-once prompt session-id nil))
+      ([prompt session-id call-opts] (invoke-once prompt session-id call-opts)))))
 
 ;; =============================================================================
 ;; IRC-based Codex invoke — send @codex on IRC, poll for [done] response

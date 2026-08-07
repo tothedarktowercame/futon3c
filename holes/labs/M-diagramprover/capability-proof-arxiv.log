@@ -1152,11 +1152,11 @@ Package rerunfilecheck Info: File `capability-proof-arxiv.out' has not changed.
 (rerunfilecheck)             Checksum: F667F36205D051A0202748DAE7CA61B1;2541.
  ) 
 Here is how much of TeX's memory you used:
- 24676 strings out of 467747
- 459612 string characters out of 5426947
+ 24678 strings out of 467747
+ 459634 string characters out of 5426947
  911518 words of memory out of 5000000
  52480 multiletter control sequences out of 15000+600000
- 755308 words of font info for 308 fonts, out of 8000000 for 9000
+ 755391 words of font info for 309 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  102i,11n,107p,1726b,917s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></usr/lo
@@ -1183,7 +1183,7 @@ sr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmtk10.pfb></usr/local/t
 exlive/2025/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/local/texlive/202
 5/texmf-dist/fonts/type1/public/lm/lmtt9.pfb></usr/local/texlive/2025/texmf-dis
 t/fonts/type1/public/lm/lmtti10.pfb>
-Output written on capability-proof-arxiv.pdf (16 pages, 586104 bytes).
+Output written on capability-proof-arxiv.pdf (16 pages, 586107 bytes).
 PDF statistics:
  346 PDF objects out of 1000 (max. 8388607)
  265 compressed objects within 3 object streams

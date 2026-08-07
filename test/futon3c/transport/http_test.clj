@@ -19,6 +19,7 @@
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.federation :as federation]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.clock-store :as clock-store]
@@ -28,6 +29,18 @@
 ;; =============================================================================
 ;; Fixtures
 ;; =============================================================================
+
+(deftest invoke-stream-stamps-every-event-with-one-turn-id
+  (let [stamp #'http/stamp-turn-event
+        events [{:type "started"}
+                {:type "text" :text "partial"}
+                {:type "tool_use" :tools ["Read"]}
+                {:type "done" :ok true :result "complete"}]
+        stamped (mapv #(stamp "turn-identity-1" %) events)]
+    (is (= ["started" "text" "tool_use" "done"]
+           (mapv :type stamped)))
+    (is (every? #(= "turn-identity-1" (:turn-id %)) stamped)
+        "started, intermediate, and terminal events share one identity")))
 
 (use-fixtures
   :each
@@ -560,6 +573,78 @@
             (is (= 502 (:status invoke-response)))
             (is (false? (:ok invoke-parsed)))
             (is (= "invoke-error" (:error invoke-parsed)))))))))
+
+(deftest agent-get-resolves-local-area-code-alias
+  (testing "GET /api/alpha/agents/:id resolves this site's qualified alias"
+    (let [handler (make-handler)
+          old-site (System/getProperty "FUTON3C_SITE")]
+      (try
+        (System/setProperty "FUTON3C_SITE" "ams")
+        (register-mock-agent! "zai-1" :zai)
+        (let [response (get-req handler "/api/alpha/agents/ams-zai-1")
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "ams-zai-1" (:agent-id parsed)))
+          (is (= "zai" (get-in parsed [:agent :type]))))
+        (let [response (post handler "/api/alpha/invoke"
+                             (json/generate-string
+                              {"agent-id" "ams-zai-1" "prompt" "hello"}))
+              parsed (parse-body response)]
+          (is (= 200 (:status response)))
+          (is (true? (:ok parsed)))
+          (is (= "ok" (:result parsed))))
+        (finally
+          (if old-site
+            (System/setProperty "FUTON3C_SITE" old-site)
+            (System/clearProperty "FUTON3C_SITE")))))))
+
+(deftest qualified-local-job-counts-project-onto-canonical-agent
+  (testing "a job addressed through this site's area code keeps the one local roster row live"
+    (let [old-site (System/getProperty "FUTON3C_SITE")]
+      (try
+        (System/setProperty "FUTON3C_SITE" "ams")
+        (register-mock-agent! "zai-1" :zai)
+        (let [job-id ((var-get #'http/create-invoke-job!)
+                      {:agent-id "ams-zai-1"
+                       :prompt "prove it"
+                       :caller "apm-driver"
+                       :surface "bell"})]
+          ((var-get #'http/mark-invoke-job-running!) job-id)
+          (let [counts (http/active-invoke-job-counts)]
+            (is (= {:queued-jobs 0
+                    :running-jobs 1
+                    :nonterminal-jobs 1}
+                   (get counts "zai-1")))
+            (is (nil? (get counts "ams-zai-1"))))
+          (let [info (get-in (reg/registry-status) [:agents "zai-1"])]
+            (is (= :invoking (:status info)))
+            (is (= 1 (:running-jobs info)))
+            (is (= 1 (:nonterminal-jobs info)))))
+        (finally
+          (if old-site
+            (System/setProperty "FUTON3C_SITE" old-site)
+            (System/clearProperty "FUTON3C_SITE")))))))
+
+(deftest proxy-runtime-refresh-is-published
+  (testing "an HTTP federation update is projected to HUDs and downstream uplinks"
+    (let [published (atom 0)
+          handler (make-handler)]
+      (with-redefs [federation/register-proxy-agent!
+                    (fn [_origin _agent _info]
+                      {:ok true :agent-id "ams-zai-1" :action :updated})
+                    reg/publish-agents-status!
+                    (fn [] (swap! published inc) {:ok true :count 1})]
+        (let [response (post handler "/api/alpha/agents"
+                             (json/generate-string
+                              {"agent-id" "zai-1"
+                               "type" "zai"
+                               "origin-url" "http://ams.invalid:7070"
+                               "proxy" true
+                               "home-site" "ams"
+                               "status" "invoking"}))]
+          (is (= 200 (:status response)))
+          (is (= 1 @published)))))))
 
 (deftest agent-auto-register-seeds-session-id
   (testing "POST /api/alpha/agents/auto seeds session continuity at registration time"

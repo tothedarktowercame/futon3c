@@ -874,6 +874,32 @@ on every redisplay tick."
 
 ;;; Streaming invoke
 
+(defun claude-repl--new-turn-id ()
+  "Return a process-unique id for one REPL request/response stream."
+  (format "repl-%s-%s"
+          (or claude-repl-agent-id "claude")
+          (substring
+           (secure-hash 'sha256
+                        (format "%s:%s:%s:%s"
+                                (float-time) (emacs-pid) (random) (current-time)))
+           0 24)))
+
+(defun claude-repl--turn-event-matches-p (expected-turn-id event)
+  "Return non-nil when EVENT belongs to EXPECTED-TURN-ID."
+  (equal expected-turn-id (alist-get 'turn-id event)))
+
+(defun claude-repl--turn-identity-mode (event)
+  "Select identity enforcement from the first EVENT of a response stream.
+New servers advertise `turn-id' on `started' and every later event.  A server
+from before the turn-identity deployment advertises none; accept that complete
+legacy stream during a rolling upgrade instead of withholding every reply."
+  (if (alist-get 'turn-id event) 'required 'legacy))
+
+(defun claude-repl--turn-mismatch-marker (expected-turn-id event)
+  "Visible marker for EVENT that cannot be attributed to the current prompt."
+  (format "[reply for an earlier turn — expected %s, received %s]"
+          expected-turn-id (or (alist-get 'turn-id event) "<missing>")))
+
 (defun claude-repl--call-claude-streaming (text callback)
   "Send TEXT to Claude via POST /api/alpha/invoke-stream.
 Streams NDJSON events incrementally. Text events are displayed as they
@@ -885,6 +911,7 @@ CALLBACK is called with the final response text on completion."
 (defun claude-repl--call-claude-streaming-with-retry (text callback retry-attempt)
   "Send TEXT to Claude with RETRY-ATTEMPT tracking for agent re-registration."
   (let* ((chat-buffer (current-buffer))
+         (turn-id (claude-repl--new-turn-id))
          (url (concat claude-repl-api-url "/api/alpha/invoke-stream"))
          (full-prompt (format "Agent: %s\n\nUser message:\n%s"
                               claude-repl-agent-id text))
@@ -892,12 +919,16 @@ CALLBACK is called with the final response text on completion."
                      (append
                       `(:agent-id ,claude-repl-agent-id
                         :prompt ,full-prompt
+                        :turn-id ,turn-id
                         :surface "emacs-repl"
                         :caller ,(or (getenv "USER") user-login-name "joe"))
                       (when-let ((clock-id (claude-repl--dispatch-clock-id)))
                         `(:mission-id ,clock-id)))))
          (outbuf (generate-new-buffer " *futon3c-invoke-stream*"))
-         (line-buffer ""))
+         (line-buffer "")
+         (done-event nil)
+         (identity-mismatch nil)
+         (turn-identity-mode nil))
     (let ((proc
            (make-process
             :name "futon3c-invoke-stream"
@@ -927,9 +958,29 @@ CALLBACK is called with the final response text on completion."
                                          :null-object nil
                                          :false-object nil))
                               (type (alist-get 'type json-obj)))
+                         ;; The first event is `started'.  It is also the
+                         ;; rolling-deployment capability advertisement: once
+                         ;; an id is present this stream stays strict.
+                         (unless turn-identity-mode
+                           (setq turn-identity-mode
+                                 (claude-repl--turn-identity-mode json-obj)))
                          (when (buffer-live-p chat-buffer)
                            (with-current-buffer chat-buffer
-                             (cond
+                             (if (and (eq turn-identity-mode 'required)
+                                      (not (claude-repl--turn-event-matches-p
+                                            turn-id json-obj)))
+                                 (unless identity-mismatch
+                                   (setq identity-mismatch
+                                         (claude-repl--turn-mismatch-marker
+                                          turn-id json-obj))
+                                   (agent-chat-insert-message
+                                    "system" identity-mismatch))
+                               (cond
+                              ((equal type "done")
+                               ;; The sentinel consumes only this captured,
+                               ;; identity-checked terminal event. A done from
+                               ;; any earlier stream can never close this turn.
+                               (setq done-event json-obj))
                               ((equal type "text")
                                (let ((txt (alist-get 'text json-obj)))
                                  (unless agent-chat--streaming-started
@@ -1011,7 +1062,7 @@ CALLBACK is called with the final response text on completion."
                                             (list #'claude-repl--tool-overlay-sensor)))))
                                    (agent-chat-update-progress
                                     (format "using %s" tool-names)
-                                    'agent-chat-prompt-face))))))))
+                                    'agent-chat-prompt-face)))))))))
                      (error nil))))))
            :sentinel
            (lambda (p _event)
@@ -1031,20 +1082,7 @@ CALLBACK is called with the final response text on completion."
                                      (with-current-buffer (process-buffer p)
                                        (buffer-string))
                                    ""))
-                            ;; Find the done event in the raw output
-                            (done-event nil)
                             (retried nil))
-                       ;; Parse done event from raw NDJSON
-                       (dolist (line (split-string raw "\n"))
-                         (when (and (not (string-empty-p (string-trim line)))
-                                    (string-match-p "\"type\"[[:space:]]*:[[:space:]]*\"done\"" line))
-                           (condition-case nil
-                               (setq done-event
-                                     (json-parse-string line
-                                                        :object-type 'alist
-                                                        :null-object nil
-                                                        :false-object nil))
-                             (error nil))))
                        (when (buffer-live-p (process-buffer p))
                          (kill-buffer (process-buffer p)))
                        (when (buffer-live-p chat-buffer)
@@ -1108,15 +1146,21 @@ CALLBACK is called with the final response text on completion."
                                          (setq retried t))
                                      (funcall callback (format "[Error: %s]" err-msg)))
                                  (funcall callback (format "[Error: %s]" err-msg)))))
-                            ;; No done event found (curl error, etc.)
+                            ;; No matching done event found (curl error or a
+                            ;; terminal event for another turn).
                             (t
                              (when agent-chat--streaming-started
                                (agent-chat-end-streaming-message))
                              (let ((exit-code (process-exit-status p)))
-                               (funcall callback
-                                        (format "[curl error (exit %d): %s]"
-                                                exit-code
-                                                (string-trim (truncate-string-to-width raw 200)))))))
+                               (funcall
+                                callback
+                                (if identity-mismatch
+                                    (concat identity-mismatch
+                                            " [response withheld from this prompt]")
+                                  (format "[curl error (exit %d): %s]"
+                                          exit-code
+                                          (string-trim
+                                           (truncate-string-to-width raw 200))))))))
                            ;; Handle retry
                            (when retried
                              (claude-repl--call-claude-streaming-with-retry

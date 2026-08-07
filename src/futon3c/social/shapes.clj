@@ -21,9 +21,11 @@
   [:or :string inst?])
 
 (def AgentIdType
-  "Typed identifier namespace — transport, continuity, or protocol.
-   R6 (identifier-separation): these are distinct namespaces."
-  [:enum :transport :continuity :protocol])
+  "Typed identifier namespace — transport, continuity, protocol, or apparatus.
+   R6 (identifier-separation): these are distinct namespaces.
+   :apparatus = non-invokable roster identities owned by harness machinery
+   (e.g. the war-machine WM snapshot identity, wm/scheduler.clj)."
+  [:enum :transport :continuity :protocol :apparatus])
 
 (def TypedAgentId
   "Agent identifier with explicit type namespace (R6).
@@ -41,7 +43,7 @@
    (live failure 2026-07-12: zai-1 [:type :zai] on the hub blocked the
    laptop codex-3 WS connect). Registering a new agent type REQUIRES adding
    it here first."
-  [:enum :claude :codex :zai :tickle :corpus :mock :peripheral])
+  [:enum :claude :codex :zai :tickle :corpus :mock :peripheral :wm])
 
 ;; =============================================================================
 ;; Pipeline input — agent connection event

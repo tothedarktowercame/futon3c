@@ -254,10 +254,14 @@
    and its per-target in-flight claim is cleared. With -n the client normally
    exits in milliseconds; bounding the exceptional path prevents one wedged
    handshake from freezing all later snapshots for that Emacs socket."
-  ([elisp] (run-emacsclient-async! elisp nil))
-  ([elisp socket-override]
+  ([elisp] (run-emacsclient-async! elisp nil nil))
+  ([elisp socket-override] (run-emacsclient-async! elisp socket-override nil))
+  ([elisp socket-override coalesce-key]
    (try
-     (let [target-key (emacsclient-target-key socket-override)]
+     (let [socket-key (emacsclient-target-key socket-override)
+           target-key (if coalesce-key
+                        [socket-key coalesce-key]
+                        socket-key)]
        (if-not (claim-async-emacsclient! target-key)
          {:ok false :output "inflight"}
          (try
@@ -292,6 +296,8 @@
    :slot    — side-window slot index (keeps multiple panels stable)
    :no-display — if true, update buffer but don't force-display it
    :emacs-socket — target a specific Emacs daemon socket (e.g. \"workspace2\")
+
+   :async-key gives an async live panel an independent coalescing lane.
 
    Returns {:ok bool :output str}."
   ([buffer-name content]
@@ -331,8 +337,10 @@
                     "))"
                     (or display-form "")
                     "nil)")
-         runner (if (:async? opts) run-emacsclient-async! run-emacsclient!)]
-     (runner elisp (:emacs-socket opts)))))
+         async? (:async? opts)]
+     (if async?
+       (run-emacsclient-async! elisp (:emacs-socket opts) (:async-key opts))
+       (run-emacsclient! elisp (:emacs-socket opts))))))
 
 (defn blackboard-eval!
   "Run arbitrary elisp via emacsclient. For cases where text content

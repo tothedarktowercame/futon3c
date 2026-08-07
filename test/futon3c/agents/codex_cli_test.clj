@@ -108,7 +108,10 @@
             (is (some #{"--json"} cmd))
             (is (some #{"-"} cmd))
             (is (= "hello codex" prompt))
-            (is (= 3600000 (:timeout-ms opts)))
+            ;; No registration-time default: the process is unbounded unless a
+            ;; bound is asked for. The job supervisor owns turn lifecycle
+            ;; (README-agency-cap.md).
+            (is (nil? (:timeout-ms opts)))
             (is (= "/tmp" (:cwd opts))))))))
   (testing "placeholder tool narration does not leak as final response text"
     (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
@@ -147,6 +150,42 @@
           (is (string? (:error resp)))
           (is (map? (:execution resp)))
           (is (str/includes? (:error resp) "Exit 2")))))))
+
+(deftest process-timeout-ms-defaults-to-unbounded
+  (testing "nil / non-positive callers are unbounded"
+    (is (nil? (codex-cli/process-timeout-ms nil)))
+    (is (nil? (codex-cli/process-timeout-ms 0)))
+    (is (nil? (codex-cli/process-timeout-ms -1))))
+  (testing "a positive caller bound is honoured"
+    (is (= 5400000 (codex-cli/process-timeout-ms 5400000))))
+  (testing "the operator override wins over the caller, and 0 restores unbounded"
+    (try
+      (System/setProperty "FUTON3C_CODEX_PROCESS_TIMEOUT_MS" "120000")
+      (is (= 120000 (codex-cli/process-timeout-ms 5400000)))
+      (is (= 120000 (codex-cli/process-timeout-ms nil)))
+      (System/setProperty "FUTON3C_CODEX_PROCESS_TIMEOUT_MS" "0")
+      (is (nil? (codex-cli/process-timeout-ms 5400000)))
+      (finally
+        (System/clearProperty "FUTON3C_CODEX_PROCESS_TIMEOUT_MS")))))
+
+(deftest make-invoke-fn-accepts-a-per-call-timeout
+  (testing "the 3-arity carries the caller's bound to the process"
+    (let [calls (atom [])
+          invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
+                                            :sandbox "workspace-write"
+                                            :approval-policy "never"
+                                            :timeout-ms 60000})
+          fake-run (fn [_cmd _prompt opts]
+                     (swap! calls conj opts)
+                     {:exit 0 :timed-out? false :session-id "sid" :text "ok"
+                      :raw-output "{\"type\":\"thread.started\",\"thread_id\":\"sid\"}\n"})]
+      (with-redefs [codex-cli/run-codex-stream! fake-run]
+        (invoke "a" nil)
+        (invoke "b" nil {:timeout-ms 5400000})
+        (invoke "c" nil {:timeout-ms nil})
+        (invoke "d"))
+      (is (= [60000 5400000 nil 60000] (mapv :timeout-ms @calls))
+          "registration default, per-call override, explicit unbounded, 1-arity"))))
 
 (deftest make-invoke-fn-preserves-exception-class-when-message-is-blank
   (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"

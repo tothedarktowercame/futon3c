@@ -17,6 +17,7 @@
      GET  /api/alpha/coordination/edges — list social-layer mesh edges
      GET  /api/alpha/coordination/qa — run mesh misrouting QA
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
+     POST /api/alpha/invoke/jobs/:id/cancel — terminate a job by explicit request
      POST /api/alpha/invoke/announce — record a queued invoke before external acceptance
      POST /api/alpha/bell — asynchronous fire-and-forget invoke (returns job-id immediately)
      POST /api/alpha/whistle — synchronous invoke (or NDJSON stream when stream=true)
@@ -948,6 +949,20 @@
     (bb/project-agents! (reg/registry-status))
     @created-id))
 
+(defn- canonical-job-agent-id
+  "Resolve a job's addressed agent id to its single registry identity.
+
+   Invoke jobs retain the address used by the caller (for example
+   `ams-zai-1`), while the local registry deliberately stores that lane once
+   under its bare id (`zai-1`).  Counts are registry state, so keying them by
+   the unnormalised address makes a live qualified job invisible to the
+   canonical roster row.  Exact peer ids remain unchanged because get-agent
+   resolves exact registrations before considering a local-site alias."
+  [agent-id]
+  (let [addressed (some-> agent-id str str/trim not-empty)]
+    (or (some-> addressed reg/get-agent :agent/id :id/value str)
+        addressed)))
+
 (defn active-invoke-job-counts
   "Return canonical non-terminal invoke-job counts keyed by agent-id.
    Example:
@@ -956,7 +971,7 @@
   (ensure-invoke-jobs-ledger!)
   (reduce
    (fn [acc job]
-     (let [aid (some-> (:agent-id job) str str/trim not-empty)
+     (let [aid (canonical-job-agent-id (:agent-id job))
            state (some-> (:state job) str)]
        (if-not (and aid (#{"queued" "running" "overrun"} state))
          acc
@@ -970,12 +985,12 @@
 (defn- running-invoke-job-for-agent
   [agent-id]
   (ensure-invoke-jobs-ledger!)
-  (let [aid (some-> agent-id str str/trim)]
+  (let [aid (canonical-job-agent-id agent-id)]
     (->> (get @!invoke-jobs-ledger :job-order [])
          reverse
          (keep (fn [job-id]
                  (let [job (get-in @!invoke-jobs-ledger [:jobs job-id])]
-                   (when (and (= aid (some-> job :agent-id str str/trim))
+                   (when (and (= aid (canonical-job-agent-id (:agent-id job)))
                               (= "running" (some-> job :state str)))
                      job))))
          first)))
@@ -1147,15 +1162,23 @@
          (map #(get-in ledger [:jobs %]))
          (remove nil?))))
 
-(defn- parse-env-ms
-  "Parse a millisecond duration from env var NAME, falling back to DEFAULT."
-  [name default]
+(defn- ms-setting
+  "Raw millisecond setting for NAME: a System property first (settable on a
+   live JVM over Drawbridge, which env vars are not), then the process env.
+   Returns ::unset when neither is present or parseable."
+  [name]
   (try
-    (let [raw (System/getenv name)]
-      (if (and raw (not (str/blank? (str/trim raw))))
-        (long (Integer/parseInt (str/trim raw)))
-        default))
-    (catch Exception _ default)))
+    (let [raw (or (System/getProperty name) (System/getenv name))]
+      (if (or (nil? raw) (str/blank? (str/trim raw)))
+        ::unset
+        (long (Long/parseLong (str/trim raw)))))
+    (catch Exception _ ::unset)))
+
+(defn- parse-env-ms
+  "Parse a millisecond duration from NAME, falling back to DEFAULT."
+  [name default]
+  (let [v (ms-setting name)]
+    (if (= ::unset v) default v)))
 
 (def ^:private default-job-cap-ms
   "Soft cap: jobs running longer than this enter the 'overrun' state.
@@ -1168,10 +1191,20 @@
   (parse-env-ms "FUTON3C_JOB_CAP_MS" default-job-cap-ms))
 
 (defn job-ceiling-ms
-  "Hard ceiling: jobs running longer than this are force-terminated.
-   Default 2x cap. Overridable via FUTON3C_JOB_CEILING_MS."
+  "Hard ceiling in ms, or nil for no wall-clock ceiling (the default).
+
+   Wall clock is an SLA signal, not evidence of stuckness. A bell that is
+   still streaming events is working, and force-terminating it discards work
+   the supervisor could have harvested — the failure this cap has produced
+   repeatedly (README-agency-cap.md). A turn now ends on explicit cancel,
+   confirmed process death, or an operator-configured ceiling; not on a clock.
+
+   Set FUTON3C_JOB_CEILING_MS (System property or env) to restore a hard
+   ceiling. 0 or a negative value means the same as unset: no ceiling."
   []
-  (parse-env-ms "FUTON3C_JOB_CEILING_MS" (* 2 (job-cap-ms))))
+  (let [v (ms-setting "FUTON3C_JOB_CEILING_MS")]
+    (when (and (not= ::unset v) (pos? v))
+      v)))
 
 (defn- mark-invoke-job-overrun!
   "Atomically move JOB-ID from running to overrun. Returns true only to the
@@ -1248,45 +1281,61 @@
 (defn- supervise-invoke-future!
   "Run INVOKE-FN once and supervise its future for a durable async job.
 
-   The soft timeout is observational: the job becomes overrun and the same
-   future remains authoritative. The hard ceiling is terminal: exactly one
-   finalizer wins, then the worker is interrupted."
+   This is the sole lifecycle authority for an async turn. Inner layers (WS
+   invoke, the registry deadline, the codex process adapter) must not
+   independently destroy the worker — an inner kill is what made every
+   previous ceiling raise ineffective (README-agency-cap.md).
+
+   The soft cap is observational: the job becomes 'overrun', the same future
+   stays authoritative, and a late result finalizes normally. Termination is
+   terminal only when an operator has configured a ceiling; then exactly one
+   finalizer wins and the worker is interrupted."
   [job-id timeout-ms invoke-fn]
   (let [soft-ms (long (or (when (and timeout-ms (pos? (long timeout-ms)))
                             timeout-ms)
                           default-async-invoke-timeout-ms))
-        ceiling-ms (long (job-ceiling-ms))
+        ceiling-ms (job-ceiling-ms)
         started-ms (System/currentTimeMillis)
         worker-thread (promise)
         turn-future (future
                       (deliver worker-thread (Thread/currentThread))
                       (invoke-fn))]
     (register-job-worker! job-id (deref worker-thread 1000 nil) turn-future)
-    (let [initial-wait-ms (max 1 (min soft-ms ceiling-ms))
+    (let [initial-wait-ms (max 1 (if ceiling-ms (min soft-ms ceiling-ms) soft-ms))
           initial-result (deref turn-future initial-wait-ms ::invoke-overrun)]
       (if (not= ::invoke-overrun initial-result)
         initial-result
         (do
+          ;; Checkpoint, not a verdict. The reaper marks the same transition
+          ;; from the cap side, so a caller passing a long timeout still gets
+          ;; an 'overrun' event on the ledger at the cap.
           (mark-invoke-job-overrun! job-id soft-ms)
-          (let [elapsed-ms (- (System/currentTimeMillis) started-ms)
-                remaining-ms (max 0 (- ceiling-ms elapsed-ms))
-                late-result (if (pos? remaining-ms)
-                              (deref turn-future remaining-ms ::invoke-ceiling)
-                              ::invoke-ceiling)]
-            (if (not= ::invoke-ceiling late-result)
-              late-result
-              (let [message (ceiling-timeout-message ceiling-ms)]
-                (finalize-job-at-ceiling! job-id ceiling-ms)
-                {:ok false
-                 :error {:error/code :timeout
-                         :error/message message}
-                 :job-id job-id
-                 :overrun true
-                 :ceiling-ms ceiling-ms}))))))))
+          (if-not ceiling-ms
+            ;; No ceiling: the worker remains authoritative until it finishes,
+            ;; is cancelled (POST .../cancel), or its process dies. Silence is
+            ;; an alert — the job sits visibly in 'overrun' — never a kill.
+            @turn-future
+            (let [elapsed-ms (- (System/currentTimeMillis) started-ms)
+                  remaining-ms (max 0 (- ceiling-ms elapsed-ms))
+                  late-result (if (pos? remaining-ms)
+                                (deref turn-future remaining-ms ::invoke-ceiling)
+                                ::invoke-ceiling)]
+              (if (not= ::invoke-ceiling late-result)
+                late-result
+                (let [message (ceiling-timeout-message ceiling-ms)]
+                  (finalize-job-at-ceiling! job-id ceiling-ms)
+                  {:ok false
+                   :error {:error/code :timeout
+                           :error/message message}
+                   :job-id job-id
+                   :overrun true
+                   :ceiling-ms ceiling-ms})))))))))
 
 (defn reap-stale-invoke-jobs!
   "Transition running jobs past the cap to 'overrun' (non-terminal, supervised).
-   Force-terminate overrun jobs past the ceiling to 'timeout' (terminal).
+   Force-terminate overrun jobs past the ceiling to 'timeout' (terminal) —
+   only when an operator has configured a ceiling; by default overrun jobs are
+   left alone to finish, and are ended by cancel rather than by clock.
    Returns the count of jobs transitioned."
   ([] (reap-stale-invoke-jobs! (job-cap-ms)))
   ([threshold-ms]
@@ -1306,7 +1355,8 @@
            (when (mark-invoke-job-overrun! jid threshold-ms)
              (swap! transitioned inc))
 
-           (and (= "overrun" (str (:state job)))
+           (and (some? ceiling-ms)
+                (= "overrun" (str (:state job)))
                 (some? age-ms) (> age-ms ceiling-ms))
            (when (finalize-job-at-ceiling! jid ceiling-ms)
              (swap! transitioned inc)))))
@@ -2545,13 +2595,18 @@
                                          :invoke-prompt-preview
                                          :invoke-activity])))]
               (if (:ok result)
-                (json-response (if (= :registered (:action result)) 201 200)
-                               {:ok true
-                                :agent-id (:agent-id result)
-                                :type (name agent-type)
-                                :proxy true
-                                :origin-url origin-url
-                                :action (name (:action result))})
+                (do
+                  ;; A proxy refresh changes operator-visible runtime state.
+                  ;; Publish it so local HUDs and any downstream WS uplink see
+                  ;; the transition instead of retaining the boot snapshot.
+                  (reg/publish-agents-status!)
+                  (json-response (if (= :registered (:action result)) 201 200)
+                                 {:ok true
+                                  :agent-id (:agent-id result)
+                                  :type (name agent-type)
+                                  :proxy true
+                                  :origin-url origin-url
+                                  :action (name (:action result))}))
                 (json-response 409 {:ok false
                                     :err (name (or (:action result) :registration-failed))
                                     :message (str "Could not register proxy: " agent-id)
@@ -4007,7 +4062,7 @@
                                             :caller caller
                                             :surface surface})
                 queued-jobs (get-in (active-invoke-job-counts)
-                                    [(str agent-id) :queued-jobs]
+                                    [(canonical-job-agent-id agent-id) :queued-jobs]
                                     0)
                 job (some-> job-id get-invoke-job invoke-job-public-view)]
             (json-response 202 {:ok true
@@ -4026,6 +4081,11 @@
    drainer-v2. Set FUTON3C_REPL_THROUGH_QUEUE=false to force the legacy direct-invoke path."
   []
   (agency-invariants/repl-through-queue-enabled?))
+
+(defn- stamp-turn-event
+  "Attach TURN-ID to one SSE/NDJSON event, including terminal events."
+  [turn-id event]
+  (assoc event :turn-id turn-id))
 
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
@@ -4054,20 +4114,16 @@
           :else
           #_{:clj-kondo/ignore [:deprecated-var]}
           (hk/with-channel request channel
-            ;; Send initial response with a keepalive comment to start chunked stream
-            (hk/send! channel
-              {:status 200
-               :headers {"Content-Type" "application/x-ndjson"
-                         "Cache-Control" "no-cache"
-                         "X-Accel-Buffering" "no"}
-               :body (str (json/generate-string {:type "started"}) "\n")}
-              false)
             (let [aid (str agent-id)
+                  turn-id (str (or (:turn-id payload) (get payload "turn-id")
+                                   (:turn_id payload) (get payload "turn_id")
+                                   (str "turn-" (UUID/randomUUID))))
                   ;; Create sink-fn that writes NDJSON lines to the channel
                   sink-fn (fn [event]
                             (try
                               (hk/send! channel
-                                (str (json/generate-string event) "\n")
+                                (str (json/generate-string
+                                      (stamp-turn-event turn-id event)) "\n")
                                 false)
                               (catch Throwable _)))
                   caller (or (some-> payload :caller str)
@@ -4102,6 +4158,16 @@
                               code (if (map? err) (:error/code err) :invoke-failed)
                               msg (if (map? err) (:error/message err) (str err))]
                           (sink-fn {:type "done" :ok false :error (name code) :message msg})))))]
+              ;; Start the chunked response only after its canonical identity is
+              ;; known. sink-fn adds that identity to EVERY later event too.
+              (hk/send! channel
+                        {:status 200
+                         :headers {"Content-Type" "application/x-ndjson"
+                                   "Cache-Control" "no-cache"
+                                   "X-Accel-Buffering" "no"}
+                         :body (str (json/generate-string
+                                     (stamp-turn-event turn-id {:type "started"})) "\n")}
+                        false)
               ;; Clean up on client disconnect
               (hk/on-close channel
                 (fn [_status]
@@ -4114,13 +4180,15 @@
                 ;; thread, exclusive to this turn) so a bell drained just before it cannot
                 ;; cross-talk onto this channel.
                 (turn-queue/accept-async!
-                 {:to aid :from caller :surface (or surface "repl")
+                 {:id turn-id :msg-id turn-id
+                  :to aid :from caller :surface (or surface "repl")
                   :prompt effective-prompt
                   :process-fn
-                  (fn [_entry]
+                  (fn [entry]
                     (reg/set-invoke-event-sink! aid sink-fn)
                     (try
-                      (binding [turn-queue/*drained-by-outer* true]
+                      (binding [turn-queue/*drained-by-outer* true
+                                turn-queue/*turn-id* (:id entry)]
                         (maybe-route-surface-writes
                          agent-id
                          (reg/invoke-agent! aid effective-prompt timeout-ms)))
@@ -4141,10 +4209,11 @@
                   (fn []
                     (reg/set-invoke-event-sink! aid sink-fn)
                     (try
-                      (emit-terminal!
-                       (maybe-route-surface-writes
-                        agent-id
-                        (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms)))
+                      (binding [turn-queue/*turn-id* turn-id]
+                        (emit-terminal!
+                         (maybe-route-surface-writes
+                          agent-id
+                          (reg/invoke-agent! (str agent-id) effective-prompt timeout-ms))))
                       (catch Throwable t
                         (sink-fn {:type "done" :ok false :error "invoke-error"
                                   :message (.getMessage t)}))
@@ -4534,6 +4603,65 @@
                         :error "invoke-job-not-found"
                         :job-id (str job-id)})))
 
+(defn- interrupt-agent-process-tree!
+  "Best-effort termination of AGENT-ID's live invoke subprocess tree.
+   Returns a result map; never throws."
+  [agent-id]
+  (try
+    (require 'futon3c.dev)
+    (if-let [interrupt-fn (resolve 'futon3c.dev/interrupt-agent-invoke!)]
+      (interrupt-fn (str agent-id))
+      {:ok false :error "interrupt-unavailable"})
+    (catch Throwable t
+      {:ok false :error "interrupt-error" :message (.getMessage t)})))
+
+(defn- handle-cancel-invoke-job
+  "POST /api/alpha/invoke/jobs/:id/cancel — end a job by explicit request.
+
+   This is the intended way to stop a long-running turn now that the wall-clock
+   ceiling is opt-in (see job-ceiling-ms). Order matters: take the terminal
+   transition FIRST so this cancellation wins the single-finalizer race, then
+   kill the process tree and interrupt the supervising worker. Finalizing after
+   the kill would let the worker's own error path record 'failed' instead."
+  [job-id request]
+  (let [payload (or (parse-json-map (read-body request)) {})
+        caller (or (some-> (or (:caller payload) (get payload "caller")) str str/trim not-empty)
+                   "http-caller")
+        reason (some-> (or (:reason payload) (get payload "reason")) str str/trim not-empty)
+        job (get-invoke-job job-id)]
+    (cond
+      (nil? job)
+      (json-response 404 {:ok false
+                          :error "invoke-job-not-found"
+                          :job-id (str job-id)})
+
+      (not (#{"queued" "running" "overrun"} (str (:state job))))
+      (json-response 409 {:ok false
+                          :error "invoke-job-already-terminal"
+                          :job-id (str job-id)
+                          :state (str (:state job))})
+
+      :else
+      (let [agent-id (str (:agent-id job))
+            message (str "Cancelled by " caller
+                         (when reason (str ": " reason)))
+            finalized? (finalize-invoke-job!
+                        job-id "cancelled" "operator-cancelled" message
+                        {:ok false
+                         :error {:error/code :cancelled
+                                 :error/message message}}
+                        (:session-id job))
+            interrupt (interrupt-agent-process-tree! agent-id)
+            worker-interrupted? (boolean (interrupt-job-worker! job-id))]
+        (try (reg/mark-agent-idle! agent-id) (catch Throwable _))
+        (json-response 200 {:ok true
+                            :job-id (str job-id)
+                            :agent-id agent-id
+                            :state "cancelled"
+                            :finalized finalized?
+                            :worker-interrupted worker-interrupted?
+                            :process-interrupt interrupt})))))
+
 (defn- relay-invoke-delivery-over-ws!
   "Best-effort relay of a delivery receipt to a WS-connected agent node."
   [agent-id invoke-trace-id {:keys [surface destination delivered? note]}]
@@ -4685,8 +4813,10 @@
 (defn- handle-agent-get
   "GET /api/alpha/agents/:id — return a single agent's details."
   [_config agent-id]
-  (let [status (reg/registry-status)
-        agent (get-in status [:agents agent-id])]
+  (let [record (reg/get-agent agent-id)
+        registered-id (some-> record :agent/id :id/value str)
+        status (reg/registry-status)
+        agent (when registered-id (get-in status [:agents registered-id]))]
     (if agent
       (json-response 200 {:ok true :agent-id agent-id :agent agent})
       (json-response 404 {:ok false :error (str "Agent not found: " agent-id)}))))
@@ -6775,6 +6905,13 @@
           (and (= :post method) (= "/api/alpha/invoke/jobs/reap" uri))
           (let [n (reap-stale-invoke-jobs!)]
             (json-response 200 {:ok true :reaped n}))
+
+          ;; Explicit operator termination — the replacement for the wall-clock
+          ;; ceiling (README-agency-cap.md).
+          (and (= :post method) (re-matches #"/api/alpha/invoke/jobs/(.+)/cancel" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)/cancel" uri)
+                job-id (enc/decode-uri-component raw-id)]
+            (handle-cancel-invoke-job job-id request))
 
           (and (= :post method) (= "/api/alpha/invoke-stream" uri))
           (handle-invoke-stream request config)

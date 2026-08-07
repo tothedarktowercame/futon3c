@@ -92,7 +92,8 @@
     (let [store-dir (config/env "FUTON1B_STORE_DIR"
                                 (str (System/getProperty "user.home")
                                      "/code/futon1b/switchover-store"))
-          port (config/env-int "FUTON1B_PORT" 7074)]
+          port (config/env-int "FUTON1B_PORT" 7074)
+          bind-host (config/env "FUTON1B_BIND_HOST" "127.0.0.1")]
       (println (format "[dev] EMBEDDING futon1b XTDB2 node in-process (store %s, :%d) — the futon1b-server systemd unit MUST be stopped first"
                        store-dir port))
       ;; Preflight the port BEFORE f1b/start-server!, which opens the XTDB2
@@ -111,7 +112,9 @@
                      "       it must stay stopped: `systemctl --user stop futon1b-server`.\n"
                      "  To run the two-JVM setup on purpose instead: FUTON1B_EMBED=0 make dev.")
                 {:port port :store-dir store-dir})))
-      (let [server (f1b/start-server! {:store-dir store-dir :port port})]
+      (let [server (f1b/start-server! {:store-dir store-dir
+                                       :port port
+                                       :bind-host bind-host})]
         (reset! !f1b-embedded server)
         server))))
 

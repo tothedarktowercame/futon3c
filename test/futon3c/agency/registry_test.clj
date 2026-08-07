@@ -39,6 +39,56 @@
       (is (false? (:ok resp)))
       (is (= :invoke-error (:error/code (:error resp)))))))
 
+(deftest invoke-timeout-detaches-rather-than-killing
+  (testing "the deadline ends the caller's wait, not the work"
+    (let [finished (promise)]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "t-detach")
+        :type :codex
+        :invoke-fn (fn [_prompt _session-id]
+                     (Thread/sleep 200)
+                     (deliver finished true)
+                     {:result "late but real" :session-id "sid-detached"})
+        :capabilities [:edit]})
+      (let [resp (reg/invoke-agent! (fix/make-agent-id "t-detach") "hi" 50)]
+        (is (false? (:ok resp)))
+        (is (true? (get-in resp [:error :error/context :detached?]))
+            "callers must be able to tell 'still running' from 'nothing happened'")
+        ;; The old code called future-cancel here, interrupting the worker.
+        (is (true? (deref finished 3000 false))
+            "the turn runs to completion instead of being abandoned")
+        ;; And the lane is released by the real completion, not by the deadline.
+        (let [idle? (fn [] (= :idle (:agent/status (reg/get-agent "t-detach"))))]
+          (loop [n 0]
+            (when (and (not (idle?)) (< n 60))
+              (Thread/sleep 50)
+              (recur (inc n))))
+          (is (idle?) "the detached turn releases the lane when it really finishes"))))))
+
+(deftest invoke-prefers-the-three-arity-contract
+  (testing "a per-call timeout reaches an invoke-fn that accepts one"
+    (let [seen (atom ::none)]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "t-arity3")
+        :type :codex
+        :invoke-fn (fn
+                     ([p] (reset! seen ::one) {:result p})
+                     ([p _s] (reset! seen ::two) {:result p})
+                     ([p _s opts] (reset! seen (:timeout-ms opts)) {:result p}))
+        :capabilities [:edit]})
+      (reg/invoke-agent! (fix/make-agent-id "t-arity3") "hi" 5000)
+      (is (= 5000 @seen))))
+  (testing "a 2-arity invoke-fn still works and is not probed by exception"
+    (let [calls (atom 0)]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "t-arity2")
+        :type :codex
+        :invoke-fn (fn [p _s] (swap! calls inc) {:result p})
+        :capabilities [:edit]})
+      (let [resp (reg/invoke-agent! (fix/make-agent-id "t-arity2") "hi" 5000)]
+        (is (true? (:ok resp)))
+        (is (= 1 @calls) "the turn must be dispatched exactly once")))))
+
 ;; =============================================================================
 ;; Ported from futon3: no resurrect after unregister
 ;; =============================================================================
@@ -509,6 +559,32 @@
         (is (= :invoking (:status info)))
         (is (= 1 (:running-jobs info)))
         (is (= 1 (:nonterminal-jobs info)))))))
+
+(deftest invoke-publishes-status-transitions-to-federation-uplink
+  (testing "both invoking and idle transitions reach a peer-hosted agents HUD"
+    (let [uplink-announced (atom 0)
+          peer-statuses (atom [])]
+      (reg/register-agent!
+       {:agent-id (fix/make-agent-id "zai-federated")
+        :type :zai
+        :invoke-fn (fn [_ _] {:result "hi"})
+        :capabilities [:coordination/execute]})
+      (with-redefs [reg/*resolve-uplink-announce*
+                    (fn [] (fn [] (swap! uplink-announced inc)))
+                    reg/*resolve-peer-announce*
+                    (fn [] (fn [agent]
+                             (swap! peer-statuses conj (:agent/status agent))))]
+        (is (:ok (reg/invoke-agent! "zai-federated" "just say hi")))
+        (loop [attempt 0]
+          (when (and (or (< @uplink-announced 2)
+                         (< (count @peer-statuses) 2))
+                     (< attempt 100))
+            (Thread/sleep 10)
+            (recur (inc attempt))))
+        (is (= 2 @uplink-announced)
+            "invoke start and completion must each announce the uplink roster")
+        (is (= [:invoking :idle] @peer-statuses)
+            "HTTP peers must receive both runtime transitions")))))
 
 (deftest shutdown-all-clears-registry
   (testing "shutdown-all! removes all agents"

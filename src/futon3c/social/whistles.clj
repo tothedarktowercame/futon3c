@@ -88,7 +88,15 @@
      :agent-id       — target agent (string or TypedAgentId)
      :prompt         — the question/request to send
      :author         — who initiated the whistle (e.g. \"joe\", \"claude-1\")
-     :timeout-ms     — optional, default 3600000 (60 minutes)
+     :timeout-ms     — optional, default 3600000 (60 minutes). A whistle keeps
+                       a strict synchronous deadline because the caller is
+                       blocked on it — but the deadline ends the WAIT, not the
+                       WORK. On timeout the turn is detached and keeps running
+                       (the result carries :detached? true); it is not killed,
+                       and its result is not discarded. See
+                       README-agency-cap.md. Callers wanting a pollable handle
+                       should use POST /api/alpha/whistle, which returns 504
+                       with a job-id and status-url.
      :evidence-store — optional (emits coordination evidence if provided)
 
    Returns:

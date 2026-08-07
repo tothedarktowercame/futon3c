@@ -247,9 +247,40 @@
     (into ["cmd.exe" "/c"] cmd)
     cmd))
 
+(defn process-timeout-ms
+  "Effective wall-clock bound for one codex process. nil means unbounded.
+
+   Unbounded is the default. This adapter is not the lifecycle authority: the
+   durable job supervisor is (README-agency-cap.md). Destroying the process
+   here ends a turn the supervisor could still harvest, and it is the innermost
+   of several deadlines — which is why raising the outer ones never moved the
+   cliff.
+
+   Precedence:
+     1. FUTON3C_CODEX_PROCESS_TIMEOUT_MS — System property, then env. 0 or
+        negative restores 'unbounded'; any positive value is a hard bound.
+     2. the caller's TIMEOUT-MS — nil or non-positive means unbounded.
+
+   The override is read per call, not captured at registration, so an operator
+   can restore a bound on a live JVM whose invoke-fns already closed over the
+   old value."
+  [timeout-ms]
+  (let [raw (or (System/getProperty "FUTON3C_CODEX_PROCESS_TIMEOUT_MS")
+                (System/getenv "FUTON3C_CODEX_PROCESS_TIMEOUT_MS"))
+        override (when-not (str/blank? (str raw))
+                   (try (Long/parseLong (str/trim raw)) (catch Exception _ nil)))]
+    (cond
+      (some? override) (when (pos? override) override)
+      (and (number? timeout-ms) (pos? (long timeout-ms))) (long timeout-ms)
+      :else nil)))
+
 (defn run-codex-stream!
   "Run CMD with PROMPT-STR on stdin, streaming Codex JSONL output.
-   Returns {:exit :timed-out? :session-id :text :error-text :stderr :raw-output :execution}."
+
+   :timeout-ms is advisory — see process-timeout-ms. The returned
+   :timeout-ms is the bound actually applied (nil when unbounded).
+   Returns {:exit :timed-out? :timeout-ms :session-id :text :error-text
+            :stderr :raw-output :execution}."
   [cmd prompt-str {:keys [timeout-ms cwd on-event on-runtime-event on-process-started on-process-exit]}]
   (let [pb (ProcessBuilder. ^java.util.List (vec (process-cmd cmd)))
         _ (when-let [d (cwd/resolve-cwd cwd)]
@@ -385,8 +416,9 @@
                    (.getOutputStream proc)
                    java.nio.charset.StandardCharsets/UTF_8)]
       (.write w (str prompt-str "\n")))
-    (let [finished? (if (and (number? timeout-ms) (pos? (long timeout-ms)))
-                      (.waitFor proc (long timeout-ms) java.util.concurrent.TimeUnit/MILLISECONDS)
+    (let [effective-timeout-ms (process-timeout-ms timeout-ms)
+          finished? (if effective-timeout-ms
+                      (.waitFor proc (long effective-timeout-ms) java.util.concurrent.TimeUnit/MILLISECONDS)
                       (do
                         (.waitFor proc)
                         true))]
@@ -426,6 +458,7 @@
             (catch Throwable _)))
         {:exit exit
          :timed-out? (not finished?)
+         :timeout-ms effective-timeout-ms
          :session-id @sid*
          :text @text*
          :error-text (or @error*
@@ -450,18 +483,31 @@
    - :sandbox (default \"danger-full-access\")
    - :approval-policy (default \"never\")
    - :reasoning-effort (optional, e.g. low|medium|high)
-   - :timeout-ms hard process timeout in milliseconds (default 3600000)
+   - :timeout-ms default process bound in ms; nil (the default) is unbounded.
+     See process-timeout-ms — this is a registration-time default only.
    - :cwd (optional working directory)
-   - :on-event (optional fn called with each parsed stream event)"
+   - :on-event (optional fn called with each parsed stream event)
+
+   The returned fn accepts three arities:
+     (f prompt)
+     (f prompt session-id)
+     (f prompt session-id {:timeout-ms n})
+   The third exists so a per-call bound reaches the process. Previously the
+   only bound was the one captured here at registration, which made every
+   caller-supplied timeout unable to extend anything — it could only make an
+   outer layer give up sooner (README-agency-cap.md)."
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
            mcp-server
            on-event on-runtime-event on-process-started on-process-exit]
     :or {codex-bin "codex"
          sandbox "danger-full-access"
-         approval-policy "never"
-         timeout-ms 3600000}}]
-  (let [!lock (Object.)]
-    (fn [prompt session-id]
+         approval-policy "never"}}]
+  (let [!lock (Object.)
+        invoke-once
+        (fn [prompt session-id call-opts]
+          (let [timeout-ms (if (contains? call-opts :timeout-ms)
+                             (:timeout-ms call-opts)
+                             timeout-ms)]
       (locking !lock
         (try
           (let [prompt-str (coerce-prompt prompt)
@@ -520,7 +566,7 @@
                 (cond
                   (:timed-out? r2)
                   {:result nil :session-id sid2 :execution exec2
-                   :error (str "codex timed out after " timeout-ms "ms")}
+                   :error (str "codex timed out after " (:timeout-ms r2) "ms")}
                   (zero? (:exit r2))
                   {:result (or txt2 "[Codex produced no text response]")
                    :session-id sid2 :execution exec2}
@@ -534,7 +580,7 @@
                 (cond
                   timed-out?
                   {:result nil :session-id final-sid :execution exec
-                   :error (str "codex timed out after " timeout-ms "ms")}
+                   :error (str "codex timed out after " (:timeout-ms stream-result) "ms")}
                   (zero? exit)
                   {:result (or final-text "[Codex produced no text response]")
                    :session-id final-sid :execution exec}
@@ -545,4 +591,8 @@
           (catch Exception e
             {:result nil
              :session-id session-id
-             :error (str "codex invocation error: " (exception-summary e))}))))))
+             :error (str "codex invocation error: " (exception-summary e))})))))]
+    (fn
+      ([prompt] (invoke-once prompt nil nil))
+      ([prompt session-id] (invoke-once prompt session-id nil))
+      ([prompt session-id call-opts] (invoke-once prompt session-id call-opts)))))

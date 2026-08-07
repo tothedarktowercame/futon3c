@@ -289,6 +289,28 @@
           (finally
             (reset! @inflight #{})))))))
 
+(deftest async-emacsclient-keeps-independent-panel-lanes
+  (testing "one slow live panel does not suppress another on the same socket"
+    (let [script (doto (java.io.File/createTempFile "fake-emacsclient-" ".sh")
+                   (.deleteOnExit))
+          run-async #'futon3c.blackboard/run-emacsclient-async!
+          inflight #'futon3c.blackboard/!async-emacsclient-inflight]
+      (spit script "#!/usr/bin/env bash\nsleep 30\n")
+      (.setExecutable script true)
+      (with-redefs [bb/emacsclient-bin (fn [] (.getAbsolutePath script))]
+        (try
+          (reset! @inflight #{})
+          (is (= "timeout" (:output (run-async "one" "test-socket" :agents))))
+          (is (= "inflight" (:output (run-async "two" "test-socket" :agents))))
+          (is (= "timeout" (:output (run-async "tree" "test-socket" :job-tree))))
+          (is (contains? @@inflight ["test-socket" :agents]))
+          (is (contains? @@inflight ["test-socket" :job-tree]))
+          (finally
+            (doseq [_ (range 120)
+                    :while (seq @@inflight)]
+              (Thread/sleep 25))
+            (reset! @inflight #{})))))))
+
 ;; =============================================================================
 ;; project! — integration of render + blackboard!
 ;; =============================================================================

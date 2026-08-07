@@ -4,6 +4,32 @@
 (require 'agent-chat)
 (require 'claude-repl)
 
+(ert-deftest claude-repl-turn-identity-is-exact ()
+  (should (claude-repl--turn-event-matches-p
+           "turn-1" '((type . "done") (turn-id . "turn-1"))))
+  (should-not (claude-repl--turn-event-matches-p
+               "turn-1" '((type . "done") (turn-id . "turn-0"))))
+  (should-not (claude-repl--turn-event-matches-p
+               "turn-1" '((type . "done")))))
+
+(ert-deftest claude-repl-turn-mismatch-is-visible ()
+  (let ((marker (claude-repl--turn-mismatch-marker
+                 "turn-current" '((turn-id . "turn-earlier")))))
+    (should (string-match-p "reply for an earlier turn" marker))
+    (should (string-match-p "turn-current" marker))
+    (should (string-match-p "turn-earlier" marker))))
+
+(ert-deftest claude-repl-turn-identity-negotiates-rolling-deployment ()
+  (should (eq 'required
+              (claude-repl--turn-identity-mode
+               '((type . "started") (turn-id . "turn-new")))))
+  (should (eq 'legacy
+              (claude-repl--turn-identity-mode '((type . "started")))))
+  ;; A strict stream still rejects missing or foreign ids; only a stream whose
+  ;; first event advertised no capability takes the compatibility path.
+  (should-not (claude-repl--turn-event-matches-p
+               "turn-new" '((type . "done")))))
+
 (ert-deftest claude-repl-finds-buffer-by-session-id ()
   (let ((buf-a (generate-new-buffer " *claude-session-a*"))
         (buf-b (generate-new-buffer " *claude-session-b*")))

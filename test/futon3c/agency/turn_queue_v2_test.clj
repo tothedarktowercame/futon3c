@@ -83,6 +83,67 @@
         (is (true? (deref started 3000 false)) "processing began on the drainer thread, not the caller")
         (deliver gate true)))))                 ;; release so the drainer thread can finish
 
+(deftest finalizer-is-installed-before-queue-publication
+  ;; Regression for the intermittent complete-content-then-[interrupted]
+  ;; incident. Force the exact load-bearing branch: accept! observes the
+  ;; finalizer map synchronously, before accept-async! can return.
+  (with-temp-v2
+    (fn []
+      (let [installed? (atom false)
+            finalizers (var-get (ns-resolve 'futon3c.agency.turn-queue
+                                            '!finalizers))]
+        (with-redefs [turn-queue/accept!
+                      (fn [entry]
+                        (reset! installed? (contains? @finalizers (:id entry)))
+                        {:status :deduped :entry entry})]
+          (turn-queue/accept-async!
+           {:id "race-turn"
+            :to "agent-race"
+            :from "joe"
+            :surface "repl"
+            :process-fn (fn [_] {:result "fast"})
+            :finalize-fn identity}))
+        (is (true? @installed?)
+            "a drainer can never observe a published entry without its finalizer")))))
+
+(deftest exact-turn-id-dedup-does-not-steal-original-finalizer
+  (with-temp-v2
+    (fn []
+      (let [first-finalizer (fn [_] :first)
+            finalizers (var-get (ns-resolve 'futon3c.agency.turn-queue
+                                            '!finalizers))
+            observed (atom nil)]
+        (swap! finalizers assoc "same-turn" first-finalizer)
+        (with-redefs [turn-queue/accept!
+                      (fn [entry]
+                        (reset! observed (get @finalizers (:id entry)))
+                        {:status :deduped :entry entry})]
+          (turn-queue/accept-async!
+           {:id "same-turn" :to "agent-race" :process-fn identity
+            :finalize-fn (fn [_] :retry)}))
+        (is (identical? first-finalizer @observed))
+        (is (identical? first-finalizer (get @finalizers "same-turn"))
+            "an exact-id retry cannot replace or remove the original channel owner")))))
+
+(deftest exact-turn-id-dedup-does-not-steal-waiter-or-processor
+  (with-temp-v2
+    (fn []
+      (let [original-process (fn [_] {:result "original"})
+            accepted (turn-queue/accept!
+                      {:id "same-queue-id" :msg-id "same-msg"
+                       :to "agent-id-owner" :process-fn original-process})
+            waiters (var-get (ns-resolve 'futon3c.agency.turn-queue '!waiters))
+            processors (var-get (ns-resolve 'futon3c.agency.turn-queue '!processors))
+            original-waiter (get @waiters "same-queue-id")
+            duplicate (turn-queue/accept!
+                       {:id "same-queue-id" :msg-id "same-msg"
+                        :to "agent-id-owner" :process-fn (constantly {:result "retry"})})]
+        (is (= :queued (:status accepted)))
+        (is (= :deduped (:status duplicate)))
+        (is (identical? original-waiter (get @waiters "same-queue-id")))
+        (is (identical? original-process (get @processors "same-queue-id"))
+            "the original accepted turn remains the sole owner of its execution")))))
+
 (deftest accept-block-returns-terminal-result
   (with-temp-v2
     (fn []

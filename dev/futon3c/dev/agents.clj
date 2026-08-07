@@ -174,7 +174,7 @@
                     :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
                                          (config/env "CODEX_APPROVAL" "never"))
                     :reasoning-effort (config/env "CODEX_REASONING_EFFORT")
-                    :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 3600000) 3600000)
+                    :timeout-ms (config/env-int "CODEX_INVOKE_TIMEOUT_MS" nil)
                     :cwd (config/configured-codex-cwd)
                     :agent-id agent-id
                     :session-file session-file
@@ -397,7 +397,7 @@
                            :approval-policy (or (config/env "CODEX_APPROVAL_POLICY")
                                                 (config/env "CODEX_APPROVAL" "never"))
                           :reasoning-effort (config/env "CODEX_REASONING_EFFORT")
-                          :timeout-ms (or (config/env-int "CODEX_INVOKE_TIMEOUT_MS" 3600000) 3600000)
+                          :timeout-ms (config/env-int "CODEX_INVOKE_TIMEOUT_MS" nil)
                           :cwd (config/configured-codex-cwd)
                           :agent-id codex-agent-id
                           :session-file session-file

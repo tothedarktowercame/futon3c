@@ -135,14 +135,26 @@
 ;; =============================================================================
 
 (deftest env-overrides-parse-with-fallback
-  (testing "(e) env overrides parse + fallback"
-    ;; With no env var set, defaults apply
+  (testing "(e) settings parse + fallback"
+    ;; The soft cap still has a positive default — it drives the observational
+    ;; 'overrun' transition.
     (is (pos? (job-cap-ms)))
-    (is (pos? (job-ceiling-ms)))
-    (is (<= (job-cap-ms) (job-ceiling-ms))
-        "ceiling must be >= cap")
-    ;; ceiling defaults to 2x cap
-    (is (= (* 2 (job-cap-ms)) (job-ceiling-ms)))))
+    ;; The hard ceiling does NOT. Unset means no wall-clock termination:
+    ;; wall clock is an SLA signal, not evidence of stuckness.
+    (is (nil? (job-ceiling-ms))
+        "no ceiling is configured by default — turns end by cancel, not clock")))
+
+(deftest ceiling-is-opt-in-via-setting
+  (testing "an operator can restore a hard ceiling, and 0 means 'none'"
+    (try
+      (System/setProperty "FUTON3C_JOB_CEILING_MS" "90000")
+      (is (= 90000 (job-ceiling-ms)))
+      (System/setProperty "FUTON3C_JOB_CEILING_MS" "0")
+      (is (nil? (job-ceiling-ms))
+          "0 reads as 'no ceiling', not as 'terminate immediately'")
+      (finally
+        (System/clearProperty "FUTON3C_JOB_CEILING_MS")))
+    (is (nil? (job-ceiling-ms)))))
 
 ;; =============================================================================
 ;; Cap -> overrun tests (a)
@@ -167,19 +179,32 @@
 ;; =============================================================================
 
 (deftest overrun-past-ceiling-becomes-timeout
-  (testing "(b) job passing ceiling -> state 'timeout', terminal-code set"
+  (testing "(b) with a ceiling configured, an overrun job past it -> 'timeout'"
     (setup-overrun-job! "job-ceil-1" "agent-ceil-1" (* 80 60 1000)) ;; 80 min ago
-    (let [n (reap-stale-invoke-jobs!)]
-      (is (pos? n))
-      (is (= "timeout" (job-state "job-ceil-1")))
-      (is (= "job-ceiling-exceeded" (job-terminal-code "job-ceil-1"))))))
+    (with-redefs [http/job-ceiling-ms (constantly (* 70 60 1000))]
+      (let [n (reap-stale-invoke-jobs!)]
+        (is (pos? n))
+        (is (= "timeout" (job-state "job-ceil-1")))
+        (is (= "job-ceiling-exceeded" (job-terminal-code "job-ceil-1")))))))
+
+(deftest overrun-past-old-ceiling-survives-by-default
+  (testing "with no ceiling configured, a long overrun job is NOT reaped"
+    ;; The regression this whole change exists to prevent: a turn that was
+    ;; still working got force-terminated with state=failed and an empty
+    ;; result, losing work already written to disk (README-agency-cap.md).
+    (setup-overrun-job! "job-ceil-live" "agent-ceil-live" (* 600 60 1000)) ;; 10h
+    (reap-stale-invoke-jobs!)
+    (is (= "overrun" (job-state "job-ceil-live"))
+        "an overrun job stays live and pollable; only cancel ends it")
+    (is (nil? (job-terminal-code "job-ceil-live")))))
 
 (deftest ceiling-finalize-marks-agent-idle
   (testing "ceiling timeout marks the agent idle"
     (register-mock-agent! "agent-ceil-2")
     (reg/update-agent! "agent-ceil-2" :agent/status :invoking)
     (setup-overrun-job! "job-ceil-2" "agent-ceil-2" (* 80 60 1000))
-    (reap-stale-invoke-jobs!)
+    (with-redefs [http/job-ceiling-ms (constantly (* 70 60 1000))]
+      (reap-stale-invoke-jobs!))
     (is (= :idle (agent-status "agent-ceil-2"))
         "agent must be :idle after ceiling timeout")))
 
@@ -192,7 +217,8 @@
              (update-in ledger [:jobs "job-ceil-3"]
                         #(assoc % :events [{:type "tool_use" :tools ["Bash"] :previews ["Bash ls"]}]
                                   :event-seq 1))))
-    (reap-stale-invoke-jobs!)
+    (with-redefs [http/job-ceiling-ms (constantly (* 70 60 1000))]
+      (reap-stale-invoke-jobs!))
     (is (= "timeout" (job-state "job-ceil-3")))
     (let [execution (job-execution "job-ceil-3")]
       (is (true? (:executed execution))
@@ -217,8 +243,12 @@
     (register-invoke-agent! "agent-fast" :codex
                             (fn [_ _] {:result "on time" :session-id "s-fast"}))
     (create-job! "job-fast" "agent-fast" "caller-1")
-    (with-redefs [http/job-ceiling-ms (constantly 200)]
-      (let [result (run-job! "job-fast" "agent-fast" 100)]
+    ;; Budgets are generous on purpose. The assertion is about semantics — an
+    ;; on-time turn records no overrun — and at a 100ms budget it was really
+    ;; measuring scheduler latency, so it failed whenever test ordering put a
+    ;; heavier namespace first.
+    (with-redefs [http/job-ceiling-ms (constantly 10000)]
+      (let [result (run-job! "job-fast" "agent-fast" 5000)]
         (is (= "done" (:terminal-state result)))
         (is (= "done" (job-state "job-fast")))
         (is (empty? (job-events "job-fast" "overrun")))
@@ -284,6 +314,77 @@
       (is (= "timeout" (job-state "job-finalize-race")))
       (is (= 1 (count (job-events "job-finalize-race" "timeout"))))
       (is (= 1 (count @bellbacks))))))
+
+;; =============================================================================
+;; No ceiling: the worker stays authoritative
+;; =============================================================================
+
+(deftest overrun-turn-without-ceiling-still-finalizes-done
+  (testing "past the soft cap with no ceiling, the turn keeps running and wins"
+    (register-invoke-agent! "agent-slow" :codex
+                            (fn [_ _]
+                              (Thread/sleep 200)
+                              {:result "slow but real" :session-id "s-slow"}))
+    (register-invoke-agent! "caller-1" :claude
+                            (fn [_ _] {:result "ack" :session-id nil}))
+    (create-job! "job-slow" "agent-slow" "caller-1")
+    (let [bellbacks (atom [])]
+      ;; job-ceiling-ms is nil by default — no with-redefs, that IS the policy.
+      (with-redefs [http/*enqueue-auto-bellback!* #(swap! bellbacks conj %)]
+        (let [result (run-job! "job-slow" "agent-slow" 15)]
+          (is (= "done" (:terminal-state result))
+              "the result is harvested, not discarded at the cap")))
+      (is (= "done" (job-state "job-slow")))
+      (is (= 1 (count (job-events "job-slow" "overrun")))
+          "the cap still records an observational overrun checkpoint")
+      (is (= 1 (count @bellbacks)))
+      (is (= :idle (agent-status "agent-slow"))))))
+
+;; =============================================================================
+;; Explicit cancellation is the replacement for the clock
+;; =============================================================================
+
+(defn- cancel-job!
+  [job-id body]
+  (#'http/handle-cancel-invoke-job
+   job-id {:request-method :post
+           :uri (str "/api/alpha/invoke/jobs/" job-id "/cancel")
+           :body body}))
+
+(deftest cancel-finalizes-a-running-job
+  (testing "an operator can end a live job explicitly"
+    (register-mock-agent! "agent-cancel-1")
+    (reg/update-agent! "agent-cancel-1" :agent/status :invoking)
+    (setup-running-job! "job-cancel-1" "agent-cancel-1" 1000)
+    (let [response (cancel-job! "job-cancel-1" "{\"caller\":\"joe\",\"reason\":\"wedged\"}")]
+      (is (= 200 (:status response)))
+      (is (= "cancelled" (job-state "job-cancel-1")))
+      (is (= "operator-cancelled" (job-terminal-code "job-cancel-1")))
+      (is (= :idle (agent-status "agent-cancel-1"))))))
+
+(deftest cancel-records-caller-and-reason
+  (testing "the terminal message names who cancelled and why"
+    (setup-running-job! "job-cancel-2" "agent-cancel-2" 1000)
+    (cancel-job! "job-cancel-2" "{\"caller\":\"joe\",\"reason\":\"superseded\"}")
+    (let [msg (:terminal-message (get-in @@#'http/!invoke-jobs-ledger [:jobs "job-cancel-2"]))]
+      (is (re-find #"joe" msg))
+      (is (re-find #"superseded" msg)))))
+
+(deftest cancel-tolerates-empty-body
+  (testing "cancel works without a JSON body"
+    (setup-running-job! "job-cancel-3" "agent-cancel-3" 1000)
+    (is (= 200 (:status (cancel-job! "job-cancel-3" nil))))
+    (is (= "cancelled" (job-state "job-cancel-3")))))
+
+(deftest cancel-is-404-and-409-on-bad-targets
+  (testing "unknown job -> 404; already-terminal job -> 409"
+    (is (= 404 (:status (cancel-job! "job-does-not-exist" nil))))
+    (setup-running-job! "job-cancel-4" "agent-cancel-4" 1000)
+    (#'http/finalize-invoke-job! "job-cancel-4" "done" nil nil {:ok true :result "r"} nil)
+    (let [response (cancel-job! "job-cancel-4" nil)]
+      (is (= 409 (:status response)))
+      (is (= "done" (job-state "job-cancel-4"))
+          "cancelling a finished job must not rewrite its outcome"))))
 
 ;; =============================================================================
 ;; Reconcile treats overrun as live (d)

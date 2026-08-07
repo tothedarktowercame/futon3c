@@ -24,6 +24,59 @@
            (ws-invoke/invoke! "agent-2" "slow" nil 10)))
     (ws-invoke/unregister! "agent-2")))
 
+(deftest ws-invoke-nil-timeout-waits-indefinitely
+  (testing "a nil/non-positive timeout waits for the agent instead of imposing one"
+    (let [sent (promise)]
+      (ws-invoke/register! "agent-unbounded" #(deliver sent %))
+      (let [f (future (ws-invoke/invoke! "agent-unbounded" "hi" nil nil))
+            invoke-id (:invoke_id (json/parse-string @sent true))]
+        ;; Comfortably past the old 60-minute-equivalent decision point: the
+        ;; call is still waiting, not sentinel-ed.
+        (is (= ::still-waiting (deref f 150 ::still-waiting)))
+        (ws-invoke/resolve! "agent-unbounded" invoke-id {:result "late but real"})
+        (is (= {:result "late but real"} (deref f 500 nil))))
+      (ws-invoke/unregister! "agent-unbounded"))))
+
+(deftest ws-disconnect-releases-unbounded-callers
+  (testing "an unbounded caller is released when its socket dies, not left forever"
+    ;; Without this, removing the WS deadline would trade a lost result for a
+    ;; permanently wedged lane: no clock remains to rescue the blocked caller.
+    (let [sent (promise)]
+      (ws-invoke/register! "agent-drop" #(deliver sent %))
+      (let [f (future (ws-invoke/invoke! "agent-drop" "hi" nil nil))]
+        @sent
+        (is (= ::still-waiting (deref f 100 ::still-waiting)))
+        (ws-invoke/unregister! "agent-drop")
+        (is (= ws-invoke/disconnected-result (deref f 1000 ::never-released))))))
+  (testing "a closed connection releases callers via unregister-current!"
+    (let [sent (promise)
+          conn (Object.)]
+      (ws-invoke/register! "agent-closed" #(deliver sent %) {:connection conn})
+      (let [f (future (ws-invoke/invoke! "agent-closed" "hi" nil nil))]
+        @sent
+        (is (true? (ws-invoke/unregister-current! "agent-closed" conn)))
+        (is (= ws-invoke/disconnected-result (deref f 1000 ::never-released)))))))
+
+(deftest ws-invoke-late-result-is-harvested-not-dropped
+  (testing "a result arriving after the caller gave up reaches the late handler"
+    (let [sent (promise)
+          late (atom nil)]
+      (ws-invoke/register! "agent-late" #(deliver sent %))
+      (ws-invoke/set-late-result-handler! #(reset! late %))
+      (try
+        (let [outcome (future (ws-invoke/invoke! "agent-late" "slow" nil 20))
+              invoke-id (:invoke_id (json/parse-string @sent true))]
+          (is (= ws-invoke/timeout-sentinel (deref outcome 500 nil)))
+          ;; The old code dissoc'd the pending entry here, so resolve! returned
+          ;; false and the agent's real reply was discarded.
+          (is (true? (ws-invoke/resolve! "agent-late" invoke-id {:result "done anyway"})))
+          (is (= "agent-late" (:agent-id @late)))
+          (is (= invoke-id (:invoke-id @late)))
+          (is (= {:result "done anyway"} (:result @late))))
+        (finally
+          (ws-invoke/set-late-result-handler! nil)
+          (ws-invoke/unregister! "agent-late"))))))
+
 (deftest ws-observer-broadcast-only
   (testing "observers receive broadcasts but are never invoke targets (I-1)"
     (let [obs-sent (atom [])

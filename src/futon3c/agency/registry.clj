@@ -66,6 +66,15 @@
     (when-let [uplink-ns (find-ns 'futon3c.agency.fed-uplink)]
       (ns-resolve uplink-ns 'announce!))))
 
+(def ^:dynamic *resolve-peer-announce*
+  "Best-effort resolver for futon3c.agency.federation/announce!.
+   Returns a one-argument fn accepting the local agent record, or nil. This is
+   separate from the WS-uplink roster announcement: a node may have HTTP peers
+   and no uplink, as the Amsterdam worker does."
+  (fn []
+    (when-let [fed-ns (find-ns 'futon3c.agency.federation)]
+      (ns-resolve fed-ns 'announce!))))
+
 (def ^:dynamic *resolve-site-prefix*
   "Best-effort resolver for futon3c.agency.federation/site-prefix.
    Returns a 0-arity fn or nil. Kept dynamic to avoid a registry -> federation
@@ -150,6 +159,18 @@
    :error/context (or context {})})
 
 (defn- now [] (Instant/now))
+
+(defn- activity-quiet-ms
+  "Milliseconds since AT — how long an invoking lane has been silent.
+
+   This is the number that separates a working lane from a stuck one. Job
+   wall-clock age cannot: a bell past the soft cap is expected to keep running
+   (README-agency-cap.md), so age alone reads the same for both."
+  [at]
+  (when at
+    (try
+      (max 0 (- (System/currentTimeMillis) (.toEpochMilli ^Instant at)))
+      (catch Throwable _ nil))))
 
 (defn- invoke-routing-info
   "Compute invoke routing readiness for an agent record.
@@ -258,6 +279,19 @@
       (try
         (announce-fn)
         (catch Throwable _ nil)))))
+
+(defn- announce-peer-agent!
+  "Push one local agent's current runtime state to configured HTTP peers."
+  [agent-id]
+  (when-let [agent (get @!registry agent-id)]
+    (when-not (get-in agent [:agent/metadata :proxy?])
+      (when-let [announce-fn (try
+                               (*resolve-peer-announce*)
+                               (catch Throwable _ nil))]
+        (future
+          (try
+            (announce-fn agent)
+            (catch Throwable _ nil)))))))
 
 (defn publish-agents-status!
   "Publish the current agent status snapshot to local and WS agent HUDs.
@@ -805,8 +839,11 @@
    (let [invoke-options (if (map? invoke-options)
                           invoke-options
                           {:timeout-ms invoke-options})
-         aid-val (agent-id-value typed-id)]
-     (if-let [agent (get @!registry aid-val)]
+         requested-aid-val (agent-id-value typed-id)
+         resolved-agent (get-agent typed-id)
+         aid-val (or (some-> resolved-agent :agent/id :id/value str)
+                     requested-aid-val)]
+     (if-let [agent resolved-agent]
        (let [invoke-fn (:agent/invoke-fn agent)
              routing-info (invoke-routing-info aid-val agent)
              current-session (:agent/session-id agent)
@@ -841,10 +878,22 @@
                                                              (assoc :invoke-started-at (str (:agent/invoke-started-at a))
                                                                     :invoke-prompt-preview (:agent/invoke-prompt-preview a))
                                                              (:agent/invoke-activity a)
-                                                             (assoc :invoke-activity (:agent/invoke-activity a)))])
+                                                             (assoc :invoke-activity (:agent/invoke-activity a))
+                                                             (:agent/invoke-activity-at a)
+                                                             (assoc :invoke-activity-at
+                                                                    (str (:agent/invoke-activity-at a))
+                                                                    :invoke-quiet-ms
+                                                                    (activity-quiet-ms
+                                                                     (:agent/invoke-activity-at a))))])
                                                     @!registry))
                                  :count (count @!registry)})
-                               (broadcast-agents-ws!))
+                               (broadcast-agents-ws!)
+                               ;; The operator HUD may be on a federation peer.
+                               ;; Local projection alone left that proxy frozen
+                               ;; at its boot-time state while this box was
+                               ;; actively invoking the lane.
+                               (announce-uplink-roster!)
+                               (announce-peer-agent! aid-val))
              mark-invoking! (fn []
                               (swap! !registry
                                      (fn [m]
@@ -869,6 +918,7 @@
                                                     :agent/invoke-started-at nil
                                                     :agent/invoke-prompt-preview nil
                                                     :agent/invoke-activity nil
+                                                    :agent/invoke-activity-at nil
                                                     :agent/invoke-event-sink nil}))
                                      m)))
                           (project-agents!)
@@ -895,19 +945,41 @@
                                   (let [f (future (call-invoke))
                                         v (deref f timeout-ms ::timeout)]
                                     (if (= v ::timeout)
-                                      (do (future-cancel f)
-                                          {:error "timeout" :exit-code -1 :timeout-ms timeout-ms})
+                                      ;; Detach, do NOT cancel. future-cancel
+                                      ;; interrupts this thread but does not kill
+                                      ;; the codex child, so the old behaviour left
+                                      ;; a live orphan writing files with nobody
+                                      ;; listening, and discarded a result that
+                                      ;; often landed seconds later. The caller's
+                                      ;; deadline ends the caller's WAIT; ending
+                                      ;; the WORK is the job supervisor's call
+                                      ;; (README-agency-cap.md).
+                                      (do
+                                        ;; Keep the lane :invoking until the turn
+                                        ;; really finishes, so a detached turn is
+                                        ;; not double-dispatched, and release it
+                                        ;; with the session-id it actually returns.
+                                        (future
+                                          (let [late (try @f (catch Throwable _ nil))]
+                                            (mark-idle! (:session-id late))))
+                                        {:error "timeout" :exit-code -1
+                                         :timeout-ms timeout-ms :detached? true})
                                       v))
                                   (call-invoke))
                      {:keys [result session-id error]} result-map]
-                 (mark-idle! session-id)
+                 (when-not (:detached? result-map)
+                   (mark-idle! session-id))
                  (if error
                    {:ok false
                     :error (make-social-error
                             :invoke-error
                             (str error)
                             :agent-id aid-val
-                            :timeout-ms (:timeout-ms result-map))}
+                            :timeout-ms (:timeout-ms result-map)
+                            ;; :detached? true means the turn is STILL RUNNING —
+                            ;; the caller stopped waiting, the work did not stop.
+                            ;; Callers must not read this as "no work happened".
+                            :detached? (boolean (:detached? result-map)))}
                    (let [invoke-meta (not-empty (dissoc result-map :result :session-id :error))
                          final-agent (get @!registry aid-val)]
                      (when (and final-agent
@@ -1014,13 +1086,23 @@
 (defn update-invoke-activity!
   "Update the current activity string for an invoking agent.
    Called from invoke-fn stream parsers to surface tool use, thinking, etc.
-   Does NOT trigger a blackboard refresh — the ticker handles that every 5s."
+   Does NOT trigger a blackboard refresh — the ticker handles that every 5s.
+
+   Stamps :agent/invoke-activity-at as well. An activity string with no time on
+   it cannot be told apart from a stale one: on 2026-08-03 three codex lanes
+   past the soft cap read `invoke-activity \"using bash\"` with `last-active`
+   from BEFORE the job started, and were reported wedged. They were working —
+   burning CPU on live keepalive'd sockets. The age is what distinguishes
+   `using bash (3s ago)` from `using bash (51m ago)`; without it, wall-clock
+   age of the job is the only signal left, and that is an SLA number, not
+   evidence of stuckness (see README-agency-cap.md)."
   [agent-id-val activity-str]
   (swap! !registry
          (fn [m]
            (if-let [a (get m agent-id-val)]
              (assoc m agent-id-val
-                    (assoc a :agent/invoke-activity activity-str))
+                    (assoc a :agent/invoke-activity activity-str
+                             :agent/invoke-activity-at (now)))
              m))))
 
 (defn mark-agent-idle!
@@ -1043,7 +1125,8 @@
                                 :agent/status :idle
                                 :agent/invoke-started-at nil
                                 :agent/invoke-prompt-preview nil
-                                :agent/invoke-activity nil})))
+                                :agent/invoke-activity nil
+                                :agent/invoke-activity-at nil})))
                m)))
     @transitioned?))
 
@@ -1430,7 +1513,8 @@
                         invoke-activity (or (:agent/invoke-activity agent)
                                             (:activity external-invoke)
                                             (when external-codex-invoking?
-                                              "codex exec running (external surface)"))]
+                                              "codex exec running (external surface)"))
+                        invoke-activity-at (:agent/invoke-activity-at agent)]
                     [aid (cond-> {:type (:agent/type agent)
                                   :id (:agent/id agent)
                                   :session-id session-id
@@ -1460,6 +1544,9 @@
                                   :invoke-prompt-preview invoke-prompt-preview)
                            invoke-activity
                            (assoc :invoke-activity invoke-activity)
+                           invoke-activity-at
+                           (assoc :invoke-activity-at (str invoke-activity-at)
+                                  :invoke-quiet-ms (activity-quiet-ms invoke-activity-at))
                            surface-projection
                            (assoc :surface-projection
                                   (dissoc surface-projection :started-at :updated-at)))]))
