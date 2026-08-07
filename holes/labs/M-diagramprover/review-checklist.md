@@ -2,77 +2,149 @@
 
 Working document. **Not part of the paper.** Tracks what the independent
 adversarial review (`futon6/holes/TN-codex-review-of-capability-proof-arxiv.md`,
-codex-5) found, what has been corrected in the paper, and what is still
-outstanding. The paper itself states only current fact plus explicit
-*pending rerun* markers; the reasoning about how it got there lives here.
+codex-5) found, what has been corrected, and what is outstanding. The paper
+states current fact plus explicit *pending rerun* markers; the reasoning about
+how it got there lives here.
 
-Status key: **DONE** corrected in the paper · **PENDING RERUN** needs compute
-before the paper can claim it · **OPEN** needs a decision or a fix ·
-**WONTFIX** deliberate, with reason.
-
----
-
-## Verified by the review — no action
-
-The entire object-level census reproduced from artifacts by an independent
-agent: 320,337 S1 marks (and every kind sub-count); 883 nodes / 419 edges / 410
-holes; 280 scopes over 20 kinds; 358 typed boxes in 8 methods; 198 carried
-sorry-holes; missing-warrant 222/383 = 57.96%; 88 typed / 10 cyclic / 0 failed;
-entropy gate 0.02 off-diagonal cosine, macro entropy 0.53, PASS.
-
-This is the part of the paper that was checked mechanically as it was produced,
-and it held. Everything below was asserted in prose.
+Status key: **DONE** corrected in the paper · **PENDING RERUN** needs compute ·
+**OPEN** needs a fix or decision · **RECLASSIFY** a readiness card is mislabelled.
 
 ---
 
-## Corrections applied to the paper
+## 0. The finding that changes how to read the rest
 
-| # | Finding | Was | Now | Status |
-|---|---|---|---|---|
-| 1 | `e2e-16` ledger incomplete | "S1–S12 ledgered 12/12" | A12 marked **partial**: 12/12 ledgered, 9 executed under this corpus id, 3 pending rerun | **DONE** |
-| 2 | A10 id collision | "10 paper signatures", twin-sim 0.75 | 9 signatures (papers with ≥2 proofs); twin similarity marked *pending recomputation* | **DONE** |
-| 3 | A6 contradicted by its own producer | "ledgered; orphan check clean" | **weak**: 12 objects for 16 papers, `wellformed:false` ×2, 33 orphans, output outside the RETRIEVE path | **DONE** |
-| 4 | A3 retry rate | 48% | 45.9% (45/98 finals carry a retry), definition stated | **DONE** |
-| 5 | A3 gate selection | "98/98 gated PASS" | qualified: passes *when finals are selected explicitly*; the directory gate also sees 98 `.rung2` reports and fails on them | **DONE** |
-| 6 | A8 "95 theorems" not derivable | asserted alongside 446/286 | export stated as 446 nodes / 286 edges (88 Proof + 358 Step); XTDB figures cited to their separate artifact | **DONE** |
-| 7 | A2 substrate wording | "substrate-corpus match measured" | adds that the stage *checks* a shipped substrate rather than rebuilding per corpus; corpus-fresh rebuild is H1 tier 2 | **DONE** |
-| 8 | S4 filled slots composition | 222 listed as 83+34+22+13+11 = 163 | shows the omitted `slot: 59` generic category | **DONE** |
-| 9 | A1/A2 paper counts | 12/12 | 16/16 | **DONE** |
-| 10 | S1 census not reproducible as shipped | implied byte-stable | notes the frozen manifest is required; default scan reads a mutable directory | **DONE** |
+**A ledger entry is weaker evidence than the paper treated it as.** The DAG
+contract requires each record to carry output, fingerprint, a structured gate
+result, reuse flag, timestamp, and run/corpus identity. `ledger_record` writes
+four fields:
+
+```json
+{"stage":"S5","corpus_id":"…","run_id":"…","gate":"pass"}
+```
+
+and it writes that record *after the command exits* — including when the stage's
+criterion is only **printed for a human** and never executed, and `--mark-done`
+can synthesise the same record with no output at all. So "12/12 ledgered" was
+never the integration warrant it sounded like: for several stages it certifies
+that a command ran, not that its criterion held.
+
+This is upstream of most of §1 and §3 below. Fixing the ledger record is worth
+more than any individual stage repair, because it converts the whole ledger from
+a claim into evidence.
 
 ---
 
-## Pending rerun — the paper marks these, the compute is outstanding
+## 1. Corrections applied to the paper
 
-| # | Item | What is needed | Cost |
+| # | Finding | Now says | Status |
 |---|---|---|---|
-| R1 | **Clean single-corpus execution of S3/S4/S7** under `math-ct-e2e-16` | The artifacts are the same 98 graphs from the same 16 papers; only the label differs. A clean run removes the caveat from A12 entirely. | ~2 days CPU on Zone (LLM stages), or hours on any GPU host |
-| R2 | **Paper-twin similarity recomputation** | The prior 0.75 was computed over a partition in which legacy ids collapsed. Recompute after the id fix. | Seconds — needs only `clean_paper_signature` re-run, but wants R1's clean embed to be quotable |
-| R3 | **A3′ anchor validation at volume** | H21's fix is validated at n=3 (3/3 exact vs 41% baseline). Needs enough re-mined proofs to warrant. | Hours CPU; re-mine ~30 proofs under the numbered prompt |
+| 1 | `e2e-16` ledger held 4 stages, not 12 | A12 **partial**: 12/12 ledgered, 9 executed under this id, 3 pending rerun | **DONE** |
+| 2 | A10 id collision (legacy ids → a paper named `math`) | 9 signatures (papers with ≥2 proofs); twin similarity *pending recomputation* | **DONE** |
+| 3 | A6 contradicted by its producer's own `wellformed` field | **weak**: 12 objects for 16 papers, 2 false, 33 orphans, output outside RETRIEVE | **DONE** |
+| 4 | A3 retry rate | 45.9% (45/98), definition stated | **DONE** |
+| 5 | A3 gate selection | qualified: passes when finals are selected explicitly | **DONE** |
+| 6 | A8 "95 theorems" not derivable | export = 446 nodes / 286 edges (88 Proof + 358 Step); XTDB cited to its own artifact | **DONE** |
+| 7 | A2 substrate wording | stage *checks* a shipped substrate; corpus-fresh rebuild is H1 tier 2 | **DONE** |
+| 8 | S4 slots composition omitted a category | shows `slot: 59` | **DONE** |
+| 9 | A1/A2 paper counts | 16/16 | **DONE** |
+| 10 | S1 census not reproducible as shipped | notes the frozen manifest requirement | **DONE** |
 
 ---
 
-## Open — needs a fix or a decision
+## 2. Pending rerun
 
-| # | Item | Note |
+| # | Item | Needs | Cost |
+|---|---|---|---|
+| R1 | Clean single-corpus execution of S3/S4/S7 | removes A12's caveat entirely | ~2 days CPU on Zone, hours on a GPU host |
+| R2 | Paper-twin similarity recomputation | prior figure used a collapsed partition | seconds, but wants R1's embed to be quotable |
+| R3 | A3′ anchor validation at volume | H21 validated only at n=3 | hours CPU, ~30 re-mined proofs |
+
+---
+
+## 3. Open defects, by severity
+
+### 3a. Release blockers for an unattended run
+
+| # | Item |
+|---|---|
+| B1 | **The stepper exits 0 on refusal, command failure, and gate failure.** Demonstrated: `✗ S1 BLOCKED … PROCESS_EXIT= 0`. An outer scheduler records success while the stepper reports it stopped. |
+| B2 | **The ledger record is weaker than the contract** (§0). Add output path, fingerprint, structured gate result, reuse flag, timestamp; stop writing `pass` when the criterion was merely printed. |
+| B3 | **The machine DAG and the runnable stages are different pipelines.** `load_deps()` reads `superpod-dag-contract.md`, whose block still uses *old* semantics (S4 clean, S5 strategy, S6 comprehension, S7 embedding) against OPS's corrected ones (S4 expository, S5 comprehension, S6 paper graph, S7 CLean). Consequences: S5 depends only on S1; S6 omits its S4 dependency; S7 depends on old S4; **S10–S12 have no dependencies at all**. The completeness guard proves completion of a graph the runner does not execute. |
+| B4 | **`.rung2.edn` reports are globbed as proof graphs** in the S3 post-gate, the S3 wrapper's eval tail, S5, and S7's inputs. One root cause, four symptoms; it is why S3's directory gate fails on its own sidecars and why S5 emits 98 spurious `no-structure` rows. |
+| B5 | **S9 masks its first sub-command with `;`** — the same class as the S11 defect already fixed. Audit every stage command for `;` between sub-steps. |
+
+### 3b. Stage-level gaps (from the review's stage table)
+
+| Stage | Gap |
+|---|---|
+| S2 | Corpus-fresh substrate **producers never invoked**: `build_term_prior.py`, `build_concept_encyclopedia.py`, `sfc_concept_index.py`. H1 tier 2 is genuinely open. |
+| S4 | Region cap still out-of-band (H10); no stage-level gate command. |
+| S5 | Sub-stages absent as executables: `iatc_semcheck.bb`, `cas_select.py`, `cas_checks.py`, `cas_cert.py`, `sfc_symbol_grounding.py`, `rung3_residue_llm.py`, `warrant_normalize.py`. Criterion printed, not checked. |
+| S6 | Does not consume exposition or concepts; writes `data/paper-graphs` instead of `data/iatc-paper-graphs/$RUN_ID`; returns 0 with `wellformed:false`; no gate. |
+| S7 | Omits `clean_argcheck.bb`; does not pass run-specific output dirs. |
+| S8 | `clean_to_lean.py` and export/load smoke tests not invoked; no gate. |
+| S10 | Reground outputs still not persisted as run artifacts; lift criterion not executable. |
+| S11 | `sfc_struct_canon` can emit a *refusal* artifact and exit successfully — no gate distinguishes measured from refused. |
+| S12 | Injected outside the machine DAG, no dependencies; `rising` printed rather than enforced. |
+| render / RETRIEVE | `render_run.py` and `build_proofcheck_demo.py` exist but no stage invokes them; S6's real output path is not in the retrieval manifest. |
+
+### 3c. Documentation / hygiene
+
+| # | Item |
+|---|---|
+| D1 | Hazard close-count not mechanically derivable — `E-superpod-hardening.md` is prose with sub-hazards and stale headings. Make it a state table or stop quoting a count. |
+| D2 | Source/PDF hash drift — record both together on any handoff. |
+| D3 | The launch playbook should record the **actual served model name** (`/v1/models`) and export `FUTON6_EPRINTS`; preflight correctly reported 7/9 in a clean environment for exactly these two. |
+
+---
+
+## 4. Readiness-card reclassification
+
+The dashboard's 2 `build` + 7 `partial` cards are mostly mislabelled. Codex's
+classification, which matches the operator's RAW-CTL intuition:
+
+| Card | Actual class | Note |
 |---|---|---|
-| O1 | **S3 directory gate treats `.rung2` reports as graphs** | The stage's own gate fails on its own sidecar files; the component result is sound only because finals are selected by hand. Fix the gate's glob. |
-| O2 | **S5 output contains 98 spurious `no-structure` rows** | Same root cause as O1 — rung-2 reports processed as graphs. The paper's 6/82/10 distribution silently selects the valid half. |
-| O3 | **S9 masks its first sub-command's failure with `;`** | Same defect class as the S11 one already fixed (H22). Audit every stage command for `;` between sub-steps. |
-| O4 | **Stepper can exit 0 after reporting a refusal or gate failure** | Process exit code does not reflect stage outcome, so a caller cannot detect failure without parsing stdout. |
-| O5 | **A6: S6 writes outside the RETRIEVE path** | `paper_graph_assemble` defaults to `data/paper-graphs`; RETRIEVE collects `data/iatc-paper-graphs/$RUN_ID`. Also: 2 objects `wellformed:false`, 33 orphans, and the promised expository-edge pass does not exist in S6. |
-| O6 | **Hazard close-count not mechanically derivable** | `E-superpod-hardening.md` is prose with sub-hazards (H11b, H12b, H19b/c) and stale status headings. Either make it a state table with one row per hazard, or stop quoting a count in the paper. |
-| O7 | **DAG contract describes an older stage numbering** | The contract and the runnable `OPS` dict disagree; the paper cites the contract. |
-| O8 | **Source/PDF drift** | The reviewed PDF was built before the reviewed source. Any third-party handoff should record source and PDF hashes together. |
+| **RAW-CTL** | **evidence already exists** | Not a build *and not even a run*: `data/exp-20260618/loop-run-70b-raw` exists — ten papers, **12.5% warrant grounding raw vs 21.4% enriched**. The old report miscounted graphs and rung-2 EDN together. Needs a modern finals-only re-analysis, no model tokens. |
+| **CAS-SEL** | needs wiring | Selector, registry, checks, segmenter, certificate all exist; OPS runs only the segmenter. "build" is stale. |
+| **SFC2b** | wiring, then evidence | Works per formula; needs a batch adapter and a run-scoped output contract. |
+| **rung-3** | needs evidence | Deterministic half wired and producing the 818-move census; the bounded LLM-on-residue pass needs a run. |
+| **RENDER** | needs wiring | Both renderers exist; `render_run.py --all` already expresses the loop but paths are hardcoded to legacy runs. |
+| **STRAT-REC** | needs evidence / calibration | Executed inside `clean_comprehension`; needs a measured recall/error report. |
+| **WARRANT-NORM** | needs wiring | Exists, invoked by nothing; defaults to the global tree and a shared demo path. |
+| **PASS3-HARVEST** | needs *correct* wiring | Present in S9 but after `;`, reading the global tree, writing a shared path. |
+| **LEAN-NL** | split | Core validation is done at 0.71 recall — reclassify **READY**; register per-step attribution and hidden-layer attachment as a *new* build card. |
 
 ---
 
-## Method note worth keeping
+## 5. Workplan before the Superpod window
 
-Every error the review found was in the direction of the claim the paper wanted
-to make, and none was in the mechanically-checked counts. The numbers were
-verified as they were produced; the integration claims were prose about how the
-pieces fit, and prose was the unchecked surface. The operational consequence is
-to run the replay harness *before* asserting an integration claim rather than
-after — when codex-5 ran it, it reported the ledger gap and recommended abort,
-which is exactly what it exists to do.
+Ordered by value/cost. Everything in 1–10 is CPU or bounded local-model work;
+none needs the eight-GPU allocation.
+
+| # | Work | Cost | Done when |
+|---|---|---|---|
+| 1 | Make failure loud: nonzero exit on refusal/command/gate failure; S9 `;`→`&&`; exit-status regression tests | very low | a refused dry run exits nonzero |
+| 2 | Reconcile the DAG source of truth with S4–S9 semantics; give S10–S12 real dependencies and inputs | low | `--plan` audit matches the contract; S5 refused without S2/S3/S4 |
+| 3 | Exclude `*.rung2.edn` everywhere proof graphs are globbed; make S6 consume its specified inputs, write the retrieved path, and fail on unattached proofs | low | replay no longer sees 196 "graphs"; S6 lands in RETRIEVE |
+| 4 | Re-run the existing RAW-CTL analytic with finals-only readers; update the stale card | very low | frozen report, identical paper set, modern gates |
+| 5 | Make S9 run-scoped: wire `warrant_normalize` + `clean_hole_harvest` with explicit paths | low CPU | normalized-hole vocabulary + pass-3 map under `$RUN` |
+| 6 | Wire the deterministic CAS chain (`cas_select` → checks → `cas_cert`) | low CPU | per-proof select + certificate for all 98 finals |
+| 7 | SFC2b batch adapter, run over the 16-paper sample | medium, bounded LLM | run-scoped symbol files, support/unsupported rates |
+| 8 | rung-3 residue pass + strategy-recognizer miss scoring | medium | question artifact; before/after recogniser recall |
+| 9 | Parameterize and invoke `render_run --all` as a post-S8 tail | low–medium CPU | render count = eligible papers; artifacts in RETRIEVE |
+| 10 | Split LEAN-NL: core READY, rest a new build card | not window-blocking | new card with one end-to-end CLean example |
+| 11 | **Only then:** clean 12–16 paper rehearsal in a fresh run namespace, rebuilding S2 rather than checking it | hours | `replay_e2e --through S12` 11/11, 12/12 same-corpus ledger with hashes, no `adhoc` metrics, clean RETRIEVE, source/PDF hashes recorded |
+
+---
+
+## 6. The acceptance criterion, in the reviewer's words
+
+> The decisive acceptance criterion is not another component count. It is one
+> fresh run for which the stepper's process status, stage ledger, output paths,
+> replay harness, and paper all refer to the same corpus and agree.
+
+Worth keeping because it reframes what remains: the census is strong and
+reproduced independently. What is missing is not capability but *agreement
+between the instruments that report on it* — which is the same class of problem
+as every hazard in the ledger, one level up.
