@@ -140,12 +140,14 @@ than the headline:
   extracted claims that never join the inference structure. That is a substantive
   finding about extraction, not a defect. It is also exactly what the 58%
   missing-warrant census rate looks like from the other side.
-- **R2c's clean sweep is partly vacuous.** 31 of its 98 passes are at
-  `rate=0.000` — no resolved warrant edges to check. A check that passes because
-  it had nothing to do should not be counted the same as one that passed on
-  evidence, and the current reporting does not distinguish them.
-- **R2d emitted no verdict on 6 graphs**, neither pass nor fail. Silent
-  abstention inflates the pass rate of whatever aggregates it.
+- **R2c cannot fail.** Its threshold is `:warrant-floor 0.0`, so its 98/98 is a
+  configuration, not a finding — the code says it is report-only "until a
+  stricter floor is calibrated", and 31 of the passes are at `rate=0.000`. A
+  non-gating rung printed in the same PASS column as three gating ones makes any
+  aggregate over that column a mixture.
+- **R2d returns `NA` on 6 graphs**, which the schema declares as `:na-not-fail`.
+  That is deliberate and correctly reported — worth stating only because the
+  denominator for R2d is 92, not 98.
 
 So A3 weakens, as the design graph predicted — but less than the first
 measurement suggested, and for a reason the first measurement had backwards.

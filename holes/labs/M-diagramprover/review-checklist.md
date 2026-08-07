@@ -167,11 +167,11 @@ uniformly, so a uniform failure is evidence about the harness first.*
 | R2a anchor-faithfulness | 84 | 14 |
 | R2b closure | 58 | 40 |
 | R2c warrant-resolution | 98 | 0 |
-| R2d concept-coverage | 92 | 0 (6 silent abstentions) |
+| R2d concept-coverage | 92 | 0 (6 `NA`, deliberate) |
 
 | # | item | cost | done when |
 |---|---|---|---|
-| 12 | Rung reporting distinguishes `pass / fail / vacuous / abstain`; headline rates quote their denominator. 31 of R2c's 98 passes are vacuous (`rate=0.000`, no edges to check) and R2d abstained on 6 graphs — both currently aggregate as passes | low | a rung summary in which vacuous and abstain are separate columns |
+| 12 | R2c is un-failable by configuration (`:warrant-floor 0.0`, report-only until calibrated) yet prints in the same PASS column as three gating rungs, so any aggregate over that column mixes them. Print report-only checks as `REPORT`, and have headline rates quote their denominator. R2d's 6 `NA` are correct and deliberate (`:na-not-fail`) — they only mean R2d's denominator is 92 | low | a rung summary in which report-only and NA are distinct from PASS |
 | 13 | Incremental checkpointing for long LLM passes. One malformed response discarded a 98-paper run's completed verdicts; the parse is now hardened, but the payload is still only written at the end | low–medium | kill a run mid-pass, restart, and have it resume rather than restart |
 | 14 | R2b closure — 40/98 graphs carry orphan nodes. This is a *finding about extraction*, not a defect, and belongs in the census rather than the gate backlog: it is the `missing-warrant` rate seen from the other side. Decide whether closure should gate at all, or only report | design call | a stated position on whether an unreachable node is a failure or a datum |
 

@@ -243,10 +243,11 @@ faithful to their cited lines, is every node reachable, are warrants resolved,
 are concepts defined --- passes on $49/98$. Closure is the binding constraint at
 $40$ of those $49$ failures: claims extracted but never joined to the inference
 structure, which is the corpus's $58\%$ \texttt{missing-warrant} rate seen from
-the other side. Two of rung~2's clean sweeps are
-softer than they look: $31$ of warrant-resolution's $98$ passes are vacuous
-(no resolved edges to check), and concept-coverage abstains silently on $6$
-graphs. \emph{Gated} in this report therefore means rungs $0$--$1$
+the other side. Rung~2's one clean sweep should not be read as a result:
+warrant-resolution's $98/98$ is a configuration rather than a finding, since its
+floor is $0.0$ and no rate can fail it --- report-only, by the checker's own
+note, until a stricter floor is calibrated, and $31$ of those passes are at
+rate $0$. \emph{Gated} in this report therefore means rungs $0$--$1$
 corpus-wide and rung~2 on half. And \textbf{A9's $732$ entries over
 $737$ moves} means essentially \emph{zero} reuse at $n{=}16$: the lexicon
 convergence curve begins at one-distinct-per-move and has nowhere to go but
