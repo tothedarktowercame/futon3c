@@ -86,3 +86,29 @@ genealogical half is not.
 Until that exists, the honest position is that **no card should be retracted on
 the strength of the implementation diagram**, because the implementation diagram
 is a description of what got built first, not of what the work requires.
+
+## Which conclusions the graph change actually moves
+
+A graph that changes no conclusions is decoration, so this is the test. Running
+the same questions against both graphs:
+
+| conclusion drawn from the implementation graph | under the design graph | moved? |
+|---|---|---|
+| **A3: "98/98 graphs gated PASS"** — verification is complete | The ladder has four rungs. Measured on the corpus right now: rung-0 (argcheck) **PASS**, rung-1 (substance) **PASS**, rung-2 (semcheck) **FAIL on every graph**, rung-3 deterministic half only. So the true claim is *"passes rungs 0–1 of 4"*. The count was never wrong; "gated" meant something narrower than a reader would take it to mean | **yes — weakens** |
+| **CAS-SEL is not needed** | Load-bearing: the genealogical select is the only cross-paper inheritance mechanism in the design, so no other node supplies what it supplies | **yes — reverses** |
+| **The APM structure-match tail is deprecated** | Also retractable here: it consumes another programme's inputs and has no path to any question this corpus can answer | no — **both graphs agree**, which is the evidence that call was right |
+| **A12: "12/12 stages ledgered"** | 12 stages is the implementation; the design has 37 cards. The integration claim is over a subgraph and should say which | **yes — weakens** |
+| **The two open gaps were accounting, not capability** | A third category appears that the implementation graph cannot express: *built, reviewed, and never run* (CAS-SEL's Tier-1 verify). Neither an accounting gap nor a missing capability — an unexecuted experiment | **yes — adds a category** |
+| Entropy gate 0.02 · 5 archetypes · curve rising · 58% missing-warrant | Unchanged. These are measurements over artifacts | no |
+
+The pattern in that column is the interesting part: **every integration
+conclusion moves, and no census conclusion does.** That is the same asymmetry
+the independent review found — the mechanically-checked counts held, and the
+prose about how the pieces fit was where the errors were. A graph is exactly a
+claim about how the pieces fit, so a wrong graph corrupts precisely the class of
+conclusion that had already proved least reliable.
+
+Which gives the operational rule: **census claims can be made from artifacts,
+but sufficiency claims must be made from the design graph**, and the
+implementation graph is evidence about neither — it records what was built
+first.
