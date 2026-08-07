@@ -166,7 +166,7 @@ uniformly, so a uniform failure is evidence about the harness first.*
 |---|---:|---:|
 | R2a anchor-faithfulness | 84 | 14 |
 | R2b closure | 58 | 40 |
-| R2c warrant-resolution | 98 | 0 |
+| R2c warrant-resolution | — | — (98 `REPORT`, un-failable) |
 | R2d concept-coverage | 92 | 0 (6 `NA`, deliberate) |
 
 | # | item | cost | done when |

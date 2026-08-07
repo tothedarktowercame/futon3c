@@ -130,7 +130,7 @@ With the interpreter corrected, rung-2 over all 98 graphs:
 |---|---:|---:|---|
 | **R2a** anchor-faithfulness | 84 | 14 | do node texts match their cited source lines |
 | **R2b** closure | 58 | 40 | is every node reachable in the inference structure |
-| **R2c** warrant-resolution | 98 | 0 | do resolved warrants point at real support |
+| **R2c** warrant-resolution | — | — | *report-only* (floor 0.0): 98 `REPORT` |
 | **R2d** concept-coverage | 92 | 0 | are the concepts used actually defined |
 
 **49/98 graphs pass rung-2 overall.** Three things in that table matter more
