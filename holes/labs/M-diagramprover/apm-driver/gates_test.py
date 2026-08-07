@@ -319,3 +319,56 @@ def test_tampering_after_a_named_argument_moves_the_hash():
     _n, _x, h1 = gates.statement_hash(base, "x00A01")
     _n, _x, h2 = gates.statement_hash(tampered, "x00A01")
     assert h1 != h2
+
+
+# --- declaration-set contract (2026-08-07) -------------------------------
+# The 120 pre-campaign closes have no theorem named for their problem, so
+# `extract_main_statement` raises and they were reviewable but not protected.
+# The set contract is what makes substitution detectable in them.
+
+MULTI = (
+    "import Mathlib\n"
+    "lemma helper (a : Nat) : a = a := rfl\n"
+    "theorem part_a (f : Nat → Nat) : Monotone f ∨ True := by simp\n"
+    "theorem part_b (f : Nat → Nat) : f 0 = f 0 := rfl\n"
+)
+
+
+def test_declaration_hashes_covers_lemmas_and_theorems():
+    frozen = gates.declaration_hashes(MULTI)
+    assert set(frozen) == {"helper", "part_a", "part_b"}
+
+
+def test_pre_campaign_file_has_no_main_statement_but_does_have_a_contract():
+    try:
+        gates.extract_main_statement(MULTI, "a01A11")
+        raise AssertionError("expected GateError")
+    except gates.GateError:
+        pass
+    assert gates.declaration_hashes(MULTI)
+
+
+def test_weakening_a_reviewed_claim_is_drift():
+    frozen = gates.declaration_hashes(MULTI)
+    weakened = MULTI.replace("Monotone f ∨ True", "True")
+    assert gates.declaration_set_drift(frozen, weakened) == ["part_a: CHANGED"]
+
+
+def test_deleting_a_reviewed_claim_is_drift():
+    frozen = gates.declaration_hashes(MULTI)
+    deleted = MULTI.replace("theorem part_b (f : Nat → Nat) : f 0 = f 0 := rfl\n", "")
+    assert gates.declaration_set_drift(frozen, deleted) == ["part_b: REMOVED"]
+
+
+def test_adding_a_helper_is_not_drift():
+    """A closer that factors out a lemma must not trip the contract — the
+    asymmetry (additions legal, weakening not) is what keeps the gate usable."""
+
+    frozen = gates.declaration_hashes(MULTI)
+    extended = MULTI + "lemma newly_factored (b : Nat) : b + 0 = b := by simp\n"
+    assert gates.declaration_set_drift(frozen, extended) == []
+
+
+def test_a_comment_that_looks_like_a_theorem_is_not_a_claim():
+    commented = MULTI + "/- theorem ghost : False := by sorry -/\n"
+    assert "ghost" not in gates.declaration_hashes(commented)

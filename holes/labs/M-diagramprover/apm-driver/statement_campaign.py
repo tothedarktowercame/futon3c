@@ -299,6 +299,25 @@ def frozen_hash(problem_id: str) -> str | None:
     return digest
 
 
+def frozen_declarations(problem_id: str) -> dict[str, str] | None:
+    """The whole reviewed claim set, for artifacts with no single main theorem.
+
+    Same last-statement-establishing-record-wins rule as `frozen_hash`, and for
+    the same reason: a proving outcome must never move the contract.
+    """
+
+    decls = None
+    if MANIFEST.exists():
+        for line in MANIFEST.read_text(encoding="utf-8").splitlines():
+            rec = json.loads(line)
+            if rec["problem-id"] != problem_id or not rec.get("declaration-hashes"):
+                continue
+            if rec.get("status") not in STATEMENT_ESTABLISHING:
+                continue
+            decls = rec["declaration-hashes"]
+    return decls
+
+
 def pass1_gate(problem_id: str) -> dict:
     """Classify a pass-1 outcome and check the statement never moved.
 
@@ -311,12 +330,25 @@ def pass1_gate(problem_id: str) -> dict:
     if not lean_file.exists():
         return {"outcome": "missing", "reasons": ["no-artifact"]}
     source = lean_file.read_text(encoding="utf-8")
+    # Set contract first: it is the only contract the 120 pre-campaign artifacts
+    # have (no theorem is named for the problem, so there is no "main" statement
+    # to hash), and it is strictly the stronger check where both exist.
+    frozen_decls = frozen_declarations(problem_id)
+    if frozen_decls:
+        drift = gates.declaration_set_drift(frozen_decls, source)
+        if drift:
+            return {"outcome": "void-statement-changed",
+                    "reasons": ["declaration-set-drift"] + drift[:6],
+                    "declaration-drift": drift}
+    theorem_name = None
     try:
         theorem_name, _norm, digest = gates.statement_hash(source, problem_id)
     except gates.GateError as exc:
-        return {"outcome": "defective", "reasons": [f"statement: {exc}"]}
+        if not frozen_decls:
+            return {"outcome": "defective", "reasons": [f"statement: {exc}"]}
+        digest = None
     expected = frozen_hash(problem_id)
-    if expected and digest != expected:
+    if expected and digest and digest != expected:
         return {"outcome": "void-statement-changed", "reasons": ["hash-moved"],
                 "statement-hash": digest, "frozen-hash": expected}
     sorries = gates.count_sorries(source)

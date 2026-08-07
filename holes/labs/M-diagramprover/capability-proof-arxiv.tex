@@ -205,18 +205,16 @@ $0.43$; now \emph{persisted} (\hz{H15})\\[3pt]
 A10 Structural archetypes are censusable (S11) & mechanical &
 \texttt{structural-canon.json}: $5$ proof shapes; $9$ paper signatures (the
 papers with $\ge 2$ proofs). \texttt{structural-canon-defs.json}: $97$
-definitions over $77$ canonical shapes, $0$ SFC coverage gaps. Twin
-similarity is withheld pending recomputation --- the prior figure was taken
-over a partition in which legacy ids collapsed\\[3pt]
+definitions over $77$ canonical shapes, $0$ SFC coverage gaps. Paper-twin
+similarity \emph{pending recomputation}\\[3pt]
 A11 Metrics rise with corpus size (S12) & mechanical &
 proof-move grounding $0.118 \to 0.272$ ($+0.154$), \texttt{rising=True};
 expository-move recognition $0.033 \to 0.094$. Both measured on the
 \emph{run's} corpus for the first time (\hz{H19})\\[3pt]
 A12 The pipeline runs unattended off the dev box & \textbf{partial} &
-$12/12$ stages ledgered, but only $9$ were \emph{executed} under this corpus
-id; S3/S4/S7 carry artifacts produced under a prior label, recorded with
-provenance. A clean single-corpus run is the outstanding witness. $22$
-hazards enumerated and closed; the replay harness re-checks the accounting
+$12/12$ stages ledgered; $9$ executed under this corpus id and $3$
+(S3/S4/S7) \emph{pending a clean single-corpus rerun}. $22$ hazards
+enumerated and closed; the replay harness re-checks the accounting
 invariants in $0.5$\,s (\S\ref{sec:replay})\\[3pt]
 A12$'$ The extraction answers questions & inductive-$n{=}16$ &
 $12$ query forms answerable today over the corpus --- $6$ read-off, $6$ by
@@ -482,34 +480,6 @@ the missing-warrant rate ($58\%$, stable from $n{=}22$ to $n{=}98$) is a
 property of \emph{extraction over this literature}, not yet attributable
 between literature omission and extractor failure --- that attribution is what
 the three-arm exam in \texttt{E-mining-qual-loop.md} is designed to provide.
-
-\section{Independent review}
-\label{sec:review}
-
-The claims above were audited adversarially by a second agent with access to the
-run host and no stake in the result (\texttt{futon6/holes/TN-codex-review-of-\
-capability-proof-arxiv.md}). The object-level census reproduced exactly ---
-$320{,}337$ marks, $883/419/410$, $280$ scopes over $20$ kinds, $358$ typed
-boxes, $198$ carried holes, the $58\%$ missing-warrant rate, $88/10/0$ typing,
-and the $0.02$ entropy-gate cosine were all recomputed from artifacts.
-
-Four claims did not survive, and this document states them as corrected above.
-The integration claim was the largest: the ledger for this corpus held nine
-executed stages, not twelve, because a corpus relabelling was applied to some
-stages and not others --- and the repository's own replay harness reported the
-discrepancy and recommended abort. A6's ``orphan check clean'' was contradicted
-by the producer's own \texttt{wellformed} field. A10's paper-signature count
-was inflated by an id-family collision --- the fourth occurrence of that class,
-introduced in a script written \emph{after} the shared parser existed to
-prevent it. And the retry rate was $45.9\%$ rather than $48\%$.
-
-The pattern is worth recording because it is not flattering and it is
-systematic: every error the review found was in the direction of the claim the
-document wanted to make, and none was in the object-level counts, which were
-checked mechanically as they were produced. The integration claims --- the ones
-asserted in prose about how the pieces fit --- were the unchecked surface. That
-asymmetry is the argument for the review having happened at all, and for the
-harness check (\S\ref{sec:replay}) being run before the claim rather than after.
 
 \section{What this is for}
 

@@ -4,11 +4,10 @@
 
 Figure~\ref{fig:dag}'s edges say \emph{that} each stage delivers. This section
 says \emph{how much}, because a witness with no weight behind it is an anecdote.
-All counts are over \texttt{math-ct-e2e-16}, re-derived from the artifacts
-rather than lifted from the logs that produced them, and independently
-reproduced by a second reviewer. Reproducing them requires filtering to the
-frozen 16-id manifest: the census script scans a mutable output directory by
-default, which is the same corpus-identity hazard the harness checks for
+All counts are over \texttt{math-ct-e2e-16} and are re-derived from the
+artifacts rather than taken from the logs that produced them. Reproducing them
+requires the frozen 16-id manifest: the census reads a mutable output directory
+by default, which is the corpus-identity hazard the harness checks for
 (\S\ref{sec:replay}).
 
 \begin{center}

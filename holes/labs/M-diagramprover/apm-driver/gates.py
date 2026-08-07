@@ -22,6 +22,8 @@ DEFAULT_REPO = Path("/home/joe/code/apm-lean")
 DEFAULT_TIMEOUT_SECONDS = 900
 STDERR_TAIL_LINES = 30
 THEOREM_RE = re.compile(r"(?m)^\s*theorem\s+([A-Za-z_][A-Za-z0-9_'.]*)\b")
+CLAIM_RE = re.compile(
+    r"(?m)^\s*(?:private\s+|protected\s+)?(?:theorem|lemma)\s+([A-Za-z_][A-Za-z0-9_'.]*)\b")
 SORRY_RE = re.compile(r"\bsorry\b")
 PROTOCOL_WORD_RE = re.compile(r"\b(tried|searched|route|blocker|requires)\b", re.I)
 MATHLIB_IDENTIFIER_RE = re.compile(r"(?:`[A-Za-z_][A-Za-z0-9_'.]*`|\b[A-Za-z][A-Za-z0-9']*_[A-Za-z0-9_']+\b)")
@@ -221,6 +223,52 @@ def statement_hash(source: str, problem_id: str | None = None,
     theorem_name, normalized = extract_main_statement(source, problem_id, expected_name)
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
     return theorem_name, normalized, f"sha256:{digest}"
+
+
+def declaration_hashes(source: str) -> dict[str, str]:
+    """Hash EVERY claim (theorem and lemma) in the file, keyed by name.
+
+    ``statement_hash`` protects one main theorem, which is all a bank problem
+    needs — but 120 pre-campaign artifacts predate the ``apm_<id>`` naming
+    convention, so ``extract_main_statement`` cannot tell which of their five
+    or twenty declarations is the claim, and raises. Reviewing those left them
+    approved with NO contract, i.e. still fully substitutable.
+
+    A set contract fixes that without renaming anything: freeze the whole
+    declaration set, then require it to be PRESERVED. Adding a claim is legal
+    (that is what a closer does when it factors out a helper); weakening or
+    deleting one that a reviewer read is not. Includes ``lemma`` because these
+    files often carry their real content there — a01J04 has no ``theorem`` at
+    all.
+    """
+
+    stripped = strip_comments(source)
+    out: dict[str, str] = {}
+    for match in CLAIM_RE.finditer(stripped):
+        end = _declaration_delimiter(stripped, match.end())
+        if end < 0:
+            continue
+        normalized = " ".join(stripped[match.start():end + 2].split())
+        digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        out[match.group(1)] = f"sha256:{digest}"
+    return out
+
+
+def declaration_set_drift(frozen: dict[str, str], source: str) -> list[str]:
+    """Claims that were reviewed and have since been removed or changed.
+
+    Empty list means the contract holds. Names absent from ``frozen`` are new
+    and therefore fine — the asymmetry is the point.
+    """
+
+    current = declaration_hashes(source)
+    drift = []
+    for name, digest in sorted(frozen.items()):
+        if name not in current:
+            drift.append(f"{name}: REMOVED")
+        elif current[name] != digest:
+            drift.append(f"{name}: CHANGED")
+    return drift
 
 
 def qualified_theorem_name(source: str, theorem_name: str) -> str:
