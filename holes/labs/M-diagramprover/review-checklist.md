@@ -148,3 +148,35 @@ Worth keeping because it reframes what remains: the census is strong and
 reproduced independently. What is missing is not capability but *agreement
 between the instruments that report on it* — which is the same class of problem
 as every hazard in the ledger, one level up.
+
+---
+
+## 7. Findings from the rung-2 measurement (2026-08-07)
+
+Opened while working W6. Corrects a claim, and adds three items.
+
+**Corrected.** Rung-2 was reported here and in `design-dag.md` as failing
+corpus-wide. That was the apparatus: `iatc_semcheck.bb` invoked bare `python3`,
+whose interpreter lacks `edn_format`, so R2d raised and the composer failed
+every graph for the same reason. Fixed (`futon6@82171d8`). Rung-2 passes on
+**49/98**. The heuristic worth keeping: *a heterogeneous corpus does not fail
+uniformly, so a uniform failure is evidence about the harness first.*
+
+| sub-check | PASS | FAIL |
+|---|---:|---:|
+| R2a anchor-faithfulness | 84 | 14 |
+| R2b closure | 58 | 40 |
+| R2c warrant-resolution | 98 | 0 |
+| R2d concept-coverage | 92 | 0 (6 silent abstentions) |
+
+| # | item | cost | done when |
+|---|---|---|---|
+| 12 | Rung reporting distinguishes `pass / fail / vacuous / abstain`; headline rates quote their denominator. 31 of R2c's 98 passes are vacuous (`rate=0.000`, no edges to check) and R2d abstained on 6 graphs — both currently aggregate as passes | low | a rung summary in which vacuous and abstain are separate columns |
+| 13 | Incremental checkpointing for long LLM passes. One malformed response discarded a 98-paper run's completed verdicts; the parse is now hardened, but the payload is still only written at the end | low–medium | kill a run mid-pass, restart, and have it resume rather than restart |
+| 14 | R2b closure — 40/98 graphs carry orphan nodes. This is a *finding about extraction*, not a defect, and belongs in the census rather than the gate backlog: it is the `missing-warrant` rate seen from the other side. Decide whether closure should gate at all, or only report | design call | a stated position on whether an unreachable node is a failure or a datum |
+
+Item 14 is the one to think about before the window. If closure gates, roughly
+half the corpus fails S3 at rung 2 and the run stops; if it reports, the corpus
+is admitted with a measured orphan rate. The census reading is the more
+defensible one — an unattached claim is a real property of the literature, not
+obviously an extractor error — but it should be chosen rather than defaulted.

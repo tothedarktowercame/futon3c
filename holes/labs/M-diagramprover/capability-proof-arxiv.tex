@@ -235,7 +235,19 @@ Two entries deserve a sentence because they are the ones a reader should
 distrust. \textbf{A3's $48\%$ retry rate} is a first-pass quality bound, not a
 defect: gates catch, feedback repairs, and the corpus-level artifact is clean
 --- but a reader tempted to quote ``$98/98$ gated'' as a model-quality figure
-should quote the retry rate beside it. And \textbf{A9's $732$ entries over
+should quote the retry rate beside it, and should note what \emph{gated} means
+here. The verification ladder has four rungs, and S3's gate is the first two:
+wiring well-formedness (\texttt{argcheck}) and anti-degeneracy
+(\texttt{substance}). Rung~2, which asks the harder questions --- are node texts
+faithful to their cited lines, is every node reachable, are warrants resolved,
+are concepts defined --- passes on $49/98$. Closure is the binding constraint at
+$40$ of those $49$ failures: claims extracted but never joined to the inference
+structure, which is the corpus's $58\%$ \texttt{missing-warrant} rate seen from
+the other side. Two of rung~2's clean sweeps are
+softer than they look: $31$ of warrant-resolution's $98$ passes are vacuous
+(no resolved edges to check), and concept-coverage abstains silently on $6$
+graphs. \emph{Gated} in this report therefore means rungs $0$--$1$
+corpus-wide and rung~2 on half. And \textbf{A9's $732$ entries over
 $737$ moves} means essentially \emph{zero} reuse at $n{=}16$: the lexicon
 convergence curve begins at one-distinct-per-move and has nowhere to go but
 down, if convergence exists at all. That is a starting point, not a finding.
