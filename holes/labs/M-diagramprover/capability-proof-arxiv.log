@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.31)  7 AUG 2026 14:44
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.10.31)  7 AUG 2026 15:10
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -895,13 +895,13 @@ Overfull \hbox (56.0827pt too wide) in paragraph at lines 84--92
 
 
 [2]
-Underfull \hbox (badness 1337) in paragraph at lines 177--181
+Underfull \hbox (badness 1337) in paragraph at lines 178--182
 []|\T1/lmr/m/n/10 (+20) Was de-gen-er-ate --- all $\OT1/lmr/m/n/10 (+20) 98$ \T
 1/lmr/m/n/10 (+20) proofs \T1/lmr/m/it/10 (+20) no-
  []
 
 
-Underfull \hbox (badness 1033) in paragraph at lines 202--204
+Underfull \hbox (badness 1033) in paragraph at lines 203--205
 []|\T1/lmr/m/n/10 (+20) proof-move ground-ing $\OT1/lmr/m/n/10 (+20) 0\OML/lmm/
 m/it/10 :\OT1/lmr/m/n/10 (+20) 118 \OMS/lmsy/m/n/10 ! \OT1/lmr/m/n/10 (+20) 0\O
 ML/lmm/m/it/10 :\OT1/lmr/m/n/10 (+20) 272$
@@ -910,50 +910,54 @@ ML/lmm/m/it/10 :\OT1/lmr/m/n/10 (+20) 272$
 
 
 [3]
-Overfull \vbox (73.32487pt too high) has occurred while \output is active []
+Overfull \vbox (157.32487pt too high) has occurred while \output is active []
 
 
 
 [4]
-Overfull \hbox (14.25487pt too wide) in paragraph at lines 288--289
+Overfull \hbox (14.25487pt too wide) in paragraph at lines 295--296
  [][] 
  []
 
 
-
-[5]
-Underfull \hbox (badness 10000) in paragraph at lines 346--346
+Underfull \hbox (badness 10000) in paragraph at lines 358--358
 \T1/lmss/m/n/10 (+20) H9 H10
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 351--351
+Underfull \hbox (badness 10000) in paragraph at lines 363--363
 \T1/lmss/m/n/10 (+20) H18 H11
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 356--356
+Underfull \hbox (badness 10000) in paragraph at lines 368--368
 []|\T1/lmss/m/n/10 (+20) H15 H16
  []
 
 
 
+[5]
+
 [6]
-Overfull \hbox (70.79272pt too wide) in paragraph at lines 422--429
-[]\T1/lmss/bx/n/10.95 (-20) S11 \T1/lmr/bx/n/10.95 (-20) --- the struc-tural ca
-non com-putes and dis-cards. \T1/lmtt/m/n/10.95 sfc_struct_canon \T1/lmr/m/n/10
-.95 (-20) and \T1/lmtt/m/n/10.95 clean_paper_signature
- []
-
-
 
 [7]
 Package microtype Info: Character `029' is missing
 (microtype)             in font `T1/lmr/m/sc/10.95'.
 (microtype)             Ignoring protrusion settings for this character.
- (./prereg-scale.tex
+ (./by-the-numbers.tex
 
 [8]
+
+[9]
+Overfull \hbox (30.38182pt too wide) in paragraph at lines 118--122
+\T1/lmr/m/n/10.95 (-20) per pa-per; a pa-per full of \T1/lmtt/m/n/10.95 difficu
+lty-assessment \T1/lmr/m/n/10.95 (-20) whose proofs are all \T1/lmtt/m/n/10.95 
+reduce-to-known-result
+ []
+
+) (./prereg-scale.tex
+
+[10]
 Underfull \hbox (badness 10000) in paragraph at lines 60--60
 []|\T1/lmr/m/n/10 (+20) P1
  []
@@ -1011,9 +1015,9 @@ Overfull \hbox (2.46716pt too wide) in paragraph at lines 57--82
 
 
 
-[9]) (./annex-worked-example.tex
+[11]) (./annex-worked-example.tex
 
-[10]
+[12]
 Underfull \hbox (badness 10000) in paragraph at lines 23--23
 []|\T1/lmtt/m/n/10 Monoidal categories were defined in \cite{be}
  []
@@ -1126,27 +1130,29 @@ LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <12> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 53.
 
 
-[11]
+[13]
 
-[12])
+[14])
 
-[13] (./capability-proof-arxiv.aux)
+[15]
+
+[16] (./capability-proof-arxiv.aux)
  ***********
 LaTeX2e <2025-06-01> patch level 1
 L3 programming layer <2025-10-24>
  ***********
 Package rerunfilecheck Info: File `capability-proof-arxiv.out' has not changed.
 
-(rerunfilecheck)             Checksum: F3311D12DEC0A5CDD8707D78E4684F8E;2159.
+(rerunfilecheck)             Checksum: F667F36205D051A0202748DAE7CA61B1;2541.
  ) 
 Here is how much of TeX's memory you used:
- 24576 strings out of 467747
- 458264 string characters out of 5426947
- 903166 words of memory out of 5000000
- 52456 multiletter control sequences out of 15000+600000
- 751668 words of font info for 274 fonts, out of 8000000 for 9000
+ 24682 strings out of 467747
+ 459688 string characters out of 5426947
+ 913635 words of memory out of 5000000
+ 52480 multiletter control sequences out of 15000+600000
+ 755752 words of font info for 311 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 102i,11n,107p,1463b,913s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 102i,11n,107p,1887b,917s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></usr/lo
 cal/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/local/texliv
 e/2025/texmf-dist/fonts/type1/public/lm/lmbx7.pfb></usr/local/texlive/2025/texm
@@ -1171,10 +1177,10 @@ sr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmtk10.pfb></usr/local/t
 exlive/2025/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/local/texlive/202
 5/texmf-dist/fonts/type1/public/lm/lmtt9.pfb></usr/local/texlive/2025/texmf-dis
 t/fonts/type1/public/lm/lmtti10.pfb>
-Output written on capability-proof-arxiv.pdf (13 pages, 569093 bytes).
+Output written on capability-proof-arxiv.pdf (16 pages, 585559 bytes).
 PDF statistics:
- 311 PDF objects out of 1000 (max. 8388607)
- 235 compressed objects within 3 object streams
- 51 named destinations out of 1000 (max. 500000)
- 70757 words of extra memory for PDF output out of 74296 (max. 10000000)
+ 344 PDF objects out of 1000 (max. 8388607)
+ 263 compressed objects within 3 object streams
+ 59 named destinations out of 1000 (max. 500000)
+ 74869 words of extra memory for PDF output out of 89155 (max. 10000000)
 

@@ -1,0 +1,146 @@
+% "16 papers by the numbers" + query catalogue — \input{} from capability-proof-arxiv.tex
+\section{Sixteen papers, by the numbers}
+\label{sec:numbers}
+
+Figure~\ref{fig:dag}'s edges say \emph{that} each stage delivers. This section
+says \emph{how much}, because a witness with no weight behind it is an anecdote.
+All counts are over \texttt{math-ct-e2e-16} and were re-derived from the
+artifacts, not lifted from the logs that produced them.
+
+\begin{center}
+\small
+\begin{tabular}{p{0.20\textwidth} r p{0.52\textwidth}}
+\textbf{Stage / witness} & \textbf{count} & \textbf{composition}\\
+\hline\\[-8pt]
+S1 marks & \textbf{320{,}337} &
+over $16/16$ papers. \emph{classified} $89{,}348$ · \emph{symbol-grounded}
+$68{,}484$ · \emph{math} $50{,}607$ · \emph{concept} $46{,}001$ · \emph{symbol}
+$12{,}499$\\[3pt]
+S1 variable grounding & \textbf{7{,}795} &
+\texttt{bind/typed} marks --- variables bound to a type. Plus
+\texttt{constrain/relation} $6{,}758$, \texttt{let-binder} $4{,}465$,
+\texttt{definiendum} $4{,}466$\\[3pt]
+S3 argument graphs & \textbf{98} &
+$883$ nodes ($719$ claim, $145$ object, $19$ ref) and $419$ typed inference
+edges\\[3pt]
+S3 relation grammar & \textbf{62 types} &
+heavy-headed: \emph{because} $161$, \emph{implies} $69$, \emph{therefore} $30$,
+\emph{follows-from} $23$, then a long singleton tail\\[3pt]
+S3 warrants & \textbf{383} &
+\emph{missing-warrant} $222$ ($58\%$) · \emph{claim} $108$ · \emph{citation}
+$53$. Each missing warrant \emph{names} the elided step\\[3pt]
+S3 declared holes & \textbf{410} &
+mirrored into the top-level \texttt{:holes} vector, which is what the gate
+checks\\[3pt]
+S4 expository scopes & \textbf{280} &
+across \textbf{20 distinct scope kinds}: \emph{connection/example-source} $112$
+· \emph{connection/literature-gap} $39$ · \emph{auxiliary-construction} $24$ ·
+\emph{connection/transfer} $15$ · \emph{universal-property/characterizes} $13$ ·
+\emph{difficulty-assessment} $8$\\[3pt]
+S4 filled slots & \textbf{222} &
+\emph{example} $83$ · \emph{other-structure} $34$ · \emph{prior-result} $22$ ·
+\emph{auxiliary} $13$ · \emph{characterizing-property} $11$\\[3pt]
+S7 typed boxes & \textbf{358} &
+over $88$ typed proofs, in $8$ methods: \emph{reduce-to-known-result} $204$ ·
+\emph{construct-auxiliary-object} $100$ · \emph{transport-along-symmetry} $16$ ·
+\emph{quotient-by-irrelevance} $13$ · \emph{compute-invariant} $11$ ·
+\emph{local-to-global} $7$ · \emph{argue-by-contradiction} $4$ ·
+\emph{count-by-decomposition} $1$\\[3pt]
+S7 sorry-holes carried & \textbf{198} &
+IATC holes converted into discharge obligations in the APM vocabulary\\[3pt]
+S5 strategy moves & \textbf{818} &
+$202$ grounded · $564$ thin · $52$ ungrounded. Verdicts: well-formed $6$,
+partial-comprehension $82$, weak-extraction $10$\\[3pt]
+S10 move lexicon & \textbf{732} &
+distinct entries over $737$ moves; mean anchor confidence $0.43$ ($197$ high,
+$298$ low)\\[3pt]
+S11 canon & \textbf{5 shapes} &
+$10$ paper signatures; paper-twin similarity mean $0.75$ (range $0.37$--$0.88$)
+--- papers cluster by argument-shape composition, not topic\\[3pt]
+S12 curve & \textbf{9 checkpoints} &
+proof-move grounding $0.118 \to 0.272$, rising\\
+\hline
+\end{tabular}
+\end{center}
+
+Three of these deserve a note. The **S7 method distribution** is the
+archetype census in miniature and it is strikingly top-heavy: $85\%$ of typed
+boxes are one of two methods. The **$58\%$ missing-warrant rate** is stable
+from $n{=}22$ to $n{=}98$ and is the quantified form of the Lakatos
+observation --- published mathematics deletes its scaffolding, and the IATC
+layer's job is to record the deletion rather than to repair it. And **paper-twin
+similarity of $0.75$** says the structural signature is doing something
+non-trivial: papers on different topics resemble each other by argument shape,
+which is the claim S11 exists to support and which was, until this week,
+computed and then thrown away.
+
+\section{What can be asked of it}
+\label{sec:queries}
+
+A capability proof should terminate in questions answerable, not in an anatomy
+delivered. The following are grouped by what answering them costs, which is the
+distinction that matters operationally: a \emph{read-off} needs one query
+against the store; a \emph{light inference} needs a join or a traversal; the
+third class needs machinery we have not connected yet, and is listed to be
+honest about the boundary.
+
+\paragraph{Read-off (one query; answerable today over the 16).}
+\begin{itemize}
+\item \emph{Which proofs in this corpus reduce to a known result rather than
+construct anything?} --- $204$ boxes, by method.
+\item \emph{What did this paper's author consider too obvious to justify?} ---
+the $222$ missing-warrants, each naming its elided step, filtered by paper.
+\item \emph{Where does the literature say it has a gap?} ---
+$39$ \texttt{connection/literature-gap} scopes.
+\item \emph{Which results are cited rather than proved here?} --- $53$
+\texttt{:citation} warrants with their targets.
+\item \emph{What examples does the field reach for when motivating a
+definition?} --- $83$ filled \texttt{:example} slots.
+\item \emph{Show me every claim anchored to lines 170--180 of this paper} ---
+the standoff anchors, which is the annex's own query.
+\end{itemize}
+
+\paragraph{Light inference (a join or traversal; answerable today).}
+\begin{itemize}
+\item \emph{Which two papers argue most alike despite being on different
+topics?} --- paper-twin similarity over structural signatures ($0.75$ mean),
+already computed by S11.
+\item \emph{Which elided justifications recur across papers?} --- group
+\texttt{:wanted} keys across the $410$ holes; a recurring hole is a candidate
+lemma the field keeps assuming.
+\item \emph{What is this proof's shape, as a sequence?} --- the
+\texttt{:clean/seq} macro sequence, e.g.
+\texttt{[:construct-auxiliary-object :reduce-to-known-result]}.
+\item \emph{Which proofs are structurally nearest to this one?} --- the
+structure embedding, off-diagonal cosine $0.02$, so neighbours are meaningful.
+\item \emph{Which concepts are used but never defined in the corpus?} ---
+S2 substrate minus S1 \texttt{definiendum} marks.
+\item \emph{Does this paper's rhetoric match its mathematics?} --- join S4
+scope kinds against S7 methods per paper; a paper full of
+\texttt{difficulty-assessment} whose proofs are all
+\texttt{reduce-to-known-result} is saying one thing and doing another.
+\end{itemize}
+
+\paragraph{Needs machinery not yet connected (named, not claimed).}
+\begin{itemize}
+\item \emph{Has this argument been made before, anywhere in the field?} ---
+needs the full corpus; over a sample the negative answer is worthless
+(\S\ref{sec:prereg}).
+\item \emph{Retrieve the memory most relevant to this proof obligation} ---
+needs the extraction wired to the memory system's retrieval stage; the
+store currently has index-reach and not the affordances retrieval expects.
+\item \emph{Is this sorry dischargeable from what the corpus already knows?}
+--- needs the S7 \texttt{:sorry} vocabulary joined to the APM formalisation
+ledger. The vocabularies already match, which is why this is a connection
+rather than a capability.
+\item \emph{Argue with it} --- ArSE-style adversarial exchange over a mined
+argument graph. The graph carries premises, warrants and declared holes, which
+is the shape such an exchange needs, but nothing consumes it yet.
+\end{itemize}
+
+The pattern in the third list is the same one the hazard ledger kept finding:
+each is a \emph{connection} between things that exist, not a capability that is
+missing. That is a claim this note is entitled to make about its own gaps
+because it made it four times already and was right each time
+(\S\ref{sec:open}) --- and it is exactly the claim the next run should be
+designed to falsify.
