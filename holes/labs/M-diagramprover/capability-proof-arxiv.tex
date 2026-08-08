@@ -37,11 +37,11 @@ of the claim ``the field's reasoning structure is recoverable at corpus
 scale'': the constructive content is a twelve-stage pipeline; the claim
 decomposes into stage-level sub-claims with contracts; and each sub-claim
 carries a \emph{graded warrant} backed by certificates --- gate exits, ledger
-entries, oracle agreement, census counts --- rather than narrative. The
+entries, oracle agreement, census counts --- rather than narrative.
 The pipeline has been executed end-to-end (S1--S12, $12/12$ stages ledgered) on
 a sixteen-paper corpus on an unattended host --- the condition under which its
-characteristic failure modes become observable. Twenty-two such failure modes
-are enumerated as a hazard ledger and all are closed. The
+characteristic failure modes become observable. Twenty-eight such failure modes
+are enumerated as a hazard ledger, twenty-six of them closed. The
 intended contribution is less the corpus coverage than the epistemic form: a
 mining programme whose own readiness claim is held to the same standard as the
 structures it extracts, and whose remaining gaps are drawn rather than
@@ -63,10 +63,22 @@ operator watches the terminal cannot distinguish a stage that works from a stage
 that prints its findings and persists nothing; the distinction only becomes
 observable on an unattended host. Executing it under that condition exposes a
 class of failure invisible to ordinary testing, and the hazard ledger
-(\S\ref{sec:hazards}) enumerates twenty-two instances: six outputs that do not
-survive the run, four parameters that silently default to a different corpus,
-three artifacts that pass one gate and are unreadable by the next, one that does
-not point where it claims to, and the remainder that halt the run outright.
+(\S\ref{sec:hazards}) enumerates twenty-eight instances: seven that halt or stall
+the run outright, five that cost operator time or mislabel what was measured,
+four that read the wrong corpus or the wrong inputs, four whose outputs do not
+survive the run, three that pass one gate and are unreadable by the next,
+\emph{four that report success without doing the work}, and one that does not
+point where it claims to.
+
+The emphasised category is the one worth the reader's attention, because its
+members are invisible by construction: a stage that fails loudly is a nuisance,
+whereas a stage that reports PASS while half of it never executed is a false
+entry in the evidence base. Its worst member does not merely omit work but
+manufactures output --- an LLM pass whose replies used different key names than
+the prompt requested, so every lookup missed, every question silently fell back
+to a stock template, and the run emitted a complete set of plausible findings the
+model had not written. All four were found by asking what a green result would
+look like if the work behind it had not happened.
 
 The corpus percentage is the odometer. The pipeline is the proof object, and
 the hazard ledger is the record of what must hold for it to be one.
@@ -123,7 +135,11 @@ argument DAG into a method vocabulary, then a structure embedding, gated for
 vocabulary conformance and for discriminativeness (entropy gate).
 \item \textbf{S8 export} --- graph JSON, Cypher, pgvector; and, separately, a
 direct EDN ingest into the XTDB 2.2.0-rc0 bench store.
-\item \textbf{S9 APM structure match} --- cross-programme coverage tails.
+\item \textbf{S9 hole harvest} --- the pass-3 hole map and a normalised
+\texttt{(type, concept)} hole vocabulary, both run-scoped. The APM
+structure-match tail that formerly stood here was withdrawn: it consumed scope
+files this corpus does not produce, and had failed silently on every run since
+it was written. It belongs to the APM programme, against APM's own inputs.
 \item \textbf{S10 lexicon + reground} --- harvest the corpus's own inference
 and expository move vocabulary; measure the grounding lift obtained by
 re-grounding the corpus against its own harvested moves.
@@ -211,11 +227,28 @@ A11 Metrics rise with corpus size (S12) & mechanical &
 proof-move grounding $0.118 \to 0.272$ ($+0.154$), \texttt{rising=True};
 expository-move recognition $0.033 \to 0.094$. Both measured on the
 \emph{run's} corpus for the first time (\hz{H19})\\[3pt]
+A11$'$ Proof moves are recognisable \emph{at the pattern level} & mechanical &
+Over the same $818$ proof steps, deterministic tactic-gesture recognition reaches
+$76$ moves ($9.3\%$) in $5$ classes; LLM pattern verification reaches
+$\mathbf{478}$ ($\mathbf{58.4\%}$) in $\mathbf{26}$, with $95/98$ proofs carrying
+at least one verified match. The gap between them is the size of the residue
+rung~3 exists for. The $9.3\%$ is \emph{not} recall --- the two instruments look
+for different objects (Lean-style tactic gestures vs.\ reasoning patterns)\\[3pt]
+A11$''$ \dots\ and the check menu matches the field & \textbf{weak} &
+It does not. Of $478$ verified matches, $157$ fire a check, $89$ select a menu
+key whose list is empty, and $\mathbf{232}$ ($48\%$) name a pattern the menu does
+not contain. The three keys that never matched once are all analysis
+(\texttt{estimate-by-bounding}, \texttt{induction-and-well-ordering},
+\texttt{separate-into-independent-pieces}); the frequent absentees are all
+categorical (\texttt{transport-across-isomorphism} $64$,
+\texttt{find-the-right-abstraction} $50$, \texttt{verify-universal-property}
+$43$). Shares stable from $72$ to $98$ proofs, so this is a property of the
+corpus, not of run length\\[3pt]
 A12 The pipeline runs unattended off the dev box & \textbf{partial} &
 $12/12$ stages ledgered; $9$ executed under this corpus id and $3$
-(S3/S4/S7) \emph{pending a clean single-corpus rerun}. $22$ hazards
-enumerated and closed; the replay harness re-checks the accounting
-invariants in $0.5$\,s (\S\ref{sec:replay})\\[3pt]
+(S3/S4/S7) \emph{pending a clean single-corpus rerun}. $27$ hazards
+enumerated, $26$ closed (\hz{H1} tier~2 open); the replay harness re-checks the
+accounting invariants in $0.5$\,s (\S\ref{sec:replay})\\[3pt]
 A12$'$ The extraction answers questions & inductive-$n{=}16$ &
 $12$ query forms answerable today over the corpus --- $6$ read-off, $6$ by
 join or traversal --- enumerated with their counts in \S\ref{sec:queries};
@@ -224,7 +257,10 @@ A13 Capability transports to the full field & designed &
 stated as a scale-transport claim; no witnesses. See
 Fig.~\ref{fig:dag} (right)\\[3pt]
 A14 Model choice is not load-bearing & registered &
-the same corpus is now minable by a second model class; comparison
+the same corpus is now minable by a second model class, and one stage has run
+end-to-end on it (A11$'$, GLM-4.5-Air Q4 on CPU, $818$ calls) --- but that is a
+\emph{different task} from the mining the claim is about, so it is evidence the
+apparatus is model-portable, not that mining results are. The comparison remains
 designed, not run (\hz{H8})\\
 \hline
 \end{tabular}
@@ -434,6 +470,23 @@ then failed to find at all. One line, plus the DAG wiring. Strategy moves went
 $0 \to 202$ grounded / $564$ thin / $52$ ungrounded, and the verdict
 distribution from uniformly \texttt{no-structure} to $\{$well-formed $6$,
 partial $82$, weak-extraction $10\}$. Total cost: two CPU minutes.
+
+\textbf{The check menu is specified for the wrong mathematics.} The cascade's
+premise is that each proof gets a menu of checks matched to \emph{its} topology
+rather than a uniform $\{$R2a,R2b,R2c$\}$. Selection works --- $478$ verified
+matches over $95$ of $98$ proofs. What the selected patterns then meet is a menu
+built from a different field: $48\%$ of matches name a pattern it does not
+contain, and every key that never matched once is an analysis pattern while the
+frequent absentees are categorical.
+
+This gap has a property the others do not: \emph{it was only visible because the
+component ran}. The deterministic path yields all-thin on arXiv, so the component
+looked inert, and the economical reading was to retract it. Retracting it would
+have removed the only instrument able to report that the menu does not fit the
+corpus --- the $232$ unmatched patterns are not a failure of the feature but its
+most informative output. A third gap category therefore has to be named beside
+\emph{accounting} and \emph{capability}: \emph{built, reviewed, and never run},
+which resembles both and is neither.
 
 \emph{The generalisable form.} Four of this pipeline's gaps are accounting
 rather than capability --- information already computed and not carried across a
