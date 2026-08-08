@@ -205,13 +205,18 @@ field is \emph{false} for two, and $33$ orphan statements are recorded.
 Output lands in \texttt{data/paper-graphs} while RETRIEVE collects
 \texttt{data/iatc-paper-graphs/\$RUN\_ID}\\[3pt]
 A7 Proof structure is typable \emph{and discriminative} (S7) & mechanical &
-$88$ typed / $10$ cyclic-rejected / $0$ failed of $98$ --- complete
-accounting. Vocabulary gate PASS. Entropy gate PASS: mean off-diagonal
+$\mathbf{94}$ typed / $\mathbf{4}$ cycle-rejected / $0$ failed of $98$ --- complete
+accounting. Was $88/10$: six rejections were a serialisation defect (an edge
+concluding several claims at once serialised as a Python list repr and failed
+the \emph{readability} gate) reported under a guessed cycle reason. The four
+survivors carry a genuine wire-graph cycle, all four flattened
+\texttt{iff}-structure. Vocabulary gate PASS. Entropy gate PASS: mean off-diagonal
 structure cosine $0.02$ (ceiling $0.85$) --- the Mark~1 embedding collapse
 definitively absent\\[3pt]
 A8 The result is queryable (S8 + bench) & mechanical (export) &
 Export verified at $446$ nodes / $286$ edges ($88$ \texttt{Proof} $+$ $358$
-\texttt{Step}). The XTDB ingest ($772$ nodes / $419$ edges, query ladder,
+\texttt{Step}) --- \emph{pending re-export} against the corrected $94$-proof
+typing (\hz{H36}). The XTDB ingest ($772$ nodes / $419$ edges, query ladder,
 integrity census) lives in a separate benchmark artifact and is
 \emph{not} re-derivable from this run directory\\[3pt]
 A9 The field's move repertoire is harvestable (S10) & inductive-$n{=}16$ &
