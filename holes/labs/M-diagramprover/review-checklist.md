@@ -185,15 +185,15 @@ obviously an extractor error — but it should be chosen rather than defaulted.
 
 ## 8. CAS-SEL Tier-1, measured (2026-08-08)
 
-Full result in `futon6/holes/TN-cas-tier1-findings.md`. 346 verified matches
-over 72 of 98 proofs; 69/72 proofs match. Selection is witnessed. The gap is the
+Full result in `futon6/holes/TN-cas-tier1-findings.md`. 478 verified matches
+over all 98 proofs; 95/98 proofs match. Selection is witnessed. The gap is the
 check menu, and it is quantified.
 
 | # | item | cost | done when |
 |---|---|---|---|
-| 15 | Extend `CHECK_MENU` to the categorical patterns the corpus actually produces. `transport-across-isomorphism` (43), `find-the-right-abstraction` (41), `verify-universal-property` (34) are absent from the menu and account for 118 of 346 matches | design + low code | no pattern above 10 matches is `ABSENT from menu` |
-| 16 | Fill the empty menu lists. `unfold-the-definition` (46 matches) is the largest key that fires nothing; 61 of 346 matches select an empty list | design + low code | every menu key either fires a check or is documented as deliberately report-only |
-| 17 | Decide the four never-matched analysis keys (`epsilon-of-room`, `estimate-by-bounding`, `induction-and-well-ordering`, `separate-into-independent-pieces`). Keep as cross-field coverage, or mark out-of-scope for math.CT — they currently make the menu look better populated than it is here | design call | a stated position |
+| 15 | Extend `CHECK_MENU` to the categorical patterns the corpus actually produces. `transport-across-isomorphism` (64), `find-the-right-abstraction` (50), `verify-universal-property` (43) are absent from the menu and account for 157 of 478 matches | design + low code | no pattern above 10 matches is `ABSENT from menu` |
+| 16 | Fill the empty menu lists. `unfold-the-definition` (67 matches) is the largest key that fires nothing; 89 of 478 matches select an empty list | design + low code | every menu key either fires a check or is documented as deliberately report-only |
+| 17 | Decide the three never-matched analysis keys (`estimate-by-bounding`, `induction-and-well-ordering`, `separate-into-independent-pieces`). Keep as cross-field coverage, or mark out-of-scope for math.CT — they currently make the menu look better populated than it is here | design call | a stated position |
 
 Until 15 and 16, CAS-SEL's card should read **selection witnessed, menu
 under-specified for this corpus** — more useful than either "ready" or
