@@ -183,8 +183,13 @@ rather than rebuilding one per corpus; corpus-fresh rebuild remains
 A3 Proof arguments reconstruct as gated DAGs (S3) & mechanical &
 $98/98$ graphs gated PASS (argcheck $+$ substance) \emph{when the finals are
 selected explicitly}; the stage's directory gate also sees $98$
-\texttt{.rung2} reports and fails on them. $45.9\%$ ($45/98$) of finals
-carry a retry attempt --- the honesty bound on first-pass quality\\[3pt]
+\texttt{.rung2} reports and fails on them. The first-pass retry rate is
+\emph{pending re-derivation} (\hz{H37}): the attempt directory is not
+run-scoped, so it now holds $188$ files over $114$ graph names against $98$
+finals, and the previously reported $45.9\%$ is no longer reproducible from it.
+Reconstructions give $37.8\%$ (graphs with $>1$ attempt) and $36.7\%$
+(attempts co-temporal with their own final); the honest statement is that this
+honesty bound requires a clean run to measure\\[3pt]
 A3$'$ \dots\ and their anchors are trustworthy & \textbf{weak} &
 Content faithful (\S\ref{sec:annex}), \emph{coordinates} not: $41\%$ of node
 anchors cover their own text's line, median drift $3$ ($n{=}290$). Repaired by
@@ -273,10 +278,13 @@ designed, not run (\hz{H8})\\
 
 \medskip
 Two entries deserve a sentence because they are the ones a reader should
-distrust. \textbf{A3's $48\%$ retry rate} is a first-pass quality bound, not a
-defect: gates catch, feedback repairs, and the corpus-level artifact is clean
---- but a reader tempted to quote ``$98/98$ gated'' as a model-quality figure
-should quote the retry rate beside it, and should note what \emph{gated} means
+distrust. \textbf{A3's retry rate} is a first-pass quality bound, not a
+defect: gates catch, feedback repairs, and the corpus-level artifact is clean.
+Its \emph{value}, however, is pending re-derivation (\hz{H37}) --- the attempt
+directory is shared across runs, so the figure once quoted here cannot now be
+recovered from it, and reconstructions land between $36.7\%$ and $37.8\%$. A
+reader tempted to quote ``$98/98$ gated'' as a model-quality figure should quote
+the retry rate beside it once it is measurable again, and should note what \emph{gated} means
 here. The verification ladder has four rungs, and S3's gate is the first two:
 wiring well-formedness (\texttt{argcheck}) and anti-degeneracy
 (\texttt{substance}). Rung~2, which asks the harder questions --- are node texts
