@@ -1,0 +1,278 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1.1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue!50!black}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{A Capability Proof, by Construction:\\
+\large The diagram prover itself --- a ladder of logics,\\
+each rung warranted by the claims it can certify}
+\author{Joseph Corneli\thanks{Prepared with the futon agent mesh
+(Claude, Codex, and Z.ai seats coordinated over a local Agency); the
+human's role was direction, review checkpoints, and the judgments
+marked as such below.}}
+\date{August 2026 --- working note, v0 (drafted 8 August)}
+
+\newcommand{\warrant}[1]{\textsl{#1}}
+\newcommand{\parr}{\rotatebox[origin=c]{180}{\&}}
+\newcommand{\seq}{\mathbin{\triangleleft}}
+\newcommand{\Caus}{\mathrm{Caus}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}\noindent
+This is the fourth note in the capability-proof series (APM, arXiv,
+War Machine), and it is reflexive: its subject is the instrument the
+other three lean on. The diagram prover exists in \emph{versions},
+and the honest statement of what the programme can certify is
+indexed by version: the Pearl-inspired engine (DAG-level:\ backdoor,
+front-door, general identification, transport via selection
+diagrams, deterministic counterfactuals) is implemented,
+oracle-triangulated, and \emph{sufficient for every causal claim the
+APM proof makes}; the War Machine proof's load-bearing claims ---
+one-way signalling at the consent gate, no-signalling exogeneity,
+silence as an open continuation --- are not expressible at that
+tier and demand a Kissinger-inspired version
+($\Caus[-]$/BV:\ higher-order causal categories, where the stack's
+own dark-tower excursion has already mapped the connectives); and a
+Fong-inspired tier (synthetic, Markov-categorical:\ intervention as
+string-diagram surgery, do-calculus without reference to a
+particular graph semantics) is registered for capabilities beyond
+both. The organizing discipline is a new refusal species,
+\emph{not-expressible-at-tier}: the prover refuses claims its
+current logic cannot state, those refusals are typed and logged, and
+the ladder grows exactly where the client proofs are hungry ---
+demand-paged logic acquisition, with the refusal log as the demand
+signal and its gain instrumented per WR-27.
+\end{abstract}
+
+\section{The claim, read constructively}
+
+The headline claim --- \emph{the programme's capability claims are
+certifiable} --- read constructively, asserts a procedure: handed
+any claim appearing in a client capability proof, the procedure
+either routes it to a prover version whose logic expresses it and
+whose machinery identifies or measures it (returning a receipt), or
+returns a \emph{typed refusal} stating exactly why not ---
+not-identified (the logic expresses it, the data cannot), or
+not-expressible-at-tier (no formula of the current logic states the
+claim). The proof object is the version ladder plus the router;
+the refusal log is its odometer.
+
+Reflexivity requires one guardrail, stated at the outset: this
+document's claims about the prover are \emph{not} certified by the
+prover. They are certified by the client proofs' own certificates
+--- the external anchor --- and by ordinary mechanical means
+(oracle agreement, executed checks). A prover licensing its own
+capability claims would be laundering; the series' whole discipline
+exists to prevent that shape.
+
+\section{The ladder}
+
+\subsection*{D1 --- Pearl-inspired (implemented)}
+
+DAG-level causal inference: backdoor and front-door adjustment,
+general identification, transportability via selection diagrams,
+deterministic counterfactuals. \textbf{Warrant:}
+\warrant{mechanical}/\warrant{replicated} --- triangulated against
+independent DAG-level oracles; the six standing receipts
+self-answered (2026-08-03); refusal discipline exercised (the
+engine declines non-identified contrasts rather than estimating
+them). \textbf{What it certifies in the client proofs:} the APM
+note's causal layer is D1-complete --- the $do(\textrm{frame})$
+controlled contrast (N4), the APM$\to$BPM transport statement (N6),
+and the mediation-style questions in the memory lane are all
+expressible and their identification receipts issued or issuable at
+this tier. The arXiv note's hazard-incidence claims likewise. D1 is
+not the bottleneck anywhere in the first two client proofs; that is
+a finding, not a boast --- it locates the demand frontier precisely
+at the third.
+
+\subsection*{D2 --- Kissinger-inspired (registered)}
+
+Higher-order causal categories --- $\Caus[\mathcal{C}]$ --- which
+are models of BV-logic (Simmons \& Kissinger, arXiv:2205.11219):
+$\otimes$ types non-signalling composition, $\parr$ types
+unconstrained interaction, and the self-dual non-commutative
+$\seq$ types \emph{one-way} signalling. The stack has already done
+the semantic groundwork: the dark-tower excursion
+(\texttt{futon5a/holes/excursions/E-the-dark-tower-2.md},
+2026-06-02) maps $\otimes$ to independent parallel agent work,
+$\parr$ to tightly-coupled co-work, and $\seq$ to the operator
+$\to$ agent turn. \textbf{Warrant:} \warrant{registered} ---
+candidate mechanism, not applied. \textbf{What demands it:} the War
+Machine proof's load-bearing structural claims are
+signalling-shaped and sit outside D1's vocabulary:
+
+\begin{itemize}
+\item \emph{The consent gate as a type.} ``Automated production,
+operator-gated emission'' becomes a $\seq$-typing judgment: the
+emission loop is well-typed only with the operator on the
+signalling side of the outward edge. A structure in which the
+machine signals outward without the operator is \emph{underivable},
+not merely forbidden.
+\item \emph{I4 exogeneity as no-signalling.} ``The fast loop cannot
+force the glacial'' is a non-signalling constraint --- the dual
+face of the same typing, stated in the logic rather than in the
+guardrail code's comments.
+\item \emph{Not-yet-answered as an open continuation.} A send whose
+grade has not arrived is $A \seq X$ with the dual not yet supplied
+--- the precise sense in which silence neither blocks nor flatters
+the proof.
+\item \emph{Conversion as a connective change.} The cold-chain
+ladder's conversion rung --- a cold contact becoming a working
+channel --- is composition upgrading from $\otimes$ toward $\parr$:
+acquiring a channel, said in the grammar.
+\item \emph{Standing as a linear resource.} The honest-standing
+drop rule is a linear constraint --- do not use a hypothesis you do
+not hold --- native to the multiplicative substrate D2 sits on.
+\end{itemize}
+
+\textbf{First-application contract} (the upgrade path from
+\warrant{registered} to \warrant{mechanical}): type the War Machine
+note's Figure~1 emission loop as a BV formula and check that the
+guardrail invariants correspond to derivability facts --- the
+operator-bypassing structure underivable; the I4 direction
+non-signalling. BV provability is decidable (known NP-complete),
+proof-search implementations exist in the deep-inference
+literature, and instances at this scale are also hand-checkable ---
+so the contract discharges mechanically, an afternoon-sized
+exercise with a crisp pass/fail. \textbf{Hazards, named now:}
+pomset logic and BV are provably distinct (Nguy\~{\^e}n \&
+Stra{\ss}burger), and War Machine traces harvested as partial
+orders from event data may be pomset-shaped --- \emph{which
+self-dual seq the traces live in} is a question to flag, not
+assume; and deep inference's context-rewriting reading of warrant
+upgrades (``never re-argued, only re-certified'' as rewriting at
+depth) is an attractive correspondence that remains
+\warrant{registered} until something checkable hangs on it.
+
+\subsection*{D3 --- Fong-inspired (registered, frontier)}
+
+Synthetic causality in Markov categories: causal theories in the
+Fong lineage, do-calculus stated without reference to a particular
+graph semantics, and intervention as an endofunctor --- string-diagram
+surgery (Jacobs--Kissinger--Zanasi), which the deep-research census
+adopts as a design constraint: $do$ should be a functor on the
+engine's own representation, not an ad hoc graph mutation.
+\textbf{Warrant:} \warrant{registered} at best, and the census's
+honesty clause governs: \emph{no categorical-causal-inference
+result in the census has a runnable implementation} --- everything
+at this tier is first-of-kind, validatable only by agreement with
+D1 oracles on the shared fragment, with the stated blind spot (a
+categorical bug that projects correctly to DAG-level answers).
+\textbf{What would demand it:} claims that need probability and
+higher-order structure \emph{together} --- quantitative versions of
+the D2 claims (reply rates and review-round dynamics \emph{under}
+signalling constraints), the value of memory amortized across
+chains read as a second-order process (a comb), and any eventual
+unification of the programme's two axes. The declared bridge
+between the D2 axis and the D3 axis is the combs-in-Markov-categories
+paper (arXiv:2404.02017), and the census's discipline holds here:
+flagged deliberately, not on the short path.
+
+\section{The demand table}
+
+Which client-proof claims demand which tier. \emph{Status} reads:
+certified (receipt exists), issuable (expressible at an implemented
+tier, receipt not yet run), registered (demands an unimplemented
+tier), refused$@$tier (typed as inexpressible at the current
+implemented tier --- these rows \emph{are} the demand signal).
+
+\begin{center}
+\small
+\begin{tabular}{p{0.44\textwidth} p{0.10\textwidth} p{0.34\textwidth}}
+\textbf{Claim (client proof, node)} & \textbf{Tier} & \textbf{Status}\\[2pt]
+\hline\\[-8pt]
+$do(\textrm{frame})$ moves consultation (APM N4) & D1 &
+certified --- preregistered contrast, receipts on file\\[3pt]
+APM $\to$ BPM transport (APM N6) & D1 & issuable --- selection
+diagram stated; awaits the held-out run\\[3pt]
+Hazard incidence claims (arXiv note) & D1 & certified /
+issuable per the hazard ledger\\[3pt]
+APM $\to$ OSS transport (WM W6) & D1 & issuable --- same selection-%
+diagram form; grader edge $S$-dependent\\[3pt]
+Harness-causes-merges below the standing confounder (WM \S6) & D1 &
+issuable --- mechanical-layer contrasts identified; social layer
+labeled observational\\[3pt]
+Consent gate well-typedness; I4 no-signalling (WM \S4) & D2 &
+refused$@$D1 $\to$ registered; first-application contract above\\[3pt]
+Not-yet-answered semantics (WM \S2) & D2 & refused$@$D1 $\to$
+registered\\[3pt]
+Conversion as $\otimes\to\parr$ (WM W4) & D2 & registered\\[3pt]
+Standing as linear resource (WM W1) & D2 & registered\\[3pt]
+Reply-rate dynamics under signalling constraints & D3 & registered
+(frontier)\\[3pt]
+Cross-chain memory value as a comb & D3 & registered (frontier)\\
+\hline
+\end{tabular}
+\end{center}
+
+\medskip
+The table's shape repeats the series' lesson at the meta-level: the
+first two client proofs sit entirely in the implemented tier ---
+the demand frontier was invisible until the third client arrived
+with claims the engine must refuse. That is what ``exactly what
+each version can prove'' buys: the refusals locate the next version
+before anyone argues about taste.
+
+\section{Demand-paged logic acquisition}
+
+The router's refusal log is a hunger log. A claim refused as
+not-expressible-at-tier is a demand signal for the next rung,
+exactly as a failed retrieval query is a demand signal for the next
+memory and a hungry corpus query is a mining target: the same
+pattern at a third altitude. Per WR-27 the loop is born
+instrumented for its gain --- the fraction of typed refusals that
+shape the next prover version is logged from day one, and a refusal
+log that never changes the ladder is the uninstrumented-loop smell.
+The corollary discipline: rungs are opened \emph{by demand}, never
+by taste. D2 is being opened because the War Machine proof's
+central claims are refused without it; D3 waits until a client
+proof's refusal --- not an aesthetic preference for category theory
+--- demands it.
+
+\section{Honest boundaries}
+
+D1's completeness claim is scoped: complete \emph{for the claims
+the first two client proofs happen to make}, at DAG level,
+oracle-triangulated --- not complete for causal inference at large.
+D2 has semantic groundwork (the dark-tower mapping) and zero
+applied instances; its first-application contract is written
+precisely so that its first warrant upgrade is mechanical rather
+than narrative. D3 has no runnable implementation anywhere in the
+censused literature; anything built there is first-of-kind, with
+the validation blind spot stated. The pomset-vs-BV question is
+open and load-bearing for D2's trace semantics. And the
+reflexivity guardrail bears repeating: every claim in this note
+about a prover version is warranted by client-proof certificates
+and executed checks, never by the version under discussion.
+
+\section{What this is for}
+
+The APM note argued the transferable object is the form; the War
+Machine note showed what the form does when the grader is a human
+institution. This note shows what it does when pointed at the
+instrument: the prover stops being one thing that is good or bad
+and becomes a ladder whose every rung carries the claims it can
+certify and the refusals that demanded the rung above. ``The simple
+Pearl-inspired one is enough for the APM model'' is now a row with
+receipts; ``we need a Kissinger-inspired one for the War Machine''
+is now five typed refusals and an afternoon-sized discharge
+contract; ``maybe a Fong-inspired one for further capabilities''
+is now a registered frontier with its bridge object named and its
+validation blind spot admitted. When a client proof someday makes
+a claim all three tiers refuse, the ladder will say so in its own
+vocabulary --- which is the only way a research programme's
+instruments stay the right size for its questions.
+
+\end{document}
