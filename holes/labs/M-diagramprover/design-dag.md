@@ -66,7 +66,8 @@ Three cases follow, and they call for different actions:
    have not reached. The preregistration's Class C. These cannot be retracted on
    pilot evidence — the pilot is exactly the regime where they look useless.
 
-CAS-SEL sits in (2) and partly (3): per-proof selection is testable now, the
+CAS-SEL sits in (2) and partly (3): per-proof selection is testable now — and
+has now been tested, see `futon6/holes/TN-cas-tier1-findings.md` — while the
 genealogical half is not.
 
 ## What this requires next
@@ -95,7 +96,7 @@ the same questions against both graphs:
 | conclusion drawn from the implementation graph | under the design graph | moved? |
 |---|---|---|
 | **A3: "98/98 graphs gated PASS"** — verification is complete | The ladder has four rungs. Measured on the corpus: rung-0 (argcheck) **98/98**, rung-1 (substance) **98/98**, rung-2 (semcheck) **49/98**, rung-3 deterministic half only. So the true claim is *"passes rungs 0–1 of 4 corpus-wide, rung 2 on half"*. The count was never wrong; "gated" meant something narrower than a reader would take it to mean | **yes — weakens** |
-| **CAS-SEL is not needed** | Load-bearing: the genealogical select is the only cross-paper inheritance mechanism in the design, so no other node supplies what it supplies | **yes — reverses** |
+| **CAS-SEL is not needed** | Load-bearing, now witnessed rather than argued: over 72 of 98 proofs the Tier-1 verify returns **346 matches on 69/72 proofs**, and 175 of them name patterns the check menu does not contain. Retracting it would have removed the only instrument able to report that the menu is specified for analysis while the corpus is categorical | **yes — reverses** |
 | **The APM structure-match tail is deprecated** | Also retractable here: it consumes another programme's inputs and has no path to any question this corpus can answer | no — **both graphs agree**, which is the evidence that call was right |
 | **A12: "12/12 stages ledgered"** | 12 stages is the implementation; the design has 38 cards. The integration claim is over a subgraph and should say which | **yes — weakens** |
 | **The two open gaps were accounting, not capability** | A third category appears that the implementation graph cannot express: *built, reviewed, and never run* (CAS-SEL's Tier-1 verify). Neither an accounting gap nor a missing capability — an unexecuted experiment | **yes — adds a category** |
