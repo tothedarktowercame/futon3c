@@ -3884,6 +3884,32 @@
         (try (bb/project-agents! (reg/registry-status)) (catch Throwable _ nil))
         (json-response 200 (assoc result :ok true))))))
 
+(defn- handle-park-complete
+  "POST /api/alpha/park/complete — mark an arbitrary parked-on dependency complete."
+  [request _config]
+  (if-not (parked-on-enabled?)
+    (json-response 503 {:ok false :error "parked-on-disabled"})
+    (let [payload (parse-json-map (read-body request))]
+      (cond
+        (nil? payload)
+        (json-response 400 {:ok false :error "invalid-json"})
+
+        (str/blank? (str (or (:dep-id payload) (get payload "dep-id"))))
+        (json-response 400 {:ok false :error "dep-id-required"})
+
+        :else
+        (let [dep-id (or (:dep-id payload) (get payload "dep-id"))
+              result (or (:result payload) (get payload "result"))
+              completion (parked-on/note-completion!
+                          dep-id result
+                          {:resume! parked-resume!
+                           :now-ms (System/currentTimeMillis)})
+              released (vec (:released completion))]
+          (json-response 200 {:ok true
+                              :dep-id dep-id
+                              :released released
+                              :released-count (count released)}))))))
+
 (defn- handle-bell
   "POST /api/alpha/bell — asynchronous fire-and-forget invoke.
    Body: {\"agent-id\":\"codex-1\",\"prompt\":\"...\",\"timeout-ms\":3600000}
@@ -6790,6 +6816,9 @@
       ;; E-repl-continuations Car 2b: register a parked-on continuation.
       (and (= :post method) (= "/api/alpha/park" uri))
       (handle-park request config)
+
+      (and (= :post method) (= "/api/alpha/park/complete" uri))
+      (handle-park-complete request config)
 
       ;; E-repl-continuations Car 2b: repl buffer polls for ready resumes.
       (and (= :get method) (= "/api/alpha/parked/ready" uri))
