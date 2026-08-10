@@ -141,9 +141,39 @@ enforcement standard for THIS design's preregistration.
   trade buys ecological validity and near-zero apparatus, and treatment
   runs are real campaign progress — the cost is partly recovered.
 
-Budget: ~10–16 paired problems ≈ 20–32 dispatches over a few days, well
-under the ablation's estimate. Lane hygiene still applies: fresh sessions
-per run; enumerate seat exposure before sizing.
+**REFRAMED 2026-08-10 (Joe): design research measured by residual
+capability.** At ≈50% proved, closing APM is not in doubt; the question is
+what capability remains at the end. The null V3 must beat is "the campaign
+was the capability to spend OpenAI tokens." So:
+
+- **Waves, not a frozen RCT.** A few open problems per class (a/m/t/b) per
+  wave; system changes (packet, recall, promotion affordances) are
+  PERMITTED between waves and are the point — "can we get this to go
+  through in one pass, robustly, across classes" is the target. Discipline:
+  per-wave prereg + `:recall-system` version tag per wave, never mid-wave.
+- **Primary battery — residue per closure, trended across waves:**
+  (1) one-pass closure rate per class; (2) deposit: lemmas promoted to
+  importable modules, memories citing importable names, index regenerated
+  at close; (3) reuse: LIB-citation rate (baseline 6%, README §4g
+  adoption) and memory USE under the fingerprint standard; (4) duplication
+  manufactured; (5) tokens per closure across waves — falling =
+  accumulating capability, flat = the token-spending null, reported
+  either way.
+- **Paired arms as a duplicate generator (Joe's observation).** Two arms
+  on the same problem produce near-exact twin lemmas by construction —
+  ground truth the write-side programme (bank §I) never had. Branch
+  protocol: `exp/<pid>-mem` and `exp/<pid>-ctl`, no auto-merge; ground
+  control adjudicates the merge; twin sets diffed into a labeled
+  near-duplicate dataset (the calibration set for §I2's statement-identity
+  instrument); the unmerged branch is kept as the variant store per the
+  2026-08-09 "duplicates are more to choose from" ruling.
+- **The channel contrast nests inside the residue frame:** the
+  preregistered prediction is that the memory arm's accumulation SLOPE
+  differs (steeper reuse, falling cost), not merely its single-pass score.
+
+Budget: ~3–4 problems per class per wave, 2–3 waves ≈ 24–48 paired
+dispatches. Lane hygiene still applies: fresh sessions per run; enumerate
+seat exposure before sizing.
 
 ### Phase 3 — repairs V3 reports as repaired (post-measurement only)
 
