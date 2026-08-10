@@ -97,7 +97,13 @@
   [memory]
   (let [k (get-in memory [:memory/body :kind])
         k (cond (keyword? k) k (string? k) (keyword k) :else nil)]
-    (assoc memory :memory-use/kind (get memory-kind->use-kind k :unclassified))))
+    ;; The contract vocabulary is CLOSED (#{:substitutive :regulative});
+    ;; "absence means not yet adjudicated". Emitting a placeholder kind
+    ;; would fail receipt validation the first time an unmapped-kind
+    ;; memory surfaces — leave the slot off instead.
+    (if-let [use-kind (get memory-kind->use-kind k)]
+      (assoc memory :memory-use/kind use-kind)
+      memory)))
 (def default-receipt-alpha 0.5)
 (def default-receipt-query-limit 200)
 (def default-receipt-stats-timeout-ms 5000)
@@ -1230,12 +1236,6 @@
            :surfaced-memory-ids memory-ids
            :used-memory-ids []
            :inclusion-reasons inclusion-reasons
-           :memory-use-kinds
-           (into {}
-                 (keep (fn [memory]
-                         (when-let [kind (:memory-use/kind memory)]
-                           [(:memory/id memory) kind])))
-                 (:memories recall-result))
            :cascade-id (or (:trace-id recall-result)
                            (str "dispatch-recall-empty-" (UUID/randomUUID)))
            :surfaced-at surfaced-at
@@ -1244,6 +1244,15 @@
          (mapv (fn [memory]
                  {:memory-id (:memory/id memory)
                   :via (:via memory)})
+               (:memories recall-result))
+         ;; B4: the contract fn drops unknown keys, so kinds ride the same
+         ;; post-assoc as surfacing-via (found when frame-0's receipt
+         ;; persisted without them despite the dry-run rendering kinds).
+         :memory-use/kinds
+         (into {}
+               (keep (fn [memory]
+                       (when-let [kind (:memory-use/kind memory)]
+                         [(:memory/id memory) kind])))
                (:memories recall-result))
          :memory-use/withheld-ids withheld-ids)]
     {:subject {:ref/type (if (str/starts-with? problem "bpm-")
