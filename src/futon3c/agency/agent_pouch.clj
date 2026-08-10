@@ -459,6 +459,7 @@
                :claude-bin (or claude-bin "claude")
                :model model
                :cwd cwd
+               :permission-mode (or permission-mode "bypassPermissions")
                :spawned-at (now)
                :spawned-at-ms (now-ms)
                :last-used-ms (now-ms)
@@ -487,12 +488,17 @@
     (stderr-drainer proc stderr)
     pouch))
 
-(defn- compatible? [pouch {:keys [session-id model cwd claude-bin]}]
+(defn- compatible? [pouch {:keys [session-id model cwd claude-bin permission-mode]}]
   (and (or (nil? session-id)
            (= (some-> session-id str) (some-> (:session-id pouch) str)))
        (= (some-> model str) (some-> (:model pouch) str))
        (= (some-> cwd str) (some-> (:cwd pouch) str))
-       (= (some-> (or claude-bin "claude") str) (some-> (:claude-bin pouch) str))))
+       (= (some-> (or claude-bin "claude") str) (some-> (:claude-bin pouch) str))
+       ;; A permission change must not be silently absorbed by a warm pouch:
+       ;; claude-2's 2026-08-10 re-registration (default -> bypassPermissions)
+       ;; never took effect because the old pouch kept serving.
+       (= (str (or permission-mode "bypassPermissions"))
+          (str (or (:permission-mode pouch) "bypassPermissions")))))
 
 (defn- ensure-pouch! [agent-id opts]
   (let [aid (str agent-id)]
