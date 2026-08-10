@@ -371,3 +371,38 @@ taxonomy; APPROVALS through the reviewer seat.
 **Standing rule:** every batch prereg cites this section and instantiates
 exactly one wave of it. The programme is the object; preregs are its
 turns.
+
+---
+
+## Generic proof plans: the vote-and-callback pipeline (Joe, 2026-08-10)
+
+**The mechanism.** Every demand signal — a runner's failed search (interview
+Q3), a hunger memory, a Tier-A prove-or-find gap, a re-derivation — is a
+**vote** for a concept. Votes are recorded as typed evidence rows keyed by a
+canonical concept slug. At threshold (≥2 distinct problems), the concept
+goes to a build lane (ConstructionTargets packet, spec preferably taken
+verbatim from the voters — closers state exactly what they need). Each
+blocked problem meanwhile parks its rerun on `concept:<slug>` — **the park
+IS the callback**: when the artifact lands (compiled, importable, indexed,
+memory written), ground control completes the dep and every voter's rerun
+wakes as a frame with the artifact named in its packet.
+
+A blocked problem thus becomes a **generic proof plan**: an honest partial
++ precisely stated obligations + concept deps wired to callbacks. This is
+not an A/B arm; it is the pipeline the A/B ladder measures. It is also the
+residual-capability thesis made operational: the votes ledger, the build
+lane, and the callback registry are what remain when the corpus is done.
+
+**Choreography rule (learned from frame 0's double-harvest):** one delivery
+channel of record per job — park OR auto-bellback, never both; park
+payloads open with a has-this-been-harvested check. Concept deps are
+completed manually by ground control after verifying the artifact, never
+automatically by job completion.
+
+**First revolution (live, 2026-08-10):** `schwarz-pick-rigidity` — votes:
+a94A09 frame-0 run + interview ×2 (searches verbatim), the a09 open-hunger
+memory, and the README §4m topology cluster's adjacent asks. Spec: the
+runner's own `eq_id_of_two_fixed_points` statement. Build dispatched;
+a94A09-uniqueness rerun parked on `concept:schwarz-pick-rigidity`.
+Second candidate at threshold: the thrice-derived polynomial zero-count
+bridge (a92J05, a97A08, a94A09) — claude-2's review finding.
