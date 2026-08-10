@@ -37,9 +37,9 @@
       (is (= [:problem-md :proof-outline-md :stdin-packet]
              (mapv :source sources)))
       (is (= (.getPath problem-file) (:path (first sources))))
-      (is (= ["bound" "continuous" "epsilon" "quotient"]
+      (is (= ["epsilon" "criterion" "boilerplate" "bound"]
              (:terms query))
-          "the bounded lexical query is filled from the highest-priority source")
+          "the bounded lexical query round-robins across ranked sources")
       (is (not-any? #{"generic"} (:terms query))))))
 
 (deftest recall-query-term-cap-is-parameterised-with-shipped-default-preserved
@@ -459,6 +459,7 @@
           {:problem "a92J05"
            :problem-root "/definitely/not/a/problem/root"
            :subjects ["roots outside unit"]
+           :query-terms ["roots"]
            :to "codex-test"
            :from "ground-control"
            :substrate-base "http://127.0.0.1:7073"

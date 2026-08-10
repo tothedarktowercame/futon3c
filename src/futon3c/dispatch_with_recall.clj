@@ -13,6 +13,7 @@
             [futon3c.peripheral.memory-recall :as memory-recall]
             [futon3c.substrate.client :as substrate])
   (:import [java.net URLEncoder]
+           [java.text Normalizer Normalizer$Form]
            [java.time Instant]
            [java.util UUID]))
 
@@ -100,7 +101,7 @@
     "they" "part"
     ;; v1.4: generic task/qualifier words exposed by IDF ranking. These carry
     ;; no mathematical identity even when they happen to be corpus-rare.
-    "choice" "close" "remaining" "special"})
+    "choice" "close" "remaining" "remains" "special"})
 
 (defn- encode [value]
   (URLEncoder/encode (str value) "UTF-8"))
@@ -252,7 +253,12 @@
       (str/replace #"\\int" " integral ")
       ;; v1.3 (meta-draft, 1342dee): strip remaining TeX command fragments
       ;; so cdot/langle/rangle etc never become query tokens.
-      (str/replace #"\\[a-zA-Z]+" " ")))
+      (str/replace #"\\[a-zA-Z]+" " ")
+      ;; Named results are often written with diacritics while memory ids and
+      ;; hooks use ASCII slugs. Decompose only after TeX normalization, then
+      ;; remove combining marks so both query and DF generation see one form.
+      (Normalizer/normalize Normalizer$Form/NFKD)
+      (str/replace #"\p{M}+" "")))
 
 (def ^:private problem-document-frequency
   (delay
@@ -266,6 +272,12 @@
                         {:resource problem-document-frequency-resource})))
       table)))
 
+(defn- term-idf
+  [word {:keys [document-count document-frequency]}]
+  (Math/log
+   (/ (double document-count)
+      (inc (get document-frequency word 0)))))
+
 (defn- text-keywords
   ([text limit]
    (text-keywords text limit @problem-document-frequency))
@@ -276,9 +288,10 @@
         frequencies
         (sort-by
          (fn [[word count]]
-           (let [df (get document-frequency word 0)
-                 idf (Math/log (/ (double document-count) (inc df)))]
-             [(- idf) (- count) word])))
+           [(- (term-idf word {:document-count document-count
+                               :document-frequency document-frequency}))
+            (- count)
+            word]))
         (map first)
         (take limit)
         vec)))
@@ -356,29 +369,18 @@
                   (problem-statement-text packet))
               8)}))))
 
-(defn- query-ladder
-  "Queries in DECREASING conjunctive strictness, for a conjunctive backend.
-
-  MEASURED 2026-07-30 across five live rows: the 3-term query returned ZERO
-  memories for ALL FIVE, while falling back to 2-term pairs and then singles
-  surfaced a memory for THREE of them. The 3-term cap was itself a fix earlier
-  the same day (from 36 terms) and it was not enough, because term SELECTION is
-  by statement order rather than by signal: a01A04's third term is `recursion`,
-  a rare word that floors any conjunction containing it.
-
-  Ordered strictest-first so precision is preferred and breadth is only reached
-  when precision returns nothing. Singles are last and deliberately included:
-  offering a marginally relevant memory costs little, because the runner reports
-  whether it USED one, and that report is the measurement we actually want."
+(defn- query-anchor-term
+  "Return the highest-IDF selected term, preserving query order on an IDF tie."
   [terms]
-  (let [t (vec (take 3 (remove str/blank? terms)))]
-    (->> (concat (when (seq t) [{:tier :triple :q (str/join " " t)}])
-                 (for [[i j] [[0 1] [0 2] [1 2]]
-                       :when (and (< i (count t)) (< j (count t)))]
-                   {:tier :pair :q (str/join " " [(t i) (t j)])})
-                 (for [x t] {:tier :single :q x}))
-         (reduce (fn [acc m] (if (some #(= (:q %) (:q m)) acc) acc (conj acc m))) [])
-         )))
+  (reduce
+   (fn [best term]
+     (if (or (nil? best)
+             (> (term-idf term @problem-document-frequency)
+                (term-idf best @problem-document-frequency)))
+       term
+       best))
+   nil
+   (remove str/blank? terms)))
 
 (defn recall-query
   "Build a bounded lexical query from subject ids, preregistered terrain, and
@@ -455,12 +457,14 @@
                    (remove str/blank?)
                    distinct
                    (take query-term-limit)
-                   vec)]
+                   vec)
+        required-term (query-anchor-term terms)]
     {:terrain terrain
      :recall-system recall-system
      :term-sources (if (seq query-terms)
                      [{:source :explicit-analysis-terms :terms terms}]
                      term-sources)
+     :required-term required-term
      :terms terms
      :query (str/join " " terms)}))
 
@@ -542,6 +546,13 @@
   (boolean
    (or (seq (:candidates proposal))
        (seq (:content-matches proposal)))))
+
+(defn- memory-contains-term?
+  [memory term]
+  (let [required (set (query-keywords (str term) Integer/MAX_VALUE))
+        present (set (query-keywords (pr-str memory) Integer/MAX_VALUE))]
+    (and (seq required)
+         (every? present required))))
 
 (defn- receipt-entries
   [base timeout-ms]
@@ -794,6 +805,7 @@
         trace-id (str "dispatch-recall-" (UUID/randomUUID))
         terrain-map (read-bpm-terrains (default-terrain-readme))
         query-data (recall-query opts packet terrain-map)
+        required-term (:required-term query-data)
         substrate-base (or substrate-base (substrate/configured-url))
         per-call-timeout (per-call-timeout-ms recall-timeout-ms)
         {:keys [search projection entry]}
@@ -811,17 +823,20 @@
             :trace-id trace-id
             :search-evidence search
             :recall-batch-fn batch-recall}))
-        ;; Walk the ladder strictest-first, stopping at the first tier that
-        ;; returns candidates. Records which tier fired so the offered half
-        ;; shows whether precision or breadth produced the result.
-        ladder-hit
-        (first (for [{:keys [tier q]} (query-ladder (:terms query-data))
-                     :let [p (propose-with q)]
-                     :when (proposal-hit? p)]
-                 (assoc p :recall/tier tier :recall/query-used q)))
-        proposals (or ladder-hit
-                      (assoc (propose-with (:query query-data))
-                             :recall/tier :none :recall/query-used (:query query-data)))
+        ;; The highest-IDF term is a required anchor, not merely one rung in a
+        ;; weakening ladder. Querying it alone also prevents the proposal
+        ;; layer's bounded OR fallback from letting a common companion term
+        ;; carry the match. No anchor support is a typed recall-empty result.
+        proposals
+        (if required-term
+          (assoc (propose-with required-term)
+                 :recall/tier :required-term
+                 :recall/query-used required-term)
+          {:candidates []
+           :content-matches []
+           :lexical-seed []
+           :recall/tier :none
+           :recall/query-used nil})
         pattern-ids (->> (:candidates proposals)
                          (sort-by proposal-rank)
                          (map :pattern-id)
@@ -916,12 +931,17 @@
         (->> ranked
              (keep
               (fn [memory]
-                (if (map? (:memory/body memory))
-                  memory
-                  (when-let [full-entry (entry (:memory/id memory))]
-                    (when (map? (:evidence/body full-entry))
-                      (assoc memory
-                             :memory/body (:evidence/body full-entry)))))))
+                (let [memory
+                      (if (and (map? (:memory/body memory))
+                               (memory-contains-term? memory required-term))
+                        memory
+                        (when-let [full-entry (entry (:memory/id memory))]
+                          (when (map? (:evidence/body full-entry))
+                            (assoc memory
+                                   :memory/body (:evidence/body full-entry)))))]
+                  (when (and memory
+                             (memory-contains-term? memory required-term))
+                    memory))))
              (take limit)
              vec)]
     (cond->
