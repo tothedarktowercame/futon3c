@@ -76,8 +76,28 @@
 (def default-problem-root "/home/joe/code/apm-lean/problems")
 (def ^:private problem-document-frequency-resource
   "apm-problem-document-frequency.edn")
-(def recall-system :v1.2-receipt-instrumented)
-(def receipt-ranked-system :v1.2-receipt-ranked-instrumented)
+(def recall-system :v1.3-kind-instrumented)
+(def receipt-ranked-system :v1.3-receipt-ranked-instrumented)
+
+;; B4 (E-memory-v3-staging): classify each surfaced memory's use MODE so
+;; use-rate can be reported per mode instead of as a misleading scalar.
+;; Derived at dispatch from the memory body's own :kind; the source value
+;; stays auditable in the store. Provisional mapping, refinable with data.
+(def ^:private memory-kind->use-kind
+  {:reference :substitutive
+   :strategy :substitutive
+   :tactic :substitutive
+   :lemma-location :substitutive
+   :feedback :regulative
+   :practice :regulative
+   :norm :regulative
+   :open-hunger :regulative})
+
+(defn- with-use-kind
+  [memory]
+  (let [k (get-in memory [:memory/body :kind])
+        k (cond (keyword? k) k (string? k) (keyword k) :else nil)]
+    (assoc memory :memory-use/kind (get memory-kind->use-kind k :unclassified))))
 (def default-receipt-alpha 0.5)
 (def default-receipt-query-limit 200)
 (def default-receipt-stats-timeout-ms 5000)
@@ -943,7 +963,7 @@
                              (memory-contains-term? memory required-term))
                     memory))))
              (take limit)
-             vec)]
+             (mapv with-use-kind))]
     (cond->
      {:status (if (seq memories) :ok :recall-empty)
       :trace-id trace-id

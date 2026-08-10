@@ -551,10 +551,16 @@ def gate_evidence_entry(job_id: str, agent: str, adjudication: dict[str, Any],
     }
 
 
-def classify_memory_lines(result: str) -> tuple[set[str], set[str], set[str]]:
+def classify_memory_lines(
+    result: str,
+) -> tuple[set[str], set[str], set[str], dict[str, str]]:
     used: set[str] = set()
     ignored: set[str] = set()
     unknown: set[str] = set()
+    # The runner's stated IGNORED reason must survive into the receipt
+    # (claude-2 review finding, 2026-08-10): capture the line remainder
+    # after the id as the rejection reason.
+    reasons: dict[str, str] = {}
     for line in result.splitlines():
         ids = set(MEMORY_ID_RE.findall(line))
         if not ids:
@@ -562,13 +568,17 @@ def classify_memory_lines(result: str) -> tuple[set[str], set[str], set[str]]:
         lowered = line.lower()
         if any(marker in lowered for marker in NEGATIVE_MARKERS):
             ignored.update(ids)
+            for memory_id in ids:
+                tail = line.split(memory_id, 1)[-1].lstrip(" :—-").strip()
+                if tail:
+                    reasons[memory_id] = tail
         elif any(marker in lowered for marker in POSITIVE_MARKERS):
             used.update(ids)
         else:
             unknown.update(ids)
     unknown.difference_update(used | ignored)
     used.difference_update(ignored)
-    return used, ignored, unknown
+    return used, ignored, unknown, reasons
 
 
 def memory_usage_section(result: str) -> str | None:
@@ -590,7 +600,7 @@ def extract_outcome(job_id: str, job: Any) -> dict[str, Any]:
     if state not in TERMINAL_STATES:
         return {"recoverable": False, "reason": "nonterminal-recall-dispatch"}
     recall_outcome = match.group(1) if match else "legacy-unknown"
-    used, ignored, unknown = classify_memory_lines(usage_section or result)
+    used, ignored, unknown, rejection_reasons = classify_memory_lines(usage_section or result)
     all_ids = used | ignored | unknown
     explicit_none = bool(re.search(
         r"(?i)(?:no\s+(?:dispatch-time\s+)?memories?|none).{0,40}"
@@ -622,6 +632,7 @@ def extract_outcome(job_id: str, job: Any) -> dict[str, Any]:
         "used_ids": sorted(used),
         "surfaced_ids": sorted(all_ids),
         "ignored_ids": sorted(ignored),
+        "rejection_reasons": rejection_reasons,
         "recall_outcome": recall_outcome,
         "extraction_method": method,
         "problem": problem_match.group(0) if problem_match else None,
@@ -674,7 +685,10 @@ def evidence_entry(outcome: dict[str, Any], swept_at: str,
     backfill = finished is None or finished < ROLLOUT_AT
     surfaced = outcome["surfaced_ids"]
     used = outcome["used_ids"]
-    unused = [memory_id for memory_id in surfaced if memory_id not in set(used)]
+    rejected = [m for m in outcome.get("ignored_ids", []) if m in set(surfaced)]
+    reasons = outcome.get("rejection_reasons", {})
+    unused = [memory_id for memory_id in surfaced
+              if memory_id not in set(used) and memory_id not in set(rejected)]
     problem = outcome.get("problem")
     subject = {
         K("ref/type"): K("apm-problem") if problem else K("agency-job"),
@@ -690,14 +704,17 @@ def evidence_entry(outcome: dict[str, Any], swept_at: str,
         K("memory-use/domain"): K("mathematics"),
         K("memory-use/surfaced-ids"): surfaced,
         K("memory-use/used-ids"): used,
-        K("memory-use/rejected-ids"): [],
+        K("memory-use/rejected-ids"): rejected,
         K("memory-use/unused-ids"): unused,
         K("memory-use/inclusion-reasons"): [
             {K("memory-id"): memory_id,
              K("reason"): "memory named in runner's final Memory usage section"}
             for memory_id in surfaced
         ],
-        K("memory-use/rejection-reasons"): [],
+        K("memory-use/rejection-reasons"): [
+            {K("memory-id"): m, K("reason"): reasons.get(m, "ignored per runner attribution")}
+            for m in rejected
+        ],
         K("memory-use/status"): K("outcome-attached"),
         K("memory-use/cascade-id"): job_id,
         K("memory-use/outcome-id"): evidence_id,
