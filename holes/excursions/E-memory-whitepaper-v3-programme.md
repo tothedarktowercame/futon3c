@@ -209,6 +209,41 @@ seat exposure before sizing. abl-codex-1 replication: probe OVERRAN
 2026-08-10 (job invoke-…f6cfb9ba) — liveness unconfirmed; retry with a
 longer budget before counting on it.
 
+#### Frames — run containerization on Zone (Joe, 2026-08-10)
+
+Both arms stay on Zone (32 cores / 249 GB, ~181 GB available with GLM 4.5
+Air down; `.lake` cache 7.2 GB). Containerization follows Joe's **frames**
+notion (Futon6): in the Minsky reading, a run is a typed slot-structure
+with required slots enforced by construction — the shape already realized
+by the γ frame in `futon6/holes/anatomy-of-a-wm-flight.md` ("no frame, no
+pair, no commit"); in the pool reading, a frame is one bounded round —
+rack, play, score, clear. Both converge on the same artifact. This is the
+E2/ValidatedTrace lesson landing at the right altitude: ~50 lines of frame
+construction/validation in bb, not a proof facility.
+
+**Setup slots (filled before dispatch, frame invalid without them):**
+`:frame/id` · `:problem` · `:base-revision` · `:checkout` (git worktree of
+apm-lean at base-revision + `cp -al` of `.lake` — hardlinks make the 7.2 GB
+cache per-frame free; verify in frame 0 that lake writes fresh files rather
+than mutating in place) · `:branch` (`exp/<pid>-<arm>`) · `:seat` +
+`:session` (fresh) · `:memory-channel` + `:recall-system` version ·
+`:resources` (systemd transient scope in `futon-agents.slice`, e.g.
+`MemoryMax=16G CPUQuota=400%` — 4-6 concurrent frames fit comfortably) ·
+`:budget` (tokens/wall-clock).
+
+**Closure slots (a frame without them is `:incomplete`, never scored):**
+`:commit-or-obstruction` · `:receipts` (offered AND outcome ids) ·
+`:lake-result` (exit + output hash) · `:axioms` (verbatim) · `:interview`
+(debrief transcript ref, or an explicit skip reason) · `:twin-diff` (once
+the pair completes). The A/B's null-outcome-columns death of 8–9 Aug
+becomes STRUCTURALLY impossible: an unscoreable frame is visible as
+`:incomplete`, not silently counted.
+
+Frame records land as EDN beside the repl-traces convention
+(`data/experiment-frames/<batch>/<frame-id>.edn`) plus an evidence row per
+frame. The batch (frame-system) = 10 frames + prereg + adjudicated merges
++ twin-lemma diff + retro.
+
 ### Phase 3 — repairs V3 reports as repaired (post-measurement only)
 
 - A3: route the codex lane through `review-attachment!` (unblocks C3).
