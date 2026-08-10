@@ -9,9 +9,13 @@
   (:import [java.net URLEncoder]))
 
 (defn configured-url []
+  ;; Fallback 7073, the standalone futon1b-server (two-JVM standard,
+  ;; 2026-08-10). The old 7071 fallback was the retired futon1a port: any
+  ;; env-less CLI invocation (fresh login shell, ssh command, cron) resolved
+  ;; to a dead port and reported store-unavailable.
   (-> (or (System/getenv "FUTON_SUBSTRATE_URL")
           (System/getenv "FUTON1A_URL")
-          "http://127.0.0.1:7071")
+          "http://127.0.0.1:7073")
       (str/replace #"/+$" "")
       (str/replace #"/api/alpha$" "")))
 
