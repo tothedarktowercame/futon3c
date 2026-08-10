@@ -6,4 +6,11 @@
   "zai-6"   {:role :apm-runner :domain :mathematics}
   "codex-2" {:role :scribe     :domain :mathematics :tools #{:memory-record}}
   "codex-5" {:role :apm        :domain :mathematics}
-  "codex-6" {:role :apm        :domain :mathematics}}}
+  "codex-6" {:role :apm        :domain :mathematics}
+  ;; Head-to-head with ams-codex-1 (Joe, 2026-08-06): same queue, same packet
+  ;; EXCEPT this seat can record memories. ams-codex-1 stays unprovisioned as
+  ;; the control arm.
+  "ams-codex-2" {:role :apm    :domain :mathematics :tools #{:memory-record}}
+  ;; Zone scribe (Joe, 2026-08-06): mines BOTH arms rollouts. Author != reviewer,
+  ;; so its attachments stay PROPOSED for a separate approval pass.
+  "ams-scribe-1" {:role :scribe :domain :mathematics :tools #{:memory-record}}}}
