@@ -28,6 +28,9 @@
                  :role "independent-reviewer"
                  :registered-by "ams-claude-1"
                  :cwd "/home/joe/code"}})
+    ;; register-agent! does NOT replace an existing agent's invoke-fn;
+    ;; the explicit update is load-bearing on re-registration (2026-08-10).
+    (reg/update-agent! agent-id :agent/invoke-fn invoke-fn)
     {:registered agent-id
      :model "claude-opus-5"
      :ok (reg/agent-registered? agent-id)}))
