@@ -45,11 +45,26 @@ def save_seen(seen):
 
 
 def notify(text):
-    # message → minibuffer + *Messages*; single-line, elisp-escaped.
+    # Land in the REPL conversation flow as a continuation (Joe,
+    # 2026-08-10): insert a "bellback" message above the prompt in every
+    # live claude-repl buffer via agent-chat-insert-message. Falls back
+    # to a minibuffer message when no REPL buffer is live.
     safe = text.replace("\\", "\\\\").replace('"', '\\"')
+    eval_form = (
+        '(let ((hit 0))'
+        ' (dolist (buf (buffer-list))'
+        '  (with-current-buffer buf'
+        '   (when (and (string-match-p "\\\\*claude-repl" (buffer-name))'
+        '              (boundp (quote agent-chat--prompt-marker))'
+        '              agent-chat--prompt-marker'
+        '              (marker-position agent-chat--prompt-marker))'
+        f'    (agent-chat-insert-message "bellback" "{safe}")'
+        '    (setq hit (1+ hit)))))'
+        f' (when (zerop hit) (message "%s" "{safe}"))'
+        ' hit)'
+    )
     subprocess.run(
-        ["emacsclient", "-s", SOCKET, "--eval",
-         f'(message "%s" "{safe}")'],
+        ["emacsclient", "-s", SOCKET, "--eval", eval_form],
         capture_output=True, timeout=10,
     )
 
