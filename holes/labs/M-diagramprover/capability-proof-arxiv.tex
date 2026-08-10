@@ -42,8 +42,8 @@ carries a \emph{graded warrant} backed by certificates --- gate exits, ledger
 entries, oracle agreement, census counts --- rather than narrative.
 The pipeline has been executed end-to-end (S1--S12, $12/12$ stages ledgered) on
 a sixteen-paper corpus on an unattended host --- the condition under which its
-characteristic failure modes become observable. Twenty-eight such failure modes
-are enumerated as a hazard ledger, twenty-six of them closed. The
+characteristic failure modes become observable. Forty such failure modes
+are enumerated as a hazard ledger, thirty-seven of them closed. The
 intended contribution is less the corpus coverage than the epistemic form: a
 mining programme whose own readiness claim is held to the same standard as the
 structures it extracts, and whose remaining gaps are drawn rather than
@@ -65,11 +65,12 @@ operator watches the terminal cannot distinguish a stage that works from a stage
 that prints its findings and persists nothing; the distinction only becomes
 observable on an unattended host. Executing it under that condition exposes a
 class of failure invisible to ordinary testing, and the hazard ledger
-(\S\ref{sec:hazards}) enumerates twenty-eight instances: seven that halt or stall
-the run outright, five that cost operator time or mislabel what was measured,
-four that read the wrong corpus or the wrong inputs, four whose outputs do not
-survive the run, three that pass one gate and are unreadable by the next,
-\emph{four that report success without doing the work}, and one that does not
+(\S\ref{sec:hazards}) enumerates forty instances: eight that halt or stall
+the run outright, ten that cost operator time or mislabel what was measured,
+five that read the wrong corpus or the wrong inputs, three whose outputs do not
+survive the run, five that pass one gate and are unreadable by the next, two
+that silently shrink the corpus, one that only bites at scale,
+\emph{five that report success without doing the work}, and one that does not
 point where it claims to.
 
 The emphasised category is the one worth the reader's attention, because its
@@ -79,7 +80,7 @@ entry in the evidence base. Its worst member does not merely omit work but
 manufactures output --- an LLM pass whose replies used different key names than
 the prompt requested, so every lookup missed, every question silently fell back
 to a stock template, and the run emitted a complete set of plausible findings the
-model had not written. All four were found by asking what a green result would
+model had not written. All were found by asking what a green result would
 look like if the work behind it had not happened.
 
 The corpus percentage is the odometer. The pipeline is the proof object, and
@@ -279,8 +280,9 @@ $43$). Shares stable from $72$ to $98$ proofs, so this is a property of the
 corpus, not of run length\\[3pt]
 A12 The pipeline runs unattended off the dev box & \textbf{partial} &
 $12/12$ stages ledgered; $9$ executed under this corpus id and $3$
-(S3/S4/S7) \emph{pending a clean single-corpus rerun}. $27$ hazards
-enumerated, $26$ closed (\hz{H1} tier~2 open); the replay harness re-checks the
+(S3/S4/S7) \emph{pending a clean single-corpus rerun}. $40$ hazards
+enumerated, $37$ closed (open: \hz{H1} tier~2, \hz{H10}'s region cap,
+\hz{H38}'s frame repair); the replay harness re-checks the
 accounting invariants in $0.5$\,s (\S\ref{sec:replay})\\[3pt]
 A12$'$ The extraction answers questions & inductive-$n{=}16$ &
 $12$ query forms answerable today over the corpus --- $6$ read-off, $6$ by
@@ -442,8 +444,11 @@ several implementations the abstraction wants to be shared.
 \section{The hazard ledger, in shape}
 \label{sec:hazards}
 
-Twenty-two hazards, all closed. Grouped by what they cost, because the groups
-argue for different remedies:
+Forty hazards at the time of writing --- \hz{H1}--\hz{H38} with letter
+variants; \hz{H8} is recorded as an asset, not a hazard --- thirty-seven
+closed, three carrying an open remainder. \emph{The ledger file, not this
+note, is the authority on the count.} Grouped by what they cost, because the
+groups argue for different remedies:
 
 {\small
 \begin{longtable}{p{0.24\textwidth} p{0.12\textwidth} p{0.52\textwidth}}
@@ -461,30 +466,50 @@ argue for different remedies:
 \endfoot
 \bottomrule
 \endlastfoot
-\emph{Stops the run} &
-\hz{H1} \hz{H2} \hz{H3} \hz{H9} \hz{H10} \hz{H14} &
+\emph{Halts or stalls the run} &
+\hz{H1} \hz{H2} \hz{H3} \hz{H9} \hz{H10} \hz{H14} \hz{H24} \hz{H26} &
 Missing commands, hardcoded model names, GPU-tuned timeouts, id parsing that
-breaks one arXiv family. Loud, cheap to fix, and each would independently
-have ended a cluster window.\\[3pt]
-\emph{Corrupts silently} &
-\hz{H12} \hz{H12b} \hz{H18} \hz{H11} \hz{H11b} &
-Artifacts that pass one reader and fail the next; a server blip fast-failing a
-whole batch; a region cap that misses an id family. These do not fail --- they
-shrink the corpus without saying so.\\[3pt]
-\emph{Destroys or misstates the findings} &
-\hz{H15} \hz{H16} \hz{H17} &
+breaks one arXiv family; a run-discarding abort on one malformed reply; an
+uncapped generation on a nine-day trajectory. Loud, cheap to fix, and each
+would independently have ended a cluster window.\\[3pt]
+\emph{Costs operator time or mislabels what was measured} &
+\hz{H4} \hz{H5} \hz{H6} \hz{H7} \hz{H17} \hz{H23} \hz{H30} \hz{H32} \hz{H36}
+\hz{H37} &
+Window arithmetic $2.5\times$ off; a block-buffered log that reads as a stall;
+an axis labelled ``papers'' counting proof-graphs; a venv miss that read as
+$0/98$; empty-candidate calls folded into no-match; a guessed rejection reason
+that cost a day; a retry rate no longer derivable from its directory.\\[3pt]
+\emph{Reads the wrong corpus or the wrong inputs} &
+\hz{H13} \hz{H19} \hz{H19b} \hz{H35} \hz{H38} &
+Stage inputs and the measurement set defaulting to fixtures or to shared,
+un-scoped directories. The most dangerous class: it neither crashes nor loses
+data, it returns plausible numbers.\\[3pt]
+\emph{Outputs do not survive the run} &
+\hz{H15} \hz{H16} \hz{H27} &
 The learning layer printed its results and persisted nothing; the accretion
-curve wrote to a mark6-named file outside the retrieval manifest; its axis was
-labelled ``papers'' while counting proof-graphs ($\approx 15\times$). The
-science, not the artifacts.\\[3pt]
-\emph{Measures the wrong thing} &
-\hz{H19} \hz{H19b} \hz{H19c} &
-Stage inputs and the measurement set defaulting to fixtures. The most dangerous
-class: it neither crashes nor loses data, it returns plausible numbers.\\[3pt]
+curve wrote to a mark6-named file outside the retrieval manifest; verdicts
+keyed by paper collapsed $98$ proofs to $16$ rows. The science, not the
+artifacts.\\[3pt]
+\emph{Passes one gate, unreadable by the next} &
+\hz{H12} \hz{H12b} \hz{H18} \hz{H33} \hz{H34} &
+Artifact validity is reader-relative: unicode in keywords, \LaTeX{} that is
+not legal EDN escaping, JSON truncated by an external cap, an extractor that
+could not parse mathematics.\\[3pt]
+\emph{Silently shrinks the corpus} &
+\hz{H11} \hz{H11b} &
+A server blip fast-failing a whole batch. These do not fail --- they shrink
+the corpus without saying so.\\[3pt]
 \emph{Scale-dependent} &
 \hz{H20} &
 Harmless at pilot size, fatal at field size. The class that a pilot cannot
 detect by succeeding.\\[3pt]
+\emph{Reports success without doing the work} &
+\hz{H22} \hz{H25} \hz{H28} \hz{H29} \hz{H31} &
+A stage recording PASS while half of it never executed; a rung whose floor no
+rate can fail; fabricated template content wearing the model's voice;
+prompt-and-hope where constrained decoding was available; authorship recorded
+but not originality. The class \S1 emphasises, and the reason the conformance
+gate's negative checks exist.\\[3pt]
 \emph{Unfaithful} &
 \hz{H21} &
 Artifacts that do not point where they say they point. The prompt gave the
@@ -492,9 +517,12 @@ model the passage as bare text, so \texttt{:source} anchors were \emph{counted}
 rather than read: $41\%$ cover the line their own text came from, median drift
 $3$ lines. Content faithful, coordinates not. Found only by reading a paper
 against its source (\S\ref{sec:annex}).\\[3pt]
-\emph{Open} &
-\hz{S11} &
-One remains: the structural canon computes and discards. See \S\ref{sec:open}.\\
+\emph{Open remainders} &
+\hz{H1} \hz{H10} \hz{H38} &
+Tier-2 corpus-fresh substrate rebuild; the S4 region cap is an out-of-band
+trim, not a flag; the anchor checker still counts lines in a different frame
+than the graphs anchor into. \hz{S11}'s compute-and-discard, formerly listed
+here, is closed (\hz{H22}, \S\ref{sec:open}).\\
 \end{longtable}
 }
 
@@ -597,7 +625,7 @@ the three-arm exam in \texttt{E-mining-qual-loop.md} is designed to provide.
 Two things. First, it is the artifact that lets a cluster window be booked
 against a tested pipeline rather than a hope: the readiness claim is now
 ``S1--S12 executed end-to-end, gated and ledgered, on a host nobody was
-watching, with twenty-two hazards enumerated and closed'', which is a
+watching, with forty hazards enumerated and thirty-seven closed'', which is a
 different kind of sentence from ``the stages exist''.
 
 Second, and more transferable: the hazard ledger is a \emph{form}. The APM note
@@ -606,9 +634,11 @@ warrants. This note adds the observation that for a pipeline, the warrants are
 not enough --- because a stage can satisfy its contract while printing into a
 void, or while measuring a fixture. What closes that gap is not more testing
 but a different question, asked stage by stage: \emph{if this stage were
-silently wrong, what would I see?} Six of the twenty-two hazards were found by
-asking it, and the two open gaps are the places where the answer is still
-``nothing''.
+silently wrong, what would I see?} Six of the first twenty-two hazards were
+found by asking it, and the audit's second wave found the entire
+reports-success class the same way. Each of the three open remainders now has
+a visible signal rather than ``nothing'' --- the substrate gate, the plan's
+region-cap note, and a frame-mismatch line in the faithfulness report.
 
 There is one further move, which \hz{H21} argues for and the annex performs:
 after asking what a silent failure would look like, \emph{read one artifact
@@ -622,8 +652,9 @@ and obvious on the first paper anyone reads.
 \label{sec:replay}
 
 The slow run establishes that the stages \emph{compute}. Almost none of the
-twenty-two hazards were compute failures --- they were accounting failures, and
-accounting is checkable in half a second against artifacts that already exist.
+forty hazards were compute failures --- they were accounting and I/O-contract
+failures, and the accounting half is checkable in half a second against
+artifacts that already exist.
 So the ledger is now a regression suite: eleven checks, one per hazard class,
 asserting \emph{conservation} (every proof has a steps file; every graph is
 typed or logged-rejected), \emph{identity} (artifacts belong to this corpus;
