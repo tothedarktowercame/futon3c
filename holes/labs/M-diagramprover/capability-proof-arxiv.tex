@@ -197,17 +197,27 @@ A3 Proof arguments reconstruct as gated DAGs (S3) & mechanical &
 $98/98$ graphs gated PASS (argcheck $+$ substance) \emph{when the finals are
 selected explicitly}; the stage's directory gate also sees $98$
 \texttt{.rung2} reports and fails on them. The first-pass retry rate is
-\emph{pending re-derivation} (\hz{H37}): the attempt directory is not
-run-scoped, so it now holds $188$ files over $114$ graph names against $98$
-finals, and the previously reported $45.9\%$ is no longer reproducible from it.
-Reconstructions give $37.8\%$ (graphs with $>1$ attempt) and $36.7\%$
-(attempts co-temporal with their own final); the honest statement is that this
-honesty bound requires a clean run to measure\\[3pt]
+\emph{outstanding, and now instrumented} (\hz{H37}): the attempt directory was
+not run-scoped, so the previously reported $45.9\%$ is not reproducible from
+it --- reconstructions give $37.8\%$ and $36.7\%$ depending on how one guesses
+which invocation wrote which file. It is not re-derivable offline, because
+mtimes cannot say that. \texttt{.attempts/} is now run-scoped and S3 emits
+\texttt{retry-rate-\$RUN\_ID.json} from the loop's own bookkeeping, so the
+figure becomes a byproduct of the next run rather than a separate study\\[3pt]
 A3$'$ \dots\ and their anchors are trustworthy & \textbf{weak} &
 Content faithful (\S\ref{sec:annex}), \emph{coordinates} not: $41\%$ of node
 anchors cover their own text's line, median drift $3$ ($n{=}290$). Repaired by
-numbering the prompt window (\hz{H21}); the re-mine is $3/3$ exact but
-$n{=}3$ --- \emph{directionally right, far too thin to warrant}\\[3pt]
+numbering the prompt window (\hz{H21}). Validation at volume now runs
+($n{=}98$, up from $n{=}3$) and is reported in two parts, because the raw
+figure conflates two different failures. Corpus-wide: $64.3\%$ pass at floor
+$0.30$. But $25$ graphs score \emph{exactly} $0.000$, missing $0/3$, $0/4$,
+$0/6$ and $0/7$ key terms simultaneously and concentrated in $4$ papers ($3$
+entirely zero), while $32$ score exactly $1.000$. Drift does not produce that
+shape; a different line basis does, and does here --- the checker resolves a
+paper to an artifact whose line $379$ is blank where the graph anchors into the
+candidate window (\hz{H38}). Excluding those $25$, the remaining $73$ give
+$\mathbf{86.3\%}$ pass, mean $0.729$. The honest claim is the second number
+with its exclusion stated, and the frame repair is open\\[3pt]
 A4 Expository structure reconstructs (S4) & mechanical &
 $280/280$ gated PASS. First pass $238/280$; all $42$ failures were one
 serialization defect and \emph{all} recovered after \hz{H18}\\[3pt]
@@ -232,9 +242,9 @@ survivors carry a genuine wire-graph cycle, all four flattened
 structure cosine $0.02$ (ceiling $0.85$) --- the Mark~1 embedding collapse
 definitively absent\\[3pt]
 A8 The result is queryable (S8 + bench) & mechanical (export) &
-Export verified at $446$ nodes / $286$ edges ($88$ \texttt{Proof} $+$ $358$
-\texttt{Step}) --- \emph{pending re-export} against the corrected $94$-proof
-typing (\hz{H36}). The XTDB ingest ($772$ nodes / $419$ edges, query ladder,
+Export re-run against the corrected $94$-proof typing (\hz{H36}):
+$\mathbf{481}$ nodes / $\mathbf{304}$ edges ($94$ \texttt{Proof} $+$ $387$
+\texttt{Step}), up from $446/286$ ($88+358$). The XTDB ingest ($772$ nodes / $419$ edges, query ladder,
 integrity census) lives in a separate benchmark artifact and is
 \emph{not} re-derivable from this run directory\\[3pt]
 A9 The field's move repertoire is harvestable (S10) & inductive-$n{=}16$ &
