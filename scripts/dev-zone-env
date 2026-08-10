@@ -49,10 +49,16 @@ export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
 
 export FUTON1A_PORT="${FUTON1A_PORT:-0}"
 export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
-export FUTON1B_EMBED="${FUTON1B_EMBED:-1}"
-export FUTON1B_PORT="${FUTON1B_PORT:-7074}"
+# Substrate lives in the STANDALONE futon1b-server (two-JVM standard, 2026-08-10),
+# not embedded here. Previously this embedded futon1b on 7074 with a store dir
+# `ams-store` that DOES NOT EXIST — so every text-search 500'd, dispatch recall
+# returned `store-unavailable`, and recall looked like a query-semantics bug for
+# most of 2026-08-10. Diagnosed by ams-claude-1; the healthy store is
+# migration-store-21, served on 7073 by the standalone process.
+export FUTON1B_EMBED="${FUTON1B_EMBED:-0}"
+export FUTON1B_PORT="${FUTON1B_PORT:-7073}"
 export FUTON1B_BIND_HOST="${FUTON1B_BIND_HOST:-127.0.0.1}"
-export FUTON1B_STORE_DIR="${FUTON1B_STORE_DIR:-${HOME}/code/futon1b/ams-store}"
+export FUTON1B_STORE_DIR="${FUTON1B_STORE_DIR:-${HOME}/code/futon1b/migration-store-21}"
 export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:${FUTON1B_PORT}}"
 export FUTON_SUBSTRATE_URL="${FUTON_SUBSTRATE_URL:-${FUTON1B_URL}}"
 export FUTON1A_URL="${FUTON1A_URL:-${FUTON_SUBSTRATE_URL}}"
