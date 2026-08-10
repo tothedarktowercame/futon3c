@@ -7,6 +7,7 @@
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
             [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [futon2.aif.memory-contract :as memory-contract]
             [futon3c.peripheral.memory-recall :as memory-recall]
@@ -72,6 +73,8 @@
 (def default-agency-base "http://localhost:7070")
 (def default-mission "M-zai-learning-loop")
 (def default-problem-root "/home/joe/code/apm-lean/problems")
+(def ^:private problem-document-frequency-resource
+  "apm-problem-document-frequency.edn")
 (def recall-system :v1.2-receipt-instrumented)
 (def receipt-ranked-system :v1.2-receipt-ranked-instrumented)
 (def default-receipt-alpha 0.5)
@@ -94,7 +97,10 @@
     ;; v1.3 additions (S4 receipt e-e36e37bd evidence): TeX fragments that
     ;; survive stripping in already-tokenized text + packet boilerplate.
     "cdot" "langle" "rangle" "denote" "select" "sorry" "commit" "your"
-    "they" "part"})
+    "they" "part"
+    ;; v1.4: generic task/qualifier words exposed by IDF ranking. These carry
+    ;; no mathematical identity even when they happen to be corpus-rare.
+    "choice" "close" "remaining" "special"})
 
 (defn- encode [value]
   (URLEncoder/encode (str value) "UTF-8"))
@@ -248,25 +254,49 @@
       ;; so cdot/langle/rangle etc never become query tokens.
       (str/replace #"\\[a-zA-Z]+" " ")))
 
-(defn- text-keywords [text limit]
-  (->> (re-seq #"[A-Za-z][A-Za-z0-9_/-]{3,}" (str/lower-case (normalize-math-text text)))
-       (remove stopwords)
-       frequencies
-       (sort-by (fn [[word count]] [(- count) word]))
-       (map first)
-       (take limit)
-       vec))
+(def ^:private problem-document-frequency
+  (delay
+    (let [resource (or (io/resource problem-document-frequency-resource)
+                       (throw (ex-info "APM problem document-frequency resource missing"
+                                       {:resource problem-document-frequency-resource})))
+          table (edn/read-string (slurp resource))]
+      (when-not (and (pos-int? (:document-count table))
+                     (map? (:document-frequency table)))
+        (throw (ex-info "invalid APM problem document-frequency resource"
+                        {:resource problem-document-frequency-resource})))
+      table)))
+
+(defn- text-keywords
+  ([text limit]
+   (text-keywords text limit @problem-document-frequency))
+  ([text limit {:keys [document-count document-frequency]}]
+   (->> (re-seq #"[A-Za-z][A-Za-z0-9_/-]{3,}"
+                (str/lower-case (normalize-math-text text)))
+        (remove stopwords)
+        frequencies
+        (sort-by
+         (fn [[word count]]
+           (let [df (get document-frequency word 0)
+                 idf (Math/log (/ (double document-count) (inc df)))]
+             [(- idf) (- count) word])))
+        (map first)
+        (take limit)
+        vec)))
 
 (defn query-keywords
-  "Return the shipped normalized, stopword-filtered frequency vocabulary.
+  "Return the shipped normalized, stopword-filtered, IDF-ranked vocabulary.
 
   This public analysis seam lets frozen-data experiments construct explicit
-  query vocabularies without copying the production tokenizer."
-  [text limit]
-  (when-not (and (integer? limit) (pos? limit))
-    (throw (ex-info "query keyword limit must be a positive integer"
-                    {:limit limit})))
-  (text-keywords text limit))
+  query vocabularies without copying the production tokenizer. The three-arity
+  form lets the document-frequency generator reuse that tokenizer before the
+  generated resource exists."
+  ([text limit]
+   (query-keywords text limit @problem-document-frequency))
+  ([text limit document-frequency]
+   (when-not (and (integer? limit) (pos? limit))
+     (throw (ex-info "query keyword limit must be a positive integer"
+                     {:limit limit})))
+   (text-keywords text limit document-frequency)))
 
 (defn- problem-statement-text [text]
   (let [marker "## Problem Statement"
@@ -374,7 +404,19 @@
            (update source :terms
                    #(vec (remove #{(str/lower-case problem)} %))))
          (problem-term-sources opts packet))
-        source-terms (mapcat :terms term-sources)
+        round-robin
+        (fn [collections]
+          (loop [remaining (mapv seq collections)
+                 out []]
+            (let [active (filterv seq remaining)]
+              (if (empty? active)
+                out
+                (recur (mapv next active)
+                       (into out (map first active)))))))
+        ;; Keep every source represented before taking the global cap. Without
+        ;; this round-robin, problem.md exhausts the budget and a rarer term in
+        ;; proof-outline.md (for example `functoriality`) is unreachable.
+        source-terms (round-robin (map :terms term-sources))
         ;; MEASURED 2026-07-30, not guessed. The text-search endpoint is
         ;; CONJUNCTIVE: hits fall off a cliff as terms are added — 1 term = 5
         ;; hits, 3 = 3, 7 = 2, 12 = 1, 29 = 0 — so a 36-term query returned
@@ -404,16 +446,8 @@
         ;; 3-term cap itself, which was added earlier the same day to fix a
         ;; 36-term conjunction. Interleaving keeps both vocabularies inside the
         ;; cap so the ladder can pair across them.
-        interleave-all
-        (fn [a b]
-          (loop [a (seq a) b (seq b) out []]
-            (cond (and (nil? a) (nil? b)) out
-                  (nil? a) (into out b)
-                  (nil? b) (into out a)
-                  :else (recur (next a) (next b)
-                               (conj out (first a) (first b))))))
         generated-terms (concat (when terrain [terrain])
-                                (interleave-all subjects source-terms))
+                                (round-robin [subjects source-terms]))
         selected-terms (if (seq query-terms)
                          (map (comp str/trim str) query-terms)
                          generated-terms)
