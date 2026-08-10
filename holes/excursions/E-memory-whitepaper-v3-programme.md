@@ -296,3 +296,78 @@ few days. **Realistic: 2–3 weeks to a V3 draft with the ablation in it.**
 apm-lean `22c5b80c` + receipts `e-fab2e3d9…` / `e-memory-outcome-sweeper-…`
 (the witnessed chain) · `memory_outcome_sweeper.py` (A1's writer) ·
 `a94A09-scribe/` (the scribe restart pass).
+
+---
+
+## The second-half research programme (Joe, 2026-08-10: "one hop isn't a programme")
+
+**The design the corpus hands us.** The first ~50% of APM ran with the memory
+channel dead (Zone: silently, all of it) or structurally throttled (91%
+trapped, no scribe, no outcome writer). It is an *accidental control cohort*,
+baselined by `E-memory-priors-survey.md`. The remaining ~291 problems
+(~27 days at the measured 10.69 clean/day) run fully instrumented: live
+channel, v1.3 kinds, frames, scribe cadence, reviewer gate, the A/B ladder.
+V3's spine is therefore a **longitudinal before/after study the size of the
+whole campaign**, with each prereg hop instantiating one wave of this
+standing programme — not the programme itself.
+
+### Memory kinds under study (taxonomy to be refined by interview data)
+
+| kind | examples | core prediction over the half |
+|---|---|---|
+| **substitutive-content** | lemma-locations, importable pointers, routes | fingerprinted use rises from **n=0** only after promotion makes pointers importable; tracks importable fraction, not memory count |
+| **regulative/practice** | packaging prescriptions, search-order discipline | continues to dominate fingerprinted uses early (our only Tier-1 case is regulative); stated so it can LOSE to substitutive once supply exists |
+| **open-hunger** | the Schwarz–Pick/Möbius marker (first tracked instance) | converts to grounded memories; time-to-grounding is measurable and falls as scribe cadence holds |
+| **negative/boundary** | failed-route records (three failed Jensen attempts) | repeat-failed-route incidents fall where a boundary memory existed and surfaced |
+| **consolidation** | the five cross-problem pairs; cyclic-number theorem | one promoted general lemma closes gaps in ≥2 problems; class-local duplication falls |
+| **identity/canonical-location** | "this fact lives HERE" (write-side) | twin-lemma manufacture per closure falls after the identity norm + paired-arm dataset calibrate detection |
+
+### Longitudinal predictions (each with falsifier + instrument)
+
+- **P1 (design research).** One-pass closure rate rises across waves while
+  tokens-per-closure falls. *Falsifier:* flat curves = the token-spending
+  null, reported as such. *Instrument:* frames.bb batch records.
+- **P2 (witnessed use).** Fingerprinted use events grow from 1 to a
+  preregistered N (proposed: ≥12 over the half), with kind distribution
+  shifting substitutive-ward after promotion Phase 1. *Falsifier:*
+  regulative stays ≥80% of fingerprinted uses ⇒ §4's surprise is the
+  finding and the promotion investment thesis is wrong. *Instrument:* v1.3
+  receipts + sweeper + fingerprint audits at wave close.
+- **P3 (recall coverage).** Recall-empty falls from 64% toward a floor as
+  scribe coverage accumulates — floor stated in advance (t91A05-class
+  problems where empty is honest). *Falsifier:* empty-rate insensitive to
+  scribe coverage ⇒ the attachment-layer conjecture (A2b) dominates and
+  lexical/scribe work is misdirected. *Instrument:* per-dispatch
+  recall-status census, re-run monthly.
+- **P4 (library uptake).** LIB-citation rises from the 6% adoption baseline
+  after index automation + push-don't-pull land mid-programme. *Falsifier:*
+  no rise ⇒ affordance was not the bottleneck (the propensity story wins).
+  *Instrument:* import scans per wave (the 0c reachability index).
+- **P5 (write-side).** Re-derivation incidents per 100 closures fall after
+  the identity norm; the paired-arm twin dataset calibrates the detector.
+  *Falsifier:* duplication rises with retrieval precision (claude-9's
+  standing prediction, §I) — which would be a MAJOR positive result for the
+  write-side thesis, stated now so it cannot be claimed post-hoc.
+- **P6 (creation loop).** First scribe-authored → later-surfaced → USED
+  chain occurs (currently n=0), then recurs at a reportable rate.
+  *Instrument:* provenance join between scribe output ids and receipt
+  used-ids.
+- **P7 (the channel).** Cumulative across the ladder: hit-stratum arm
+  differences exceed empty-stratum differences. *Falsifier:* they do not,
+  at cumulative n across all waves ⇒ the channel does nothing detectable
+  and V3 leads with that.
+
+### Phase map over the half
+
+Waves 1–2: baseline contrast (:push/:none), instrument shakedown, first
+interview corpus. Then **promotion Phase 1** (the banked single-lemma
+experiment — now doubly motivated by P2's kind question) grows substitutive
+supply; waves 3+ measure uptake. Mid-programme: index automation (the
+cheapest lever, still unautomated) and the push-don't-pull rung. Monthly:
+re-run the priors-survey census — those tables ARE the paper's longitudinal
+results section. Scribe pass per completed wave; interviews feed the
+taxonomy; APPROVALS through the reviewer seat.
+
+**Standing rule:** every batch prereg cites this section and instantiates
+exactly one wave of it. The programme is the object; preregs are its
+turns.
