@@ -6,6 +6,8 @@
 \usepackage{amsmath}
 \usepackage{array}
 \usepackage{longtable}
+\usepackage{booktabs}
+\usepackage[htt]{hyphenat}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue!50!black}
 \usepackage{enumitem}
@@ -167,11 +169,22 @@ membership is asserted by manifest and checked mechanically
 (\S\ref{sec:replay}, check \texttt{I1}), because a shared output directory
 otherwise admits artifacts from a neighbouring run.
 
-\begin{center}
-\small
-\begin{tabular}{p{0.30\textwidth} p{0.17\textwidth} p{0.40\textwidth}}
-\textbf{Sub-claim} & \textbf{Warrant} & \textbf{Key certificates}\\[2pt]
-\hline\\[-8pt]
+{\small
+\begin{longtable}{p{0.30\textwidth} p{0.15\textwidth} p{0.40\textwidth}}
+\toprule
+\textbf{Sub-claim} & \textbf{Warrant} & \textbf{Key certificates}\\
+\midrule
+\endfirsthead
+\multicolumn{3}{l}{\emph{\small Claims table, continued from previous page}}\\
+\toprule
+\textbf{Sub-claim} & \textbf{Warrant} & \textbf{Key certificates}\\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\emph{\small continued overleaf}}\\
+\endfoot
+\bottomrule
+\endlastfoot
 A1 Anatomy is recoverable from source (S1) & mechanical &
 $16/16$ papers emitted, $0$ failures; $320{,}337$ marks (1{,}871 on HTT
 alone); ledgered for this corpus\\[3pt]
@@ -272,9 +285,8 @@ end-to-end on it (A11$'$, GLM-4.5-Air Q4 on CPU, $818$ calls) --- but that is a
 \emph{different task} from the mining the claim is about, so it is evidence the
 apparatus is model-portable, not that mining results are. The comparison remains
 designed, not run (\hz{H8})\\
-\hline
-\end{tabular}
-\end{center}
+\end{longtable}
+}
 
 \medskip
 Two entries deserve a sentence because they are the ones a reader should
@@ -423,11 +435,22 @@ several implementations the abstraction wants to be shared.
 Twenty-two hazards, all closed. Grouped by what they cost, because the groups
 argue for different remedies:
 
-\begin{center}
-\small
-\begin{tabular}{p{0.26\textwidth} p{0.10\textwidth} p{0.52\textwidth}}
-\textbf{Class} & \textbf{Hazards} & \textbf{What the class implies}\\[2pt]
-\hline\\[-8pt]
+{\small
+\begin{longtable}{p{0.24\textwidth} p{0.12\textwidth} p{0.52\textwidth}}
+\toprule
+\textbf{Class} & \textbf{Hazards} & \textbf{What the class implies}\\
+\midrule
+\endfirsthead
+\multicolumn{3}{l}{\emph{\small Hazard classes, continued}}\\
+\toprule
+\textbf{Class} & \textbf{Hazards} & \textbf{What the class implies}\\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\emph{\small continued overleaf}}\\
+\endfoot
+\bottomrule
+\endlastfoot
 \emph{Stops the run} &
 \hz{H1} \hz{H2} \hz{H3} \hz{H9} \hz{H10} \hz{H14} &
 Missing commands, hardcoded model names, GPU-tuned timeouts, id parsing that
@@ -462,9 +485,8 @@ against its source (\S\ref{sec:annex}).\\[3pt]
 \emph{Open} &
 \hz{S11} &
 One remains: the structural canon computes and discards. See \S\ref{sec:open}.\\
-\hline
-\end{tabular}
-\end{center}
+\end{longtable}
+}
 
 \section{Honest boundaries and the open gaps}
 \label{sec:open}
