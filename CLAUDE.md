@@ -93,11 +93,26 @@ these invariants, stop and rethink.
 
 ### I-0: One JVM Is Plenty
 
+> **TEMPORARY OVERRIDE (2026-08-10, joe): the substrate is a SEPARATE JVM.**
+> The embedded futon1b (`FUTON1B_EMBED=1`, the 2026-07-14 unification below)
+> is retired for now: we formally decided to run futon1b as its own server
+> JVM, separate from the futon3c/fdev JVM. All substrate clients reach it via
+> `FUTON_SUBSTRATE_URL` (on Zone: `c7-futon1b.service`, port 7073, store
+> `migration-store-21`). Concrete failure that surfaced the confusion: on
+> 2026-08-10 the futon3c JVM embedded futon1b against a fresh, empty
+> `ams-store` on 7074 while the real 137k-row corpus sat in the separate
+> server on 7073 — every dispatch recall (e.g. a94A09) came back empty.
+> Consequence for the test below: at rest, `pgrep java` returning TWO PIDs
+> (futon3c + futon1b-server) is expected, not a regression. Everything else
+> in I-0 (no extra JVMs for WebArxana, War Machine, etc.) still holds.
+> Remove this note when the substrate topology decision is finalized.
+
 **There is exactly one serving JVM on this machine: the futon3c JVM.** It
 hosts the futon3c API (port 7070), the futon1b XTDB 2 substrate/evidence
 store (7074, embedded in-process via `FUTON1B_EMBED` — the I-0 unification,
-2026-07-14; the retired futon1a XTDB 1 store on 7071 is gone), the WebArxana
-app (3100), the War Machine API endpoints
+2026-07-14; the retired futon1a XTDB 1 store on 7071 is gone; **suspended by
+the override note above — the substrate now runs as its own JVM**), the
+WebArxana app (3100), the War Machine API endpoints
 (`/api/alpha/war-machine`, `/api/alpha/aif-stack/live`, etc., all on 7070),
 and the Drawbridge nREPL-over-HTTP (6768). Everything serves out of this
 one process.
