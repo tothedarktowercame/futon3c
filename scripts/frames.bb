@@ -164,6 +164,11 @@
                     (if (str/starts-with? value "skip:")
                       {:skipped (subs value 5)}
                       {:ref value}))
+        _ (doseq [[k v] {:offered-receipt (:offered-receipt o)
+                         :outcome-receipt (:outcome-receipt o)}]
+            (when (= v "MISSING")
+              (die (str "sentinel MISSING passed as " (name k)
+                        " — look up the real receipt id (claude-3 shakedown D1)"))))
         updated (assoc frame
                   :commit-or-obstruction
                   {:commit (none->nil (:commit o))
@@ -204,9 +209,21 @@
 (defn usage []
   (println "usage: frames.bb open|close|validate [--option value ...]"))
 
+(defn twin! [args]
+  (let [o (require-options! (parse-options args) [:frame-a :frame-b :diff])
+        _ (when-not (fs/regular-file? (:diff o))
+            (die (str "no such diff file: " (:diff o))))
+        lines (count (str/split-lines (slurp (:diff o))))]
+    (doseq [fid [(:frame-a o) (:frame-b o)]]
+      (let [path (locate-frame fid)
+            f (read-edn path)]
+        (write-edn! path (assoc f :twin-diff {:path (str (:diff o)) :lines lines}))
+        (println "TWIN" fid "->" (str (:diff o)) "(" lines "lines )")))))
+
 (let [[command & args] *command-line-args*]
   (case command
     "open" (open-frame! args)
     "close" (close-frame! args)
+    "twin" (twin! args)
     "validate" (validate-batch! args)
     (do (usage) (System/exit 2))))

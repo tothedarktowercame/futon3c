@@ -85,3 +85,30 @@ vote→build→callback (a94A09, pre-batch). Recommendation:
    partial for the other nine (no conflicts — one problem per pair).
    Scribe pass over the batch; then the census re-run for the monthly
    longitudinal table.
+
+---
+
+## Errata (2026-08-10, post claude-3 shakedown — supervisor repairs)
+
+The Opus operator's induction shakedown (job invoke-…bc77c73b) found three
+record-level defects, all one shape: **sentinel values passing frame
+validation as filled slots** — the silence failure mode reappearing inside
+the instrument built to prevent it. Data was intact throughout; records
+were stale. Repairs by ams-claude-1:
+
+- **D1**: four mem frames carried the literal lookup-fallback token
+  "MISSING" as their outcome-receipt id; the receipts existed and were
+  correctly bound (sweeper wrote them after frame close). Frame records
+  repaired with the real ids; `frames.bb close` now REFUSES the sentinel.
+- **D2**: batch-1-a01A01-mem's axioms block omitted the main theorem's
+  sorryAx line and its obstruction was nil — presenting a partial as a
+  clean closure. Repaired (axioms + verbatim obstruction). The report's
+  arm tallies were already correct (compile-verified by the operator);
+  only the frame record misled.
+- **D3**: `:twin-diff` was structurally unfillable (close hardcoded
+  :pending-pair). New `frames.bb twin` subcommand; all ten pairs now
+  record their diff path + line count. Batch revalidates exit 0.
+
+The shakedown also verified a01A05-mem's closure independently (byte-level
+frozen-statement hashes, #print axioms on a copy, negative control against
+a known-sorryAx frame). Operator verdict: inducted.
