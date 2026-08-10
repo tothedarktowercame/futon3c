@@ -98,34 +98,52 @@ version tag (v1.3), landed at a lane boundary, never mid-wave.
 - **1c — anchor-vocabulary findings** (delta 4) with the U-curve and A2b
   restated; preregister the anchor-DF experiment (do not ship the rule).
 
-### Phase 2 — the ablation (H), on Zone — the headline
+### Phase 2 — the naturalistic head-to-head — the headline
 
-Order is load-bearing; each step gates the next.
+**REVISED 2026-08-10 (Joe): the ablation is set aside in favour of a
+naturalistic paired head-to-head.** Rationale: the E2 facility absorbed
+eleven review passes and still carried a do-not-run verdict — the apparatus
+was where the fluff lived — while the naturalistic design needs almost no
+new apparatus: `dispatch_with_recall.clj` already implements the treatment
+contrast as `--memory-channel :push` vs `:none`, and the seats were
+provisioned for exactly this (`f56780aa`: ams-codex-2 memory arm,
+ams-codex-1 control). This is the 8–9 Aug A/B redone with the instrument
+that killed it (null outcome columns) now fixed and proven live. The H
+material stays banked; the ValidatedTrace lesson (H6) survives as the
+enforcement standard for THIS design's preregistration.
 
-- **2a — E2 refactor lands first**: `classify : ValidatedTrace → Outcome`
-  (codex-1's design, H6); the eleven-pass adversarial traces become the
-  regression suite. The facility does not run before this exists.
-- **2b — isolation on Zone** (H3e, all four counts): separate user account;
-  apm-lean re-`git init`ed from the pre-solution tree (no future objects);
-  no read access to `/home/joe`; fresh codex session per run;
-  process-bound isolation receipts (H5 req. 4). Needs Joe: account creation.
-- **2c — noise floor** on closed problems (binary DV: did it re-close?).
-  3 problems × K=3 repeats, isolated checkouts. H3f predicts a low floor;
-  if it is not low, stop and report that instead.
-- **2d — filtered ablation (H3b), LB vs IN pairs, preregistered panel**
-  (H5 req. 3): fixed (problem, memory, arm) mapping before any run.
-  Candidates: a95J08 (both routes characterised), a94A09 (delta 2 — the
-  packaged-slice memory is a live LB candidate with a documented
-  fingerprint; re-run from pre-`22c5b80c` state), + 4-6 from the closed set.
-  Decision table is H1's: LB moves closure and IN does not ⇒ the P2 rubric
-  is validated as measurement; anything else ⇒ 38% is judgement and V3 says
-  so. **Either outcome is a publishable result.**
-- **2e — (optional, later) database-shipping arm** (H3a) on a subset, as
-  the graph-effect check; federation buys independence, not validity.
+- **2a — design + prereg (light but real).** Same problem, same packet, to
+  both seats; own git branch per run from the same base revision, fresh
+  session per run (the shared-worktree finding H3c applies to head-to-heads
+  too; branches are the cheap fix on open problems, where there is no
+  answer to leak). Problem panel by fixed rule: next N open sorries,
+  class-stratified (≤1 per prelim class in flight), topology-blocked
+  excluded. Predicted direction and falsifier stated before the first
+  dispatch.
+- **2b — the built-in placebo.** Stratify pairs by dispatch-time recall
+  status. Recall-empty pairs are control-vs-control in effect: arm
+  differences there estimate the seat/noise confound directly, replacing
+  the separate noise-floor pilot. **Falsifier: if arm differences in the
+  recall-hit stratum do not exceed the recall-empty stratum, the channel
+  does nothing and V3 says so.**
+- **2c — DV: behavioural, plural, artifact-corroborated.** Closure /
+  sorry-delta, route divergence, memory citation with the a94A09
+  fingerprint standard (attribution corroborated by committed code, never
+  prose alone), control re-derivation of store-held facts. Paired coding on
+  artifacts; honest n= markers.
+- **2d — replication arm: `abl-codex-1` on Dionysus** (on Zone's roster,
+  invoke-ready) for a subset of pairs — another box is the strongest cheap
+  independence check. **Probe first**: whether it has apm-lean + toolchain
+  + Mathlib cache; do not count on it until verified.
+- **What this trades away, stated in the paper:** the channel-level claim
+  ("the memory channel changes behaviour") replaces the memory-level one
+  ("memory M was load-bearing"); the P2 rubric stays a judgement. The
+  trade buys ecological validity and near-zero apparatus, and treatment
+  runs are real campaign progress — the cost is partly recovered.
 
-Budget: ~30–50 dispatches ≈ 0.8–1.4M runner tokens (codex-7's estimate
-stands). Lane hygiene: enumerate fresh-on-this-programme seats on Zone
-before sizing arms (H3b'), and budget them like the finite resource they are.
+Budget: ~10–16 paired problems ≈ 20–32 dispatches over a few days, well
+under the ablation's estimate. Lane hygiene still applies: fresh sessions
+per run; enumerate seat exposure before sizing.
 
 ### Phase 3 — repairs V3 reports as repaired (post-measurement only)
 
@@ -157,10 +175,11 @@ few days. **Realistic: 2–3 weeks to a V3 draft with the ablation in it.**
 
 ## Decisions needed (Joe)
 
-1. **Isolated user account on Zone** for 2b (account creation + the homedir
-   restriction; the load-bearing part of validity).
-2. **Lane budget**: which codex seats count as fresh for the ablation, and
-   how many dispatches the programme may spend (~30–50 proposed).
+1. ~~Isolated user account on Zone~~ **superseded by the 2026-08-10
+   naturalistic revision** — branch isolation + optional abl-codex-1
+   replication replaces the account setup.
+2. **Panel size and dispatch budget** for the head-to-head (~10–16 paired
+   problems ≈ 20–32 dispatches proposed).
 3. **Interface-1 successor**: the mission names claude-4 (live loop) and
    claude-6 (retrieval growth) as owners; both sessions are gone. Propose:
    both interfaces collapse into ground control (ams-claude-1) with Joe as
