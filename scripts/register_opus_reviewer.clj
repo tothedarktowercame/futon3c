@@ -12,7 +12,7 @@
         make-fn (resolve 'futon3c.dev/make-claude-invoke-fn)
         invoke-fn (@make-fn
                    {:claude-bin (or (System/getenv "CLAUDE_BIN") "claude")
-                    :permission-mode "default"
+                    :permission-mode "bypassPermissions"
                     :agent-id agent-id
                     :session-file sf
                     :session-id-atom sid-atom
