@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Headless Agency worker profile for zone-joe (Amsterdam).
+#
+# TWO JVMs are expected here (standard revised 2026-08-10, Joe): the main
+# serving JVM started by fdev, AND a separate futon1b-server. The previous
+# note here said no separate futon1b-server may run — that is obsolete, and
+# it actively misleads: it reads as a hard constraint and stops you bringing
+# the substrate up on this box.
+
+export FUTON3C_ROLE="${FUTON3C_ROLE:-zone}"
+export FUTON3C_SITE="${FUTON3C_SITE:-ams}"
+export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-0.0.0.0}"
+export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
+export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://104.243.39.24:7070}"
+
+export FUTON3C_HEAP="${FUTON3C_HEAP:-12g}"
+export FUTON3C_DIRECT="${FUTON3C_DIRECT:-4g}"
+
+export FUTON3C_IRC_PORT="${FUTON3C_IRC_PORT:-0}"
+export FUTON3C_RELAY_CLAUDE="${FUTON3C_RELAY_CLAUDE:-false}"
+export FUTON3C_RELAY_CODEX="${FUTON3C_RELAY_CODEX:-false}"
+export FUTON3C_REGISTER_CLAUDE="${FUTON3C_REGISTER_CLAUDE:-true}"
+export FUTON3C_REGISTER_CLAUDE2="${FUTON3C_REGISTER_CLAUDE2:-false}"
+export FUTON3C_REGISTER_CODEX="${FUTON3C_REGISTER_CODEX:-true}"
+export FUTON3C_REGISTER_VSCODE_CODEX="${FUTON3C_REGISTER_VSCODE_CODEX:-false}"
+export FUTON3C_CODEX_AGENT_ID="${FUTON3C_CODEX_AGENT_ID:-ams-codex-1}"
+export FUTON3C_CODEX_NICK="${FUTON3C_CODEX_NICK:-ams-codex}"
+
+# A ZAI lane is created through Agency's public auto-registration boundary by
+# systemd's ExecStartPost helper. This keeps one registration implementation.
+export FUTON3C_BOOTSTRAP_AGENT_TYPES="${FUTON3C_BOOTSTRAP_AGENT_TYPES:-zai}"
+export FUTON3C_BOOTSTRAP_AGENT_CWD="${FUTON3C_BOOTSTRAP_AGENT_CWD:-${HOME}/code}"
+export FUTON3C_AGENT_ROSTER_FILE="${FUTON3C_AGENT_ROSTER_FILE:-${HOME}/.local/state/futon3c/ams-agent-roster.edn}"
+export FUTON3C_DURABLE_QUEUE_PATH="${FUTON3C_DURABLE_QUEUE_PATH:-${HOME}/.local/state/futon3c/ams-turn-queue.edn}"
+
+# The wrappers move child CLI processes out of the protected server cgroup and
+# into futon-agents.slice. ZAI makes API calls in-process and has no child CLI.
+export FUTON_CLAUDE_BIN_REAL="${FUTON_CLAUDE_BIN_REAL:-${HOME}/.local/bin/claude}"
+export FUTON_CODEX_BIN_REAL="${FUTON_CODEX_BIN_REAL:-${HOME}/.nvm/versions/node/v24.9.0/bin/codex}"
+export PATH="${HOME}/.nvm/versions/node/v24.9.0/bin:${HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+export CLAUDE_BIN="${CLAUDE_BIN:-${HOME}/code/futon3c/scripts/systemd/scoped-claude}"
+export CODEX_BIN="${CODEX_BIN:-${HOME}/code/futon3c/scripts/systemd/scoped-codex}"
+export CODEX_CWD="${CODEX_CWD:-${HOME}/code}"
+export CODEX_SANDBOX="${CODEX_SANDBOX:-danger-full-access}"
+export CODEX_APPROVAL="${CODEX_APPROVAL:-never}"
+export CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-${CODEX_APPROVAL}}"
+
+export FUTON1A_PORT="${FUTON1A_PORT:-0}"
+export FUTON3C_EVIDENCE_BACKEND="${FUTON3C_EVIDENCE_BACKEND:-futon1b}"
+export FUTON1B_EMBED="${FUTON1B_EMBED:-1}"
+export FUTON1B_PORT="${FUTON1B_PORT:-7074}"
+export FUTON1B_BIND_HOST="${FUTON1B_BIND_HOST:-127.0.0.1}"
+export FUTON1B_STORE_DIR="${FUTON1B_STORE_DIR:-${HOME}/code/futon1b/ams-store}"
+export FUTON1B_URL="${FUTON1B_URL:-http://127.0.0.1:${FUTON1B_PORT}}"
+export FUTON_SUBSTRATE_URL="${FUTON_SUBSTRATE_URL:-${FUTON1B_URL}}"
+export FUTON1A_URL="${FUTON1A_URL:-${FUTON_SUBSTRATE_URL}}"
+export FUTON4_BASE_URL="${FUTON4_BASE_URL:-${FUTON1A_URL}/api/alpha}"
+
+# This is a headless worker, not a frontend build or operator HUD host.
+export FUTON5_PORT="${FUTON5_PORT:-0}"
+export FUTON3C_WEBARXANA_SERVER_AUTOSTART="${FUTON3C_WEBARXANA_SERVER_AUTOSTART:-false}"
+export FUTON3C_SHADOW_AUTOSTART="${FUTON3C_SHADOW_AUTOSTART:-false}"
+export FUTON3C_EXTERNAL_HUD="${FUTON3C_EXTERNAL_HUD:-0}"
+export FUTON3C_DISPLAY_AGENTS_WINDOW="${FUTON3C_DISPLAY_AGENTS_WINDOW:-0}"
+
+export FUTON3C_PEERS="${FUTON3C_PEERS:-lon=http://172.236.28.208:7070,chi=http://172.236.108.82:7070}"
+export FUTON3C_PEER_SITES="${FUTON3C_PEER_SITES:-lon,chi}"
+export FUTON3C_FED_SYNC_INTERVAL_MS="${FUTON3C_FED_SYNC_INTERVAL_MS:-30000}"
+
+if systemctl --user is-active futon1b-server.service >/dev/null 2>&1; then
+  echo "[zone] refusing to embed futon1b while futon1b-server.service is active" >&2
+  exit 1
+fi
+for required in "${FUTON_CLAUDE_BIN_REAL}" "${FUTON_CODEX_BIN_REAL}" .admintoken; do
+  if [[ ! -s "${required}" ]]; then
+    echo "[zone] required deployment input missing or empty: ${required}" >&2
+    exit 1
+  fi
+done
+if [[ "$(<.admintoken)" == "change-me" ]]; then
+  echo "[zone] refusing insecure fallback admin token" >&2
+  exit 1
+fi
+
+exec make dev "$@"
