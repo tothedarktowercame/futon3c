@@ -171,9 +171,43 @@ was the capability to spend OpenAI tokens." So:
   preregistered prediction is that the memory arm's accumulation SLOPE
   differs (steeper reuse, falling cost), not merely its single-pass score.
 
-Budget: ~3–4 problems per class per wave, 2–3 waves ≈ 24–48 paired
-dispatches. Lane hygiene still applies: fresh sessions per run; enumerate
-seat exposure before sizing.
+**REFINED AGAIN 2026-08-10 (Joe): a LADDER of A/B pairings, batches of 10,
+loss-minimizing.** Memory-on vs memory-off is only the BASIC pairing — the
+programme is a sequence of increasingly good A/B contrasts *starting* there.
+
+- **Batch structure — "mini workshops."** Each batch ≈ 10 dispatches on
+  real open problems (class-stratified). Batch k+1's contrast is chosen
+  from batch k's findings; the running-best configuration is always one
+  arm, so every batch does real campaign work under the best-known system
+  while resolving one design uncertainty. Candidate ladder after B1
+  (:push vs :none): :push vs :push+pull; anchor-term DF-source variants
+  (memory-corpus vs problem-corpus); packet search-receipt variants;
+  fresh-scribed vs stale store; push-don't-pull (top-k library lemmas in
+  the packet). Pick by expected loss reduction, prereg one contrast per
+  batch.
+- **Loss-minimization is the objective, not vindication.** The design goal
+  is explicitly NOT "demonstrate memory beats no-memory." Loss = wasted
+  dispatches + running a known-worse config + unrecoverable data (missing
+  instruments). Rules: every dispatch is real work; both arms' artifacts
+  are adjudicated for merge so no run is discarded; contrasts are sized to
+  move the next DESIGN decision, not to clear a significance bar — V3
+  reports the trajectory and the residue, not a hypothesis test.
+- **Post-batch interviews ("focus groups").** After each batch, a debrief
+  bell to a sample of runner seats while session context is warm: what did
+  you need and not have; did the surfaced memories matter, honestly; what
+  did you search for and miss; what would have made this one-pass. This
+  generalises the hunger audit from queries to stated needs; output feeds
+  (a) the next pairing choice, (b) the scribe's demand-side tags, (c)
+  V3's qualitative section. **Separation rule: interviews are design
+  signal only — USED claims still require the artifact fingerprint;
+  self-report never counts as outcome measurement.**
+
+Budget: batches of 10, number of batches open-ended by design (the ladder
+stops when a batch's contrast resolves nothing — a stopping rule, not a
+schedule). Lane hygiene still applies: fresh sessions per run; enumerate
+seat exposure before sizing. abl-codex-1 replication: probe OVERRAN
+2026-08-10 (job invoke-…f6cfb9ba) — liveness unconfirmed; retry with a
+longer budget before counting on it.
 
 ### Phase 3 — repairs V3 reports as repaired (post-measurement only)
 
