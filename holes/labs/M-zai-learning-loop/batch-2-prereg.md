@@ -164,3 +164,50 @@ session experience, not by the packet. First-order V3 material.
 bellback-turn REPLY routes to the void (this one sat unread three
 hours). Escalations are delivered ONLY as explicit bells to
 ams-claude-1 — bell first, then reply in-turn if desired.
+
+## Amendment 6 (2026-08-11, correction: amendment 5's FINDING is retracted)
+
+**The norm-cargo finding was wrong on its premise.** Supervisor-verified
+against the committed template (`git show HEAD:data/codex-sorry-packet-
+template.txt`, 137 lines): `native_decide` occurs ZERO times. The packet
+never banned it. "Axiom-clean" (line 1, line 106) is never defined; the
+only operationalization the packet gives is the sorryAx test (line 108).
+There was no "hard-banned tactic" and no packet ban for session
+experience to carry. Operator-caught (this correction is claude-3's, from
+the b01A02r-ctl interview + a direct packet check); the supervisor filed
+amendment 5's finding without checking the packet text it presupposed.
+
+**Corrected finding:** an undefined gate term produced three sincere
+readings — two strict (refuse native_decide; one runner discarded a
+working proof to over-comply), one narrow (sorryAx-only, from a runner
+that DID audit: added `#print axioms`, recorded output verbatim, judged
+the entries permissible under the only explicit test given). Both strict
+runners attributed their strictness to packet text that does not exist
+("the packet explicitly ... rejected native_decide" — it does not), and
+the supervisor repeated the attribution. The gate LOOKED enforced
+because most runners happened to over-comply. Session-experience
+contribution cannot be ruled out (contaminated arms read strictly, the
+fresh arm read narrowly, n=1 fresh), but ambiguity is the parsimonious
+explanation. This is silence-catalogue material (V3 §2.1 instance 11),
+not norm-cargo material; the norm-cargo thesis is UNSUPPORTED at n=1
+and must not appear in V3 as established.
+
+**What survives amendment 5:** ruling 1 (defective-partial) stands on
+artifact grounds alone — 19 native_decide axioms in `#print axioms` fail
+the kernel-clean standard the CAMPAIGN scores by, whichever reading the
+runner took; no fault attaches to the runner. Ruling 3 (no packet change
+for b01A04r) stands and is strengthened: comparability now also measures
+the ambiguity itself. Ruling 2's framing shifts accordingly: fresh-run
+readings of the undefined term are the measured variable.
+
+**Banked for post-batch-2r (packet v-next, single versioned change):**
+the ctl runner's own drafted gate text — "No theorem claimed complete
+may acquire dependencies produced by native_decide; #print axioms must
+contain only the accepted foundational axioms and no
+*.native_decide.ax_*. Existing native-decision dependencies do not
+authorize adding more. Compare the final axiom set against baseline."
+
+**Retraction hygiene:** any store rows asserting the norm-cargo finding
+or the nonexistent packet ban get retractions + RETRACTION-MARKER
+companion rows (runbook convention). Amendment 5's text above stands
+unedited as the historical record; this amendment is its correction.

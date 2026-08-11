@@ -136,6 +136,25 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
     escalation markers and re-sends them as real bells (`312fca36`).
     The net's first live firing caught the very escalation that
     motivated its construction.
+11. **The ban that never existed.** The dispatch packet's acceptance
+    gate turned on "axiom-clean" — a term the packet uses (headline and
+    acceptance clause) but never defines; its only operationalization is
+    the sorryAx test. Three runners produced three sincere readings: two
+    strict (refuse `native_decide`; one discarded a working proof to
+    comply), one narrow (sorryAx-only — from the one runner that audited
+    explicitly, recorded `#print axioms` verbatim, and judged the
+    entries permissible under the only test given). Both strict runners
+    cited a packet prohibition of `native_decide` that does not exist —
+    zero occurrences at HEAD — and the supervisor filed a "norms carried
+    by session experience, not packet text" ruling on top of the
+    citation without checking the text it presupposed. The gate looked
+    enforced because most runners happened to over-comply; the
+    enforcement was coincidence wearing the costume of a rule. Operator-
+    caught (interview cross-check against the template; batch-2
+    amendment 6, which retracts amendment 5's finding). Distinctive
+    twist: here the well-formed-but-unmoored records were the agents'
+    own sincere self-reports — and one supervisor ruling — not a
+    machine's.
 
 ### 2.2 The argument
 
@@ -163,7 +182,7 @@ passes. What fixed each instance was one of three moves:
 The prior series' claim (I3, staging bank): norms must be authored before
 recurrence becomes visible. V3 adds the operational corollary: **authored
 norms decay into sentinels unless some instrument or fresh reader is
-charged with disbelieving them.** [n: 10 instances, two days; this is a
+charged with disbelieving them.** [n: 11 instances, two days; this is a
 catalogue with a mechanism, not a rate.]
 
 ## 3. The witness standard, and what survived it
@@ -272,7 +291,7 @@ rung may join here.]
 
 ## 8. Asserted on our own authority [TO MAINTAIN]
 
-- The ten-instance catalogue is complete for the period as far as we
+- The eleven-instance catalogue is complete for the period as far as we
   know — by construction we cannot know it is.
 - Relevance scoring blindness (batch-2) is procedural, not cryptographic.
 - All twin comparisons carry a two-seat confound; seats traded
