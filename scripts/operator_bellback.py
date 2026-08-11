@@ -25,6 +25,19 @@ SOCKET = os.environ.get("FUTON3C_EMACS_SOCKET_NAME", "server")
 WATCHED_CALLERS = set(
     os.environ.get("BELLBACK_CALLERS", "ams-claude-1,joe").split(",")
 )
+# Operator seats whose bellback-turn REPLIES would otherwise route to the
+# void ("a bellback never bellbacks" — deliberate loop safety in the
+# Agency). The watcher is the delivery net: their completions render in
+# the REPL, and replies carrying an escalation marker are RELAYED as a
+# real bell to the supervisor (2026-08-11: a claude-3 escalation sat
+# unread three hours in exactly this gap).
+WATCHED_AGENTS = set(
+    os.environ.get("BELLBACK_AGENTS", "claude-3,claude-2").split(",")
+)
+ESCALATION_MARKERS = ("ESCALAT", "# HOLDING", "RULING", "needs your hand",
+                      "NEEDS A RULING", "STOP BEFORE")
+SUPERVISOR = os.environ.get("BELLBACK_SUPERVISOR", "ams-claude-1")
+AGENCY_SEND = "/home/joe/code/futon3c/scripts/agency_send.py"
 TERMINAL = {"done", "failed", "timeout", "cancelled", "deduped", "overrun"}
 STATE_FILE = "/tmp/operator-bellback-seen.json"
 POLL_S = 15
@@ -69,6 +82,21 @@ def notify(text):
     )
 
 
+def relay_escalation(j):
+    """A watched agent's bellback-turn reply carries an escalation marker:
+    convert the void reply into a delivered bell to the supervisor."""
+    result = (j.get("result") or "")
+    pointer = (f"ESCALATION RELAY (watcher): {j.get('agent-id')} wrote an "
+               f"escalation into a bellback-turn reply (the void). Job "
+               f"{j.get('job-id')}. Opening lines:\n\n" + result[:400] +
+               "\n\nFetch the full result from the job endpoint and rule.")
+    subprocess.run(
+        ["python3", AGENCY_SEND, "--to", SUPERVISOR, "--from",
+         "escalation-relay", "--kind", "bell", "--mode", "brief"],
+        input=pointer, text=True, capture_output=True, timeout=30,
+    )
+
+
 def poll_once(seen, announce=True):
     with urllib.request.urlopen(f"{BASE}/api/alpha/invoke/jobs", timeout=10) as r:
         jobs = json.load(r).get("jobs", [])
@@ -76,10 +104,26 @@ def poll_once(seen, announce=True):
         jid = j.get("job-id")
         state = j.get("state") or (j.get("events") or [{}])[-1].get("type")
         caller = j.get("caller")
-        if not jid or jid in seen or caller not in WATCHED_CALLERS:
+        agent = j.get("agent-id")
+        watched_agent_reply = (caller == "auto-bellback"
+                               and agent in WATCHED_AGENTS)
+        if not jid or jid in seen or (caller not in WATCHED_CALLERS
+                                      and not watched_agent_reply):
             continue
         if state not in TERMINAL and not j.get("finished-at"):
             continue
+        if watched_agent_reply and announce:
+            # The window listing has only result-summary; fetch the full
+            # job for the marker scan.
+            try:
+                with urllib.request.urlopen(
+                        f"{BASE}/api/alpha/invoke/jobs/{jid}", timeout=10) as rf:
+                    full = json.load(rf).get("job", {})
+            except Exception:
+                full = j
+            result = (full.get("result") or "")
+            if any(m in result for m in ESCALATION_MARKERS):
+                relay_escalation(full)
         if announce:
             summary = (j.get("result-summary") or "").strip().replace("\n", " ")
             if len(summary) > 120:
