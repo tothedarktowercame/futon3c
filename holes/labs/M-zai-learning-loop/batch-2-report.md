@@ -56,7 +56,8 @@ contrast.
   test the upside; noise discipline measured instead.*
 
 **ZAI relevance (blind, amendment-4 rubric), all pools: 0 relevant, 3 adjacent,
-4 noise.** Operator spot-check ≥20% plus all `relevant`: performed on every
+5 noise** (8 memories scored: a01J05's pool of 4 → 2 adjacent / 2 noise;
+a01J06, a02J04, b01A02r, b01A04r one each). Operator spot-check ≥20% plus all `relevant`: performed on every
 scored pool; concurred throughout. One dissent recorded and upheld — ZAI's sole
 `relevant` (a01J06) was re-scored `adjacent` after **both** runners described
 the memory as confirmatory rather than determining.
