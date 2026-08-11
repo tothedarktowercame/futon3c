@@ -38,6 +38,11 @@ WATCHED_AGENTS = set(
 ESCALATION_MARKERS = ("ESCALAT", "# HOLDING", "RULING", "needs your hand",
                       "NEEDS A RULING", "STOP BEFORE")
 SUPERVISOR = os.environ.get("BELLBACK_SUPERVISOR", "ams-claude-1")
+# Exact buffer to notify. Buffers are per-agent ("*claude-repl:claude-1*");
+# the old prefix match ("*claude-repl") sprayed every agent's REPL —
+# operator saw bellbacks landing in unrelated agents' buffers (Joe,
+# 2026-08-11, stop-the-line).
+REPL_BUFFER = os.environ.get("BELLBACK_REPL_BUFFER", "*claude-repl:claude-1*")
 AGENCY_SEND = "/home/joe/code/futon3c/scripts/agency_send.py"
 TERMINAL = {"done", "failed", "timeout", "cancelled", "deduped", "overrun"}
 STATE_FILE = "/tmp/operator-bellback-seen.json"
@@ -64,16 +69,17 @@ def notify(text):
     # live claude-repl buffer via agent-chat-insert-message. Falls back
     # to a minibuffer message when no REPL buffer is live.
     safe = text.replace("\\", "\\\\").replace('"', '\\"')
+    buf = REPL_BUFFER.replace("\\", "\\\\").replace('"', '\\"')
     eval_form = (
-        '(let ((hit 0))'
-        ' (dolist (buf (buffer-list))'
-        '  (with-current-buffer buf'
-        '   (when (and (string-match-p "\\\\*claude-repl" (buffer-name))'
-        '              (boundp (quote agent-chat--prompt-marker))'
+        '(let ((hit 0)'
+        f'      (target (get-buffer "{buf}")))'
+        ' (when target'
+        '  (with-current-buffer target'
+        '   (when (and (boundp (quote agent-chat--prompt-marker))'
         '              agent-chat--prompt-marker'
         '              (marker-position agent-chat--prompt-marker))'
         f'    (agent-chat-insert-message "bellback" "{safe}")'
-        '    (setq hit (1+ hit)))))'
+        '    (setq hit 1))))'
         f' (when (zerop hit) (message "%s" "{safe}"))'
         ' hit)'
     )
