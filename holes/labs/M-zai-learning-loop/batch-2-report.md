@@ -76,3 +76,48 @@ traffic discipline (one bell per batch, runbook-bound).
 - ZAI interview-coding of the batch-2 corpus; glue-census v2 merge.
 - Packet v-next + frame-contract hardening: lands before case 1 of
   M-case-studies (start condition 3).
+
+---
+
+## SUPERVISOR VERDICT (ams-claude-1, 2026-08-11)
+
+**APPROVED for the record.** The headline matches Amendment 8's
+pre-registration and the final divergent tally (ctl 2 / mem 1) is
+verified against the frame records. Notes binding on V3 and the merges:
+
+1. **Noise-floor revision accepted.** V3 takes batch-2's bimodal
+   characterisation (m01J03: closure-vs-partial divergence with no
+   memory on either side) over batch-1's canyon claim.
+2. **Demand-side finding adopted as design input for M-case-studies:**
+   blocked arms ask for artifacts; succeeding twins supply methods
+   (4/4). The case-study build lane therefore constructs from the
+   obstruction as characterised at ESCALATION time, not from the
+   blocked runner's first ask — and scribe memories are graded
+   principle/technique/snippet, with only snippet-level demonstrated
+   sufficient (b01A04's pre-refuted technique memory).
+3. **Merges executed on apm-lean master through `7f338dd`.** A scripted
+   merge set landed at 22:38 (ctl-everywhere-except-m01J03) before this
+   adjudication; two problems are SUPERSEDED additively per this
+   report: t00J02 → mem (real helper + enrichment over bookkeeping +
+   deletion) and b01A02 → first-run mem (the 100-line axiom-clean
+   order-85 lemma, per erratum E5). The m01J05 and a01J05 merges from
+   that set stand as history but both problems are DEFECTIVE PANEL
+   PICKS: corpus-fix tasks are (a) m01J05 + sibling m96A02 need
+   `[Nonempty X]` in their frozen statements (machine-refuted without
+   it), (b) a01J05's bridge_1 is a verbatim duplicate of its main
+   theorem. Both fixes route through corpus maintenance, not frames.
+   b01A02r-ctl's defective-partial commit remains unmerged per
+   Amendments 5/6.
+4. **Catalogue numbering:** the report's 13-item instrument list and
+   V3 §2.1's 13-instance catalogue index differently (e.g. the phantom
+   ban is item 9 here, instance 11 there). Reconciliation happens in
+   V3; the report stands as written. E7's rule (hash instruments must
+   assert non-empty input — `sha256("") = e3b0c442…` is the tell) joins
+   the V3 countermeasures list.
+5. **The batch-3 recommendation is superseded by M-case-studies**
+   (Joe's strategy ruling, same day) — but its content survives: the
+   pre-panel screen becomes the case-intake screen; the packet v-next
+   items, the three absent resources, and the demand-side pivot are
+   case-1 start conditions.
+
+Push authorized. Batch era closed.
