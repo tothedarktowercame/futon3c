@@ -107,6 +107,18 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
    erratum D4; `66a52638`). The decisive experimental stratum was
    salvaged by re-running it on supervisor-verified session resets with
    the actual session id recorded at close.
+9. **The gate that indicted the innocent.** The attribution-compliance
+   gate's regex tolerated a backtick before the memory id but not before
+   the keyword; one seat wraps whole attribution lines in backticks, so
+   its complete, correct attributions failed invisibly and the gate
+   deposited compliance-failure rows naming the seat — false evidence
+   with an agent attached. Sub-finding: the gate's once-per-run
+   idempotency (designed to prevent double-counting) froze the false
+   verdicts in its state store, so fixing the parser alone changed
+   nothing; correction required clearing the frozen adjudications with
+   an audit trail. Operator-found, mid-batch, with two self-refuted
+   hypotheses en route to the one-character root cause (`8a5ad3c9`;
+   retractions e-retraction-gate-*).
 
 ### 2.2 The argument
 
