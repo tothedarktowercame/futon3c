@@ -120,6 +120,22 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
    until the frozen adjudications were cleared with an audit trail. Operator-found, mid-batch, with two self-refuted
    hypotheses en route to the one-character root cause (`8a5ad3c9`;
    retractions e-retraction-gate-*).
+10. **The transport that acknowledged into the void.** Replies written
+    inside auto-bellback turns are routed to no recipient — a deliberate
+    loop-safety rule ("a bellback never bellbacks") that doubles as an
+    unmarked dead-letter office. The transport accepted these messages
+    exactly as it would for a live recipient: no error, no bounce, no
+    missing field. The batch operator, unaware, filed escalations there
+    for a full session — including a decisive-pair halt that sat unread
+    three hours — and misread the resulting pattern as bell latency
+    ("several of my findings reached you only because you happened to
+    bell me on an adjacent topic"). Found not by any instrument but by
+    the supervisor noticing that content known to exist had never
+    arrived. Fixed by norm plus net: an explicit-bell rule in the
+    operator runbook, and a watcher that scans void-routed replies for
+    escalation markers and re-sends them as real bells (`312fca36`).
+    The net's first live firing caught the very escalation that
+    motivated its construction.
 
 ### 2.2 The argument
 
@@ -147,7 +163,7 @@ passes. What fixed each instance was one of three moves:
 The prior series' claim (I3, staging bank): norms must be authored before
 recurrence becomes visible. V3 adds the operational corollary: **authored
 norms decay into sentinels unless some instrument or fresh reader is
-charged with disbelieving them.** [n: 7 instances, one day; this is a
+charged with disbelieving them.** [n: 10 instances, two days; this is a
 catalogue with a mechanism, not a rate.]
 
 ## 3. The witness standard, and what survived it
@@ -256,7 +272,7 @@ rung may join here.]
 
 ## 8. Asserted on our own authority [TO MAINTAIN]
 
-- The seven-instance catalogue is complete for the period as far as we
+- The ten-instance catalogue is complete for the period as far as we
   know — by construction we cannot know it is.
 - Relevance scoring blindness (batch-2) is procedural, not cryptographic.
 - All twin comparisons carry a two-seat confound; seats traded
