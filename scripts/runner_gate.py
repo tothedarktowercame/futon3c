@@ -88,7 +88,11 @@ class UseAttributionGate:
         "Emit `USED <id>: <mechanism>` or `IGNORED <id>: <reason>` for every "
         "surfaced memory id. A missing verdict destroys the retrieval-to-use witness."
     )
-    _verdict = re.compile(r"^\s*(?:[-*]\s*)?(USED|IGNORED)\s+`?(e-[A-Za-z0-9_-]+)`?\s*:", re.MULTILINE)
+        # Backtick tolerance must cover the KEYWORD too: ams-codex-1 wraps whole
+    # attribution lines in backticks, and the old pattern silently failed
+    # every such line, writing false compliance rows against the seat
+    # (claude-3, batch-2; silence-catalogue instance 9).
+    _verdict = re.compile(r"^\s*(?:[-*]\s*)?`?(USED|IGNORED)\s+`?(e-[A-Za-z0-9_-]+)`?\s*:", re.MULTILINE)
 
     def __init__(self, *, strict: bool = False):
         self.strict = strict
