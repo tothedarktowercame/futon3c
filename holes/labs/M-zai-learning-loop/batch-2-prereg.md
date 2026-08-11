@@ -249,3 +249,53 @@ arms dispatch together so neither can read a completed twin.
 read-scope line in the frame contract, and `frames.bb close` removing
 the worktree (the branch is the artifact of record; a closed frame's
 checkout on shared disk is an open book).
+
+## Amendment 8 (2026-08-11, PRE-b01A04r: falsifier verdict, written before
+## the last pair runs)
+
+**The anchor-DF rung FAILS. problem-idf stays.** Recorded now, dated
+before b01A04r's dispatch, so no later reading can cast b01A04r as
+having tipped it.
+
+**The arithmetic (operator's, supervisor-verified against amendment 2's
+frozen statistic):** scoring is problem-level and arm-independent
+(amendment 4), so the seven tie-stratum dispatches — a01J06 and a02J04
+(identical single-memory surfaces) and m01J03, m01J04, m01J05, t00A05,
+t00J02 (both arms empty on empty pools) — contribute identically to both
+correct-decision numerators whatever ZAI scores them. The falsifier
+therefore reduces to the divergent stratum:
+- a01J05 — mem noisy-surface, ctl correct-empty → ctl
+- b01A02r — mem noisy-surface (single surfaced memory ZAI-scored noise,
+  operator-concurred, all four runners across both runs called it
+  unrelated), ctl correct-empty → ctl
+- b01A04r — pending; mem's best case leaves ctl ahead 2–1.
+Mem cannot strictly exceed ctl. Under the frozen statistic — ties or
+worse = fail — the verdict is entailed regardless of b01A04r.
+
+**The statistic stays frozen:** b01A04r's classification will be
+recorded and folded into the final rates pro forma; the VERDICT cannot
+move. The batch report's falsifier section cites a01J05 and b01A02r as
+the deciding dispatches.
+
+**Design reading (V3 §5 material):** the rung passed its offline
+acceptance test both directions (fixed the a01A12 slit-wedge inversion;
+t91A05 honest-empty) and still failed the batch. Both facts stand:
+memory-df selects better anchors when a relevant memory EXISTS, but at
+current store coverage most dispatches have nothing relevant to find,
+so a more permissive anchor policy trades correct-empties for noisy
+surfaces — the empty-pool prior dominates. The next rung is not anchor
+selection; it is coverage/relevance-floor (supply side) or the
+vote→build→callback pipeline (demand side), which remains the only
+mechanism with a demonstrated closure. The --anchor-source flag and
+memory-df rung stay in the code as instrumentation for a re-test when
+coverage warrants; the shipping default remains problem-idf.
+
+**b01A04r is re-scoped, not cancelled:** it runs as (1) the isolation
+experiment — first genuinely quarantined frames of the campaign
+(amendment 7; both the disk copy AND the shared-object-store refs of
+its first-run answer are gone), where reproduction of the same
+Subsingleton.elim transport by a fresh session would be convergence
+evidence that retroactively calibrates the breach's severity; (2) a
+recurrence test for b01A04's scribe-candidate demand signal; (3)
+batch-2r record completeness. Two codex dispatches; codex is
+unconstrained (Joe, 2026-08-10).
