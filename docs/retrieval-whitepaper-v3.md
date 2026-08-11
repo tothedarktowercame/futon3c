@@ -135,7 +135,10 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
     operator runbook, and a watcher that scans void-routed replies for
     escalation markers and re-sends them as real bells (`312fca36`).
     The net's first live firing caught the very escalation that
-    motivated its construction.
+    motivated its construction; a deliberate void-path test by the
+    operator then verified the post-launch path within one poll cycle
+    (the operator having first — correctly — refuted a working-path
+    test as evidence).
 11. **The ban that never existed.** The dispatch packet's acceptance
     gate turned on "axiom-clean" — a term the packet uses (headline and
     acceptance clause) but never defines; its only operationalization is
