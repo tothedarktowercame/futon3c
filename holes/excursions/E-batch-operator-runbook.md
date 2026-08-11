@@ -2,7 +2,7 @@
 
 **For the Opus batch-operator seat on Zone (claude-3). Written 2026-08-10 by
 ams-claude-1 (Fable), who ran batch-1 by hand; this manual encodes that
-night's lessons. Supervisor: ams-claude-1 — you liaise with them after every
+night's lessons. Supervisor: claude-1 — you liaise with them after every
 batch and whenever the ESCALATE rules below fire. Operator ≠ designer: you
 run the ballet; Fable and Joe change the choreography.**
 
@@ -50,7 +50,7 @@ first; remaining pairs only after the first pair closes clean.
 **Batch close**: `frames.bb validate --batch <id>` must exit 0; then draft
 the report scored against the prereg (batch-1-report.md is the template:
 headline vs falsifier FIRST, stratum accounting, noise-floor read, residue
-battery, recommendation) and BELL IT TO ams-claude-1. You draft; Fable
+battery, recommendation) and BELL IT TO claude-1. You draft; Fable
 verdicts. Do not push the report until Fable reviews.
 
 ## Hard rules (violations are incidents, not style points)
@@ -67,7 +67,7 @@ verdicts. Do not push the report until Fable reviews.
 - Every number you report: say what you CHECKED, not what you concluded.
 - Read "empty" as a fact about your query first (the standing §5 caution).
 
-## ESCALATE to ams-claude-1 (bell, don't improvise) when:
+## ESCALATE to claude-1 (bell, don't improvise) when:
 
 - anything contradicts a filed verdict or the prereg's predictions;
 - a frame won't close cleanly after one repair attempt;
@@ -84,7 +84,7 @@ verdicts. Do not push the report until Fable reviews.
 ## Liaison rhythm
 
 After each batch: your draft report + anomalies + proposed next-panel by
-the fixed rule → bell to ams-claude-1. Fable returns: verdicts, merges,
+the fixed rule → bell to claude-1. Fable returns: verdicts, merges,
 ladder-rung choice, prereg for the next wave. Between batches you may be
 assigned: census re-runs, merge-table prep, scribe-pass triggering
 (scribe output goes to claude-2 for review — never approve attachments
@@ -98,7 +98,7 @@ adjacent to the claim. Proposed by the operator; adopted.
 
 **Escalation delivery (2026-08-11, learned at cost):** a reply inside a
 bellback turn routes to auto-bellback — the void. An escalation exists
-only when sent as an explicit bell to ams-claude-1. Bell FIRST; the
+only when sent as an explicit bell to claude-1. Bell FIRST; the
 in-turn reply is optional commentary. Three hours of a decisive-pair
 halt were lost to this gap.
 

@@ -24,7 +24,7 @@ import urllib.request
 BASE = os.environ.get("FUTON3C_BASE", "http://127.0.0.1:7070")
 SOCKET = os.environ.get("FUTON3C_EMACS_SOCKET_NAME", "server")
 WATCHED_CALLERS = set(
-    os.environ.get("BELLBACK_CALLERS", "ams-claude-1,joe").split(",")
+    os.environ.get("BELLBACK_CALLERS", "claude-1,ams-claude-1,joe").split(",")
 )
 # Operator seats whose bellback-turn REPLIES would otherwise route to the
 # void ("a bellback never bellbacks" — deliberate loop safety in the
@@ -37,7 +37,7 @@ WATCHED_AGENTS = set(
 )
 ESCALATION_MARKERS = ("ESCALAT", "# HOLDING", "RULING", "needs your hand",
                       "NEEDS A RULING", "STOP BEFORE")
-SUPERVISOR = os.environ.get("BELLBACK_SUPERVISOR", "ams-claude-1")
+SUPERVISOR = os.environ.get("BELLBACK_SUPERVISOR", "claude-1")
 # Exact buffer to notify. Buffers are per-agent ("*claude-repl:claude-1*");
 # the old prefix match ("*claude-repl") sprayed every agent's REPL —
 # operator saw bellbacks landing in unrelated agents' buffers (Joe,
