@@ -13,6 +13,7 @@ Run durably as a child of the futon3c JVM:
 (Survives pouch teardown; dies with a JVM restart — relaunch after one.)
 """
 
+import fcntl
 import json
 import os
 import subprocess
@@ -135,6 +136,17 @@ def poll_once(seen, announce=True):
 
 
 def main():
+    # Single-instance guard: two watchers sharing the seen-state race
+    # between load and save, and each relays the same escalation (two
+    # duplicate relay bells 10s apart, 2026-08-11). The lock fd must
+    # stay open for the process lifetime.
+    lock = open("/tmp/operator-bellback.lock", "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        print("another operator_bellback instance holds the lock; exiting",
+              file=sys.stderr)
+        sys.exit(0)
     seen = load_seen()
     # On first run, silently mark everything currently terminal as seen so
     # the watcher only announces NEW completions, not history.
