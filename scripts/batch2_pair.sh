@@ -50,7 +50,7 @@ print(t)
 PYEOF
 )
   JOB=$(echo "$PACKET" | "$F3C/scripts/dispatch_with_recall.clj" \
-    --problem "$PID" --to "$SEAT" --from ams-claude-1 \
+    --problem "$PID" --to "$SEAT" --from claude-3 \
     --memory-channel :push --anchor-source "$ANCHOR" --limit 5 --recall-timeout-ms 60000)
   printf '%s\t%s\t%s\t%s\t%s\n' "$FRAME" "$ARM" "$SEAT" "$ANCHOR" "$JOB" >> "$LOG"
   echo "DISPATCHED $FRAME -> $JOB ($SEAT, anchor $ANCHOR)"

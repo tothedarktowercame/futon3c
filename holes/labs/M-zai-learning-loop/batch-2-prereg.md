@@ -55,3 +55,13 @@ pair completion — it is the cheap counterfactual this rung uniquely allows.
 
 20 codex dispatches + interviews (codex fresh at 100%); Claude spend
 limited to claude-3 operator turns + one Fable liaison review.
+
+## Amendment (2026-08-11, pre-dispatch, Joe's ZAI allocation)
+
+Relevance scoring (the falsifier's input) is performed by the ZAI
+measurement lane: for each surfaced memory, zai scores terrain-relevance
+{relevant | adjacent | noise} against the problem's statement + outline
+under a three-line rubric, blind to arm. claude-3 spot-checks ≥20% and all
+{relevant} scores; disagreements escalate to Fable. ZAI also codes
+interview answers (needs/misses/glue) for the census. Dispatcher of record
+for batch-2 is claude-3 (driver dispatches --from claude-3).
