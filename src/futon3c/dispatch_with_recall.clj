@@ -170,6 +170,7 @@
          opts {:limit default-limit
                :recall-timeout-ms default-recall-timeout-ms
                :memory-channel default-memory-channel
+               :anchor-source :problem-idf
                :base default-agency-base
                :mission default-mission
                :from "ground-control"
@@ -194,7 +195,7 @@
         (contains? #{"--problem" "--to" "--from" "--base" "--mission"
                      "--subject" "--terrain" "--substrate-base" "--limit"
                      "--recall-timeout-ms" "--receipt-alpha" "--withhold"
-                     "--memory-channel"}
+                     "--memory-channel" "--anchor-source"}
                    arg)
         (let [value (second remaining)]
           (when (or (nil? value) (str/starts-with? value "--"))
@@ -211,6 +212,12 @@
              "--withhold" (update opts :withhold-ids conj value)
              "--memory-channel"
              (assoc opts :memory-channel (parse-memory-channel value))
+             "--anchor-source"
+             (let [src (keyword (str/replace value #"^:" ""))]
+               (when-not (#{:problem-idf :memory-df} src)
+                 (throw (ex-info "--anchor-source must be problem-idf or memory-df"
+                                 {:value value})))
+               (assoc opts :anchor-source src))
              "--terrain" (assoc opts :terrain value)
              "--substrate-base" (assoc opts :substrate-base value)
              "--limit" (assoc opts :limit (positive-int arg value))
@@ -237,6 +244,7 @@
    "  --receipt-alpha N         use-rate boost weight, 0..1 (default 0.5)\n"
    "  --no-receipt-ranking      disable use-receipt ranking\n"
    "  --memory-channel MODE     :push (default), :push+pull, :pull-only, or :none\n"
+   "  --anchor-source SRC       problem-idf (default) or memory-df (wave-2 rung)\n"
    "  --substrate-base URL      authoritative substrate override\n"
    "  --base URL                Agency base (default http://localhost:7070)\n"
    "  --from ID                 dispatch/receipt author (default ground-control)\n"
@@ -408,6 +416,52 @@
    nil
    (remove str/blank? terms)))
 
+;; Wave-2 ladder rung (batch-1 finding: problem-corpus IDF selects artifact
+;; vocabulary and INVERTS relevance — e-retrieval-miss-a01A12-slit-wedge).
+;; Alternative anchor source: the MEMORY corpus's own document frequencies via
+;; the store's ?df= endpoint, preferring the mid-DF band (P1's U-curve: rare
+;; floors conjunctions, common drowns in noise). Selectable per dispatch with
+;; --anchor-source; default remains problem-idf so live behavior is unchanged
+;; until an arm flips it (A2b: experiment, don't ship).
+(def ^:private anchor-df-band [3 150])
+
+(defn- evidence-document-frequencies
+  "Fetch df for TERMS from the substrate's index in one call; nil on any
+  failure — anchor selection must never break recall."
+  [substrate-base terms]
+  (try
+    (let [base (trim-base (or substrate-base (substrate/configured-url)))
+          url (str base "/api/alpha/evidence/text-search?df="
+                   (encode (str/join "," terms)))
+          response (http/get url {:headers {"Accept" "application/edn"}
+                                  :timeout 15000 :throw false})
+          parsed (edn/read-string (:body response))]
+      (when (map? (:df parsed)) (:df parsed)))
+    (catch Throwable _ nil)))
+
+(defn- query-anchor-term-memory-df
+  "Anchor = the term whose MEMORY-corpus df lies in the discriminative band,
+  highest problem-IDF among those; falls back to problem-IDF selection when
+  no term is in band or the df fetch fails."
+  [terms substrate-base]
+  (let [terms (vec (remove str/blank? terms))
+        dfs (evidence-document-frequencies substrate-base terms)
+        [lo hi] anchor-df-band
+        in-band (when dfs
+                  (filterv #(let [d (get dfs % 0)] (<= lo d hi)) terms))]
+    (if (seq in-band)
+      ;; Within the band: problem-IDF first (discriminative for THIS
+      ;; problem), memory-df breaks ties (among equally discriminative
+      ;; terms, prefer the one memories actually speak — a01A12: slit
+      ;; df=42 reaches the memory, mobius df=23 does not; max-df alone
+      ;; wrongly picked generic "minus").
+      (reduce (fn [best t]
+                (let [k (fn [x] [(term-idf x @problem-document-frequency)
+                                 (get dfs x 0)])]
+                  (if (pos? (compare (k t) (k best))) t best)))
+              in-band)
+      (query-anchor-term terms))))
+
 (defn recall-query
   "Build a bounded lexical query from subject ids, preregistered terrain, and
   problem files, with packet terms retained as fallback. The exact problem id
@@ -484,13 +538,25 @@
                    distinct
                    (take query-term-limit)
                    vec)
-        required-term (query-anchor-term terms)]
+        anchor-source (or (:anchor-source opts) :problem-idf)
+        ;; memory-df anchors choose from the PRE-CAP pool: the capped four
+        ;; can lose the discriminative term (a01A12: "slit" survived the
+        ;; sources but not the cap; acceptance test 2026-08-10).
+        anchor-pool (->> selected-terms
+                         (remove str/blank?)
+                         distinct
+                         (take 16)
+                         vec)
+        required-term (if (= :memory-df anchor-source)
+                        (query-anchor-term-memory-df anchor-pool (:substrate-base opts))
+                        (query-anchor-term terms))]
     {:terrain terrain
      :recall-system recall-system
      :term-sources (if (seq query-terms)
                      [{:source :explicit-analysis-terms :terms terms}]
                      term-sources)
      :required-term required-term
+     :anchor-source anchor-source
      :terms terms
      :query (str/join " " terms)}))
 
