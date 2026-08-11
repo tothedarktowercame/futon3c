@@ -114,9 +114,10 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
    deposited compliance-failure rows naming the seat — false evidence
    with an agent attached. Sub-finding: the gate's once-per-run
    idempotency (designed to prevent double-counting) froze the false
-   verdicts in its state store, so fixing the parser alone changed
-   nothing; correction required clearing the frozen adjudications with
-   an audit trail. Operator-found, mid-batch, with two self-refuted
+   verdicts in its state store — one of TWO live blockers (stale
+   bytecode cache was the other; the operator established both by
+   experiment), so the parser fix appeared inert on the normal path
+   until the frozen adjudications were cleared with an audit trail. Operator-found, mid-batch, with two self-refuted
    hypotheses en route to the one-character root cause (`8a5ad3c9`;
    retractions e-retraction-gate-*).
 

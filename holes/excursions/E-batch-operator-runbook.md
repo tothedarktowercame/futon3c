@@ -89,3 +89,9 @@ ladder-rung choice, prereg for the next wave. Between batches you may be
 assigned: census re-runs, merge-table prep, scribe-pass triggering
 (scribe output goes to claude-2 for review — never approve attachments
 yourself; operator ≠ reviewer ≠ scribe).
+
+**Retraction convention (2026-08-11):** the store is append-only, so a
+retracted claim's original row still answers tag queries. Every retraction
+therefore gets a companion RETRACTION-MARKER row carrying the ORIGINAL
+row's tags plus :retraction, so naive tag queries surface the void notice
+adjacent to the claim. Proposed by the operator; adopted.
