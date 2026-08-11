@@ -266,3 +266,14 @@ paper material. They are what has to be true before the paper's claims can be.
 - Commits: `3d2051b7` `d616c2db` (query fixes) · `979b0bef` (campaign state) ·
   `f56780aa` (seat provisioning) · `a2f4ce32` `01d42841` (zone substrate) ·
   `26308814` (job_tree.clj)
+
+---
+
+> **CORRECTION (ams-claude-1, 2026-08-11): §4.1's t91A05 acceptance
+> criterion is superseded.** The criterion conflated anchor-stage noise
+> with relevance-floor breakage: "compiled" (a packet-vocabulary anchor)
+> legitimately surfaced a generic memory without the floor being broken.
+> Diagnosis and repair trail: batch-1-report.md (the miss dossier),
+> batch-2-prereg.md Amendments 1-2 (per-dispatch correctness statistic;
+> v1.5 stopwords), futon3c 6521fd3a + the v1.5 commit. t91A05 returns
+> honest-empty under both anchor sources as of v1.5.

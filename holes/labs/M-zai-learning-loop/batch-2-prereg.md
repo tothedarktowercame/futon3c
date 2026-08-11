@@ -65,3 +65,38 @@ under a three-line rubric, blind to arm. claude-3 spot-checks ≥20% and all
 {relevant} scores; disagreements escalate to Fable. ZAI also codes
 interview answers (needs/misses/glue) for the census. Dispatcher of record
 for batch-2 is claude-3 (driver dispatches --from claude-3).
+
+## Amendment 2 (2026-08-11, supervisor rulings on the operator's pre-dispatch
+## hold; NOTHING dispatched before this landed)
+
+**E3 ruling — mechanism fix, both arms symmetrically.** The six observed
+packet-template anchor terms (compiled, files, route, frozen, proves,
+closer) join the stopword family (v1.5). The contrast now tests memory-df
+beyond boilerplate filtering. Re-verified post-fix: a01A12/memory-df still
+surfaces slit-wedge (anchor "slit"); t91A05 honest-empty under BOTH sources
+(problem-idf anchor becomes "functoriality").
+
+**E1 ruling — §4.1's criterion is superseded, not violated.** The relevance
+floor was intact; the old criterion conflated anchor-stage noise with floor
+breakage. Restated: t91A05 must return honest-empty under the current-best
+retrieval configuration — now true under both arms post-v1.5. A dated
+correction goes on the handover doc. The operator's discovery that
+memory-df independently repaired t91A05 pre-v1.5 is banked as a second
+offline acceptance instance for the rung.
+
+**E2 ruling — the falsifier statistic is PER-DISPATCH.** Each dispatch is
+classified using ZAI-blind relevance scores over (a) its surfaced set and
+(b) the union candidate pool from the offline both-source replay:
+correct-surface (≥1 relevant surfaced) · correct-empty (none surfaced AND
+no relevant memory in the union pool) · noisy-surface (surfaced, none
+relevant) · harmful-empty (none surfaced BUT a relevant memory exists in
+the union pool). **Falsifier: the mem arm's correct-decision rate
+(correct-surface + correct-empty) must strictly exceed ctl's; ties or
+worse = the rung fails and problem-idf stays.** Correct suppression
+(m01J05-type) and harmful suppression (b01A04-type) are now both visible.
+Timing honesty: this statistic was fixed after the prereg-sanctioned
+replay exposed surfacing COUNTS (which diverge in both directions and do
+not determine the statistic's outcome) and before any relevance scoring.
+
+Operator may dispatch on receipt of this amendment. First pair staggering
+unchanged.

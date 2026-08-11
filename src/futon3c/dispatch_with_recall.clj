@@ -127,7 +127,12 @@
     "they" "part"
     ;; v1.4: generic task/qualifier words exposed by IDF ranking. These carry
     ;; no mathematical identity even when they happen to be corpus-rare.
-    "choice" "close" "remaining" "remains" "special"})
+    "choice" "close" "remaining" "remains" "special"
+    ;; v1.5 (claude-3 pre-dispatch replay, batch-2 E3): packet-template
+    ;; vocabulary observed AS ANCHORS on 6/10 panel problems. Applied to
+    ;; BOTH arms symmetrically so the anchor-source contrast tests
+    ;; memory-df beyond boilerplate filtering.
+    "compiled" "files" "route" "frozen" "proves" "closer"})
 
 (defn- encode [value]
   (URLEncoder/encode (str value) "UTF-8"))
