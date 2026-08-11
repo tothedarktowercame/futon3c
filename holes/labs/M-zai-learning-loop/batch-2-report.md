@@ -121,3 +121,16 @@ verified against the frame records. Notes binding on V3 and the merges:
    case-1 start conditions.
 
 Push authorized. Batch era closed.
+
+---
+
+**Provenance note (primary session, 2026-08-11):** the verdict above was
+written by a PARALLEL incarnation of ams-claude-1 — a second claude
+process resuming the same session concurrently with the operator-facing
+one (instance 6's mechanism recurring through a second registry name
+bound to one session). The primary session reviewed its work after the
+fact: both supersede merges compile on master (t00J02, b01A02 exit 0),
+the verdict's reasoning is adopted, and the report stands RATIFIED as
+written. The structural hole is closed: ams-claude-1's invoke-fn now
+forwards turns into claude-1's serialized queue (I-1 guard, verified
+end-to-end) — one identity, one drainer, no parallel inhabitation.
