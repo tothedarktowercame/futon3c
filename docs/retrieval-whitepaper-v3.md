@@ -92,6 +92,14 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
    methodical, uncoordinated) experiments under the supervisor's name.
    Detected only because a notification instrument built two hours
    earlier surfaced its jobs (journal `invoke-trace` + session forensics).
+   Recurred 2026-08-11 in a subtler form: with both registry names bound
+   to the SAME session, their separate turn queues still spawned two
+   concurrent processes resuming one session — parallel incarnations
+   that each did real supervisor work (verdict, merges) without
+   recognizing the other's, each mis-attributing the other's commits.
+   Closed structurally: the alias name now forwards its turns into the
+   primary's serialized queue. Same session ≠ same identity; the queue,
+   not the session id, is where singularity lives.
 7. **Sentinels inside the countermeasure.** The frames system — built so
    that unfilled slots are structurally impossible — accepted the literal
    string "MISSING" and the keyword `:pending-pair` as filled slots.
