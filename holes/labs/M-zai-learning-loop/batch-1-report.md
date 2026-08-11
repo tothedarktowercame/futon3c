@@ -119,3 +119,11 @@ a known-sorryAx frame). Operator verdict: inducted.
   comparisons stand (arms ran on different seats); within-arm sequence
   independence does not. Fixed for batch-2r onward (:session recorded at
   close from job records; verified resets for decisive runs).
+- **Recoverability note on D1–D3 (2026-08-11, batch-2 amendment 9):** the
+  frame corpus was not under version control when these in-place repairs
+  were made (gitignored since inception; discovered during batch-2r), so
+  the displaced originals are not byte-recoverable from git. Nothing is
+  lost in substance — the displaced values were content-known sentinels
+  ("MISSING", the omitted sorryAx line, the nil obstruction), described
+  above, and this narrative is their record. The corpus entered git on
+  2026-08-11.

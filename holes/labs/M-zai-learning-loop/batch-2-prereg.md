@@ -290,7 +290,8 @@ mechanism with a demonstrated closure. The --anchor-source flag and
 memory-df rung stay in the code as instrumentation for a re-test when
 coverage warrants; the shipping default remains problem-idf.
 
-**b01A04r is re-scoped, not cancelled:** it runs as (1) the isolation
+**b01A04r is re-scoped, not cancelled [see amendment 9 below for the
+frame-corpus versioning finding that arrived while it ran]:** it runs as (1) the isolation
 experiment — first genuinely quarantined frames of the campaign
 (amendment 7; both the disk copy AND the shared-object-store refs of
 its first-run answer are gone), where reproduction of the same
@@ -299,3 +300,47 @@ evidence that retroactively calibrates the breach's severity; (2) a
 recurrence test for b01A04's scribe-candidate demand signal; (3)
 batch-2r record completeness. Two codex dispatches; codex is
 unconstrained (Joe, 2026-08-10).
+
+## Amendment 9 (2026-08-11, the frame corpus had no past)
+
+**Finding (operator, discovered EXECUTING a supervisor ruling):** the
+entire frame corpus — 44 records across batches 1/2/2r plus twin diffs,
+the primary artifact every report cites — was gitignored (`data/*` at
+line 15; a bare `data/` at line 34 that ALSO deadened every existing
+`!data/…` negation). Zero of 71 files ever tracked. No history, no
+backup, no audit trail; silently editable; `frames.bb validate` reads
+the same unversioned files and passes regardless. The records look
+authoritative and nothing indicates they have no past.
+
+**Supervisor premise failure, second of the day:** the in-place
+correction ruling asserted "frame records are files under git — version
+control IS their append-only history" and cited the D1/D2 repairs as
+recoverable-from-git precedent. Never checked; false. (After amendment
+6 the rule was "verify claims about packet text before ruling"; the
+rule is now "verify premises about INFRASTRUCTURE too" — the two
+failures are one failure.) The operator executed the ruling in good
+faith, then checked `git ls-files`, then escalated with the original
+text preserved.
+
+**Rulings:**
+1. **Un-ignore, retroactively commit — executed by supervisor.**
+   `!data/experiment-frames/` + `/**` after the deadening line; all 71
+   files committed. History begins 2026-08-11; the corpus's
+   pre-history is attested only by the reports, transcripts, and job
+   records. `frames.bb close` auto-committing the frame record joins
+   the batch-3 hardening list (enforcement by construction).
+2. **The operator's applied correction STANDS.** The corrected text is
+   accurate; the displaced original is preserved here verbatim as the
+   record of what the field said from close until correction:
+   "...apm_b01a02 now depends on 19 native_decide axioms, violating
+   the packet's axiom-clean acceptance rule. Runner's own error-fix
+   log: ..." (the phantom-ban clause is what amendment 6 falsified;
+   the axiom facts and error-fix log were and remain correct).
+3. **D1/D2 batch-1 errata annotated:** those in-place repairs happened
+   on an unversioned corpus too, so their originals are not
+   byte-recoverable — but nothing is actually lost: the displaced
+   values were content-known sentinels (the literal "MISSING", the
+   omitted sorryAx line, the nil obstruction), fully described in the
+   errata narrative, which is the record.
+
+**V3:** silence-catalogue instance 13 — the evidence base with no past.

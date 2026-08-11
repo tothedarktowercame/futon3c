@@ -174,6 +174,26 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
     dispatch (bundle + worktree removal + ref deletion, closing the
     disk channel and the shared-object-store channel) and, for the next
     batch, read-scope in the contract and worktree removal at close.
+13. **The evidence base with no past.** The frame corpus itself — 44
+    records across three batches carrying every receipt id, axiom
+    block, session id, obstruction, and twin reference the reports
+    rest on — was never under version control: a gitignore pattern
+    excluded the data directory wholesale (and a second, later pattern
+    silently deadened the file's own existing negation lines). No
+    history, no backup, no audit trail; silently editable; the
+    validation gate reads the same unversioned files and passes
+    regardless. Discovered only when the operator, executing a
+    supervisor ruling that said "version control IS their append-only
+    history" and citing earlier repairs as recoverable-from-git
+    precedent, ran `git add` and was refused — the ruling's premise
+    had never been checked, and the cited precedent repairs had
+    themselves been unrecoverable all along. The deepest specimen in
+    the catalogue: not a field, a receipt, or a gate, but the ground
+    the records stand on, looking exactly as authoritative absent as
+    present. Fixed by un-ignoring and committing the corpus
+    retroactively (history begins the day of discovery; pre-history is
+    attested only by reports and transcripts) and queueing close-time
+    auto-commit for the next batch.
 
 ### 2.2 The argument
 
@@ -201,7 +221,7 @@ passes. What fixed each instance was one of three moves:
 The prior series' claim (I3, staging bank): norms must be authored before
 recurrence becomes visible. V3 adds the operational corollary: **authored
 norms decay into sentinels unless some instrument or fresh reader is
-charged with disbelieving them.** [n: 12 instances, two days; this is a
+charged with disbelieving them.** [n: 13 instances, two days; this is a
 catalogue with a mechanism, not a rate.]
 
 ## 3. The witness standard, and what survived it
@@ -310,8 +330,8 @@ rung may join here.]
 
 ## 8. Asserted on our own authority [TO MAINTAIN]
 
-- The twelve-instance catalogue is complete for the period as far as we
-  know — by construction we cannot know it is.
+- The thirteen-instance catalogue is complete for the period as far as
+  we know — by construction we cannot know it is.
 - Relevance scoring blindness (batch-2) is procedural, not cryptographic.
 - All twin comparisons carry a two-seat confound; seats traded
   fastest-arm honors across batch-1 pairs, but no formal seat calibration
