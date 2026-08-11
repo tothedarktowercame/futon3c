@@ -406,3 +406,12 @@ runner's own `eq_id_of_two_fixed_points` statement. Build dispatched;
 a94A09-uniqueness rerun parked on `concept:schwarz-pick-rigidity`.
 Second candidate at threshold: the thrice-derived polynomial zero-count
 bridge (a92J05, a97A08, a94A09) — claude-2's review finding.
+
+**Candidate rung (Joe, 2026-08-11): model-of-runner contrast.** The frame
+machinery is seat-agnostic, so arms can differ by MODEL rather than by
+memory configuration: ZAI workers vs Codex workers on paired problems, with
+Codex pushed to the reviewer role for those batches (roles rotate; the
+operator/reviewer/scribe separation holds regardless of which model fills
+each). Enables model comparison on the same residue battery — and the
+budget distribution (three independent quotas) makes it nearly free to
+schedule. Queue behind the retrieval rungs.
