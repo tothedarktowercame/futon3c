@@ -92,11 +92,21 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
    methodical, uncoordinated) experiments under the supervisor's name.
    Detected only because a notification instrument built two hours
    earlier surfaced its jobs (journal `invoke-trace` + session forensics).
-7. **Sentinels inside the countermeasure.** The frames system — built so
+7a. **Sentinels inside the countermeasure.** The frames system — built so
    that unfilled slots are structurally impossible — accepted the literal
    string "MISSING" and the keyword `:pending-pair` as filled slots.
    Found not by the author but by a fresh operator's induction audit
    (batch-1-report errata; `8d205959`).
+8. **Fictitious isolation.** Frame records minted random UUIDs into their
+   `:session` slot while the runner seats carried one session across their
+   entire job queue — fresh-session-per-run, a preregistration condition
+   of both batches, never held, and the record asserted it did. Worse
+   than an empty slot: it reads as evidence. Survived two batches and two
+   supervisor reviews; found by the operator joining frame records
+   against live job session-ids mid-batch (batch-2 amendment 3; batch-1
+   erratum D4; `66a52638`). The decisive experimental stratum was
+   salvaged by re-running it on supervisor-verified session resets with
+   the actual session id recorded at close.
 
 ### 2.2 The argument
 
