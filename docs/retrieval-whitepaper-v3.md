@@ -155,6 +155,22 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
     twist: here the well-formed-but-unmoored records were the agents'
     own sincere self-reports — and one supervisor ruling — not a
     machine's.
+12. **The isolation that scoped only writes.** The frame contract
+    confined each experimental arm's WRITES ("work only in {checkout};
+    commit on the frame branch only") and was silent about reads; all
+    ~44 frame worktrees sat world-readable in one directory, sharing one
+    git object store. A verified-fresh-session runner read a prior arm's
+    frame off disk — its interview cites "control-frame notes" whose
+    text greps to exactly one branch and zero in base — and calibrated
+    its behavior from them; the next scheduled re-run's own answer (a
+    committed proof transport) was equally on disk waiting. Every twin-
+    independence claim in two batches rested on isolation that was
+    requested, never enforced; no runner violated any instruction.
+    Self-reported by the runner, operator-verified, supervisor-
+    reproduced (batch-2 amendment 7); fixed by quarantine-before-
+    dispatch (bundle + worktree removal + ref deletion, closing the
+    disk channel and the shared-object-store channel) and, for the next
+    batch, read-scope in the contract and worktree removal at close.
 
 ### 2.2 The argument
 
@@ -182,7 +198,7 @@ passes. What fixed each instance was one of three moves:
 The prior series' claim (I3, staging bank): norms must be authored before
 recurrence becomes visible. V3 adds the operational corollary: **authored
 norms decay into sentinels unless some instrument or fresh reader is
-charged with disbelieving them.** [n: 11 instances, two days; this is a
+charged with disbelieving them.** [n: 12 instances, two days; this is a
 catalogue with a mechanism, not a rate.]
 
 ## 3. The witness standard, and what survived it
@@ -291,7 +307,7 @@ rung may join here.]
 
 ## 8. Asserted on our own authority [TO MAINTAIN]
 
-- The eleven-instance catalogue is complete for the period as far as we
+- The twelve-instance catalogue is complete for the period as far as we
   know — by construction we cannot know it is.
 - Relevance scoring blindness (batch-2) is procedural, not cryptographic.
 - All twin comparisons carry a two-seat confound; seats traded

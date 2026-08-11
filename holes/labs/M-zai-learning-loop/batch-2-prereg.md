@@ -211,3 +211,41 @@ authorize adding more. Compare the final axiom set against baseline."
 or the nonexistent packet ban get retractions + RETRACTION-MARKER
 companion rows (runbook convention). Amendment 5's text above stands
 unedited as the historical record; this amendment is its correction.
+
+## Amendment 7 (2026-08-11, pre-b01A04r: cross-frame READ isolation)
+
+**Finding (operator, supervisor-reproduced):** the frame contract scopes
+WRITES ("work only in {checkout}; commit on the frame branch only") and
+says nothing about reads. b01A02r-mem, on a verified-fresh session, read
+first-run frames off disk — its interview cites "control-frame notes"
+whose text exists ONLY on `exp/b2-firstrun-b01A02-ctl` (grep: 1 there, 0
+in base) — and calibrated its native_decide caution from them. All ~44
+frame worktrees were world-readable siblings sharing one object store,
+so every arm of batches 1–2 had disk AND git-ref access to every other
+frame, including its twin's. No instruction was violated; the isolation
+was requested, never enforced.
+
+**Consequences accepted into the record:** (1) b01A02r carries a
+cross-frame-exposure caveat (its mem/ctl caution asymmetry is now
+explained: mem read the first-run ctl closer notes). This further
+undercuts the retracted amendment-5 finding. (2) All twin-independence
+claims in batches 1–2 weaken from "isolated" to "no evidence of
+cross-reading, channel open" — one demonstrated instance, self-reported.
+(3) First-run b01A04 artifacts on disk would have handed the re-run its
+answer (the committed transport at Main.lean:143).
+
+**Ruling — option (a), executed by the supervisor (cross-frame scope):**
+first-run b01A04 artifacts quarantined BEFORE dispatch: branches bundled
+to `/home/joe/code/apm-frames-aside/b2-firstrun-b01A04.bundle` (verified
+complete; restore instructions + shas in the README there), worktrees
+removed, branch refs deleted — unreachable from `git log --all`, closing
+both the disk channel and the shared-object-store channel. Packet text
+unchanged (ruling 3 comparability preserved); b01A04r therefore runs
+with REAL isolation while b01A02r ran with the channel open — the
+falsifier read must weigh the pairs accordingly. Twin rule: both b01A04r
+arms dispatch together so neither can read a completed twin.
+
+**Banked for batch-3 (single versioned change with the axiom gate):** a
+read-scope line in the frame contract, and `frames.bb close` removing
+the worktree (the branch is the artifact of record; a closed frame's
+checkout on shared disk is an open book).
