@@ -213,12 +213,20 @@
   (let [o (require-options! (parse-options args) [:frame-a :frame-b :diff])
         _ (when-not (fs/regular-file? (:diff o))
             (die (str "no such diff file: " (:diff o))))
-        lines (count (str/split-lines (slurp (:diff o))))]
+        content (slurp (:diff o))
+        ;; str/split-lines on "" yields [""] -> :lines 1 for a byte-identical
+        ;; pair, indistinguishable from one-line divergence (claude-3,
+        ;; batch-2 pair 1). Identical twins are the dataset's strongest
+        ;; label; record them as such.
+        lines (if (str/blank? content) 0 (count (str/split-lines content)))]
     (doseq [fid [(:frame-a o) (:frame-b o)]]
       (let [path (locate-frame fid)
             f (read-edn path)]
-        (write-edn! path (assoc f :twin-diff {:path (str (:diff o)) :lines lines}))
-        (println "TWIN" fid "->" (str (:diff o)) "(" lines "lines )")))))
+        (write-edn! path (assoc f :twin-diff
+                                 (cond-> {:path (str (:diff o)) :lines lines}
+                                   (zero? lines) (assoc :identical true))))
+        (println "TWIN" fid "->" (str (:diff o)) "(" lines "lines"
+                 (if (zero? lines) "— BYTE-IDENTICAL )" ")"))))))
 
 (let [[command & args] *command-line-args*]
   (case command
