@@ -92,7 +92,7 @@ by an independent probe. Dates 2026-08-10/11; refs in parentheses.
    methodical, uncoordinated) experiments under the supervisor's name.
    Detected only because a notification instrument built two hours
    earlier surfaced its jobs (journal `invoke-trace` + session forensics).
-7a. **Sentinels inside the countermeasure.** The frames system — built so
+7. **Sentinels inside the countermeasure.** The frames system — built so
    that unfilled slots are structurally impossible — accepted the literal
    string "MISSING" and the keyword `:pending-pair` as filled slots.
    Found not by the author but by a fresh operator's induction audit
