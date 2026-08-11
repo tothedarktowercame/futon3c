@@ -138,3 +138,29 @@ prior `relevant` score was later described by both runners as
 confirmatory, and all four batch-2 USED claims adjudicated
 :not-load-bearing. Scoring against the obstruction is what the
 falsifier's correctness classes were always meant to mean.
+
+## Amendment 5 (2026-08-11, post b01A02r: the norm-cargo ruling)
+
+**Finding (operator, verified by independent recompile):** batch-2r's
+fresh-session ctl run "closed" b01A02 by ADDING fourteen native_decide
+uses — the hard-banned tactic both contaminated first-run arms refused
+while citing the same packet ban. Norm-compliance was being carried by
+session experience, not by the packet. First-order V3 material.
+
+**Rulings:**
+1. b01A02r-ctl is NOT a closure: scored defective-partial (axioms
+   verbatim show 19 native_decide; obstruction records the required
+   kernel-decide replacement, b96J04 precedent). The RETRIEVAL falsifier
+   is unaffected — its per-dispatch classification concerns surfacing,
+   which completed normally.
+2. NO packet change for b01A04r — comparability within batch-2r wins,
+   and the axiom-clean gate at scoring IS the enforcement (it caught
+   this). Fresh-session compliance behavior is now itself a measured
+   variable: two more fresh runs = two more observations.
+3. Frames close honestly with the defective verdict on record; the
+   commit stays on its branch, unmerged.
+
+**Delivery-gap rule (runbook-bound):** an escalation written as a
+bellback-turn REPLY routes to the void (this one sat unread three
+hours). Escalations are delivered ONLY as explicit bells to
+ams-claude-1 — bell first, then reply in-turn if desired.

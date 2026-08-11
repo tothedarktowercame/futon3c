@@ -95,3 +95,9 @@ retracted claim's original row still answers tag queries. Every retraction
 therefore gets a companion RETRACTION-MARKER row carrying the ORIGINAL
 row's tags plus :retraction, so naive tag queries surface the void notice
 adjacent to the claim. Proposed by the operator; adopted.
+
+**Escalation delivery (2026-08-11, learned at cost):** a reply inside a
+bellback turn routes to auto-bellback — the void. An escalation exists
+only when sent as an explicit bell to ams-claude-1. Bell FIRST; the
+in-turn reply is optional commentary. Three hours of a decisive-pair
+halt were lost to this gap.
