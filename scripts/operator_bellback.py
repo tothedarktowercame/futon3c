@@ -91,17 +91,18 @@ def notify(text):
 
 def relay_escalation(j):
     """A watched agent's bellback-turn reply carries an escalation marker:
-    convert the void reply into a delivered bell to the supervisor."""
+    surface the void reply LOUDLY in the operator REPL. NOTIFY-ONLY as of
+    2026-08-11: relaying as a bell to the supervisor spawned a concurrent
+    resume of the supervisor's session whenever a REPL turn was in flight
+    (the parallel-incarnation incident) — a bell arriving mid-turn does
+    NOT serialize with the emacs-surface turn. Until that JVM-side
+    serialization lands (hardening list), no automated path may bell the
+    supervisor; escalations land in the REPL where operator and
+    supervisor both see them."""
     result = (j.get("result") or "")
-    pointer = (f"ESCALATION RELAY (watcher): {j.get('agent-id')} wrote an "
-               f"escalation into a bellback-turn reply (the void). Job "
-               f"{j.get('job-id')}. Opening lines:\n\n" + result[:400] +
-               "\n\nFetch the full result from the job endpoint and rule.")
-    subprocess.run(
-        ["python3", AGENCY_SEND, "--to", SUPERVISOR, "--from",
-         "escalation-relay", "--kind", "bell", "--mode", "brief"],
-        input=pointer, text=True, capture_output=True, timeout=30,
-    )
+    pointer = (f"[ESCALATION — void-path reply from {j.get('agent-id')}] "
+               f"job {j.get('job-id')}: " + result[:400].replace("\n", " "))
+    notify(pointer)
 
 
 def poll_once(seen, announce=True):
