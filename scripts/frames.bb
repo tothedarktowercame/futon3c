@@ -64,12 +64,14 @@
 
 (defn closure-missing [frame]
   (let [base (remove #(present? (get frame %)) closure-slots)
+        session-pending (when (= :recorded-at-close (:session frame))
+                          [:session/runner-session])
         coo (:commit-or-obstruction frame)
         receipts (:receipts frame)
         lake (:lake-result frame)
         interview (:interview frame)]
     (vec
-      (concat base
+      (concat base session-pending
               (when (and (map? coo)
                          (not (or (present? (:commit coo))
                                   (present? (:obstruction coo)))))
@@ -120,7 +122,10 @@
                    :checkout checkout
                    :branch branch
                    :seat (:seat o)
-                   :session (str (java.util.UUID/randomUUID))
+                   ;; The runner's ACTUAL session id is knowable only after
+                   ;; dispatch (job record). A minted UUID here asserted isolation
+                   ;; that did not exist (claude-3, batch-2 session escalation).
+                   :session :recorded-at-close
                    :memory-channel (keyword (:memory-channel o))
                    :recall-system (:recall-system o)
                    :batch (:batch o)
@@ -160,6 +165,7 @@
                  (slurp axioms-path))
         exit (when-let [value (:lake-exit o)]
                (try (parse-long value) (catch Exception _ nil)))
+        runner-session (:runner-session o)
         interview (when-let [value (:interview o)]
                     (if (str/starts-with? value "skip:")
                       {:skipped (subs value 5)}
@@ -169,7 +175,9 @@
             (when (= v "MISSING")
               (die (str "sentinel MISSING passed as " (name k)
                         " — look up the real receipt id (claude-3 shakedown D1)"))))
-        updated (assoc frame
+        updated (cond-> frame
+                  runner-session (assoc :session runner-session)
+                  true (assoc
                   :commit-or-obstruction
                   {:commit (none->nil (:commit o))
                    :obstruction (none->nil (:obstruction o))}
@@ -179,7 +187,7 @@
                                 :output-hash (when axioms (sha256 axioms))}
                   :axioms axioms
                   :interview interview
-                  :twin-diff :pending-pair)
+                  :twin-diff :pending-pair))
         missing (frame-missing updated)
         status (if (seq missing) :incomplete :closed)
         final (assoc updated :frame/status status)]

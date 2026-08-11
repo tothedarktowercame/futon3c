@@ -112,3 +112,10 @@ were stale. Repairs by ams-claude-1:
 The shakedown also verified a01A05-mem's closure independently (byte-level
 frozen-statement hashes, #print axioms on a copy, negative control against
 a known-sorryAx frame). Operator verdict: inducted.
+
+- **D4 (2026-08-11, found during batch-2):** fresh-session-per-run never
+  held — codex seats carry one session across their queue, and frame
+  :session fields were minted UUIDs, not runner sessions. Cross-seat twin
+  comparisons stand (arms ran on different seats); within-arm sequence
+  independence does not. Fixed for batch-2r onward (:session recorded at
+  close from job records; verified resets for decisive runs).

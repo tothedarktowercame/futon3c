@@ -100,3 +100,26 @@ not determine the statistic's outcome) and before any relevance scoring.
 
 Operator may dispatch on receipt of this amendment. First pair staggering
 unchanged.
+
+## Amendment 3 (2026-08-11, mid-batch: session-isolation defect + salvage)
+
+**Defect (operator escalation, mid-drain):** codex seats carry ONE session
+across their whole job queue; fresh-session-per-run never held, in either
+batch. `frames.bb open` compounded it by minting fictitious session UUIDs
+(false evidence; fixed — :session is now recorded at close from the JOB
+record's actual session-id, and the placeholder cannot survive closure).
+
+**Salvage ruling (statistic untouched; decisive stratum preserved):**
+- The seven tie-stratum pairs (pool-empty or pool-identical) complete
+  as-queued, marked :contaminated-session, reported with that caveat —
+  their union pools cannot move the falsifier.
+- First-run b01A02 and b01A04 (the decisive pool-divergent pairs) are
+  EXCLUDED from the falsifier regardless of their results.
+- The decisive data comes from re-runs as batch **batch-2r**: fresh frames
+  from the same base, first-run exp branches renamed aside, and a
+  VERIFIED session reset (supervisor performs the reset via Drawbridge on
+  the operator's request bell, per job, both seats) with the actual
+  session id recorded at close. Four codex jobs; codex is unconstrained.
+- Batch-1's frame :session fields are equally fictitious → erratum D4 on
+  its report; batch-1's cross-seat twin comparisons stand (different
+  seats), its within-arm independence does not, and V3 must not lean on it.
