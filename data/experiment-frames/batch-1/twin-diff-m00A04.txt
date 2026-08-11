@@ -1,0 +1,63 @@
+diff --git a/problems/m00A04/lean/Main.lean b/problems/m00A04/lean/Main.lean
+index dc9db75..b446977 100644
+--- a/problems/m00A04/lean/Main.lean
++++ b/problems/m00A04/lean/Main.lean
+@@ -90,25 +90,6 @@ private lemma apm_m00A04_zero_weak_solution {n : ℕ}
+   intro v h hv
+   simp
+ 
+-/-- The positive-dimensional representative form of the Lax--Milgram theorem
+-needed by `apm_m00a04`.  Its proof must construct the energy completion of
+-compactly supported smooth functions and identify completion points with the
+-raw function/weak-gradient pairs in `apm_m00A04_memH10WithGradient`. -/
+-theorem apm_m00A04_positive_dimensional_weak_solution
+-    {n : ℕ} (hn : n ≠ 0) (U : Set (Fin n → ℝ))
+-    (hUne : U.Nonempty) (hUopen : IsOpen U)
+-    (hUbounded : Bornology.IsBounded U)
+-    (F : (Fin n → ℝ) → ℝ) (hF : apm_m00A04_L2On U F) (hF0 : F ≠ 0) :
+-    ∃ (u : (Fin n → ℝ) → ℝ)
+-      (g : Fin n → (Fin n → ℝ) → ℝ),
+-      apm_m00A04_memH10WithGradient U u g ∧
+-      ∀ (v : (Fin n → ℝ) → ℝ)
+-        (h : Fin n → (Fin n → ℝ) → ℝ),
+-        apm_m00A04_memH10WithGradient U v h →
+-          (∫ x in U, (∑ i : Fin n, g i x * h i x) + u x * v x) =
+-            ∫ x in U, F x * v x := by
+-  sorry
+-
+ theorem apm_m00a04
+     (V : Type) [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+     [CompleteSpace V] (f : V →L[ℝ] ℝ) :
+@@ -228,6 +209,30 @@ theorem apm_m00a04
+           Remaining boundary: construct the energy completion of compactly
+           supported smooth tests and prove its elements admit representatives
+           satisfying `apm_m00A04_memH10WithGradient`.
++
++          The closest repository model, `m03J05H1`, works only on `(0,1)` and
++          identifies a Sobolev element with its value at zero and one `Lp`
++          derivative; it cannot represent a general bounded open subset of
++          `Fin n → ℝ`. Mathlib's `IsCoercive.continuousLinearEquivOfBilin`
++          supplies the final Lax--Milgram step only after a complete Hilbert
++          space has been built.
++
++          A concrete next implementation must define the pre-Hilbert space of
++          `apm_m00A04_testFunction U` modulo energy-zero equality, with inner
++          product
++
++            ∫ x in U, (∑ i, partial φ i x * partial ψ i x) + φ x * ψ x,
++
++          take its uniform completion, and construct an isometric map into the
++          finite product `Lp ℝ 2 (volume.restrict U) ×
++          (Fin n → Lp ℝ 2 (volume.restrict U))`. Closedness of that image gives
++          representatives `(u,g)`; convergence against tests gives the weak
++          gradient identity and the defining approximation clause. Only then
++          can the forcing `F` be lifted by Cauchy--Schwarz and Riesz/Lax--Milgram.
++          Searches of `LEMMA-INDEX.md`, `ConstructionTargets/`, `m03J05`, and
++          Mathlib's Lax--Milgram and `Lp` completion APIs found no declaration
++          packaging this graph-closure realization. The configured Zulip and
++          arXiv-manifest paths were absent. No axiom, opaque declaration, or
++          `native_decide` is introduced.
+           -/
+-          exact apm_m00A04_positive_dimensional_weak_solution
+-            hn U hUne hUopen hUbounded F hF hF0
++          sorry

@@ -1,0 +1,51 @@
+diff --git a/problems/t00A02/lean/Main.lean b/problems/t00A02/lean/Main.lean
+index a4dede4..0385e3d 100644
+--- a/problems/t00A02/lean/Main.lean
++++ b/problems/t00A02/lean/Main.lean
+@@ -193,24 +193,24 @@ theorem apm_t00A02_bridge_antipodalCover_isCoveringMap :
+     IsCoveringMap apm_t00A02_antipodalCover := by
+   sorry
+ 
+-/-- The two global surface-topology inputs independent of the concrete
+-antipodal quotient: classification of connected degree-ten covers of a
+-genus-five surface, and construction of regular and nonregular four-sheeted
+-covers of the projective-plane wedge. -/
+-theorem apm_t00A02_bridge_surface_classification_and_wedge_covers :
++/-- The two genuinely global inputs to `apm_t00a02`, separated from the
++elementary antipodal-fiber calculation: classification of connected finite
++covers of a genus-five surface, and construction of the regular and
++nonregular four-sheeted wedge covers. -/
++theorem apm_t00A02_bridge_global_cover_classification_and_wedge :
+     (∀ (F E₁ E₂ : Type)
+         [TopologicalSpace F] [T2Space F] [CompactSpace F]
+         [PathConnectedSpace F] [ChartedSpace apm_t00A02_E2 F]
+         [IsManifold apm_t00A02_I2 ⊤ F]
+         [TopologicalSpace E₁] [PathConnectedSpace E₁]
+         [TopologicalSpace E₂] [PathConnectedSpace E₂]
+-        (hF : apm_t00A02_hasGenusFiveHomology F)
++        (_hF : apm_t00A02_hasGenusFiveHomology F)
+         (p₁ : E₁ → F) (p₂ : E₂ → F),
+       apm_t00A02_isNfoldCover 10 p₁ →
+       apm_t00A02_isNfoldCover 10 p₂ → Nonempty (E₁ ≃ₜ E₂)) ∧
+-    ∀ r₀ : apm_t00A02_RP2,
++    (∀ r₀ : apm_t00A02_RP2,
+       Nonempty (apm_t00A02_coverWitness (apm_t00A02_wedge r₀) 4 true) ∧
+-      Nonempty (apm_t00A02_coverWitness (apm_t00A02_wedge r₀) 4 false) := by
++      Nonempty (apm_t00A02_coverWitness (apm_t00A02_wedge r₀) 4 false)) := by
+   sorry
+ 
+ theorem apm_t00a02 :
+@@ -279,8 +279,8 @@ theorem apm_t00a02 :
+   classification. The genus-five classification and both wedge covers remain
+   independently open.
+   -/
+-  obtain ⟨hsurface, hwedge⟩ :=
+-    apm_t00A02_bridge_surface_classification_and_wedge_covers
+-  refine ⟨hsurface, ?_, hwedge⟩
+-  exact ⟨apm_t00A02_bridge_antipodalCover_isCoveringMap,
+-    apm_t00A02_antipodalCover_fiber_card⟩
++  exact
++    ⟨apm_t00A02_bridge_global_cover_classification_and_wedge.1,
++      ⟨apm_t00A02_bridge_antipodalCover_isCoveringMap,
++        apm_t00A02_antipodalCover_fiber_card⟩,
++      apm_t00A02_bridge_global_cover_classification_and_wedge.2⟩

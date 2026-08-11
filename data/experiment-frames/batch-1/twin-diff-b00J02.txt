@@ -1,0 +1,46 @@
+diff --git a/problems/b00J02/lean/Main.lean b/problems/b00J02/lean/Main.lean
+index b2d8444..b2c5f05 100644
+--- a/problems/b00J02/lean/Main.lean
++++ b/problems/b00J02/lean/Main.lean
+@@ -13,21 +13,27 @@ None. `GL (Fin 3) (ZMod 4)` is Mathlib's group of invertible `3 × 3`
+ matrices over `ℤ/4ℤ`.
+ -/
+ 
+-/-- The finite-field factor in the reduction-modulo-two count. -/
+-lemma apm_b00J02_card_GL3_zmod2 :
+-    Fintype.card (GL (Fin 3) (ZMod 2)) = 168 := by
+-  rw [← Nat.card_eq_fintype_card, Matrix.card_GL_field]
++/-- The residue-field factor in the reduction-modulo-two count. -/
++lemma apm_b00j02_card_GL_mod2 :
++    Nat.card (GL (Fin 3) (ZMod 2)) = 168 := by
++  rw [Matrix.card_GL_field]
+   decide
+ 
+-/-- Reduction modulo two is onto `GL₃(𝔽₂)` and its kernel consists of
+-the matrices `1 + 2A`, one for each of the nine binary entries of `A`. -/
+-theorem apm_b00J02_card_GL3_zmod4_eq_kernel_mul_mod2 :
+-    Fintype.card (GL (Fin 3) (ZMod 4)) =
+-      2 ^ 9 * Fintype.card (GL (Fin 3) (ZMod 2)) := by
+-  sorry
+-
+ theorem apm_b00j02 :
+     Fintype.card (GL (Fin 3) (ZMod 4)) = 86016 := by
+-  rw [apm_b00J02_card_GL3_zmod4_eq_kernel_mul_mod2,
+-    apm_b00J02_card_GL3_zmod2]
+-  norm_num
++  /-
++  The remaining bridge is the reduction homomorphism
++  `GeneralLinearGroup.map (ZMod.castHom (show 2 ∣ 4 by norm_num) (ZMod 2))`.
++  One must prove it surjective and identify its kernel with the 512 matrices
++  `1 + 2A`, `A : Matrix (Fin 3) (Fin 3) (ZMod 2)`.  Together with
++  `apm_b00j02_card_GL_mod2`, the finite-group homomorphism cardinality formula
++  gives `512 * 168 = 86016`.
++
++  Mathlib provides `GeneralLinearGroup.map`, `ZMod.castHom_surjective`, and
++  `Matrix.card_GL_field`, but no lifting theorem showing that a surjective
++  ring homomorphism induces a surjection on `GL`, nor the square-zero-kernel
++  count. Direct kernel `decide` was also tested: the default recursion limit
++  fails, and raising it to 20,000 still fails (100,000 overflows the process
++  stack), so kernel evaluation is not a viable axiom-clean route.
++  -/
++  sorry

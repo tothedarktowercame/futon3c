@@ -1,0 +1,98 @@
+diff --git a/problems/t00J02/lean/Main.lean b/problems/t00J02/lean/Main.lean
+index 727b2eb..979f03b 100644
+--- a/problems/t00J02/lean/Main.lean
++++ b/problems/t00J02/lean/Main.lean
+@@ -99,6 +99,25 @@ lemma apm_t00j02_component_compact_and_pathConnected
+   ⟨apm_t00j02_isCompact_connectedComponentIn_of_componentsBoundDisks hdisks hx,
+     apm_t00j02_isPathConnected_connectedComponentIn_of_componentsBoundDisks hdisks hx⟩
+ 
++/-- The boundary parametrization in `componentsBoundDisks` is not merely
++surjective: the embedded disk restricts to an embedding of the circle, so each
++displayed component is homeomorphic to `Circle`. -/
++lemma apm_t00j02_component_homeomorphic_circle
++    {S : Type} [TopologicalSpace S] {A : Set S}
++    (hdisks : apm_t00j02_componentsBoundDisks A) {x : S} (hx : x ∈ A) :
++    Nonempty (Circle ≃ₜ connectedComponentIn A x) := by
++  rcases hdisks x hx with ⟨d, _hdcont, hdemb, hd⟩
++  have hcircleToDisk : Topology.IsEmbedding apm_t00j02_circleToDisk := by
++    refine (Topology.IsEmbedding.of_comp_iff .subtypeVal).mp ?_
++    simpa [Function.comp_def, apm_t00j02_circleToDisk] using
++      (Topology.IsEmbedding.subtypeVal :
++        Topology.IsEmbedding ((↑) : Circle → ℂ))
++  have hemb : Topology.IsEmbedding
++      (fun z : Circle => d (apm_t00j02_circleToDisk z)) :=
++    hdemb.comp hcircleToDisk
++  rw [← hd]
++  exact ⟨hemb.toHomeomorph⟩
++
+ def apm_t00j02_hasDegree {S : Type} [TopologicalSpace S]
+     (f : C(S, S)) (degree : ℤ) : Prop :=
+   ∃ e : apm_t00j02_H 2 S ≅ ModuleCat.of ℤ ℤ,
+@@ -157,4 +176,66 @@ theorem apm_t00j02
+     (degree : ℤ) (hdegree : apm_t00j02_hasDegree f degree) :
+     degree = 0 := by
+   apply apm_t00j02_degree_eq_zero_of_homologyMap_eq_zero f degree hdegree
+-  exact apm_t00J02_bridge_1 hS f hf c hc hcsmooth hhandle htrans hdisks
++  /-
++  PARTIAL boundary (closer hop 1).  The algebraic degree step is now closed by
++  `apm_t00j02_degree_eq_zero_of_homologyMap_eq_zero`: evaluating the frozen
++  degree equation on the inverse image of `1 ∈ ℤ` under the chosen top-homology
++  equivalence proves `degree = 0` as soon as the induced `H₂` map vanishes.
++  Thus the sole remaining goal is the concrete categorical equality
++  `apm_t00j02_homologyMap 2 f = 0`.
++
++  Mathematically, the disk-bounding components of the transverse inverse image
++  give a null-homologous inverse image of the essential handle circle; the
++  intersection pairing/naturality formula then forces the top-dimensional
++  degree to vanish.  Searches of `ConstructionTargets/`, `LEMMA-INDEX.md`, all
++  closed topology artifacts, Mathlib's singular-chain, singular-homology,
++  contractibility, excision, Mayer--Vietoris, manifold transversality, degree,
++  and intersection APIs, and git history found no packaged Poincare-duality or
++  transverse-preimage formula relating this geometric hypothesis to the
++  induced `H₂` morphism.  Mathlib also has no surface intersection pairing or
++  fundamental-class API at this level.  Building that chain-level bridge
++  remains open.
++
++  CLOSER HOP 2: the new lemma
++  `apm_t00j02_isCompact_connectedComponentIn_of_componentsBoundDisks` proves
++  directly from `hdisks` that every transverse inverse-image component is a
++  compact continuous image of the boundary circle.  I also investigated the
++  narrower factorization route through the supplied embedded closed disk.
++  Mathlib proves `ContractibleSpace` for closed balls, but its singular-
++  homology API only packages positive-degree vanishing for totally
++  disconnected spaces; it has no homotopy-invariance/contractible-space
++  theorem that would make the boundary map zero on `H₁`.  Even that local
++  component class therefore cannot yet be killed categorically, and the
++  subsequent transverse-preimage/Poincare-duality bridge to the `H₂` map
++  remains unavailable.
++
++  CLOSER HOP 3 strengthens the geometric component package beyond compactness.
++  `apm_t00j02_isPathConnected_connectedComponentIn_of_componentsBoundDisks`
++  proves that every disk-bounding inverse-image component is path connected:
++  it first derives `PathConnectedSpace Circle` from the continuous surjection
++  `Circle.exp : ℝ → Circle`, then transports path connectedness through the
++  displayed boundary parametrization. The combined lemma
++  `apm_t00j02_component_compact_and_pathConnected` now exposes each component
++  as both compact and path connected, exactly the point-set input normally
++  used before assigning its null-homology class.
++
++  Further inspection of homotopy invariance, contractible spaces, singular
++  chains, and manifold transverse-preimage APIs still found no bridge from
++  this compact path-connected disk-bounding component to a zero `H₁` class,
++  nor from those component classes to `apm_t00j02_homologyMap 2 f = 0`.
++  Thus the remaining obstruction is purely the missing homological
++  null-boundary and Poincare-duality/intersection machinery, and remains open.
++
++  BATCH 2 CLOSER: `apm_t00j02_component_homeomorphic_circle` now sharpens the
++  component description to an actual homeomorphism with `Circle`, by composing
++  the subtype embedding of the unit circle into the closed disk with the disk
++  embedding supplied by `hdisks`, then identifying its range with the connected
++  component.  This eliminates any remaining point-set ambiguity about the
++  inverse-image components.  Searches for a singular-homology theorem sending
++  an embedded circle which bounds an embedded disk to zero, and for the
++  transverse pullback/intersection naturality formula, still found neither in
++  Mathlib nor in the repository's indexed helpers.  Those two categorical
++  bridges (ultimately Poincare duality for the surface) remain the exact open
++  obligation.
++  -/
++  sorry

@@ -1,0 +1,119 @@
+diff --git a/problems/b01A04/lean/Main.lean b/problems/b01A04/lean/Main.lean
+index 67f0213..12eb863 100644
+--- a/problems/b01A04/lean/Main.lean
++++ b/problems/b01A04/lean/Main.lean
+@@ -99,42 +99,69 @@ theorem apm_b01A04_bridge_compositum_restrict_equiv
+       ((E ≃ₐ[F] E) ≃* ((K ≃ₐ[F] K) × (L ≃ₐ[F] L))) := by
+   letI : IsGalois F K := hK
+   letI : IsGalois F L := hL
+-  let r : (E ≃ₐ[F] E) →* ((K ≃ₐ[F] K) × (L ≃ₐ[F] L)) :=
+-    MonoidHom.prod (AlgEquiv.restrictNormalHom K)
+-      (AlgEquiv.restrictNormalHom L)
+-  have hr_inj : Function.Injective r := by
+-    rw [injective_iff_map_eq_one]
+-    intro σ hσ
+-    rw [← Subgroup.mem_bot, ← IntermediateField.fixingSubgroup_top,
+-      ← hsup, IntermediateField.fixingSubgroup_sup]
+-    constructor
+-    · intro x
+-      have hx := congrArg (fun q => q.1 x) hσ
+-      have hx' := congrArg (fun y : K => (y : E)) hx
+-      simpa [r, AlgEquiv.restrictNormalHom_apply] using hx'
+-    · intro x
+-      have hx := congrArg (fun q => q.2 x) hσ
+-      have hx' := congrArg (fun y : L => (y : E)) hx
+-      simpa [r, AlgEquiv.restrictNormalHom_apply] using hx'
++  let rK : (E ≃ₐ[F] E) →* (K ≃ₐ[F] K) :=
++    AlgEquiv.restrictNormalHom K
++  let rL : (E ≃ₐ[F] E) →* (L ≃ₐ[F] L) :=
++    AlgEquiv.restrictNormalHom L
++  let r := rK.prod rL
++  have hr_injective : Function.Injective r := by
++    rw [← MonoidHom.ker_eq_bot_iff, MonoidHom.ker_prod]
++    change (AlgEquiv.restrictNormalHom K).ker ⊓
++      (AlgEquiv.restrictNormalHom L).ker = ⊥
++    rw [K.restrictNormalHom_ker, L.restrictNormalHom_ker,
++      ← IntermediateField.fixingSubgroup_sup, hsup,
++      IntermediateField.fixingSubgroup_top]
+   have hld : K.LinearDisjoint L :=
+     IntermediateField.LinearDisjoint.of_inf_eq_bot hinf
+-  have hfin : Module.finrank F E =
++  have hfinrank : Module.finrank F E =
+       Module.finrank F K * Module.finrank F L := by
+-    have := hld.finrank_sup
+-    rwa [hsup, IntermediateField.finrank_top'] at this
++    have h := hld.finrank_sup
++    rw [hsup, IntermediateField.finrank_top'] at h
++    exact h
+   have hcard : Fintype.card (E ≃ₐ[F] E) =
+       Fintype.card ((K ≃ₐ[F] K) × (L ≃ₐ[F] L)) := by
+-    rw [← Nat.card_eq_fintype_card, ← Nat.card_eq_fintype_card,
+-      Nat.card_prod, IsGalois.card_aut_eq_finrank,
+-      IsGalois.card_aut_eq_finrank, IsGalois.card_aut_eq_finrank]
+-    exact hfin
++    rw [Fintype.card_prod, ← Nat.card_eq_fintype_card,
++      ← Nat.card_eq_fintype_card, ← Nat.card_eq_fintype_card,
++      IsGalois.card_aut_eq_finrank, IsGalois.card_aut_eq_finrank,
++      IsGalois.card_aut_eq_finrank]
++    exact hfinrank
+   exact ⟨MulEquiv.ofBijective r
+-    ((Fintype.bijective_iff_injective_and_card r).2 ⟨hr_inj, hcard⟩)⟩
++    ((Fintype.bijective_iff_injective_and_card r).2
++      ⟨hr_injective, hcard⟩)⟩
+ 
+ theorem apm_b01a04 :
+     apm_b01A04_isGaloisGroup (Multiplicative (ZMod 3)) ∧
+       apm_b01A04_isGaloisGroup
+         (Multiplicative (ZMod 3 × ZMod 3)) := by
++  rcases apm_b01A04_bridge_cubic_compositum_exists with
++    ⟨E, hE, hA, hfd, K, L, hGalE, hGalK, hGalL,
++      hKfin, hLfin, hinf, hsup⟩
++  letI : Field E := hE
++  letI : Algebra ℚ E := hA
++  letI : FiniteDimensional ℚ E := hfd
++  have hAlgK : (DivisionRing.toRatAlgebra : Algebra ℚ K) = K.algebra' :=
++    Subsingleton.elim _ _
++  have hAlgL : (DivisionRing.toRatAlgebra : Algebra ℚ L) = L.algebra' :=
++    Subsingleton.elim _ _
++  rw [hAlgK] at hGalK
++  rw [hAlgL] at hGalL
++  letI : Algebra ℚ K := K.algebra'
++  letI : Algebra ℚ L := L.algebra'
++  letI : FiniteDimensional ℚ K :=
++    FiniteDimensional.of_injective K.val.toLinearMap K.val.injective
++  letI : FiniteDimensional ℚ L :=
++    FiniteDimensional.of_injective L.val.toLinearMap L.val.injective
++  letI : IsGalois ℚ E := hGalE
++  letI : IsGalois ℚ K := hGalK
++  letI : IsGalois ℚ L := hGalL
++  rcases apm_b01A04_aut_mulEquiv_zmod_three K hKfin with ⟨eK⟩
++  rcases apm_b01A04_aut_mulEquiv_zmod_three L hLfin with ⟨eL⟩
++  constructor
++  · exact ⟨K, inferInstance, inferInstance, inferInstance, ⟨eK⟩⟩
++  · rw [apm_b01A04_isGaloisGroup_multiplicative_prod_iff]
++    rcases apm_b01A04_bridge_compositum_restrict_equiv
++      ℚ E K L hGalK hGalL hinf hsup with ⟨e⟩
++    exact ⟨E, hE, hA, hGalE, ⟨e.trans (eK.prodCongr eL)⟩⟩
+   /-
+   PARTIAL boundary (closer hop 2): realizability transport across an arbitrary
+   group isomorphism is now compiled as
+@@ -175,5 +202,18 @@ theorem apm_b01a04 :
+   produced no actual rational degree-three Galois field or a linearly
+   disjoint pair. Those arithmetic constructions and the simultaneous
+   restriction equivalence for the compositum remain open.
++
++  BATCH 2 CLOSER: the simultaneous restriction equivalence is now proved.
++  Its restriction homomorphism has kernel
++  `fixingSubgroup K ⊓ fixingSubgroup L`, which is the fixing subgroup of
++  `K ⊔ L = ⊤`, hence is trivial. Linear disjointness follows from the
++  Galois hypothesis and `K ⊓ L = ⊥`; `LinearDisjoint.finrank_sup` and
++  `IsGalois.card_aut_eq_finrank` then show source and target have equal finite
++  cardinality, upgrading injectivity to a `MulEquiv`. The main theorem's
++  assembly is also closed. A subtle duplicate `Algebra ℚ K` instance (the
++  canonical rational algebra versus the intermediate-field algebra) is
++  transported with `Subsingleton.elim` before applying the cubic automorphism
++  lemma. The sole remaining sorry is now the arithmetic construction of two
++  linearly disjoint cyclic cubic extensions in
++  `apm_b01A04_bridge_cubic_compositum_exists`.
+   -/
+-  sorry

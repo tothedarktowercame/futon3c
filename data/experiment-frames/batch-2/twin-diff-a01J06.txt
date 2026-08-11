@@ -1,0 +1,115 @@
+diff --git a/problems/a01J06/lean/Main.lean b/problems/a01J06/lean/Main.lean
+index 9e7a08f..eb1ad6e 100644
+--- a/problems/a01J06/lean/Main.lean
++++ b/problems/a01J06/lean/Main.lean
+@@ -15,7 +15,7 @@ point to have cardinality equal to Mathlib's analytic order of vanishing.
+ Thus neither the zero set nor its multiplicities are fabricated.
+ -/
+ 
+-open Complex MeromorphicOn Metric Set
++open Complex
+ 
+ noncomputable section
+ 
+@@ -84,44 +84,46 @@ lemma apm_a01J06_card_preimage_eq_finsum_analyticOrder
+   intro z hz
+   simpa only [Nat.card_coe_set_eq] using (hω z).2
+ 
+-/-- The indices enumerating zeros in a closed disk form a finite set.  This
+-packages the locally finite divisor support into the sequence encoding used by
+-the problem, independently of the later Jensen estimate. -/
+-lemma apm_a01J06_finite_closedBall_preimage
++/-- An entire nonzero function has only finitely many enumerated zeros in
++each closed disk.  This connects the fiber-cardinality invariant in
++`apm_a01J06_EnumeratesZeros` to Mathlib's locally finite meromorphic divisor. -/
++lemma apm_a01J06_finite_closedDisk_indices
+     {f : ℂ → ℂ} {ω : ℕ → ℂ}
+-    (hf_entire : Differentiable ℂ f)
+-    (hf_nonzero : f ≠ 0)
++    (hf_entire : Differentiable ℂ f) (hf_nonzero : f ≠ 0)
+     (hω : apm_a01J06_EnumeratesZeros f ω) (R : ℝ) :
+-    {n : ℕ | ‖ω n‖ ≤ R}.Finite := by
+-  let D := divisor f (closedBall 0 R)
+-  have hD : D.support.Finite :=
+-    (divisor f (closedBall 0 R)).finiteSupport (isCompact_closedBall 0 R)
+-  have hpre := apm_a01J06_finite_preimage_of_enumeratesZeros hω hD
+-  apply hpre.subset
+-  intro n hn
+-  have hnball : ω n ∈ closedBall (0 : ℂ) R := by
+-    simpa [mem_closedBall, dist_zero] using hn
+-  have hnzero := apm_a01J06_apply_eq_zero_of_enumeratesZeros hω n
+-  have hf_an : AnalyticOnNhd ℂ f (closedBall 0 R) :=
+-    fun z _ => hf_entire.analyticAt z
+-  have hf_global : AnalyticOnNhd ℂ f Set.univ :=
+-    fun z _ => hf_entire.analyticAt z
+-  obtain ⟨x, hx⟩ : ∃ x, f x ≠ 0 := by
+-    simpa [Function.ne_iff] using hf_nonzero
+-  have hxorder : meromorphicOrderAt f x ≠ ⊤ := by
+-    rw [(hf_entire.analyticAt x).meromorphicNFAt.meromorphicOrderAt_eq_zero_iff.mpr hx]
+-    exact WithTop.zero_ne_top
+-  have hnorder_top : meromorphicOrderAt f (ω n) ≠ ⊤ :=
+-    hf_global.meromorphicOn.meromorphicOrderAt_ne_top_of_isPreconnected
+-      isPreconnected_univ (Set.mem_univ x) (Set.mem_univ (ω n)) hxorder
+-  have hnorder : meromorphicOrderAt f (ω n) ≠ 0 := by
+-    intro horder
+-    exact (((hf_entire.analyticAt (ω n)).meromorphicNFAt.meromorphicOrderAt_eq_zero_iff.mp
+-      horder) hnzero)
+-  apply Function.mem_support.mpr
+-  change divisor f (closedBall 0 R) (ω n) ≠ 0
+-  rw [MeromorphicOn.divisor_apply hf_an.meromorphicOn hnball]
+-  simpa [WithTop.untop₀_eq_zero, hnorder, hnorder_top]
++    Set.Finite {n : ℕ | ‖ω n‖ ≤ R} := by
++  have han : AnalyticOnNhd ℂ f (Set.univ : Set ℂ) := by
++    intro z hz
++    exact hf_entire.analyticAt z
++  have hmer : MeromorphicOn f (Set.univ : Set ℂ) := han.meromorphicOn
++  obtain ⟨z, hz⟩ : ∃ z : ℂ, f z ≠ 0 := by
++    simpa only [not_forall, Classical.not_not] using
++      (Function.ne_iff.mp hf_nonzero)
++  have hzorder : meromorphicOrderAt f z ≠ ⊤ := by
++    have hz0 : meromorphicOrderAt f z = 0 :=
++      (han z (Set.mem_univ z)).meromorphicNFAt.meromorphicOrderAt_eq_zero_iff.mpr hz
++    simp [hz0]
++  have hord : ∀ u : (Set.univ : Set ℂ), meromorphicOrderAt f u ≠ ⊤ :=
++    (hmer.exists_meromorphicOrderAt_ne_top_iff_forall
++      (isConnected_univ : IsConnected (Set.univ : Set ℂ))).1
++      ⟨⟨z, Set.mem_univ z⟩, hzorder⟩
++  let D := MeromorphicOn.divisor f (Set.univ : Set ℂ)
++  have hzeros : (Set.univ : Set ℂ) ∩ f ⁻¹' {0} = D.support :=
++    han.meromorphicNFOn.zero_set_eq_divisor_support hord
++  let s : Set ℂ := Metric.closedBall 0 R ∩ f ⁻¹' {0}
++  have hs : s.Finite := by
++    have hD : LocallyFiniteSupport (D : ℂ → ℤ) :=
++      Function.locallyFinsupp.locallyFiniteSupport D
++    have hfin := hD.finite_inter_support_of_isCompact
++      (isCompact_closedBall (0 : ℂ) R)
++    simpa [s, ← hzeros] using hfin
++  have heq : {n : ℕ | ‖ω n‖ ≤ R} = {n : ℕ | ω n ∈ s} := by
++    ext n
++    simp only [Set.mem_setOf_eq, s, Set.mem_inter_iff, Metric.mem_closedBall,
++      dist_zero_right, Set.mem_preimage, Set.mem_singleton_iff]
++    exact (and_iff_left (apm_a01J06_apply_eq_zero_of_enumeratesZeros hω n)).symm
++  rw [heq]
++  exact apm_a01J06_finite_preimage_of_enumeratesZeros hω hs
+ 
+ theorem apm_a01j06 (f : ℂ → ℂ) (ω : ℕ → ℂ) (A B : ℝ)
+     (hf_entire : Differentiable ℂ f)
+@@ -152,10 +154,14 @@ theorem apm_a01j06 (f : ℂ → ℂ) (ω : ℕ → ℂ) (A B : ℝ)
+   the logarithmic Jensen identity, nor converts that bound directly to this
+   indexed `Real.rpow` series.
+ 
+-  The remaining bridge is quantitative: apply the compiled finite-disk and
+-  aggregation identities, derive an `O(r)`
+-  count from Jensen and the exponential bound, and complete the dyadic-shell
+-  geometric comparison for `α > 1`. No statement defect was found.
++  This pass closes the qualitative disk-finiteness step:
++  `apm_a01J06_finite_closedDisk_indices` identifies the zero set with the
++  support of Mathlib's locally finite meromorphic divisor, intersects it with
++  the compact closed disk, and transports finiteness through the enumerating
++  fibers. The remaining bridge is quantitative: apply the compiled aggregation
++  identity, derive an `O(r)` count from Jensen and the exponential bound, and
++  complete the dyadic-shell geometric comparison for `α > 1`. No statement
++  defect was found.
+ 
+   HOP 4 isolates the absent library-level content as the following two exact
+   contracts (not introduced as declarations, since neither was proved):

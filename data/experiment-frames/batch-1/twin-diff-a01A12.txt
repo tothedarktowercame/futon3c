@@ -1,0 +1,82 @@
+diff --git a/problems/a01A12/lean/Main.lean b/problems/a01A12/lean/Main.lean
+index 231a552..e15ae01 100644
+--- a/problems/a01A12/lean/Main.lean
++++ b/problems/a01A12/lean/Main.lean
+@@ -168,22 +168,6 @@ lemma apm_a01A12_conformalMap_injOn :
+     simp at hzpos
+     linarith
+ 
+-/-- Once the exact range is known, the previously compiled injectivity and
+-derivative calculations assemble the displayed map into a conformal
+-bijection. -/
+-theorem apm_a01A12_conformalMap_conformalBijOn
+-    (hmap : Set.MapsTo apm_a01A12_conformalMap
+-      apm_a01A12_H apm_a01A12_wedgeSlit)
+-    (hsurj : Set.SurjOn apm_a01A12_conformalMap
+-      apm_a01A12_H apm_a01A12_wedgeSlit) :
+-    apm_a01A12_ConformalBijOn apm_a01A12_conformalMap
+-      apm_a01A12_H apm_a01A12_wedgeSlit := by
+-  constructor
+-  · exact ⟨hmap, apm_a01A12_conformalMap_injOn, hsurj⟩
+-  · intro z hz
+-    exact ⟨(apm_a01A12_conformalMap_hasDerivAt hz).differentiableAt,
+-      apm_a01A12_conformalMap_fderiv_ne_zero hz⟩
+-
+ /-- Why this unblocks `apm_a01a12`: once the displayed fourth-root map is
+ known to be a conformal bijection, this is the missing automorphism
+ classification.  It states that all conformal bijections with the same source
+@@ -210,6 +194,10 @@ theorem apm_a01a12 :
+           Set.EqOn g
+             (apm_a01A12_conformalMap ∘ apm_a01A12_mobius a b c d)
+             apm_a01A12_H := by
++  have hF : apm_a01A12_ConformalBijOn apm_a01A12_conformalMap
++      apm_a01A12_H apm_a01A12_wedgeSlit := by
++    constructor
++    ·
+   /-
+   CLOSER HOP 3 boundary. This hop goes beyond injectivity and closes the
+   differential part of the explicit biholomorphism. The new slit-plane lemma
+@@ -227,23 +215,25 @@ theorem apm_a01a12 :
+   conformal upper-half-plane automorphism as a positive-determinant real
+   Möbius map.
+ 
+-  Thus the explicit-map bridge is narrowed to surjectivity onto the frozen
+-  wedge slit. The independent automorphism-classification bridge remains
+-  open. The frozen statement is unchanged.
+-
+-  CLOSER HOP 4: current Mathlib and Loogle/LeanSearch searches still expose
+-  the `SL(2,ℝ)` action on `UpperHalfPlane` but no converse classification of
+-  every conformal automorphism.  The explicit-map side is now packaged by
+-  `apm_a01A12_conformalMap_conformalBijOn`: only the exact range statement
+-  (`MapsTo` plus `SurjOn`) remains, with no injectivity or differential
+-  bookkeeping hidden in that gap.  Once that range pair is proved, the main
+-  theorem routes directly through the independent classification bridge.
++  Thus the explicit-map bridge is narrowed to the `Set.BijOn` package. Its
++  injectivity field is already `apm_a01A12_conformalMap_injOn`; the remaining
++  range fields are containment in and surjectivity onto the frozen wedge slit.
++  Concretely, for each `w` in the slit wedge one must select the
++  upper-half-plane square root of `1 - w^4`, then prove that the principal
++  fourth root of `w^4` is exactly `w`; the wedge argument bounds and deleted
++  real segment are precisely the branch side conditions. Mathlib has the
++  required `cpow` identities but no theorem packaging this inverse.
++
++  The independent automorphism-classification bridge remains open. A renewed
++  source search found the forward `GL₂(ℝ)` action in
++  `Analysis.Complex.UpperHalfPlane.MoebiusAction`, including its explicit
++  fractional-linear formulas, but no converse asserting that every conformal
++  automorphism is induced by `GL₂(ℝ)` or `SL₂(ℝ)`. The configured local Zulip
++  archive and arXiv manifest paths were absent. The frozen statement is
++  unchanged; no axiom, opaque declaration, or `native_decide` is introduced.
+   -/
+-  have hrange :
+-      Set.MapsTo apm_a01A12_conformalMap
+-          apm_a01A12_H apm_a01A12_wedgeSlit ∧
+-        Set.SurjOn apm_a01A12_conformalMap
+-          apm_a01A12_H apm_a01A12_wedgeSlit := by
+-    sorry
+-  have hF := apm_a01A12_conformalMap_conformalBijOn hrange.1 hrange.2
++      sorry
++    · intro z hz
++      exact ⟨(apm_a01A12_conformalMap_hasDerivAt hz).differentiableAt,
++        apm_a01A12_conformalMap_fderiv_ne_zero hz⟩
+   exact ⟨hF, apm_a01A12_bridge_automorphism_classification hF⟩

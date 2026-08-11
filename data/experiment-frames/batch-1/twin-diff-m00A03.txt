@@ -1,0 +1,30 @@
+diff --git a/problems/m00A03/lean/Main.lean b/problems/m00A03/lean/Main.lean
+index 7a9bc26..d3b0d6e 100644
+--- a/problems/m00A03/lean/Main.lean
++++ b/problems/m00A03/lean/Main.lean
+@@ -94,8 +94,7 @@ theorem apm_m00a03
+     simpa [dist_eq_norm] using this
+   · intro A hA
+     have hfinite : ∀ ε : ℝ, 0 < ε →
+-        {z ∈ spectrum ℂ A | ε < ‖z‖}.Finite :=
+-      apm_m00A03_bridge_1 A hA
++        {z ∈ spectrum ℂ A | ε < ‖z‖}.Finite := by
+     /-
+     Boundary after closer hop 1: Riesz's lemma is closed above using Mathlib's compiled
+     `riesz_lemma_of_lt_one`, applied to the comap of `Y` inside the subtype
+@@ -143,11 +142,11 @@ theorem apm_m00a03
+     `apm_m00A03_derivedSet_subset_zero_of_annular_finite`: a ball of radius
+     `‖x‖ / 2`, intersected with the complement of the finite closed annulus
+     (apart from `x`), contradicts `accPt_iff_nhds` at every `x ≠ 0`.
+-    Consequently the bridge theorem above is confined exactly to annular
+-    spectral finiteness, i.e. the multi-eigenvalue invariant-flag/
+-    Riesz-separation construction described above.  The main theorem now
+-    consumes that bridge directly; it introduces no second analytic gap.
++    Consequently this final `sorry` is confined exactly to annular spectral
++    finiteness, i.e. the multi-eigenvalue invariant-flag/Riesz-separation
++    construction described above.
+     -/
++      exact apm_m00A03_bridge_1 A hA
+     refine ⟨hfinite, ?_⟩
+     exact apm_m00A03_derivedSet_subset_zero_of_annular_finite
+       (spectrum ℂ A) (fun ε hε ↦

@@ -1,0 +1,17 @@
+diff --git a/problems/t00A03/lean/Main.lean b/problems/t00A03/lean/Main.lean
+index 1328b6b..4a549ad 100644
+--- a/problems/t00A03/lean/Main.lean
++++ b/problems/t00A03/lean/Main.lean
+@@ -283,7 +283,8 @@ theorem apm_t00a03 :
+   -/
+   intro g n F _ _ _ _ _ _ hg hgenus curves hemb hessential hdisjoint
+     hnonparallel hmax
+-  exact ⟨apm_t00A03_bridge_1 g n F hg hgenus curves hemb hessential
+-      hdisjoint hnonparallel hmax,
+-    apm_t00A03_bridge_2 g n F hg hgenus curves hemb hessential
+-      hdisjoint hnonparallel hmax⟩
++  exact
++    ⟨apm_t00A03_bridge_1 g n F hg hgenus curves hemb hessential hdisjoint
++        hnonparallel hmax,
++      apm_t00A03_bridge_2 g n F hg hgenus curves hemb hessential hdisjoint
++        hnonparallel hmax⟩

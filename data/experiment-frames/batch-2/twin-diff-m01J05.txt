@@ -1,0 +1,33 @@
+diff --git a/problems/m01J05/lean/Main.lean b/problems/m01J05/lean/Main.lean
+index 90796f2..dea9c22 100644
+--- a/problems/m01J05/lean/Main.lean
++++ b/problems/m01J05/lean/Main.lean
+@@ -31,6 +31,28 @@ def apm_m01J05_newtonIterate {n : ℕ}
+   | 0 => x₀
+   | k + 1 => apm_m01J05_newtonStep F (apm_m01J05_newtonIterate F x₀ k)
+ 
++universe u
++
++/-- The first frozen conjunct is false without a `Nonempty X` hypothesis:
++the empty complete metric space satisfies every contraction hypothesis but
++has no candidate fixed point. -/
++theorem apm_m01J05_contraction_clause_false :
++    ¬ (∀ (X : Type u) [MetricSpace X] [CompleteSpace X]
++        (T : X → X) (q : ℝ),
++      0 ≤ q → q < 1 →
++      (∀ x y : X, dist (T x) (T y) ≤ q * dist x y) →
++        ∃ xStar : X,
++          T xStar = xStar ∧
++          (∀ y : X, T y = y → y = xStar) ∧
++          ∀ x₀ : X,
++            Tendsto (fun k ↦ (T^[k]) x₀) atTop (nhds xStar)) := by
++  intro h
++  let X := ULift.{u} Empty
++  let T : X → X := id
++  obtain ⟨xStar, -⟩ := h X T 0 (by norm_num) (by norm_num)
++    (fun x ↦ x.down.elim)
++  exact xStar.down.elim
++
+ theorem apm_m01j05 :
+     (∀ (X : Type*) [MetricSpace X] [CompleteSpace X]
+         (T : X → X) (q : ℝ),

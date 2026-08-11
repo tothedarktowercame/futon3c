@@ -1,0 +1,114 @@
+diff --git a/problems/t00A05/lean/Main.lean b/problems/t00A05/lean/Main.lean
+index d6fcb45..ce1d0b3 100644
+--- a/problems/t00A05/lean/Main.lean
++++ b/problems/t00A05/lean/Main.lean
+@@ -59,45 +59,53 @@ def apm_t00a05_IsC2 (γ : ℝ → ℝ × ℝ × ℝ) : Prop :=
+     (γ t).1 * deriv (fun s => (γ s).2.1) t -
+       (γ t).2.1 * deriv (fun s => (γ s).1) t
+ 
+-/-- The angle form is closed away from the removed vertical axis. -/
+-theorem apm_t00a05_dOmega_eq_zero
+-    (p : apm_t00a05_U) : apm_t00a05_dOmega p.1 = 0 := by
++lemma apm_t00a05_dOmega_eq_zero (p : apm_t00a05_U) :
++    apm_t00a05_dOmega p.1 = 0 := by
+   rcases p with ⟨⟨x, y, z⟩, hxy⟩
+-  simp only [apm_t00a05_dOmega, apm_t00a05_omega]
+   have hden : x ^ 2 + y ^ 2 ≠ 0 := by
+     rcases hxy with hx | hy
+     · nlinarith [sq_pos_of_ne_zero hx]
+     · nlinarith [sq_pos_of_ne_zero hy]
+-  have hxderiv :
+-      deriv (fun u : ℝ => -u / (u ^ 2 + y ^ 2)) x =
+-        (-1 * (x ^ 2 + y ^ 2) - -x * (2 * x)) /
+-          (x ^ 2 + y ^ 2) ^ 2 := by
+-    simpa [id_eq] using (((hasDerivAt_id x).neg.div
+-      (((hasDerivAt_id x).pow 2).add_const (y ^ 2)) hden).deriv)
+-  have hyderiv :
+-      deriv (fun v : ℝ => v / (x ^ 2 + v ^ 2)) y =
+-        (1 * (x ^ 2 + y ^ 2) - y * (2 * y)) /
+-          (x ^ 2 + y ^ 2) ^ 2 := by
+-    simpa [id_eq] using (((hasDerivAt_id y).div
+-      ((hasDerivAt_const y (x ^ 2)).add ((hasDerivAt_id y).pow 2)) hden).deriv)
+-  rw [hxderiv, hyderiv]
+-  ext <;> simp <;> field_simp <;> ring
++  ext <;>
++    simp only [apm_t00a05_dOmega, apm_t00a05_omega, Prod.fst,
++      Prod.snd, deriv_const, sub_zero]
++  · have hxden : HasDerivAt (fun u : ℝ ↦ u ^ 2 + y ^ 2) (2 * x) x := by
++      convert ((hasDerivAt_id x).pow 2).add_const (y ^ 2) using 1 <;> simp [id] <;> ring
++    have hyden : HasDerivAt (fun v : ℝ ↦ x ^ 2 + v ^ 2) (2 * y) y := by
++      convert (hasDerivAt_const y (x ^ 2)).add ((hasDerivAt_id y).pow 2) using 1 <;>
++        simp [id] <;> ring
++    have hxnum : HasDerivAt (fun u : ℝ ↦ -u) (-1) x := by
++      simpa using (hasDerivAt_id x).neg
++    have hynum : HasDerivAt (fun v : ℝ ↦ v) 1 y := hasDerivAt_id y
++    have hxquot := hxnum.div hxden hden
++    have hyquot := hynum.div hyden hden
++    have hxder := hxquot.deriv
++    have hyder := hyquot.deriv
++    simp only [Pi.div_apply] at hxder hyder
++    change deriv ((fun u : ℝ ↦ -u) / (fun u ↦ u ^ 2 + y ^ 2)) x -
++      deriv ((fun v : ℝ ↦ v) / (fun v ↦ x ^ 2 + v ^ 2)) y = 0
++    rw [hxder, hyder]
++    field_simp
++    ring
++  · simp
++  · simp
+ 
+-/-- The explicitly parametrized reference circle has period `-2π`. -/
+-theorem apm_t00a05_lineIntegral_C1 :
++lemma apm_t00a05_lineIntegral_C1 :
+     apm_t00a05_lineIntegral apm_t00a05_C1 0 (2 * Real.pi) =
+       -2 * Real.pi := by
+-  simp only [apm_t00a05_lineIntegral, apm_t00a05_C1,
+-    apm_t00a05_omega, Real.deriv_cos, Real.deriv_sin, neg_mul]
+-  simp_rw [Real.cos_sq_add_sin_sq]
+-  simp only [div_one, Real.cos_zero, deriv_const', mul_zero, add_zero]
+-  have hfun :
+-      (fun t : ℝ => Real.sin t * -Real.sin t +
+-        -Real.cos t * Real.cos t) = fun _ => -1 := by
+-    funext t
+-    nlinarith [Real.sin_sq_add_cos_sq t]
+-  rw [hfun]
+-  simp [Real.pi_pos.le]
++  unfold apm_t00a05_lineIntegral
++  calc
++    _ = ∫ _t in Set.Icc (0 : ℝ) (2 * Real.pi), (-1 : ℝ) := by
++      apply integral_congr_ae
++      filter_upwards with t
++      simp only [apm_t00a05_C1, apm_t00a05_omega, Prod.fst, Prod.snd]
++      rw [Real.hasDerivAt_cos t |>.deriv, Real.hasDerivAt_sin t |>.deriv]
++      rw [Real.cos_sq_add_sin_sq]
++      simp
++      nlinarith [Real.sin_sq_add_cos_sq t]
++    _ = -2 * Real.pi := by
++      rw [setIntegral_const]
++      simp [Real.volume_Icc, Real.pi_pos.le]
+ 
+ theorem apm_t00a05 :
+     (∀ p : apm_t00a05_U, apm_t00a05_dOmega p.1 = 0) ∧
+@@ -106,15 +114,14 @@ theorem apm_t00a05 :
+       apm_t00a05_lineIntegral γ 0 (2 * Real.pi) = -2 * Real.pi) := by
+   refine ⟨apm_t00a05_dOmega_eq_zero, apm_t00a05_lineIntegral_C1, ?_⟩
+   /-
+-  Remaining frontier: project `γ` to the `(x,y)` plane.  Its defining surface
+-  equation is the regular level curve
+-  `2*x^2 + y^2 + exp (2*(y-x)) = 10`, enclosing the origin.  Injectivity and
+-  the positive signed-area integral select its counterclockwise traversal, so
+-  the projected curve has winding number one.  The first two coefficients of
+-  `omega` are minus the angular form and therefore integrate to `-2π`; the
+-  third coefficient is `cos z`, whose contribution is the endpoint difference
+-  of `sin z` and vanishes because the curve is closed.  Mathlib has curve-
+-  integral algebra but no theorem connecting these hypotheses to the winding
+-  number of an arbitrary positively oriented Jordan curve.
++  This pass closes the exterior-derivative computation and the complete `C1`
++  period calculation.  The remaining assertion is genuinely global: an
++  injective, positively oriented parametrization of the specified connected
++  component must have winding number one around the deleted axis, after which
++  the exact angular-form integral is `-2π`; the `cos z dz` term is exact.
++  Mathlib exposes no theorem connecting these raw coordinate `deriv` integrals
++  and the frozen implicit-surface/simple-loop predicate to winding number or a
++  change-of-variables formula.
+   -/
++  intro γ hγ
+   sorry

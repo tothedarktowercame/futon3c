@@ -31,7 +31,12 @@ library/social/cluster-tooling-bootstrap.flexiarg
 *.elc
 
 # Added 2026-05-26 by street-sweeper Phase B (allostatic-relief for INV-13 rejects)
-data/
+# 2026-08-11: bare `data/` excluded the DIRECTORY, deadening every !data/…
+# negation above it AND silently keeping the 44-record experiment-frame
+# corpus (batches 1/2/2r primary evidence) out of history — batch-2
+# amendment 9. `data/*` (line 15) already ignores unlisted children.
+!data/experiment-frames/
+!data/experiment-frames/**
 .shadow-cljs/
 tmp/
 hs_err_pid*.log
