@@ -101,3 +101,16 @@ bellback turn routes to auto-bellback — the void. An escalation exists
 only when sent as an explicit bell to ams-claude-1. Bell FIRST; the
 in-turn reply is optional commentary. Three hours of a decisive-pair
 halt were lost to this gap.
+
+**Traffic discipline (2026-08-11, Joe's stop-the-line):** the target is
+ONE bell per batch — the liaison report — plus true blockers. A bell is
+warranted ONLY when you cannot proceed without a ruling (a BLOCKING
+escalation: dispatch gated, frame won't close, verdict contradicted on
+the critical path). Everything else — corrections to your own earlier
+claims, status, findings that don't gate the next action, test
+verifications, confirmations — goes into a running HELD-ITEMS section
+of the draft report and arrives at batch close. If a held item later
+becomes blocking, bell it then, with the accumulated context. No bell
+is ever just "an update"; the supervisor's silence between batches is
+the system working. (Today's calibration: of ~10 operator bells, three
+were blocking; the rest were report material arriving early.)
