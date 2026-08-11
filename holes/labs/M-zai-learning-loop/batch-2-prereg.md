@@ -123,3 +123,18 @@ record's actual session-id, and the placeholder cannot survive closure).
 - Batch-1's frame :session fields are equally fictitious → erratum D4 on
   its report; batch-1's cross-seat twin comparisons stand (different
   seats), its within-arm independence does not, and V3 must not lean on it.
+
+## Amendment 4 (2026-08-11, pre-batch-2r: the relevant/adjacent boundary)
+
+Ruled before any batch-2r pool exists. **`relevant` = bears on the
+problem's REMAINING OBSTRUCTION** — the memory would change what the
+runner must construct (supply a needed artifact, route, or maneuver for
+the open step). `adjacent` = same terrain but confirmatory/background:
+it addresses work already done, general context, or a step not on the
+critical path. `noise` = wrong terrain. The obstruction text (problem-
+level, arm-independent — blindness preserved) is included in ZAI's
+scoring packet. Basis: the operator's accumulated evidence — the sole
+prior `relevant` score was later described by both runners as
+confirmatory, and all four batch-2 USED claims adjudicated
+:not-load-bearing. Scoring against the obstruction is what the
+falsifier's correctness classes were always meant to mean.
