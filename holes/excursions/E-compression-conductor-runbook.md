@@ -77,3 +77,19 @@ surfaced from ≥N DISTINCT PROBLEMS (not transcripts). Before a slice:
 run the recogniser over the slice's prose and collect the no-candidate
 passages — that miss-list is the worklist (README-pattern-mining §6),
 and it must be measured on prose, not extracted steps (§5 bias).
+
+## Assay design lessons (case-1 pilot, 2026-08-12 — learned by failing)
+
+- **Headroom first:** assay on the step that STALLED in the transcripts
+  (where the candidate would have been load-bearing), never on a step
+  the runners handled — a goal the student solves unaided measures
+  nothing. Pilot instance: the bridge lemma was route-findable by
+  zai-1 cold; the right target was the instance-diamond assembly.
+- **Arms are sessions, not prompts:** one seat carries one session
+  across its queue (D4). Control-then-treatment on the same seat lets
+  the treatment see the control ("unchanged from the first assay").
+  Verified session reset between arms, or distinct seats.
+- **Score non-application too:** a treatment that correctly declines
+  to use an inapplicable memory, naming where it WOULD apply, is
+  positive evidence about deposit scoping — record it, separately from
+  the teachability verdict.
