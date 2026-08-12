@@ -225,3 +225,21 @@ it lands) and a separate stage-2 job (verify/cluster/author from disk).
 Never let synthesis share a job with a hundred reads. Recovery from
 any cap kill = re-dispatch the stage that died, from the persisted
 artifacts of the stage that finished.
+
+## Two-generations lesson (2026-08-12, slice-3 reconciliation)
+
+Slice 3 produced TWO contradicting honest reports: the original job
+(recovered from its overrun scare, redid reads as a "final clean run"
+into marks-final/, 312 marks, commit b953b42d) and a supervisor-
+dispatched recovery job scoped to marks/ — the graveyard of the
+CANCELLED preliminary attempts — which correctly found nothing
+admissible there and rolled back the authored candidate (d1a607a3,
+reverted). Neither agent erred; the supervisor's evidence-base scoping
+did. RULES: (1) before dispatching recovery for a "dead" job,
+re-verify its terminal state — overrun jobs can recover, and a
+recovery racing its recoveree makes two writers; (2) a recovery packet
+must scope evidence by CONTENT (the attested final artifacts named in
+the surviving report), never by the supervisor's memory of directory
+layout; (3) when generations of an artifact exist, the conductor names
+the operative one in its report and stale generations get a
+TOMBSTONE file saying which run superseded them.
