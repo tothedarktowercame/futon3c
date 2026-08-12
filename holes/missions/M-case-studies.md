@@ -112,9 +112,32 @@ route — is the teachable, transferable part. So every case ends with:
    memories. This is the memory experiment, relocated to where the
    learning actually is.
 
-Roles: the compression read is supervisor or reviewer work
-(operator ≠ scribe); extracted candidates go through claude-2 review
-before deposit, same as scribe output.
+Roles — the worse-is-better extraction lane (Joe, 2026-08-11): the
+compression read is TWO-STAGE, and the first stage deliberately uses
+the WEAKEST capable model.
+
+- **Stage 1, detection (zai-1):** read the case transcripts with a
+  surprisal rubric — mark the moments that are surprising, the turning
+  points, the steps "I would not have tried," each with why. Rationale:
+  an expert's compression drops exactly the steps that are automatic
+  for the expert, which are often the teachable ones; a weak solver's
+  surprise is a direct measurement of where teachable content sits,
+  where the expert reader reports "nothing new here." (It is also why
+  the channel experiments nulled: expert consumers have no headroom —
+  measuring memory effects on codex is measuring at ceiling.)
+- **Stage 2, validation + formulation (reviewer/supervisor):** turn
+  surviving marks into situation-class candidates, filter confusion
+  (a weak model also marks what it merely misunderstood — surprise is
+  the detector, not the verdict), grade principle/technique/snippet,
+  deposit. Operator ≠ scribe ≠ reviewer as always.
+- **Stage 3, teachability assay (zai-1 as test-solver):** the direct
+  transfer test with real headroom — re-run a SOLVED problem (ground
+  truth known, cheap to score) on zai-1 with and without the deposit
+  and compare trajectories. A deposit that lifts an 8.33% solver
+  demonstrably teaches; whether it also lifts codex AT ITS FRONTIER is
+  the standing hypothesis (every solver is a novice at its own
+  frontier), tested longitudinally by the case metrics. This revives
+  the banked model-of-runner contrast in its most useful form.
 
 ## Case 1 designation (proposed): finish b01A04, then compress it
 
