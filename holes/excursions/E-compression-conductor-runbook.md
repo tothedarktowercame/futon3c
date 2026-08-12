@@ -188,3 +188,29 @@ beat one-at-a-time — patterns are cross-instance objects, so the unit
 of work must match the unit of signal. Solving stays per-case (closure
 is a per-problem object); mining stays batched (a pattern cannot even
 be OBSERVED in a single instance). Same campaign, two correct shapes.
+
+## Slice-2 root cause CORRECTION + context-rotation protocol (2026-08-12)
+
+The conductor's packet-size diagnosis was WRONG (and so was the
+supervisor's first session theory). Root cause: the zai invoke-fn
+holds the full conversation in an unbounded closure atom — after ~110
+jobs the accumulated context exceeded the model window and EVERY new
+prompt failed 1261, even 6KB probes. Fixed in src (07e944d7): session
+rotation now truncates the conversation to the system message.
+
+CONSEQUENCES:
+- **Slices 1-2 independence caveat:** all reads shared one accumulating
+  context — later reads had earlier packets AND marks in view. Slice-1
+  clusters carry an anchoring caveat; convergence there is weaker
+  evidence than the ledger suggests. Slice 3+ is the clean run.
+- **Rotation protocol (conductor self-serve, no Drawbridge):** every 20
+  reads, POST /api/alpha/agents/restore with {"agent-id":"zai-1",
+  "type":"zai","session-id":"zai-<fresh-uuid>"} — verified to truncate
+  the context (24KB probe OK immediately after). Rotate BETWEEN
+  problems, never mid-problem.
+- **Packet budget:** ≤2 chunks (~18KB) per read is comfortably inside
+  the fresh-context window (24KB probe passed); the budget constraint
+  is cumulative, not per-packet.
+- Debugging pearl: Drawbridge surfaces runtime asserts as "Syntax error
+  macroexpanding" — wrap the call in try/catch and read .getMessage to
+  get the real error ("ZAI/ZAIF requires a durable evidence store").
