@@ -139,6 +139,26 @@ the WEAKEST capable model.
   frontier), tested longitudinally by the case metrics. This revives
   the banked model-of-runner contrast in its most useful form.
 
+## The retrospective mining lane (Joe, 2026-08-11; starts after case 1
+## validates the rubric)
+
+The ~203 already-solved problems are a mining corpus, and zai quota is
+the free workforce. Two sub-corpora, honestly distinguished: ARTIFACTS
+(all 203 final proofs — technique-as-artifact, dead ends erased) and
+TRANSCRIPTS (campaign era only — process, mistakes, turning points; the
+case loop manufactures more of these going forward). Mechanic: a fleet
+of independent zai miners over corpus slices with the surprisal/pattern
+rubric, funneled through the EXISTING vote infrastructure — a pattern
+counts only when independently surfaced from ≥N distinct problems by
+miners blind to each other (convergence is the signal, same threshold
+logic as concept votes). Survivors then take the standard stage-2
+validation and stage-3 teachability assay. HARD RULE: mining output
+lives in a research file, NOT the store, until it passes the assay —
+the store's disease was unvalidated supply, and a corpus-wide mine
+without this gate would recreate at scale the noise that failed two
+anchor rungs. Case 1's compression pass is the pilot of the mining
+rubric; the lane opens once that pilot shapes it.
+
 ## Case 1 designation (proposed): finish b01A04, then compress it
 
 b01A04 stands at sorry 3→1 on master with the last obstruction
