@@ -143,10 +143,15 @@ the WEAKEST capable model.
 ## validates the rubric)
 
 The ~203 already-solved problems are a mining corpus, and zai quota is
-the free workforce. Two sub-corpora, honestly distinguished: ARTIFACTS
-(all 203 final proofs — technique-as-artifact, dead ends erased) and
-TRANSCRIPTS (campaign era only — process, mistakes, turning points; the
-case loop manufactures more of these going forward). Mechanic: a fleet
+the free workforce. Two sub-corpora: ARTIFACTS (all 203 final proofs —
+technique-as-artifact) and TRANSCRIPTS (process, mistakes, turning
+points). Correction (Joe, 2026-08-12): process evidence for the
+HISTORICAL solves exists on Dionysus — transcripts for all solves are
+recoverable, not just the campaign era's. Transfer tasked to
+oxf-codex-6 (inventory manifest + rsync to zone
+/home/joe/apm-evidence/, size-capped, read-only on sources; job
+invoke-1786534960500-3805-87d5a7ae); the case loop manufactures more
+going forward. Mechanic: a fleet
 of independent zai miners over corpus slices with the surprisal/pattern
 rubric, funneled through the EXISTING vote infrastructure — a pattern
 counts only when independently surfaced from ≥N distinct problems by
