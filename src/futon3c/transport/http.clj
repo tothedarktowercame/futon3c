@@ -18,6 +18,9 @@
      GET  /api/alpha/coordination/qa — run mesh misrouting QA
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
      POST /api/alpha/invoke/jobs/:id/cancel — terminate a job by explicit request
+     GET  /api/alpha/agency/queue — operator view of the per-agent turn queues
+     POST /api/alpha/agency/queue/hold — pause a queue after the turn in flight
+     POST /api/alpha/agency/queue/release — lift a hold, resume the backlog
      POST /api/alpha/invoke/announce — record a queued invoke before external acceptance
      POST /api/alpha/bell — asynchronous fire-and-forget invoke (returns job-id immediately)
      POST /api/alpha/whistle — synchronous invoke (or NDJSON stream when stream=true)
@@ -1182,8 +1185,12 @@
 
 (def ^:private default-job-cap-ms
   "Soft cap: jobs running longer than this enter the 'overrun' state.
-   The lane keeps executing (supervised); this is NOT a terminal state."
-  (* 35 60 1000))  ;; 35 minutes
+   The lane keeps executing (supervised); this is NOT a terminal state.
+   2026-08-12 (Joe): raised 35min -> 24h — if a codex job needs the
+   time, it can have it. The 35-min label produced a false-death
+   misread (mining slice 3: supervisor dispatched recovery against a
+   live job). FUTON3C_JOB_CAP_MS still overrides."
+  (* 24 60 60 1000))
 
 (defn job-cap-ms
   "Current job cap in ms. Overridable via FUTON3C_JOB_CAP_MS."
@@ -4629,6 +4636,51 @@
                         :error "invoke-job-not-found"
                         :job-id (str job-id)})))
 
+(defn- handle-agency-queue
+  "GET /api/alpha/agency/queue?all=1 — operator view of the per-agent turn
+   queues: pending depth, the queued turns themselves, who is mid-drain, and
+   which queues are held. The queue is what the jobs window cannot show: a
+   bell sitting behind a slow turn has no job yet."
+  [request]
+  (let [params (parse-query-params request)
+        all? (contains? #{"1" "true" "yes"} (str/lower-case (str (get params "all" ""))))]
+    (json-response 200 (assoc (turn-queue/queue-view all?) :ok true))))
+
+(defn- queue-agent-param [request]
+  (let [payload (or (parse-json-map (read-body request)) {})]
+    {:payload payload
+     :agent (some-> (or (:agent payload) (get payload "agent")
+                        (:agent-id payload) (get payload "agent-id"))
+                    str str/trim not-empty)}))
+
+(defn- handle-agency-queue-hold
+  "POST /api/alpha/agency/queue/hold {agent, reason, by, ttl-minutes|ttl-ms}
+   — hold a queue. The turn already in flight finishes; nothing new is popped
+   until release. Bells keep queueing behind the hold."
+  [request]
+  (let [{:keys [payload agent]} (queue-agent-param request)]
+    (if-not agent
+      (json-response 400 {:ok false :error "agent-required"})
+      (let [ttl-ms (or (some-> (or (:ttl-ms payload) (get payload "ttl-ms")) str parse-int)
+                       (some-> (or (:ttl-minutes payload) (get payload "ttl-minutes"))
+                               str parse-int (* 60000)))
+            hold (turn-queue/hold!
+                  agent
+                  {:reason (some-> (or (:reason payload) (get payload "reason")) str str/trim not-empty)
+                   :by (some-> (or (:by payload) (get payload "by")) str str/trim not-empty)
+                   :ttl-ms ttl-ms})
+            pending (count (get-in (turn-queue/snapshot) [:queues agent]))]
+        (json-response 200 {:ok true :agent-id agent :hold hold :pending pending})))))
+
+(defn- handle-agency-queue-release
+  "POST /api/alpha/agency/queue/release {agent} — lift a hold and wake the
+   drainer so the backlog resumes immediately."
+  [request]
+  (let [{:keys [agent]} (queue-agent-param request)]
+    (if-not agent
+      (json-response 400 {:ok false :error "agent-required"})
+      (json-response 200 (assoc (turn-queue/release! agent) :ok true)))))
+
 (defn- interrupt-agent-process-tree!
   "Best-effort termination of AGENT-ID's live invoke subprocess tree.
    Returns a result map; never throws."
@@ -6749,6 +6801,19 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      ;; Operator queue control (2026-08-11): see what is queued behind an
+      ;; agent, hold that queue, release it. Mounted here rather than in
+      ;; make-handler's cond so a Drawbridge reload activates it without
+      ;; re-mounting the server — the running turn must not be disturbed.
+      (and (= :get method) (= "/api/alpha/agency/queue" uri))
+      (handle-agency-queue request)
+
+      (and (= :post method) (= "/api/alpha/agency/queue/hold" uri))
+      (handle-agency-queue-hold request)
+
+      (and (= :post method) (= "/api/alpha/agency/queue/release" uri))
+      (handle-agency-queue-release request)
+
       (and (= :get method) (= "/api/alpha/jvm/incidents" uri))
       (handle-jvm-incidents request)
 
