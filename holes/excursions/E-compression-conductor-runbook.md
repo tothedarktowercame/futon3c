@@ -93,3 +93,24 @@ and it must be measured on prose, not extracted steps (§5 bias).
   to use an inapplicable memory, naming where it WOULD apply, is
   positive evidence about deposit scoping — record it, separately from
   the teachability verdict.
+
+## Slice-1 lesson: the novelty bias (2026-08-12)
+
+Surprisal selects for OUT-OF-DISTRIBUTION content, not for the content
+you care about. Slice 1 ran on an 81%-math corpus and returned
+coordination patterns (verdicts, gates, evidence rows) — our homegrown
+agency machinery is more novel to the student than Mathlib proofs, so
+the surprise gauge locked onto the exotic minority stratum. (The
+distribution-inheritance warning, §5 of the mining README, in a new
+guise: the instrument inherits the reader's training distribution.)
+COUNTERMEASURES, both mandatory for math mining: (1) rubric v2
+(apm-evidence/case-1-corpus/rubric-stage1-math-v2.txt) pins the
+measurement DOMAIN — in-scope math/formalization process, out-of-scope
+coordination, COORDINATION-ONLY as a valid response; (2) packets are
+filtered to the math stratum via prose/index-strata.tsv (stratum
+column: math | coord). The coord stratum is separately minable for
+AGENCY-family patterns — slice 1 demonstrated that by independently
+re-deriving two silence-catalogue countermeasures from the logs
+(probe-the-claimed-property-not-the-acceptance-proxy,
+separate-evidence-history-from-verdict-state) — route those through
+claude-2 review for the agency family, never math.
