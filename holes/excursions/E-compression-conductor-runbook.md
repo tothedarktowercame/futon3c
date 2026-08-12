@@ -164,3 +164,27 @@ The full re-prove loop (does a live solve fingerprint-USE a mined
 pattern?) comes free when case-solving resumes — the case loop with
 recall IS that test, and the longitudinal metrics capture it. The
 tide test is its cheap leading indicator in the meantime.
+
+## Scaling policy + per-slice retrievability check (Joe, 2026-08-12)
+
+**Scaling decision rule:** slice 2 clears claude-2 review clean → scale
+immediately (parallel zai worker seats + second conductor). Upgrades
+needed → apply them, run ONE more slice, then scale. Never run long
+while unconsumed quality signals sit in the queue — reviews and assays
+are consumed BEFORE the next scale step, not banked.
+
+**Per-slice retrievability sanity check (stage 2 step 6, mandatory):**
+for each authored candidate, form 2 natural queries from the
+PROVENANCE MARKS' vocabulary (the wishes/phrasings of the runners and
+readers — never the pattern's own name or hotwords), and verify the
+candidate surfaces in the Tier-0 retriever top-5. A candidate that its
+own provenance vocabulary cannot find is NOT FINDABLE — repair
+hotwords before it counts. This is the cheap every-slice version of
+the tide test: memories must be reachable without convoluted
+reasoning, or transfer to live use cannot be trusted.
+
+**Unit-of-work note (Joe):** mining is the case where BATCHES genuinely
+beat one-at-a-time — patterns are cross-instance objects, so the unit
+of work must match the unit of signal. Solving stays per-case (closure
+is a per-problem object); mining stays batched (a pattern cannot even
+be OBSERVED in a single instance). Same campaign, two correct shapes.
