@@ -130,3 +130,37 @@ claude-2 review for the agency family, never math.
 - **Throughput scaling is gated on quality:** more zai worker seats /
   a second conductor only after two consecutive slices clear the
   claude-2 review gate with <20% candidate rejection.
+
+## Stage 4 — the tide test: discoverability against elicited demand
+## (Joe, 2026-08-12; first run after slice-3 review)
+
+The assay proves teach-when-given; nothing above proves FIND-when-
+needed, and retrieval is where both batch nulls lived. A library that
+teaches but never surfaces is a sandcastle. So, periodically (every
+~3 slices):
+
+1. **Panel**: sample K=5-8 UNSOLVED problems — the actual future
+   consumers, not the solved past.
+2. **Elicit demand**: one cheap job per problem (codex or zai, no
+   solving): "sketch your route in 5 lines; then list the memories,
+   artifacts, or techniques you would WISH for, phrased as the search
+   queries you would actually run." Wishes in the runner's natural
+   vocabulary — that vocabulary IS the test.
+3. **Match through the REAL retrieval paths** (not by hand): each
+   wish-query goes through (a) the store recall ladder
+   (dispatch_with_recall offline replay) and (b) the pattern index
+   Tier-0 hotword retriever. Score each wish: DIRECT HIT (a
+   deposited/staged pattern surfaces) / NEAR-MISS (the pattern exists
+   but the query vocabulary cannot reach it — a hotword/anchor defect,
+   repairable) / TRUE GAP (nothing exists).
+4. **Actions**: near-misses → hotword/registration repairs (cheap,
+   high-value — discoverability is mostly vocabulary); true gaps →
+   the DEMAND-DRIVEN priority list for the next slices (mine where
+   the tide already wants something); headline metric = DEMAND-MATCH
+   RATE, tracked per tide test. Rising match rate = the library is
+   real; flat = sandcastles.
+
+The full re-prove loop (does a live solve fingerprint-USE a mined
+pattern?) comes free when case-solving resumes — the case loop with
+recall IS that test, and the longitudinal metrics capture it. The
+tide test is its cheap leading indicator in the meantime.
