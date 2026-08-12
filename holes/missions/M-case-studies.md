@@ -196,3 +196,16 @@ discipline, retraction conventions.
 3. Hardening list landed as one consolidated change (supervisor,
    no bells).
 4. Joe edits this note and greenlights case 1.
+
+## Sequencing decision (Joe, 2026-08-12): mining pass FIRST
+
+Codex + zai quota are plentiful; the historical mining pass runs
+before one-at-a-time solving resumes. Consequence: the "second half"
+of the corpus is solved semi-supervised WITH the historical memories +
+patterns already sorted into maximal usefulness — the longitudinal
+metrics start from the best baseline instead of improving mid-stream.
+Conductor: codex-supervised per the runbook (codex conducts slices,
+claude-2 reviews formulations, Fable spot-checks + runs assays).
+Precondition being built now: prose extraction from the evidence
+manifest (session-jsonl/job-edn → digestible per-problem process
+texts), since stage-1 reads need excerpts, not 1.7MB transcripts.
