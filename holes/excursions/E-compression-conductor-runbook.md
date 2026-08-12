@@ -114,3 +114,19 @@ re-deriving two silence-catalogue countermeasures from the logs
 (probe-the-claimed-property-not-the-acceptance-proxy,
 separate-evidence-history-from-verdict-state) — route those through
 claude-2 review for the agency family, never math.
+
+## Quality gates addendum (2026-08-12, quality/throughput review)
+
+- **Quote verification (mandatory, stage 2 step 0):** before clustering,
+  mechanically verify each mark's QUOTE appears verbatim (or
+  near-verbatim, whitespace-tolerant) in its packet's source chunks.
+  Marks with unverifiable quotes are FABRICATIONS: excluded from
+  clustering, counted in the report, and a fabrication rate >5% fails
+  the slice. Nothing in the pipeline checked this before.
+- **Inter-slice convergence:** from slice 3 on, report which clusters
+  re-surface from DIFFERENT problems than any prior slice — the
+  strongest promotion signal; track in a running table at
+  data/pattern-staging/cluster-ledger.tsv.
+- **Throughput scaling is gated on quality:** more zai worker seats /
+  a second conductor only after two consecutive slices clear the
+  claude-2 review gate with <20% candidate rejection.
