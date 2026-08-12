@@ -1,0 +1,40 @@
+@flexiarg math-formalization/search-the-namespace-not-the-qualified-name
+@title Search the Namespace, Not the Qualified Name
+@sigils [🔍/名]
+@keywords search, grep, namespace, declaration, Mathlib, discovery, def, lemma, qualified, bare
+@audience lean-provers, agents
+@tone heuristic
+@difficulty easy
+@subjects formalization tooling
+@examples b01A04
+@provenance case-1 compression pilot (2026-08-12): three-way convergence — operator's self-diagnosed error, supervisor memory (grep-anchoring-hides-namespaced-decls), independent zai-1 mark
+
+! conclusion:
+  Mathlib declares most names INSIDE namespace blocks, so grep for the
+  BARE name within candidate files (or use exact-name search tools);
+  a qualified-name anchor like `^def IntermediateField.restrict` returns
+  empty on a declaration that exists, and an empty result read as
+  absence sends the proof down an unnecessary construction.
+
+  + context: You believe an API should exist (restrict, lift, comap
+    variants), grep for its qualified name, find nothing, and conclude
+    you must build it — or recommend the wrong neighboring API.
+
+  + IF: You are searching Lean/Mathlib source with text tools; the
+    target is plausibly declared as `def restrict` inside
+    `namespace IntermediateField ... end`.
+
+  + HOWEVER: Bare-name search over-returns (every namespace's `restrict`);
+    filter by file/namespace context. And an empty result is still only
+    evidence about your QUERY, not about the library — corroborate with
+    a second modality (exact-name search, doc-gen, or reading the
+    likeliest file's declaration list) before acting on absence.
+
+  + THEN: grep -n "^def restrict\|^lemma restrict" within the namespace's
+    file; or search doc-gen/loogle by exact name; before recommending an
+    API to another agent, verify it by opening the file at the line.
+
+  + BECAUSE: Empty-as-absence is the retrieval analogue of the silence
+    failure mode: a well-formed query with a wrong anchor produces a
+    confident wrong world-model, and the cost lands downstream in
+    someone else's round.

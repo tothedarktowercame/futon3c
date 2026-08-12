@@ -37,6 +37,8 @@ library/social/cluster-tooling-bootstrap.flexiarg
 # amendment 9. `data/*` (line 15) already ignores unlisted children.
 !data/experiment-frames/
 !data/experiment-frames/**
+!data/pattern-staging/
+!data/pattern-staging/**
 .shadow-cljs/
 tmp/
 hs_err_pid*.log
