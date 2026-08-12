@@ -214,3 +214,14 @@ CONSEQUENCES:
 - Debugging pearl: Drawbridge surfaces runtime asserts as "Syntax error
   macroexpanding" — wrap the call in try/catch and read .getMessage to
   get the real error ("ZAI/ZAIF requires a durable evidence store").
+
+## Job-cap rule (2026-08-12, slice-3 overrun): one stage, one job
+
+Slice 3 died of Agency job-cap OVERRUN between stage 1 and synthesis —
+silently, as cap kills always are. The 93 persisted marks survived
+because persist-as-you-go is mandatory; the synthesis did not. RULE:
+a slice is TWO dispatches — a stage-1 job (reads, persist each mark as
+it lands) and a separate stage-2 job (verify/cluster/author from disk).
+Never let synthesis share a job with a hundred reads. Recovery from
+any cap kill = re-dispatch the stage that died, from the persisted
+artifacts of the stage that finished.
