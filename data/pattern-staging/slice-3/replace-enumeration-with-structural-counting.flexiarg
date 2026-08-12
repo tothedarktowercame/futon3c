@@ -1,0 +1,50 @@
+@flexiarg math-formalization/replace-enumeration-with-structural-counting
+@title Replace Enumeration with Structural Counting
+@keywords enumeration, native_decide, decide, cardinality, kernel, exact-sequence, kernel, quotient, factorization, counting
+@audience Lean provers, finite-algebra formalizers
+@tone heuristic
+@style pattern
+@grade technique
+@provenance slice-3 math-strict compression mining (2026-08-12): 4 quote-verified marks across 4 independent read transcripts and 3 distinct problems (b00J02 b97J01 b98A03)
+
+! conclusion:
+  When direct evaluation of a finite cardinality is too expensive or extends
+  the trust base, replace enumeration with a structural factorization whose
+  factors are already kernel-checkable.
+
+  + context:
+    A finite group, matrix family, or combinatorial type has a computable
+    cardinality. `native_decide` or brute-force enumeration can produce the
+    numeral quickly in ordinary execution, but the proof must remain within
+    the kernel's accepted trust and resource budget.
+
+  + IF:
+    The object admits a homomorphism, quotient, filtration, orbit
+    decomposition, short exact sequence, or ordered-basis parametrization
+    whose fibers and image have simpler known sizes.
+
+  + HOWEVER:
+    Structural counting is not automatically cheaper. Constructing the map,
+    proving surjectivity, and identifying every fiber can require more library
+    infrastructure than a small kernel computation. First try kernel `decide`
+    on genuinely small objects; use the structural route when enumeration
+    blows the elaboration budget, scales exponentially, or introduces an
+    unacceptable compiler axiom.
+
+  + THEN:
+    Find a map that decomposes the object into a known image and uniform
+    fibers; prove the map's algebraic properties; compute the kernel/fiber and
+    image sizes separately; combine them with a cardinality theorem; and make
+    the final numeral follow from those proved factors rather than evaluator
+    output.
+
+  + BECAUSE:
+    The proof kernel checks the algebraic decomposition rather than replaying
+    a large search. The resulting proof explains the number, scales with the
+    mathematics rather than the state space, and avoids making correctness
+    depend on compiler-evaluated decision procedures.
+
+  + NEXT-STEPS:
+    next[Try kernel decide once and record its resource behavior.]
+    next[Look for a quotient, kernel-image formula, orbit decomposition, or basis parametrization.]
+    next[Prove each factor cardinality independently before multiplying them.]

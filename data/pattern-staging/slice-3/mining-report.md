@@ -1,41 +1,44 @@
-# Slice 3 stage-2 audit of persisted marks
+# Slice 3 math-strict synthesis
 
-This continuation used only the 93 files in
-`/home/joe/apm-evidence/mining/slice-3/marks/`, as instructed. Their terminal
-states are 15 done, 4 failed, and 74 cancelled.
+The index contains exactly 180 `math-strict` chunks for the requested IDs,
+forming 93 two-chunk-or-smaller packets. `b71A68` has no strict chunks.
 
-## Stage-2 step 0: quote verification
+An initial 93-job attempt exposed a queue-semantics error in the conductor:
+rotating after enqueue does not bind queued work to that context. Cancelling
+ledger jobs also does not remove their durable queued turns. That attempt was
+stopped (9 done, 84 cancelled), as was a 22-job correction attempt. To preserve
+the 200-read ceiling, the final clean run down-sampled eight b97A02 packets and
+ran the remaining 85 packets. Each batch drained completely before the next
+verified restore. All 85 final jobs completed; zero failed. Six final rotations
+returned `ok:true`.
 
-The persisted files contain zero `QUOTE:` fields, zero `MOVE:` fields, and
-zero structured `MARK n` blocks. Therefore there are zero quotes available to
-verify and a fabrication count of zero. This is a vacuous zero, not evidence
-that the student quoted accurately.
+The clean run produced 312 marks, 5 `COORDINATION-ONLY`, and 16
+`NOTHING-SURPRISED`. Coordination-only rate: 5/85 = 5.9%, below slice 2's
+8/13. Quote verification found 128/312 QUOTE fields that could not be matched
+verbatim to their source packet after whitespace/Markdown normalization and
+ellipsis-aware segmentation. Those marks were excluded. The synthesis uses
+184 quote-verified marks. This is reported as a fabrication count of 128,
+though many are faithful paraphrases mislabeled as verbatim quotes rather than
+invented mathematical claims.
 
-Several done files say in prose that the student “marked” a number of moments,
-but preserve only a summary of those marks. The missing QUOTE/MOVE records
-cannot be reconstructed from summaries without violating the instruction to
-work from persisted marks only.
+## Quote-verified clusters
 
-## Coordination-only count
+| Cluster | Problems | Transcripts | Disposition |
+|---|---:|---:|---|
+| Match a goal to a named theorem by hypothesis/conclusion shape | 7 | 13 | Reinforces `math-informal/reduce-to-known-result` and `math-informal/find-the-right-abstraction` |
+| Replace enumeration with structural counting | 3 | 4 | Authored as technique |
+| Probe the transitive axiom/trust closure | 5 | 9 | Reinforces slice-1 `probe-the-claimed-property-not-the-acceptance-proxy` |
+| Re-express a goal into the library's native API form | 4 | 6 | Reinforces `math-informal/structural-equivalence` and `math-strategy/convention-bridge` |
+| Construct an edge witness or pathological model to test semantics | 4 | 4 | Reinforces `math-informal/construct-an-explicit-witness`, `check-the-extreme-cases`, and `failure-mode-characterization` |
+| Check hidden instance, equality, direction, and ambient hypotheses | 4 | 4 | Reinforces `math-strategy/hypothesis-category-check` and case-1 `transport-across-an-instance-diamond` |
 
-Six files contain `COORDINATION-ONLY` (seven occurrences): four b97A02 reads
-and two b98A03 reads. Because only 15 reads completed, the file-level rate
-among completed reads is 6/15 = 40%. This does not support the expected strict-
-stratum improvement and is evidence that the classifier or extracted chunks
-still admit substantial coordination content.
+No quote-verified math cluster reinforced slice-1
+`separate-evidence-history-from-verdict-state`; that remains an agency-family
+candidate. The axiom-closure cluster materially reinforces slice-1's other
+candidate from five distinct math problems.
 
-## Clustering and authoring
-
-No semantic clustering is possible from the required MOVE phrases because no
-MOVE phrases were persisted. Consequently no candidate can satisfy the
-three-distinct-problem threshold, no dedupe survivor exists, and no flexiarg is
-authored.
-
-The previously staged `replace-enumeration-with-structural-counting` file was
-removed: it was derived from a different `marks-final/` directory, not from
-the 93 mark files placed in scope for this continuation, and is unsupported by
-this audit.
-
-There is likewise no admissible evidence in these files for math-side
-reinforcement of either slice-1 agency candidate. Any such claim would require
-reconstructing absent MOVE records.
+The authored structural-counting move is a gap after dedupe against the full
+futon3 library and case-1/slice-1 staging. Existing
+`bijectivity-from-injectivity-plus-count` uses an already-known finite count,
+while this move explains how to replace unsafe or infeasible enumeration with
+a kernel-checkable decomposition that obtains the count.
