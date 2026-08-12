@@ -79,6 +79,59 @@ The memory question rides the cases instead of steering them:
 - **Calibration twins become an audit tool only**: run a blind twin
   when (and only when) a case claims a memory was load-bearing.
 
+## The compression pass (Joe, 2026-08-11 — the point of the mission)
+
+The corpus is not N problems; it is N learning opportunities. A human
+who solved 46% of these would have learned how to solve the rest
+faster; the system so far has not, and batch-2 measured why: the store
+supplies CONTENT (lemmas, snippets) while blocked runners demand
+METHODS (4/4, verdict item 2). Content is cheap to look up when it
+exists; strategy — the cascade of ways of thinking that picks the
+route — is the teachable, transferable part. So every case ends with:
+
+1. **Solve first, then read.** After closure, a compression reader
+   goes through the FULL transcripts of every dispatch that touched
+   the problem (including failed routes and error→fix chains) looking
+   for patterns, hints, mistakes, and clues that would have made the
+   resolve more efficient.
+2. **Extract at the cross-problem level.** Per-problem distillation is
+   per-problem fine-tuning — explicitly not the goal. A candidate
+   memory must state the situation-class it applies to ("when two
+   instance paths give definitionally different modules, do X before
+   building Y"), not the problem it came from.
+3. **Grade what was extracted** on the verdict's scale —
+   principle / technique / snippet — and record the grade in the
+   deposit. The standing hypothesis to test: snippet-level is
+   demonstrably sufficient (n=1, b01A04); the bet of this mission is
+   that technique- and principle-level memories, which have never yet
+   been fingerprint-USED, become load-bearing once they are extracted
+   FROM transcripts rather than written a priori.
+4. **Deposit and test forward.** The next case in the same cluster is
+   the transfer test; the longitudinal metrics (interventions,
+   one-pass-after-build rate) now also track hits on strategy-graded
+   memories. This is the memory experiment, relocated to where the
+   learning actually is.
+
+Roles: the compression read is supervisor or reviewer work
+(operator ≠ scribe); extracted candidates go through claude-2 review
+before deposit, same as scribe output.
+
+## Case 1 designation (proposed): finish b01A04, then compress it
+
+b01A04 stands at sorry 3→1 on master with the last obstruction
+precisely characterised (the intermediate-field `finrank` instance
+mismatch — an instance-coherence diamond, a situation-class that
+recurs across the whole corpus). It carries the campaign's richest
+transcript set for one problem: four dispatches across two batches,
+twin diffs, the isolation re-derivation, and two independent hits of
+the same wall by the mem seat. Case 1 = close the last sorry
+(construction loop as needed), then run the first compression pass
+over all five transcripts. Expected first strategy deposits: the
+instance-diamond playbook and the restrictNormalHom product
+decomposition as a technique-class. Demonstrates the full baseline —
+dispatch, obstruction, build, closure, compression, graded deposit —
+on one problem, end to end.
+
 ## Kept from the batch era
 
 Frames (read-scoped contract + close-time auto-commit land before case
