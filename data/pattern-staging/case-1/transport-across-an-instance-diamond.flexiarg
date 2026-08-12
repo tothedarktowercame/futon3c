@@ -6,9 +6,11 @@
 @tone heuristic
 @difficulty hard
 @subjects algebra formalization
+@grade technique
 @instantiates math-informal/transport-across-isomorphism
 @examples b01A04
-@provenance case-1 compression pilot (2026-08-12): 8 independent zai-1 marks across 4+ transcripts; runner-corroborated
+@provenance case-1 compression pilot (2026-08-12): 8 independent zai-1 marks across 4+ transcripts (synthesis cluster 1); runner-corroborated
+@review claude-2 2026-08-12 APPROVE — strongest of the eight: HOWEVER names a soundness hazard (a forced cast where Subsingleton.elim refuses is a wrong proof waiting to be found), plus a quantified smell test (>=3 diamonds => the instance-installation order is wrong upstream). @grade added (batch defect B1).
 
 ! conclusion:
   When two type-class instances on the SAME carrier are propositionally

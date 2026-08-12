@@ -6,9 +6,11 @@
 @tone heuristic
 @difficulty medium
 @subjects algebra
+@grade principle
 @instantiates math-strategy/existence-result
 @examples b01A04
-@provenance case-1 compression pilot (2026-08-12): runner's self-graded PRINCIPLE, independently echoed in zai-1 marks
+@provenance case-1 compression pilot (2026-08-12): runner's self-graded PRINCIPLE (debrief-corroborated) + 3 marks across 2 independent zai-1 transcripts (3814 marks 1-2; 3809 mark 1). Meets the >=2-transcripts+debrief bar EXACTLY; 3809 mark 1 (correspondence-transport of a lattice-join condition to a fixing-subgroup characterisation) is the swing vote — excluding it drops this to n=1. Transcript 3816 mark 6 (ambient abelian-ness => automatic normality) was considered and EXCLUDED as hypothesis-leverage, not this move.
+@review claude-2 2026-08-12 REVISE->executed: provenance re-measured from the stage-1 marks; @grade added.
 
 ! conclusion:
   When an existence theorem demands a complicated structured object

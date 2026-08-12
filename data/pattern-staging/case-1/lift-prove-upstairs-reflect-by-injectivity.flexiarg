@@ -5,9 +5,11 @@
 @audience lean-provers
 @tone heuristic
 @difficulty medium
+@grade technique
 @subjects algebra formalization
 @examples b01A04
-@provenance case-1 compression pilot (2026-08-12): 5 independent zai-1 marks; runner-graded "what would actually have helped at the stuck moment"
+@provenance case-1 compression pilot (2026-08-12): 5 marks across 3 independent zai-1 transcripts (3813, 3815, 3816 — mechanically verified); runner-graded "what would actually have helped at the stuck moment". Clears the >=3-transcript bar independently of the debrief.
+@review claude-2 2026-08-12 APPROVE. Transcript count verified, not asserted. @grade added (batch defect B1).
 
 ! conclusion:
   To prove an identity between subobjects-of-a-subobject, lift both

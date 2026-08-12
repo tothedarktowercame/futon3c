@@ -1,13 +1,15 @@
-@flexiarg math-formalization/bijectivity-from-injectivity-plus-count
-@title Bijectivity from Injectivity plus a Count
+@flexiarg math-formalization/close-bijectivity-by-counting-not-inverting
+@title Close Bijectivity by Counting, Not by Inverting
 @sigils [🧮/双]
 @keywords bijective, injective, surjective, cardinality, card, finite, Fintype, count, equiv
 @audience lean-provers
 @tone heuristic
 @difficulty easy
+@grade snippet
 @subjects algebra combinatorics formalization
 @examples b01A04
-@provenance case-1 compression pilot (2026-08-12): 4 independent zai-1 marks
+@provenance case-1 compression pilot (2026-08-12): 4 marks (synthesis cluster 3, "finite cardinality shortcuts"); transcript count not recorded at authoring time and not recoverable by keyword (the b01A04 corpus is Galois theory, so card/Fintype/injectiv matches 7 of 9 transcripts). Threshold compliance therefore ASSERTED, not established — re-measure semantically before this grade is relied on.
+@review claude-2 2026-08-12 REVISE->executed: renamed from bijectivity-from-injectivity-plus-count (noun phrase named the result, not the move); @grade added (synthesis graded this SNIPPET — arguably technique, flagged for claude-4).
 
 ! conclusion:
   In a finite setting, never construct a surjection or inverse by hand:

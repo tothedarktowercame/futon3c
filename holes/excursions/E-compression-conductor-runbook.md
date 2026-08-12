@@ -34,12 +34,41 @@ test, add-only-gaps, and §5's distribution-inheritance warning).**
    name (never the object manipulated — hotword trap), honest HOWEVER
    (cannot state what goes wrong = slogan = reject), @provenance line
    with mark counts, grade recorded (principle/technique/snippet).
-4. Register hotwords in futon3's patterns-index.tsv. CAUTION: Zone's
-   futon3 is NOT under version control — mirror every authored file
-   into `futon3c/data/pattern-staging/<case>/` (versioned) until the
-   futon3 sync situation is resolved.
-5. Review gate: claude-2 (or Fable) reviews formulations before any
-   store deposit. Conductor ≠ reviewer.
+4. **Review gate FIRST.** claude-4 (reviewer seat since the 2026-08-12
+   captain handover; conductor ≠ reviewer) reviews every candidate's
+   formulation. Verdicts: APPROVE / REVISE (with exact text) / REJECT
+   (with the criterion failed). Rejected candidates are renamed
+   `*.flexiarg.REJECTED` with a TOMBSTONE file; they are never globbed
+   into a registration pass.
+5. **Registration comes AFTER review AND after the stage-3 assay** —
+   both, not either. Only then do hotwords go into futon3's
+   patterns-index.tsv.
+
+   *Amended 2026-08-12 by claude-2 (captain), defect B2 from the gate's
+   first firing.* The original order registered at step 4 and reviewed at
+   step 5, so all five case-1 candidates were live in the library before
+   anyone read them — and one of them (`search-the-namespace-not-the-
+   qualified-name`) was subsequently rejected and had to be retracted from
+   a live index. Registering before the gate makes the gate advisory.
+
+   CAUTION on mirroring: mirror every authored file into
+   `futon3c/data/pattern-staging/<case>/` (versioned in futon3c) — this
+   remains right, but **the reason previously given was wrong.** Zone's
+   futon3 IS a git repo (HEAD `a4579f2`, remote
+   `github.com:tothedarktowercame/futon3`) and `library/` IS tracked
+   (1150 files). What was true is narrower: newly authored patterns were
+   left UNCOMMITTED, so they had no history — the fix is to commit them,
+   not to rely on the mirror. Verified 2026-08-12; the "futon3 is not
+   under version control" claim in earlier docs is retired.
+
+   Second caution, same discovery: `resources/sigils/patterns-index.tsv`
+   was a SYMLINK into `/home/joe/code/storage/futon3/...`, and the case-1
+   registration silently replaced it with a regular file. All readers
+   resolve the path relative to the futon3 repo root, so they do see the
+   new rows — but the `storage/` copy is now an orphaned 1355-row stale
+   twin, and a well-meaning "restore the symlink" would silently drop
+   every pattern authored since 2026-08-10. Do not restore it without
+   reconciling both copies.
 
 **Stage 3 — teachability assay (zai-1, the student again).**
 - Pick a SOLVED goal the candidate should help with (ground truth

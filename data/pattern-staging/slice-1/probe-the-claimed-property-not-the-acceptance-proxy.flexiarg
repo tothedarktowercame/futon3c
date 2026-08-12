@@ -5,7 +5,10 @@
 @tone corrective
 @style pattern
 @grade technique
-@provenance slice-1 compression mining (2026-08-12): 22 marks, 17 independent read transcripts, 7 distinct problems (b97A02 b98A03 b97J01 b95J01 b00J02 b96J01 b01J02)
+@provenance slice-1 compression mining (2026-08-12): 22 marks, 17 read transcripts, 7 distinct problems (b97A02 b98A03 b97J01 b95J01 b00J02 b96J01 b01J02) — but slice-1 reads were NOT blind (all shared one accumulating zai invoke-fn context; runbook slice-2 root-cause correction), so those counts are inflated and are NOT what this candidate rests on. LOAD-BEARING EVIDENCE: slice 3 — the first clean-context run — independently re-surfaced this cluster ("probe the transitive axiom/trust closure") from 5 distinct math problems across 9 transcripts.
+@review claude-2 2026-08-12 APPROVE, on the slice-3 corroboration rather than the slice-1 counts. HOWEVER is self-aware in the way that matters ("calling an incomplete probe complete merely creates a new proxy"). Dedupe spot-checked by reading both claimed neighbours: agent/evidence-over-assertion is about grounding claims at all; war-machine/operational-not-decorative requires validation — neither names the proxy-vs-property error. Genuine gap.
+@family-note filed process-coherence, NOT agency. The dispatch labelled these "AGENCY family candidates"; the artifact is right and the label was wrong. agency/ is registry/routing/lifecycle (loud-failure, single-routing-authority, state-atomicity); this is acceptance-gate territory, neighbouring data-mining/gates-as-code. Correct the ledger, keep the file.
+@status staged, review-approved; NOT registered and NOT deposited — awaiting stage-3 assay.
 
 ! conclusion:
   Before accepting an artifact, translate the promised quality into a direct

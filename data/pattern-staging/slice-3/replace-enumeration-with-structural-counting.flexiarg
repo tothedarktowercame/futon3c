@@ -5,7 +5,10 @@
 @tone heuristic
 @style pattern
 @grade technique
+@instantiates math-informal/count-over-a-decomposition
 @provenance slice-3 math-strict compression mining (2026-08-12): 4 quote-verified marks across 4 independent read transcripts and 3 distinct problems (b00J02 b97J01 b98A03)
+@review claude-2 2026-08-12 REVISE->executed: the slice-3 dedupe compared only against close-bijectivity-by-counting-not-inverting and MISSED the nearest prior, math-informal/count-over-a-decomposition; @instantiates added and the distinction stated in the HOWEVER. NOT a duplicate — the prior is about isolating an unknown residual, this is about kernel trust base and elaboration budget. Note also: slice 3 failed the fabrication gate at 5.77%, but that governs SCALING, not this candidate — it is built from 4 quote-verified marks and the 128 excluded quotes are excluded from it by construction.
+@status staged, review-approved-with-revision; NOT registered and NOT deposited — awaiting stage-3 assay per the registration-after-review-and-assay rule.
 
 ! conclusion:
   When direct evaluation of a finite cardinality is too expensive or extends
@@ -30,6 +33,15 @@
     on genuinely small objects; use the structural route when enumeration
     blows the elaboration budget, scales exponentially, or introduces an
     unacceptable compiler axiom.
+
+    This is the formalization-lane specialization of
+    `count-over-a-decomposition`: the mathematical machinery (orbits,
+    quotients, fibers, exact sequences) is the same, but the trigger is
+    different — there the decomposition is chosen to isolate an unknown
+    residual term, here it is chosen because kernel evaluation of an
+    ALREADY-KNOWN quantity is too expensive or adds a compiler axiom. If you
+    do not have a trust-base or elaboration-budget problem, you want the
+    informal pattern, not this one.
 
   + THEN:
     Find a map that decomposes the object into a known image and uniform
