@@ -294,6 +294,34 @@ launch_repl() {
     echo "EMACSCLIENT_TIMEOUT must be a positive integer (seconds)." >&2
     exit 1
   fi
+  # Lane identity: mint (or reuse, find-or-create) a numbered codex lane
+  # via the same /agents/auto endpoint cr uses, so buffers come up as
+  # *codex-repl:codex-N* instead of the unnumbered singleton
+  # (2026-08-12, Joe: lanes should number sequentially like claude's).
+  # An explicit AGENCY_AGENT_ID (cx -a codex-3) short-circuits the mint.
+  local lane_id minted
+  if [[ -n "${AGENCY_AGENT_ID:-}" ]]; then
+    lane_id="${AGENCY_AGENT_ID}"
+    register_agent "${lane_id}"
+  else
+    minted="$(curl -sS --max-time 5 -H 'Content-Type: application/json' \
+        -X POST -d "{\"type\":\"codex\",\"cwd\":\"$(pwd)\"}" \
+        "${agency_base%/}/api/alpha/agents/auto" 2>/dev/null \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin).get("agent-id",""))' \
+        2>/dev/null || true)"
+    if [[ -n "${minted}" ]]; then
+      lane_id="${minted}"
+    else
+      lane_id="${agency_agent_id}"
+      register_agent "${lane_id}"
+    fi
+  fi
+  agency_agent_id="${lane_id}"
+  if [[ -z "${CODEX_SESSION_FILE:-}" ]]; then
+    session_file="/tmp/futon-codex-session-id-${lane_id}"
+  fi
+  local escaped_lane
+  escaped_lane="$(elisp_escape "${lane_id}")"
   escaped_session_file="$(elisp_escape "${session_file}")"
   escaped_ui="$(elisp_escape "${emacs_dir}/agent-chat.el")"
   escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
@@ -343,17 +371,25 @@ launch_repl() {
         (when (and (process-live-p p)
                    (string-prefix-p \"codex-repl-codex\" (process-name p)))
           (delete-process p)))
-      (when (get-buffer \"*codex-repl*\")
-        (kill-buffer \"*codex-repl*\")))
+      (dolist (stale (list \"*codex-repl*\" (codex-repl--lane-buffer-name \"${escaped_lane}\")))
+        (when (get-buffer stale)
+          (kill-buffer stale))))
     (setq futon3c-ui-agency-base-url \"${escaped_agency_base}\"
           agent-chat-agency-base-url \"${escaped_agency_base}\")
-    (setq codex-repl-session-file \"${escaped_session_file}\")
     (setq codex-repl-evidence-url \"${escaped_evidence_url}\")
     (setq codex-repl-irc-send-base-url ${irc_send_form})
     (setq codex-repl-sandbox \"${escaped_codex_sandbox}\")
     (setq codex-repl-approval-policy \"${escaped_codex_approval}\")
     (setq codex-repl-session-id ${sid_form})
-    (codex-repl))"
+    (codex-repl--open-instance (codex-repl--lane-buffer-name \"${escaped_lane}\")
+                               (codex-repl--lane-invoke-buffer-name \"${escaped_lane}\")
+                               codex-repl-api-url
+                               \"${escaped_lane}\"
+                               \"${escaped_session_file}\"
+                               default-directory
+                               'repl
+                               ${new_form}
+                               nil))"
 
   # --reuse-frame needs a resolvable frame context; on a terminal-daemon
   # host (Zone) it dies with "could not get terminal name" even from an
