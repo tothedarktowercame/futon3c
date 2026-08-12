@@ -99,13 +99,16 @@
   (let [o (require-options! (parse-options args)
                             [:problem :arm :base-rev :seat :memory-channel
                              :recall-system :batch])
-        _ (when-not (#{"mem" "ctl"} (:arm o))
-            (die "--arm must be mem or ctl"))
+        ;; "case" = M-case-studies single-arm frame (no twin; branch
+        ;; must be batch-qualified via --branch since exp/<pid>-<arm>
+        ;; names collide with closed batch frames).
+        _ (when-not (#{"mem" "ctl" "case"} (:arm o))
+            (die "--arm must be mem, ctl, or case"))
         _ (when-not (#{"push" "none"} (:memory-channel o))
             (die "--memory-channel must be push or none"))
         frame-id (str (:batch o) "-" (:problem o) "-" (:arm o))
         checkout (str (fs/path worktrees-root frame-id))
-        branch (str "exp/" (:problem o) "-" (:arm o))
+        branch (or (:branch o) (str "exp/" (:problem o) "-" (:arm o)))
         record-path (fs/path frames-root (:batch o) (str frame-id ".edn"))
         revision (run! "git" "-C" apm-root "rev-parse"
                        (str (:base-rev o) "^{commit}"))]
@@ -187,11 +190,20 @@
                                 :output-hash (when axioms (sha256 axioms))}
                   :axioms axioms
                   :interview interview
-                  :twin-diff :pending-pair))
+                  :twin-diff (if (= :case (:arm frame))
+                               {:not-applicable :single-arm-case}
+                               :pending-pair)))
         missing (frame-missing updated)
         status (if (seq missing) :incomplete :closed)
         final (assoc updated :frame/status status)]
     (write-edn! path final)
+    ;; Close-time auto-commit (amendment 9 / case-studies hardening):
+    ;; the frame corpus is versioned; a record that only exists in the
+    ;; working tree has no past.
+    (run! "git" "-C" "/home/joe/code/futon3c" "add" (str path))
+    (run! "git" "-C" "/home/joe/code/futon3c" "commit" "-m"
+          (str "frame close: " (:frame/id final) " (" (name status) ")")
+          "--" (str path))
     (println (str/upper-case (name status)) (:frame/id final))
     (println "lake output hash source: --axioms-file")
     (println "twin diff: pending-pair")
