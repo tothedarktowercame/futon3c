@@ -1264,6 +1264,15 @@ CALLS contains maps of tool name, arguments, and result digest."
            :session-id sid
            :error "Z.AI API key missing; set ZAI_API_KEY or create ~/.zaikey or ~/.zai-key"}
           (do
+        ;; Session rotation (reg/reset-session!): a fresh session must not
+        ;; inherit the old conversation, and the unbounded !messages vector
+        ;; otherwise exceeds the model context after ~100 jobs (mining
+        ;; slice-2, 2026-08-12: 186 consecutive 1261 "Prompt exceeds max
+        ;; length" — the registry reset rotated the id but this closure
+        ;; kept the whole history). Truncate to the system message.
+        (let [prev-sid @!session-id]
+          (when (and prev-sid sid (not= prev-sid sid))
+            (swap! !messages #(vec (take 1 %)))))
         (reset! !session-id sid)
         (when session-file (spit session-file sid))
         (when (compare-and-set! !booted false true)
