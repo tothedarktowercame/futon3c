@@ -243,3 +243,24 @@ the surviving report), never by the supervisor's memory of directory
 layout; (3) when generations of an artifact exist, the conductor names
 the operative one in its report and stale generations get a
 TOMBSTONE file saying which run superseded them.
+
+## Slice-3 gate ruling (2026-08-12): FAIL at 5.77% vs 5.0% — by the letter
+
+Re-verification (0816a2c2): of 128 excluded quotes, 107 were the
+VERIFIER's false negatives (naive matching; unicode/wrapping), 2
+sibling drift, 1 true cross-problem bleed (reassigned; no cluster lost
+threshold), 18 true fabrications → 5.77%. The threshold is 5.0%, set
+before calibration data existed; it stays where it was set, because
+moving a gate after reading the number is the disease this whole
+apparatus treats. Slice 3 therefore FAILS the fabrication gate
+marginally. Per the scaling decision rule: upgrades + ONE more slice,
+then scale on its pass. UPGRADES (mandatory from slice 4):
+- Rubric v3: quotes must be COPY-PASTED EXACTLY; when exact quoting is
+  not possible, write PARAPHRASE: instead of QUOTE: — an honest lane
+  for compression removes the incentive to decorate a paraphrase with
+  quotation marks. PARAPHRASE marks count for clustering but are
+  flagged, and their rate is reported.
+- The tolerant matcher (NFKC/case/whitespace/markdown/punctuation +
+  ordered ellipsis fragments) is the STANDARD verifier from now on;
+  the naive matcher is retired — its 84% false-negative rate would
+  poison every future gate reading.
