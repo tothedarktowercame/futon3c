@@ -294,34 +294,8 @@ launch_repl() {
     echo "EMACSCLIENT_TIMEOUT must be a positive integer (seconds)." >&2
     exit 1
   fi
-  # Lane identity: mint (or reuse, find-or-create) a numbered codex lane
-  # via the same /agents/auto endpoint cr uses, so buffers come up as
-  # *codex-repl:codex-N* instead of the unnumbered singleton
-  # (2026-08-12, Joe: lanes should number sequentially like claude's).
-  # An explicit AGENCY_AGENT_ID (cx -a codex-3) short-circuits the mint.
-  local lane_id minted
-  if [[ -n "${AGENCY_AGENT_ID:-}" ]]; then
-    lane_id="${AGENCY_AGENT_ID}"
-    register_agent "${lane_id}"
-  else
-    minted="$(curl -sS --max-time 5 -H 'Content-Type: application/json' \
-        -X POST -d "{\"type\":\"codex\",\"cwd\":\"$(pwd)\"}" \
-        "${agency_base%/}/api/alpha/agents/auto" 2>/dev/null \
-      | python3 -c 'import json,sys; print(json.load(sys.stdin).get("agent-id",""))' \
-        2>/dev/null || true)"
-    if [[ -n "${minted}" ]]; then
-      lane_id="${minted}"
-    else
-      lane_id="${agency_agent_id}"
-      register_agent "${lane_id}"
-    fi
-  fi
-  agency_agent_id="${lane_id}"
-  if [[ -z "${CODEX_SESSION_FILE:-}" ]]; then
-    session_file="/tmp/futon-codex-session-id-${lane_id}"
-  fi
   local escaped_lane
-  escaped_lane="$(elisp_escape "${lane_id}")"
+  escaped_lane="$(elisp_escape "${agency_agent_id}")"
   escaped_session_file="$(elisp_escape "${session_file}")"
   escaped_ui="$(elisp_escape "${emacs_dir}/agent-chat.el")"
   escaped_repl="$(elisp_escape "${emacs_dir}/codex-repl.el")"
@@ -533,6 +507,51 @@ fi
 
 if $open_repl; then
   sid=""
+  # Lane identity (2026-08-12, Joe): numbering depends on WHAT NUMBERS
+  # EXIST, never on attached/busy status — status-based find-or-create
+  # minted a plain codex-1 that displayed as a duplicate of ams-codex-1
+  # (the blackboard strips site prefixes), the visual-twin disease
+  # again. Numbering counts only ids in the LOCAL site display column
+  # (plain codex-N and ${FUTON_SITE:-ams}-codex-N); other sites number
+  # themselves. --new mints the smallest unused N; bare cx attaches to
+  # the highest existing PLAIN codex-N (or mints if none);
+  # AGENCY_AGENT_ID (cx -a) short-circuits. This MUST run before any
+  # register_agent call — an early register with the codex-1 default
+  # was resurrecting the duplicate on every launch.
+  roster_scan="$(curl -sS --max-time 5 "${agency_base%/}/api/alpha/agents" 2>/dev/null \
+    | python3 -c '
+import json, re, sys
+mode = sys.argv[1]
+site = sys.argv[2]
+try:
+    ids = list((json.load(sys.stdin).get("agents") or {}).keys())
+except Exception:
+    ids = []
+used = set()
+plain = []
+for i in ids:
+    m = re.fullmatch(r"codex-([0-9]+)", i) or re.fullmatch(
+        re.escape(site) + r"-codex-([0-9]+)", i)
+    if m:
+        used.add(int(m.group(1)))
+    m2 = re.fullmatch(r"codex-([0-9]+)", i)
+    if m2:
+        plain.append(int(m2.group(1)))
+if mode == "attach" and plain:
+    print(f"codex-{max(plain)}")
+else:
+    n = 1
+    while n in used:
+        n += 1
+    print(f"codex-{n}")' "$( $start_new && echo new || echo attach )" "${FUTON_SITE:-ams}" 2>/dev/null || true)"
+  if [[ -n "${AGENCY_AGENT_ID:-}" ]]; then
+    agency_agent_id="${AGENCY_AGENT_ID}"
+  elif [[ -n "${roster_scan}" ]]; then
+    agency_agent_id="${roster_scan}"
+  fi
+  if [[ -z "${CODEX_SESSION_FILE:-}" ]]; then
+    session_file="/tmp/futon-codex-session-id-${agency_agent_id}"
+  fi
   register_agent "${agency_agent_id}"
   if $start_new; then
     rm -f "${session_file}"
