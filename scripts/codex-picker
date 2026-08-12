@@ -25,11 +25,14 @@ else
 fi
 
 check_infra() {
-  local f1a_port="${FUTON1A_PORT:-7071}"
-  if (echo > "/dev/tcp/127.0.0.1/${f1a_port}") >/dev/null 2>&1; then
-    printf "${GREEN}futon1a${RESET} running on port %s\n" "$f1a_port"
+  # The live coordination infra is the futon3c Agency (7070); the old
+  # futon1a check (7071) reported a RETIRED service as "not running"
+  # on every launch (I-0: futon1a store is gone).
+  local agency_port="${FUTON3C_PORT:-7070}"
+  if (echo > "/dev/tcp/127.0.0.1/${agency_port}") >/dev/null 2>&1; then
+    printf "${GREEN}agency${RESET} (futon3c) running on port %s\n" "$agency_port"
   else
-    printf "${YELLOW}futon1a${RESET} not running (port %s). Start with: ${BOLD}make dev${RESET}\n" "$f1a_port"
+    printf "${YELLOW}agency${RESET} (futon3c) not running (port %s). Start with: ${BOLD}./scripts/dev-linode-env${RESET}\n" "$agency_port"
   fi
   echo
 }
@@ -352,8 +355,16 @@ launch_repl() {
     (setq codex-repl-session-id ${sid_form})
     (codex-repl))"
 
+  # --reuse-frame needs a resolvable frame context; on a terminal-daemon
+  # host (Zone) it dies with "could not get terminal name" even from an
+  # interactive shell, while the same eval without it succeeds
+  # (2026-08-12, cx-on-Zone). Use it only under a display.
+  local -a frame_flags=()
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    frame_flags+=(--reuse-frame)
+  fi
   set +e
-  eval_out="$("${emacsclient_cmd[@]}" --timeout "${emacsclient_timeout}" --alternate-editor "" --reuse-frame --no-wait -e "${elisp}" 2>&1)"
+  eval_out="$("${emacsclient_cmd[@]}" --timeout "${emacsclient_timeout}" --alternate-editor "" "${frame_flags[@]}" --no-wait -e "${elisp}" 2>&1)"
   rc=$?
   set -e
   primary_eval_out="${eval_out}"
