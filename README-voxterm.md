@@ -151,11 +151,48 @@ already on screen in the pending buffer, which is the better channel for
 checking it. Same "don't duplicate what the monitor already shows" argument that
 rules out mid-turn narration. Survives as a debug toggle, off by default.
 
-**A condensation model (Haiku / local GLM) summarising the buffer for speech.**
-Unnecessary once the agent's own first paragraph is used: a summariser produces
-another model's account of what happened, where the first paragraph is what the
-agent meant to say. It also adds a round trip and a dependency for no latency
-gain, since both run after the turn.
+**A condensation model summarising the agent's reply for speech.** Unnecessary
+once the agent's own first paragraph is used: a summariser produces another
+model's account of what happened, where the first paragraph is what the agent
+meant to say. It also adds a round trip for no latency gain, since both run
+after the turn.
+
+This rejection is about *condensing output*, and does not extend to the instant
+reply below — a second model reasoning **alongside** the agent is a different
+thing from one paraphrasing it afterwards.
+
+## Instant reply — a second model alongside, not after
+
+The agent is deep but slow, so the user waits before hearing anything. Optional
+mode: on dispatch the utterance goes to the agent *and*, in parallel, to a fast
+model that says the most useful thing it can immediately — likely cause, what to
+check first, the caveat that will bite. Roughly 4.5 s to a considered answer
+while the agent is still working.
+
+It is a commentator, not a worker: no tools, and **not in the coding path** — a
+failure is a quiet turn. The guardrail is narrow: *it reasons, it does not
+report*. It may be wrong about the problem (the buffer carries the truth, and a
+wrong idea is still worth having), but it must not claim to have looked at
+anything or say what the agent is about to do, because those are claims the user
+cannot check.
+
+It reads the tail of whichever buffer has focus, fetched read-only through
+`voxterm-context` over `emacsclient` — the same target-window logic as
+dictation, so context comes from where the user is looking.
+
+**Divergence is inherent**: a fast guess and a verified finding will sometimes
+disagree, and it bites hardest when the user is *not* watching the screen. The
+mitigation is not hedged language but a **different voice per channel**, so which
+authority is speaking is never in question.
+
+Two backends: the API (~4.5 s, needs API credits, which are funded separately
+from a Claude subscription) or `claude -p` (~7 s, billed to the subscription;
+process startup is the difference). Neither touches futon3c.
+
+Feeding the commentator's take *into* the buffer so the agent can confirm or
+refute it would turn two monologues into a dialogue — but it would also put the
+commentator in the coding path, where a wrong guess could anchor the real work.
+Not done.
 
 ## Open
 
