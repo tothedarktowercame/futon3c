@@ -206,7 +206,7 @@
           "--" (str path))
     (println (str/upper-case (name status)) (:frame/id final))
     (println "lake output hash source: --axioms-file")
-    (println "twin diff: pending-pair")
+    (println (str "twin diff: " (pr-str (:twin-diff final))))
     (when (seq missing) (println "MISSING CLOSURE SLOTS:" (str/join ", " missing)))))
 
 (defn validate-batch! [args]
