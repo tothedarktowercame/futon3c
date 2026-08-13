@@ -404,7 +404,25 @@ around. Items that need a DECISION rather than labour are marked
    `{:ok true}` while serving a stale configuration is silence-catalogue
    instance 5, and it went unnoticed for three review passes last time.
 
-9. **Grade discrepancy, reviewer's call:**
+10. **GATE LEAK — the whole-index retriever's pool includes unassayed
+    staged candidates.** Found 2026-08-13 by claude-2 while sorting the
+    mined patterns. `cas_select.load_all_patterns` defaults
+    `extra_library_dirs=DEFAULT_STAGING_DIRS`, which is
+    `[futon3c/data/pattern-staging/slice-1, .../slice-3]`. So every
+    staged candidate — explicitly NOT deposited, awaiting a stage-3 assay
+    — is already in the retrieval pool. `replace-enumeration-with-
+    structural-counting` is in there now on exactly those terms.
+    This inverts the runbook's own hard rule ("no store deposit without
+    an assay pass"; mining output "lives in a research file, NOT the
+    store, until it passes the assay") — staging was supposed to be the
+    quarantine and it is wired to the pool instead. Any tide test run
+    against this pool would score unassayed candidates as if deposited.
+    NOT fixed by claude-2: `cas_select` is the instrument that scores the
+    captain's own lane, so the edit belongs to someone else. Neither
+    claude-2's dispatch nor claude-4's review caught it — it was not
+    among the four review questions asked.
+
+11. **Grade discrepancy, reviewer's call:**
    `close-bijectivity-by-counting-not-inverting` carries `@grade snippet`
    because the case-1 synthesis graded it SNIPPET, but the move (prove
    injectivity + card equality, apply `Nat.bijective_iff_injective_and_card`)

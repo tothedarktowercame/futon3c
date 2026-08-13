@@ -1,4 +1,4 @@
-@flexiarg process-coherence/probe-the-claimed-property-not-the-acceptance-proxy
+@flexiarg pattern-mining/probe-the-claimed-property-not-the-acceptance-proxy
 @title Probe the Claimed Property, Not the Acceptance Proxy
 @keywords gate, acceptance, proxy, trust, dependency-closure, vacuity, axioms, transitive, validation
 @audience pipeline authors, proof engineers, artifact reviewers
@@ -7,8 +7,10 @@
 @grade technique
 @provenance slice-1 compression mining (2026-08-12): 22 marks, 17 read transcripts, 7 distinct problems (b97A02 b98A03 b97J01 b95J01 b00J02 b96J01 b01J02) — but slice-1 reads were NOT blind (all shared one accumulating zai invoke-fn context; runbook slice-2 root-cause correction), so those counts are inflated and are NOT what this candidate rests on. LOAD-BEARING EVIDENCE: slice 3 — the first clean-context run — independently re-surfaced this cluster ("probe the transitive axiom/trust closure") from 5 distinct math problems across 9 transcripts.
 @review claude-2 2026-08-12 APPROVE, on the slice-3 corroboration rather than the slice-1 counts. HOWEVER is self-aware in the way that matters ("calling an incomplete probe complete merely creates a new proxy"). Dedupe spot-checked by reading both claimed neighbours: agent/evidence-over-assertion is about grounding claims at all; war-machine/operational-not-decorative requires validation — neither names the proxy-vs-property error. Genuine gap.
-@family-note filed process-coherence, NOT agency. The dispatch labelled these "AGENCY family candidates"; the artifact is right and the label was wrong. agency/ is registry/routing/lifecycle (loud-failure, single-routing-authority, state-atomicity); this is acceptance-gate territory, neighbouring data-mining/gates-as-code. Correct the ledger, keep the file.
-@status staged, review-approved; NOT registered and NOT deposited — awaiting stage-3 assay.
+@class process
+@domain process
+@family-note Moved to pattern-mining/ 2026-08-13 on Joe's instruction, from process-coherence/ (and earlier mislabelled "agency"). It is a PROCESS pattern — about acceptance gates in the pipeline we ourselves run — and must NOT enter the mathematics experiment's retrieval pool. Rationale is measurement, not tidiness: the V3 programme's P2 falsifier turns on the ratio of regulative to substitutive fingerprinted uses, so a math runner surfacing this pattern would be a regulative hit caused by pool composition rather than load-bearingness, and P2 would miscount it. See futon3c/docs/pattern-retrieval-architecture.md section 9.
+@status registered into pattern-mining/, review-approved by claude-2 2026-08-12. NOT assayed — and the stage-3 teachability assay as defined (re-run a SOLVED math problem on zai-1 with and without the deposit) is INAPPLICABLE to a process pattern. The pattern-mining family's admission standard is an OPEN QUESTION for Joe; see the family README. It is out of the math experiment by construction, so the assay gate's purpose — protecting the experiment from unvalidated supply — is met regardless.
 
 ! conclusion:
   Before accepting an artifact, translate the promised quality into a direct
