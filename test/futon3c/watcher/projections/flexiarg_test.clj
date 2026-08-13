@@ -52,7 +52,7 @@
               var-call (some #(when (= "code/v05/var" (:hx-type %)) %) @hx-calls)
               contains-call (some #(when (= "code/v05/contains" (:hx-type %)) %) @hx-calls)
               first-slot (first @doc-calls)]
-          (is (= {:vertices 2 :edges 11 :failed 0} stats))
+          (is (= {:vertices 2 :edges 11 :failed 0 :retracted 0} stats))
           (is (= ["futon3/flexiarg.orchestration/state-in-substrate-deltas-in-messages"]
                  (:endpoints var-call)))
           (is (= "Lift State Into Shared Substrate; Keep Messages As Deltas"
@@ -75,3 +75,57 @@
           (is (= "conclusion" (get-in first-slot [:props "slot/name-key"])))
           (is (str/includes? (get-in first-slot [:props "slot/text"])
                              "lift state into a shared substrate")))))))
+
+(deftest flexiarg-dispatch-emits-canonical-entities-and-relations-only
+  (let [path "/home/joe/code/futon3/library/baldwin/two-claims-not-one.flexiarg"
+        entities (atom [])
+        relations (atom [])
+        hyperedges (atom [])]
+    (with-redefs [file-ingest/post-entity!
+                  (fn [payload]
+                    (swap! entities conj payload)
+                    {:ok? true :entity (assoc payload :id (:name payload))})
+                  file-ingest/post-relation!
+                  (fn [payload]
+                    (swap! relations conj payload)
+                    {:ok? true :relation payload})
+                  file-ingest/post-hyperedge!
+                  (fn [& args]
+                    (swap! hyperedges conj args)
+                    {:ok? true})
+                  file-ingest/post-hyperedge-doc!
+                  (fn [& args]
+                    (swap! hyperedges conj args)
+                    {:ok? true})]
+      (let [result (file-ingest/dispatch! {:path path
+                                           :root "/home/joe/code/futon3"
+                                           :label "futon3-d"})
+            names (set (map :name @entities))
+            relation-types (set (map :type @relations))
+            pid "baldwin/two-claims-not-one"
+            facets #{"conclusion" "context" "if" "however"
+                     "then" "because" "next-steps"}]
+        (is (= :pattern (:status result)))
+        (is (= facets (set (:facets result))))
+        (is (= (conj (set (map #(str pid "/" %) facets)) pid) names))
+        (is (= (set (map #(str ":pattern/has-" %) facets)) relation-types))
+        (is (not (contains? names (str pid "/counterfactual"))))
+        (is (empty? @hyperedges))))))
+
+(deftest clojure-dispatch-keeps-code-ingest-path
+  (let [calls (atom [])]
+    (with-redefs [file-ingest/collect-repo (fn [_] {:root :context})
+                  file-ingest/ingest-one-file!
+                  (fn [args]
+                    (swap! calls conj args)
+                    {:vertices 1 :edges 0 :failed 0})
+                  file-ingest/ingest-flexiarg!
+                  (fn [_]
+                    (throw (ex-info "flexiarg path must not handle Clojure" {})))]
+      (let [path "/home/joe/code/futon3c/src/futon3c/watcher/projections/flexiarg.clj"
+            result (file-ingest/dispatch! {:path path
+                                           :root "/home/joe/code/futon3c"
+                                           :label "futon3c-d"})]
+        (is (= :ingested (:status result)))
+        (is (= path (:path result)))
+        (is (= 1 (count @calls)))))))

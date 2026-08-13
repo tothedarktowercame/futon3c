@@ -312,7 +312,30 @@
                (try (json/parse-string (:body resp) true)
                     (catch Exception _ (:body resp))))]
     {:ok? (and (= 200 (:status resp))
-               (or (:entity body) (:id body)))}))
+               (or (:entity body) (:id body)))
+     :entity (:entity body)
+     :body body
+     :status (:status resp)}))
+
+(defn post-relation!
+  [{:keys [type src dst provenance]}]
+  (let [payload (cond-> {"type" type "src" src "dst" dst}
+                  provenance (assoc "provenance" provenance))
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/relation")
+                          {:headers {"Content-Type" "application/json"
+                                     "X-Penholder" PENHOLDER}
+                           :body (json/generate-string payload)
+                           :throw false})
+               (catch Exception e {:status -1 :body (.getMessage e)}))
+        body (when (string? (:body resp))
+               (try (json/parse-string (:body resp) true)
+                    (catch Exception _ (:body resp))))]
+    {:ok? (and (= 200 (:status resp))
+               (or (:relation body) (:id body)))
+     :relation (:relation body)
+     :body body
+     :status (:status resp)}))
 
 ;; ---------- file-extension helpers (replaces babashka.fs/extension) ----------
 
@@ -1255,6 +1278,60 @@
                             :root-ctx root-ctx
                             :labels ["v05" "phase-4.5" label "per-file"]})))
 
+(def ^:private canonical-pattern-facets
+  [:conclusion :context :if :however :then :because :next-steps])
+
+(def ^:private pattern-facet-aliases
+  {:conclusion #{"conclusion" "claim" "summary" "instantiated-by"}})
+
+(defn- pattern-facet-text
+  [v facet]
+  (let [aliases (or (get pattern-facet-aliases facet) #{(name facet)})]
+    (some (fn [slot]
+            (when (contains? aliases (:slot/name-key slot))
+              (:slot/text slot)))
+          (:pattern/slots v))))
+
+(defn ingest-flexiarg!
+  "Write one flexiarg as canonical pattern/clause entities and relations only."
+  [{:keys [path]}]
+  (let [vars (:vars (flexiarg/collect-file path))
+        stats (atom {:patterns 0 :clauses 0 :relations 0 :failed 0
+                     :facets []})]
+    (doseq [v vars]
+      (let [pid (:pattern/id v)
+            pattern-r (post-entity! {:name pid
+                                     :type "pattern/library"
+                                     :external-id pid
+                                     :source (or (:pattern/title v) pid)})
+            pattern-entity (:entity pattern-r)]
+        (if-not (:ok? pattern-r)
+          (swap! stats update :failed inc)
+          (do
+            (swap! stats update :patterns inc)
+            (doseq [facet canonical-pattern-facets
+                    :let [text (pattern-facet-text v facet)]
+                    :when text]
+              (let [clause-name (str pid "/" (name facet))
+                    clause-r (post-entity! {:name clause-name
+                                            :type "pattern/clause"
+                                            :external-id clause-name
+                                            :source text})
+                    clause-entity (:entity clause-r)]
+                (if-not (:ok? clause-r)
+                  (swap! stats update :failed inc)
+                  (let [relation-r
+                        (post-relation!
+                         {:type (str ":pattern/has-" (name facet))
+                          :src (:id pattern-entity)
+                          :dst (:id clause-entity)
+                          :provenance {:note (str ":pattern/has-" (name facet))
+                                       :source "multi-watcher-flexiarg"}})]
+                    (swap! stats update :clauses inc)
+                    (swap! stats update :facets conj (name facet))
+                    (swap! stats update (if (:ok? relation-r) :relations :failed) inc)))))))))
+    @stats))
+
 (defn dispatch!
   "Top-level entry point used by the watcher's per-cycle loop. Takes
    {:path :root :label} (no root-ctx — this function fetches it via
@@ -1305,6 +1382,12 @@
             stats (ingest-essay! {:path path :label label})
             dur (- (System/currentTimeMillis) t-start)]
         (assoc stats :status :essay :duration-ms dur :path path))
+
+      (= "flexiarg" ext)
+      (let [t-start (System/currentTimeMillis)
+            stats (ingest-flexiarg! {:path path})
+            dur (- (System/currentTimeMillis) t-start)]
+        (assoc stats :status :pattern :duration-ms dur :path path))
 
       :else
       (let [t-start (System/currentTimeMillis)
