@@ -293,3 +293,120 @@ then scale on its pass. UPGRADES (mandatory from slice 4):
   ordered ellipsis fragments) is the STANDARD verifier from now on;
   the naive matcher is retired — its 84% false-negative rate would
   poison every future gate reading.
+
+## Known needed cleanups (Joe, 2026-08-12)
+
+Janitorial tasks. **Anyone can pick one up at any time, no dispatch and no
+permission needed.** They are small, unambiguous, and independent of the
+slice loop. Tick an item off in place (strike it and date it) rather than
+deleting it, so the list stays an honest record of what was left lying
+around. Items that need a DECISION rather than labour are marked
+**[decision: Joe]** and should not be "tidied" by whoever finds them.
+
+1. **TWO real copies of `patterns-index.tsv`, not three.** [decision: Joe]
+   The live one is `futon3/resources/sigils/patterns-index.tsv` (1359 rows
+   — every reader resolves this path from the repo root). It *was* a
+   symlink into `/home/joe/code/storage/futon3/resources/sigils/
+   patterns-index.tsv` until the case-1 registration silently replaced it
+   with a regular file; that storage copy is now an orphaned stale twin at
+   1355 rows. **DO NOT "restore the symlink" as a tidy-up** — it would
+   silently drop every pattern authored since 2026-08-10.
+   *Corrected 2026-08-13 (codex-4, verified by claude-2):*
+   `/home/joe/code/data/notions/patterns-index.tsv` is **a symlink to the
+   live file**, not a third copy — it is a working compatibility link and
+   should be retained. The original wording here asserted three copies
+   without checking the file types.
+   PROPOSAL ON THE TABLE (codex-4, awaiting Joe): make the futon3 path
+   canonical; keep the data/notions symlink; archive and retire the stale
+   storage copy after explicit reconciliation; require writers to resolve
+   the canonical real path before atomic replacement; add a preflight
+   check for row count/hash plus forbidden divergent regular copies.
+
+2. **86 uncommitted entries in `futon3/library/`.** Sitting in the working
+   tree with no history; one `git checkout` away from gone (instance 13's
+   lesson, still live). Not mine and not the mining lane's — whoever
+   authored them should commit or discard.
+   *Corrected 2026-08-13 (codex-4, verified by claude-2):* the original
+   wording named `baldwin/`, `agency/`, `aif/`, `career-coherence/`,
+   `forward-model/` — which are among the SMALLEST contributors. The
+   actual spread is 14 directories: futon-theory 20, baldwin 10,
+   structure 8, repository-transition 8, mmca 8, war-room 7,
+   forward-model 7, ukrns 6, memory 5, math-strategy 3, then p4ng,
+   career-coherence, aif, agency at 1 each. The original list was
+   generalised from the first 20 lines of an alphabetically sorted
+   `git status` — the same extraction failure as trusting an anchored
+   grep: assert you have seen the whole list before summarising it.
+   PROPOSAL ON THE TABLE (codex-4, awaiting Joe): treat discovered library
+   dirt as owned work, never anonymous cleanup — record owner/session and
+   age immediately, move changes into an owner-specific worktree or a
+   provenance-labelled WIP commit, and require the owner or a designated
+   steward to choose merge vs explicit discard after review; prevent
+   recurrence with clean-tree lane preflights and a scheduled dirty-tree
+   report.
+
+3. **`futon3` git identity was unset** and is now `Joseph Corneli
+   <jcorneli@brookes.ac.uk>` (repo-local, set 2026-08-12 by claude-2 to
+   match the repo's own history and the futon3c/apm-lean convention).
+   Change it if that is the wrong identity for agent commits here.
+
+4. **`data/pattern-staging/cluster-ledger.tsv` does not exist.** The
+   inter-slice convergence rule ("from slice 3 on, report which clusters
+   re-surface from DIFFERENT problems than any prior slice") mandates it.
+   Slice-3's reinforcements were reported in prose instead. Create it and
+   backfill slices 1-3 from the mining reports. Two live entries to seed
+   it with: `specialised-packaging-search` (n=1, transcript 3816 mark 3 —
+   the real pattern left on the table when
+   `search-the-namespace-not-the-qualified-name` was rejected) and
+   `separate-evidence-history-from-verdict-state` (rejected, awaiting a
+   clean-context leg).
+
+5. ~~`apm-lean/LEMMA-INDEX.md` is missing the six a94A09 lemmas added by
+   commit `22c5b80c`.~~ **STRUCK 2026-08-13 — the premise was stale.**
+   All six rows are present exactly once in the now-2154-line file
+   (codex-4 refused the item; claude-2 verified each with `grep -c`).
+   The index was updated after the 2026-08-12 review that generated this
+   item, and claude-2 wrote the item from the review's findings without
+   re-checking current state.
+
+6. ~~`apm-lean/problems/a94A09/{status.json,proof-outline.md}` describe
+   the pre-`22c5b80c` state; `sorry_count_total: 1` is still correct.~~
+   **STRUCK 2026-08-13 — the premise was WORSE than stale, it was wrong
+   in a way that would have produced a self-contradictory file.** Commit
+   `a266157` ("a94A09: close uniqueness via Schwarz-Pick rigidity")
+   closed the problem. `Main.lean` now has **no executable `sorry`** —
+   its single `sorry` match is inside a comment at line 345 ("the
+   sorry-free module `ConstructionTargets.Rouche`"). codex-4 stopped
+   rather than execute an instruction that would have preserved a false
+   count; claude-2 verified and concurs. **This is the honesty bar
+   working in the direction that matters — a dispatched agent refusing a
+   captain's wrong premise.**
+   REPLACEMENT ITEM, real and unmeasured: `a94A09/status.json` still
+   says `sorry_count_total: 1` and `classification: partial-lean-proof`
+   for a CLOSED problem. If the corpus percentage is derived from
+   `status.json`, it is understated by at least one. A corpus-wide audit
+   is worth doing — **but do it with a comment-aware detector.** a94A09
+   is itself the proof that a naive `grep -c sorry` lies: 1 match, 0
+   executable. A naive audit here would indict every problem whose
+   Main.lean merely mentions the word.
+
+7. **`futon3c/scripts/review_codex_lane_attachments.clj` has three
+   defects** (filed 2026-08-12, repair not yet scheduled): it hardcodes
+   `claude-10` as reviewer, hardcodes `:session-id
+   "M-codex-sorry-loop/duree"` regardless of the lane, and hardcodes
+   `:verdict :approve` so it cannot record a rejection. Until it is
+   repaired, the three a94A09 attachment edges stay `:proposed` even
+   though two carry `:approve` review evidence — "approved" there means
+   *evidence recorded*, not *attachment projected*.
+
+8. **claude-4's invoke path is unverified.** Registration was verified on
+   seven fields, but that only proves the row. Confirm a fresh session id
+   is minted on claude-4's first real review — registration returning
+   `{:ok true}` while serving a stale configuration is silence-catalogue
+   instance 5, and it went unnoticed for three review passes last time.
+
+9. **Grade discrepancy, reviewer's call:**
+   `close-bijectivity-by-counting-not-inverting` carries `@grade snippet`
+   because the case-1 synthesis graded it SNIPPET, but the move (prove
+   injectivity + card equality, apply `Nat.bijective_iff_injective_and_card`)
+   reads as a technique. Recorded as authored rather than silently
+   re-graded by the captain; claude-4 rules.
