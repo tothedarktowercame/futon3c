@@ -20,18 +20,16 @@
 ;; equals the memory's author — author must not review their own attachment. The
 ;; codex-lane pipeline sets BOTH to the same constant ("claude-6"), so it cannot
 ;; produce a reviewable attachment at all; that is the root defect, not a missing
-;; call. The review evidence written here is authored by claude-9 and therefore
-;; satisfies the guard.
-;;
-;; It is only written for memories claude-9 PERSONALLY owner-reviewed (passes
-;; 12-22, each with a written review note). The 51 earlier memories were reviewed
-;; by claude-6 and are NOT backfilled here: asserting a review I did not perform
-;; would be exactly the false attestation this guard exists to prevent. They are
-;; reported and left for an operator decision.
+;; call. This script does not infer who performed a review. Reviewer, session,
+;; verdict, and evidence id (or batch prefix) come from the invocation and are
+;; checked against the separately authored evidence row before projection.
 ;;
 ;; Usage:
 ;;   clojure -M scripts/review_codex_lane_attachments.clj [--commit] [--names-file F]
+;;     --reviewer ID --session-id ID --verdict approve|reject
+;;     --review-evidence-prefix PREFIX
 ;;   clojure -M scripts/review_codex_lane_attachments.clj [--commit]
+;;     --reviewer ID --session-id ID --verdict approve|reject
 ;;     --memory-id ID --review-evidence-id ID --pattern-id ID
 ;;
 ;; The explicit form is the forward promotion seam: a promotion invokes it
@@ -48,17 +46,36 @@
          '[futon3c.evidence.store :as estore])
 
 (def base-url (or (System/getenv "FUTON_SUBSTRATE_URL") "http://127.0.0.1:7073"))
-(def reviewer
-  (or (System/getenv "ATTACHMENT_REVIEWER") "claude-9"))
-(def review-evidence-prefix
-  ;; Preserve the historical backfill default.  Cross-author review jobs set
-  ;; this explicitly so the evidence id names the actual reviewer.
-  (or (System/getenv "ATTACHMENT_REVIEW_EVIDENCE_PREFIX")
-      "e-review-claude9-earlier-"))
 (def commit? (some #{"--commit"} *command-line-args*))
 
 (defn- arg-value [flag]
   (second (drop-while #(not= flag %) *command-line-args*)))
+
+(defn- invocation-value [flag env-name]
+  (or (arg-value flag) (System/getenv env-name)))
+
+(defn- require-invocation-value [flag env-name]
+  (let [value (invocation-value flag env-name)]
+    (when-not (and (string? value) (not (str/blank? value)))
+      (throw (ex-info (str "missing required review invocation value: " flag
+                           " or " env-name)
+                      {:flag flag :environment-variable env-name})))
+    value))
+
+(def reviewer
+  (require-invocation-value "--reviewer" "ATTACHMENT_REVIEWER"))
+(def review-session-id
+  (require-invocation-value "--session-id" "ATTACHMENT_REVIEW_SESSION_ID"))
+(def verdict
+  (let [value (require-invocation-value "--verdict" "ATTACHMENT_REVIEW_VERDICT")
+        parsed (keyword (str/replace value #"^:" ""))]
+    (when-not (contains? #{:approve :reject} parsed)
+      (throw (ex-info "attachment review verdict must be approve or reject"
+                      {:verdict value :allowed [:approve :reject]})))
+    parsed))
+(def review-evidence-prefix
+  (invocation-value "--review-evidence-prefix"
+                    "ATTACHMENT_REVIEW_EVIDENCE_PREFIX"))
 
 (defn- memory-edge [memory-id]
   (first (filter #(= memory-id (get-in % [:hx/props :roles :entry]))
@@ -67,6 +84,11 @@
                  (substrate/hyperedges-by-end memory-id {:limit 50}))))
 
 (defn- review-evidence-id [memory-name]
+  (when-not (and (string? review-evidence-prefix)
+                 (not (str/blank? review-evidence-prefix)))
+    (throw (ex-info "batch review requires an evidence-id prefix from the invocation"
+                    {:flag "--review-evidence-prefix"
+                     :environment-variable "ATTACHMENT_REVIEW_EVIDENCE_PREFIX"})))
   (str review-evidence-prefix memory-name))
 
 (defn- pattern-ids-of [edge]
@@ -114,7 +136,7 @@
 (defn -main [& _]
   (let [evidence-store (f1b/make-futon1b-backend base-url)
         ctx {:agent-id reviewer
-             :session-id "M-codex-sorry-loop/duree"
+             :session-id review-session-id
              :domain :mathematics
              :evidence-store evidence-store}
         targets (if explicit-target [explicit-target]
@@ -129,7 +151,8 @@
                  status (get-in edge [:hx/props :attachment-status])]
              (cond
                (nil? edge) {:name name :result :no-edge}
-               (= :reviewed status) {:name name :result :existing}
+               (and (= :approve verdict) (= :reviewed status))
+               {:name name :result :existing}
                (empty? pats) {:name name :result :no-pattern-ids}
                (nil? (estore/get-entry* evidence-store rev-id))
                {:name name :result :no-review-evidence :expected rev-id}
@@ -144,9 +167,13 @@
                         ctx
                         {:memory-id memory-id
                          :review-evidence-id rev-id
-                         :verdict :approve
+                         :verdict verdict
                          :pattern-ids pats})]
-                 {:name name :result (if (:ok r) :reviewed :failed)
+                 {:name name :result (if (:ok r)
+                                       (if (= :approve verdict)
+                                         :reviewed
+                                         :rejection-recorded)
+                                       :failed)
                   :detail (when-not (:ok r) r)}))))
          targets)]
     (prn {:ok true

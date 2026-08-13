@@ -31,6 +31,7 @@
     :evidence/type :memory
     :evidence/claim-type :observation
     :evidence/author reviewer
+    :evidence/session-id "live-memory-selection-verify"
     :evidence/at "2026-07-24T10:05:00Z"
     :evidence/body
     (cond->
@@ -61,7 +62,7 @@
 
 (def ctx
   {:domain :war-machine
-   :agent-id "codex-4"
+   :agent-id "claude-4"
    :session-id "live-memory-selection-verify"})
 
 (defn graph-fixture
@@ -183,7 +184,7 @@
            (get-in (first (:memories projection))
                    [:memory/attachment-status])))))
 
-(deftest changed-verdict-is-a-new-review-not-a-hidden-replay
+(deftest rejection-is-recorded-without-promoting-the-proposed-attachment
   (let [graph (graph-fixture proposed-edge)
         approval (review-entry review-id :approve)
         reject-id "e-review-reject"
@@ -201,9 +202,24 @@
          (opts graph entries))]
     (is (true? (:ok approved)))
     (is (true? (:ok rejected)) rejected)
-    (is (= :rejected (:attachment-status rejected)))
+    (is (= :proposed (:attachment-status rejected)))
+    (is (= :reject (get-in (second @(:posts graph))
+                           [:hx/props :review :verdict])))
+    (is (= "live-memory-selection-verify"
+           (get-in (second @(:posts graph))
+                   [:hx/props :review :session-id])))
     (is (not (:idempotent-replay? rejected)))
     (is (= 2 (count @(:posts graph))))))
+
+(deftest invocation-reviewer-must-match-evidence-author
+  (let [graph (graph-fixture proposed-edge)]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"identity does not match"
+         (lifecycle/review-attachment!
+          (assoc ctx :agent-id "claude-9") request
+          (opts graph {memory-id memory-entry
+                       review-id (review-entry review-id :approve)}))))))
 
 (deftest successful-repost-must-be-immediately-visible
   (let [graph (graph-fixture proposed-edge true)

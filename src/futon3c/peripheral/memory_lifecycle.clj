@@ -116,7 +116,7 @@
        (= (set expected) (set actual))))
 
 (defn- validate-review!
-  [memory-id pattern-ids verdict memory-entry review-entry]
+  [ctx memory-id pattern-ids verdict memory-entry review-entry]
   (when-not review-entry
     (throw (ex-info "memory attachment review evidence not found"
                     {:memory-id memory-id})))
@@ -134,6 +134,16 @@
                       {:memory-id memory-id
                        :memory-author author
                        :reviewer reviewer})))
+    (when-not (= (str (:agent-id ctx)) reviewer)
+      (throw (ex-info "review invocation identity does not match evidence author"
+                      {:memory-id memory-id
+                       :invoked-reviewer (:agent-id ctx)
+                       :evidence-author reviewer})))
+    (when-not (= (str (:session-id ctx)) (:evidence/session-id review-entry))
+      (throw (ex-info "review invocation session does not match evidence session"
+                      {:memory-id memory-id
+                       :invoked-session (:session-id ctx)
+                       :evidence-session (:evidence/session-id review-entry)})))
     (when-not (= {:ref/type :memory :ref/id memory-id}
                  (:evidence/subject review-entry))
       (throw (ex-info "review evidence subject does not name the memory"
@@ -211,13 +221,13 @@
          memory-entry (fetch-entry memory-id)
          review-entry (fetch-entry review-evidence-id)
          {:keys [reviewer witness-status memory-use/kind]}
-         (validate-review! memory-id pattern-ids verdict memory-entry
+         (validate-review! ctx memory-id pattern-ids verdict memory-entry
                            review-entry)
          existing-review (get-in edge [:hx/props :review])
          attachment-status (case verdict
                              :approve :reviewed
                              :challenge :challenged
-                             :reject :rejected)]
+                             :reject :proposed)]
      (when-not (exact-patterns? edge-patterns pattern-ids)
        (throw (ex-info "review pattern set does not match attachment"
                        {:memory-id memory-id
@@ -246,6 +256,7 @@
        (let [reviewed-at (:evidence/at review-entry)
              review (cond-> {:evidence-id review-evidence-id
                              :reviewer reviewer
+                             :session-id (str (:session-id ctx))
                              :verdict verdict
                              :pattern-ids pattern-ids
                              :reviewed-at reviewed-at}
