@@ -39,6 +39,12 @@ library/social/cluster-tooling-bootstrap.flexiarg
 !data/experiment-frames/**
 !data/pattern-staging/
 !data/pattern-staging/**
+# 2026-08-13: the CT commissioning artifacts are the pre-registration's
+# evidence base — problem text, negative probe, ground truth, run records.
+# Leaving them under `data/*` would reproduce instance 13 (the evidence base
+# with no past) on the very trial meant to prove the system.
+!data/ct-commissioning/
+!data/ct-commissioning/**
 .shadow-cljs/
 tmp/
 hs_err_pid*.log
