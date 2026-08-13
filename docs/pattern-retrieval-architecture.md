@@ -207,3 +207,119 @@ used one and got 7/7.
   coarse buckets are patterns, tags, or a third thing.
 - Sequencing against the mining slices. Slice 4 can run on the current
   files; only the *tide test* is blocked on this migration.
+
+---
+
+## 8. Where this fits: it is a Phase 0 instrument
+
+Read against `E-memory-whitepaper-v3-programme.md`, this is not a detour
+from the programme. It is a **Phase 0 unrecoverable that the bank never
+enumerated**, because the bank's instrument list covers the *memory*
+channel and this is the *pattern* channel.
+
+Phase 0's rule is the sharpest in the programme:
+
+> **"Every dispatch that runs without these loses data forever."**
+
+Three of the programme's own predictions are unmeasurable until this
+migration lands:
+
+| Prediction | What it needs | Status today |
+|---|---|---|
+| **P3** recall-empty falls as scribe coverage accumulates; *falsifier:* empty-rate insensitive to coverage ⇒ lexical/scribe work is misdirected | coverage must be able to *reach* the retriever | mined patterns are 404 in the store; coverage can rise with no possible effect on empty-rate, which would **fire P3's falsifier for the wrong reason** |
+| **P4** LIB-citation rises after *"index automation (the cheapest lever, still unautomated)"* | the automated index | §5 of this document IS that lever |
+| **P2** fingerprinted use shifts substitutive-ward; *falsifier:* regulative stays ≥80% | pools that don't mix the two kinds | see §9 — currently mixed |
+
+**P3's falsifier is the live danger.** If we run waves while mined
+patterns are unreachable, a flat empty-rate reads as "the attachment-layer
+conjecture dominates, lexical/scribe work is misdirected" — a substantive
+finding about the *design* — when the true cause is that the supply never
+reached the retriever. That is the silence result recurring inside the
+instrument built to measure it: well-formed receipts, honest-looking null,
+wrong conclusion. §2's five defects are exactly the mechanism.
+
+So the sequencing claim is stronger than "the tide test is blocked":
+**this migration is a precondition for the second-half programme's
+headline measurements**, and it belongs in Phase 0 beside 0a/0b/0c rather
+than after them.
+
+## 9. Process patterns vs content patterns — a measurement problem
+
+The mining produced a **mix**, and the mix is not merely untidy.
+
+- **Content/substitutive** — `transport-across-an-instance-diamond`,
+  `lift-prove-upstairs-reflect-by-injectivity`,
+  `close-bijectivity-by-counting-not-inverting`,
+  `construct-through-a-finite-correspondence`,
+  `replace-enumeration-with-structural-counting`. Mathematics. These
+  belong in a math runner's pool.
+- **Process/regulative** — `probe-the-claimed-property-not-the-acceptance-proxy`,
+  `separate-evidence-history-from-verdict-state` (rejected, held).
+  These are about *the kind of work we are doing here*: gates, verdicts,
+  evidence, acceptance. They do **not** belong in a math runner's pool.
+
+The programme's own taxonomy already names this split —
+**substitutive-content** vs **regulative/practice** — and **P2's
+falsifier turns on the ratio between them** ("regulative stays ≥80% of
+fingerprinted uses ⇒ §4's surprise is the finding and the promotion
+investment thesis is wrong").
+
+Which makes the consequence precise: **if process patterns sit in the
+math pool, accurate recall of them corrupts P2.** A math runner surfacing
+`probe-the-claimed-property` is a regulative hit that occurred because of
+pool composition, not because the memory was load-bearing — and P2 would
+count it. Joe's "accurate recall of them would be bad news" is exactly
+right, and the reason is measurement, not distraction alone.
+
+**Proposal (Joe's): a `library/pattern-mining/` family.** It is the right
+home, and the reasons are stronger than tidiness:
+
+1. Process patterns are genuinely useful — to *this* work and to the
+   helpers doing it. Deleting them would lose real findings.
+2. Under `:domain` scoping (§4) they simply do not appear in a math run.
+   No directory games, no filter to bypass.
+3. It gives the mining lane its own dogfood corpus: the campaign's method
+   patterns, retrievable by the agents running the campaign.
+4. It makes the mix *visible* at authoring time — a candidate that wants
+   to be in `pattern-mining/` is announcing that it is regulative, which
+   is metadata P2 needs anyway.
+
+Recommended: `:domain :process` (or `:pattern-mining`) as a first-class
+domain beside `:mathematics`, so the split is a store predicate rather
+than a directory convention, per §4.
+
+## 10. Candidate process patterns from this week — staged, NOT authored
+
+The architecture work itself produced findings that look like
+`pattern-mining/` material. They are recorded here as **candidates with
+provenance**, deliberately not authored as library patterns: the mining
+discipline requires ≥2 independent instances, an honest HOWEVER, and
+review by someone who is not the author, and the author here is me.
+Authoring them by fiat because they are mine would be the exact
+self-corroboration failure that got `search-the-namespace` rejected.
+
+| Candidate | Instances so far | Note |
+|---|---|---|
+| **presence-is-not-configuration** | claude-4 on the roster but auto-registered with no model/role (today); catalogue instance 5 — seat re-registration returning `ok` while serving stale config; `patterns-index.tsv` present at the expected path with detached content | **at threshold (3, independent subsystems)** — strongest candidate |
+| **verify-the-premise-before-acting-on-a-finding** | amendment 6 (packet text never checked); amendment 9 (infrastructure never checked); cleanup items 5–6 struck today (state moved after the review that generated them) | **at threshold (3)**; the catalogue already names two |
+| **do-not-plant-the-diagnosis-in-the-packet** | my dispatch pre-labelled "a hotword defect, repairable" and received it back as a finding; catalogue instance 11 (phantom `native_decide` ban — a supervisor attribution repeated until it read as fact) | 2 instances; HOWEVER available (a planted label can still be *true* — mine was nearer right than my correction) |
+| **check-the-object-is-misfiled-before-deleting-the-filter** | the `math-informal*` boundary read as a bug and widened, when six files were misfiled | n=1 (today) |
+| **the-instrument-that-scores-your-lane-is-not-yours-to-build** | retriever dispatched away from me; tide test held | n=1, but it is the programme's own separation rule |
+| **measure-the-quantity-the-claim-is-about** | my basename-vs-qualified-name miscount that appeared to contradict claude-4; claude-4's first stoplist, which would have manufactured its own zero-overlap result | 2 instances, both self-caught |
+| **a-machine-move-does-not-carry-the-agent's-memories** | Joe, today: the campaign moved Zone←Dionysus and Claude's own memories did not follow, which is *why basics are being rediscovered* | n=1, high explanatory value |
+
+That last one deserves emphasis because it reframes several of the
+others. The Zone/Dionysus move carried the corpus, the toolchain, the
+store and the lanes — but **not the operator's memory**. Several of
+today's rediscoveries (the futon3 version-control premise, the index
+symlink, the family boundary's purpose) are things a Dionysus-resident
+operator would likely have known. The working patterns did not carry
+over because the *substrate for working patterns* did not carry over —
+which is, precisely, the thesis this whole programme is testing, observed
+on ourselves.
+
+**Next step for §10, if wanted:** these go to a fresh seat to be mined
+*independently* from the week's transcripts under the stage-1 rubric,
+blind to this table. If the same candidates surface from blind reads,
+they clear the bar honestly. If they do not, this table is what it looks
+like when an author grades their own week.
