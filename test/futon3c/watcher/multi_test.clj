@@ -17,6 +17,83 @@
     (spit f "# Mission\n")
     f))
 
+(deftest flexiarg-retraction-is-one-atomic-document-set
+  (let [calls (atom [])
+        entity-lookups (atom 0)
+        path "/repo/library/demo/sample.flexiarg"]
+    (with-redefs [sut/fetch-pattern-relations
+                  (fn [pattern-id]
+                    (is (= "demo/sample" pattern-id))
+                    [{:relation/id "rel-a" :relation/type :pattern/has-if}
+                     {:relation/id "rel-ignored" :relation/type :unrelated}])
+                  sut/fetch-pattern-entity-ids
+                  (fn [names]
+                    (if (= 1 (swap! entity-lookups inc)) names []))
+                  sut/retract-documents!
+                  (fn [documents]
+                    (swap! calls conj documents)
+                    {:ok? true :count (count documents)})]
+      (let [result (sut/retract-flexiarg! path)
+            documents (first @calls)]
+        (is (= 1 (count @calls)))
+        (is (= 9 (:count result)))
+        (is (= 1 (:batches result)))
+        (is (= {:table :entities :id "demo/sample"} (first documents)))
+        (is (= #{{:table :relations :id "rel-a"}}
+               (set (filter #(= :relations (:table %)) documents))))
+        (is (= 8 (count (filter #(= :entities (:table %)) documents))))))))
+
+(deftest flexiarg-delete-retracts-instead-of-marking-code-stale
+  (let [calls (atom [])]
+    (with-redefs [sut/retract-flexiarg! (fn [path]
+                                         (swap! calls conj [:retract path])
+                                         {:ok? true :count 8})
+                  sut/source-file-vertices (fn [& _]
+                                             (throw (ex-info "code scan forbidden" {})))
+                  sut/deletion-event! (fn [m] (swap! calls conj [:event (:path m)]))]
+      (sut/handle-deletion! {:path "/repo/library/demo/gone.flexiarg"
+                             :root "/repo" :label "repo" :run-id 1
+                             :event-n 2 :hash "old"})
+      (is (= [[:retract "/repo/library/demo/gone.flexiarg"]
+              [:event "/repo/library/demo/gone.flexiarg"]]
+             @calls)))))
+
+(deftest flexiarg-retraction-drains-legacy-same-name-duplicates
+  (let [lookups (atom [["demo/sample"] ["legacy-uuid"] []])
+        batches (atom [])]
+    (with-redefs [sut/fetch-pattern-entity-ids
+                  (fn [_]
+                    (let [result (first @lookups)]
+                      (swap! lookups subvec 1)
+                      result))
+                  sut/fetch-pattern-relations (constantly [])
+                  sut/retract-documents!
+                  (fn [documents]
+                    (swap! batches conj (vec documents))
+                    {:ok true :count (count documents)})]
+      (let [result (sut/retract-flexiarg! "/repo/library/demo/sample.flexiarg")]
+        (is (= 2 (:batches result)))
+        (is (= 2 (:count result)))
+        (is (= ["demo/sample" "legacy-uuid"]
+               (mapv (comp :id first) @batches)))))))
+
+(deftest flexiarg-rename-ingests-new-before-retracting-old
+  (let [calls (atom [])]
+    (with-redefs [sut/ingest-event! (fn [m] (swap! calls conj [:ingest (:path m)]))
+                  sut/retract-flexiarg! (fn [path]
+                                         (swap! calls conj [:retract path])
+                                         {:ok? true :count 8})
+                  sut/rename-event! (fn [m] (swap! calls conj [:event (:from m) (:to m)]))]
+      (sut/handle-rename! {:from "/repo/library/old/sample.flexiarg"
+                           :to "/repo/library/new/sample.flexiarg"
+                           :root "/repo" :label "repo" :run-id 1
+                           :event-n 2 :hash "same"})
+      (is (= [[:ingest "/repo/library/new/sample.flexiarg"]
+              [:retract "/repo/library/old/sample.flexiarg"]
+              [:event "/repo/library/old/sample.flexiarg"
+               "/repo/library/new/sample.flexiarg"]]
+             @calls)))))
+
 (deftest run-cycle-skips-post-file-work-when-stop-requested
   (testing "shutdown gate suppresses heartbeat and commit ingest"
     (let [heartbeat-called? (atom false)

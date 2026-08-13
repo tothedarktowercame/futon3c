@@ -428,6 +428,96 @@
     (string? x) x
     :else (str x)))
 
+(def ^:private canonical-pattern-facets
+  ["conclusion" "context" "if" "however" "then" "because" "next-steps"])
+
+(defn flexiarg-pattern-id
+  "Derive the qualified pattern id from a library flexiarg path, including
+   families with nested directories. Returns nil for every other path."
+  [path]
+  (second (re-find #"(?:^|/)library/(.+)\.flexiarg$" (str path))))
+
+(defn fetch-pattern-relations
+  [entity-id]
+  (let [url (str FUTON1A "/api/alpha/relations?from="
+                 (java.net.URLEncoder/encode entity-id "UTF-8")
+                 "&limit=100")]
+    (vec (or (:relations (http-get-edn url)) []))))
+
+(defn fetch-pattern-entity-ids
+  "Resolve canonical names to their stored IDs while retaining name-shaped IDs.
+   The latter are included because legacy pattern hyperedges could mint a
+   same-name entity alongside the UUID-backed canonical record."
+  [names]
+  (->> names
+       (mapcat (fn [entity-name]
+                 (let [url (str FUTON1A "/api/alpha/entity/"
+                                (java.net.URLEncoder/encode entity-name "UTF-8"))
+                       resp (http/get url {:headers {"X-Penholder" PENHOLDER}
+                                           :throw false
+                                           :timeout 15000})
+                       resolved (when (= 200 (:status resp))
+                                  (some-> (:body resp) edn/read-string :entity :id))]
+                   (if resolved [entity-name resolved] []))))
+       distinct
+       vec))
+
+(defn retract-documents!
+  "Atomically retract derived documents, failing closed on any non-200 reply."
+  [documents]
+  (let [payload {:documents (vec documents)}
+        resp (http/post (str FUTON1A "/api/alpha/documents/retract")
+                        {:headers {"Content-Type" "application/edn"
+                                   "X-Penholder" PENHOLDER}
+                         :body (pr-str payload)
+                         :throw false
+                         :timeout 10000})
+        body (when (string? (:body resp))
+               (try (edn/read-string (:body resp))
+                    (catch Exception _ (:body resp))))]
+    (if (and (= 200 (:status resp)) (:ok body))
+      body
+      (throw (ex-info "pattern document retraction failed"
+                      {:status (:status resp) :body body
+                       :document-count (count documents)})))))
+
+(defn retract-flexiarg!
+  "Retract a file-derived pattern, its canonical clauses, and its owned
+   pattern/has-* relations in verified atomic batches. Legacy same-name
+   duplicates are revealed only after the first ID is gone, so repeat until
+   the canonical names no longer resolve."
+  [path]
+  (let [pattern-id (or (flexiarg-pattern-id path)
+                       (throw (ex-info "not a library flexiarg path" {:path path})))
+        entity-names (cons pattern-id
+                           (map #(str pattern-id "/" %) canonical-pattern-facets))]
+    (loop [batch 0 total 0]
+      (let [entity-ids (fetch-pattern-entity-ids entity-names)]
+        (if (empty? entity-ids)
+          {:ok true :count total :batches batch :pattern-id pattern-id}
+          (do
+            (when (>= batch 4)
+              (throw (ex-info "pattern duplicates remain after retraction limit"
+                              {:path path :pattern-id pattern-id
+                               :entity-ids entity-ids})))
+            (let [pattern-ids (->> entity-ids
+                                   (filter #(or (= pattern-id %)
+                                                (not (str/includes? % "/"))))
+                                   (cons pattern-id)
+                                   distinct)
+                  relations (->> pattern-ids
+                                 (mapcat fetch-pattern-relations)
+                                 (filter #(str/starts-with?
+                                           (type-str (:relation/type %))
+                                           "pattern/has-"))
+                                 (keep :relation/id)
+                                 distinct)
+                  documents (concat
+                             (map #(hash-map :table :entities :id %) entity-ids)
+                             (map #(hash-map :table :relations :id %) relations))
+                  result (retract-documents! documents)]
+              (recur (inc batch) (+ total (:count result))))))))))
+
 (defn- prop-get [h k]
   (let [props (:hx/props h)
         ks (cond
@@ -742,46 +832,63 @@
 
 (defn handle-deletion!
   [{:keys [path root label run-id event-n hash]}]
-  (let [victims (source-file-vertices label path)
-        stale (mark-vertices-stale! victims "deletion"
-                                    {"edge/witness-stale-source-file" path
-                                     "edge/witness-stale-last-known-hash" hash})]
-    (deletion-event! {:path path :root root :label label
-                      :run-id run-id :event-n event-n :hash hash})
-    (println (format "[deletion-stale] %s vertices=%d failed=%d"
-                     path (:written stale) (:failed stale)))))
+  (if (flexiarg-pattern-id path)
+    (let [retracted (retract-flexiarg! path)]
+      (deletion-event! {:path path :root root :label label
+                        :run-id run-id :event-n event-n :hash hash})
+      (println (format "[deletion-pattern] %s documents=%d"
+                       path (:count retracted))))
+    (let [victims (source-file-vertices label path)
+          stale (mark-vertices-stale! victims "deletion"
+                                      {"edge/witness-stale-source-file" path
+                                       "edge/witness-stale-last-known-hash" hash})]
+      (deletion-event! {:path path :root root :label label
+                        :run-id run-id :event-n event-n :hash hash})
+      (println (format "[deletion-stale] %s vertices=%d failed=%d"
+                       path (:written stale) (:failed stale))))))
 
 (defn handle-rename!
   [{:keys [from to root label run-id event-n hash]}]
-  (let [old-vertices (source-file-vertices label from)]
-    (ingest-event! {:path to :root root :label label
-                    :run-id run-id :event-n event-n
-                    :source "rename-ingest"})
-    (let [new-vertices (source-file-vertices label to)
-          survivor-eps (clojure.set/intersection
-                        (set (map primary-endpoint old-vertices))
-                        (set (map primary-endpoint new-vertices)))
-          stale-old (vec (remove #(survivor-eps (primary-endpoint %)) old-vertices))
-          stale (mark-vertices-stale! stale-old "rename"
-                                      {"edge/witness-stale-source-file" from
-                                       "edge/witness-stale-renamed-to" to
-                                       "edge/witness-stale-last-known-hash" hash})
-          pairs (deterministic-rename-pairs old-vertices new-vertices)
-          link-stats (reduce (fn [acc {:keys [from to]}]
-                               (let [ok? (:ok? (emit-renamed-link!
-                                                {:from from :to to :label label
-                                                 :from-path from :to-path to
-                                                 :hash hash}))]
-                                 (update acc (if ok? :written :failed) inc)))
-                             {:written 0 :failed 0}
-                             pairs)]
-      (rename-event! {:from from :to to :hash hash
-                      :root root :label label
-                      :run-id run-id :event-n event-n})
-      (println (format "[rename-cascade] %s → %s stale=%d stale-failed=%d links=%d link-failed=%d"
-                       from to
-                       (:written stale) (:failed stale)
-                       (:written link-stats) (:failed link-stats))))))
+  (if (flexiarg-pattern-id from)
+    (do
+      (ingest-event! {:path to :root root :label label
+                      :run-id run-id :event-n event-n
+                      :source "rename-ingest"})
+      (let [retracted (retract-flexiarg! from)]
+        (rename-event! {:from from :to to :hash hash
+                        :root root :label label
+                        :run-id run-id :event-n event-n})
+        (println (format "[rename-pattern] %s → %s retracted=%d"
+                         from to (:count retracted)))))
+    (let [old-vertices (source-file-vertices label from)]
+      (ingest-event! {:path to :root root :label label
+                      :run-id run-id :event-n event-n
+                      :source "rename-ingest"})
+      (let [new-vertices (source-file-vertices label to)
+            survivor-eps (clojure.set/intersection
+                          (set (map primary-endpoint old-vertices))
+                          (set (map primary-endpoint new-vertices)))
+            stale-old (vec (remove #(survivor-eps (primary-endpoint %)) old-vertices))
+            stale (mark-vertices-stale! stale-old "rename"
+                                        {"edge/witness-stale-source-file" from
+                                         "edge/witness-stale-renamed-to" to
+                                         "edge/witness-stale-last-known-hash" hash})
+            pairs (deterministic-rename-pairs old-vertices new-vertices)
+            link-stats (reduce (fn [acc {:keys [from to]}]
+                                 (let [ok? (:ok? (emit-renamed-link!
+                                                  {:from from :to to :label label
+                                                   :from-path from :to-path to
+                                                   :hash hash}))]
+                                   (update acc (if ok? :written :failed) inc)))
+                               {:written 0 :failed 0}
+                               pairs)]
+        (rename-event! {:from from :to to :hash hash
+                        :root root :label label
+                        :run-id run-id :event-n event-n})
+        (println (format "[rename-cascade] %s → %s stale=%d stale-failed=%d links=%d link-failed=%d"
+                         from to
+                         (:written stale) (:failed stale)
+                         (:written link-stats) (:failed link-stats)))))))
 
 (defn handle-cross-root-move!
   [{:keys [from to from-root to-root from-label to-label run-id event-n hash]}]
