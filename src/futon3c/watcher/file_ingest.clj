@@ -361,6 +361,31 @@
                       {:status (:status resp) :body body
                        :expected-count (count relations)})))))
 
+(defn post-entities-batch!
+  "Write a non-empty entity batch through futon1b's verified atomic route.
+   Returned entities preserve input order; any failure is fatal."
+  [entities]
+  (let [payload {"entities" (vec entities)}
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/entities/batch")
+                          {:headers {"Content-Type" "application/json"
+                                     "X-Penholder" PENHOLDER}
+                           :body (json/generate-string payload)
+                           :throw false})
+               (catch Exception e {:status -1 :body (.getMessage e)}))
+        body (when (string? (:body resp))
+               (try (json/parse-string (:body resp) true)
+                    (catch Exception _ (:body resp))))]
+    (if (and (= 200 (:status resp))
+             (= (count entities) (:count body))
+             (= (count entities) (count (:entities body))))
+      {:ok? true :count (:count body) :entities (:entities body)
+       :rescue (:rescue body) :queued? (:queued? body)
+       :body body :status (:status resp)}
+      (throw (ex-info "entity batch write failed"
+                      {:status (:status resp) :body body
+                       :expected-count (count entities)})))))
+
 ;; ---------- file-extension helpers (replaces babashka.fs/extension) ----------
 
 (defn- file-ext [path]
@@ -1324,41 +1349,42 @@
                      :facets []})]
     (doseq [v vars]
       (let [pid (:pattern/id v)
-            pattern-r (post-entity! {:name pid
-                                     :type "pattern/library"
-                                     :external-id pid
-                                     :source (or (:pattern/title v) pid)})
-            pattern-entity (:entity pattern-r)
-            relation-specs (atom [])]
-        (if-not (:ok? pattern-r)
-          (swap! stats update :failed inc)
-          (do
-            (swap! stats update :patterns inc)
-            (doseq [facet canonical-pattern-facets
-                    :let [text (pattern-facet-text v facet)]
-                    :when text]
-              (let [clause-name (str pid "/" (name facet))
-                    clause-r (post-entity! {:name clause-name
-                                            :type "pattern/clause"
-                                            :external-id clause-name
-                                            :source text})
-                    clause-entity (:entity clause-r)]
-                (if-not (:ok? clause-r)
-                  (swap! stats update :failed inc)
-                  (do
-                    (swap! stats update :clauses inc)
-                    (swap! stats update :facets conj (name facet))
-                    (swap! relation-specs conj
-                           {:type (str ":pattern/has-" (name facet))
-                            :src (:id pattern-entity)
-                            :dst (:id clause-entity)
-                            :provenance {:note (str ":pattern/has-" (name facet))
-                                         :source "multi-watcher-flexiarg"}})))))
-            ;; Batch endpoint resolution is intentionally after every entity
-            ;; write and its post-commit verification.
-            (when (seq @relation-specs)
-              (let [relation-r (post-relations-batch! @relation-specs)]
-                (swap! stats update :relations + (:count relation-r))))))))
+            facets (->> canonical-pattern-facets
+                        (keep (fn [facet]
+                                (when-let [text (pattern-facet-text v facet)]
+                                  {:facet facet :text text})))
+                        vec)
+            entity-specs (into [{:name pid
+                                 :type "pattern/library"
+                                 :external-id pid
+                                 :source (or (:pattern/title v) pid)}]
+                               (map (fn [{:keys [facet text]}]
+                                      (let [clause-name (str pid "/" (name facet))]
+                                        {:name clause-name
+                                         :type "pattern/clause"
+                                         :external-id clause-name
+                                         :source text})))
+                               facets)
+            entity-r (post-entities-batch! entity-specs)
+            returned (:entities entity-r)
+            pattern-entity (first returned)
+            clause-entities (subvec (vec returned) 1)
+            relation-specs
+            (mapv (fn [{:keys [facet]} clause-entity]
+                    {:type (str ":pattern/has-" (name facet))
+                     :src (:id pattern-entity)
+                     :dst (:id clause-entity)
+                     :provenance {:note (str ":pattern/has-" (name facet))
+                                  :source "multi-watcher-flexiarg"}})
+                  facets clause-entities)]
+        (swap! stats update :patterns inc)
+        (swap! stats update :clauses + (count facets))
+        (swap! stats update :facets into (mapv (comp name :facet) facets))
+        ;; Endpoint resolution happens only after the entity batch has returned
+        ;; from its post-commit read-back verification.
+        (when (seq relation-specs)
+          (let [relation-r (post-relations-batch! relation-specs)]
+            (swap! stats update :relations + (:count relation-r))))))
     @stats))
 
 (defn dispatch!

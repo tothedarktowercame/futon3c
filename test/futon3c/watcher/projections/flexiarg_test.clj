@@ -82,10 +82,11 @@
         entities (atom [])
         relations (atom [])
         hyperedges (atom [])]
-    (with-redefs [file-ingest/post-entity!
+    (with-redefs [file-ingest/post-entities-batch!
                   (fn [payload]
-                    (swap! entities conj payload)
-                    {:ok? true :entity (assoc payload :id (:name payload))})
+                    (swap! entities into payload)
+                    {:ok? true :count (count payload)
+                     :entities (mapv #(assoc % :id (:name %)) payload)})
                   file-ingest/post-relations-batch!
                   (fn [payload]
                     (swap! relations into payload)
@@ -139,4 +140,4 @@
     (is (thrown-with-msg?
          clojure.lang.ExceptionInfo #"relation batch write failed"
          (file-ingest/post-relations-batch!
-          [{:type ":pattern/has-if" :src "missing" :dst "also-missing"}])))))
+         [{:type ":pattern/has-if" :src "missing" :dst "also-missing"}])))))
