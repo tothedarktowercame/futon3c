@@ -1,6 +1,7 @@
 (ns futon3c.watcher.projections.flexiarg-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [babashka.http-client :as http]
             [futon3c.watcher.file-ingest :as file-ingest]
             [futon3c.watcher.projections.flexiarg :as sut]))
 
@@ -85,10 +86,10 @@
                   (fn [payload]
                     (swap! entities conj payload)
                     {:ok? true :entity (assoc payload :id (:name payload))})
-                  file-ingest/post-relation!
+                  file-ingest/post-relations-batch!
                   (fn [payload]
-                    (swap! relations conj payload)
-                    {:ok? true :relation payload})
+                    (swap! relations into payload)
+                    {:ok? true :count (count payload) :relations payload})
                   file-ingest/post-hyperedge!
                   (fn [& args]
                     (swap! hyperedges conj args)
@@ -109,6 +110,7 @@
         (is (= facets (set (:facets result))))
         (is (= (conj (set (map #(str pid "/" %) facets)) pid) names))
         (is (= (set (map #(str ":pattern/has-" %) facets)) relation-types))
+        (is (= 7 (count @relations)))
         (is (not (contains? names (str pid "/counterfactual"))))
         (is (empty? @hyperedges))))))
 
@@ -129,3 +131,12 @@
         (is (= :ingested (:status result)))
         (is (= path (:path result)))
         (is (= 1 (count @calls)))))))
+
+(deftest relation-batch-failure-is-not-silently-dropped
+  (with-redefs [http/post
+                (fn [& _]
+                  {:status 400 :body "{\"error\":\"missing endpoint\"}"})]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo #"relation batch write failed"
+         (file-ingest/post-relations-batch!
+          [{:type ":pattern/has-if" :src "missing" :dst "also-missing"}])))))

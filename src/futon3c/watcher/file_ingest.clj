@@ -337,6 +337,30 @@
      :body body
      :status (:status resp)}))
 
+(defn post-relations-batch!
+  "Write a non-empty relation batch through futon1b's verified atomic route.
+   Any transport, validation, endpoint, or read-back failure is fatal."
+  [relations]
+  (let [payload {"relations" (vec relations)}
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/relations/batch")
+                          {:headers {"Content-Type" "application/json"
+                                     "X-Penholder" PENHOLDER}
+                           :body (json/generate-string payload)
+                           :throw false})
+               (catch Exception e {:status -1 :body (.getMessage e)}))
+        body (when (string? (:body resp))
+               (try (json/parse-string (:body resp) true)
+                    (catch Exception _ (:body resp))))]
+    (if (and (= 200 (:status resp))
+             (= (count relations) (:count body))
+             (= (count relations) (count (:relations body))))
+      {:ok? true :count (:count body) :relations (:relations body)
+       :rescue (:rescue body) :body body :status (:status resp)}
+      (throw (ex-info "relation batch write failed"
+                      {:status (:status resp) :body body
+                       :expected-count (count relations)})))))
+
 ;; ---------- file-extension helpers (replaces babashka.fs/extension) ----------
 
 (defn- file-ext [path]
@@ -1304,7 +1328,8 @@
                                      :type "pattern/library"
                                      :external-id pid
                                      :source (or (:pattern/title v) pid)})
-            pattern-entity (:entity pattern-r)]
+            pattern-entity (:entity pattern-r)
+            relation-specs (atom [])]
         (if-not (:ok? pattern-r)
           (swap! stats update :failed inc)
           (do
@@ -1320,16 +1345,20 @@
                     clause-entity (:entity clause-r)]
                 (if-not (:ok? clause-r)
                   (swap! stats update :failed inc)
-                  (let [relation-r
-                        (post-relation!
-                         {:type (str ":pattern/has-" (name facet))
-                          :src (:id pattern-entity)
-                          :dst (:id clause-entity)
-                          :provenance {:note (str ":pattern/has-" (name facet))
-                                       :source "multi-watcher-flexiarg"}})]
+                  (do
                     (swap! stats update :clauses inc)
                     (swap! stats update :facets conj (name facet))
-                    (swap! stats update (if (:ok? relation-r) :relations :failed) inc)))))))))
+                    (swap! relation-specs conj
+                           {:type (str ":pattern/has-" (name facet))
+                            :src (:id pattern-entity)
+                            :dst (:id clause-entity)
+                            :provenance {:note (str ":pattern/has-" (name facet))
+                                         :source "multi-watcher-flexiarg"}})))))
+            ;; Batch endpoint resolution is intentionally after every entity
+            ;; write and its post-commit verification.
+            (when (seq @relation-specs)
+              (let [relation-r (post-relations-batch! @relation-specs)]
+                (swap! stats update :relations + (:count relation-r))))))))
     @stats))
 
 (defn dispatch!
