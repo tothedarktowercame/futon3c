@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodically reconcile manifest-addressed evidence replicas
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+AccuracySec=5min
+Unit=futon3c-evidence-mesh.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,6 @@
+# site	peer-env	default-ssh-target	repo-root
+ams	FUTON_EVIDENCE_PEER_AMS	zone-joe	/home/joe/code/futon3c
+lon	FUTON_EVIDENCE_PEER_LON	lucy-joe	/home/joe/code/futon3c
+chi	FUTON_EVIDENCE_PEER_CHI	linode-chicago	/home/joe/code/futon3c
+# oxf is the replaceable-client site name. Set FUTON_EVIDENCE_PEER_OXF on other sites.
+oxf	FUTON_EVIDENCE_PEER_OXF	-	/home/joe/code/futon3c

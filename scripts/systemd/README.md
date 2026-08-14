@@ -24,6 +24,8 @@ install -Dm644 scripts/systemd/units/futon-agents.slice ~/.config/systemd/user/f
 install -Dm644 scripts/systemd/units/futon1b-server.service ~/.config/systemd/user/futon1b-server.service
 install -Dm644 scripts/systemd/units/futon1b-vitality.service ~/.config/systemd/user/futon1b-vitality.service
 install -Dm644 scripts/systemd/units/futon1b-vitality.timer ~/.config/systemd/user/futon1b-vitality.timer
+install -Dm644 scripts/systemd/units/futon3c-evidence-mesh.service ~/.config/systemd/user/futon3c-evidence-mesh.service
+install -Dm644 scripts/systemd/units/futon3c-evidence-mesh.timer ~/.config/systemd/user/futon3c-evidence-mesh.timer
 install -Dm644 scripts/systemd/units/futon3c-server.service ~/.config/systemd/user/futon3c-server.service
 systemd-analyze --user verify ~/.config/systemd/user/futon-services.slice \
   ~/.config/systemd/user/futon-agents.slice \
