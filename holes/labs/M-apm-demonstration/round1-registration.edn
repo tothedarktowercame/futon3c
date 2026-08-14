@@ -1,0 +1,108 @@
+;; APM demonstration — round 1 registration.
+;;
+;; Written 2026-08-14 by claude-2, BEFORE round 1 runs. Values are Joe's
+;; baseline (M-apm-demonstration I.4); shapes are dictated by
+;; mmca-clj/src/mmca/apm_demonstration_preregistration.clj.
+;;
+;; Validate with:
+;;   clojure -M scripts/validate_apm_demonstration_preregistration.clj \
+;;           <this-file> <trace> <lean-repo>
+{:kind   :apm-demonstration-round1-registration
+ :schema 1
+
+ ;; --- binding to the Lean -------------------------------------------------
+ :lean-registration "DarkTower.APMDemonstration.round1Registration"
+ :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
+ :lean-revision     "d0623df8992ec23c7c647cf30eac014221bbdb2d"
+
+ ;; --- what is being run ---------------------------------------------------
+ :modules                [:R :F :S :A :M :P :X]
+ :structural-invariants  [:F1]
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F7 :F8 :F9]
+
+ ;; t94J02 — chosen because it was genuinely worked, not because it is short:
+ ;; 22-line Main.lean carrying ONE code-level sorry, against a 97-line
+ ;; proof-outline and a 41-line informal-solution. Zero candidate frames and no
+ ;; prior scribe history, so no memory-system contamination on the first
+ ;; measurement.
+ :problem "t94J02"
+
+ ;; Identity floor rather than reproducibility: "the same result twice" means a
+ ;; student-tier solver reaches it given the deposit. Pinned by MODEL VERSION
+ ;; and BENCHMARK RELEASE, never by the rate -- the rate moved 1/41 -> 4/48
+ ;; across two releases, so a floor defined as a percentage silently rises
+ ;; whenever the vendor ships.
+ :variation {:kind     :measured
+             :endpoint "identity floor: a GLM-5.2-class student solver reaches the result given the deposit (ArXivLean June 2026, 4/48)"}
+
+ :claim :descriptive
+ :arms  [{:name "one problem, one-shot measurement"
+          :neutral? false
+          :axes []
+          :role :treatment}]
+
+ :replication-stage  :pilot
+ :pilot-units        ["t94J02"]
+ :confirmation-units ["a98A01"]
+
+ ;; --- Joe's baseline, 2026-08-14 -----------------------------------------
+ ;; Cost is in units of weekly usage. Provisional by design: round 1's job is
+ ;; to replace this estimate with a measurement.
+ :estimated-cost    0.01
+ :budget-cap        0.05          ; 5x -- a cap, not a target
+ :teardown-deadline 120           ; minutes after launch, hard stop
+
+ :stop-rules [:budget-exceeded
+              :attempt-cap-reached          ; 10
+              :axiom-unclean-close
+              :no-progress                  ; 3 consecutive attempts
+              :teardown-deadline-passed]
+
+ ;; Total by construction: the outcomes partition on
+ ;; (residual-sorries, axiom-clean?, defect?), so every trace maps to exactly
+ ;; one. Totality is checkable at the schema level rather than the type level.
+ :decision-rule {:id       :apm-round1-outcome
+                 :outcomes [:closed :tier-a :tier-b :defective]}
+
+ :required-capabilities
+ [:registration-gates-launch :frame-containment-witnessed
+  :created-frame-worked :unique-disposition :offer-use-disposition
+  :need-retrieval :promotion-importable :promotion-need-taggable
+  :measurement-populated]
+
+ :required-measurement-fields
+ ["statement defects at review" "terminal disposition"
+  "residual executable sorries" "attempts or closer hops"
+  "axiom cleanliness" "memories promoted" "review escape rate"
+  "promoted then surfaced then used" "contract leaks"
+  "duplicate declarations" "locked-lemma exposure" "promotion coverage"
+  "unconsumed promotions" "import-only edges" "scribe lane coverage"
+  "arc-lane yield" "rewrite rule offered and used"]
+
+ ;; Frozen for the round. Tuning between rounds is permitted, but a role-card
+ ;; change is a REGIME BOUNDARY: P1's slope must not be read across one, or a
+ ;; decline caused by better framing reads as one caused by better substrate.
+ :reg/role-cards
+ {:codex-solver "6d39d750305cc00638816cebef735c3aeceb1483dcb659213150019b12fec1aa"
+  :zai-student  "4651ed7161eb8bc00e2a0d32869846a683442912d5f16addd3a01f049893614f"
+  :claude-guide "a4ff3915bca198c6aec1ee9b9e2d517f53cec1b69818b1d77078f538dedc708e"
+  :scribe       "e14f8ff87470bc5e7454704803291ccb32bb8598be191a4c70a9df325a36710c"}
+
+ ;; --- predictions, recorded BEFORE the round -----------------------------
+ ;; A prediction written after the data is not a prediction.
+ :reg/predictions
+ [{:id        :P1
+   :statement "Guidance interventions per cycle decline as problems seen increases."
+   :source    "Joe, 2026-08-14"
+   :measured-by "guidance interventions (RoleEvent :ground-control count per cycle)"
+   :confound  "a role-card change, a store-mode/harness-mode switch, or a solver version change is a regime boundary; the slope must not be read across one"}
+  {:id        :P2
+   :statement "By frame-100, the loop supports high confidence in its own claims."
+   :source    "Joe, 2026-08-14"
+   :status    :horizon-declared-metric-open
+   :note      "claude-2's proposed operational reading, NOT the operator's: (i) P1's slope estimable within a stated regime, and (ii) at least one teachability pair shows L(i) falling with the deposit and not without. Operator to accept, replace, or refuse."}]
+
+ ;; Frame-1 carries no guarantee. Joe, 2026-08-14: "at frame-1 nothing is
+ ;; guaranteed at all." Recorded as a pre-commitment: frame-1's outcome is not
+ ;; evidence for or against the design.
+ :reg/frame-1-disclaimer true}

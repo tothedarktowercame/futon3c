@@ -5549,3 +5549,77 @@ own best work:
 **Remaining before frame-1:** C (harness + emitter-side F1 refusal — what
 codex-4 stopped on in I.1, now unblocked), and **B**, which is mine and still
 outstanding.
+
+## I.16 B complete — role cards, registration, and P1 recorded before the round
+
+**Written by claude-2 under carve-out.** Location:
+`holes/labs/M-apm-demonstration/` — four role cards plus
+`round1-registration.edn`.
+
+**Verified:** EDN parses, **25 keys, zero required keys missing** against the
+validator's `required-registration-keys`; all four role-card hashes match the
+files on disk.
+
+### The role cards are surface contracts, and one of them had to fight an incentive
+
+Each states environment, bounds, and what is measured — no capability
+restrictions, per I.9 and `futon3c/CLAUDE.md`. Two are unremarkable. Two carry
+weight:
+
+**`zai-student.md`** had to solve a problem the design creates. Zai's job is to
+*report what does not work*, but every instinct of a solver is to close the
+problem and tidy the account. So the card says plainly:
+
+> *"**This report is more valuable than a closed proof.** A closed proof tells
+> the system one problem is done. A precise failure tells it what to build
+> next."* … *"There is no penalty of any kind for not closing. There is a real
+> cost to a vague 'I couldn't do it'."*
+
+And, because the arc-lane needs the **stereotyped register** rather than a
+summary: *"in your own words, in whatever phrasing comes naturally. Do not tidy
+it into a summary."* **Tidying is what destroys the match** — that is the whole
+reason nine scribe passes yielded no rewrite rules from tidy prose.
+
+**`codex-solver.md`** carries the opposite hazard. Guidance count is the P1
+measurable, so a solver told it is counted will under-ask to look
+self-sufficient:
+
+> *"**Ask for guidance when you need it.** Under-asking to look self-sufficient
+> corrupts the measurement, and the prediction is about the system, not about
+> you."*
+
+**Naming an incentive is cheaper than fighting it**, and both of these would have
+been invisible in the data — an under-asking Codex and a tidying Zai both
+produce clean-looking rounds.
+
+### The registration
+
+Joe's baseline throughout: `t94J02`, 120-minute hard stop, `0.01` weekly usage,
+`0.05` cap (5×), 10 attempts, no-progress 3, identity-floor endpoint pinned by
+**model version and benchmark release** rather than by the rate.
+
+`:confirmation-units ["a98A01"]` — the second problem is named now, so the
+pilot/confirmation split is preregistered rather than chosen after seeing round
+1. **That is `ReplicationPlan`'s point and it costs nothing to honour it early.**
+
+### Predictions recorded before the round
+
+**P1** (Joe's): guidance interventions decline as problems seen increases — with
+its confounds written into the record, not left to memory: *a role-card change,
+a mode switch, or a solver version change is a regime boundary and the slope must
+not be read across one.*
+
+**P2** carries `:status :horizon-declared-metric-open`, and its operational
+reading is explicitly labelled **claude-2's proposal, not the operator's**. A
+prediction whose metric is settled after the data is not a prediction; labelling
+whose reading it is keeps that honest.
+
+**`:reg/frame-1-disclaimer true`** — Joe's *"at frame-1 nothing is guaranteed at
+all"*, recorded as a pre-commitment so frame-1's outcome cannot later be read as
+evidence either way.
+
+### Status
+
+**B is done.** Remaining before frame-1: **A8** (in flight — `no-direct-channel`
+reading the Agency log directly) and **C** (the harness plus the emitter-side F1
+refusal, which codex-4 stopped on in I.1 and which is now unblocked).
