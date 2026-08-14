@@ -40,20 +40,72 @@ Therefore:
 
 ## A. Store contains surplus or wrong-shaped data
 
-- **A1 — 1,213 surplus `pattern/library` hyperedges.** From the abandoned
-  re-typing. Nothing produces or reads them. *Owed first: an explanation of
-  why there are 1,213, by diffing hyperedge ids against entity ids.* Verified
-  1213.
+- **A1 — 1,213 surplus `pattern/library` hyperedges.** ✅ **EXPLAINED
+  2026-08-13 (claude-2).** Safe to delete; every one is redundant.
+
+  **Why 1,213.** Every id has the shape `hx:pattern/library:<ns>/<name>` with
+  a single endpoint (the pattern name), and all 1,213 are **distinct**. So
+  this is *one hyperedge per pattern name*, not a duplication artefact — it
+  is the legacy representation of the whole pattern library, and 1,213 is
+  simply the library's size at the moment that writer was retired. The live
+  index (`data/notions/patterns-index.tsv`) has 1,359 rows, so the 146
+  patterns authored since then never got a hyperedge.
+
+  **Redundancy (the deletion-safety question).** 1,211 of 1,213 resolve to a
+  live entity of the same name. Content is duplicated for all of them:
+  | where the content lives | n |
+  |---|---|
+  | entity `:entity/props` | 1,183 |
+  | separate `pattern/clause` entities (all 7 facets present) | 28 |
+  | **only on the hyperedge** | **0** |
+  Nothing in `futon3c/src`, `futon3c/scripts` or `futon1b/*.clj` queries
+  hyperedges by `pattern/library`, confirming the "nothing reads them" claim.
+
+  **The 2 with no entity are exactly today's two re-filings** —
+  `math-informal/verify-universal-property` (moved to `math-informal-CT`) and
+  `math-strategy/clarification-meta` (deleted). So the delete/rename orphan
+  sweep removes the entity and its relations but **not** the legacy hyperedge.
+  Self-resolving: nothing writes these any more, so deleting all 1,213 ends it.
+
+  *Method note — the 28 nearly became a false "data-loss risk". They look like
+  bare stubs because their parent entity has no `:props`; their content is in
+  `pattern/clause` entities (15,637 of them). Classifying on the parent alone
+  would have reported 28 patterns about to be destroyed. Both document shapes
+  have to be checked, every time.*
 - **A2 — 284 legacy `code/v05/pattern-slot` records.** Patterns as code,
   superseded by the new ingest but not removed. Verified 284.
-- **A3 — ~5 entity rows per pattern.** 5,000 rows / 1,194 distinct names;
-  811 names duplicated. **Unknown whether real duplicates or bitemporal
-  versions — that distinction decides everything.** Gates the re-filing.
+- **A3 — ~5 entity rows per pattern.** ~~5,000 rows / 1,194 distinct names;
+  811 names duplicated.~~ **Those numbers are void — see A3.1.** Still
+  unknown whether real duplicates or bitemporal versions; that distinction
+  decides everything. Gates the re-filing.
+  - **A3.2 — `entities/batch` does not deduplicate WITHIN a batch**
+    (found 2026-08-13, measured). `build-entity` → `ensure-entity-id`
+    resolves an existing row by querying the node, but nothing in the batch
+    is committed while the items are being built — so N copies of one name
+    in one batch each miss the lookup and each get a fresh UUID. Measured:
+    the same name sent 3× in one batch returned **3 distinct ids** and wrote
+    3 rows. Across separate calls idempotency is intact (verified: 3 writes,
+    1 row). The flexiarg caller sends 8 distinct names so it is not hit
+    today, but any future batch caller with a repeated name silently
+    multiplies rows — the exact failure A3 exists to clean up.
+  - **A3.1 — the entity endpoint cannot enumerate its own largest type**
+    (found 2026-08-13 while working A1). `entities-query` takes only a
+    `limit`, has **no cursor**, and `max-result-limit` is **5000** — but
+    there are **5,876** `pattern/library` entities. Its `:count` is the
+    *returned* row count, so a full request comes back silently short and
+    looks complete. Every A3 figure above was read off a truncated
+    `limit=5000` page and must be re-measured before A3 can be worked.
+    (Contrast `hyperedges-query`, which has an `after` cursor *and* whose
+    `:count` is the true type total — that is why A1 could be answered
+    exactly and A3 cannot yet.)
 - **A4 — `math/*` buckets exist only in the store.** Seven coarse buckets
   (`missing-dependency-protocol`, `measure-integration-api`,
   `holomorphic-disk-api`, …) with no files and no `library/math/` directory.
 
 ## B. Retrieval is not wired
+
+*Elaborated into dispatch-ready packets: `E-apm-halftime-pre-go-live-B.md` (2026-08-14).*
+**HELD until A is done (Joe, 2026-08-14) — for coherence.**
 
 - **B1 — patterns and memories are disjoint taxonomies.** 3 of 76 math
   patterns are named by any memory edge. The rest are unreachable through the
@@ -70,6 +122,9 @@ Therefore:
 
 ## C. Format and parser
 
+*Elaborated into dispatch-ready packets: `E-apm-halftime-pre-go-live-C.md` (2026-08-14).*
+**HELD until A is done (Joe, 2026-08-14).**
+
 - **C1 — the two flexiarg parsers disagree.** `contrib/flexiarg.el` builds
   the tree with an indent stack; `futon3a/.../projection.clj` discards
   indentation. No conformance test. Mitigated in ingest (canonical seven
@@ -78,6 +133,9 @@ Therefore:
   projection output.
 
 ## D. Substrate residuals
+
+*Elaborated into dispatch-ready packets: `E-apm-halftime-pre-go-live-D.md` (2026-08-14).*
+**HELD until A is done (Joe, 2026-08-14).**
 
 - **D1 — `respond!`'s JSON path still parses.** A JSON-requested response
   whose EDN does not read back still fails. Real fix is callers passing maps,
@@ -89,6 +147,8 @@ Therefore:
   processed offset would have made the 36-minute outage a warning.
 
 ## E. Ownership and hygiene
+
+*Batched into one packet file with the other section: `E-apm-halftime-pre-go-live-EF.md` (2026-08-14) — Joe: "both relevant to creating a working lab for the second half of the APM project".*
 
 - **E1 — 86 uncommitted files in `futon3/library/`.** No owner. Verified 86.
 - **E2 — 198 uncommitted entries in `futon3c`,** including the deleted
@@ -103,6 +163,8 @@ Therefore:
   understated. Audit needs a comment-aware detector.
 
 ## F. The experiment itself
+
+*Batched into one packet file with the other section: `E-apm-halftime-pre-go-live-EF.md` (2026-08-14) — Joe: "both relevant to creating a working lab for the second half of the APM project".*
 
 - **F1 — zero assays have ever passed.** The one that ran was invalid: no
   headroom, and the arms shared a session.
@@ -135,3 +197,9 @@ Therefore:
 - the polynomial zero-count bridge was re-derived three times (a92J05,
   a97A08, a94A09) and is absent from the store
 - `LEMMA-INDEX.md` is the only place the trapped-lemma recurrence is visible
+- **the type catalog has no retraction path.** `documents/retract` does not
+  permit `:type-catalog`, so every probe type ever registered stays forever.
+  24 of 242 entries are probe/test litter (`probe/*`, `vrfy/*`, `h1/*`) from
+  the 2026-08-13/14 performance work — mine and codex-4's. Harmless (no entity
+  carries these types, nothing reads them) but it only accumulates. codex-4
+  correctly refused to bypass the API boundary to clean it.
