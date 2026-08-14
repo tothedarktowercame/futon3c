@@ -1,0 +1,154 @@
+{:id "capability-proof-futon"
+ :description "Canonical claim-DAG for the futon stack's own capability proof — the successor representation to the text-based War Room (Joe, 2026-08-08: the War Room was a scratchwork capability proof compressed to fit in his head; the text form ran out of road). Form per WR-8: this EDN is the source of truth; prose is a rendered projection (render_capability_proof_futon.bb); editing the projection in place is a defect. Update discipline per WR-28: from bulletin 16 onward, every War Bulletin carries a proof-state delta section naming warrant moves + certificates; a bulletin that moves nothing says 'no proof-state change'. Revision contract: deltas, not silent edits — candidate deltas are registered in this description before application, as in retrieval-stage-causal-spec.json. Reflexivity guardrail: no node's warrant is certified by machinery that node claims; external anchors (kernel, maintainer, client, operator report where the operator IS the ground truth) do the certifying. v0 2026-08-08 (Joe + Fable): nodes seeded from bulletins 1-15, the four client capability proofs (apm, arxiv, war-machine, diagramprover), and the prover-registry grounding taxonomy — whose classes (verified / substrate / external-witness / frontier) independently converged on the warrant vocabulary and are hereby unified with it."
+
+ :top
+ {:claim "FUTON is the missing platform for open research in the agent era"
+  :source "Joe, 2026-07-05"
+  :constructive-reading "A procedure exists that converts research questions + agent fleets + operator direction into externally-verdicted research outputs — with witnesses that each component does its job. The proof object is the stack; the bulletins are its certificate archive; this document is its warrant ledger."
+  :warrant :under-construction
+  :discharge "strong warrants on F1-F12 + the composition running continuously across at least two client research programmes with external verdicts"}
+
+ :warrant-classes
+ {:mechanical "executed witness (compiler exit, probe, hash, ledger fold)"
+  :replicated "independent runs agree on load-bearing quantities"
+  :inductive "n observed instances, honesty bounds stated"
+  :designed "contract written, no witnesses"
+  :registered "candidate mechanism, not applied"
+  :refused "typed: proved-impossible | not-yet-capable | not-yet-answered | not-expressible-at-tier"
+  :unobserved-by-constitution "deliberately unsensed; the boundary is typed, not missing (the consent-gate move applied to observation)"}
+
+ :nodes
+ [{:id :F1
+   :claim "The stack solves qualifying-exam mathematics, formally, at scale"
+   :client "capability-proof-apm.tex + capability-proof.md (live, N1-N9)"
+   :warrant [:inductive {:n "2 chains composition-witnessed (both branches); corpus ~35% formally closed (2026-08-08); remote full-relay close witnessed (a97J01)"}]
+   :certificates ["Steinhaus closed end-to-end under automation (318160d8)" "BPM v3 held out as actual test — hygiene rules to be preregistered (bulletin 15 addendum)"]
+   :constrained-by [:WR-24]
+   :upgrade "continuous operation; BPM held-out run (standalone paper); statement-audit round-trip protocol (bulletin 15 addendum)"}
+
+  {:id :F2
+   :claim "The stack mines research corpora into queryable structure"
+   :client "capability-proof-arxiv.tex"
+   :warrant [:inductive {:n "arXiv.CT harvest: 9,916 math.CT papers, 22,721 relations; Zone Air pilot serving (one llama.cpp instance, CPU-bound, probed 2026-08-06)"}]
+   :certificates ["hazard ledger per the arxiv note" "manifest 570,209 math papers with abstracts (verified 08-05)"]
+   :constrained-by [:WR-27]
+   :upgrade "demand-paged mining: hungry queries become mining targets; gain (hunger-shaped acquisitions / total) logged from birth"}
+
+  {:id :F3
+   :claim "The stack does valuable open-source work (naturalistic, maintainer-graded)"
+   :client "capability-proof-war-machine.tex (W1-W9)"
+   :warrant [:inductive {:n "1 full ladder (send -> reply -> call -> agreed collaboration); scan n=1 (~10 rungs); external merges n=0; internal Tickle merges rehearsal-class only"}]
+   :certificates ["Henderson receipt :first-of-campaign true" "#3663-first collaboration path agreed 2026-08-05"]
+   :constrained-by [:WR-23 :WR-24]
+   :upgrade "second scan; first external mechanical-layer packet; contribution packet templates"}
+
+  {:id :F4
+   :claim "The programme's claims are certifiable by a prover whose logic ladder grows by demand"
+   :client "capability-proof-diagramprover.tex"
+   :warrant [:mechanical {:note "D1 (Pearl/DAG) oracle-triangulated, six receipts self-answered; D2 (Caus[-]/BV) and D3 (Markov-cat) registered"}]
+   :certificates ["D1 refusal discipline exercised" "five typed refusals from F3's claims demanded D2; first-application contract written (BV-type the emission loop)"]
+   :constrained-by [:WR-27]
+   :upgrade "discharge D2's first-application contract; D3 waits for a client refusal, not taste"}
+
+  {:id :F5
+   :claim "The memory loop records, transports, and eventually serves learning"
+   :client "capability-proof-store.md (M-memory-retrieval) + APM N3-N5"
+   :warrant [:inductive {:n "write-side strong (scribe unattended, author!=reviewer); retrieval WEAK — one positive against a replicated mechanical negative (M4)"}]
+   :certificates ["hunger audit closes demand exactly (E10)" "do(frame): 0 -> 21 consultations, preregistered"]
+   :constrained-by [:WR-27]
+   :upgrade "repairs 2-4; memory x corpus 2x2 (DAG-first with Rob's engine)"}
+
+  {:id :F6
+   :claim "The coordination substrate routes multi-agent work reliably"
+   :client "Agency (bells/whistles/park/pouches) — daily operation"
+   :warrant [:inductive {:n "months of daily operation; pathologies ledgered and patched (crossed bells, pouch evictions, park surface gotchas)"}]
+   :certificates ["protocol memories + E-crossed-bells" "reply-delivery contract learned from the lost-review incident"]
+   :constrained-by [:WR-1 :WR-2 :WR-3]
+   :upgrade "D2 typing of the bell/whistle grammar (whistle = paired round-trip; bell = one-way seq) — registered"}
+
+  {:id :F7
+   :claim "Capability is measured by a modular evaluation harness, not vibes"
+   :client "bulletin 15 Finding 3 + addendum (the keystone: one instrument, three customers)"
+   :warrant [:designed {:note "harness fixes {cohort, dispatch, receipts, scoring, zero-adjudication}; setting supplies {problem source, grader}; endpoint prereg draft hardened; receipts v1.2 live"}]
+   :certificates ["prelim batteries + ArSE named as the quality measure (Joe)"]
+   :constrained-by [:WR-24 :WR-28]
+   :upgrade "first cohort scored end-to-end with zero operator-adjudication events — this same event discharges F8's re-arm"}
+
+  {:id :F8
+   :claim "Bounded autonomy runs overnight, guardrailed, and its value is measurable"
+   :client "WM overnight apparatus (guardrails/needs-you/hole-counter/gate-runner, live-verified) + WM-OVERNIGHT-RUNBOOK.md"
+   :warrant [:mechanical {:note "apparatus live-verified; PAUSED with a countable re-arm condition written at the switch (WR-26 discharged 2026-08-08); value warrant awaits F7"}]
+   :certificates ["star-map C3 PASS (production-faithful)" "re-arm = first fleet capability measurement"]
+   :constrained-by [:WR-26 :WR-24]
+   :upgrade "F7's first measurement fires the re-arm mechanically"}
+
+  {:id :F9
+   :claim "The business layer converts stack capability into external commitments"
+   :client "futon7 (outbox/receipts/ledger) + XTDB engagement + MoU"
+   :warrant [:inductive {:n "1 conversion (Henderson: research capability -> warm relationship -> collaboration path); MoU ~GBP 5k operator-reported (WR-25: ordering-effective, number-inert until artifact)"}]
+   :certificates ["receipts chain in futon7/data/outbox" "Rob (superpod + causal engine) and Charlie (50% sales capacity) as named human resources"]
+   :constrained-by [:WR-24 :WR-25]
+   :upgrade "MoU artifact lands; offer one-pager derived from the completed prelims run"}
+
+  {:id :F10
+   :claim "The operator's own capability and life are part of the proof — on the operator's terms"
+   :client "futon0 (cyborg layer) + m14 (what the ascent costs and returns him) + M-trip-journal"
+   :warrant [:unobserved-by-constitution {:note "AFK life deliberately unsensed by FUTON; the boundary is typed here rather than silently missing. Witness is demand-paged and operator-granted; operator report IS ground truth for this subtree (WR-25 does not apply inward). State flag (Joe, 08-10, superseding 08-08 LANGUISHING): MOBILIZED — an external opportunity has the layer moving."}]
+   :certificates ["Knecht clause: fragility-on-leaving is the warning — operator capabilities need external anchors too (Brookes role, calls held, papers submitted are existing ones)"
+                  "2026-08-10 (operator-granted): invited to a technical interview for an Anthropic Institute fellowship — an external institution evaluating the OPERATOR, not the stack; the Knecht clause's answering certificate. Python prep underway; lane-E preemption applies (a concrete livelihood signal pulls ahead of everything)."
+                  "2026-08-10 (operator-granted): daily swimming adopted for the interview week — the first witness deposited through F10's own demand-paged channel, exactly as designed."
+                  "precedent (operator-reported): the external-monitor upgrade — environment changes to the operator loop pay off out of proportion; swim + prep are the same investment class"]
+   :constrained-by [:WR-4]
+   :upgrade "operator chooses witness channels (trip-journal hinges; a bulletin AFK line); nothing here upgrades without Joe's grant"}
+
+  {:id :F11
+   :claim "The compute substrate carries the workload, with headroom accounted"
+   :client "zone-joe (32t/249G) + laptop + superpod access via Rob"
+   :warrant [:mechanical {:note "probed 2026-08-06: zone CPU-saturated by one GLM-4.5-Air server, ~190G RAM headroom idle; laptop restored to OK after Firefox kill; headroom's named consumer = XTDB 2.2.x benchmark"}]
+   :certificates ["load 30.3/32; 111.5G resident model; -t 30"]
+   :constrained-by []
+   :upgrade "cohabit the XTDB benchmark in the RAM headroom; throughput levers (batching, speculative decoding, GPUs) as demanded"}
+
+  {:id :F12
+   :claim "The stack represents itself honestly: bulletins narrate, this ledger certifies, WR items govern"
+   :client "war-room.md (WR-1..28) + bulletins 1-15 + this document"
+   :warrant [:designed {:note "v0 authored; delta discipline begins at bulletin 16; the projection renders one page so the whole fits in the operator's head"}]
+   :certificates ["WR-8 precedent (AIF+ files canonical, prose regenerated)" "grounding-taxonomy convergence (verified/substrate/external-witness/frontier ~= warrant classes)"]
+   :constrained-by [:WR-8 :WR-9 :WR-25 :WR-28]
+   :upgrade "bulletin 16 carries the first delta section; a WR item that cannot be pointed at in this structure is flagged"}]
+
+ :lemmas
+ [{:id :L1 :name "zone-corpus"
+   :statement "The Zone mining pilot's corpus is the benchmark corpus for XTDB #3663/#5637"
+   :cited-from [:F2 :F9] :status :in-progress
+   :note "the exemplar throughline: two ostensibly unrelated subtrees joined by one artifact"}
+  {:id :L2 :name "text-sidecar"
+   :statement "One retrieval engine (candidate pre-filter + re-check) serves memory recall, corpus indexing, and the #5637 evidence packet"
+   :cited-from [:F5 :F2 :F9] :status :in-progress}
+  {:id :L3 :name "eval-instrument"
+   :statement "Prelim batteries + ArSE qualify agents for the BPM demo, the superpod go-live, and the consulting offer"
+   :cited-from [:F1 :F3 :F7 :F9] :status :designed}
+  {:id :L4 :name "gain-parameter"
+   :statement "One order parameter (coupling gain) governs the CA family, the strategy verdict gate, and the epistemic economy"
+   :cited-from [:F4 :F5 :F8] :status :measured-in-first-substrate
+   :note "WR-27 makes it a design rule: loops are born instrumented for their gain"}]
+
+ :tier-demands
+ [{:claim "Consent gate + I4 exogeneity as derivability facts" :nodes [:F8 :F3] :tier :D2 :status :registered}
+  {:claim "Bell/whistle grammar typed (crossed bells = untyped seq pathology)" :nodes [:F6] :tier :D2 :status :registered}
+  {:claim "WR-25 as a signalling constraint on inference (which channel may move the posterior)" :nodes [:F12 :F9] :tier :D3 :status :registered
+   :note "the stack's first native D3 demand — legislated in prose before the logic existed"}
+  {:claim "EFE under guardrails (NAG salience = negated EFE): quantity routed by signalling type" :nodes [:F8] :tier :D3 :status :registered}]
+
+ :invariants
+ {:WR-1-2-3 [:F6] :WR-4 [:all] :WR-8 [:F12] :WR-9 [:F12] :WR-23 [:F3 :F9]
+  :WR-24 [:F1 :F3 :F7 :F8 :F9] :WR-25 [:F9 :F12] :WR-26 [:F8] :WR-27 [:F2 :F4 :F5]
+  :WR-28 [:F12]}
+
+ :update-log
+ [{:date "2026-08-10"
+   :note "CANDIDATE DELTA (registered, NOT applied; lane-E preemption defers build to post-interview): a second renderer over this same EDN — a VSAT-native 3D projection (A-Frame/WebXR: cardboard viewer + phone now, Steam Frame later), as the forward-model complement to VSATARCS ('the stack dreams itself'). Design sketch agreed in conversation: warrant class -> opacity (mechanical solid, inductive firm, designed wireframe, registered ghost); F10's unobserved-by-constitution rendered as a visible veil, not an omission; throughline lemmas as long arcs spanning subtrees; upgrade paths + tier demands = the dream geometry (ghosted continuations of solid structure). Feeds: this EDN + star-map (prior) + M-futon-forward-model (lanes/gates). Guard rails: WR-8 (generated from source, never hand-placed) and the Castalia clause (the scene renders the warrant ledger, external verdicts included — a dream browser that hides the graders is a glass bead game)."}
+  {:date "2026-08-10"
+   :note "DELTA (F10 only): state flag LANGUISHING -> MOBILIZED on operator report; three operator-granted certificates attached (Anthropic Institute fellowship technical-interview invitation = the Knecht clause's answering external channel; daily swim = first witness through the demand-paged channel; monitor-upgrade precedent). Lane-E preemption noted: Python prep correctly preempts stack work this week. No other node moved."}
+  {:date "2026-08-08"
+   :note "v0 authored (Joe + Fable). Nodes seeded from bulletins 1-15 and the four client proofs; form decided = WR-8 route (canonical EDN + rendered projection); the D2/D3 question answered structurally: the stack demands D3 at two rows (WR-25-as-inference-constraint; EFE-under-guardrails), so capability-proof-futon does not stay at D2."}]}

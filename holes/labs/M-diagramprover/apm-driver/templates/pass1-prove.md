@@ -53,3 +53,14 @@ already had), blocker (if not proved) — then a
 closing note listing any statement you believe is WRONG as stated,
 with your reason (this feeds statement review; it does not authorize
 you to change it).
+
+NEVER INTRODUCE `opaque` OR `axiom`. Not for the statement, not for a
+helper, not to make something elaborate. An `opaque` constant has no
+defining equations, so nothing about it can ever be proved, and an
+`axiom` pollutes `#print axioms` at the gate — both are now detected
+and downgrade the outcome to `defective`. Eight artifacts were lost
+this way (one fabricated wedge, oriented integration AND the exterior
+derivative, leaving a statement that referred to no actual forms). If
+a bridge cannot be built honestly, leave the `sorry` with a boundary
+comment and say so — an honest partial is a valid outcome; a
+placeholder that elaborates is not.

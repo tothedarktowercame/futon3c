@@ -9,6 +9,7 @@ PHASE_B = {"problem_id": "a96J09", "bundle_path": "/x/problems/a96J09/",
 CLOSER = {"problem_id": "a96J09", "hop_n": "1",
           "main_lean_path": "problems/a96J09/lean/Main.lean",
           "base_commit": "abc1234", "sorry_count": "1",
+          "boundary_framing": "This is hop 1; no prior hop exists.",
           "boundary_excerpt": "-- searched Foo.bar; bridge = baz",
           "statement_hash": "sha256:deadbeef"}
 SCRIBE = {"problem_id": "a96J09", "session_jobs": "invoke-1, invoke-2",

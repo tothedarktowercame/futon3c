@@ -328,6 +328,13 @@ class Runner:
                     "main_lean_path": str(lean_rel),
                     "base_commit": shas[-1] if shas else "unreported",
                     "sorry_count": str(gate_payload.get("gate-results", {}).get("sorries", "unknown")),
+                    "boundary_framing": (
+                        "A prior hop left the boundary comment below. It records"
+                        " what that hop reported, not necessarily the artifact's"
+                        " current state — re-read the source before trusting it."
+                        if chain["hops"] else
+                        "This is the first hop; the excerpt below is the sorry"
+                        " site as committed, not a prior hop's report."),
                     "boundary_excerpt": self.deps.boundary(problem_id, gate_payload),
                     "statement_hash": str(chain["statement-hash"]),
                 })
@@ -430,7 +437,7 @@ class Runner:
         packets = [
             ("phase-a", {"problem_id": problem_id, "bundle_path": str(bundle)}),
             ("phase-b", {"problem_id": problem_id, "bundle_path": str(bundle), "main_lean_path": str(main_lean_path(problem_id))}),
-            ("closer", {"hop_n": "1", "problem_id": problem_id, "main_lean_path": str(main_lean_path(problem_id)), "base_commit": "DRY-RUN", "sorry_count": "unknown", "boundary_excerpt": "(available after mechanical gate)", "statement_hash": "DRY-RUN"}),
+            ("closer", {"hop_n": "1", "problem_id": problem_id, "main_lean_path": str(main_lean_path(problem_id)), "base_commit": "DRY-RUN", "sorry_count": "unknown", "boundary_framing": "(dry run: no hop history)", "boundary_excerpt": "(available after mechanical gate)", "statement_hash": "DRY-RUN"}),
             ("scribe", {"problem_id": problem_id, "session_jobs": "DRY-RUN", "commit_sha": "DRY-RUN", "output_dir": str(Path(self.config["scribe_root"]) / f"{problem_id}-scribe")}),
         ]
         for name, params in packets:

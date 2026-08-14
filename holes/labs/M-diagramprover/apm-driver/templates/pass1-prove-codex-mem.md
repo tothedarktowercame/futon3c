@@ -25,7 +25,7 @@ For EACH problem in your set, in order:
 1. Read the statement and `problems/<id>/informal-solution.md`.
 2. DESK RESEARCH IS PART OF THE JOB — not an optional preliminary.
    Consult, and say what each returned:
-   - **`LEMMA-INDEX.md`** at the repo root — 1037 helper lemmas ALREADY
+   - **`LEMMA-INDEX.md`** at the repo root — every helper lemma ALREADY
      PROVED here, with signatures. GREP IT FIRST; do not re-derive
      something the corpus has proved. `LIB:` rows import directly; the
      rest name the problem whose file holds the proof, so read it there
@@ -81,3 +81,14 @@ LIST OF EVERY RESOURCE CONSULTATION (what, what it returned, used or
 discarded and why) — then a closing note
 listing any statement you believe is WRONG as stated, with your reason
 (this feeds statement review; it does not authorize you to change it).
+
+NEVER INTRODUCE `opaque` OR `axiom`. Not for the statement, not for a
+helper, not to make something elaborate. An `opaque` constant has no
+defining equations, so nothing about it can ever be proved, and an
+`axiom` pollutes `#print axioms` at the gate — both are now detected
+and downgrade the outcome to `defective`. Eight artifacts were lost
+this way (one fabricated wedge, oriented integration AND the exterior
+derivative, leaving a statement that referred to no actual forms). If
+a bridge cannot be built honestly, leave the `sorry` with a boundary
+comment and say so — an honest partial is a valid outcome; a
+placeholder that elaborates is not.

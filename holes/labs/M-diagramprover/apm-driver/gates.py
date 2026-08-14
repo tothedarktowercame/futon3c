@@ -198,10 +198,24 @@ def extract_main_statement(source: str, problem_id: str | None = None,
                 f"frozen main theorem {expected_name!r} not found in source")
     if match is None and problem_id:
         wanted = problem_id.lower()
+        # EXACT `apm_<id>` first, substring only as a fallback. The substring
+        # scan takes the FIRST theorem containing the id, so a closer that
+        # legitimately factors out `apm_a94J06_at_zero` above the main theorem
+        # silently re-keys the contract to that helper: a94J06's statement was
+        # then byte-identical yet hashed differently, the gate returned
+        # void-statement-changed, and a real close was discarded. Same defect
+        # the axiom probe had (t97J01). Exactly 2 of 447 artifacts were
+        # mis-keyed when this was written, and both are re-frozen alongside it.
+        exact = f"apm_{wanted}"
         for candidate in matches:
-            if wanted in candidate.group(1).lower():
+            if candidate.group(1).lower() == exact:
                 match = candidate
                 break
+        if match is None:
+            for candidate in matches:
+                if wanted in candidate.group(1).lower():
+                    match = candidate
+                    break
     if match is None:
         if len(matches) == 1:
             match = matches[0]
@@ -417,6 +431,56 @@ def _run_lean(
         }
 
 
+OPAQUE_RE = re.compile(r"(?m)^\s*opaque\s+([A-Za-z_][A-Za-z0-9_'.]*)")
+
+
+def opaque_declarations(source: str) -> list[str]:
+    """Names introduced by ``opaque``, i.e. constants with NO definition.
+
+    A statement quantifying over one is not about the object the source names:
+    `opaque windingNumber : ℤ` makes `windingNumber γ ≠ 2` a claim about an
+    unknown integer. Eight artifacts did this, one fabricating an entire
+    differential-forms apparatus (wedge, oriented integral, exterior
+    derivative) so that nothing in the statement referred to forms at all.
+
+    Neither existing gate sees this: the file has no ``sorry``, and ``opaque``
+    introduces no axioms — a theorem about one prints "does not depend on any
+    axioms", so the axiom sweep passes it.
+
+    Comments are stripped first: several of these files DISCUSS opacity in
+    prose, and a raw grep counts that as a declaration.
+    """
+
+    return OPAQUE_RE.findall(strip_comments(source))
+
+
+AXIOM_WHITELIST = frozenset({"propext", "Classical.choice", "Quot.sound"})
+
+
+def impure_axioms(output: str, theorem_name: str) -> list[str]:
+    """Axioms outside the accepted kernel set, from ``#print axioms`` output.
+
+    Read the COMBINED output, not the single line ``_axiom_line`` returns:
+    Lean wraps a long bracketed list across lines, so a line-scoped match
+    silently truncates it. b95J01 carried seven ``native_decide`` axioms and
+    the list wrapped after the second.
+
+    Split on commas and strip per element rather than deleting spaces — a
+    wrapped element arrives as ``"\\nClassical.choice"``, which fails the
+    whitelist and reads as a defect in every artifact.
+    """
+
+    match = re.search(
+        rf"'{re.escape(theorem_name)}' depends on axioms: \[([^\]]*)\]",
+        output,
+        re.S,
+    )
+    if not match:
+        return []
+    found = {part.strip() for part in match.group(1).split(",") if part.strip()}
+    return sorted(found - AXIOM_WHITELIST)
+
+
 def _axiom_line(output: str, theorem_name: str) -> str | None:
     for line in output.splitlines():
         if theorem_name in line and (
@@ -447,12 +511,16 @@ def run_axiom_probe(
             repo_root=repo_root,
             timeout_seconds=timeout_seconds,
         )
-    combined = result["stdout"] + "\n" + result["stderr"]
+    # `.get`, not `[...]`: the probe must never be the thing that takes the
+    # gate lane down. A result without captured output is simply a probe that
+    # told us nothing, which the caller already handles as `axiom-probe-failed`.
+    combined = (result.get("stdout") or "") + "\n" + (result.get("stderr") or "")
     return {
-        "exit-code": result["exit-code"],
-        "timed-out": result["timed-out"],
+        "exit-code": result.get("exit-code", 1),
+        "timed-out": result.get("timed-out", False),
         "line": _axiom_line(combined, qualified_name),
-        "stderr-tail": result["stderr-tail"],
+        "impure": impure_axioms(combined, qualified_name),
+        "stderr-tail": result.get("stderr-tail", ""),
     }
 
 

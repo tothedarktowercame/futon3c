@@ -372,3 +372,86 @@ def test_adding_a_helper_is_not_drift():
 def test_a_comment_that_looks_like_a_theorem_is_not_a_claim():
     commented = MULTI + "/- theorem ghost : False := by sorry -/\n"
     assert "ghost" not in gates.declaration_hashes(commented)
+
+
+def test_native_decide_axioms_are_impure():
+    """The defect that reached `proved` three times: a zero-sorry artifact
+    trusted to the compiler rather than checked by the kernel."""
+
+    out = ("'apm_b95j01' depends on axioms: [propext, Classical.choice, "
+           "apm_b95j01._native.native_decide.ax_1_4]")
+    assert gates.impure_axioms(out, "apm_b95j01") == [
+        "apm_b95j01._native.native_decide.ax_1_4"]
+
+
+def test_the_accepted_kernel_set_is_pure():
+    out = "'apm_x' depends on axioms: [propext, Classical.choice, Quot.sound]"
+    assert gates.impure_axioms(out, "apm_x") == []
+
+
+def test_a_wrapped_axiom_list_is_read_whole():
+    """Lean wraps a long list across lines. Matching one line truncates it, and
+    stripping spaces instead of per-element leaves `\\nClassical.choice`, which
+    fails the whitelist and marks every artifact defective."""
+
+    out = ("'apm_x' depends on axioms: [propext,\n Classical.choice,\n"
+           " Quot.sound,\n apm_x._native.native_decide.ax_1_2]")
+    assert gates.impure_axioms(out, "apm_x") == ["apm_x._native.native_decide.ax_1_2"]
+
+
+def test_sorry_axiom_is_impure():
+    out = "'apm_x' depends on axioms: [propext, sorryAx]"
+    assert gates.impure_axioms(out, "apm_x") == ["sorryAx"]
+
+
+def test_axioms_of_another_theorem_are_not_read():
+    """Two probes in one output must not cross-contaminate."""
+
+    out = ("'apm_helper' depends on axioms: [sorryAx]\n"
+           "'apm_x' depends on axioms: [propext, Quot.sound]")
+    assert gates.impure_axioms(out, "apm_x") == []
+
+
+def test_missing_probe_output_is_not_a_defect():
+    """No line means the probe did not run — that is `axiom-probe-failed`,
+    decided by the caller, not a positive finding of impurity."""
+
+    assert gates.impure_axioms("", "apm_x") == []
+
+
+def test_opaque_declarations_are_found():
+    """`opaque c : T` is an uninterpreted constant; a statement over one is not
+    about the object the source names, and no axiom appears to betray it."""
+
+    source = ("opaque windingNumber (g : Nat) : Int\n"
+              "theorem apm_x (g : Nat) : windingNumber g ≠ 2 := by sorry\n")
+    assert gates.opaque_declarations(source) == ["windingNumber"]
+
+
+def test_prose_about_opacity_is_not_a_declaration():
+    """Several of these files discuss opacity in comments; a raw grep counts
+    that as a declaration and t02A08 was miscounted exactly that way."""
+
+    source = ("/-- This models an\nopaque integer-valued operation. -/\n"
+              "def real (n : Nat) : Nat := n\n")
+    assert gates.opaque_declarations(source) == []
+
+
+def test_a_prefixed_helper_does_not_capture_the_main_statement():
+    """a94J06's closer factored out `apm_a94J06_at_zero` ABOVE the main theorem.
+    The substring scan took it, so the contract silently re-keyed to a helper:
+    the statement was byte-identical yet hashed differently, the gate returned
+    void-statement-changed, and a genuine close was thrown away."""
+
+    source = ("theorem apm_x00A01_at_zero : True := trivial\n"
+              "theorem apm_x00A01 (n : Nat) : n + 0 = n := by simp\n")
+    name, _norm, _digest = gates.statement_hash(source, "x00A01")
+    assert name == "apm_x00A01"
+
+
+def test_substring_match_still_covers_legacy_names():
+    """Artifacts predating the apm_<id> convention must keep resolving."""
+
+    source = "theorem legacy_x00A01_main : True := trivial\n"
+    name, _norm, _digest = gates.statement_hash(source, "x00A01")
+    assert name == "legacy_x00A01_main"
