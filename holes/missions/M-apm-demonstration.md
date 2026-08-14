@@ -4938,3 +4938,85 @@ not yet falsifiable. **Making it a prediction would need a bound**: cycles, or
 wall-clock, before the loop produces a deposit that measurably lowers `L(i)`.
 Offered as a question rather than assumed: *what would count as "quickly"?*
 P1 is falsifiable; this is not, and the difference should not blur.
+
+## I.7 The substrate as the only channel — I.6's constraint made structural
+
+**Joe, 2026-08-14:** *"Claude's hints to Zai are not going to be direct bells,
+but rather, **changes to the memory substrate** based on observing how Zai fails
+and Codex succeeded. Zai can get 10 attempts like Codex, but **no hints that are
+not mediated through the substrate**."*
+
+**This supersedes I.6's constraint and is better in kind.** I wrote *"assistance
+must be a post-close role event"* — enforceable only by care, and silently
+violable, which is the failure mode this mission exists to remove.
+
+> **Joe's version removes the possibility instead of forbidding the act. There
+> is no channel by which Claude could hint except the one being measured.**
+
+That is F9's own shape — *do not rely on a rule where you can remove the
+capability* — applied to the experiment's design rather than to its code.
+
+### Four consequences, none of which required extra machinery
+
+**1. The channel becomes the measurement.** Every assist is *by construction* a
+substrate write: recorded, retrievable, attributable. A hint that bypassed the
+substrate would have been indistinguishable from a recalled memory in the trace
+(I.6). Now it cannot exist.
+
+**2. F3 and F7 become satisfiable honestly, automatically.** Every deposit is an
+**offer**; Zai's consultation or non-consultation is a **disposition**. The
+thing absent from the entire historical record — *the disposition* — is now
+**unavoidable**, because the substrate is the sole conduit. I.1 blocked because
+replay could not produce offers honestly; **this produces them as a side effect
+of the design.**
+
+**3. The arc-lane moves onto the critical path.** *"Observing how Zai fails and
+Codex succeeded"* **is** the arc-lane (`error→fix spans → scoped tactic rewrite
+rules`), and writing the deposit **is** its output. D.19 found that lane
+specified, demonstrated four times, and never run — because nothing depended on
+it. **Now the intervention is nothing but the lane.** It cannot silently not-run,
+because if it does not run, nothing happens at all.
+
+**4. The memory system stops being an accessory and becomes the treatment.**
+The experiment is now literally: *does writing to the substrate change what Zai
+can do?* That is N5 and N3, asked directly.
+
+### Design, with the contrast preserved
+
+Symmetric budgets — **10 attempts each tier** — which also makes the tiers
+comparable on attempt count rather than requiring a conversion.
+
+| arm | substrate | yields |
+|---|---|---|
+| **control** | **frozen** for the whole run | `L(i)` trajectory with no intervention |
+| **treatment** | Claude writes between attempts, per observed failure | `L(i)` trajectory **plus** per-write dose-response |
+
+**Both the contrast and the trajectory are available.** The contrast answers
+*did the substrate help?*; the trajectory answers *which write helped, and by how
+much* — a finer signal than a single with/without comparison, and free.
+
+### The F5 interaction, which must not be missed
+
+**A substrate write mid-run is a regime change.** F5 forbids a measurement
+spanning a regime boundary unstratified — and the treatment arm deliberately
+crosses one *between every attempt*.
+
+**This is not a contradiction; it is a granularity error waiting to happen.**
+The fix is schema-level:
+
+> **`:cycle/regime` becomes per-attempt, not per-cycle.** Each attempt records
+> the substrate revision in force when it ran, so the trajectory is a sequence
+> of *named* regimes rather than an undifferentiated run.
+
+Without that change the treatment arm would violate F5 by construction, and the
+violation would be invisible — the cycle would report one regime while having
+had ten. **Recorded as a required schema amendment before frame-1.**
+
+### What this closes
+
+I.1's blocking gap was that replay could not honestly satisfy the capability
+invariants. **This design satisfies them by construction rather than by
+replay** — offers exist because deposits are the only intervention, dispositions
+exist because Zai either consults or does not, and both are recorded because the
+substrate is the channel. **The harness no longer needs history to demonstrate
+itself.**
