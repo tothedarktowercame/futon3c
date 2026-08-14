@@ -3629,3 +3629,107 @@ it cost one operator correction and two wrong guesses on my part (A.10's "sole
 constructor", A.12's "definitional, therefore closed"). Recorded plainly: the
 method existed, was reachable, and I proposed building it twice before reading
 it. **Thirteenth instance, mine.**
+
+---
+
+# VERIFY — readiness assessment and spike design
+
+*Joe, 2026-08-14: "we have iterated twice on DERIVE and once on ARGUE — are we
+ready to go to VERIFY? In this case, that could possibly be done by making fake
+data for a frame-0 and feeding it through the Lean code to produce relevant
+witnesses; if that works we could implement in the spec-locked Clojure and be
+confident tests & procedures would work in reality."*
+
+## V.0 Are we ready? Yes — and the gaps are VERIFY's work, not blockers
+
+Per the lifecycle, VERIFY is *"check the architecture against constraints
+**before** committing to full implementation… targeted risk reduction."* Its
+exit criterion is that risks which cannot be verified statically **have been
+spiked**. That is precisely the state we are in.
+
+**What is ready:** a consolidated DERIVE candidate plus two amendment rounds; an
+independent blinded ARGUE; three defects found, repaired and re-verified at the
+semantic level; a Lean file that typechecks and refuses launch on invariant
+failure.
+
+**What is not, recorded honestly:**
+
+| gap | disposition |
+|---|---|
+| ARGUE exit clause 2 — outsider comprehension of §A.8 | **untested**; needs a person, not a phase |
+| formalisation is **two amendments behind** the design — stage 2 (C, F10, tiered S, student floor) *and* the A.13/A.14 bridge + F11 material | VERIFY work item |
+| no futon5 wiring diagram | VERIFY item 1 — draw it, or record why skipped |
+| GF fidelity check (D.10's preserve/adapt matrix) | VERIFY item 4 — tripwires not yet confirmed to exist |
+
+None blocks entry. All four are things VERIFY exists to surface.
+
+## V.1 Joe's spike is the right one — with a scope limit
+
+**The method is correct**: synthetic frame-0 → Lean → witness. It is exactly the
+lifecycle's *"minimal spike to validate the riskiest DERIVE commitments."*
+
+**But A.13 constrains what it can establish.** Lean sits entirely on the model
+side. A witness produced from fabricated data shows that **the registration
+machinery is coherent and satisfiable** — it says nothing about whether a
+running system satisfies it.
+
+> **IF** the spike produces a witness, **HOWEVER** the data was fabricated to be
+> well-formed, **THEN** the confidence gained is about the **specification**, not
+> about reality, **BECAUSE** the model–artifact bridge is exactly what a
+> model-internal exercise cannot test — and mistaking one for the other is the
+> failure §20 of `TN-baldwin-reboot` documents.
+
+That does not weaken the spike; it names its yield precisely. **"Be confident
+tests & procedures would work in reality" should read: be confident the spec is
+implementable and internally consistent.** Reality gets checked by the bridges
+(A.14), once Clojure exists.
+
+## V.2 The spike must include negative cases — or it proves nothing
+
+A frame-0 constructed to satisfy the observables demonstrates only that
+satisfiable observables are satisfiable. We adopted the rule that forbids this
+one phase ago:
+
+> *"A test that cannot fail is worth nothing."* (§18.4, adopted at A.14)
+
+So the spike is **not one trace, it is a matrix**:
+
+| case | construction | expected |
+|---|---|---|
+| **positive** | a well-formed frame-0 satisfying every observable | `ReadyToRun` **inhabited** — a witness is produced |
+| **negative × F2…F9** | one trace per invariant, violating exactly that one | `IsEmpty (ReadyToRun …)` — launch refused |
+| **negative × F1** | a scaffold-identical closing frame | **must not compile** |
+
+The negatives are nearly free: `no_round1_witness_of_failed_invariant` is
+already proved, so each case is an instantiation rather than a new proof.
+
+**The F1 row is the interesting one.** After the repair, `WorkedFrame` carries
+`changed : closingHash ≠ scaffoldHash` as a field, so a scaffold-identical frame
+is **unconstructible**. Its negative test therefore is not "the observable
+reports false" but **"this code does not typecheck"** — the strongest available
+outcome, and worth demonstrating explicitly rather than assuming.
+
+## V.3 What the spike would settle, and what it would not
+
+**Settles:** that the registration is satisfiable at all; that every invariant
+can be independently violated and independently refuses launch; that F1's
+guarantee is structural rather than nominal; that the observable set is not
+vacuous.
+
+**Does not settle:** anything about a running solver; the `L(i)` weights, the
+retrieval pass bar or the need-vocabulary rule (all deferred to pilot
+observation by D.13); the student-tier floor; or whether the Clojure implements
+what the Lean says — that is the bridge, and it is VERIFY's *other* half.
+
+## V.4 Recommended sequence
+
+1. **Spike the matrix above** — positive, F1-doesn't-compile, and one negative
+   per remaining invariant.
+2. **Completion-criteria pre-check** (lifecycle item 3) against §1.5's seven
+   criteria — cheap, and it may expose a criterion the design silently drops.
+3. **GF fidelity check** (item 4) against D.10's preserve/adapt matrix.
+4. **Wiring diagram** — draw or record why skipped.
+5. Only then: spec-locked Clojure, with a bridge per invariant (A.14's
+   six-part method).
+
+**Gate is Joe's.** Nothing spiked yet.
