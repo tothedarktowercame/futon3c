@@ -161,10 +161,48 @@ verbatim from the session, not paraphrase.
 
 ## 1. IDENTIFY *(draft — gated)*
 
-### 1.1 Motivation
+### 1.1 Motivation — the gap, in the operator's words
 
-The discrepancy: the capability proof certifies only its **enabling** nodes.
-Sorting v1's own warrant table by certification makes the gap exact —
+Joe, 2026-08-14, naming what two days of work have been circling:
+
+> "At the level of IDENTIFY, I'd say the key gap is what we've now spent 2 days
+> trying to even get our heads around —
+> **(1)** how much evidence of success was there from the initial APM work?
+> **(1a)** How much evidence was there from the initial APM work, full stop?
+> E.g. we had 'one' success across — how many runs?
+> and **(2)** can we demonstrably build a system that gathers evidence from the
+> first cycle, and that **(2b)** plausibly will show improvement at each
+> iteration."
+
+**These four questions are the gap.** They are not answered here; answering
+them is MAP's job (§MAP). What IDENTIFY can state is *why they are hard*, and
+that diagnosis is the mission's actual motivation:
+
+#### The structural problem: numerators without denominators
+
+Every positive result on record is a **numerator**. The denominator has never
+been stated.
+
+| the numerator we cite | the denominator nobody has stated |
+|---|---|
+| *one* end-to-end demand→build→closure revolution (V3 §6) | out of how many demand cycles? how many votes reached threshold and produced nothing? |
+| *one* rewrite found at 0.77 cosine (glue census) | out of how many rewrites looked for? |
+| 17 of 45 adjudicated load-bearing | 45 out of 130 jobs surfaced memory IDs at all; 129 offered halves → 114 joins → **20 metric-bearing rows (15.5%)** |
+| Steinhaus closed end-to-end under automation | out of how many chains attempted? |
+| 0 → 21 store lookups on task framing (E9/E10) | the one contrast that *does* carry its own denominator |
+
+So (1) cannot be answered as a rate, and (1a) — *how much evidence exists at
+all* — turns out to be the prior question, because the observation channel is
+admitted selective: only 15.5% of offered rows became metric-bearing.
+
+**This is the same failure as the guiding light, one level up.** The evidence
+was not missing; it was uncountable — recorded in a form where the total was
+never fixed, so no result could be expressed as a fraction of anything.
+
+#### Why the warrant table looks the way it does
+
+The certified/uncertified split is a *symptom* of the above, not the disease.
+Sorting v1's own table:
 
 | certified (scaffolding) | uncertified (the thesis) |
 |---|---|
@@ -174,15 +212,29 @@ Sorting v1's own warrant table by certification makes the gap exact —
 | N4 agents consult when instructed — n=1 (ctrl) | **N8 learns at ability level — designed** |
 | N9 the pipeline runs — n=2 | |
 
-Everything certified amounts to "a relay exists, runs, and hands work between
-agents." That is the reading Joe calls uninteresting, and the table proves it
-rather than merely permitting it.
+Everything certified is an *existence* claim — a thing happened at least once —
+and existence claims need no denominator. Everything uncertified is a *rate* or
+*trend* claim, which cannot be stated without one. **The table is not evidence
+of dishonesty or of a weak pipeline; it is evidence that the programme has been
+able to certify exactly the class of claim that does not require counting.**
 
-**Correction carried from `capability-proof-apm-v2-plan.md` §8.1:** N8 is
-*mis-graded*. V3 §6 witnesses a complete demand→build→closure revolution
-(`10eac91b` → `a266157d`), so N8 is `inductive-n=1`, not `designed`. Neither
-document cited the other — itself a Leopard instance, a witness that existed
-where the document needing it could not see it.
+*(Correction carried from `capability-proof-apm-v2-plan.md` §8.1: N8 is
+mis-graded — V3 §6 witnesses it at n=1. But n=1 of an unstated denominator is
+still not a rate, which is exactly Joe's point.)*
+
+#### What (2) and (2b) then ask for
+
+Not "instrument the loop" in the abstract. Specifically:
+
+- **(2)** a system where **cycle one already yields evidence** — the
+  denominator fixed in advance, so the first round is countable rather than
+  retrospectively reconstructible;
+- **(2b)** and where **iteration plausibly improves** — which requires the
+  round-to-round quantity to be comparable, i.e. the difficulty and
+  retrieval-regime controls named in the carried-forward tensions.
+
+(2b) says *plausibly*, not *provably*. That is the right bar for IDENTIFY: the
+mission must show the design could exhibit improvement, not that it has.
 
 ### 1.2 Theoretical anchoring
 
@@ -285,21 +337,62 @@ External: Codex lanes for implementation under the handoff protocol;
 
 ## MAP *(not started)*
 
-**Exit condition:** every row of the N-register (§1.4) resolved to
-*already-done / partly-done / greenfield*, with evidence. Until then no
-ordering, no keystone, and no endpoint definition is adopted.
+**Exit condition:** Joe's (1) and (1a) answered with denominators, and every
+row of the N-register (§1.4) resolved to *already-done / partly-done /
+greenfield*, with evidence. Until then no ordering, no keystone, and no
+endpoint definition is adopted.
 
-Survey questions to answer with concrete findings, not speculation:
+MAP is research: it produces facts, not decisions.
 
-- **Q1** Which measurement-vector quantities are *already* emitted by the loop,
-  and which need new bookkeeping? (Anything needing new bookkeeping will not
-  survive contact with a campaign.)
-- **Q2** What does the hunger audit currently record, and what would running it
-  at campaign scale cost?
-- **Q3** Is there a difficulty signal already in the corpus usable for
-  stratification (closer_hop? sorry count at formalization? problem family?).
-- **Q4** What is the true corpus closure under a comment-aware sorry detector?
-- **Q5** Which held-out set — BPM or arXiv — has the better-formed selection
-  diagram, i.e. where is `S` most separable from the pipeline edge?
-- **Q6** What is the batch-2 regime boundary in commit terms, and how many
+### Track A — answer (1a) first: how much evidence exists, full stop?
+
+The prior question, because (1) is a fraction of it.
+
+- **A1** What is the **complete inventory of runs** the APM programme has
+  executed — across the 130 frozen job results, the conductor ledgers
+  (`apm-conductor-log.edn` 5,564 lines / v2 1,854 / v3), the bridge-pilot
+  jobs, the escalation queue, and the campaign ledger? Deduplicated, with a
+  stated definition of what counts as one run.
+- **A2** For each run, is the outcome **recoverable**? The V2 ledger reports
+  91 completion events over 73 unique problems, 15 proved / 76 partial. Does
+  that reconcile with the 475 `status.json` files and the 186 at zero sorries?
+- **A3** Why did **only 15.5%** of offered rows become metric-bearing
+  (129 offered → 114 joins → 20 metric-bearing)? Is the loss at emission,
+  join, or scoring? This determines whether the historical corpus can ever
+  yield rates, or only existence claims.
+- **A4** What is the true corpus closure under a **comment-aware sorry
+  detector**? (Current gauge is known to read low: E5, `a94A09`.)
+
+### Track B — then (1): how much of it is evidence of success?
+
+- **B1** For each numerator in §1.1, what is its denominator? Specifically:
+  how many demand cycles produced no artifact; how many rewrites were sought
+  vs found; how many chains were attempted vs closed.
+- **B2** Is there a **run-level record** that survived, or only
+  problem-level? A rate over problems is not a rate over attempts.
+- **B3** Which historical results carry their own denominator already?
+  (E9/E10 does — 0 vs 21 in a fixed design. Are there others?)
+
+### Track C — the N-register (§1.4): already-done / partly-done / greenfield?
+
+- **C1** Which measurement-vector quantities are **already emitted** by the
+  loop, and which need new bookkeeping? Anything needing new bookkeeping will
+  not survive contact with a campaign.
+- **C2** What does the hunger audit currently record, has it ever run, and what
+  would campaign scale cost?
+- **C3** Is there a difficulty signal already in the corpus usable for
+  stratification (`closer_hop`? sorries at formalization? problem family?).
+- **C4** Has any transport derivation been attempted, and does the causal
+  engine refuse it? Which held-out set — BPM or arXiv — has the better-formed
+  selection diagram?
+- **C5** What is the batch-2 regime boundary in commit terms, and how many
   problems fall each side of it?
+- **C6** Is the vote ledger machine-readable as a *series*, or only as a
+  snapshot? (14 concepts, three past threshold.)
+
+### Track D — (2): can cycle one be countable?
+
+- **D1** What would have to be fixed **in advance** for a first cycle to yield
+  a countable result — the denominator, the arms, the stopping rule?
+- **D2** Does `batch2r_pair.sh` plus the three preconditions already constitute
+  a countable cycle, or is something missing?
