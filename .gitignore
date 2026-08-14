@@ -65,3 +65,9 @@ capability-proof-arxiv.out
 # `data/` here would repeat the 2026-08-11 mistake above and deaden the
 # !data/… negations.
 logs/data/
+
+# 2026-08-14 (claude-2): apm-driver transient run state. Heartbeats and lane
+# logs are written continuously by the driver; the lock is process state. The
+# .jsonl ledgers beside them are NOT ignored — they are cited evidence.
+holes/labs/M-diagramprover/apm-driver/*.log
+holes/labs/M-diagramprover/apm-driver/.bridge-lane.lock
