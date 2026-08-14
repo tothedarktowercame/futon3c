@@ -4,8 +4,18 @@
 **Gate:** operator-acceptance — HEAD must be recognised as faithful to the
 mission's live shape before IDENTIFY hardens it. Per the lifecycle, the
 operator clears this by editing the file.
-**Gate:** operator-decision — IDENTIFY's completion criteria (§1.4) name
+**Gate:** operator-decision — IDENTIFY's completion criteria (§1.5) name
 thresholds that are proposals, not settled numbers.
+
+**Note on phase discipline (Joe, 2026-08-14).** An earlier draft of IDENTIFY
+carried design conclusions from `capability-proof-apm-v2-plan.md` — "N7 is the
+keystone", the measurement vector, `L(i)`'s form, a dispatch order — as though
+they were settled. They are not: they were written before any survey of what
+the loop already emits, which is MAP's job. They now live in the **N-register
+(§1.4)** as open directions, each with the question MAP must answer. The
+lifecycle is explicit that MAP "produces facts, not decisions"; importing
+DERIVE-level design into IDENTIFY is the failure HEAD's exit criterion warns
+about — pretending the unknowns have already been settled.
 
 Supersedes `E-apm-halftime-pre-go-live.md`, **closed 2026-08-14**: its 24
 items are discharged, corrected in place, or explicitly parked. What remains
@@ -176,39 +186,72 @@ where the document needing it could not see it.
 
 ### 1.2 Theoretical anchoring
 
-- **Constructive (BHK) reading of the capability claim** — retained from v1.
-- **Graded warrants with typed refusal** — retained from v1.
-- **Transportability via selection diagrams** (Pearl) for N6.
-- **Loss-function framing** — the operator's: each round emits measurables;
-  the claim becomes a slope, not a property.
-- **The reversed guiding light** as a new warrant condition: reachability by
-  the consumer's own vocabulary.
+Retained from v1 and not in question: the **constructive (BHK) reading** of the
+capability claim; **graded warrants with typed refusal**; **transportability
+via selection diagrams** for N6.
+
+Candidate, *not* adopted: a **loss-function framing** in which each round emits
+measurables and the claim becomes a slope rather than a property; and the
+**reversed guiding light** as a warrant condition (reachability by the
+consumer's own vocabulary). Both are the operator's, both are plausible, and
+neither has been tested against what the system already emits. See §1.4.
 
 ### 1.3 Scope in / out
 
-**In.** Instrumenting the loop so each round emits a measurement vector;
-defining `L(i)`; running the hunger audit at scale; discharging N6's
-derivation; revising `capability-proof-apm.tex` to v2; a demonstration on
-held-out BPM or arXiv proofs.
+**In.** Determining, for each uncertified node, whether the work is already
+done, partly done, or greenfield — and only then designing. A demonstration on
+held-out BPM or arXiv proofs. Revising `capability-proof-apm.tex` to v2.
 
 **Out (explicitly deferred).** Rewriting v1's warrant machinery — it is the
-contribution and survives intact. Substrate-2 reingest (Joe: not now). The
-`#uuid` gate (scoped, contained, not on this path). B/C/D packet residue.
+contribution and survives intact. Substrate-2 reingest. The `#uuid` gate.
+B/C/D packet residue.
 
-### 1.4 Completion criteria *(testable; thresholds are proposals — see Gate)*
+### 1.4 OPEN IN IDENTIFY — the N-register
 
-1. **N7 mechanical** — one round of the loop emits a complete measurement
-   vector, dry-run on the canned CT problem.
-2. **N5 graded against the users' contract** — retrieval answers engine-name
-   and structural-similarity queries (V3 §4.2), measured by a campaign-scale
-   hunger audit, not by generic relevance.
-3. **N8 as a slope** — `dL/d(problems seen) < 0` **within a fixed retrieval
-   regime named by hash**, with difficulty stratification pre-declared.
-4. **N6 discharged or refused** — the transport derivation carried out, or the
-   causal engine's refusal recorded.
-5. **A held-out demonstration** on BPM or arXiv proofs, satisfying all three
-   preconditions (headroom; arm independence; **elicitation verified**).
-6. **The capability proof revised** to rank nodes by load-bearing status and to
+Joe, 2026-08-14: *"your plan according to N-numbers from previous rounds could
+serve as a checklist for IDENTIFY — for example, 'N7 is the keystone' may be
+true but IDENTIFY would help us see what work (if any) has already been done,
+or whether this is a greenfield design issue … as they currently comprise a
+speculative design."*
+
+**Everything in `capability-proof-apm-v2-plan.md` §2 is speculative design.**
+It was written before any survey of what the loop already emits. It is retained
+as a *source of hypotheses*, not as a plan. Each node below is therefore left
+**open**, with the question MAP must answer stated as: *already done / partly
+done / greenfield?*
+
+| node | v1 grade | what is FACT | what is SPECULATION | MAP must determine |
+|---|---|---|---|---|
+| **N5** retrieval serves the need | weak | The defect is diagnosed (V3 §4.1, inverted relevance on a01A12). Users search by **engine names** and **structural similarity**, never concept vocabulary (V3 §4.2, twelve exit interviews). A repair shipped as a switchable contrast (`6521fd3a`), under live test as batch-2. | That the hunger audit is "the instrument", and that running it is "a measurement, not a build". | What does the hunger audit actually record today? Has it ever run? What would campaign scale cost? Is batch-2 concluded? |
+| **N6** transports to held-out | designed | v1 states it as a transport claim with selection variable `S`; the causal engine exists (backdoor/front-door/transportability). | That the derivation is discharge-able at all, and that BPM is the right held-out set. | Has any transport derivation been attempted? Does the engine refuse it? Which of BPM / arXiv has the better-formed selection diagram? |
+| **N7** outcomes scoreable | designed→mechanical | v1 names "delta-form endpoint, executed-witness-only scoring" but never defines the endpoint. 57 `receipt.json` files exist with a rich schema. Ledgers exist (`bridge-pilot-jobs.jsonl`, `escalation-queue.jsonl`, `axiom-audit.jsonl`). | **That N7 is "the keystone"**; the six-row measurement vector; `L(i) = cost + residual + rework`. None of this has been checked against what the loop emits. | Which vector quantities are **already emitted**? Which need new bookkeeping? Is there a scoring implementation already, in the driver or the gate? |
+| **N8** learns at ability level | designed | **Mis-graded.** V3 §6 records a complete demand→build→closure revolution (`10eac91b` → `a266157d`, merged `087924c`) closing a theorem that had survived three prior closer hops. The vote ledger exists: 14 concepts, three past threshold. | That N8 should be restated as `dL/d(problems seen) < 0`; that difficulty stratification is the right control. | Is the vote ledger machine-readable as a series? Is there a difficulty signal already in the corpus (`closer_hop`? sorries at formalization? family?) |
+
+**Consequence for ordering.** The v2 plan asserted an order (N7 first, then N8
+and N5, N6 last). That order rests on the keystone claim, which is itself
+speculative. **No order is adopted here.** MAP's findings determine it.
+
+**Consequence for the three preconditions.** Headroom, arm independence and
+elicitation-verified are *observed invalidators*, not design — they are facts
+about assays that failed, so they stay. What is speculative is promoting them
+to formal pass/fail conditions; that is a DERIVE decision.
+
+### 1.5 Completion criteria *(testable; thresholds are proposals — see Gate)*
+
+Stated so as not to presume the register's outcome:
+
+1. **Every N-register row resolved** to already-done / partly-done /
+   greenfield, with evidence — this is MAP's exit condition and this mission's
+   first real deliverable.
+2. **N7 carries a mechanical warrant**, by whatever endpoint DERIVE settles on.
+3. **N5 graded against the users' contract** (engine-name and
+   structural-similarity queries), not a generic relevance notion.
+4. **N8 stated in a checkable form** and evaluated within a fixed retrieval
+   regime named by hash.
+5. **N6 discharged or refused**, with the refusal recorded if so.
+6. **A held-out demonstration** on BPM or arXiv satisfying the three
+   preconditions.
+7. **The capability proof revised** to rank nodes by load-bearing status and to
    drop the miscalibrated odometer.
 
 ### 1.5 Relationship to other missions
@@ -241,6 +284,10 @@ External: Codex lanes for implementation under the handoff protocol;
 ---
 
 ## MAP *(not started)*
+
+**Exit condition:** every row of the N-register (§1.4) resolved to
+*already-done / partly-done / greenfield*, with evidence. Until then no
+ordering, no keystone, and no endpoint definition is adopted.
 
 Survey questions to answer with concrete findings, not speculation:
 
