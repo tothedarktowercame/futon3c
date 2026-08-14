@@ -3537,3 +3537,95 @@ A.12's claim — *the correspondence is definitional, so the boundary is closed*
 render is not well-formed. It does **not** establish that the running system does
 what the rendered model says. **That gap is exactly the model–artifact bridge,
 and it is open.** A.12 stands on the facts and is corrected on the conclusion.
+
+## A.14 The bridge exemplar, traced end to end
+
+Joe: *"if you look in the DarkTower repo you will see some experiments that we
+registered in connection with the futon5 work, and we should be able to trace
+through and find the associated CLean + Malli specs that validate the actual
+implementation."*
+
+**Traced. The pattern is complete, live, and mutation-tested — and it is the
+method this mission has been missing.**
+
+### The chain
+
+| layer | artifact | role |
+|---|---|---|
+| **registration** | `DarkTower/ExotypeLiftVariantPreregistration.lean` | **names the Clojure artifact**: `futon5/src/futon5/hexagram/lift.clj`, `futon5.exotype.efe/predict` |
+| **bridge** | `futon5/test/futon5/exotype/invariants_test.clj` — 37 KB, **25 tests** | machine-checked statements that the *artifact* respects bounds the *model* derives |
+| **falsifiability** | mutation testing (§18.4) | every mechanism verified to **kill a defect**, not merely to pass |
+| **declared holes** | four `hole-*` tests | what remains unchecked, named and executable |
+| **runtime shapes** | Malli 0.16.3 (futon3c: `envelope`, `proof_shapes`, `social/shapes`, `mission_shapes`) | validates records on the coordination side |
+
+*(Correction: futon5 itself uses no Malli — its bridges are `deftest` invariants.
+Malli is the futon3c-side shape layer. Both are artifact-side; they are not the
+same mechanism.)*
+
+### The test that settles A.13's story
+
+`permutation-writes-are-uniform-but-the-2015-bug-is-not` constructs the very map
+Lean could not express:
+
+```clojure
+(let [bug (mapv #(max (dec %) 0) (range 8))
+      counts (frequencies bug)]
+  (is (= 2 (get counts 0)) "position 0 is written twice")
+  (is (nil? (get counts 7)) "position 7 is never written")
+  (is (not= (into {} (map #(vector % 1) (range 8))) counts)
+      "the bug is therefore not a permutation, and not in the 8! family"))
+```
+
+Its docstring: *"This is `holes/F-what-the-propagator-actually-does.md` 5, **made
+executable**."*
+
+> **The claim that was *inexpressible* in Lean is asserted, and checked, in
+> Clojure.** The model held the refutation as a typing obstruction nobody could
+> query; the bridge asks it directly. That is "bridges before proofs" with a
+> worked instance, not a slogan.
+
+### What a `hole-*` test actually does — better than a docstring `sorry`
+
+`hole-the-objective-is-degenerate-over-its-entire-domain` does not assert
+correctness. It asserts the **current unsatisfactory state**, with a dated
+history of movement (`full 2 → 3`, `3 → 2`, `2 → 4`) and the reason each number
+changed — so any drift is caught and any improvement is visible.
+
+> **A declared hole is not a comment saying "unverified". It is a test pinning
+> exactly how unverified, so the number cannot move in silence.** That is
+> strictly stronger than the docstring-`sorry` of A.13, and §18.3 records the
+> upgrade path: *"The bound previously lived in a docstring, which is precisely
+> where §17 #3 walked past it."*
+
+### Anti-vacuity is built in — independently of us
+
+§18.1: the RNG scanner *"also asserts the scanner still sees sites of each
+class, so it cannot silently degrade into a vacuous pass if the file layout
+changes."*
+
+**That is the vacuity trap this mission hit four times, pre-empted in someone
+else's test file.** And §18.4 states the principle we reached as F11 from the
+other direction: *"a test that cannot fail is worth nothing."* **Mutation
+testing is F11's method** — it demonstrates the probe can fail, rather than
+asserting it.
+
+### The method this mission now adopts
+
+Each model-side invariant F1–F11 gets a bridge of this exact shape:
+
+1. **The registration names the artifact** — namespace, file, function.
+2. **An invariants test asserts the model's bound over the artifact**, not over
+   an idealisation.
+3. **Anti-vacuity clause** — the scan must still see instances of each class.
+4. **Mutation-tested** — reintroduce the real defect; confirm it is killed;
+   record which assertions failed.
+5. **`hole-*` test** for whatever remains unchecked, pinning the current numbers
+   with dated history.
+6. **Bounds live in tests, not docstrings.** A docstring is where the last one
+   was walked past.
+
+**This is the VERIFY phase's method, found rather than invented** — and finding
+it cost one operator correction and two wrong guesses on my part (A.10's "sole
+constructor", A.12's "definitional, therefore closed"). Recorded plainly: the
+method existed, was reachable, and I proposed building it twice before reading
+it. **Thirteenth instance, mine.**
