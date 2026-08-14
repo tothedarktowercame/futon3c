@@ -6078,3 +6078,84 @@ apparatus and no evidence, which is exactly what "ready to launch" means.
 A1 ✓ · A2–7 ✓ · A8 ✓ · B ✓ · I.19/I.21 schemas ✓ · **C ✓**
 
 **Frame-1 is ready to launch. Launching is Joe's call.**
+
+## I.24 The protocol gap — Joe is right, and two of the gaps are hard
+
+**Joe, 2026-08-14:** *"we have the apparatus but not necessarily the protocol —
+clean lanes, handoffs, bellback procedures — or is that all covered?"*
+
+**Not covered.** We have apparatus (harness, validator, gates) and *roles* (four
+cards). We do not have the **operational runbook**: who dispatches whom, in what
+order, how results return, and what happens when they do not.
+
+**Two of the gaps are not paperwork.** Both were found by checking rather than
+assuming.
+
+### ⚠ Gap 1 — the 120-minute stop cannot be independently verified
+
+`futon3c/src/futon3c/agency/mesh_qa.clj:18`, the Agency's own QA register:
+
+> **`:MQ-2 :capture-gap`** — *"invoke-jobs do not capture the requested
+> timeout/deadline; nonterminal timeout-window checks are gap findings."*
+
+**A job does not record the deadline it was given.** So `:teardown-deadline-passed`
+cannot be checked against the job log the way `no-direct-channel` can — the
+evidence isn't captured. We can *set* a 120-minute stop; we cannot *prove from
+the record* that it was honoured.
+
+**That is exactly the class I.10 said must be mechanical**, and it currently is
+not. Options: record the deadline in the cycle trace at dispatch time
+(self-reported — weaker), or fix `MQ-2` (Agency work, out of this mission).
+**Recorded as a known limit, not glossed** — the same treatment A8 got.
+
+*Related:* `:MQ-3 :partial` — *"bellback intent is not explicit; only edges with
+`:bellback-of` can be checked"* — so the return leg of a handoff is only
+partially auditable too.
+
+### ⚠ Gap 2 — there are not 10 Zai seats
+
+The design gives Zai **10 attempts, fresh per attempt** (I.9, forced by I.7:
+a persistent context is an unaudited channel).
+
+**Available locally: `zai-1` (idle), `zai-2` (restored), `air-1`.** Three.
+
+`registry.clj:804` has `reset-session!`, so freshness *may* be achievable by
+resetting one seat between attempts rather than by holding ten. **But that is
+untested for this purpose, and "fresh" then rests on `reset-session!` actually
+clearing context** — which is precisely the kind of claim this mission does not
+accept without a check.
+
+**Neither gap blocks writing the runbook. Both block trusting it.**
+
+### The rest of the runbook — ordinary, but absent
+
+1. **Seat allocation** — which concrete agents fill each role card, recorded in
+   the trace (`:cycle/solver-version` exists; the *seat* does not).
+2. **Dispatch sequence** — Claude bells Codex with what packet; how the closer
+   loop's guidance turns are counted as `RoleEvent :ground-control`.
+3. **Result return** — an attempt's outcome must become **entities**
+   (`Attempt`, `MemoryOffer`, `MemoryUse`, …) before `run-cycle!` can consume
+   them. **Nothing yet says who writes them.** Today the only candidate is
+   Claude — which is the guide/observer/adjudicator conflation already flagged.
+4. **Park discipline at scale** — 10 attempts is up to 10 dispatch/park cycles;
+   the protocol should say whether attempts are one job or ten.
+5. **Failure modes** — bell never returns; job dies mid-attempt; `run-cycle!`
+   throws at the F1 gate. Each needs a defined disposition, or a dead job
+   silently becomes a missing attempt.
+
+### Assessment
+
+**The apparatus is real and verified. The protocol is not written, and two of
+its preconditions are currently unverifiable.**
+
+That is a better position than it sounds: **both gaps were found by checking the
+Agency's own QA register and the live roster**, not discovered mid-run. The
+honest statement for the checkpoint is:
+
+> **Frame-1 can be launched. It cannot yet be launched with the same standard of
+> evidence the apparatus itself enforces** — the deadline is unverifiable and
+> runner freshness rests on an untested mechanism.
+
+**Recommendation:** write the runbook next, and treat Gaps 1 and 2 as its first
+two entries with their limits stated — rather than discovering at frame-1 that a
+stop rule cannot be evidenced. **Joe's call whether that precedes launch.**
