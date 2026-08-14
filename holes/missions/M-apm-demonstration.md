@@ -5725,3 +5725,112 @@ The party being guided and the party judging the outcome are the same agent.
 **Not a blocker for frame-1** — the disposition is mechanically constrained and
 the proctoring checks are independent — **but it is a confound to split before
 frame-20**, and better named now than discovered in the data.
+
+## I.19 Third stop — six missing schemas, and a category error in my own pre-flight list
+
+**codex-4 stopped again, enforcing the rule I wrote.** I.2 states *"a projection
+must be DERIVED from stored entities, never asserted alongside them"* — and the
+harness cannot produce the trace without asserting projections, because **six
+entities have no schema.** Verified: the registration is clean
+(`shape []`, `content []`); the gap is downstream of it.
+
+### The six, all real, all mine
+
+| missing | consequence |
+|---|---|
+| **Attempt** | the validator's own `attempt?` requires `:cycle/regime`, `:cycle/store-revision`, `:cycle/harness-revision`, `:cycle/runner-freshness` **per attempt** — I.7–I.9 named these as `:cycle/…` fields and **never said what stores them.** A per-attempt value cannot live on a Cycle as a scalar |
+| **StoreSnapshot** | I specified `:cycle/store-snapshot-id` and never the snapshot — so the membership test has an id pointing at nothing |
+| **CapabilityProbe** | nine probes with evidence ids required; I.2 defines neither the entity nor a derivation |
+| **RetrievalProbe** | in D.1, absent from I.2 — F7's available/retrieved projection has no stored content |
+| **ContainmentProbe** | Frame stores a probe *id and result*; the probe itself has no schema |
+| **LaunchGateEvent** | `launch-gate-refused-without-witness?` has no stored event to derive from |
+
+**The pattern in my error is consistent:** in I.7–I.9 I added *fields* to satisfy
+invariants and never asked **what entity holds them**. Naming a field is not
+specifying storage. That is the same shape as I.16's key-presence check — the
+easier half of the job, reported as the whole.
+
+### The schemas
+
+Ids qualified and deterministic, per D.1. `†` = projected into the trace.
+
+**Attempt** — `attempt/<cycle-id>/<n>`
+```
+:attempt/id :attempt/cycle :attempt/seq
+:cycle/regime† :cycle/store-revision† :cycle/harness-revision†
+:cycle/runner-freshness†          ; boolean, per I.9
+:attempt/started-at :attempt/ended-at
+:attempt/residual-sorries :attempt/stop-reason
+```
+
+**StoreSnapshot** — `snap/<cycle-id>` *(taken at round open)*
+```
+:snap/id† :snap/cycle :snap/taken-at :snap/memory-ids†
+```
+
+**CapabilityProbe** — `probe/<cycle-id>/<capability>`
+```
+:probe/capability† :probe/evidence-id† :probe/recorded?† :probe/at
+```
+
+**RetrievalProbe** — `rprobe/<cycle-id>/<n>`
+```
+:rprobe/id :rprobe/cycle :rprobe/need-vocabulary :rprobe/query
+:rprobe/retrieved-ids† :rprobe/available-ids† :rprobe/at
+```
+
+**ContainmentProbe** — `cprobe/<frame-id>`
+```
+:cprobe/id† :cprobe/frame :cprobe/claimed?† :cprobe/recorded?†
+:cprobe/passed?† :cprobe/readable-observed :cprobe/writable-observed :cprobe/at
+```
+
+**LaunchGateEvent** — `gate/<cycle-id>`
+```
+:gate/cycle :gate/refused-without-witness?† :gate/witness-id :gate/at
+```
+
+### The derivation map — the part I.2 omitted entirely
+
+| trace key | derived from |
+|---|---|
+| `:cycle/attempts` | `Attempt` entities for the cycle, ordered by `:attempt/seq` |
+| `:cycle/store-snapshot-id` / `-memory-ids` | `StoreSnapshot` |
+| `:capability-probes` | `CapabilityProbe` entities |
+| `:available-artifact-ids` / `:need-probe-retrieved-ids` | `RetrievalProbe` |
+| `:containment-claimed?` / `-recorded?` / `-passed?` | `ContainmentProbe` |
+| `:launch-gate-refused-without-witness?` | `LaunchGateEvent` |
+| `:measurement` | `Measurement` (`:meas/values`, `:meas/unset`) |
+| `:disposition-ids` | `Disposition` |
+| `:memory-offers` / `:memory-disposition-offer-ids` | `MemoryOffer` / `MemoryUse` |
+
+**Schemas without a derivation map are half a specification** — codex-4 named
+exactly that, and it was right to stop rather than invent the mapping.
+
+### The category error, which matters more
+
+codex-4 also checked the artifact: `t94J02`'s `Scratch.lean` is **empty
+scaffolding**, `Main.lean` is **statement plus `sorry`**. It noted that using git
+history to synthesise a solve *"would repeat the replay error this dispatch
+explicitly corrected."* **Correct — and it holds the line I set.**
+
+Which exposes a category error in my own pre-flight list:
+
+> **I listed "end-to-end demo" as a pre-flight item. It cannot be one.**
+> An honest end-to-end run needs a genuine solve. Replay is forbidden (I.1),
+> fabrication is forbidden. **Therefore the first honest end-to-end run *is*
+> frame-1.**
+
+**What genuinely can be built before frame-1:** the harness and its stage-level
+unit tests, **and the refusal paths** — a refusal test needs a deliberately-bad
+synthetic trace, not a genuine solve, so those are legitimate and testable now.
+
+**Revised:**
+
+1. Write the six schemas + derivation map *(done, above)*.
+2. Build the harness with **stage tests and refusal tests** — no end-to-end claim.
+3. **Frame-1 is the end-to-end demo.** Joe's call.
+4. Validate frame-1's emitted trace through the existing gate.
+
+**Not re-dispatched.** Three stops, three findings, and this one corrected the
+plan rather than the code.
