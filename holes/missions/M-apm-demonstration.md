@@ -128,9 +128,15 @@ out from APM, which makes it formally a transport claim.
 
 Named here so IDENTIFY does not pretend they are settled:
 
-1. **The odometer is miscalibrated.** v1 says ~27% closed; `status.json` gives
+1. **The odometer is miscalibrated.** ~~v1 says ~27% closed; `status.json` gives
    186/475 = 39.2%, and E5 showed that file *understates* closure. No
-   percentage should be quoted until a comment-aware sorry detector exists.
+   percentage should be quoted until a comment-aware sorry detector exists.~~
+   **RESOLVED 2026-08-14 (MAP A4/A4a).** A comment-aware detector now exists and
+   has been written twice independently, by claude-2 and ams-codex-1, agreeing
+   at **214/475 = 45.1%** over 448 source-bearing bundles. E5 was right that
+   `status.json` understates: the gauge reads 186. The tension is discharged —
+   but see A4a, because the first attempt at the replacement gauge was itself
+   miscalibrated, in the mission's own signature way.
 2. **`L(i)` needs a difficulty model.** Stratification or matching, declared in
    advance. Not yet designed.
 3. **N6's transport derivation is an unpaid obligation.** v1 states it
@@ -478,22 +484,91 @@ not recoverable from the frozen receipts.
 
 #### A4. Comment-aware closure
 
-There are 475 top-level `status.json` files; 403 point to at least one Lean
-file that currently exists, while **72 have no readable Lean file**. A lexer
-that removes nested `/- ... -/` comments, `--` comments, and strings before
-matching the `sorry` token finds:
+> ⚠ **RECONCILED 2026-08-14.** Track A first reported 403 source-bearing /
+> 185 zero-sorry / **38.9%**. Three independent counts disagreed; all three are
+> now accounted for exactly, and the figure is **214/475 = 45.1%**. The
+> reconciliation is recorded below because *how* the numbers were wrong is the
+> more useful result.
 
-- among the 403 bundles with Lean source, raw token scanning says 175 have no
-  `sorry`; comment-aware scanning says **185/403** have no code-level `sorry`;
-  the ten corrected comment-only cases include `a94A09`;
+There are 475 top-level `status.json` files. **448 have `lean/Main.lean` on
+disk**; **27 have no Lean source of any name**. A lexer that removes nested
+`/- ... -/` comments, `--` comments, and strings before matching the `sorry`
+token finds:
+
+- among the 448 bundles with Lean source, raw token scanning says 204 have no
+  `sorry`; comment-aware scanning says **214/448** have no code-level `sorry`;
+  the ten corrected comment-only cases are `a01A06`, `a01J01`, `a93A04`,
+  `a94A09`, `a94J02`, `a94J06`, `a95J06`, `a96A02`, `b00J04`, `m95A05`;
 - on the full 475-problem denominator, the evidence-backed closure gauge is
-  therefore **185/475 = 38.9%**, requiring a Lean file as well as zero
+  therefore **214/475 = 45.1%**, requiring a Lean file as well as zero
   code-level sorries;
-- a purely vacuous “zero sorries” detector would call all 72 missing-source
-  bundles zero and report **257/475 = 54.1%**. That is not closure evidence and
+- a purely vacuous “zero sorries” detector would call all 27 missing-source
+  bundles zero and report **241/475 = 50.7%**. That is not closure evidence and
   is reported only to expose the denominator trap.
 
-The existing 186/475 status gauge is neither of these. It counts 65
+##### A4a. How three counts of one corpus differed — and why it reconciles
+
+Three agents counted the same corpus and got 185, 203, and 214. Every step of
+the spread is now identified, with nothing left over:
+
+| count | who | predicate | value |
+|---|---|---|---|
+| 185/403 | ams-codex-1 | `status.json`'s `lean.files` / `lean.main` metadata | 38.9% |
+| 203/448 | oxf-claude-3 (Dionysus) | disk, raw `\bsorry\b`, at `origin/master` | 42.7% |
+| 204/448 | claude-2 (Zone) | disk, raw `\bsorry\b`, at `a92ffb6` | 42.9% |
+| **214/448** | claude-2 + ams-codex-1 (corrected) | disk, comment-aware | **45.1%** |
+
+Two independent bridges close the gap exactly:
+
+1. **185 → 214 is a predicate defect, not a corpus fact.** codex-1's predicate
+   read `status.json` metadata and never probed `problem_root/lean/Main.lean`
+   directly. Exactly **45 bundles have `lean/Main.lean` on disk but no
+   `lean.files` and no `lean.main` entry**, so they were silently excluded.
+   Of those 45, 29 are zero-sorry and 16 carry a code-level `sorry`:
+   403 + 45 = 448 and 185 + 29 = 214. codex-1 confirmed this itself and
+   retracted 185: *"my predicate accidentally measured metadata completeness."*
+   Running its own (stricter, depth-tracking) lexer over all 448 disk files
+   also yields 214 — so **two independently written comment-strippers agree**.
+2. **203 → 204 is one real byte-level divergence between hosts.** Zone is
+   `origin/master + 3`; those three commits touch exactly one `Main.lean` —
+   `problems/b01A04/lean/Main.lean`, which has **1 `sorry` at `origin/master`
+   and 0 at Zone's HEAD** (the case-1 b01A04 cyclotomic closure). Dionysus,
+   sitting clean at origin, cannot see it. 203 + 1 = 204, and 204 + 10
+   comment-only cases = 214.
+
+**Bundle inventory is identical across hosts** (475 / 448 / 27 on both), and
+the 27 source-less bundles are source-less on *both* — so no Lean source is
+missing from Zone. Dionysus's 8 "dirty" files are all **untracked** (`.bak`
+scratch files and staging dirs); zero tracked files are modified and zero
+`Main.lean` is dirty.
+
+**Method lesson, entered as evidence for the guiding light.** The error that
+produced 185 is the mission's own thesis in miniature: the source *was there*,
+on disk, readable — and the count missed it because it asked the index rather
+than the shelf. A file present but absent from the metadata that describes it
+is exactly "technically-present, not available." That the miscount landed in a
+gauge intended to *replace* a miscalibrated gauge is the sharpest available
+argument that the guiding light needs to be a mechanical check, not a slogan.
+
+**Staging lesson (oxf-claude-3).** Identical counts did **not** imply identical
+content: all three of 475/448/27 matched across hosts while the corpora still
+differed by a byte. Only a content digest caught it —
+
+```bash
+cd ~/code/apm-lean && ls -d problems/*/ | sort | while read d; do
+  f="$d/lean/Main.lean"; [ -f "$f" ] && printf "%s  %s\n" \
+    "$(sha256sum "$f" | cut -d' ' -f1)" "$(basename $d)"
+done | sha256sum
+# Zone a92ffb6 : b012d0bda61bca9e6a3db8a9d96a03e09ed627cdd9f4f778cd1dee9abda37f1e
+# Dionysus     : d4fe1417333725f181bb7da77c42d76cfb57fd646a5bfc65b1281c04dc548249
+```
+
+Since Zone carries three unpushed commits, **the commit sha and the bytes
+currently disagree about what "the corpus" is.** Joe's "we can now pin hashes
+to experiment stages" therefore needs either a push before staging, or a
+content digest as the pinned object. **Open decision for the operator.**
+
+The existing 186/475 status gauge is neither of these. It counts 25
 missing-source bundles as zero, six status-zero bundles now contain a real
 code-level `sorry`, and many nonzero status counts are stale relative to live
 source. Comment awareness corrects ten live-source false positives, but a
