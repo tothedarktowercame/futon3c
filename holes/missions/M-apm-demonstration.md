@@ -4259,3 +4259,89 @@ validation where value-equality is currently doing shape's job.
 
 **Explicit non-goals in the packet:** no generator, no arrow, no
 meta-specification. **This is the first RHS.**
+
+## V.12 The first RHS exists — verified, with the losses enumerated
+
+*(codex-4, `mmca-clj` commit `9d217d0`, pushed to `origin/main`. **Verified by
+claude-2, tests run independently.**)*
+
+Added: `src/mmca/apm_demonstration_preregistration.clj` (278 lines),
+`scripts/write_apm_demonstration_launch_authorization.clj` (45), and
+`test/mmca/apm_demonstration_preregistration_test.clj` (113).
+
+### Verification — I ran it, rather than accepting the claim
+
+| check | result |
+|---|---|
+| test suite, run by claude-2 | **111 tests, 333 assertions, 0 failures, 0 errors** — matches exactly |
+| self-naming failure keywords | **45 distinct**, `cond->`-accumulated — nearly 3× the exemplar's 17 |
+| bare boolean verdict anywhere | **none** |
+| authorization gated | `(when-not (:launchable? report) (throw …))`, plus a 40-hex SHA check |
+| generator / arrow / meta-spec | **none** — the only textual matches are the docstring *disclaiming* it: *"This is not a generator or a formal Lean-to-Clojure projection."* |
+| clj-kondo / check-parens | 0 errors, 0 warnings / `OK` |
+
+**The staleness check is better than specified.** I asked for the pin to be
+compared against repo state. It resolves *the last commit that changed the named
+Lean file* — the right granularity, since it only goes stale when that file
+moves — and distinguishes three outcomes: match, `:stale-lean-revision`, and
+`:lean-source-revision-unavailable`. The last is a refinement nobody asked for:
+**"I could not check" is not the same as "it is stale."**
+
+### The declines — one sound, one over-applying my own fence
+
+**Malli, declined:** *"`mmca-clj` intentionally has zero dependencies, and the
+small hand-written shape layer reports structural failures separately."*
+**Sound.** Malli's *job* was done — structural failures report separately
+(`:malformed-trace-boolean`) — while its *dependency* was declined. That is the
+correct way to decline a tool: implement the function, refuse the weight.
+
+**core.logic, declined:** *"using `run*` would effectively move toward
+generating the negative matrix — the explicitly excluded generator/meta-spec
+direction."*
+
+⚠ **This over-reads my fence, and the fence was mine to write clearly.** The
+prohibition was on a generator for the **Lean→Clojure correspondence** — an
+arrow, a projection, a meta-specification. **Generating negative test cases is
+a different thing**: it is mutation testing, and V.9 identified it as
+core.logic's one earning job.
+
+**The decline is nonetheless defensible on other grounds** — a first RHS should
+be maximally plain, and relational generation would blur what the instance *is*.
+So: right call, wrong reason. **core.logic remains available for negative-case
+generation without touching the arrow question**, and that should be said
+explicitly next time rather than left for the agent to infer.
+
+### The most valuable output: what does NOT survive the crossing
+
+codex-4 enumerated four things Lean expresses that EDN cannot. **This is A.13's
+model/artifact split, measured rather than argued.**
+
+1. **F1 degrades from unconstructible to detectable.** In Lean,
+   `WorkedFrame.changed` makes a scaffold-identical frame *impossible to build*.
+   In EDN the counterpart can only *report* `:f1-scaffold-identical-frame`.
+2. `DecisionRule` is a total function in Lean; EDN can require a named rule and
+   a non-empty outcome domain but **cannot prove totality**.
+3. Dependent proofs (non-empty pilot units, stop rules) become **runtime checks
+   rather than construction guarantees**.
+4. Round-one problem, variation endpoint, costs, teardown deadline, stop rules
+   and decision outcomes **remain caller-supplied. Nothing was invented.**
+
+**Item 1 has a direct consequence for INSTANTIATE.** A validator can only catch
+what the emitter already let through. **To preserve F1 across the boundary, the
+*frame emitter* must refuse to emit — the validator cannot restore a
+construction guarantee after the fact.** That is the concrete form of A.14's
+bridge requirement for F1, and it was invisible until an RHS existed to lose it.
+
+### Joe's question — is a formal arrow now definable?
+
+**My read: not yet, and the loss list is the reason.** It enumerates exactly
+where an arrow would be *lossy* — one construction guarantee, one totality
+claim, and a class of dependent proofs. Whether those four losses are **general**
+or **specific to this registration** cannot be known from a single instance, and
+an arrow abstracted from one example would encode this registration's
+particulars as if they were laws.
+
+**One more RHS — a second, structurally different registration — would settle
+it.** If the same four losses recur, they are the arrow's signature; if
+different ones appear, one instance was never going to be enough. **Joe's call,
+not mine.**
