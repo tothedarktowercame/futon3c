@@ -5020,3 +5020,79 @@ replay** — offers exist because deposits are the only intervention, dispositio
 exist because Zai either consults or does not, and both are recorded because the
 substrate is the channel. **The harness no longer needs history to demonstrate
 itself.**
+
+## I.8 One variable per round — the conjunction is the covert channel
+
+**Joe, 2026-08-14:** *"the only confound is that we can change either Zai's
+harness or the memory store during one run, **but not both**, because otherwise
+we'd create the possibility of actually feeding Zai the answer… If we change the
+memory store during the round to seed hints, we can't change the harness until
+after (any hints that are missed) — or vice versa… **So, we could alternate
+modes per round.**"*
+
+### Why the conjunction is the danger, and neither alone
+
+| changed | what it can do | what it cannot do |
+|---|---|---|
+| **store only** | add content | **make Zai find it** — the unmodified harness must retrieve it on its own merits, which is a genuine F7 test |
+| **harness only** | improve collection of *known* memories | **add an answer** — there is no new content to deliver |
+| **both** | **hand-deliver** — craft the content *and* the path that reaches it | — |
+
+> **A co-designed store+harness change is indistinguishable in the trace from a
+> genuine retrieval success.** That is I.6's problem one level up: there, a hint
+> looked like a recalled memory; here, a *delivered* answer looks like a
+> *retrieved* one.
+
+**IF** both channels are open in one round, **HOWEVER** the trace records only
+that a memory was surfaced and used, **THEN** the strongest possible result and
+the most complete self-deception produce **identical evidence**, **BECAUSE**
+nothing in the record distinguishes "the system found what it needed" from "we
+built a path to what we planted." Holding one fixed makes the retrieval do work
+it could not have been handed.
+
+### The alternation, and the backlog it generates
+
+| round | varies | frozen | the other channel's needs |
+|---|---|---|---|
+| **store-mode** | substrate content | harness | **hints that were missed** → motivates the next harness change |
+| **harness-mode** | retrieval/collection | substrate | **content gaps** → motivates the next store change |
+
+**The backlog is not overhead — it is the round's second output.** Each mode
+generates precisely the intervention the next mode needs: *"any hints that are
+missed"* in store-mode **is** the harness-change specification, measured rather
+than guessed. **The loop closes at the round level, not just the attempt level.**
+
+**Round 1 is store-mode** by necessity — there is no prior round to specify a
+harness change, and its deposit comes from observing Codex succeed while Zai
+fails, which is available within the round.
+
+### This simplifies the F5 problem I raised in I.7 rather than compounding it
+
+I flagged that a substrate write between attempts is a regime change, and the
+treatment arm crosses one every attempt. **Under alternation the regime is
+one-dimensional per round**: in store-mode the regime *is* the store revision
+with the harness fixed; in harness-mode the reverse. So the attempt-level regime
+sequence varies along **one named axis**, which is interpretable, rather than
+along an undifferentiated "the substrate changed somehow", which is not.
+
+### Make it structural, not disciplinary — per I.7's own lesson
+
+Mode adherence should not rest on Claude remembering. The registration declares
+the mode, and the trace carries both revisions:
+
+```
+:cycle/mode            #{:store-mode :harness-mode}
+:cycle/store-revision    ; per attempt
+:cycle/harness-revision  ; per attempt
+```
+
+> **New failure keyword: `:both-channels-varied`.** A cycle in which *both*
+> revision sequences change is refused — the validator can see it, so the
+> discipline does not have to.
+
+That is the same move I.7 made on hinting: **remove the possibility rather than
+forbid the act.** Without it, a mode violation would be a judgement call after
+the fact; with it, the cycle simply does not validate.
+
+**Recorded as a required schema amendment before frame-1**, alongside I.7's
+per-attempt regime.
