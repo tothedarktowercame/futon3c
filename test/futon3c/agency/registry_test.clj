@@ -11,7 +11,8 @@
             [futon3c.blackboard]
             [futon3c.social.shapes :as shapes]
             [futon3c.social.test-fixtures :as fix]
-            [futon3c.transport.ws.invoke :as ws-invoke]))
+            [futon3c.transport.ws.invoke :as ws-invoke])
+  (:import [java.util.concurrent CountDownLatch TimeUnit]))
 
 (use-fixtures
   :each
@@ -39,6 +40,109 @@
       (is (= 1 @broadcast))
       (is (zero? @announced)
           "fed_roster import must not trigger another fed_announce"))))
+
+(defn- await-latch!
+  [^CountDownLatch latch message]
+  (is (.await latch 3 TimeUnit/SECONDS) message))
+
+(defn- await-status-publish-idle!
+  []
+  (let [state (var-get
+               (ns-resolve 'futon3c.agency.registry
+                           '!agents-status-publish-state))
+        idle (promise)
+        watch-key (gensym "await-status-publish-idle-")]
+    (add-watch state watch-key
+               (fn [_ _ _ current]
+                 (when (= :idle (:phase current))
+                   (deliver idle true))))
+    (when (= :idle (:phase @state))
+      (deliver idle true))
+    (try
+      (is (true? (deref idle 3000 false))
+          "async status publisher should return to idle")
+      (finally
+        (remove-watch state watch-key)))))
+
+(deftest async-status-publication-runs-once-when-idle
+  (let [calls (atom 0)
+        published (CountDownLatch. 1)]
+    (with-redefs [reg/publish-agents-status!
+                  (fn [_]
+                    (swap! calls inc)
+                    (.countDown published))]
+      (is (true? (:scheduled? (reg/publish-agents-status-async!))))
+      (await-latch! published "the leading publication should run")
+      (await-status-publish-idle!)
+      (is (= 1 @calls)))))
+
+(deftest async-status-publication-runs-a-trailing-publication
+  (let [calls (atom 0)
+        order (atom [])
+        first-started (CountDownLatch. 1)
+        release-first (CountDownLatch. 1)
+        second-finished (CountDownLatch. 1)]
+    (with-redefs [reg/publish-agents-status!
+                  (fn [_]
+                    (let [call (swap! calls inc)]
+                      (swap! order conj [:start call])
+                      (when (= 1 call)
+                        (.countDown first-started)
+                        (.await release-first 3 TimeUnit/SECONDS))
+                      (swap! order conj [:finish call])
+                      (when (= 2 call)
+                        (.countDown second-finished))))]
+      (is (true? (:scheduled? (reg/publish-agents-status-async! {:run 1}))))
+      (await-latch! first-started "the leading publication should start")
+      (is (false? (:scheduled? (reg/publish-agents-status-async! {:run 2}))))
+      (.countDown release-first)
+      (await-latch! second-finished "the trailing publication should finish")
+      (await-status-publish-idle!)
+      (is (= 2 @calls))
+      (is (= [[:start 1] [:finish 1] [:start 2] [:finish 2]] @order)))))
+
+(deftest async-status-publication-coalesces-to-latest-options
+  (let [seen-opts (atom [])
+        first-started (CountDownLatch. 1)
+        release-first (CountDownLatch. 1)
+        second-finished (CountDownLatch. 1)]
+    (with-redefs [reg/publish-agents-status!
+                  (fn [opts]
+                    (let [call (count (swap! seen-opts conj opts))]
+                      (when (= 1 call)
+                        (.countDown first-started)
+                        (.await release-first 3 TimeUnit/SECONDS))
+                      (when (= 2 call)
+                        (.countDown second-finished))))]
+      (reg/publish-agents-status-async! {:request 0})
+      (await-latch! first-started "the leading publication should start")
+      (doseq [request (range 1 21)]
+        (is (false?
+             (:scheduled?
+              (reg/publish-agents-status-async! {:request request})))))
+      (.countDown release-first)
+      (await-latch! second-finished "the coalesced trailing publication should finish")
+      (await-status-publish-idle!)
+      (is (= [{:request 0} {:request 20}] @seen-opts)))))
+
+(deftest async-status-publication-recovers-after-exception
+  (let [calls (atom 0)
+        first-called (CountDownLatch. 1)
+        second-called (CountDownLatch. 1)]
+    (with-redefs [reg/publish-agents-status!
+                  (fn [_]
+                    (case (swap! calls inc)
+                      1 (do
+                          (.countDown first-called)
+                          (throw (ex-info "expected test failure" {})))
+                      2 (.countDown second-called)))]
+      (reg/publish-agents-status-async!)
+      (await-latch! first-called "the throwing publication should run")
+      (await-status-publish-idle!)
+      (is (true? (:scheduled? (reg/publish-agents-status-async!))))
+      (await-latch! second-called "a later publication should run normally")
+      (await-status-publish-idle!)
+      (is (= 2 @calls)))))
 
 ;; =============================================================================
 ;; Ported from futon3: timeout enforcement

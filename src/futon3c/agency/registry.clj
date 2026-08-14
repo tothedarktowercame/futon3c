@@ -293,7 +293,8 @@
             (announce-fn agent)
             (catch Throwable _ nil)))))))
 
-(defonce ^:private !agents-status-publish-pending? (atom false))
+(defonce ^:private !agents-status-publish-state
+  (atom {:phase :idle}))
 
 (defn publish-agents-status!
   "Publish the current agent status snapshot to local and WS agent HUDs.
@@ -315,24 +316,38 @@
       :count (:count status)})))
 
 (defn publish-agents-status-async!
-  "Coalesced, non-blocking variant of `publish-agents-status!`.
+  "Leading-and-trailing, non-blocking variant of `publish-agents-status!`.
 
    Status projection may contact many Emacs sockets and must not run on a
-   transport's ordered receive worker. Concurrent requests coalesce because a
-   later registry update will publish another snapshot; HUD projection is
-   best-effort and does not define federation delivery semantics."
+   transport's ordered receive worker. Requests received during a publication
+   coalesce into one trailing publication using the latest options. HUD
+   projection is best-effort and does not define federation delivery semantics."
   ([] (publish-agents-status-async! {}))
   ([opts]
-   (let [scheduled? (compare-and-set! !agents-status-publish-pending? false true)]
+   (let [[previous _]
+         (swap-vals! !agents-status-publish-state
+                     (fn [{:keys [phase] :as state}]
+                       (case phase
+                         :idle {:phase :running :opts opts}
+                         :running {:phase :running-dirty :opts opts}
+                         :running-dirty (assoc state :opts opts))))
+         scheduled? (= :idle (:phase previous))]
      (when scheduled?
        (future
-         (try
-           (publish-agents-status! opts)
-           (catch Throwable t
-             (println (str "[registry] async status publication failed: "
-                           (.getMessage t))))
-           (finally
-             (reset! !agents-status-publish-pending? false)))))
+         (loop [publish-opts opts]
+           (try
+             (publish-agents-status! publish-opts)
+             (catch Throwable t
+               (println (str "[registry] async status publication failed: "
+                             (.getMessage t)))))
+           (let [[completed _]
+                 (swap-vals! !agents-status-publish-state
+                             (fn [{:keys [phase opts]}]
+                               (case phase
+                                 :running {:phase :idle}
+                                 :running-dirty {:phase :running :opts opts})))]
+             (when (= :running-dirty (:phase completed))
+               (recur (:opts completed)))))))
      {:ok true :scheduled? scheduled?})))
 
 (def ^:private bell-file "/tmp/futon-bell.edn")
