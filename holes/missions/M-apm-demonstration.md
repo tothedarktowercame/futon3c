@@ -3303,3 +3303,59 @@ session**, with the fix confirmed at the semantic level rather than accepted on
 report. Author ≠ reviewer ≠ verifier held throughout. **That is the coding-handoff
 protocol working end to end**, on the very artifact whose subject is whether
 claims get checked.
+
+## A.11 The student figure — denominator recovered, and two caveats it brings
+
+**[OPEN] item closed.** `matharena.ai/competitions` gives **ArXivLean June 2026 =
+48 problems**. So Joe's 8.33% is exactly:
+
+> **Zai (GLM 5.2): 4 / 48 on ArXivLean June 2026 = 8.33%**
+
+F6 is satisfied — the rate now carries its denominator and may enter a
+registration.
+
+### Caveat 1: the point estimate is not sharp
+
+`4/48` has a **Wilson 95% interval of [3.3%, 19.6%]**. The figure looks precise
+because it is a repeating decimal; it is not. **The upper end of that interval
+overlaps the frontier tier's March performance (6–7/41 = 15–17%).**
+
+That does **not** collapse the tier distinction — the point estimates differ by
+2×, MathArena reports the open/closed gap as its own headline, and the March
+open-model result (GLM 5.1: **1/41 = 2.4%**) is independent corroboration. But
+**"an 8.33% solver" must not be written as though it were a measured constant.**
+Where the design needs a headroom argument, the argument is *"far from ceiling,
+externally corroborated"* — not *"8.33%"*.
+
+### Caveat 2: the student is a moving instrument — this one bites
+
+| release | model | score |
+|---|---|---|
+| March 2026 | GLM 5.1 | **1 / 41 = 2.4%** |
+| June 2026 | GLM 5.2 | **4 / 48 = 8.3%** |
+
+**The student tier improved 3.4× between two releases, and neither the benchmark
+nor its difficulty is constant across them.**
+
+**IF** the identity floor is "a solver at ~8.33% reaches it, given the deposit",
+**HOWEVER** that rate is a property of a model version that is revised
+quarterly, **THEN** the registration must name **the model version and benchmark
+release**, never the rate, **BECAUSE** a floor defined by a percentage silently
+rises whenever the vendor ships — and a result that "reproduces at the identity
+floor" would then mean something different each quarter, with nothing in the
+record showing that the goalposts moved.
+
+**Consequence for the design:** `S-student` is a **versioned** component.
+`Registration` must pin it the way it pins a retrieval regime by commit hash —
+this is F5 (no measurement spans a regime boundary unstratified) applied to the
+solver rather than to the store. **A model upgrade is a regime change.**
+
+### Recorded
+
+- `S-student` = **GLM 5.2**, floor evidence **4/48 on ArXivLean June 2026**.
+- Registration pins **version + benchmark release**, not a rate. **[NEW
+  OBLIGATION]**
+- The headroom argument stands on the tier *gap*, corroborated by two releases
+  and MathArena's own summary — not on the point estimate.
+
+*Source:* [MathArena competitions](https://matharena.ai/competitions)
