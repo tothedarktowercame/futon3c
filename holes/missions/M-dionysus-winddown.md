@@ -104,6 +104,35 @@ the futon1b stores, the Evidence Landscape they contain, raw session history,
 and any repo working state not yet pushed. Making the Landscape *usable* from a
 non-laptop node, including the FTS5 sidecar.
 
+**Scope in — broadened 2026-08-14 (operator).** Not only the FUTON repos. The
+box carries an operating environment as well as a stack:
+
+> "if we broaden beyond the FUTON repos, we should also consider things like my
+> home dir and passwords in Firefox and other stuff like that — emacs config —
+> etc. Not necessarily right away, but before I give the box back."
+
+So: home directory, browser credential stores, Emacs configuration, shell and
+tool config, ssh keys and known-hosts, systemd user units, and anything else
+whose absence would make the next machine *a different machine* rather than the
+same one elsewhere. Inventory owed; none of it is assessed yet.
+
+**Recoverable ≠ usable.** The operator's framing, and the mission's sharpest
+constraint:
+
+> "Given that I'm stashing things on a 2TB drive (LenovoBackup, not currently
+> plugged in) that data is recoverable, but there's a difference between
+> recoverable and usable w/ seamless transition."
+
+A LenovoBackup copy discharges *recoverable*. It does not discharge *usable*:
+an archive on an unplugged drive is not a working environment, and a 21 GB
+store that has to be found, restored, re-indexed and re-pointed is a project
+rather than a transition. This is the same distinction as C2/C3 — a verified
+copy nobody can query is half a rescue — applied to the whole machine.
+
+Practical consequence: the backup drive is the **floor**, not the plan. Work
+that ends with "it's on LenovoBackup" has met the weaker of the two bars, and
+the mission should say which bar each item has reached.
+
 **Scope out.** Continuous multi-master federation (that is `README-federate.md`'s
 own implementation order, not this mission). Repairing the stale checkouts on lon
 and chi beyond what is needed to host data. Migrating `~/apm-evidence` — derived,
@@ -122,6 +151,15 @@ regenerable, and correctly signalled as a temporary dump by living in `~`.
       (F-7).
 - [ ] C5. Dionysus can be wiped with nothing lost — demonstrated by a written
       reconciliation, not asserted.
+- [ ] C6. The stack reaches inbox zero across the repo census (17 repos as of
+      2026-08-14; was 14 before futon1b, apm-lean and mathlib4 were added).
+      Baseline that day: **22 dirty, 65 untracked**, of which futon3c
+      contributed 0.
+- [ ] C7. Every item in the broadened scope is recorded at one of two levels —
+      *recoverable* (on LenovoBackup or equivalent) or *usable* (present and
+      working on a live non-laptop host) — with no item left unstated. Items
+      may legitimately stop at *recoverable*; what is not acceptable is not
+      knowing which.
 
 **Relationship to other missions.** Enables `C-substrate-completion` §8.1.
 Blocks the next machine's usefulness.
@@ -253,6 +291,15 @@ but the total entry count is unknown — the entity census reports the wrong axi
 and no hyperedge-axis total has been obtained. **Get a real count before sizing.**
 
 ### Surprises
+
+0. **`futon0/README-federate.md` is untracked.** The governing design document
+   for this mission's federation strand — cited throughout MAP as the authority
+   — exists only on the laptop being returned. So does its companion
+   `README-deploy.md`. Two mission files are also untracked
+   (`futon4/.../M-librarian.md`, `futon7/.../M-becoming-nomad.md`), as are two
+   DarkTower Lean sources on the in-use `darktower` branch
+   (`GeometricMorphism.lean`, `GrothendieckTopos.lean`). The documents that
+   describe how to survive losing the box are themselves not surviving it.
 
 1. **The turn→code corpus already exists, structured and live.** §8.1 describes
    it as something to build; it is being written now. This raises the stakes of
