@@ -25,7 +25,10 @@
  ;; proof-outline and a 41-line informal-solution. Zero candidate frames and no
  ;; prior scribe history, so no memory-system contamination on the first
  ;; measurement.
- :problem "t94J02"
+ :problem {:problem-id            "t94J02"
+           :difficulty-stratum    "family=t;freeze-stmt-lines=22"
+           :regime                "6521fd3aa158da16a6d520a6c2eef19195ac54cd"
+           :locked-lemma-exposure []}
 
  ;; Identity floor rather than reproducibility: "the same result twice" means a
  ;; student-tier solver reaches it given the deposit. Pinned by MODEL VERSION
@@ -42,8 +45,15 @@
           :role :treatment}]
 
  :replication-stage  :pilot
- :pilot-units        ["t94J02"]
- :confirmation-units ["a98A01"]
+ ;; pilot-units must be [the problem map]; confirmation-units must be EMPTY for a
+ ;; pilot. Lean models confirmation as a SEPARATE registration naming its
+ ;; predecessor (seededConfirmation), not as a field on the pilot -- see the note
+ ;; at the foot of this file.
+ :pilot-units        [{:problem-id            "t94J02"
+                       :difficulty-stratum    "family=t;freeze-stmt-lines=22"
+                       :regime                "6521fd3aa158da16a6d520a6c2eef19195ac54cd"
+                       :locked-lemma-exposure []}]
+ :confirmation-units []
 
  ;; --- Joe's baseline, 2026-08-14 -----------------------------------------
  ;; Cost is in units of weekly usage. Provisional by design: round 1's job is
@@ -79,14 +89,16 @@
   "unconsumed promotions" "import-only edges" "scribe lane coverage"
   "arc-lane yield" "rewrite rule offered and used"]
 
- ;; Frozen for the round. Tuning between rounds is permitted, but a role-card
+ ;; Frozen for the round. Hashes are `git hash-object` blob ids (40 hex), the
+ ;; format the validator requires and reproducible with one command.
+ ;; Tuning between rounds is permitted, but a role-card
  ;; change is a REGIME BOUNDARY: P1's slope must not be read across one, or a
  ;; decline caused by better framing reads as one caused by better substrate.
  :reg/role-cards
- {:codex-solver "6d39d750305cc00638816cebef735c3aeceb1483dcb659213150019b12fec1aa"
-  :zai-student  "4651ed7161eb8bc00e2a0d32869846a683442912d5f16addd3a01f049893614f"
-  :claude-guide "a4ff3915bca198c6aec1ee9b9e2d517f53cec1b69818b1d77078f538dedc708e"
-  :scribe       "e14f8ff87470bc5e7454704803291ccb32bb8598be191a4c70a9df325a36710c"}
+ {:codex-solver "ab12c46e4cbe0a992bc00c95d2b389673d60023b"
+  :zai-student  "6467820235471e556ca4490f10a0ed5b76c6757c"
+  :claude-guide "b475f85cb1114184329f7e7b0a5e423085201218"
+  :scribe       "2e934652ea5d75f9f394455ab851d6344d73dcba"}
 
  ;; --- predictions, recorded BEFORE the round -----------------------------
  ;; A prediction written after the data is not a prediction.
@@ -105,4 +117,12 @@
  ;; Frame-1 carries no guarantee. Joe, 2026-08-14: "at frame-1 nothing is
  ;; guaranteed at all." Recorded as a pre-commitment: frame-1's outcome is not
  ;; evidence for or against the design.
- :reg/frame-1-disclaimer true}
+ :reg/frame-1-disclaimer true
+
+ ;; a98A01 is the intended confirmation unit. It is NOT recorded here: the Lean
+ ;; models confirmation as a separate registration naming its predecessor
+ ;; (`seededConfirmation`), and a pilot's confirmation-units are empty by
+ ;; projection. Preregistering it by stuffing it into the pilot would bend the
+ ;; formalism to save a file. The round-2 registration is written before round 1
+ ;; is scored, which preserves the intent honestly.
+ :reg/intended-confirmation-unit "a98A01"}
