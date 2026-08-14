@@ -5499,3 +5499,53 @@ would produce a *clean-looking* result, which is the category I.10 says must
 never rest on self-report.
 
 **Recorded, not actioned. Awaiting the call.**
+
+## I.15 The self-certification challenge, answered precisely
+
+**Joe, 2026-08-14:** *"If it is a mechanical check I can't see how it would be
+self-certification; we could commit JSON or whatever before/after rounds; add
+data.json, we have enough other dependencies that one more can't hurt."*
+
+**The challenge is fair and the label was imprecise.** Recorded with the
+distinction it needed:
+
+> **Mechanical ≠ independently sourced.** The check *is* mechanical — that was
+> never in dispute. The issue is the **provenance of its input**: a perfectly
+> mechanical check over a self-reported input inherits the input's
+> trustworthiness.
+
+**And Joe's commit proposal is a genuine partial strengthening, not a
+non-answer.** Committing the edge list makes the record **tamper-evident** —
+Claude cannot revise it after the fact. What it does not address is **omission at
+write time**: git proves *when* a list was written, not that it is *all* of what
+happened. Tamper-evidence and completeness are different properties, and only the
+first is bought by committing.
+
+**With `data.json` authorised the distinction stops mattering**, because reading
+the job log directly *is* independent sourcing: **the Agency writes that log, not
+Claude.** So the strong version is available and the partial one is unnecessary.
+
+### One factual correction, recorded not relitigated
+
+*"we have enough other dependencies"* — **`mmca-clj` currently declares zero.**
+`data.json` will be its first. The decision stands and is right for this job; it
+is noted because V.9 recorded the zero-dependency character as *a feature, not an
+oversight*, and **codex-4 declined Malli on exactly that basis.** A first
+dependency changes what that precedent means, and the change should be deliberate
+rather than discovered later.
+
+### Dispatched — A8
+
+`invoke-1786731903409`, parked. One requirement carried forward from codex-4's
+own best work:
+
+> **The degraded path must be named.** If the log is unreachable, emit
+> `:direct-channel-evidence-unavailable` — **never a silent fallback to the
+> trace-supplied list.** *"Could not check" and "checked and clean" must never be
+> the same result.* codex-4 got this exactly right unprompted in
+> `lean-source-revision` (`:lean-source-revision-unavailable`); this is the same
+> shape, asked for explicitly.
+
+**Remaining before frame-1:** C (harness + emitter-side F1 refusal — what
+codex-4 stopped on in I.1, now unblocked), and **B**, which is mine and still
+outstanding.
