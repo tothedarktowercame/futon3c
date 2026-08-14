@@ -3897,3 +3897,64 @@ redesign: F9 stays the rule, F2/F3/F7/F8 stay derived, and the change is to the
 **What the spike settles:** the specification is coherent, satisfiable, and
 capable of refusing synthetic failures — including one it refuses at
 compile time. **What it does not settle:** anything about a running system.
+
+## V.7 Correction to V.5 — the spec is not generated
+
+**Operator correction, Joe, 2026-08-14:** *"You're right, it isn't 'generated'.
+It also doesn't include Malli (or core.logic, or maybe even CLean). But we could
+use it as an inspiring example of **how** to make a validated Clojure
+implementation, and I bet Codex could help make the Lean-to-Clojure
+projection."*
+
+**V.5's layer 3 does not exist and its guarantee does not hold.** I wrote that a
+generated Malli/CLean spec would make drift *"impossible by construction"*.
+There is no such generator, the artifact that exists is not generated, and it
+does not use Malli, core.logic or CLean. The correction matters because the
+guarantee was structural: **without generation, spec drift is possible**, and
+nothing prevents it except tests.
+
+### Revised layer table
+
+| # | layer | establishes | can it drift? |
+|---|---|---|---|
+| 1 | Lean model (F1–F11) | invariants stated and typechecked | — |
+| 2 | Matrix spike (V.6) | model satisfiable; every invariant can refuse | — |
+| 3 | ~~Generated spec~~ → **hand-written implementation, method borrowed** | that a validated implementation is *achievable*, by example | **yes** |
+| 4 | Bridge tests + mutation (A.14) | the running artifact honours the contract | **this is now the only guard** |
+
+**Consequence, and it is not cosmetic.** Under V.5, layers 3 and 4 divided the
+work: generation killed drift, tests caught behaviour. With generation gone,
+**layer 4 carries both** — the bridges must now catch spec drift *and*
+behavioural divergence. That raises the bar on A.14's six-part method rather
+than lowering it, and it makes the F9 attribution fix (V.6) more valuable, since
+a bridge that cannot name what it caught is now the only diagnostic there is.
+
+### What is actually on offer
+
+- **An existing validated Clojure implementation** — as an *example of method*,
+  not a source of generation. Joe has asked `oxf-claude-3` to send the specifics;
+  **not yet received, and deliberately not guessed at here.**
+- **A Lean→Clojure projection** as a *build candidate*, with Codex able to help.
+  Note this is the arrow V.5 called new: Lean types → Clojure. It remains
+  unbuilt, and it is now a *proposal*, not an assumption.
+
+### Noted against myself — third time today
+
+A.12: I recorded a boundary as an open job when a validator existed. A.14: I
+proposed building a bridge method that was already worked and mutation-tested.
+V.5: I asserted a structural guarantee from a mechanism that was never built.
+
+**The shape is consistent: I keep converting "an example exists" into "a
+guarantee exists."** That is the mission's own defect wearing my face — assuming
+a capability is wired because it is described. Recorded rather than quietly
+fixed, per A.12's precedent. **Practical mitigation:** when writing that
+something holds "by construction", check that the construction exists *before*
+the sentence goes in, not after an operator reads it.
+
+### Sequence, unchanged in order but not in weight
+
+1. ~~Matrix spike~~ — done (V.6).
+2. **F9 failure attribution** — now higher priority, per above.
+3. Review `oxf-claude-3`'s example when it arrives; extract *method*, not code.
+4. Lean→Clojure projection — scope it once (3) is in hand.
+5. Mutation-tested bridges — now load-bearing for drift as well as behaviour.
