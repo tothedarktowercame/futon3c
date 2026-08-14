@@ -116,6 +116,33 @@ tool config, ssh keys and known-hosts, systemd user units, and anything else
 whose absence would make the next machine *a different machine* rather than the
 same one elsewhere. Inventory owed; none of it is assessed yet.
 
+**Target environment — there is no next laptop.** Recorded 2026-08-14:
+
+> "even though I have working computers available I don't have another laptop
+> to migrate things to, so we're migrating *from* a laptop to a server plus a
+> DeX-powered Samsung. (I could no doubt buy a cheap laptop if we absolutely
+> need one.)"
+
+`futon0/README-termux.md` (2026-08-12, tracked) already designs this shape:
+Zone becomes the main machine, the phone is a client, and
+`mosh zone -- tmux new-session -A -s main` is the one command — **[verified]**
+idempotent from Dionysus. mosh survives the network, tmux survives mosh.
+Companion: `~/code/DEX-SETUP.md`.
+
+**Capacity is not the constraint.** Zone: 1.9 T disk with **1.3 T free**,
+249 G RAM (169 G available), 32 cores. The 21 GB store is unremarkable there.
+
+**The constraint is that the client is thin.** Everything must run and be
+queryable *server-side*; nothing may assume a fat local workstation. This
+sharpens C2/C3 — "queryable from a non-laptop node" now means queryable over
+mosh/tmux from a phone, not merely present on a box. Anything whose usability
+depends on a desktop-class local machine either moves server-side or is
+explicitly accepted as lost. It also means the migration has no "copy the home
+directory across" step: there is no symmetrical destination.
+
+**Order of work** (operator): the FUTON repos first, then `~`, `~/.config`,
+Firefox, and the rest.
+
 **Recoverable ≠ usable.** The operator's framing, and the mission's sharpest
 constraint:
 
@@ -291,6 +318,20 @@ but the total entry count is unknown — the entity census reports the wrong axi
 and no hyperedge-axis total has been obtained. **Get a real count before sizing.**
 
 ### Surprises
+
+-1. **`~/code` is not a repository, and 69 loose files live in it.** Among them
+   the documents that define how the system is operated:
+   `CLAUDE.md` (8,987 B — the workspace handoff protocol, bells-vs-whistles,
+   the park discipline), `AGENTS.md` (3,446 B — the Codex-side view of that
+   same protocol, which `CLAUDE.md` points at), `DEX-SETUP.md` (5,653 B — the
+   setup for the machine we are migrating *to*), `START_HERE.md`,
+   `futon-evidence-pack.md` (156 KB), and five setup scripts
+   (`general-setup.sh`, `lucy-setup.sh`, `chicago-setup.sh`, `real-setup.sh`,
+   `check.sh`). None are symlinks into a repo; `~/code/CLAUDE.md` is a
+   different file from `futon3c/CLAUDE.md`. Also present: a 7-byte `SECRET`
+   at mode 664.
+   These are the instructions for running the fleet and for building its
+   replacement, and they are the least protected artifacts on the machine.
 
 0. **`futon0/README-federate.md` is untracked.** The governing design document
    for this mission's federation strand — cited throughout MAP as the authority
