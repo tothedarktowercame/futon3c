@@ -1009,3 +1009,38 @@ wrong twice over, not once: 57/74 = 77.0% was inflated both by counting
 vacuous frames as clean *and* by counting no-op frames as attempts. Neither
 error would have been visible without opening the files. Recorded because the
 mission's central risk is a number that survives on its plausibility.
+
+### E6. Invariant F1 — a created frame is a worked frame
+
+**Operator ruling, Joe, 2026-08-14.** *"The b94J01 problem sounds more like a
+mechanical plant failure than a mathematical aberration. I don't think we need
+a historical deep dive on the 24 frames, just an invariant that says that if a
+frame is created it is worked on. That will come out directly from a one-shot
+system (which we can later just map over the list of problems)."*
+
+This **reclassifies E5 out of the evidence question.** The 24 empty frames are
+a plant failure, not a signal about mathematical capability, and they are not
+evidence about the corpus. They therefore have no bearing on the closure gauge
+(A4), the reuse count (E1), or the four questions.
+
+> **F1 (frame liveness).** If a frame is created, it is worked on. A frame
+> whose `Main.lean` is byte-identical to the scaffold at close is a plant
+> failure, not an attempt: it must not be emitted, and must never be counted
+> in any denominator.
+
+**Status: CLOSED as a historical question, OPEN as a design requirement.** No
+further archaeology on the 24 — the mechanism by which they were created is
+explicitly *not* being investigated. F1 is not retrofitted to the March/April
+batch; it is a property the **one-problem one-shot solver** must have by
+construction, which then holds automatically when that solver is mapped over
+the problem list.
+
+That is a strictly stronger position than an enforcement check bolted onto the
+existing batch path: an invariant that falls out of the design cannot drift,
+whereas a check added afterwards is one more thing that can silently stop
+running — the failure mode this mission has now catalogued three times.
+
+**Consequences for what MAP may still assert.** The candidate register is a
+source of **31 worked frames**, not 55 attempts. It remains unusable as a
+success rate for the reasons in the B-recheck (no outcome field, null
+`cycle-id`, root ≠ accepted candidate). Nothing further is owed here.
