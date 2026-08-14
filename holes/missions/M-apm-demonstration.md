@@ -1197,3 +1197,81 @@ first?" but: *is a transport query worth building an engine capability for, or
 should N6 be restated to something the existing engine can adjudicate?* That is
 a design decision with a real cost attached, which is what MAP is supposed to
 hand over.
+
+---
+
+## MAP addendum 2 — is "transport" a terminology collision?
+
+*(Joe, 2026-08-14: "v1 states it as a transport claim — that leads to a
+question in light of the recent Codex finding, could we validate it if it was
+such? Does this transport claim align with a transport in the causal prover,
+or is that just a terminology collision.")*
+
+Three distinct senses of "transport" are live in this stack. Separating them
+answers the question and turns up a defect in the capability proof itself.
+
+**1. v1's usage is correct Pearl, not a collision.** `capability-proof-apm.tex`
+uses "transport" in the exact Bareinboim–Pearl sense — *"'solves APM ⇒ capable
+on held-out BPM' is formally a transport claim, not an induction"* (line 278),
+with `S` switching the problem distribution across domains and identification
+requiring the `S`-dependence to separate from the pipeline edge (line 261).
+That is transportability as the literature defines it. **N6 is a genuine
+transport claim, correctly stated.**
+
+**2. But v1 asserts an engine capability that does not exist.** Line 275
+describes the engine as *"Pearl-style: backdoor and front-door adjustment,
+general identification, **transportability via selection diagrams**"*. The
+first three are real — `identify.clj`, `idalg.clj`. **The fourth is not
+implemented.** This is a false capability claim in the document that exists to
+certify capability claims, and it is the **fifth** instance of the mission's
+documentation-drift pattern (E1, C5, D2, A4, and now the capability proof
+itself).
+
+**3. The real collision is inside the engine's own vocabulary, and it plausibly
+caused the error.** `causal/receipts.clj` contains `r1-selection-variant` and
+the typed refusal `:open-selection-backdoors` — the very refusal Track C4 cited
+as evidence of the engine's rigour. But that "selection" is **selection bias
+within a single domain**, a backdoor problem (`:selection-regime` edges,
+adjusted by `dsep/backdoor-adjustment?`). It is *not* a **selection diagram**,
+which indexes differences *between* domains by an S-node.
+
+> **Same word, two concepts.** Selection *bias* (one domain, confounded
+> sampling) vs. selection *diagram* (two domains, transportability). The engine
+> has the first and not the second. Anyone reading "selection" in the engine and
+> "selection diagram" in the paper would conclude — wrongly — that transport was
+> supported.
+
+### Could we validate N6 if it is a genuine transport claim? Yes.
+
+The substrate is closer than "greenfield" suggested. Transportability (`sID` /
+`sTR`, Bareinboim–Pearl) is built from components the engine already has:
+
+| needed by sID | present |
+|---|---|
+| latent projection to ADMG | `admg.clj` — `latent-project` |
+| general identification | `idalg.clj` — `identify-effect`, `formula` |
+| d-separation | `dsep.clj` |
+| graph surgery | `surgery.clj` |
+| typed refusal + receipts | `identify.clj`, `receipts.clj` |
+
+What is absent is the **transport layer of the algorithm**, not its
+foundations: S-node semantics, source/target domain inputs, per-domain
+observational availability, and mechanism-invariance declarations (the receipt's
+own `:missing` list). So N6 is **validatable in principle by a bounded
+extension** — an added entrypoint over existing machinery, not a rewrite.
+
+**Recorded as a MAP fact; whether to build it is DERIVE's call.** The honest
+framing for that decision: N6 is not blocked on evidence, it is blocked on an
+unimplemented algorithm that the capability proof already claims to have.
+
+### Correction owed to v1
+
+`capability-proof-apm.tex:275` must drop "transportability via selection
+diagrams" from the engine description, or the engine must acquire it. Until one
+of those happens the paper overstates its own instrument — which is precisely
+the failure mode the paper was written to prevent.
+
+*(Note: a **third**, unrelated sense of "transport" exists in futon3c — the
+message transport layer of I-2, "Transport Routes, It Does Not Create". No
+overlap with either causal sense; flagged only so the three are never conflated
+in future prose.)*
