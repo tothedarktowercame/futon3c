@@ -5245,3 +5245,86 @@ that must never rest on self-report.
 **Apparatus still to build before frame-1:** role cards themselves (content —
 mine to draft), the store snapshot at round open, and the three checks. **None
 requires a Lean change.**
+
+## I.11 Pre-flight list for frame-1
+
+**Joe, 2026-08-14:** *"we can also tune the role cards between rounds in case we
+deem it necessary. But yes, we are now very close with a short list of things we
+need to do before we go live with frame-1."*
+
+### First, the cost of tuning role cards — permitted, but priced
+
+I.9 froze role cards **within** a round. Tuning them **between** rounds is fine
+and probably necessary. But it introduces a **third axis** alongside store and
+harness, and for the cross-round claims it behaves like the others:
+
+> **A role-card change is a regime boundary.** P1's slope — *guidance
+> interventions decline* — must not be read across one without saying so, or a
+> decline caused by better framing reads as a decline caused by better substrate.
+
+This is exactly C5's situation: the `6521fd3a` retrieval repair mid-series is *"a
+stratum boundary for every measurement"*. Same treatment. **Tune freely; record
+the boundary; never compare across it silently.** E9/E10 is the reason this is
+not paranoia — framing alone moved consultation from 0 to 21.
+
+### The list
+
+**A — validator and schema** *(Clojure only; no Lean change, per I.10)*
+
+1. **`:meas/values` as a map**, `populatedMeasurementFields` derived from it,
+   `:measurement-field-claimed-without-value` — **I.2 gap (c), the vacuity hole
+   in the acceptance gate.** Nothing downstream means anything until this lands.
+2. `:cycle/regime` **per attempt** (I.7).
+3. `:cycle/store-revision` + `:cycle/harness-revision` per attempt, with
+   `:both-channels-varied` (I.8).
+4. `:cycle/runner-freshness` per attempt; `:reg/role-cards` hashes (I.9).
+5. `:cycle/mode`, `:cycle/deposit-state`, `:cycle/paired-with` (I.5, I.8).
+6. **Round-open store snapshot** — `:cycle/store-snapshot-id`, the basis for
+   check 7a.
+7. **Three proctoring checks** (I.10): **(a)** `no-new-memories` as membership
+   against the snapshot; **(b)** `harness-frozen`; **(c)** `no-direct-channel`
+   against the Agency job log.
+
+**B — content** *(mine to draft)*
+
+8. **Four role cards** — Codex-solver, Zai-student, Claude-guide, Scribe. Surface
+   contracts, not capability restrictions (I.9).
+9. **The round-1 registration EDN**, with I.4's baseline: 120 min, 1% weekly
+   usage, 5× cap, 10 attempts, K=3, closer profile, identity-floor endpoint.
+10. **P1 in `:reg/predictions`**, recorded *before* the round.
+
+**C — harness** *(the thing codex-4 stopped on; now unblocked)*
+
+11. The cycle harness: `registration → frame → work → adjudicate → trace →
+    validate → authorization`.
+12. **Emitter-side F1 refusal** — hash scaffold and closing `Main.lean` before
+    persistence, throw on equality. codex-4 confirmed this *"achievable and
+    unambiguous"*; V.12 established why it must live at the emitter.
+
+**D — operator**
+
+13. **Pick the frame-1 problem.**
+14. *(Optional)* give *"should work pretty quickly"* a bound, or leave it an
+    expectation (I.6).
+
+### Ordering, and what is genuinely blocking
+
+**1 first, alone.** It is a defect in the gate that judges everything else.
+
+**Then B in parallel with A2–7** — content and checks are independent.
+
+**Then C**, which consumes both.
+
+**13 can happen at any point** and does not block; the harness is
+problem-agnostic by construction (I.3: *a problem is a row, not a negotiation*).
+
+### Honest status
+
+**Nothing on this list is a design question.** Every item is either a mechanical
+change with a stated shape, a document to draft, or an operator choice with the
+alternatives named. **That is what "close" means here** — INSTANTIATE stopped
+once because DERIVE was genuinely incomplete (I.1); it will not stop for that
+reason again, because gaps (a)–(e) are closed.
+
+**The one thing I would not promise:** that frame-1 runs clean first time. The
+proctoring checks exist precisely because we expect to catch ourselves.
