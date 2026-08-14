@@ -1354,13 +1354,15 @@
                                 (when-let [text (pattern-facet-text v facet)]
                                   {:facet facet :text text})))
                         vec)
-            entity-specs (into [{:name pid
+            entity-specs (into [{:id pid
+                                 :name pid
                                  :type "pattern/library"
                                  :external-id pid
                                  :source (or (:pattern/title v) pid)}]
                                (map (fn [{:keys [facet text]}]
                                       (let [clause-name (str pid "/" (name facet))]
-                                        {:name clause-name
+                                        {:id clause-name
+                                         :name clause-name
                                          :type "pattern/clause"
                                          :external-id clause-name
                                          :source text})))
