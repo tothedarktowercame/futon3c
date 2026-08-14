@@ -363,6 +363,155 @@ The prior question, because (1) is a fraction of it.
 - **A4** What is the true corpus closure under a **comment-aware sorry
   detector**? (Current gauge is known to read low: E5, `a94A09`.)
 
+### MAP Track A findings
+
+*Surveyed 2026-08-14. These are inventory facts, not a choice of experimental
+unit or a proposed repair.*
+
+#### A1. Run inventory
+
+For this inventory, **one run means one problem offered to one agent in one
+top-level attempt**. An internal phase redispatch or continuation inside that
+attempt is not another run; two separately timestamped attempts at the same
+problem are. A batch job containing several named problems contributes one run
+per offered problem, because its per-problem outcomes are the quantities later
+compared. Where an Agency job ID exists it is the deduplication key; older
+ledgers have no job ID, so their dated lifecycle/dispatch records are the only
+available identities.
+
+| source | counted problem-runs | basis |
+|---|---:|---|
+| conductor v1 | 28 | `:problem-start`; the 1,776 `:phase-dispatch` records are internal phase calls, not 1,776 top-level attempts |
+| conductor v2 | 118 | `:problem-start`; the 324 `:dispatch` records include kicks/retries inside those attempts |
+| conductor v3 | 954 | 11 ordinary `:started`, 8 initial batch problems + 901 subsequent `:batch-dispatch`, and 7 initial cleanup problems + 27 subsequent `:cleanup-dispatch` |
+| frozen 2026-07-31 job results | 130 | 130 files, 130 distinct Agency job IDs, each prompt names one APM problem |
+| bridge pilot | 169 | 169 rows and distinct job IDs, covering 167 distinct problems |
+| campaign ledger | **1,913 confirmed; at most 1,918** | 347 problem slots in 86 accepted batch jobs; 493 pass-1 jobs; 157 of 162 repair offers with a later gate; 916 accepted closer jobs |
+| escalation queue | 0 additional | 55 construction-target summaries, no dispatch/job identity; these are derived queue records, not runs |
+
+This yields **3,312 confirmed problem-runs and an upper bound of 3,317**. The
+five-run interval is irreducible from these files: `repair-dispatch` was logged
+before `agency.dispatch_fn`; five of 162 repair offers have neither a job ID nor
+a later `repair-gate`, so the ledger cannot say whether invocation failed or a
+run occurred without a gate. The 55 `closer-hop-annulled` rows are not added a
+second time: each exactly annotates a preceding accepted closer hop whose job
+failed quickly. If “run” is instead restricted to substantive non-annulled
+attempts, subtract those 55; the corpus itself uses both notions (offer versus
+attempt), so MAP does not collapse them.
+
+Across the three sources that carry IDs, the 130 frozen, 169 bridge, and 579
+campaign job IDs form a union of **878 with zero cross-source collisions**.
+That proves deduplication there. No comparable cross-source identity exists for
+the March/April conductor ledgers. Their date ranges do not overlap the
+July/August ID-bearing sources, but their individual records cannot be joined
+to Agency history by ID. The checked copies of the three conductor logs are in
+the frozen evidence tree (`/home/joe/apm-evidence/code/futon3c/data/`); they are
+absent from the current futon3c worktree. The v3 file also contains malformed
+EDN (a bare timestamp), so its event inventory required event-level scanning
+rather than whole-file EDN parsing.
+
+#### A2. Outcome recoverability and the status snapshot
+
+Outcome recovery is incomplete and source-dependent:
+
+| source | top-level runs | terminal/outcome records recoverable in that source |
+|---|---:|---:|
+| v1 | 28 | 15: 11 complete (4 proved, 7 partial) + 4 abandoned; 13 lack a top-level terminal record |
+| v2 | 118 | 115: 91 complete + 21 abandoned + 3 timed out; 3 lack a top-level terminal record |
+| v3 | 954 | 949: 7 ordinary `done` + 908 batch returns + 34 cleanup returns; five lack the corresponding top-level return/done |
+| frozen jobs | 130 | 130 terminal states: 126 done, 4 failed |
+| bridge pilot | 169 | 0; this file records dispatch identity only |
+| campaign | 1,913–1,918 | not one-to-one recoverable: 86 accepted initial jobs have only 76 `poll-done` rows and batch result tails; pass-1/repair gates are problem/artifact observations rather than job outcomes; closer rows omit job IDs |
+
+The reported v2 numbers reproduce exactly: **91 completion events over 73
+unique problems, 15 `proved` events and 76 `partial` events**. They do **not**
+reconcile as the same measure as the current **186/475** top-level
+`status.json` zero-sorry count:
+
+- v2 covers 73 problems and attempt-time classifications; status covers 475
+  current problem bundles and is a later mutable snapshot;
+- repeated v2 attempts mean the latest classification over those 73 is only
+  10 proved / 63 partial, rather than 15 / 76;
+- 37 of those 73 currently report status sorry-count zero; across all 475 the
+  count is 186, i.e. 171 more than the 15 v2 proved events, but over 402 more
+  problems and months of subsequent work;
+- only 5 of the 15 problems ever classified proved by v2 currently report
+  status zero. This is direct evidence that the attempt label and regenerated
+  bundle status are not a durable shared outcome key, not evidence of 10 proof
+  regressions.
+
+Therefore the corpus can count final/current bundle state and can count some
+historical attempt outcomes, but **cannot recover an outcome for every run or
+reconstruct a complete run-level success rate**.
+
+#### A3. Observation-channel loss
+
+The frozen audit reproduces **129 offered halves → 115 outcome halves → 114
+joins → 20 rows with non-empty `used-ids`**. The loss is not primarily a join
+failure:
+
+- **Emission:** 15/129 offered rows have no outcome half. Twelve surfaced
+  nothing and three surfaced IDs. Their later memory disposition was never
+  recorded.
+- **Join:** all 114 emitted outcomes belonging to an offer join successfully.
+  There is one orphan outcome without an offered half, but it removes no row
+  from the 129-offer denominator.
+- **Retrieval eligibility:** 70 of the 114 joined rows surfaced no IDs, so they
+  cannot carry a memory-use score. Across all offers, 82/129 surfaced nothing;
+  46 record timeout and 12 store-unavailable, so much of “nothing” is an
+  infrastructure observation rather than a negative retrieval judgment.
+- **Scoring/report emission:** 44 joined rows did surface IDs. Of these, 18
+  report used only, 2 report both used and unused, 5 report unused only, and
+  **19 report neither used nor unused**. The audit's published
+  `metric-bearing` definition counts only the 20 with non-empty `used-ids`; it
+  excludes the five explicit unused-only negatives as well as the 19 with no
+  disposition.
+
+Thus the answer is **mixed, dominated after joining by eligibility/scoring,
+not linkage**: 15 outcomes were never emitted; no additional offered outcome
+was lost at join; 70 joined rows had nothing to score; and 19 memory-bearing
+offers reached an outcome without emitting a use/non-use disposition. The
+historical corpus can support existence claims and rates over the explicitly
+observed subset. It **cannot ever yield a complete success/use rate over all
+129 offers**, because the missing 15 outcomes and 19 missing dispositions are
+not recoverable from the frozen receipts.
+
+#### A4. Comment-aware closure
+
+There are 475 top-level `status.json` files; 403 point to at least one Lean
+file that currently exists, while **72 have no readable Lean file**. A lexer
+that removes nested `/- ... -/` comments, `--` comments, and strings before
+matching the `sorry` token finds:
+
+- among the 403 bundles with Lean source, raw token scanning says 175 have no
+  `sorry`; comment-aware scanning says **185/403** have no code-level `sorry`;
+  the ten corrected comment-only cases include `a94A09`;
+- on the full 475-problem denominator, the evidence-backed closure gauge is
+  therefore **185/475 = 38.9%**, requiring a Lean file as well as zero
+  code-level sorries;
+- a purely vacuous “zero sorries” detector would call all 72 missing-source
+  bundles zero and report **257/475 = 54.1%**. That is not closure evidence and
+  is reported only to expose the denominator trap.
+
+The existing 186/475 status gauge is neither of these. It counts 65
+missing-source bundles as zero, six status-zero bundles now contain a real
+code-level `sorry`, and many nonzero status counts are stale relative to live
+source. Comment awareness corrects ten live-source false positives, but a
+sorry detector alone does not establish compilation or axiom cleanliness;
+those outcomes were not counted here because the requested inventory did not
+provide build receipts for all 475 bundles.
+
+#### What this corpus cannot count
+
+- An exact all-program run count: five repair offers have no execution
+  identity, and March/April runs lack Agency IDs.
+- A terminal outcome for every run: the source-level gaps above are real
+  missing records, not partial joins that can be repaired retrospectively.
+- A complete historical memory-success rate: 15 outcomes and 19 surfaced-ID
+  dispositions were never emitted.
+- “Closed and verified” for all 475: 72 bundles have no Lean source to inspect,
+  and zero textual sorries is not a compile or axiom certificate.
+
 ### Track B — then (1): how much of it is evidence of success?
 
 - **B1** For each numerator in §1.1, what is its denominator? Specifically:
