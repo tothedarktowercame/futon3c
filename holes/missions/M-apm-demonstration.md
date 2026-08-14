@@ -2224,3 +2224,85 @@ waiting on, and it is the same move as F7: turn the principle into a check.
 
 **Item 3 first.** On today's evidence the likeliest error is building something
 that already exists two directories away.
+
+## D.22 Reading the defunct ablation preregistration — what survives 1-shot
+
+Joe: *"The Ablation experiment is defunct b/c we are moving to a 1-shot
+modality, but you can read it to get the feel for what's there."*
+
+Read (`MemoryAblationPreregistration.lean`, 1,040 lines). Two thirds of it dies
+with the modality; **the third that survives is the third this mission needs.**
+
+### What dies with 1-shot
+
+Everything whose inferential power comes from running *the same problem more
+than once*: `ArmKind` (full / ablated / control), seeds as within-problem
+repeats, `cell` / `cellAt` / `harderAt`, `signVsControl`, `problemSign`,
+`binomTail` / `signTestPasses`. The ablation's evidence is a **paired sign test
+over problems**, and 1-shot has nothing to pair.
+
+### What survives, and is directly reusable
+
+The **Observable layer**, which is modality-independent:
+
+| observable | what it checks | our name |
+|---|---|---|
+| `sessionsDistinct` | the runs really were separate sessions | **precondition 2** — the batch2r defect (D2), *checked* |
+| `homeUnreadable`, `historyTruncated` | isolation actually held | isolation **verified**, not asserted |
+| `noOmissions`, `noDuplicates`, `noExtras` | runs agree exactly with the panel | F6 denominator discipline |
+| `expectationWellFormed` | the prediction was stated before outcomes | preregistration proper |
+| `withholdingAsRegistered`, `revisionsAsRegistered` | the protocol was followed as written | anti-drift |
+
+**The discipline that makes them work is stated in the file itself** (line 410):
+
+> *"Every observable here is checked against **recorded probe evidence** rather
+> than against an assertion."*
+
+**That single sentence is the cure for all ten instances in D.21's table.** Our
+defects are uniformly assertions with no probe: a comment claiming freshness, a
+table claiming consumers, a paper claiming transportability. DarkTower's answer
+is not "assert more carefully" but "an observable is a *probe*, and its
+soundness is definitional."
+
+Two further lessons transfer verbatim:
+
+- **Unit of analysis** (line 344): *"Seeds are repeats within a problem, not
+  independent observations… Running a sign test over 18 seed-level pairs would
+  treat three repeats of one problem as three independent facts."* This is the
+  mission's denominator discipline, already written down and already applied.
+- **Completeness as three checks, not one** (line 534): `noOmissions` +
+  `noDuplicates` + `noExtras` are jointly equivalent to exact agreement but
+  **separately actionable** — a failing check tells you *which* way the panel
+  is wrong. A single multiset equality would only say "no".
+
+### The consequence 1-shot forces, stated plainly
+
+**1-shot removes the within-problem contrast.** The ablation could hold the
+problem fixed and vary the treatment; a one-shot series cannot. So:
+
+**IF** each problem is one experiment, **HOWEVER** a single shot admits no
+within-problem control arm, **THEN** the per-problem registration is a
+**measurement registration** — fixing what will be observed and what counts as
+discharge — and **not** a contrast, **BECAUSE** the learning claim (N8) lives in
+the *slope across the series*, not inside any one problem.
+
+Two things follow, and both sharpen earlier sections:
+
+1. **Difficulty stratification (D.6) becomes more central, not less.** It was
+   one control among several when contrasts were within-problem; under 1-shot
+   it is *the* identification strategy for N8. Family × freeze-time statement
+   length now carries weight it did not before.
+2. **`sessionsDistinct` still matters — and for a new reason.** Within-problem
+   contamination is moot, but a 1-shot *series* runs problems in sequence, so
+   contamination flows from problem *i* to problem *i+1*. **In a learning
+   experiment that leakage is indistinguishable from learning**, which is the
+   single most dangerous confound the new modality introduces. It needs a probe,
+   not an assurance.
+
+### Recorded
+
+`MemoryAblationPreregistration.lean` is **defunct as a design and live as a
+reference**. Its observables and its probe-evidence discipline should be lifted
+into the problem-level registration (D.21); its arm/seed/sign-test machinery
+should not. Point 2 above is **new** — it is not in D.6 or the three
+preconditions, and it is a direct consequence of the modality change.
