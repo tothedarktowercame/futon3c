@@ -856,3 +856,103 @@ of what is missing is:
 
 This list names absent bindings/checks; choosing their exact form belongs to
 DERIVE.
+
+---
+
+## MAP Track E — ConstructionTargets as a known-failing retrieval test
+
+*(Joe's proposal, 2026-08-14, executed by claude-2 the same turn. Joe:
+"the ConstructionTargets should give a kind of 'mockup' of a replicable
+finding — for instance Rouché was one of the first ones, and this **was**
+reused, even if it wasn't reused through the memory system itself. This
+'positive' result (for the mathematics) is still a 'negative' finding for the
+system as a whole, but it is a negative finding that could be the basis of a
+known-failing test.")*
+
+### E1. The reuse is real, measured, and far larger than recorded
+
+`ConstructionTargets/` holds lemmas built to unblock specific APM problems.
+Re-derived from disk (not read off the in-repo table):
+
+| | in-repo table (2026-07-30) | re-derived 2026-08-14 |
+|---|---|---|
+| modules | 15 | **18** |
+| consumer edges | 23 | **64** |
+| `Rouche` consumers | 2 | **9** |
+
+An `import` is not reuse, so edges were split by whether the consumer actually
+references a declaration from the module: **39 of 64 = 60.9% are
+declaration-using**, the other 25 import-only. `Rouche`: 9 imports, **7
+load-bearing**.
+
+⚠ **The in-repo table is stale by roughly 3×** and should be regenerated, not
+patched. Note the file already warns about exactly this failure — a previous
+version named `a94A10` as a `Rouche` consumer, "which was never true and cost
+a day of misrouted dispatches." The table is derived-by-grep by policy; the
+derivation simply has not been re-run since 2026-07-30.
+
+*(Method note: the first count returned 19/64 because the detector excluded
+dotted references — `(?<![\w.])name` — which silently drops every **qualified**
+use, the normal way these lemmas are called. Same class as the anchored-grep
+trap. Corrected before use.)*
+
+### E2. The negative system finding, demonstrated rather than assumed
+
+Joe's claim — reused, but not *through the memory system* — was tested against
+the live store (`localhost:7073`), not assumed:
+
+| query | hits | surfaces `Rouche` / `ConstructionTargets`? |
+|---|---|---|
+| `text=Rouche` | 5 | **yes** |
+| `text=ConstructionTargets` | 5 | **yes** |
+| `text=YoungConvolution` | 5 | **yes** |
+| `text=argument principle` | 8 | **no** |
+| `text=counting zeros` | 8 | **no** |
+| `text=winding number` | 8 | **no** |
+
+**The store answers to the artifact's own name and not to the need it
+serves.** A consumer such as `a97A08` — which genuinely used `Rouche`, and
+whose source states the need as *"f has no zeros on |z| = 2 (so the count on
+the open disk is well-defined)"* — could only have found it by already knowing
+its name. This is the reversed guiding light failing mechanically and
+reproducibly: **technically present, not available.**
+
+### E3. Why this is the instrument the mission has been missing
+
+The four questions asked for evidence with denominators. This supplies one:
+
+- **Ground truth is independent of the memory system.** The reuse is provable
+  from the repo — the import edge and the declaration reference are on disk.
+  Nothing has to be taken on narrative.
+- **n = 39, not n = 1.** Each load-bearing edge is one test case: *at the
+  moment consumer C needed module M, would retrieval have surfaced M given
+  C's own vocabulary?*
+- **It is expected to fail now.** That makes it a **known-failing test** whose
+  passing is a certificate, exactly the shape the warrant machinery requires
+  (*upgrade by certificate, never by narrative*).
+- **It runs against today's store, with no new evidence channel** — it is
+  evidence from cycle one, which is Joe's question (2).
+- **It targets N5 directly** (retrieval serves the need), the weakest node in
+  v1's warrant table.
+
+The obvious confound must be pre-declared: many of the 39 edges post-date the
+module's creation and some consumers were told about the module by dispatch.
+**Whether a given edge was memory-mediated, dispatch-mediated, or
+author-recalled is not currently recorded** — the same provenance-without-
+outcome gap the B-recheck found. Stratifying the 39 accordingly is DERIVE's
+first job, not MAP's.
+
+### E4. The gating question, answered
+
+Joe, on the 24 vacuous candidates: *"all of that kind of stuff is supposed to
+be gated and checked but clearly wasn't."*
+
+**The gate held.** Of the 448 promoted `problems/*/lean/Main.lean`, **zero**
+lack a `theorem`/`lemma` and **zero** are under 200 bytes. Every vacuous
+artifact sits in `candidates/` — unpromoted attempt frames from 31 Mar–1 Apr
+2026. Nothing vacuous reached the corpus.
+
+What is missing is not a gate but a **score**: the frames were never
+adjudicated, so a later reader who treats `candidates/` as an attempt series
+computes a rate (57/74 = 77.0%) that is mostly measuring stub-ness. The defect
+is the same one found twice already — **provenance recorded, outcome not.**
