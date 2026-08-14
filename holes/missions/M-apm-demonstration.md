@@ -6016,3 +6016,65 @@ for typos. *"Verify, don't trust"* has been right eleven times. The difference i
 that the second is about **evidence** and the first is about **authority** —
 and authority rules need to say *whose* decision it is, not just that a decision
 exists.
+
+## I.23 The harness is built — INSTANTIATE checkpoint
+
+**`mmca-clj` `7028234`. Verified by claude-2, suite run independently: 124 tests,
+352 assertions, 0 failures** (was 118/344). **The corrected stopping rule
+worked** — five dispatches, four correct stops, one build.
+
+| check | result |
+|---|---|
+| **emitter-side F1** | `emit-frame!` (`apm_cycle_harness.clj:41`) hashes **both** files, throws `:f1-scaffold-identical-frame` **before** `persist-roundtrip!`, **writes nothing** |
+| refusal tests | all five present by name, 7 deftests total |
+| validator forked? | **no** — `(:require … [mmca.apm-demonstration-preregistration :as prereg])`, and `git diff 563592f..7028234` on the validator is **empty** |
+| scope | 3 files, 251 insertions; **no solver embedded** |
+
+### The "decisions I made" list — all seven local, all defensible
+
+The rule change produced exactly what it was meant to: **seven small choices to
+review instead of a fifth stop.** Reviewed:
+
+| decision | verdict |
+|---|---|
+| persistence injected via `:write!`/`:read!`, exact in-memory impl in tests | **good** — keeps futon1b out of the test path; a live adapter swaps in without touching orchestration |
+| stage entities supplied by the live cycle; no solver embedded | **correct** — the scope fence, honoured |
+| authorization injected so the existing writer stays authoritative | **good** — avoids a second authority |
+| `LaunchGateEvent` gets a deterministic `:gate/id` | **mine to have specified**; I implied identity via `gate/<cycle-id>` and never said it |
+| ISO instants, because the validator's window parser requires them | **forced, not chosen** |
+| Registration stored as exact file bytes + SHA-256 | **exactly right** — byte-identical read-back, as I.21 asked |
+| projections derived **exclusively** from read-back entity maps | **the I.2 principle, honoured in code** |
+
+**None needs reverting.** The one I would have specified myself is the
+`:gate/id`, which is my omission, not its overreach.
+
+### Awaiting frame-1 — declared, not hidden
+
+codex-4's own list: real futon1b adapter execution · a genuine solver-produced
+closing `Main.lean` · live Agency-log validation · real authorization output ·
+**"the first honest end-to-end result; no synthetic success was claimed."**
+
+**That last clause is the point of the whole exercise.** A harness that had
+claimed a synthetic success would have been the mission's own defect, shipped in
+the mission's own apparatus.
+
+### §1.5 completion criteria — evidence, not assertion
+
+| # | criterion | status |
+|---|---|---|
+| 1 | every N-register row resolved | **met** (MAP; N5/N7/N8 partly-done, N6 greenfield) |
+| 2 | N7 carries a mechanical warrant | **apparatus ready, unearned** — needs frame-1 |
+| 3 | N5 graded against the users' contract | **instrument exists** (39 probes, E1/E2); ungraded |
+| 4 | N8 in checkable form, fixed regime | **stated** (P1 + `L(i)` by tier, I.5); unmeasured |
+| 5 | N6 discharged or refused | **open** — engine cannot express transport (addendum 2) |
+| 6 | held-out demonstration | **not started** |
+| 7 | capability proof revised | **planned** (v2 plan + corrections); not written |
+
+**Nothing is claimed as met that has not been demonstrated.** Criteria 2–4 have
+apparatus and no evidence, which is exactly what "ready to launch" means.
+
+### Pre-flight: complete
+
+A1 ✓ · A2–7 ✓ · A8 ✓ · B ✓ · I.19/I.21 schemas ✓ · **C ✓**
+
+**Frame-1 is ready to launch. Launching is Joe's call.**
