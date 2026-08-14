@@ -377,6 +377,74 @@
             (System/setProperty "FUTON3C_SITE" old-site)
             (System/clearProperty "FUTON3C_SITE")))))))
 
+(deftest equivalent-http-and-uplink-origins-update-in-both-directions
+  (let [http-origin "http://172.236.28.208:7070"
+        uplink-origin "ws-uplink://lon"
+        agent-id "ams-codex-8"
+        base-info {:type "codex"
+                   :capabilities ["coordination/execute"]}]
+    (fed/configure! {:peers [{:site "lon" :url http-origin}]})
+    (testing "an HTTP proxy accepts a WS-uplink update from the same peer"
+      (is (= :registered
+             (:action (fed/register-proxy-agent!
+                       http-origin agent-id
+                       (assoc base-info :status :idle :session-id "http-session")))))
+      (is (= :updated
+             (:action (fed/register-proxy-agent!
+                       uplink-origin agent-id
+                       (assoc base-info
+                              :status :invoking
+                              :session-id "uplink-session"
+                              :invoke-activity "responding")))))
+      (let [proxy (reg/get-agent agent-id)]
+        (is (= uplink-origin (get-in proxy [:agent/metadata :origin-url])))
+        (is (= :invoking (:agent/status proxy)))
+        (is (= "uplink-session" (:agent/session-id proxy)))
+        (is (= "responding" (:agent/invoke-activity proxy)))))
+    (testing "a WS-uplink proxy accepts an HTTP update from the same peer"
+      (reg/reset-registry!)
+      (is (= :registered
+             (:action (fed/register-proxy-agent!
+                       uplink-origin agent-id
+                       (assoc base-info :status :idle :session-id "uplink-session")))))
+      (is (= :updated
+             (:action (fed/register-proxy-agent!
+                       http-origin agent-id
+                       (assoc base-info
+                              :status :invoking
+                              :session-id "http-session"
+                              :invoke-activity "using tools")))))
+      (let [proxy (reg/get-agent agent-id)]
+        (is (= http-origin (get-in proxy [:agent/metadata :origin-url])))
+        (is (= :invoking (:agent/status proxy)))
+        (is (= "http-session" (:agent/session-id proxy)))
+        (is (= "using tools" (:agent/invoke-activity proxy)))))))
+
+(deftest unrelated-live-peer-origins-still-conflict
+  (let [peer-a "http://172.236.28.208:7070"
+        peer-b "http://172.236.108.82:7070"
+        agent-id "ams-claude-8"
+        info {:type "claude" :capabilities ["coordination/execute"]}]
+    (fed/register-proxy-agent! peer-a agent-id info)
+    (let [result (fed/register-proxy-agent!
+                  peer-b agent-id (assoc info :status :invoking))]
+      (is (= :origin-conflict (:action result)))
+      (is (= peer-a (:origin-url result)))
+      (is (= peer-a
+             (get-in (reg/get-agent agent-id) [:agent/metadata :origin-url]))))))
+
+(deftest unmapped-uplink-origin-safely-retains-string-comparison
+  (let [http-origin "http://172.236.28.208:7070"
+        agent-id "ams-zai-8"
+        info {:type "zai" :capabilities ["coordination/execute"]}]
+    (fed/configure! {:peers []})
+    (fed/register-proxy-agent! http-origin agent-id info)
+    (is (= :origin-conflict
+           (:action (fed/register-proxy-agent!
+                     "ws-uplink://lon" agent-id info))))
+    (is (= http-origin
+           (get-in (reg/get-agent agent-id) [:agent/metadata :origin-url])))))
+
 (deftest own-site-reflections-are-not-imported
   ;; When we pull a peer, its roster contains ITS proxies of OUR agents.
   ;; Importing those would loop invokes to our own agent through the peer.

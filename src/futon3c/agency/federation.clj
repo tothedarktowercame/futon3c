@@ -20,7 +20,8 @@
             [clojure.string :as str]
             [cheshire.core :as json]
             [org.httpkit.client :as http])
-  (:import [java.time Instant]
+  (:import [java.net URI]
+           [java.time Instant]
            [java.util.concurrent Executors ScheduledExecutorService TimeUnit]))
 
 (def ^:private default-proxy-timeout-ms 600000)
@@ -517,6 +518,50 @@
       (parse-home-site (get-in agent-info [:metadata :home-site]))
       (get (:peer-site-by-url @!config) origin-url)))
 
+(defn- endpoint-origin-identity
+  [origin-url]
+  (try
+    (let [uri (URI. (str origin-url))
+          scheme (some-> (.getScheme uri) str/lower-case)
+          host (some-> (.getHost uri) str/lower-case)
+          port (.getPort uri)]
+      (when (and host (#{"http" "https" "ws" "wss"} scheme))
+        [:endpoint
+         host
+         (if (neg? port)
+           (case scheme
+             "http" 80
+             "ws" 80
+             "https" 443
+             "wss" 443)
+           port)]))
+    (catch Exception _ nil)))
+
+(defn- uplink-origin-site
+  [origin-url]
+  (some->> (str origin-url)
+           (re-matches #"(?i)^ws-uplink:(?://)?([^/?#]+).*$")
+           second
+           parse-home-site))
+
+(defn- configured-peer-url-for-site
+  [site]
+  (some (fn [[url configured-site]]
+          (when (= site (parse-home-site configured-site))
+            url))
+        (:peer-site-by-url @!config)))
+
+(defn- canonical-origin-identity
+  "Resolve transport-specific origin strings to a physical peer endpoint.
+   Logical WS-uplink origins use the configured site→URL association; without
+   that mapping, retain the raw origin so conflict handling degrades safely."
+  [origin-url]
+  (or (endpoint-origin-identity origin-url)
+      (some-> (uplink-origin-site origin-url)
+              configured-peer-url-for-site
+              endpoint-origin-identity)
+      [:origin origin-url]))
+
 (defn proxy-local-id
   "Local registry id for an imported remote agent. Already-qualified ids are
    kept; a bare id gets its resolved home site as a prefix (laptop codex-1 →
@@ -639,7 +684,9 @@
       ;; failed HTTP-sync proxies without leaving split-brain stale status.
       (and existing
            (get-in existing [:agent/metadata :proxy?])
-           (not= origin-url (get-in existing [:agent/metadata :origin-url]))
+           (not= (canonical-origin-identity origin-url)
+                 (canonical-origin-identity
+                  (get-in existing [:agent/metadata :origin-url])))
            (not (true? (get-in existing [:agent/metadata :federation/stale?]))))
       {:ok false
        :agent-id aid
