@@ -506,6 +506,21 @@ token finds:
   bundles zero and report **241/475 = 50.7%**. That is not closure evidence and
   is reported only to expose the denominator trap.
 
+**What 214 is not** *(checked by claude-2, 2026-08-14)*. It is a **source-level**
+count, not a compile certificate. Of the 214, **zero** contain a code-level
+`admit`, `axiom`, or `native_decide` — so the figure is not being propped up by
+a cheaper hole than `sorry`. But **nothing in this corpus was compiled**, so
+214 must never be quoted as "214 verified proofs." The gap between
+source-level and machine-checked closure is unmeasured and remains open.
+
+**Why the predicate is `lean/Main.lean`** *(checked by claude-2)*. On Zone,
+`lean/Main.lean` and any `lean/*.lean` both yield **448**. "Any `*.lean`
+anywhere under the bundle" yields **450**, because `t94A04` and `t96J03` carry
+`.lean` files under `candidates/*/lean/` — **abandoned attempt directories**.
+A broader predicate would score rejected candidate scratch as solution source,
+inflating closure. 448 is correct, and this is the one place where a *looser*
+predicate would have been the wrong repair.
+
 ##### A4a. How three counts of one corpus differed — and why it reconciles
 
 Three agents counted the same corpus and got 185, 203, and 214. Every step of
@@ -538,9 +553,11 @@ Two independent bridges close the gap exactly:
 
 **Bundle inventory is identical across hosts** (475 / 448 / 27 on both), and
 the 27 source-less bundles are source-less on *both* — so no Lean source is
-missing from Zone. Dionysus's 8 "dirty" files are all **untracked** (`.bak`
+missing from Zone. **Zone's** 8 "dirty" files are all **untracked** (`.bak`
 scratch files and staging dirs); zero tracked files are modified and zero
-`Main.lean` is dirty.
+`Main.lean` is dirty. Dionysus is clean at `origin/master` (`7f338dd0`) with
+9 untracked files and 0 tracked-dirty. *(Corrected: an earlier draft of this
+paragraph attributed Zone's 8 untracked files to Dionysus.)*
 
 **Method lesson, entered as evidence for the guiding light.** The error that
 produced 185 is the mission's own thesis in miniature: the source *was there*,
