@@ -4199,3 +4199,63 @@ CLean is adopted **as the structural vocabulary for the cycle**, subject to the
 test above, and separately retained for the binding (V.8/V.9). It is the fourth
 place today where the answer was already in the tree — and the first where it
 supplies a *theorem we had just finished writing as a rule*.
+
+## V.11 CLean is shorthand, not decoration — and the RHS comes before the arrow
+
+**Operator corrections, Joe, 2026-08-14.**
+
+### Correction 1 — my honesty test was the wrong frame
+
+> *"CLean just gives a way to write those things down in EDN so that they can be
+> talked about in a lightweight way. We could say it is 'just decoration' but I'd
+> call it **shorthand**."*
+
+V.10 posed a binary — either CLean makes something newly *provable* or it is
+decoration — and threatened to drop it on that test. **That was too strict.** A
+notation earns its place by making structure *sayable and discussable* at low
+cost; it does not have to discharge a theorem to be worth having. Shorthand is a
+third category the test did not admit.
+
+The honesty test is **not withdrawn**, but demoted: it remains the right
+question for whether CLean should carry *load* (coverage completeness,
+starvation as a typed obligation). It was wrong as a condition of *use*.
+
+**And the heavy layer is separately located:** Joe — *"what would happen on the
+Lean side is that Codex's experimental design would **lift** to a
+category-theoretic model of the pipeline."* So the division is EDN shorthand for
+talking, Lean lift for proving. Two layers, not one test.
+
+### Correction 2 — the constraint that shapes the next build
+
+> *"we don't have a 'generator' so let's not pin it to a meta-specification or
+> formal 'arrow' — not yet. **We still lack any example of a RHS of the
+> arrow!**"*
+
+**This is the sharpest methodological point of the session.** V.5 imagined a
+generator; V.7 mourned its absence; V.8 found pinning instead. All three were
+arguing about the *arrow* while having **no instance of its output for our own
+design**. `mmca-clj` is an RHS — for Baldwin, not for us.
+
+**IF** a generator is wanted, **HOWEVER** no example of its output exists for
+this design, **THEN** build one right-hand side by hand first, **BECAUSE** a
+generator is an abstraction over instances and abstracting from zero instances
+is how you get a specification nobody can satisfy — the same "instances before
+abstraction" ordering as *bridges before proofs* (A.13) and *`structural_law`
+only contains shapes that already recur* (V.9).
+
+### Dispatched
+
+`codex-4`, job `invoke-1786728100232`, parked `park-5bbd1031`. Build **one
+concrete aligned Clojure specification** for the round-1 registration, modelled
+on `mmca-clj`, with **real tool freedom** over Malli / core.logic / CLean EDN —
+including the freedom to decline any of them with reasons, since `mmca-clj`'s
+zero-dependency character is a feature.
+
+Carried forward as requirements: self-naming violation keywords with **all**
+reported, the enforced revision pin, and the authorization gate. Carried as
+improvements on the exemplar: **the staleness check it lacks** (it pins
+`f50d34cf`; 40 commits have since touched `DarkTower/`) and structural
+validation where value-equality is currently doing shape's job.
+
+**Explicit non-goals in the packet:** no generator, no arrow, no
+meta-specification. **This is the first RHS.**
