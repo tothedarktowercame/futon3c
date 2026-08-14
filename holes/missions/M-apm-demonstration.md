@@ -4698,3 +4698,86 @@ their results comparable.**
 **Gate: three numbers from Joe** (teardown `N`, round-1 cost estimate, budget
 multiple) **plus two integers** (attempt cap, no-progress `K`). Everything else
 above is a proposal I can land without further input.
+
+## I.4 Gap (a) closed — the baseline, and a prediction that changes the design
+
+**Operator decisions, Joe, 2026-08-14.** *"Those seem like a reasonable
+'baseline' given where we were at with the previous experiment."*
+
+| slot | value |
+|---|---|
+| `:reg/teardown-deadline` | **launch + 120 min**, hard stop |
+| `:reg/estimated-cost` | **1% of weekly usage per problem** — provisional, to be refined |
+| `:reg/budget-cap` | **5× the estimate** — *"a cap, not a target"* |
+| attempt cap | **10** |
+| no-progress `K` | **3** |
+| prover profile | the pre-existing **"closer" profile** |
+
+**The 2-hour stop has a stated rationale, which makes it a claim rather than a
+convention:** *"if it can't close the problem by then (using external materials,
+patching mathlib, searching mathlib — and reading memories and other local info
+… ) then it probably isn't going to solve the problem."* Recorded as the
+justification, so a future round can test it rather than inherit it.
+
+**Note on the closer profile's resources** — arXiv search, mathlib patching,
+mathlib search, memory reads, local info — Joe: *"all the kinds of stuff that we
+DO have records from the first half to validate."* This qualifies D.13's
+"inspiring but useless": the first half is useless for **outcome** measurement
+(no dispositions) but **usable for validating that these resource channels
+existed and functioned.** A narrower and more accurate statement than the
+original ruling.
+
+### The goal, restated by the operator — record it, it constrains claims
+
+> *"we're not aiming to prove how great Codex is, we're aiming to **learn how to
+> solve mathematics problems**."*
+
+That is a constraint on what the demonstration may claim. A result reading
+"Codex closed N problems" is **off-target even if true**; the target is
+transferable method. It also retro-justifies the student tier: a weak solver is
+interesting *because* what helps it is method rather than capability.
+
+### The attempts reframing — the most consequential thing in this turn
+
+Joe: *"running codex 'more' isn't that interesting — I think it needs the
+scaffolding of the 'closer' loop, and previous attempts were **guided by a
+Claude agent in Ground Control**. So 'attempts' isn't actually that meaningful,
+it's **'attempts with structured guidance based on our knowledge of how these
+things work'**. What should happen as a **PREDICTION** is that **that guidance
+is needed less as time goes by**."*
+
+**This supplies something the design lacked: a pre-declared, falsifiable
+learning signal that is not `L(i)`.**
+
+**IF** the process is learning, **HOWEVER** `L(i)` can fall merely because the
+problem tail is easier, **THEN** *guidance needed per cycle* is the better
+signal, **BECAUSE** it is a property of the **interaction** rather than of the
+problem — the guide's effort is not a function of problem difficulty in the way
+cost and residual are. It still needs stratification, but it fails differently,
+and two signals that fail differently are worth more than one.
+
+**Design changes, all small:**
+
+1. **`RoleEvent` gains `:ground-control`** as a role — guidance is an emitted
+   event, not an untracked side-channel. Without this the signal is unmeasurable,
+   which is how it stayed invisible for the whole first half.
+2. **Measurement vector gains `guidance interventions`** — count of structured
+   guidance events per cycle. **Free** once (1) emits.
+3. **`Registration` gains `:reg/predictions`** — and its first entry is
+   Joe's, recorded *before* round 1:
+
+> **P1.** *Guidance interventions per cycle decline as problems seen increases.*
+
+**That belongs in the registration, not the measurement vector**, because a
+prediction written after the data is not a prediction. This is the first use of
+the preregistration machinery for its actual purpose — E9/E10's discipline
+("predictions written down, two subsequently refuted"), applied prospectively.
+
+### Status of gap (a)
+
+**Closed.** Every slot from I.3 has a value; every value is round-level or
+computed; **no per-problem decisions remain.** What was five open numbers is now
+a baseline with a stated rationale and one falsifiable prediction attached.
+
+**Remaining before frame-1:** the validator fix (I.2 gap (c)) and the harness
+itself — both now unblocked.
