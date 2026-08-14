@@ -4059,3 +4059,72 @@ not the missing binding.** The binding exists.
 
 **Items 1–5 are built and working. Our design should adopt them rather than
 re-derive them; 6 and 7 are the additions worth making.**
+
+## V.9 Malli + CLean + core.logic — the mix is right, and all three are already here
+
+**Joe, 2026-08-14:** *"I was assuming that the best mix of Malli, CLean, and
+core.logic would give us a validated implementation."*
+
+**Checked before answering. The assumption holds, and none of the three needs
+building** — what is missing is the assignment of jobs.
+
+| tool | present? | unique job it does that `cond->` cannot |
+|---|---|---|
+| **Malli** 0.16.3 | `futon3c/deps.edn`; used in `social/shapes`, `proof_shapes`, `mission_shapes`, `reflection/envelope`, with `malli.error` | **shape** validation — types, required-vs-`nil`, nesting, and *humanized* failures. V.8's gap exactly: `mmca-clj` checks content by value-equality, so malformed EDN reports as `:wrong-arms` instead of a schema error |
+| **core.logic** 1.1.0 | `futon3c`, `futon3b`, `futon3`, `futon2`; live in `logic/structural_law.clj`, `agency/logic.clj`, `portfolio/logic.clj`, `logic/outreach_intake_guard.clj` | **enumerates violations rather than reporting a boolean** — see below |
+| **CLean** | `clean_to_lean.py` (1,028 lines, attack-verified) | registration/obligation structure, and render-as-correctness-gate |
+
+### core.logic's unique contribution is already implemented, and it is the one VERIFY needs
+
+`futon3c/src/futon3c/logic/structural_law.clj` — *"Shared structural-law query
+helpers… paired-edge symmetry, dangling references, enum validity, and
+phase-output completeness."* Its functions are
+
+```
+query-paired-edge-mismatches · query-dangling-targets
+query-invalid-enum-values    · query-missing-phase-outputs
+```
+
+each built on `l/run*` — which **returns the set of violating facts**, not
+true/false.
+
+> **This is the automated form of V.6's negative matrix.** codex-4 hand-built one
+> violating trace per invariant. A structural law expressed relationally
+> **enumerates** them: run the relation and it hands you every violation it can
+> find. That is negative-case *generation* rather than negative-case
+> *authorship*, and it is the thing mutation testing wants.
+
+It also carries a scope discipline worth copying verbatim: *"This namespace only
+contains shapes that already recur in live domains"* — it refuses to generalise
+speculatively, which is the failure mode this mission has catalogued thirteen
+times.
+
+### The honest caution: the exemplar has zero dependencies
+
+`mmca-clj/deps.edn` declares **no `:deps` at all** — its 17 named violations,
+the revision pin and the launch-authorization gate are pure `clojure.core`.
+So the burden of proof is per-tool, not for the trio as a bundle:
+
+- **Malli earns it** — shape validation is genuinely absent and the failure
+  diagnostics are worse without it.
+- **core.logic earns it *if* we want generated counterexamples.** For
+  straight-line checks, `cond->` is simpler, faster and easier to debug, and
+  adding a relational layer to reimplement `not=` would be a regression.
+- **CLean is structural**, not optional, if registrations are to render.
+
+### Assignment for our design
+
+| layer | tool | what it establishes |
+|---|---|---|
+| registration shape | **Malli** | the EDN is well-formed *before* content is compared |
+| registration content | plain `cond->`, per `mmca-clj` | 17-style self-naming violations, all reported |
+| invariant violations | **core.logic** `run*` | the *set* of violating cases — the generator for the negative matrix |
+| Lean binding | pinned revision + **CLean** render | correspondence, frozen and enforced |
+| behaviour | mutation-tested bridges (A.14) | the running artifact honours it |
+
+**Nothing in this table needs inventing.** Every row exists somewhere in the
+stack; the work is wiring, not writing — which is I-4's whole point, and the
+fourth time today the thing was already there.
+
+*(Method note: this time the check ran before the claim, per V.7's mitigation.
+Twice in a row now — V.8 and here.)*
