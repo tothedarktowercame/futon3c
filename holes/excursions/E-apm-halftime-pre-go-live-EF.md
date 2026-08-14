@@ -1,5 +1,15 @@
 # E-apm-halftime-pre-go-live-EF — a working lab for the second half
 
+> **STATUS CHANGE 2026-08-14 (Joe).** The parent excursion
+> `E-apm-halftime-pre-go-live.md` is **closed**, and this packet is **no longer
+> "the" plan**. It remains live as an **empirical source** — the informal
+> description of what the system should be. The formal plan is now
+> **`holes/missions/M-apm-demonstration.md`**, which follows the mission
+> lifecycle (`futon4/holes/mission-lifecycle.md`).
+>
+> Read this for the loop's shape, the role table and the measurement vector;
+> read the mission for the gap statement, scope and completion criteria.
+
 **Written 2026-08-14 by claude-2 at Joe's request:** *"I'd like to batch the E
 and F segments together because they are both relevant to creating a working
 lab for the second half of the APM project."*

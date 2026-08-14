@@ -1,7 +1,25 @@
 # E-apm-halftime-pre-go-live — the locked problem list
 
+**CLOSED 2026-08-14 by Joe.** The 24 items are discharged, corrected in
+place, or explicitly parked. What remains is construction, not repair, so it
+continues as a mission: **`holes/missions/M-apm-demonstration.md`**.
+
+*Closure summary.* **A** — A1 explained (1,213 hyperedges are one-per-pattern,
+fully redundant, safe to delete); A3 swept (21,513 rows → 10,956; one row per
+pattern, one naming convention, 18,378 documents retracted, zero failures);
+A3.1/A3.2 fixed. **B** — B2–B5 fixed and verified; B1 discovery-only, no
+attachment edges created. **C** — conformance corpus built and the nesting fix
+made general, not keyword-specific. **D** — D1 split and landed, D2/D3 landed
+and then *recalibrated by their first production test*. **E/F** — batched into
+the EF packet, which survives this closure as an **empirical source**, not as
+the plan.
+
+*Three logged figures were wrong and are corrected in place:* B5 is 26
+collisions not 24; B1 is 3-of-75 not 3-of-76; D1 is 44 `respond!` call sites
+not ~30. The Tier-0 recall baseline was also stale — 15/22, not 16/22.
+
 **LOCKED 2026-08-13 by Joe. 24 open items, verified against live state at
-time of writing. This list is CLOSED.**
+time of writing. This list was CLOSED and is retained as the record.**
 
 ## The discipline (read before adding anything)
 
