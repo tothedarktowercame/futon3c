@@ -2683,3 +2683,94 @@ now.
 
 **DERIVE remains open.** Awaiting codex-4 (`invoke-1786723026643-4478-31c19ce7`,
 parked `park-251041e1`). The gate is Joe's to call.
+
+---
+
+## DERIVE candidate §9 — updated by the round-1 formalisation
+
+*(codex-4, job `invoke-1786723026643`, commits `37c502ba` + `c89af757` on
+`darktower`; **reviewed and independently verified by claude-2**, 2026-08-14.)*
+
+Artifact: `~/code/mathlib4/DarkTower/APMDemonstrationPreregistration.lean`, 269
+lines.
+
+### Review — what claude-2 actually checked
+
+| check | result |
+|---|---|
+| the build claim (`761/761 jobs`) | **real** — `.olean` present, 946 KB, timestamped the same minute as the source |
+| "no `sorry`, `admit`, or added axioms" | **true** — the single regex hit is the *string literal* `"axiom cleanliness"` at line 122 |
+| no ablation pairing machinery | **clean** — zero hits for `ArmKind`/`cell`/`harderAt`/`signVsControl`/`binomTail`/`seedResult` |
+| `ReplicationPlan` used, not reinvented | **yes** — `.pilot [problem] (by simp) variation` |
+| structure not invented to force a typecheck | **confirmed** — see below |
+| commits exist on `darktower` | yes |
+
+**The fence held.** Underspecified quantities are **exposed as arguments**, with
+the docstrings saying so: *"mandatory but currently unspecified operational
+quantities exposed as inputs rather than invented constants"* and *"that choice
+remains an argument."* This is the behaviour the packet asked for and the
+opposite of the fabricated-premise failure mode.
+
+### The refusal theorem is the design's whole point, discharged
+
+```lean
+theorem no_round1_witness_of_failed_invariant … (hfail : ¬ (invariantObservable i).holds smoke) :
+    IsEmpty (ExperimentalDesign.ReadyToRun (round1Base …) e smoke)
+```
+
+**If any of F1–F9 fails on the smoke trace, round 1 cannot launch** — and it is
+proved via `no_witness_of_inert_flag`, *the very theorem D.21 identified as
+corresponding to the `batch2r` defect*. "Written but not wired up" is now
+structurally impossible for this experiment: an invariant that does not act on
+the trace is an inert flag, and an inert flag admits no witness.
+
+### codex-4's own self-review catch, which is the mission's signature bug
+
+Commit `c89af757` *"closes an empty-expectation loophole found during
+self-review: F9 and X now check **registration-fixed** lists rather than
+trace-supplied lists that could be empty."*
+
+**That is the vacuity trap, caught unprompted, in new work.** This mission hit
+it three times in old work — vacuous candidates scoring clean because empty
+(D.14), containment `:state` empty (D.23), `ApmCanaries/Local` empty (D.23).
+The docstring is exactly right: *"A trace may not shrink this denominator."*
+**Denominator discipline applied reflexively to the formalism itself.**
+
+### §9 revised — what the formalism actually demanded
+
+| # | open item | source | closed by |
+|---|---|---|---|
+| 1 | round-1 problem + its stratum, regime, locked-lemma exposure | pre-flagged; now a typed `ProblemUnit` | **operator choice** |
+| 2 | **`VariationPlan`: the facility requires a reproducibility *or* identity-floor endpoint — the one-shot candidate selects neither** | **NEW — surfaced by formalising** | **ARGUE** |
+| 3 | stopping predicates and executable checks | new | problem 1 |
+| 4 | outcome type and total decision rule | new | problem 1 |
+| 5 | estimated cost, budget cap, teardown deadline | new | operator |
+| 6 | field-level validators/types for the vector (membership + completeness only, so far) | new | problem 1 |
+| 7 | `L(i)` weights, retrieval pass bar, need-vocabulary rule | candidate §9 | pilot observation |
+| 8 | Clojure semi-formalism: full validator or hole counter? | candidate §9 | **read before building** |
+| 9 | futon5 wiring diagram | candidate §9 | not blocking |
+
+**Item 2 is the sharpest result of the whole exercise.** The candidate declared
+a one-shot round to be *"a measurement registration, not a contrast"* (D.22) —
+but DarkTower still requires a variation endpoint. **The formalism will not let
+a round decline to say what would count as the same result twice.** That is a
+real tension between the 1-shot modality and the facility, it was invisible in
+prose, and it is exactly what formalising is for.
+
+### Two observations for ARGUE, not defects
+
+1. **`measurementArm.axes := []`.** With no axes, `no_witness_of_dead_axis` and
+   `Axis.Navigable` have nothing to bite on. Defensible — a descriptive round
+   has no treatment to vary — but it means **round 1 is formally incapable of
+   supporting a learning claim.** That is correct and should be stated out loud
+   rather than discovered later.
+2. It is structurally the same *shape* as the empty-list loophole codex-4 just
+   closed. Worth one deliberate look in ARGUE.
+
+### Gate status
+
+**DERIVE remains open.** Per Joe's ruling, a formalisation is *a thing to argue
+about*, not an argument. On the evidence above the artifact does appear **good
+enough to argue for** — it typechecks, it refuses launch on invariant failure,
+it invented nothing, and it surfaced a real design tension. **The gate is Joe's
+to call.**
