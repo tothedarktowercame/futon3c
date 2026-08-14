@@ -4857,3 +4857,84 @@ Add `:cycle/deposit-state ∈ #{:with-deposit :without-deposit :n/a}` so a
 teachability pair is identifiable as a pair, and `:cycle/paired-with` naming its
 twin. **Nothing else changes** — the tier axis was already in the schema; it was
 the analysis that had not caught up.
+
+## I.6 Role assignment — each agent does what it is good at
+
+**Joe, 2026-08-14:** *"this gives everyone a job that they are good at. **Codex:
+be the best at solving problems. Claude: be a helpful assistant to Codex and to
+Zai (using slightly different modalities). Zai: be great at acknowledging what
+doesn't work for you while you learn.** All together, it will be a closed loop
+that should work pretty quickly in my opinion."*
+
+**The design had modules and no agents.** R/F/S/A/M/P/X/C were specified as
+guarantees; nothing said who discharges them. This assigns them:
+
+| agent | job | modules | signal it produces |
+|---|---|---|---|
+| **Codex** | solve, at the frontier | **S-frontier** | closure, residual, attempts |
+| **Claude** | assist — Codex *and* Zai, different modalities | **A** adjudicator, **X** measurement, guidance | **guidance interventions** (P1) |
+| **Zai** | attempt in isolation and **report what did not work** | **S-student** | **`L(i)`**, and the failure register |
+
+### Zai's job closes D.19's gap, and that is not a coincidence
+
+*"be great at acknowledging what doesn't work for you while you learn"* is not a
+solver job — **it is a reporting job.** And it is precisely the input the
+**arc-lane** needs: D.19 found the arc-lane fully specified (`error→fix spans →
+scoped tactic rewrite rules`), demonstrated four times in the s1 pilot, and
+**never wired into any per-session scribe pass**.
+
+The reason it produced nothing is now legible: **the lane needed a rich,
+stereotyped failure signal, and it was being run against agents that mostly
+succeeded.** Zai supplies what Codex structurally cannot.
+
+> **Zai's weakness is a resource twice over:** headroom, so memory effects are
+> measurable at all (A.11); **and failure volume, so the arc-lane has material.**
+> Those are different arguments for the same choice, and neither was visible when
+> the student tier was introduced.
+
+### The modality distinction is load-bearing — and one direction can break the experiment
+
+⚠ *"slightly different modalities"* is doing real work, and getting it wrong is
+silent:
+
+- **Claude → Codex:** structured guidance **during** the attempt. Counted, and
+  predicted to decline (P1).
+- **Claude → Zai:** must be **after** the attempt — helping articulate what did
+  not work — **never hints during it.**
+
+**IF** Claude assists Zai during the isolation run, **HOWEVER** that run's whole
+purpose is `L(i)` under memory-only conditions, **THEN** the teachability
+measurement is destroyed and will still look valid, **BECAUSE** a hint is
+indistinguishable from a recalled memory in the trace unless the channel is
+separated. This is precondition 3 (elicitation) failing in the opposite
+direction from E9/E10 — not *"the agent never looked"* but *"the agent did not
+need to."*
+
+**Recorded as a hard constraint:** the Zai isolation cycle admits **no
+Claude-originated content before close**. Assistance is a post-close role event,
+and the schema must be able to prove the ordering — `:ev/at` versus
+`:cycle/closed-at` already can.
+
+### The loop, stated
+
+```
+Codex solves, guided        →  guidance count ↓ over time (P1)
+        ↓ deposit
+Zai re-proves in isolation  →  L(i) with vs without deposit  (teachability)
+        ↓ failure register
+Claude adjudicates + mines  →  arc-lane rewrite rules → next deposit
+        ↑___________________________________________________|
+```
+
+**It closes.** Each arrow is an artifact one agent produces and another consumes,
+and each has a measurable. The one arrow that has never run in this project is
+the third — which is exactly where D.19 found four rules and no pipeline.
+
+### The operator's expectation, recorded honestly
+
+*"a closed loop that should work pretty quickly in my opinion."* Recorded as an
+**expectation, not a prediction** — it names no metric and no horizon, so it is
+not yet falsifiable. **Making it a prediction would need a bound**: cycles, or
+wall-clock, before the loop produces a deposit that measurably lowers `L(i)`.
+Offered as a question rather than assumed: *what would count as "quickly"?*
+P1 is falsifiable; this is not, and the difference should not blur.
