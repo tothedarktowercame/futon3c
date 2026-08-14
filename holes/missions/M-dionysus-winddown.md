@@ -354,6 +354,120 @@ and no hyperedge-axis total has been obtained. **Get a real count before sizing.
 
 ---
 
+## Checkpoint 1 — 2026-08-14 (end of first session)
+
+Written so a fresh session can resume cold. Everything below was measured, not
+assumed.
+
+### Done
+
+**C6 satisfied — the FUTON stack is coherent.** All **17 repos** at inbox zero
+(`git status --porcelain -uall` empty), pushed, and on `main`/`master`. Baseline
+that morning was 22 dirty / 65 untracked across 14 monitored repos; futon1b,
+apm-lean and mathlib4 were not even in the census (`futon0/data/git_sources.json`).
+Diagnose with `bb futon0/scripts/futon-sync.clj status`.
+
+Fourteen of the files committed were **finished work nobody had staged** —
+three passing test namespaces, five documents, four systemd units — plus a
+1559-line apm-driver slice (102 tests green) and an entire untracked pattern
+library (`futon3/library/or3/`, 18 files).
+
+**Branches landed on trunk.** futon2 `M-propagators-ant-gate` (179 commits, plus
+a clean three-way merge of 20 commits that were only on `origin/main`) and
+futon5 `M-propagators-2026-07-15` (284 commits, fast-forward). Both trunks were
+**0 behind** their branches — `main` had been dormant since mid-July while all
+work happened elsewhere. Only `mathlib4/darktower` remains off-trunk, and that
+is the documented exception.
+
+**C1 satisfied for the 154-file evidence corpus.** Relocated to
+`data/evidence/<original-path>` (root `data/` only — nested `data/` dirs are NOT
+ignored), manifest rewritten, `sha256sum -c` **154/154** on Dionysus, ams, lon
+and chi. `scripts/evidence_mesh_sync.sh` + `futon3c-evidence-mesh.timer` keep it
+so: idempotent, pull-from-any-verifying-peer, repairs corruption automatically,
+`replication-factor=4/4  non-laptop=3/3`.
+
+**futon1b is healthy again.** `futon1b-server.service` had restarted **291
+times** (`memory-projection-source-moved-after-quiescence`) while a *transient*
+unit `c7-futon1b-dionysus.service` — created by `systemd-run`, invisible in
+`~/.config/systemd/user/`, dead on reboot — actually served the store. The
+transient unit exited and the proper unit booted first try. Store 22 GB, intact,
+`memory/assert` still 264.
+
+**The interoceptive surface exists** (`f038c414`). `futon1b-vitality.py` gained
+`dual-write-disabled` and `evidence-write-stale`; alerts now render in
+`*agents*`; a missing sample is itself an alert. This mattered because vitality
+had been *correctly* detecting the fault — **1,633 `unit-inactive` alerts over
+two days** — into a JSONL file nobody read. Detection was never the gap.
+
+**lucy recovered.** It had been unstartable for an unknown period: futon3c/src
+requires `futon2.aif.memory-contract`, which existed only on a futon2 branch
+lucy was not on. Its 13-day-old JVM survived only because it had loaded the code
+when the checkout still provided it. Stopping it revealed this. Fixed by landing
+the branch on `main`. lucy now serves **95,848 evidence rows / 365,131
+hyperedges** on `:7074`.
+
+### Still open
+
+| # | criterion | state |
+|---|---|---|
+| C2 | Landscape queryable from a non-laptop node | **not done** |
+| C3 | FTS index populated | **not done here** — `fts5-evidence.db` is 32 KB and empty on Dionysus; lucy has a **215 MB** populated one |
+| C4 | recovery point distinct from a mirror (F-7) | **not done** |
+| C5 | written reconciliation | **not done** |
+| C7 | every asset recorded as *recoverable* or *usable* | **not done** — `~` unsurveyed |
+
+**The evidence line is still cut.** `*agents*` shows `⚠ dual-write-disabled —
+same-target` right now: `FUTON_SUBSTRATE_URL` and `FUTON1B_URL` are both
+`http://127.0.0.1:7073`, so `self-dual-write?` no-ops every write. A viable
+target now exists (lucy `:7074`, bound `0.0.0.0`), but the requirement is
+fan-out, not a partner — see `E-evidence-flows-everywhere`.
+
+### Next: `~`, and it is a different kind of survey
+
+The FUTON repos had a diagnostic (`futon-sync`), a convention (`main`/`master`),
+and a definition of clean. **`~` has none of these**, and it is 622 GB. Operator's
+named examples, measured 2026-08-14:
+
+| path | size | files | state |
+|---|---|---|---|
+| `~/vsat` | 583 MB | 37,457 | git repo, clean — but its **only remote is Heroku** (`git.heroku.com/vsat-dev.git`), a deploy target, not a backup; and it is on branch `authoring-3d`, off-trunk |
+| `~/.emacs-graph` | 863 MB | 16,699 | **not a repo at all** (contains `init.el`) |
+| `~/.config` | 3.5 GB | 21,337 | includes `sway/` (56 KB, 5 files) |
+| `~/.mozilla` | 312 MB | 2,368 | Firefox profile — the credential store |
+| `~/.ssh` | 76 KB | 9 | keys |
+| `~/code` | 420 GB | — | 69 loose files in **no repo**, incl. `CLAUDE.md`, `AGENTS.md`, `DEX-SETUP.md`, `START_HERE.md` |
+
+`~/vsat` is the sharpest: a clean repo whose only remote is a Heroku deploy
+endpoint is *recoverable only while Heroku keeps it*, which is not a backup.
+
+Do not start this by generalising `futon-sync`. Most of `~` is not repos, so
+"inbox zero" does not apply; C7's *recoverable vs usable* is the right frame.
+
+### Facts a new session will need
+
+- **Ports differ per host.** Agency always `:7070`; futon1b `:7073` here and on
+  zone, `:7074` on lucy and chi. Dionysus and zone use the same store *name*
+  (`migration-store-21`) for *different* stores. Full map:
+  `holes/excursions/E-port-wiring-map.md`.
+- **Only root `data/` is git-ignored** (`.gitignore:15 data/*`). Nested `data/`
+  dirs are not. Verify with `git check-ignore -v`, never by assumption.
+- **Never `git commit -a` in futon3c** if jj is ever recolocated. jj was tried
+  and parked — `futon0/README-inbox-zero.md` appendix.
+- **Target environment**: Zone becomes the main box; the client is a DeX phone
+  over `mosh zone -- tmux new-session -A -s main` (`futon0/README-termux.md`).
+  Zone has 1.3 T free, 249 G RAM, 32 cores. Capacity is not a constraint.
+- Backups taken today: `~/zone-futon3c-backup/`, `~/zone-futon6-backup/`,
+  `~/lucy-futon3c-backup/`.
+- ams-claude-2 owns zone. Do not sync it from here.
+
+### Largest unknown, unchanged
+
+Whether `migration-export` can run against a **live** 21 GB store or the node
+must stop. Untested. It is the pivot of the whole transfer and worth settling
+early rather than at day twelve.
+
+---
+
 ## Next
 
 DERIVE is blocked on the three gates at the head of this document. The MAP
