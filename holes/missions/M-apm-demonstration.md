@@ -4128,3 +4128,74 @@ fourth time today the thing was already there.
 
 *(Method note: this time the check ran before the claim, per V.7's mitigation.
 Twice in a row now — V.8 and here.)*
+
+## V.10 CLean as structure, not just binding — the cycle is a futonic flight
+
+**Joe, 2026-08-14:** *"CLean is likely useful not just for the binding but also
+for thinking through the structure, because the cycles we're talking about are
+very similar to futonic flights / missions, which CLean is linked to."*
+
+**Read the primitives before mapping.** `TypedHole.lean` (100), `Comb.lean`
+(117), `Discharge.lean` (118), `Coverage.lean` (165).
+
+### The mapping — our one-shot cycle in CLean's vocabulary
+
+| our design | CLean primitive | what it buys |
+|---|---|---|
+| cycle steps (register → frame → work → adjudicate → promote) | `Stp` positions composed by **`Comb`** | `comp_assoc`, `id_comp`, `comp_id` are **proved** — stages compose lawfully, and re-bracketing a pipeline is not a new risk |
+| an unfilled step's obligation | **`Obligation`** exposed by an open `TypedHole` | an open step *names what it needs*, rather than being merely absent |
+| **F3** — offer with no disposition | an **open hole**, `SatietyGrade`-graded | see below |
+| the hunger audit (queries returning empty) | **`nodesBySatiety`** | **starvation becomes a theorem**, not a logged metric |
+| **module C** — cascade ranked by recorded wear | **`cascadeFeed_routes_through_satiety`** | *already a stated routing law* |
+| **F10** — earned paths, no boost without recorded use | the same theorem | a feed that does **not** route through satiety is off-law, not merely discouraged |
+| promotion discharging a later need | **`Discharge`** (`opened`/`filled`, `open_filled`) | promotion is a coalgebra move, not an ad-hoc write |
+| "is every step accounted for?" | **`Coverage`** — `noOrphan`, `coverageComplete` | completeness as a proof obligation rather than a checklist |
+
+**`cascadeFeed_routes_through_satiety` is the find.** Module C and F10 were
+derived this afternoon from the Ψ-closure mechanism and written as a new
+invariant. **CLean already states the routing law**: cascade feed *routes
+through* satiety. Our F10 — "a ranking boost is warranted only by recorded
+use/offer statistics" — is that theorem's content, expressed as a project rule
+rather than a structure. Fourteenth instance of the pattern, and this one is
+mine from four hours ago.
+
+### Why the flight/mission analogy is load-bearing, not decorative
+
+A futonic mission is phases with holes that discharge; a flight is stages with
+obligations. **Our solve cycle is the same shape at a shorter timescale** —
+which is precisely why `README-missions.md`'s tracker already types missions as
+*"a DarkTower comb of holes"*. The cycle is a comb of holes too. The vocabulary
+is not being borrowed by analogy; **it is the same construction at a different
+grain.**
+
+That also explains why the mission lifecycle's phases and our cycle's steps kept
+rhyming all day — HEAD/IDENTIFY/MAP/DERIVE are holes that discharge, and so are
+register/frame/adjudicate/promote.
+
+### The honesty test — how we will know CLean is earning its keep
+
+**The risk is decorative adoption**: naming our steps `Stp` and our gaps
+`TypedHole` while no law does any work. That is "written but not wired up" in a
+new costume, and it would be the most embarrassing possible instance given this
+mission's subject.
+
+> **Test: does some claim about our cycle become *provable* that was not before?**
+> Two candidates, both concrete:
+> 1. **Coverage** — `coverageComplete` for our step set, i.e. no step is
+>    unaccounted. Today that is a checklist; under CLean it is a theorem with a
+>    `noOrphan`-style cardinality check.
+> 2. **Starvation** — an offer that never receives a disposition is a
+>    *provably starved hole* at a named `SatietyGrade`, rather than a row missing
+>    from a table. That converts F3 from bookkeeping into a typed obligation.
+
+**If neither becomes provable, CLean is decoration here and should be dropped**
+— the `Comb` laws and `Coverage` theorems must be instantiated for our domain,
+which is real work, and their existing `Projection` cardinality (6) is about
+*their* domain, not ours.
+
+### Recorded position
+
+CLean is adopted **as the structural vocabulary for the cycle**, subject to the
+test above, and separately retained for the binding (V.8/V.9). It is the fourth
+place today where the answer was already in the tree — and the first where it
+supplies a *theorem we had just finished writing as a rule*.
