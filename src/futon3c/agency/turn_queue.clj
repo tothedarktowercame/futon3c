@@ -37,6 +37,7 @@
    :seqs {}
    :msg-index {}
    :draining #{}
+   :held {}
    :drained-frontier {}
    :history []})
 
@@ -51,6 +52,9 @@
 
 (declare run-finalizer!)
 (declare stop-all-drainers!)
+(declare drainer-v2-enabled?)
+(declare ensure-drainer!)
+(declare signal-drainer!)
 
 (defn- load-state []
   (let [f (io/file (queue-store-path))]
@@ -299,6 +303,123 @@
         (when @processor-installed? (swap! !processors dissoc id)))
       @result)))
 
+;; =============================================================================
+;; Operator hold — pause a recipient's queue without touching the live turn
+;; =============================================================================
+;;
+;; A hold stops the drain loop BETWEEN turns: the entry already being processed
+;; runs to completion and finalizes normally, and nothing new is popped until
+;; release!. Bells keep being ACCEPTED while held — they pile up in FIFO order
+;; rather than being rejected — which is the point: the operator wants to
+;; interpose a word, not lose the backlog (Joe, 2026-08-11: "a way to hold the
+;; queue while I have a word with claude-1", with the work in progress left
+;; alone).
+;;
+;; Unlike :draining, a hold is durable across a JVM restart. :draining is an
+;; in-flight lock and is cleared on load; a hold is operator intent, and a
+;; restart silently resuming a queue the operator paused is the failure mode
+;; worth avoiding. :expires-at is the safety valve for the opposite failure —
+;; a hold set and forgotten, with bells accumulating unseen behind it.
+
+(def ^:private hold-backoff-ms
+  "Sleep applied when drain! is entered for a held agent. A drainer's .wait
+   only covers the EMPTY-queue case, so a held NON-EMPTY queue would otherwise
+   spin the drainer thread at full CPU on the 500 ms poll — including a drainer
+   thread compiled before this change and still running after a hot reload."
+  500)
+
+(defn- expired? [hold now-ms]
+  (boolean (when-let [exp (:expires-at hold)]
+             (<= (long exp) (long now-ms)))))
+
+(defn held?
+  "True when AGENT-ID's queue is currently held. Clears an expired hold."
+  [agent-id]
+  (let [aid (clean-str agent-id)
+        hold (get-in (snapshot) [:held aid])]
+    (cond
+      (nil? hold) false
+      (expired? hold (System/currentTimeMillis))
+      (do (swap-state! update :held dissoc aid) false)
+      :else true)))
+
+(defn holds
+  "Map of agent-id -> hold for every queue currently held (expired ones dropped)."
+  []
+  (let [now-ms (System/currentTimeMillis)]
+    (into {} (remove (fn [[_ h]] (expired? h now-ms))) (:held (snapshot)))))
+
+(defn hold!
+  "Hold AGENT-ID's queue. The turn already in flight finishes; nothing new is
+   popped until release!. OPTS: :reason, :by, :ttl-ms (auto-release after this
+   many ms; omit or 0 for an indefinite hold). Returns the hold map."
+  ([agent-id] (hold! agent-id nil))
+  ([agent-id {:keys [reason by ttl-ms]}]
+   (when-let [aid (clean-str agent-id)]
+     (let [ttl (some-> ttl-ms long)
+           hold (cond-> {:agent-id aid
+                         :held-at (now)
+                         :by (or (clean-str by) "operator")}
+                  (clean-str reason) (assoc :reason (clean-str reason))
+                  (and ttl (pos? ttl)) (assoc :expires-at (+ (System/currentTimeMillis) ttl)
+                                              :ttl-ms ttl))]
+       (swap-state! assoc-in [:held aid] hold)
+       hold))))
+
+(defn release!
+  "Lift AGENT-ID's hold and wake its drainer so queued turns resume at once."
+  [agent-id]
+  (when-let [aid (clean-str agent-id)]
+    (let [had? (contains? (:held (snapshot)) aid)]
+      (swap-state! update :held dissoc aid)
+      (let [pending (count (get-in (snapshot) [:queues aid]))]
+        (when (and (pos? pending) (drainer-v2-enabled?))
+          (ensure-drainer! aid)
+          (signal-drainer! aid))
+        {:agent-id aid :released had? :pending pending}))))
+
+(defn- entry-view [entry]
+  (let [prompt (:prompt entry)
+        text (cond
+               (string? prompt) prompt
+               (map? prompt) (str (or (:prompt prompt) (get prompt "prompt") prompt))
+               :else (str prompt))]
+    {:id (:id entry)
+     :seq (:seq entry)
+     :from (:from entry)
+     :surface (:surface entry)
+     :msg-id (:msg-id entry)
+     :accepted-at (:accepted-at entry)
+     :preview (let [t (str/replace (str/trim (str text)) #"\s+" " ")]
+                (if (> (count t) 200) (str (subs t 0 197) "...") t))}))
+
+(defn queue-view
+  "Operator view of the queues: who has pending turns, what they are, who is
+   mid-drain, and who is held. Agents with nothing pending, no drain in flight
+   and no hold are omitted unless ALL? is true."
+  ([] (queue-view false))
+  ([all?]
+   (let [state (snapshot)
+         held (holds)
+         ;; Union, not just (:queues state): an agent can be held (or mid-drain)
+         ;; before it has ever had a queue key, and a hold that is invisible in
+         ;; the operator view is the whole failure this endpoint exists to fix.
+         aids (into #{} cat [(keys (:queues state)) (keys held) (:draining state)])
+         rows (for [aid aids
+                    :let [ids (get-in state [:queues aid] [])
+                          pending (count ids)
+                          draining? (contains? (:draining state) aid)
+                          hold (get held aid)]
+                    :when (or all? (pos? pending) draining? hold)]
+                (cond-> {:agent-id aid
+                         :pending pending
+                         :draining draining?
+                         :queued (mapv #(entry-view (get-in state [:entries %])) ids)}
+                  hold (assoc :held hold)))]
+     {:agents (vec (sort-by (juxt (comp - :pending) :agent-id) rows))
+      :held held
+      :total-pending (reduce + 0 (map (comp count val) (:queues state)))})))
+
 (defn- acquire-drain! [agent-id]
   (let [acquired? (atom false)]
     (swap-state!
@@ -379,12 +500,26 @@
    argument is a fallback for direct tests/dev drains."
   [agent-id process-fn]
   (let [aid (clean-str agent-id)]
-    (when (acquire-drain! aid)
+    (cond
+      ;; Held: do not acquire the drain lock at all, and back off so a poll-loop
+      ;; drainer cannot hot-spin on the held non-empty queue (hold-backoff-ms).
+      (held? aid)
+      (do (try (Thread/sleep (long hold-backoff-ms))
+               (catch InterruptedException _))
+          nil)
+
+      (not (acquire-drain! aid))
+      nil
+
+      :else
       (loop [processed-total []]
         (let [processed-batch
               (try
                 (loop [processed []]
-                  (if-let [entry (pop-next! aid)]
+                  ;; Checked BEFORE each pop, never mid-turn: a hold placed
+                  ;; while an entry is in flight lets that entry finish and
+                  ;; finalize, then stops the drain.
+                  (if-let [entry (when-not (held? aid) (pop-next! aid))]
                     (let [frontier (get-in (snapshot) [:drained-frontier aid] 0)
                           stale? (and (:seq entry) (< (:seq entry) frontier))
                           entry-process-fn (or (get @!processors (:id entry)) process-fn)
@@ -408,7 +543,8 @@
                 (finally
                   (release-drain! aid)))
               processed* (into processed-total processed-batch)]
-          (if (and (seq (get-in (snapshot) [:queues aid]))
+          (if (and (not (held? aid))
+                   (seq (get-in (snapshot) [:queues aid]))
                    (acquire-drain! aid))
             (recur processed*)
             processed*))))))
@@ -482,7 +618,8 @@
                   (while @running
                     (locking lock
                       (when (and @running
-                                 (empty? (get-in (snapshot) [:queues agent-id])))
+                                 (or (held? agent-id)
+                                     (empty? (get-in (snapshot) [:queues agent-id]))))
                         (try (.wait lock (long drainer-wait-ms))
                              (catch InterruptedException _))))
                     ;; A timeout or spurious wake with no work is genuinely
@@ -490,6 +627,7 @@
                     ;; queue store. A signal cannot be lost because the queue is
                     ;; checked while holding the same monitor used by notify.
                     (when (and @running
+                               (not (held? agent-id))
                                (seq (get-in (snapshot) [:queues agent-id])))
                       (try
                         (drain! agent-id nil)   ;; each entry carries its own processor
