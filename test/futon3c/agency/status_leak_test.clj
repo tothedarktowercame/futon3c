@@ -1,7 +1,7 @@
 (ns futon3c.agency.status-leak-test
   "Tests for the agent-status leak fix: failed/thrown invoke jobs must reset
    the agent's roster status to :idle, and stale :invoking agents must be
-   reconciled on roster reads."
+   reconciled by the periodic agents ticker."
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
             [futon3c.transport.http :as http]

@@ -3484,6 +3484,9 @@ RESPOND WITH ONLY:
                            (reset! skipped 0)
                            (future
                              (try
+                               (try
+                                 (reg/reconcile-stale-invoking! 120000)
+                                 (catch Throwable _))
                                (bb/project-agents! (reg/registry-status))
                                (catch Throwable _)
                                (finally

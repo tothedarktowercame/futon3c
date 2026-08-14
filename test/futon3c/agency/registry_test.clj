@@ -478,6 +478,48 @@
       :capabilities []})
     (is (= 1 (:count (reg/registry-status))))))
 
+(defn- register-stale-invoking-agent!
+  [agent-id & [metadata]]
+  (reg/register-agent!
+   {:agent-id (fix/make-agent-id agent-id)
+    :type :mock
+    :invoke-fn (fn [_p _s] {:result "ok"})
+    :capabilities []
+    :metadata metadata})
+  (reg/update-agent!
+   agent-id
+   :agent/status :invoking
+   :agent/invoke-started-at (.minusSeconds (java.time.Instant/now) 31536000)))
+
+(deftest reconcile-never-sweeps-federated-proxies
+  (testing "a proxy's home site remains the sole authority for runtime status"
+    (register-stale-invoking-agent! "remote-worker" {:proxy? true})
+    (is (empty? (reg/reconcile-stale-invoking! 120000)))
+    (is (= :invoking (:agent/status (reg/get-agent "remote-worker"))))))
+
+(deftest reconcile-preserves-fresh-invoke-activity
+  (testing "fresh stream activity proves a ledger-less local turn is alive"
+    (register-stale-invoking-agent! "active-repl")
+    (reg/update-invoke-activity! "active-repl" "using bash")
+    (is (empty? (reg/reconcile-stale-invoking! 120000)))
+    (is (= :invoking (:agent/status (reg/get-agent "active-repl"))))))
+
+(deftest reconcile-repairs-stale-local-agent-without-liveness
+  (testing "a genuinely abandoned local invocation is still repaired"
+    (register-stale-invoking-agent! "abandoned-local")
+    (is (= ["abandoned-local"]
+           (reg/reconcile-stale-invoking! 120000)))
+    (is (= :idle (:agent/status (reg/get-agent "abandoned-local"))))))
+
+(deftest registry-status-does-not-repair-stale-invocations
+  (testing "reading the roster twice does not mutate agent runtime status"
+    (register-stale-invoking-agent! "read-pure")
+    (let [first-read (reg/registry-status)
+          second-read (reg/registry-status)]
+      (is (= :invoking (get-in first-read [:agents "read-pure" :status])))
+      (is (= :invoking (get-in second-read [:agents "read-pure" :status])))
+      (is (= :invoking (:agent/status (reg/get-agent "read-pure")))))))
+
 (deftest registry-status-detects-external-codex-invocation
   (testing "codex agent marked invoking when matching external codex process session is active"
     (reg/register-agent!

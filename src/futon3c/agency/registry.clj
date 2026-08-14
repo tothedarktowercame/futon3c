@@ -1150,6 +1150,16 @@
                              :agent/invoke-activity-at (now)))
              m))))
 
+(defn- with-idle-invoke-state
+  [agent now*]
+  (merge agent
+         {:agent/last-active now*
+          :agent/status :idle
+          :agent/invoke-started-at nil
+          :agent/invoke-prompt-preview nil
+          :agent/invoke-activity nil
+          :agent/invoke-activity-at nil}))
+
 (defn mark-agent-idle!
   "Public idle-reset for use by HTTP-layer try/finally guarantees.
    Resets :agent/status to :idle, clears invoke metadata. Idempotent —
@@ -1165,13 +1175,7 @@
                  (when (= :invoking (:agent/status agent*))
                    (reset! transitioned? true))
                  (assoc m aid-val
-                        (merge agent*
-                               {:agent/last-active (now)
-                                :agent/status :idle
-                                :agent/invoke-started-at nil
-                                :agent/invoke-prompt-preview nil
-                                :agent/invoke-activity nil
-                                :agent/invoke-activity-at nil})))
+                        (with-idle-invoke-state agent* (now))))
                m)))
     @transitioned?))
 
@@ -1193,32 +1197,58 @@
                           0))))))
     (catch Throwable _ false)))
 
-(defn reconcile-stale-invoking!
-  "Read-repair: find agents whose :agent/status is :invoking but who have
-   no running job in the invoke-jobs ledger AND whose invoking state is
-   older than THRESHOLD-MS (default 120s). Reset them to :idle.
+(defn- stale-invoking-without-fresh-activity?
+  [agent threshold-ms now-ms]
+  (let [started-at (:agent/invoke-started-at agent)
+        last-active (:agent/last-active agent)
+        activity-at (:agent/invoke-activity-at agent)
+        ref-inst (or started-at last-active)
+        age-ms (when (instance? Instant ref-inst)
+                 (- now-ms (.toEpochMilli ^Instant ref-inst)))
+        activity-age-ms (when (instance? Instant activity-at)
+                          (- now-ms (.toEpochMilli ^Instant activity-at)))]
+    (and (= :invoking (:agent/status agent))
+         (not (get-in agent [:agent/metadata :proxy?]))
+         (some? age-ms)
+         (> age-ms (long threshold-ms))
+         (not (and (some? activity-age-ms)
+                   (<= activity-age-ms (long threshold-ms)))))))
 
-   Returns a vector of repaired agent-id strings. Safe when the jobs ledger
-   is unavailable (no-op). NEVER touches an agent with a live running job."
+(defn reconcile-stale-invoking!
+  "Periodic repair for local agents whose :agent/status is :invoking, whose
+   invoking state and latest activity are older than THRESHOLD-MS (default
+   120s), and who have no running job in the local invoke-jobs ledger.
+
+   Federated proxies are never repaired locally: their home site owns their
+   status and job ledger. Returns a vector of repaired agent-id strings."
   ([]
    (reconcile-stale-invoking! 120000))
   ([threshold-ms]
-   (let [now-ms (.toEpochMilli (now))
-         registry @!registry
-         stale-agents
-         (for [[aid agent] registry
-               :when (= :invoking (:agent/status agent))
-               :when (not (invoke-jobs-running-for-agent? aid))
-               :let [started-at (:agent/invoke-started-at agent)
-                     last-active (:agent/last-active agent)
-                     ref-inst (or started-at last-active)
-                     age-ms (when (instance? Instant ref-inst)
-                              (- now-ms (.toEpochMilli ^Instant ref-inst)))]
-               :when (and age-ms (> age-ms (long threshold-ms)))]
-           aid)]
-     (doseq [aid stale-agents]
-       (mark-agent-idle! aid))
-     (vec stale-agents))))
+   (let [scan-now-ms (.toEpochMilli (now))
+         candidate-ids
+         (for [[aid agent] @!registry
+               :when (stale-invoking-without-fresh-activity?
+                      agent threshold-ms scan-now-ms)]
+           aid)
+         repaired (atom [])]
+     (doseq [aid candidate-ids
+             :when (not (invoke-jobs-running-for-agent? aid))]
+       (let [now* (now)
+             now-ms (.toEpochMilli now*)
+             [before after]
+             (swap-vals! !registry
+                         (fn [registry]
+                           (if-let [agent (get registry aid)]
+                             (if (stale-invoking-without-fresh-activity?
+                                  agent threshold-ms now-ms)
+                               (assoc registry aid
+                                      (with-idle-invoke-state agent now*))
+                               registry)
+                             registry)))]
+         (when (and (= :invoking (get-in before [aid :agent/status]))
+                    (= :idle (get-in after [aid :agent/status])))
+           (swap! repaired conj aid))))
+     @repaired)))
 
 (defn report-external-invoke!
   "Record or clear externally-driven invoke state for AGENT-ID-VAL.
@@ -1488,11 +1518,6 @@
 (defn registry-status
   "Return status of all registered agents."
   []
-  ;; Read-repair: reset agents stuck at :invoking with no running job.
-  ;; The :overrun job state (2026-07-19) makes capped-but-alive lanes visible
-  ;; to active-invoke-job-counts (overrun counts as non-terminal/running), so
-  ;; the tight 120s threshold is safe again — reconcile won't sweep live lanes.
-  (try (reconcile-stale-invoking! 120000) (catch Throwable _))
   (let [registry @!registry
         now* (now)
         codex-session-ids (running-codex-session-ids)
