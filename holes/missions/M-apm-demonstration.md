@@ -2101,3 +2101,126 @@ the mechanism itself demonstrably works when run.
 
 Lane coverage is the F1-shaped fix: **a scribe pass that reports which lanes it
 ran cannot silently run one of four.**
+
+## D.21 Registration as the structural fix for "written but not wired up"
+
+**Operator ruling, Joe, 2026-08-14:** *"'written but not wired up' is a common
+defect in the APM project so far, it seems! The demonstration should have much
+better behaviour than that. NB that in `~/code/mathlib4/DarkTower/` we have
+material for creating an ExperimentalDesign and ExperimentPreregistration and
+checking them formally. I'd argue that each problem is (henceforth) potentially
+an experiment, and the experiment should be registered. The DarkTower formalism
+corresponds to a Clojure semi-formalism that ensures that the actual
+implementation matches the specification."*
+
+### The defect, catalogued
+
+Joe's diagnosis is supported by ten instances found in this mission alone:
+
+| # | written | not wired |
+|---|---|---|
+| 1 | `ConstructionTargets` lemmas | no `lean_lib` → unreachable *(fixed 07-30)* |
+| 2 | `YoungL2` lemma | same defect → a94J04's runner hit it *(fixed 07-31)* |
+| 3 | **1,943 problem-held lemmas** | no `lean_lib` for `problems` → **unfixed** (D.18) |
+| 4 | `batch2r_pair.sh` "verified-fresh sessions" | a comment; no implementing code (D2) |
+| 5 | arc-lane rewrite-rule spec | 4 rules, never wired into per-session scribe (D.19) |
+| 6 | capability proof: "transportability via selection diagrams" | not implemented (addendum 2) |
+| 7 | `ConstructionTargets` consumer table | stale ~3× (E1) |
+| 8 | V3 "under live test / pending" | stale vs the close-out report (C5) |
+| 9 | `status.json` as Lean-source oracle | wrong for 45 bundles (A4) |
+| 10 | mission section content | wrong header → *"the hole will NOT discharge"* (`README-missions.md`) |
+
+**These are one defect, not ten.** In every case an artifact asserts a
+capability that nothing checks. F1 and F7 were the first two local answers;
+registration is the general one.
+
+### What DarkTower already supplies
+
+`ExperimentPreregistration.lean` (426 lines) and `ExperimentalDesign.lean` (244
+lines) are not a sketch. They define `Observable`, `Flag`, `Axis`, `Arm`,
+`ArmRole`, `ClaimForm`, `Registration`, `StopRule`, `DecisionRule`,
+`ProspectiveRegistration`, `ReplicationPlan` (pilot vs confirmation), and
+`Obligation` — plus `Evidence`, whose four fields read as a direct rebuke of
+this project's failures:
+
+- tools **resolved *and executed*** in the run's own environment;
+- the remote **asserted** at the expected commit, not assumed;
+- the teardown path **itself exercised**;
+- the arms **observed to produce distinct output**.
+
+**And `Launch` is gated.** `Launch` requires `ReadyToRun`, which requires
+`Discharged`. **An experiment that has not discharged its obligations cannot
+be launched** — "wired up" enforced by the type checker rather than by
+diligence.
+
+### The no-witness theorems are this mission's preconditions, already proved
+
+| DarkTower theorem | what it refuses | our name for it |
+|---|---|---|
+| `no_witness_of_inert_flag` | a flag not observed to act on the smoke trace | **exactly defect #4** — the batch2r comment |
+| `no_witness_of_missing_control` | "rarer than chance" with no no-selection arm | **headroom** (precondition 1) |
+| `no_witness_of_constant_axis` | an axis whose score never varies | a measure that cannot move |
+| `no_witness_of_dead_axis` | a profile zero at every sampled level | a treatment with no effect surface |
+| `no_witness_of_undischarged` | obligations not discharged | **F1/F3 generalised** |
+| `no_witness_of_over_budget` | over-budget registration | cost discipline |
+
+The three preconditions promoted in the v2 plan (headroom, arm independence,
+elicitation verified) are **already theorems here**, or one field away from it.
+We were re-deriving, informally, what exists formally two directories over —
+which is D.17's locked-lemma pathology at the level of our own methodology.
+
+### The correspondence is live, not aspirational
+
+The Clojure side exists: `M-typed-holes` carries the `(typed-hole, fill)`
+datatype under DarkTower's `Fill`/`Comb`/`Discharge` laws, and
+`futon3c.logic.capability-star-map-extractor/structural-hole-report` is the
+structural counter the outer-loop tracker reads. `README-missions.md` states the
+enforcement in its own terms: *"If you advance a phase but put the content under
+the wrong header, the tracker will NOT see it and the hole will NOT discharge."*
+
+**That is defect #10 and its own cure in one sentence** — the tracker refuses to
+discharge what it cannot see, which is the behaviour every other item in the
+table lacked.
+
+### Design consequence — every problem is a registered experiment
+
+> **D.21 ruling.** Henceforth each problem attempt is an **experiment with a
+> `Registration`**. A cycle may not launch without a discharged registration;
+> an unregistered run is not a failed experiment but **not an experiment**, and
+> contributes to no denominator.
+
+This subsumes several earlier DERIVE items rather than adding to them:
+
+| earlier item | subsumed as |
+|---|---|
+| **F1** frame liveness | an obligation on the frame observable |
+| **F3** offer carries a disposition | an `Observable` with a discharge condition |
+| **F5** no measurement spans a regime | `Registration` names the regime; stage-typed |
+| **D.13** build-on-1, verify-on-2 | `ReplicationPlan` — **pilot vs confirmation, already formalised** |
+| three preconditions | the no-witness theorems above |
+
+**D.13's two-problem protocol is `ReplicationPlan` exactly** — `pilotUnits` and
+`confirmationUnits`, with `confirmation_not_pilot` proved. The walkthrough Joe
+specified is already the formalism's shape.
+
+### Starvation becomes a theorem
+
+`AIF-COMPLIANCE.md`: *"every external dependency (observation/feed) is a
+satiety-graded `TypedHole`, so **starvation is a theorem**."*
+
+The hunger audit measures queries returning empty. Under this formalism an
+unserved memory need is not a logged metric but a **provable starvation of a
+typed hole**. That is a strictly stronger instrument than the one N5 has been
+waiting on, and it is the same move as F7: turn the principle into a check.
+
+### [OPEN]
+
+1. Which DarkTower `Registration` fields a *problem-level* experiment needs — the
+   existing preregistrations are cohort-scale. **Settle on problem 1** (D.13).
+2. Whether the Clojure semi-formalism validates a `Registration` end-to-end today
+   or only counts structural holes.
+3. Whether `MemoryAblationPreregistration.lean` (1,040 lines) already covers the
+   memory arm this mission needs — **read before writing** (I-4).
+
+**Item 3 first.** On today's evidence the likeliest error is building something
+that already exists two directories away.
