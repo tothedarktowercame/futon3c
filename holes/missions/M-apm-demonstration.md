@@ -4619,3 +4619,82 @@ the principle above it cannot: `populatedMeasurementFields` must be computed as
 Gap **(a)** — variation kind/endpoint, costs, budget, teardown, stop rules,
 decision rule — **operator decisions**, now with named schema slots to land in.
 Everything else codex-4 listed is closed or has a stated treatment.
+
+## I.3 Gap (a) walked through — round-level by requirement, not by convenience
+
+**Joe, 2026-08-14:** *"let's walk through these b/c I don't want to have to
+decide them independently for each of 100s of problems."*
+
+**The constraint and the methodology agree, which is worth stating before the
+table.** If any of these varied per problem by *judgement*, cross-problem
+comparison would be confounded by the variation itself — a problem that quietly
+got a larger budget or a laxer stop rule is not comparable to one that did not,
+and **N8's whole claim is a slope across problems.** So:
+
+> **Anything decided per problem by judgement destroys the comparability N8
+> needs. Everything here must be round-level, or computed by a rule.**
+
+**Result: zero per-problem decisions.** Six items, five necessarily round-level,
+one a rule keyed by stratum.
+
+### The sheet
+
+| # | item | level | proposal |
+|---|---|---|---|
+| 1 | **variation kind / endpoint** | **round** | **identity-floor** (not reproducibility). Endpoint: *a GLM-5.2-class student solver reaches it given the deposit* — amendment 2. Pinned by **model version + benchmark release**, never by the rate (A.11) |
+| 2 | **estimated cost** | **rule, keyed by stratum** | a table `stratum → estimate`, **not** a per-problem guess. Round 1 has no data to populate it honestly, so: **one declared round-level figure, marked provisional, calibrated by the first cycles** |
+| 3 | **budget cap** | **round, uniform** | a fixed multiple of the estimate. **Uniformity is required, not convenient** — an unequal cap is an unequal treatment |
+| 4 | **teardown deadline** | **rule** | `launch + N`, one round-level `N`. Computed per cycle, never decided |
+| 5 | **stop rules** | **round, identical** | proposed set below |
+| 6 | **total decision rule** | **round** | the scoring function; identical by definition or outcomes are not comparable |
+
+### Where I need your judgement, and where I do not
+
+**Do not need you:** 1, 4, and 6 — their *structure* is forced by the design and
+I have proposed the content. 2's structure likewise; only its number is open.
+
+**Need you, and only three numbers:**
+- **`N` for teardown** — wall-clock minutes after launch.
+- **The round-1 cost estimate** — a single provisional figure. It will be wrong;
+  that is expected, and round 1's job is to replace it with a measurement.
+- **The budget multiple** — I would suggest 3× the estimate, so a cycle can
+  overrun substantially before being refused, but cannot run unbounded.
+  `no_witness_of_over_budget` then has teeth.
+
+### Proposed stop rules (5) — round-level, identical for every problem
+
+1. **budget exceeded** — `cost > budget-cap`.
+2. **attempt cap reached** — a fixed number of prover attempts.
+3. **axiom-unclean close** — a candidate closes but fails the axiom probe.
+4. **no-progress** — K consecutive attempts with no reduction in residual
+   sorries.
+5. **teardown deadline passed.**
+
+Each yields a **named** terminal reason, not a boolean — per V.8's 45-keyword
+lesson. **Only 2 and 4 need integers from you; the rest are structural.**
+
+### Proposed decision rule (6) — total, and computed from the Disposition
+
+```
+:closed     residual-sorries = 0  ∧  axiom-clean?
+:tier-a     residual-sorries = 0  ∧  ¬axiom-clean?
+:tier-b     residual-sorries > 0  ∧  progress made
+:defective  statement defect found at or after freeze
+```
+
+**Total by construction** — the four cases partition on
+`(residual-sorries, axiom-clean?, defect?)`, so every trace maps to exactly one
+outcome. That discharges codex-4's *"EDN cannot prove the implementation
+total"* by making totality checkable at the schema level rather than the type
+level: a decision rule that is a **lookup over a partition** cannot be partial.
+
+### What this buys beyond convenience
+
+**A problem becomes a row, not a negotiation.** Registering the 476th problem
+requires: its id, and running the three extraction rules from I.2. Nothing else
+is decided, which is what makes hundreds of problems tractable — **and what makes
+their results comparable.**
+
+**Gate: three numbers from Joe** (teardown `N`, round-1 cost estimate, budget
+multiple) **plus two integers** (attempt cap, no-progress `K`). Everything else
+above is a proposal I can land without further input.
