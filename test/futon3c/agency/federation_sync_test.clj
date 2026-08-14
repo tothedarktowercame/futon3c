@@ -51,6 +51,21 @@
         (is (fn? (:agent/invoke-fn agent)))
         (is (empty? (logic/find-phantoms (logic/build-live-db))))))))
 
+(deftest sync-peer-publishes-hud-only-when-proxy-state-changes
+  (let [peer "http://hub:7070"
+        published (atom [])]
+    (with-redefs [reg/publish-agents-status-async!
+                  (fn [opts]
+                    (swap! published conj opts)
+                    {:ok true :scheduled? true})]
+      (fed/sync-peer! peer {:now-ms 1000
+                            :fetch-fn (fn [_] (peer-roster))})
+      (is (empty? @published) "an empty no-op sync does not repaint")
+      (fed/sync-peer! peer {:now-ms 2000
+                            :fetch-fn (fn [_] (peer-roster "claude-3"))})
+      (is (= [{:announce-uplink? false}] @published)
+          "a state-changing sync schedules exactly one no-echo repaint"))))
+
 (deftest sync-tick-prunes-departed-proxies-but-not-local-agents
   (testing "departed peer agents are pruned, while real local records are never pruned"
     (let [peer "http://hub:7070"

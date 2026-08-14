@@ -1015,6 +1015,9 @@
                        vec)
           pruned (prune-departed-proxies! peer-url roster-ids)]
       (record-peer-success! peer-url now results pruned)
+      (when (or (seq pruned)
+                (some #(contains? #{:updated :registered} (:action %)) results))
+        (reg/publish-agents-status-async! {:announce-uplink? false}))
       {:ok true
        :peer peer-url
        :count (count results)
