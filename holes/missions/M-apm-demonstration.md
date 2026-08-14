@@ -3359,3 +3359,77 @@ solver rather than to the store. **A model upgrade is a regime change.**
   and MathArena's own summary — not on the point estimate.
 
 *Source:* [MathArena competitions](https://matharena.ai/competitions)
+
+## A.12 Correction — the Clojure is not unrelated, and the boundary validator exists
+
+**Operator correction, Joe, 2026-08-14:** *"whether that's true or not in the
+abstract, the ExperimentalDesign is set up to work in concert with Malli + CLean
+to provide behavioural certificates for the Clojure code, so associated Clojure
+is not 'unrelated'."*
+
+**Correct, and A.10 oversold codex-4's caveat.** I recorded it as "the most
+valuable line in the return" and assigned the Clojure side a new job — *"be the
+sole constructor of `Trace`"* — as though that job were open. **It is not open.
+It is `futon6/scripts/clean_to_lean.py`, 1,028 lines, and it already exists.**
+
+### The mechanism, in its own words
+
+`clean_to_lean.py` docstring:
+
+> *"CLean → DarkTower Lean emitter (deterministic). … **The render IS the
+> correctness gate: a CLean is well-formed iff it produces type-correct, 0-sorry
+> DarkTower Lean.**"*
+
+**The Lean is *generated from* the Clojure-side record, not written alongside
+it.** So the failure codex-4 imagined — an untyped Clojure record bypassing the
+Lean — is not a gap to police: **a record that does not render to valid Lean is
+by definition not well-formed.** The correspondence is definitional, not
+aspirational. That is the behavioural certificate.
+
+### `validate_experiment` already enforces things this mission re-derived
+
+| check (line) | what it prevents | our name for it |
+|---|---|---|
+| *"must be `:registered-not-run` before rendering"* (180) | rendering a registration for an experiment that already ran | **preregistration, mechanically enforced** — you cannot retrofit a registration to results |
+| *"axis requires at least two reachable levels"* (193) | a dead or constant axis | `no_witness_of_dead_axis` / `Axis.Navigable`, enforced **before** Lean |
+| non-empty unique axis ids; numeric levels (190, 196) | ill-formed axes | shape discipline |
+
+And the v3 programme records the pipeline as **attack-verified**: *"claude-4's
+CLean pipeline gained `ArmRole` + `axisPredictedNonNavigable` (mathlib4
+`084930e`, futon6 `9a25e8c`, **attack-verified — a live axis cannot be laundered
+as a positive control**)."* Someone tried to defeat it and could not.
+
+Malli is the Clojure-side schema layer for the runtime records
+(`futon3c/deps.edn` → `metosin/malli 0.16.3`; used in `reflection/envelope.clj`,
+`peripheral/proof_shapes.clj`, `social/shapes.clj`, `peripheral/mission_shapes.clj`).
+
+### What is actually open — much smaller than A.10 implied
+
+Not "build a boundary validator". The accurate statement:
+
+> **F1's hash-inequality obligation is new and is not yet among
+> `validate_experiment`'s checks.** The job is to add one obligation to an
+> existing, attack-verified validator — not to construct the correspondence.
+
+**A.10's paragraph beginning "The semi-formalism must be the sole constructor of
+`Trace`" is superseded by this section.** The principle stands; the implication
+that it needed building does not.
+
+### The lesson is the mission's own, applied to me
+
+I read codex-4's caveat, found it well-reasoned, and recorded it as a finding
+without checking whether the capability it presumed missing already existed.
+**That is I-4 (read before you write) violated by the agent maintaining a
+document about capabilities that go unchecked** — and it is why the operator
+correction was needed. Recorded rather than quietly fixed, because a silent
+correction here would be the same defect once more.
+
+### Incidental: D.14 was E7's H1, already specified
+
+`E-memory-v3-programme.md` lists **E7** as *"duplicate detection over the Lean
+corpus, calibrated against the 17 `LusinN`/`a95A02` byte-identical proofs"*,
+blocked on nothing for H1. **That is exactly what D.14 did today** — including
+validating against the same 17. The experiment was designed, unrun, and
+independently re-derived. It reinforces D.17's finding at the level of the
+project's own plans: **material that is written but not reachable at the moment
+of need gets rebuilt, not reused.**
