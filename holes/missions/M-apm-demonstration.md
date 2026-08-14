@@ -2306,3 +2306,94 @@ reference**. Its observables and its probe-evidence discipline should be lifted
 into the problem-level registration (D.21); its arm/seed/sign-test machinery
 should not. Point 2 above is **new** — it is not in D.6 or the three
 preconditions, and it is a direct consequence of the modality change.
+
+## D.23 Did frame containment actually work? Partly — and the split is instructive
+
+Joe: *"Containment in frames was maybe the one thing that actually worked. But,
+I don't know that it did actually work. Anyway, yes, we do need it here."*
+
+**Both halves are right.** Containment worked exactly where a type system
+enforced it, and is unknown exactly where a receipt field was left empty.
+
+### Structurally real, and mechanically verified
+
+Each of the 51 frames carries a distinct workspace record:
+
+| field | isolation |
+|---|---|
+| `workspace/root` | `futon6/.state/proof-frames/<problem>/<frame-id>/` — distinct per frame |
+| `workspace/lean-root` | `apm-lean/ApmCanaries/Frames/<PROBLEM>/<Frame_id>/` — distinct |
+| `workspace/module-root` | `ApmCanaries.Frames.<Problem>.<Frame_id>` — **51 distinct namespaces** |
+
+On disk: **77 frame directories, 220 Lean files.** And the check that matters:
+
+> **Zero namespace collisions** across every frame under `ApmCanaries/Frames`.
+
+That is not an assertion — it is a property Lean's module system enforces and
+that I re-verified today. **Containment held where it was mechanically
+enforced.** This is the strongest positive result about the old apparatus in the
+whole mission, and it justifies Joe's "maybe the one thing that actually worked."
+
+### Unknown where it was only declared
+
+The receipts contain the field that would witness filesystem containment, and it
+is empty in **all 51**:
+
+```edn
+:state {:readonly [] :writable []}
+```
+
+Zero readonly paths, zero writable paths — the capability record was never
+filled. And `boundary/workdir` is `/home/joe/code/futon3c` for **all 51**: the
+frames had distinct *workspaces* but ran from a **common working directory**.
+
+So whether a frame read or wrote outside its workspace is **not recorded and not
+recoverable**. Joe's "I don't know that it did actually work" is the correct
+epistemic position, and the reason is now exact: **the evidence slot exists and
+is empty.** Same shape as the missing outcome disposition (A3, B-recheck, C1) —
+the schema anticipated the evidence; nothing populated it.
+
+### The designed escape hatch was never used at all
+
+Every frame's workspace names one shared writable surface:
+
+```
+workspace/shared-extension-root : /home/joe/code/apm-lean/ApmCanaries/Local   (all 51)
+```
+
+and the frame scaffold instructs: *"Promote reusable lemmas explicitly into
+`ApmCanaries.Local`."*
+
+**`ApmCanaries/Local` contains zero files.** Created 31 March, never written to.
+
+⚠ **Eleventh instance of D.21's defect** — and a consequential one. The
+designed promotion channel was advertised in the scaffold, wired into every
+workspace record, and **never once used.** Promotion instead happened ad hoc
+into `ConstructionTargets` **by copying** — which is exactly how `LusinN` and
+`LemniscateComponents` came to be (D.16), and part of why 1,943 lemmas stayed
+locked (D.18).
+
+**IF** containment is judged by leakage, **HOWEVER** the one sanctioned leak was
+never exercised while unsanctioned copying flourished, **THEN** the apparatus
+was *over*-contained rather than under-contained, **BECAUSE** it sealed frames
+from each other and left the sole legitimate exit unused — so the only way to
+share work was to copy it. **Containment without a working promotion path
+manufactures duplication.**
+
+### What this means for the design
+
+1. **Keep frame containment. It is the one component with a passing mechanical
+   check** — namespace isolation, verifiable at any time by the collision scan
+   above. Lift it into the 1-shot modality unchanged.
+2. **Fill `:state`.** The readonly/writable record becomes an `Observable`
+   checked against recorded probe evidence (D.22) rather than a declared shape.
+   Then "did containment hold" is answerable instead of arguable.
+3. **The promotion path must be exercised, not merely available.** An unused
+   sanctioned exit is worse than no exit, because it licenses the belief that
+   sharing is possible while the only working mechanism is copying. Suggested
+   obligation: *a cycle that produces a reusable lemma and promotes nothing
+   must say why.*
+
+**Recorded as a positive result with a named limit** — containment is the first
+component this mission can report as *working*, and the report says precisely
+which half.
