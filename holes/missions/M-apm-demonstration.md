@@ -2397,3 +2397,203 @@ manufactures duplication.**
 **Recorded as a positive result with a named limit** — containment is the first
 component this mission can report as *working*, and the report says precisely
 which half.
+
+---
+
+## DERIVE CANDIDATE — the system, consolidated
+
+*Written 2026-08-14 at Joe's request, after D.1–D.23 established the shape.
+**D.1–D.23 are the derivation log; this is the design.** Where they disagree,
+this section governs. Kept under the `DERIVE` header deliberately — per
+`README-missions.md`, content under the wrong header never discharges the hole.*
+
+### 0. What we are building, in one paragraph
+
+**A one-problem one-shot solver whose every run is a registered experiment.**
+The run cannot launch without a discharged registration; it cannot close without
+a disposition; and every capability it claims is checked by a probe rather than
+asserted in prose. Its outputs are a solved-or-not problem, a complete
+measurement vector, and a promotion that is *reachable* by the next problem that
+needs it. The learning claim lives in the slope across a series of such runs,
+not inside any one of them.
+
+### 1. Why this shape — the two facts it is built around
+
+1. **The system records where work happened, not how it turned out.** Three
+   independent audits (A3, C1, B-recheck) plus the empty containment record
+   (D.23). Every channel has provenance; none has disposition.
+2. **"Written but not wired up" is the project's characteristic defect** —
+   eleven instances catalogued (D.21, D.23). In every case an artifact asserts a
+   capability nothing checks.
+
+**So the design is not new machinery. It is dispositions on existing channels,
+plus registration to make claims checkable.** That is why it is smaller than it
+looks.
+
+### 2. Modules
+
+Eight, with `T` optional. Each names what it *guarantees* — not what it does.
+
+| id | module | guarantees |
+|---|---|---|
+| **R** | **Registration** | a run without a discharged registration cannot launch, and is not an experiment |
+| **F** | **Frame** | namespace-isolated workspace, with reads/writes *witnessed* |
+| **S** | **Solver** | one problem, one shot; a created frame is a worked frame |
+| **A** | **Adjudicator** | every closed cycle carries exactly one disposition |
+| **M** | **Memory** | every offer carries a use-disposition; retrieval answers to need |
+| **P** | **Promotion** | what is promoted is *importable* and *need-taggable* |
+| **X** | **Measurement** | the per-cycle vector, computed from emitted fields |
+| **T** | **Transport** *(optional)* | N6 adjudicable — or explicitly refused |
+
+**Dependency structure.** `R` gates `S`. `F` contains `S`. `S` emits to `A` and
+`M`. `P` consumes `A`/`M` output. `X` reads all of them. `T` hangs off nothing.
+
+```
+        R ──gates──▶ S ──within──▶ F
+                     │
+              ┌──────┴──────┐
+              ▼             ▼
+              A             M ──▶ P
+              └──────┬──────┘
+                     ▼
+                     X ──▶ L(i) · retrieval board · warrant table
+
+        T ── independent, no edges into the above
+```
+
+### 3. Module specifications
+
+#### R — Registration *(new; DarkTower-derived)*
+Per-problem `Registration` (D.21): observables, flags, axes, stop rule, decision
+rule, obligations. `Launch` requires `ReadyToRun` requires `Discharged`.
+**Under 1-shot this is a *measurement* registration, not a contrast** (D.22) —
+it fixes what will be observed, not two arms to compare.
+*Reuse:* `ExperimentPreregistration.lean`, `ExperimentalDesign.lean`.
+*Do not reuse:* the ablation's arm/seed/sign-test machinery.
+
+#### F — Frame *(exists; works; needs witnessing)*
+Distinct `workspace/root`, `lean-root`, `module-root`. **Namespace isolation is
+mechanically enforced and verified passing** — keep unchanged (D.23).
+*Change:* populate `:state {:readonly … :writable …}` as an observable checked
+against probe evidence.
+
+#### S — Solver *(new, but assembled from existing gates)*
+One problem, one shot. **F1 holds by construction, not by check** (E6): a frame
+that would close scaffold-identical is not emitted. Adjudication is *inside* the
+solver, not a later pass (Joe, D.13).
+
+#### A — Adjudicator *(the central gap)*
+Emits the `Disposition` — the entity the whole system lacks. Also carries the
+n-ary `adjudication(cycle, offer, outcome, verdict, adjudicator, at)` hyperedge
+(D.2), because A3 failed precisely by losing the (offer, outcome) pair.
+
+#### M — Memory *(exists; partly working)*
+Offers and uses. **The scribe's need-vocabulary tag bags demonstrably pass F7**
+(D.20) — that is the working model. Four lanes, of which only solve-lane has
+ever run: **lane coverage is now reported per pass**, so one-of-four cannot
+recur silently. Arc-lane (rewrite rules) is the highest-value unrun lane (D.19).
+
+#### P — Promotion *(exists; two defects)*
+1. **Importability.** 1,943 lemmas are unimportable because `problems` has no
+   `lean_lib` (D.18). Retrieval cannot reach them at any quality.
+2. **Need-taggability.** Promotions carry no tag bag, so they surface by name
+   only (E2) — unlike scribe memories (D.20).
+**Obligation:** a cycle producing a reusable lemma and promoting nothing must
+say why. *Containment without a working promotion path manufactures
+duplication* (D.23).
+
+#### X — Measurement *(joins over emitted fields)*
+The vector (D.5) plus the free additions found later: duplicate declarations
+(D.14), locked-lemma exposure and promotion coverage (D.17), unconsumed
+promotions and import-only edges (D.16), lane coverage (D.20).
+`L(i) = w₁·attempts + w₂·residual + w₃·rework`, shipped with **`w₃ = 0` and the
+rework term declared-but-unpopulated** until def-body hashing exists — and
+populating it is a regime change requiring stratification.
+
+#### T — Transport *(optional; three dispositions)*
+Build / restate / refuse (component T). Nothing above depends on it.
+
+### 4. Invariants
+
+| id | invariant | enforced by |
+|---|---|---|
+| **F1** | a created frame is a worked frame | S, by construction |
+| **F2** | exactly one disposition per closed cycle | A |
+| **F3** | every memory offer carries a use-disposition | A |
+| **F4** | difficulty stratum frozen before assignment | R |
+| **F5** | no measurement spans a regime boundary unstratified | R (regime named in registration) |
+| **F6** | no denominator promoted from corpus size | X |
+| **F7** | an artifact is available only if a need-vocabulary probe retrieves it | M, P |
+| **F8** | *(new)* containment is witnessed, not declared | F |
+| **F9** | *(new)* every claimed capability has a probe | R — this is D.21's general fix |
+
+**F9 subsumes the other eight.** They are the instances we know; F9 is the rule.
+
+### 5. The two suites
+
+| | Suite I — importability | Suite II — findability |
+|---|---|---|
+| population | 1,943 locked lemmas | 39 demonstrated-demand reuse edges |
+| pass | reachable by `import` | need-vocabulary probe surfaces it |
+| baseline | **0 / 1,943** | **0 of 3 hand-probed** |
+| gauge | promotion coverage **9.2%** | pass rate |
+
+**Do not merge them.** Suite II on locked lemmas would fail for a non-retrieval
+reason and miscalibrate the retrieval gauge — the A4 mistake repeated (D.18).
+
+### 6. Build order
+
+Per D.13, and this *is* DarkTower's `ReplicationPlan` (`pilotUnits` /
+`confirmationUnits`, `confirmation_not_pilot` proved):
+
+1. **Problem 1 — pilot.** Walk one solve live. Build each measurable as it is
+   needed until every field of §3's X populates. Settle the open weights and
+   bars *by observation*, then freeze them.
+2. **Problem 2 — confirmation.** Build nothing. Confirm the same fields
+   populate unaided.
+
+**Exit criterion:** problem 2 populates unaided.
+
+### 7. Sequencing constraint
+
+**Importability precedes findability precedes use** (D.18). A `lean_lib` for
+`problems` is the cheapest experiment available and could move Suite I from
+0/1,943 without promoting anything — its soundness at scale is a question for
+problem 1, not for argument now.
+
+### 8. What this design deliberately does NOT do
+
+- **No retrospective instrumentation.** Historical data is *inspiring but
+  useless* (Joe, D.13). Nothing is threaded back through the 475.
+- **No cleanup.** `LusinN`, `LemniscateComponents` and the import-only edges
+  stay as they are; measuring against a moving corpus is worse than measuring
+  against a flawed one.
+- **No within-problem contrast.** 1-shot cannot pair; the learning claim is the
+  series slope, stratified.
+- **No embeddings yet.** Exact duplicate detection is validated (17/17 against
+  ground truth) and bounds the target; embeddings are for semantic
+  near-duplicates only, with a known baseline to beat.
+
+### 9. Open, and who closes it
+
+| # | open | closed by |
+|---|---|---|
+| 1 | `L(i)` weights | problem 1, by observation |
+| 2 | retrieval pass bar | problem 1 |
+| 3 | need-vocabulary extraction rule | problem 1, frozen before problem 2 |
+| 4 | which `Registration` fields a *problem-level* experiment needs | problem 1 |
+| 5 | is the Clojure semi-formalism a full validator or a hole counter? | **read before building** (I-4) |
+| 6 | futon5 wiring diagram | not blocking |
+| 7 | `lean_lib` for `problems` — sound at scale? | problem 1 |
+
+**Item 5 first.** On this mission's evidence the likeliest error is building
+something that already exists two directories away.
+
+### 10. Honest status
+
+**This is a candidate, not a ratified design.** It satisfies the lifecycle exit
+criterion in structure — the modules, guarantees, invariants, suites and build
+order are stated implementably — but seven items in §9 are open, four of which
+close only by walking problem 1. **That is the design's own claim about itself:
+it expects to be corrected by contact with one problem, and says so in advance
+rather than after.**
