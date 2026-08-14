@@ -5096,3 +5096,70 @@ the fact; with it, the cycle simply does not validate.
 
 **Recorded as a required schema amendment before frame-1**, alongside I.7's
 per-attempt regime.
+
+## I.9 Role cards and runner freshness — forced, not chosen
+
+**Joe, 2026-08-14:** *"giving everyone a 'role card' (system prompt) is going to
+be helpful / necessary, and presumably we want to use fresh runners per role
+(Scribe may or may not need to be fresh?)"*
+
+### The principle that answers the Scribe question and all the others
+
+I.7 established that the substrate is the **only** channel by which Claude may
+influence Zai. But:
+
+> **A persistent context window is also a channel — and an unauditable one.**
+> It is an unversioned, uninspectable, unpersisted store that no validator can
+> read and no regime can name.
+
+So freshness is not an ops preference. **Anything that accumulates in a context
+window is accumulation that escaped the substrate**, which is precisely what
+I.7 forbids.
+
+> **General rule: any accumulation that matters must live in the substrate,
+> because a context window is a store you cannot audit, version, or refuse.**
+
+### Per-role, with the reason each is forced
+
+| role | freshness | forced by |
+|---|---|---|
+| **Zai** (S-student) | **fresh per attempt** | **I.7.** If attempt *n+1* retains attempt *n*, Zai improves by in-context learning — an unmediated channel. The `L(i)` trajectory would then measure context accumulation, **not the memory system**, and would look like success |
+| **Codex** (S-frontier) | **fresh per problem** | **P1.** If Codex persists across problems, declining guidance may just be Codex remembering. Freshness is what makes "guidance declined" mean *the guidance or the substrate improved* |
+| **Scribe** | **fresh**, accumulating **in the store** | the algorithms doc already requires it: *"instance accumulation updates confidence in place (n=1→n=2), and the scribe may refuse false merges."* **In-place means in the store.** A fresh scribe reading the store reproduces the same state and is auditable; a persistent scribe's accumulation is neither |
+| **Claude** (guide / adjudicator) | **persistent — the one accumulator** | it must observe how Zai failed and Codex succeeded across a round. **Constrained not by freshness but by egress: its only output to Zai is a substrate write (I.7).** |
+
+**The asymmetry is the design, not a compromise.** Learning is deliberately
+located in the substrate and in Claude's observation, and **denied to the
+solvers** — because a solver that improves in-context has learned something the
+system cannot inspect, reuse, or transfer to the next problem. That is the
+opposite of what this mission is trying to build.
+
+**So Joe's question answers itself against the general rule: the Scribe should be
+fresh.** Not because staleness is harmful, but because a scribe that accumulates
+in context is holding evidence in a place the store cannot see — and the store is
+the deliverable.
+
+### Role cards — surface contracts, not capability restrictions
+
+`futon3c/CLAUDE.md` already distinguishes these, and it matters here: a role card
+that says *"you are the student; your only external information is what the
+memory system surfaces"* is a **surface contract** — accurate information about
+the environment. One that removes tools to *force* that outcome would be a
+capability restriction, and it would also corrupt the measurement: **we want to
+know whether Zai consults memory when it can do otherwise**, which is E9/E10's
+whole finding (0 vs 21 lookups under different framings, same agent, same store).
+
+**Consequence:** the framing in each role card is itself an experimental
+variable, and **it must be frozen in the registration** — `:reg/role-cards`
+carrying a hash per role. A round in which a role card changed mid-run is a
+regime change (F5) and must be refused, exactly as `:both-channels-varied` is.
+
+### Amendments required before frame-1 — now three
+
+1. `:cycle/regime` per attempt (I.7).
+2. `:cycle/store-revision` + `:cycle/harness-revision` per attempt, with
+   `:both-channels-varied` (I.8).
+3. **`:cycle/runner-freshness` per attempt** — a recorded assertion that the
+   runner was fresh, plus `:reg/role-cards` hashes. **Without (3), the
+   contamination that killed Assay 1 is invisible again** — that failure was
+   *"one seat, one session across the queue"*, and nothing in the trace said so.
