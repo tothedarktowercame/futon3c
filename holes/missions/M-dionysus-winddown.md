@@ -468,6 +468,58 @@ early rather than at day twelve.
 
 ---
 
+## Below the checkpoint — carried forward, not yet started
+
+### mmca-clj — add to the census, then treat as a repo
+
+Surfaced 2026-08-14 while answering an unrelated question, and deferred by Joe
+("we will come back to it later"). Recorded so it is not rediscovered a third
+time.
+
+**It holds the Clojure half of a Lean-bound experimental protocol.**
+`~/code/mathlib4/DarkTower/` declares preregistrations and the pre-go-live gate
+in Lean (`ExperimentPreregistration.lean`, `ExperimentalDesign.lean`, plus nine
+Baldwin preregistrations); `~/code/mmca-clj/` implements the validators —
+`src/mmca/baldwin_{guidance,masking,masking_six_arm}_preregistration.clj`,
+`scripts/validate_*`, `scripts/write_baldwin_guidance_launch_authorization.clj`,
+`test/mmca/baldwin_preregistration_test.clj`. The ns docstring is explicit:
+*"Executable structural validator for the Lean guidance preregistration."*
+
+State measured 2026-08-14:
+
+| | |
+|---|---|
+| remote | `git@github.com:tothedarktowercame/mmca-clj.git`, on `main`, in sync |
+| size | 940 MB, 187 commits |
+| dirt | **7 modified, 59 untracked** |
+| census | **absent** from `futon0/data/git_sources.json`, so invisible to `futon-sync` |
+
+Three reasons it matters to this mission:
+
+1. **Unmonitored.** One of the 23 repos outside the census. futon1b, apm-lean
+   and mathlib4 were added on 2026-08-14; mmca-clj was not. Its 66 dirty/
+   untracked files are therefore uncounted in the C6 baseline.
+2. **A stale pin.** `baldwin_guidance_preregistration.clj` hardcodes
+   `required-lean-revision "f50d34cffbd2d92b624592ef50e9d57f7b84af98"`. That
+   commit exists, but **36 commits have since touched `DarkTower/`** and the
+   branch is now at `1bc1734308`. A hardcoded sha degrades silently: the
+   validator keeps discharging obligations against a preregistration that has
+   moved. Establish whether the drift is material before trusting any launch
+   authorization it produced.
+3. **It was hard to find.** ams-claude-2 concluded the Lean→Clojure pathway did
+   not exist. Reasonably so — a search for "Lean → Clojure + **Malli**" returns
+   nothing, because there is no Malli anywhere in it (zero files across futon5,
+   mmca-clj, futon2, futon3c contain both `malli` and `prereg`); validation is
+   hand-written predicates over EDN. Joe's ruling: *"this is what Joe had in
+   mind as a starting point, even though it is imperfect."* Work that no
+   dashboard lists is work that gets declared nonexistent.
+
+Order when picked up: add to the census first, then inbox-zero it, then decide
+about the pin. Not before the `~` survey — this is a FUTON-adjacent repo, and
+the FUTON side is otherwise coherent.
+
+---
+
 ## Next
 
 DERIVE is blocked on the three gates at the head of this document. The MAP
