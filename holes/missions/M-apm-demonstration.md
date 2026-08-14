@@ -2883,3 +2883,108 @@ than no path, because it is indistinguishable from a learned one.
 
 **Recorded as a candidate amendment, not a redesign.** `C` names an existing
 mechanism, `F10` guards it, and both are ARGUE's to revise.
+
+---
+
+## DERIVE amendment 2 — the student, and why S was wrong to be generic
+
+**Operator finding, Joe, 2026-08-14:** *"this is another medium-is-the-message
+finding, because I think Codex's design misses the 'student' concept that we'd
+sketched before whereby Zai is specifically valuable b/c it is successful on
+about 8.33% of formalised research mathematics problems, whereas Codex is much
+better. Zai can become the repro lane that Codex was asking for. But that was
+missing from the original design."*
+
+**Confirmed, and the concept is already written down** — `M-case-studies.md`
+§Stage 1–3 (Joe, 2026-08-11). The candidate missed it because **module S treats
+the solver as capability-agnostic.** It is not. Capability tier is a design
+variable, and the *weakness* of the student is the resource.
+
+### What the existing sketch says
+
+> **Stage 1, detection (zai-1):** *"an expert's compression drops exactly the
+> steps that are automatic for the expert, which are often the teachable ones;
+> **a weak solver's surprise is a direct measurement of where teachable content
+> sits**, where the expert reader reports 'nothing new here.'"*
+>
+> **Stage 3, teachability assay (zai-1 as test-solver):** *"the direct transfer
+> test **with real headroom** — re-run a SOLVED problem (ground truth known,
+> cheap to score) on zai-1 with and without the deposit and compare
+> trajectories. **A deposit that lifts an 8.33% solver demonstrably teaches**;
+> whether it also lifts codex AT ITS FRONTIER is the standing hypothesis (every
+> solver is a novice at its own frontier)."*
+
+### This retro-explains batch-1's null, and that matters
+
+`M-case-studies.md` states it parenthetically and it is the most consequential
+sentence in the file:
+
+> *"(It is also why the channel experiments nulled: expert consumers have no
+> headroom — **measuring memory effects on codex is measuring at ceiling**.)"*
+
+`batch-1-report.md` recorded the falsifier firing: *"Per-arm explicit sorry
+delta: mem −6, ctl −6 — identical … the channel did nothing detectable this
+batch."*
+
+**Read together: the null may be a ceiling artefact, not an absence.** That
+changes how the historical result should be quoted — **not** as evidence the
+memory channel does nothing, but as evidence it is **not measurable on a solver
+with no headroom.** Recorded as a *supported hypothesis*, not an established
+fact: `M-case-studies` asserts the ceiling reading, `batch-1` says only that the
+channel did nothing *detectable*, and no experiment has yet contrasted the two
+tiers directly. **That contrast is now the obvious experiment.**
+
+### It resolves §9 item 2 — the VariationPlan endpoint
+
+codex-4's sharpest complaint was that DarkTower requires a **reproducibility or
+identity-floor** endpoint and the one-shot candidate selects neither. Joe's
+answer supplies one:
+
+> **The identity floor is the student.** "The same result twice" means: *a
+> solver at ~8.33% reaches it, given the deposit.* Re-running a SOLVED problem
+> on zai-1 has known ground truth and is cheap to score — precisely the shape an
+> identity-floor endpoint needs.
+
+**IF** a one-shot round cannot pair a problem with itself, **HOWEVER** the
+facility still demands to know what would count as the same result twice,
+**THEN** pair across **capability tiers** rather than across repetitions,
+**BECAUSE** a result that a weak solver can reach with the deposit and not
+without it is reproducible *in the sense that matters* — it survives transfer to
+a consumer who had no other way to get there. **The variation axis is the
+solver, not the run.**
+
+### Amendment to module S
+
+| id | module | guarantees |
+|---|---|---|
+| **S** | Solver *(now tiered)* | one problem, one shot, **at a declared capability tier** |
+| **S-frontier** | Codex | closes at its own frontier; **no headroom for channel measurement** |
+| **S-student** | Zai (~8.33%) | **the headroom carrier**: repro lane, teachability assay, surprisal detector |
+
+The three roles the student plays are one property used three ways:
+**surprisal detector** (Stage 1 — where teachable content sits),
+**identity floor** (the repro endpoint), and **the only tier on which channel
+effects are measurable at all**.
+
+**New measurable — teachability delta.** Trajectory of `S-student` on a solved
+problem, with and without the deposit. Ground truth known, cheap to score,
+**and it has the headroom the frontier tier structurally lacks.**
+
+### Two honest caveats
+
+1. **8.33% needs its denominator recorded.** It appears in `M-case-studies:136`
+   as a bare rate; 8.33% is 1/12, and this mission's own F6 forbids quoting a
+   rate whose denominator is not declared. **[OPEN]** — recover it before the
+   figure is used in a registration.
+2. **"Every solver is a novice at its own frontier" is a standing hypothesis,
+   not a result.** If it holds, the student tier generalises to Codex at its
+   frontier; if it does not, the student is a measuring instrument only. Do not
+   assume it.
+
+### Why the design missed this
+
+The candidate abstracted the solver to "one problem, one shot" and treated *who
+solves* as implementation. **That is the medium-is-the-message error**: the
+agent is not a substitutable component but the variable that determines whether
+anything is measurable at all. Recorded as the second thing formalising
+surfaced — the first was the VariationPlan gap it now answers.
