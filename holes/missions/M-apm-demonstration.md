@@ -1917,3 +1917,98 @@ from 0/1,943 toward complete **without promoting anything**. Whether that is
 sound Lean practice at this scale is **[OPEN]** and is a question for the next
 one-shot walkthrough — it is exactly the kind of thing D.13 says to settle live
 on one problem rather than argue in advance.
+
+## D.19 The Zai rewrite-rule inspiration — designed, demonstrated, never instrumented
+
+**Operator framing, Joe, 2026-08-14:** *"the point that motivated this whole
+project is that Zai uses very stereotyped language to talk about its mistakes.
+My observation is that each of those could become a rewrite rule. The earlier
+claim that we had 1 success across however many N trials might invalidate that
+suggestion, or it might show that it was never instrumented properly."*
+
+**It is the second: never instrumented properly.** The evidence is a count, not
+an opinion.
+
+### The mechanism was fully specified
+
+`algorithms/zai-learning-loop.md:81` names it as one of four scribe lanes:
+
+> **arc-lane**: error→fix spans → scoped tactic rewrite rules
+> (scope / before / after / level / confidence / evidence-ids).
+
+So the idea is not a sketch — it has a schema, a source (error→fix spans), and a
+place in the loop.
+
+### It was demonstrated, and the demonstration is good
+
+`s1-pilot/memory-drafts-cohort1.edn` contains rules of exactly this shape. One
+in full (abridged):
+
+```edn
+{:problem-class "Prove a complex equality by real and imaginary parts when the
+                 expression contains integers cast directly into ℂ…"
+ :symptom "After `Complex.ext` and expansion with `Complex.add_re`, …, goals
+           retain terms such as `(↑⌊x⌋ : ℂ).re`…; `Complex.ofReal_re` and
+           `Complex.ofReal_im` do not match those direct integer casts."
+ :lemma "`Complex.ofReal_intCast`"
+ :before "`simp only [Complex.ofReal_re, Complex.ofReal_im, …]` leaves
+          integer-cast projections opaque, so `linarith`, `ring`, `omega`…" }
+```
+
+**`:symptom` is the stereotyped register, already captured as a field.** It is
+a mechanically matchable description of a recurring failure, paired with the
+lemma that resolves it. This is precisely Joe's observation, realised.
+
+### But it ran essentially once
+
+| source | drafts | with `:before`/`:after` |
+|---|---|---|
+| `s1-pilot/memory-drafts*.edn` | 86 | **4** |
+| the nine per-problem `*-scribe/` passes | 9 EDN | **0** |
+
+**Four rewrite rules exist in total, all from the s1 pilot.** The nine later
+per-problem scribe passes — `a94A09`, `a96J02`, `a97J01`, `a97J02`, `a97J03`,
+`a97J07`, `e9`, `e10`, `j07` — produced **no arc-lane output at all**. No lane
+tags appear in any of them.
+
+### Consequence for the "1 success across N trials" claim
+
+**It does not invalidate the rewrite-rule idea, because the idea was never
+given a trial.** With four rules produced, none in the per-problem passes and
+none wired into recall as a rule set, no run could have benefited from a rewrite
+rule it was never offered. A mechanism that fires four times cannot be refuted
+by an outcome measured over N runs.
+
+This is the same shape as C2's finding about the hunger audit — *staffed but not
+performed* — and the same shape as the mission's recurring diagnosis. **The
+arc-lane is a designed instrument that was demonstrated and then not run.**
+
+**IF** the low success rate were evidence against error→fix rewrite rules,
+**HOWEVER** only four such rules were ever produced and none reached the runs
+being counted, **THEN** the success rate is silent on the question, **BECAUSE**
+you cannot measure the effect of a treatment that was not administered — and
+recording it as evidence against would be exactly the "numerator without a
+denominator" failure this mission opened with, inverted.
+
+### What this adds to the design
+
+| field | role | status |
+|---|---|---|
+| **arc-lane yield** — rewrite rules extracted per session | scribe | **new bookkeeping** — the lane must actually run |
+| **rule-offered / rule-used** | scribe | **join** — same shape as F3's offer/use disposition |
+
+The rewrite rule is structurally the *same object* as a memory: it is offered,
+may be used, and needs a disposition. So **it needs no new evidence channel** —
+it needs F3 and the arc-lane switched on. That is consistent with the whole
+design: the channel exists, the disposition does not.
+
+### Scope limit — this is a Zone-only answer
+
+Searched: `data/repl-caches/2026-07-13/` (12 Zai REPL transcripts, 894 KB — but
+these are coordination buffers, not mathematical self-report),
+`holes/labs/M-zai-learning-loop/`, and `~/apm-evidence/`. **Joe notes some Zai
+material may exist only in `apm-evidence` or only on Dionysus and has not left
+it.** The count above is therefore a *floor* on arc-lane output, not a census.
+**[OPEN]** — a Dionysus-side check would firm it up, and the conclusion
+("demonstrated, not instrumented") would only strengthen if more unrun lanes
+turned up.
