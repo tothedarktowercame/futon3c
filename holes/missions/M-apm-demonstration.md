@@ -5834,3 +5834,46 @@ synthetic trace, not a genuine solve, so those are legitimate and testable now.
 
 **Not re-dispatched.** Three stops, three findings, and this one corrected the
 plan rather than the code.
+
+## I.20 Harness dispatched with the corrected deliverable
+
+**Joe, 2026-08-14:** *"frame-1 is the demo, let's build it."*
+
+The deliverable changed shape as a result of I.19, and the packet says so
+explicitly rather than quietly re-sending the old ask:
+
+| was | is |
+|---|---|
+| harness **+ end-to-end demo** before frame-1 | harness **+ stage tests + refusal tests**; **no end-to-end claim** |
+| find a worked artifact to run on | **do not look for one — there isn't one, and that is correct** |
+| six schemas implied | six schemas **and the derivation map**, specified at I.19 |
+
+**The distinction the packet turns on**, and the reason the previous two
+dispatches stopped:
+
+> **Synthetic data is correct for refusal tests and forbidden for success
+> claims.** A refusal test needs a deliberately-bad trace, not a genuine solve —
+> you are testing the gate, not claiming a result.
+
+That makes the valuable half of the testing available *now*, and leaves the half
+that requires real work to frame-1, where it belongs.
+
+**Refusal coverage asked for:** scaffold-identical frame refused **at the
+emitter**; two dispositions on one cycle; an offer with no disposition;
+`:both-channels-varied`; a new memory in harness-mode.
+
+**Dispatched:** `invoke-1786733183271`. If codex-4 stops a fourth time, that is
+recorded and not re-dispatched — three stops have each been worth more than the
+code they replaced.
+
+### Pre-flight, final state
+
+| item | status |
+|---|---|
+| A1 measurement vacuity | ✓ verified 113/336/0 |
+| A2–7 attempt schema + proctoring | ✓ verified 117/340/0 |
+| A8 independent-source direct-channel | ✓ verified 118/344/0 |
+| B role cards + registration + P1/P2 | ✓ committed, validates clean |
+| I.19 six schemas + derivation map | ✓ written |
+| **C harness** | **in flight** |
+| **frame-1 launch** | **Joe's call** |
