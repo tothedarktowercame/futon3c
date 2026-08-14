@@ -103,6 +103,37 @@ extrapolation." v2 should **carry out the derivation** (or record that the
 causal engine refuses it), because an obligation that is never discharged is
 indistinguishable from an aspiration.
 
+⚠ **CORRECTION 2026-08-14 (MAP addendum 2; ams-codex-2 audit `5de70dbd`,
+verified by claude-2).** The parenthetical above — "or record that the causal
+engine refuses it" — **is not currently available**, and v2 must not plan
+around it.
+
+- **v1's terminology is correct.** "Transport" at line 278 is Bareinboim–Pearl
+  transportability, properly used: *"'solves APM ⇒ capable on held-out BPM' is
+  formally a transport claim, not an induction."* No terminology collision with
+  the literature.
+- **v1's engine description is false.** Line 275 lists the engine as
+  "backdoor and front-door adjustment, general identification, **transportability
+  via selection diagrams**". The first three exist (`identify.clj`, `idalg.clj`);
+  **the fourth is not implemented.** `identify` takes `[causal-dag treatment
+  outcome]` — one domain. There is no S-node, no source/target domain input, no
+  transport entrypoint anywhere in `causal/`.
+- **The likely cause is a collision inside the engine's own vocabulary.**
+  `receipts.clj` has `r1-selection-variant` and the refusal
+  `:open-selection-backdoors`, but that is selection **bias** in one domain, not
+  a selection **diagram** across two. Same word, different concept.
+
+**v2 must therefore either (a) delete "transportability via selection diagrams"
+from line 275, or (b) implement it.** Shipping v2 with that phrase intact would
+be a capability proof overstating its own instrument — the exact failure the
+document exists to prevent, and the fifth instance of this mission's
+documentation-drift pattern.
+
+If (b): the extension is bounded, not a rewrite. `sID`/`sTR` builds on
+`admg/latent-project`, `idalg/identify-effect`, `dsep`, and `surgery`, all
+present. What is missing is S-node semantics, source/target domain inputs,
+per-domain observational availability, and mechanism-invariance declarations.
+
 ### N5 — retrieval serves the need → run the instrument that exists
 
 The **hunger audit** is already specified in the scribe template and is the
