@@ -5877,3 +5877,88 @@ code they replaced.
 | I.19 six schemas + derivation map | ✓ written |
 | **C harness** | **in flight** |
 | **frame-1 launch** | **Joe's call** |
+
+## I.21 Fourth stop — the pattern is mine. Complete derivation, done exhaustively.
+
+**codex-4 stopped a fourth time, correctly.** Not re-dispatched.
+
+### The diagnosis is about my method, not its output
+
+Four stops on one task is a pattern, and it is mine: **I have been specifying
+incrementally against a requirement I never read in full.** I.2 wrote schemas
+from the design. I.19 added six more when told six were missing. Each round
+covered *some* trace keys; codex-4 found the rest; I patched again. **That is
+field-by-field patching against a list I could have read once.**
+
+**The complete requirement is 29 trace keys and 23 registration keys.** Below is
+every one of them, mapped. Where a decision was needed I have made it and marked
+it, because *"stop and say which"* was the right instruction for codex-4 and the
+wrong posture for me — **the design decisions are mine to make.**
+
+### Complete trace derivation — all 29
+
+| trace key | source |
+|---|---|
+| `:problem` | **Registration** `:problem` (copied at open, frozen) |
+| `:frame` | **Frame** — `:frame/scaffold-hash`, `:frame/closing-hash` |
+| `:launch-gate-refused-without-witness?` | **LaunchGateEvent** `:gate/refused-without-witness?` |
+| `:cycle-closed?` | **Cycle** — `(some? :cycle/closed-at)` |
+| `:disposition-ids` | **Disposition** entities for the cycle |
+| `:memory-offers` | **MemoryOffer** entities |
+| `:memory-disposition-offer-ids` | **MemoryUse** — the offers that have one |
+| `:stratum-frozen-at` | **NEW** `:cycle/stratum-frozen-at` |
+| `:assigned-at` | **NEW** `:cycle/assigned-at` — F4 requires frozen **<** assigned |
+| `:cycle/attempts` | **Attempt** entities ordered by `:attempt/seq` |
+| `:cycle/mode` | **Cycle** `:cycle/mode` — *named in I.8, never added to the schema table* |
+| `:cycle/deposit-state` | **Cycle** — *named in I.5, same omission* |
+| `:cycle/paired-with` | **Cycle** — *same* |
+| `:cycle/store-snapshot-id` · `-memory-ids` | **StoreSnapshot** |
+| `:cycle/window` | **Cycle** `:cycle/opened-at` / `:cycle/closed-at` |
+| `:denominator-declared?` | **Registration** — true iff `:required-measurement-fields` is present and non-empty. **F6 is a registration property, not a cycle observation** |
+| `:denominator-inferred-from-corpus?` | **Registration** — constant `false`; a corpus-inferred denominator would be a registration defect, not a runtime one |
+| `:available-artifact-ids` · `:need-probe-retrieved-ids` | **RetrievalProbe** |
+| `:containment-*` (3) | **ContainmentProbe** |
+| `:capability-probes` | **CapabilityProbe** entities |
+| `:required-measurement-fields` | **Registration** (copied) |
+| `:measurement` | **Measurement** `:meas/values` + `:meas/unset` |
+| `:promoted-artifact-ids` | **NEW: Promotion** entity |
+| `:importable-promoted-artifact-ids` | **Promotion** where `:promo/importable?` |
+| `:need-tagged-promoted-artifact-ids` | **Promotion** where `:promo/need-tags` non-empty |
+
+### The two new entities and three new Cycle fields
+
+**Promotion** — `promo/<cycle-id>/<artifact-id>`
+```
+:promo/id :promo/cycle :promo/artifact-id
+:promo/importable?      ; P's guarantee -- reachable by `import`
+:promo/need-tags        ; vector; empty = surfaces by name only (E2's defect)
+:promo/at
+```
+
+**Cycle gains** — `:cycle/mode`, `:cycle/deposit-state`, `:cycle/paired-with`
+(named across I.5/I.8 and never landed in the table), plus
+`:cycle/stratum-frozen-at` and `:cycle/assigned-at`.
+
+### Registration persistence — the honest fix
+
+codex-4: *"Writing only its listed attributes would not round-trip the actual
+registration identically."* **Correct.** I.2's Registration schema was written
+*before* the EDN existed, so it does not cover what the EDN holds.
+
+> **The Registration entity is the EDN.** Persist it verbatim, keyed by
+> `reg/<mission>/<round>`, with the file's sha256 recorded. **Do not
+> re-enumerate its fields in a second schema** — two lists of the same thing is
+> exactly the drift this mission has catalogued fifteen times.
+
+Round-trip is then byte-identity, which is stronger than field-wise equality and
+cheaper to check.
+
+### What this changes about the next dispatch
+
+**Nothing is left ambiguous by design.** Every one of the 29 keys names a source;
+the two genuinely new entities are specified; the three Cycle omissions are
+closed; and Registration round-trips by content rather than by enumeration.
+
+**If codex-4 stops a fifth time, the finding is again mine** — but this is the
+first pass where I worked from the complete list rather than from the last
+complaint.
