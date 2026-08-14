@@ -3433,3 +3433,107 @@ validating against the same 17. The experiment was designed, unrun, and
 independently re-derived. It reinforces D.17's finding at the level of the
 project's own plans: **material that is written but not reachable at the moment
 of need gets rebuilt, not reused.**
+
+## A.13 The actual CLean point — bridges before proofs
+
+**Operator correction, Joe, 2026-08-14:** *"we use CLean in different ways — the
+Lean-from-CLean isn't the example I had in mind."* Source:
+`futon5/TN-baldwin-reboot.md` §20.
+
+**A.12 was right that a boundary mechanism exists and wrong about which one
+matters.** The render-gate is a *well-formedness* check. The concept Joe means
+is deeper and is stated there in full.
+
+> Joe, quoted in §20: *"this is what we were trying to go towards with the
+> Lean+CLean formalism… the problem is we would have been formalising the wrong
+> things. What I think we need isn't just a formal model, it is, ultimately, a
+> **proof that what we have works**. And that can't be created if we don't have a
+> working system. But at least we could be **honest about the holes**."*
+
+### The distinction that governs everything we built today
+
+| kind | what it proves | who does it |
+|---|---|---|
+| **model-internal proof** | properties of an idealisation | Lean, well |
+| **model–artifact bridge** | **whether the running thing satisfies what the model says about it** | almost nothing, so far |
+
+> *"Every failure in this register is the second kind."* … *"**Lean sits entirely
+> on the model side.** The §18 invariants are the first bridges built here — not
+> proofs, but **machine-checked statements that the artifact respects a bound the
+> model derives**. That is why they caught what review did not."*
+
+**This reclassifies our own work.** F1–F10, `WorkedFrame`, the typed
+`CapabilityProbe` — all **model-internal**. `WorkedFrame` makes a
+scaffold-identical trace unconstructible *in the model*; it says nothing about
+the running solver. codex-4's caveat was gesturing at this and I mistook it for
+a plumbing gap.
+
+> **Ordering, now explicit: bridges before proofs.** *"A proof that the system
+> works is only meaningful once the system's claims about itself are true, and
+> that is a property of the artifact, not of the model."*
+
+### The failure mode that should frighten us most
+
+§20.1, on `DarkTower/Patterns/Propagator.lean`:
+
+> It is **sorry-free**. Its theorems are stated over `Equiv.Perm` — bijections.
+> Nothing in it is wrong. The false claim was *"that 2015 paper found a single
+> member of this family."* **In Lean that claim is not false — it is
+> inexpressible.** You cannot construct `k ↦ max(k-1,0)` as an `Equiv.Perm`,
+> because it has no inverse. **The formalism *contained* the refutation, as a
+> typing obstruction, and was never asked. The claim was made in LaTeX.**
+
+**That is this mission's guiding light, at the level of formalism.** A
+sorry-free artifact, holding the refutation as a typing obstruction, never
+queried — technically present, not available. It is the third distinct form of
+the same failure today, after the 1,943 locked lemmas and the retrieval index.
+
+> *"A proof assistant checks theorems, not the **relevance** of theorems."*
+
+And the repair is stated: **generalise until the load-bearing question becomes a
+typing question.** State `T1′` over general endomaps rather than permutations and
+*"is the bug in this family?"* stops being prose. *"It moves the load-bearing
+claim inside the formalism, which is the only place a formalism can help."*
+
+### Candidate invariant F11
+
+> **F11 (ask the formalism).** A formalism earns its keep only if the
+> load-bearing claim is **expressible inside it**. If the claim that would
+> falsify the design cannot be stated in the model, generalise the model until
+> it can — or record that the claim lives outside and is unchecked.
+
+F9 says every claimed capability has a probe. **F11 says the probe must be able
+to fail.** A model in which the refutation is inexpressible cannot refute, and
+its sorry-freeness is then a fact about its types, not about the world.
+
+### And the cheapest thing in the whole mission
+
+§20.3:
+
+> *"A `sorry` is an honest hole: the obligation is named, typed, and visible to
+> the checker."* … *"`declared-channels`' docstring — 'HAND-DECLARED, not
+> derived… do NOT assume symmetry with `:rule-change`' — **is already a `sorry`
+> written in Clojure.** It is a named, located, honest obligation. **It needs no
+> new machinery, only doing it everywhere it applies.**"*
+
+**A Clojure docstring that names its own unverified assumption is a bridge-side
+`sorry`.** Zero cost, no tooling, and it is precisely what the eleven
+"written but not wired up" instances lacked: not a check, just an honest hole
+where a check should be.
+
+**Design consequence.** Every model-side invariant F1–F11 gets one of two
+things, and must carry which:
+1. **a bridge** — a machine-checked statement that the artifact respects it; or
+2. **a declared hole** — a located Clojure `sorry` saying it is unchecked.
+
+**Silence is the only forbidden option.** That is "honest about the holes" made
+operational, and it is what this mission's twelve defects were each an instance
+of failing to do.
+
+### Correction to A.12
+
+A.12's claim — *the correspondence is definitional, so the boundary is closed* —
+**overreached.** The render-gate closes *well-formedness*: a CLean that does not
+render is not well-formed. It does **not** establish that the running system does
+what the rendered model says. **That gap is exactly the model–artifact bridge,
+and it is open.** A.12 stands on the facts and is corrected on the conclusion.
