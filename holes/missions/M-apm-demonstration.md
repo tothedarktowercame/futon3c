@@ -1275,3 +1275,66 @@ the failure mode the paper was written to prevent.
 message transport layer of I-2, "Transport Routes, It Does Not Create". No
 overlap with either causal sense; flagged only so the three are never conflated
 in future prose.)*
+
+---
+
+## Carried into DERIVE — component **T**: transport identification
+
+*(Joe, 2026-08-14: "this creates an interesting dependency to validate some of
+the features — we don't need to decide implementation details or ownership now
+but I think we should retain the dependency (e.g. making it a modular component
+within DERIVE)".)*
+
+Recorded as a **named modular component with explicit edges**, deliberately
+without design or owner. The point of naming it now is that an unnamed
+dependency is one that disappears between phases; this mission has catalogued
+five artifacts that drifted precisely because nothing held them accountable.
+
+> **T — transport identification.** The capability to adjudicate a
+> Bareinboim–Pearl transport query: selection diagram with S-node, source and
+> target domains, per-domain observational availability, mechanism-invariance
+> declarations. Absent from the engine as of `d4867bd3`.
+
+### What T gates, and what it does not
+
+**Modular is the operative word.** T is on nobody's critical path. Naming its
+edges is what keeps that true rather than assumed.
+
+| depends on T | how |
+|---|---|
+| **N6** (capability transports to held-out) | entirely — N6 is a transport claim and cannot be adjudicated without T |
+| **§1.5 criterion 5** ("N6 discharged or refused") | entirely — currently neither, because the query is unaskable |
+| **warrant class of §1.5 criterion 6** (held-out demonstration) | the demonstration can be **run** without T; what T changes is whether its result is *identified by design* or an *extrapolation* |
+| **capability-proof v2, line 275** | the fork is delete-the-phrase vs implement-T |
+
+| does **not** depend on T |
+|---|
+| running the held-out BPM/arXiv demonstration at all |
+| N5 (retrieval), N7 (scoreability), N8 (learning slope) |
+| cycle-one instrumentation — the outcome-field work, which remains the highest-value target |
+| F1 and the one-shot solver |
+
+### The substitution, stated now so it is a choice later
+
+If T is never built, N6 does not become false — it becomes **inductive rather
+than designed**. v1 already says the right thing: transport is *"a derivation
+obligation, not an extrapolation."* Declining T means accepting the
+extrapolation and **saying so in the warrant**, which is a legitimate outcome
+under this mission's rules and must not be reached by silence.
+
+So T has exactly three admissible dispositions, all acceptable, none default:
+
+1. **build** — bounded extension over `admg/latent-project`,
+   `idalg/identify-effect`, `dsep`, `surgery`;
+2. **restate** N6 into a claim the existing single-domain engine can adjudicate;
+3. **refuse** — record N6 as extrapolative, downgrade the warrant, and strike
+   "transportability via selection diagrams" from the capability proof.
+
+**Not decided here. Not owned here.** DERIVE picks one and records why.
+
+### Why this is worth carrying rather than closing
+
+T is the only place in the register where the *instrument*, not the evidence,
+is the binding constraint. Every other open item is answered by measuring
+something that exists. That makes T structurally different, and it is the
+reason it earns a component of its own rather than a line in a node's notes.
