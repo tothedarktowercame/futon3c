@@ -5659,3 +5659,69 @@ it built the mechanism that solved it, (b) I wrote, (a) Joe decided.
 
 **Pre-flight status:** A1 ✓ · A2–7 ✓ · A8 ✓ · B ✓ · **C in flight**. When C
 lands, frame-1 is ready to launch — **and launching is Joe's call.**
+
+## I.18 The gate caught me — and a future arm worth recording
+
+### codex-4 stopped a second time, on my registration
+
+**`shape [:malformed-problem :malformed-role-cards]`, `content
+[:pilot-has-confirmation-units]`.** All three real; two straightforwardly my
+error.
+
+**The error worth naming:** I.16 reported *"25 keys, zero required keys
+missing"* — I had checked **key presence** and **never run the validator**, then
+reported the weaker property as though it were the stronger one. **That is the
+mission's own defect, committed by me, in the file that gates the experiment.**
+It is the fifteenth instance and the most on-the-nose: a claim of validity
+backed by a check that could not have falsified it.
+
+**The gate worked.** That is the first time in this mission that apparatus caught
+an owner error before it reached a run — which is, precisely, what the apparatus
+is for.
+
+| conflict | resolution |
+|---|---|
+| `:problem` a bare string | now the derived map: family `t`, freeze-stmt-lines 22, regime `6521fd3a` (batch-2 anchor boundary), exposure `[]` |
+| SHA-256 role-card hashes | **`git hash-object` blob ids** — the required 40-hex format *and* reproducible with one command, rather than a truncated SHA-256 meaning nothing |
+| `:confirmation-units ["a98A01"]` | **the formalism decided it** |
+
+**On the third — codex-4 rightly refused to choose, and Lean settled it.**
+`ReplicationPlan` models confirmation as a **separate registration naming its
+predecessor** (`seededConfirmation`); a pilot's confirmation-units are empty *by
+projection*. I had stuffed `a98A01` into the pilot to preregister it cheaply —
+**bending the formalism to save a file.** Now `[]`, with
+`:reg/intended-confirmation-unit` recorded and round 2's registration to be
+written *before* round 1 is scored.
+
+**Second time today formalising surfaced something invisible in prose** (after
+the `VariationPlan` endpoint), and both times the right move was to follow it
+rather than route around it.
+
+**Verified after fixing: `shape []`, `content []`.** C re-dispatched,
+`invoke-1786732786153`.
+
+### Recorded for later — swapping Codex into the student role
+
+**Joe, 2026-08-14:** *"Another thing we could try eventually is swapping in
+Codex."*
+
+**A genuinely discriminating arm, and worth stating why.** The design claims the
+student tier's value is its **weakness** — headroom for measurement (A.11) and
+failure volume for the arc-lane (I.6). But every observation so far comes from
+one model, so **"weak solver" and "GLM 5.2" are currently confounded.**
+
+> Running Codex in the student position — isolated, memory-only, fresh per
+> attempt — separates them. If the loop still teaches, the mechanism is the
+> **role**; if it does not, the mechanism was the **model**, and much of the
+> student-tier argument needs rewriting.
+
+Requires the same treatment as A.11: **pin model version and benchmark release,
+never the rate.** Recorded as a future arm, not scheduled.
+
+### Also recorded — a conflation in the Claude card
+
+The `claude-guide` card holds **guide, observer and adjudicator** in one role.
+The party being guided and the party judging the outcome are the same agent.
+**Not a blocker for frame-1** — the disposition is mechanically constrained and
+the proctoring checks are independent — **but it is a confound to split before
+frame-20**, and better named now than discovered in the data.
