@@ -1836,3 +1836,84 @@ the board from cycle one.
 *(Generator: `holes/labs/M-diagramprover/apm-driver/lemma_index.py`; last
 regenerated at `ae23c95`. Predicted-duplication risk should be validated against
 the next duplicate found, not asserted from these six rows.)*
+
+## D.18 The 1,943 as a failing test suite — and the layer they fail at
+
+**Operator framing, Joe, 2026-08-14:** *"from a memory system point of view,
+each of those is, effectively, a failing test."*
+
+Correct. And checking *how* they fail changes what the remedy is.
+
+### They are not merely un-imported. They are un-importable.
+
+`apm-lean/lakefile.toml` declares exactly three `lean_lib` targets:
+**`ApmCanaries`, `ConstructionTargets`, `YoungL2`.** There is **no `lean_lib`
+for `problems`**. So no problem file is on the module path, and
+`import <problem>` fails with *"unknown module prefix"* — the same error the
+lakefile's own comments record happening twice before:
+
+> *"Until 2026-07-30 there was no lean_lib for [ConstructionTargets], so the
+> files were NOT on the module path … The proved lemmas were therefore
+> unreachable from the problems they were built for."*
+>
+> *"[YoungL2] had the SAME defect … a94J04's runner hit this on 2026-07-31 and
+> reported the proved lemma as unreachable."*
+
+**This failure mode has already been hit and fixed twice, at module
+granularity. The 1,943 are the same failure at problem granularity, unfixed.**
+
+### Why this reframes the remedy
+
+A test can fail at either of two layers:
+
+| layer | question | status for the 1,943 |
+|---|---|---|
+| **retrieval** | would the memory system surface this lemma given the need? | untested — and **moot** |
+| **importability** | could the consumer *use* it if surfaced? | **no — fails structurally** |
+
+**Retrieval improvements cannot move these.** If the store surfaced the exact
+lemma with perfect relevance and the consumer's own vocabulary, the consumer
+still could not `import` it. **The only available reuse mechanism is to copy the
+text.**
+
+**IF** duplication looked like a discipline failure, **HOWEVER** the sole
+mechanism by which a locked lemma can be reused is textual copying, **THEN**
+copying was the *rational* response and not carelessness, **BECAUSE** the agents
+that produced `LusinN` and `LemniscateComponents` had no other way to reuse
+`a95A02` and `a00J04` — the import they would have needed does not resolve.
+D.17's structural claim is thereby confirmed at the mechanism level, not merely
+correlated.
+
+### Consequence for ordering — importability is upstream of retrieval
+
+**Promotion coverage (9.2%) bounds what retrieval quality can achieve.** No
+amount of N5 work reaches the other 90.8%. That reorders the design:
+
+1. **importability** — can it be reached at all? (`lean_lib`, promotion)
+2. **findability** — is it surfaced by need vocabulary? (F7, the 39 probes)
+3. **use** — is it load-bearing once surfaced? (adjudication, D.3 F3)
+
+The 39-probe suite (Track E) tests layer 2 **on the 196 that have cleared layer
+1**. That is the right suite for layer 2 and it should not be enlarged to 1,943:
+those would fail for a reason the probe does not measure, which would make the
+retrieval gauge read low for a non-retrieval cause — the A4 miscalibration
+mistake, repeated.
+
+> **Two suites, not one.**
+> **Suite I (importability):** 1,943 cases. Pass = the lemma is reachable by
+> `import`. Currently **0/1,943**; corpus gauge = promotion coverage 9.2%.
+> **Suite II (findability):** 39 cases with demonstrated demand. Pass = a
+> need-vocabulary probe surfaces the module. Baseline 0 of 3 probed by hand.
+
+**Honest limit on Suite I.** The 1,943 are a *contract* failure, not 1,943
+demonstrated unmet needs: most may never be wanted again. Suite I therefore
+measures **exposure**, not damage. Its pass criterion is availability, and it
+must never be reported as "1,943 failed retrievals" — that would be a numerator
+without a denominator, which is the diagnosis this mission opened with.
+
+**Cheapest possible first experiment.** Adding a `lean_lib` for `problems` (or a
+generated re-export module) is a lakefile-level change that would move Suite I
+from 0/1,943 toward complete **without promoting anything**. Whether that is
+sound Lean practice at this scale is **[OPEN]** and is a question for the next
+one-shot walkthrough — it is exactly the kind of thing D.13 says to settle live
+on one problem rather than argue in advance.
