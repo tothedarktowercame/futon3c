@@ -136,3 +136,39 @@ Example stream:
 - `bell` is non-blocking and does not stream by itself; observe progress via job status polling.
 - `whistle-stream` gives partial-progress visibility during execution (`job-event` + `heartbeat`), so callers can see work is still active.
 - Delivery status is recorded in the job ledger (`delivery-recorded` event) when terminal output is emitted to the caller surface.
+
+## Holding a queue — interposing a word without cancelling work
+
+Bells that arrive while an agent is busy sit in that agent's durable turn queue
+(`futon3c.agency.turn-queue`). They are **not yet jobs**, so `/api/alpha/invoke/jobs`
+cannot show them: from the operator's side a pile-up looks like silence. Two
+operator controls close that gap.
+
+```bash
+python3 scripts/agency_queue.py status              # what is queued, behind whom
+python3 scripts/agency_queue.py hold ams-claude-1 --reason "having a word"
+python3 scripts/agency_queue.py release ams-claude-1
+```
+
+`status` lists each agent's pending depth, the caller/surface/preview of every
+waiting bell, who is mid-drain, and who is held.
+
+`hold` pauses the queue **between turns**. The turn already in flight runs to
+completion and finalizes normally — a hold is not a cancel and never interrupts
+work in progress. Bells keep being accepted while held and queue up behind the
+hold in FIFO order; none are dropped. `release` wakes the drainer and the backlog
+resumes immediately, in order.
+
+To end the turn that is actually *running*, that is a different tool:
+`POST /api/alpha/invoke/jobs/<job-id>/cancel` (see `README-agency-cap.md`).
+
+Holds are durable across a JVM restart — operator intent should survive a restart,
+unlike the `:draining` lock, which is cleared on load. The mirror risk is a hold
+set and forgotten with bells silently accumulating behind it, so the CLI defaults
+to a 30-minute TTL; `--ttl 0` holds indefinitely.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/alpha/agency/queue` | Per-agent pending depth, queued turns, drains, holds |
+| `POST /api/alpha/agency/queue/hold` | `{agent, reason, by, ttl-minutes}` |
+| `POST /api/alpha/agency/queue/release` | `{agent}` |

@@ -338,3 +338,24 @@ Code is being ported from futon3 via scoped missions. The source material is in:
 3. Check the peripheral spec: `~/code/futon3/docs/peripheral-spec.md`
 4. Check futon3b's AGENTS.md for the development protocol
 5. Search session history: `~/.claude/projects/`
+
+## Voice surface — open each turn with a Gist
+
+When a session may be spoken (the voxterm surface — see `README-voxterm.md`),
+open every turn with a one-line gist on its own line, prefixed `Gist:`:
+
+```
+Gist: The retry hangs because the enqueue blocks with no timeout.
+
+<the rest of the turn as normal>
+```
+
+One sentence, plain prose, no markup, no paths or code. It is read aloud on its
+own, before the rest of the turn is visible, to someone who may not be looking
+at the screen — so it must stand alone rather than refer back to anything.
+
+The gist is not a summary appended to the turn; it is the turn's opening line,
+saying what you found or what you are about to do. The body is unchanged.
+
+This is a format convention, not a brevity instruction: it adds a line, it does
+not constrain what follows.
