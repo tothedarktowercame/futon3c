@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+real_bin="${FUTON_CODEX_BIN_REAL:-${HOME}/.nvm/versions/node/v24.9.0/bin/codex}"
+[[ -x "${real_bin}" ]] || { echo "Codex binary is not executable: ${real_bin}" >&2; exit 127; }
+exec "${HOME}/code/futon3c/scripts/systemd/run-agent-scope" \
+  cx "${FUTON3C_SITE:-local}-codex" -- "${real_bin}" "$@"

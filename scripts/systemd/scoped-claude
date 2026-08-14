@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+real_bin="${FUTON_CLAUDE_BIN_REAL:-${HOME}/.local/bin/claude}"
+[[ -x "${real_bin}" ]] || { echo "Claude binary is not executable: ${real_bin}" >&2; exit 127; }
+exec "${HOME}/code/futon3c/scripts/systemd/run-agent-scope" \
+  cr "${FUTON3C_SITE:-local}-claude" -- "${real_bin}" "$@"

@@ -1,0 +1,38 @@
+[Unit]
+Description=Futon3c Amsterdam Agency with embedded futon1b (I-0)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Slice=futon-services.slice
+WorkingDirectory=%h/code/futon3c
+Environment=FUTON3C_SYSTEMD=1
+Environment=FUTON3C_SITE=ams
+Environment=FUTON3C_PORT=7070
+Environment=FUTON3C_BOOTSTRAP_AGENT_TYPES=zai
+ExecStartPre=%h/code/futon3c/scripts/systemd/server-guard assert-zero
+ExecStart=%h/code/futon3c/scripts/dev-zone-env
+ExecStartPost=%h/code/futon3c/scripts/systemd/server-guard assert-one --wait 120
+ExecStartPost=%h/code/futon3c/scripts/systemd/bootstrap-local-agents
+Restart=on-failure
+RestartSec=10
+KillMode=control-group
+KillSignal=SIGTERM
+FinalKillSignal=SIGKILL
+SendSIGKILL=yes
+TimeoutStartSec=180
+TimeoutStopSec=60
+ManagedOOMPreference=avoid
+OOMPolicy=stop
+CPUAccounting=yes
+MemoryAccounting=yes
+IOAccounting=yes
+TasksAccounting=yes
+MemoryHigh=20G
+MemoryMax=24G
+MemorySwapMax=2G
+TasksMax=1024
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+base_url="http://127.0.0.1:${FUTON3C_PORT:-7070}"
+types="${FUTON3C_BOOTSTRAP_AGENT_TYPES:-}"
+cwd="${FUTON3C_BOOTSTRAP_AGENT_CWD:-${HOME}/code}"
+site="${FUTON3C_SITE:-}"
+ready_agent="${FUTON3C_BOOTSTRAP_READY_AGENT:-${site:+${site}-}codex-1}"
+
+[[ -n "${types}" ]] || exit 0
+for _ in $(seq 1 120); do
+  if curl -fsS --max-time 1 \
+    "${base_url}/api/alpha/agents/${ready_agent}" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+curl -fsS --max-time 2 "${base_url}/api/alpha/agents/${ready_agent}" >/dev/null
+
+IFS=',' read -r -a requested <<<"${types}"
+for raw_type in "${requested[@]}"; do
+  agent_type="${raw_type//[[:space:]]/}"
+  case "${agent_type}" in
+    claude|codex|zai) ;;
+    *) echo "unsupported FUTON3C_BOOTSTRAP_AGENT_TYPES entry: ${agent_type}" >&2; exit 2 ;;
+  esac
+  id_pattern="^(${site:+${site}-})?${agent_type}-[0-9]+$"
+  agent_id="$(curl -fsS --max-time 3 "${base_url}/api/alpha/agents" \
+    | jq -r --arg pattern "${id_pattern}" \
+      '.agents | keys | map(select(test($pattern))) | sort | .[0] // empty')"
+  if [[ -z "${agent_id}" ]]; then
+    payload="$(jq -cn --arg type "${agent_type}" --arg cwd "${cwd}" '{type:$type,cwd:$cwd}')"
+    response="$(curl -fsS --max-time 15 -H 'content-type: application/json' \
+      --data "${payload}" "${base_url}/api/alpha/agents/auto")"
+    agent_id="$(jq -er 'select(.ok == true) | .["agent-id"]' <<<"${response}")"
+  fi
+  if [[ -n "${site}" ]]; then
+    qualified_id="${agent_id}"
+    [[ "${qualified_id}" == "${site}-"* ]] || qualified_id="${site}-${qualified_id}"
+    curl -fsS --max-time 3 "${base_url}/api/alpha/agents/${qualified_id}" >/dev/null
+  fi
+  echo "[zone] bootstrap agent ready: ${agent_id}${site:+ (area alias ${site}-${agent_id})}"
+done
