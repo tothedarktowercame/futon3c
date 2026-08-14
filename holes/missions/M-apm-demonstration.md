@@ -5962,3 +5962,57 @@ closed; and Registration round-trips by content rather than by enumeration.
 **If codex-4 stops a fifth time, the finding is again mine** — but this is the
 first pass where I worked from the complete list rather than from the last
 complaint.
+
+## I.22 The stopping rule was miscalibrated — corrected, and re-dispatched
+
+**Joe, 2026-08-14:** *"Can you ask it again based on what you've learned here?"*
+
+**The main thing learned is not about the schemas. It is about the instruction I
+gave.**
+
+I told codex-4: *"if a derivation is still ambiguous, stop and say which."* It
+stopped four times and **every stop was correct.** But that rule was written for
+**design decisions** and I applied it to **every missing field** — so it stopped
+on things that were mine to specify, and each stop cost a round-trip for a gap I
+could have closed in a line.
+
+> **A stopping rule calibrated for structural decisions, applied to local gaps,
+> converts a specification error into a coordination loop.** Four stops, all
+> correct individually, none of which needed to happen if the spec had been read
+> whole.
+
+### The corrected rule, now in the packet
+
+| gap | rule |
+|---|---|
+| **structural** — would change the design, alter what an invariant means, or commit us to something hard to reverse | **STOP and say which.** That judgement has been right every time |
+| **local** — a missing field, timestamp, id, or obvious derivation, where any reasonable choice is defensible and cheap to change | **make the minimal choice, RECORD IT in a "decisions I made" section, CONTINUE** |
+
+Stated plainly in the packet: *"I would rather have a built harness plus a list
+of ten small choices to review than a fifth stop."*
+
+**This is not a relaxation of rigour.** The decisions still get recorded and
+reviewed — they move from a blocking question to a reviewable list, which is
+where local choices belong. **What it removes is the round-trip, not the
+scrutiny.**
+
+### Also said explicitly
+
+> *"If something is still unmapped, that is my error, not an ambiguity in your
+> reading."*
+
+Worth saying because four stops could otherwise read as an agent being
+obstructive, when in fact it was **holding a line I set and I kept handing it
+incomplete work.** The record should be unambiguous about which of us was
+failing.
+
+**Dispatched:** `invoke-1786733448453`.
+
+### The general lesson, for the mission not just this packet
+
+Every handoff instruction is a **policy**, and a policy tuned for one class of
+case will misfire on another. *"Stop if ambiguous"* is right for design and wrong
+for typos. *"Verify, don't trust"* has been right eleven times. The difference is
+that the second is about **evidence** and the first is about **authority** —
+and authority rules need to say *whose* decision it is, not just that a decision
+exists.
