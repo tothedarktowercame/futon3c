@@ -373,6 +373,56 @@ The prior question, because (1) is a fraction of it.
 - **B3** Which historical results carry their own denominator already?
   (E9/E10 does — 0 vs 21 in a fixed design. Are there others?)
 
+### MAP Track B findings
+
+**B1 — denominators.** The audit distinguishes a countable source population
+from the denominator of the claim. A large corpus is not automatically the
+number of opportunities on which a cited event could have occurred.
+
+| cited numerator | surviving denominator |
+|---|---|
+| One demand→build→callback→closure revolution | **Unrecoverable as a rate.** V3 §6 preserves one dated revolution and a one-day ledger *snapshot* of 14 concepts, three past threshold. It does not preserve a series of demand cycles, a count of threshold crossings, or an artifact/no-artifact outcome for every crossing. Therefore neither “cycles attempted” nor “threshold concepts producing no artifact” can be counted from this record. The snapshot's 14 and three are populations of concepts at one time, not a denominator for revolutions. Track A's total-run inventory may add runs, but cannot be substituted here unless it identifies demand-cycle boundaries and outcomes. |
+| One rewrite found verbatim at cosine 0.77 | **Unrecoverable as a rewrite hit rate.** `have-corpus.jsonl` has 6,114 statement rows and `clusters.tsv` has 3,805 cluster rows; these are the indexed search space and clustering output. V3 §7 says one evening step matched two prior occurrences at 0.77, but no artifact defines or counts the population “rewrites looked for.” Thus 6,114 and 3,805 are not denominators for the one cited rewrite. |
+| 17 adjudicated load-bearing | **17/45 only within the non-unclear reported-use subset.** The complete selection chain is: 154 frozen files → 130 raw job records → 121 jobs with a memory report → 45 jobs whose reports surfaced memory IDs (76 reports without IDs) → 49 candidate memory-use instances → 45 adjudicable instances after four `UN` exclusions → 17 `LB` (with the remaining 21 `CO`, five `TRAJ`, two `IN`). A separate observation-channel funnel is 129 offered halves → 115 outcome halves → 114 joins → 20 metric-bearing rows (15.5%). The 17/45 is therefore not a rate over 130 jobs, 129 offers, all APM attempts, or all memories offered. Sources: the frozen worksheet, candidate JSONL, verdict JSON, observation-channel audit, and `evidence-summary-20260814.md`. |
+| Steinhaus closed end-to-end under automation | **Unrecoverable as a chain-closure rate.** The surviving material names a successful theorem/problem episode, but the surveyed records contain no frozen chain ledger defining all Steinhaus-chain attempts, including retries and abandoned chains. A problem-level success cannot supply its own attempt-level denominator. This remains dependent on Track A if its deduplication finds an explicit attempt series; absent that, it is an existence witness only. |
+| 0 → 21 store lookups under task framing (E9/E10) | **Denominator present: one observed run in each of two fixed conditions.** E9 records zero memory-tool calls under the invitation framing; E10 records 21 under the two-part frame, with the same agent and store. This differs from the other rows because the contrast and scoring unit were fixed prospectively, the baseline and treatment were both observed, and transcripts count calls in both conditions. It is an `n=1` paired mechanism contrast, not a proof-success-rate estimate. Sources: `E9-pull-probe-prereg.md` and the E9/E10 synthesis in `M-diagramprover.md`. |
+
+**B2 — record granularity: mixed.** The frozen July corpus contains genuine
+run-level records for 130 invokes (126 terminal `done`, four `failed`), and the
+E9/E10 probe preserves condition-level transcripts. Those records can support
+rates whose unit is explicitly one of those invokes or conditions. Other cited
+results survive only at problem or episode level: the demand ledger is a
+concept snapshot, the glue result does not enumerate rewrite-seeking attempts,
+and the Steinhaus success has no complete chain-attempt register. Consequently
+there is no defensible historical “successes per APM attempt” rate yet. Track
+A owns the cross-ledger run total; this finding does not duplicate or guess it.
+
+**B3 — historical results already carrying denominators.** These may be quoted
+as rates or fixed contrasts now, provided their narrow units and caveats travel
+with them:
+
+- E9/E10: 0 versus 21 memory-tool calls, one observed run per framing
+  condition; a mechanism contrast, not outcome lift.
+- Observation-channel completeness: 115/129 outcome halves, 114/129 joins,
+  and 20/129 metric-bearing rows. These measure evidence capture, not proof
+  efficacy.
+- Load-bearing adjudication: 17/45 non-unclear reported-use instances (49
+  candidates before four `UN` exclusions), explicitly a filtered-subset rate.
+- Frozen raw jobs: 126/130 terminal `done` and 4/130 `failed`; operational job
+  completion only, across heterogeneous phases and targets.
+- Retrieval damage-state sweeps: 5/55 single-edge perturbations and 1/55
+  pattern-role removals changed the top-five set, on two frozen cases. This is
+  retrieval sensitivity, not proof success.
+- RAW-CTL corrected contrast: enriched 3/25 versus raw 4/26 over 51 inference
+  edges. The denominator is explicit, but the mission already records that it
+  is one edge wide and supplies no directional prior.
+- The warrant audit's negative rate is also countable: 52/53 attachments marked
+  independently witnessed lacked a witness record. It invalidates a success
+  measure rather than supporting one.
+
+No denominator was promoted from corpus size, problem count, cluster count, or
+ledger snapshot by inference.
+
 ### Track C — the N-register (§1.4): already-done / partly-done / greenfield?
 
 - **C1** Which measurement-vector quantities are **already emitted** by the
