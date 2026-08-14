@@ -3056,3 +3056,163 @@ diagram), and choosing between them is ARGUE's, not MAP's or mine.
 *Sources:* [MathArena ArXivLean](https://matharena.ai/arxivlean/) ·
 [MathArena competitions](https://matharena.ai/competitions) ·
 [Beyond Benchmarks: MathArena as an Evaluation Platform (arXiv:2605.00674)](https://arxiv.org/abs/2605.00674)
+
+---
+
+# ARGUE
+
+*Staged per Joe's instruction as PRO / CONTRA **backed purely by patterns**, and
+belled to `zai-1` — uninvolved, and **blinded**: it received a standalone extract
+of the DERIVE candidate (sha `6cc741fe…`) and codex-4's Lean file, never the
+mission file, our derivation log, or our critique. zai-1 confirms: "Blinding held
+throughout — the mission file was never opened." PAR `par-5ca3cf5e`.*
+
+## A.1 The blind test — scoring overlap
+
+We withheld five known findings. Result:
+
+| our withheld finding | zai-1, independently |
+|---|---|
+| `measurementArm.axes = []` ⇒ round 1 cannot support a learning claim | **partial hit** — "missing counterfactual series for the slope claim"; "single-axis regime string vs multi-axis stationarity" |
+| importability precedes findability | **hit, as a PRO** — praised suite separation via `baldwin/ablation-axes-must-not-disable-the-instrument` |
+| `VariationPlan` endpoint unselected | **partial** — reached via the counterfactual-series point, not named as the endpoint gap |
+| **patterns / cascade absent from the design** | **missed** |
+| **F3 offer-disposition is the load-bearing gap** | **missed** |
+
+**Two of five hit, one partial, two missed — and that is the good result.** Per
+the packet's own terms, *divergence is more valuable than overlap*, and zai-1
+returned **five findings we did not have**, two of which are sharper than
+anything on our list.
+
+## A.2 The two CONTRA findings that verify, and bite
+
+**Verified by claude-2 before acceptance** — not taken on report.
+
+**1. `modules` and `enforcedBy` are decorative.** Each appears exactly **once**,
+at its own definition site. Nothing consumes them.
+
+> **The artifact whose entire purpose is to prevent "written but not wired up"
+> contains two definitions that are written and not wired.** Twelfth instance of
+> the defect, inside its own cure. Found by a blinded reviewer who had never seen
+> our eleven-item catalogue.
+
+**2. F1 is encoded as a watchdog, not as a construction guarantee.** The design
+says F1 *"holds by construction, not by check — a frame that would close
+scaffold-identical is not emitted."* The Lean says:
+
+```lean
+observable "F1: every emitted frame differs from its scaffold" fun t =>
+  t.frameCreated = true → t.closingHash ≠ t.scaffoldHash
+```
+
+That is **detection after the fact on a trace** — the exact substitution E6
+rejected, and it silently converts the design's strongest guarantee into its
+weakest. zai-1 caught it against `invariant-coherence/reachable-from-boot`:
+*"a watchdog asks 'did someone follow the discipline?'; this invariant makes the
+discipline impossible to violate."* **The reviewer used the same pattern to
+praise the design (PRO 1) and to convict its formalisation (CONTRA 7).**
+
+**3. String-identity probes as acceptance proxies** — zai-1 calls this "the
+deepest one". F9's check is membership in a registered string list, so it
+verifies *names*, not capabilities. **That is the vacuity trap one level up**:
+`c89af757` closed the empty-list loophole, but a non-empty list of strings still
+proves nothing about whether the capability was probed. Not yet independently
+verified in detail; recorded as zai-1's, and the most important item to resolve.
+
+Remaining CONTRA: half-checked F2 locus; `L(i)` outside the registered
+denominator; single-axis regime string vs multi-axis stationarity.
+
+## A.3 Pattern cross-reference — and a disconfirmed expectation
+
+**PRO (9)** drew on `pattern-discipline/peripheral-as-sokoban`,
+`invariant-coherence/reachable-from-boot`, `invariant-coherence/shape-first-identify`
+(F9-as-named-shape is *verbatim* that pattern's move),
+`baldwin/ablation-axes-must-not-disable-the-instrument`, the baldwin divergence
+clause, and `small-n-is-a-design-feature` for the honest n=1 scoping.
+
+⚠ **The expectation at the DERIVE→ARGUE gate was wrong.** We recorded the 76
+`math-*` flexiargs as "the historical output ARGUE actually needs." zai-1's
+UNSUPPORTED section reports **"the math-\* families' inability to carry a design
+review"**, and the patterns it actually used came from `pattern-discipline/`,
+`invariant-coherence/`, `baldwin/` and `metaca/`.
+
+**The math-\* families are proof patterns; this was a design review.** Right
+library, wrong shelf. Recorded as a **correction to our own gate note**, and as
+a genuine result about the library's coverage.
+
+## A.4 The F7 / cascade probe result
+
+The ARGUE run doubled as a retrieval probe on non-mathematical vocabulary
+(gate section). Findings:
+
+- **The methodology families carried the review**; the mathematics families did
+  not. Coverage is real but domain-shaped.
+- zai-1 reports the substrate endpoint **"returning bodyless rows"** — search
+  yields ids without content, so a reviewer cannot judge relevance without a
+  second fetch. **An independent second sighting of an F7-class defect in the
+  retrieval surface itself** (claude-2 hit the silent-unknown-parameter trap in
+  the same endpoint).
+- zai-1 read patterns **from files**, not from the store. The store did not
+  serve the need; the filesystem did.
+
+**This is the cascade's problem statement, evidenced rather than asserted.**
+
+## A.5 Coherence with IDENTIFY
+
+| question | does the design serve it? |
+|---|---|
+| (1a) how much evidence, full stop | **yes** — registration makes every run countable or explicitly not-an-experiment |
+| (1) how much is evidence of success | **yes** — the disposition is the missing term |
+| (2) can cycle one be countable | **yes** — and cheaper than feared: dispositions on existing channels |
+| (2b) will it improve per iteration | **mechanism now named** — `L` falls because paths form; path formation is measurable upstream of `L` |
+
+The theory has not shifted. It has **narrowed**: from "build measurement" to
+"record outcomes on channels that already carry provenance."
+
+## A.6 Trade-offs
+
+**Given up:** within-problem contrast (1-shot cannot pair); retrospective use of
+the 475; corpus cleanup; embeddings for now; and — newly — the assumption that
+the solver is a substitutable component.
+
+**Bought:** launch gated on discharge; measurability from cycle one; an external
+scorer available (ArXivLean) if we want the grader out of the party with an
+interest; and a variation endpoint that costs no repetition (the student tier).
+
+**Still owed:** the three verified CONTRA items above, before any registration
+is frozen.
+
+## A.7 Generalization
+
+**F9 generalises past this project.** *Every claimed capability has a probe* is a
+general antidote to documentation drift, and the twelve instances catalogued here
+are one organisation's sample of a universal failure. So does the headroom
+result: **an augmentation cannot be measured on a consumer that already
+succeeds** — which is why the channel experiments nulled, and which applies to
+any tool-augmentation evaluation, not just this one.
+
+## A.8 Plain-language argument
+
+> Several AI systems work together here to prove mathematical theorems, and we
+> want to know whether the group actually gets better with practice or merely
+> gets lucky sometimes. The trouble is that it has always recorded what it *did*
+> and never recorded how things *turned out* — so we could count the attempts but
+> not the successes. We are rebuilding it around one rule: nothing may claim to
+> work unless something checks that it does, and every run must say in advance
+> what will be measured. We test this by walking through a single problem and
+> watching each measurement come to life, then walking through a second one
+> without building anything and seeing whether they still work. If the system is
+> genuinely learning, we will see it in the paths — it should stop searching at
+> random and start following the routes that earlier work wore into the grass.
+
+## A.9 Exit criterion — not yet met
+
+The lifecycle asks that the design feel **inevitable**. It does not yet, for one
+honest reason: **three verified defects sit between the design and its
+formalisation** — decorative definitions, F1 demoted to a watchdog, and
+string-identity probes standing in for capability probes. Each is the design's
+own named defect reappearing inside its cure, which is either an indictment of
+the design or the strongest possible evidence that its central claim is right.
+
+**ARGUE's verdict: the design is arguable and the argument mostly holds; the
+formalisation is not yet faithful to it.** That is a repair, not a redesign.
