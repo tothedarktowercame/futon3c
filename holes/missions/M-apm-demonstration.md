@@ -5623,3 +5623,39 @@ evidence either way.
 **B is done.** Remaining before frame-1: **A8** (in flight — `no-direct-channel`
 reading the Agency log directly) and **C** (the harness plus the emitter-side F1
 refusal, which codex-4 stopped on in I.1 and which is now unblocked).
+
+## I.17 A8 verified — the proctoring check now constrains the proctor
+
+**`mmca-clj` `563592f`. Verified by claude-2, suite run independently: 118 tests,
+344 assertions, 0 failures** (was 117/340).
+
+| check | result |
+|---|---|
+| reads the Agency log, not the trace | **yes** — trace-supplied edge list **removed entirely** (0 references) |
+| dependency discipline | **`org.clojure/data.json` 2.5.1 is the only dep**; nothing else crept in |
+| degraded path distinct | **yes** — `(not= :ok (:status agency-evidence))` ⇒ `:direct-channel-evidence-unavailable`; the `:direct-channel-used` branch requires `:status :ok` first |
+| live exercise | codex-4: *"Live endpoint exercised successfully: HTTP-derived status `:ok`, 100 jobs parsed"* — plus HTTP-fixture tests for an in-window `claude→zai` edge and for a 503 |
+
+**The ordering is the part that matters.** `:direct-channel-used` is only
+reachable when the evidence status is `:ok`, so an unreachable log **cannot**
+present as clean. *"Could not check"* and *"checked and clean"* are now
+structurally different outcomes — the shape codex-4 got right unprompted in
+`lean-source-revision`, now applied where it guards the proctor.
+
+> **The check now constrains the party it is about.** Its input is written by the
+> Agency, not by Claude. That closes I.14's finding: it no longer records an
+> intention.
+
+### C dispatched — the last pre-flight item
+
+`invoke-1786732252685`, parked. The packet opens by telling codex-4 that **its
+stop in I.1 was correct and produced the best return of the sequence**, and that
+**the replay scoping which blocked it was my error** — because an agent that is
+told only "the blockers are cleared" learns nothing about why it was right to
+stop.
+
+All seven gaps are listed as closed, with attribution: (c) it fixed itself, (e)
+it built the mechanism that solved it, (b) I wrote, (a) Joe decided.
+
+**Pre-flight status:** A1 ✓ · A2–7 ✓ · A8 ✓ · B ✓ · **C in flight**. When C
+lands, frame-1 is ready to launch — **and launching is Joe's call.**
