@@ -3733,3 +3733,75 @@ what the Lean says — that is the bridge, and it is VERIFY's *other* half.
    six-part method).
 
 **Gate is Joe's.** Nothing spiked yet.
+
+## V.5 The full VERIFY chain — matrix, then generated spec
+
+**Operator ruling, Joe, 2026-08-14:** *"VERIFY can point at your matrix and if
+that passes point also at the Malli+CLean discipline that follows on from the
+Lean work as a generated spec."* And on why the phase exists at all: *"naturally
+we need to verify before building (post-build verification comes 'for free'…
+sometimes in the form of bugs)."*
+
+### The economy argument, in one line
+
+**Verification is not optional; only its timing is.** Post-build verification
+arrives free, in the form of bugs — and this project has the receipts for what
+that costs: eleven "written but not wired up" defects, an odometer that read low
+for four months, and 1,943 lemmas nobody could import. Joe's contrast is exact:
+*"a huge upgrade from the first half of APM where we bashed through and didn't
+validate anything."*
+
+### Four layers, and they are not the same thing
+
+| # | layer | establishes | can it drift? |
+|---|---|---|---|
+| 1 | **Lean model** (F1–F11) | the invariants are stated and typecheck | — |
+| 2 | **Matrix spike** (V.2) | the model is *satisfiable*, and every invariant can *refuse* | — |
+| 3 | **Generated Malli/CLean spec** | the runtime **contract** matches the model | **no — by construction** |
+| 4 | **Bridge tests + mutation** (A.14) | the running **artifact** honours the contract | yes; this is what tests catch |
+
+**Layers 3 and 4 are easy to conflate and must not be.** A generated Malli
+schema makes *spec drift* impossible — the contract cannot disagree with the
+model because it is derived from it. It does **not** establish that the solver
+behaves accordingly: a schema validates the *shape* of a record, not that the
+runtime refused to emit a scaffold-identical frame. **Shape conformance is
+generated; behavioural conformance is tested.** That distinction is A.13's
+model/artifact split, reappearing one level down.
+
+### Direction matters — these are two different arrows
+
+There is an existing generator, and it runs the **other way**:
+
+- **`futon6/scripts/clean_to_lean.py`** — *record* → Lean *term*. A CLean EDN
+  instance renders to DarkTower Lean; *"the render IS the correctness gate: a
+  CLean is well-formed iff it produces type-correct, 0-sorry DarkTower Lean."*
+- **Proposed (does not exist)** — Lean *type* → Malli *schema*. The invariant
+  and observable declarations generate the runtime contract.
+
+**Types generate the schema; records render to terms.** Different levels, no
+circularity — but stating it prevents exactly the muddle that would produce one.
+Checked before proposing: **no Lean→Malli generator exists** anywhere in the
+tree; the only direction implemented today is CLean→Lean.
+
+### The pattern to copy, rather than invent
+
+`clean_to_lean.py` is 1,028 lines with a `validate_experiment` that fails hard,
+**and it has a test** — `futon6/tests/test_clean_to_lean_experiment.py`. A
+Lean→Malli generator should follow that shape: deterministic, hard-failing on
+ill-formed input, and tested. **It should also carry its own anti-vacuity
+clause** (§18.1's move): assert that it still emits schemas for each declared
+invariant, so a refactor cannot silently reduce it to generating nothing.
+
+### Revised VERIFY sequence
+
+1. **Matrix spike** — positive, F1-must-not-compile, one negative per invariant.
+2. **If it passes: generate the Malli/CLean spec from the Lean.** Spec drift
+   becomes structurally impossible.
+3. **Bridge tests per invariant**, mutation-tested (A.14's six-part method) —
+   this is where behavioural conformance is actually established.
+4. Completion-criteria pre-check; GF fidelity check; wiring diagram or a
+   recorded reason to skip.
+
+**Steps 1–2 are verify-before-build. Step 3 is the part that only exists once
+there is something to build against** — and naming that ordering is what stops
+step 2's structural guarantee being mistaken for step 3's empirical one.
