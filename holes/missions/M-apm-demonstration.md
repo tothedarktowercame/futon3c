@@ -5391,3 +5391,44 @@ test leaves the same hole open one refactor later.
 
 **B is mine by carve-out** and starts now: four role cards, the round-1
 registration EDN, and P1 recorded before the round.
+
+## I.13 A1 landed and verified; A2–7 dispatched as one packet
+
+**A1 — `mmca-clj` `eeba467`. Verified by claude-2, suite run independently.**
+
+| check | result |
+|---|---|
+| tests, run by me | **113 tests, 336 assertions, 0 failures** (was 111/333) |
+| the test that matters | `claimed-measurement-fields-require-values` — asserts an empty `:meas/values` **and** empty `:meas/unset` yields `:measurement-field-claimed-without-value` **specifically** |
+| honest-deferral case | `declared-unset-measurement-with-reason-is-valid` — a field in `:meas/unset` with reason *"deferred to pilot observation"* passes, and the reason is readable |
+| derived, not asserted | populated fields = `(keys :meas/values)` ∪ `(keys :meas/unset)` |
+| scope | **zero** A2–7 territory touched; 2 files, 38 insertions |
+
+**The vacuity hole in the acceptance gate is closed**, and D.13's deferred
+quantities now have an honest home: *declared, unset, with a reason, and visibly
+so.*
+
+### A2–7 sent as one packet, deliberately
+
+The handoff discipline says keep packets small, and this one carries seven schema
+fields plus three checks. **Splitting it would be worse:** the proctoring checks
+*read* the attempt-level fields, so a fields-only packet would add structure
+nothing consumes — **which is this project's signature defect, eleven times
+catalogued.** Fields and their consumers land together or the packet is itself a
+bug. Stated in the packet so the reasoning travels with it.
+
+**One instruction worth recording** — on check (c), `no-direct-channel`:
+
+> *"If the job log is not reachable from `mmca-clj` without adding a dependency,
+> say so and take the trace-supplied edge list as input instead — but say which
+> you did, because **a check that reads only what the checked party supplies is
+> weaker** and we should know we accepted that."*
+
+That is the difference between a limit and a defect: **a weakened check that is
+recorded as weakened is honest apparatus; the same check unrecorded is a
+false assurance.** The mission has twelve instances of the latter.
+
+**Dispatched:** `invoke-1786731230221`, parked `park-a9ed047c`'s successor.
+
+**Remaining:** C (harness + emitter-side F1 refusal — what codex-4 originally
+stopped on, now unblocked), and B, which is mine and in progress.
