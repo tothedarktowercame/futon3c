@@ -33,7 +33,7 @@ ACCT_NPM=$ACCT_HOME/.npm-global
 AGENT_ID=abl-codex-1
 AGENCY=http://127.0.0.1:7070
 SRC=/home/joe/code/apm-lean
-OUT=/home/joe/code/futon3c/holes/experiments/e2-isolation-probe.edn
+OUT=/home/joe/code/futon3c/data/evidence/holes/experiments/e2-isolation-probe.edn
 
 # problem:base-revision — the commit immediately BEFORE each problem closed.
 # Per-problem rather than one shared revision, so each run sees the tree as

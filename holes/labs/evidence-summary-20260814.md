@@ -18,7 +18,7 @@ The fairest conclusion is therefore: **memory use and several useful mechanisms
 worked in production, sometimes apparently decisively; causal improvement in
 APM proof success remains unmeasured.** This is the distinction made explicitly
 by the corpus's own synthesis: attribution plus compiler witness is not causal
-attribution ([retrieval-whitepaper.pdf](../../docs/retrieval-whitepaper.pdf),
+attribution ([retrieval-whitepaper.pdf](../../data/evidence/docs/retrieval-whitepaper.pdf),
 §§5.7 and 6).
 
 ## Scope and reading method
@@ -49,14 +49,14 @@ Evidence strength in this note uses four levels:
 ### What the experiment was
 
 The files under
-[`job-results-20260731/`](M-memory-retrieval/job-results-20260731/) preserve the
+[`job-results-20260731/`](../../data/evidence/holes/labs/M-memory-retrieval/job-results-20260731/) preserve the
 full invoke records for theorem-proving and construction-target jobs: dispatch
 prompt, event stream, final result, execution metadata, commit reference, and
 the runner's memory-use report. They cover several phases rather than one clean
 randomised cohort. Direct parsing gives 126 terminal `done` jobs and four
 `failed` jobs; the agent mix is 60 codex-6, 56 codex-7, 12 zai-5, and two zai-6.
 The 130-file capture itself is documented by
-[memory-reports-worksheet-20260731.json](M-memory-retrieval/memory-reports-worksheet-20260731.json),
+[memory-reports-worksheet-20260731.json](../../data/evidence/holes/labs/M-memory-retrieval/memory-reports-worksheet-20260731.json),
 which finds a memory report in 121 files, including 45 reports with surfaced
 memory IDs and 76 without.
 
@@ -70,7 +70,7 @@ jobs, 30 prompts say `completed-with-memories`, 28 say `timeout`, one says
 Consequently, “no memory used” mixes genuine non-use with missing or failed
 recall. The larger receipt audit reaches the same diagnosis independently:
 46 timeouts and 12 store-unavailable cases occur among 129 offered halves
-([observation-channel-audit-20260731.edn](M-memory-retrieval/observation-channel-audit-20260731.edn)).
+([observation-channel-audit-20260731.edn](../../data/evidence/holes/labs/M-memory-retrieval/observation-channel-audit-20260731.edn)).
 
 ### What success they support
 
@@ -81,20 +81,20 @@ They support concrete, outcome-witnessed cases:
   exited 0, and the axiom report had no `sorryAx`. The runner says one memory
   correctly identified the Fubini/integrability frontier and another stopped
   repeated API search
-  ([invoke-1785243793353-233-a32962a2.edn](M-memory-retrieval/job-results-20260731/invoke-1785243793353-233-a32962a2.edn)).
+  ([invoke-1785243793353-233-a32962a2.edn](../../data/evidence/holes/labs/M-memory-retrieval/job-results-20260731/invoke-1785243793353-233-a32962a2.edn)).
 - For a01A07, a recalled local half-disk route is reported as carrying the proof;
   the target and downstream declarations became axiom-clean, with sorry count
   1 to 0
-  ([invoke-1785451020936-403-177f0408.edn](M-memory-retrieval/job-results-20260731/invoke-1785451020936-403-177f0408.edn)).
+  ([invoke-1785451020936-403-177f0408.edn](../../data/evidence/holes/labs/M-memory-retrieval/job-results-20260731/invoke-1785451020936-403-177f0408.edn)).
 - For a95A04, the recalled dyadic-induction/Lebesgue-differentiation
   architecture is reported as the successful architecture
-  ([invoke-1785467054646-455-b8371b8f.edn](M-memory-retrieval/job-results-20260731/invoke-1785467054646-455-b8371b8f.edn)).
+  ([invoke-1785467054646-455-b8371b8f.edn](../../data/evidence/holes/labs/M-memory-retrieval/job-results-20260731/invoke-1785467054646-455-b8371b8f.edn)).
 - For a95J05, two recalled memories supplied the strict/closed-threshold bridge
   and the a.e.-convergent subsequence API in a completed commit
-  ([invoke-1785469190846-464-39b04a8f.edn](M-memory-retrieval/job-results-20260731/invoke-1785469190846-464-39b04a8f.edn)).
+  ([invoke-1785469190846-464-39b04a8f.edn](../../data/evidence/holes/labs/M-memory-retrieval/job-results-20260731/invoke-1785469190846-464-39b04a8f.edn)).
 - For a94J04, the recalled Young-inequality reduction exactly matched the route
   used to close `poissonConv_L2_contraction`
-  ([invoke-1785473298737-474-6e1af56a.edn](M-memory-retrieval/job-results-20260731/invoke-1785473298737-474-6e1af56a.edn)).
+  ([invoke-1785473298737-474-6e1af56a.edn](../../data/evidence/holes/labs/M-memory-retrieval/job-results-20260731/invoke-1785473298737-474-6e1af56a.edn)).
 
 These are real positive records on the measure “a relevant memory was used in a
 job whose proof obligation closed.” Their strength is limited: Lean witnesses
@@ -105,21 +105,21 @@ matched no-memory rerun. They establish successful use, not causal lift.
 
 ### Receipts, use, and load-bearing adjudication
 
-[receipts-export-20260731-all-authors.edn](M-memory-retrieval/receipts-export-20260731-all-authors.edn)
+[receipts-export-20260731-all-authors.edn](../../data/evidence/holes/labs/M-memory-retrieval/receipts-export-20260731-all-authors.edn)
 is the offered/outcome evidence substrate. The audit finds 129 offered halves,
 115 outcome halves, 114 joins, and only 20 metric-bearing rows; outcome-half
 completion was 89.15%, while just 15.5% of offered rows became metric-bearing
-([observation-channel-audit-20260731.edn](M-memory-retrieval/observation-channel-audit-20260731.edn)).
+([observation-channel-audit-20260731.edn](../../data/evidence/holes/labs/M-memory-retrieval/observation-channel-audit-20260731.edn)).
 That is a major repair over the earlier slice—14 offered, two outcomes, one
 metric-bearing row—but still a selective observation channel
-([observation-channel-audit-20260730.edn](M-memory-retrieval/observation-channel-audit-20260730.edn)).
+([observation-channel-audit-20260730.edn](../../data/evidence/holes/labs/M-memory-retrieval/observation-channel-audit-20260730.edn)).
 
 The strongest success count in the corpus comes from a two-step analysis. The
 frozen candidate set contains 49 reported memory-use instances
-([load-bearing-candidates-20260731.jsonl](M-memory-retrieval/load-bearing-candidates-20260731.jsonl));
+([load-bearing-candidates-20260731.jsonl](../../data/evidence/holes/labs/M-memory-retrieval/load-bearing-candidates-20260731.jsonl));
 the per-instance verdict file assigns 17 `LB`, 21 `CO`, five `TRAJ`, two `IN`,
 and four `UN` verdicts
-([adjudication-verdicts-p2-20260801.json](M-memory-retrieval/adjudication-verdicts-p2-20260801.json)).
+([adjudication-verdicts-p2-20260801.json](../../data/evidence/holes/labs/M-memory-retrieval/adjudication-verdicts-p2-20260801.json)).
 Thus 17 of the 45 non-`UN` instances, 37.8%, were judged load-bearing. Examples
 include the Young-convolution assembly, the a01A07 local half-disk route, the
 a95A04 dyadic architecture, and the a95J05 threshold/API bridge.
@@ -134,17 +134,17 @@ the solve rate?”
 The same corpus also shows that surfacing was noisy and that the solver often
 declined memories. The coding file extracts the relevant memory-report sections
 from 45 surfaced rows
-([coding-sections-20260731.json](M-memory-retrieval/coding-sections-20260731.json)).
+([coding-sections-20260731.json](../../data/evidence/holes/labs/M-memory-retrieval/coding-sections-20260731.json)).
 Across 94 coded rejection statements, 61 are topical mismatch, 16 absent
 precondition, six scope mismatch, four stage mismatch, three subsumption, and
 four relevance-without-applicability
-([rejection-coding-20260731.json](M-memory-retrieval/rejection-coding-20260731.json)).
+([rejection-coding-20260731.json](../../data/evidence/holes/labs/M-memory-retrieval/rejection-coding-20260731.json)).
 This supports a descriptive result—agents discriminate among offered memories,
 rather than blindly applying all of them—but the reasons are solver self-report,
 not independently labelled relevance judgments.
 
-[memory-reports-worksheet-20260731.json](M-memory-retrieval/memory-reports-worksheet-20260731.json)
-and [cooccurrence-table-20260801.json](M-memory-retrieval/cooccurrence-table-20260801.json)
+[memory-reports-worksheet-20260731.json](../../data/evidence/holes/labs/M-memory-retrieval/memory-reports-worksheet-20260731.json)
+and [cooccurrence-table-20260801.json](../../data/evidence/holes/labs/M-memory-retrieval/cooccurrence-table-20260801.json)
 make the corpus analysable: the latter records 129 dispatch queries, 273 distinct
 terms, and 1,864 term pairs under an exhaustive, analyst-blind extraction. Those
 are corpus-description assets, not efficacy results.
@@ -158,8 +158,8 @@ neighbors. In the Lemniscate case, content is redundant but the pattern arm
 supplies three neighbors. Across single-edge perturbations, 5/55 changed the
 top-five set (maximum Jaccard distance 0.889); across pattern-role removals,
 1/55 changed it (maximum 0.75)
-([damage-state-fixture-20260730.edn](M-memory-retrieval/damage-state-fixture-20260730.edn),
-[damage-state-results-20260730.edn](M-memory-retrieval/damage-state-results-20260730.edn)).
+([damage-state-fixture-20260730.edn](../../data/evidence/holes/labs/M-memory-retrieval/damage-state-fixture-20260730.edn),
+[damage-state-results-20260730.edn](../../data/evidence/holes/labs/M-memory-retrieval/damage-state-results-20260730.edn)).
 
 This is a controlled success for **complementary candidate generation** against
 arm-removal baselines, on two frozen cases. The artifact explicitly limits its
@@ -171,7 +171,7 @@ does not show that the additional candidates caused more proofs to close.
 The warrant field failed its own audit. Of 62 attachments carrying a witness
 status, 53 say independently witnessed, but 52 of those 53 have no witness
 record; the only two actual witness records split across the two status classes
-([warrant-audit-20260730.edn](M-memory-retrieval/warrant-audit-20260730.edn)).
+([warrant-audit-20260730.edn](../../data/evidence/holes/labs/M-memory-retrieval/warrant-audit-20260730.edn)).
 Any success rate based on `:witness-status` alone is invalid. This negative
 finding is important because it prevents an apparently clean but unsupported
 success narrative.
@@ -180,11 +180,11 @@ success narrative.
 
 Five `harvest-dryrun-*.edn` files preserve turn-level context selected from five
 Codex sessions: 70, 67, 14, two, and three turns respectively, 156 total
-([019f9b12](M-codex-sorry-loop/harvest-dryrun-019f9b12.edn),
-[019fa2c1](M-codex-sorry-loop/harvest-dryrun-019fa2c1.edn),
-[019fb3b7](M-codex-sorry-loop/harvest-dryrun-019fb3b7.edn),
-[019fb48a](M-codex-sorry-loop/harvest-dryrun-019fb48a.edn), and
-[019fb49a](M-codex-sorry-loop/harvest-dryrun-019fb49a.edn)). They contain the
+([019f9b12](../../data/evidence/holes/labs/M-codex-sorry-loop/harvest-dryrun-019f9b12.edn),
+[019fa2c1](../../data/evidence/holes/labs/M-codex-sorry-loop/harvest-dryrun-019fa2c1.edn),
+[019fb3b7](../../data/evidence/holes/labs/M-codex-sorry-loop/harvest-dryrun-019fb3b7.edn),
+[019fb48a](../../data/evidence/holes/labs/M-codex-sorry-loop/harvest-dryrun-019fb48a.edn), and
+[019fb49a](../../data/evidence/holes/labs/M-codex-sorry-loop/harvest-dryrun-019fb49a.edn)). They contain the
 source text, event ranges, and tool digests from which self-correction memories
 can be mined. Because they are dry-run capture artifacts, they demonstrate that
 the raw correction trace is recoverable; they do not themselves test whether a
@@ -193,7 +193,7 @@ mined rewrite helps later work.
 The sixth file classifies roughly 30 observed uses into seven modes:
 interface translation, direct proof step, strategy override, work removal,
 proof architecture, risk ordering, and stopping rule
-([memory-use-modes-20260731.json](M-codex-sorry-loop/memory-use-modes-20260731.json)).
+([memory-use-modes-20260731.json](../../data/evidence/holes/labs/M-codex-sorry-loop/memory-use-modes-20260731.json)).
 Five of the seven are non-substitutive—they alter what the solver does or stops
 doing rather than supplying mathematics. This is a useful qualitative success:
 the effect vocabulary is broader than “recalled lemma inserted.” Its own caveats
@@ -202,29 +202,29 @@ unexhausted tail. It has no control arm or rate estimate.
 
 ## 4. The three typed-memory files
 
-[live-graph-export-20260730.edn](M-typed-memories/live-graph-export-20260730.edn)
+[live-graph-export-20260730.edn](../../data/evidence/holes/labs/M-typed-memories/live-graph-export-20260730.edn)
 is a read-only snapshot of the deployed reviewed-memory graph. The corresponding
 meter records 219 nodes, 233 edges, 227 reviewed-current versus six other review
 states, and a largest reviewed component of 146 nodes. Its verdict is
 `:component-limited`; the measured λ₂ is 0.0755, below the preregistered >0.1
 criterion
-([connectivity-meter-20260730.edn](M-typed-memories/connectivity-meter-20260730.edn)).
+([connectivity-meter-20260730.edn](../../data/evidence/holes/labs/M-typed-memories/connectivity-meter-20260730.edn)).
 This demonstrates deployed graph construction and auditability, not APM proof
 success.
 
 The owner-stability check preregistered Spearman ρ ≤ −0.8 between λ₂ and time to
 uniformity and measured approximately −0.8 over four settings, marked `passed?`
-([ws2-owner-stability-check-results.edn](M-typed-memories/ws2-owner-stability-check-results.edn)).
+([ws2-owner-stability-check-results.edn](../../data/evidence/holes/labs/M-typed-memories/ws2-owner-stability-check-results.edn)).
 That apparent positive must be read with the later correction: the whitepaper
 reports that three of four settings were beyond the explicit-Euler stability
 boundary, so the runs measured concentration rather than diffusion; a corrected
 ε=0.1 rerun again obtained −0.8, but multi-seed replication remained outstanding
-([retrieval-whitepaper.pdf](../../docs/retrieval-whitepaper.pdf), §5.4). It is a
+([retrieval-whitepaper.pdf](../../data/evidence/docs/retrieval-whitepaper.pdf), §5.4). It is a
 mechanism check, not an outcome result.
 
 ## 5. The two whitepapers
 
-[retrieval-whitepaper.pdf](../../docs/retrieval-whitepaper.pdf) is the corpus's
+[retrieval-whitepaper.pdf](../../data/evidence/docs/retrieval-whitepaper.pdf) is the corpus's
 best integrated interpretation, and it is notably conservative:
 
 - Hybrid content-plus-pattern retrieval is demonstrated as complementary on two
@@ -245,7 +245,7 @@ best integrated interpretation, and it is notably conservative:
   compiler/axiom witnessed. The paper nevertheless states that memory use is
   runner attribution and causation is not independently established (§5.7).
 
-[retrieval-whitepaper-v2-plan.pdf](../../docs/retrieval-whitepaper-v2-plan.pdf)
+[retrieval-whitepaper-v2-plan.pdf](../../data/evidence/docs/retrieval-whitepaper-v2-plan.pdf)
 updates the data boundary after the overnight corpus. It says frozen historical
 corpus state is unavailable, so recall@k, nDCG, and the planned chronological
 benchmark cannot be reconstructed (§3.1). It identifies the production
@@ -257,7 +257,7 @@ corpus supports a use taxonomy and case evidence, not a causal success rate.
 
 ## 6. The E2 isolation probe
 
-[e2-isolation-probe.edn](../experiments/e2-isolation-probe.edn) records an
+[e2-isolation-probe.edn](../../data/evidence/holes/experiments/e2-isolation-probe.edn) records an
 isolated `apmablate` account, five frozen problem/revision targets, inaccessible
 operator/source state, a clean runner-side store, and registration status 201.
 Every listed isolation predicate is true. This is a successful **readiness
@@ -269,7 +269,7 @@ the file present on both surveyed machines is 1,002 bytes with SHA-256
 `51dcd0d5…`; the added fields strengthen the isolation record. The mismatch is
 an integrity defect in the catalog, not a divergent copy
 ([evidence-manifest-20260801.tsv](evidence-manifest-20260801.tsv),
-[e2-isolation-probe.edn](../experiments/e2-isolation-probe.edn)).
+[e2-isolation-probe.edn](../../data/evidence/holes/experiments/e2-isolation-probe.edn)).
 
 ## Overall judgement
 
@@ -281,16 +281,16 @@ an integrity defect in the catalog, not a divergent copy
   (specific job records above).
 - **Adjudicated usefulness:** 17/45 non-unclear reported-use instances were
   classified load-bearing
-  ([adjudication-verdicts-p2-20260801.json](M-memory-retrieval/adjudication-verdicts-p2-20260801.json)).
+  ([adjudication-verdicts-p2-20260801.json](../../data/evidence/holes/labs/M-memory-retrieval/adjudication-verdicts-p2-20260801.json)).
 - **Retrieval mechanics:** content and pattern arms contribute different
   candidates on two frozen cases
-  ([damage-state-results-20260730.edn](M-memory-retrieval/damage-state-results-20260730.edn)).
+  ([damage-state-results-20260730.edn](../../data/evidence/holes/labs/M-memory-retrieval/damage-state-results-20260730.edn)).
 - **Anti-collapse mechanism:** the exploration floor beats two controls on one
   synthetic planted-decoy fixture
-  ([retrieval-whitepaper.pdf](../../docs/retrieval-whitepaper.pdf), §5.4).
+  ([retrieval-whitepaper.pdf](../../data/evidence/docs/retrieval-whitepaper.pdf), §5.4).
 - **Loop closure:** one same-problem mine→recall→use→compiler-witness episode
   and one cross-model transfer are recorded
-  ([retrieval-whitepaper.pdf](../../docs/retrieval-whitepaper.pdf), §5.7).
+  ([retrieval-whitepaper.pdf](../../data/evidence/docs/retrieval-whitepaper.pdf), §5.7).
 
 ### Against what baseline
 

@@ -628,7 +628,7 @@ expired job is indistinguishable from a mistyped id through that endpoint.
 
 **Captured 2026-07-31 by claude-2 before proceeding:** all 130 distinct
 job-ids from the frozen receipts export, into
-`holes/labs/M-memory-retrieval/job-results-20260731/` — 130 files, 1.4 MB,
+`data/evidence/holes/labs/M-memory-retrieval/job-results-20260731/` — 130 files, 1.4 MB,
 2.8 KB–87 KB, none truncated, zero fetch failures. (One file matches
 `:error`; inspection shows 21 occurrences inside the runner's own error→fix
 log, not a fetch fault.)
@@ -668,7 +668,7 @@ not the runner. Memory acting on the operator rather than the actor is outside
 every model in V1.
 
 **Artifact with resolvable ids**:
-`holes/labs/M-codex-sorry-loop/memory-use-modes-20260731.json` — **15 evidence
+`data/evidence/holes/labs/M-codex-sorry-loop/memory-use-modes-20260731.json` — **15 evidence
 rows over 14 distinct receipts**, each with problem id, full receipt uuid and a
 note on what the memory did. Caveats live in a `caveats` field inside the file
 so they cannot be separated from the data.
