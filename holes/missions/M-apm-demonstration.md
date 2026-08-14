@@ -3958,3 +3958,104 @@ the sentence goes in, not after an operator reads it.
 3. Review `oxf-claude-3`'s example when it arrives; extract *method*, not code.
 4. Lean→Clojure projection — scope it once (3) is in hand.
 5. Mutation-tested bridges — now load-bearing for drift as well as behaviour.
+
+## V.8 The validated-implementation exemplar — `mmca-clj`, read and verified
+
+*(Relayed by `claude-3`; read and checked by claude-2. Joe: "the 'Malli' part is
+the bit that isn't there.")*
+
+**This is a working model–artifact bridge, and it already contains the fix V.6
+recommended.**
+
+### What is actually built
+
+**Lean** — `DarkTower/`: `ExperimentPreregistration.lean` (what an experiment
+commits to; declares claims, derives obligations) and `ExperimentalDesign.lean`
+(the pre-go-live gate; makes the witness a **required argument of launching**),
+plus **nine** concrete Baldwin preregistrations.
+
+**Clojure** — `~/code/mmca-clj/`: executable structural validators
+(`baldwin_guidance_preregistration.clj` et al.), validate scripts, a launch
+authorization writer, and tests.
+
+### The binding, verified enforced — not merely declared
+
+```clojure
+(def required-lean-revision "f50d34cffbd2d92b624592ef50e9d57f7b84af98")
+…
+(not= required-lean-revision (:lean-revision registration))
+(conj :wrong-lean-revision)
+```
+
+**`failures` returns a vector of 17 distinct, self-naming violation keywords**,
+accumulated with `cond->` so **every** violation is reported rather than the
+first: `:wrong-kind :wrong-schema :wrong-lean-registration :wrong-lean-revision
+:wrong-task-partition :wrong-learning-budgets :wrong-preparedness
+:wrong-production-protocol :wrong-smoke-configuration-evidence
+:missing-pilot-seed :missing-confirmation-seed :pilot-reused-for-confirmation
+:wrong-arms :wrong-smoke-observations :wrong-stop-rules :wrong-outcomes
+:over-budget`.
+
+> ⚠ **V.6's recommendation already exists here.** I proposed making F9's failure
+> *name which capability failed*, citing the ablation preregistration's
+> "jointly equivalent, separately actionable" split. This validator does exactly
+> that, seventeen ways, and reports them all. **The fix is not to be invented —
+> it is to be copied.**
+
+**`:pilot-reused-for-confirmation` is `ReplicationPlan.confirmation_not_pilot`
+enforced at runtime** — a Lean theorem with a Clojure counterpart check. That is
+a bridge in the A.13 sense, and it is one line.
+
+**The launch authorization writer** refuses a revision that is not a full 40-hex
+SHA, refuses to write at all unless `(:launchable? report)`, and records
+`:authorization-revision` in the output. **You cannot obtain an authorization
+without passing, and the authorization states what it was discharged against.**
+
+### Correction to V.7 — pinning is a third thing
+
+V.5 said generation would make drift *"impossible by construction"*. V.7, once
+generation turned out not to exist, said *"nothing prevents it except tests"*.
+**Both are wrong.** Pinning is a **declared correspondence with a deliberate
+freeze**:
+
+| drift | caught? |
+|---|---|
+| registration authored against a **different** Lean revision than the validator expects | **yes** — `:wrong-lean-revision` |
+| the **Lean itself moving** while validator and registration both stay pinned | **no** — the constant is hardcoded and never compared to repo state |
+
+**Verified live, right now:** `f50d34cf` ("Make Baldwin guidance witness
+population-level") **is an ancestor of `darktower` HEAD** (`259266de`, today's
+spike). The Lean has moved on and nothing notices.
+
+**That is not a defect.** A preregistration *should* bind to the model as it
+stood — freezing is the point. The gap is narrower and worth naming: **there is
+no staleness signal.** Nothing tells a reader "the model has advanced since you
+pinned"; you have to ask. Adding that comparison — validator's constant vs the
+actual revision of the Lean file it pins — is cheap, and is itself a bridge in
+A.14's sense.
+
+### What Malli would add, precisely
+
+Today the registration EDN is checked **by value-equality against constants**:
+`(not= required-arms (set (:arms registration)))`. That validates *content*, not
+*shape* — nothing checks that `:arms` is a collection of the right type, that
+required keys are present rather than `nil`, or that nesting is well-formed. A
+malformed EDN fails as `:wrong-arms` rather than as a schema error, which is a
+worse diagnostic for the same fault. **Malli is the missing structural layer,
+not the missing binding.** The binding exists.
+
+### The method, extracted
+
+1. Lean declares the registration and derives obligations.
+2. A Clojure validator **pins the Lean revision** and enforces the pin.
+3. Failures are **distinct self-naming keywords, all reported** — never a
+   boolean.
+4. Selected Lean theorems get **runtime counterpart checks**
+   (`pilot-reused-for-confirmation`).
+5. **Launch authorization cannot be written unless validation passes**, and it
+   **records the revision it discharged against**, format-checked.
+6. *(missing)* structural schema validation — Malli.
+7. *(missing)* a staleness signal on the pin.
+
+**Items 1–5 are built and working. Our design should adopt them rather than
+re-derive them; 6 and 7 are the additions worth making.**
