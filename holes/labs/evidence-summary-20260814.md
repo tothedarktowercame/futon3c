@@ -3,7 +3,10 @@
 **Answer in plain words.** Yes, this corpus contains evidence that parts of the
 APM memory system succeeded. Memories were retrieved and reported as useful in
 real proof work; a later adjudication classified 17 of 45 non-unclear use
-instances as load-bearing; individual records show recalled memories supplying
+instances as load-bearing — a rate *within* a doubly-filtered subset, since only
+45 of the 130 jobs surfaced memory IDs at all and the observation channel yields
+just 20 metric-bearing rows from 129 offered halves (15.5%), so it is not a rate
+over the corpus; individual records show recalled memories supplying
 the architecture or API that accompanied compiler-checked closure; and the
 whitepaper records one same-problem end-to-end loop closure plus one cross-model
 transfer. But the corpus does **not** establish that memory-augmented APM solves
