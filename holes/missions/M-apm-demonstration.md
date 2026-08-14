@@ -1758,3 +1758,81 @@ the `LusinN` cleanup and holds it pending a statement-defect review. The
 `LemniscateComponents` case should be recorded as known debt on the same
 footing; whether and when to act is the operator's, and doing it now would
 disturb a corpus we are about to measure against.
+
+## D.17 The real duplication figure — 1,943 locked lemmas
+
+*(Found 2026-08-14 by following Joe's pointer to the `*claude-repl:claude-1*`
+buffer, which led to `apm-lean/LEMMA-INDEX.md`. This supersedes D.15's reading
+of what the ">1000" report was about.)*
+
+**`LEMMA-INDEX.md` states it in its own header**, and the number is exact:
+
+```
+2139 lemmas already proved in this repo, outside the problems'
+own statements. GREP THIS BEFORE RE-DERIVING ANYTHING.
+```
+
+| | count | share |
+|---|---|---|
+| helper lemmas proved, sorry-free | **2,139** | |
+| **`LIB:` — importable today** (18 CT modules) | **196** | 9.2% |
+| **locked inside a single problem file** | **1,943** | **90.8%** |
+
+Spread over **361 problems**, median **5** locked lemmas each.
+
+**1,943 is the ">1000" figure**, and it is a far better one than D.15's
+have-clusters: these are *lemmas*, individually proved and sorry-free, not
+anonymised proof-step shapes.
+
+### This is F7 at full scale, and the index is its confession
+
+A lemma locked in one problem file cannot be imported. It can only be reused by
+reading someone else's proof and re-typing the argument — **re-derivation with a
+hint, not reuse.** The index exists precisely because these are unreachable, and
+its remedy is an instruction to *grep before re-deriving*: a **documentation
+workaround for a code-level availability failure.** "Technically present, not
+available" is not an analogy here; it is what the file says it is for.
+
+**So the duplication exposure is not 38 — it is 1,943.** D.14's 38 exact
+duplicate bodies are the *realised* fraction of that exposure; 196 promotions are
+the *mitigated* fraction (9.2%). The remaining ~90% is standing risk.
+
+### The correlation that makes this predictive
+
+Top holders of locked lemmas, against the duplications D.14/D.16 found:
+
+| problem | locked lemmas | rank of 361 | implicated in a duplication? |
+|---|---|---|---|
+| `a96A04` | 34 | 1 | |
+| `a96J01` | 30 | 2 | |
+| `a01A10` | 20 | 3 | |
+| **`a00J04`** | **19** | 4 | **yes — 21 decls copied into `LemniscateComponents`** |
+| **`a01A08`** | **19** | 5 | **yes — 15 decls shared** |
+| **`a95A02`** | **18** | 6 | **yes — 17 decls copied into `LusinN`** |
+
+**Three of the top six holders are exactly the three problems involved in every
+duplication found today**, against a median of 5. Duplication is not occurring
+randomly: **it occurs where lemma density is high and importability is absent.**
+
+**IF** duplication were a discipline failure, **HOWEVER** it lands precisely on
+the problems holding the most unreachable lemmas, **THEN** treat it as a
+*structural* consequence of non-importability rather than as carelessness,
+**BECAUSE** that makes it predictable and preventable — the exposure is
+computable per problem today, and the fix (promote, or make importable) is
+mechanical, whereas "be more careful" is neither.
+
+### New measurable — locked-lemma exposure
+
+| field | role | status |
+|---|---|---|
+| **locked-lemma exposure** — helper lemmas this problem holds that no other problem can import | scribe | **free** — `lemma_index.py` computes it |
+| **promotion coverage** — importable ÷ total proved helpers | scribe | **free** — currently **196/2,139 = 9.2%** |
+
+Promotion coverage is a **single corpus-level number that moves as the loop
+works**, needs no arm assignment, no stratification and no probe design, and is
+already generated. It is the cheapest N3/N5 gauge available and it should be on
+the board from cycle one.
+
+*(Generator: `holes/labs/M-diagramprover/apm-driver/lemma_index.py`; last
+regenerated at `ae23c95`. Predicted-duplication risk should be validated against
+the next duplicate found, not asserted from these six rows.)*
