@@ -4401,3 +4401,97 @@ correspondence**, not about generating test cases. codex-4 declined
 explicitly**: negative-case generation was never excluded.
 
 **Dispatched:** `codex-4`, job `invoke-1786728751795`.
+
+## I.1 codex-4 stopped — and the stop is correct, including about my scoping
+
+**No files changed, no commit, no gates claimed.** Verified: `mmca-clj` still at
+`9d217d0`, working tree clean. The packet said *"a stop is a finding, not a
+failure"* and this one earns it — **seven specific blocking gaps**, one of them
+a defect in codex-4's own validator.
+
+### My scoping decision was wrong, and it contradicted a ruling already recorded
+
+I chose *"exercise the harness against an already-solved `apm-lean` bundle"* to
+satisfy F1 honestly. It does satisfy F1. But codex-4's gaps 6 and 7 are the
+direct consequence of the same choice:
+
+> *"Empty offers, promotions, and available artifacts would make F3/F7 and parts
+> of F9 pass vacuously. **Creating synthetic rows would not be an honest replay
+> of the solved bundle.**"* … *"No containment-probe artifact exists for a newly
+> replayed frame, so F8 evidence would also need invented structure."*
+
+**A historical solve has no offers, no dispositions and no containment probes —
+because recording them is precisely what this mission exists to add.** So those
+invariants could only pass vacuously or by fabrication.
+
+> **You cannot demonstrate an instrument by replaying data that predates it.**
+
+D.13 already ruled that historical data is *"inspiring but useless"* for the next
+round of gathering. **I then scoped the demonstration around replaying it.** That
+is my error, and unlike the day's earlier ones it went into a handoff rather than
+a document.
+
+### The gap has structure, and it matches V.6 exactly
+
+codex-4's blocked set is **F3, F7, F8 and parts of F9** — which is the *same
+cluster* V.6 proved entangled (`F2/F3/F7/F8_failure_entails_F9_failure`). The
+split is not coincidental:
+
+| class | invariants | satisfiable from a registration alone? |
+|---|---|---|
+| **procedural** — how the round was set up | F4 stratum, F5 regime, F6 denominator | **yes** — replay-compatible |
+| **capability** — what the system actually did | F2, F3, F7, F8 → F9 | **no** — requires a live run |
+
+**Capability invariants assert what happened; only a live cycle can witness
+them.** That is why the harness cannot be demonstrated on replay, and it is an
+argument *for* going straight to a live frame-1 rather than an obstacle to it.
+
+### The seven gaps, classified
+
+**(a) Operator decisions — §9 items, quick:** variation kind/endpoint, costs,
+budget cap, teardown deadline, stop rules, total decision rule.
+
+**(b) A genuine DERIVE gap — implementation-blocking:** *"D.1–D.2 define
+identities and relationships, but **not the stored attribute schemas** for
+Cycle, Frame, Disposition, RoleEvent, Measurement, or adjudication. Implementing
+round-trip persistence would require inventing them."* **Correct — the candidate
+has an identity column and a relation list, and no field lists.** This is the
+one gap that is straightforwardly ours to close.
+
+**(c) A validator defect — verified by claude-2:** `required-measurement-fields`
+is a vector of **strings**, compared against `:populated-measurement-fields`.
+**A trace can claim all 17 field names while emitting no values.** Vacuity, in
+the acceptance gate itself, found by its own author. Cheap to fix and it must be
+fixed before the gate means anything.
+
+**(d) Extraction rules absent:** difficulty stratum, regime and locked-lemma
+exposure are structurally required but have no extraction rule for a chosen
+bundle. D.6 chose *family × freeze-time statement length*; it never said how to
+compute them.
+
+**(e) The chicken-and-egg D.13 created:** `L(i)` weights, retrieval pass bar and
+need-vocabulary rule were deferred *to pilot observation* — but the pilot needs
+the harness, and the harness needs values for them. **Deferring to the pilot is
+only coherent if the harness can run with those fields declared-but-unset**,
+which is the `w₃ = 0` treatment generalised. Recorded as a DERIVE revision.
+
+### One thing confirmed implementable
+
+> *"The emitter-side F1 check is achievable and unambiguous: hash scaffold and
+> closing `Main.lean` before persistence and **throw before emitting a Frame**
+> when equal."*
+
+V.12's requirement stands and is cheap. codex-4 declined to ship it alone
+because *"implementing only the F1 refusal would leave a misleading partial
+harness"* — right call; a fragment that looks like a harness is worse than none.
+
+### Recommended order
+
+1. **Fix (c)** — the acceptance gate's own vacuity hole. Small, and nothing
+   downstream means anything until it is done.
+2. **Close (b)** — write the attribute schemas into DERIVE. Ours, not a handoff.
+3. **Decide (a) and (d)** — operator, with (e)'s declared-but-unset treatment.
+4. **Then frame-1 LIVE, not replayed** — because capability invariants have no
+   other witness.
+
+**Gate is Joe's.** Nothing re-dispatched.
