@@ -218,3 +218,118 @@ worse than no report — it would be wrong in the discouraging direction.
 
 **Therefore F3 and F4 are gated on this sweep**, not merely informed by it.
 Dispatched to `oxf-codex-1` (federated peer `172.236.108.82`) on 2026-08-14.
+
+---
+
+# REFRAME (Joe, 2026-08-14): EF as an agentic coding loop with a loss function
+
+Joe: *"we've talked about various roles (prover, scribe, etc.) … it isn't
+formalised. Since the current state of evidence seems to be 'pilot not
+measurement', I want each round of the agentic loop to lead to measurables that
+can serve as something like a loss function as we move from problem to
+problem."*
+
+**"Pilot not measurement" is the correct diagnosis** and it reorders this whole
+packet. F3/F4 analyse what a pilot happened to leave behind. The reframe asks
+the loop to *emit measurements by construction*, so the second half does not
+depend on archaeology.
+
+## The loop already exists — it is just not instrumented
+
+From `futon6/README-apm-lean-ground-control.md` §1 ("The regime"), which is the
+closest thing to a written spec:
+
+| # | role | does | already emits |
+|---|---|---|---|
+| 1 | **Formalizer** (Codex) | APM problem → Lean statement | the statement |
+| 2 | **Reviewer** (Claude) | statement-fidelity gate | a verdict |
+| 3 | **Freeze** | `frozen_hash` + `frozen_declarations` | a hash |
+| 4 | **Prover** | closes, or reports **Tier A** (missing Mathlib lemma) / **Tier B** (bridge lemma) / **defective statement** | a typed outcome |
+| 5 | **Scribe** | draft + promotion, memory entries with retrievable tags, **hunger audit** | memories |
+
+Two known holes in the regime, both already documented and neither closed:
+- **the freeze does not cover `def` bodies** — "an open gap Joe knows about and
+  has not yet ruled on". A contract that does not bind the thing under change
+  cannot bound rework.
+- **the scribe was never run on the recent campaign** — `scribe.md` unmodified
+  since 2026-08-04 while the campaign ran on the 8th–9th; `ams-scribe-1` was
+  repurposed as a bridge-lane seat. So role 5 has been *staffed but not
+  performed*, which is why the memory record is thin.
+
+## The measurement vector — one per round, per role
+
+Each quantity must come from an artifact the loop **already produces**.
+Anything requiring new bookkeeping will not survive contact with a real
+campaign.
+
+| role | measurable | direction |
+|---|---|---|
+| Formalizer | statement defects found at review | ↓ |
+| Reviewer | **escape rate** — defects the prover hits that review missed | ↓ |
+| Freeze | **contract leaks** — post-freeze changes to `def` bodies | ↓ (currently unmeasured *and* unbounded) |
+| Prover | outcome ∈ {closed, TierA, TierB, defective}; attempts to close; residual `sorry` count | ↓ |
+| Scribe | memories promoted; **hunger audit — queries returning empty** | ↓ |
+| Scribe (join) | promoted memories later *surfaced and used* on a later problem | ↑ |
+
+**The hunger audit is the instrument that already exists and is closest to a
+gradient.** It measures retrieval failure directly, per round, from the
+scribe's own template. It has simply never been run at campaign scale.
+
+## The loss function
+
+Per problem *i*:
+
+```
+L(i) = cost_to_close(i) + residual(i) + rework(i)
+
+  cost_to_close : prover attempts (optionally wall-clock / tokens)
+  residual      : sorries remaining + open Tier A/B items
+  rework        : re-freezes + defective statements caught late + review escapes
+```
+
+The research question is then **not** "does retrieval work?" but a slope:
+
+> does `L` fall as accumulated memory grows — `dL/d(problems seen) < 0`
+> — *conditioned on memory being available*?
+
+That is exactly "something like a loss function as we move from problem to
+problem", and it is answerable from the vector above without any new
+infrastructure.
+
+**The confound that must be stated, not finessed:** `L(i)` is only comparable
+across problems if problems are comparable in difficulty. A falling `L` is
+otherwise indistinguishable from an easier tail of the corpus. So the design
+needs stratification or a paired/matched comparison **declared in advance**.
+
+## What this does to F1–F5
+
+The reframe promotes two items from hygiene to prerequisite:
+
+- **F2 (pre-registration) is now load-bearing, not paperwork.** A loss function
+  chosen after seeing the data is a curve fit. The difficulty-stratification
+  above must be fixed in advance or the slope means nothing.
+- **F5 (gate reliability) bounds the measurement.** `escape rate` and `defects
+  found at review` are *gate outputs*. A gate that misfires on a backtick puts
+  noise directly into the loss function. Characterise it before trusting any
+  round.
+- **F1** becomes: does one round of the loop produce a complete, valid
+  measurement vector? That is a far cheaper pass/fail than the original assay,
+  and it can be dry-run on the canned CT problem.
+- **F3/F4 are re-scoped as *baseline*, not verdict.** They establish `L` for
+  problems already run, so the second half has a zero point to improve on.
+  This also dissolves the tension in F3: the corpus does not have to answer
+  "does it work" — it only has to yield a baseline.
+
+## Ordering under the reframe
+
+1. **F2** — pre-register the loss function and the stratification. Blocks all.
+2. **F5** — characterise the gates that feed it.
+3. **F1** — dry-run one round on the CT problem; acceptance is *a complete
+   measurement vector*, not a proof.
+4. **F3/F4** — compute the baseline `L` over the existing corpus.
+5. Then, and only then, run rounds and look at the slope.
+
+**Also needed, and currently missing:** the scribe pass must actually run, or
+role 5 emits nothing and the two most informative measurables (hunger audit,
+memory-use join) stay empty — which is precisely how the current record became
+thin enough to look like "one positive result".

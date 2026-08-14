@@ -134,3 +134,96 @@ deletion/rename tests (33) where the change could reach them.
 `:count`, commit `77c5a60`) is landed but **not live** — it needs a substrate
 restart. Whoever restarts next picks it up; coordinate rather than booting
 twice.
+
+---
+
+## D2/D3 — FIRST PRODUCTION TEST, 2026-08-14: both need recalibration
+
+The first real cold boot with D2's quiescence wait **failed**, and D3's
+pre-restart check had said it was safe. Both behaved as *written*; both are
+mis-tuned. Recorded because this is the calibration data codex-3 explicitly
+could not gather ("no before/after production cold-boot time was measured").
+
+**What happened.** After the day's writes (1,184-file reingest + an
+18,378-document retraction sweep), the store log had grown ~25.0 MB since the
+previous clean boot. D3 judged that safe against its 32 MB default budget.
+The restart then ran **605 s** at ~111% CPU and died:
+
+```
+UNIT DIED at 605s
+Execution error (ExceptionInfo) at futon1b-gates/layered-error
+indexing-quiescence-timeout
+```
+
+**D2 worked as designed.** It waited, did not hang, and failed **loudly** with
+a named error — exactly the required behaviour, and strictly better than the
+old retry-until-lucky path, which would have spent the same wall-clock doing
+*expensive* projection rebuilds instead of cheap polling. The defect is only
+the default: `FUTON1B_PROJECTION_QUIESCENCE_TIMEOUT_MS` = 600,000 ms is too
+short for this store after a bulk write. Recovery: restart with the env var
+raised (3,600,000 ms used).
+
+**D3 is the more serious finding: its threshold predicts the wrong thing.**
+It answers *"is the backlog small enough that a boot should work?"* — but the
+quantity that actually matters is **how long indexing will take**, and the two
+are not the same. A green check preceded a failed boot. Reference points now
+on record for this store:
+
+| log delta since last boot | boot outcome |
+|---|---|
+| +4.4 MB (quiet, 14 h idle) | **28 s** |
+| ~0 (post-incident, 4.30 GB log) | **379 s** |
+| **+25.0 MB (after bulk reingest + sweep)** | **FAILED at 605 s** |
+
+So the budget is not monotone in "MB of log delta" alone — 25 MB of freshly
+written transactions costs far more indexing time than the raw byte figure
+suggests. **D3 should either predict a time and compare it against D2's
+timeout, or state plainly that it bounds bootability rather than boot time.**
+Silently implying the latter is the failure mode this campaign catalogues.
+
+*Neither is a regression: before today the same restart would have hit the old
+gate's 500 attempts. The difference is that we now get a named error instead of
+a mystery.*
+
+
+### ROOT CAUSE, MEASURED — D2 and D3 defaults are mutually inconsistent
+
+The failed boot's own error report (`/tmp/clojure-15553444324293308928.edn`)
+carried the offsets, which makes this exact rather than inferred:
+
+```
+waited-ms                     600,093
+latest-submitted-byte-offset  4,335,031,163
+latest-processed-byte-offset  4,327,068,451
+remaining                         7,962,712 bytes   (8.0 MB short)
+```
+
+Against the 4,308,384,676-byte log size at the previous clean 28 s boot:
+
+| quantity | value |
+|---|---|
+| backlog to index | 26.6 MB |
+| indexed in 600 s | 18.7 MB |
+| remaining at timeout | 8.0 MB |
+| **observed log replay rate** | **31.1 KB/s** |
+| time the full backlog needs | **856 s (14.3 min)** |
+| what D2's 600 s default covers | **18.7 MB** |
+| what D3 calls safe (32 MB) needs | **1,078 s (18.0 min)** |
+
+**So D3 green-lights a backlog that D2 will not wait for — by nearly 2×.**
+This is one uncalibrated pair, not two independent bugs. The boot did not
+fail because the store was unhealthy; it failed because the gate gave up 8 MB
+from the end of a job whose size the other gate had already declared
+acceptable.
+
+**The fix is to derive one from the other, not to pick two numbers.**
+Either D3 predicts `gap_bytes / replay_rate` and refuses when that exceeds
+D2's timeout, or D2's timeout is set from D3's budget at the measured rate.
+Replay rate is measurable at runtime (poll the two offsets), so this can be
+adaptive rather than a constant.
+
+*Note the rate is the interesting quantity in its own right: **31 KB/s** of
+log replay means a 4.3 GB log would take ~39 hours to replay from empty. The
+store only boots quickly because it replays from a checkpoint. Anything that
+invalidates the checkpoint is an outage, and nothing currently measures how
+close we are to that.*

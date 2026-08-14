@@ -388,3 +388,228 @@ loss."*
 H1 and H2 are independent discovery — run concurrently, they answer different
 questions. H3 and H4 are small independent fixes that can run alongside.
 H5 waits on H4. H6 waits on H1, H3, H5.
+
+---
+
+## The identity convention, codified (Joe, 2026-08-14)
+
+Joe: *"The 19 math buckets are actually a 'silent success' until we codify
+this as a new standard."*
+
+**The standard, stated so conformance can be checked:**
+
+> A `pattern/library` or `pattern/clause` entity's `:entity/id` **is its
+> qualified name** (`<namespace>/<name>`, and `<namespace>/<name>/<facet>` for
+> clauses). Relation endpoints use the same ids. No UUIDs, no `#uuid` strings.
+
+This was never written down, which is why the store accumulated **three**
+conventions (3,934 plain UUID, 1,242 qualified name, 700 stringified `#uuid`)
+and why nobody noticed until a duplication audit forced an id census.
+
+### Why A4 must be re-read, not just re-counted
+
+The 19 `math/*` buckets were logged as a defect — "exist only in the store,
+no files". But they **already carry qualified-name ids**, so they conform to
+the standard we are now adopting, and they survive the sweep untouched. They
+were counted as an anomaly only because there was no written standard for them
+to be measured against.
+
+**This is the mirror image of the silence catalogue.** That catalogue collects
+*failures that present as normal operation*. This is a **success that presented
+as an anomaly** — and the mechanism is the same one: an unwritten expectation.
+When the norm is implicit, both conformance and deviation are invisible, and
+which one you "see" depends only on which you went looking for.
+
+So A4's real content is narrower than logged: not "these are wrong" but
+**"these are store-authored patterns with no file, and we have not decided
+whether store-authored patterns are legitimate."** That is a decision for Joe,
+not a defect to fix. If they are legitimate, the multi_watcher requirement
+("kept up to date by the watcher") needs a second path for patterns that have
+no file — or they need files.
+
+### What codifying it buys
+
+A written convention makes conformance **checkable**: a one-line audit
+(`every id qualified?`) becomes a gate rather than an archaeology project. The
+700 `#uuid` rows are being deleted by the sweep, but deletion is not a fix —
+the writer is under investigation (codex-4, `invoke-1786699246201-4453-61905ba4`).
+Without a written standard the same rows return and nobody notices; with one,
+the next audit catches them in a single query.
+
+---
+
+## The `#uuid`-string defect — ROOT CAUSE FOUND, and it is LIVE
+
+**codex-4, `invoke-1786699246201-4453-61905ba4`, verified by claude-2
+2026-08-14.**
+
+**The writer:** `migration.transform/deep-stringify-non-keyword-maps`.
+
+```clojure
+;; migration/transform.clj:104-107
+;; Fallback: stringify anything else (Java objects, dates, etc.)
+:else
+(pr-str v)
+```
+
+`java.util.UUID` is not among the preserved scalar types, so it falls to the
+`pr-str` fallback. `transform-doc` (transform.clj:299) applies that walk to the
+**whole document, including identity fields**.
+
+**It is not confined to the migration.** The same transformer is on the live
+write path:
+
+| call site | path |
+|---|---|
+| `futon1b_graph.clj:34` | `put-verified!` — every single-document write |
+| `futon1b_graph.clj:311` | `write-entities-batch!` — every batched write |
+
+and `futon1b_server.clj:182` parses request bodies with `edn/read-string`, so
+an explicit `:id #uuid "…"` arrives at `build-entity` as a real UUID and is
+then corrupted by the shared transformer.
+
+**Reproduced by claude-2 independently** (pure function, no store write):
+
+```
+id value : "#uuid \"0030a6e9-f433-42e9-8c3f-00ca295a29d2\""
+id class : java.lang.String
+CORRUPTED: true
+```
+
+**So the 700 rows the sweep deletes are a symptom.** Deleting them does not
+close this: the API will accept a UUID id today and silently store a mangled
+string. The corrupted value still *round-trips as an id*, which is why nothing
+ever failed loudly — it is a silence-catalogue instance in the substrate's
+identity layer.
+
+### The decision this needs (Joe, not the implementer)
+
+What *should* a UUID `:id` do?
+
+1. **Preserve it as a UUID** — most faithful, but XTDB 2 doc values and the
+   rest of the code path must accept a non-string id everywhere.
+2. **Coerce to the plain 36-char string** (`str` not `pr-str`) — cheap, keeps
+   ids strings, loses the type distinction, and is what most callers already
+   assume.
+3. **Reject it at the gate** — the codified convention says an id *is* the
+   qualified name, so a UUID id is a contract violation and should 400 rather
+   than be silently transformed.
+
+**(3) is most consistent with the convention now codified above**, but it is a
+breaking change for any caller that passes UUIDs today, so it is Joe's call.
+Whichever is chosen, the fallback must stop silently rewriting identity fields
+— stringifying an *unknown Java object* is defensible; stringifying the
+**primary key** is not.
+
+---
+
+## Implications of rejecting UUID pattern ids (option 3)
+
+**codex-4 discovery/design follow-up, 2026-08-14. No store writes and no
+implementation.**
+
+### Verdict
+
+Option 3 is a **contained, per-type contract change**. It does not force a
+substrate-2 reingest. Validate the requested id after the entity has been built
+but before `transform-doc`, and apply the qualified-name contract only to
+`:pattern/library` and `:pattern/clause`. Existing non-pattern entity types may
+continue using their established id schemes. A complete reingest may later be
+useful for normalising the wider substrate, but it is neither a prerequisite
+nor a consequence of closing this live corruption path.
+
+The important boundary is not “change the generic fallback to reject UUIDs”.
+The boundary is: **identity fields are validated before the generic document
+value transformer is allowed to touch them**. This leaves the migration/value
+compatibility behaviour unchanged while ensuring a primary key cannot be
+silently made acceptable by serialization.
+
+### What the fallback actually handles
+
+`deep-stringify-non-keyword-maps` has several distinct behaviours; only the
+last is the catch-all:
+
+| input | current behaviour | legitimate dependency |
+|---|---|---|
+| nil, strings, keywords, numbers, booleans, chars | preserved | ordinary document data |
+| ratios | preserved because `number?` is true | no fallback dependency |
+| `java.util.Date` and `java.time.Instant` | preserved because `inst?` is true | temporal fields |
+| symbols | explicitly converted with `str` | `.sexp`/structural-law data named in the source comment |
+| maps with string keys | entire map converted with `pr-str` | chiefly JSON-shaped `:evidence/body`; this is the transform's documented purpose |
+| keyword-keyed maps, sequences, sets | recursively walked; sequences become vectors | nested document values; a set does not require mutually comparable members |
+| UUID, URI, Duration, regex, and other unmatched Java/Clojure objects | converted with `pr-str` by the `:else` fallback | compatibility escape hatch, not an identity contract |
+
+A pure-function class probe confirmed: UUID, URI, Duration, and regex become
+strings; ratio remains a ratio; Date and Instant remain typed; a symbol becomes
+a plain string; unmatched objects inside lists and sets are recursively
+stringified. The fallback's `#object[...]` representation for arbitrary Java
+objects is not generally EDN-round-trippable and can contain process-local
+identity text, so it is preservation-of-some-description, not faithful value
+round-tripping.
+
+The checked full migration export contains 56,834 `#uuid` forms and 13,452
+`#inst` forms; no `#object` forms were found by the tag census. UUID is thus the
+material fallback case in the migrated corpus. Instants do not use the
+fallback. The string-keyed-map rule remains independently load-bearing for
+evidence bodies.
+
+### Current callers and blast radius
+
+Searches covered production Clojure/ClojureScript and HTTP callers in
+`futon1a`, `futon1b`, `futon3`, and `futon3c` (excluding generated migration
+exports and history data).
+
+* The active `futon3c` watcher sends JSON and, since `ac7e812e`, explicitly
+  supplies the qualified name as the pattern and clause `id`. It is unaffected.
+* `scripts/wire_math_memory_patterns.clj` supplies `pattern-id` as both id and
+  name. It is unaffected.
+* `mission_scope_ingest.clj` supplies string ids, but its entities are scope
+  and mission types. A per-pattern-type gate does not affect it.
+* `futon1a/scripts/ingest_flexiarg_pattern.clj` is the one callable pattern
+  writer that does **not** supply `:id`; it supplies only name, type,
+  external-id, and source. On futon1b, `ensure-entity-id` reuses an existing
+  name match, otherwise generates a plain UUID string. Therefore this older
+  script would receive 400 for a genuinely new pattern after a qualified-name
+  gate. It must either remain retired from commissioning or be changed to send
+  the qualified name explicitly before it is used again.
+* Futon1b's own generated entity and evidence ids use `(str (random-uuid))`,
+  not UUID objects. They demonstrate why a global “qualified-name for every
+  entity” gate would be wrong: non-pattern types still legitimately use plain
+  UUID strings under their existing contracts.
+
+No currently active production caller was found passing a typed UUID as a
+pattern id. The live vulnerability remains reachable by any EDN client that
+posts `:id #uuid "..."`; rejecting that request is the intended breaking
+change.
+
+The contract should consequently be per type:
+
+* `:pattern/library`: id is a string equal to its qualified pattern name and
+  matches the agreed `<namespace>/<name>` shape.
+* `:pattern/clause`: id is a string equal to its clause name and matches
+  `<namespace>/<name>/<facet>`.
+* other entity types: unchanged until their own identity conventions are
+  separately specified.
+
+Equality with `:entity/name` is stronger and clearer than slash-count alone;
+shape validation then distinguishes library from clause. Applying only a
+generic “contains `/`” regex would accept malformed identities while appearing
+to enforce the convention.
+
+### Transaction, bitemporal, rescue, and batch semantics
+
+The rejection belongs in entity construction/validation, alongside
+`gate-entity-id!`, before `put-verified!` calls `transform-doc`. Therefore:
+
+* a rejected single write reaches neither `execute-tx` nor
+  `put-doc-with-rescue!`;
+* it creates no bitemporal version and performs no post-commit read-back;
+* the rescue stages cannot convert or mask the rejection;
+* batch construction already validates every item before its single
+  transaction, so one invalid pattern id rejects the whole batch before any
+  sibling is written.
+
+This is independent of historical rows. The gate prevents new violations; the
+A3 sweep/reingest decision governs old values. Closing the live route therefore
+does not require reingesting code and docs, and reingesting without the gate
+would not close the route.

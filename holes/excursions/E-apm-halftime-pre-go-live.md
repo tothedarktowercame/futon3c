@@ -107,7 +107,28 @@ Therefore:
 *Elaborated into dispatch-ready packets: `E-apm-halftime-pre-go-live-B.md` (2026-08-14).*
 **HELD until A is done (Joe, 2026-08-14) — for coherence.**
 
-- **B1 — patterns and memories are disjoint taxonomies.** 3 of 76 math
+**✅ B2/B3/B4/B5 DONE 2026-08-14 (ams-codex-1), verified by claude-2.**
+futon6 `ce8182c9`/`d8870f83`, futon3c `a476af86`.
+- **B4 ✅** default `extra_library_dirs` is now `()`. Verified live: default
+  pool 1,358 patterns, **0 staging files**. Quarantine now quarantines.
+- **B5 ✅** collisions surface and BOTH rows are retained. Verified live:
+  `read_index_rows()` returns 1,358 and keeps **two** `f3/p0` rows —
+  "Portal Query Layer" *and* "MUSN Coordination Substrate". Silent last-wins
+  is gone. (Re-keying the source rows remains Joe's decision, untouched.)
+- **B2/B3 ✅** whole-index retrieval over all 1,358 valid rows (the file's
+  1,359 lines include a header). Widening the pool 30× dropped raw-scorer
+  recall to **7/22**; the IDF/stopword stage restored it to **15/22**.
+  *Correction to this list: the packet quoted "~16/22" as the baseline. The
+  harness docstring pins the honest number at **15/22** ("was 16/22; dropped
+  to 15 when the 3 CAS-0 patterns were added"), so 15/22 across a 30× wider
+  pool is a match, not a regression.* Verified by running the module directly:
+  `test_tier0_retrieval_recall_is_honest` passes.
+- **B1 — DISCOVERY ONLY, as required.** Three options documented (reviewed
+  attachments / separate direct pattern retrieval / hybrid nomination-warrant);
+  **no attachment edges created** — verified independently: `memory/assert`
+  census still **372**, unchanged. Awaiting Joe's ruling.
+
+- ~~**B1 (original) — patterns and memories are disjoint taxonomies.**~~ 3 of 76 math
   patterns are named by any memory edge. The rest are unreachable through the
   only path recall uses. *Structural, not lexical.*
 - **B2 — Tier-0 indexes 45 of 1,359.** Family-prefix filter. No live
@@ -125,7 +146,25 @@ Therefore:
 *Elaborated into dispatch-ready packets: `E-apm-halftime-pre-go-live-C.md` (2026-08-14).*
 **HELD until A is done (Joe, 2026-08-14).**
 
-- **C1 — the two flexiarg parsers disagree.** `contrib/flexiarg.el` builds
+- **C1 — ✅ DONE 2026-08-14 (ams-codex-2), verified by claude-2.** Shared
+  language-neutral JSON corpus (`futon3/test/fixtures/flexiarg-conformance.json`)
+  now runs against BOTH parsers: 7 CT fixtures + all 12 nested-component files.
+  It failed on landing exactly as the packet required — Clojure failed all 8
+  full-tree cases by promoting children to roots — and it also caught a
+  **reversed unwind comparison in the Emacs reference parser**, i.e. the
+  instrument found a bug in the implementation that was supposed to be the
+  reference. That is why C1 had to precede C2.
+- **C2 — ✅ DONE 2026-08-14 (ams-codex-2), verified by claude-2.** General fix,
+  not a keyword patch: `section-header-re` now captures leading whitespace and
+  `sections-at-level` rebuilds the indentation-defined tree recursively.
+  Verified by claude-2: no `COUNTERFACTUAL` string in either parser;
+  futon3a 41 tests/169 assertions; futon3c flexiarg 37; and the live ingest of
+  `pattern-to-code-receipts.flexiarg` (a real nested file) yields 1 pattern +
+  7 clauses + 7 relations with exactly the canonical seven facets and **no
+  counterfactual clause** — the sub-component stays nested.
+  Commits: futon3 `b2dbf35a`/`4dd3ad65`/`27c0bae9`,
+  futon3a `a9ab6d1b`/`10234247`/`98d33138`.
+- ~~**C1 (original) — the two flexiarg parsers disagree.**~~ `contrib/flexiarg.el` builds
   the tree with an indent stack; `futon3a/.../projection.clj` discards
   indentation. No conformance test. Mitigated in ingest (canonical seven
   selected by name) but the divergence stands.
@@ -137,7 +176,35 @@ Therefore:
 *Elaborated into dispatch-ready packets: `E-apm-halftime-pre-go-live-D.md` (2026-08-14).*
 **HELD until A is done (Joe, 2026-08-14).**
 
-- **D1 — `respond!`'s JSON path still parses.** A JSON-requested response
+**✅ D1/D2/D3 DONE 2026-08-14 (codex-3, futon1b `3e1b0d2`), verified by claude-2.**
+- **D3 ✅** `scripts/pre-restart-check.py` + `/api/alpha/restart-readiness`.
+  Every number byte-labelled (the TN's trap). **Fails closed**: verified live —
+  status endpoint unreachable → `restart_safe=false`, **exit 2**.
+  *(Chicken-and-egg: the endpoint needs a restart to exist, so until then the
+  check always says unsafe. Correct direction — it refuses to certify what it
+  cannot measure.)*
+  *claude-2 self-correction: I first reported exit 0 and called it a defect. I
+  had piped through `head`, so `$?` was head's status. The script was right.*
+- **D1 ✅ and correctly SPLIT** — temporal-bearing routes only (entity,
+  hyperedge, relation, evidence), exactly the group specified; pure-literal
+  responses left for a later mechanical pass. JSON path now converts Java
+  temporals to ISO strings. **The EDN fast path is intact** — verified by
+  reading: `(if (string? body) body (pr-str body))`, no round-trip, so the fix
+  that ended the outage survives.
+- **D2 ✅** boot now waits **boundedly** for indexing quiescence then builds
+  once. Timeout env-overridable, 500 ms poll, and it **throws loudly**
+  (`:indexing-quiescence-timeout`) rather than hanging — an unbounded wait
+  would have converted a crash into a hang. Validated against a **real 20,000
+  document backlog** on a temporary node, not a quiescent one.
+  *Honest gap, stated by codex-3: the live substrate was not restarted, so
+  there is no before/after production cold-boot number yet. Current reference
+  points: 379 s from a 4.3 GB log, 28 s from a quiet store.*
+
+Verified by claude-2 by running, not reading reports: `test-temporal`
+**16 tests / 65 assertions**, `test-a3a4a5` **69/69**, and the live
+pre-restart check's exit code.
+
+- ~~**D1 (original) — `respond!`'s JSON path still parses.**~~ A JSON-requested response
   whose EDN does not read back still fails. Real fix is callers passing maps,
   ~30 sites.
 - **D2 — the boot gate retries rather than waits.** 500 expensive projection
