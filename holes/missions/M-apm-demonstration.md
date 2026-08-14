@@ -3805,3 +3805,95 @@ invariant, so a refactor cannot silently reduce it to generating nothing.
 **Steps 1–2 are verify-before-build. Step 3 is the part that only exists once
 there is something to build against** — and naming that ordering is what stops
 step 2's structural guarantee being mistaken for step 3's empirical one.
+
+## V.6 Spike executed — result, and the design finding it produced
+
+*(codex-4, `DarkTower/APMDemonstrationVerifySpike.lean`, 239 lines, commit
+`259266de`. **Verified by claude-2**: `.olean` 864 KB at 17:01 matching source;
+`lake build` 762/762; no `sorry`/`admit`/axioms; 37 declarations.)*
+
+Kept as a **separate file** — fabricated verification data does not live in the
+registration specification. Right call, unprompted.
+
+### The matrix
+
+| row | result | mechanism |
+|---|---|---|
+| **positive** | `ReadyToRun` **witness inhabited** | machine-checked |
+| **F1** | scaffold-identical `WorkedFrame` **rejected at elaboration** | **`#guard_msgs`**, verified: an `example` whose failure at `⊢ "same" ≠ "same"` is itself checked |
+| **F2, F3, F7, F8** | `ReadyToRun` empty | machine-checked — **but each also violates F9** |
+| **F4, F5, F6, F9** | `ReadyToRun` empty, **all other invariants hold** | machine-checked, clean single violation |
+
+**F1 is demonstrated, not asserted.** `#guard_msgs in example : WorkedFrame
+where … changed := by rfl` — Lean checks that constructing a scaffold-identical
+frame *fails to elaborate*. The strongest available outcome, and it is the
+machine that says so.
+
+**Anti-vacuity, machine-checked** (`by decide`): 9 capability probes, 1 offer
+with a disposition, all 17 registered measurement fields populated, non-empty
+artifacts/promotions/regimes. codex-4 also disclosed the deliberate absences —
+*"no axes, comparative-arm obligation, or control obligation; those registration
+obligations are **absent rather than tested vacuously**."* That resolves ARGUE's
+`axes := []` observation: deliberate absence, not a vacuous pass.
+
+**Scope stated correctly and unprompted:** *"entirely model-internal … provides
+no evidence that the running system satisfies the model."*
+
+### The finding: four invariants are provably entangled
+
+> **`F2_failure_entails_F9_failure`**, and likewise F3, F7, F8 — stated
+> `(t : Trace) → ¬ Fᵢ.holds t → ¬ f9CapabilityProbes.holds t`. **General
+> theorems over every trace, not observations on the synthetic one.**
+
+**This is the most valuable line in the return, and it cuts both ways.**
+
+**It proves the design's own claim.** The DERIVE candidate asserted: *"F9
+subsumes the other eight. They are the instances we know; F9 is the rule."*
+That was a slogan. For F2, F3, F7 and F8 **it is now a theorem** — a direct
+consequence of the 1.3 repair, which made F9 require each capability's concrete
+predicate rather than its name. The repair earned more than it was asked for.
+
+**And the split is principled, not arbitrary:**
+
+| entangled with F9 | independent |
+|---|---|
+| F2 disposition, F3 offer-disposition, F7 need-retrievable, F8 witnessed containment | F4 stratum frozen, F5 single regime, F6 declared denominator |
+| **capability** invariants — claims about what the system can do | **procedural** invariants — claims about how the round was set up |
+
+Capability invariants collapse into the capability rule. Procedural ones do not,
+because they are not capabilities. That is a coherent structure, discovered
+rather than designed.
+
+### The cost, and the repair — a DERIVE revision
+
+**Subsumption costs diagnosability, and this project already knows better.**
+`MemoryAblationPreregistration.lean` §534 splits completeness into
+`noOmissions` + `noDuplicates` + `noExtras` precisely because *"jointly they are
+equivalent to exact agreement, while separately they preserve an actionable"*
+signal. Our F9 does the opposite: when launch is refused, **the refusal alone
+cannot say whether F3 or F7 failed.**
+
+**IF** F9 rightly subsumes the capability invariants, **HOWEVER** a refusal that
+cannot name its cause is a diagnostic dead end, **THEN** keep the subsumption and
+make **F9's failure report *which capability* failed**, **BECAUSE** the goal is
+joint equivalence *with* separate actionability — exactly the pattern the
+ablation preregistration already established, and which we would otherwise be
+re-learning at debugging time.
+
+**Recorded as a DERIVE revision** (lifecycle VERIFY item 5, decision log). Not a
+redesign: F9 stays the rule, F2/F3/F7/F8 stay derived, and the change is to the
+*failure report*, not the invariant set.
+
+### VERIFY sequence — updated
+
+1. ~~Matrix spike~~ — **done, passed, and produced a design finding.**
+2. **Next: F9 failure attribution** (above) — small, and it should land before
+   bridges, since a bridge that cannot say what it caught is half a bridge.
+3. Generated Malli/CLean spec — *Joe is sourcing whether it exists.*
+4. Mutation-tested bridges per invariant (A.14's six-part method).
+5. Completion-criteria pre-check; GF fidelity check; wiring diagram or a
+   recorded reason to skip.
+
+**What the spike settles:** the specification is coherent, satisfiable, and
+capable of refusing synthetic failures — including one it refuses at
+compile time. **What it does not settle:** anything about a running system.
