@@ -4495,3 +4495,127 @@ harness"* — right call; a fragment that looks like a harness is worse than non
    other witness.
 
 **Gate is Joe's.** Nothing re-dispatched.
+
+## I.2 Attribute schemas — closing the blocking DERIVE gap
+
+*(claude-2, 2026-08-14. codex-4's gap (b): "D.1–D.2 define identities and
+relationships, but not the stored attribute schemas… Implementing round-trip
+persistence would require inventing them." Correct. Closing it here rather than
+by handoff — architecture is the owner's, per the protocol.)*
+
+### The principle that makes these derivable rather than invented
+
+The Lean `Trace` is **not** a storage schema. It is a **projection**: id-lists
+and booleans carrying exactly what the observables need to decide, and nothing
+else. `dispositionIds : List String` tells F2 how many dispositions closed the
+cycle; it does not say what any of them decided.
+
+> **Each entity stores content. The trace projects the minimum needed to decide
+> an observable. A projection must be *derived* from stored entities, never
+> asserted alongside them.**
+
+That principle is not decoration — **it is also the fix for gap (c)**, below.
+
+### Schemas
+
+Ids follow D.1: qualified, human-readable, deterministic. `at` is epoch-ms.
+`†` marks a field the Lean `Trace` projects.
+
+**Cycle** — `cycle/<bundle-id>/<epoch-ms>`
+```
+:cycle/id :cycle/problem† :cycle/registration-id :cycle/regime†
+:cycle/stratum† :cycle/solver-tier :cycle/solver-version
+:cycle/opened-at :cycle/closed-at :cycle/closed?†
+```
+`solver-version` is mandatory, per A.11: **the student is a versioned
+component, and a model upgrade is a regime change.**
+
+**Frame** — `frame/<cycle-id>`
+```
+:frame/id :frame/cycle :frame/workspace-root :frame/lean-root
+:frame/module-root :frame/scaffold-hash† :frame/closing-hash†
+:frame/readable-paths :frame/writable-paths   ; D.23 — the field left empty in all 51
+:frame/containment-probe-id† :frame/containment-probe-passed?†
+```
+
+**Disposition** — `disp/<cycle-id>` *(exactly one per closed cycle — F2)*
+```
+:disp/id :disp/cycle :disp/outcome        ; #{:closed :tier-a :tier-b :defective}
+:disp/residual-sorries :disp/attempts :disp/closer-hops
+:disp/axiom-clean? :disp/adjudicator :disp/at
+```
+
+**RoleEvent** — `ev/<cycle-id>/<role>/<seq>`
+```
+:ev/id :ev/cycle :ev/role                 ; #{:formalizer :reviewer :freeze :prover :scribe}
+:ev/seq :ev/at :ev/kind :ev/payload-ref :ev/lanes-run   ; D.20 lane coverage
+```
+
+**MemoryOffer** — `offer/<cycle-id>/<memory-id>`
+```
+:offer/id :offer/cycle :offer/memory-id :offer/query-terms
+:offer/rank :offer/surfaced-at :offer/recall-system-version
+```
+
+**MemoryUse** — `use/<offer-id>` *(every offer has one — F3)*
+```
+:use/id :use/offer :use/consulted? :use/load-bearing?
+:use/reason :use/mediation                ; #{:memory :dispatch :author :unknown} — E3's confound
+:use/at
+```
+
+**Measurement** — `meas/<cycle-id>`
+```
+:meas/id :meas/cycle
+:meas/values      ; MAP field-name -> value. NOT a list of names.
+:meas/unset       ; SET of declared-but-unset fields, with reasons
+```
+**`:meas/values` is a map.** `populatedMeasurementFields†` is then
+`(keys :meas/values)` — **derived, not asserted**.
+
+**Adjudication** — the n-ary hyperedge (D.2)
+```
+:adj/cycle :adj/offer :adj/outcome :adj/verdict :adj/adjudicator :adj/at
+```
+
+**Registration** — `reg/<mission>/<round>`
+```
+:reg/id :reg/lean-registration :reg/lean-source :reg/lean-revision
+:reg/variation-kind :reg/variation-endpoint :reg/stop-rules
+:reg/decision-rule :reg/estimated-cost :reg/budget-cap :reg/teardown-deadline
+:reg/required-capabilities :reg/required-measurement-fields
+```
+*(The empty ones are gap (a) — operator decisions, not schema gaps.)*
+
+### The fix for gap (c) falls out, and it is principled rather than a patch
+
+The validator today compares `:populated-measurement-fields` against a vector of
+**strings**, so a trace can claim all 17 names while emitting no values.
+
+**The defect exists because the trace asserts the projection directly.** Under
+the principle above it cannot: `populatedMeasurementFields` must be computed as
+`(keys (:meas/values …))`, so claiming a field requires storing a value for it.
+
+**Two changes, both small:**
+1. `Measurement` stores `:meas/values` as a **map**, plus `:meas/unset` with
+   reasons — which also gives D.13's deferred `L(i)` weights and pass bars an
+   honest home (gap (e): *declared-but-unset*, the `w₃ = 0` treatment
+   generalised).
+2. The validator derives the populated set from stored values and adds
+   `:measurement-field-claimed-without-value` to its failure vocabulary.
+
+### Extraction rules — gap (d), specified
+
+- **stratum** = `family(bundle-id) × freeze-time-statement-length`, per D.6.
+  Family is the id prefix (`a`/`b`/`m`/`t`, complete for all 475). Length is
+  captured **at formalization-freeze**, so it is pre-treatment by construction.
+- **regime** = the commit sha of the retrieval configuration in force
+  (`6521fd3a` is the batch-2 boundary, C5).
+- **locked-lemma exposure** = the count for that bundle from
+  `lemma_index.py`'s output — already computed (D.17).
+
+### What remains open after this section
+
+Gap **(a)** — variation kind/endpoint, costs, budget, teardown, stop rules,
+decision rule — **operator decisions**, now with named schema slots to land in.
+Everything else codex-4 listed is closed or has a stated treatment.
