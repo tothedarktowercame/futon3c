@@ -1667,3 +1667,94 @@ plain measurement, **THEN** add it to the per-problem vector immediately rather
 than waiting for the retrieval work, **BECAUSE** it is the one N5-adjacent
 measurable whose ground truth is on disk and needs no model, no probe design,
 and no pass-bar decision — it goes green or it does not.
+
+## D.15 The >1000 near-duplicate report, reconciled
+
+Joe: *"there was a previous report of inexact duplicates that was noticing #'s
+of lemmas over 1000."*
+
+That report exists and its number is real — **but it does not contradict D.14's
+38, because the two count different objects.** Source:
+`data/glue-census/clusters.tsv` (3,805 clusters) over `have-corpus.jsonl`
+(6,114 rows).
+
+| filter | clusters | occurrences |
+|---|---|---|
+| spanning >1 problem | 383 | **2,322** |
+| …text > 10 chars | 381 | 1,445 |
+| …text > 20 chars | 288 | 775 |
+| …text > 30 chars | 167 | **390** |
+| …text > 50 chars | 67 | 161 |
+
+So ">1000" recovers as **1,445–2,322** depending on the filter. Two facts
+determine how to read it:
+
+**1. These are `have` steps, not lemmas.** The corpus indexes intermediate proof
+steps. A repeated `have` is ordinary proof craft; a repeated *lemma* is
+duplicated work. Different objects, different significance.
+
+**2. The corpus is variable-anonymised** — `V` for variables, `N` for numerals.
+So `have H : N < V` matching across 45 problems means 45 problems contain a step
+of the form *"some numeral < some variable"*. That is not duplication, it is
+shape. **The anonymisation makes this corpus structurally unable to distinguish
+"same lemma" from "same shape."**
+
+The degenerate head dominates: `have H` alone is **753** occurrences across 258
+problems, and the top eight forms account for **1,167 of 2,322 — 50%**. Filter
+to substantive statements (>30 chars) and the whole tail is 390 occurrences.
+
+⚠ **This is the denominator trap again, and it is the fourth sighting today.**
+A large number over an unfiltered population, where half the population is
+degenerate. Recorded so the ">1000 duplicate lemmas" reading does not persist.
+
+**The two methods converge where it matters.** The largest substantive glue
+cluster — `have H : (V : ConnectedComponents ↥((lemniscate V)ᶜ)) = V`, 8
+occurrences over 2 problems — is `a00J04`/`a01A08`, **exactly the pair D.14's
+exact-declaration scan flagged.** Independent methods, same real case. That is
+evidence both are working, and that the real duplication is concentrated rather
+than pervasive.
+
+## D.16 Unconsumed promotions — the "yikes", quantified
+
+Joe: *"LemniscateComponents and other ConstructionTargets that no one imports —
+yikes."*
+
+Justified, and it concentrates in one module.
+
+| module | lines | decls | consumers | overlap with a problem |
+|---|---|---|---|---|
+| **`LemniscateComponents`** | **602** | 24 | **0** | **21 of 24 duplicate `a00J04`** (15 also in `a01A08`) |
+| `SetIntegralPrimitive` | 30 | 1 | **0** | none — original, merely unused |
+
+**`LemniscateComponents` is the whole problem in one artifact**: 602 lines,
+~87% of its declarations copied from a problem, and **nothing imports it**. It
+is simultaneously a duplicate *and* dead weight, and a fix to `a00J04` does not
+reach it. `SetIntegralPrimitive` is a 30-line original that simply found no
+consumer — minor.
+
+**Beyond the two zero-consumer modules, 25 of 64 import edges are import-only**
+(E1): the consumer imports the module and references no declaration from it.
+That is a milder form of the same waste and should be measured, not assumed
+benign — an unused import is a retrieval signal that fired and led nowhere.
+
+**New measurable — promotion consumption.** Add to the D.5 vector:
+
+| field | role | status |
+|---|---|---|
+| **unconsumed promotions** — modules promoted with zero declaration-using consumers | scribe | **free** — computable today |
+| **import-only edges** — consumer imports module, uses nothing from it | scribe | **free** |
+
+**IF** promotion to a shared library is the loop's mechanism for compounding
+work, **HOWEVER** two modules have no consumers at all and 25 of 64 edges use
+nothing from what they import, **THEN** promotion consumption is a first-class
+measurable rather than a maintenance chore, **BECAUSE** an unconsumed promotion
+is precisely N3/N5's failure mode made visible — the store recorded the lemma,
+and no one who needed it reached it. **This is F7 at the library level**, and
+unlike the retrieval probes it needs no need-vocabulary design: the import graph
+is ground truth on disk.
+
+**Cleanup is NOT proposed here.** `ConstructionTargets.lean` already specifies
+the `LusinN` cleanup and holds it pending a statement-defect review. The
+`LemniscateComponents` case should be recorded as known debt on the same
+footing; whether and when to act is the operator's, and doing it now would
+disturb a corpus we are about to measure against.
