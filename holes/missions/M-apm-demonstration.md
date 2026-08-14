@@ -4345,3 +4345,59 @@ particulars as if they were laws.
 it.** If the same four losses recur, they are the arrow's signature; if
 different ones appear, one instance was never going to be enough. **Joe's call,
 not mine.**
+
+---
+
+# INSTANTIATE
+
+**Operator ruling, Joe, 2026-08-14:** *"I'm not sure how I feel about these
+declines, but in effect this isn't our problem right now… What we need to do now
+is get a Clojure implementation that works for us. We don't need it to
+'provably' work, although we have come as close as we can using current tools.
+**We need to see it working.** Therefore, I think it is time to INSTANTIATE…
+and then we'll be ready to pick a problem and hopefully actually run frame-1."*
+
+**The arrow question is parked**, not dropped:
+`holes/excursions/E-lean-to-clojure-arrow.md` carries the loss list, both tool
+declines (including the fence ambiguity that was mine), and the deciding
+experiment — a third structurally-different RHS.
+
+### The phase's own constraint, carried into the handoff
+
+The lifecycle is explicit that INSTANTIATE *"should be the least creative phase
+— if it requires novel design decisions, the earlier phases were incomplete."*
+So the packet instructs codex-4 to **stop and report** on encountering a design
+decision, rather than invent one. **A stop is a finding about DERIVE.**
+
+### Scope, decided rather than delegated
+
+**Build the cycle harness, not a solver:**
+`registration → frame → work → adjudicate → trace → validate → authorization`,
+with codex-4's own validator (`9d217d0`) as the acceptance gate for its own
+output.
+
+**Exercised against an already-solved `apm-lean` bundle.** The reasoning is F1,
+and it is not incidental: **a stubbed solve step would emit a scaffold-identical
+frame, which F1 correctly refuses — so a stub cannot pass our own gate.** A
+replayed real solve gives the frame genuine content and satisfies F1 honestly.
+This is the first time an invariant has *dictated* an implementation choice
+rather than merely judging one, which is some evidence the invariants are load
+bearing.
+
+### The V.12 consequence, made a requirement
+
+> **A validator can only catch what the emitter already let through.**
+
+F1 degrades from *unconstructible* to *detectable* at the boundary, so the
+**frame emitter must refuse to emit** — the check belongs at construction, not
+only in validation. codex-4 is asked to implement it there and say so, or to
+give a reasoned obstruction.
+
+### Also corrected in the packet
+
+The earlier fence — "no generator" — was about the **Lean↔Clojure
+correspondence**, not about generating test cases. codex-4 declined
+`core.logic` partly on that reading. **The ambiguity was mine and is now stated
+explicitly**: negative-case generation was never excluded.
+
+**Dispatched:** `codex-4`, job `invoke-1786728751795`.
