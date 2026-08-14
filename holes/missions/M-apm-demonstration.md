@@ -5163,3 +5163,85 @@ regime change (F5) and must be refused, exactly as `:both-channels-varied` is.
    runner was fresh, plus `:reg/role-cards` hashes. **Without (3), the
    contamination that killed Assay 1 is invisible again** — that failure was
    *"one seat, one session across the queue"*, and nothing in the trace said so.
+
+## I.10 Formal or informal — split by what must not be self-certified
+
+**Joe, 2026-08-14:** *"if we need to change that in the Lean & update the Clojure
+on this basis we can do that, or we can just write it down as a more informal
+'setting'… We'll need a bit more apparatus, like the role cards, and **a way to
+double check that Claude proctors correctly for Zai** (e.g. no new memories in a
+harness tuning round)."*
+
+**Recommendation: neither wholesale.** Split on one test —
+
+> **Would an informal version be self-certification?** If the only evidence that
+> a rule was followed is the word of the party bound by it, it must be
+> mechanical. Otherwise informal is fine and cheaper.
+
+**Claude is the proctor and also the party under constraint.** So proctoring
+checks fail that test immediately: *"Claude confirms it added no memories during
+the harness round"* is exactly the shape of assurance this mission has spent the
+day dismantling.
+
+### The rule that lets us do this without widening the Lean gap
+
+The Lean is already two amendments behind the design (V.7). Rather than widen
+that:
+
+> **The Clojure validator may check MORE than the Lean proves. It may not check
+> less.**
+
+Exceeding is a *bridge* (A.14) — a machine-checked statement about the artifact
+that the model does not derive. Falling short is a gap. **So the three
+amendments and the proctoring checks land in Clojure now, and lift to Lean later
+if we want them proved rather than merely checked.** That keeps INSTANTIATE the
+least-creative phase and does not touch the model mid-implementation.
+
+### Mechanical — three proctoring checks, all trace-level
+
+**1. `:proctor/no-new-memories` — harness-mode.** Not a revision counter, which
+can be bumped or recomputed. **A membership test:** snapshot the store's
+memory-id set at round open (`:cycle/store-snapshot-id`); require every surfaced
+`:offer/memory-id` to be in it.
+
+> **Precedent, not invention:** this is `withholdingAsRegistered` from
+> `MemoryAblationPreregistration` (D.22) — *"withheld id ∉ surfaced"* — run in
+> the other direction. **New id ∈ surfaced ⇒ violation.**
+
+**2. `:proctor/harness-frozen` — store-mode.** The symmetric case:
+`:cycle/harness-revision` constant across the attempt sequence.
+
+**3. `:proctor/no-direct-channel` — every mode.** I.7 says the substrate is
+Claude's only conduit to Zai. **The Agency job log already records every bell**,
+so this is checkable against existing infrastructure: **no dispatch edge from a
+`claude-*` id to a `zai-*` id with a timestamp inside the cycle window.** If one
+exists, the cycle did not run under the stated conditions — regardless of what
+the payload said.
+
+Each yields a **named** failure, per V.8: `:new-memory-in-harness-round`,
+`:harness-changed-in-store-round`, `:direct-channel-used`.
+
+### Informal — and legitimately so
+
+- **Role-card content.** The wording is a surface contract and will be revised.
+  What must be mechanical is only that it was **frozen for the round** —
+  `:reg/role-cards` hashes (I.9) — not what it said.
+- **Mode-alternation policy**, the rationale for 2 hours, the choice of student
+  tier: **written down, not enforced.** These are decisions with reasons, and a
+  reason is not a check.
+- **The prediction P1** stays declared-not-enforced by nature — enforcing a
+  prediction would defeat it.
+
+### Why this ordering is defensible rather than merely convenient
+
+The proctoring checks are the ones whose absence would be **invisible**, and
+invisibility is this mission's catalogued defect — eleven instances, plus two
+inside the formalisation written to prevent them. **Everything I have proposed
+to leave informal fails loudly if wrong**: a bad role card produces a bad round
+you can read; a wrong teardown value produces a stopped cycle you can see. The
+proctoring failures produce a *clean-looking result*, which is the one category
+that must never rest on self-report.
+
+**Apparatus still to build before frame-1:** role cards themselves (content —
+mine to draft), the store snapshot at round open, and the three checks. **None
+requires a Lean change.**
