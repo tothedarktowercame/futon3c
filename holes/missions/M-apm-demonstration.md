@@ -5328,3 +5328,66 @@ reason again, because gaps (a)–(e) are closed.
 
 **The one thing I would not promise:** that frame-1 runs clean first time. The
 proctoring checks exist precisely because we expect to catch ourselves.
+
+## I.12 "Quickly" bounded, frame-1 problem selected, A1 dispatched
+
+**Joe, 2026-08-14:** *"at frame-1 nothing is guaranteed at all. **By frame-100 we
+should have high confidence of everything (that's quickly enough).**"*
+
+### P2 — the expectation becomes a prediction, with one caveat
+
+I.6 recorded *"should work pretty quickly"* as an **expectation**, not a
+prediction, because it named no horizon. **It now names one.**
+
+> **P2.** *By frame-100, the loop supports high confidence in its own claims.*
+
+**Horizon: falsifiable. Metric: not yet.** "High confidence of everything" needs
+an operational reading before frame-100 arrives, or it will be settled by
+argument rather than evidence. **My proposed reading, offered as mine and not
+Joe's:** by frame-100, (i) P1's guidance slope is estimable within a stated
+regime, and (ii) at least one teachability pair shows `L(i)` falling with the
+deposit and not without it. **Recorded as a proposal; the operator's to accept,
+replace, or refuse.**
+
+Note the asymmetry that makes this honest: *"at frame-1 nothing is guaranteed at
+all"* is itself a useful pre-commitment — **it forbids reading frame-1's outcome
+as evidence either way.**
+
+### D — frame-1 problem: `t94J02` recommended
+
+Joe: *"let's start with one that's already been worked on, e.g. with 1 sorry, so
+we know that the problem was deemed reasonably well represented."*
+
+**125 problems have exactly one code-level sorry.** Filtering for *evidence of
+real work* rather than brevity alone:
+
+| bundle | Main.lean | proof-outline | informal-solution | candidates | prior scribe |
+|---|---|---|---|---|---|
+| **`t94J02`** | 22 lines, 1 theorem, **1 sorry** | **97 lines** | 41 lines | 0 | **none** |
+| `a98A01` | 49 lines | 24 | 87 | 0 | none |
+| `m94J05` | 43 lines | 12 | 106 | 0 | none |
+
+**`t94J02` is the recommendation.** A 97-line proof outline against a 22-line
+formalisation means the problem was **thought about hard and represented
+tightly** — exactly Joe's "deemed reasonably well represented". Zero candidate
+frames and no prior scribe history mean **no memory-system contamination** to
+confound the first measurement.
+
+*(A short `Main.lean` alone would have been the wrong filter — it selects stubs.
+The outline-to-formalisation ratio is what distinguishes a worked near-miss from
+an abandoned start.)*
+
+### Dispatched
+
+**A1** — the acceptance-gate vacuity fix — sent alone to `codex-4`
+(`invoke-1786731083135`). Alone because **it is a defect in the gate that judges
+everything else**; a diluted review of it would be the worst possible economy.
+
+The packet carries the principle rather than just the patch: *the trace asserts
+the projection directly, and a projection must be derived from stored values.*
+It also requires **the test that would have caught the original defect** — a
+trace listing every field with an empty values map — because a fix without that
+test leaves the same hole open one refactor later.
+
+**B is mine by carve-out** and starts now: four role cards, the round-1
+registration EDN, and P1 recorded before the round.
