@@ -4781,3 +4781,79 @@ a baseline with a stated rationale and one falsifiable prediction attached.
 
 **Remaining before frame-1:** the validator fix (I.2 gap (c)) and the harness
 itself — both now unblocked.
+
+## I.5 Signal assignment by tier — and D.22's contrast, partially recovered
+
+**Joe, 2026-08-14:** *"L(i) is probably more relevant for zai, if zai is trying
+to re-prove the same problem in isolation without hints but just using the memory
+system (and, from a frankly much worse baseline track record than codex, per
+MathArena)."*
+
+**The design had one `L(i)` for the whole system. It needs two signals, assigned
+by tier, because the tiers have different headroom.**
+
+| tier | signal | why it fits |
+|---|---|---|
+| **S-frontier** (Codex, guided) | **guidance interventions**, P1: declining | no headroom for memory effects (A.11); learning shows in how much scaffolding it needs |
+| **S-student** (Zai, isolated, memory-only) | **`L(i)`** = cost + residual + rework | real headroom (4/48); and measured on a *fixed* problem, so the terms are comparable by construction |
+
+**`L(i)` was mis-assigned, not mis-specified.** Across different problems its
+terms are confounded by difficulty — which is why D.6 needed stratification and
+why the anti-glibness list warns that a falling `L` is indistinguishable from an
+easier tail. **On a re-proof of the same problem, that confound is absent by
+construction.**
+
+### This partially reverses D.22, and I should say which part
+
+D.22 concluded: *"1-shot removes the within-problem contrast… a one-shot series
+cannot [hold the problem fixed and vary the treatment]."*
+
+**Right about one solver; wrong in general.** A single solver cannot pair with
+itself under 1-shot. But **varying the *tier* holds the problem fixed and varies
+the treatment** — which is exactly what amendment 2 proposed ("pair across
+capability tiers rather than across repetitions") and which I did not follow
+through to its consequence.
+
+> **The within-problem contrast exists after all. It runs along the tier axis,
+> not the repetition axis.**
+
+### Which means there are two claims, not one, and they need different designs
+
+| claim | design | difficulty confound? |
+|---|---|---|
+| **Teachability** — *did this deposit teach?* | same problem; Zai isolated, with vs without the deposit | **none** — literally the same problem. **No stratification needed** |
+| **Learning** — *does the process improve?* | across problems: guidance declining (Codex), teachability improving (Zai) | **yes** — stratification still required (D.6) |
+
+**Separating these is a real simplification.** The teachability claim — the one
+that most directly tests whether the memory system does anything — is now
+**confound-free and cheap**: ground truth known, scoring mechanical, no
+stratification, no matching. It was buried inside a cross-problem slope that made
+it look harder than it is.
+
+### The loop this completes
+
+1. **Codex closes** a problem with structured guidance → guidance count recorded.
+2. The cycle **deposits** what was learned.
+3. **Zai re-proves the same problem in isolation**, memory-only, no hints →
+   `L(i)` with and without the deposit.
+4. **The deposit taught iff Zai's `L(i)` falls.** That is the identity floor
+   from amendment 2, and Stage 3 of `M-case-studies`, now operationalised.
+
+### One precondition that must not be dropped
+
+*"without hints but just using the memory system"* is **elicitation** —
+precondition 3, and the one E9/E10 showed is silently violable: **0 store
+lookups under one framing, 21 under another, same agent and same store.** A Zai
+isolation run that never consults memory measures nothing while appearing valid.
+
+**So the isolated re-proof must verify elicitation, not assume it** — the pull
+receipt exists for exactly this (C1/D-track). Recorded as a required observable
+on the teachability cycle.
+
+### Schema consequence
+
+`Cycle` already carries `:cycle/solver-tier` and `:cycle/solver-version` (I.2).
+Add `:cycle/deposit-state ∈ #{:with-deposit :without-deposit :n/a}` so a
+teachability pair is identifiable as a pair, and `:cycle/paired-with` naming its
+twin. **Nothing else changes** — the tier axis was already in the schema; it was
+the analysis that had not caught up.
