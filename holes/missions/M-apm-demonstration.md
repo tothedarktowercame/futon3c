@@ -2597,3 +2597,89 @@ order are stated implementably — but seven items in §9 are open, four of whic
 close only by walking problem 1. **That is the design's own claim about itself:
 it expects to be corrected by contact with one problem, and says so in advance
 rather than after.**
+
+---
+
+## Gate: DERIVE → ARGUE
+
+**Operator ruling, Joe, 2026-08-14:** *"even if it comes up with a model, that's
+only DERIVE — we haven't yet run ARGUE. So I'd say the gate for DERIVE to ARGUE
+is to have a formalisation that seems good enough to argue for. When we run
+ARGUE we may well change the design after we kick it around informally."*
+
+**Recorded to prevent a specific misreading:** codex-4's returning a compiling
+`ExperimentalDesign` + `ExperimentPreregistration` would **not** close DERIVE and
+would **not** authorise implementation. A formalisation is a *thing to argue
+about*, not an argument.
+
+> **Gate condition.** DERIVE → ARGUE opens when there is **a formalisation that
+> seems good enough to argue for.** Not correct, not complete — *arguable*.
+
+**The design is expected to change in ARGUE.** Per the lifecycle, ARGUE's
+pattern cross-reference is *"a structured survey, not a post-hoc decoration —
+patterns you discover here may revise the DERIVE design."* The DERIVE candidate
+already declares itself provisional (§10); this gate is where that gets
+exercised rather than merely stated.
+
+### ARGUE's checklist, and what this mission already has for it
+
+| lifecycle item | status going in |
+|---|---|
+| **pattern cross-reference** (`futon3/library/`) | **the resource Joe flagged — see below** |
+| theoretical coherence vs IDENTIFY | the four questions and the N-register are stated and resolved |
+| trade-off summary | partly written — candidate §8 ("what this design deliberately does NOT do") |
+| generalization notes | not started |
+| **plain-language argument** (3–5 sentences, no jargon) | **not started — and the hardest item** |
+
+**Exit criterion (lifecycle):** the design feels *inevitable* given the
+constraints, not merely possible; and an outsider can understand it from the
+plain-language argument alone.
+
+### The historical output that ARGUE actually needs
+
+Joe: *"that's another place where the historical work had some useful output,
+namely the math-formal, math-informal and math-informal-\* patterns."*
+
+Located and counted — `futon3/library/`:
+
+| family | patterns |
+|---|---|
+| `math-informal` | 38 |
+| `math-formalization` | 18 |
+| `math-strategy` | 13 |
+| `math-informal-CT` | 7 |
+| **total** | **76** |
+
+**These are already in the exact argument form ARGUE requires.** A flexiarg is
+a structured `IF / HOWEVER / THEN / BECAUSE` argument with context, keywords,
+audience and tone — for example
+`math-informal/construct-an-explicit-witness`:
+
+> **IF** the existence statement is concrete enough to describe the object…
+> **HOWEVER** explicit constructions can obscure *why* the object exists…
+> **THEN** build the object step by step… **BECAUSE** an explicit witness is the
+> gold standard of existence proofs.
+
+That is the same form used throughout this DERIVE section. **So the pattern
+cross-reference is not a translation exercise — the library speaks the
+methodology's own argument language.** This is the second time historical work
+has proved "inspiring" in Joe's sense: unusable as *data*, directly usable as
+*form*.
+
+### A reflexive opportunity worth taking
+
+These 76 patterns were ingested into futon1b by this session's own flexiarg work
+(`pattern/library` 1,288 rows; `pattern/clause` 9,668). **So ARGUE's pattern
+cross-reference is a genuine retrieval task with a genuine need** — and can
+therefore double as an **F7 probe on non-mathematical vocabulary**: does the
+store surface the right argument pattern when someone describes a *design*
+problem rather than a *proof* problem?
+
+If it does not, that is a finding about retrieval breadth obtained for free,
+while doing work we owe anyway. **[OPEN]** — to be decided when ARGUE opens, not
+now.
+
+### Status
+
+**DERIVE remains open.** Awaiting codex-4 (`invoke-1786723026643-4478-31c19ce7`,
+parked `park-251041e1`). The gate is Joe's to call.
