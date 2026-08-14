@@ -1338,3 +1338,234 @@ T is the only place in the register where the *instrument*, not the evidence,
 is the binding constraint. Every other open item is answered by measuring
 something that exists. That makes T structurally different, and it is the
 reason it earns a component of its own rather than a line in a node's notes.
+
+---
+
+# DERIVE
+
+*Opened 2026-08-14 on Joe's instruction ("for DERIVE let's follow the standard
+checklist"). Follows `futon4/holes/mission-lifecycle.md` §3. Design work is the
+Claude owner's per the handoff protocol carve-out (d).*
+
+**Exit criterion (lifecycle):** someone could implement this from the DERIVE
+section alone. Where that is not yet true, it is marked **[OPEN]** rather than
+papered over.
+
+**The design is driven by one MAP fact above all others.** Three independent
+tracks found that the system records *where work happened* and not *how it
+turned out*. So this is **not** an evidence-collection build. It is the
+addition of a **disposition** to channels that already carry provenance, plus
+the joins that make dispositions computable. Most of what follows is smaller
+than it looks for that reason.
+
+## D.1 Entity types
+
+Identity pattern throughout: **qualified, human-readable, deterministic** —
+per the identity convention adopted 2026-08-14 (`pattern/library` census). No
+fresh UUIDs where a natural key exists; that decision already paid for itself
+in the A3 join.
+
+| entity | identity | source | notes |
+|---|---|---|---|
+| **Problem** | `apm/<bundle-id>` e.g. `apm/a97A08` | ingested | 475 in corpus; attributes frozen at panel time |
+| **Cycle** | `cycle/<bundle-id>/<epoch-ms>` | authored | **the unit of measurement**; one problem, one shot |
+| **Frame** | `frame/<cycle-id>` | derived | workspace; subject to **F1** |
+| **Disposition** | `disp/<cycle-id>` | authored | **THE new entity.** Exactly one per closed cycle |
+| **RoleEvent** | `ev/<cycle-id>/<role>/<seq>` | emitted | formalizer, reviewer, freeze, prover, scribe |
+| **MemoryOffer** | `offer/<cycle-id>/<memory-id>` | emitted | what retrieval surfaced |
+| **MemoryUse** | `use/<offer-id>` | authored | consulted? load-bearing? — the A3 gap |
+| **RetrievalProbe** | `probe/<consumer>/<module>` | authored | the 39 known-failing cases |
+| **ReuseEdge** | `reuse/<consumer>/<module>` | derived | 64 import / 39 declaration-using |
+| **Stratum** | `stratum/<scheme>/<level>` | derived | frozen pre-assignment |
+| **Regime** | `regime/<commit-sha>` | derived | retrieval regime, named by hash |
+| **Measurement** | `meas/<cycle-id>` | derived | the per-cycle vector |
+
+## D.2 Relation types
+
+Binary where the connection is binary:
+
+`cycle --of--> problem` · `frame --realises--> cycle` · `disp --closes--> cycle`
+· `ev --within--> cycle` · `offer --surfaced-in--> cycle`
+· `use --disposes--> offer` · `reuse --consumer--> problem`
+· `reuse --module--> construction-target` · `cycle --under--> regime`
+· `problem --assigned--> stratum` · `meas --scores--> cycle`
+
+**One genuine hyperedge.** Adjudication is irreducibly n-ary:
+
+```
+adjudication(cycle, offer, outcome, verdict, adjudicator, at)
+```
+
+**IF** we modelled this as binary `offer --verdict--> value`, **HOWEVER** a
+verdict is only meaningful relative to the outcome it is being credited
+against *and* the adjudicator who made the call, **THEN** it is a hyperedge,
+**BECAUSE** the A3 audit failed precisely by losing the (offer, outcome) pair —
+19 of 44 memory-bearing offers reached an outcome with no disposition, and a
+binary model cannot even express that as a missing row.
+
+## D.3 Invariant rules
+
+Checkable propositions. **F1 is already ruled (E6);** the rest follow its shape
+— prefer invariants that hold by construction over checks that can stop running.
+
+| id | invariant | check |
+|---|---|---|
+| **F1** | a created frame is a worked frame | `Main.lean` hash ≠ scaffold hash at close |
+| **F2** | every closed cycle has exactly one disposition | `count(disp where closes=cycle) == 1` |
+| **F3** | every memory offer carries a use-disposition | `count(offer without use) == 0` |
+| **F4** | difficulty stratum frozen before arm assignment | `stratum.at < assignment.at` |
+| **F5** | no measurement spans a regime boundary unstratified | `distinct(cycle.regime) == 1` per comparison |
+| **F6** | no denominator promoted from corpus/cluster size | denominators declared, not inferred |
+| **F7** | **availability**: an artifact counts as available only if a need-vocabulary probe retrieves it | `probe(need) ∋ artifact` |
+
+**F3 and F7 are the two that would have changed history.** F3 is the A3 defect
+stated as an invariant; F7 is the reversed guiding light made mechanical — the
+first time it becomes a check rather than a principle.
+
+## D.4 Data flow
+
+```
+   apm-lean problems/*/          futon1b (7073)
+        │  ingest                     ▲
+        ▼                             │ evidence rows
+   [ one-shot solver ] ──cycle──▶ [ disposition writer ]
+        │  F1 by construction         │
+        ├── RoleEvents ───────────────┤
+        ├── MemoryOffers ─────────────┤
+        └── close ──▶ Disposition ────┘
+                                      │
+                            [ measurement join ] ──▶ meas/<cycle>
+                                      │
+                       ┌──────────────┼──────────────┐
+                       ▼              ▼              ▼
+                 L(i) series   retrieval board   warrant table
+                 (N8)          (N5, 39 probes)   (capability proof)
+```
+
+Producers: the solver (cycles, frames, role events, offers); the adjudicator
+(dispositions, uses); the derivation job (reuse edges, strata, measurements).
+Storage: futon1b evidence rows, qualified ids. Query: `memory/search` with
+`text=` (**note the parameter is `text`, not `q`; unknown params are silently
+ignored — a live trap, see D.7**).
+
+## D.5 The measurement vector and L(i) — grounded, not proposed
+
+MAP forbade adopting the v2 plan's speculative vector. This one is built from
+**what C1 found is actually emitted**, with each field marked by cost.
+
+| field | role | status | source |
+|---|---|---|---|
+| statement defects at review | formalizer | **free** | `statement-review-verdicts` (117 rows) |
+| outcome ∈ {closed, TierA, TierB, defective} | prover | **free** | gate events |
+| residual executable sorries | prover | **free** | gate emits |
+| attempts / closer hops | prover | **free** | 16 closer-hop events |
+| axiom cleanliness | prover | **free** | `axiom-audit.jsonl` (214) |
+| memories promoted | scribe | **free** | `promotion-queued` |
+| **escape rate** (defects review missed) | reviewer | **join** | reconstruct from review × gate histories |
+| **promoted → later surfaced → used** | scribe | **join** | needs F3 dispositions |
+| **contract leaks** (post-freeze `def` changes) | freeze | **NEW** | no hash covers `def` bodies today |
+
+```
+L(i) = w₁·attempts(i) + w₂·residual(i) + w₃·rework(i)
+```
+
+**IF** we want `L` computable from cycle one, **HOWEVER** `rework` needs
+def-body hashing that does not exist, **THEN** ship `L` with `w₃ = 0` and the
+rework term declared-but-unpopulated, **BECAUSE** two of three terms are free
+today and a loss function that waits for its third term is a loss function that
+never ships — while silently dropping the term would misrepresent `L` as
+complete. `w₃` becomes non-zero the day def-body hashing lands, and **that is a
+regime change requiring F5 stratification.**
+
+**Weights are [OPEN]** — an operator decision. They are not derivable from the
+corpus and must not be fitted to it.
+
+## D.6 Difficulty stratification (N8's confound)
+
+C3: no complete pre-treatment covariate exists. `closer_hop` is missing for
+255/475 and confounds effort with difficulty; sorry counts and statement length
+are altered by work; family is complete but coarse.
+
+**IF** stratification needs a pre-treatment difficulty measure, **HOWEVER** no
+complete one exists and the two most informative candidates are contaminated by
+effort, **THEN** stratify on **family (complete, coarse, uncontaminated) ×
+initial statement length at formalization-freeze (complete going forward,
+pre-treatment by construction)**, and record `closer_hop` as a covariate
+without stratifying on it, **BECAUSE** a coarse-but-clean stratifier supports a
+defensible comparison whereas a fine-but-contaminated one produces a falling
+`L` indistinguishable from an easier tail — the exact anti-glibness failure
+HEAD names.
+
+Retrospective stratification of the existing 475 is **[OPEN]** and may be
+refused; going forward it is free, since freeze-time length is captured at
+freeze.
+
+## D.7 N5 — the retrieval instrument
+
+The n=39 known-failing suite (Track E). Each probe: *given consumer C's need
+vocabulary, does retrieval surface module M?*
+
+- **Ground truth**: independent of the memory system — the import edge and
+  declaration reference are on disk.
+- **Need vocabulary**: extracted from the consumer's own `problem.md` /
+  `proof-outline.md`, **not** from the module. Extraction rule is **[OPEN]**;
+  it must be frozen before scoring, or the test is unfalsifiable.
+- **Pass bar**: **[OPEN]** — operator decision. Current baseline is a
+  demonstrated **0** on the three probes run by hand.
+- **Confound to pre-declare**: mediation class (memory / dispatch / author /
+  unknown) is unrecorded for all 39. Stratify or declare unknown.
+
+**Also fix the silent-parameter trap**: `memory/search` ignores unrecognised
+query params, so a typo returns plausible unfiltered results. That is F7's
+failure mode inside the instrument meant to test F7. Reject unknown params.
+
+## D.8 Views
+
+| view | shows |
+|---|---|
+| **cycle inspector** | one cycle: frame, role events, offers, disposition, measurement |
+| **retrieval scoreboard** | 39 probes, pass/fail, by regime hash |
+| **L trend** | `L(i)` over problems seen, banded by regime, stratified by family |
+| **warrant table** | N1–N9 ranked by load-bearing status, certificates linked |
+
+## D.9 Wiring diagram
+
+**Applicable and recommended.** This mission defines a loop (solver → outcome →
+measurement → retrieval) crossing three repos (futon3c, futon6, apm-lean) and
+two timescales. Per the lifecycle, sketching the futon5 AIF+ exotype now settles
+ports, exogeneity and closure before code hardens. **[OPEN]** — not yet drawn.
+
+## D.10 Fidelity contract (GF)
+
+**Required** — this extends existing behaviour (driver, gates, scribe).
+
+| donor capability | disposition |
+|---|---|
+| gate outcome/build/sorry/axiom emission | **preserve** — L reads it |
+| `proof-frame-receipt.v1` | **adapt** — add disposition; keep provenance fields |
+| scribe hunger audit | **preserve** — it works, it has simply not been run |
+| `batch2r_pair.sh` two-seat dispatch | **adapt** — keep two seats, add real freshness |
+| candidate-frame emission without work | **drop** — F1 forbids it |
+| `status.json` as Lean-source oracle | **drop** — wrong for 45 bundles (A4) |
+
+Tripwire tests: F1 on a scaffold-only frame; F3 on an offer with no use; the
+A4 predicate on a bundle whose `status.json` omits `lean.files`.
+
+## D.11 Component T — carried, not scheduled
+
+T (transport identification) stays modular per Joe's ruling, with the three
+admissible dispositions unchanged. Joe, 2026-08-14: *"that may be a source of
+creative ideas later on!"* — recorded as a **generative seam**, not a blocker.
+Nothing in D.1–D.10 depends on T.
+
+## D.12 What is [OPEN] at DERIVE close
+
+1. `L(i)` weights `w₁ w₂ w₃` — operator
+2. Retrieval pass bar — operator
+3. Need-vocabulary extraction rule — must freeze before scoring
+4. Retrospective stratification of the 475 — may be refused
+5. The futon5 wiring diagram — not yet drawn
+
+**The lifecycle exit criterion is therefore not yet met**, and this section says
+so rather than claiming completeness. Items 3 and 5 are the two that block
+implementation; 1, 2 and 4 are decisions, not unknowns.
