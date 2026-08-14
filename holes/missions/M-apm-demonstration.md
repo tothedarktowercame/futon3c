@@ -2774,3 +2774,112 @@ about*, not an argument. On the evidence above the artifact does appear **good
 enough to argue for** — it typechecks, it refuses launch on invariant failure,
 it invented nothing, and it surfaced a real design tension. **The gate is Joe's
 to call.**
+
+---
+
+## DERIVE candidate amendment — module C, the pattern cascade
+
+**Operator observation, Joe, 2026-08-14:** *"I don't think we mentioned patterns
+at all. But a suitably constructed pattern cascade should provide efficiency
+boosts to the proving environment. E.g. the simplest example is 'is this a
+topology problem? If so, look at topology patterns.' But that should then cascade
+in a way that makes the search based on paths-in-the-grass rather than
+random-access shots-in-the-dark."*
+
+**The gap is real** — neither the candidate nor codex-4's formalisation mentions
+patterns. But the mechanism Joe describes is **already specified**, in two
+halves, and finding that changes what needs building.
+
+### Half 1 — the cascade is pattern-mediated recall, which already exists
+
+`algorithms/zai-learning-loop.md:103`:
+
+> *"**Recall requires this**: pattern-mediated recall only surfaces memories
+> reachable through a reviewed edge to a **pattern endpoint in the domain**.
+> Content without wiring is invisible (we proved this the hard way)."*
+
+**"Is this a topology problem? then look at topology patterns" *is* that
+mechanism** — the domain-scoped pattern endpoint is the routing step. It is not
+a new idea to design; it is an existing mechanism the candidate failed to name.
+Substrate: `pattern/library` 1,288 rows, `pattern/clause` 9,668, plus the 76
+`math-*` flexiargs (ARGUE gate section).
+
+### Half 2 — "paths in the grass" is Ψ closure, also already specified
+
+`algorithms/zai-learning-loop.md:144`:
+
+> *"**Close Ψ — receipts feed retrieval.** Per-memory use/offer statistics as a
+> bounded multiplicative ranking boost `(1 + α·used/offered)`, α≈0.5,
+> **cold-start neutral**, never-blocking, audited in the receipt. **Every use
+> event now bends future recall.** Reasoned non-use mildly demotes — that is
+> correct, not a bug."*
+
+**That is paths-in-the-grass, formally.** A path is worn by recorded use; the
+boost is the wear.
+
+### The consequence — the cascade is blocked on F3, the mission's central gap
+
+`used/offered` is exactly the **disposition** this mission has spent the day
+establishing does not exist: 19 of 44 offers with no disposition (A3), `state`
+empty in all 51 receipts (B-recheck), provenance without outcome (C1).
+
+> **Without F3 there are no paths, only grass.** The ranking boost has no
+> numerator *and* no denominator, so search stays random-access by construction
+> — which is precisely the "shots-in-the-dark" behaviour Joe wants to leave
+> behind.
+
+**IF** the pattern cascade is the efficiency mechanism, **HOWEVER** its wear
+term is `used/offered`, **THEN** F3 is not bookkeeping but the **substrate of
+path formation**, **BECAUSE** every use event is a footfall and a path is
+nothing but recorded footfalls — so the disposition record and the cascade are
+one piece of work, not two.
+
+### And this is plausibly N8's missing mechanism
+
+N8 asks for `dL/d(problems seen) < 0` *conditioned on memory availability*. The
+candidate never said **by what mechanism `L` would fall.** This is it:
+
+> **`L` falls because paths form.** Search stops being random access and becomes
+> path-following. Path formation is measurable directly — the distribution of
+> `used/offered` over patterns — and it is *upstream* of `L`, so it can be
+> observed before any slope is claimable.
+
+**"Cold-start neutral" fits the pilot exactly**: round 1 has no paths, so it
+measures the shots-in-the-dark baseline honestly, and path formation becomes
+observable from round 2 — the same pilot/confirmation split the design already
+uses.
+
+### Module C — added to the candidate
+
+| id | module | guarantees |
+|---|---|---|
+| **C** | **Cascade** | search is **directed** — classified by domain to a pattern endpoint, refined along reviewed edges, ranked by recorded wear |
+
+Edges: `M` supplies offers/uses → `C` computes wear → `C` directs `M`'s next
+retrieval. **`C` closes the loop `M` currently leaves open**, which is why the
+candidate's diagram had `M` feeding only `P` and `X`.
+
+**New invariant:**
+
+> **F10 (earned paths).** A ranking boost is warranted **only** by recorded
+> use/offer statistics. No boost from assumed relevance, hand-tuned priors, or
+> similarity alone.
+
+F10 is F9's shape applied to ranking: *every claimed capability has a probe*
+becomes *every claimed relevance has a footfall*. Without it the cascade would
+be a place to smuggle in unearned confidence — and a fabricated path is worse
+than no path, because it is indistinguishable from a learned one.
+
+### Deferred to ARGUE, per Joe
+
+- **Reproducibility / the `VariationPlan` endpoint** (§9 item 2). Joe:
+  *"Reproducibility is an interesting question, but yes, let's come back to that
+  in ARGUE, possibly we have patterns that can help us with that design aspect."*
+  **Noted as promising**: the 76 `math-*` flexiargs are IF/HOWEVER/THEN/BECAUSE
+  arguments, and the pattern library may well contain the argument form that
+  settles what "the same result twice" means for a one-shot round.
+- **Cascade depth and classification granularity** — how many refinement steps,
+  and what counts as "the domain". Not decidable from the desk.
+
+**Recorded as a candidate amendment, not a redesign.** `C` names an existing
+mechanism, `F10` guards it, and both are ARGUE's to revise.
