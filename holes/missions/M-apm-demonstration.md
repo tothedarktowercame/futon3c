@@ -3216,3 +3216,90 @@ the design or the strongest possible evidence that its central claim is right.
 
 **ARGUE's verdict: the design is arguable and the argument mostly holds; the
 formalisation is not yet faithful to it.** That is a repair, not a redesign.
+
+## A.10 Stage-1 repair — verified, and ARGUE's exit test re-run
+
+*(codex-4, commit `d0623df8`, 269 → 329 lines. **Verified by claude-2 at the
+semantic level**, not by naming: the right structure names can exist without the
+right constraints.)*
+
+### The three defects, repaired and checked
+
+| # | defect | repair | verified |
+|---|---|---|---|
+| 1.1 | `modules`/`enforcedBy` decorative (1 use each) | now inhabit `SystemDesign`; **4 uses each** | `theorem every_enforcer_is_installed (i m) (h : m ∈ systemDesign.enforcedBy i) : m ∈ systemDesign.modules` — the enforcer map is *proved* coherent with the module list |
+| 1.2 | F1 demoted to a trace watchdog | **structural** | `structure WorkedFrame where … changed : closingHash ≠ scaffoldHash` — the inequality is a **field**, so no `WorkedFrame` exists without a proof of it, and `Trace` requires one. A scaffold-identical closing trace is **unconstructible** |
+| 1.3 | string-identity probes verify names | **typed evidence** | F9 now requires `capability.holds t ∧ ∃ probe … recorded = true ∧ evidenceId ≠ ""` — the concrete predicate **first**, the receipt as corroboration. `registeredCapabilities : List Capability`, no longer `List String` |
+
+Fences all held: build real (`.olean` 1.29 MB, 16:27, same minute as source),
+761/761, zero `sorry`/`admit`/axioms, **8.33% not hardcoded**, no ablation
+machinery.
+
+**codex-4 agreed with zai-1's 1.3** rather than defending its own work:
+*"String membership proved only naming agreement."*
+
+### codex-4's boundary caveat is the most valuable line in the return
+
+> *"This makes invalid frames unconstructible inside the Lean model. The external
+> runtime still needs a validator that only constructs `Trace` after obtaining
+> the hash inequality; **Lean cannot prevent unrelated Clojure from emitting its
+> own untyped record**."*
+
+**That is precisely the seam Joe named** — *"the DarkTower formalism corresponds
+to a Clojure semi-formalism that ensures the actual implementation matches the
+specification."* F1 is now structural *inside* the model, and the obligation
+moves to the boundary. This is not a weakness; it is an exact statement of where
+the guarantee ends, and it hands the Clojure side a precise job:
+
+> **The semi-formalism must be the sole constructor of `Trace`.** Any untyped
+> record entering by another path defeats F1 no matter how strong the Lean is.
+> **F9 applied to the boundary.**
+
+### Stage 2 correctly not attempted
+
+codex-4 took the checkpoint: *"fixing 1.3 changes the evidence shape C and F10
+should use… proceeding under the old shape would violate the checkpoint."*
+**Correct, and the reason is the right one** — C and F10 are about *earned* paths,
+and F10's whole content is that a boost is warranted only by recorded evidence.
+Encoding that against string-identity probes would have built F10 on the very
+defect 1.3 removed.
+
+### ARGUE exit test, re-run
+
+ARGUE failed its exit criterion for exactly one reason: three verified defects
+sat between the design and its formalisation. **All three are now repaired and
+independently verified.** Re-running:
+
+| criterion | status |
+|---|---|
+| the design feels **inevitable**, not merely possible | **argued** — see below |
+| an outsider understands it from §A.8 alone | **untested** — needs an actual outsider |
+
+**The inevitability argument.** The design's central claim is F9: *every claimed
+capability has a probe.* Over one day that claim was tested twelve times against
+this project's own artifacts — and then a thirteenth and fourteenth time against
+**the formalisation written to enforce it**, which contained decorative
+definitions and a watchdog masquerading as a guarantee. A design principle that
+keeps catching its own implementation is not merely workable; **the alternative
+designs are the ones that already failed here, repeatedly, in recorded fact.**
+
+**Remaining gap, and it is not a fidelity defect.** The formalisation is one
+amendment round behind the design: module C, F10, tiered S and the student
+identity floor are designed but not encoded — deliberately, by a checkpoint we
+asked for. Plus three lower-priority zai-1 items (F2 locus, `L(i)` outside the
+registered denominator, multi-axis regime stationarity) parked pending design
+decisions.
+
+> **Assessment: ARGUE's substantive work is done and its exit criterion is met on
+> the first clause.** The second clause — outsider comprehension — cannot be
+> self-certified and is the one honest reason not to declare ARGUE closed.
+> **Both the DERIVE→ARGUE gate and ARGUE→VERIFY are Joe's to call.**
+
+### First closed loop in this mission
+
+Worth recording plainly: a defect was **found by a blinded independent reviewer,
+verified by the owner, repaired by the author, and re-verified — within one
+session**, with the fix confirmed at the semantic level rather than accepted on
+report. Author ≠ reviewer ≠ verifier held throughout. **That is the coding-handoff
+protocol working end to end**, on the very artifact whose subject is whether
+claims get checked.
