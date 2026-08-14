@@ -2012,3 +2012,92 @@ it.** The count above is therefore a *floor* on arc-lane output, not a census.
 **[OPEN]** — a Dionysus-side check would firm it up, and the conclusion
 ("demonstrated, not instrumented") would only strengthen if more unrun lanes
 turned up.
+
+## D.20 What the Scribe was actually doing — one lane of four, done well
+
+Joe: *"So what was the Scribe role doing, b/c scribe was supposed to be run
+after each Zai, or, later, Codex run, to extract patterns and rewrites similar
+to the ones we found…?"*
+
+**It ran. It performed one of its four lanes. That lane works.**
+
+### The lane inventory across all nine per-problem scribe passes
+
+`a94A09`, `a96J02`, `a97J01`, `a97J02`, `a97J03`, `a97J07`, `e9`, `e10`, `j07`:
+
+| lane (per `algorithms/zai-learning-loop.md`) | shape | count |
+|---|---|---|
+| **solve-lane** — lemma-location + proof-shape | `:lemma`, `:strategy` | **8 + 7** |
+| **arc-lane** — error→fix → *rewrite rules* | `:symptom` `:before` `:after` | **0** |
+| **trajectory-lane** — cost/process memories | `:cost` | **0** |
+| **challenge-lane** — corrections of prior claims | `:challenge` | **0** |
+
+The algorithm doc describes solve-lane as *"Near-mechanical, highest
+precision"* and trajectory-lane as *"Highest novelty — mines what error→fix
+schemes can't see."* **The scribe ran the near-mechanical lane and none of the
+novel ones.** So C2's "staffed but not performed" needs amending: it was
+staffed and *partially* performed — the cheapest quarter of it.
+
+### What one pass produced
+
+`a97J01-scribe/promotion-report.edn` (2.8 KB, asserter `ams-codex-1`,
+2026-08-04): **three memories**, each with a memory-id, a hyperedge-id, one
+pattern (`math/measure-integration-api`), a 14–20 keyword tag bag, and
+`:verified-present? true` with a tag-query verification block confirming each
+memory is retrievable by its own tags.
+
+That is careful work. It is simply *one lane's* work.
+
+### The lane it ran passes F7 — and that is the most useful thing here
+
+`:attachment-status :proposed` with `:attachment-reviewer-pending` looked
+alarming, since the algorithm doc warns *"pattern-mediated recall only surfaces
+memories reachable through a reviewed edge … Content without wiring is
+invisible (we proved this the hard way)."* **Tested against the live store, they
+surface anyway:**
+
+| need-vocabulary query | hits | surfaces the a97J01 memory? |
+|---|---|---|
+| `bounded finite measure integral` | 6 | **yes** |
+| `monotone convergence truncation` | 4 | **yes** |
+
+**Contrast with E2**, where `ConstructionTargets` modules surfaced by *module
+name* and not by `argument principle` / `counting zeros` / `winding number`:
+
+> **Scribe memories are findable by need. ConstructionTargets modules are
+> findable only by name.** The difference is the tag bag — the scribe's
+> 14–20 keyword vocabulary is exactly the need-vocabulary work that makes F7
+> pass, and promotion to `ConstructionTargets` carries no such vocabulary.
+
+**IF** retrieval were uniformly broken, **HOWEVER** scribe-authored memories
+surface on need vocabulary while name-only promotions do not, **THEN** the
+defect is not retrieval but **what promotion records**, **BECAUSE** the two
+populations sit in the same store behind the same query path and differ only in
+whether a need-vocabulary tag bag was written at authoring time. **This is the
+first mechanism-level explanation of the N5 defect in the mission**, and it is
+cheap to act on: give promotions the scribe's tagging.
+
+*(Caveat: two queries, both hitting. A larger probe set is Suite II's job —
+this is a positive existence result, not a rate.)*
+
+### Answering the question directly
+
+The scribe was **not** idle and **not** broken. Per session it produced ~3
+well-tagged, verifiably retrievable solve-lane memories. What it did **not** do
+— on any of the nine sessions — is the arc-lane extraction that turns Zai's
+stereotyped mistake language into rewrite rules. Those four rules (D.19) came
+from the s1 pilot and were never made routine.
+
+**So the rewrite-rule pipeline was never wired into the per-session scribe
+pass**, which is why nine sessions of scribe work yielded zero rewrites while
+the mechanism itself demonstrably works when run.
+
+### Design consequence
+
+| field | role | status |
+|---|---|---|
+| **lane coverage** — which of the four lanes ran this session | scribe | **new bookkeeping**, trivial |
+| **promotion tag bag** — need-vocabulary tags attached at promotion | scribe | **new**, mechanically derivable from the module's own source |
+
+Lane coverage is the F1-shaped fix: **a scribe pass that reports which lanes it
+ran cannot silently run one of four.**
