@@ -956,3 +956,56 @@ What is missing is not a gate but a **score**: the frames were never
 adjudicated, so a later reader who treats `candidates/` as an attempt series
 computes a rate (57/74 = 77.0%) that is mostly measuring stub-ness. The defect
 is the same one found twice already — **provenance recorded, outcome not.**
+
+### E5. The waste is real, measurable, and cheaply preventable
+
+Joe, 2026-08-14: *"adjudication should be part of our one-problem one-shot
+solver then for sure; but creating vacuous candidates is still a waste even if
+it's gated!"*
+
+Correct, and the waste has a sharper shape than "low-quality output". All 24
+vacuous frames are **the untouched scaffold**, byte-identical across problems:
+
+```
+lean/Main.lean     399 bytes   imports, namespace, boilerplate comment, `end`
+lean/Scratch.lean  283 bytes   ditto
+```
+
+Zero of the 24 have a `Scratch.lean` over 400 bytes, and zero state a
+`theorem` or `lemma` anywhere in the frame. **The work did not land in the
+wrong file — no work was done at all.** The frame was created, the scaffold
+written, and nothing else happened.
+
+**43.6% of all attempt frames (24/55) contain no work.** The nominal 55
+attempts are effectively **31**.
+
+The empties concentrate exactly where retries happened:
+
+| problem | empty / frames |
+|---|---|
+| `b94J01` | 4 / 6 |
+| `t97J01` | 4 / 6 |
+| `a96J01` | 3 / 6 |
+| `a92J02`, `a93A01`, `a93J02` | 2 / 2 — **every frame empty** |
+
+So the high-retry problems were not tried six times; they were **re-framed**
+six times and worked on twice. Three problems received a frame apiece and no
+work whatsoever. Any "attempts per problem" figure taken from this directory
+overstates effort by ~1.8×.
+
+**Two consequences, both DERIVE inputs, recorded here as operator constraints:**
+
+1. **Adjudication belongs inside the one-problem one-shot solver** (Joe's
+   requirement). A frame that ends is a frame that must carry a verdict.
+2. **A no-op frame should never be emitted.** The check is as cheap as a
+   check can be — refuse to close a frame whose `Main.lean` is byte-identical
+   to the scaffold. This costs one hash comparison and would have suppressed
+   24 of 55 frames. It is the same insight as the mission's headroom
+   precondition, applied at the frame level rather than the round level: a
+   round that cannot measure anything should not be counted as a round.
+
+**Method-honesty note.** This also means the earlier attempt-level figure was
+wrong twice over, not once: 57/74 = 77.0% was inflated both by counting
+vacuous frames as clean *and* by counting no-op frames as attempts. Neither
+error would have been visible without opening the files. Recorded because the
+mission's central risk is a number that survives on its plausibility.
