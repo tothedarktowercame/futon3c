@@ -664,6 +664,67 @@ with them:
 No denominator was promoted from corpus size, problem count, cluster count, or
 ledger snapshot by inference.
 
+#### B-recheck. The "unrecoverable" verdicts, rechecked as a class
+
+*(claude-2, 2026-08-14.)* Track C overturned B's first verdict — the vote
+ledger **is** a timestamped series (`e-concept-vote-*` rows in the evidence
+table; 27 ids / 11 supplements / 10 concepts in a 200-row window), not the
+one-day snapshot B took it for. One of four wrong makes the class suspect, and
+the shared wording is the tell: B repeatedly writes *"the surveyed records
+contain no…"*. That is the same move `ams-codex-1` made in A4 — **asking the
+index rather than the shelf.** So the remaining verdicts were rechecked
+against disk and store rather than against V3's prose.
+
+**A per-attempt register does exist, and B did not survey it.** 21 of 475
+bundles carry `candidates/apm-v2-<problem>-<epoch-ms>/` directories — **55
+timestamped attempt frames**, 31 Mar–1 Apr 2026, 51 of them with a
+`proof-frame-receipt.v1` receipt naming frame id, workdir, artifacts and
+graph-refs. B2's "no run-level record survived for these" is therefore **too
+strong as stated.**
+
+**But B2's conclusion survives, for a different reason than B gave.** The
+register cannot yield a success rate, on three independent grounds:
+
+1. **The receipts carry no outcome.** `state` is `{"readonly": [], "writable":
+   []}` in all 51. There is no verdict, acceptance, or disposition field —
+   provenance only.
+2. **`proof/cycle-id` is `null` in all 51,** so attempts cannot be grouped
+   into demand cycles even in principle.
+3. **The root file is not the accepted candidate.** Every root `Main.lean`
+   hashes differently from all of its candidates. `b94J01` is decisive: six
+   candidates from 31 Mar averaging ~12 lines, versus a 154-line root from
+   9 Aug carrying two `sorry`s. The root is *later independent work*, not a
+   selected winner — so root-vs-candidate cannot be read as accept-vs-reject.
+
+**A tempting number, and why it must not be quoted.** Treating candidates as
+attempts gives 57/74 = 77.0% zero-sorry. It is an artifact: only **31 of 55**
+candidates state a `theorem` or `lemma` at all, and of the 42 zero-sorry
+candidates only **18** are non-vacuous. This is the A4 denominator trap
+recurring one level down — clean because empty, not clean because proved. The
+figure is recorded here **solely so that no later reader recomputes it and
+believes it.**
+
+**Revised verdicts:**
+
+| # | B's verdict | after recheck |
+|---|---|---|
+| 1 | revolution rate unrecoverable | **overturned** (C) — series exists |
+| 2 | rewrite hit rate unrecoverable | **stands** — no artifact defines "rewrites sought" |
+| 3 | 17/45 within subset | **stands** — recovered, correctly scoped |
+| 4 | chain-closure rate unrecoverable | **conclusion stands, reason corrected** — a register exists but emits no outcome |
+
+**Why this matters more than the verdicts.** Two independent audits now find
+the *same* failure shape. A3: 15 outcomes never emitted, **zero lost at
+join**, 19 of 44 with no disposition. B-recheck: 51 receipts with full
+provenance and **no outcome field at all**. The system has never had a linkage
+problem — it records *where work happened* meticulously and *how it turned
+out* not at all.
+
+That converts Joe's question (2) from open to nearly answered: **cycle-one
+instrumentation does not need a new evidence channel, it needs an outcome
+field on the channel that already exists.** Entered as a MAP fact; the design
+is DERIVE's.
+
 ### Track C — the N-register (§1.4): already-done / partly-done / greenfield?
 
 - **C1** Which measurement-vector quantities are **already emitted** by the
