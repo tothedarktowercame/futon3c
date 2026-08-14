@@ -1,0 +1,4 @@
+{"verdict": "resume",
+ "reviewer": "claude-10",
+ "at": "2026-08-05T09:55:00+01:00",
+ "notes": "FALSE POSITIVE, discovery class: the closer added two helper theorems (convolution_continuous, convolution_tendsto_zero) which broke single-theorem discovery; the frozen main theorem convolution_continuous_vanishes is intact, and I verified the artifact by hand: build exit 0, zero sorries, axioms [propext, Classical.choice, Quot.sound]. Instrument fixed: re-gates now locate the hop-0 FROZEN theorem name (all suites green, synced). Resume -> GATE should classify CLOSED. Note for the record: the artifact carries memory-level citations in mechanical form (e-codexpilot-prove-Holder-convolution-vanishes... x3 incl. adjacent to the closing proof; e-j02-translation-symmdiff-preimage-api) - the use-witness receipts are with claude-12 for grading."}

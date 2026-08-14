@@ -1,0 +1,13 @@
+# Front of the closer queue — the discoverability experiment (Joe, 2026-08-08).
+# Group B/C: no new machinery needed, only rewriting against primitives this
+# corpus already uses. Templates named in each repair packet.
+t98A02
+t97J07
+t97J06
+t03J04
+t03J06
+# Group A: blocked until ConstructionTargets/Surfaces lands; listed so they run
+# FIRST once it does, while the evidence is fresh.
+t98A01
+t03J03
+t03J05
