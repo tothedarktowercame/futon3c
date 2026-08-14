@@ -1122,3 +1122,78 @@ C4 established that the causal engine exists, issues typed refusals, and has
 engine accepts or refuses the N6 selection diagram is a *fact about the engine*,
 answerable now, and it discharges §1.5 criterion 5 either way. **Belled out
 2026-08-14.** Everything else in the register rests on completed survey.
+
+---
+
+## MAP addendum — N6: not discharged, not refused, **unaskable**
+
+*(ams-codex-2, job `invoke-1786719652409`, receipt commit `5de70dbd`; reviewed
+and independently verified by claude-2, 2026-08-14.)*
+
+The packet asked for an engine verdict on N6 and pre-declared that *a typed
+refusal is a fully successful outcome*. The actual result is **a third
+outcome neither the packet nor the wake-checklist anticipated**, and it is
+recorded as such rather than forced into the binary.
+
+**Verdict: the engine was not invoked, because N6 cannot be represented by its
+callable contract.** There is no engine identification and no typed refusal
+keyword.
+
+### Review (what claude-2 actually checked)
+
+| check | result |
+|---|---|
+| receipt exists at claimed path | yes, 1,575 bytes |
+| sha256 matches claim | **yes** — `d54ef283…48b9b66` |
+| commit `5de70dbd` exists, scope | yes, 1 file / 33 insertions, no code touched |
+| encoded diagram matches the TeX | **yes** — `capability-proof-apm.tex:261`, caption quoted accurately |
+| engine contract as described | **yes** — `identify.clj:98`, `[causal-dag treatment outcome]` |
+| transport support anywhere in `causal/` | **none** — zero hits for transport, selection-diagram, S-node, source/target-domain |
+
+The receipt is honest in the way that matters: `:invoked? false`,
+`:engine-verdict nil`, `:typed-engine-refusal nil`, and an explicit
+`:non-equivalent-invocation-rejected` entry recording the tempting wrong move
+(running `pipeline → solved`, which asks a single-domain question and not a
+transport one). **codex-2 stopped rather than inventing the missing structure**,
+which is what the packet required.
+
+### What this changes
+
+C4 said the engine *"has never been asked"* about N6. That was too generous:
+**it cannot be asked.** `identify` implements single-domain identification —
+backdoor → front-door → general ID → typed refusal `:not-identifiable` with
+`:proof-status :proved-impossible`. That refusal machinery is real, but it
+answers *"is P(Y|do(X)) identifiable in this one DAG?"*. Transport needs
+selection diagrams with S-nodes plus source/target data availability — a
+different algorithm.
+
+Precisely missing, per the receipt: transport-query entrypoint; source and
+target domain inputs; selection-node semantics; source-versus-target
+observational availability; cross-domain mechanism-invariance declarations.
+
+**N6's register verdict is unchanged — greenfield — but its reason is now
+sharper and its cost is now known.** It is not blocked on running a tool; it
+is blocked on a capability the tool does not have.
+
+### Status of §1.5 criterion 5
+
+**NOT discharged.** The criterion reads *"N6 discharged or refused, with the
+refusal recorded if so."* Neither occurred: there is no derivation and no
+engine refusal. Recording it as "refused" would be exactly the laundering this
+mission exists to prevent — **an audit note is not an engine receipt**, and the
+receipt says so itself in its own `:note`.
+
+Criterion 5 remains open. It is a *mission* completion criterion, not MAP's
+exit condition, so it does not block MAP's close.
+
+### MAP is closed
+
+§1.5 criterion 1 — every N-register row resolved with evidence — is met:
+N5 partly-done (demonstrably failing), N6 greenfield (unaskable), N7
+partly-done, N8 partly-done. Every row now rests on completed survey.
+
+**DERIVE inherits a sharper first question than expected.** Not "which node
+first?" but: *is a transport query worth building an engine capability for, or
+should N6 be restated to something the existing engine can adjudicate?* That is
+a design decision with a real cost attached, which is what MAP is supposed to
+hand over.
