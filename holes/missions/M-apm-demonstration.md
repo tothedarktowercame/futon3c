@@ -446,3 +446,92 @@ ledger snapshot by inference.
   a countable result — the denominator, the arms, the stopping rule?
 - **D2** Does `batch2r_pair.sh` plus the three preconditions already constitute
   a countable cycle, or is something missing?
+
+### MAP Track D findings
+
+**Surveyed 2026-08-14 by codex-4. MAP facts only; no assay run and no design
+adopted.** Sources checked: the four batch/cohort preregistrations in
+`holes/labs/M-zai-learning-loop/`, `futon6/README-apm-lean-ground-control.md`
+§1, both `data/ct-commissioning/` problem files, `scripts/batch2r_pair.sh`,
+the receipt/session code named below, and
+`~/apm-evidence/case-1-corpus/stage2-synthesis.md`.
+
+#### D1. What must be fixed in advance
+
+The repository contains worked precedents for all four ingredients, but it
+does not yet contain one preregistration that fixes them together for the next
+CT/APM cycle. Therefore “exists” below means an existing mechanism or worked
+precedent, not that cycle one has already been registered.
+
+| ingredient | state | what exists, and what remains unfixed for cycle one |
+|---|---|---|
+| **Denominator** | **partly exists** | `cohort-1-prereg.md` fixes five fresh attempts by a deterministic first-five rule, separates the revisit row, and says no retries/every outcome counts. `bpm-batch-0-prereg.md` fixes ten ordered problems with the same rule. `batch-1-prereg.md` and `batch-2-prereg.md` each name ten paired problems. The next cycle has no frozen panel/attempt count yet; the two commissioning problem files are probes, not a declared attempt population. |
+| **Arms** | **partly exists** | `batch-1-prereg.md` defines push-memory versus none; `batch-2-prereg.md` defines problem-IDF versus memory-DF under push; `batch2r_pair.sh:23-54` materializes the latter as `mem`/`ctl`. The CT commissioning files define positive and negative retrieval probes, not control/treatment execution arms for a learning-effect cycle. No next-cycle arm contract is frozen. |
+| **Stopping rule** | **partly exists** | `bpm-batch-0-prereg.md` makes one session's terminal state the attempt outcome and forbids retries; cohort 1 adds the approximately 20-minute honest-partial pacing instruction; batch 1 closes/scored the batch after its fixed panel. Ground-control §1 defines terminal prover reports (Tier A, Tier B, defective statement). These are precedents, but no next-cycle rule currently fixes time/turn cap, terminal states, retry treatment, and cycle close in one place. |
+| **Outcome** | **exists** | The strongest complete definition is `bpm-batch-0-prereg.md`: solved/partial/failed from compile exit, sorry/error counts and commit SHA, with ground-control recompilation. Batch 1 adds sorry delta, twin route divergence, memory citation corroborated by committed code, and tokens. `dispatch_with_recall.clj:1226-1234` requires one `USED`/`IGNORED` verdict per surfaced id; `memory_outcome_sweeper.py` writes the outcome half. The machinery exists, although the next cycle still has to select and freeze which existing outcomes are its endpoints. |
+
+The distinction exposed by the preregs is that a named panel is not enough:
+cohort 2 added `S1b` after a stub misdispatch and later found `S6` already
+closed. Both were honestly labeled, but they show why the denominator, retry/
+continuation treatment, and dispatch-time eligibility must be frozen and
+checked rather than reconstructed at close.
+
+#### D2. `batch2r_pair.sh` and the three preconditions
+
+`batch2r_pair.sh` is a two-arm dispatcher, not by itself a countable cycle. It
+does not choose a fixed multi-problem denominator, declare the cycle stopping
+rule, check headroom, or enforce elicitation. Its fresh-session claim is also
+stronger than its code.
+
+| precondition | present status | checked fact |
+|---|---|---|
+| **Headroom** | **checkable, not mechanically checked** | `problem-ct-primary.md:7-8` supplies an explicit cold-control rule: if Run 0 solves competently, re-author rather than reinterpret. It also supplies ground truth. No code in `batch2r_pair.sh` runs or grades that assay, records a headroom verdict, or refuses dispatch when it fails. |
+| **Arm independence** | **checkable, not mechanically checked** | The script uses separate seats (`ams-codex-2` and `ams-codex-1`) and separate frames, but lines 23-57 contain no session lookup, reset, comparison, or refusal. `frames.bb` deliberately records the actual runner session only at close (`:recorded-at-close`; lines 128-131, 171-182). Batch-2 amendment 3 required a supervisor Drawbridge reset per job; that action is outside this script. Amendment 7 further shows distinct sessions alone did not close shared worktree/git-ref read channels. Thus the comment “verified-fresh sessions” is not verified by the script. |
+| **Elicitation verified** | **checkable, not enforced for this runner** | Contrary to a clean “no mechanism” premise, `src/futon3c/peripheral/pull_receipts.clj` records every successful or empty `memory_search`, `pattern_memory`, `library_search`, `evidence_graph`, or `psr_search` result with dispatch, session, tool and round. This can mechanically establish that a pull lookup occurred. Separately, the dispatch packet and runner gate require per-surfaced-id `USED`/`IGNORED` attribution, which establishes disposition of pushed material, not that the runner initiated retrieval. `batch2r_pair.sh` uses operator-side push and contains no requirement or gate for a pull receipt, so E9/E10-style elicitation is not checked in this path. |
+
+The runner can therefore produce countable rows only if an external prereg and
+operator procedure supply the missing cycle boundary and precondition verdicts.
+The shell script itself does not constitute that procedure.
+
+#### D3. Case 1 as the negative worked example
+
+**Fixed in advance:** the stage-2 synthesis named one control-versus-treatment
+pair on the b01A04 bridge, fixed the candidate deposits (`c1+c2`), used a known
+ground-truth route, and named observable success as trajectory difference,
+time-to-route, or an honest characterization of the wall. Its preceding mining
+also fixed the evidence corpus: nine reads, 41 marks, and five staged
+candidates.
+
+**Discovered too late:** the control already found the full route, so the
+treatment had no headroom and the deposits were not load-bearing at that
+target. The treatment then explicitly revealed session contamination—“Route:
+unchanged from the first assay”—because both arms used one seat/session. These
+were not adverse outcomes inside a valid denominator; they invalidated the
+comparison itself. The useful residual result, correct non-application of the
+memories, is an existence/pilot observation rather than the preregistered
+treatment-effect measurement.
+
+Case 1 had fixed the proposed contrast and observable but had not assayed
+headroom or enforced independent sessions before exposing the treatment. It
+therefore discovered its two validity conditions from the outcomes instead of
+recording them as passed preconditions.
+
+#### Honest Track D verdict
+
+**Cycle one is not countable with the currently assembled path.** Nearly all
+raw components exist, so this is not greenfield instrumentation, but no current
+artifact binds them into one pre-outcome contract. The shortest factual list
+of what is missing is:
+
+1. a frozen cycle-one panel/attempt count with exclusions, retries and
+   continuations accounted for;
+2. a frozen arm assignment and stopping rule for that panel;
+3. a recorded headroom pass before treatment exposure;
+4. a pre-dispatch independence check that covers actual session identity and
+   the known cross-frame read channel; and
+5. an elicitation requirement wired to the already-available pull receipt (or
+   an explicit declaration that pushed-material disposition, rather than
+   agent-initiated lookup, is the measured exposure).
+
+This list names absent bindings/checks; choosing their exact form belongs to
+DERIVE.
