@@ -1,0 +1,33 @@
+{:receipt/type :causal-engine-invocation-audit
+ :receipt/date "2026-08-14"
+ :claim :N6-capability-transports-to-held-out-BPM
+ :source "holes/labs/M-diagramprover/capability-proof-apm.tex"
+ :encoded-diagram
+ {:variables
+  {:S {:label "S" :role :selection-variable}
+   :problem-distribution {:label "problem distribution"}
+   :pipeline {:label "pipeline"}
+   :solved {:label "solved"}}
+  :arrows
+  [[:S :problem-distribution]
+   [:problem-distribution :solved]
+   [:pipeline :solved]]
+  :source-caption
+  "S switches the problem distribution (APM vs. held-out BPM); the pipeline works on BPM is identified only if the S-dependence can be separated from the pipeline edge."}
+ :engine-entrypoint :futon3c.diagramprover.causal.identify/identify
+ :engine-contract "one causal DAG, treatment node, outcome node"
+ :invoked? false
+ :engine-verdict nil
+ :audit-status :stopped-before-invocation
+ :audit-reason :transport-query-underspecified
+ :missing
+ [:transport-query-entrypoint
+  :source-and-target-domain-inputs
+  :selection-node-semantics
+  :source-versus-target-observational-availability
+  :cross-domain-mechanism-invariance]
+ :non-equivalent-invocation-rejected
+ {:candidate [:pipeline :solved]
+  :why "This asks for P(solved | do(pipeline)) in one DAG. It does not ask whether that effect or capability transports from APM to BPM."}
+ :typed-engine-refusal nil
+ :note "No engine refusal keyword is reported because the transport query could not be represented by the callable engine contract. This receipt is an audit record, not an engine-generated identification receipt."}
