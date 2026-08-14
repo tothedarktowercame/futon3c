@@ -805,7 +805,11 @@
                                         uplink-site (assoc :federation/uplink-site uplink-site)
                                         invoke-fn (assoc :invoke-fn invoke-fn))]
                        (register-proxy-agent! origin-url agent-id agent-info)))))]
-    (reg/publish-agents-status!)
+    ;; Never block the ordered WS receive worker on local HUD projection, and
+    ;; never announce back in response to an imported roster.  The latter is
+    ;; an announce -> roster -> announce echo loop that can starve fed_invoke
+    ;; frames indefinitely on an otherwise healthy connection.
+    (reg/publish-agents-status-async! {:announce-uplink? false})
     results))
 
 (defn- uplink-proxy-for-site?

@@ -258,7 +258,10 @@
                  (:invoke-prompt-preview entry)))
           (reg/reset-registry!)
           (System/setProperty "FUTON3C_SITE" "lon")
-          (with-redefs [reg/publish-agents-status! (fn [] (swap! published inc))]
+          (with-redefs [reg/publish-agents-status-async!
+                        (fn [opts]
+                          (is (= {:announce-uplink? false} opts))
+                          (swap! published inc))]
             (fed/import-uplink-roster! origin [entry] {:uplink-site "oxf"}))
           (let [proxy (get-in (reg/registry-status) [:agents "oxf-codex-7"])]
             (is (= :invoking (:status proxy)))
@@ -266,7 +269,10 @@
             (is (= "using bash" (:invoke-activity proxy)))
             (is (= "--- CURRENT TURN ---\nSurface: bell"
                    (:invoke-prompt-preview proxy))))
-          (with-redefs [reg/publish-agents-status! (fn [] (swap! published inc))]
+          (with-redefs [reg/publish-agents-status-async!
+                        (fn [opts]
+                          (is (= {:announce-uplink? false} opts))
+                          (swap! published inc))]
             (fed/import-uplink-roster!
              origin
              [{:agent-id "codex-7"
@@ -289,6 +295,33 @@
             (System/setProperty "FUTON3C_SITE" old-site)
             (System/clearProperty "FUTON3C_SITE")))))))
 
+(deftest uplink-import-publishes-off-worker-without-echo
+  (testing "fed_roster import cannot block receive or trigger fed_announce"
+    (let [old-site (System/getProperty "FUTON3C_SITE")
+          publication (promise)]
+      (try
+        (System/setProperty "FUTON3C_SITE" "lon")
+        (with-redefs [reg/publish-agents-status-async!
+                      (fn [opts]
+                        (deliver publication opts)
+                        {:ok true :scheduled? true})]
+          (fed/import-uplink-roster!
+           "ws-uplink://oxf"
+           [{:agent-id "claude-3"
+             :type "claude"
+             :capabilities ["coordination/execute"]
+             :home-site "ams"
+             :session-id "b44d2248"}]
+           {:transport :ws-uplink :uplink-site "oxf"}))
+        (is (= {:announce-uplink? false}
+               (deref publication 1000 ::timeout)))
+        (is (= "b44d2248"
+               (:agent/session-id (reg/get-agent "ams-claude-3"))))
+        (finally
+          (if old-site
+            (System/setProperty "FUTON3C_SITE" old-site)
+            (System/clearProperty "FUTON3C_SITE")))))))
+
 (deftest uplink-roster-replaces-stale-origin-proxy
   (testing "a live WS-uplink proxy can heal a stale HTTP-sync proxy for the same remote agent"
     (let [old-site (System/getProperty "FUTON3C_SITE")]
@@ -306,7 +339,7 @@
                      :origin-url "http://127.0.0.1:17070"
                      :federation/stale? true
                      :federation/reachable? false}})
-        (with-redefs [reg/publish-agents-status! (fn [] {:ok true})]
+        (with-redefs [reg/publish-agents-status-async! (fn [_] {:ok true})]
           (let [[result] (fed/import-uplink-roster!
                           "ws-uplink://oxf"
                           [{:agent-id "codex-5"

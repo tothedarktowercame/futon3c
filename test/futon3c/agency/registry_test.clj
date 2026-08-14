@@ -22,6 +22,24 @@
     (binding [reg/*enable-hop-event-emission?* false]
       (f))))
 
+(deftest status-publication-can-suppress-uplink-echo
+  (testing "an imported roster can update HUDs without announcing back upstream"
+    (let [projected (atom 0)
+          broadcast (atom 0)
+          announced (atom 0)]
+      (with-redefs-fn
+        {(ns-resolve 'futon3c.agency.registry 'broadcast-agents-ws!)
+         #(swap! broadcast inc)
+         (ns-resolve 'futon3c.agency.registry 'announce-uplink-roster!)
+         #(swap! announced inc)
+         #'futon3c.blackboard/project-agents!
+         (fn [_] (swap! projected inc))}
+        #(reg/publish-agents-status! {:announce-uplink? false}))
+      (is (= 1 @projected))
+      (is (= 1 @broadcast))
+      (is (zero? @announced)
+          "fed_roster import must not trigger another fed_announce"))))
+
 ;; =============================================================================
 ;; Ported from futon3: timeout enforcement
 ;; =============================================================================

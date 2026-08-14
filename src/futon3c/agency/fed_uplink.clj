@@ -73,6 +73,17 @@
    :error/message message
    :error/at (str (Instant/now))})
 
+(defn- fail-pending!
+  "Resolve and clear every invoke waiting on PENDING.  A stopped or failed
+   socket can never produce those invoke results; leaving the promises parked
+   makes the corresponding per-agent turn lane wait until its full timeout."
+  [pending message]
+  (when pending
+    (let [[waiting _] (swap-vals! pending (constantly {}))]
+      (doseq [[_ p] waiting]
+        (deliver p {:ok false :error message})))
+    true))
+
 (defn- send-text!
   [^WebSocket socket text]
   (when socket
@@ -176,10 +187,15 @@
         (.request ws 1)
         nil)
       (onError [_ _ws error]
+        (fail-pending! (:pending @!state)
+                       (str "Federation uplink error: "
+                            (.getMessage ^Throwable error)))
         (swap! !state assoc
                :connected? false
                :last-error (.getMessage ^Throwable error)))
       (onClose [_ _ws _status reason]
+        (fail-pending! (:pending @!state)
+                       (str "Federation uplink closed: " reason))
         (swap! !state assoc
                :connected? false
                :socket nil
@@ -281,7 +297,8 @@
            (uplink-status)))))))
 
 (defn stop-uplink! []
-  (let [{:keys [^WebSocket socket ^Thread runner ^ExecutorService executor]} @!state]
+  (let [{:keys [^WebSocket socket ^Thread runner ^ExecutorService executor pending]} @!state]
+    (fail-pending! pending "Federation uplink stopped")
     (swap! !state assoc :running? false :connected? false :socket nil :runner nil :executor nil)
     (when socket
       (try (.sendClose socket WebSocket/NORMAL_CLOSURE "stop-uplink") (catch Throwable _)))

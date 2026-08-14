@@ -48,6 +48,24 @@
   (testing "a long outage reaches the cap without overflowing long arithmetic"
     (is (= 60000 (#'fed-uplink/backoff-delay-ms Long/MAX_VALUE)))))
 
+(deftest stopping-uplink-resolves-in-flight-invokes
+  (testing "cycling a connection cannot orphan promises owned by the old socket"
+    (let [result (promise)
+          pending (atom {"invoke-1" result})
+          state (var-get #'fed-uplink/!state)
+          original @state]
+      (try
+        (reset! state (assoc original
+                             :running? true
+                             :connected? true
+                             :pending pending))
+        (fed-uplink/stop-uplink!)
+        (is (= {} @pending))
+        (is (= {:ok false :error "Federation uplink stopped"}
+               @result))
+        (finally
+          (reset! state original))))))
+
 (deftest federation-launchers-load-token-before-exec
   (testing "the final JVM inherits the token instead of exec bypassing its loader"
     (doseq [path ["scripts/dev-laptop-env" "scripts/dev-linode-env"]]
@@ -109,6 +127,40 @@
                         :result "done"
                         :session-id "sess-2"}))
           (is (= {:result "done" :session-id "sess-2"} @result-f)))))))
+
+(deftest hub-dispatches-inbound-federated-invoke
+  (testing "an authenticated uplink can invoke a hub-visible qualified agent"
+    (let [{:keys [on-open on-receive sent]} (make-test-ws)
+          ch :uplink-inbound
+          invoked (promise)]
+      (on-open ch {:request-method :get :request-uri "/ws"})
+      (on-receive ch (announce-frame "test-token" []))
+      (reset! sent [])
+      (with-redefs [reg/invoke-agent!
+                    (fn [agent-id prompt timeout-ms]
+                      (deliver invoked [agent-id prompt timeout-ms])
+                      {:result "MESH_FIXED_OK" :session-id "sess-zone"})]
+        (on-receive ch
+                    (proto/render-fed-invoke
+                     {:invoke-id "invoke-upstream"
+                      :agent-id "ams-claude-3"
+                      :prompt "ping"
+                      :timeout-ms 1234}))
+        (is (= ["ams-claude-3" "ping" 1234]
+               (deref invoked 1000 ::timeout)))
+        (let [deadline (+ (System/currentTimeMillis) 1000)
+              frame (loop []
+                      (if-let [frame (first (parsed-sent sent))]
+                        frame
+                        (when (< (System/currentTimeMillis) deadline)
+                          (Thread/sleep 10)
+                          (recur))))]
+          (is (= {:type "fed_invoke_result"
+                  :invoke_id "invoke-upstream"
+                  :ok true
+                  :result "MESH_FIXED_OK"
+                  :session_id "sess-zone"}
+                 frame)))))))
 
 (deftest uplink-close-marks-stale-and-prunes-after-missed-announces
   (testing "close marks stale immediately; prune requires three missed announces"

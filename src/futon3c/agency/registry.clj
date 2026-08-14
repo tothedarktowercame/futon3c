@@ -293,17 +293,47 @@
             (announce-fn agent)
             (catch Throwable _ nil)))))))
 
+(defonce ^:private !agents-status-publish-pending? (atom false))
+
 (defn publish-agents-status!
   "Publish the current agent status snapshot to local and WS agent HUDs.
    Use this after multi-agent registry updates that do not flow through
-   register-agent! or invoke-agent!."
-  []
-  (let [status (registry-status)]
-    (bb/project-agents! status)
-    (broadcast-agents-ws!)
-    (announce-uplink-roster!)
-    {:ok true
-     :count (:count status)}))
+   register-agent! or invoke-agent!.
+
+   :announce-uplink? defaults true. Set it false while importing an uplink
+   roster: announcing in response to a roster creates an announce/roster echo
+   loop on the same federation connection."
+  ([] (publish-agents-status! {}))
+  ([{:keys [announce-uplink?]
+     :or {announce-uplink? true}}]
+   (let [status (registry-status)]
+     (bb/project-agents! status)
+     (broadcast-agents-ws!)
+     (when announce-uplink?
+       (announce-uplink-roster!))
+     {:ok true
+      :count (:count status)})))
+
+(defn publish-agents-status-async!
+  "Coalesced, non-blocking variant of `publish-agents-status!`.
+
+   Status projection may contact many Emacs sockets and must not run on a
+   transport's ordered receive worker. Concurrent requests coalesce because a
+   later registry update will publish another snapshot; HUD projection is
+   best-effort and does not define federation delivery semantics."
+  ([] (publish-agents-status-async! {}))
+  ([opts]
+   (let [scheduled? (compare-and-set! !agents-status-publish-pending? false true)]
+     (when scheduled?
+       (future
+         (try
+           (publish-agents-status! opts)
+           (catch Throwable t
+             (println (str "[registry] async status publication failed: "
+                           (.getMessage t))))
+           (finally
+             (reset! !agents-status-publish-pending? false)))))
+     {:ok true :scheduled? scheduled?})))
 
 (def ^:private bell-file "/tmp/futon-bell.edn")
 

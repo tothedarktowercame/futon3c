@@ -21,6 +21,7 @@
    - realtime/single-authority-registration (L6): one connection per agent-id
    - realtime/structured-events-only (R9): typed JSON frames only"
   (:require [futon3c.transport.protocol :as proto]
+            [clojure.string :as str]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.federation :as federation]
             [futon3c.social.mode :as mode]
@@ -63,7 +64,7 @@
   (some-> (or (System/getProperty "FUTON3C_FED_TOKEN")
               (System/getenv "FUTON3C_FED_TOKEN"))
           str
-          clojure.string/trim
+          str/trim
           not-empty))
 
 (defn- fed-token-valid?
@@ -495,6 +496,38 @@
                      (send-fn ch (proto/render-fed-roster
                                   (or (federation/site-prefix) "hub")
                                   export))))
+
+                 ;; --- Federation uplink: client-originated invoke via hub ---
+                 :fed-invoke
+                 (if-not (get-in conn [:fed-uplink :site])
+                   (send-fn ch (proto/render-ws-frame
+                                (transport-error :not-federated
+                                                 "fed_invoke requires an authenticated federation uplink")))
+                   ;; Agent execution can take minutes.  Never occupy the
+                   ;; per-channel serial receiver: roster/status frames and
+                   ;; subsequent invoke results must remain dispatchable.
+                   (future
+                     (let [invoke-id (:fed/invoke-id parsed)
+                           agent-id (:fed/agent-id parsed)
+                           timeout-ms (long (or (:fed/timeout-ms parsed) 600000))
+                           result (try
+                                    (reg/invoke-agent! agent-id
+                                                       (:fed/prompt parsed)
+                                                       timeout-ms)
+                                    (catch Throwable t
+                                      (transport-error :invoke-failed
+                                                       (.getMessage t))))
+                           error (or (:error/message result) (:error result))
+                           ok? (and (nil? error)
+                                    (not (contains? result :error/code)))]
+                       (send-fn ch
+                                (proto/render-fed-invoke-result
+                                 (cond-> {:invoke-id invoke-id
+                                          :ok ok?}
+                                   ok? (assoc :result (:result result)
+                                              :session-id (:session-id result))
+                                   (not ok?) (assoc :error (or error
+                                                               (str result)))))))))
 
                  ;; --- Federation uplink: result for a hub-originated invoke ---
                  :fed-invoke-result
