@@ -1569,3 +1569,101 @@ Nothing in D.1–D.10 depends on T.
 **The lifecycle exit criterion is therefore not yet met**, and this section says
 so rather than claiming completeness. Items 3 and 5 are the two that block
 implementation; 1, 2 and 4 are decisions, not unknowns.
+
+## D.13 Exit criterion, revised — measurables-per-problem, built live
+
+**Operator ruling, Joe, 2026-08-14.** *"If the old data had been gathered with
+enough enrichment to make it work, we could build your five open items against
+the historical data and thread it through. I don't think that's possible. So,
+we have to use the historical data as 'inspiring but useless' for our next round
+of data gathering. … your 'five open items' reduce to measurables-per-problem so
+we'd be able to step through a single problem solve and see them all become
+green. On that basis, they could be built as we step through 'live' on one
+problem, and then checked as we step through another."*
+
+This replaces D.12's framing and is a better resolution than the one it
+replaces. The five items were treated as *decisions to make in advance*; they
+are in fact **measurables that either light up on a single problem or do not.**
+
+> **DERIVE exit criterion (revised).** Step through **one** problem solve live,
+> building each measurable as it is needed, until every field of the D.5 vector
+> is populated for that problem. Then step through a **second** problem,
+> building nothing, and confirm the same fields populate unaided. **Build on
+> problem 1, verify on problem 2.**
+
+**IF** the five open items were genuine unknowns, **HOWEVER** each is in fact a
+per-problem quantity that is either emitted or not, **THEN** settle them by
+walking one problem rather than by deciding in advance, **BECAUSE** a threshold
+argued in the abstract is exactly the "speculative design" IDENTIFY was
+restructured to prevent — whereas a measurable that fails to go green on a real
+problem is self-refuting and needs no argument.
+
+**Consequences for the five:**
+
+| # | item | disposition under the revised criterion |
+|---|---|---|
+| 1 | `L(i)` weights | **settled live** — observe the three terms on problem 1 before weighting |
+| 2 | retrieval pass bar | **settled live** — the probe either surfaces the module or it does not |
+| 3 | need-vocabulary extraction | **built live** on problem 1, frozen before problem 2 |
+| 4 | retrospective stratification of the 475 | **CLOSED — refused.** Historical data is inspiring but useless |
+| 5 | futon5 wiring diagram | still open; not blocking the walkthrough |
+
+**Item 4 is now a decision, not a gap.** The historical corpus is retired as an
+evidence base for this design: it lacked the enrichment, and MAP's whole
+achievement was establishing *precisely how* it lacked it (no disposition, null
+`cycle-id`, root ≠ accepted candidate, 45 metadata-invisible bundles). That
+knowledge is the "inspiring" part. Nothing further is owed to it.
+
+## D.14 Duplicate proof detection — a measurable, validated today
+
+Joe: *"one thing that has been noticed in that regard is duplicate lemmas being
+proved and we did discuss this and tried a quick experiment with a cheap
+embedding approach that might help with that."*
+
+**Exact duplicate detection needs no embedding, and it works.** Scan: extract
+every `theorem`/`lemma`/`def` block from all 448 problem `Main.lean` files plus
+all 18 `ConstructionTargets` modules, whitespace-normalise, hash, group.
+
+**Validated against ground truth.** `ConstructionTargets.lean` documents that
+`LusinN` shares "**17 of its 18 declarations**" byte-identically with `a95A02`,
+which does not import it. The detector independently found **17**. Method sound.
+
+**It then found an undocumented case that is worse:**
+
+| pair | shared declarations |
+|---|---|
+| `CT:LemniscateComponents` ↔ `prob:a00J04` | **21** |
+| `CT:LusinN` ↔ `prob:a95A02` | 17 *(documented)* |
+| `CT:LemniscateComponents` ↔ `prob:a01A08` | 15 |
+| `prob:a00J04` ↔ `prob:a01A08` | 15 |
+
+⚠ **`LemniscateComponents` is one of the two ConstructionTargets modules with
+ZERO consumers** (E1). So it is a 21-declaration copy of `a00J04` that nothing
+imports — the same defect as `LusinN`, undocumented, and strictly worse, since
+`LusinN` at least has three consumers. It is dead weight that also fragments
+maintenance: a fix to `a00J04` does not reach it.
+
+**Corpus-wide, exact duplication is rare and concentrated**: 38 duplicated
+bodies over 466 sources, essentially all in the four pairs above. That is a
+real result — the fear of pervasive duplicate proving is **not** borne out at
+the exact-match level.
+
+**Which sharpens what embeddings are for.** Exact matching cannot see the case
+Joe is actually worried about: the *same mathematics proved independently* with
+different names and phrasings. The scan above bounds the exact case at four
+pairs, so **any embedding work is aimed squarely at semantic near-duplicates,
+with exact duplicates already covered for free.** Cheap embeddings remain the
+right tool; they now have a known baseline to beat rather than an unbounded
+target.
+
+**As a per-problem measurable** (D.5 vector, new row):
+
+| field | role | status |
+|---|---|---|
+| **duplicate declarations** — count of this problem's declarations already proved elsewhere in the corpus | prover / scribe | **free** — computable today, validated |
+
+**IF** duplicate-proving is a retrieval failure, **HOWEVER** it is also a
+plain measurement, **THEN** add it to the per-problem vector immediately rather
+than waiting for the retrieval work, **BECAUSE** it is the one N5-adjacent
+measurable whose ground truth is on disk and needs no model, no probe design,
+and no pass-bar decision — it goes green or it does not.
