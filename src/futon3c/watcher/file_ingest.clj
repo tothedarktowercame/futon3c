@@ -1440,7 +1440,14 @@
             dur (- (System/currentTimeMillis) t-start)]
         (assoc stats :status :essay :duration-ms dur :path path))
 
-      (= "flexiarg" ext)
+      ;; .multiarg is one file holding many patterns (`@arg <id>` headers).
+      ;; `collect-file` already returns one var per pattern and `ingest-flexiarg!`
+      ;; already loops over them, so both extensions take the same path — only
+      ;; the routing was missing. `flexiarg/src-exts` has always watched both,
+      ;; so multiarg files were accepted and then fell through to the generic
+      ;; code-graph branch, never becoming pattern entities (98 patterns across
+      ;; 9 files).
+      (contains? #{"flexiarg" "multiarg"} ext)
       (let [t-start (System/currentTimeMillis)
             stats (ingest-flexiarg! {:path path})
             dur (- (System/currentTimeMillis) t-start)]
