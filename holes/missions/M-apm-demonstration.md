@@ -5432,3 +5432,70 @@ false assurance.** The mission has twelve instances of the latter.
 
 **Remaining:** C (harness + emitter-side F1 refusal — what codex-4 originally
 stopped on, now unblocked), and B, which is mine and in progress.
+
+## I.14 A2–7 verified — and the one weakened check is weaker than it needs to be
+
+**`mmca-clj` `7485880`. Verified by claude-2, suite run independently: 117 tests,
+340 assertions, 0 failures** (was 113/336).
+
+| item | verified |
+|---|---|
+| `no-new-memories` is **membership**, not a counter | **yes** — `(not (subset? (surfaced-memory-ids trace) (:cycle/store-snapshot-memory-ids trace)))` |
+| `harness-frozen` | distinct `:cycle/harness-revision` across attempts > 1 ⇒ `:harness-changed-in-store-round` |
+| `:both-channels-varied` | present, same shape |
+| F5 | *"now derives regimes from the attempt sequence rather than a cycle-level assertion"* — exactly the granularity fix I.7 required |
+| named failures | all four keywords, with tests |
+
+**codex-4 reported the weakened check unprompted and precisely.** That is the
+behaviour the packet asked for and it is worth saying plainly: **a weakened check
+declared is honest apparatus.**
+
+### But the premise behind the weakening is false, and I checked
+
+> codex-4: *"I found no stable Agency job-log API or local interface available to
+> dependency-free `mmca-clj`."*
+
+**The job log is reachable from dependency-free Clojure.** `java.net.http` is
+JDK-builtin — no library. Fifteen lines returned **HTTP 200** and live JSON from
+`localhost:7070/api/alpha/invoke/jobs`. And the three fields the check needs —
+`caller`, `agent-id`, timestamps — are **regex-extractable without a JSON
+parser**; I confirmed it against the live response, which currently shows
+`caller=claude-2 → agent-id=codex-4` pairs.
+
+**So the real constraint is not HTTP and not the API. It is JSON parsing**, and
+even that is avoidable for three flat fields.
+
+### Why this matters more than a normal shortfall
+
+**The check as built fails I.10's own test.** `no-direct-channel` consumes a
+**trace-supplied** edge list — and **Claude produces the trace.** The party under
+constraint supplies the evidence of its own compliance. That is the definition of
+self-certification, and I.10 put this check in the mechanical column precisely to
+avoid it.
+
+> **A proctoring check that reads only what the proctor supplies does not
+> constrain the proctor.** It records an intention.
+
+The other two checks are unaffected — the store snapshot and the harness
+revisions are artifacts of the run, not of Claude's account of it.
+
+### The decision is Joe's, because it is about the repo's character
+
+**I am not fixing this unilaterally.** V.9 recorded `mmca-clj`'s zero-dependency
+character as *a feature, not an oversight* — and it still has **zero** deps.
+Changing that is a repo-character decision, not a review fix.
+
+| option | cost | strength |
+|---|---|---|
+| **(a)** add `org.clojure/data.json` | breaks zero-dep | full, robust |
+| **(b)** `java.net.http` + regex for three flat fields | **zero dep**, fragile to response-shape change | full for the threat, brittle |
+| **(c)** leave as-is | none | **self-certifying — does not constrain the proctor** |
+
+**My recommendation is (b)**, with the fragility recorded and a test that fails
+if the response shape changes — the same "test that would have caught it"
+discipline that has worked twice today. **(c) should not survive to frame-1**:
+of everything on the pre-flight list, this is the single check whose failure
+would produce a *clean-looking* result, which is the category I.10 says must
+never rest on self-report.
+
+**Recorded, not actioned. Awaiting the call.**
