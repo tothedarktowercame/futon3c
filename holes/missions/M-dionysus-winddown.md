@@ -124,7 +124,42 @@ regenerable, and correctly signalled as a temporary dump by living in `~`.
       reconciliation, not asserted.
 
 **Relationship to other missions.** Enables `C-substrate-completion` §8.1.
-Depends on nothing; blocks the next machine's usefulness.
+Blocks the next machine's usefulness.
+
+**Precondition: `futon0/README-inbox-zero.md`.** Not a nicety — the dependency
+is structural, and it bites in three places.
+
+1. **Uncommitted work cannot enter a content-addressed sync.** The mechanism
+   shipped today replicates what a manifest names and verifies by sha256. A
+   dirty file has no manifest row and no expected hash, so there is nothing to
+   check a copy against. Such a file is not "harder" to sync — it is outside
+   the scheme entirely. The only alternative is wholesale rsync, which
+   abandons verification exactly where the stakes are highest.
+
+2. **A dirty tree is an unreliable narrator, and syncing propagates that.**
+   On 2026-08-14 three agents each drew a confident wrong conclusion from
+   zone's tree: deleted-but-committed files read as missing artefacts,
+   duplicate shas read as stranded work. Those conclusions were relayed
+   between agents and compounded. Replicating an ambiguous tree to N sites
+   multiplies the ambiguity rather than resolving it, and every site then
+   disagrees plausibly.
+
+3. **You cannot evacuate what you cannot enumerate.** C5 ("Dionysus can be
+   wiped with nothing lost") is only demonstrable against a known inventory.
+   The risk table in MAP exists *because* futon3c reached zero first: what
+   remained was 154 catalogued files with hashes, not an indefinite pile. Had
+   the 29 dirty files and 154 uncatalogued ones still been in place, the honest
+   answer to "what is on this laptop" would have been "we don't know."
+
+Evidence that the precondition is load-bearing: the corpus reached four
+verifying replicas in an afternoon *because* it was catalogued and ignored,
+while lon and chi sit 401 and 1060 commits behind with unpushed local work —
+i.e. the sites whose repos are dirtiest are exactly the ones where nothing
+could be trusted to have arrived correctly.
+
+Status: satisfied on Dionysus futon3c and zone futon3c (both at zero,
+2026-08-14). **Not** satisfied on lon, chi, or hyperreal, and not yet assessed
+for futon1b's own working tree — see the mission's Next section.
 
 **Owner and dependencies.** claude-3 drives; ams-claude-2 owns zone. Repos:
 futon1b (stores, FTS), futon3c (mesh sync, this mission), futon0 (design docs).
@@ -244,3 +279,17 @@ Unblocked meanwhile, and safe to do in any order:
 - Test whether `migration-export` can be produced from a **live** 21 GB store,
   or whether the node must stop (carried-forward tension 2). This is the
   single largest unknown in the transfer.
+- **Bring futon1b to inbox zero** — it holds the mission's most valuable asset
+  and has never been assessed. Surveyed 2026-08-14: in sync with origin, one
+  tracked modification (`test_json.clj`), ten untracked. Two of those are
+  authored documents that have never been committed —
+  `TN-xtdb2-query-ceilings-and-ingest-memory-2026-08-02.md` and
+  `holes/DEFECT-bitemporal-as-of-two-routes.md` — the same pattern that cost a
+  morning in futon3c. The rest are generated (`fts5-evidence.db{,-shm,-wal}`,
+  `logs/full-backfill.log`, `migration-export-full/export-summary.edn`,
+  `holes/jstack-hydration-slowness-2026-08-02.txt`) and want ignore rules.
+  Small job; do it before the store moves, not after.
+- Assess inbox zero on lon, chi and hyperreal. Their repos are 401 and 1060
+  commits behind with unpushed local work, so this is a larger job than
+  futon1b's and may be scoped out — but it should be a decision, not an
+  omission.
