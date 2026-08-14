@@ -1,0 +1,11 @@
+{:source "damage-state-fixture-20260730.edn"
+ :attachments-with-witness-status 62
+ :witness-status-values {":independently-witnessed": 53, ":self-asserted": 9}
+ :independently-witnessed 53
+ :independently-witnessed-with-witness-record 1
+ :independently-witnessed-WITHOUT-witness-record 52
+ :independently-witnessed-and-reviewed 52
+ :fraction-witnessed-lacking-record 0.9811
+ :status-x-witness-record {":independently-witnessed/without-witness-record": 52, ":independently-witnessed/with-witness-record": 1, ":self-asserted/without-witness-record": 8, ":self-asserted/with-witness-record": 1}
+ :witness-field-names-searched [":witness ", ":witnesses ", ":witness-refs", ":witness-evidence"]
+}

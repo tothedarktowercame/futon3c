@@ -1,0 +1,163 @@
+{
+ "artifact": "claude-9 memory use-mode taxonomy",
+ "date": "2026-07-31",
+ "corpus": "apm-lean",
+ "runner-model": "codex (all)",
+ "caveats": [
+  "one corpus",
+  "one runner model (all codex)",
+  "one day",
+  "seven modes from ~30 observed uses; tail not exhausted",
+  "receipt ids are claude-9-authored :evidence/type :pattern-outcome in the futon1b store at :7073"
+ ],
+ "modes": [
+  {
+   "n": "1",
+   "id": "interface-translation",
+   "gloss": "Connect a file's own predicates to Mathlib's, where a definitional mismatch blocks every library call.",
+   "character": "substitutive-adjacent: supplies no mathematics but makes existing mathematics callable",
+   "evidence": [
+    {
+     "problem": "a95J05",
+     "receipt": "de8c5005-c2b1-4724-ac59-cdc48e06d8eb",
+     "what": "bridged the file's STRICT-threshold TendstoInMeasureZero to Mathlib's CLOSED-threshold TendstoInMeasure"
+    },
+    {
+     "problem": "a96A01",
+     "receipt": "d93b18d6-b8cf-41a2-ba3d-ce943587e09b",
+     "what": "descend through eLpNorm/rpow before the lintegral rewrite, translating quasiNorm through lpNorm/eLpNorm"
+    }
+   ]
+  },
+  {
+   "n": "2",
+   "id": "proof-step",
+   "gloss": "Supply mathematics used directly in the argument.",
+   "character": "substitutive",
+   "evidence": [
+    {
+     "problem": "LemniscateComponents",
+     "receipt": "7fd3850e-959a-4c6c-85d9-f40aec83963d",
+     "what": "the lemniscate component bound, reused across a00J04/a01A08"
+    }
+   ]
+  },
+  {
+   "n": "3",
+   "id": "strategy-selection-against-the-problems-own-hint",
+   "gloss": "Override the method the problem statement itself proposes.",
+   "character": "regulative",
+   "evidence": [
+    {
+     "problem": "a01A10",
+     "receipt": "bbe05f2b-2df9-4f8e-87fd-2bb19ec5a319",
+     "what": "source TeX says 'use a contour integral'; memory steered to specialising Mathlib's Gaussian transform first, which is far more formalisable"
+    }
+   ]
+  },
+  {
+   "n": "4",
+   "id": "work-removal",
+   "gloss": "Make the proof shorter by deleting a step the scaffold assumed necessary.",
+   "character": "regulative",
+   "evidence": [
+    {
+     "problem": "a93A02",
+     "receipt": "ecfd21bb-8761-42f9-84cb-de34242383d6",
+     "what": "'return to the original functions before Vitali' eliminated the scaffold's unnecessary uniform-integrability proof for f_n - g"
+    }
+   ]
+  },
+  {
+   "n": "5",
+   "id": "proof-architecture",
+   "gloss": "Determine the decomposition before any step is attempted.",
+   "character": "regulative",
+   "evidence": [
+    {
+     "problem": "a96A02",
+     "receipt": "919d7eb0-86fa-43cd-a60f-0df5165a41c3",
+     "what": "representation-first guidance produced spike-lookup, midpoint, endpoint, value-range and junction lemmas BEFORE either global theorem; shaped a 484-line proof"
+    }
+   ]
+  },
+  {
+   "n": "6",
+   "id": "risk-ordering-triage",
+   "gloss": "Attack the riskiest interface first rather than polishing local lemmas.",
+   "character": "regulative",
+   "evidence": [
+    {
+     "problem": "a95J04",
+     "receipt": "666758ce-79c5-4ca9-8052-b323abd5b182",
+     "what": "probing the highest-risk assembly edge exposed an invalid meromorphicity hypothesis -- claude-9's OWN missed defect. MEMORY ACTED ON THE OPERATOR, NOT THE ACTOR."
+    },
+    {
+     "problem": "a95A02",
+     "receipt": "f5f2e8ec-76bb-48bc-9e38-838dca6e1d33",
+     "what": "same memory e-9751e537, same job: probe the countable-component assembly edge before polishing endpoint lemmas"
+    }
+   ]
+  },
+  {
+   "n": "7",
+   "id": "stopping-rule",
+   "gloss": "A constraint against doing work.",
+   "character": "regulative",
+   "evidence": [
+    {
+     "problem": "a95A02",
+     "receipt": "f5f2e8ec-76bb-48bc-9e38-838dca6e1d33",
+     "what": "bounded descent into endpoint infrastructure; error log confirms it bit -- 'endpoint bookkeeping threatened to recurse ... replaced by a direct component diameter lemma'. Attempts 1-4 had repeatedly added exactly that machinery; attempt 5 converged."
+    }
+   ]
+  }
+ ],
+ "not-use-modes-but-in-the-taxonomy": [
+  {
+   "id": "relevance-without-applicability",
+   "gloss": "Memory names the right shape of argument and lacks the usable form. DISTINCT from scope mismatch (right area, wrong sub-object): this is right content, unusable form.",
+   "note": "metric-3 scores these identically to genuinely unrelated memories",
+   "evidence": [
+    {
+     "problem": "a02J03",
+     "receipt": "b1c473a3-e000-435e-93bc-ee90ad4e610c",
+     "what": "'conceptually matches the remaining density step, but supplies no interval-indicator density construction'"
+    },
+    {
+     "problem": "a94A04",
+     "receipt": "521262e5-78e2-48fe-be91-f27192dc3996",
+     "what": "'considered but not used; Mathlib's direct dense-range inner-product lemma closed the analogous density step'"
+    },
+    {
+     "problem": "a95J06",
+     "receipt": "dd81c915-29cb-437b-921b-0fe6df3807d9",
+     "what": "'endpoint extension differs from the countable Cantor-gap problem'"
+    },
+    {
+     "problem": "a02J01",
+     "receipt": "6d168c49-116d-426c-bb1c-93a089103550",
+     "what": "'considered conceptually relevant to product integrability, but its Vitali route was not used'"
+    },
+    {
+     "problem": "a95A06",
+     "receipt": "b5e31aa4-0451-403a-92b4-17725ee0f399",
+     "what": "'relevant to the ALREADY-COMPLETED continuity theorem, but not to the natural-boundary reduction' -- a TEMPORAL distinction, right file wrong stage"
+    }
+   ]
+  },
+  {
+   "id": "used-correctly-wrong-decision",
+   "gloss": "Memory transferred its fact faithfully; runner drew the opposite operational conclusion because the memory carried the fact WITHOUT its consequent.",
+   "note": "used-ids scores this as a SUCCESS",
+   "evidence": [
+    {
+     "problem": "a96A04",
+     "receipt": "e9d008be-b34f-40a4-a00e-e6a16d245122",
+     "what": "'ContDiff top means analytic' arrived correctly; runner concluded 'therefore a hard analytic construction' instead of 'therefore the statement is mis-stated'. a01A03 had drawn the opposite conclusion from the same fact."
+    }
+   ]
+  }
+ ],
+ "headline-claim": "Modes 3-7 are NON-SUBSTITUTIVE: none supplies mathematics; they change what the runner does or stops doing. A use vocabulary with only 'supplied a step' makes five of seven invisible."
+}

@@ -1,0 +1,681 @@
+[
+ {
+  "job-id": "invoke-1785096421259-158-9638e22e",
+  "problem": "a93J02",
+  "surfaced-ids": [
+   "e-1ac936fb-04e8-460e-a710-37fac474401c",
+   "e-a9fc50f9-51a3-4908-a3d3-7ad0a8b46e3a",
+   "e-b3f51bc2-7509-4bc8-9750-3afc57cfdbec"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:**\n- **`convergence-in-measure-through-bounded-transform`** (surfaced memory): not directly applicable.\n- **`lacunary-series-three-layer-architecture`** (surfaced memory): not directly applicable.\n- **`symmetric-interval-law-to-dyadic-differentiation`** (surfaced memory): not directly applicable.\n- The Mathlib Leibniz formula proof (`Real.tendsto_sum_pi_div_four`) was the key template for the Abel's theorem application.\n--- ## Final Summary **Target:** Formalize and prove APM a93J02 \u2014 \u03a3(-1)\u207f/(n+1) = log 2 via dominated convergence. **Validation command:** `cd /home/joe/code/apm-lean && lake env lean problems/a93J02/lean/Main.lean` **...\nStarting on a93J02. Let me read the problem files immediately.\nThis is a clear problem: prove \u03a3(-1)\u207f/(n+1) = log 2 using DCT. The key insight from the informal solution is that Mathlib likely already has `Real.log` and integral machinery. Let me check if Mathlib already proves this result, and start writing Lean early.\nVery interesting! Line 354 of `Log/Deriv.lean`: `HasSum (fun n : \u2115 => x ^ (n + 1) / (n + 1)) (-log (1 - x))`. This is the Taylor series of `-log(1-x)`. If I substitute `x = -1`, I get `-log(2) = \u03a3 (-1)^{n+1}/(n+1)`, i.e., `log(2) = \u03a3 (-1)^n/(n+1)`. But `x = -1` is on the boundary, so this might not apply directly.\n\nLet me check the exact statement and domain:\nSo `hasSum_pow_div_log_of_abs_lt_one` requires `|x| < 1`. For our problem we need `x = -1` which has `|x| = 1`, so this doesn't directly apply. The DCT approach is needed to extend to the boundary.\n\nHowever, the problem says \"Apply the dominated convergence theorem.\" So I need to actually use DCT. But if Mathlib already has a way to get the result (even without DCT), I could prove the statement and note the method in comments. Let me check if there's a mo \u2026[truncated]"
+ },
+ {
+  "job-id": "invoke-1785098957336-167-75dd4cab",
+  "problem": "a96A04",
+  "surfaced-ids": [
+   "e-9751e537-f5b7-4c40-a857-0c0b699b93a2",
+   "e-dfea2de9-8979-4f8f-9343-caabb48487e6"
+  ],
+  "used-ids": [
+   "e-9751e537-f5b7-4c40-a857-0c0b699b93a2",
+   "e-dfea2de9-8979-4f8f-9343-caabb48487e6"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:**\n- **`stop-research-after-repeated-young-api-miss`** (process memory): Confirmed that parts (b) and (c) are blocked on Young's convolution inequality which is genuinely absent from Mathlib. This guided me to focus on the provable Gaussian integral rather than re-probing missing APIs.\n- **`inventory-assembly-dependencies-before-polishing-leaves`** (process memory): Supported the strategy of identifying which components are provable vs blocked before spending effort, leading to the efficient proof of `heatKernel_integral`.\n## Final Summary **Target:** Continue APM a96A04 \u2014 heat kernel smoothness, L\u00b2 contraction, convergence. Reduce sorries from 4. **Validation command:** `cd /home/joe/code/apm-lean && lake env lean problems/a96A04/lean/...\nLet me start by reading the existing work on a96A04.\nGood \u2014 4 sorries. Let me check what Mathlib has for the Gaussian integral, which is the most tractable to close first:\n`integral_gaussian (b : \u211d) : \u222b x : \u211d, exp (-b * x ^ 2) = \u221a(\u03c0 / b)`. This is exactly what I need for the heat kernel normalization. Let me read the exact statement:\n`integral_gaussian` has `\u222b x : \u211d, exp (-b * x ^ 2) = \u221a(\u03c0 / b)` for all `b : \u211d` (including `b \u2264 0` where both sides are 0). For `b > 0`, this is the standard Gaussian integral.\n\nNow the heat kernel normalization: `\u222b G_t(x) dx = (4\u03c0t)^{-1/2} \u222b exp(-x\u00b2/(4t)) dx`. With `b = 1/(4t)`: `\u222b exp(-x\u00b2/(4t)) dx = \u222b exp(-x\u00b2\u00b7(1/(4t))) dx`. Let me write `x\u00b2/(4t) = (1/(4t))\u00b7x\u00b2`, so `b = 1/(4t)`. Then `\u222b exp(-b\u00b7x\u00b2) = \u221a(\u03c0/b) = \u221a(4\u03c0t)`. So the normalization is `(4\u03c0t)^{-1/2} \u00b7 \u221a(4\u03c0t) = 1`.\n\nLet me now prove `heatKernel_integral`:\nNow prove `heatKernel_integral`:\nThe `rw` to rearrange `4 * \u03c0 * t = 4 * (\u03c0 * t)` doesn't find a match because it's inside the `heatKernel` function. Let me simplify the proof \u2014 unfold `h \u2026[truncated]"
+ },
+ {
+  "job-id": "invoke-1785132489867-176-174d5c40",
+  "problem": "a96A03",
+  "surfaced-ids": [
+   "e-65b94d16-3cdd-4850-970a-62974766637a",
+   "e-7b39a396-5b35-4b84-a12f-9032c438c804"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:**\n- **`liouville-bounded-entire-constant-api`** and **`reduce-lattice-periodic-entire-functions-to-compact-domain`**: from a93J05 (different problem class), not directly applicable.\n- The liminf API challenges echo those from a93A03 part (b), confirming the recurring pattern that `liminf_le_of_le` requires careful `IsBoundedUnder` construction.\n## Final Summary **Target:** Formalize and prove APM a96A03 \u2014 a.e. convergence in L\u00b2 unit ball implies weak convergence. **Validation command:** `cd /home/joe/code/apm-lean && lake env lean problems/a96A03/lean/Main.l...\nStarting on a96A03. Let me read the problem files immediately.\nGood \u2014 this is an L\u00b2 functional analysis problem. Two parts: (1) f \u2208 B via Fatou's lemma, (2) weak convergence via density + DCT. Let me check what Mathlib has for the key lemmas:\nExcellent! `eLpNorm'_lim_le_liminf_eLpNorm'` \u2014 this is Fatou's lemma for Lp norms! Let me read it:\n`eLpNorm'_lim_le_liminf_eLpNorm'` \u2014 this is exactly Fatou for Lp norms! It takes:\n- `hp_pos : 0 < p` (for p = 2, trivially true)\n- `hf : \u2200 n, AEStronglyMeasurable (f n) \u03bc`\n- `h_lim : \u2200\u1d50 x, Tendsto (fun n => f n x) atTop (\ud835\udcdd (f_lim x))`\n- Returns: `eLpNorm' f_lim p \u03bc \u2264 atTop.liminf fun n => eLpNorm' (f n) p \u03bc`\n\nBut note it uses `eLpNorm'` (the primed version) not `eLpNorm`. Let me check the difference:\nGood \u2014 `eLpNorm_eq_eLpNorm'` converts between the two for p \u2260 0, \u221e. Now let me write the Lean file. I'll start with part (1) using Fatou's lemma:\nMissing import for `\ud835\udcdd` and `eLpNorm'_lim_le_liminf_eLpNorm'`. Let me fix imports:\nWrong import. Let me use the right one:\nThe `eLpNorm'_lim_le_liminf_eLpNorm'` isn't found \u2014 it might need a namespace. Let me check:\nIt's inside `MeasureTheory.Lp` namespace. Let me also check the `eLpNorm_eq_eLpNorm'` signature more carefully. \u2026[truncated]"
+ },
+ {
+  "job-id": "invoke-1785240935276-230-26db063f",
+  "problem": "young-convolution-L1-L2",
+  "surfaced-ids": [
+   "e-9751e537-f5b7-4c40-a857-0c0b699b93a2",
+   "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
+   "e-dfea2de9-8979-4f8f-9343-caabb48487e6"
+  ],
+  "used-ids": [
+   "e-9751e537-f5b7-4c40-a857-0c0b699b93a2",
+   "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
+   "e-dfea2de9-8979-4f8f-9343-caabb48487e6"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-9751e537-f5b7-4c40-a857-0c0b699b93a2` \u2014 used. Prompted early probing of the high-risk integral assembly and an early compiling checkpoint.\n- `e-dfea2de9-8979-4f8f-9343-caabb48487e6` \u2014 used. Kept API reconnaissance bounded once the integral-Minkowski gap was confirmed.\n- `e-bb16ffa8-e6da-4956-81c3-011e312d5302` \u2014 used. Its API map correctly identified Fubini/integrability assembly as the frontier; I added the compiling translation-invariance leaf."
+ },
+ {
+  "job-id": "invoke-1785243793353-233-a32962a2",
+  "problem": "young-convolution-L1-L2-frontier",
+  "surfaced-ids": [
+   "e-9751e537-f5b7-4c40-a857-0c0b699b93a2",
+   "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
+   "e-dfea2de9-8979-4f8f-9343-caabb48487e6"
+  ],
+  "used-ids": [
+   "e-9751e537-f5b7-4c40-a857-0c0b699b93a2",
+   "e-bb16ffa8-e6da-4956-81c3-011e312d5302",
+   "e-dfea2de9-8979-4f8f-9343-caabb48487e6"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-9751e537-f5b7-4c40-a857-0c0b699b93a2` \u2014 used. I tested the weighted Cauchy\u2013Schwarz and Tonelli assembly edges before further leaf polishing.\n- `e-dfea2de9-8979-4f8f-9343-caabb48487e6` \u2014 used. API reconnaissance was bounded; I switched immediately to constructing the local ENNReal lemma rather than repeating searches for Young/Minkowski.\n- `e-bb16ffa8-e6da-4956-81c3-011e312d5302` \u2014 used. Its diagnosis that Fubini/integrability was the true frontier was accurate; translation invariance plus the new weighted lemma completed that assembly."
+ },
+ {
+  "job-id": "invoke-1785246177365-240-fcde4301",
+  "problem": "schwarz-equality-case",
+  "surfaced-ids": [
+   "e-3c8277ed-f830-4578-b69c-ef5ace0a1b24",
+   "e-9e32e848-089b-4ec7-8aff-63d6558e7db6",
+   "e-aa9c729b-fe1e-435d-ba5d-bb19087f27a7",
+   "e-d0b4ed4d-98ac-4f50-a3ca-daf64abc14b0",
+   "e-d9b1739f-7820-4949-afb0-d63146b71508"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- Ignored `e-3c8277ed-f830-4578-b69c-ef5ace0a1b24`, `e-9e32e848-089b-4ec7-8aff-63d6558e7db6`, `e-aa9c729b-fe1e-435d-ba5d-bb19087f27a7`, `e-d0b4ed4d-98ac-4f50-a3ca-daf64abc14b0`, and `e-d9b1739f-7820-4949-afb0-d63146b71508`: all concern unrelated antiderivative, denominator-normalization, or topology issues."
+ },
+ {
+  "job-id": "invoke-1785342613132-282-b20c35fc",
+  "problem": "a01A02-weakL2-L1-bound",
+  "surfaced-ids": [
+   "e-0e4e32fe-54af-451b-b302-17aa521891fd",
+   "e-30e87097-f843-4341-81c0-a49ee7ce0ef4",
+   "e-afb1eae8-284f-4551-8c49-d0babd83a780",
+   "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde",
+   "e-ff95cfd3-c645-4b64-afa1-46605015bb00"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-0e4e32fe-54af-451b-b302-17aa521891fd`: ignored; no liminf obligation arose.\n- `e-30e87097-f843-4341-81c0-a49ee7ce0ef4`: ignored; no liminf side condition arose.\n- `e-afb1eae8-284f-4551-8c49-d0babd83a780`: ignored; Hilbert-space Kadec\u2013Klee strategy is unrelated.\n- `e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde`: ignored; no Fatou/a.e.-limit step arose.\n- `e-ff95cfd3-c645-4b64-afa1-46605015bb00`: ignored; square-root transport is downstream algebra, but the hypothesis is already unsound.\n\nNo compile errors occurred beyond the expected sorry warning, so error recall was not triggered. The unrelated backup file remains untouched.\nBlocked: the theorem is false as stated because the weak bound uses `ENNReal.toReal` without a finiteness hypothesis. Counterexample: - Take `\u03b1 = \u211d`, `f \u2261 1`, and any `C > 0`. - For `0 < t < 1`, the superlevel set is ..."
+ },
+ {
+  "job-id": "invoke-1785353412527-288-08144a51",
+  "problem": "a01A05-gram-schmidt-approximation",
+  "surfaced-ids": [
+   "e-0e4e32fe-54af-451b-b302-17aa521891fd",
+   "e-30e87097-f843-4341-81c0-a49ee7ce0ef4",
+   "e-afb1eae8-284f-4551-8c49-d0babd83a780",
+   "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde",
+   "e-ff95cfd3-c645-4b64-afa1-46605015bb00"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-0e4e32fe-54af-451b-b302-17aa521891fd`: ignored; no liminf argument arose.\n- `e-30e87097-f843-4341-81c0-a49ee7ce0ef4`: ignored; no liminf side condition arose.\n- `e-afb1eae8-284f-4551-8c49-d0babd83a780`: ignored; Kadec\u2013Klee proves strong convergence from already-known weak convergence, unlike this task.\n- `e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde`: ignored; no Fatou or a.e.-limit argument arose.\n- `e-ff95cfd3-c645-4b64-afa1-46605015bb00`: ignored; the counterexample used an elementary norm calculation, not the norm-limit transport chain.\n\nThe approximation statement needs either stronger pairwise hypotheses or a larger accumulated-error bound. The unrelated backup remains untouched.\nBlocked: `gramSchmidt_approximation` is false. Counterexample in \\(\\ell^2(\\mathbb N)\\): \\[ f_0=e_0,\\qquad f_1=\\tfrac12e_0+\\tfrac{\\sqrt3}{2}e_1,\\qquad f_n=e_n\\quad(n\\ge2). \\] Every vector has norm one, and all required..."
+ },
+ {
+  "job-id": "invoke-1785432909957-364-928b4249",
+  "problem": "a95J03-polynomial-degree",
+  "surfaced-ids": [
+   "e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity",
+   "e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness",
+   "e-codexpilot-convert-unit-complex-coefficient-to-an-angle-rotation",
+   "e-codexpilot-derive-circle-curve-length-from-the-average-of-the-derivative",
+   "e-codexpilot-extend-holomorphic-disk-recall-description-with-laurent-pole-vocabulary"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-codexpilot-analytic-order-at-least-two-implies-local-noninjectivity`: ignored; unrelated complex-analytic local injectivity result.\n- `e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness`: ignored; concerns Schwarz rigidity and coefficient uniqueness, not this finite polynomial degree bound.\n- `e-codexpilot-convert-unit-complex-coefficient-to-an-angle-rotation`: ignored; unrelated rotation normalization.\n- `e-codexpilot-derive-circle-curve-length-from-the-average-of-the-derivative`: ignored; unrelated analytic integral estimate.\n- `e-codexpilot-extend-holomorphic-disk-recall-description-with-laurent-pole-vocabulary`: ignored; unrelated Laurent/pole vocabulary."
+ },
+ {
+  "job-id": "invoke-1785433194612-365-336a88d9",
+  "problem": "a96A03-weak-convergence",
+  "surfaced-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus",
+   "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
+   "e-codexpilot-le-liminf-is-cobounded-under-unbounded-above-gap",
+   "e-codexpilot-spread-small-pairwise-correlations-across-growing-triangular-support"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus`: ignored; concerns liminf and Banach\u2013Steinhaus.\n- `e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness`: considered as the density-based alternative, but not used because product-level Vitali was shorter and directly supported.\n- `e-codexpilot-le-liminf-is-cobounded-under-unbounded-above-gap`: ignored; unrelated liminf API.\n- `e-codexpilot-spread-small-pairwise-correlations-across-growing-triangular-support`: ignored; unrelated counterexample technique.\n- `e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses`: ignored; no recursive missing lemma arose.\n- No error-time memories surfaced."
+ },
+ {
+  "job-id": "invoke-1785434639043-369-d460cf72",
+  "problem": "a00J04-lemniscate-components",
+  "surfaced-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap",
+   "e-codexpilot-distinguish-clean-measure-theory-recall-gap-from-malformed-query",
+   "e-codexpilot-extend-holomorphic-disk-recall-description-with-laurent-pole-vocabulary"
+  ],
+  "used-ids": [
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses`: considered but not used; no recursive missing theorem was introduced.\n- `e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases`: respected; this required a genuine exterior-connectivity construction, not merely interface adaptation.\n- `e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap`: used as a caution; the empty error recall was not treated as evidence of absence.\n- `e-codexpilot-distinguish-clean-measure-theory-recall-gap-from-malformed-query`: ignored as measure-theory-specific.\n- `e-codexpilot-extend-holomorphic-disk-recall-description-with-laurent-pole-vocabulary`: ignored as unrelated."
+ },
+ {
+  "job-id": "invoke-1785436046073-372-28603266",
+  "problem": "a01A08-lemniscate-complement-components",
+  "surfaced-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap",
+   "e-codexpilot-distinguish-clean-measure-theory-recall-gap-from-malformed-query",
+   "e-codexpilot-extend-holomorphic-disk-recall-description-with-laurent-pole-vocabulary"
+  ],
+  "used-ids": [
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases`: used as a caution; although this row permitted an adapter-like transplant, the retained proof contains genuine topology and radial construction.\n- `e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses`: considered; no recursion occurred because the sibling had already closed the construction.\n- `e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap`: considered when interpreting the empty Zulip result; no terrain-gap claim was made.\n- `e-codexpilot-distinguish-clean-measure-theory-recall-gap-from-malformed-query`: ignored as measure-theory-specific.\n- `e-codexpilot-extend-holomorphic-disk-recall-description-with-laurent-pole-vocabulary`: ignored as unrelated to polynomial lemniscate topology."
+ },
+ {
+  "job-id": "invoke-1785439906978-381-36c58afb",
+  "problem": "a92J05-rouche-root-count",
+  "surfaced-ids": [
+   "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound",
+   "e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity",
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-descend-through-eLpNorm-rpow-before-lintegral-rewrite",
+   "e-codexpilot-extend-fin-partition-to-bounded-nat-sequence-for-telescoping"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound`: relevant to the degree support already committed in the preceding pass; not needed for this homotopy lemma.\n- `e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity`: ignored; radial integration-specific.\n- `e-codexpilot-derive-integrable-from-nonzero-bochner-integral`: ignored; measure-theory-specific.\n- `e-codexpilot-descend-through-eLpNorm-rpow-before-lintegral-rewrite`: ignored; measure-theory-specific.\n- `e-codexpilot-extend-fin-partition-to-bounded-nat-sequence-for-telescoping`: ignored; unrelated finite-partition API."
+ },
+ {
+  "job-id": "invoke-1785440558225-384-2820fe28",
+  "problem": "connectedComponents-complement-lemniscate",
+  "surfaced-ids": [
+   "e-codexpilot-count-polynomial-lemniscate-components-by-roots-plus-one-exterior",
+   "e-codexpilot-frontier-of-open-connected-component-lies-in-ambient-frontier",
+   "e-codexpilot-turn-component-membership-into-interior-membership-via-openness",
+   "e-codexpilot-zulip-general-topology-complement-connected-component-anchor"
+  ],
+  "used-ids": [
+   "e-codexpilot-count-polynomial-lemniscate-components-by-roots-plus-one-exterior",
+   "e-codexpilot-frontier-of-open-connected-component-lies-in-ambient-frontier",
+   "e-codexpilot-turn-component-membership-into-interior-membership-via-openness",
+   "e-codexpilot-zulip-general-topology-complement-connected-component-anchor"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-codexpilot-count-polynomial-lemniscate-components-by-roots-plus-one-exterior`: used directly as the proof architecture.\n- `e-codexpilot-frontier-of-open-connected-component-lies-in-ambient-frontier`: used; the existing public frontier lemma was preserved.\n- `e-codexpilot-turn-component-membership-into-interior-membership-via-openness`: used in the component-frontier construction.\n- `e-codexpilot-zulip-general-topology-complement-connected-component-anchor`: used as the literature anchor and correctly treated as non-polynomial background."
+ },
+ {
+  "job-id": "invoke-1785441024938-386-944657a5",
+  "problem": "rouche-root-count-transfer",
+  "surfaced-ids": [
+   "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count",
+   "e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap",
+   "e-codexpilot-finish-an-outside-root-count-from-an-inside-count-and-no-boundary-roots",
+   "e-codexpilot-order-proof-search-by-known-route-components-before-literature",
+   "e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another"
+  ],
+  "used-ids": [
+   "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count",
+   "e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap",
+   "e-codexpilot-order-proof-search-by-known-route-components-before-literature",
+   "e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `e-codexpilot-diagnose-recall-empty-before-declaring-terrain-gap` \u2014 used: independently verified current APIs rather than treating previous recall emptiness as evidence of absence.\n- `e-codexpilot-finish-an-outside-root-count-from-an-inside-count-and-no-boundary-roots` \u2014 ignored for this construction proof; it concerns downstream algebraic bookkeeping after the analytic inside-count transfer.\n- `e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another` \u2014 used: current closed-one-form homotopy infrastructure improved the route over covering-space lifting.\n- `e-codexpilot-order-proof-search-by-known-route-components-before-literature` \u2014 used: searched components first, then Zulip; arXiv was unnecessary because the route was known.\n- `e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count` \u2014 used to confirm that this analytic transfer, rather than polynomial degree bookkeeping, is the beneficiary\u2019s exact residual frontier.\n\nThe only untracked repository item remains the pre-existing unrelated `ApmCanaries/Current.lean.bak`.\nOutcome: blocked at the genuine argument-principle frontier. I committed an axiom-clean analytic homotopy package, without weakening or relocating the remaining theorem. Commit: `929e7cade198a20269e6010ea65974cee5bd59..."
+ },
+ {
+  "job-id": "invoke-1785448407546-396-80ac8783",
+  "problem": "a01A06-orlicz-not-L2",
+  "surfaced-ids": [
+   "e-0e4e32fe-54af-451b-b302-17aa521891fd",
+   "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound",
+   "e-codexpilot-derive-local-L1-from-weak-L2-by-layer-cake-and-optimized-splitting",
+   "e-codexpilot-prove-eLpNorm-to-essential-supremum-by-superlevel-and-probability-monotonicity",
+   "e-codexpilot-refute-essential-boundedness-at-a-singularity-on-a-positive-measure-ball"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Ignored `e-codexpilot-derive-local-L1-from-weak-L2-by-layer-cake-and-optimized-splitting`: no weak-\\(L\u00b2\\) premise.\n- Ignored `e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound`: unrelated.\n- Ignored `e-codexpilot-refute-essential-boundedness-at-a-singularity-on-a-positive-measure-ball`: conceptually adjacent singularity, but concerns \\(L^\\infty\\), not the required \\(L\u00b2\\) counterexample.\n- Ignored `e-codexpilot-prove-eLpNorm-to-essential-supremum-by-superlevel-and-probability-monotonicity`: unrelated.\n- Ignored `e-0e4e32fe-54af-451b-b302-17aa521891fd`: unrelated liminf result.\n\nThe unrelated untracked `ApmCanaries/Current.lean.bak` remains untouched."
+ },
+ {
+  "job-id": "invoke-1785449302666-400-2956dd68",
+  "problem": "a01A09-laplace-transform",
+  "surfaced-ids": [
+   "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6",
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity",
+   "e-codexpilot-prove-eLpNorm-translation-through-the-underlying-lintegral"
+  ],
+  "used-ids": [
+   "e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used conceptually: `e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity` for function-level congruence bridges.\n- Ignored as unrelated: `e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile`, `e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6`, `e-codexpilot-prove-eLpNorm-translation-through-the-underlying-lintegral`.\n- `e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation` was reviewed but no instance diamond arose.\n- Error recall was invoked for the encountered compile errors; it returned no memory IDs.\n\nError \u2192 fix highlights:\n\n- Missing canary `.olean` \u2192 built the declared scratch dependency.\n- Stale complex-analysis and `MemLp` APIs \u2192 migrated to current equivalents.\n- Kernel integrability gap \u2192 conjugate-exponent H\u00f6lder proof.\n- Analyticity gap \u2192 locally dominated parametric differentiation.\n- Missing measurability assumption in compact-support theorem \u2192 split on integrability and handled the nonintegrable branch via `integral_undef`."
+ },
+ {
+  "job-id": "invoke-1785451020936-403-177f0408",
+  "problem": "a01A07-L1-disk-convergence",
+  "surfaced-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count",
+   "e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound",
+   "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence"
+  ],
+  "used-ids": [
+   "e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound",
+   "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- `e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence` \u2014 used. Its local half-disk route carried the proof and avoided the discarded finite-cover construction.\n- `e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound` \u2014 used as verified prerequisite support; that bridge was already axiom-clean, so it was not rebuilt.\n- `e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses` \u2014 ignored; it concerns the unrelated univalent-derivative frontier.\n- `e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases` \u2014 ignored; general orchestration feedback did not affect this concrete proof.\n- `e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count` \u2014 ignored; unrelated Rouch\u00e9/argument-principle terrain.\n- Error-time recall was queried twice and returned no memory IDs.\n\nThe pre-existing untracked `ApmCanaries/Current.lean.bak` remains untouched.\nCompleted axiom-clean. `tendstoUniformlyOn_of_L1_on_disks` is proved, and all downstream declarations are now free of transitive `sorryAx`. Route: - Used the standard disk sub-mean argument. - Around each `x \u2208 \u03a9`, cho..."
+ },
+ {
+  "job-id": "invoke-1785451054804-404-ea54a8e6",
+  "problem": "a01A10-gaussian-fresnel",
+  "surfaced-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count",
+   "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count",
+   "e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another"
+  ],
+  "used-ids": [
+   "e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used: `e-codexpilot-override-a-documented-proof-route-when-component-evidence-favors-another`. Component evidence required replacing the documented \u201cbuild a contour proof\u201d route with the existing Gaussian theorem and rejecting the false Bochner-Fresnel target.\n- Reviewed but not needed:\n  - `e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses`\n  - `e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases`\n- Ignored as unrelated:\n  - `e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count`\n  - `e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count`\n- Error recall was run for each compile-error class and returned no error-time memory IDs.\n\nError \u2192 fix log:\n\n- Integral-function equality rejected `funext` \u2192 used `integral_congr_ae`.\n- Real-square-root versus complex `cpow` mismatch \u2192 bridged with `Real.sqrt_eq_rpow` and `Complex.ofReal_cpow`.\n- Norm simplification left an imaginary-part expression \u2192 rewrote through `Complex.norm_exp_I_mul_ofReal`.\n- Constant-integrability contradiction shape mismatch \u2192 used `integrableOn_const_iff` together with `volume_Ioi = \u221e`."
+ },
+ {
+  "job-id": "invoke-1785452411378-406-4a85d0fb",
+  "problem": "a02J05-dirichlet-sinc",
+  "surfaced-ids": [
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity",
+   "e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x",
+   "e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral"
+  ],
+  "used-ids": [
+   "e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x",
+   "e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used:\n  - `e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral` to evaluate the inherited Abel route and identify the precise remaining bridge.\n  - `e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x` directly informed the uniform tail estimate and Cauchy proof.\n- Ignored as unrelated:\n  - `e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile`\n  - `e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation`\n  - `e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity`\n- Error-time recall surfaced `e-codexpilot-package-closed-ball-holomorphicity-as-DiffContOnCl-for-Cauchy-estimates`; ignored because it concerns complex closed-ball differentiability, not the real improper-integral errors. Other error recalls returned no IDs.\n\nError \u2192 fix log:\n\n- FTC result normalized as `-b\u207b\u00b9 + a\u207b\u00b9` \u2192 closed by explicit ring normalization.\n- `fun_prop` could not infer denominator nonvanishing \u2192 supplied positivity on `uIcc`.\n- Triangle inequality parsing around nested subtraction \u2192 expanded it through explicit `abs_add_le` steps.\n- Missing filter namespace qualifiers \u2192 used `Filter.Ici_mem_atTop`, `Filter.eventually_ge_atTop`, and `Filter.Tendsto.congr'`.\n- Set integral/interval integral rewrite ambiguity \u2192 instantiated endpoints and measure explicitly."
+ },
+ {
+  "job-id": "invoke-1785453304694-411-86a472d7",
+  "problem": "a02J05-dirichlet-sinc",
+  "surfaced-ids": [
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity",
+   "e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x",
+   "e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral"
+  ],
+  "used-ids": [
+   "e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x",
+   "e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage\n\n`[dispatch-recall-outcome=completed-with-memories]`\n\n- Used `e-codexpilot-remove-Abel-regularization-from-the-Dirichlet-sinc-integral`.\n- Used `e-codexpilot-derive-a-sinc-tail-identity-by-differentiating-cosine-over-x`.\n- Ignored the radial-R\u00b3, Euclidean measurable-space, and Orlicz memories as unrelated."
+ },
+ {
+  "job-id": "invoke-1785456131137-414-deba81c2",
+  "problem": "a01J01-uniform-integrability",
+  "surfaced-ids": [
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity",
+   "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks",
+   "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- `e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure`: reviewed but not used; concerns infinite-space weak convergence.\n- The other four dispatch memories were unrelated and ignored.\n- Error recall was invoked after each compile-error family and returned no memory IDs.\n\nError \u2192 fix log:\n\n- Obsolete constant-integral/indicator rewrites \u2192 used `integral_indicator_const`.\n- Unqualified `volume_Icc` \u2192 used `Real.volume_Icc`.\n- Old reciprocal/square APIs \u2192 used `inv_lt_comm\u2080` and `sq_lt_sq\u2080`.\n- Set-integral measure mismatch \u2192 used `setIntegral_eq_integral_of_forall_compl_eq_zero`.\n- ENNReal delta, including `\u03b4 = \u22a4` \u2192 split finite/top cases and used `toReal`.\n- Old `let \u2026 in` parser failure \u2192 equivalent semicolon syntax."
+ },
+ {
+  "job-id": "invoke-1785456161357-415-96ae984b",
+  "problem": "a01J02-lebesgue-borel-completion",
+  "surfaced-ids": [
+   "e-4adf0546-2bed-4f35-93f1-032cd254177f",
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-prove-eLpNorm-to-essential-supremum-by-superlevel-and-probability-monotonicity",
+   "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- `e-codexpilot-prove-eLpNorm-to-essential-supremum-by-superlevel-and-probability-monotonicity` \u2014 ignored; unrelated eLpNorm terrain.\n- `e-4adf0546-2bed-4f35-93f1-032cd254177f` \u2014 ignored; no convergence-in-measure step.\n- `e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde` \u2014 ignored; no Fatou or liminf step.\n- `e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile` \u2014 ignored; unrelated radial integration.\n- `e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation` \u2014 ignored; the failure is an ill-typed measure/domain pairing, not an instance diamond.\n- Required error recall returned no memory IDs.\nBlocked: the two target statements do not elaborate in the installed Mathlib, and repairing them requires changing their types. Route and search: - Standard result: completion-measurable sets/functions have measurable..."
+ },
+ {
+  "job-id": "invoke-1785457030310-419-0dd760eb",
+  "problem": "a01J06-jensen-zero-count",
+  "surfaced-ids": [
+   "e-3c62f164-174b-4d75-b5bd-67f1bbbbfb5d",
+   "e-ca13d43b-128b-4ca3-a1c9-89ab32584ef6",
+   "e-cae42a27-acb6-4452-b76b-00175593b32f",
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- All five dispatched memories were reviewed and ignored as unrelated to this zero-enumeration modeling defect.\n- Error recall was run for both compile errors; it returned no memory IDs.\n- Error \u2192 fix:\n  - Exponential nonnegativity not closed by `simp` \u2192 used `Real.exp_pos`.\n  - Weight rewrite under `Tendsto` failed \u2192 established a function equality with `funext`, then rewrote."
+ },
+ {
+  "job-id": "invoke-1785457061590-420-9110d0ac",
+  "problem": "a02J01-schur-test",
+  "surfaced-ids": [
+   "e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness",
+   "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks",
+   "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
+   "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence",
+   "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- `e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks` \u2014 ignored; unrelated holomorphic convergence terrain.\n- `e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness` \u2014 ignored; unrelated complex-analysis rigidity.\n- `e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure` \u2014 ignored as a proof route; the infinite-measure warning is directionally related, but the targets fail earlier through `integral_undef`.\n- `e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence` \u2014 ignored; unrelated diskwise convergence.\n- `e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde` \u2014 ignored; no Fatou or liminf argument applies.\n- No error-time memories were queried because the required Lean command produced no errors.\nBlocked: all three target statements are false under Mathlib\u2019s Bochner-integral semantics. The decisive library fact is: ```text MeasureTheory.integral_undef (h : \u00acIntegrable f \u03bc) : \u222b a, f a \u2202\u03bc = 0 ``` Because the amb..."
+ },
+ {
+  "job-id": "invoke-1785459775899-422-8b0bdb11",
+  "problem": "a02J02-radon-riesz",
+  "surfaced-ids": [
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity",
+   "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks",
+   "e-codexpilot-derive-local-L1-from-weak-L2-by-layer-cake-and-optimized-splitting"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- `e-codexpilot-derive-local-L1-from-weak-L2-by-layer-cake-and-optimized-splitting`: reviewed as measure-theoretically adjacent, but not applicable.\n- The remaining four dispatch memories were unrelated and ignored.\n- No error-time memory lookup was required because the implementation compiled on its first attempt.\n\nError \u2192 fix log:\n\n- No compile errors.\n- Real-valued generalized mean inequality was unavailable directly in the required form \u2192 lifted absolute values to `NNReal` and transported the existing theorem with `exact_mod_cast`."
+ },
+ {
+  "job-id": "invoke-1785460187893-426-75c10560",
+  "problem": "a02J02-radon-riesz",
+  "surfaced-ids": [
+   "e-0e4e32fe-54af-451b-b302-17aa521891fd",
+   "e-afb1eae8-284f-4551-8c49-d0babd83a780",
+   "e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks",
+   "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure",
+   "e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence"
+  ],
+  "used-ids": [
+   "e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n`[dispatch-recall-outcome=completed-with-memories]`\n\n- `e-codexpilot-prove-weak-L2-convergence-by-Vitali-on-products-over-infinite-measure`: conceptually relevant confirmation of the Vitali architecture.\n- `e-codexpilot-complete-diskwise-L1-to-compact-uniform-convergence-on-local-half-disks`: ignored; holomorphic compact convergence is unrelated.\n- `e-codexpilot-upgrade-diskwise-L1-convergence-to-local-uniform-convergence`: ignored for the same reason.\n- `e-afb1eae8-284f-4551-8c49-d0babd83a780`: analogous Kadec\u2013Klee strategy, but not used for general `Lp`.\n- `e-0e4e32fe-54af-451b-b302-17aa521891fd`: ignored; the liminf boundedness obstruction does not arise in the Scheff\u00e9\u2013Vitali route."
+ },
+ {
+  "job-id": "invoke-1785463015054-436-acf510c5",
+  "problem": "a93J07-hurwitz",
+  "surfaced-ids": [
+   "e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness",
+   "e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus",
+   "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
+   "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate",
+   "e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- `e-codexpilot-derive-real-liminf-lower-semicontinuity-via-Banach-Steinhaus`: ignored; concerns weak convergence and real liminf.\n- `e-e7805bcc-6d9f-492d-9bd5-b12d0fbb9dde`: ignored; concerns Fatou\u2019s lemma and `L\u00b2`.\n- `e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness`: ignored; Schwarz rigidity was not part of this route.\n- `e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate`: ignored; no cocompact integral occurred.\n- `e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness`: ignored; unrelated Hilbert-space weak convergence.\n- Error-time recall returned no memory IDs.\n\nThe unrelated untracked `ApmCanaries/Current.lean.bak` remains untouched.\nCompleted all three Hurwitz declarations axiom-clean. - Commit: `b898439` \u2014 `Prove Hurwitz limit theorems` - File changed: `problems/a93J07/lean/Main.lean` - Sorry count: 3 \u2192 0 Route and anchor: - `hurwitz_eventually_..."
+ },
+ {
+  "job-id": "invoke-1785463217420-437-12ef7c36",
+  "problem": "a94A01-indicator-convergence",
+  "surfaced-ids": [
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity",
+   "e-codexpilot-derive-the-unit-ball-volume-recursion-through-Wallis-parity-formulas",
+   "e-codexpilot-identify-an-L1-kernel-from-its-action-on-smooth-test-derivatives"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Ignored `e-codexpilot-identify-an-L1-kernel-from-its-action-on-smooth-test-derivatives`: unrelated convolution problem.\n- Ignored `e-codexpilot-derive-the-unit-ball-volume-recursion-through-Wallis-parity-formulas`: unrelated geometry.\n- Ignored `e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile`: unrelated radial integration.\n- Ignored `e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation`: no instance diamond arose.\n- Ignored `e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity`: unrelated Orlicz problem."
+ },
+ {
+  "job-id": "invoke-1785464073951-441-1c05a75c",
+  "problem": "a94A03-gaussian-approximate-identity",
+  "surfaced-ids": [
+   "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound",
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-derive-the-unit-ball-volume-recursion-through-Wallis-parity-formulas",
+   "e-codexpilot-normalize-r3-radial-coefficient-to-four-pi",
+   "e-codexpilot-reduce-probability-kernel-L2-contraction-to-young"
+  ],
+  "used-ids": [
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-reduce-probability-kernel-L2-contraction-to-young"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-derive-integrable-from-nonzero-bochner-integral`: derived kernel integrability from its nonzero integral and `integral_undef`.\n- Used conceptually `e-codexpilot-reduce-probability-kernel-L2-contraction-to-young`: accurately identifies the missing Young estimate, though this target requires general finite `p`, not only `p=2`.\n- Ignored `e-codexpilot-derive-the-unit-ball-volume-recursion-through-Wallis-parity-formulas`: unrelated.\n- Ignored `e-codexpilot-normalize-r3-radial-coefficient-to-four-pi`: unrelated dimension/radial-integration problem.\n- Ignored `e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound`: unrelated.\nBlocked on the general finite-`p` Young/Minkowski estimate; committed an axiom-clean partial. - Commit: `0037b66921e80e68bb67e0845f297a6ce4c7975a` - Changed only `problems/a94A03/lean/Main.lean`. - Proved `gaussKernel..."
+ },
+ {
+  "job-id": "invoke-1785464687922-443-547dd835",
+  "problem": "a94A03-gaussian-approximate-identity",
+  "surfaced-ids": [
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity",
+   "e-codexpilot-prove-Holder-convolution-vanishes-at-infinity-by-compact-support-density",
+   "e-codexpilot-separate-compact-bump-convergence-from-full-support-poisson-kernels"
+  ],
+  "used-ids": [
+   "e-codexpilot-separate-compact-bump-convergence-from-full-support-poisson-kernels"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-separate-compact-bump-convergence-from-full-support-poisson-kernels`: prevented misuse of compactly supported bump convergence for the full-support Gaussian.\n- Considered but did not use `e-codexpilot-prove-Holder-convolution-vanishes-at-infinity-by-compact-support-density`: related density technique, but it does not supply Young\u2019s inequality.\n- Ignored as unrelated: `e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile`, `e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation`, and `e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity`.\n\nExact remaining obstruction: formalize general \\(L^1 * L^p\\) Young contraction for \\(1 \\le p < \\infty\\), likely through weighted Jensen/H\u00f6lder plus Tonelli. The committed unit-kernel identity then reduces convergence to translation continuity and dominated convergence.\nBlocked with an axiom-clean normalization prefix committed as `f7be9b7975eecf1a91a07335e954253cc1e08d72`. Route and literature anchor: - Standard results: Young\u2019s convolution inequality \\(L^1 * L^p \\to L^p\\), followed..."
+ },
+ {
+  "job-id": "invoke-1785465172267-445-440fdc02",
+  "problem": "a95J08-young-convolution",
+  "surfaced-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count",
+   "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count",
+   "e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound"
+  ],
+  "used-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses` and `e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases` as scope guards: the completed existence/measurability layer does not imply the remaining Young estimate is adapter work.\n- Ignored as unrelated:\n  - `e-codexpilot-lift-the-circle-submean-bound-to-a-disk-area-bound`\n  - `e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count`\n  - `e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count`"
+ },
+ {
+  "job-id": "invoke-1785465608922-448-d51857ac",
+  "problem": "a94J04",
+  "surfaced-ids": [
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-derive-the-unit-ball-volume-recursion-through-Wallis-parity-formulas",
+   "e-codexpilot-normalize-r3-radial-coefficient-to-four-pi",
+   "e-codexpilot-poisson-ae-convergence-bridge",
+   "e-codexpilot-reduce-probability-kernel-L2-contraction-to-young"
+  ],
+  "used-ids": [
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-reduce-probability-kernel-L2-contraction-to-young"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-derive-integrable-from-nonzero-bochner-integral` directly for `poissonKernel_integrable`.\n- Used `e-codexpilot-reduce-probability-kernel-L2-contraction-to-young` to identify the exact remaining dependency.\n- Considered but did not use `e-codexpilot-poisson-ae-convergence-bridge`: it concerns the later pointwise Lebesgue-point theorem, not the dispatched \\(L^2\\) target.\n- Ignored as unrelated:\n  - `e-codexpilot-derive-the-unit-ball-volume-recursion-through-Wallis-parity-formulas`\n  - `e-codexpilot-normalize-r3-radial-coefficient-to-four-pi`"
+ },
+ {
+  "job-id": "invoke-1785466155603-451-cdc46268",
+  "problem": "a94J02-fat-cantor-strict-mono",
+  "surfaced-ids": [
+   "e-codexpilot-count-polynomial-lemniscate-components-by-roots-plus-one-exterior",
+   "e-codexpilot-frontier-of-open-connected-component-lies-in-ambient-frontier",
+   "e-codexpilot-turn-component-membership-into-interior-membership-via-openness",
+   "e-codexpilot-zulip-general-topology-complement-connected-component-anchor"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- `e-codexpilot-turn-component-membership-into-interior-membership-via-openness`: ignored; concerns connected components, not this construction.\n- `e-codexpilot-frontier-of-open-connected-component-lies-in-ambient-frontier`: ignored as unrelated.\n- `e-codexpilot-count-polynomial-lemniscate-components-by-roots-plus-one-exterior`: ignored as unrelated.\n- `e-codexpilot-zulip-general-topology-complement-connected-component-anchor`: reviewed but ignored; its recorded negative scope explicitly excludes this measure-theoretic construction.\n- Error-time recall calls returned no memory IDs.\n\nError \u2192 fix log:\n\n- Dot notation failed for `ae_hasDerivAt_integral` \u2192 invoked `LocallyIntegrable.ae_hasDerivAt_integral` explicitly.\n- Adjacent-integral rewriting left an unconstrained midpoint \u2192 supplied a fully typed equality before `linarith`.\n- Simplification unfolded `constructedH` before using the endpoint equality \u2192 proved explicit zero/one endpoint equations and rewrote them directly.\n\nExact remaining obstruction: `constructedH_strictMonoOn` is false because its hypotheses permit the irrationals in `[0,1]`; the committed axiom-clean counterexample proves this. Adding `IsClosed C` repairs the statement, as demonstrated by the completed helper."
+ },
+ {
+  "job-id": "invoke-1785467054646-455-b8371b8f",
+  "problem": "a95A04-symmetric-mean-value",
+  "surfaced-ids": [
+   "e-1ac936fb-04e8-460e-a710-37fac474401c",
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-derive-the-unit-ball-volume-recursion-through-Wallis-parity-formulas",
+   "e-codexpilot-normalize-r3-radial-coefficient-to-four-pi",
+   "e-codexpilot-reduce-probability-kernel-L2-contraction-to-young"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-1ac936fb-04e8-460e-a710-37fac474401c`: it supplied the successful dyadic-induction plus Lebesgue-differentiation architecture.\n- Ignored the four kernel/ball-volume memories as unrelated to this interval differentiation problem.\n- No error-time memory IDs surfaced."
+ },
+ {
+  "job-id": "invoke-1785468063277-459-e1c0bf0f",
+  "problem": "a95J02-entire-lower-bound-monomial",
+  "surfaced-ids": [
+   "e-909b0800-f5ea-46ac-ae87-7a9f77d46d95",
+   "e-b3f51bc2-7509-4bc8-9750-3afc57cfdbec",
+   "e-codexpilot-combine-Schwarz-rigidity-with-power-series-uniqueness",
+   "e-codexpilot-extend-weak-convergence-from-a-dense-linear-span-by-uniform-boundedness",
+   "e-codexpilot-prove-Hurwitz-zero-persistence-through-quantitative-open-mapping"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `[dispatch-recall-outcome=completed-with-memories]`\n- The five supplied memories concerned weak convergence, Hurwitz, convergence in measure, or Schwarz rigidity; none applied to this zero-order/Liouville construction, so all were ignored.\n- No error-time memories surfaced."
+ },
+ {
+  "job-id": "invoke-1785468249753-460-8e64039c",
+  "problem": "a95J08-young-convolution",
+  "surfaced-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count",
+   "e-codexpilot-poisson-ae-convergence-bridge",
+   "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young"
+  ],
+  "used-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young`: correctly identified integral Young as the construction boundary.\n- Used as scope guards:\n  - `e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses`\n  - `e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases`\n  These prevented misclassifying the remaining estimate as mere glue.\n- Ignored as unrelated:\n  - `e-codexpilot-poisson-ae-convergence-bridge`\n  - `e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count`\n- No error-time memory IDs surfaced."
+ },
+ {
+  "job-id": "invoke-1785468999028-463-2354633d",
+  "problem": "a95J08-young-convolution",
+  "surfaced-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count",
+   "e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count",
+   "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young"
+  ],
+  "used-ids": [
+   "e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses",
+   "e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases",
+   "e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-prove-general-probability-kernel-Lp-contraction-by-integral-Young`; it correctly identified the general Jensen\u2013Tonelli bridge.\n- Used `e-codexpilot-bound-automatic-frontier-descent-when-a-leaf-recurses` as a caution against understating this construction frontier.\n- Used `e-codexpilot-bound-the-interface-adapter-heuristic-with-genuine-construction-cases` to avoid misclassifying the missing weighted inequality as mere API adaptation.\n- Ignored `e-codexpilot-bridge-logarithmic-derivative-circle-integral-to-divisor-count` and `e-codexpilot-close-a92J05-by-transferring-the-unit-disk-zero-count` as unrelated.\n- Error-time recall produced no memory ID.\nBlocked as `:blocked-mathlib-frontier` after the third attempt, but with a compiling, axiom-clean endpoint proof committed. Route and search: - Standard result: Young\u2019s convolution inequality via weighted H\u00f6lder/Jense..."
+ },
+ {
+  "job-id": "invoke-1785469190846-464-39b04a8f",
+  "problem": "a95J05-convergence-in-measure-arctan",
+  "surfaced-ids": [
+   "e-1ac936fb-04e8-460e-a710-37fac474401c",
+   "e-4adf0546-2bed-4f35-93f1-032cd254177f",
+   "e-909b0800-f5ea-46ac-ae87-7a9f77d46d95",
+   "e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails",
+   "e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate"
+  ],
+  "used-ids": [
+   "e-4adf0546-2bed-4f35-93f1-032cd254177f",
+   "e-909b0800-f5ea-46ac-ae87-7a9f77d46d95"
+  ],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-909b0800-f5ea-46ac-ae87-7a9f77d46d95` for the strict/closed threshold bridge.\n- Used `e-4adf0546-2bed-4f35-93f1-032cd254177f` for the a.e.-convergent subsequence API.\n- Ignored `e-codexpilot-evaluate-the-Dirichlet-sinc-integral-by-Abel-regularization-and-uniform-tails`, `e-codexpilot-replace-cocompact-dominated-convergence-with-a-uniform-compact-support-estimate`, and `e-1ac936fb-04e8-460e-a710-37fac474401c` as unrelated.\n- No error-time memory surfaced.\n\nUnrelated existing changes in `a95A02` and `ApmCanaries/Current.lean.bak` were preserved and excluded from the commit."
+ },
+ {
+  "job-id": "invoke-1785469706584-466-fa740d18",
+  "problem": "hard-problems-a95j06-lean-main-lean",
+  "surfaced-ids": [
+   "e-1ac936fb-04e8-460e-a710-37fac474401c",
+   "e-4adf0546-2bed-4f35-93f1-032cd254177f",
+   "e-909b0800-f5ea-46ac-ae87-7a9f77d46d95",
+   "e-a9fc50f9-51a3-4908-a3d3-7ad0a8b46e3a",
+   "e-codexpilot-descend-through-eLpNorm-rpow-before-lintegral-rewrite"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Ignored `e-4adf0546-2bed-4f35-93f1-032cd254177f`, `e-codexpilot-descend-through-eLpNorm-rpow-before-lintegral-rewrite`, `e-1ac936fb-04e8-460e-a710-37fac474401c`, `e-909b0800-f5ea-46ac-ae87-7a9f77d46d95`, and `e-a9fc50f9-51a3-4908-a3d3-7ad0a8b46e3a` as unrelated to Cantor measure and interval monotonicity.\n- No error-time memory surfaced.\n\nUnrelated `ApmCanaries/Current.lean.bak` was preserved and excluded from the commit.\nCompleted both requested declarations and committed as `a44e581`. Route: - `cantorSet_measure_zero`: used Cantor-set self-similarity and Lebesgue scaling. Both self-similar pieces have one-third the original measure, ..."
+ },
+ {
+  "job-id": "invoke-1785469907154-467-a2928a5f",
+  "problem": "a96A01",
+  "surfaced-ids": [
+   "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound",
+   "e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity",
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-descend-through-eLpNorm-rpow-before-lintegral-rewrite",
+   "e-codexpilot-extend-fin-partition-to-bounded-nat-sequence-for-telescoping"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-descend-through-eLpNorm-rpow-before-lintegral-rewrite` as an interface-normalization guide when translating `quasiNorm` through `lpNorm`/`eLpNorm`.\n- Ignored `e-codexpilot-derive-integrable-from-nonzero-bochner-integral`, `e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound`, `e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity`, and `e-codexpilot-extend-fin-partition-to-bounded-nat-sequence-for-telescoping` as unrelated.\n- Error-time recall surfaced no memory ID.\nCompiling partial committed as `a960c44`. Route and search: - Standard result: generalized/power-mean monotonicity on a probability space, plus existence of a one-sided limit for a bounded monotone function. - Arm (a)..."
+ },
+ {
+  "job-id": "invoke-1785470457961-468-ad547147",
+  "problem": "a96A04",
+  "surfaced-ids": [
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity",
+   "e-codexpilot-distinguish-ContDiff-top-analytic-from-ContDiff-infinity-smooth",
+   "e-codexpilot-identify-an-L1-kernel-from-its-action-on-smooth-test-derivatives"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-derive-integrable-from-nonzero-bochner-integral` to prove `heatKernel_integrable` from its nonzero normalized integral.\n- Used `e-codexpilot-distinguish-ContDiff-top-analytic-from-ContDiff-infinity-smooth` to identify the true analytic-strength frontier.\n- Ignored `e-codexpilot-identify-an-L1-kernel-from-its-action-on-smooth-test-derivatives`, `e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile`, `e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation`, and `e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity` as unrelated.\nCommitted a compiling, axiom-clean partial as `a0a6f65298060d18b982949b6d0fd0ae2751e99b`. Route and result: - Standard results: heat-kernel regularization, Young\u2019s `L\u00b9 * L\u00b2 \u2192 L\u00b2` inequality, and Gaussian approximate-i..."
+ },
+ {
+  "job-id": "invoke-1785470492377-469-c4cbe680",
+  "problem": "a97A06",
+  "surfaced-ids": [
+   "e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile",
+   "e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation",
+   "e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity",
+   "e-codexpilot-prove-Laplace-analyticity-by-conjugate-Holder-and-local-derivative-domination",
+   "e-codexpilot-split-compact-support-Laplace-entireness-on-integrability"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Ignored `e-codexpilot-prove-Laplace-analyticity-by-conjugate-Holder-and-local-derivative-domination`: concerns parameterized Laplace transforms.\n- Ignored `e-codexpilot-split-compact-support-Laplace-entireness-on-integrability`: no compact-support Laplace transform here.\n- Ignored `e-codexpilot-apply-radial-R3-integration-through-a-one-dimensional-profile`: unrelated dimension and integral.\n- Ignored `e-codexpilot-avoid-euclidean-measurable-space-diamond-by-direct-general-instantiation`: no instance diamond arose.\n- Ignored `e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-borderline-power-singularity`: unrelated problem class.\n- No error-time memory surfaced.\nImplemented and committed a compiling partial. Route and search: - Standard results used: - comparison test for integrability, splitting `(0, \u221e)` at `1`; - the M\u2013L inequality/Jordan-type semicircle estimate, bounded b..."
+ },
+ {
+  "job-id": "invoke-1785471377736-471-acbcd206",
+  "problem": "a97A08",
+  "surfaced-ids": [
+   "e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound",
+   "e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity",
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-descend-through-eLpNorm-rpow-before-lintegral-rewrite",
+   "e-codexpilot-extend-fin-partition-to-bounded-nat-sequence-for-telescoping"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-bound-polynomial-sum-degree-by-a-common-summand-bound` when bounding the degree of the lower-order polynomial terms.\n- Ignored `e-codexpilot-descend-through-eLpNorm-rpow-before-lintegral-rewrite`, `e-codexpilot-bridge-radial-integrand-order-with-pointwise-commutativity`, `e-codexpilot-derive-integrable-from-nonzero-bochner-integral`, and `e-codexpilot-extend-fin-partition-to-bounded-nat-sequence-for-telescoping` as unrelated.\n- Error-time recall surfaced no memory ID.\nCommitted as `73b85263c2efc083c14e7892e478e2c49bbd0e8d`. Route and result: - Standard results: - Cauchy\u2019s root bound, used directly for the outer disk. - Rouch\u00e9\u2019s theorem for the inner disk. - Multiset partitioning fo..."
+ },
+ {
+  "job-id": "invoke-1785473298737-474-6e1af56a",
+  "problem": "a94J04",
+  "surfaced-ids": [
+   "e-1ac936fb-04e8-460e-a710-37fac474401c",
+   "e-4adf0546-2bed-4f35-93f1-032cd254177f",
+   "e-codexpilot-derive-integrable-from-nonzero-bochner-integral",
+   "e-codexpilot-poisson-ae-convergence-bridge",
+   "e-codexpilot-reduce-probability-kernel-L2-contraction-to-young"
+  ],
+  "used-ids": [],
+  "rejected-ids": [],
+  "section": "Memory usage:\n\n- `[dispatch-recall-outcome=completed-with-memories]`\n- Used `e-codexpilot-reduce-probability-kernel-L2-contraction-to-young`: exactly matched the successful route.\n- Ignored `e-codexpilot-poisson-ae-convergence-bridge`: relevant only to the later a.e. target.\n- Ignored `e-codexpilot-derive-integrable-from-nonzero-bochner-integral`: the imported contraction theorem handles kernel integrability internally.\n- Ignored `e-1ac936fb-04e8-460e-a710-37fac474401c`: unrelated dyadic differentiation problem.\n- Ignored `e-4adf0546-2bed-4f35-93f1-032cd254177f`: unrelated convergence-in-measure subsequence API.\n- No error-time memory IDs surfaced."
+ }
+]
