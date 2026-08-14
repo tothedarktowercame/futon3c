@@ -50,6 +50,29 @@
       (is (str/includes? result "slot-1 [codex, unreachable] idle"))
       (is (str/includes? result "— registered-only")))))
 
+(deftest evidence-flow-alerts-appear-in-agents-roster
+  (testing "sampler alerts are visible where the operator watches agents"
+    (with-redefs [bb/evidence-flow-status
+                  (fn [] {:alerts ["dual-write-disabled" "evidence-write-stale"]
+                          :sample-age-seconds 12
+                          :record {:dual_write {:reason "same-target"}
+                                   :evidence_writes {:window_seconds 900}}})]
+      (let [result (bb/format-agent-status {:count 0 :agents {}})]
+        (is (str/includes? result "EVIDENCE FLOW ALERTS"))
+        (is (str/includes? result "dual-write-disabled — same-target"))
+        (is (str/includes? result "evidence-write-stale"))))))
+
+(deftest absent-vitality-producer-is-an-alert
+  (testing "stopping the producer ages into a visible failure instead of silence"
+    (let [state-file (java.io.File/createTempFile "vitality-state-" ".json")]
+      (.deleteOnExit state-file)
+      (spit state-file
+            "{\"sampled_at_epoch\":1000,\"latest_record\":{\"alerts\":[]}}")
+      (is (= ["no-recent-sample"]
+             (:alerts (bb/evidence-flow-status (.getPath state-file)
+                                                (* 1301 1000)
+                                                180)))))))
+
 (deftest format-process-status-shows-headless-codex-lanes
   (testing "process blackboard renders agent-lane state distinctly"
     (let [result (bb/format-process-status

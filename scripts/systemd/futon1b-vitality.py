@@ -20,6 +20,7 @@ LOG_PATH = STATE_DIR / "vitality.jsonl"
 STATE_PATH = STATE_DIR / "vitality-state.json"
 MAX_LOG_BYTES = 10 * 1024 * 1024
 DEFAULT_JOURNAL_LOOKBACK_SECONDS = 300
+DEFAULT_EVIDENCE_WRITE_STALE_SECONDS = 15 * 60
 
 
 def systemctl_property(name):
@@ -99,6 +100,138 @@ def recent_evidence_append_errors(since_epoch):
     return summarize_evidence_append_errors(result.stdout)
 
 
+def summarize_evidence_writes(journal_records):
+    """Summarize accepted Landscape writes from journal JSON records."""
+    accepted = []
+    for record in journal_records:
+        message = record.get("MESSAGE", "")
+        if (
+            "end method=POST uri=/api/alpha/evidence" in message
+            or "end method=POST uri=/api/alpha/hyperedge" in message
+        ) and "outcome=ok" in message:
+            accepted.append(record)
+    latest = max(
+        (int(record.get("__REALTIME_TIMESTAMP", 0)) for record in accepted),
+        default=None,
+    )
+    return {
+        "count": len(accepted),
+        "last_accepted_at": (
+            datetime.fromtimestamp(latest / 1_000_000, timezone.utc).isoformat()
+            if latest
+            else None
+        ),
+    }
+
+
+def recent_evidence_writes(since_epoch):
+    result = subprocess.run(
+        [
+            "journalctl",
+            "--user",
+            "-u",
+            UNIT,
+            "--since",
+            f"@{since_epoch:.3f}",
+            "--no-pager",
+            "-o",
+            "json",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return {
+            "count": None,
+            "last_accepted_at": None,
+            "error": result.stderr.strip() or f"journalctl exit {result.returncode}",
+        }
+    try:
+        records = [json.loads(line) for line in result.stdout.splitlines() if line]
+    except json.JSONDecodeError as error:
+        return {"count": None, "last_accepted_at": None, "error": str(error)}
+    return summarize_evidence_writes(records)
+
+
+def normalize_url(url):
+    return url.rstrip("/").replace("localhost", "127.0.0.1") if url else None
+
+
+def dual_write_status(environment):
+    """Mirror file-ingest's self-dual-write normalization and guard."""
+    primary = environment.get("FUTON_SUBSTRATE_URL") or environment.get("FUTON1A_URL")
+    primary = primary or "http://localhost:7071"
+    secondary = environment.get("FUTON1B_URL")
+    normalized_primary = normalize_url(primary)
+    normalized_secondary = normalize_url(secondary)
+    reason = None
+    if not secondary:
+        reason = "secondary-unset"
+    elif normalized_primary == normalized_secondary:
+        reason = "same-target"
+    return {
+        "primary_url": primary,
+        "secondary_url": secondary,
+        "normalized_primary": normalized_primary,
+        "normalized_secondary": normalized_secondary,
+        "disabled": reason is not None,
+        "reason": reason,
+    }
+
+
+def read_process_environment(pid):
+    try:
+        values = pathlib.Path(f"/proc/{pid}/environ").read_bytes().split(b"\0")
+        return {
+            key.decode(): value.decode()
+            for item in values
+            if b"=" in item
+            for key, value in [item.split(b"=", 1)]
+        }
+    except (FileNotFoundError, PermissionError, OSError, UnicodeDecodeError):
+        return {}
+
+
+def read_process_command(pid):
+    try:
+        return pathlib.Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="ignore")
+    except (FileNotFoundError, PermissionError, OSError):
+        return ""
+
+
+def futon3c_environment():
+    """Read the actual serving process environment, with direct env for tests."""
+    if os.environ.get("FUTON1B_URL") or os.environ.get("FUTON_SUBSTRATE_URL"):
+        return dict(os.environ), "sampler-environment"
+    result = subprocess.run(
+        ["systemctl", "--user", "show", "futon3c-server.service", "-p", "MainPID", "--value"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    candidates = []
+    if result.returncode == 0 and result.stdout.strip().isdigit():
+        candidates.append(int(result.stdout.strip()))
+    candidates.extend(
+        int(path.name)
+        for path in pathlib.Path("/proc").glob("[0-9]*")
+        if path.name.isdigit()
+    )
+    seen = set()
+    for pid in candidates:
+        if pid <= 0 or pid in seen:
+            continue
+        seen.add(pid)
+        environment = read_process_environment(pid)
+        if (
+            environment.get("FUTON1B_URL")
+            and "futon3c" in read_process_command(pid)
+        ):
+            return environment, f"process:{pid}"
+    return {}, "unavailable"
+
+
 def load_state():
     try:
         return json.loads(STATE_PATH.read_text())
@@ -139,8 +272,20 @@ def concise_summary(record):
         f" liveness={liveness.get('status')}/{liveness.get('elapsed_ms')}ms"
         f" memory-high={ratio_text}"
         f" recent-evidence-errors={evidence_errors.get('count', 'unknown')}"
+        f" recent-writes={record.get('evidence_writes', {}).get('count', 'unknown')}"
         f" alerts={','.join(record.get('alerts', [])) or 'none'}"
     )
+
+
+def persist_record(record, sampled_at_epoch, memory_events_high=None):
+    append_bounded(record)
+    state = {
+        "sampled_at_epoch": sampled_at_epoch,
+        "latest_record": record,
+    }
+    if memory_events_high is not None:
+        state["memory_events_high"] = memory_events_high
+    write_private(STATE_PATH, json.dumps(state, sort_keys=True) + "\n")
 
 
 def main(check_mode=False):
@@ -160,7 +305,7 @@ def main(check_mode=False):
             "alerts": ["unit-inactive"],
         }
         if not check_mode:
-            append_bounded(record)
+            persist_record(record, sampled_at_epoch)
         print(
             concise_summary(record)
             if check_mode
@@ -186,6 +331,13 @@ def main(check_mode=False):
     status, latency_ms, health_error = health_probe(MAIN_HEALTH_URL)
     liveness_status, liveness_latency_ms, liveness_error = health_probe(LIVENESS_URL)
     evidence_append_errors = recent_evidence_append_errors(previous_sample_epoch)
+    stale_seconds = int(
+        os.environ.get("FUTON1B_EVIDENCE_WRITE_STALE_SECONDS", DEFAULT_EVIDENCE_WRITE_STALE_SECONDS)
+    )
+    evidence_writes = recent_evidence_writes(sampled_at_epoch - stale_seconds)
+    server_environment, environment_source = futon3c_environment()
+    dual_write = dual_write_status(server_environment)
+    dual_write["environment_source"] = environment_source
     high_delta = events.get("high", 0) - int(previous.get("memory_events_high", 0))
     ratio = (current / high) if high else None
     alerts = []
@@ -205,6 +357,12 @@ def main(check_mode=False):
         alerts.append("evidence-append-journal-unavailable")
     elif evidence_append_errors["count"] > 0:
         alerts.append("evidence-append-rejected")
+    if evidence_writes.get("error"):
+        alerts.append("evidence-write-journal-unavailable")
+    elif evidence_writes["count"] == 0:
+        alerts.append("evidence-write-stale")
+    if dual_write["disabled"]:
+        alerts.append("dual-write-disabled")
     record = {
         "at": datetime.now(timezone.utc).isoformat(),
         "unit": UNIT,
@@ -228,20 +386,15 @@ def main(check_mode=False):
             "error": liveness_error,
         },
         "evidence_append_errors": evidence_append_errors,
+        "evidence_writes": {
+            **evidence_writes,
+            "window_seconds": stale_seconds,
+        },
+        "dual_write": dual_write,
         "alerts": alerts,
     }
     if not check_mode:
-        append_bounded(record)
-        write_private(
-            STATE_PATH,
-            json.dumps(
-                {
-                    "memory_events_high": events.get("high", 0),
-                    "sampled_at_epoch": sampled_at_epoch,
-                }
-            )
-            + "\n",
-        )
+        persist_record(record, sampled_at_epoch, events.get("high", 0))
     prefix = "ALERT" if alerts else "ok"
     print(
         concise_summary(record)

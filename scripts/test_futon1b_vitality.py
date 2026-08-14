@@ -10,6 +10,51 @@ SPEC.loader.exec_module(VITALITY)
 
 
 class Futon1bVitalityTest(unittest.TestCase):
+    def test_summarizes_accepted_evidence_and_hyperedge_writes(self):
+        records = [
+            {
+                "MESSAGE": "end method=POST uri=/api/alpha/evidence outcome=ok",
+                "__REALTIME_TIMESTAMP": "1720000000000000",
+            },
+            {
+                "MESSAGE": "end method=POST uri=/api/alpha/hyperedge outcome=error",
+                "__REALTIME_TIMESTAMP": "1720000001000000",
+            },
+            {
+                "MESSAGE": "end method=POST uri=/api/alpha/hyperedge outcome=ok",
+                "__REALTIME_TIMESTAMP": "1720000002000000",
+            },
+        ]
+
+        result = VITALITY.summarize_evidence_writes(records)
+
+        self.assertEqual(2, result["count"])
+        self.assertEqual("2024-07-03T09:46:42+00:00", result["last_accepted_at"])
+
+    def test_dual_write_disabled_when_unset_or_same_after_normalization(self):
+        self.assertEqual(
+            "secondary-unset",
+            VITALITY.dual_write_status({"FUTON_SUBSTRATE_URL": "http://127.0.0.1:7073"})["reason"],
+        )
+        result = VITALITY.dual_write_status(
+            {
+                "FUTON_SUBSTRATE_URL": "http://localhost:7073/",
+                "FUTON1B_URL": "http://127.0.0.1:7073",
+            }
+        )
+        self.assertTrue(result["disabled"])
+        self.assertEqual("same-target", result["reason"])
+
+    def test_dual_write_enabled_for_distinct_targets(self):
+        result = VITALITY.dual_write_status(
+            {
+                "FUTON_SUBSTRATE_URL": "http://127.0.0.1:7073",
+                "FUTON1B_URL": "http://127.0.0.1:17073",
+            }
+        )
+        self.assertFalse(result["disabled"])
+        self.assertIsNone(result["reason"])
+
     def test_summarizes_only_completed_evidence_errors(self):
         journal = "\n".join(
             [

@@ -44,6 +44,15 @@ It also counts completed `/api/alpha/evidence` errors since the preceding
 sample, so a live store with rejected boundary appends is reported as degraded
 rather than healthy. The split distinguishes a live JVM from a dead or
 saturated main dispatcher.
+
+The same sampler observes accepted evidence/hyperedge writes in the service
+journal and alerts after 15 minutes without one
+(`FUTON1B_EVIDENCE_WRITE_STALE_SECONDS` overrides this). It also reads the
+actual serving futon3c process environment and reports `dual-write-disabled`
+when `FUTON1B_URL` is absent or normalizes to the primary substrate URL. The
+latest full record is written atomically to `vitality-state.json`; the
+`*agents*` blackboard renders its alerts and adds `no-recent-sample` after
+three missed one-minute intervals. No second sampler or timer is involved.
 Enable it after installing:
 
 ```bash

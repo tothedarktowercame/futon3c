@@ -20,6 +20,7 @@
    Design: emacsclient is the transport. No protocol to design, no
    endpoint to build. Emacs IS the sliding blackboard."
   (:require [clojure.string :as str]
+            [cheshire.core :as json]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.dev.config :as config])
   (:import [java.util UUID]))
@@ -870,6 +871,75 @@
                           (when (seq preview) (str " — " preview)))))))))
     (catch Throwable _ nil)))
 
+(defn vitality-state-path
+  "Location written by the existing futon1b vitality timer."
+  []
+  (str (or (System/getenv "XDG_STATE_HOME")
+           (str (System/getProperty "user.home") "/.local/state"))
+       "/futon1b/vitality-state.json"))
+
+(defn- long-setting
+  [property-name default]
+  (try
+    (Long/parseLong
+     (or (System/getProperty property-name)
+         (System/getenv property-name)
+         (str default)))
+    (catch Throwable _ default)))
+
+(defn vitality-max-age-seconds
+  "Age limit expressed as N producer intervals; defaults to three minutes."
+  []
+  (* (long-setting "FUTON1B_VITALITY_INTERVAL_SECONDS" 60)
+     (long-setting "FUTON1B_VITALITY_MISSED_INTERVALS" 3)))
+
+(defn evidence-flow-status
+  "Read the sampler's latest persisted result. This never samples futon1b.
+   Missing or stale producer output is itself an operator-visible alert."
+  ([] (evidence-flow-status (vitality-state-path)
+                            (System/currentTimeMillis)
+                            (vitality-max-age-seconds)))
+  ([path now-ms max-age-seconds]
+   (try
+     (let [state (json/parse-string (slurp path) true)
+           sampled-at (long (or (:sampled_at_epoch state) 0))
+           age-seconds (max 0 (quot (- now-ms (* 1000 sampled-at)) 1000))
+           record (:latest_record state)
+           alerts (vec (or (:alerts record) []))
+           alerts (if (> age-seconds max-age-seconds)
+                    (conj alerts "no-recent-sample")
+                    alerts)]
+       {:alerts (vec (distinct alerts))
+        :sample-age-seconds age-seconds
+        :record record})
+     (catch Throwable t
+       {:alerts ["no-recent-sample"]
+        :sample-age-seconds nil
+        :error (or (.getMessage t) (.. t getClass getSimpleName))}))))
+
+(defn- evidence-flow-banner
+  []
+  (let [{:keys [alerts sample-age-seconds record]} (evidence-flow-status)]
+    (when (seq alerts)
+      (str "\n\nEVIDENCE FLOW ALERTS"
+           (when sample-age-seconds (str " (sample " sample-age-seconds "s old)"))
+           ":\n"
+           (str/join
+            "\n"
+            (for [alert alerts]
+              (str "  ⚠ " alert
+                   (case alert
+                     "dual-write-disabled"
+                     (when-let [reason (get-in record [:dual_write :reason])]
+                       (str " — " reason))
+                     "evidence-write-stale"
+                     (str " — no accepted write within "
+                          (or (get-in record [:evidence_writes :window_seconds]) "?")
+                          "s")
+                     "no-recent-sample"
+                     " — vitality producer is absent or late"
+                     nil))))))))
+
 (defn- local-site
   "This box's site code (FUTON3C_SITE property or env), or nil when
    undecorated."
@@ -1025,6 +1095,7 @@
          (when (seq ws-unregistered)
            (str "\n\nWS Connected (Unregistered):\n"
                 (str/join "\n" (map #(str "  " %) ws-unregistered))))
+         (evidence-flow-banner)
          "\n")))
 
 (defn project-agents!
