@@ -1044,3 +1044,81 @@ running — the failure mode this mission has now catalogued three times.
 source of **31 worked frames**, not 55 attempts. It remains unusable as a
 success rate for the reasons in the B-recheck (no outcome field, null
 `cycle-id`, root ≠ accepted candidate). Nothing further is owed here.
+
+---
+
+## MAP consolidation — the register is resolved
+
+*(claude-2, 2026-08-14, at Joe's instruction to consolidate C and D.)*
+
+### The N-register (§1.4), resolved
+
+§1.5's first completion criterion — *every N-register row resolved to
+already-done / partly-done / greenfield, with evidence* — is **met**. This is
+MAP's exit condition and the mission's first real deliverable.
+
+| node | verdict | resting on | the sharpest fact |
+|---|---|---|---|
+| **N5** retrieval serves the need | **partly-done**, and now *demonstrably failing* | C2, C5, **E2** | The batch-2 boundary is closed and named by hash (`6521fd3a`). The hunger audit **has** run — 5 chains — but not in the Aug 8–9 campaign. E2 then showed the live store answers to an artifact's *name* and not to the *need*: `text=Rouche` hits, `argument principle` / `counting zeros` / `winding number` do not. |
+| **N6** transports to held-out | **greenfield** | C4 | No transport derivation has ever been attempted. The causal engine is real and can issue typed refusals; **it has simply never been asked about N6.** BPM is better-formed than arXiv on artifact grounds — the only explicit selection diagram plus a fixed ten-problem panel. |
+| **N7** outcomes scoreable | **partly-done** | C1 | Rich append-only records exist (117 verdict rows; 2,730 manifest events; 31 gate + 16 closer-hop events; 214 axiom-audit records). **No artifact computes the vector or `L(i)`**, escape rate is not a field, and freeze contract leaks are unobservable because no hash covers `def` bodies. |
+| **N8** learns at ability level | **partly-done** | C3, C6 | The vote ledger **is** a machine-readable series (65 timestamped records, 39 concept-vote-tagged, 16 concept values) — so B's snapshot reading was wrong and trend reconstruction is possible. But no complete *pre-treatment* difficulty covariate exists: `closer_hop` is missing for 255/475 and confounds effort with difficulty. |
+
+**The v2 plan's ordering is not adopted.** "N7 is the keystone" was
+speculative; MAP shows N7 is the *best-instrumented* of the four, while N6 is
+the only true greenfield. Ordering is DERIVE's, on these facts.
+
+### Two systemic failures, each found independently by three tracks
+
+MAP's most durable result is not any single number but a pair of recurring
+mechanisms. Neither was looked for; both fell out.
+
+**1. Provenance is recorded, outcomes are not.**
+
+| track | finding |
+|---|---|
+| A3 | 15 outcomes never emitted; **0 lost at join**; 19 of 44 offers with no disposition |
+| C1 | the 57 `receipt.json` files are *proof-frame provenance* receipts — "not solver-outcome receipts" |
+| B-recheck | 51 candidate receipts, full provenance, `state` empty, `cycle-id` null in all |
+
+Three independent surveys, one conclusion: **the system has never had a linkage
+problem.** It records *where work happened* meticulously and *how it turned
+out* not at all. This is why the past is only partly countable, and it is the
+single highest-value target for cycle-one instrumentation — an outcome field on
+an existing channel, not a new channel.
+
+**2. Documents assert what the code and data do not.**
+
+| track | drifted artifact |
+|---|---|
+| E1 | the `ConstructionTargets` consumer table — stale ~3× (15 modules/23 edges recorded; 18/64 actual) |
+| C5 | V3 §"under live test / pending" — stale relative to the close-out report |
+| D2 | `batch2r_pair.sh`'s "verified-fresh sessions" — a comment with no implementing code |
+| A4 | `status.json` as a source of truth about its own bundle's Lean files — wrong for 45 |
+
+Every one is the reversed guiding light: **an index that disagrees with the
+shelf.** F1 (E6) is the mission's first structural answer — prefer invariants
+that hold by construction over checks that can silently stop running.
+
+### What MAP establishes against the four questions
+
+| question | answer |
+|---|---|
+| **(1a)** how much evidence, full stop? | **3,312 confirmed problem-runs** (A1) — the denominator that makes the other questions well-formed. |
+| **(1)** how much is evidence of *success*? | Source-level closure **214/475 = 45.1%** (A4, not a compile certificate). **39 load-bearing reuse edges** (E1). E9/E10's **0 vs 21** in a fixed design. One witnessed demand→closure revolution. **No defensible success-per-attempt rate** (B2, B-recheck). |
+| **(2)** can cycle one be countable? | **Not with the currently assembled path** (D). Not greenfield either — the components exist; five bindings are missing, and none is a build. |
+| **(2b)** will it improve per iteration? | **Not yet answerable.** N8 is checkable in principle and the vote series supports trend reconstruction, but stratification has no complete pre-treatment covariate (C3). |
+
+### What MAP does not settle, and is not asked to
+
+The measurement vector, `L(i)`'s form, the node ordering, the held-out set,
+and whether the three preconditions become formal pass/fail conditions. All
+DERIVE. MAP's job was facts, and the facts are now in.
+
+### The one MAP question still open
+
+C4 established that the causal engine exists, issues typed refusals, and has
+**never been asked about N6** — the mission's only greenfield node. Whether the
+engine accepts or refuses the N6 selection diagram is a *fact about the engine*,
+answerable now, and it discharges §1.5 criterion 5 either way. **Belled out
+2026-08-14.** Everything else in the register rests on completed survey.
