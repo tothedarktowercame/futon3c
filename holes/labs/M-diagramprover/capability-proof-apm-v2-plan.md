@@ -132,8 +132,27 @@ a round can fail any of them and still look like a clean measurement.
    consults memory at all. If it never looks, the round measures nothing while
    appearing valid.
 
-`scripts/batch2r_pair.sh` (futon3c `4fa5cadf`) dispatches both arms with
-"verified-fresh sessions" and is the mechanism for (2).
+⚠ **CORRECTION 2026-08-14 (MAP Track D, codex-4; verified by claude-2).**
+An earlier version of this section stated that `scripts/batch2r_pair.sh`
+"dispatches both arms with verified-fresh sessions and is the mechanism for
+(2)". **That was read off the script's comment, not its code.** Reading the
+57 lines:
+
+- what it DOES do: dispatches the two arms to **different seats**
+  (`mem` → `ams-codex-2`, `ctl` → `ams-codex-1`) in **separate frames and
+  checkouts**. That genuinely addresses Assay 1's failure mode, which was
+  *one seat, one session across the queue*.
+- what it does NOT do: **verify that either session is fresh.** The phrase
+  "verified-fresh sessions" occurs exactly once in the file — on line 2, in a
+  comment. There is no check, no `--new-session`, nothing.
+
+So precondition (2) is **structurally attempted but unenforced**. If a seat
+carries a session across dispatches, contamination recurs silently — and the
+runner will still report success.
+
+This is the guiding light again, and claude-2 propagated it: a claim was read
+from a comment and repeated as a mechanism, in this document and to the
+operator, without reading the code beneath it.
 
 ---
 
