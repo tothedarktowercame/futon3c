@@ -2988,3 +2988,71 @@ solves* as implementation. **That is the medium-is-the-message error**: the
 agent is not a substitutable component but the variable that determines whether
 anything is measurable at all. Recorded as the second thing formalising
 surfaced — the first was the VariationPlan gap it now answers.
+
+## DERIVE amendment 2a — the student figure has an external source
+
+Joe, 2026-08-14: *"The figures are from here (Zai is GLM 5.2)
+https://matharena.ai/?comp=arxivlean--june&view=problem"*
+
+**This upgrades the student concept from a project-internal belief to an
+externally measured one**, and supplies more than a denominator.
+
+### The benchmark
+
+**ArXivLean** (MathArena, ETH Zürich / INSAIT) — formalised statements
+automatically extracted from recent arXiv paper abstracts, each checked by a
+team member, evaluated by producing formal Lean proofs. Updated quarterly.
+
+| release | problems | closed models (GPT-5.4, Claude-Opus-4.7, Gemini-3.1-Pro) | open models |
+|---|---|---|---|
+| **March 2026** (first) | **41** | **6–7 solved** (≈15–17%) | Step 3.5 Flash, **GLM 5.1: 1 solved** (Q27) ≈2.4% |
+| **June 2026** | *(not recovered)* | — | **Zai = GLM 5.2, ~8.33%** per Joe |
+
+> *"a substantial capability gap between the open and closed model ecosystems
+> for Lean"* — MathArena's own summary.
+
+### What this settles, and what it does not
+
+**Settled — the tier gap is real and externally measured.** The student/frontier
+split (amendment 2) is not a project belief about our own agents; it is the
+headline finding of an independent benchmark. That materially strengthens the
+headroom argument: *measuring memory effects on the frontier tier is measuring
+at ceiling* now rests on external evidence, not only on `batch-1`'s null.
+
+**Not settled — the June denominator.** The site is JS-rendered and the tables
+did not resolve to a fetch; the March figure (41) is confirmed, June is not.
+8.33% is consistent with denominators of 12, 24, 36 or 48 (1/12, 2/24, 3/36,
+4/48). **F6 still applies: do not put 8.33% in a registration until the
+denominator is read off the live page.** [OPEN] — a one-minute check in a
+browser, which is where it should be done rather than guessed here.
+
+### Two consequences nobody asked for
+
+**1. The benchmark already includes a memory channel.** Models are run *"with
+extensive tool access, including Lean verification, semantic search through Lean
+and Mathlib, and **a persistent file of proven Lean lemmas**."*
+
+That persistent lemma file is structurally **our `ConstructionTargets` plus
+`LEMMA-INDEX`** — the same construct, in the evaluation harness of an external
+benchmark. So the thing this mission is building is not exotic; it is the
+augmentation the field already assumes. It also means **any comparison must
+declare whether our channel is additional to that one or a replacement**, or the
+contrast is confounded from the start.
+
+**2. ArXivLean is a candidate held-out set for N6.** HEAD names the target as
+*"improved capability on BPM or **arXiv proofs** — held out from APM, which makes
+it formally a transport claim."* ArXivLean is exactly that: arXiv-derived,
+formalised, **externally scored, uncontaminated, and refreshed quarterly** so
+contamination has a clock on it.
+
+**IF** N6 needs a held-out set, **HOWEVER** our own BPM panel is scored by us,
+**THEN** ArXivLean is the stronger candidate, **BECAUSE** an external scorer
+removes the grader from the party with an interest in the result — which is the
+same separation-of-powers principle the coding-handoff protocol already applies
+to author-vs-reviewer. Recorded as a **candidate**, not adopted: C4 found BPM
+better-formed *on artifact grounds* (it has the only explicit selection
+diagram), and choosing between them is ARGUE's, not MAP's or mine.
+
+*Sources:* [MathArena ArXivLean](https://matharena.ai/arxivlean/) ·
+[MathArena competitions](https://matharena.ai/competitions) ·
+[Beyond Benchmarks: MathArena as an Evaluation Platform (arXiv:2605.00674)](https://arxiv.org/abs/2605.00674)
