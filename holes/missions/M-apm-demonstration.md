@@ -8103,3 +8103,67 @@ it.
 
 **Credit where due:** four stops, four correct, and this one found a live hole in
 code that had already passed my review.
+
+## I.47 A3 is not a packet, it is a layer — and the recommendation is to witness it for frame-1
+
+**Fifth stop, fifth time right, and this one is about ordering:**
+
+> *"Adding `:cycle/environment-checkout` to mmca Attempt entities now would still
+> accept a path supplied through `entities` — precisely the self-report design
+> I.46 rejects."*
+
+**Building the mmca half first would have manufactured the exact hole I.46 had just
+forbidden.** The field cannot honestly exist before the thing that assigns it.
+
+### What the stops were actually telling me
+
+Four re-dispatches of "A3" and each one uncovered another missing layer beneath it.
+That is the signature CLAUDE.md warns about: *a packet whose goal contains "and"
+between two nouns.* My goal was "derive the revision **and** require it in the
+shape" — sitting on top of an **entire unbuilt assignment layer**.
+
+**A3 is not a packet. It is four:**
+
+1. **`:assign-checkouts`** — a `:register` phase tool that calls the existing
+   provisioner and records `{:solver path :student path}` as a required output.
+2. **Injection** — the dispatch adapter injects the assigned checkout the same way
+   it already injects the memory channel: **`assoc` last, caller cannot override.**
+   That mechanism is already built and mutation-tested (`1a9c026d`), so this reuses
+   a proven precedent rather than inventing one.
+3. **mmca derivation** — `attempt?` requires both fields; the revision is
+   `git rev-parse` on the assigned path.
+4. **The distinctness half** of `environment-arms-match` (I.46).
+
+### What exists, per codex-4's I-4 read
+
+`scripts/frames.bb` **already** creates isolated `apm-lean` worktrees and records
+`:checkout` plus `:base-revision`; `night_shift_backend.clj` has a second
+provisioner. **Reuse the provisioner — but not its vocabulary:** its `mem`/`ctl`/
+`case` arms belong to the batch era, which closed 2026-08-11. Arms here are
+**solver** and **student**.
+
+### Recommendation: A3 becomes witnessed-not-enforced for frame-1
+
+**A3 is infrastructure, not a pre-launch fix.** Four packets before launch is a
+real cost, and the honest question is what frame-1 actually needs.
+
+> **Frame-1 is one cycle with a human watching.** The proctor can check directly
+> that the two arms ran in different trees at the same revision — that is a
+> two-command check on a single cycle. **The machinery matters at frame-10 and
+> beyond, when nobody is looking.**
+
+This is **exactly the disposition A4 already has** (`:reg/seat-exclusivity
+:witnessed-not-enforced`), and for the same reason: a human-in-the-loop pilot can
+witness what an unattended loop must enforce.
+
+**So: `:reg/environment-containment :witnessed-not-enforced` for round 1**, with
+the four-packet build sequenced after, and the proctor card's job 1 extended to
+cover it.
+
+**What this does NOT do:** it does not make the containment true, only checked by a
+person. If frame-1's Codex patches Mathlib and the arms share a tree, the proctor
+must catch it — and if the proctor misses it, the result is contaminated and we
+will not know. **That is the cost of the recommendation, stated plainly.**
+
+**Operator's call**, because it trades launch timing against enforcement, and
+launch timing is Joe's.
