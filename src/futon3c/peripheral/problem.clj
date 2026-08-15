@@ -57,11 +57,27 @@
 
 (defn- environment-arms-match [outputs]
   (let [pinned (:environment-revision outputs)
-        solver (get-in outputs [:solver-attempt :cycle/environment-revision])
-        students (map :cycle/environment-revision (:student-attempts outputs))]
-    (when-not (and (= pinned solver) (every? #(= pinned %) students))
+        solver-revision (get-in outputs
+                                [:solver-attempt :cycle/environment-revision])
+        student-revisions (map :cycle/environment-revision
+                               (:student-attempts outputs))
+        solver-checkout (get-in outputs
+                                [:solver-attempt :cycle/environment-checkout])
+        student-checkouts (map :cycle/environment-checkout
+                               (:student-attempts outputs))]
+    (cond
+      (not (and (= pinned solver-revision)
+                (every? #(= pinned %) student-revisions)))
       {:failure :environment-mismatch-between-arms
-       :pinned pinned :solver solver :students (vec students)})))
+       :pinned pinned :solver solver-revision
+       :students (vec student-revisions)}
+
+      ;; Student attempts deliberately reuse one cold-attempt tree. Only the
+      ;; solver-vs-student boundary is a containment boundary. `nil = nil` is a
+      ;; shared checkout, never evidence of separation.
+      (some #(= solver-checkout %) student-checkouts)
+      {:failure :environment-shared-checkout
+       :solver solver-checkout :students (vec student-checkouts)})))
 
 (defn- autoconf [context config]
   (let [intervention-tool (case (:cycle/mode context)

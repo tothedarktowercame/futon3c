@@ -255,6 +255,7 @@
                                      :base-revision "env-a"}}
    :frame :f :containment-probe :c
    :solver-attempt {:cycle/environment-revision "env-a"
+                    :cycle/environment-checkout "/solver"
                     :cycle/store-snapshot :solver-store}
    :ground-control-events [] :memory-offers [] :intervention :i})
 
@@ -336,6 +337,42 @@
     (is (= :environment-mismatch-between-arms (:error/code result)))
     (is (= :environment-arms-match
            (get-in result [:error/context :invariant])))))
+
+(defn- advance-student-attempts [outputs attempts]
+  (let [[p state] (started :store-mode)]
+    (runner/step
+     p (assoc state :current-phase :student-attempts
+                    :cycle/outputs outputs)
+     {:tool :advance-problem-phase
+      :args ["M" "C" {:student-attempts attempts :memory-uses []}]})))
+
+(deftest equal-revisions-and-distinct-arm-checkouts-are-accepted
+  (let [result (advance-student-attempts
+                outputs-through-student
+                [{:cycle/environment-revision "caller"
+                  :cycle/environment-checkout "/caller"}])]
+    (is (:ok result))))
+
+(deftest shared-solver-student-checkout-is-rejected
+  (let [outputs (assoc-in outputs-through-student
+                          [:environment-checkouts :student :checkout]
+                          "/solver")
+        result (advance-student-attempts outputs [{}])]
+    (is (= :environment-shared-checkout (:error/code result)))
+    (is (= :environment-arms-match
+           (get-in result [:error/context :invariant])))))
+
+(deftest student-attempts-may-share-their-own-checkout
+  (let [result (advance-student-attempts outputs-through-student [{} {} {}])]
+    (is (:ok result))))
+
+(deftest absent-checkouts-do-not-pass-as-separate
+  (let [outputs (-> outputs-through-student
+                    (assoc-in [:solver-attempt :cycle/environment-checkout] nil)
+                    (assoc-in [:environment-checkouts :solver :checkout] nil)
+                    (assoc-in [:environment-checkouts :student :checkout] nil))
+        result (advance-student-attempts outputs [{}])]
+    (is (= :environment-shared-checkout (:error/code result)))))
 
 (deftest malformed-operand-is-a-failure-not-a-crash-and-not-a-pass
   ;; Invariant operands are supplied by TOOLS, so a malformed one must be
