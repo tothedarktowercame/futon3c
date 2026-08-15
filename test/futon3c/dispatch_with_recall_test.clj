@@ -200,6 +200,54 @@
     (is (= ["e-first" "e-second"]
            (get-in entry [:body :memory-use :memory-use/surfaced-ids])))))
 
+(deftest production-recall-records-post-eligibility-pre-cutoff-vector
+  (let [candidates [{:memory/id "e-first"
+                     :memory/body {:summary "anchor one"}}
+                    {:memory/id "e-second"
+                     :memory/body {:summary "anchor two"}}
+                    {:memory/id "e-third"
+                     :memory/body {:summary "anchor three"}}
+                    {:memory/id "e-ineligible"
+                     :memory/body {:summary "other"}}]
+        recall-result
+        (with-redefs-fn
+          {#'dispatch/recall-query
+           (fn [& _] {:required-term "anchor" :terms ["anchor"]})
+           (ns-resolve 'futon3c.dispatch-with-recall 'substrate-seams)
+           (fn [& _]
+             {:search (constantly {})
+              :projection (constantly {})
+              :entry (constantly nil)})
+           (ns-resolve 'futon3c.peripheral.memory-recall
+                       'propose-patterns-by-query)
+           (fn [& _]
+             {:candidates []
+              :content-matches candidates
+              :lexical-seed []
+              :index-as-of "test-index"})
+           (ns-resolve 'futon3c.peripheral.memory-recall
+                       'recall-by-endpoints)
+           (fn [& _] {:recalls []})}
+          #(deref
+            (future
+              (#'dispatch/recall-now
+               {:problem "a-test"
+                :subjects []
+                :limit 2
+                :recall-timeout-ms 3000
+                :receipt-ranking? false}
+               "PROBLEM PACKET"))))
+        receipt (dispatch/offered-evidence
+                 {:problem "a-test" :from "ground-control"}
+                 recall-result "job-1" "session-1")
+        eligible-ids (get-in receipt [:body :eligible-memory-ids])
+        surfaced-ids (get-in receipt [:body :memory-use
+                                      :memory-use/surfaced-ids])]
+    (is (= ["e-first" "e-second" "e-third"] eligible-ids))
+    (is (= ["e-first" "e-second"] surfaced-ids))
+    (is (> (count eligible-ids) (count surfaced-ids)))
+    (is (= surfaced-ids (subvec eligible-ids 0 (count surfaced-ids))))))
+
 (deftest receipt-ranking-fetch-failure-is-loud-without-changing-fallback-order
   (let [candidates [{:memory/id "e-first"} {:memory/id "e-second"}]
         load (dispatch/load-receipt-ranking-stats
