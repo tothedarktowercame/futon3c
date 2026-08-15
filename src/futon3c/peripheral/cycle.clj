@@ -13,6 +13,9 @@
    - :tool-ops         {tool -> :observe|:action} operation classification
    - :required-outputs {phase -> #{keys}} mandatory outputs before advancing
    - :enforce-required-outputs? opt-in accumulated output gate (default false)
+   - :state-io-tools  optional {:save tool :load tool}; save receives engine state
+   - :always-available-tools optional tools allowed during setup and every phase
+   - :state-validate-fn optional (fn [current loaded] -> nil | failure map)
    - :cycle-begin-tool keyword for the tool that starts a cycle
    - :cycle-advance-tool keyword for the tool that advances phases
    - :state-init-fn    (fn [context] -> domain-state-map) additional state at start
@@ -35,7 +38,8 @@
             [futon3c.peripheral.common :as common]
             [futon3c.peripheral.evidence :as evidence]
             [futon3c.peripheral.runner :as runner]
-            [futon3c.peripheral.tools :as tools]))
+            [futon3c.peripheral.tools :as tools])
+  (:import [java.util UUID]))
 
 ;; =============================================================================
 ;; Configuration validation
@@ -51,6 +55,16 @@
        (set? (:setup-tools config))
        (map? (:tool-ops config))
        (map? (:required-outputs config))
+       (or (nil? (:always-available-tools config))
+           (set? (:always-available-tools config)))
+       (or (nil? (:state-io-tools config))
+           (let [{:keys [save load] :as state-io} (:state-io-tools config)]
+             (and (= #{:save :load} (set (keys state-io)))
+                  (keyword? save)
+                  (keyword? load)
+                  (not= save load))))
+       (or (nil? (:state-validate-fn config))
+           (fn? (:state-validate-fn config)))
        (or (nil? (:output-invariants config))
            (and (vector? (:output-invariants config))
                 (every? (fn [invariant]
@@ -67,17 +81,13 @@
 ;; Phase logic (generic)
 ;; =============================================================================
 
-(defn- phase-transitions
-  "Build phase transition map from phase order vector."
-  [phase-order]
-  (into {} (map vector phase-order (rest phase-order))))
-
 (defn- current-phase-tools
   "Get the set of tools allowed in the current cycle phase."
-  [{:keys [phase-tools setup-tools]} state]
-  (if-let [phase (:current-phase state)]
-    (get phase-tools phase #{})
-    setup-tools))
+  [{:keys [phase-tools setup-tools always-available-tools]} state]
+  (into (or always-available-tools #{})
+        (if-let [phase (:current-phase state)]
+          (get phase-tools phase #{})
+          setup-tools)))
 
 (defn- phase-allows-tool?
   "Check if the current phase allows the given tool."
@@ -115,6 +125,38 @@
               (assoc failure :invariant/id id))))
         (:output-invariants config)))
 
+(defn- loaded-state-failure
+  [config current loaded]
+  (cond
+    (not (map? loaded))
+    {:failure :loaded-state-not-map}
+
+    (not= (:session-id current) (:session-id loaded))
+    {:failure :loaded-state-session-mismatch
+     :expected (:session-id current)
+     :actual (:session-id loaded)}
+
+    (and (some? (:current-phase loaded))
+         (not (contains? (set (:phase-order config))
+                         (:current-phase loaded))))
+    {:failure :loaded-state-invalid-phase
+     :phase (:current-phase loaded)}
+
+    :else
+    (when-let [validate (:state-validate-fn config)]
+      (try
+        (validate current loaded)
+        (catch Throwable t
+          {:failure :loaded-state-domain-validation-threw
+           :thrown (.getMessage t)})))))
+
+(defn- branch-marker [state args]
+  {:branch/id (str "branch-" (UUID/randomUUID))
+   :branch/loaded-at (str (java.time.Instant/now))
+   :branch/load-args args
+   :branch/from-phase (:current-phase state)
+   :branch/from-step-count (count (:steps state))})
+
 ;; =============================================================================
 ;; Evidence enrichment
 ;; =============================================================================
@@ -145,6 +187,8 @@
     (let [{:keys [tool args]} (common/normalize-action action)
           cycle-begin (:cycle-begin-tool config)
           cycle-advance (:cycle-advance-tool config)
+          state-save (get-in config [:state-io-tools :save])
+          state-load (get-in config [:state-io-tools :load])
           advance-outputs (when (= tool cycle-advance)
                             (merge (:cycle/outputs state)
                                    (advance-payload args)))
@@ -192,7 +236,12 @@
            :details (dissoc failure :failure :invariant/id)))
 
         :else
-        (let [dispatch-result (tools/dispatch-tool tool args spec backend)]
+        (let [backend-args (if (= tool state-save) (into [state] args) args)
+              dispatch-result (tools/dispatch-tool tool backend-args spec backend)
+              load-failure (when (and (= tool state-load)
+                                      (:ok dispatch-result))
+                             (loaded-state-failure config state
+                                                   (:result dispatch-result)))]
           (cond
             (common/social-error? dispatch-result)
             dispatch-result
@@ -202,8 +251,17 @@
                                  "Tool execution failed"
                                  :tool tool :args args :result dispatch-result)
 
+            load-failure
+            (runner/runner-error
+             (:domain-id config) (:failure load-failure)
+             "Loaded cycle state failed validation"
+             :tool tool
+             :details (dissoc load-failure :failure))
+
             :else
             (let [result (:result dispatch-result)
+                  marker (when (= tool state-load) (branch-marker state args))
+                  state-base (if marker result state)
                   ev (evidence/make-step-evidence
                       (:domain-id config) (:session-id state) (:author state)
                       tool args result (:last-evidence-id state))
@@ -214,9 +272,12 @@
                   new-cycle-id (when (= tool cycle-begin)
                                  (:cycle/id result))
                   last-phase (last (:phase-order config))
-                  new-state (cond-> state
+                  step-record (cond-> {:tool tool :args args :result result}
+                                marker (assoc :branch-marker marker))
+                  new-state (cond-> state-base
                               true (assoc :last-evidence-id (:evidence/id ev))
-                              true (update :steps conj {:tool tool :args args :result result})
+                              true (update :steps (fnil conj []) step-record)
+                              marker (update :branch-markers (fnil conj []) marker)
                               new-phase (assoc :current-phase new-phase)
                               new-phase (update :cycle/outputs merge
                                                 (advance-payload args))

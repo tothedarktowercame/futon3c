@@ -284,3 +284,95 @@
           step (runner/step p (:state start) {:tool :mystery-tool :args []})]
       (fix/assert-valid! shapes/SocialError step)
       (is (= :unclassified-tool (:error/code step))))))
+
+;; =============================================================================
+;; Opt-in engine-owned state I/O
+;; =============================================================================
+
+(def state-io-config
+  (-> test-config
+      (assoc :state-io-tools {:save :state-save :load :state-load}
+             :always-available-tools #{:state-save :state-load})
+      (update :tool-ops assoc :state-save :action :state-load :action)))
+
+(def state-io-spec
+  (update test-spec :peripheral/tools into #{:state-save :state-load}))
+
+(deftest domain-without-state-io-keeps-backend-argument-contract
+  (let [backend (make-test-mock)
+        p (make-test-peripheral backend)
+        start (runner/start p {:session-id "no-state-io"})
+        step (runner/step p (:state start) {:tool :tool-a :args [:caller-arg]})]
+    (is (:ok step))
+    (is (= [:caller-arg]
+           (:args (last (tools/recorded-calls backend)))))))
+
+(deftest state-save-receives-authoritative-engine-state
+  (let [seen (atom nil)
+        backend (make-test-mock
+                 {:state-save
+                  (fn [_ args]
+                    (reset! seen args)
+                    {:ok true :result {:saved? true}})})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "save-state" :test-field :engine})
+        fake {:session-id "save-state" :test-field :caller-fake}
+        saved (runner/step p (:state start)
+                           {:tool :state-save :args [fake :v1]})]
+    (is (:ok saved))
+    (is (= :engine (:test-field (first @seen))))
+    (is (not= fake (first @seen)))
+    (is (= [fake :v1] (vec (rest @seen))))))
+
+(deftest valid-state-load-replaces-state-and-records-branch-marker
+  (let [loaded (atom nil)
+        backend (make-test-mock
+                 {:state-load (fn [_ _] {:ok true :result @loaded})})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "load-state" :test-field :current})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        candidate (-> (:state start)
+                      (assoc :current-phase :beta
+                             :test-field :loaded
+                             :loaded-only true
+                             :steps []))
+        _ (reset! loaded candidate)
+        result (runner/step p (:state begun)
+                            {:tool :state-load :args [3]})
+        marker (last (get-in result [:state :branch-markers]))]
+    (is (:ok result))
+    (is (= :loaded (get-in result [:state :test-field])))
+    (is (true? (get-in result [:state :loaded-only])))
+    (is (= :beta (get-in result [:state :current-phase])))
+    (is (string? (:branch/id marker)))
+    (is (= [3] (:branch/load-args marker)))
+    (is (= marker (get-in result [:state :steps 0 :branch-marker])))))
+
+(deftest invalid-state-load-leaves-authoritative-state-untouched
+  (let [backend (make-test-mock
+                 {:state-load {:session-id "different-session"
+                               :current-phase :alpha}})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "keep-state" :test-field :original})
+        before (:state start)
+        bytes-before (pr-str before)
+        result (runner/step p before {:tool :state-load :args [99]})]
+    (is (= :loaded-state-session-mismatch (:error/code result)))
+    (is (nil? (:state result)))
+    (is (= bytes-before (pr-str before)))
+    (is (= :original (:test-field before)))
+    (is (empty? (:steps before)))))
+
+(deftest always-available-tools-do-not-weaken-ordinary-phase-gating
+  (let [backend (make-test-mock
+                 {:state-save {:saved? true}
+                  :state-load {:session-id "always" :current-phase :alpha}})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "always"})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        saved (runner/step p (:state begun) {:tool :state-save :args []})
+        forbidden (runner/step p (:state begun) {:tool :tool-b :args []})]
+    (is (:ok saved))
+    (is (= :phase-tool-not-allowed (:error/code forbidden)))))
