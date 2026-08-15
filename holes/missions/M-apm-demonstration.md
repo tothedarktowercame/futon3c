@@ -6688,3 +6688,71 @@ vacuity shape — and after A1, it is the shape I now expect to find.
    one layer up.
 5. **(a) stays separate**: auditing `ps/phase-required-outputs` and flipping the
    default is its own piece of work, on the proof peripheral's schedule.
+
+## I.32 The problem-peripheral exists — verified, with one thing to watch
+
+**`futon3c` `6d182a4e`. Verified by claude-2: targeted suite run independently —
+21 tests, 36 assertions, 0 failures.**
+
+| check | result |
+|---|---|
+| **enforcement is real** | `cycle.clj:142` — fires only under the flag, computes `required-through-phase` (the accumulated union), diffs against `(merge (:cycle/outputs state) (advance-payload args))`, errors `:missing-required-outputs` **naming which are missing** |
+| **the test that matters** | `later-phase-refuses-missing-earlier-output`: at `:frame`, frame outputs supplied, **`:registration` from an earlier phase omitted** → refused, with `:registration` in `:missing`. **Exactly the shape asked for** |
+| flag defaults false | yes (`cycle.clj:15`), plus `required-output-enforcement-defaults-off` asserting historical behaviour |
+| **proof peripheral untouched** | **`git diff` on `proof.clj` and `proof_shapes.clj` is empty** |
+| absence tests | substrate-write during `:student-attempts`; harness-tune in store-mode `:intervene`; substrate-write in harness-mode `:intervene` |
+| cardinality kept out of the engine | yes — *"remains outside the engine as instructed"* |
+| join to the harness | fruit passes `mmca`'s `trace-shape-failures` |
+| scope | 5 files, 208 insertions |
+
+**So the config is instantiated and `:required-outputs` is no longer
+decorative** — for opt-in consumers. Instance #16 is repaired at the point of
+use without touching a peripheral we did not write.
+
+### The honest report on the full suite, and why I accept it
+
+codex-4: *"Full suite was attempted but has unrelated existing/environment
+failures, including federation-origin state, **missing `python`**, missing futon6
+fixture data."*
+
+**Spot-checked: `python` is genuinely absent from this box** (only `python3`).
+That corroborates the claim rather than proving all of it, and the named causes —
+federation state, a missing interpreter, absent fixtures — are **not things a
+peripheral config can break**.
+
+**Recorded as accepted-with-limit, not as verified.** The targeted namespaces I
+ran myself; the full-suite claim rests on codex-4's report plus one corroborating
+spot-check. **A full-suite baseline comparison at `6d182a4e~1` would settle it and
+has not been run.**
+
+### ⚠ One decision worth watching — a new cross-repo dependency
+
+> *"`mmca-clj` is a **test-only local dependency**, used to run
+> `trace-shape-failures`."* — `deps.edn:56`,
+> `mmca/mmca {:local/root "../mmca-clj"}` under `:extra-deps`.
+
+**This is the right call and it should still be flagged.** Testing that the
+peripheral's fruit satisfies the validator is *exactly* the join test I asked
+for, and it cannot be done without reaching the validator. Test-scoped and
+`:local/root` keeps it out of the runtime path.
+
+**But it couples futon3c's test suite to a sibling repo's path.** If `mmca-clj`
+moves or its namespace changes, futon3c's tests break for a reason that has
+nothing to do with futon3c. **Recorded so that failure is diagnosable in one
+step rather than puzzled over** — and noted that `mmca-clj` is one of the repos
+*outside* `futon0`'s git-sources census (claude-3, I.17-adjacent), so nothing
+currently watches it.
+
+### State
+
+**Pre-flight complete; orchestration now has its envelope.**
+
+| | |
+|---|---|
+| harness (`mmca-clj` `7028234`) | ✓ 124 tests |
+| validator + proctoring (`563592f`) | ✓ 118 tests |
+| registration + role cards | ✓ validates clean |
+| **problem-peripheral (`6d182a4e`)** | **✓ 21 tests** |
+| blackboard render for a cycle | **not started** |
+| (a) audit `ps/phase-required-outputs` | **not started, separate** |
+| **frame-1** | **Joe's call** |
