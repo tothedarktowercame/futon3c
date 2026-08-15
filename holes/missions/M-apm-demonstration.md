@@ -7092,3 +7092,85 @@ is recoverable; a wrong merge is not."* Hash re-pinned
 relative to discovery as problems accumulate — the same shape as P1's guidance
 decline, from the store's side. **Recorded as a candidate measurable**, not added
 to the frozen vector, since the vector is pinned for round 1.
+
+## I.37 The real question is extraction, not solving — and "any means necessary" opens a fourth channel
+
+**Joe, 2026-08-14:** *"The challenge we have isn't mainly 'can Codex close
+these' — that's the standing assumption. The interesting question is whether,
+supposing that Codex closes them by **'any means necessary'**, **can we extract a
+learning signal for Zai?** But we don't have to fully solve that in frame-1, we
+can sort it out as we go."*
+
+**This relocates the mission's difficulty, and it is worth stating plainly
+because much of today's work implicitly assumed otherwise.**
+
+> **The solve is not the interesting artifact. The EXTRACTION is.** If A1 holds,
+> Codex closing is a given; the open question is whether a "by any means
+> necessary" solve can be rendered into something a **cold, weaker** solver can
+> use.
+
+That is not a solving problem. It is a **representation** problem, and it is the
+part with no prior evidence: D.19 found the arc-lane specified, demonstrated four
+times, and never run at scale. **We have never once tested whether a frontier
+solve can be extracted into a student-usable deposit.**
+
+### The ladder's rungs differ in extractability — which frame-1 can measure
+
+I.35's technique ladder is also, read sideways, an **extractability gradient**:
+
+| rung | what Codex did | what can be deposited | transfers to a cold student? |
+|---|---|---|---|
+| 1 Mathlib search | found lemma `X` | *"the lemma you want is `X`"* | **yes — a pointer** |
+| 2 shape-search | searched by statement shape | *"search by shape; here is the shape"* | **yes — a method** |
+| 3 already-here-under-another-name | found it 40 lines up | *"this file already proves it as `Y`"* | **problem-specific** |
+| 4 previous proof shapes | imitated a prior close | *"problem `Z` was closed like this"* | **yes — a template** |
+| 5 arXiv | found an informal proof | *"paper `P` has the argument"* | **yes, but heavy** |
+| — | **heavy guidance** | *the guidance itself?* | **unknown — this is the open case** |
+
+**The last row is the one worth watching.** If Codex closes because Ground
+Control told it the right thing, then **the transferable artifact may be the
+guidance rather than the proof** — and the deposit should carry the *intervention*,
+not just the lemma. Frame-1 can observe which of these actually occurs; nothing
+in the design currently records *which rung produced the deposit*.
+
+**Cheap addition:** tag each `Promotion` with the ladder rung that produced it.
+Then "which rungs yield transferable deposits" is a count after ten problems
+rather than an opinion.
+
+### ⚠ "Any means necessary" opens a fourth channel we have not controlled
+
+I.8 controls **store** and **harness**; I.11 added **role card**. But *"any means
+necessary"* explicitly includes **patching Mathlib** (I.34's recovered
+instructions say so).
+
+> **A Mathlib patch is none of our three axes.** It is not a memory, not
+> retrieval machinery, not framing. **It is the environment** — and it persists
+> into Zai's run.
+
+Two consequences, both real:
+
+1. **If Codex patches Mathlib to close the problem, Zai must have that patch**,
+   or Zai is not attempting the same problem. The teachability test would fail
+   for a reason that has nothing to do with memory.
+2. **If Zai does have it, the environment changed between arms** — and an
+   environment change is a regime boundary we are not currently recording.
+
+**Neither is hypothetical:** `bridge_packets.py` treats *"names a missing Mathlib
+item"* as a legitimate outcome, so environment change is an expected result of a
+solve, not an edge case.
+
+**Minimum fix, and it is small:** record `:cycle/environment-revision` (the
+`apm-lean`/Mathlib commit in force) per attempt, exactly as store and harness
+revisions are recorded. Then "the environment changed mid-cycle" is visible
+rather than silent, and the Zai arm can be pinned to the post-solve environment
+deliberately rather than by accident.
+
+### Deliberately deferred, per Joe
+
+*"We don't have to fully solve that in frame-1, we can sort it out as we go."*
+
+**Recorded as a deferral with a boundary**: frame-1 does **not** have to answer
+*which extraction works*. It **does** have to record enough to answer it later —
+the rung tag and the environment revision. **A deferral that keeps the data is a
+deferral; one that loses it is a decision.** These two fields are the difference,
+and both are cheap now and unrecoverable afterwards.
