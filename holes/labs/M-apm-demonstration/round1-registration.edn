@@ -22,7 +22,23 @@
  ;; record this environment revision. The store snapshot is recorded but is
  ;; deliberately allowed to change: it is the measured transfer channel.
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "70282341dd146419ea750e4fc32c74581b550e6f"
+ ;; AMENDED 2026-08-15, BEFORE launch. The harness pin was
+ ;; 70282341dd146419ea750e4fc32c74581b550e6f, which is mmca-clj's HEAD ("Add
+ ;; stageable APM cycle harness"). That was correct when written -- the validator
+ ;; and cycle harness lived in mmca-clj -- and became wrong the same day, when
+ ;; that code moved into futon3c and mmca-clj was severed as an unrelated
+ ;; dependency. The pin was never noticed because until today NOTHING READ IT:
+ ;; it is 40 hex, so every shape check passed while the referent pointed into a
+ ;; repository this round does not use.
+ ;;
+ ;; Re-pinned to futon3c, which is where the harness now is. The value is the
+ ;; commit that last changed the HARNESS PATHS (src, scripts, deps.edn), not
+ ;; futon3c's HEAD: HEAD moves on every note and on this amendment itself, and a
+ ;; commit cannot contain its own sha, so a HEAD-scoped pin could never be
+ ;; satisfied by the run that follows it. Measured by
+ ;; problem/measure-harness-repository, the same construction the validator uses
+ ;; for :lean-revision.
+ :reg/harness-revision     "7c743f777ccdd2b023149149f375e17bf1b1f949"
 
  ;; The solver seat is a PARAMETER OF THE MEASUREMENT, not a location like the
  ;; Lean repo or the Agency endpoint: guidance is counted as in-window Agency
