@@ -805,12 +805,14 @@
 
 (defn- scored-use-stat
   [stat alpha]
-  (let [{:keys [offered-count used-count]}
-        (merge (empty-use-stat) stat)
+  (let [stat (-> (merge (empty-use-stat) stat)
+                 (update :offered-count #(or % 0))
+                 (update :used-count #(or % 0)))
+        {:keys [offered-count used-count]} stat
         use-rate (if (pos? offered-count)
                    (/ (double used-count) offered-count)
                    0.0)]
-    (assoc (merge (empty-use-stat) stat)
+    (assoc stat
            :use-rate use-rate
            :ranking-factor
            (if (pos? offered-count)
@@ -1009,8 +1011,8 @@
         stats-found?
         (boolean
          (some (fn [[_ stat]]
-                 (or (pos? (:offered-count stat))
-                     (pos? (:used-count stat))))
+                 (or (pos? (or (:offered-count stat) 0))
+                     (pos? (or (:used-count stat) 0))))
                (:memories receipt-stats)))
         ranked
         (if (and receipt-ranking? stats-found?)

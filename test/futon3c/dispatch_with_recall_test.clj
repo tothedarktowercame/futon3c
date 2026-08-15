@@ -10,7 +10,7 @@
                "A continuous function has integral zero."
                {"1.5.1" "nonneg integral zero → zero"})]
     (is (= "nonneg integral zero → zero" (:terrain query)))
-    (is (= :v1.2-receipt-instrumented (:recall-system query)))
+    (is (= :v1.3-kind-instrumented (:recall-system query)))
     (is (not-any? #{"bpm-1-5-1"} (:terms query))
         "problem ids are graph endpoints, not conjunctive lexical terms")
     (is (some #{"nonnegative integral"} (:terms query)))))
@@ -138,6 +138,19 @@
     (is (= 1.0
            (get-in (first cold)
                    [:dispatch/receipt-stats :ranking-factor])))))
+
+(deftest nil-receipt-counts-keep-memory-at-base-score
+  (let [ranked (dispatch/rank-memories
+                [{:memory/id "e-never-offered"}]
+                {"e-never-offered" {:offered-count nil :used-count nil}}
+                0.5)
+        memory (first ranked)]
+    (is (= 1.0 (:dispatch/base-score memory)))
+    (is (= (:dispatch/base-score memory)
+           (:dispatch/ranking-score memory)))
+    (is (= 0.0 (get-in memory [:dispatch/receipt-stats :use-rate])))
+    (is (= 1.0 (get-in memory
+                       [:dispatch/receipt-stats :ranking-factor])))))
 
 (deftest pre-cutoff-ranking-audit-retains-below-cutoff-candidates
   (let [ranked [{:memory/id "e-ranked"
@@ -678,7 +691,7 @@
                "job-1" "session-1")
         receipt (get-in entry [:body :memory-use])]
     (is (= :pattern-outcome (:type entry)))
-    (is (= :v1.2-receipt-instrumented
+    (is (= :v1.3-kind-instrumented
            (get-in entry [:body :recall-system])))
     (is (= :recall-empty (get-in entry [:body :recall-status])))
     (is (= [] (:memory-use/surfaced-ids receipt)))
