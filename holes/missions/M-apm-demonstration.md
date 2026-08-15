@@ -6292,3 +6292,81 @@ the same mission — the first being the replay scoping that contradicted D.13.
 of judgement. The mitigation is not "be more careful"; it is that a claim about
 a mode should be read *from the registration*, which is short, rather than
 recalled from a 5,900-line mission file.
+
+## I.27 Orchestration — what exists, and the one thing that does not
+
+**Joe, 2026-08-14:** *"what's mostly missing now is the orchestration. Whoever or
+whatever is running the experiment needs to be able to register new agents,
+dispatch problems, etc.; futon6 had already created a 'proof peripheral' that
+could likely be adapted."*
+
+**Checked before proposing.** The peripheral is not in futon6 — futon6 holds its
+*handoffs and mission triples*; **the code is in futon3c**, and
+`M-proof-peripheral.md` is archived-complete.
+
+### What already exists
+
+| component | lines | what it gives us |
+|---|---|---|
+| `agents/apm_work_queue.clj` | **924** | per-problem dispatch with a **phase machine** — observe · propose · target-check · execute · validate · classify · integrate — and a per-phase prompt for each |
+| `peripheral/proof_backend.clj` | — | `init-problem!`, `make-initial-state`, `make-proof-backend` |
+| `peripheral/proof.clj` | 168 | the peripheral surface |
+| `blackboard.clj` | **58 KB** | proof-session observability; `format-proof-state` renders problem/mode/phase/cycles/blocker/ledger; **evidence emitted on every projection** |
+| `agency/registry.clj` | — | `register-agent!` / `unregister-agent!` — agent registration is solved |
+| `proof/bridge.clj` | — | the bridge |
+
+Plus, from the archived mission: a **9-phase cycle machine, ledger + DAG, G5–G0
+gate checklist, TryHarder licensing to gate persistence loops**, and
+**mandatory-FALSIFY-before-CONSTRUCT** enforcement.
+
+**Joe's instinct is right: this is adaptation, not construction.** Agent
+registration, problem dispatch, phase sequencing, and observability all exist and
+have run.
+
+### What it does *not* give us — and it is exactly one thing
+
+`apm_work_queue`'s phase machine drives **a single agent through phases of one
+problem**. Our cycle is **three agents in defined relation**: Codex solves under
+counted guidance → deposit → Zai re-proves cold, three times → Claude adjudicates.
+
+> **What is missing is not dispatch. It is the multi-agent choreography and its
+> proctoring** — the ordering constraints that make the measurement valid:
+> Zai's session must be fresh per attempt; Claude may reach Zai only through the
+> substrate; exactly one of store/harness varies across attempts; guidance must
+> be counted as it happens.
+
+**None of those are phases of a problem. They are relations between agents**, and
+that is the layer no existing component models.
+
+### The adaptation, stated concretely
+
+| need | source |
+|---|---|
+| register agents | `registry/register-agent!` — **as-is** |
+| dispatch a problem to an agent | `apm_work_queue` — **as-is** |
+| sequence phases within one agent's work | `apm_work_queue` phase machine — **as-is** |
+| observability / operator view | `blackboard` + `format-proof-state` — **adapt**: render a *cycle*, not a proof-state |
+| persist state | `data/proof-state/{problem-id}.edn` — **adapt**: our entities are the schemas at I.19/I.21 |
+| **agent choreography + proctoring** | **new — the only genuinely missing piece** |
+| run the cycle and emit the trace | `mmca-clj` harness `run-cycle!` — **exists**, needs a caller |
+
+**The missing caller is the orchestrator**: the thing that calls `run-cycle!`
+with entities assembled from real dispatches, in the right order, honouring the
+constraints. That is the runbook (I.24) made executable.
+
+### One thing Joe added that changes an axis
+
+> *"We could reset the role card for the **next** problem without confounding
+> (though obviously we can't feed answers **through** the role card, but in
+> principle we can explain conceptually **how to use the memory store better**)."*
+
+**That makes the role card a third teaching channel, not merely framing
+hygiene.** I.11 treated a card change as a *regime boundary to respect*; it is
+also an *intervention to use* — teaching method between problems, where store
+teaches facts and harness teaches procedure.
+
+**The constraint that keeps it honest is Joe's own:** method, never answers. A
+card that named a lemma would be feeding the answer through the framing channel,
+which is the covert-channel problem (I.8) in a third guise. **Recorded as an
+axis with that boundary**, so a future round can use it deliberately rather than
+discovering it as a confound.
