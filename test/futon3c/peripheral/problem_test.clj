@@ -1901,3 +1901,46 @@
                   (fn [_ _] (repeat 4999 {:hx/props {:roles {:entry "memory/x"}}}))]
       (is (= ["memory/x"] (#'problem/snapshot-reviewed-memories))
           "a short page is a complete read and must succeed"))))
+
+;; F8's OTHER DIRECTION -- the test that was missing, and whose absence hid a
+;; one-character bug for the whole life of :emit-frame. The tool wrote
+;; :cprobe/passed; derive-trace reads :cprobe/passed? (cycle_harness.clj:126).
+;; So :containment-probe-passed? was ALWAYS nil and F8 fired on EVERY claimed
+;; containment, however well witnessed. The firing test could not see it, because
+;; a gate that always fires still fires.
+(deftest a-witnessed-containment-does-not-fire-f8
+  (let [scaffold (Files/createTempFile "problem-frame-scaffold-witnessed-" ".lean"
+                                       (make-array FileAttribute 0))
+        closing (Files/createTempFile "problem-frame-closing-witnessed-" ".lean"
+                                      (make-array FileAttribute 0))
+        witness (Files/createTempFile "problem-frame-witness-ok-" ".edn"
+                                      (make-array FileAttribute 0))]
+    (try
+      (spit (.toFile scaffold) "theorem t : True := by sorry\n")
+      (spit (.toFile closing) "theorem t : True := by trivial\n")
+      (spit (.toFile witness) "{:containment :observed}\n")
+      (timestamp-frame-snapshots! scaffold closing)
+      (let [{:keys [emitted]} (machine-frame-result scaffold closing witness true)
+            output (:result emitted)]
+        (is (:ok emitted))
+        (is (true? (get-in output [:containment-probe :cprobe/recorded?])))
+        (is (true? (get-in output [:containment-probe :cprobe/passed?]))
+            "the key must be :cprobe/passed? -- what derive-trace actually reads")
+        (is (not (some #{:f8-unwitnessed-containment}
+                       (frame-validation-failures output)))
+            "F8 must NOT fire when the containment claim IS witnessed"))
+      (finally
+        (Files/deleteIfExists scaffold)
+        (Files/deleteIfExists closing)
+        (Files/deleteIfExists witness)))))
+
+;; One spelling per fact. :promote-artifact emitted both :promo/importable and
+;; :promo/importable?; derive-trace reads the `?` spelling (cycle_harness.clj:136).
+;; A dual emission is a hedge, and a hedge is a second route to a field the
+;; machine owns.
+(deftest promotion-emits-one-spelling-of-importable
+  (let [{:keys [promotions]} (adjudication-machine-results)
+        entity (first promotions)]
+    (is (true? (:promo/importable? entity)))
+    (is (not (contains? entity :promo/importable))
+        "the non-predicate spelling must not be emitted at all")))

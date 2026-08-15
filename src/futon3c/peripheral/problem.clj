@@ -1225,7 +1225,12 @@
            :cprobe/frame frame-id
            :cprobe/claimed? (true? (:containment-claimed? options))
            :cprobe/recorded? witness-recorded?
-           :cprobe/passed witness-recorded?}}})
+           ;; :cprobe/passed? WITH the question mark. derive-trace reads
+           ;; :cprobe/passed? (cycle_harness.clj:126); this emitted :cprobe/passed,
+           ;; so :containment-probe-passed? was ALWAYS nil and F8 fired on every
+           ;; claimed containment no matter how well witnessed. The F8 test could
+           ;; not see it because it only checked that the gate FIRES.
+           :cprobe/passed? witness-recorded?}}})
 
       (= tool-id :write-disposition)
       (let [options (first args)
@@ -1269,10 +1274,15 @@
            :result {:promo/id (str "promo/" cycle-id "/" step-index)
                     :promo/cycle cycle-id
                     :promo/artifact-id artifact-id
-                    ;; :promo/importable is the documented entity field;
-                    ;; derive-trace's current compatibility projection reads the
-                    ;; predicate spelling.
-                    :promo/importable importable?
+                    ;; ONE key, the one derive-trace actually reads
+                    ;; (cycle_harness.clj:136). Emitting both spellings was a
+                    ;; hedge against not knowing which is canonical, and a hedge
+                    ;; is a second route to a field the machine owns: if the two
+                    ;; ever disagree, which wins depends on the consumer you ask.
+                    ;; The `?` spelling matches every other boolean on these
+                    ;; entities -- :cprobe/claimed?, :cprobe/recorded?,
+                    ;; :cprobe/passed? -- and the last of those was silently wrong
+                    ;; for exactly this reason.
                     :promo/importable? importable?
                     :promo/need-tags need-tags}}
           {:ok false
