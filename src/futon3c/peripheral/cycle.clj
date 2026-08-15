@@ -142,17 +142,24 @@
     {:failure :loaded-state-invalid-phase
      :phase (:current-phase loaded)}
 
-    ;; :cycle/id is engine-owned (set at cycle-begin), so it is as checkable as
-    ;; :session-id. Without this a step-back could restore ANOTHER cycle's state
-    ;; -- verified: a same-session load of a foreign cycle succeeded and silently
-    ;; switched :cycle/id, which would merge two cycles' :cycle/outputs, and that
-    ;; is where the measurements live. A nil current id is a resume, not a switch,
-    ;; so it stays permitted.
-    (and (some? (:cycle/id current))
-         (not= (:cycle/id current) (:cycle/id loaded)))
+    ;; The engine stores the cycle id as :current-cycle-id (see the assoc at
+    ;; cycle-begin); :cycle/id is the key on the BACKEND RESULT, not on state.
+    ;; This guard first read :cycle/id from state and was therefore dead -- and
+    ;; its test passed only because the test set that key itself, building a
+    ;; precondition that never occurs. Without the guard, a same-session load of
+    ;; a foreign cycle succeeds and silently switches cycles, merging two cycles'
+    ;; :cycle/outputs -- where the measurements live. A nil current id is a
+    ;; resume into a fresh peripheral, not a switch, so it stays permitted.
+    ;; BOTH must be present: a loaded state with no cycle id is a rewind to
+    ;; before this cycle began, which is a legitimate -- indeed the most extreme
+    ;; -- step-back. Only a DIFFERENT live cycle is the hole. The first version
+    ;; omitted the second some? and broke exactly that legitimate case.
+    (and (some? (:current-cycle-id current))
+         (some? (:current-cycle-id loaded))
+         (not= (:current-cycle-id current) (:current-cycle-id loaded)))
     {:failure :loaded-state-cycle-mismatch
-     :expected (:cycle/id current)
-     :actual (:cycle/id loaded)}
+     :expected (:current-cycle-id current)
+     :actual (:current-cycle-id loaded)}
 
     :else
     (when-let [validate (:state-validate-fn config)]

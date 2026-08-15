@@ -378,16 +378,20 @@
     (is (= :phase-tool-not-allowed (:error/code forbidden)))))
 
 (deftest load-refuses-a-foreign-cycle
-  ;; :cycle/id is engine-owned, so it is as checkable as :session-id. Without
-  ;; this a same-session load of another cycle succeeded and silently switched
-  ;; :cycle/id, merging two cycles' :cycle/outputs -- where measurements live.
-  (let [foreign {:session-id "xcycle" :cycle/id "CYCLE-B"
+  ;; The cycle id is set BY THE ENGINE at cycle-begin, so this test must let the
+  ;; engine set it rather than assoc it in. The first version of this test built
+  ;; :cycle/id on the state by hand -- a key the engine never writes -- so it
+  ;; passed against a guard that could not fire in reality.
+  (let [foreign {:session-id "xcycle" :current-cycle-id "CYCLE-B"
                  :steps [] :cycle/outputs {}}
         backend (make-test-mock
-                 {:state-load (fn [_ _] {:ok true :result foreign})})
+                 {:cycle-begin (fn [_ _] {:ok true :result {:cycle/id "CYCLE-A"}})
+                  :state-load  (fn [_ _] {:ok true :result foreign})})
         p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
         start (runner/start p {:session-id "xcycle"})
-        st (assoc (:state start) :cycle/id "CYCLE-A")
-        r (runner/step p st {:tool :state-load :args []})]
+        begun (runner/step p (:state start) {:tool :cycle-begin :args ["M" "C"]})
+        _ (is (= "CYCLE-A" (:current-cycle-id (:state begun)))
+              "the engine, not the test, must establish the cycle id")
+        r (runner/step p (:state begun) {:tool :state-load :args []})]
     (is (= :loaded-state-cycle-mismatch (:error/code r)))
     (is (nil? (:state r)))))
