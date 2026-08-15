@@ -155,6 +155,20 @@
                     :reads [:f/absent-reader]
                     :writes [:f/absent-writer]}]}))))
 
+(deftest unreadable-site-is-a-finding-not-an-exception
+  (let [findings (wiring/conformance
+                  "."
+                  {:spec/id :unreadable
+                   :boxes [{:box/id :ghost
+                            :site {:file "no/such/file.clj"}
+                            :reads [:f/x]}]})]
+    (is (= 1 (count findings)))
+    (is (= :site-unreadable (:finding (first findings))))
+    (is (= {:file "no/such/file.clj"} (:site (first findings))))
+    (is (string? (:error (first findings))))
+    (is (not-any? #(= :declaration-without-occurrence (:finding %)) findings)
+        "an unreadable site must not also emit drift findings")))
+
 (deftest namespace-sites-resolve-under-src
   (is (= []
          (wiring/conformance

@@ -115,18 +115,28 @@
   (let [boxes (or boxes [])
         field-universe (set (fields-in boxes))
         boxes-by-site (group-by :site (filter :site boxes))
+        ;; An unreadable or malformed site is a FINDING, not an exception: the
+        ;; checker's own boundary must not escape unstructured (the ToolBackend
+        ;; lesson from the peripheral session, applied to the verifier itself).
         site-text (into {}
                         (map (fn [[site _]]
-                               [site (slurp (site-path repo-root site))]))
+                               [site (try {:text (slurp (site-path repo-root site))}
+                                          (catch Exception e
+                                            {:error (str (.getMessage e))}))]))
                         boxes-by-site)
+        unreadable-sites
+        (for [[site {:keys [error]}] site-text
+              :when error]
+          {:finding :site-unreadable :site site :error error})
         missing-declarations
         (for [box boxes
-              :let [site (:site box)]
-              :when site
+              :let [site (:site box)
+                    text (get-in site-text [site :text])]
+              :when (and site text)
               [role fields] [[:reads (or (:reads box) [])]
                              [:writes (or (:writes box) [])]]
               field fields
-              :when (not (field-occurs? (get site-text site) field))]
+              :when (not (field-occurs? text field))]
           {:finding :declaration-without-occurrence
            :box/id (:box/id box)
            :field field
@@ -134,8 +144,9 @@
            :site site})
         undeclared-occurrences
         (for [[site site-boxes] boxes-by-site
-              :let [text (get site-text site)
+              :let [text (get-in site-text [site :text])
                     declared-here (set (fields-in site-boxes))]
+              :when text
               field field-universe
               :when (and (not (contains? declared-here field))
                          (field-occurs? text field))]
@@ -143,6 +154,6 @@
            :field field
            :site site
            :declared-by []})]
-    (->> (concat missing-declarations undeclared-occurrences)
+    (->> (concat unreadable-sites missing-declarations undeclared-occurrences)
          (sort-by (juxt (comp str :finding) (comp str :field)))
          vec)))
