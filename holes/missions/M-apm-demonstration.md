@@ -7486,3 +7486,58 @@ that only rules out the *shape* of self-certification, **THEN** the check would
 have been graded F1-strength, **BECAUSE** the precedent I cited made it sound
 like one. **The gate is real; it is one grade weaker than advertised, and A3 is
 the name of the difference.**
+
+## I.41 GLM-5.3 — not a plan change, but a preregistered transport test later
+
+**Joe, 2026-08-15:** *"we don't need to change the plan but we could look into
+swapping in 5.3 for 5.2 at some point in the experiment to see if their improved
+model makes a difference. For reasons described earlier, using 5.2 may be
+preferable for our project."*
+
+*(`z.ai/blog/glm-5.3` returned no content to the fetcher; no 5.3 figures are
+recorded here, and none should be invented. The design point does not need them.)*
+
+### Agreed, and the sharp reason
+
+**A stronger student is worse for this measurement in the near term.** The design
+needs Zai to fail *informatively* — at 4/48 the failure modes are the data, and
+the role card asks for *"a precise account of what did not work"* rather than
+closures. Raising the floor shrinks the signal before the substrate has had a
+chance to move it.
+
+### The machinery already exists, and this vindicates it
+
+The registration pins the identity floor **by model version and benchmark
+release, never by rate** — written because the rate moved 1/41 → 4/48 across two
+releases. A 5.2→5.3 swap is therefore a **regime boundary**, the same class as a
+role-card change: **P1's slope must not be read across one.** That pin was
+speculative when written; a real release arriving one day later is the case it
+was for.
+
+### What the swap is actually worth measuring
+
+**Not** *"does the better model do better"* — predictable, and uninteresting. It
+is a **transportability test of the substrate**:
+
+> Does a deposit that helped 5.2 also help 5.3?
+>
+> - **helps both** → the memory encodes **mathematics**;
+> - **helps only 5.2** → the substrate is **model-specific**, patching one
+>   model's weaknesses rather than accumulating knowledge.
+
+The second outcome is a finding about the **memory system**, which is what this
+mission is about. It is also the closest runnable approximation to **N6 /
+transport**, which MAP established the engine cannot ask.
+
+**Form:** a separate registration naming its predecessor — the `seededConfirmation`
+discipline already used for a98A01. **Never a mid-round swap.**
+
+### Risk this release exposes
+
+**5.2 now has a shelf life.** The identity floor is anchored to a specific model
+version; if the vendor retires it, **the anchor disappears and the floor becomes
+uninterpretable** — a live hazard for any design pinned to a vendor model rather
+than to a rate.
+
+**Cheap insurance:** record 5.2's exact model id alongside the ArXivLean June
+figures, so the floor stays interpretable after the endpoint goes away.
