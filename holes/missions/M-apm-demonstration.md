@@ -8702,3 +8702,53 @@ has favoured the version that cannot be.
 
 **`:cycle/runner-freshness` becomes checkable rather than asserted:** a boolean that
 was a claim about the session can now be a structural fact about the tree as well.
+
+## I.57 The attempt cap is decorative — and A3.5 should provision on demand
+
+**Eleventh stop, eleventh time right.** codex-4: `:assign-checkouts` cannot reach the
+frozen registration, and it refused both bad ways out — taking `N` as a tool argument
+(**caller-supplied denominator**, the thing this whole line of work removes) and
+hardcoding the round-1 path (**couples the generic peripheral to one experiment**).
+
+Checking the premise before answering found something worse.
+
+### `:reg/attempt-caps` is read by nothing
+
+```
+grep -rn "attempt-caps|s-frontier|s-student" src/ test/ scripts/
+  → zero real hits (every match is an unrelated "frontier")
+```
+
+**Nothing enforces the cap** — not the runtime, not the validator. And I added that
+field this morning with the note:
+
+> *"Previously these lived only in a comment, so they could not be checked."*
+
+**I moved it from a comment into a data field and stopped.** That made it
+*checkable* and left it *unchecked* — the mission's signature defect, committed by me,
+in a change whose commit message claims to be fixing exactly that defect. Moving a
+value from prose into EDN feels like wiring it. It is not.
+
+### So A3.5 provisions ON DEMAND
+
+Provisioning `1 + N` upfront needs a number **nothing else respects**. Instead:
+
+- **each student attempt provisions its own tree at dispatch** — no `N`, no
+  registration access, no new engine mechanism;
+- **distinctness becomes structural** — a fresh frame per dispatch cannot collide;
+- **exactly as many trees as attempts**, and a step-back that re-runs provisions
+  fresh naturally;
+- **arm naming needs uniqueness, not counting**, so it needs no state to derive.
+
+**IF** trees were provisioned upfront, **HOWEVER** that requires the cap, which
+nothing enforces, **THEN** provision per attempt, **BECAUSE** the only thing the
+count was buying was an audit that the validator should be doing anyway — and is not.
+
+### Separately: the cap should actually be enforced
+
+That is its own packet, and it is not A3.5's job. The validator has the registration
+and the trace; comparing attempt counts against `:reg/attempt-caps` is exactly the
+kind of check it already performs for everything else.
+
+**Recorded as a live gap rather than fixed in passing** — folding it into A3.5 is how
+packets grow the "and" that I.47 warned about.
