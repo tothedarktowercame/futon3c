@@ -1,0 +1,61 @@
+;; WS-E slice 3b — declared ownership map for the problem peripheral's
+;; registration-pin and close chains. Authored by claude-7 (2026-08-15) from
+;; the RC audit (TN-problem-peripheral-RC-fable-review.md) against HEAD
+;; after c199fe4d/faa33539; checked by futon3c.diagramprover.wiring under
+;; contract (c): declaration + site conformance. Scope is the audited seam,
+;; not yet the full tool surface — coverage widens per slice, and the
+;; conformance check is what keeps these declarations honest as the
+;; peripheral moves.
+;;
+;; Notes on deliberate declarations:
+;; - :advance-payload writes :environment-checkouts because recorded-assignment
+;;   still falls back to the caller payload (problem.clj:229) — a live
+;;   double-writer seam, declared so multiply-written reports it.
+;; - No box writes :retrieval-probes: the producer is the known deliberate gap
+;;   (README-problem-peripheral.md "Known gap"), and injection is now stripped.
+;; - :required-outputs-gate models the engine's advance gate, whose reads are
+;;   data-driven via the required-outputs map declared in problem.clj.
+;; - :environment-arms-match reads BOTH registration pins: made load-bearing by
+;;   the "Fable RC review: close the caller-injectable retrieval gap, make the
+;;   pins load-bearing" commit (problem.clj:87-88). The first draft of this map
+;;   omitted them and the conformance check flagged the omission on its first
+;;   live run — the checker correcting its own author's stale belief.
+{:spec/id :apm-problem-peripheral-live
+ :boxes
+ [{:box/id :registration-edn
+   :site {:file "holes/labs/M-apm-demonstration/round1-registration.edn"}
+   :writes [:reg/environment-revision :reg/harness-revision :reg/solver-seat
+            :lean-revision :required-measurement-fields]}
+  {:box/id :assign-checkouts
+   :site {:ns "futon3c.peripheral.problem"}
+   :writes [:environment-checkouts]}
+  {:box/id :advance-payload
+   :site {:ns "futon3c.peripheral.problem"}
+   :writes [:environment-checkouts]}
+  {:box/id :stamp-environment-outputs
+   :site {:ns "futon3c.peripheral.problem"}
+   :reads [:environment-checkouts]
+   :writes [:environment-revision]}
+  {:box/id :environment-arms-match
+   :site {:ns "futon3c.peripheral.problem"}
+   :reads [:environment-revision :reg/environment-revision
+           :reg/harness-revision]}
+  {:box/id :record-measurement
+   :site {:ns "futon3c.peripheral.problem"}
+   :reads [:required-measurement-fields]
+   :writes [:measurement]}
+  {:box/id :emit-trace
+   :site {:ns "futon3c.peripheral.problem"}
+   :reads [:measurement :retrieval-probes]
+   :writes [:trace]}
+  {:box/id :validate-trace
+   :site {:ns "futon3c.peripheral.problem"}
+   :reads [:trace :reg/solver-seat]
+   :writes [:validation]}
+  {:box/id :write-authorization
+   :site {:ns "futon3c.peripheral.problem"}
+   :reads [:validation :lean-revision]
+   :writes [:authorization]}
+  {:box/id :required-outputs-gate
+   :site {:ns "futon3c.peripheral.problem"}
+   :reads [:measurement :trace :validation :authorization]}]}
