@@ -7412,3 +7412,77 @@ and the launch gate is its deadline, not its source.
   resource permitted to differ across arms (I.39).
 - The proof peripheral could adopt this later. **Out of scope**; opt-in means it
   costs nothing to leave unadopted.
+
+## I.40a Review of `d8b8e748` — and an overclaim in I.40 that the review caught
+
+**Reviewed as a gate, not a rubber stamp.** What was checked, and how:
+
+| check | method | result |
+|---|---|---|
+| diff read | `git show d8b8e748`, all 5 files | 118 insertions, matches summary |
+| predicate is engine-derived | read `environment-arms-match` | **passes** — no tool-asserted boolean |
+| gates compose | `cond` order in `dispatch-step` | presence before content, correct precedence |
+| tests are load-bearing | **4 mutations** | each killed its intended test, nothing else |
+| counts | re-ran `-X:test` myself | **25/43/0** — matches codex-4 exactly |
+| clj-kondo | touched files only | 0 errors, 1 pre-existing warning |
+| opt-in / no collateral | `proof.clj`, `axiom-audit.jsonl` | untouched, as claimed |
+
+**The mutation pass is what makes this a gate.** Green tests prove nothing until
+they can go red. Of the four, **M2 mattered most**: over-constraining the
+invariant to also require equal store snapshots *did* turn
+`differing-store-snapshots-are-explicitly-accepted` red — so the store exemption
+is **positively expressed**, not merely absent. That was the one that could have
+silently over-constrained and frozen the transfer channel.
+
+**codex-4 improved on the spec, correctly.** I asked for `solver == students`; it
+implemented `pinned == solver == students`. That makes the registration pin
+**load-bearing rather than presence-only** — the pin is now something the cycle
+can fail against, not decoration. Better than what I asked for.
+
+### Defect found and fixed (`8f5d6a2`, mine, not re-belled)
+
+A probe with `:student-attempts` bound to a keyword made the predicate **throw
+out of `runner/step`** rather than return a structured error. Fixed in the
+*engine*, so every future invariant is safe by construction. **The catch yields a
+failure, never nil** — returning nil would let a misbehaving tool defeat the gate
+by emitting garbage instead of a mismatch, a strictly worse hole than the crash.
+
+*(A second suspicion — that eager computation could preempt phase-gating — probed
+false: `advance-outputs` is only computed for the advance tool.)*
+
+### The overclaim, and A3
+
+**I.40 said:** *"a predicate the engine computes over data it already required is
+a measurement."* **Reviewing the implementation, that overclaims.**
+
+All three compared values — the pin, the solver's revision, each student's — are
+**reported by tools**. The engine checks that three independently-sourced reports
+**agree**; it never consults the environment.
+
+> **Contrast F1, which I cited as the precedent.** The emitter *hashes the actual
+> files*. Nobody can lie to it. Here, a harness that reports the pinned revision
+> while running against a different tree passes the gate.
+
+So the honest grading: **stronger than the asserted boolean codex-4 refused to
+build** — three parties, different phases, different tools, all must agree — but
+**weaker than F1**, and not a measurement of the environment.
+
+This surfaces a standing assumption that was never written down:
+
+> **A3.** *The harness derives each revision from the actual checkout, rather
+> than echoing the registered pin.*
+
+**A3 is doing real work in I.38's containment argument and was invisible until
+now.** The environment is the pass-note channel; if revisions are echoed rather
+than derived, the gate that closes that channel is reporting on itself.
+
+**Fix path, not built:** derive the revision at point of use (`git rev-parse` in
+the working tree the attempt actually ran in). Cheap, and it converts A3 from an
+assumption into a measurement. Recorded rather than done, because it belongs to
+whoever builds the harness, not to the cycle machine.
+
+**IF** the review had stopped at "the predicate is engine-computed", **HOWEVER**
+that only rules out the *shape* of self-certification, **THEN** the check would
+have been graded F1-strength, **BECAUSE** the precedent I cited made it sound
+like one. **The gate is real; it is one grade weaker than advertised, and A3 is
+the name of the difference.**
