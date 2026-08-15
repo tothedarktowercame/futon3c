@@ -6531,3 +6531,83 @@ validator already checks, so nothing new is invented at the boundary.
 `:cycle-advance-tool :advance-problem-phase` · `:tool-ops` classifying each tool
 `:observe` or `:action` · `:setup-tools` = `{:load-registration :list-problems}` ·
 `:state-init-fn` seeding `:cycle/mode`, `:cycle/deposit-state`, ids.
+
+## I.30 Structural stop — `:required-outputs` is documented and never read
+
+**codex-4 stopped on a structural gap, exactly as instructed, and it is a
+finding about the engine rather than about my spec.** Not re-dispatched.
+
+**Verified by claude-2 directly.** `:required-outputs` appears **three times** in
+`peripheral/cycle.clj` and is **read by nothing**:
+
+| line | what it is |
+|---|---|
+| 14 | docstring — *"mandatory outputs before advancing"* |
+| 29 | docstring — *"味 = required-outputs (evaluation: did this phase produce enough?)"* |
+| 51 | `valid-domain-config?` — checks only that it **is a map** |
+
+**No dispatch path, no advance path, nowhere else in the file.**
+
+> **Instance #16 of "written but not wired up" — and it is inside the generic
+> engine whose phase gating I called, one section ago, the structural answer to
+> proctoring.** The key that says *"mandatory outputs before advancing"* does not
+> gate advancing.
+
+### The distinction that saves the design — I checked both keys, not just the one
+
+**`:phase-tools` IS enforced**, and that is the load-bearing mechanism:
+
+```clojure
+(defn- current-phase-tools [{:keys [phase-tools setup-tools]} state] …)
+(defn- phase-allows-tool? [config state tool]
+  (contains? (current-phase-tools config state) tool))
+```
+
+| mechanism | status | what depends on it |
+|---|---|---|
+| **`:phase-tools`** | **enforced** (66–76, used at 121) | **the proctoring** — covert channel absent, mode discipline, guidance counted |
+| **`:required-outputs`** | **decorative** | *entity completeness* — "a phase cannot advance without its entities" (I.29) |
+
+**So I.28's central claim survives intact.** The tool absence is real; the covert
+channel genuinely cannot be authored. **What does not survive is I.29's
+`:required-outputs` table**, which as written is a claim with no mechanism —
+precisely the defect this mission exists to remove, authored by me two sections
+after cataloguing fifteen instances of it.
+
+### Why codex-4's refusal to work around it was right
+
+> *"Repeating that workaround in a new problem backend would make
+> `:required-outputs` **decorative in the config** and duplicate enforcement
+> outside the advertised generic mechanism."*
+
+The proof peripheral gets output-gating from its **backend**, not the engine. We
+could copy that. **We should not**: it would leave the engine advertising a
+guarantee it does not provide, and put our enforcement somewhere a reader of the
+config cannot see. That is how the eleven instances happened.
+
+### The fix, and the risk that makes it Joe's call
+
+**Right fix: make `cycle.clj` enforce the key it documents.** Small, generic,
+and it repairs the engine for the proof peripheral too.
+
+⚠ **But it is shared infrastructure, and enabling a dormant gate is not
+neutral.** `proof-domain-config` sets `:required-outputs ps/phase-required-outputs`
+— a **populated** map. If any entry there names an output the proof peripheral
+does not actually produce, **switching enforcement on would break a working
+peripheral.** The gate has never fired, so nothing has ever had to satisfy it.
+
+**Options:**
+
+| | |
+|---|---|
+| **(a)** enforce in `cycle.clj`, audit `phase-required-outputs` first | correct; touches shared infra; needs the audit before flipping |
+| **(b)** enforce in the problem backend only | fast; leaves the engine lying; **codex-4's objection stands** |
+| **(c)** enforce in `cycle.clj` behind an opt-in config flag | safe for the proof peripheral, honest for ours; costs a flag |
+
+**My recommendation: (c), then (a) once the audit is done** — the flag makes our
+peripheral honest immediately without risking a peripheral we did not write, and
+converts "enable a dormant gate across the codebase" into a separate, checkable
+piece of work.
+
+**Recorded, not actioned.** Fourth structural stop in the sequence; fourth time
+the stop was worth more than the code.
