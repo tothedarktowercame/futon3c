@@ -2012,3 +2012,47 @@
     (is (= "http://elsewhere:1" (:base (second @calls))))
     (is (= [:push+pull :push+pull :pull-only]
            (mapv :memory-channel @calls)))))
+
+(deftest student-dispatch-packet-names-its-provisioned-checkout
+  (let [dispatches (atom [])
+        frame {:checkout "/frames/batch/student-1"
+               :branch "exp/batch-student-1"
+               :base-revision "0123456789abcdef"
+               :frame/id "batch-student-1"}
+        inner (reify tools/ToolBackend
+                (execute-tool [_ tool-id args]
+                  (when (= :dispatch-student-fresh tool-id)
+                    (swap! dispatches conj args))
+                  {:ok true :result {:job-id "job-1"}}))
+        backend (problem/make-checkout-provisioning-backend
+                 inner (constantly frame) (constantly nil))
+        _ (tools/execute-tool backend :assign-checkouts [checkout-options])
+        original "ORIGINAL STUDENT PACKET\nDo the proof."
+        result (tools/execute-tool backend :dispatch-student-fresh
+                                   [{:to "zai-1"} original])
+        [opts packet] (take 2 (first @dispatches))
+        failed-dispatches (atom [])
+        provision-count (atom 0)
+        failing (problem/make-checkout-provisioning-backend
+                 (reify tools/ToolBackend
+                   (execute-tool [_ _ args]
+                     (swap! failed-dispatches conj args)
+                     {:ok true :result {}}))
+                 (fn [_]
+                   (if (= 1 (swap! provision-count inc))
+                     frame
+                     (throw (ex-info "provision failed" {}))))
+                 (constantly nil))
+        _ (tools/execute-tool failing :assign-checkouts [checkout-options])
+        failed (tools/execute-tool failing :dispatch-student-fresh
+                                   [{} original])]
+    (is (:ok result))
+    (is (str/starts-with? packet original))
+    (is (str/includes? packet (:checkout frame)))
+    (is (str/includes? packet (:branch frame)))
+    (is (str/includes? packet (:base-revision frame)))
+    (is (= (:checkout frame) (:environment-checkout opts)))
+    (is (= (:base-revision frame) (:environment-revision opts)))
+    (is (false? (:ok failed)))
+    (is (empty? @failed-dispatches)
+        "a failed provision must not reach the inner dispatch")))

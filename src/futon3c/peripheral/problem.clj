@@ -951,7 +951,13 @@
                :error (str "student checkout provisioning failed: "
                            (.getMessage ^Throwable frame))
                :rolled-back 0}
-              (let [dispatch (tools/execute-tool
+              (let [packet (str packet
+                                "\n--- ENVIRONMENT (provisioned by dispatcher) ---\n"
+                                "Your checkout: " (:checkout frame) "\n"
+                                "Branch: " (:branch frame) "\n"
+                                "Base revision: " (:base-revision frame) "\n"
+                                "Work ONLY in this checkout; commit ONLY to this branch.\n")
+                    dispatch (tools/execute-tool
                               inner-backend tool-id
                               [(assoc (or opts {})
                                       :environment-checkout (:checkout frame)
