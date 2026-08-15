@@ -8,13 +8,19 @@
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute FileTime]))
 
-(def ^:private env-revision
-  "a92ffb6c9cda32a33df0d259df552b1dbc611daf")
-(def ^:private harness-revision
-  "7c743f777ccdd2b023149149f375e17bf1b1f949")
 (def ^:private registration
   (edn/read-string
    (slurp "holes/labs/M-apm-demonstration/round1-registration.edn")))
+
+;; READ FROM THE REGISTRATION, not hard-coded. Both pins are compared against the
+;; frozen registration by environment-arms-match, so a literal here means every
+;; legitimate pre-launch re-pin reddens the traverse -- which is exactly what
+;; happened when the harness pin moved to 7787eb9a after the eligible-vector
+;; recording. The traverse's job is to walk the phases; the pins have their own
+;; dedicated tests (provisioned-revision-must-match-the-registration-pin and the
+;; harness-revision one), and those still supply mismatching values on purpose.
+(def ^:private env-revision (:reg/environment-revision registration))
+(def ^:private harness-revision (:reg/harness-revision registration))
 
 (defn- smoke-problem []
   (let [clock (atom 0)]
