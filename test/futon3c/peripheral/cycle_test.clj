@@ -376,3 +376,18 @@
         forbidden (runner/step p (:state begun) {:tool :tool-b :args []})]
     (is (:ok saved))
     (is (= :phase-tool-not-allowed (:error/code forbidden)))))
+
+(deftest load-refuses-a-foreign-cycle
+  ;; :cycle/id is engine-owned, so it is as checkable as :session-id. Without
+  ;; this a same-session load of another cycle succeeded and silently switched
+  ;; :cycle/id, merging two cycles' :cycle/outputs -- where measurements live.
+  (let [foreign {:session-id "xcycle" :cycle/id "CYCLE-B"
+                 :steps [] :cycle/outputs {}}
+        backend (make-test-mock
+                 {:state-load (fn [_ _] {:ok true :result foreign})})
+        p (cycle/make-cycle-peripheral state-io-config state-io-spec backend)
+        start (runner/start p {:session-id "xcycle"})
+        st (assoc (:state start) :cycle/id "CYCLE-A")
+        r (runner/step p st {:tool :state-load :args []})]
+    (is (= :loaded-state-cycle-mismatch (:error/code r)))
+    (is (nil? (:state r)))))

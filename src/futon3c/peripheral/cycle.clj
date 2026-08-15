@@ -142,6 +142,18 @@
     {:failure :loaded-state-invalid-phase
      :phase (:current-phase loaded)}
 
+    ;; :cycle/id is engine-owned (set at cycle-begin), so it is as checkable as
+    ;; :session-id. Without this a step-back could restore ANOTHER cycle's state
+    ;; -- verified: a same-session load of a foreign cycle succeeded and silently
+    ;; switched :cycle/id, which would merge two cycles' :cycle/outputs, and that
+    ;; is where the measurements live. A nil current id is a resume, not a switch,
+    ;; so it stays permitted.
+    (and (some? (:cycle/id current))
+         (not= (:cycle/id current) (:cycle/id loaded)))
+    {:failure :loaded-state-cycle-mismatch
+     :expected (:cycle/id current)
+     :actual (:cycle/id loaded)}
+
     :else
     (when-let [validate (:state-validate-fn config)]
       (try
