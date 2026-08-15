@@ -8550,3 +8550,56 @@ succeeds.
 
 **A collision that only appears on the second use is exactly what a single-run test
 cannot find.** It took opening the same frame twice.
+
+## I.54 The outputs boundary is caller-supplied — the stamp belongs there
+
+**Tenth stop, tenth time right.** codex-4: the attempt-assembly site cannot see
+`:cycle/outputs`; ordinary tools receive only caller arguments, and engine state
+reaches only the save tool. So the injection I specified had nowhere to happen.
+
+Tracing it properly found something wider than the packet:
+
+```clojure
+new-phase (update :cycle/outputs merge (advance-payload args))
+```
+
+> **`:cycle/outputs` is populated from the caller's advance payload.** Attempts never
+> pass through a tool result at all — so stamping at tool-result time would have
+> missed them entirely, and I would have shipped a stamp that never fired.
+
+### And this is the mechanism behind I.40a's limitation
+
+I.40a recorded that `environment-arms-match` compares tool-reported values, so it
+checks consistency rather than measuring the environment. **Now the mechanism is
+visible:** `:environment-revision` — the pin the invariant compares against — enters
+`:cycle/outputs` **through the same caller-supplied advance payload**. Caller versus
+caller, exactly as I.40a said, and now located rather than merely suspected.
+
+### Decision: `:output-stamp-fn`, applied to the advance payload
+
+```clojure
+:output-stamp-fn (fn [state payload] -> payload')
+```
+
+Optional, engine-applied to the advance payload **before** it merges into
+`:cycle/outputs`. The engine holds both operands: **state** carries
+`:environment-checkouts` from `:register`, and **payload** carries the attempts.
+
+**This closes I.40a's gap rather than only A3.3's**, because the same stamp writes
+the register-phase pin from the assignment instead of accepting it from the payload.
+After that, the invariant compares two machine-written values.
+
+### The shape all of today's fixes share
+
+Worth stating once rather than discovering a fifth time:
+
+| boundary | caller supplies | machine overwrites |
+|---|---|---|
+| dispatch args | memory channel | role fixes it (`1a9c026d`) |
+| validator invocation | solver seat | registration pins it (`0ce12b8a`) |
+| runtime keys | identity keys | config rejects them (`0ce12b8a`) |
+| **advance payload** | **attempts, pins** | **`:output-stamp-fn`** |
+
+> **Every one is the same move: the caller may supply the data, but the machine owns
+> certain fields and overwrites them.** The bug is never that callers supply
+> things — it is that nothing reclaimed the fields the machine is answerable for.
