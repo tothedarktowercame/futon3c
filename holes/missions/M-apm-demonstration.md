@@ -8984,3 +8984,62 @@ were absent; each became loud the moment a real gate was wired to the real recor
 probes, the two missing producers (gate event, measurement), `:validate-trace` +
 `:write-authorization`, attempt-cap enforcement, A4 — **six or seven packets, not
 the two left over from the original count.**
+
+## I.62 There is no launch gate — the Lean and the Clojure disagree about who owns it
+
+**Fifteenth stop, and codex-4 refused exactly as instructed**: it would not record a
+constant `true` for `:gate/refused-without-witness?`, because *"an engine-derived
+producer could only set `true` as a constant or infer it from its own assertion —
+exactly the forbidden self-certification."*
+
+Verified repo-wide. **Every reference is a consumer:**
+
+| site | role |
+|---|---|
+| `preregistration.clj:46` | declares the trace key |
+| `preregistration.clj:349` | `capability-holds?` **reads** it |
+| `problem.clj:50` | `required-outputs` **demands** it |
+| `cycle_harness.clj:100` | `derive-trace` **projects** it |
+| Lean `:125` | `launchGateRefusedWithoutWitness : Bool` — a **field** |
+| Lean `:238` | the capability **reads** the field |
+
+**Nothing produces it. Nothing exercises a gate. There is no gate.**
+
+### Not "written but not wired" — *checked but never built*
+
+Previous instances had a producer that nothing consumed, or a consumer nothing
+called. **Here the entire consumer side exists — declaration, requirement,
+projection, capability check, in two languages — and the thing being checked was
+never built.**
+
+### And the two sides disagree about whose gate it is
+
+`APMDemonstrationPreregistration.lean:314`:
+
+> *"The generic gate applies without a second APM-specific launch path."*
+
+**The Lean assigns the gate to the generic DarkTower chain** (`Launch ⟸ ReadyToRun
+⟸ Discharged`). **The Clojure requires the CYCLE to produce evidence of a refusal**
+(`:launch-gate-event` as an `:adjudicate` output).
+
+> **So this is not a missing producer. It is two specifications disagreeing about
+> which layer owns the gate** — and the disagreement was invisible while neither
+> side was executed. Precisely Joe's diagnosis: the data was verified, the process
+> model was not.
+
+### Three ways out — operator's decision, carried to the consolidated report
+
+1. **Build an APM launch gate** the cycle exercises and records refusing.
+2. **Source the capability from the generic gate's evidence** — follow the Lean, drop
+   `:launch-gate-event` from cycle outputs, cite the generic gate's evidence id
+   instead. Requires the generic gate to emit citable evidence.
+3. **Drop `:registration-gates-launch`** from round 1 — legitimate pre-launch, but it
+   *reduces what the experiment claims to demonstrate*, which is Joe's call and not a
+   tidy-up.
+
+**(2) matches the Lean's own stated intent** and is my recommendation, but it depends
+on whether the generic gate emits evidence a trace can cite — unchecked as of this
+note.
+
+**`:record-measurement` is unaffected and buildable**; codex-4 held it only because
+the packet paired the two. Re-dispatched alone.
