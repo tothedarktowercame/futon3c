@@ -54,8 +54,8 @@
                         :cycle/regime "r" :cycle/store-revision "s"
                         :cycle/runner-freshness :cold}]
     :memory-uses []}
-   :adjudicate {:disposition [{:disp/id "d-1" :disp/cycle "c"}]}
-   :promote {:promotion-result []}
+   :adjudicate {:disposition [{:disp/id "FORGED" :disp/cycle "FORGED"}]}
+   :promote {:promotion-result [{:promo/id "FORGED"}]}
    :close {}})
 
 (def ^:private phase-tools
@@ -73,7 +73,12 @@
         {:assign-checkouts
          [{:problem "t94J02" :batch "frame-1" :base-rev env-revision
            :solver-seat "codex-4" :student-seat "zai-1"
-           :recall-system "futon1b"}]}]
+           :recall-system "futon1b"}]
+         :write-disposition [{:outcome :closed}]
+         :write-use [{:offer-id "offer/smoke"}]
+         :promote-artifact [{:artifact-id "artifact/smoke"
+                             :importable? true
+                             :need-tags ["smoke"]}]}]
     (reduce
      (fn [{:keys [state] :as walk} tool]
        (if (:stop walk)

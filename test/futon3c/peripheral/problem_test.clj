@@ -1422,6 +1422,152 @@
         "capabilities with no attesting step get no probe")
     (is (some #{:f9-capability-probe-missing} content-failures))))
 
+(defn- adjudication-machine-results []
+  (let [p (problem/make-problem
+           (tools/make-mock-backend) (fn [& _] {:ok true}) "/tmp/adjudication-state"
+           (fn [_] {})
+           (fn [_] {:harness-revision (apply str (repeat 40 "a"))
+                    :harness-tree-dirty? false})
+           (constantly []) (constantly 0))
+        start (:state (runner/start p {:session-id "adjudication-tools"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode
+                                       :harness-repo "/harness"
+                                       :lean-repo "/lean"}))
+        begun (runner/step p start {:tool :begin-problem-cycle :args ["M" "C"]})
+        adjudicate (assoc (:state begun)
+                          :current-phase :adjudicate
+                          :cycle/outputs
+                          {:registration {:reg/environment-revision "env"
+                                          :reg/harness-revision
+                                          (apply str (repeat 40 "a"))}
+                           :store-snapshot {}
+                           :stratum-frozen-at 1
+                           :environment-revision "env"
+                           :harness-revision
+                           (apply str (repeat 40 "a"))
+                           :environment-checkouts {}
+                           :frame {}
+                           :containment-probe {}
+                           :solver-attempt
+                           {:cycle/environment-revision "env"
+                            :cycle/harness-revision
+                            (apply str (repeat 40 "a"))
+                            :cycle/environment-checkout "/solver"}
+                           :ground-control-events []
+                           :memory-offers []
+                           :intervention {}
+                           :student-attempts
+                           [{:cycle/environment-revision "env"
+                             :cycle/harness-revision
+                             (apply str (repeat 40 "a"))
+                             :cycle/environment-checkout "/student"}]
+                           :memory-uses []})
+        d1 (runner/step p adjudicate
+                        {:tool :write-disposition :args [{:outcome :closed}]})
+        d2 (runner/step p (:state d1)
+                        {:tool :write-disposition :args [{:outcome :tier-a}]})
+        u1 (runner/step p (:state d2)
+                        {:tool :write-use :args [{:offer-id "offer/one"}]})
+        u2 (runner/step p (:state u1)
+                        {:tool :write-use :args [{:offer-id "offer/two"}]})
+        advanced (runner/step
+                  p (:state u2)
+                  {:tool problem/advance
+                   :args ["M" "C"
+                          {:disposition [{:disp/id "FORGED"}]
+                           :memory-uses [{:use/id "FORGED"
+                                          :use/offer "offer/FORGED"}]}]})
+        promoted (runner/step
+                  p (:state advanced)
+                  {:tool :promote-artifact
+                   :args [{:artifact-id "artifact/one"
+                           :importable? true :need-tags ["needed"]}]})
+        promoted-without-tags (runner/step
+                               p (:state promoted)
+                               {:tool :promote-artifact
+                                :args [{:artifact-id "artifact/two"
+                                        :importable? true}]})
+        promotion-advanced
+        (runner/step p (:state promoted-without-tags)
+                     {:tool problem/advance
+                      :args ["M" "C" {:promotion-result [{:promo/id "FORGED"}]}]})]
+    {:cycle-id (get-in begun [:state :current-cycle-id])
+     :dispositions [(:result d1) (:result d2)]
+     :uses [(:result u1) (:result u2)]
+     :promotions [(:result promoted) (:result promoted-without-tags)]
+     :adjudicate-outputs (get-in advanced [:state :cycle/outputs])
+     :promotion-outputs (get-in promotion-advanced [:state :cycle/outputs])}))
+
+(defn- adjudication-trace [cycle-id dispositions uses promotions]
+  (let [registration {:problem (:problem synthetic-trace)
+                      :required-capabilities []
+                      :required-measurement-fields []
+                      :reg/solver-seat "solver"}
+        entities (concat
+                  [{:cycle/id cycle-id :cycle/closed-at "closed"
+                    :cycle/stratum-frozen-at 1 :cycle/assigned-at 2}
+                   {:frame/id "frame/adjudication" :frame/cycle cycle-id
+                    :frame/scaffold-hash "before" :frame/closing-hash "after"}
+                   {:snap/id "snap/adjudication" :snap/cycle cycle-id
+                    :snap/memory-ids []}
+                   {:cprobe/id "probe/adjudication"
+                    :cprobe/frame "frame/adjudication"
+                    :cprobe/claimed? false :cprobe/recorded? true
+                    :cprobe/passed? true}
+                   {:meas/id "meas/adjudication" :meas/cycle cycle-id
+                    :meas/values {} :meas/unset {}}
+                   {:offer/id "offer/one" :offer/cycle cycle-id
+                    :offer/memory-id "memory/one"}
+                   {:offer/id "offer/two" :offer/cycle cycle-id
+                    :offer/memory-id "memory/two"}]
+                  dispositions uses promotions)]
+    {:registration registration
+     :trace (apm-harness/derive-trace registration cycle-id entities)}))
+
+(defn- adjudication-failures [{:keys [registration trace]}]
+  (prereg/trace-content-failures registration trace
+                                  {:status :ok :jobs []} "solver"))
+
+(deftest machine-dispositions-and-uses-drive-both-directions-of-f2-and-f3
+  (let [{:keys [cycle-id dispositions uses adjudicate-outputs]}
+        (adjudication-machine-results)
+        zero-dispositions (adjudication-trace cycle-id [] uses [])
+        one-disposition (adjudication-trace cycle-id [(first dispositions)] uses [])
+        two-dispositions (adjudication-trace cycle-id dispositions uses [])
+        missing-use (adjudication-trace cycle-id [(first dispositions)]
+                                          [(first uses)] [])]
+    (is (some #{:f2-non-unique-disposition}
+              (adjudication-failures zero-dispositions)))
+    (is (some #{:f2-non-unique-disposition}
+              (adjudication-failures two-dispositions)))
+    (is (not (some #{:f2-non-unique-disposition}
+                   (adjudication-failures one-disposition))))
+    (is (some #{:f3-undispositioned-offer}
+              (adjudication-failures missing-use)))
+    (is (not (some #{:f3-undispositioned-offer}
+                   (adjudication-failures one-disposition))))
+    (is (= (mapv :disp/id dispositions)
+           (mapv :disp/id (:disposition adjudicate-outputs)))
+        "recorded tool dispositions overwrite the forged advance payload")
+    (is (= (mapv :use/id uses) (mapv :use/id (:memory-uses adjudicate-outputs)))
+        "recorded tool uses overwrite the forged advance payload")))
+
+(deftest machine-promotions-drive-both-capabilities-and-overwrite-forgeries
+  (let [{:keys [cycle-id dispositions uses promotions promotion-outputs]}
+        (adjudication-machine-results)
+        complete (adjudication-trace cycle-id [(first dispositions)] uses
+                                      [(first promotions)])
+        missing-tags (adjudication-trace cycle-id [(first dispositions)] uses
+                                          [(second promotions)])]
+    (is (prereg/capability-holds? :promotion-importable (:trace complete)))
+    (is (prereg/capability-holds? :promotion-need-taggable (:trace complete)))
+    (is (not (prereg/capability-holds? :promotion-need-taggable
+                                       (:trace missing-tags))))
+    (is (= (mapv :promo/id promotions)
+           (mapv :promo/id (:promotion-result promotion-outputs)))
+        "recorded promotions overwrite the forged advance payload")))
+
 (defn- measurement-state [state]
   (assoc state
          :current-phase :close

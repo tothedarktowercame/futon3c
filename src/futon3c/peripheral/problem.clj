@@ -175,6 +175,17 @@
           (when (= tool tool-id) result))
         (reverse (:steps state))))
 
+(defn- recorded-cycle-tool-results
+  "All results for `tool-id` since the current cycle's begin step, in order."
+  [state tool-id]
+  (->> (:steps state)
+       reverse
+       (take-while #(not= :begin-problem-cycle (:tool %)))
+       reverse
+       (keep (fn [{:keys [tool result]}]
+               (when (= tool-id tool) result)))
+       vec))
+
 (defn- recorded-frame-output [state]
   (some-> (recorded-tool-result state :emit-frame)
           (select-keys [:frame :containment-probe])))
@@ -249,6 +260,9 @@
         harness-revision (:harness-revision harness)
         store-snapshot (recorded-tool-result state :snapshot-store)
         frame-output (recorded-frame-output state)
+        dispositions (recorded-cycle-tool-results state :write-disposition)
+        memory-uses (recorded-cycle-tool-results state :write-use)
+        promotions (recorded-cycle-tool-results state :promote-artifact)
         frozen-at (:cycle/stratum-frozen-at
                    (recorded-tool-result state :freeze-stratum))
         assigned-at (:assigned-at (recorded-tool-result state :assign-checkouts))]
@@ -282,6 +296,15 @@
 
       (seq frame-output)
       (merge frame-output)
+
+      (seq dispositions)
+      (assoc :disposition dispositions)
+
+      (seq memory-uses)
+      (assoc :memory-uses memory-uses)
+
+      (seq promotions)
+      (assoc :promotion-result promotions)
 
       (some? frozen-at)
       (assoc :stratum-frozen-at frozen-at)
@@ -332,7 +355,8 @@
     ;; recorded either side of a restart is meaningless -- F4 would refuse a
     ;; sound cycle or pass a broken one. The engine's own step index is
     ;; persisted in :steps, survives save/load, and is identical on any host.
-    (:freeze-stratum :assign-checkouts)
+    (:freeze-stratum :assign-checkouts :write-disposition :write-use
+     :promote-artifact)
     (conj (vec args) {:cycle/step-index (count (:steps state))})
 
     args))
@@ -1202,6 +1226,57 @@
            :cprobe/claimed? (true? (:containment-claimed? options))
            :cprobe/recorded? witness-recorded?
            :cprobe/passed witness-recorded?}}})
+
+      (= tool-id :write-disposition)
+      (let [options (first args)
+            cycle-id @active-cycle-id
+            step-index (:cycle/step-index (last args))
+            outcome (or (:disp/outcome options) (:outcome options))
+            allowed #{:closed :tier-a :tier-b :defective}]
+        (if (and cycle-id (contains? allowed outcome))
+          {:ok true
+           :result {:disp/id (str "disp/" cycle-id "/" step-index)
+                    :disp/cycle cycle-id
+                    :disp/outcome outcome
+                    :disp/step-index step-index}}
+          {:ok false
+           :error (str "write-disposition requires an open cycle and one of "
+                       allowed)}))
+
+      (= tool-id :write-use)
+      (let [options (first args)
+            cycle-id @active-cycle-id
+            step-index (:cycle/step-index (last args))
+            offer-id (or (:use/offer options) (:offer-id options))]
+        (if (and cycle-id (string? offer-id) (not (str/blank? offer-id)))
+          {:ok true
+           :result {:use/id (str "use/" cycle-id "/" step-index)
+                    :use/offer offer-id}}
+          {:ok false :error "write-use requires an open cycle and :offer-id"}))
+
+      (= tool-id :promote-artifact)
+      (let [options (first args)
+            cycle-id @active-cycle-id
+            step-index (:cycle/step-index (last args))
+            artifact-id (or (:promo/artifact-id options) (:artifact-id options))
+            importable? (true? (if (contains? options :promo/importable)
+                                 (:promo/importable options)
+                                 (:importable? options)))
+            need-tags (vec (or (:promo/need-tags options)
+                               (:need-tags options) []))]
+        (if (and cycle-id (string? artifact-id) (not (str/blank? artifact-id)))
+          {:ok true
+           :result {:promo/id (str "promo/" cycle-id "/" step-index)
+                    :promo/cycle cycle-id
+                    :promo/artifact-id artifact-id
+                    ;; :promo/importable is the documented entity field;
+                    ;; derive-trace's current compatibility projection reads the
+                    ;; predicate spelling.
+                    :promo/importable importable?
+                    :promo/importable? importable?
+                    :promo/need-tags need-tags}}
+          {:ok false
+           :error "promote-artifact requires an open cycle and :artifact-id"}))
 
       :else
       (tools/execute-tool inner-backend tool-id args))))
