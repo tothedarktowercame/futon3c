@@ -303,6 +303,18 @@
     :emit-frame
     (conj (vec args) {:cycle/id (:current-cycle-id state)})
 
+    ;; F4 asks whether the stratum was frozen BEFORE the checkouts were
+    ;; assigned. That is an ordering of events, so the value must be a LOGICAL
+    ;; clock, not a wall or monotonic one. System/nanoTime was the first
+    ;; implementation and its origin is arbitrary and per-JVM: comparable only
+    ;; within one process. Save/load across a restart is a designed feature of
+    ;; this peripheral, and the round spans two machines, so a nanoTime pair
+    ;; recorded either side of a restart is meaningless -- F4 would refuse a
+    ;; sound cycle or pass a broken one. The engine's own step index is
+    ;; persisted in :steps, survives save/load, and is identical on any host.
+    (:freeze-stratum :assign-checkouts)
+    (conj (vec args) {:cycle/step-index (count (:steps state))})
+
     args))
 
 (defn- now-string []
@@ -1038,13 +1050,14 @@
           {:ok false :error "snapshot-store has no open cycle"}))
 
       (= tool-id :freeze-stratum)
-      (let [measured (long (clock))]
+      (let [measured (long (or (:cycle/step-index (last args)) (clock)))]
         {:ok true :result {:cycle/stratum-frozen-at measured}})
 
       (= tool-id :assign-checkouts)
       (let [result (tools/execute-tool inner-backend tool-id args)]
         (if (:ok result)
-          (assoc-in result [:result :assigned-at] (long (clock)))
+          (assoc-in result [:result :assigned-at]
+                    (long (or (:cycle/step-index (last args)) (clock))))
           result))
 
       (= tool-id advance)

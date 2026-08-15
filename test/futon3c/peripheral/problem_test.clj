@@ -1015,17 +1015,57 @@
     (is (= (select-keys snapshot [:snap/id :snap/cycle :snap/memory-ids])
            (select-keys snap-entity [:snap/id :snap/cycle :snap/memory-ids])))))
 
-(deftest f4-fires-when-the-measured-freeze-is-not-before-assignment
-  (let [{:keys [advanced]} (register-tool-run (constantly 7) [])
-        outputs (get-in advanced [:state :cycle/outputs])
-        trace (assoc synthetic-trace
-                     :stratum-frozen-at (:stratum-frozen-at outputs)
-                     :assigned-at (:assigned-at outputs))
-        failures (prereg/trace-content-failures {} trace [] nil)]
-    (is (= 7 (:stratum-frozen-at outputs)))
-    (is (= 7 (:assigned-at outputs)))
-    (is (some #{:f4-stratum-not-frozen-before-assignment} failures)
-        "the values measured by the two tools reach and trip invariant F4")))
+(defn- f4-failures-for-order [tool-order]
+  ;; Drive the two real tools in the given order and ask F4 about the result.
+  ;; The clock is the engine's STEP INDEX, so the ordering cannot be forced by
+  ;; injecting a degenerate clock -- it can only be produced by actually doing
+  ;; the operations in the wrong order, which is the failure F4 exists to catch.
+  (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        p (problem/make-problem
+           (tools/make-mock-backend) (fn [_ _] {:evidence {}})
+           "/tmp/f4-order-state"
+           (fn [{:keys [arm]}] {:checkout (str "/frames/" arm)
+                                :base-revision revision})
+           (fn [_] {:harness-revision revision :harness-tree-dirty? false})
+           (constantly []) (constantly 0))
+        start (runner/start p {:session-id "f4-order" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (:state (runner/step p (:state start)
+                                   {:tool :begin-problem-cycle :args ["M" "C"]}))
+        step (fn [st tool]
+               (:state (runner/step
+                        p st {:tool tool
+                              :args (if (= tool :assign-checkouts)
+                                      [{:problem "p" :batch "b" :base-rev revision
+                                        :solver-seat "codex-4" :student-seat "zai-1"
+                                        :recall-system "v1"}]
+                                      [])})))
+        done (reduce step begun tool-order)
+        advanced (runner/step
+                  p done {:tool :advance-problem-phase
+                          :args ["M" "C" {:registration :r
+                                             :store-snapshot {:snap/id "s"}
+                                             :environment-revision revision
+                                             :harness-revision revision
+                                             :environment-checkouts {}}]})
+        outputs (get-in advanced [:state :cycle/outputs])]
+    {:outputs outputs
+     :failures (prereg/trace-content-failures
+                {} (assoc synthetic-trace
+                          :stratum-frozen-at (:stratum-frozen-at outputs)
+                          :assigned-at (:assigned-at outputs))
+                [] nil)}))
+
+(deftest f4-fires-when-the-stratum-is-frozen-after-assignment
+  (let [wrong (f4-failures-for-order [:assign-checkouts :freeze-stratum])
+        right (f4-failures-for-order [:freeze-stratum :assign-checkouts])]
+    (is (some #{:f4-stratum-not-frozen-before-assignment} (:failures wrong))
+        "freezing the stratum AFTER assignment must trip F4")
+    (is (not (some #{:f4-stratum-not-frozen-before-assignment} (:failures right)))
+        "the correct order must NOT trip F4 -- a gate that always fires is useless")
+    (is (< (:stratum-frozen-at (:outputs right))
+           (:assigned-at (:outputs right))))))
 
 (deftest runner-driven-problem-traverse-stops-at-the-first-real-gate
   (let [p (harness-measured-problem
