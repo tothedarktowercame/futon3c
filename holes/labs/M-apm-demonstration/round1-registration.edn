@@ -2,11 +2,14 @@
 ;;
 ;; Written 2026-08-14 by claude-2, BEFORE round 1 runs. Values are Joe's
 ;; baseline (M-apm-demonstration I.4); shapes are dictated by
-;; mmca-clj/src/mmca/apm_demonstration_preregistration.clj.
+;; futon3c/src/futon3c/apm/preregistration.clj.
 ;;
-;; Validate with:
-;;   clojure -M scripts/validate_apm_demonstration_preregistration.clj \
-;;           <this-file> <trace> <lean-repo>
+;; Moved out of mmca-clj 2026-08-15: that repo is a cellular-automata research
+;; port with pinned hashes for reproducibility, and this work required nothing
+;; from it -- the only mmca thing about it was the namespace name.
+;;
+;; Validate via futon3c.apm.preregistration/report; the launch authorization
+;; writer is futon3c/scripts/write_apm_demonstration_launch_authorization.clj.
 {:kind   :apm-demonstration-round1-registration
  :schema 1
 

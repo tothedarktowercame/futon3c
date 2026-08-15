@@ -27,7 +27,7 @@ have to stay hand-written and pinned?
 | artifact | what it is |
 |---|---|
 | `mmca-clj/src/mmca/baldwin_guidance_preregistration.clj` | RHS #1 — Baldwin. 17 self-naming violations, pinned revision, authorization gate. **Pin goes stale silently** (`f50d34cf`; 40 commits have since touched `DarkTower/`) |
-| `mmca-clj/src/mmca/apm_demonstration_preregistration.clj` (`9d217d0`) | RHS #2 — APM round 1. 45 self-naming violations, **staleness check present**, authorization gate. 111 tests / 333 assertions green |
+| `futon3c/src/futon3c/apm/preregistration.clj` (moved out of mmca-clj 2026-08-15) | RHS #2 — APM round 1. 45 self-naming violations, **staleness check present**, authorization gate. 111 tests / 333 assertions green |
 | `futon6/scripts/clean_to_lean.py` | the *other* arrow: CLean record → Lean term, render-as-correctness-gate, attack-verified |
 
 Note the direction asymmetry: **record→term exists and is enforced;
@@ -79,7 +79,7 @@ not settled.
    again**.)
 2. Does a third RHS confirm the loss list as the arrow's signature?
 3. Should `baldwin_guidance_preregistration.clj` gain the staleness check that
-   `apm_demonstration_preregistration.clj` now has? Cheap; not ours to change
+   `futon3c.apm.preregistration` now has? Cheap; not ours to change
    unilaterally.
 4. Joe notes a heavier direction: the experimental design **lifting** to a
    category-theoretic model of the pipeline on the Lean side. Out of scope here;

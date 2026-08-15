@@ -53,8 +53,7 @@
                     "-Dio.netty.tryReflectionSetAccessible=true"
                     "-Djava.net.preferIPv4Stack=true"
                     "-Xmx2g" "-XX:MaxDirectMemorySize=768m"]
-         :extra-deps {mmca/mmca {:local/root "../mmca-clj"}
-                      io.github.cognitect-labs/test-runner
+         :extra-deps {io.github.cognitect-labs/test-runner
                       {:git/url "https://github.com/cognitect-labs/test-runner.git"
                        :sha "5e91ee0989d93115cfb5e15b6f242f5ec7ab762e"}}
          :main-opts ["-m" "cognitect.test-runner"]

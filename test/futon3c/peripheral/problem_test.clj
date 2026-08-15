@@ -6,7 +6,7 @@
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
-            [mmca.apm-demonstration-preregistration :as prereg])
+            [futon3c.apm.preregistration :as prereg])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
