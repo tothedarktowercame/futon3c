@@ -6229,3 +6229,66 @@ throughput argument is sound and the design absorbs the small n honestly.
 
 **Recorded so nobody later reads "3 attempts showed no improvement" as a
 finding.** It is a trigger, and the registration says so.
+
+## I.26 ERRATUM — I misread harness-mode. Both modes vary; both improvements are real.
+
+**Joe, 2026-08-14:** *"In harness-mode, the store is frozen, but it's not 3
+samples of one condition, it's **3 different harnesses against the fixed
+store**. It's not 'variance' but genuine improvement… Think about zai as a
+Chipwit moving through a maze. **In harness mode we are changing the Chipwit
+program, not the maze.**"*
+
+**Correct, and I.25 was wrong.** Worse: **I.8 had it right and I regressed
+against my own text.** I.8 says harness-mode *"tune retrieval and collection"*
+between attempts. In I.25 I wrote *"the store is frozen"* and slid from that to
+*"three samples of ONE condition"* — a different claim, and false. **Frozen store
+≠ nothing varies.**
+
+**The consequence had I not been corrected:** `:applies-in [:store-mode]` would
+have suppressed escalation in harness-mode entirely — **silently discarding half
+the experiment's signal**, in a rule I introduced to prevent false escalation.
+A guard against noise that deletes data is worse than no guard.
+
+### The corrected picture
+
+| mode | what varies across attempts | frozen | the question it asks |
+|---|---|---|---|
+| **store-mode** | **the maze** — Claude writes memories between attempts | the harness | *does adding knowledge help?* |
+| **harness-mode** | **the Chipwit program** — retrieval/collection retuned between attempts | the store | *does working better against fixed knowledge help?* |
+
+**A flat `L(i)` across three attempts is a real finding in either mode.**
+`:applies-in [:store-mode :harness-mode]`.
+
+**Harness-mode is the more interesting of the two**, and I had it backwards:
+it is *"how we guide Zai to solve a problem when all the facts are known"* —
+which is precisely the case where failure cannot be blamed on missing knowledge.
+That is a sharper test of the retrieval story than store-mode, not a weaker one.
+
+### The specification Joe asked for — and one boundary that matters
+
+*"Since that's perhaps confusing, we need to specify it more."* Written into the
+registration:
+
+> **The harness is NOT the role card.** The harness is the **retrieval and
+> collection machinery** — how Zai queries, what it collects, how results are
+> ordered and presented. The role card is **framing**, and is frozen for the
+> round.
+
+**IF** harness-mode may retune "how Zai works against the store", **HOWEVER**
+framing is also a way of changing that, **THEN** framing must be excluded from
+the harness by definition, **BECAUSE** E9/E10 measured framing alone moving store
+lookups from **0 to 21** — so a harness round that quietly adjusted framing would
+attribute a framing effect to retrieval, and it is the largest single effect this
+project has measured.
+
+Three axes remain distinct: **store** (I.8), **harness** (I.8, now specified),
+**role card** (I.11, its own regime boundary).
+
+### Noted about the error itself
+
+This is the second time today I have contradicted something I wrote earlier in
+the same mission — the first being the replay scoping that contradicted D.13.
+**Both were regressions across distance in a long document**, not disagreements
+of judgement. The mitigation is not "be more careful"; it is that a claim about
+a mode should be read *from the registration*, which is short, rather than
+recalled from a 5,900-line mission file.

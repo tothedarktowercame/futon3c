@@ -82,14 +82,27 @@
  ;; rule's totality (four outcomes partitioning on residual/axiom/defect).
  ;; It is orthogonal: a cycle may be :tier-b AND escalated.
  ;;
- ;; NOTE ON WHAT "IMPROVEMENT" MEANS, and it differs by mode:
- ;;   store-mode   -- Claude writes between attempts, so attempts 1->2->3 face
- ;;                   DIFFERENT substrates and a flat L(i) is a real finding.
- ;;   harness-mode -- the store is frozen, so three cold attempts are three
- ;;                   samples of ONE condition; flatness there is variance, not
- ;;                   absence of learning, and must NOT trigger escalation.
+ ;; WHAT VARIES, AND WHAT "IMPROVEMENT" MEANS. Both modes vary something ACROSS
+ ;; ATTEMPTS, so improvement is genuine in both. Joe's framing: Zai is a Chipwit
+ ;; moving through a maze --
+ ;;   store-mode   -- we change THE MAZE. Same harness all three attempts; Claude
+ ;;                   writes memories between them. Question: does adding
+ ;;                   knowledge help?
+ ;;   harness-mode -- we change THE CHIPWIT PROGRAM. Same store all three
+ ;;                   attempts; the harness is retuned between them. Question:
+ ;;                   does working better against fixed knowledge help? This is
+ ;;                   how we guide Zai to solve a problem when all the facts are
+ ;;                   already known.
+ ;; A flat L(i) across three attempts is a real finding in EITHER mode.
+ ;;
+ ;; THE HARNESS IS NOT THE ROLE CARD. The harness is the retrieval and collection
+ ;; machinery -- how Zai queries, what it collects, how results are ordered and
+ ;; presented. The role card is FRAMING and is frozen for the round (a card change
+ ;; is its own regime boundary). Keeping them apart matters: E9/E10 showed framing
+ ;; alone moved store lookups from 0 to 21, so a harness round that quietly
+ ;; retuned framing would attribute a framing effect to retrieval.
  :reg/escalation {:trigger  :no-improvement-across-student-attempts
-                  :applies-in [:store-mode]
+                  :applies-in [:store-mode :harness-mode]
                   :measure  "L(i) across the student's cold attempts"
                   :action   :escalate-to-operator
                   :otherwise :continue-to-next-problem}
