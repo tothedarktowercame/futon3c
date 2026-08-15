@@ -8651,3 +8651,54 @@ stamp did **not** run — a missing or malformed assignment leaves caller values
 place — or when the assignment itself is wrong. **That is defence in depth rather
 than redundancy: the gate covers exactly the case where the earlier machinery
 failed.**
+
+## I.56 "Cold in the same tree" is a contradiction — Joe is right, and I built it in
+
+**Joe, 2026-08-15:** *"'student attempts may run up to three cold attempts in the
+same tree' is a contradiction in terms. Either they are cold (isolated) or they are
+in the same tree. Which is it? Before we had 'cold'."*
+
+**He is right, and the contradiction is mine.**
+
+The zai-student card, written yesterday, says:
+
+> *"If attempt 3 goes better than attempt 2, **that difference has to have come
+> through the substrate, or it did not happen.**"*
+
+**A shared tree falsifies that sentence.** Attempt 3 starts on attempt 2's leftover
+Lean edits, so a difference can arrive through the **filesystem** — the same
+unmeasured-conduit problem as I.36–I.39, one level down. A student who got halfway
+on attempt 1 begins attempt 2 halfway, and L(i) improves for reasons that have
+nothing to do with the memory system.
+
+### How I introduced it
+
+A3.2's assignment shape is `{:solver … :student …}` — **one** student entry, which I
+specified. Reasoning about A3.4 I took that shape as given and rationalised it:
+*"cold means session-fresh, not tree-fresh."* Then I told codex-4 that requiring all
+checkouts distinct **"would break the design"** and had it excluded as over-strict —
+
+> **and then mutation-verified that the correct behaviour stayed excluded, and
+> reported that as a strength.** I wrote "proving the gate is not over-strict is as
+> load-bearing as proving it fires" about a gate I had just wrongly loosened.
+
+**The shape led the reasoning.** I inferred the intent from a data structure I had
+written an hour earlier, rather than from the role card that states it.
+
+### The correction: one tree per student attempt
+
+**Freshness must be structural, not procedural.** The alternative — one tree reset
+between attempts — makes isolation a step that can be skipped, and everything today
+has favoured the version that cannot be.
+
+- **Provision `1 + N` trees at `:register`**, where `N` = `:reg/attempt-caps
+  :s-student` (**3**). The count is known because the cap is in the frozen
+  registration, so it is pinned and auditable.
+- **Assignment shape:** the student side becomes a **sequence**, one entry per
+  permitted attempt.
+- **Each attempt stamps from ITS OWN tree.**
+- **The invariant requires ALL checkouts distinct** — solver and every student
+  attempt. That is the mutation I called over-strict in A3.4; it was correct.
+
+**`:cycle/runner-freshness` becomes checkable rather than asserted:** a boolean that
+was a claim about the session can now be a structural fact about the tree as well.
