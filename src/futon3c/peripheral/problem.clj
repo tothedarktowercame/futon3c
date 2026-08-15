@@ -7,7 +7,9 @@
             [futon3c.apm.cycle-harness :as apm-harness]
             [futon3c.apm.preregistration :as prereg]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
+            [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.cycle :as cycle]
+            [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.tools :as tools]
             [futon3c.substrate.client :as substrate])
   (:import [java.nio.file Files StandardCopyOption]
@@ -1154,7 +1156,7 @@
 
 (defrecord ProblemCycleBackend [inner-backend harness-measurer cycle-context
                                 begin-seq active-cycle-id
-                                store-snapshotter clock]
+                                store-snapshotter clock record-memory-fn]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
     (cond
@@ -1216,6 +1218,28 @@
         (if-let [attempt (attempt-by-id outputs attempt-id)]
           {:ok true :result attempt}
           {:ok false :error (str "attempt result not found: " attempt-id)}))
+
+      (= tool-id :write-substrate)
+      (let [cycle-id @active-cycle-id]
+        (if-not cycle-id
+          {:ok false :error "write-substrate has no open cycle"}
+          (let [ctx {:agent-id "problem-peripheral"
+                     :session-id (:session-id @cycle-context)
+                     :domain :mathematics
+                     :evidence-store
+                     (f1b/make-futon1b-backend (substrate/configured-url))}
+                receipt (try (record-memory-fn ctx (first args))
+                             (catch Throwable t
+                               {:ok false
+                                :error {:error/component :E-store
+                                        :error/code :memory-write-threw
+                                        :error/message (.getMessage t)}}))]
+            (if (:ok receipt)
+              {:ok true
+               :result {:memory-id (:id receipt) :cycle cycle-id}}
+              {:ok false
+               :error (str "write-substrate failed: "
+                           (pr-str (:error receipt)))}))))
 
       (= tool-id :assign-checkouts)
       (let [result (tools/execute-tool inner-backend tool-id args)]
@@ -1342,10 +1366,15 @@
       (tools/execute-tool inner-backend tool-id args))))
 
 (defn make-problem-cycle-backend
-  [inner-backend harness-measurer cycle-context store-snapshotter clock]
-  (->ProblemCycleBackend inner-backend harness-measurer cycle-context
-                         (atom 0) (atom nil)
-                         store-snapshotter clock))
+  ([inner-backend harness-measurer cycle-context store-snapshotter clock]
+   (make-problem-cycle-backend inner-backend harness-measurer cycle-context
+                               store-snapshotter clock
+                               memory-write/record-memory!))
+  ([inner-backend harness-measurer cycle-context store-snapshotter clock
+    record-memory-fn]
+   (->ProblemCycleBackend inner-backend harness-measurer cycle-context
+                          (atom 0) (atom nil)
+                          store-snapshotter clock record-memory-fn)))
 
 (defn make-problem
   ([] (make-problem (tools/make-mock-backend)))
@@ -1364,6 +1393,10 @@
                  snapshot-reviewed-memories #(System/nanoTime)))
   ([backend dispatch-fn state-root provisioner-fn harness-measurer
     store-snapshotter clock]
+   (make-problem backend dispatch-fn state-root provisioner-fn harness-measurer
+                 store-snapshotter clock memory-write/record-memory!))
+  ([backend dispatch-fn state-root provisioner-fn harness-measurer
+    store-snapshotter clock record-memory-fn]
    (let [cycle-context (atom nil)]
      (cycle/make-cycle-peripheral
       (assoc problem-domain-config :cycle-context cycle-context) problem-spec
@@ -1373,4 +1406,5 @@
          (make-problem-state-backend backend state-root)
          dispatch-fn)
         provisioner-fn)
-       harness-measurer cycle-context store-snapshotter clock)))))
+       harness-measurer cycle-context store-snapshotter clock
+       record-memory-fn)))))

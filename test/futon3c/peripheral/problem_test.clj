@@ -2056,3 +2056,47 @@
     (is (false? (:ok failed)))
     (is (empty? @failed-dispatches)
         "a failed provision must not reach the inner dispatch")))
+
+(deftest write-substrate-uses-the-production-writer-contract
+  (let [payload {:name "cycle-memory"
+                 :kind :feedback
+                 :hook "when rehearsing"
+                 :body {:finding "the write path is live"}
+                 :subjects [{:ref/type :problem :ref/id "p"}]}
+        calls (atom [])
+        context (atom {:session-id "session-1"
+                       :problem-id "p"
+                       :harness-repo "/harness"})
+        writer (fn [ctx actual]
+                 (swap! calls conj [ctx actual])
+                 {:ok true :id "e-memory-1"})
+        inner (tools/make-mock-backend {:sentinel {:unchanged true}})
+        backend (problem/make-problem-cycle-backend
+                 inner (constantly {}) context (constantly [])
+                 (constantly 0) writer)
+        unopened (tools/execute-tool backend :write-substrate [payload])
+        _ (tools/execute-tool backend :begin-problem-cycle [])
+        written (tools/execute-tool backend :write-substrate [payload])
+        [ctx actual] (first @calls)
+        delegated (tools/execute-tool backend :sentinel [])
+        failed-backend
+        (problem/make-problem-cycle-backend
+         inner (constantly {}) context (constantly []) (constantly 0)
+         (fn [_ _] {:ok false
+                    :error {:error/code :rejected
+                            :error/message "store refused"}}))
+        _ (tools/execute-tool failed-backend :begin-problem-cycle [])
+        failed (tools/execute-tool failed-backend :write-substrate [payload])]
+    (is (false? (:ok unopened)))
+    (is (= 1 (count @calls)) "no-open-cycle refusal must not invoke the writer")
+    (is (identical? payload actual) "the payload object passes through unchanged")
+    (is (= "session-1" (:session-id ctx)))
+    (is (= "problem-peripheral" (:agent-id ctx)))
+    (is (= :mathematics (:domain ctx)))
+    (is (some? (:evidence-store ctx)))
+    (is (= "e-memory-1" (get-in written [:result :memory-id])))
+    (is (string? (get-in written [:result :cycle])))
+    (is (false? (:ok failed)))
+    (is (re-find #"store refused" (:error failed)))
+    (is (= {:unchanged true} (:result delegated))
+        "all other tools still delegate to the existing backend")))
