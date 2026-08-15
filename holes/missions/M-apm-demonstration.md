@@ -9358,3 +9358,12 @@ referents — the demand-side loop firing inside the rehearsal.
 Provenance note: the statement-repair route on a01A06 was operator-authorized
 2026-07-30 (`dcf668a`) — the `:defective` disposition matches the recorded
 history, not just the mathematics.
+
+**W.4 addendum (A2 full-report review):** finding 11, nit-grade —
+`dispatch!` now defaults `:mission-id` to `default-mission`
+("M-zai-learning-loop"), so a mission-less programmatic dispatch is silently
+MIS-ATTRIBUTED rather than crashed. Rehearsal-1 passed `:mission` explicitly;
+frame-1 runbook: ground-control dispatch opts MUST carry
+`:mission "M-apm-demonstration"` (or wire mission injection from cycle
+context alongside Fix B's `:base`). Per-key defaults audit otherwise verified
+against source; finding 3 remains closed.
