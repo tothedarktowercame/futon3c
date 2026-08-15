@@ -5,6 +5,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.cycle-harness :as apm-harness]
+            [futon3c.apm.preregistration :as prereg]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.tools :as tools])
@@ -35,7 +36,8 @@
    :student-attempts #{:dispatch-student-fresh :read-attempt-result advance}
    :adjudicate #{:write-disposition :write-use advance}
    :promote #{:promote-artifact advance}
-   :close #{:emit-trace :validate-trace :write-authorization advance}
+   :close #{:emit-capability-probes :emit-trace :validate-trace
+            :write-authorization advance}
    :completed #{}})
 
 (def required-outputs
@@ -196,6 +198,39 @@
                 (:cycle/opened-at result)))
             (reverse (:steps state)))))
 
+(def ^:private capability-attesting-tools
+  ;; These pairings are deliberately narrower than "a nearby phase". Three
+  ;; required capabilities currently have no step that exercises them:
+  ;; registration-gates-launch (launch-gate-event is only an advance output),
+  ;; need-retrieval (RetrievalProbe has no producer), and measurement-populated
+  ;; (measurement is only an advance output). They get no synthetic probe.
+  {:created-frame-worked :emit-frame
+   :frame-containment-witnessed :emit-frame
+   :unique-disposition :write-disposition
+   :offer-use-disposition :write-use
+   :promotion-importable :promote-artifact
+   :promotion-need-taggable :promote-artifact})
+
+(defn- latest-step [state tool]
+  (some #(when (= tool (:tool %)) %) (reverse (:steps state))))
+
+(defn- emit-capability-probes-from-state [state _args]
+  (->> prereg/required-capabilities
+       (keep (fn [capability]
+               (when-let [tool (get capability-attesting-tools capability)]
+                 (when-let [evidence-id (:evidence/id (latest-step state tool))]
+                   {:probe/id (str "probe/" (:current-cycle-id state) "/"
+                                   (name capability))
+                    :probe/capability capability
+                    :probe/evidence-id evidence-id
+                    :probe/recorded? true}))))
+       vec))
+
+(defn- recorded-capability-probes [state]
+  (some (fn [{:keys [tool result]}]
+          (when (= tool :emit-capability-probes) result))
+        (reverse (:steps state))))
+
 (defn- emit-trace-from-state
   "Project the engine-owned cycle record through the existing APM projection.
 
@@ -203,7 +238,12 @@
   collection proves its producer ran and is passed to the validator; a missing
   key means there is no evidence that the producer ran and fails here."
   [state _args]
-  (let [outputs (:cycle/outputs state)
+  (let [recorded-probes (recorded-capability-probes state)
+        ;; Capability probes are never accepted from the advance payload. Only
+        ;; the engine-derived tool's retained step result can supply them.
+        outputs (cond-> (dissoc (:cycle/outputs state) :capability-probes)
+                  (some? recorded-probes)
+                  (assoc :capability-probes recorded-probes))
         producer-keys {:registration :registration
                        :frame :frame
                        :launch-gate :launch-gate-event
@@ -287,7 +327,8 @@
    :state-validate-fn validate-loaded-state
    :state-snapshot-fn state-snapshot
    :output-stamp-fn stamp-environment-outputs
-   :derived-tools {:emit-trace emit-trace-from-state}
+   :derived-tools {:emit-capability-probes emit-capability-probes-from-state
+                   :emit-trace emit-trace-from-state}
    :output-invariants
    [{:id :environment-arms-match
      :requires #{:environment-revision :solver-attempt :student-attempts}

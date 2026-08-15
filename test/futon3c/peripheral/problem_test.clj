@@ -4,11 +4,12 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.cycle-harness :as apm-harness]
+            [futon3c.apm.preregistration :as prereg]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
+            [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
-            [futon3c.peripheral.tools :as tools]
-            [futon3c.apm.preregistration :as prereg])
+            [futon3c.peripheral.tools :as tools])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
@@ -767,6 +768,8 @@
   (assoc state
          :current-phase :close
          :current-cycle-id "cycle-1"
+         :steps [{:tool :emit-capability-probes :result []
+                  :evidence/id "e-capability-probes"}]
          :cycle/opened-at "2026-08-15T00:00:00Z"
          :cycle/deposit-state :n/a
          :cycle/paired-with nil
@@ -820,8 +823,10 @@
 
 (deftest emit-trace-names-missing-entity-producers
   (let [[p state] (started :store-mode)
-        state (update (trace-emission-state state) :cycle/outputs
-                      dissoc :retrieval-probes :capability-probes)
+        state (-> (trace-emission-state state)
+                  (assoc :steps [])
+                  (update :cycle/outputs
+                          dissoc :retrieval-probes :capability-probes))
         result (runner/step p state {:tool :emit-trace :args []})]
     (is (= :tool-execution-failed (:error/code result)))
     (is (re-find #"retrieval-probe" (str result)))
@@ -857,6 +862,8 @@
         st (assoc (:state (runner/start p {:session-id "e2e" :problem-id "t94J02"
                                            :cycle/mode :store-mode}))
                   :current-phase :close :current-cycle-id "C1"
+                  :steps [{:tool :emit-capability-probes :result []
+                           :evidence/id "e-capability-probes"}]
                   :cycle/outputs
                   {:registration {:problem {:problem-id "t94J02"
                                             :difficulty-stratum "s"
@@ -890,3 +897,66 @@
     (is (= "S1" (:cycle/store-snapshot-id trace)))
     (is (= ["P1"] (:promoted-artifact-ids trace)))
     (is (string? (get-in trace [:cycle/window :closed-at])))))
+
+(defn- capability-probe-state [state steps]
+  (assoc state :current-phase :close :current-cycle-id "C-probes" :steps steps))
+
+(deftest capability-probes-cite-the-latest-attesting-steps
+  (let [backend (tools/make-mock-backend)
+        p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec backend)
+        state (:state (runner/start p {:session-id "cap-probes"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode}))
+        steps [{:tool :emit-frame :evidence/id "e-frame"}
+               {:tool :write-disposition :evidence/id "e-disposition"}
+               {:tool :write-use :evidence/id "e-use-old"}
+               {:tool :write-use :evidence/id "e-use-latest"}
+               {:tool :promote-artifact :evidence/id "e-promotion"}]
+        result (runner/step
+                p (capability-probe-state state steps)
+                {:tool :emit-capability-probes :args [{:forged true}]})
+        probes (:result result)
+        by-capability (into {} (map (juxt :probe/capability identity)) probes)]
+    (is (:ok result))
+    (is (= 6 (count probes)))
+    (is (= "e-frame"
+           (get-in by-capability [:created-frame-worked :probe/evidence-id])))
+    (is (= "e-use-latest"
+           (get-in by-capability [:offer-use-disposition :probe/evidence-id]))
+        "when several steps attest a capability, the latest is cited")
+    (is (= "e-promotion"
+           (get-in by-capability [:promotion-importable :probe/evidence-id])))
+    (is (every? #(and (:probe/recorded? %)
+                      (not (str/blank? (:probe/evidence-id %))))
+                probes))
+    (is (empty? (tools/recorded-calls backend))
+        "the engine derives probes without consulting the backend")))
+
+(deftest absent-attesting-step-yields-no-probe-and-real-f9-failure
+  (let [p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec
+                                       (tools/make-mock-backend))
+        state (:state (runner/start p {:session-id "missing-probe"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode}))
+        result (runner/step
+                p (capability-probe-state
+                   state [{:tool :emit-frame :evidence/id "e-frame"}])
+                {:tool :emit-capability-probes :args []})
+        probes (:result result)
+        trace (assoc synthetic-trace
+                     :capability-probes
+                     (mapv (fn [probe]
+                             {:capability (:probe/capability probe)
+                              :evidence-id (:probe/evidence-id probe)
+                              :recorded? (:probe/recorded? probe)})
+                           probes))
+        registration {:required-capabilities prereg/required-capabilities
+                      :reg/solver-seat "codex-4"}
+        content-failures (prereg/trace-content-failures
+                          registration trace {:status :ok :jobs []} "codex-4")]
+    (is (= #{:created-frame-worked :frame-containment-witnessed}
+           (set (map :probe/capability probes)))
+        "capabilities with no attesting step get no probe")
+    (is (some #{:f9-capability-probe-missing} content-failures))))
