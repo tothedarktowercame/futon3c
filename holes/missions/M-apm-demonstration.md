@@ -6370,3 +6370,88 @@ card that named a lemma would be feeding the answer through the framing channel,
 which is the covert-channel problem (I.8) in a third guise. **Recorded as an
 axis with that boundary**, so a future round can use it deliberately rather than
 discovering it as a confound.
+
+## I.28 The problem-peripheral — and the proctoring becomes phase gating
+
+**Joe, 2026-08-14:** *"it's adaptation of that; we could call it a
+**problem-peripheral** to distinguish it from proof-peripheral."*
+
+**Adopted.** The distinction is not cosmetic — **the units differ**:
+
+| | unit | drives |
+|---|---|---|
+| **proof-peripheral** | a *proof* | one agent through phases of proving one theorem |
+| **problem-peripheral** | a *problem as an experimental unit* | **three agents in defined relation** over one problem |
+
+### The extension point already exists, and it is the intended one
+
+`peripheral/cycle.clj` is a **generic cycle machine**, and its own docstring
+says so: *"the proof peripheral is a cycle machine with proof-domain
+configuration. This namespace is the generic engine that both proof and code
+mission peripherals instantiate."*
+
+A `CycleDomainConfig` supplies:
+
+```
+:domain-id · :phase-order · :phase-tools · :setup-tools · :tool-ops
+:required-outputs · :cycle-begin-tool · :cycle-advance-tool
+:state-init-fn · :fruit-fn
+```
+
+**So the problem-peripheral is `cycle.clj` instantiated with a
+problem-domain-config.** Not a fork, not a new engine — the second instantiation
+the file was written to accept.
+
+### ⚠ The finding: proctoring stops being a check and becomes a capability envelope
+
+> `proof.clj`: *"**Phase gating restricts which tools are available in each
+> phase.** The agent enters `:proof` mode, works with proof-specific tools, and
+> **cannot advance a cycle without satisfying gate criteria**."*
+
+**That is exactly the mechanism I.10 wanted and could not find.** The proctoring
+rules — the ones that must not rest on Claude's self-report — map onto
+`:phase-tools`:
+
+| proctoring rule | as phase gating |
+|---|---|
+| Claude may reach Zai **only** through the substrate | **no dispatch-to-student tool exists in the student-attempt phases.** Not forbidden — **absent** |
+| store-mode: harness frozen | harness-tuning tools absent from store-mode phases |
+| harness-mode: no new memories | memory-write tools absent from harness-mode phases |
+| guidance is counted | the guidance tool is the *only* channel to the solver, so its invocations **are** the count |
+
+**IF** a constraint is enforced by a validator, **HOWEVER** the validator runs
+after the act, **THEN** phase gating is strictly stronger, **BECAUSE** the tool
+is not present to be misused — the same move as `WorkedFrame.changed` making a
+scaffold-identical frame unconstructible, and as I-3's *"the peripheral
+constrains what the agent can do."*
+
+This also matches the file's own stated principle: **"the paren IS the gate —
+generation and checking are the same act."** Emitter-side F1 is that principle;
+so is this.
+
+### Consequence for the layers
+
+The proctoring checks in `mmca-clj` (A2–8) **do not become redundant** — they
+remain the *audit* over an emitted trace, and they catch a cycle that ran
+outside the peripheral. But inside the peripheral, **the violation cannot be
+authored**. Belt and brace, in the right order: prevention structural, detection
+independent.
+
+**And it retires the weakest link.** I.14 flagged `no-direct-channel` as the one
+check whose failure would look clean; A8 strengthened its evidence to the Agency
+log. Phase gating removes the act. **Three layers now: the tool is absent, the
+Agency log is read independently, the validator refuses.**
+
+### What still has to be written
+
+- **`problem-domain-config`** — `:phase-order` for the cycle
+  (register → frame → guided-solve → deposit → student-attempt ×3 → adjudicate →
+  promote → close), with `:phase-tools` encoding the table above.
+- **`:fruit-fn`** returning the **trace** the `mmca-clj` validator consumes —
+  which is where the peripheral meets the harness.
+- **`:required-outputs`** per phase, so a phase cannot advance without its
+  entities (I.19/I.21).
+- Blackboard render for a *cycle* rather than a proof-state.
+
+**Everything else is instantiation.** `register-agent!`, dispatch, the phase
+engine, evidence-on-projection and `run-cycle!` all exist.
