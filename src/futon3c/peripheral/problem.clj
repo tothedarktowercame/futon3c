@@ -1,6 +1,7 @@
 (ns futon3c.peripheral.problem
   "Problem peripheral — one registered experimental problem per cycle."
-  (:require [futon3c.peripheral.cycle :as cycle]
+  (:require [futon3c.dispatch-with-recall :as dispatch-with-recall]
+            [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.tools :as tools]))
 
 (def phase-order
@@ -99,7 +100,44 @@
    :peripheral/exit #{:user-request}
    :peripheral/context {}})
 
+(def ^:private dispatch-channels
+  {:dispatch-solver :push+pull
+   :dispatch-student-fresh :pull-only})
+
+(defrecord GroundControlBackend [inner-backend dispatch-fn]
+  tools/ToolBackend
+  (execute-tool [_ tool-id args]
+    (if-let [memory-channel (get dispatch-channels tool-id)]
+      (let [[opts packet] args
+            dispatch-result (dispatch-fn (assoc (or opts {})
+                                                :memory-channel memory-channel)
+                                         packet)]
+        ;; This is the receipt emitted by the dispatcher that made the offer,
+        ;; not a second account synthesized by the cycle machine.  Even an
+        ;; empty/failed recall has one offered receipt.
+        {:ok true
+         :result (assoc dispatch-result
+                        :memory-offers [(:evidence dispatch-result)])})
+      (tools/execute-tool inner-backend tool-id args))))
+
+(defn make-ground-control-backend
+  "Wrap a cycle backend with real ground-control dispatches.
+
+  Dispatch tools take `[opts packet]`.  The role fixes the memory channel:
+  solver is `:push+pull`; student is `:pull-only`.  `dispatch-fn` is injectable
+  so envelope tests never bell a live agent."
+  ([inner-backend]
+   (make-ground-control-backend inner-backend
+                                dispatch-with-recall/run-dispatch!))
+  ([inner-backend dispatch-fn]
+   (->GroundControlBackend inner-backend dispatch-fn)))
+
 (defn make-problem
   ([] (make-problem (tools/make-mock-backend)))
   ([backend]
-   (cycle/make-cycle-peripheral problem-domain-config problem-spec backend)))
+   (cycle/make-cycle-peripheral
+    problem-domain-config problem-spec (make-ground-control-backend backend)))
+  ([backend dispatch-fn]
+   (cycle/make-cycle-peripheral
+    problem-domain-config problem-spec
+    (make-ground-control-backend backend dispatch-fn))))
