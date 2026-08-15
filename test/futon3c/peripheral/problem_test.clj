@@ -815,7 +815,12 @@
     (is (:ok result))
     (is (= {:projected true :measurement-summary {:measured 1 :unset 0}}
            (get-in result [:result :trace])))
-    (is (empty? (get-in result [:result :producer-failures])))
+    ;; NOT empty: retrieval-probe has no producer, and this fixture previously
+    ;; supplied :retrieval-probes in outputs to make the list empty -- i.e. it was
+    ;; relying on exactly the caller-injection route Fable's finding 3 closed. The
+    ;; honest expectation is the one known gap and nothing else.
+    (is (= [{:failure :missing-trace-entity-producer :entity-type :retrieval-probe}]
+           (get-in result [:result :producer-failures])))
     (is (= "cycle-1" (:cycle-id @called)))
     (is (= "cycle-1" (:cycle/id cycle-entity)))
     (is (= :store-mode (:cycle/mode cycle-entity)))
@@ -1137,3 +1142,41 @@
     (is (= :apm-demonstration-round1-launch-authorization (:kind written)))
     (is (= report (:validation written)))
     (is (empty? (tools/recorded-calls backend)))))
+
+(deftest injected-retrieval-probes-cannot-silence-the-missing-producer
+  ;; Fable's finding 3. Verified before the fix: injecting :retrieval-probes []
+  ;; removed :missing-trace-entity-producer for :retrieval-probe from the close
+  ;; envelope. The one entity type with no producer was the one a caller could
+  ;; supply -- and "an empty collection proves its producer ran" was exactly the
+  ;; rule it exploited.
+  (let [p (problem/make-problem (tools/make-mock-backend))
+        base (:state (runner/start p {:session-id "inj" :problem-id "t94J02"
+                                      :cycle/mode :store-mode}))
+        outs {:registration {:problem {:problem-id "t94J02" :difficulty-stratum "s"
+                                       :regime "r" :locked-lemma-exposure []}
+                             :required-measurement-fields ["a"]}
+              :frame {:frame/id "F1" :frame/scaffold-hash "aa" :frame/closing-hash "bb"}
+              :launch-gate-event {} :store-snapshot {:snap/id "S1" :snap/memory-ids []}
+              :containment-probe {} :solver-attempt {} :student-attempts []
+              :disposition {:disp/id "D1"} :memory-offers [] :memory-uses []
+              :capability-probes [] :promotion-result {}
+              :retrieval-probes []
+              :stratum-frozen-at 1 :assigned-at "t"}
+        st (assoc base :current-phase :close :current-cycle-id "C1"
+                  :cycle/outputs outs)
+        r (runner/step p st {:tool :emit-trace :args []})
+        failures (:producer-failures (:result (last (get-in r [:state :steps]))))]
+    (is (some #(= :retrieval-probe (:entity-type %)) failures)
+        "an injected empty probe set must not clear the missing-producer failure")))
+
+(deftest provisioned-revision-must-match-the-registration-pin
+  ;; Fable's finding 1. The pins were read by nothing, and :assign-checkouts takes
+  ;; a caller-supplied :base-rev -- so a cycle provisioned at the WRONG revision
+  ;; validated cleanly. Every other check compares the arms against each other.
+  (let [pin "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        wrong "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        outputs (-> outputs-through-student
+                    (assoc :registration {:reg/environment-revision pin}
+                           :environment-revision wrong))
+        result (advance-student-attempts outputs [{}])]
+    (is (= :environment-revision-not-registered (:error/code result)))))

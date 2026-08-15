@@ -10,10 +10,22 @@ Built 2026-08-15. `src/futon3c/peripheral/problem.clj`.
 ## The one rule the whole thing implements
 
 > **The machine owns the fields it is answerable for.** A caller may supply data,
-> but anything a gate later reads is written by the engine from its own records.
+> but the engine writes the fields it is answerable for from its own records.
 
 That is why so much here is *derived* rather than passed in. If a value could be
 chosen at the moment it is checked, the check measures the chooser.
+
+**The rule holds of the derived fields, not of everything.** Frame hashes,
+dispositions, containment probes, snapshots and offers arrive as **caller-relayed**
+advance payloads and are shape- and consistency-checked only. In particular the
+emitter-side F1 gate that hashes actual files (`cycle-harness/emit-frame!`) sits on
+the `run-cycle!` path, **not** the peripheral path — here the validator compares two
+relayed strings. That is defensible for a Codex-as-REPL process, but **do not read a
+relayed claim as a measured one.**
+
+**Real in production:** provisioning, dispatch, state IO, and the five derived close
+tools. **Relayed:** everything else, including via `(make-problem)` with no arguments,
+which uses the mock backend for every tool the wrappers do not intercept.
 
 ## Phases
 
@@ -98,9 +110,11 @@ Memory channel is fixed by role and cannot be overridden: solver `:push+pull`, s
 
 ## Closing
 
-`:emit-trace` refuses if any entity producer is absent — **an empty collection proves
-its producer ran; a missing key does not.** `:validate-trace` accumulates producer
-failures and validator failures together. `:write-authorization` **refuses on a
+`:emit-trace` **completes and records `producer-failures`** when an entity producer is
+absent — it does not refuse; refusal is deferred to `:write-authorization`, which
+keeps the whole picture auditable. **An empty collection proves its producer ran; a
+missing key does not.** `:validate-trace` accumulates producer failures and validator
+failures together. `:write-authorization` **refuses on a
 non-launchable report and records the refusal**, because a refusal that leaves no
 trace is indistinguishable from a cycle that never tried.
 
@@ -113,6 +127,22 @@ missing producer: retrieval-probe
 measurement: 4 measured / 13 unset
 :launchable? false     authorization: refused, not written
 ```
+
+## Reading a refusal
+
+**No cycle can currently produce a written authorization, and that is the accepted
+normal for round 1.** Three refusal codes are **expected and benign** — they mean the
+machine is working and the known gaps are known:
+
+| expected-and-benign | why |
+|---|---|
+| `missing producer: retrieval-probe` | no producer exists (below) |
+| `:f9-capability-probe-missing` | `:need-retrieval` cannot be probed without one |
+| `:guidance-measurement-mismatch` | `record-measurement` cannot reach Agency evidence, so "attempts or closer hops" is unset while the validator computes it independently |
+
+**Anything else in a refusal is disqualifying** and means that cycle is not sound.
+A reviewer of frame-40 should be able to tell a healthy refusal from a broken one by
+this list alone.
 
 ## Known gap — deliberate
 
@@ -127,6 +157,15 @@ recorded in all three of the Lean, the validator constants, and the registration
 launch obligation is discharged *by construction*: `Launch` requires a `ReadyToRun`
 whose failure cases are proved uninhabited, so it never refuses at runtime and emits
 no event to attest.
+
+### Two things that look like checks and are not
+
+- **`:solver-seat-mismatch` is dead on this path.** `validate-trace-from-state` passes
+  the registration's own pin as the invoked seat, so it compares the pin against
+  itself. Correct given engine ownership — but do not rely on it firing here.
+- **`:f7-missed-available-artifact` is still computed** though F7 was dropped from the
+  runtime invariants. It is vacuous by construction now that retrieval probes are
+  stripped at close (`[] ⊆ []`), but it is a check with nothing behind it.
 
 ## Tests
 

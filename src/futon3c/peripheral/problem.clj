@@ -69,7 +69,16 @@
         (reverse (:steps state))))
 
 (defn- environment-arms-match [outputs]
-  (let [pinned (:environment-revision outputs)
+  (let [registration (:registration outputs)
+        ;; The registration's resource pins were decorative: nothing in src/,
+        ;; test/ or scripts/ read :reg/environment-revision or
+        ;; :reg/harness-revision, and :assign-checkouts takes a caller-supplied
+        ;; :base-rev -- so a cycle provisioned at the WRONG revision validated
+        ;; cleanly. The other checks compare the arms against EACH OTHER; this
+        ;; one compares them against the frozen registration.
+        pinned-env (:reg/environment-revision registration)
+        pinned-harness (:reg/harness-revision registration)
+        pinned (:environment-revision outputs)
         solver-revision (get-in outputs
                                 [:solver-attempt :cycle/environment-revision])
         student-revisions (map :cycle/environment-revision
@@ -79,6 +88,21 @@
         student-checkouts (map :cycle/environment-checkout
                                (:student-attempts outputs))]
     (cond
+      (and (some? pinned-env) (not= pinned-env pinned))
+      {:failure :environment-revision-not-registered
+       :registered pinned-env :provisioned pinned}
+
+      (and (some? pinned-harness)
+           (not (every? #(= pinned-harness %)
+                        (keep :cycle/harness-revision
+                              (cons (:solver-attempt outputs)
+                                    (:student-attempts outputs))))))
+      {:failure :harness-revision-not-registered
+       :registered pinned-harness
+       :actual (vec (keep :cycle/harness-revision
+                          (cons (:solver-attempt outputs)
+                                (:student-attempts outputs))))}
+
       (not (and (= pinned solver-revision)
                 (every? #(= pinned %) student-revisions)))
       {:failure :environment-mismatch-between-arms
@@ -165,8 +189,16 @@
         payload (if closing?
                   ;; Close artifacts are retained derived-step results, never
                   ;; advance-payload assertions from the caller.
+                  ;; :retrieval-probes is stripped for the opposite reason to the
+                  ;; others: they are replaced by recorded derived results, but
+                  ;; NOTHING produces retrieval probes, so an injected
+                  ;; `:retrieval-probes []` would read as "the producer ran and
+                  ;; returned nothing" and silence the one gap that has no producer.
+                  ;; Verified: injecting it removed :missing-trace-entity-producer
+                  ;; for :retrieval-probe from the close envelope.
                   (apply dissoc payload
-                         [:measurement :trace :validation :authorization])
+                         [:measurement :trace :validation :authorization
+                          :retrieval-probes])
                   payload)
         measurement (recorded-measurement state)
         close-envelope (recorded-close-envelope state)
@@ -354,8 +386,14 @@
         measurement (recorded-measurement state)
         ;; Capability probes are never accepted from the advance payload. Only
         ;; the engine-derived tool's retained step result can supply them.
+        ;; :retrieval-probes joins the strip list for the OPPOSITE reason to the
+        ;; other two: they are replaced by recorded derived results, but NOTHING
+        ;; produces retrieval probes -- so an injected `:retrieval-probes []` would
+        ;; read as "the producer ran and returned nothing" and silence the one gap
+        ;; that has no producer. Verified before this fix: injecting it removed
+        ;; :retrieval-probe from the close envelope's producer failures.
         outputs (cond-> (dissoc (:cycle/outputs state)
-                                :capability-probes :measurement)
+                                :capability-probes :measurement :retrieval-probes)
                   (some? recorded-probes)
                   (assoc :capability-probes recorded-probes)
                   (some? measurement)
@@ -511,7 +549,8 @@
                    :write-authorization write-authorization-from-state}
    :output-invariants
    [{:id :environment-arms-match
-     :requires #{:environment-revision :solver-attempt :student-attempts}
+     :requires #{:registration :environment-revision :solver-attempt
+                :student-attempts}
      :check environment-arms-match}]
    :cycle-begin-tool :begin-problem-cycle
    :cycle-advance-tool advance
