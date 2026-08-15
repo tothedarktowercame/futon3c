@@ -7174,3 +7174,79 @@ deliberately rather than by accident.
 the rung tag and the environment revision. **A deferral that keeps the data is a
 deferral; one that loses it is a decision.** These two fields are the difference,
 and both are cheap now and unrecoverable afterwards.
+
+## I.38 Environment containment — the Mathlib patch is a pass-note
+
+**Joe, 2026-08-14:** *"the patches to Mathlib do need to be **contained**
+otherwise Codex is basically **giving Zai the answer as a pass-note**."*
+
+**Correct, and the fix is the move I.7 already made once.** A lemma Codex adds to
+a shared Mathlib is a channel from solver to student that **bypasses the
+substrate entirely** — Zai would simply `import` the answer. Under the trace it
+would look like a clean close.
+
+> **The pass-note is worse than a direct hint**, because a hint at least appears
+> in the Agency log (I.14/A8). **A patched environment appears nowhere** — Zai's
+> run would be honest, fresh, memory-only, and still handed the answer.
+
+### The rule
+
+> **Zai's attempt runs against the PRE-solve environment, pinned.** Whatever
+> Codex added during its solve is **not** in Zai's environment. If it should
+> reach Zai, it goes **through the substrate as a deposit** — where it is
+> measured.
+
+That is I.7's principle applied to the fourth channel: **everything reaches the
+student through the one measured conduit, or not at all.**
+
+**Checkable, like the other proctoring rules:** the student attempts'
+`:cycle/environment-revision` (I.37) must **equal the pre-solve revision**. A
+mismatch is `:environment-leaked-to-student`. **The validator can see it, so the
+discipline does not have to.**
+
+### The machinery mostly exists — and one part of it has never been used
+
+**D.23 found frame containment working**: 51 frames, distinct
+`workspace/lean-root`s, **zero namespace collisions**, enforced by Lean's module
+system. Codex's work is already frame-local by construction.
+
+**The exposure is the shared surface.** Each frame also names
+`workspace/shared-extension-root: ApmCanaries/Local` — the sanctioned promotion
+channel — and **D.23 found that directory empty: created 31 March, never
+written to.**
+
+> **The unused exit is now load-bearing.** It was harmless while nothing used it
+> — that was D.23's *"over-contained rather than under-contained"*. Under this
+> rule it becomes the boundary that must be **excluded from the student's
+> environment**, because anything landing there is exactly a pass-note.
+
+So: Codex may write frame-local freely; anything it wants to share goes to the
+shared extension root **or** the substrate; and **the student's environment
+includes neither** unless deposited.
+
+### This sharpens I.37's extraction question rather than blunting it
+
+If Codex closes by adding a genuinely missing Mathlib lemma — a **legitimate**
+outcome, which `bridge_packets.py` explicitly treats as success — then
+containment means **Zai cannot import it**. Good:
+
+> **The lemma must be deposited as a memory that Zai can find by need
+> vocabulary, and used. That is the extraction question in its hardest form** —
+> not "can we transfer a hint" but "can we transfer a *definition* through a
+> memory system."
+
+If that works, it is the strongest possible evidence for N3/N5. If it does not,
+we learn that new-lemma results are **not** extractable by the current store —
+which is a finding, and one nobody could have had while the pass-note was open.
+
+### Recorded
+
+- **Rule:** student environment pinned to pre-solve revision.
+- **Check:** `:environment-leaked-to-student` on mismatch.
+- **Scope:** frame-local writes unrestricted; shared-extension-root and Mathlib
+  patches excluded from the student environment.
+- **Consequence:** a Codex solve that *required* an environment change produces a
+  **harder** teachability test, not an invalid one.
+
+**Fourth channel closed by the same principle as the first.** Store, harness,
+role card, environment — each reaches the student only through what we measure.
