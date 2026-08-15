@@ -35,7 +35,21 @@
  ;; an unrelated file must not read as an unfrozen harness. Measured by
  ;; problem/measure-harness-repository, the same construction the validator uses
  ;; for :lean-revision.
- :reg/harness-revision     "7787eb9a56bc75cc1f4e33cdd85217248982b7ca"
+ :reg/harness-revision     "7f37893b115cd13f33b8bde023c69d4c0a32acac"
+ ;; ^ re-pinned 2026-08-15 pre-flight (claude-7): last src/scripts/deps.edn
+ ;; commit after the rehearsal-driven fixes (base-injection, packet-checkout,
+ ;; recall nil-safety x2, write-substrate wiring, disposition pass-through,
+ ;; evidence-store-required, memory_read). Path-scoped measurer semantics.
+
+ ;; PRE-LAUNCH RULINGS (Joe, 2026-08-15, recorded before round 1):
+ ;; (1) :cycle/store-revision convention ADOPTED for round 1: sha-256 of the
+ ;;     sorted snapshot memory-id vector (+ deposits at attempt time), first
+ ;;     40 hex. Grounded in the supersession discipline: memories change by
+ ;;     new id, never in-place, so the id-set tracks store state honestly.
+ ;; (2) Student pull reads: envelope-only reads REPAIRED (memory_read tool,
+ ;;     7f37893b) -- Joe's launch gate: a zai runner must QUOTE a memory
+ ;;     body verbatim through the new tool before round 1 opens. Validation
+ ;;     result recorded in the mission record (W.5).
 
  ;; The solver seat is a PARAMETER OF THE MEASUREMENT, not a location like the
  ;; Lean repo or the Agency endpoint: guidance is counted as in-window Agency
