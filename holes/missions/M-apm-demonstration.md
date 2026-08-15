@@ -6954,3 +6954,75 @@ phase should:
 3. **Tag each intervention with which technique it invoked**, so the guidance
    vocabulary (I.33) is *counted* rather than described — and so P1's decline,
    when it comes, can be attributed to a technique rather than to a mood.
+
+## I.35 The technique ladder, and a 15-vs-120 conflict that would have faked a failure
+
+**Joe:** *"arXiv is an escalation from mathlib… obviously if Codex has access to
+the memories and previous records as well, then they'd see things like Rouché and
+other ConstructionTargets — i.e. they can in principle look over the **'shapes'
+of the previous proofs**… though **15 minutes might be a bit too optimistic**."*
+
+### ⚠ The 15-minute instruction contradicts our registration — verified
+
+The recovered prompts tell the solver, **five times**:
+
+> `:109` *"Time budget: **15 minutes**. Use it."*
+> `:168` *"set a timer for **15 minutes**"*
+> `:169` *"at the end of 15 minutes **you must stop whatever you are doing**"*
+> `:182` *"can be fully closed… **in 15 minutes**"*
+> `:455` *"**15-minute exam timer starts NOW**"*
+
+Our registration says `:teardown-deadline 120`.
+
+> **Reusing those prompts verbatim would tell Codex to stop at 15 minutes while
+> the registration allowed 120 — and frame-1 would then report "Codex could not
+> close it" as an artifact of our own instruction text.**
+
+**That is exactly the outcome Joe said he did not want**, and it would have been
+invisible: the trace would show a legitimate non-closure inside a legitimate cap,
+with no field recording that the solver had been told to stop eight times sooner.
+
+**Fix:** the time budget in the prompt must be **derived from the registration**,
+not hardcoded. And Joe's *"15 minutes might be a bit too optimistic"* is a
+substantive correction to A1's original form — the assumption survives, its
+**timescale does not**. The bounded form (I.33) already uses the registration's
+caps rather than the prompt's, so it stands.
+
+### Techniques are a LADDER with escalation, not a flat list
+
+Joe: *"arXiv is an escalation from mathlib."* So order matters, and the order is
+cheap-to-expensive and near-to-far:
+
+| # | technique | escalate when |
+|---|---|---|
+| 1 | **Search Mathlib** — `exact?`, `apply?`, grep for key terms | nothing matches the name you guessed |
+| 2 | **Search by STATEMENT SHAPE, not the guessed name** (`LEMMA-INDEX`) | the shape search also comes back empty |
+| 3 | **Check this file** — the most common rejection is a lemma proved *"forty lines above, under another name"* | still absent locally |
+| 4 | **Look over the SHAPES of previous proofs** — memories, `ConstructionTargets` (Rouché et al.), neighbouring solved problems | no local template fits |
+| 5 | **Escalate to arXiv** — related *informal* proofs as templates | — |
+
+**Steps 1–3 are recorded** (I.34). **Steps 4 and 5 are Joe's, and neither is in
+either instruction surface.** Step 5 was never written down at all; step 4 is
+implied by the closer profile's memory access but never stated as a *technique*.
+
+**Step 4 is the more interesting addition.** It is not "find the lemma you need"
+— it is *"read how a similar problem was closed and imitate its shape."*
+`ConstructionTargets` has **39 load-bearing reuse edges** (E1) precisely because
+that works. And it doubles as the encouragement Joe describes: **seeing that
+these problems have been closed is evidence they are closeable**, which is A1
+supported by artifacts rather than asserted.
+
+### ⚠ One consequence to watch: Codex reading the store confounds "memories promoted"
+
+If Codex consults the substrate during its solve, then Claude's deposit may
+**re-deposit content Codex read from the store in the first place.**
+
+That inflates `memories promoted` without adding knowledge, and it is the
+duplicate-lemma problem (D.14/D.17) one level up — **at the memory layer, where
+we currently have no duplicate detector.** We measure `duplicate declarations`
+for Lean; we do not measure duplicate *memories*.
+
+**Cheap mitigation, and it uses machinery that already exists:** the deposit step
+runs the same membership test the proctoring uses — a promoted memory whose
+content already matches something in the round-open `StoreSnapshot` is flagged.
+**Recorded as a measurable to add, not a blocker for frame-1.**
