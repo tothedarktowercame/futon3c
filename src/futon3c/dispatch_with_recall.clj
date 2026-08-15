@@ -916,7 +916,10 @@
   [{:keys [problem subjects limit substrate-base recall-timeout-ms
            receipt-ranking? receipt-alpha include-pre-cutoff-ranking?
            ranking-receipt-entries]
-    :or {receipt-ranking? true receipt-alpha default-receipt-alpha}
+    :or {limit default-limit
+         recall-timeout-ms default-recall-timeout-ms
+         receipt-ranking? true
+         receipt-alpha default-receipt-alpha}
     :as opts}
    packet]
   (let [started-ns (System/nanoTime)
@@ -1072,8 +1075,9 @@
   "Run recall under one total wall-clock budget. Every failure is converted to
   a typed empty result so dispatch can continue."
   [opts packet]
-  (let [task (future (recall-now opts packet))
-        timeout-ms (:recall-timeout-ms opts)
+  (let [timeout-ms (or (:recall-timeout-ms opts) default-recall-timeout-ms)
+        opts (assoc opts :recall-timeout-ms timeout-ms)
+        task (future (recall-now opts packet))
         result (deref task timeout-ms ::timeout)]
     (if (= ::timeout result)
       (do
@@ -1403,11 +1407,11 @@
 
 (defn- dispatch! [{:keys [base to from mission]} packet]
   (post-json
-   (str (trim-base base) "/api/alpha/bell")
+   (str (trim-base (or base default-agency-base)) "/api/alpha/bell")
    {:agent-id to
     :prompt packet
     :caller from
-    :mission-id mission
+    :mission-id (or mission default-mission)
     :mode "work"}
    30000))
 

@@ -152,6 +152,29 @@
     (is (= 1.0 (get-in memory
                        [:dispatch/receipt-stats :ranking-factor])))))
 
+(deftest ground-control-shaped-opts-default-at-recall-consumption
+  (let [opts {:to "zai-1" :from "test" :problem "a01A06"
+              :subjects ["a01A06"]
+              :base "http://localhost:7070"
+              :memory-channel :push+pull
+              :allow-thin? true}
+        recall-now-var
+        (ns-resolve 'futon3c.dispatch-with-recall 'recall-now)
+        fixture-recall
+        (fn [_ _] {:status :recall-empty :reason :fixture-empty :memories []})]
+    (with-redefs-fn
+      {recall-now-var fixture-recall}
+      (fn []
+        (let [safe (dispatch/safe-recall opts "fixture packet")
+              dry-run (atom nil)]
+          (with-out-str
+            (reset! dry-run
+                    (dispatch/run-dispatch! (assoc opts :dry-run? true)
+                                            "fixture packet")))
+          (is (nil? (:error safe)))
+          (is (nil? (get-in @dry-run [:recall :error])))
+          (is (= :recall-empty (get-in @dry-run [:recall :status]))))))))
+
 (deftest pre-cutoff-ranking-audit-retains-below-cutoff-candidates
   (let [ranked [{:memory/id "e-ranked"
                  :dispatch/pre-receipt-rank 2
