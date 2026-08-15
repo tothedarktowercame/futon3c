@@ -1,10 +1,14 @@
 (ns futon3c.peripheral.problem-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.test :refer [deftest is]]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
-            [mmca.apm-demonstration-preregistration :as prereg]))
+            [mmca.apm-demonstration-preregistration :as prereg])
+  (:import [java.nio.file Files]
+           [java.nio.file.attribute FileAttribute]))
 
 (def dispatch-packet
   (apply str (repeat 220 "p")))
@@ -249,3 +253,88 @@
                                                    :result synthetic-trace}])
                           "synthetic")]
     (is (empty? (prereg/trace-shape-failures (:fruit stop))))))
+
+(defn- temp-state-root []
+  (.toFile (Files/createTempDirectory "problem-cycle-state-"
+                                      (make-array FileAttribute 0))))
+
+(defn- stateful-problem [root mode session-id]
+  (let [p (problem/make-problem (tools/make-mock-backend)
+                                (fn [_ _] (throw (ex-info "not dispatched" {})))
+                                root)
+        start (runner/start p {:session-id session-id
+                               :problem-id "t94J02"
+                               :cycle/mode mode})]
+    [p (assoc (:state start)
+              :current-cycle-id "cycle-1"
+              :current-phase :frame)]))
+
+(deftest problem-state-save-load-is-additive-and-mid-phase
+  (let [root (temp-state-root)
+        [p initial] (stateful-problem root :store-mode "state-roundtrip")
+        saves (loop [version 1 state initial results []]
+                (if (> version 5)
+                  {:state state :results results}
+                  (let [saved (runner/step
+                               p (assoc state :checkpoint version)
+                               {:tool :problem-save :args []})]
+                    (recur (inc version) (:state saved) (conj results saved)))))
+        cycle-dir (io/file root "cycle-1")
+        vfiles (map #(io/file cycle-dir (str "v" % ".edn")) (range 1 6))
+        loaded (runner/step p (:state saves)
+                            {:tool :problem-load :args ["cycle-1" 3]})]
+    (is (every? :ok (:results saves))
+        "problem-save is always available while the frame phase is active")
+    (is (= 3 (get-in loaded [:state :checkpoint])))
+    (is (every? #(.isFile %) vfiles))
+    (is (every? #(map? (edn/read-string (slurp %))) vfiles)
+        "v4 and v5 remain present and parseable after rewinding to v3")
+    (is (= (mapv #(str "v" % ".edn") (range 1 6))
+           (mapv #(.getName %) vfiles)))
+    (is (get-in (first (:results saves)) [:snapshot-evidence]))
+    (is (= 1 (get-in (first (:results saves))
+                     [:snapshot-evidence :evidence/body :version])))))
+
+(deftest problem-state-versions-are-write-once-and-partials-are-not-versions
+  (let [root (temp-state-root)
+        [p state] (stateful-problem root :store-mode "state-write-once")
+        first-save (runner/step p (assoc state :checkpoint :first)
+                                {:tool :problem-save :args []})
+        v1 (io/file root "cycle-1" "v1.edn")
+        original (slurp v1)
+        partial (io/file root "cycle-1" ".state-interrupted.tmp")
+        _ (spit partial "{:truncated")
+        second-save (runner/step p (assoc (:state first-save) :checkpoint :second)
+                                 {:tool :problem-save :args []})
+        v2 (io/file root "cycle-1" "v2.edn")]
+    (is (:ok second-save))
+    (is (= original (slurp v1)) "a later save cannot overwrite v1")
+    (is (= :first (:checkpoint (edn/read-string (slurp v1)))))
+    (is (= :second (:checkpoint (edn/read-string (slurp v2)))))
+    (is (= ["v1.edn" "v2.edn"]
+           (->> (.listFiles (io/file root "cycle-1"))
+                (map #(.getName %))
+                (filter #(re-matches #"v[0-9]+\.edn" %))
+                sort
+                vec))
+        "an interrupted temp file never becomes a readable version")))
+
+(deftest problem-state-written-form-round-trips-as-edn
+  (let [root (temp-state-root)
+        [p state] (stateful-problem root :store-mode "state-edn")
+        saved (runner/step p state {:tool :problem-save :args []})
+        stored (slurp (io/file root "cycle-1" "v1.edn"))]
+    (is (:ok saved))
+    (is (map? (edn/read-string stored)))
+    (is (not (.contains stored "#object")))))
+
+(deftest problem-state-load-refuses-cross-mode-runtime-pairing
+  (let [root (temp-state-root)
+        [store-p store-state] (stateful-problem root :store-mode "mode-check")
+        saved (runner/step store-p store-state {:tool :problem-save :args []})
+        [harness-p harness-state] (stateful-problem root :harness-mode "mode-check")
+        loaded (runner/step harness-p harness-state
+                            {:tool :problem-load :args ["cycle-1" 1]})]
+    (is (:ok saved))
+    (is (= :loaded-state-mode-mismatch (:error/code loaded)))
+    (is (nil? (:state loaded)))))
