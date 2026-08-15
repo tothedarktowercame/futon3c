@@ -198,6 +198,16 @@
               events))
           [] (:steps state)))
 
+(defn- recorded-retrieval-probes [state]
+  (->> (:steps state)
+       reverse
+       (take-while #(not= :begin-problem-cycle (:tool %)))
+       reverse
+       (keep (fn [{:keys [tool result]}]
+               (when (#{:dispatch-solver :dispatch-student-fresh} tool)
+                 (:retrieval-probe result))))
+       vec))
+
 (defn- recorded-student-assignments [state]
   ;; :steps spans the whole peripheral session, including completed cycles.
   ;; Reset at the latest assignment so attempt 1 of a new cycle cannot be
@@ -236,13 +246,9 @@
         payload (if closing?
                   ;; Close artifacts are retained derived-step results, never
                   ;; advance-payload assertions from the caller.
-                  ;; :retrieval-probes is stripped for the opposite reason to the
-                  ;; others: they are replaced by recorded derived results, but
-                  ;; NOTHING produces retrieval probes, so an injected
-                  ;; `:retrieval-probes []` would read as "the producer ran and
-                  ;; returned nothing" and silence the one gap that has no producer.
-                  ;; Verified: injecting it removed :missing-trace-entity-producer
-                  ;; for :retrieval-probe from the close envelope.
+                  ;; Retrieval probes are also machine-owned: retained dispatch
+                  ;; results replace this key below. An injected empty vector must
+                  ;; never erase a real probe or impersonate its producer.
                   (apply dissoc payload
                          [:measurement :trace :validation :authorization
                           :retrieval-probes])
@@ -263,6 +269,7 @@
         dispositions (recorded-cycle-tool-results state :write-disposition)
         memory-uses (recorded-cycle-tool-results state :write-use)
         promotions (recorded-cycle-tool-results state :promote-artifact)
+        retrieval-probes (recorded-retrieval-probes state)
         frozen-at (:cycle/stratum-frozen-at
                    (recorded-tool-result state :freeze-stratum))
         assigned-at (:assigned-at (recorded-tool-result state :assign-checkouts))]
@@ -306,6 +313,9 @@
       (seq promotions)
       (assoc :promotion-result promotions)
 
+      (seq retrieval-probes)
+      (assoc :retrieval-probes retrieval-probes)
+
       (some? frozen-at)
       (assoc :stratum-frozen-at frozen-at)
 
@@ -342,6 +352,10 @@
           {:cycle/id (:current-cycle-id state)
            :solver-seat (get-in state
                                 [:cycle/outputs :registration :reg/solver-seat])})
+
+    (:dispatch-solver :dispatch-student-fresh)
+    (conj (vec args) {:cycle/id (:current-cycle-id state)
+                      :cycle/step-index (count (:steps state))})
 
     :read-attempt-result
     (conj (vec args) {:cycle/outputs (:cycle/outputs state)})
@@ -510,20 +524,20 @@
   [state _args]
   (let [recorded-probes (recorded-capability-probes state)
         measurement (recorded-measurement state)
-        ;; Capability probes are never accepted from the advance payload. Only
+        ;; Capability and retrieval probes are never accepted from the advance
+        ;; payload. Only
         ;; the engine-derived tool's retained step result can supply them.
-        ;; :retrieval-probes joins the strip list for the OPPOSITE reason to the
-        ;; other two: they are replaced by recorded derived results, but NOTHING
-        ;; produces retrieval probes -- so an injected `:retrieval-probes []` would
-        ;; read as "the producer ran and returned nothing" and silence the one gap
-        ;; that has no producer. Verified before this fix: injecting it removed
-        ;; :retrieval-probe from the close envelope's producer failures.
+        ;; Retrieval probes are reconstructed from retained dispatch results;
+        ;; caller-supplied probes are discarded even when no dispatch produced one.
+        recorded-retrieval-probes (recorded-retrieval-probes state)
         outputs (cond-> (dissoc (:cycle/outputs state)
                                 :capability-probes :measurement :retrieval-probes)
                   (some? recorded-probes)
                   (assoc :capability-probes recorded-probes)
                   (some? measurement)
-                  (assoc :measurement measurement))
+                  (assoc :measurement measurement)
+                  (seq recorded-retrieval-probes)
+                  (assoc :retrieval-probes recorded-retrieval-probes))
         producer-keys {:registration :registration
                        :frame :frame
                        :store-snapshot :store-snapshot
@@ -910,7 +924,8 @@
              :rolled-back (count @done)})))
 
       (= tool-id :dispatch-student-fresh)
-      (let [[opts packet] args
+      (let [[opts packet] (take 2 args)
+            measured (last args)
             context @assignment-context]
         (if-not context
           {:ok false :error "student dispatch has no recorded checkout assignment"}
@@ -937,7 +952,7 @@
                               [(assoc (or opts {})
                                       :environment-checkout (:checkout frame)
                                       :environment-revision (:base-revision frame))
-                               packet])]
+                               packet measured])]
                 (if (:ok dispatch)
                   (do
                     (swap! provisioned-frames conj frame)
@@ -961,7 +976,8 @@
 (defrecord GroundControlBackend [inner-backend dispatch-fn]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
-    (if (= tool-id :guide-solver)
+    (cond
+      (= tool-id :guide-solver)
       (let [measured (last args)
             [opts packet] (butlast args)
             solver-seat (:solver-seat measured)]
@@ -978,8 +994,11 @@
                :result (assoc dispatch-result
                               :ground-control/recipient solver-seat
                               :ground-control/cycle (:cycle/id measured))}))))
-      (if-let [memory-channel (get dispatch-channels tool-id)]
-      (let [[opts packet] args
+
+      (contains? dispatch-channels tool-id)
+      (let [[opts packet] (take 2 args)
+            measured (last args)
+            memory-channel (get dispatch-channels tool-id)
             ;; assoc LAST: the role fixes the channel and a caller cannot
             ;; override it.  A caller-supplied :push to the student would be a
             ;; containment breach, so this precedence is load-bearing.
@@ -998,10 +1017,29 @@
           ;; This is the receipt emitted by the dispatcher that made the offer,
           ;; not a second account synthesized by the cycle machine.  Even an
           ;; empty/failed recall has one offered receipt.
-          {:ok true
-           :result (assoc dispatch-result
-                          :memory-offers [(:evidence dispatch-result)])}))
-        (tools/execute-tool inner-backend tool-id args)))))
+          (let [receipt-body (get-in dispatch-result [:evidence :body])
+                eligible-ids (:eligible-memory-ids receipt-body)
+                retrieved-ids
+                (get-in receipt-body
+                        [:memory-use :memory-use/surfaced-ids])
+                cycle-id (:cycle/id measured)
+                step-index (:cycle/step-index measured)
+                retrieval-probe
+                (when (and cycle-id (integer? step-index)
+                           (sequential? eligible-ids)
+                           (sequential? retrieved-ids))
+                  {:rprobe/id (str "rprobe/" cycle-id "/" step-index)
+                   :rprobe/cycle cycle-id
+                   :rprobe/available-ids (vec eligible-ids)
+                   :rprobe/retrieved-ids (vec retrieved-ids)})]
+            {:ok true
+             :result (cond-> (assoc dispatch-result
+                                    :memory-offers [(:evidence dispatch-result)])
+                       retrieval-probe
+                       (assoc :retrieval-probe retrieval-probe))})))
+
+      :else
+      (tools/execute-tool inner-backend tool-id args))))
 
 (defn make-ground-control-backend
   "Wrap a cycle backend with real ground-control dispatches.

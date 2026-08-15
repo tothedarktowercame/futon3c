@@ -41,6 +41,53 @@
     (is (= :push+pull (get-in @calls [0 :opts :memory-channel])))
     (is (= {:body {:memory-channel :push+pull}} receipt))))
 
+(deftest dispatch-produces-retrieval-probes-on-both-sides-of-cutoff
+  (let [dispatch-fn
+        (fn [opts _]
+          (let [eligible (if (:untruncated? opts) ["m1" "m2"]
+                             ["m1" "m2" "m3"])
+                surfaced ["m1" "m2"]]
+            {:evidence {:body {:eligible-memory-ids eligible
+                               :memory-use
+                               {:memory-use/surfaced-ids surfaced}}}}))
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend) dispatch-fn)
+        truncated (:result
+                   (tools/execute-tool
+                    backend :dispatch-solver
+                    [{} "packet" {:cycle/id "cycle-1" :cycle/step-index 7}]))
+        untruncated (:result
+                     (tools/execute-tool
+                      backend :dispatch-solver
+                      [{:untruncated? true} "packet"
+                       {:cycle/id "cycle-1" :cycle/step-index 8}]))
+        truncated-probe (:retrieval-probe truncated)
+        untruncated-probe (:retrieval-probe untruncated)]
+    (is (= "rprobe/cycle-1/7" (:rprobe/id truncated-probe)))
+    (is (> (count (:rprobe/available-ids truncated-probe))
+           (count (:rprobe/retrieved-ids truncated-probe))))
+    (is (= (:rprobe/retrieved-ids truncated-probe)
+           (subvec (:rprobe/available-ids truncated-probe)
+                   0 (count (:rprobe/retrieved-ids truncated-probe)))))
+    (is (= (:rprobe/available-ids untruncated-probe)
+           (:rprobe/retrieved-ids untruncated-probe)))))
+
+(deftest recorded-retrieval-probe-overwrites-forged-advance-payload
+  (let [recorded {:rprobe/id "rprobe/cycle-1/7"
+                  :rprobe/cycle "cycle-1"
+                  :rprobe/available-ids ["m1" "m2" "m3"]
+                  :rprobe/retrieved-ids ["m1" "m2"]}
+        state {:current-phase :guided-solve
+               :steps [{:tool :begin-problem-cycle :result {:cycle/id "cycle-1"}}
+                       {:tool :dispatch-solver
+                        :result {:retrieval-probe recorded}}]}
+        stamped (#'problem/stamp-environment-outputs
+                 state
+                 {:retrieval-probes [{:rprobe/id "FORGED"
+                                      :rprobe/available-ids []
+                                      :rprobe/retrieved-ids []}]})]
+    (is (= [recorded] (:retrieval-probes stamped)))))
+
 (deftest student-dispatch-is-pull-only-and-pushes-no-memories
   (let [recall-result {:status :ok
                        :memories [{:memory/id "must-not-reach-student"

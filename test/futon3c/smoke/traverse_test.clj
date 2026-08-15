@@ -27,7 +27,13 @@
     (problem/make-problem
      (tools/make-mock-backend)
      (fn [& _]
-       {:ok true :job-id "smoke" :environment-checkout
+       {:ok true :job-id "smoke"
+        :evidence {:offer/id "offer/smoke"
+                   :body {:eligible-memory-ids ["memory/smoke-a"
+                                                "memory/smoke-b"]
+                          :memory-use
+                          {:memory-use/surfaced-ids ["memory/smoke-a"]}}}
+        :environment-checkout
         {:checkout "/tmp/smoke/student" :base-revision env-revision}})
      "/tmp/smoke-state"
      (fn [{:keys [arm]}]
@@ -139,6 +145,7 @@
         begun (runner/step p (:state (runner/start p context))
                            {:tool :begin-problem-cycle :args ["M" "C"]})
         register-facts (atom nil)
+        close-envelope (atom nil)
         outcome
         (loop [state (:state begun), advances 0]
           (if-let [phase (:current-phase state)]
@@ -155,6 +162,11 @@
                           :args ["M" "C" (get phase-payloads phase {})]})]
                     (if (:ok advanced)
                       (do
+                        (when (= phase :close)
+                          (reset! close-envelope
+                                  (some #(when (= :emit-trace (:tool %))
+                                           (:result %))
+                                        (reverse (:steps tool-state)))))
                         (when (= phase :register)
                           (reset! register-facts
                                   (select-keys
@@ -167,10 +179,13 @@
             {:completed? true :advances advances}))]
     (is (= :register (get-in begun [:state :current-phase])))
     (println "SMOKE register facts" (pr-str @register-facts))
+    (println "SMOKE close envelope" (pr-str @close-envelope))
     (println "SMOKE traversal" (pr-str outcome))
     (is (= ["memory/smoke-a" "memory/smoke-b"]
            (get-in @register-facts [:store-snapshot :snap/memory-ids])))
     (is (< (:stratum-frozen-at @register-facts)
            (:assigned-at @register-facts)))
+    (is (not-any? #(= :retrieval-probe (:entity-type %))
+                  (:producer-failures @close-envelope)))
     (is (= {:completed? true :advances 8} outcome)
         "all eight real phases advance through :completed, which clears state")))
