@@ -7541,3 +7541,85 @@ than to a rate.
 
 **Cheap insurance:** record 5.2's exact model id alongside the ArXivLean June
 figures, so the floor stays interpretable after the endpoint goes away.
+
+## I.42 Pre-launch verification of the pick — and the corpus's own memory failure
+
+**Joe, 2026-08-15:** *"if we're ready to launch frame 1, then I think we just need
+to pick a problem from the list — especially if we're stepping through."*
+
+**The problem was already picked and preregistered: `t94J02`.** What this section
+adds is that it has now been **verified from the files**, which turned out to
+matter more than expected.
+
+### The pick stands. Verified directly:
+
+| property | claimed | verified |
+|---|---|---|
+| Main.lean | 22 lines, one code-level sorry | **yes** — sorry at line 22 |
+| statement | genuinely worked, not trivial | **yes** — σ compact Hausdorff ⟹ every strictly finer topology non-compact ∧ every strictly coarser non-Hausdorff |
+| scaffolding for the solver | outline + informal solution | **yes** — 9.3K and 5.6K |
+| no leaked prior work | "zero candidate frames" | **corrected — see below** |
+
+### The prior frame: no leak, but a live F1 instance
+
+`ApmCanaries/Frames/T94J02/Apm_v2_t94J02_1775011263361/Main.lean` **exists** and
+is an **empty scaffold** — 12 lines of namespace boilerplate, no content.
+
+- **Nothing leaked.** What the "zero candidate frames" claim was protecting is
+  intact.
+- **But it is a scaffold-identical frame** — a created frame that was never
+  worked. **F1 now has a real pre-existing example in the corpus rather than a
+  synthetic one.** Excluded from the student environment per I.38.
+
+Registration prose amended before launch accordingly (`:reg/prior-frame`).
+
+### The finding: `status.json` is stale corpus-wide
+
+Verifying the pick meant reading `status.json`, which **disagrees with its own
+Lean**:
+
+> **144 of 475 bundles disagree.** Every `status.json` is frozen at the
+> **2026-05-01 import**; the Lean files moved since (t94J02 on 2026-08-08,
+> a00J01 on 2026-07-29). Nothing regenerates it.
+
+**Drift runs both ways, and the larger class is the surprising one:**
+
+- **~20 overstate** — claim `sorry_count 0` / `"complete"`, file carries a sorry.
+  **t94J02 is one of these**, and so is **a98A01, the preregistered confirmation
+  unit.**
+- **~124 understate** — claim N sorries, file has **zero**. Work was done and the
+  record never noticed.
+
+*(Checked against raw `grep`, not only the comment-stripping pass, so the
+both-ways result is not a regex artifact.)*
+
+### Why this did not block launch, and what it does change
+
+**It did not block, because the pick was verified from the files.** Had selection
+read `status.json`, t94J02 would have been filtered out as `"complete"` — and the
+round would have measured a problem chosen by a stale cache.
+
+**What changes:** `:reg/selection-verified-from :files-not-metadata` is now
+recorded in the registration. **Problem selection must not read `status.json`.**
+
+### The shape of it
+
+This is the **third** instance of one pattern, and the family is now clear:
+
+| instance | the record says | reality |
+|---|---|---|
+| "written but not wired up" (×16) | the code exists | nothing calls it |
+| 45-bundle closure gap | the predicate classified them | it classified on metadata |
+| **status.json (×144)** | **solved / unsolved** | **the file says otherwise** |
+
+**All three are unchecked claims** — which is precisely what the registration,
+the invariants, and A1–A3 exist to prevent.
+
+> **The corpus we are using to measure a memory system has 144 stale records.**
+> That is not an aside: it is the same failure the mission is trying to detect,
+> occurring in the instrument. **The ~124 understating bundles may mean the
+> project is further along than its own records show** — which rhymes with the
+> 1,943 locked lemmas that exist but cannot be imported.
+
+**Not fixed here.** Regenerating `status.json` is corpus work, and corpus cleanup
+is out of scope by standing instruction. Recorded, and selection routed around it.

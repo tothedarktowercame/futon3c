@@ -27,10 +27,31 @@
  :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F7 :F8 :F9]
 
  ;; t94J02 — chosen because it was genuinely worked, not because it is short:
- ;; 22-line Main.lean carrying ONE code-level sorry, against a 97-line
- ;; proof-outline and a 41-line informal-solution. Zero candidate frames and no
- ;; prior scribe history, so no memory-system contamination on the first
- ;; measurement.
+ ;; 22-line Main.lean carrying ONE code-level sorry, against a 9.3K proof-outline
+ ;; and a 5.6K informal-solution.
+ ;;
+ ;; AMENDED 2026-08-15, BEFORE launch, after verifying the pick from the FILES
+ ;; rather than from status.json (which is corpus-wide stale: 144 of 475 bundles
+ ;; disagree with their own Lean, every status.json frozen at the 2026-05-01
+ ;; import while the Lean moved since). Two corrections to the original prose:
+ ;;
+ ;;   (1) "Zero candidate frames" overstated. A frame directory DOES exist --
+ ;;       ApmCanaries/Frames/T94J02/Apm_v2_t94J02_1775011263361/ -- but its
+ ;;       Main.lean is an EMPTY SCAFFOLD: 12 lines of namespace boilerplate and
+ ;;       no content. So nothing leaked, which is what the claim was for; but it
+ ;;       is a scaffold-identical frame, i.e. a live pre-existing F1 instance in
+ ;;       the corpus, not the absence of a frame.
+ ;;   (2) t94J02's own status.json is one of the 144: it reports
+ ;;       sorry_count_main 0 and classification "complete" while Main.lean
+ ;;       carries a code-level sorry. The problem is genuinely OPEN. Selection
+ ;;       must not read this file.
+ ;;
+ ;; No prior scribe history, so no memory-system contamination on the first
+ ;; measurement -- that part stands.
+ :reg/selection-verified-from :files-not-metadata
+ :reg/prior-frame {:module "ApmCanaries.Frames.T94J02.Apm_v2_t94J02_1775011263361"
+                   :state  :empty-scaffold
+                   :note   "pre-existing F1 instance; excluded from the student environment per I.38"}
  :problem {:problem-id            "t94J02"
            :difficulty-stratum    "family=t;freeze-stmt-lines=22"
            :regime                "6521fd3aa158da16a6d520a6c2eef19195ac54cd"
