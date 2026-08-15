@@ -177,3 +177,62 @@
            :boxes [{:box/id :wiring-source
                     :site {:ns "futon3c.diagramprover.wiring"}
                     :reads [:declaration-without-occurrence]}]}))))
+
+(def apm-phases-pre-fix
+  {:spec/id :apm-phases-pre-fix
+   :phases {:order [:register :frame :guided-solve :intervene
+                    :student-attempts :adjudicate :promote :close]
+            :tools {:close #{:record-measurement :emit-capability-probes
+                             :emit-trace :validate-trace :write-authorization
+                             :advance-problem-phase}}}})
+
+(def apm-phases-post-fix
+  {:spec/id :apm-phases-post-fix
+   :phases {:order [:register :frame :guided-solve :intervene
+                    :student-attempts :adjudicate :promote :close :completed]
+            :tools {:close #{:record-measurement :emit-capability-probes
+                             :emit-trace :validate-trace :write-authorization
+                             :advance-problem-phase}
+                    :completed #{}}}})
+
+(deftest recorded-unreachable-close-tools-are-found
+  (is (= [{:finding :terminal-phase-with-tools
+           :phase :close
+           :tools [:advance-problem-phase :emit-capability-probes
+                   :emit-trace :record-measurement :validate-trace
+                   :write-authorization]}]
+         (wiring/phase-chain-findings apm-phases-pre-fix))))
+
+(deftest completed-sentinel-makes-close-enterable
+  (is (= [] (wiring/phase-chain-findings apm-phases-post-fix))))
+
+(deftest phase-tools-key-must-appear-in-order
+  (is (= [{:finding :phase-tools-without-phase :phase :ghost}]
+         (wiring/phase-chain-findings
+          {:spec/id :ghost-tools
+           :phases {:order [:start :completed]
+                    :tools {:completed #{} :ghost #{:haunt}}}}))))
+
+(deftest duplicate-phases-are-findings
+  (is (= [{:finding :duplicate-phase :phase :work}]
+         (wiring/phase-chain-findings
+          {:spec/id :duplicate
+           :phases {:order [:start :work :work :completed]
+                    :tools {:completed #{}}}}))))
+
+(deftest missing-phases-have-no-phase-chain-findings
+  (is (= [] (wiring/phase-chain-findings {:spec/id :no-phases}))))
+
+(deftest empty-order-makes-every-tools-key-orphaned
+  (is (= [{:finding :phase-tools-without-phase :phase :alpha}
+          {:finding :phase-tools-without-phase :phase :beta}]
+         (wiring/phase-chain-findings
+          {:spec/id :empty-order
+           :phases {:order [] :tools {:beta #{} :alpha #{:tool}}}}))))
+
+(deftest empty-terminal-tool-set-is-allowed
+  (is (= []
+         (wiring/phase-chain-findings
+          {:spec/id :empty-terminal
+           :phases {:order [:start :completed]
+                    :tools {:completed #{}}}}))))

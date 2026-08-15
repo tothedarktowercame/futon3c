@@ -157,3 +157,37 @@
     (->> (concat unreadable-sites missing-declarations undeclared-occurrences)
          (sort-by (juxt (comp str :finding) (comp str :field)))
          vec)))
+
+(defn phase-chain-findings
+  "Report structural defects in a declared cycle phase chain.
+
+  The cycle convention documented beside `phase-order` in
+  `futon3c.peripheral.problem` is that the engine clears the cycle when an
+  advance returns the last phase. The last phase is therefore a transition,
+  never an enterable state, and tools declared there are unreachable."
+  [{:keys [phases]}]
+  (if-not phases
+    []
+    (let [order (vec (or (:order phases) []))
+          tools (or (:tools phases) {})
+          order-set (set order)
+          terminal (peek order)
+          terminal-tools (get tools terminal #{})
+          terminal-finding
+          (when (and terminal (seq terminal-tools))
+            {:finding :terminal-phase-with-tools
+             :phase terminal
+             :tools (vec (sort-by str terminal-tools))})
+          orphan-tool-phases
+          (for [phase (keys tools)
+                :when (not (contains? order-set phase))]
+            {:finding :phase-tools-without-phase :phase phase})
+          duplicate-phases
+          (for [[phase n] (frequencies order)
+                :when (< 1 n)]
+            {:finding :duplicate-phase :phase phase})]
+      (->> (concat (when terminal-finding [terminal-finding])
+                   orphan-tool-phases
+                   duplicate-phases)
+           (sort-by (juxt (comp str :finding) (comp str :phase)))
+           vec))))
