@@ -7250,3 +7250,88 @@ which is a finding, and one nobody could have had while the pass-note was open.
 
 **Fourth channel closed by the same principle as the first.** Store, harness,
 role card, environment — each reaches the student only through what we measure.
+
+## I.39 Pinned hashes as a cycle-machine requirement; and A2, the one assumption about us
+
+**Joe, 2026-08-14:** *"the cycle machine should **require pinned hashes** (and
+the relevant Zai one for mathlib and any other content resources **needs to match
+the ones that Codex gets**). The **memory store is allowed to persist** memories
+between, so that's our 'transfer' mechanism… It's **not** a pass-note (at least,
+that's **another standing assumption** — that we're not stuffing it with cheat
+codes, but legitimate abstractions and pointers)."*
+
+### Joe's formulation is better than I.38's, and I am adopting it
+
+I wrote *"Zai runs against the **pre-solve** environment."* Joe's is **"the same
+one Codex gets"** — and that is cleaner:
+
+> **Both arms start from the same pinned environment.** Symmetric, stated
+> positively, and it makes the check an **equality** rather than a temporal
+> claim: `codex.environment-revision == zai.environment-revision`.
+
+"Pre-solve" invited the question *pre which solve?*; "the same one Codex gets"
+does not. Same rule, better stated.
+
+### Pinned hashes become a cycle-machine requirement
+
+This is now a **`:required-outputs` obligation on `:register`**, which is exactly
+what the I.30–I.31 enforcement work makes possible:
+
+| resource | pinned as |
+|---|---|
+| Lean model | `:lean-revision` *(already in the registration)* |
+| Mathlib / `apm-lean` | **`:cycle/environment-revision`** |
+| harness | `:cycle/harness-revision` |
+| role cards | `:reg/role-cards` sha per card *(already)* |
+| registration itself | verbatim bytes + sha256 *(already)* |
+| **memory store** | `:cycle/store-snapshot-id` — pinned, **but deliberately not frozen** |
+
+**Everything is pinned; exactly one thing is permitted to change across the
+cycle.** That is the design in one line, and the machine can now enforce it
+rather than the operator remembering it.
+
+> **The store is the only unfrozen resource. That is not a gap in the pinning —
+> it *is* the transfer mechanism**, and it is unfrozen precisely so that what
+> crosses is measurable.
+
+### A2 — recorded as a standing assumption, with the one caveat it needs
+
+> **A2.** *The store carries legitimate abstractions and pointers, not cheat
+> codes.*
+
+**Recorded as Joe framed it.** But it is worth noting what makes A2 different
+from A1: **A1 is an assumption about Codex; A2 is an assumption about us.** It is
+the only standing assumption whose subject is the party running the experiment —
+and I.10's test says a rule whose only evidence is the word of the party bound by
+it should not rest on assertion.
+
+**I am not proposing to replace it with a check.** I am noting that it has **two
+cheap partial checks available**, and that they cost nothing to record now:
+
+**1. Syntactic, immediate.** A deposit that names the problem id (`t94J02`) or
+restates a verbatim slice of the frozen statement is **problem-specific by
+construction** — that is a cheat code's signature regardless of intent. A
+one-line guard at deposit time; flag, do not block.
+
+**2. Behavioural, retrospective — and this one is free.** A deposit that is
+**never reused on any other problem** was, in effect, problem-specific. A deposit
+that **is** reused is by definition an abstraction. **The reuse-to-discovery
+ratio (I.36) is therefore also A2's evidence**, arriving a few problems later
+without anyone having to judge intent.
+
+**IF** A2 were checked by inspecting deposits for "cheatiness", **HOWEVER** that
+requires judging our own intent, **THEN** use reuse instead, **BECAUSE** *"did
+this help somewhere else?"* is answerable from the record and *"were we
+cheating?"* is not. **A2 becomes testable by accident, through a measure we
+already wanted.**
+
+### Recorded
+
+- **Environment rule (restated, Joe's form):** both arms get the same pinned
+  environment; violation is `:environment-mismatch-between-arms`.
+- **Pinning obligation:** all resources pinned at `:register`, enforced as
+  required-outputs.
+- **A2** as a standing assumption, with the syntactic guard and the reuse measure
+  noted as its available evidence.
+- **The store is deliberately the sole unfrozen resource** — the transfer
+  mechanism, fallible and imperfect, and measured for exactly that reason.
