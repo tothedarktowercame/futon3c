@@ -11,7 +11,7 @@
 
 (def base-phase-tools
   {:register #{:read-registration :validate-registration :snapshot-store
-               :freeze-stratum advance}
+               :freeze-stratum :pin-resources advance}
    :frame #{:emit-frame advance}
    :guided-solve #{:dispatch-solver :guide-solver :read-substrate advance}
    :intervene #{advance}
@@ -21,7 +21,8 @@
    :close #{:emit-trace :validate-trace :write-authorization advance}})
 
 (def required-outputs
-  {:register #{:registration :store-snapshot :stratum-frozen-at}
+  {:register #{:registration :store-snapshot :stratum-frozen-at
+               :environment-revision :harness-revision}
    :frame #{:frame :containment-probe}
    :guided-solve #{:solver-attempt :ground-control-events :memory-offers}
    :intervene #{:intervention}
@@ -46,6 +47,14 @@
   (some (fn [{:keys [tool result]}] (when (= :emit-trace tool) result))
         (reverse (:steps state))))
 
+(defn- environment-arms-match [outputs]
+  (let [pinned (:environment-revision outputs)
+        solver (get-in outputs [:solver-attempt :cycle/environment-revision])
+        students (map :cycle/environment-revision (:student-attempts outputs))]
+    (when-not (and (= pinned solver) (every? #(= pinned %) students))
+      {:failure :environment-mismatch-between-arms
+       :pinned pinned :solver solver :students (vec students)})))
+
 (defn- autoconf [context config]
   (let [intervention-tool (case (:cycle/mode context)
                             :store-mode :write-substrate
@@ -65,6 +74,10 @@
                     :tune-harness :action)
    :required-outputs required-outputs
    :enforce-required-outputs? true
+   :output-invariants
+   [{:id :environment-arms-match
+     :requires #{:environment-revision :solver-attempt :student-attempts}
+     :check environment-arms-match}]
    :cycle-begin-tool :begin-problem-cycle
    :cycle-advance-tool advance
    :state-init-fn (fn [context]

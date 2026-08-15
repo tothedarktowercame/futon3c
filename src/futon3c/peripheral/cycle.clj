@@ -51,6 +51,13 @@
        (set? (:setup-tools config))
        (map? (:tool-ops config))
        (map? (:required-outputs config))
+       (or (nil? (:output-invariants config))
+           (and (vector? (:output-invariants config))
+                (every? (fn [invariant]
+                          (and (keyword? (:id invariant))
+                               (set? (:requires invariant))
+                               (fn? (:check invariant))))
+                        (:output-invariants config))))
        (keyword? (:cycle-begin-tool config))
        (keyword? (:cycle-advance-tool config))
        (fn? (:fruit-fn config))
@@ -92,6 +99,13 @@
   (let [payload (nth args 2 {})]
     (if (map? payload) payload {})))
 
+(defn- output-invariant-failure [config outputs]
+  (some (fn [{:keys [id requires check]}]
+          (when (clojure.set/subset? requires (set (keys outputs)))
+            (when-let [failure (check outputs)]
+              (assoc failure :invariant/id id))))
+        (:output-invariants config)))
+
 ;; =============================================================================
 ;; Evidence enrichment
 ;; =============================================================================
@@ -121,7 +135,12 @@
     err
     (let [{:keys [tool args]} (common/normalize-action action)
           cycle-begin (:cycle-begin-tool config)
-          cycle-advance (:cycle-advance-tool config)]
+          cycle-advance (:cycle-advance-tool config)
+          advance-outputs (when (= tool cycle-advance)
+                            (merge (:cycle/outputs state)
+                                   (advance-payload args)))
+          invariant-failure (when advance-outputs
+                              (output-invariant-failure config advance-outputs))]
       (cond
         ;; Phase gating
         (not (phase-allows-tool? config state tool))
@@ -153,6 +172,15 @@
                                "Cannot advance with required outputs missing"
                                :phase (:current-phase state)
                                :missing (vec missing)))
+
+        invariant-failure
+        (let [failure invariant-failure]
+          (runner/runner-error
+           (:domain-id config) (:failure failure)
+           "Cycle output invariant failed"
+           :phase (:current-phase state)
+           :invariant (:invariant/id failure)
+           :details (dissoc failure :failure :invariant/id)))
 
         :else
         (let [dispatch-result (tools/dispatch-tool tool args spec backend)]

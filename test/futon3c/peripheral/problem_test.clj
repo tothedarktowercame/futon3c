@@ -40,6 +40,58 @@
     (is (= :missing-required-outputs (:error/code result)))
     (is (some #{:registration} (get-in result [:error/context :missing])))))
 
+(deftest register-refuses-missing-resource-pin
+  (let [[p state] (started :store-mode)
+        state (assoc state :current-phase :register :cycle/outputs {})
+        result (runner/step
+                p state
+                {:tool :advance-problem-phase
+                 :args ["M" "C" {:registration :r :store-snapshot :s
+                                    :stratum-frozen-at 1
+                                    :environment-revision "env"}]})]
+    (is (= :missing-required-outputs (:error/code result)))
+    (is (some #{:harness-revision}
+              (get-in result [:error/context :missing])))))
+
+(def outputs-through-student
+  {:registration :r :store-snapshot :round-open :stratum-frozen-at 1
+   :environment-revision "env-a" :harness-revision "harness-a"
+   :frame :f :containment-probe :c
+   :solver-attempt {:cycle/environment-revision "env-a"
+                    :cycle/store-snapshot :solver-store}
+   :ground-control-events [] :memory-offers [] :intervention :i})
+
+(deftest environment-mismatch-fails-at-first-complete-advance
+  (let [[p state] (started :store-mode)
+        state (assoc state :current-phase :student-attempts
+                           :cycle/outputs outputs-through-student)
+        result (runner/step
+                p state
+                {:tool :advance-problem-phase
+                 :args ["M" "C"
+                        {:student-attempts
+                         [{:cycle/environment-revision "env-b"}]
+                         :memory-uses []}]})]
+    (is (= :environment-mismatch-between-arms (:error/code result)))
+    (is (= :environment-arms-match
+           (get-in result [:error/context :invariant])))))
+
+(deftest differing-store-snapshots-are-explicitly-accepted
+  (let [[p state] (started :store-mode)
+        state (assoc state :current-phase :student-attempts
+                           :cycle/outputs outputs-through-student)
+        result (runner/step
+                p state
+                {:tool :advance-problem-phase
+                 :args ["M" "C"
+                        {:student-attempts
+                         [{:cycle/environment-revision "env-a"
+                           :cycle/store-snapshot :student-store}]
+                         :memory-uses []}]})]
+    ;; Store snapshots are intentionally not invariant operands: the store is
+    ;; the transfer channel and is permitted to differ between arms.
+    (is (:ok result))))
+
 (def synthetic-trace
   {:problem {:problem-id "p" :difficulty-stratum "s" :regime "r"
              :locked-lemma-exposure []}

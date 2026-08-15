@@ -15,6 +15,12 @@
  :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
  :lean-revision     "d0623df8992ec23c7c647cf30eac014221bbdb2d"
 
+ ;; Resource pins at cycle registration. Both solver and student attempts must
+ ;; record this environment revision. The store snapshot is recorded but is
+ ;; deliberately allowed to change: it is the measured transfer channel.
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
+ :reg/harness-revision     "70282341dd146419ea750e4fc32c74581b550e6f"
+
  ;; --- what is being run ---------------------------------------------------
  :modules                [:R :F :S :A :M :P :X]
  :structural-invariants  [:F1]

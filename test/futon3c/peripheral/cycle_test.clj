@@ -178,6 +178,22 @@
                               {:tool :cycle-advance :args ["M" "C1" {}]})]
     (is (:ok advanced))))
 
+(deftest output-invariant-waits-for-all-required-operands
+  (let [called (atom false)
+        config (assoc test-config :output-invariants
+                      [{:id :needs-never-produced
+                        :requires #{:left :right}
+                        :check (fn [_] (reset! called true) {:failure :boom})}])
+        p (cycle/make-cycle-peripheral config test-spec (make-test-mock))
+        start (runner/start p {:session-id "invariant-not-ready"})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        advanced (runner/step p (:state begun)
+                              {:tool :cycle-advance
+                               :args ["M" "C1" {:observed true}]})]
+    (is (:ok advanced))
+    (is (false? @called))))
+
 (deftest cycle-completion-clears-phase
   (let [backend (tools/make-mock-backend
                  {:cycle-begin {:cycle/id "C1"
