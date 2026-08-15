@@ -8285,3 +8285,64 @@ Two readings, and they differ:
 
 That keeps the exclusion decision with the party holding the measurement rather than
 the party being measured, which is the same separation as everything else here.
+
+## I.50 The precedent did not do what it said; and two decisions codex-4 asked for
+
+**Seventh stop, seventh time right — and this one falsified a premise Joe and I
+both held.**
+
+### The proof peripheral's save/load is not what its docstring says
+
+| claimed | actual |
+|---|---|
+| *"Atomically save"* | `(spit f (pr-str updated))` — **no temp+rename.** An interrupted write truncates: the same failure class fixed in `needs_you.clj` hours earlier |
+| *"version bump"* implying an archive | `:proof/version` is **a counter**; one path, `data/proof-state/<problem-id>.edn`, **overwritten** |
+
+**So "load v3 after reaching v5" was never possible.** Step-through is *not* a
+reinterpretation of this; it needs a genuinely new versioned store.
+
+**This is a third variety of the signature defect.** Not *written but not wired*,
+and not *record disagrees with artifact* — **documented but not implemented.** And
+it is the one that propagates furthest, because a docstring is what the next person
+reads instead of the code.
+
+> **I read `adapter.clj`'s description string, not `save-state!`.** Fourth time this
+> session I trusted a description over the thing described (I.40, I.44, I.44a, this).
+> The standing check needs its plainest form: **verify the thing, do not read about
+> the thing.**
+
+Both descriptions corrected in place, so the next reader is not misled the same way.
+
+### And a spec test red since March
+
+`proof_test/phase-order-is-complete` asserted **9** phases. `phase-order` has had
+**10** since `36d3b4ba` (**2026-03-31**) added `:target-check`.
+
+> **Red on master for four and a half months** — so every "tests green" claim in that
+> namespace was either wrong or scoped around it. Fixed to 10; the phase was added
+> deliberately, so the assertion was stale, not the code.
+
+### Decision 1 — the version store is append-only
+
+`data/problem-state/<cycle-id>/v<N>.edn`, **one file per version, write-once, never
+overwritten**, with temp-file + atomic rename.
+
+**Additive by construction:** a step-back cannot destroy a later version because
+nothing is ever overwritten — which is Joe's requirement satisfied structurally
+rather than by discipline. **Do not extend proof's store**; its overwrite behaviour
+is its own business and `proof.clj` stays out of scope.
+
+### Decision 2 — the proctor's exclusion is a joined event, not an argument
+
+**codex-4's own proposal, and it is right:** actions carry only `{:tool :args}`,
+state has one session-wide `:author`, so a flag in tool arguments is caller-supplied
+and unenforceable — and checking the session author would make the whole peripheral
+proctor-owned.
+
+> **`:problem-load` records a branch marker with an id. The proctor records
+> exclusions keyed by that branch id in its own record. The validator JOINS them.
+> The cycle machine never accepts `:setup-correction` at all.**
+
+**Absent proctor record → the branch counts**, which is the default that cannot
+flatter. This is exactly I.44's shape: the measurement comes from a separately
+authored record, not from a flag set by the party being measured.
