@@ -719,6 +719,99 @@
     (is (= "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
            (:environment-revision outputs)))))
 
+(defn- harness-measured-problem [measurement]
+  (problem/make-problem
+   (tools/make-mock-backend
+    {:begin-problem-cycle {:cycle/id "C-harness"}
+     :advance-problem-phase {:cycle/phase :intervene}})
+   (fn [_ _] {:evidence {}})
+   "/tmp/harness-measurement-state"
+   (fn [_] (throw (ex-info "provisioner not used" {})))
+   (fn [repo]
+     (is (= "/measured/harness" repo))
+     measurement)))
+
+(deftest forged-harness-revision-is-overwritten-by-cycle-open-measurement
+  (let [measured "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        p (harness-measured-problem {:harness-revision measured
+                                     :harness-tree-dirty? false})
+        start (runner/start p {:session-id "harness-stamp" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        state (assoc (:state begun) :current-phase :guided-solve
+                     :cycle/outputs
+                     {:registration {:reg/harness-revision measured}
+                      :store-snapshot :s :stratum-frozen-at 1
+                      :environment-revision "env"
+                      :harness-revision measured
+                      :environment-checkouts
+                      {:solver {:checkout "/solver" :base-revision "env"}
+                       :student []}
+                      :frame :f :containment-probe :c})
+        advanced (runner/step
+                  p state
+                  {:tool :advance-problem-phase
+                   :args ["M" "C" {:solver-attempt
+                                      {:cycle/harness-revision "FORGED"}
+                                      :ground-control-events []
+                                      :memory-offers []}]})]
+    (is (:ok begun))
+    (is (:ok advanced) (pr-str advanced))
+    (is (= measured (get-in begun [:result :harness-revision])))
+    (is (= measured
+           (get-in advanced
+                   [:state :cycle/outputs :solver-attempt
+                    :cycle/harness-revision])))))
+
+(deftest dirty-harness-at-cycle-open-fails-the-register-advance
+  (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        p (harness-measured-problem {:harness-revision revision
+                                     :harness-tree-dirty? true})
+        start (runner/start p {:session-id "dirty-harness" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        result (runner/step
+                p (:state begun)
+                {:tool :advance-problem-phase
+                 :args ["M" "C" {:registration :r :store-snapshot :s
+                                    :stratum-frozen-at 1
+                                    :environment-revision "env"
+                                    :harness-revision "FORGED"
+                                    :environment-checkouts {}}]})]
+    (is (= :harness-tree-dirty (:error/code result)))
+    (is (= :harness-tree-clean
+           (get-in result [:error/context :invariant])))))
+
+(deftest measured-harness-revision-must-match-registration
+  (let [measured "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        registered "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        p (harness-measured-problem {:harness-revision measured
+                                     :harness-tree-dirty? false})
+        start (runner/start p {:session-id "harness-pin" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        state (assoc (:state begun) :current-phase :student-attempts
+                     :cycle/outputs
+                     (-> outputs-through-student
+                         (assoc :registration {:reg/harness-revision registered}
+                                :harness-revision measured
+                                :harness-tree-dirty? false)
+                         (assoc-in [:solver-attempt :cycle/harness-revision]
+                                   measured)))
+        result (runner/step
+                p state
+                {:tool :advance-problem-phase
+                 :args ["M" "C" {:student-attempts [{}] :memory-uses []}]})]
+    (is (= :harness-revision-not-registered (:error/code result)))
+    (is (= [measured measured]
+           (get-in result [:error/context :details :actual])))))
+
 (deftest student-provisioning-failure-must-not-destroy-the-solver-tree
   ;; Verified before this fix: a transient failure on student attempt 2 rolled
   ;; back ["/tree/solver" "/tree/student-1"] -- deleting the worktree the solver

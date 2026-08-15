@@ -87,6 +87,8 @@
            (fn? (:state-validate-fn config)))
        (or (nil? (:output-stamp-fn config))
            (fn? (:output-stamp-fn config)))
+       (or (nil? (:cycle-begin-result-fn config))
+           (fn? (:cycle-begin-result-fn config)))
        (or (nil? (:derived-tools config))
            (and (map? (:derived-tools config))
                 (every? (fn [[tool-id derive]]
@@ -326,6 +328,18 @@
               ;; Validate the exact candidate the engine would install. Runtime
               ;; resources belong to the live peripheral, so a rewind retains
               ;; them from current state rather than trusting serialized values.
+              dispatch-result
+              (if (and (= tool cycle-begin)
+                       (:ok dispatch-result)
+                       (:cycle-begin-result-fn config))
+                (try
+                  (update dispatch-result :result
+                          #((:cycle-begin-result-fn config) state args %))
+                  (catch Throwable t
+                    {:ok false
+                     :error (str "cycle begin measurement failed: "
+                                 (.getMessage t))}))
+                dispatch-result)
               loaded-state (when (and (= tool state-load)
                                       (:ok dispatch-result))
                              (let [loaded (:result dispatch-result)]

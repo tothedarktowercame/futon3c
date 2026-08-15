@@ -121,10 +121,17 @@
   (let [intervention-tool (case (:cycle/mode context)
                             :store-mode :write-substrate
                             :harness-mode :tune-harness
-                            nil)]
+                            nil)
+        harness-repo (:harness-repo context)
+        harness-measurer (:harness-measurer config)]
     (cond-> config
       intervention-tool
-      (update-in [:phase-tools :intervene] conj intervention-tool))))
+      (update-in [:phase-tools :intervene] conj intervention-tool)
+
+      harness-measurer
+      (assoc :cycle-begin-result-fn
+             (fn [_state _args result]
+               (merge result (harness-measurer harness-repo)))))))
 
 (defn- validate-loaded-state [current loaded]
   (when (not= (:cycle/mode current) (:cycle/mode loaded))
@@ -144,12 +151,20 @@
                      :step-count (count (:steps state))}
      :snapshot/tags [:problem :snapshot]}))
 
-(defn- stamp-attempt-environment [attempt assignment]
+(defn- stamp-attempt-environment [attempt assignment harness-revision]
   (if (map? attempt)
-    (assoc attempt
-           :cycle/environment-checkout (:checkout assignment)
-           :cycle/environment-revision (:base-revision assignment))
+    (cond-> (assoc attempt
+                   :cycle/environment-checkout (:checkout assignment)
+                   :cycle/environment-revision (:base-revision assignment))
+      (some? harness-revision)
+      (assoc :cycle/harness-revision harness-revision))
     attempt))
+
+(defn- recorded-harness-measurement [state]
+  (some (fn [{:keys [tool result]}]
+          (when (= tool :begin-problem-cycle)
+            (select-keys result [:harness-revision :harness-tree-dirty?])))
+        (reverse (:steps state))))
 
 (defn- recorded-student-assignments [state]
   ;; :steps spans the whole peripheral session, including completed cycles.
@@ -208,7 +223,9 @@
         solver (:solver assignments)
         students (let [recorded (recorded-student-assignments state)]
                    (if (seq recorded) recorded (vec (:student assignments))))
-        revision (:base-revision solver)]
+        revision (:base-revision solver)
+        harness (recorded-harness-measurement state)
+        harness-revision (:harness-revision harness)]
     (cond-> payload
       (some? measurement)
       (assoc :measurement measurement)
@@ -230,14 +247,23 @@
       (some? revision)
       (assoc :environment-revision revision)
 
+      (some? harness-revision)
+      (assoc :harness-revision harness-revision
+             :harness-tree-dirty? (:harness-tree-dirty? harness))
+
       (contains? payload :solver-attempt)
-      (update :solver-attempt stamp-attempt-environment solver)
+      (update :solver-attempt stamp-attempt-environment solver harness-revision)
 
       (sequential? (:student-attempts payload))
       (update :student-attempts
               #(mapv (fn [index attempt]
-                       (stamp-attempt-environment attempt (get students index)))
+                       (stamp-attempt-environment attempt (get students index)
+                                                  harness-revision))
                      (range) %)))))
+
+(defn- harness-tree-clean [outputs]
+  (when (:harness-tree-dirty? outputs)
+    {:failure :harness-tree-dirty}))
 
 (defn- now-string []
   (str (Instant/now)))
@@ -548,7 +574,10 @@
                    :validate-trace validate-trace-from-state
                    :write-authorization write-authorization-from-state}
    :output-invariants
-   [{:id :environment-arms-match
+   [{:id :harness-tree-clean
+     :requires #{:harness-tree-dirty?}
+     :check harness-tree-clean}
+    {:id :environment-arms-match
      :requires #{:registration :environment-revision :solver-attempt
                 :student-attempts}
      :check environment-arms-match}]
@@ -560,6 +589,7 @@
                      :cycle/deposit-state (:cycle/deposit-state context)
                      :cycle/paired-with (:cycle/paired-with context)
                      :lean-repo (:lean-repo context)
+                     :harness-repo (:harness-repo context)
                      :agency-endpoint (:agency-endpoint context)
                      :authorization-revision (:authorization-revision context)
                      :authorization-output (:authorization-output context)})
@@ -867,6 +897,24 @@
   ([inner-backend dispatch-fn]
    (->GroundControlBackend inner-backend dispatch-fn)))
 
+(defn- measure-harness-repository [repo]
+  (when-not (and (string? repo) (not (str/blank? repo)))
+    (throw (ex-info "begin-problem-cycle requires :harness-repo" {})))
+  (let [{rev-exit :exit rev-out :out rev-err :err}
+        (shell/sh "git" "-C" repo "rev-parse" "HEAD")
+        {status-exit :exit status-out :out status-err :err}
+        (shell/sh "git" "-C" repo "status" "--porcelain")
+        revision (str/trim rev-out)]
+    (when-not (and (zero? rev-exit)
+                   (re-matches #"[0-9a-f]{40}" revision))
+      (throw (ex-info "failed to measure harness revision"
+                      {:repo repo :exit rev-exit :error rev-err})))
+    (when-not (zero? status-exit)
+      (throw (ex-info "failed to measure harness tree status"
+                      {:repo repo :exit status-exit :error status-err})))
+    {:harness-revision revision
+     :harness-tree-dirty? (not (str/blank? status-out))}))
+
 (defn make-problem
   ([] (make-problem (tools/make-mock-backend)))
   ([backend]
@@ -877,8 +925,11 @@
   ([backend dispatch-fn state-root]
    (make-problem backend dispatch-fn state-root provision-frame!))
   ([backend dispatch-fn state-root provisioner-fn]
+   (make-problem backend dispatch-fn state-root provisioner-fn
+                 measure-harness-repository))
+  ([backend dispatch-fn state-root provisioner-fn harness-measurer]
    (cycle/make-cycle-peripheral
-    problem-domain-config problem-spec
+    (assoc problem-domain-config :harness-measurer harness-measurer) problem-spec
     (make-checkout-provisioning-backend
      (make-ground-control-backend
       (make-problem-state-backend backend state-root)
