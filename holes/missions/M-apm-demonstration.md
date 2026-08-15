@@ -9085,3 +9085,58 @@ were absent.**
 capability should require a minimum measured fraction, or the trace should surface
 the derived-vs-unset ratio where a reader will see it. **Operator's call — it changes
 what a passing round-1 authorization means.**
+
+## I.64 F7 cannot fail — a preregistered invariant that is unfalsifiable by its own definition
+
+**Sixteenth stop, and codex-4 answered the question with citations rather than
+guessing.** Verified both:
+
+**Line 1419 — F7's own definition:**
+
+> *"**availability**: an artifact counts as available only if a need-vocabulary probe
+> retrieves it"* — `probe(need) ∋ artifact`
+
+**Available is DEFINED AS retrieved.** So the runtime check —
+`(subset? available-artifact-ids need-probe-retrieved-ids)` — is **true by
+construction. F7 cannot fail.**
+
+And it is **preregistered**: `:runtime-invariants [:F2 :F3 :F4 :F5 :F6 :F7 :F8 :F9]`.
+
+### Three incompatible readings in the mission's own record
+
+| source | reading | consequence |
+|---|---|---|
+| `:1419` | available **≡** retrieved | **tautology** — cannot fail |
+| `:1896` | the 39-probe suite, known target per probe | coherent, but needs a preregistered need→artifact map the cycle state does not hold |
+| `:2059` | hand probes as "query hits" + did one known memory surface | **not exhaustive** — no denominator |
+| `:5776` | the schema **names both sets** | **does not say how `available-ids` is obtained** |
+
+And `dispatch_with_recall` bounds recall at five and truncates, so its receipt holds
+**returned** memories, never the pre-cutoff matching population. The whitepaper
+defines neither F7 nor `available-artifact-ids`.
+
+### A third species of the defect
+
+- *written but not wired* — a producer nothing consumes;
+- *checked but never built* (I.62) — a full consumer side, no subject;
+- **and now: a check that cannot fail by its own definition.**
+
+**F7 was called one of "the two that would have changed history"** (with F3, line
+1419's own commentary). **As defined, it would have changed nothing** — it passes
+whatever happens.
+
+### Not resolvable from here
+
+**Operator's decision.** The honest options:
+
+1. **Adopt the 39-probe reading** — F7 becomes real, but needs a preregistered
+   need→expected-artifact mapping that round-1 does not have;
+2. **Redefine `available`** as something the runtime can obtain independently (a
+   separate exhaustive query), accepting that bounded recall will then legitimately
+   miss items and F7 must tolerate that;
+3. **Drop F7** from `:runtime-invariants` for round 1 — honest, and it stops the
+   registration preregistering an unfalsifiable check.
+
+**codex-4 refused to build either the tautology or the fabrication.** Right call:
+either would have produced a passing F7 that means nothing, which is worse than an
+absent one because it would look like evidence.
