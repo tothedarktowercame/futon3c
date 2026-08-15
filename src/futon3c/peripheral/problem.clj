@@ -179,6 +179,14 @@
   (some-> (recorded-tool-result state :emit-frame)
           (select-keys [:frame :containment-probe])))
 
+(defn- recorded-guide-events [state]
+  (reduce (fn [events {:keys [tool result]}]
+            (case tool
+              :begin-problem-cycle []
+              :guide-solver (conj events result)
+              events))
+          [] (:steps state)))
+
 (defn- recorded-student-assignments [state]
   ;; :steps spans the whole peripheral session, including completed cycles.
   ;; Reset at the latest assignment so attempt 1 of a new cycle cannot be
@@ -281,6 +289,9 @@
       (some? assigned-at)
       (assoc :assigned-at assigned-at)
 
+      (= :guided-solve (:current-phase state))
+      (assoc :ground-control-events (recorded-guide-events state))
+
       (contains? payload :solver-attempt)
       (update :solver-attempt stamp-attempt-environment solver harness-revision)
 
@@ -302,6 +313,15 @@
 
     :emit-frame
     (conj (vec args) {:cycle/id (:current-cycle-id state)})
+
+    :guide-solver
+    (conj (vec args)
+          {:cycle/id (:current-cycle-id state)
+           :solver-seat (get-in state
+                                [:cycle/outputs :registration :reg/solver-seat])})
+
+    :read-attempt-result
+    (conj (vec args) {:cycle/outputs (:cycle/outputs state)})
 
     ;; F4 asks whether the stratum was frozen BEFORE the checkouts were
     ;; assigned. That is an ordering of events, so the value must be a LOGICAL
@@ -367,7 +387,11 @@
       (assoc "axiom cleanliness" (:disp/axiom-clean? disposition))
 
       (vector? locked-exposure)
-      (assoc "locked-lemma exposure" locked-exposure))))
+      (assoc "locked-lemma exposure" locked-exposure)
+
+      (sequential? (:ground-control-events outputs))
+      (assoc "attempts or closer hops"
+             (count (:ground-control-events outputs))))))
 
 (defn- unset-measurement-reason [field]
   (case field
@@ -913,7 +937,24 @@
 (defrecord GroundControlBackend [inner-backend dispatch-fn]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
-    (if-let [memory-channel (get dispatch-channels tool-id)]
+    (if (= tool-id :guide-solver)
+      (let [measured (last args)
+            [opts packet] (butlast args)
+            solver-seat (:solver-seat measured)]
+        (if-not (and (string? solver-seat) (not (str/blank? solver-seat)))
+          {:ok false :error "guide-solver has no registered solver seat"}
+          (let [dispatch-result
+                (try (dispatch-fn (assoc (or opts {}) :to solver-seat) packet)
+                     (catch Throwable t t))]
+            (if (instance? Throwable dispatch-result)
+              {:ok false
+               :error (str "guide-solver dispatch failed: "
+                           (.getMessage ^Throwable dispatch-result))}
+              {:ok true
+               :result (assoc dispatch-result
+                              :ground-control/recipient solver-seat
+                              :ground-control/cycle (:cycle/id measured))}))))
+      (if-let [memory-channel (get dispatch-channels tool-id)]
       (let [[opts packet] args
             ;; assoc LAST: the role fixes the channel and a caller cannot
             ;; override it.  A caller-supplied :push to the student would be a
@@ -936,7 +977,7 @@
           {:ok true
            :result (assoc dispatch-result
                           :memory-offers [(:evidence dispatch-result)])}))
-      (tools/execute-tool inner-backend tool-id args))))
+        (tools/execute-tool inner-backend tool-id args)))))
 
 (defn make-ground-control-backend
   "Wrap a cycle backend with real ground-control dispatches.
@@ -1010,6 +1051,33 @@
          sort
          vec)))
 
+(defn- read-frozen-registration [path]
+  (when-not (and (string? path) (not (str/blank? path)))
+    (throw (ex-info "read-registration requires a registration path" {})))
+  (edn/read-string (slurp (io/file path))))
+
+(defn- validate-frozen-registration [registration]
+  (let [failures (prereg/registration-shape-failures registration)]
+    {:registration registration
+     :failures failures
+     :valid? (empty? failures)}))
+
+(defn- read-substrate-page [hx-type options]
+  (let [limit (long (or (:limit options) substrate-page-limit))]
+    (when (> limit substrate-page-limit)
+      (throw (ex-info "read-substrate limit exceeds substrate maximum"
+                      {:limit limit :maximum substrate-page-limit})))
+    (let [rows (substrate/hyperedges-by-type hx-type
+                                             (assoc (or options {}) :limit limit))]
+      (when (>= (count rows) limit)
+        (throw (ex-info "read-substrate page may be truncated"
+                        {:rows (count rows) :limit limit})))
+      {:type hx-type :rows (vec rows) :complete? true})))
+
+(defn- attempt-by-id [outputs attempt-id]
+  (some #(when (= attempt-id (:attempt/id %)) %)
+        (cons (:solver-attempt outputs) (:student-attempts outputs))))
+
 (defrecord ProblemCycleBackend [inner-backend harness-measurer cycle-context
                                 begin-seq active-cycle-id
                                 store-snapshotter clock]
@@ -1052,6 +1120,28 @@
       (= tool-id :freeze-stratum)
       (let [measured (long (or (:cycle/step-index (last args)) (clock)))]
         {:ok true :result {:cycle/stratum-frozen-at measured}})
+
+      (= tool-id :read-registration)
+      (try
+        {:ok true :result (read-frozen-registration (first args))}
+        (catch Throwable t
+          {:ok false :error (str "read-registration failed: " (.getMessage t))}))
+
+      (= tool-id :validate-registration)
+      {:ok true :result (validate-frozen-registration (first args))}
+
+      (= tool-id :read-substrate)
+      (try
+        {:ok true :result (read-substrate-page (first args) (second args))}
+        (catch Throwable t
+          {:ok false :error (str "read-substrate failed: " (.getMessage t))}))
+
+      (= tool-id :read-attempt-result)
+      (let [attempt-id (first args)
+            outputs (:cycle/outputs (last args))]
+        (if-let [attempt (attempt-by-id outputs attempt-id)]
+          {:ok true :result attempt}
+          {:ok false :error (str "attempt result not found: " attempt-id)}))
 
       (= tool-id :assign-checkouts)
       (let [result (tools/execute-tool inner-backend tool-id args)]

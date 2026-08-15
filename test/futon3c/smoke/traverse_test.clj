@@ -62,10 +62,11 @@
   (assoc
    (into {}
          (for [[phase tool-set] problem/base-phase-tools]
-           [phase (vec (remove #{problem/advance} tool-set))]))
+           [phase (vec (remove #(or (= problem/advance %)
+                                    (= :observe (get problem/tool-ops %)))
+                               tool-set))]))
    :register
-   [:read-registration :validate-registration :snapshot-store
-    :freeze-stratum :assign-checkouts]))
+   [:snapshot-store :freeze-stratum :assign-checkouts]))
 
 (defn- run-phase-tools [p state phase]
   (let [tool-args
