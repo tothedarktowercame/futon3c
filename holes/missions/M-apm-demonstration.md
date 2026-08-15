@@ -8603,3 +8603,51 @@ Worth stating once rather than discovering a fifth time:
 > **Every one is the same move: the caller may supply the data, but the machine owns
 > certain fields and overwrites them.** The bug is never that callers supply
 > things — it is that nothing reclaimed the fields the machine is answerable for.
+
+## I.55 A3 complete — the chain of custody, end to end
+
+**Four packets, and the I.46 hole is closed.**
+
+| packet | what it added |
+|---|---|
+| A3.1 `1f881251` | `frames.bb` accepts `solver` / `student` arms |
+| A3.2 `749c0e5e` + `7f00228a` | `:assign-checkouts` at `:register`, batch-qualified branch, all-or-nothing rollback |
+| A3.3 `db5b961f` + `ad2a20df` | `:output-stamp-fn`; attempts and the pin stamped from the recorded assignment |
+| A3.4 `19ae9e31` | revisions **equal**, checkouts **distinct** |
+
+### The chain, with no caller-supplied link
+
+1. **`frames.bb` derives** the revision — `git rev-parse <base-rev>^{commit}` — and
+   creates the worktree **at** it, so the recorded value is true by construction.
+2. **The engine records** the `:assign-checkouts` result in `:steps`, where a caller
+   cannot edit it.
+3. **The stamp reads that record**, not the advance payload (`ad2a20df`).
+4. **Attempts and `:environment-revision` are written from it** — caller values
+   overwritten.
+5. **The invariant compares two machine-written values**, and additionally requires
+   the trees to be **different**.
+
+**Step 3 was the last caller-owned link**, and finding it mattered: without it a
+relayed assignment would have been stamped through consistently, and every check
+would have passed against paths that were never provisioned.
+
+### A3.4 verified as a pair
+
+Two mutations, and **both directions matter**:
+
+- removing the distinctness clause → **red on the shared case AND the nil case**;
+- tightening it to all-distinct → **red on the three-attempts case**.
+
+> **A gate that is over-strict gets switched off rather than fixed.** The student
+> runs three cold attempts in one tree by design; a gate that forbade that would
+> have been disabled within a day, taking the containment check with it. Proving
+> the gate is *not* over-strict is as load-bearing as proving it fires.
+
+### What the invariant is now for
+
+After stamping, solver and student take different checkouts **from the assignment**,
+so in the ordinary path the invariant passes by construction. It bites when the
+stamp did **not** run — a missing or malformed assignment leaves caller values in
+place — or when the assignment itself is wrong. **That is defence in depth rather
+than redundancy: the gate covers exactly the case where the earlier machinery
+failed.**
