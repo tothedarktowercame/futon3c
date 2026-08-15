@@ -338,3 +338,39 @@
     (is (:ok saved))
     (is (= :loaded-state-mode-mismatch (:error/code loaded)))
     (is (nil? (:state loaded)))))
+
+(deftest cycle-id-cannot-escape-the-state-root
+  ;; ".." matches [A-Za-z0-9._-]+ because both dots are in the class, so the
+  ;; character check alone was not containment: a save with that cycle id wrote
+  ;; to <root>/../v1.edn, outside the store.
+  ;; The root is nested inside a dedicated parent so "above the root" is a
+  ;; directory this test owns. Checking a shared parent like /tmp picks up other
+  ;; runs' litter -- the first version of this test failed on a file left by the
+  ;; probe that originally demonstrated the escape.
+  (let [parent (str (java.nio.file.Files/createTempDirectory
+                     "pstate" (make-array java.nio.file.attribute.FileAttribute 0)))
+        root (str (java.io.File. parent "store"))
+        ;; The root MUST already exist. With a missing root the traversal fails
+        ;; incidentally -- the temp file cannot be created -- and the test then
+        ;; passes without exercising the guard at all. That is how the first
+        ;; version of this test survived having the guard deleted.
+        _ (.mkdirs (java.io.File. root))
+        b (problem/make-problem-state-backend (tools/make-mock-backend) root)
+        saved (tools/execute-tool b :problem-save
+                                  [{:current-cycle-id ".." :steps []}])
+        loaded (tools/execute-tool b :problem-load ["../elsewhere" 1])]
+    (is (false? (:ok saved)))
+    (is (false? (:ok loaded)))
+    (is (empty? (filter #(= "v1.edn" (.getName %))
+                        (or (.listFiles (java.io.File. parent)) [])))
+        "nothing was written above the root")))
+
+(deftest missing-version-is-a-tool-failure-not-an-escaping-exception
+  ;; ToolBackend promises {:ok true :result} | {:ok false :error}; slurp on a
+  ;; missing version threw FileNotFoundException straight out of execute-tool.
+  (let [root (str (java.nio.file.Files/createTempDirectory
+                   "pstate" (make-array java.nio.file.attribute.FileAttribute 0)))
+        b (problem/make-problem-state-backend (tools/make-mock-backend) root)
+        r (tools/execute-tool b :problem-load ["C1" 99])]
+    (is (false? (:ok r)))
+    (is (re-find #"problem-load failed" (:error r)))))

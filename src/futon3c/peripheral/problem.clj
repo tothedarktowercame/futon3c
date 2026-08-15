@@ -135,10 +135,33 @@
 (def ^:private default-problem-state-root "data/problem-state")
 (def ^:private problem-state-write-lock (Object.))
 
+(defn- cycle-dir-within
+  "Resolve the per-cycle directory and REQUIRE it to sit under root.
+
+  The character-class check alone is not path safety: \"..\" matches
+  [A-Za-z0-9._-]+ because both dots are in the class, and a save with that cycle
+  id wrote to <root>/../v1.edn -- outside the store. A regex that looks like a
+  containment check is worse than none, because it stops anyone looking. So the
+  resolved canonical path is compared against the resolved canonical root."
+  [root cycle-id]
+  (when-not (and (string? cycle-id)
+                 (re-matches #"[A-Za-z0-9._-]+" cycle-id)
+                 (not (contains? #{"." ".."} cycle-id)))
+    (throw (ex-info "Problem state requires a safe cycle id"
+                    {:cycle-id cycle-id})))
+  (let [root-path (.toAbsolutePath (.normalize (.toPath (io/file root))))
+        dir (io/file root cycle-id)
+        dir-path (.toAbsolutePath (.normalize (.toPath dir)))]
+    (when-not (.startsWith dir-path root-path)
+      (throw (ex-info "Problem state path escapes its root"
+                      {:cycle-id cycle-id :resolved (str dir-path)})))
+    dir))
+
 (defn- safe-cycle-id [state]
   (let [cycle-id (:current-cycle-id state)]
     (when-not (and (string? cycle-id)
-                   (re-matches #"[A-Za-z0-9._-]+" cycle-id))
+                   (re-matches #"[A-Za-z0-9._-]+" cycle-id)
+                   (not (contains? #{"." ".."} cycle-id)))
       (throw (ex-info "Problem state requires a safe active cycle id"
                       {:current-cycle-id cycle-id})))
     cycle-id))
@@ -162,7 +185,7 @@
   ;; saves from ever presenting it with the same target.
   (locking problem-state-write-lock
     (let [cycle-id (safe-cycle-id state)
-          cycle-dir (io/file root cycle-id)
+          cycle-dir (cycle-dir-within root cycle-id)
           _ (Files/createDirectories (.toPath cycle-dir)
                                      (make-array FileAttribute 0))
           version (inc (or (last (existing-versions cycle-dir)) 0))
@@ -179,25 +202,31 @@
           (Files/deleteIfExists temp))))))
 
 (defn- load-problem-state [root cycle-id version]
-  (when-not (and (string? cycle-id)
-                 (re-matches #"[A-Za-z0-9._-]+" cycle-id))
-    (throw (ex-info "Problem state requires a safe cycle id" {:cycle-id cycle-id})))
   (when-not (pos-int? version)
     (throw (ex-info "Problem state version must be a positive integer"
                     {:version version})))
-  (edn/read-string (slurp (io/file root cycle-id (str "v" version ".edn")))))
+  (edn/read-string (slurp (io/file (cycle-dir-within root cycle-id)
+                                   (str "v" version ".edn")))))
 
 (defrecord ProblemStateBackend [inner-backend root]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
     (case tool-id
+      ;; ToolBackend promises {:ok true :result} | {:ok false :error}. A missing
+      ;; version made slurp throw FileNotFoundException straight out of
+      ;; execute-tool, so the cycle could not record its own failure -- the third
+      ;; instance of this same boundary defect in this session.
       :problem-save
       (let [[state] args]
-        {:ok true :result (save-problem-state! root state)})
+        (try {:ok true :result (save-problem-state! root state)}
+             (catch Throwable t
+               {:ok false :error (str "problem-save failed: " (.getMessage t))})))
 
       :problem-load
       (let [[cycle-id version] args]
-        {:ok true :result (load-problem-state root cycle-id version)})
+        (try {:ok true :result (load-problem-state root cycle-id version)}
+             (catch Throwable t
+               {:ok false :error (str "problem-load failed: " (.getMessage t))})))
 
       (tools/execute-tool inner-backend tool-id args))))
 
