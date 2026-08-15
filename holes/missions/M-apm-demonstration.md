@@ -9202,3 +9202,36 @@ makes the discipline impossible to violate."* That was repaired by making
 **IF** the Lean's gate were merely a field, **HOWEVER** it is a structure whose
 emptiness is proved, **THEN** the capability's demand is the category error, not the
 gate, **BECAUSE** you cannot observe an event whose non-occurrence is a theorem.
+
+## W.1 Takeover: claude-7 finishes through "working system" (2026-08-15)
+
+**Operator ruling (Joe):** claude-7 takes over the mission from claude-2 —
+whose 16K-line REPL session did good work but carries rising confusion risk —
+and finishes **up to the point of knowing we have a working system.** The
+handoff artifact is claude-2's three-open-items list; decisions on all three
+were taken with the operator this evening:
+
+1. **Live rehearsal — GO, on `a01A06`** (rehearsal-1-registration.edn, this
+   directory). Selection: audit-clean in the driver era (zero future
+   measurement value), open at the environment pin (1 sorry / 390-line
+   Main.lean at a92ffb6c), a-family (recall-leakage distance from t94J02),
+   not a98A01. Riders: batch id `rehearsal-1`; **every memory id written
+   during the rehearsal is recorded here** for frame-1's reviewer to check
+   against its offers; **a98A01 is protected like t94J02** — the intended
+   confirmation unit must not be rehearsed on either, this round or later.
+2. **F7 comparand — deferred to post-round-1** (packet F records both
+   vectors regardless). The missing "declared-need notion" already has a
+   house name: the demand-side vocabulary (hunger memories, failed-search
+   votes, `concept:` tags — whitepaper §6). F7's eventual form is
+   `declared-need ⊆ retrieved`, not `available ⊆ retrieved`.
+3. **README benign-refusal edit — after the rehearsal**, which may shrink
+   the list rather than grow it: packets F/G landed a retrieval-probe
+   producer (`4e6457ea`, `414294a9`), so two of the three listed codes may
+   no longer fire. The rehearsal settles the list empirically.
+
+Handoff verification performed before any action: begin/advance are real
+(`6d182a4e`, `1e97fc0f` — the repro headers are historical gap-records);
+harness measurement is path-scoped (`src scripts deps.edn` → `414294a9` at
+freeze, tree clean); apm-lean pin `a92ffb6c` is an ancestor of HEAD; seats
+codex-4/zai-1 registered; substrate live. Rehearsal bells to codex-4 are
+outside any measurement window (none is open).
