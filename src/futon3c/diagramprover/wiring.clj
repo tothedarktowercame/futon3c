@@ -49,3 +49,38 @@
                                   vec)}))))
        (sort-by (comp str :field))
        vec))
+
+(defn read-never-written
+  "Return findings for fields read by at least one box and written by none."
+  [wiring-graph]
+  (->> (graph/vertices wiring-graph)
+       (keep (fn [vertex]
+               (let [readers (graph/out-edges wiring-graph vertex)]
+                 (when (and (seq readers)
+                            (empty? (graph/in-edges wiring-graph vertex)))
+                   {:finding :read-never-written
+                    :field (:field (graph/vertex-data wiring-graph vertex))
+                    :readers (->> readers
+                                  (map #(-> (graph/edge-data wiring-graph %)
+                                            :box/id))
+                                  (sort-by str)
+                                  vec)}))))
+       (sort-by (comp str :field))
+       vec))
+
+(defn multiply-written
+  "Return findings for fields written by two or more boxes."
+  [wiring-graph]
+  (->> (graph/vertices wiring-graph)
+       (keep (fn [vertex]
+               (let [writers (graph/in-edges wiring-graph vertex)]
+                 (when (<= 2 (count writers))
+                   {:finding :multiply-written
+                    :field (:field (graph/vertex-data wiring-graph vertex))
+                    :writers (->> writers
+                                  (map #(-> (graph/edge-data wiring-graph %)
+                                            :box/id))
+                                  (sort-by str)
+                                  vec)}))))
+       (sort-by (comp str :field))
+       vec))

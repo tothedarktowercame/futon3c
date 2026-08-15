@@ -57,3 +57,43 @@
               :boxes [{:box/id :self
                        :reads [:field/x]
                        :writes [:field/x]}]}))))))
+
+(def apm-close-pre-fix
+  {:spec/id :apm-close-pre-fix
+   :boxes
+   [{:box/id :assign-checkouts :writes [:environment-checkouts]}
+    {:box/id :advance-payload :writes [:environment-checkouts]}
+    {:box/id :stamp-environment-outputs
+     :reads [:environment-checkouts] :writes [:solver-attempt]}
+    {:box/id :emit-trace :reads [:retrieval-probes :solver-attempt] :writes [:trace]}
+    {:box/id :validate-trace :reads [:trace] :writes [:validation]}
+    {:box/id :write-authorization :reads [:validation]}]})
+
+(deftest recorded-apm-missing-producer-is-found
+  (let [findings (wiring/read-never-written
+                  (wiring/ingest apm-close-pre-fix))]
+    (is (= [{:finding :read-never-written
+             :field :retrieval-probes
+             :readers [:emit-trace]}]
+           findings))
+    (is (empty? (filter (comp #{:solver-attempt :trace :validation} :field)
+                        findings)))))
+
+(deftest recorded-apm-double-writer-is-found
+  (let [findings (wiring/multiply-written
+                  (wiring/ingest apm-close-pre-fix))]
+    (is (= [{:finding :multiply-written
+             :field :environment-checkouts
+             :writers [:advance-payload :assign-checkouts]}]
+           findings))
+    (is (empty? (filter (comp #{:solver-attempt :trace :validation} :field)
+                        findings)))))
+
+(deftest empty-spec-has-no-reader-or-multiple-writer-findings
+  (let [g (wiring/ingest {:spec/id :empty :boxes []})]
+    (is (= [] (wiring/read-never-written g)))
+    (is (= [] (wiring/multiply-written g)))))
+
+(deftest slice-one-fixture-has-only-single-writers
+  (is (= [] (wiring/multiply-written
+             (wiring/ingest apm-round1-pre-fix)))))
