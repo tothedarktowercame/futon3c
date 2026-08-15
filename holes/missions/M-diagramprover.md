@@ -1513,6 +1513,52 @@ once) that makes a proof a diagram rather than a derivation. Cheap
 companion read: LeanTree (arXiv:2507.14722) — on its abstract, the
 closest existing work to the typed-ports invariant.
 
+**WS-E: Mission-wiring verification — ADOPTED 2026-08-15 as a matter of
+urgency (operator ruling, Joe).** Trigger: M-apm-demonstration built and
+REPL-bashed a cycle machine with no process-level verifier, accumulating
+sixteen written-but-not-wired instances plus three independent-audit
+findings before the class was caught — while scoring 4-for-4 on the
+wiring-required test added the same day to `futon4/holes/
+mission-lifecycle.md` §Specification Bill of Materials. Operator ruling,
+recorded: *"we need this sorted out as a matter of urgency, not just
+recorded. M-diagramprover will have two jobs: solving this at a
+sufficient level of generality for other missions, and proving it — not
+'self-certifying' but at least demonstrating that it itself follows
+known best practice."*
+
+Job 1 — **solve, generally.** An ingest functor from process configs to
+the engine's typed-diagram representation (the WS-B DAG-ingest functor
+is the worked precedent; WS-D's typed ports are the same invariant on a
+different source), plus structural checks over the result. First
+sources: futon3c `CycleDomainConfig` (problem peripheral) + the round-1
+registration EDN; futon5 exotype `.edn`. Checks, minimum three: every
+wire has both ends (no orphan writer/reader), every box is reachable
+(no ghost phase), every wire leaves exactly one box (single writer /
+declared ownership). Generality bar, per shape-first discipline: the
+same functor + checks run on **≥2 non-APM configs** — the proof
+peripheral's domain config is sibling #1; sibling #2 from the WM flight
+loop or the futon3b gate pipeline. If only the APM instance ever works,
+record `:special-case true` as a finding, not a success.
+
+Job 2 — **prove it, without self-certification.** Warrants:
+(i) *ground truth that predates the tool* — the APM reconstruction as
+replay corpus. Sensitivity: the verifier must catch, on pre-fix states,
+the unreachable `:close` (`44d8fe6d`), the unread registration pins,
+the injectable `:retrieval-probes`, and the producer-less validator
+field (`TN-problem-peripheral-RC-fable-review.md`, findings established
+by other parties before WS-E existed). Specificity: it must pass the
+post-fix states as negative control. (ii) *author ≠ reviewer*, per
+mission ownership — Codex authors, Claude owner reviews with
+independent re-runs (the WS-B pattern that produced three-way oracle
+agreement). (iii) M-diagramprover fills **its own BOM** at VERIFY
+(futon4 lifecycle §SBOM), including running WS-E over WS-E's own
+pipeline config — flagged as *demonstration*, never certificate; the
+certificate-grade warrant is (i)+(ii).
+
+Discharges: the priced hole in `futon4/holes/mission-lifecycle.md`
+§Specification Bill of Materials (tool-status note). When acceptance
+lands, re-point the lifecycle's process row at WS-E and close the hole.
+
 ### Explicitly parked / superseded
 
 - **TPG as tactic generator** (Phase 3b) — parked, off the critical
