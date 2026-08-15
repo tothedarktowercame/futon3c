@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
+            [futon3c.apm.cycle-harness :as apm-harness]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
@@ -761,3 +762,86 @@
     (is (= :completed (last problem/phase-order)))
     (is (empty? (get problem/base-phase-tools :completed))
         "the terminal sentinel carries no tools")))
+
+(defn- trace-emission-state [state]
+  (assoc state
+         :current-phase :close
+         :current-cycle-id "cycle-1"
+         :cycle/opened-at "2026-08-15T00:00:00Z"
+         :cycle/deposit-state :n/a
+         :cycle/paired-with nil
+         :cycle/outputs
+         {:registration {:required-measurement-fields ["x"]}
+          :stratum-frozen-at 1
+          :assigned-at 2
+          :frame {:frame/id "frame-1"}
+          :launch-gate-event {:gate/id "gate-1"}
+          :store-snapshot {:snap/id "snap-1"}
+          :containment-probe {:cprobe/id "cprobe-1"}
+          :measurement {:meas/id "meas-1"}
+          :solver-attempt {:attempt/id "attempt-1"}
+          :student-attempts []
+          :disposition []
+          :memory-offers []
+          :memory-uses []
+          :retrieval-probes []
+          :capability-probes []
+          :promotion-result []}))
+
+(deftest emit-trace-reuses-existing-projection-and-machine-cycle-facts
+  (let [[p state] (started :store-mode)
+        called (atom nil)
+        closed-at "2026-08-15T01:02:03Z"
+        result (with-redefs [apm-harness/derive-trace
+                             (fn [registration cycle-id entities]
+                               (reset! called {:registration registration
+                                               :cycle-id cycle-id
+                                               :entities entities})
+                               {:projected true})
+                             problem/now-string (constantly closed-at)]
+                 (runner/step
+                  p (trace-emission-state state)
+                  {:tool :emit-trace
+                   ;; A caller-supplied cycle entity is deliberately ignored.
+                   :args [{:cycle/id "forged" :cycle/closed-at "forged"}]}))
+        cycle-entity (some #(when (:cycle/id %) %) (:entities @called))]
+    (is (:ok result))
+    (is (= {:projected true} (:result result)))
+    (is (= "cycle-1" (:cycle-id @called)))
+    (is (= "cycle-1" (:cycle/id cycle-entity)))
+    (is (= :store-mode (:cycle/mode cycle-entity)))
+    (is (= "2026-08-15T00:00:00Z" (:cycle/opened-at cycle-entity)))
+    (is (= closed-at (:cycle/closed-at cycle-entity))
+        "the engine clock, not the caller, closes the trace")
+    (is (= #{"cycle-1" "frame-1" "gate-1" "snap-1" "cprobe-1"
+             "meas-1" "attempt-1"}
+           (set (keep apm-harness/entity-id (:entities @called))))
+        "typed entities are assembled from cycle outputs")))
+
+(deftest emit-trace-names-missing-entity-producers
+  (let [[p state] (started :store-mode)
+        state (update (trace-emission-state state) :cycle/outputs
+                      dissoc :retrieval-probes :capability-probes)
+        result (runner/step p state {:tool :emit-trace :args []})]
+    (is (= :tool-execution-failed (:error/code result)))
+    (is (re-find #"retrieval-probe" (str result)))
+    (is (re-find #"capability-probe" (str result)))))
+
+(deftest empty-offer-output-is-not-a-missing-producer
+  (let [[p state] (started :store-mode)
+        called (atom false)
+        result (with-redefs [apm-harness/derive-trace
+                             (fn [_ _ entities]
+                               (reset! called true)
+                               (is (empty? (filter :offer/id entities)))
+                               {:projected true})]
+                 (runner/step p (trace-emission-state state)
+                              {:tool :emit-trace :args []}))]
+    (is (:ok result))
+    (is @called)
+    (let [missing (runner/step
+                   p (update (trace-emission-state state) :cycle/outputs
+                             dissoc :memory-offers)
+                   {:tool :emit-trace :args []})]
+      (is (= :tool-execution-failed (:error/code missing)))
+      (is (re-find #"memory-offer" (str missing))))))

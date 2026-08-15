@@ -4,11 +4,13 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon3c.apm.cycle-harness :as apm-harness]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.tools :as tools])
   (:import [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
+           [java.time Instant]
            [java.util UUID]))
 
 (def phase-order
@@ -177,6 +179,84 @@
                        (stamp-attempt-environment attempt (get students index)))
                      (range) %)))))
 
+(defn- now-string []
+  (str (Instant/now)))
+
+(defn- output-entities [outputs key]
+  (let [value (get outputs key)]
+    (cond
+      (nil? value) []
+      (and (sequential? value) (not (map? value))) (vec value)
+      :else [value])))
+
+(defn- cycle-opened-at [state]
+  (or (:cycle/opened-at state)
+      (some (fn [{:keys [tool result]}]
+              (when (= tool :begin-problem-cycle)
+                (:cycle/opened-at result)))
+            (reverse (:steps state)))))
+
+(defn- emit-trace-from-state
+  "Project the engine-owned cycle record through the existing APM projection.
+
+  Producer presence is distinct from cardinality: an output key with an empty
+  collection proves its producer ran and is passed to the validator; a missing
+  key means there is no evidence that the producer ran and fails here."
+  [state _args]
+  (let [outputs (:cycle/outputs state)
+        producer-keys {:registration :registration
+                       :frame :frame
+                       :launch-gate :launch-gate-event
+                       :store-snapshot :store-snapshot
+                       :containment-probe :containment-probe
+                       :measurement :measurement
+                       :solver-attempt :solver-attempt
+                       :student-attempt :student-attempts
+                       :disposition :disposition
+                       :memory-offer :memory-offers
+                       :memory-use :memory-uses
+                       :retrieval-probe :retrieval-probes
+                       :capability-probe :capability-probes
+                       :promotion :promotion-result}
+        missing (->> producer-keys
+                     (keep (fn [[entity-type output-key]]
+                             (when-not (contains? outputs output-key)
+                               entity-type)))
+                     vec)]
+    (when (seq missing)
+      (throw (ex-info (str "emit-trace missing entity producers: "
+                           (str/join ", " (map name missing)))
+                      {:failure :missing-trace-entity-producers
+                       :entity-types missing})))
+    (let [cycle-id (:current-cycle-id state)
+          cycle-entity {:cycle/id cycle-id
+                        :cycle/opened-at (cycle-opened-at state)
+                        ;; Emission is the closing record. The machine reads the
+                        ;; clock; no timestamp is accepted from tool arguments.
+                        :cycle/closed-at (now-string)
+                        :cycle/mode (:cycle/mode state)
+                        :cycle/deposit-state (:cycle/deposit-state state)
+                        :cycle/paired-with (:cycle/paired-with state)
+                        :cycle/stratum-frozen-at (:stratum-frozen-at outputs)
+                        :cycle/assigned-at (:assigned-at outputs)}
+          entities (vec
+                    (concat
+                     [cycle-entity]
+                     (output-entities outputs :frame)
+                     (output-entities outputs :launch-gate-event)
+                     (output-entities outputs :store-snapshot)
+                     (output-entities outputs :containment-probe)
+                     (output-entities outputs :measurement)
+                     (output-entities outputs :solver-attempt)
+                     (output-entities outputs :student-attempts)
+                     (output-entities outputs :disposition)
+                     (output-entities outputs :memory-offers)
+                     (output-entities outputs :memory-uses)
+                     (output-entities outputs :retrieval-probes)
+                     (output-entities outputs :capability-probes)
+                     (output-entities outputs :promotion-result)))]
+      (apm-harness/derive-trace (:registration outputs) cycle-id entities))))
+
 (def problem-domain-config
   {:domain-id :problem
    :phase-order phase-order
@@ -193,6 +273,7 @@
    :state-validate-fn validate-loaded-state
    :state-snapshot-fn state-snapshot
    :output-stamp-fn stamp-environment-outputs
+   :derived-tools {:emit-trace emit-trace-from-state}
    :output-invariants
    [{:id :environment-arms-match
      :requires #{:environment-revision :solver-attempt :student-attempts}
