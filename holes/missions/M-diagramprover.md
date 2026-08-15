@@ -1559,6 +1559,26 @@ Discharges: the priced hole in `futon4/holes/mission-lifecycle.md`
 §Specification Bill of Materials (tool-status note). When acceptance
 lands, re-point the lifecycle's process row at WS-E and close the hole.
 
+**WS-E slices 1–4 LANDED + reviewed 2026-08-15** (codex-4 authored,
+claude-7 reviewed with gates re-run and adversarial probes per slice):
+`a7131e61` ingest + written-never-read; `ad256571` read-never-written +
+multiply-written; `7aa8e8df` site conformance (+ review fix `77cca3c9`:
+unreadable site is a finding, not an exception); `c474470f` phase-chain
+checks; `0a26ea42` the live declared map + findings snapshot
+(`holes/labs/M-apm-demonstration/problem-wiring.edn`,
+`wiring-findings-20260815.edn`). **Sensitivity: demonstrated on all four
+recorded defect classes** — unread pins (fixture; and on the first live
+run the conformance check caught the MAP AUTHOR's stale belief that the
+pins were still unread — they had been made load-bearing by the "Fable
+RC review" commit); missing producer (`:retrieval-probes`, live);
+double-writer (`:environment-checkouts` payload fallback, live — the one
+open seam, flagged to the peripheral owners); ghost phase (pre-`44d8fe6d`
+fixture). **Specificity: post-fix states clean** — live snapshot:
+written-never-read [], phase-chain [] (phases derived from the live
+config at check time), conformance []. **Remaining for acceptance: the
+generality leg** — the same functor + checks on ≥2 non-APM configs
+(proof peripheral first).
+
 ### Explicitly parked / superseded
 
 - **TPG as tactic generator** (Phase 3b) — parked, off the critical

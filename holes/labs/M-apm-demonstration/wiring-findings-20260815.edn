@@ -1,14 +1,16 @@
-{:snapshot/spec :apm-problem-peripheral-live,
- :snapshot/at-commit "158ad9976ca76af9a8d9d90b751df62c98ed5bd3",
- :snapshot/date "2026-08-15",
- :snapshot/by "claude-7 (WS-E slice 3b)",
- :written-never-read [],
- :read-never-written
- [{:finding :read-never-written,
-   :field :retrieval-probes,
-   :readers [:emit-trace]}],
+{:snapshot/date "2026-08-15",
+ :conformance [],
  :multiply-written
  [{:finding :multiply-written,
    :field :environment-checkouts,
    :writers [:advance-payload :assign-checkouts]}],
- :conformance []}
+ :phase-chain [],
+ :snapshot/by "claude-7 (WS-E slices 3b+4 follow-up)",
+ :written-never-read [],
+ :snapshot/spec :apm-problem-peripheral-live,
+ :read-never-written
+ [{:finding :read-never-written,
+   :field :retrieval-probes,
+   :readers [:emit-trace]}],
+ :snapshot/at-commit "c474470fb26748193380bc0bd2765f7ae64db6cf",
+ :snapshot/phases-source :live-problem-domain-config}

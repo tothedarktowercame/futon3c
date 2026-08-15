@@ -20,6 +20,10 @@
 ;;   pins load-bearing" commit (problem.clj:87-88). The first draft of this map
 ;;   omitted them and the conformance check flagged the omission on its first
 ;;   live run — the checker correcting its own author's stale belief.
+;; - :phases is NOT stored here: the snapshot runner assoc's it from the live
+;;   problem-domain-config (problem/phase-order, problem/base-phase-tools) at
+;;   check time, so phase drift between declaration and code is impossible by
+;;   construction. See wiring-findings-20260815.edn :snapshot/phases-source.
 {:spec/id :apm-problem-peripheral-live
  :boxes
  [{:box/id :registration-edn
