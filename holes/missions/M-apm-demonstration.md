@@ -8502,3 +8502,51 @@ regime; the dispatch records the mechanism.
 recording *when it is knowable* rather than asserting at creation. The discipline
 this mission keeps rediscovering is already house practice in this file; it simply
 had not reached the cycle machine.
+
+## I.53a A3.1 verified on disk — and a collision that only the second use reveals
+
+**codex-4's change is two lines** (`1f881251`): `solver` and `student` added to the
+permitted arms. Everything else in `frames.bb` untouched, and its scratch frames
+were cleaned up.
+
+**Verified independently, on disk, not from the report:**
+
+| property | result |
+|---|---|
+| distinct checkouts | `…/t94J02-solver` vs `…/t94J02-student` |
+| `:base-revision` equal across arms | both `a92ffb6c9cda…` — same starting environment (I.39) |
+| **derived, not echoed** | equals `git rev-parse HEAD` of `apm-lean` exactly |
+| channel mapping | solver `:push`, student `:none` — as decided in I.53 |
+| repeat open | dies, no clobber |
+
+**And the derived value equals `:reg/environment-revision` in the registration** —
+so the pin and the measurement agree, which is the cross-check A3 exists to make.
+
+### The finding: branches collide across batches
+
+Opening the **same problem + arm in a second batch** fails:
+
+```
+Preparing worktree (new branch 'exp/t94J02-solver')
+fatal: a branch named 'exp/t94J02-solver' already exists
+```
+
+The default branch is `exp/<problem>-<arm>` — **not batch-qualified**. The `case`
+arm already documents this trap and works around it by requiring an explicit
+`--branch`; **`solver` and `student` inherit the same exposure.**
+
+> **This will bite us specifically.** Frame-1 takes `exp/t94J02-solver`. Any re-run
+> of t94J02 — a later frame, or **a step-back that re-provisions** — collides. The
+> step-through machinery built this morning makes re-runs a normal operation rather
+> than an exception.
+
+**So A3.2 must pass a batch-qualified `--branch`** (`exp/<batch>-<problem>-<arm>`),
+exactly as `case` does. Recorded now rather than discovered at frame-2.
+
+Two secondary notes: the failure surfaces as a raw git `fatal:` rather than a clean
+`die`, and it leaves **no partial state** — verified: no checkout and no record dir
+after the failed open, because the record is written only after `worktree add`
+succeeds.
+
+**A collision that only appears on the second use is exactly what a single-run test
+cannot find.** It took opening the same frame twice.
