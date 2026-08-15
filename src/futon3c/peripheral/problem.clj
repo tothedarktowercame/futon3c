@@ -122,16 +122,12 @@
                             :store-mode :write-substrate
                             :harness-mode :tune-harness
                             nil)
-        harness-repo (:harness-repo context)
-        harness-measurer (:harness-measurer config)]
+        cycle-context (:cycle-context config)]
+    (when cycle-context
+      (reset! cycle-context context))
     (cond-> config
       intervention-tool
-      (update-in [:phase-tools :intervene] conj intervention-tool)
-
-      harness-measurer
-      (assoc :cycle-begin-result-fn
-             (fn [_state _args result]
-               (merge result (harness-measurer harness-repo)))))))
+      (update-in [:phase-tools :intervene] conj intervention-tool))))
 
 (defn- validate-loaded-state [current loaded]
   (when (not= (:cycle/mode current) (:cycle/mode loaded))
@@ -933,6 +929,23 @@
     {:harness-revision revision
      :harness-tree-dirty? (not (str/blank? status-out))}))
 
+(defrecord ProblemCycleBackend [inner-backend harness-measurer cycle-context]
+  tools/ToolBackend
+  (execute-tool [_ tool-id args]
+    (if (= tool-id :begin-problem-cycle)
+      (let [{:keys [session-id problem-id harness-repo]} @cycle-context
+            identity-input [session-id problem-id (vec args)]
+            digest (apm-harness/sha256-bytes
+                    (.getBytes (pr-str identity-input) "UTF-8"))]
+        {:ok true
+         :result (merge {:cycle/id (str problem-id "-" digest)
+                         :cycle/opened-at (now-string)}
+                        (harness-measurer harness-repo))})
+      (tools/execute-tool inner-backend tool-id args))))
+
+(defn make-problem-cycle-backend [inner-backend harness-measurer cycle-context]
+  (->ProblemCycleBackend inner-backend harness-measurer cycle-context))
+
 (defn make-problem
   ([] (make-problem (tools/make-mock-backend)))
   ([backend]
@@ -946,10 +959,13 @@
    (make-problem backend dispatch-fn state-root provisioner-fn
                  measure-harness-repository))
   ([backend dispatch-fn state-root provisioner-fn harness-measurer]
-   (cycle/make-cycle-peripheral
-    (assoc problem-domain-config :harness-measurer harness-measurer) problem-spec
-    (make-checkout-provisioning-backend
-     (make-ground-control-backend
-      (make-problem-state-backend backend state-root)
-      dispatch-fn)
-     provisioner-fn))))
+   (let [cycle-context (atom nil)]
+     (cycle/make-cycle-peripheral
+      (assoc problem-domain-config :cycle-context cycle-context) problem-spec
+      (make-problem-cycle-backend
+       (make-checkout-provisioning-backend
+        (make-ground-control-backend
+         (make-problem-state-backend backend state-root)
+         dispatch-fn)
+        provisioner-fn)
+       harness-measurer cycle-context)))))

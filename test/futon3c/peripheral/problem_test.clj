@@ -732,6 +732,61 @@
      (is (= "/measured/harness" repo))
      measurement)))
 
+(deftest problem-cycle-begin-is-deterministic-and-opens-the-register-phase
+  (let [context {:session-id "deterministic-cycle" :problem-id "t94J02"
+                 :cycle/mode :store-mode
+                 :harness-repo "/measured/harness"}
+        begin (fn []
+                (let [p (harness-measured-problem
+                         {:harness-revision
+                          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                          :harness-tree-dirty? false})
+                      start (runner/start p context)]
+                  (runner/step p (:state start)
+                               {:tool :begin-problem-cycle
+                                :args ["M-demo" "round-1"]})))
+        first-begin (begin)
+        second-begin (begin)]
+    (is (= :register (get-in first-begin [:state :current-phase])))
+    (is (= (get-in first-begin [:result :cycle/id])
+           (get-in first-begin [:state :current-cycle-id])))
+    (is (= (get-in first-begin [:result :cycle/id])
+           (get-in second-begin [:result :cycle/id]))
+        "the same session/problem/begin inputs produce the same cycle id")
+    (is (string? (get-in first-begin [:result :cycle/opened-at])))))
+
+(deftest second-problem-cycle-begin-refuses-while-cycle-is-open
+  (let [p (harness-measured-problem
+           {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            :harness-tree-dirty? false})
+        start (runner/start p {:session-id "double-begin" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        repeated (runner/step p (:state begun)
+                              {:tool :begin-problem-cycle :args ["M" "C"]})]
+    (is (= :phase-tool-not-allowed (:error/code repeated)))
+    (is (some? (get-in begun [:state :current-cycle-id])))))
+
+(deftest runner-driven-problem-traverse-stops-at-the-first-real-gate
+  (let [p (harness-measured-problem
+           {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            :harness-tree-dirty? false})
+        start (runner/start p {:session-id "dry-traverse" :problem-id "t94J02"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        advanced (runner/step p (:state begun)
+                              {:tool :advance-problem-phase
+                               :args ["M" "C" {}]})]
+    (is (= :register (get-in begun [:state :current-phase])))
+    (is (= :missing-required-outputs (:error/code advanced)))
+    (is (some #{:registration} (get-in advanced [:error/context :missing])))
+    (is (= :register (get-in begun [:state :current-phase]))
+        "the traversal uses runner state and never hand-assocs a phase")))
+
 (deftest forged-harness-revision-is-overwritten-by-cycle-open-measurement
   (let [measured "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         p (harness-measured-problem {:harness-revision measured
