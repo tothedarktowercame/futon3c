@@ -7707,3 +7707,79 @@ had not reached the measurement path.
   recording.
 - **Then:** cycle-level step-through. `--dry-run` gives it per dispatch; backing
   up a *cycle* without invalidating output is still undesigned.
+
+## I.44 The guide/proctor split — authorship, not lanes
+
+**Joe, 2026-08-15:** *"in terms of splitting them, I guess we could use different
+lanes (though that doesn't avoid all possible forms of contamination) … what's
+your thinking on the split?"*
+
+### Lanes are the wrong axis
+
+**Lanes separate audiences, not authorship.** Two lanes written by one mind is
+still one mind. Joe's parenthesis was already pointing at this.
+
+### What can the guide actually fake?
+
+P1 counts *guidance interventions per cycle*. If the guide emits the RoleEvents,
+**the guide decides what counts as an intervention**:
+
+> **A guide that merely becomes tidier about labelling produces a textbook
+> declining P1 with no change in behaviour whatsoever.**
+
+**And a second agent judging does not fix it** — it would be adjudicating the
+guide's own labels. This is why "add a reviewer" is not automatically a fix; the
+reviewer has to be reviewing something the author did not write.
+
+### The fix is I.40's move: derive from a record the guide cannot author
+
+**The Agency job log.** Server-written rows carrying caller, recipient, timestamp,
+body. The guide cannot edit it.
+
+**The precedent is already built and wired**: `direct-channel-inside-window?`
+(`mmca-clj/src/mmca/apm_demonstration_preregistration.clj:287`) already reads this
+log to detect `claude-* → zai-*` contact inside the cycle window. **Counting
+`claude-guide → codex` bells is the same query against different endpoints.**
+
+### The layering, by what can be faked
+
+| fact | authored by | guide can fake? |
+|---|---|---|
+| an interaction happened | **Agency server** | **no** |
+| its content | the bell body, in the log | **no** |
+| whether it counts as *guidance* | classifier | **yes if the guide classifies** → **proctor** |
+| whether it *helped* | judgement | **proctor** |
+
+> **The guide never writes the measurement.** The transport writes the fact; the
+> proctor classifies and judges — against a **rubric hashed and frozen before the
+> round**, exactly as the role cards are. A proctor free to redefine
+> "intervention" mid-round is the same hole one level up.
+
+**Reporting path:** the proctor reaches Joe through `wm/operator-lane`
+(`:brief`/`:nag`), **not through the guide** — so the guide cannot filter what the
+operator hears. *That* is the right use of lanes: not to separate the two roles,
+but to give the proctor an unmediated path out.
+
+### The residue, named
+
+Joe is right that this does not close everything. What remains:
+
+1. **Guidance via substrate.** For Codex a deposit is also a channel. **Countable**
+   — substrate writes carry `receipt-author "ground-control"` — so **count both
+   channels** rather than pretend there is one.
+2. **Correlated priors.** Guide and proctor are both Claude; a shared notion of
+   "intervention" classifies alike. The frozen rubric makes drift **detectable,
+   not impossible.**
+3. **Nobody checks the checker.** Mitigated only by the log remaining re-readable
+   by the operator — post-hoc auditable, the same standard as the review protocol.
+4. **An unreachable log.** Already solved in the precedent and kept:
+   `:direct-channel-evidence-unavailable` is a **distinct failure** from
+   `:direct-channel-used`. **Absence of evidence is not evidence of cleanliness.**
+
+**IF** the split were made by lanes, **HOWEVER** lanes separate who *reads* rather
+than who *writes*, **THEN** it must be made by authorship, **BECAUSE** the thing
+being protected is the provenance of a number, not its distribution list.
+
+**You cannot close every channel. You can make each one either counted or blocked,
+and name what is left** — which is the same discipline that closed the four
+pass-note channels (I.36–I.39).
