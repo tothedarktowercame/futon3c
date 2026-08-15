@@ -35,7 +35,7 @@
  ;; an unrelated file must not read as an unfrozen harness. Measured by
  ;; problem/measure-harness-repository, the same construction the validator uses
  ;; for :lean-revision.
- :reg/harness-revision     "7c743f777ccdd2b023149149f375e17bf1b1f949"
+ :reg/harness-revision     "7787eb9a56bc75cc1f4e33cdd85217248982b7ca"
 
  ;; The solver seat is a PARAMETER OF THE MEASUREMENT, not a location like the
  ;; Lean repo or the Agency endpoint: guidance is counted as in-window Agency
