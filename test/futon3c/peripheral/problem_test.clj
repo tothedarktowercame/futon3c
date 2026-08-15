@@ -10,7 +10,8 @@
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
-            [futon3c.peripheral.tools :as tools])
+            [futon3c.peripheral.tools :as tools]
+            [futon3c.substrate.client :as substrate])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute FileTime]))
 
@@ -1669,3 +1670,48 @@
 (deftest cycle-ids-are-reproducible-across-fresh-peripherals
   (is (= (begin-two-cycles-in-one-session) (begin-two-cycles-in-one-session))
       "replaying the same sequence of begins must reproduce the same ids"))
+
+;; THE OTHER DIRECTION. B's F1 test proves the gate FIRES on a deliberately
+;; scaffold-identical frame. Nothing proved it stays SILENT on an ordinary one --
+;; so a defect making every frame scaffold-identical shipped green. Verified by
+;; mutation: hashing the scaffold file for BOTH hashes reddened nothing across 65
+;; tests. A gate that always fires is as useless as one that never does, and only
+;; the pair of tests pins the tool to the gate.
+(deftest a-distinct-frame-does-not-fire-f1
+  (let [scaffold (Files/createTempFile "problem-frame-scaffold-distinct-" ".lean"
+                                       (make-array FileAttribute 0))
+        closing (Files/createTempFile "problem-frame-closing-distinct-" ".lean"
+                                      (make-array FileAttribute 0))]
+    (try
+      (spit (.toFile scaffold) "theorem t : True := by sorry\n")
+      (spit (.toFile closing) "theorem t : True := by trivial\n")
+      (timestamp-frame-snapshots! scaffold closing)
+      (let [{:keys [emitted]} (machine-frame-result scaffold closing nil false)
+            output (:result emitted)]
+        (is (:ok emitted))
+        (is (not= (get-in output [:frame :frame/scaffold-hash])
+                  (get-in output [:frame :frame/closing-hash]))
+            "different file bytes must produce different hashes")
+        (is (not (some #{:f1-scaffold-identical-frame}
+                       (frame-validation-failures output)))
+            "F1 must NOT fire on a frame whose closing differs from its scaffold"))
+      (finally
+        (Files/deleteIfExists scaffold)
+        (Files/deleteIfExists closing)))))
+
+;; The store snapshot IS the round's measured transfer channel, and the
+;; hyperedges endpoint has no cursor -- so a full page is indistinguishable from
+;; a complete read. It must refuse rather than silently under-report. (The
+;; previous limit, 10000, was above the substrate's maximum of 5000 and returned
+;; a hard 400, so :snapshot-store failed on every production call; the tests did
+;; not catch it because they inject a snapshotter.)
+(deftest a-full-page-store-snapshot-refuses-rather-than-truncating
+  (let [full-page (repeat 5000 {:hx/props {:roles {:entry "memory/x"}}})]
+    (with-redefs [substrate/hyperedges-by-type
+                  (fn [_ _] full-page)]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"truncated"
+                            (#'problem/snapshot-reviewed-memories))))
+    (with-redefs [substrate/hyperedges-by-type
+                  (fn [_ _] (repeat 4999 {:hx/props {:roles {:entry "memory/x"}}}))]
+      (is (= ["memory/x"] (#'problem/snapshot-reviewed-memories))
+          "a short page is a complete read and must succeed"))))

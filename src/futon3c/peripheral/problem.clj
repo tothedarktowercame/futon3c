@@ -974,13 +974,29 @@
     {:harness-revision revision
      :harness-tree-dirty? (not (str/blank? status-out))}))
 
+(def ^:private substrate-page-limit
+  ;; The substrate's own maximum. Asking for more is a hard 400
+  ;; (:reason :invalid-limit, :maximum 5000), not a clamp -- so a larger number
+  ;; here does not read more rows, it reads NONE. 10000 was the previous value
+  ;; and it made :snapshot-store fail on every production call.
+  5000)
+
 (defn- snapshot-reviewed-memories []
-  (->> (substrate/hyperedges-by-type :memory/assert {:limit 10000})
-       (keep #(get-in % [:hx/props :roles :entry]))
-       (filter string?)
-       distinct
-       sort
-       vec))
+  (let [rows (substrate/hyperedges-by-type :memory/assert
+                                           {:limit substrate-page-limit})]
+    ;; The store snapshot IS the measured transfer channel for the round. A
+    ;; silently truncated snapshot is a silently wrong measurement, and the
+    ;; endpoint offers no cursor -- so a full page cannot be distinguished from
+    ;; a complete read and must refuse rather than under-report.
+    (when (>= (count rows) substrate-page-limit)
+      (throw (ex-info "store snapshot may be truncated"
+                      {:rows (count rows) :limit substrate-page-limit})))
+    (->> rows
+         (keep #(get-in % [:hx/props :roles :entry]))
+         (filter string?)
+         distinct
+         sort
+         vec)))
 
 (defrecord ProblemCycleBackend [inner-backend harness-measurer cycle-context
                                 begin-seq active-cycle-id
