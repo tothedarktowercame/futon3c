@@ -15,23 +15,24 @@
    (slurp "holes/labs/M-apm-demonstration/round1-registration.edn")))
 
 (defn- smoke-problem []
-  (problem/make-problem
-   (tools/make-mock-backend)
-   (fn [& _]
-     {:ok true :job-id "smoke" :environment-checkout
-      {:checkout "/tmp/smoke/student" :base-revision env-revision}})
-   "/tmp/smoke-state"
-   (fn [{:keys [arm]}]
-     {:checkout (str "/tmp/smoke/" (name (or arm :solver)))
-      :base-revision env-revision})
-   (fn [_]
-     {:harness-revision harness-revision :harness-tree-dirty? false})))
+  (let [clock (atom 0)]
+    (problem/make-problem
+     (tools/make-mock-backend)
+     (fn [& _]
+       {:ok true :job-id "smoke" :environment-checkout
+        {:checkout "/tmp/smoke/student" :base-revision env-revision}})
+     "/tmp/smoke-state"
+     (fn [{:keys [arm]}]
+       {:checkout (str "/tmp/smoke/" (name (or arm :solver)))
+        :base-revision env-revision})
+     (fn [_]
+       {:harness-revision harness-revision :harness-tree-dirty? false})
+     (constantly ["memory/smoke-a" "memory/smoke-b"])
+     #(swap! clock inc))))
 
 (def ^:private phase-payloads
   {:register
    {:registration registration
-    :store-snapshot {:snap/id "snap-1" :snap/memory-ids []}
-    :stratum-frozen-at 1
     :environment-revision env-revision
     :harness-revision harness-revision
     :environment-checkouts {}}
@@ -56,9 +57,13 @@
    :close {}})
 
 (def ^:private phase-tools
-  (into {}
-        (for [[phase tool-set] problem/base-phase-tools]
-          [phase (vec (remove #{problem/advance} tool-set))])))
+  (assoc
+   (into {}
+         (for [[phase tool-set] problem/base-phase-tools]
+           [phase (vec (remove #{problem/advance} tool-set))]))
+   :register
+   [:read-registration :validate-registration :snapshot-store
+    :freeze-stratum :assign-checkouts]))
 
 (defn- run-phase-tools [p state phase]
   (let [tool-args
@@ -90,6 +95,7 @@
                  :authorization-output "/tmp/smoke-auth.edn"}
         begun (runner/step p (:state (runner/start p context))
                            {:tool :begin-problem-cycle :args ["M" "C"]})
+        register-facts (atom nil)
         outcome
         (loop [state (:state begun), advances 0]
           (if-let [phase (:current-phase state)]
@@ -105,10 +111,23 @@
                          {:tool problem/advance
                           :args ["M" "C" (get phase-payloads phase {})]})]
                     (if (:ok advanced)
-                      (recur (:state advanced) (inc advances))
+                      (do
+                        (when (= phase :register)
+                          (reset! register-facts
+                                  (select-keys
+                                   (get-in advanced [:state :cycle/outputs])
+                                   [:store-snapshot :stratum-frozen-at
+                                    :assigned-at])))
+                        (recur (:state advanced) (inc advances)))
                       {:stop {:phase phase :tool problem/advance
                               :code (:error/code advanced)}})))))
             {:completed? true :advances advances}))]
     (is (= :register (get-in begun [:state :current-phase])))
+    (println "SMOKE register facts" (pr-str @register-facts))
+    (println "SMOKE traversal" (pr-str outcome))
+    (is (= ["memory/smoke-a" "memory/smoke-b"]
+           (get-in @register-facts [:store-snapshot :snap/memory-ids])))
+    (is (< (:stratum-frozen-at @register-facts)
+           (:assigned-at @register-facts)))
     (is (= {:completed? true :advances 8} outcome)
         "all eight real phases advance through :completed, which clears state")))

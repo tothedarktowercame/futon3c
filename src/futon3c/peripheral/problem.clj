@@ -8,7 +8,8 @@
             [futon3c.apm.preregistration :as prereg]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
             [futon3c.peripheral.cycle :as cycle]
-            [futon3c.peripheral.tools :as tools])
+            [futon3c.peripheral.tools :as tools]
+            [futon3c.substrate.client :as substrate])
   (:import [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
            [java.time Instant]
@@ -169,6 +170,11 @@
             (select-keys result [:harness-revision :harness-tree-dirty?])))
         (reverse (:steps state))))
 
+(defn- recorded-tool-result [state tool-id]
+  (some (fn [{:keys [tool result]}]
+          (when (= tool tool-id) result))
+        (reverse (:steps state))))
+
 (defn- recorded-student-assignments [state]
   ;; :steps spans the whole peripheral session, including completed cycles.
   ;; Reset at the latest assignment so attempt 1 of a new cycle cannot be
@@ -228,7 +234,11 @@
                    (if (seq recorded) recorded (vec (:student assignments))))
         revision (:base-revision solver)
         harness (recorded-harness-measurement state)
-        harness-revision (:harness-revision harness)]
+        harness-revision (:harness-revision harness)
+        store-snapshot (recorded-tool-result state :snapshot-store)
+        frozen-at (:cycle/stratum-frozen-at
+                   (recorded-tool-result state :freeze-stratum))
+        assigned-at (:assigned-at (recorded-tool-result state :assign-checkouts))]
     (cond-> payload
       (some? measurement)
       (assoc :measurement measurement)
@@ -253,6 +263,15 @@
       (some? harness-revision)
       (assoc :harness-revision harness-revision
              :harness-tree-dirty? (:harness-tree-dirty? harness))
+
+      (some? store-snapshot)
+      (assoc :store-snapshot store-snapshot)
+
+      (some? frozen-at)
+      (assoc :stratum-frozen-at frozen-at)
+
+      (some? assigned-at)
+      (assoc :assigned-at assigned-at)
 
       (contains? payload :solver-attempt)
       (update :solver-attempt stamp-attempt-environment solver harness-revision)
@@ -942,8 +961,17 @@
     {:harness-revision revision
      :harness-tree-dirty? (not (str/blank? status-out))}))
 
+(defn- snapshot-reviewed-memories []
+  (->> (substrate/hyperedges-by-type :memory/assert {:limit 10000})
+       (keep #(get-in % [:hx/props :roles :entry]))
+       (filter string?)
+       distinct
+       sort
+       vec))
+
 (defrecord ProblemCycleBackend [inner-backend harness-measurer cycle-context
-                                begin-seq]
+                                begin-seq active-cycle-id
+                                store-snapshotter clock]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
     (cond
@@ -963,11 +991,32 @@
             seq-no (dec (swap! begin-seq inc))
             identity-input [session-id problem-id seq-no (vec args)]
             digest (apm-harness/sha256-bytes
-                    (.getBytes (pr-str identity-input) "UTF-8"))]
+                    (.getBytes (pr-str identity-input) "UTF-8"))
+            cycle-id (str problem-id "-" digest)]
+        (reset! active-cycle-id cycle-id)
         {:ok true
-         :result (merge {:cycle/id (str problem-id "-" digest)
+         :result (merge {:cycle/id cycle-id
                          :cycle/opened-at (now-string)}
                         (harness-measurer harness-repo))})
+
+      (= tool-id :snapshot-store)
+      (let [cycle-id @active-cycle-id]
+        (if cycle-id
+          {:ok true
+           :result {:snap/id (str "snap/" cycle-id)
+                    :snap/cycle cycle-id
+                    :snap/memory-ids (vec (store-snapshotter))}}
+          {:ok false :error "snapshot-store has no open cycle"}))
+
+      (= tool-id :freeze-stratum)
+      (let [measured (long (clock))]
+        {:ok true :result {:cycle/stratum-frozen-at measured}})
+
+      (= tool-id :assign-checkouts)
+      (let [result (tools/execute-tool inner-backend tool-id args)]
+        (if (:ok result)
+          (assoc-in result [:result :assigned-at] (long (clock)))
+          result))
 
       (= tool-id advance)
       (let [current-phase (:cycle/current-phase (last args))
@@ -982,9 +1031,11 @@
       :else
       (tools/execute-tool inner-backend tool-id args))))
 
-(defn make-problem-cycle-backend [inner-backend harness-measurer cycle-context]
+(defn make-problem-cycle-backend
+  [inner-backend harness-measurer cycle-context store-snapshotter clock]
   (->ProblemCycleBackend inner-backend harness-measurer cycle-context
-                         (atom 0)))
+                         (atom 0) (atom nil)
+                         store-snapshotter clock))
 
 (defn make-problem
   ([] (make-problem (tools/make-mock-backend)))
@@ -999,6 +1050,10 @@
    (make-problem backend dispatch-fn state-root provisioner-fn
                  measure-harness-repository))
   ([backend dispatch-fn state-root provisioner-fn harness-measurer]
+   (make-problem backend dispatch-fn state-root provisioner-fn harness-measurer
+                 snapshot-reviewed-memories #(System/nanoTime)))
+  ([backend dispatch-fn state-root provisioner-fn harness-measurer
+    store-snapshotter clock]
    (let [cycle-context (atom nil)]
      (cycle/make-cycle-peripheral
       (assoc problem-domain-config :cycle-context cycle-context) problem-spec
@@ -1008,4 +1063,4 @@
          (make-problem-state-backend backend state-root)
          dispatch-fn)
         provisioner-fn)
-       harness-measurer cycle-context)))))
+       harness-measurer cycle-context store-snapshotter clock)))))

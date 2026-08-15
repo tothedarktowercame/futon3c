@@ -810,6 +810,77 @@
     (is (= :phase-tool-not-allowed (:error/code advanced)))
     (is (= :setup (get-in advanced [:error/context :phase])))))
 
+(defn- register-tool-run [clock snapshot]
+  (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        p (problem/make-problem
+           (tools/make-mock-backend)
+           (fn [_ _] {:evidence {}})
+           "/tmp/register-tool-state"
+           (fn [{:keys [arm]}]
+             {:checkout (str "/frames/" arm) :base-revision revision})
+           (fn [_] {:harness-revision revision :harness-tree-dirty? false})
+           (constantly snapshot) clock)
+        start (runner/start p {:session-id "register-tools" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        snapped (runner/step p (:state begun) {:tool :snapshot-store :args []})
+        frozen (runner/step p (:state snapped) {:tool :freeze-stratum :args []})
+        assigned (runner/step
+                  p (:state frozen)
+                  {:tool :assign-checkouts
+                   :args [{:problem "p" :batch "b" :base-rev revision
+                           :solver-seat "codex-4" :student-seat "zai-1"
+                           :recall-system "v1"}]})
+        advanced (runner/step
+                  p (:state assigned)
+                  {:tool :advance-problem-phase
+                   :args ["M" "C" {:registration :r
+                                      :store-snapshot {:snap/id "FORGED"}
+                                      :stratum-frozen-at -1
+                                      :environment-revision revision
+                                      :harness-revision revision
+                                      :environment-checkouts {}}]})]
+    {:p p :advanced advanced}))
+
+(deftest snapshot-tool-result-reaches-the-trace-projection
+  (let [ticks (atom 0)
+        {:keys [p advanced]} (register-tool-run #(swap! ticks inc)
+                                                ["memory/a" "memory/b"])
+        outputs (get-in advanced [:state :cycle/outputs])
+        snapshot (:store-snapshot outputs)
+        captured (atom nil)
+        state (assoc (:state advanced)
+                     :current-phase :close
+                     :cycle/outputs {:registration :r
+                                     :store-snapshot snapshot})
+        emitted (with-redefs [apm-harness/derive-trace
+                              (fn [_ _ entities]
+                                (reset! captured entities)
+                                {:projected true})]
+                  (runner/step p state {:tool :emit-trace :args []}))
+        snap-entity (some #(when (:snap/id %) %) @captured)]
+    (is (:ok advanced))
+    (is (:ok emitted))
+    (is (not= "FORGED" (:snap/id snapshot)))
+    (is (= (:current-cycle-id (:state advanced)) (:snap/cycle snapshot)))
+    (is (= ["memory/a" "memory/b"] (:snap/memory-ids snapshot)))
+    (is (= (select-keys snapshot [:snap/id :snap/cycle :snap/memory-ids])
+           (select-keys snap-entity [:snap/id :snap/cycle :snap/memory-ids])))))
+
+(deftest f4-fires-when-the-measured-freeze-is-not-before-assignment
+  (let [{:keys [advanced]} (register-tool-run (constantly 7) [])
+        outputs (get-in advanced [:state :cycle/outputs])
+        trace (assoc synthetic-trace
+                     :stratum-frozen-at (:stratum-frozen-at outputs)
+                     :assigned-at (:assigned-at outputs))
+        failures (prereg/trace-content-failures {} trace [] nil)]
+    (is (= 7 (:stratum-frozen-at outputs)))
+    (is (= 7 (:assigned-at outputs)))
+    (is (some #{:f4-stratum-not-frozen-before-assignment} failures)
+        "the values measured by the two tools reach and trip invariant F4")))
+
 (deftest runner-driven-problem-traverse-stops-at-the-first-real-gate
   (let [p (harness-measured-problem
            {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
