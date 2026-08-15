@@ -29,7 +29,14 @@
 
 (def base-phase-tools
   {:register #{:read-registration :validate-registration :snapshot-store
-               :freeze-stratum :pin-resources :assign-checkouts advance}
+               ;; :pin-resources was removed 2026-08-15. Since the engine began
+               ;; stamping :environment-revision from the recorded
+               ;; :assign-checkouts and :harness-revision from a measured
+               ;; repository, a caller-invoked pin would be a SECOND and forgeable
+               ;; route to fields the machine owns. The one rule this peripheral
+               ;; implements is that the machine owns the fields it is answerable
+               ;; for; a pin tool contradicts it.
+               :freeze-stratum :assign-checkouts advance}
    :frame #{:emit-frame advance}
    :guided-solve #{:dispatch-solver :guide-solver :read-substrate advance}
    :intervene #{advance}
