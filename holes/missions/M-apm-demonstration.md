@@ -8042,3 +8042,64 @@ pinned sha versus `nil` fails `:environment-mismatch-between-arms` — so this i
 "will not launch" rather than a "silently wrong". **But A3 was never satisfiable**,
 which is the point: I.40a named A3 as an assumption and it turns out the machinery
 to even state it is absent on one side.
+
+## I.46 The checkout is an input, not a discovery — and same-revision is not same-tree
+
+**codex-4 stopped a fourth time, on the condition I named, and was right again.**
+Its finding: `run-cycle!` receives one `lean-repo`; attempt entities carry no
+checkout field; `derive-trace` only projects stored fields. So there is **no
+authoritative input for a per-attempt `git rev-parse`**, and —
+
+> *"Solver and student attempts may run in distinct contained environments, so
+> deriving every attempt from the single `lean-repo` argument would silently assume
+> they shared a checkout."*
+
+**That is a second way to make the invariant vacuous**, and I had only guarded the
+first. Echoing the pin makes the arms agree by construction; **deriving both from
+one path also makes them agree by construction.** Different mechanism, identical
+worthless result.
+
+### Decision: the checkout is assigned, not discovered
+
+**The cycle machine assigns each arm its working tree at dispatch and derives the
+revision from the tree it assigned.**
+
+- **Assigned, so the path is authoritative** — we chose it, so provenance is ours.
+- **Derived, so the revision is a measurement** — `git rev-parse` on that tree.
+- **Per-arm, so the comparison is real** — two trees that could differ, compared.
+
+The alternative — asking the agent where it ran — is self-report, and fails the
+provenance check for the same reason `caller` did.
+
+Each attempt therefore records **both**: `:cycle/environment-checkout` (the path
+the machine assigned) and `:cycle/environment-revision` (derived from it).
+
+### The containment hole this exposes
+
+I.39 adopted Joe's formulation: both arms get **the same environment** — meaning
+the same **revision**. The invariant as built (`d8b8e748`) checks exactly that.
+**But equal revisions do not imply separate trees**, and:
+
+> **If both arms run in the SAME working tree, the solver's uncommitted patches are
+> visible to the student.** Revisions match, the invariant passes, and the
+> environment pass-note channel I.38 exists to close is **wide open**.
+
+So the rule needs both halves, and they pull in opposite directions:
+
+| quantity | requirement | why |
+|---|---|---|
+| `:cycle/environment-revision` | **equal** across arms | same starting environment (I.39) |
+| `:cycle/environment-checkout` | **distinct** across arms | the solver's working state must not reach the student (I.38) |
+
+**Same revision, different trees.** Stated once, it is obvious; the invariant has
+been shipping with only the first half since `d8b8e748`, and no test would have
+caught a single shared directory.
+
+**IF** A3 had been satisfied by deriving from one repo path, **HOWEVER** that would
+have made both arms agree trivially *and* left them physically sharing a tree,
+**THEN** the checkout must be per-arm and asserted distinct, **BECAUSE** the
+invariant's job is to detect exactly the configuration that would otherwise pass
+it.
+
+**Credit where due:** four stops, four correct, and this one found a live hole in
+code that had already passed my review.
