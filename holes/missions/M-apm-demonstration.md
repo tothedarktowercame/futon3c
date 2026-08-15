@@ -9043,3 +9043,45 @@ note.
 
 **`:record-measurement` is unaffected and buildable**; codex-4 held it only because
 the packet paired the two. Re-dispatched alone.
+
+## I.63 Four of seventeen measures are derivable — and `:measurement-populated` is satisfied by declaring ignorance
+
+`:record-measurement` lands (`6c7f3525`), engine-derived, with coverage
+mutation-verified. **The split it produced is the most informative result of the
+run.**
+
+**Genuinely derived (4):** terminal disposition; residual executable sorries; axiom
+cleanliness; locked-lemma exposure.
+
+**Explicitly unset (13), and they cluster:**
+
+| cluster | fields | what it means |
+|---|---|---|
+| **no producer / no event** | statement defects, scribe lane coverage, arc-lane yield, rewrite rule offered-and-used, contract leaks | the *event* is never emitted — same family as the missing gate |
+| **cross-cycle join** | promoted-then-surfaced-then-used, review escape rate, unconsumed promotions | **cannot exist at n=1** — correct to be unset in frame-1 |
+| **corpus scan** | duplicate declarations, promotion coverage, import-only edges | needs a denominator over the corpus |
+| **wiring only** | attempts-or-closer-hops | **the guidance count EXISTS** (built earlier from the Agency log) — it is simply not reachable from this tool |
+| **shape gap** | memories promoted | promotions do not identify memory artifacts |
+
+> **Only the last two clusters are defects.** The cross-cycle joins are *supposed* to
+> be empty at frame-1, and saying so with a reason is the honest outcome. The "no
+> producer" cluster is five more instances of the pattern this run keeps finding.
+
+### And the gate is weaker than its name
+
+Probed: **`:measurement-populated` holds when ALL SEVENTEEN fields are unset.**
+
+```
+ALL-UNSET holds? => true
+```
+
+The capability checks that every required field was **declared**, not that any was
+**measured**. That is defensible — an honest "unset because X" beats silence, and it
+is what makes the 13 above visible at all — **but the capability's name promises more
+than it checks, and a reader of a passing trace would not know that 13 of 17 measures
+were absent.**
+
+**For the consolidated report:** this is not a bug to fix silently. Either the
+capability should require a minimum measured fraction, or the trace should surface
+the derived-vs-unset ratio where a reader will see it. **Operator's call — it changes
+what a passing round-1 authorization means.**
