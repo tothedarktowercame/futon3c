@@ -2,7 +2,9 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.agents.zai-api :as zai]
-            [futon3c.evidence.boundary :as boundary]))
+            [futon3c.evidence.boundary :as boundary]
+            [futon3c.peripheral.memory-backend :as memory-backend]
+            [futon3c.peripheral.tools :as tools]))
 
 (defn- tool-call
   [i]
@@ -215,3 +217,29 @@
       (is (= :invalid-entry (get-in call [:refusal :error/code])))
       (is (= :shape (get-in call [:refusal :invariant/violation :kind])))
       (is (= reason (get-in call [:refusal :invariant/violation :reason]))))))
+
+(deftest memory-read-is-registered-and-dispatched-with-the-evidence-store
+  (let [specs (#'zai/openai-tools :full)
+        spec (some #(when (= "memory_read" (get-in % [:function :name])) %)
+                   specs)
+        captured (atom nil)
+        store (atom {:entries {} :order []})
+        call {:id "tc-memory-read"
+              :type "function"
+              :function {:name "memory_read"
+                         :arguments "{\"evidence_id\":\"e-one\"}"}}
+        executed
+        (with-redefs [memory-backend/memory-read
+                      (fn [ctx args]
+                        (reset! captured [ctx args])
+                        {:ok true :result {:items []}})]
+          (#'zai/execute-tool
+           (tools/make-mock-backend)
+           {:agent-id "zai-test" :session-id-atom (atom "sid")
+            :evidence-store store}
+           call))]
+    (is (some? spec))
+    (is (str/includes? (get-in spec [:function :description]) "FULL BODY"))
+    (is (= {:evidence-id "e-one"} (second @captured)))
+    (is (identical? store (:evidence-store (first @captured))))
+    (is (true? (get-in executed [:result :ok])))))

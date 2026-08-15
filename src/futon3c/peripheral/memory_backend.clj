@@ -224,6 +224,44 @@
       (:session-ref disc) (assoc :session-ref (:session-ref disc))
       (:discipline-kind disc) (assoc :discipline-kind (:discipline-kind disc)))))
 
+(defn- full-evidence-item
+  "Project one EvidenceEntry for the explicit second-hop read. Unlike
+   `evidence-item`, this deliberately includes the complete evidence body."
+  [e]
+  (let [body (:evidence/body e)]
+    (cond-> {:id (:evidence/id e)
+             :at (:evidence/at e)
+             :body body}
+      (:evidence/author e) (assoc :author (:evidence/author e))
+      (:evidence/type e) (assoc :type (:evidence/type e))
+      (:evidence/claim-type e) (assoc :claim-type (:evidence/claim-type e))
+      (:evidence/tags e) (assoc :tags (:evidence/tags e))
+      (:name body) (assoc :name (:name body))
+      (:hook body) (assoc :hook (:hook body)))))
+
+(defn memory-read
+  "Read one full EvidenceEntry by id. This is the explicit second hop after
+   envelope-grade search/graph results; list views continue to omit bodies."
+  [{:keys [evidence-store]} {:keys [evidence-id]}]
+  (if-not (and (string? evidence-id) (not (str/blank? evidence-id)))
+    {:ok false
+     :error {:error/component :memory-read
+             :error/code :missing-evidence-id
+             :error/field :evidence-id
+             :error/message "memory_read requires a non-blank :evidence-id"}}
+    (let [durable (or evidence-store (durable-evidence-store))
+          entry (or (when durable
+                      (safe-call 'futon3c.evidence.store/get-entry*
+                                 durable evidence-id))
+                    (when-not evidence-store
+                      (safe-call 'futon3c.evidence.store/get-entry evidence-id)))]
+      {:ok true
+       :result (envelope {:store :evidence
+                          :mode :full-body
+                          :evidence-id evidence-id}
+                         (if entry [(full-evidence-item entry)] [])
+                         1)})))
+
 (defn- thread-item
   "Project a ThreadProjection into the §12.3 item shape."
   [t]

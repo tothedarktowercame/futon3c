@@ -5,6 +5,7 @@
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-backend :as memory-backend]
+            [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.substrate.client :as substrate]))
 
 (use-fixtures
@@ -95,3 +96,33 @@
       (is (= [{:id "hx:test" :type :test/edge
                :endpoints ["mission:M-x" "cap:y"]}]
              (get-in resp [:result :items]))))))
+
+(deftest memory-read-opens-one-recorded-memory-without-leaking-list-bodies
+  (let [ctx {:agent-id "zai-test" :session-id "session-1"
+             :domain :mathematics :evidence-store estore/!store}
+        payload {:name "readable-memory"
+                 :kind :feedback
+                 :hook "when a search result needs detail"
+                 :body {:lesson "the full body survived the second hop"}
+                 :subjects [{:ref/type :problem :ref/id "p"}]}
+        receipt (with-redefs [memory-write/post-hyperedge!
+                              (fn [_ _] {:ok true})]
+                  (memory-write/record-memory! ctx payload))
+        evidence-id (:id receipt)
+        opened (memory-backend/memory-read ctx {:evidence-id evidence-id})
+        item (get-in opened [:result :items 0])
+        missing (memory-backend/memory-read ctx {:evidence-id "e-unknown"})
+        invalid (memory-backend/memory-read ctx {})
+        listed (memory-backend/memory-search ctx {:type :memory})
+        list-item (first (get-in listed [:result :items]))]
+    (is (:ok receipt))
+    (is (= "the full body survived the second hop"
+           (get-in item [:body :body :lesson])))
+    (is (= "readable-memory" (:name item)))
+    (is (= "when a search result needs detail" (:hook item)))
+    (is (true? (:ok missing)))
+    (is (empty? (get-in missing [:result :items])))
+    (is (false? (:ok invalid)))
+    (is (= :evidence-id (get-in invalid [:error :error/field])))
+    (is (not (contains? list-item :body))
+        "memory_search remains an envelope view without body leakage")))

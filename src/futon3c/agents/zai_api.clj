@@ -262,6 +262,14 @@
                   :limit {:type "integer" :description "Max items (default 20, max 100)."}
                   :include_ephemeral {:type "boolean"}}
                  [])}
+   {:name "memory_read"
+    :description (str "Open the tin by id: fetch ONE evidence entry with its FULL BODY. "
+                      "Use this second hop after memory_search or evidence_graph "
+                      "returns an envelope containing an evidence id.")
+    :parameters (json-schema
+                 {:evidence_id {:type "string"
+                                :description "Evidence entry id, for example e-..."}}
+                 ["evidence_id"])}
    {:name "tool_history"
     :description "Read the clock-store session state for this agent: current clock target, edit activity, last auto-clock witness. Returns the memory envelope. Read-only."
     :parameters (json-schema {} [])}
@@ -298,7 +306,7 @@
 (def ^:private memory-family-tool-names
   "The memory write/read tools plus the two orientation tools; removable per
    :memory-mode for the M-custom-harness §8.4 comparison conditions."
-  #{"memory_record" "memory_search" "tool_history" "evidence_graph" "pattern_memory"
+  #{"memory_record" "memory_search" "memory_read" "tool_history" "evidence_graph" "pattern_memory"
     "recent_coordination" "mission_context"})
 
 (def ^:private orientation-tool-names
@@ -406,7 +414,8 @@
                     :session-id (some-> session-id-atom deref)
                     :dispatch-id dispatch-id
                     :turn-id turn-id
-                    :cwd cwd}
+                    :cwd cwd
+                    :evidence-store evidence-store}
         result
         (cond
           (:__unparseable_arguments args)
@@ -427,7 +436,7 @@
                             "write_file" "run_shell" "run_readonly"
                             "reflect_ns" "reflect_var" "reflect_deps"
                             "reflect_java_class" "psr_search" "psr_select"
-                            "pur_update" "memory_record" "irc_send"}
+                            "pur_update" "memory_record" "memory_read" "irc_send"}
                           name))
           (fail (str "TOOL-CALL ARGUMENTS ARRIVED EMPTY at the harness for "
                      name " — a transport/truncation artifact, not you "
@@ -524,6 +533,10 @@
              (seq (:tags args)) (assoc :tags (vec (:tags args)))
              (:limit args) (assoc :limit (:limit args))
              (:include_ephemeral args) (assoc :include-ephemeral? true)))
+
+          "memory_read"
+          (memory-backend/memory-read
+           memory-ctx {:evidence-id (:evidence_id args)})
 
           "tool_history"
           (memory-backend/tool-history
