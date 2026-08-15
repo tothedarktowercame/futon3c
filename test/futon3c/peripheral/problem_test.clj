@@ -12,7 +12,7 @@
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools])
   (:import [java.nio.file Files]
-           [java.nio.file.attribute FileAttribute]))
+           [java.nio.file.attribute FileAttribute FileTime]))
 
 (def dispatch-packet
   (apply str (repeat 220 "p")))
@@ -809,6 +809,151 @@
                                :args ["M" "C" {}]})]
     (is (= :phase-tool-not-allowed (:error/code advanced)))
     (is (= :setup (get-in advanced [:error/context :phase])))))
+
+(defn- machine-frame-result [scaffold closing witness claimed?]
+  (let [p (harness-measured-problem
+           {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            :harness-tree-dirty? false})
+        start (runner/start p {:session-id "frame-emission" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        frame-state (assoc (:state begun)
+                           :current-phase :frame
+                           :cycle/outputs
+                           {:registration :r
+                            :store-snapshot :s
+                            :stratum-frozen-at 1
+                            :environment-revision "env"
+                            :harness-revision
+                            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                            :environment-checkouts {}})
+        emitted (runner/step
+                 p frame-state
+                 {:tool :emit-frame
+                  :args [{:scaffold-path scaffold :closing-path closing
+                          :containment-witness-path witness
+                          :containment-claimed? claimed?}]})
+        advanced (runner/step
+                  p (:state emitted)
+                  {:tool :advance-problem-phase
+                   :args ["M" "C"
+                          {:frame {:frame/id "FORGED"
+                                   :frame/scaffold-hash "FORGED"
+                                   :frame/closing-hash "FORGED"}
+                           :containment-probe
+                           {:cprobe/id "FORGED" :cprobe/recorded? true}}]})]
+    {:emitted emitted :advanced advanced}))
+
+(defn- timestamp-frame-snapshots! [scaffold closing]
+  (Files/setLastModifiedTime scaffold (FileTime/fromMillis 1000))
+  (Files/setLastModifiedTime closing (FileTime/fromMillis 2000)))
+
+(defn- frame-derived-trace [frame-output]
+  (let [cycle-id "cycle/frame-test"
+        registration {:problem (:problem synthetic-trace)
+                      :required-capabilities []
+                      :required-measurement-fields []
+                      :reg/solver-seat "solver"}
+        frame (assoc (:frame frame-output) :frame/cycle cycle-id)
+        probe (assoc (:containment-probe frame-output)
+                     :cprobe/frame (:frame/id frame))
+        entities [{:cycle/id cycle-id :cycle/closed-at "closed"
+                   :cycle/stratum-frozen-at 1 :cycle/assigned-at 2}
+                  frame
+                  {:snap/id "snap/frame-test" :snap/cycle cycle-id
+                   :snap/memory-ids []}
+                  probe
+                  {:meas/id "meas/frame-test" :meas/cycle cycle-id
+                   :meas/values {} :meas/unset {}}]
+        trace (apm-harness/derive-trace registration cycle-id entities)]
+    {:registration registration :trace trace}))
+
+(defn- frame-validation-failures [frame-output]
+  (let [{:keys [registration trace]} (frame-derived-trace frame-output)]
+    (prereg/trace-content-failures registration trace
+                                   {:status :ok :jobs []} "solver")))
+
+(deftest machine-produced-scaffold-identical-frame-fires-f1
+  (let [scaffold (Files/createTempFile
+                  "problem-frame-scaffold-identical-" ".lean"
+                  (make-array FileAttribute 0))
+        closing (Files/createTempFile
+                 "problem-frame-closing-identical-" ".lean"
+                 (make-array FileAttribute 0))]
+    (try
+      (spit (.toFile scaffold) "theorem scaffold : True := by trivial\n")
+      (spit (.toFile closing) "theorem scaffold : True := by trivial\n")
+      (timestamp-frame-snapshots! scaffold closing)
+      (let [{:keys [emitted]}
+            (machine-frame-result scaffold closing nil false)
+            output (:result emitted)]
+        (is (:ok emitted))
+        (is (some #{:f1-scaffold-identical-frame}
+                  (frame-validation-failures output))
+            "F1 must fire on equal hashes produced from the actual file bytes"))
+      (finally
+        (Files/deleteIfExists scaffold)
+        (Files/deleteIfExists closing)))))
+
+(deftest machine-produced-unrecorded-containment-claim-fires-f8
+  (let [scaffold (Files/createTempFile
+                  "problem-frame-scaffold-" ".lean"
+                  (make-array FileAttribute 0))
+        closing (Files/createTempFile
+                 "problem-frame-closing-" ".lean"
+                 (make-array FileAttribute 0))]
+    (try
+      (spit (.toFile scaffold) "scaffold\n")
+      (spit (.toFile closing) "closing\n")
+      (timestamp-frame-snapshots! scaffold closing)
+      (let [{:keys [emitted]} (machine-frame-result scaffold closing nil true)
+            output (:result emitted)]
+        (is (false? (get-in output [:containment-probe :cprobe/recorded?])))
+        (is (some #{:f8-unwitnessed-containment}
+                  (frame-validation-failures output))
+            "F8 must fire when the arm claims containment without a witness"))
+      (finally
+        (Files/deleteIfExists scaffold)
+        (Files/deleteIfExists closing)))))
+
+(deftest frame-advance-retains-tool-result-not-caller-forgeries
+  (let [scaffold (Files/createTempFile
+                  "problem-frame-scaffold-" ".lean"
+                  (make-array FileAttribute 0))
+        closing (Files/createTempFile
+                 "problem-frame-closing-" ".lean"
+                 (make-array FileAttribute 0))
+        witness (Files/createTempFile
+                 "problem-frame-witness-" ".edn"
+                 (make-array FileAttribute 0))]
+    (try
+      (spit (.toFile scaffold) "scaffold\n")
+      (spit (.toFile closing) "closing\n")
+      (spit (.toFile witness) "{:contained? true}\n")
+      (timestamp-frame-snapshots! scaffold closing)
+      (let [{:keys [emitted advanced]}
+            (machine-frame-result scaffold closing witness true)
+            tool-output (:result emitted)
+            outputs (get-in advanced [:state :cycle/outputs])
+            trace (:trace (frame-derived-trace
+                           (select-keys outputs [:frame :containment-probe])))]
+        (is (:ok advanced) (pr-str advanced))
+        (is (= (:frame tool-output) (:frame outputs)))
+        (is (= (:containment-probe tool-output)
+               (:containment-probe outputs)))
+        (is (not= "FORGED" (get-in outputs [:frame :frame/id])))
+        (is (= (select-keys (:frame trace) [:scaffold-hash :closing-hash])
+               {:scaffold-hash
+                (get-in tool-output [:frame :frame/scaffold-hash])
+                :closing-hash
+                (get-in tool-output [:frame :frame/closing-hash])}))
+        (is (true? (:containment-probe-recorded? trace))))
+      (finally
+        (Files/deleteIfExists scaffold)
+        (Files/deleteIfExists closing)
+        (Files/deleteIfExists witness)))))
 
 (defn- register-tool-run [clock snapshot]
   (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

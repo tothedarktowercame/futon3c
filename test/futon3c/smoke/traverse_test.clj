@@ -4,7 +4,9 @@
             [clojure.test :refer [deftest is]]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
-            [futon3c.peripheral.tools :as tools]))
+            [futon3c.peripheral.tools :as tools])
+  (:import [java.nio.file Files]
+           [java.nio.file.attribute FileAttribute FileTime]))
 
 (def ^:private env-revision
   "a92ffb6c9cda32a33df0d259df552b1dbc611daf")
@@ -75,8 +77,37 @@
      (fn [{:keys [state] :as walk} tool]
        (if (:stop walk)
          (reduced walk)
-         (let [result (runner/step p state
-                                   {:tool tool :args (get tool-args tool [])})]
+         (let [result
+               (if (= tool :emit-frame)
+                 (let [scaffold (Files/createTempFile
+                                 "smoke-scaffold-" ".lean"
+                                 (make-array FileAttribute 0))
+                       closing (Files/createTempFile
+                                "smoke-closing-" ".lean"
+                                (make-array FileAttribute 0))
+                       witness (Files/createTempFile
+                                "smoke-containment-" ".edn"
+                                (make-array FileAttribute 0))]
+                   (try
+                     (spit (.toFile scaffold) "scaffold\n")
+                     (spit (.toFile closing) "closing\n")
+                     (spit (.toFile witness) "{:contained? true}\n")
+                     (Files/setLastModifiedTime scaffold
+                                                (FileTime/fromMillis 1000))
+                     (Files/setLastModifiedTime closing
+                                                (FileTime/fromMillis 2000))
+                     (runner/step
+                      p state
+                      {:tool tool
+                       :args [{:scaffold-path scaffold :closing-path closing
+                               :containment-witness-path witness
+                               :containment-claimed? true}]})
+                     (finally
+                       (Files/deleteIfExists scaffold)
+                       (Files/deleteIfExists closing)
+                       (Files/deleteIfExists witness))))
+                 (runner/step p state
+                              {:tool tool :args (get tool-args tool [])}))]
            (if (:ok result)
              {:state (:state result)}
              {:state state

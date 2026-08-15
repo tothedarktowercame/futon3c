@@ -175,6 +175,10 @@
           (when (= tool tool-id) result))
         (reverse (:steps state))))
 
+(defn- recorded-frame-output [state]
+  (some-> (recorded-tool-result state :emit-frame)
+          (select-keys [:frame :containment-probe])))
+
 (defn- recorded-student-assignments [state]
   ;; :steps spans the whole peripheral session, including completed cycles.
   ;; Reset at the latest assignment so attempt 1 of a new cycle cannot be
@@ -236,6 +240,7 @@
         harness (recorded-harness-measurement state)
         harness-revision (:harness-revision harness)
         store-snapshot (recorded-tool-result state :snapshot-store)
+        frame-output (recorded-frame-output state)
         frozen-at (:cycle/stratum-frozen-at
                    (recorded-tool-result state :freeze-stratum))
         assigned-at (:assigned-at (recorded-tool-result state :assign-checkouts))]
@@ -267,6 +272,9 @@
       (some? store-snapshot)
       (assoc :store-snapshot store-snapshot)
 
+      (seq frame-output)
+      (merge frame-output)
+
       (some? frozen-at)
       (assoc :stratum-frozen-at frozen-at)
 
@@ -288,8 +296,13 @@
     {:failure :harness-tree-dirty}))
 
 (defn- thread-current-phase [state tool args]
-  (if (= tool advance)
+  (case tool
+    :advance-problem-phase
     (conj (vec args) {:cycle/current-phase (:current-phase state)})
+
+    :emit-frame
+    (conj (vec args) {:cycle/id (:current-cycle-id state)})
+
     args))
 
 (defn- now-string []
@@ -1027,6 +1040,49 @@
           {:ok true :result {:cycle/phase next-phase}}
           {:ok false :error (str "advance-problem-phase has no open phase: "
                                  current-phase)}))
+
+      (= tool-id :emit-frame)
+      (let [options (first args)
+            cycle-id (:cycle/id (last args))
+            scaffold-path (:scaffold-path options)
+            closing-path (:closing-path options)
+            witness-path (:containment-witness-path options)
+            scaffold-at (.toMillis
+                         (Files/getLastModifiedTime
+                          (.toPath (io/file (str scaffold-path)))
+                          (make-array java.nio.file.LinkOption 0)))
+            closing-at (.toMillis
+                        (Files/getLastModifiedTime
+                         (.toPath (io/file (str closing-path)))
+                         (make-array java.nio.file.LinkOption 0)))
+            scaffold-hash (apm-harness/sha256-bytes
+                           (apm-harness/file-bytes scaffold-path))
+            closing-hash (apm-harness/sha256-bytes
+                          (apm-harness/file-bytes closing-path))
+            frame-id (str "frame/" cycle-id)
+            witness-recorded? (and (some? witness-path)
+                                   (.isFile (io/file (str witness-path))))]
+        (when-not (< scaffold-at closing-at)
+          (throw (ex-info "frame snapshots were not taken at distinct times"
+                          {:scaffold-path (str scaffold-path)
+                           :scaffold-at scaffold-at
+                           :closing-path (str closing-path)
+                           :closing-at closing-at})))
+        {:ok true
+         :result
+         {:frame {:frame/id frame-id
+                  :frame/cycle cycle-id
+                  :frame/scaffold-hash scaffold-hash
+                  :frame/closing-hash closing-hash
+                  :frame/scaffold-at scaffold-at
+                  :frame/closing-at closing-at
+                  :frame/keys [:scaffold :closing]}
+          :containment-probe
+          {:cprobe/id (str "cprobe/" frame-id)
+           :cprobe/frame frame-id
+           :cprobe/claimed? (true? (:containment-claimed? options))
+           :cprobe/recorded? witness-recorded?
+           :cprobe/passed witness-recorded?}}})
 
       :else
       (tools/execute-tool inner-backend tool-id args))))
