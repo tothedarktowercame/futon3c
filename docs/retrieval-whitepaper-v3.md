@@ -336,6 +336,57 @@ terms, memory's durable niche is glue — is preregistered as P2's kind
 distribution. [v2 extraction with justifications; the model-of-runner
 rung may join here.]
 
+## 7a. The same loop over software, and the operator's corrections as the corpus [NOTE — Joe, 2026-08-15]
+
+The system's subject so far has been mathematics: lemmas, fits, need
+vocabulary. Nothing in the loop requires that. A single day's work
+building this experiment's own apparatus produced the same shapes, over
+code rather than proofs, and one shape that the mathematics corpus does
+not readily supply.
+
+**What the software session produced, in the mathematics vocabulary.**
+The repeated defect was *written but not wired up*, and it recurred at
+four distinct levels: a value moved from a comment into EDN and still
+read by nothing; a predicate declared and never called; a docstring
+claiming atomicity the implementation lacked; and — the deepest — three
+tools declared in a **phase the machine could not enter**, because the
+engine clears the cycle the moment an advance *returns* the last phase.
+That last one had generated an entire second pipeline around the gap it
+left. Each instance is a *fit* in exactly the regulative sense §7
+describes: not a term to reuse, but a shape of glue that failed the same
+way twice.
+
+**The mineable unit was the operator's correction, not the agent's.**
+The agent's self-corrections were already written down — that is what the
+mission record is for, and a system that mines only those learns from a
+party with an interest in the result. The corrections that moved the work
+came from outside it, and several were of recognisable *type*:
+
+- *contradiction in terms* — "three cold attempts in the same tree" is
+  either cold or shared; the spec had used a word the role card defined
+  otherwise;
+- *category collision* — an experiment's validator living in a
+  cellular-automata repo whose pins attest to a different result;
+- *premise challenge* — "if it is a mechanical check I cannot see how it
+  would be self-certification";
+- *scope honesty* — "are we talking about 5 total dispatches now, or
+  more?".
+
+**Two of those four are mechanically checkable.** A contradiction in
+terms is a spec using a term against the definition its own source of
+intent gives; a category collision is content whose declared purpose does
+not match its container's. Both are comparisons between an artifact and a
+document that already exists. The other two are not obviously reducible,
+and pretending otherwise would be the supply-side error §1.2 warns about.
+
+**Why this belongs in a memory paper rather than a methodology one.**
+The corrections that could be automated are exactly the ones with a
+*written referent* — a role card, a README. That is the demand-side
+result again, in a second domain: the value was not in storing what the
+operator said, but in knowing which of his objections had a document
+behind them. **Preregistered as a note, not a result: n=1, one operator,
+one day, and the agent doing the mining is the party being corrected.**
+
 ## 8. Asserted on our own authority [TO MAINTAIN]
 
 - The thirteen-instance catalogue is complete for the period as far as
