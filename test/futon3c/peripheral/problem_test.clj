@@ -455,3 +455,25 @@
         r (tools/execute-tool b :problem-load ["C1" 99])]
     (is (false? (:ok r)))
     (is (re-find #"problem-load failed" (:error r)))))
+
+(deftest assign-checkouts-is-all-or-nothing
+  ;; Verified before the rollback existed: when the student arm failed, the
+  ;; solver's worktree and branch survived on disk, and the retry then died on
+  ;; "frame already exists". A sticky failure is worse than a loud one, because
+  ;; the obvious response -- try again -- cannot work.
+  (let [rolled (atom [])
+        provisioner (fn [{:keys [arm]}]
+                      (if (= "student" arm)
+                        (throw (ex-info "student provisioning failed" {}))
+                        {:checkout "/tmp/solver" :branch "exp/b-p-solver"
+                         :base-revision "abc" :frame/id "b-p-solver"}))
+        b (problem/make-checkout-provisioning-backend
+           (tools/make-mock-backend) provisioner
+           (fn [frame] (swap! rolled conj frame)))
+        r (tools/execute-tool b :assign-checkouts
+                              [{:problem "p" :batch "b" :base-rev "HEAD"
+                                :solver-seat "codex-4" :student-seat "zai-1"
+                                :recall-system "v1"}])]
+    (is (false? (:ok r)))
+    (is (= 1 (:rolled-back r)) "the solver frame must be rolled back")
+    (is (= ["/tmp/solver"] (mapv :checkout @rolled)))))

@@ -286,28 +286,59 @@
      ;; The script's default omits batch and collides on the second cycle.
      :branch (str "exp/" batch "-" problem "-" arm-name)}))
 
-(defrecord CheckoutProvisioningBackend [inner-backend provisioner-fn]
+(def ^:private apm-root "/home/joe/code/apm-lean")
+
+(defn- rollback-frame!
+  "Undo one provisioned frame: worktree, branch, and record.
+
+  Assignment must be ALL-OR-NOTHING. Verified before this existed: when the
+  student arm failed, the solver's worktree and branch survived, and the retry
+  then died on \"frame already exists\" -- a half-provisioned cycle that could not
+  be re-registered without manual cleanup. A sticky failure is worse than a loud
+  one, because the obvious response (try again) cannot work."
+  [{:keys [checkout branch] :as frame}]
+  (when checkout
+    (shell/sh "git" "-C" apm-root "worktree" "remove" "--force" checkout))
+  (when branch
+    (shell/sh "git" "-C" apm-root "branch" "-D" branch))
+  (when-let [frame-id (:frame/id frame)]
+    (let [batch (first (str/split frame-id #"-"))]
+      (io/delete-file (io/file experiment-frames-root batch
+                               (str frame-id ".edn")) true)))
+  (shell/sh "git" "-C" apm-root "worktree" "prune"))
+
+(defrecord CheckoutProvisioningBackend [inner-backend provisioner-fn rollback-fn]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
     (if (= tool-id :assign-checkouts)
-      (let [[options] args]
+      (let [[options] args
+            done (atom [])]
         (try
           {:ok true
            :result
            {:environment-checkouts
             (into {}
                   (map (fn [arm]
-                         [arm (provisioner-fn (checkout-options options arm))])
+                         (let [frame (provisioner-fn (checkout-options options arm))]
+                           (swap! done conj frame)
+                           [arm frame]))
                        [:solver :student]))}}
           (catch Throwable t
-            {:ok false :error (str "assign-checkouts failed: " (.getMessage t))})))
+            ;; Roll back whatever already succeeded, so a retry is possible.
+            (doseq [frame @done]
+              (try (rollback-fn frame) (catch Throwable _ nil)))
+            {:ok false
+             :error (str "assign-checkouts failed: " (.getMessage t))
+             :rolled-back (count @done)})))
       (tools/execute-tool inner-backend tool-id args))))
 
 (defn make-checkout-provisioning-backend
   ([inner-backend]
-   (make-checkout-provisioning-backend inner-backend provision-frame!))
+   (make-checkout-provisioning-backend inner-backend provision-frame! rollback-frame!))
   ([inner-backend provisioner-fn]
-   (->CheckoutProvisioningBackend inner-backend provisioner-fn)))
+   (make-checkout-provisioning-backend inner-backend provisioner-fn rollback-frame!))
+  ([inner-backend provisioner-fn rollback-fn]
+   (->CheckoutProvisioningBackend inner-backend provisioner-fn rollback-fn)))
 
 (defrecord GroundControlBackend [inner-backend dispatch-fn]
   tools/ToolBackend
