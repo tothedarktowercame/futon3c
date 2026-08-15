@@ -347,10 +347,15 @@ not readily supply.
 **What the software session produced, in the mathematics vocabulary.**
 The repeated defect was *written but not wired up*, and it recurred at
 four distinct levels: a value moved from a comment into EDN and still
-read by nothing; a predicate declared and never called; a docstring
-claiming atomicity the implementation lacked; and — the deepest — three
-tools declared in a **phase the machine could not enter**, because the
-engine clears the cycle the moment an advance *returns* the last phase.
+read by nothing (the attempt caps; moved `44a3f1e4`, found decorative
+`9d9e7a07`, mission I.57); a predicate declared and never called (the
+engine's own `:required-outputs` advance gate, present in two docstrings
+and read by nothing — I.30; wired `0907fc6c`, `e6caa48f`); a docstring
+claiming atomicity the implementation lacked (proof's `save-state!`,
+"atomic write and version bump" — I.50; replaced by the append-only
+store, `13130808`); and — the deepest — three tools declared in a
+**phase the machine could not enter**, because the engine clears the
+cycle the moment an advance *returns* the last phase (`44d8fe6d`).
 That last one had generated an entire second pipeline around the gap it
 left. Each instance is a *fit* in exactly the regulative sense §7
 describes: not a term to reuse, but a shape of glue that failed the same
@@ -386,6 +391,21 @@ result again, in a second domain: the value was not in storing what the
 operator said, but in knowing which of his objections had a document
 behind them. **Preregistered as a note, not a result: n=1, one operator,
 one day, and the agent doing the mining is the party being corrected.**
+
+**Postscript (2026-08-15, same day).** The class recurred while this
+note was being written. An independent pre-run audit of the finished
+peripheral (`TN-problem-peripheral-RC-fable-review.md`) found the
+round-1 registration's own resource pins — `:reg/environment-revision`,
+`:reg/harness-revision` — written into the frozen EDN and read by
+nothing in the engine or the validator: a cycle provisioned at the wrong
+revision would have validated cleanly. Wiring began the same afternoon
+(`29638fde`, harness revision measured from the repository at
+cycle-begin). A note about "written but not wired up" was drafted while
+a fresh instance sat unwired in the registration it describes — which is
+the §2.2 mechanism again: the pins were well-formed, so nothing about
+their presence disclosed that nothing read them. The catch came from the
+standing countermeasure §2.2 names last — a fresh reader charged with
+disbelieving the document.
 
 ## 8. Asserted on our own authority [TO MAINTAIN]
 
