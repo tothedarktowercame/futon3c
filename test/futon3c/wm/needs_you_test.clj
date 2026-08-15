@@ -144,3 +144,29 @@
                       written)))
       (finally
         (delete-tree! (.getParent (io/file path)))))))
+
+(deftest compromise-finding-outranks-a-full-board-of-routine-work
+  ;; At -1.0 this lost to ten ordinary items at -5.0 and fell into the overflow,
+  ;; so the operator would have seen a count instead of the compromise.
+  (let [p (str (java.io.File/createTempFile "needs" ".edn"))
+        board (vec (for [i (range 10)]
+                     {:id (str "wm-" i) :lane :nag :g-total -5.0 :salience 5.0}))]
+    (spit p (pr-str board))
+    (needs-you/emit-proctor-finding!
+     #:finding{:id "f1" :cycle-id "c1" :summary "seats not exclusive"
+               :compromised? true}
+     {:path p})
+    (let [out (edn/read-string (slurp p))]
+      (is (some #(re-find #"apm-proctor" (str (:id %))) out)
+          "a compromised cycle must never be displaced into the overflow"))))
+
+(deftest unreadable-board-is-not-an-empty-board
+  ;; Defaulting to [] would rewrite the file with only this finding, deleting
+  ;; every unrelated operator item with no signal.
+  (let [p (str (java.io.File/createTempFile "needs" ".edn"))]
+    (spit p "[{:id \"truncated-mid-write")
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (needs-you/emit-proctor-finding!
+                  #:finding{:id "f1" :cycle-id "c1" :summary "x"
+                            :compromised? true}
+                  {:path p})))))

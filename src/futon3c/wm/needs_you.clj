@@ -162,7 +162,13 @@
    :target cycle-id
    :salience (if compromised? 1.0 0.0)
    :repo "futon3c"
-   :g-total (if compromised? -1.0 0.0)
+   ;; A compromised cycle outranks EVERY routine item, mirroring the overflow
+   ;; advisory's Double/MAX_VALUE at the other end of the same scale. At -1.0 it
+   ;; lost to ten ordinary WM items at -5.0 and fell into the overflow, so the
+   ;; operator would have seen "10 more items" instead of the compromise. This
+   ;; is not priority inflation: when a cycle is compromised, every other item
+   ;; on the board concerns work whose results may now be invalid.
+   :g-total (if compromised? (- Double/MAX_VALUE) 0.0)
    :emitted-at (now-iso)
    :proctor/finding finding})
 
@@ -233,9 +239,16 @@
              :or {top-k default-top-k}}]
    (let [path (or path *needs-you-path*)
          file (io/file path)
+         ;; An unreadable board is NOT an empty board. Defaulting to [] here
+         ;; would rewrite the file with only this finding, silently deleting
+         ;; every unrelated operator item -- verified: a truncated file left
+         ;; exactly one surviving id. Losing one emission loudly beats losing
+         ;; the operator's whole board quietly; the proctor also reports direct.
          current (if (.exists file)
-                   (try (edn/read-string (slurp file))
-                        (catch Throwable _ []))
+                   (try (vec (edn/read-string (slurp file)))
+                        (catch Throwable t
+                          (throw (ex-info "refusing to emit over an unreadable needs-you board"
+                                          {:path path :cause (.getMessage t)}))))
                    [])]
      (emit-needs-you! (conj (vec (filter map? current))
                             (proctor-finding->needs-you-item finding))
