@@ -8935,3 +8935,52 @@ a timestamp, for the same reason every other field here is machine-written.
 not exist** — a stamp at a seam that never fires, a tool in a phase that cannot be
 entered, a count from a field nothing reads. The specification was confident every
 time; only the attempt to build it produced the falsification.
+
+## I.61 Three required capabilities have no attesting step — a phase-design gap
+
+**Capability probes land** (`85c379a9`), engine-derived, each citing the
+`:evidence/id` of the step that attests it. Mutation-verified two ways: citing
+`:last-evidence-id` instead of the attesting step reddens the pairing test, and
+fabricating an id for an unattested capability reddens the honest-absence test.
+
+### codex-4 corrected my mapping and found a third gap
+
+I flagged two capabilities as unattested; **it found three.** Independently
+confirmed by auditing `required-outputs` against `base-phase-tools` per phase:
+
+| required output | phase | producing tool |
+|---|---|---|
+| `:launch-gate-event` | `:adjudicate` | **none** — only `:write-disposition`, `:write-use` |
+| `:measurement` | `:close` | **none** — only trace/probe/authorization tools |
+
+*(`:intervene`'s empty base tool set is not a gap — `autoconf` supplies
+`:write-substrate` or `:tune-harness` by mode.)*
+
+So three of the nine required capabilities cannot be probed:
+
+- **`:registration-gates-launch`** — needs the launch-gate event, which no tool
+  produces;
+- **`:measurement-populated`** — needs the measurement, which no tool produces;
+- **`:need-retrieval`** — needs the retrieval probe, whose producer is unbuilt.
+
+**They receive no probe, so F9 fails honestly** with
+`:f9-capability-probe-missing`. **A fabricated id would have satisfied exactly the
+check designed to catch this**, which is why the second mutation matters more than
+the first.
+
+### What this is
+
+**Two required outputs are declared with no tool able to produce them.** Same family
+as the unreachable `:close` phase (I.60) and the unread attempt cap (I.57), and it
+means the cycle as specified **cannot currently close honestly**: `:emit-trace`
+refuses without the producers, and F9 refuses without the probes.
+
+**That is the machinery working.** Every one of these was invisible while the checks
+were absent; each became loud the moment a real gate was wired to the real record.
+
+### Scope note
+
+**This is new work, not in the estimate.** The remaining sequence is now: retrieval
+probes, the two missing producers (gate event, measurement), `:validate-trace` +
+`:write-authorization`, attempt-cap enforcement, A4 — **six or seven packets, not
+the two left over from the original count.**
