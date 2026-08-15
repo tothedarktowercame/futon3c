@@ -8225,3 +8225,63 @@ and for the same reason.
 > defensible for one supervised cycle and is exactly what must not be true by
 > frame-10. **It should be stated as a group rather than discovered three more
 > times.**
+
+## I.49 Joe corrects the grouping; and step-through is the proof peripheral's save/load
+
+**Joe, 2026-08-15:** *"I wouldn't say that a person can separate for A3. A3 is what
+is meant by 'frame'. It means that we need work not to collide, git hashes to be
+persisted, etc. — no human can do that, but machines can. A4 is also not worth
+doing by hand, it would be far easier to understand what `cx new`, `cz new`, and
+`cr new` do, and automate those. nag lane, however, is something that needs a human
+on the other side by definition."*
+
+### The grouping in I.48 was wrong, and wrong in a specific way
+
+I put A3, A4 and the nag lane together as *"machinery absent, frame-1 substitutes a
+person."* **Two of the three do not belong in that class.**
+
+> **A human at the end of a channel is the design. A human standing in for absent
+> machinery is a deferral.** I conflated them, and the conflation made two build
+> tasks look like staffing decisions.
+
+| | what it actually is | why |
+|---|---|---|
+| **A3** | **the frame itself** | Work must not collide and hashes must be persisted **during** the run. A proctor checking afterwards that two trees differed does not *prevent* collision and does not *produce* the record. Checking is not the same operation as containing. |
+| **A4** | **automatable** | `cx new` / `cz new` / `cr new` allocate a **fresh agent lane per session** (`cx new M-foo` clocks it into a mission). Freshness becomes **structural rather than witnessed** — and `:cycle/runner-freshness` is *already* a required field in `attempt?`. The field exists; fresh-lane allocation is what would honestly fill it. |
+| **nag** | **human by definition** | The human is the **recipient**, not a stand-in. Correctly terminated. |
+
+**So A3 and A4 are builds, not witnesses.** My "proctor checks two trees" was a
+category error: it proposed observation where the requirement is containment.
+
+### Step-through: the reinterpretation is direct, and mostly already built
+
+**`cycle.clj` already honours `:state-snapshot-fn`** (`237-259`) and emits snapshot
+evidence. **`proof.clj` supplies one; `problem.clj` supplies none.** And
+`:proof-load` / `:proof-save` are already a **save/restore pair in `setup-tools`**,
+with `save-state!` doing an atomic write and version bump.
+
+So the design is: `:problem-save` / `:problem-load` in the problem peripheral's
+setup tools, a `:state-snapshot-fn` on save, and **stepping back = loading an
+earlier version**. Versions are additive, so loading v3 after reaching v5 does not
+destroy v4–v5 — exactly the LISP behaviour Joe asked for.
+
+### The one thing that genuinely needs deciding: what a step-back does to the count
+
+**Stepping back does not un-send bells.** If the guide dispatched guidance, then we
+backed up and re-ran, those Agency rows are still in the window — so a naive
+step-back **inflates the guidance count**, and "rerun without invalidating the
+output" fails.
+
+Two readings, and they differ:
+
+- **setup correction** (we misconfigured something) — should not count;
+- **strategy change** (the guidance did not work, try another) — **should** count,
+  because the cycle genuinely needed it.
+
+> **Default: count everything.** Excluding is the flattering direction, and I.44's
+> rule is that doubt resolves toward the higher count. A step-back **may** be marked
+> `:setup-correction` — **by the proctor, never by the guide** — and every such
+> exclusion is recorded and visible in the trace.
+
+That keeps the exclusion decision with the party holding the measurement rather than
+the party being measured, which is the same separation as everything else here.
