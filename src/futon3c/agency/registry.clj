@@ -1140,14 +1140,22 @@
    burning CPU on live keepalive'd sockets. The age is what distinguishes
    `using bash (3s ago)` from `using bash (51m ago)`; without it, wall-clock
    age of the job is the only signal left, and that is an SLA number, not
-   evidence of stuckness (see README-agency-cap.md)."
+   evidence of stuckness (see README-agency-cap.md).
+
+   An activity report is proof of a live local invoke stream, so if the agent
+   has been flipped to :idle mid-turn (reconcile-stale-invoking! after a long
+   quiet Bash, or a premature job completion — 2026-08-15, claude-2 rendered
+   idle while dispatching packets), restore :agent/status :invoking. Only :idle
+   is restored; other states (:restored etc.) are left alone."
   [agent-id-val activity-str]
   (swap! !registry
          (fn [m]
            (if-let [a (get m agent-id-val)]
              (assoc m agent-id-val
-                    (assoc a :agent/invoke-activity activity-str
-                             :agent/invoke-activity-at (now)))
+                    (cond-> (assoc a :agent/invoke-activity activity-str
+                                     :agent/invoke-activity-at (now))
+                      (= :idle (:agent/status a))
+                      (assoc :agent/status :invoking)))
              m))))
 
 (defn- with-idle-invoke-state

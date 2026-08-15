@@ -1031,6 +1031,7 @@
                                               (format-elapsed-secs secs))
                                             (catch Exception _ nil)))
                                 activity (:invoke-activity info)
+                                quiet-ms (:invoke-quiet-ms info)
                                 readiness (case route
                                             :local "ready"
                                             :ws "ready"
@@ -1083,7 +1084,16 @@
                                                ")"))
                                         " — " readiness
                                         (when session-tag
-                                          (str ", " session-tag)))
+                                          (str ", " session-tag))
+                                        ;; An idle agent with fresh activity is a
+                                        ;; live turn the registry lost track of
+                                        ;; (2026-08-15: claude-2 mid-turn rendered
+                                        ;; as plain idle). Surface it, with age.
+                                        (when (and activity quiet-ms
+                                                   (< (long quiet-ms) 180000))
+                                          (str "\n    ⚠ " activity
+                                               " (" (quot (long quiet-ms) 1000)
+                                               "s ago, but status=idle)")))
                                    (name status))
                                  (parked-suffix (name aid)))))]
            (->> agents
