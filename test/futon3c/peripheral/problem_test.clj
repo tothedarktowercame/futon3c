@@ -1,6 +1,7 @@
 (ns futon3c.peripheral.problem-test
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
             [futon3c.peripheral.problem :as problem]
@@ -50,11 +51,23 @@
            :evidence
            (dispatch-with-recall/offered-evidence
             opts (assoc recall-result :memories []) "job-1" "session-1")})
-        p (problem/make-problem (tools/make-mock-backend) dispatch-fn)
+        provisioner (fn [{:keys [arm] :as options}]
+                      {:checkout (str "/frames/" arm)
+                       :base-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                       :branch (:branch options) :frame/id (str "b-p-" arm)
+                       :batch "b"})
+        p (problem/make-problem (tools/make-mock-backend) dispatch-fn
+                                "/tmp/problem-test-state" provisioner)
         start (runner/start p {:session-id "s" :problem-id "p"
                                :cycle/mode :store-mode})
+        assigned (runner/step
+                  p (assoc (:state start) :current-phase :register)
+                  {:tool :assign-checkouts
+                   :args [{:problem "p" :batch "b" :base-rev "HEAD"
+                           :solver-seat "codex-4" :student-seat "zai-1"
+                           :recall-system "v1"}]})
         result (runner/step
-                p (assoc (:state start) :current-phase :student-attempts)
+                p (assoc (:state assigned) :current-phase :student-attempts)
                 {:tool :dispatch-student-fresh
                  :args [{:problem "p" :to "zai-1"} dispatch-packet]})]
     (is (:ok result))
@@ -189,7 +202,7 @@
    :student-seat "zai-1"
    :recall-system "apm-v1"})
 
-(deftest assign-checkouts-provisions-both-arms-with-batch-qualified-branches
+(deftest assign-checkouts-provisions-the-solver-with-a-batch-qualified-branch
   (let [calls (atom [])
         revision "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
         provisioner (fn [options]
@@ -204,16 +217,12 @@
         result (tools/execute-tool backend :assign-checkouts [checkout-options])
         checkouts (get-in result [:result :environment-checkouts])]
     (is (:ok result))
-    (is (= ["solver" "student"] (mapv :arm @calls))
-        "the machine invokes the provisioner exactly once per fixed arm")
-    (is (= ["exp/round-1-t94J02-solver"
-            "exp/round-1-t94J02-student"]
+    (is (= ["solver"] (mapv :arm @calls)))
+    (is (= ["exp/round-1-t94J02-solver"]
            (mapv :branch @calls)))
-    (is (= ["push" "none"] (mapv :memory-channel @calls)))
-    (is (not= (get-in checkouts [:solver :checkout])
-              (get-in checkouts [:student :checkout])))
-    (is (= revision (get-in checkouts [:solver :base-revision])
-           (get-in checkouts [:student :base-revision])))))
+    (is (= ["push"] (mapv :memory-channel @calls)))
+    (is (= revision (get-in checkouts [:solver :base-revision])))
+    (is (= [] (:student checkouts)))))
 
 (deftest assign-checkouts-provisioner-failure-is-a-tool-failure
   (let [backend (problem/make-checkout-provisioning-backend
@@ -251,8 +260,8 @@
    :environment-revision "env-a" :harness-revision "harness-a"
    :environment-checkouts {:solver {:checkout "/solver"
                                     :base-revision "env-a"}
-                           :student {:checkout "/student"
-                                     :base-revision "env-a"}}
+                           :student [{:checkout "/student"
+                                      :base-revision "env-a"}]}
    :frame :f :containment-probe :c
    :solver-attempt {:cycle/environment-revision "env-a"
                     :cycle/environment-checkout "/solver"
@@ -263,8 +272,8 @@
   (let [assigned-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         assignments {:solver {:checkout "/frames/solver"
                               :base-revision assigned-revision}
-                     :student {:checkout "/frames/student"
-                               :base-revision assigned-revision}}
+                     :student [{:checkout "/frames/student"
+                                :base-revision assigned-revision}]}
         backend (tools/make-mock-backend
                  {:advance-problem-phase {:cycle/phase :frame}})
         p (problem/make-problem backend)
@@ -320,10 +329,71 @@
               (get-in outputs [:student-attempts 0
                                :cycle/environment-checkout])))))
 
+(deftest each-student-dispatch-provisions-and-stamps-its-own-tree
+  (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        provisioned (atom [])
+        provisioner (fn [{:keys [arm] :as options}]
+                      (let [frame {:checkout (str "/frames/" arm)
+                                   :base-revision revision
+                                   :branch (:branch options)
+                                   :frame/id (str "round-p-" arm)
+                                   :batch "round"}]
+                        (swap! provisioned conj frame)
+                        frame))
+        backend (tools/make-mock-backend
+                 {:advance-problem-phase {:cycle/phase :adjudicate}})
+        p (problem/make-problem backend
+                                (fn [_ _] {:job-id "job" :evidence {}})
+                                "/tmp/student-tree-test" provisioner)
+        start (runner/start p {:session-id "student-trees" :problem-id "p"
+                               :cycle/mode :store-mode})
+        assigned (runner/step
+                  p (assoc (:state start) :current-phase :register)
+                  {:tool :assign-checkouts :args [checkout-options]})
+        first-dispatch (runner/step
+                        p (assoc (:state assigned)
+                                 :current-phase :student-attempts)
+                        {:tool :dispatch-student-fresh
+                         :args [{:environment-checkout "/caller"} "packet"]})
+        second-dispatch (runner/step
+                         p (:state first-dispatch)
+                         {:tool :dispatch-student-fresh
+                          :args [{:environment-checkout "/caller"} "packet"]})
+        solver (get-in assigned [:result :environment-checkouts :solver])
+        student-frames [(get-in first-dispatch
+                                [:result :environment-checkout])
+                        (get-in second-dispatch
+                                [:result :environment-checkout])]
+        ready-state (assoc (:state second-dispatch)
+                           :current-phase :student-attempts
+                           :cycle/outputs
+                           (assoc outputs-through-student
+                                  :environment-revision revision
+                                  :environment-checkouts
+                                  {:solver solver :student []}
+                                  :solver-attempt
+                                  {:cycle/environment-checkout (:checkout solver)
+                                   :cycle/environment-revision revision}))
+        advanced (runner/step
+                  p ready-state
+                  {:tool :advance-problem-phase
+                   :args ["M" "C" {:student-attempts [{:attempt/id 1}
+                                                       {:attempt/id 2}]
+                                    :memory-uses []}]})
+        attempts (get-in advanced [:state :cycle/outputs :student-attempts])]
+    (is (= 3 (count @provisioned)) "one solver plus two student trees")
+    (is (= 2 (count (set (map :checkout student-frames)))))
+    (is (every? #(not= (:checkout solver) (:checkout %)) student-frames))
+    (is (= (mapv :checkout student-frames)
+           (mapv :cycle/environment-checkout attempts))
+        "attempt i is paired with dispatch i's machine-recorded tree")
+    (is (= [revision revision]
+           (mapv :cycle/environment-revision attempts)))))
+
 (deftest environment-mismatch-fails-at-first-complete-advance
   (let [[p state] (started :store-mode)
         outputs (assoc-in outputs-through-student
-                          [:environment-checkouts :student :base-revision]
+                          [:environment-checkouts :student 0 :base-revision]
                           "env-b")
         state (assoc state :current-phase :student-attempts
                            :cycle/outputs outputs)
@@ -355,22 +425,35 @@
 
 (deftest shared-solver-student-checkout-is-rejected
   (let [outputs (assoc-in outputs-through-student
-                          [:environment-checkouts :student :checkout]
+                          [:environment-checkouts :student 0 :checkout]
                           "/solver")
         result (advance-student-attempts outputs [{}])]
     (is (= :environment-shared-checkout (:error/code result)))
     (is (= :environment-arms-match
            (get-in result [:error/context :invariant])))))
 
-(deftest student-attempts-may-share-their-own-checkout
-  (let [result (advance-student-attempts outputs-through-student [{} {} {}])]
+(deftest student-attempts-may-not-share-their-own-checkout
+  (let [outputs (assoc outputs-through-student :environment-checkouts
+                       {:solver {:checkout "/solver" :base-revision "env-a"}
+                        :student [{:checkout "/student" :base-revision "env-a"}
+                                  {:checkout "/student" :base-revision "env-a"}]})
+        result (advance-student-attempts outputs [{} {}])]
+    (is (= :environment-shared-checkout (:error/code result)))))
+
+(deftest multiple-student-attempts-with-distinct-checkouts-are-accepted
+  (let [outputs (assoc outputs-through-student :environment-checkouts
+                       {:solver {:checkout "/solver" :base-revision "env-a"}
+                        :student [{:checkout "/student-1" :base-revision "env-a"}
+                                  {:checkout "/student-2" :base-revision "env-a"}
+                                  {:checkout "/student-3" :base-revision "env-a"}]})
+        result (advance-student-attempts outputs [{} {} {}])]
     (is (:ok result))))
 
 (deftest absent-checkouts-do-not-pass-as-separate
   (let [outputs (-> outputs-through-student
                     (assoc-in [:solver-attempt :cycle/environment-checkout] nil)
                     (assoc-in [:environment-checkouts :solver :checkout] nil)
-                    (assoc-in [:environment-checkouts :student :checkout] nil))
+                    (assoc-in [:environment-checkouts :student 0 :checkout] nil))
         result (advance-student-attempts outputs [{}])]
     (is (= :environment-shared-checkout (:error/code result)))))
 
@@ -561,27 +644,33 @@
     (is (false? (:ok r)))
     (is (re-find #"problem-load failed" (:error r)))))
 
-(deftest assign-checkouts-is-all-or-nothing
-  ;; Verified before the rollback existed: when the student arm failed, the
-  ;; solver's worktree and branch survived on disk, and the retry then died on
-  ;; "frame already exists". A sticky failure is worse than a loud one, because
-  ;; the obvious response -- try again -- cannot work.
+(deftest student-provisioning-failure-rolls-back-the-whole-assignment
   (let [rolled (atom [])
-        provisioner (fn [{:keys [arm]}]
-                      (if (= "student" arm)
-                        (throw (ex-info "student provisioning failed" {}))
-                        {:checkout "/tmp/solver" :branch "exp/b-p-solver"
-                         :base-revision "abc" :frame/id "b-p-solver"}))
+        student-count (atom 0)
+        provisioner
+        (fn [{:keys [arm] :as options}]
+          (when (and (str/starts-with? arm "student-")
+                     (= 2 (swap! student-count inc)))
+            (throw (ex-info "student provisioning failed" {})))
+          {:checkout (str "/tmp/" arm) :branch (:branch options)
+           :base-revision "abc" :frame/id (str "b-p-" arm) :batch "b"})
+        inner (tools/make-mock-backend
+               {:dispatch-student-fresh {:job-id "job" :evidence {}}})
         b (problem/make-checkout-provisioning-backend
-           (tools/make-mock-backend) provisioner
-           (fn [frame] (swap! rolled conj frame)))
-        r (tools/execute-tool b :assign-checkouts
-                              [{:problem "p" :batch "b" :base-rev "HEAD"
-                                :solver-seat "codex-4" :student-seat "zai-1"
-                                :recall-system "v1"}])]
-    (is (false? (:ok r)))
-    (is (= 1 (:rolled-back r)) "the solver frame must be rolled back")
-    (is (= ["/tmp/solver"] (mapv :checkout @rolled)))))
+           inner provisioner (fn [frame] (swap! rolled conj frame)))
+        assigned (tools/execute-tool b :assign-checkouts [checkout-options])
+        first-attempt (tools/execute-tool
+                       b :dispatch-student-fresh [{:to "zai-1"} "packet"])
+        failed (tools/execute-tool
+                b :dispatch-student-fresh [{:to "zai-1"} "packet"])]
+    (is (:ok assigned))
+    (is (:ok first-attempt))
+    (is (false? (:ok failed)))
+    (is (= 2 (:rolled-back failed)) "solver and student-1 both roll back")
+    (is (= #{"/tmp/solver"
+             (get-in first-attempt
+                     [:result :environment-checkout :checkout])}
+           (set (map :checkout @rolled))))))
 
 (deftest recorded-assignment-beats-a-relayed-one
   ;; :environment-checkouts otherwise arrives through the caller-supplied advance
@@ -590,8 +679,7 @@
   ;; every check passing against paths that were never provisioned.
   (let [real {:solver  {:checkout "/real/solver"
                         :base-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
-              :student {:checkout "/real/student"
-                        :base-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+              :student []}
         forged {:solver  {:checkout "/FORGED"
                           :base-revision "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
                 :student {:checkout "/FORGED"

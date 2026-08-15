@@ -102,8 +102,9 @@
         ;; "case" = M-case-studies single-arm frame (no twin; branch
         ;; must be batch-qualified via --branch since exp/<pid>-<arm>
         ;; names collide with closed batch frames).
-        _ (when-not (#{"mem" "ctl" "case" "solver" "student"} (:arm o))
-            (die "--arm must be mem, ctl, case, solver, or student"))
+        _ (when-not (or (#{"mem" "ctl" "case" "solver" "student"} (:arm o))
+                        (re-matches #"student-[0-9a-f-]+" (:arm o)))
+            (die "--arm must be mem, ctl, case, solver, student, or student-<uuid>"))
         _ (when-not (#{"push" "none"} (:memory-channel o))
             (die "--memory-channel must be push or none"))
         frame-id (str (:batch o) "-" (:problem o) "-" (:arm o))

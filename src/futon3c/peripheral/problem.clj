@@ -8,7 +8,8 @@
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.tools :as tools])
   (:import [java.nio.file Files StandardCopyOption]
-           [java.nio.file.attribute FileAttribute]))
+           [java.nio.file.attribute FileAttribute]
+           [java.util UUID]))
 
 (def phase-order
   [:register :frame :guided-solve :intervene :student-attempts
@@ -72,10 +73,11 @@
        :pinned pinned :solver solver-revision
        :students (vec student-revisions)}
 
-      ;; Student attempts deliberately reuse one cold-attempt tree. Only the
-      ;; solver-vs-student boundary is a containment boundary. `nil = nil` is a
-      ;; shared checkout, never evidence of separation.
-      (some #(= solver-checkout %) student-checkouts)
+      ;; A cold attempt has its own tree. Any nil or duplicate checkout leaves
+      ;; an unmeasured filesystem channel between attempts.
+      (let [checkouts (into [solver-checkout] student-checkouts)]
+        (or (some nil? checkouts)
+            (not= (count checkouts) (count (set checkouts)))))
       {:failure :environment-shared-checkout
        :solver solver-checkout :students (vec student-checkouts)})))
 
@@ -107,11 +109,23 @@
      :snapshot/tags [:problem :snapshot]}))
 
 (defn- stamp-attempt-environment [attempt assignment]
-  (if (and (map? attempt) (map? assignment))
+  (if (map? attempt)
     (assoc attempt
            :cycle/environment-checkout (:checkout assignment)
            :cycle/environment-revision (:base-revision assignment))
     attempt))
+
+(defn- recorded-student-assignments [state]
+  ;; :steps spans the whole peripheral session, including completed cycles.
+  ;; Reset at the latest assignment so attempt 1 of a new cycle cannot be
+  ;; paired with attempt 1's tree from the previous cycle.
+  (reduce (fn [assignments {:keys [tool result]}]
+            (case tool
+              :assign-checkouts []
+              :dispatch-student-fresh
+              (conj assignments (:environment-checkout result))
+              assignments))
+          [] (:steps state)))
 
 (defn- recorded-assignment
   "What :assign-checkouts ACTUALLY produced, from the engine's own step record.
@@ -134,7 +148,8 @@
 (defn- stamp-environment-outputs [state payload]
   (let [assignments (recorded-assignment state payload)
         solver (:solver assignments)
-        student (:student assignments)
+        students (let [recorded (recorded-student-assignments state)]
+                   (if (seq recorded) recorded (vec (:student assignments))))
         revision (:base-revision solver)]
     (cond-> payload
       ;; The recorded assignment overwrites the caller's, exactly as the attempt
@@ -150,8 +165,9 @@
 
       (sequential? (:student-attempts payload))
       (update :student-attempts
-              #(mapv (fn [attempt]
-                       (stamp-attempt-environment attempt student)) %)))))
+              #(mapv (fn [index attempt]
+                       (stamp-attempt-environment attempt (get students index)))
+                     (range) %)))))
 
 (def problem-domain-config
   {:domain-id :problem
@@ -331,7 +347,7 @@
     (let [record (edn/read-string
                   (slurp (io/file experiment-frames-root batch
                                   (str frame-id ".edn"))))]
-      (select-keys record [:checkout :base-revision :branch :frame/id]))))
+      (select-keys record [:checkout :base-revision :branch :frame/id :batch]))))
 
 (defn- checkout-options [options arm]
   (let [arm-name (name arm)
@@ -366,27 +382,27 @@
   (when branch
     (shell/sh "git" "-C" apm-root "branch" "-D" branch))
   (when-let [frame-id (:frame/id frame)]
-    (let [batch (first (str/split frame-id #"-"))]
+    (let [batch (or (:batch frame) (first (str/split frame-id #"-")))]
       (io/delete-file (io/file experiment-frames-root batch
                                (str frame-id ".edn")) true)))
   (shell/sh "git" "-C" apm-root "worktree" "prune"))
 
-(defrecord CheckoutProvisioningBackend [inner-backend provisioner-fn rollback-fn]
+(defrecord CheckoutProvisioningBackend
+    [inner-backend provisioner-fn rollback-fn assignment-context
+     provisioned-frames]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
-    (if (= tool-id :assign-checkouts)
+    (cond
+      (= tool-id :assign-checkouts)
       (let [[options] args
             done (atom [])]
         (try
-          {:ok true
-           :result
-           {:environment-checkouts
-            (into {}
-                  (map (fn [arm]
-                         (let [frame (provisioner-fn (checkout-options options arm))]
-                           (swap! done conj frame)
-                           [arm frame]))
-                       [:solver :student]))}}
+          (let [solver (provisioner-fn (checkout-options options :solver))]
+            (swap! done conj solver)
+            (reset! assignment-context options)
+            (reset! provisioned-frames [solver])
+            {:ok true
+             :result {:environment-checkouts {:solver solver :student []}}})
           (catch Throwable t
             ;; Roll back whatever already succeeded, so a retry is possible.
             (doseq [frame @done]
@@ -394,6 +410,40 @@
             {:ok false
              :error (str "assign-checkouts failed: " (.getMessage t))
              :rolled-back (count @done)})))
+
+      (= tool-id :dispatch-student-fresh)
+      (let [[opts packet] args
+            context @assignment-context]
+        (if-not context
+          {:ok false :error "student dispatch has no recorded checkout assignment"}
+          (let [arm (str "student-" (UUID/randomUUID))
+                frame (try (provisioner-fn (checkout-options context arm))
+                           (catch Throwable t t))]
+            (if (instance? Throwable frame)
+              (let [to-rollback @provisioned-frames]
+                (doseq [existing to-rollback]
+                  (try (rollback-fn existing) (catch Throwable _ nil)))
+                (reset! provisioned-frames [])
+                (reset! assignment-context nil)
+                {:ok false
+                 :error (str "student checkout provisioning failed: "
+                             (.getMessage ^Throwable frame))
+                 :rolled-back (count to-rollback)})
+              (let [dispatch (tools/execute-tool
+                              inner-backend tool-id
+                              [(assoc (or opts {})
+                                      :environment-checkout (:checkout frame)
+                                      :environment-revision (:base-revision frame))
+                               packet])]
+                (if (:ok dispatch)
+                  (do
+                    (swap! provisioned-frames conj frame)
+                    (assoc-in dispatch [:result :environment-checkout] frame))
+                  (do
+                    (try (rollback-fn frame) (catch Throwable _ nil))
+                    dispatch)))))))
+
+      :else
       (tools/execute-tool inner-backend tool-id args))))
 
 (defn make-checkout-provisioning-backend
@@ -402,7 +452,8 @@
   ([inner-backend provisioner-fn]
    (make-checkout-provisioning-backend inner-backend provisioner-fn rollback-frame!))
   ([inner-backend provisioner-fn rollback-fn]
-   (->CheckoutProvisioningBackend inner-backend provisioner-fn rollback-fn)))
+   (->CheckoutProvisioningBackend inner-backend provisioner-fn rollback-fn
+                                  (atom nil) (atom []))))
 
 (defrecord GroundControlBackend [inner-backend dispatch-fn]
   tools/ToolBackend
@@ -456,8 +507,8 @@
   ([backend dispatch-fn state-root provisioner-fn]
    (cycle/make-cycle-peripheral
     problem-domain-config problem-spec
-    (make-ground-control-backend
-     (make-checkout-provisioning-backend
+    (make-checkout-provisioning-backend
+     (make-ground-control-backend
       (make-problem-state-backend backend state-root)
-      provisioner-fn)
-     dispatch-fn))))
+      dispatch-fn)
+     provisioner-fn))))
