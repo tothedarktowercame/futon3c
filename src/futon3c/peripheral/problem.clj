@@ -97,13 +97,35 @@
            :cycle/environment-revision (:base-revision assignment))
     attempt))
 
+(defn- recorded-assignment
+  "What :assign-checkouts ACTUALLY produced, from the engine's own step record.
+
+  Preferred over the payload because :environment-checkouts otherwise arrives
+  through the caller-supplied advance payload like every other output -- so a
+  caller could relay a fabricated assignment and everything downstream would
+  stamp consistently from the fabrication, with every check passing against
+  paths that were never provisioned. The engine writes tool results into :steps
+  and the caller cannot edit them. Same shape as `fruit`, which reads the
+  :emit-trace result from step history."
+  [state payload]
+  (or (some (fn [{:keys [tool result]}]
+              (when (= :assign-checkouts tool)
+                (:environment-checkouts result)))
+            (reverse (:steps state)))
+      (get-in state [:cycle/outputs :environment-checkouts])
+      (:environment-checkouts payload)))
+
 (defn- stamp-environment-outputs [state payload]
-  (let [assignments (or (get-in state [:cycle/outputs :environment-checkouts])
-                        (:environment-checkouts payload))
+  (let [assignments (recorded-assignment state payload)
         solver (:solver assignments)
         student (:student assignments)
         revision (:base-revision solver)]
     (cond-> payload
+      ;; The recorded assignment overwrites the caller's, exactly as the attempt
+      ;; fields do -- the caller may relay it, but the machine owns it.
+      (and (some? assignments) (contains? payload :environment-checkouts))
+      (assoc :environment-checkouts assignments)
+
       (some? revision)
       (assoc :environment-revision revision)
 

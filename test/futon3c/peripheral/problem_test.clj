@@ -545,3 +545,44 @@
     (is (false? (:ok r)))
     (is (= 1 (:rolled-back r)) "the solver frame must be rolled back")
     (is (= ["/tmp/solver"] (mapv :checkout @rolled)))))
+
+(deftest recorded-assignment-beats-a-relayed-one
+  ;; :environment-checkouts otherwise arrives through the caller-supplied advance
+  ;; payload like every other output, so a caller could relay a fabricated
+  ;; assignment and everything downstream would stamp consistently from it --
+  ;; every check passing against paths that were never provisioned.
+  (let [real {:solver  {:checkout "/real/solver"
+                        :base-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+              :student {:checkout "/real/student"
+                        :base-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+        forged {:solver  {:checkout "/FORGED"
+                          :base-revision "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+                :student {:checkout "/FORGED"
+                          :base-revision "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}
+        backend (tools/make-mock-backend
+                 {:advance-problem-phase {:cycle/phase :frame}})
+        p (problem/make-problem backend (fn [_ _] {:evidence {}})
+                                "/tmp/custody"
+                                (fn [{:keys [arm]}] (get real (keyword arm))))
+        start (runner/start p {:session-id "custody" :problem-id "t94J02"
+                               :cycle/mode :store-mode})
+        ;; the machine runs the tool -- its result lands in :steps
+        assigned (runner/step p (assoc (:state start) :current-phase :register)
+                              {:tool :assign-checkouts
+                               :args [{:problem "t94J02" :batch "b" :base-rev "HEAD"
+                                       :solver-seat "codex-4" :student-seat "zai-1"
+                                       :recall-system "v1"}]})
+        ;; the caller then relays a DIFFERENT assignment on the advance
+        advanced (runner/step p (:state assigned)
+                              {:tool :advance-problem-phase
+                               :args ["M" "C"
+                                      {:registration :r :store-snapshot :s
+                                       :stratum-frozen-at 1 :harness-revision "h"
+                                       :environment-revision "caller"
+                                       :environment-checkouts forged}]})
+        outputs (get-in advanced [:state :cycle/outputs])]
+    (is (:ok assigned))
+    (is (= real (:environment-checkouts outputs))
+        "the recorded assignment must win over the relayed one")
+    (is (= "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+           (:environment-revision outputs)))))
