@@ -47,9 +47,9 @@
    :guided-solve #{:solver-attempt :ground-control-events :memory-offers}
    :intervene #{:intervention}
    :student-attempts #{:student-attempts :memory-uses}
-   :adjudicate #{:disposition :launch-gate-event}
+   :adjudicate #{:disposition}
    :promote #{:promotion-result}
-   :close #{:measurement :trace}})
+   :close #{:measurement :trace :validation :authorization}})
 
 (def all-tools
   (into #{:begin-problem-cycle :load-registration :list-problems
@@ -157,15 +157,21 @@
       (get-in state [:cycle/outputs :environment-checkouts])
       (:environment-checkouts payload)))
 
-(declare recorded-measurement)
+(declare recorded-measurement recorded-close-envelope recorded-validation
+         recorded-authorization)
 
 (defn- stamp-environment-outputs [state payload]
-  (let [payload (if (= :close (:current-phase state))
-                  ;; Measurement is a derived step result, never an advance
-                  ;; payload assertion from the caller.
-                  (dissoc payload :measurement)
+  (let [closing? (= :close (:current-phase state))
+        payload (if closing?
+                  ;; Close artifacts are retained derived-step results, never
+                  ;; advance-payload assertions from the caller.
+                  (apply dissoc payload
+                         [:measurement :trace :validation :authorization])
                   payload)
         measurement (recorded-measurement state)
+        close-envelope (recorded-close-envelope state)
+        validation (recorded-validation state)
+        authorization (recorded-authorization state)
         assignments (recorded-assignment state payload)
         solver (:solver assignments)
         students (let [recorded (recorded-student-assignments state)]
@@ -174,6 +180,15 @@
     (cond-> payload
       (some? measurement)
       (assoc :measurement measurement)
+
+      (some? (:trace close-envelope))
+      (assoc :trace (:trace close-envelope))
+
+      (some? validation)
+      (assoc :validation validation)
+
+      (some? authorization)
+      (assoc :authorization authorization)
 
       ;; The recorded assignment overwrites the caller's, exactly as the attempt
       ;; fields do -- the caller may relay it, but the machine owns it.
@@ -212,8 +227,7 @@
 (def ^:private capability-attesting-tools
   ;; These pairings are deliberately narrower than "a nearby phase". Three
   ;; required capabilities currently have no step that exercises them:
-  ;; registration-gates-launch (launch-gate-event is only an advance output),
-  ;; need-retrieval (RetrievalProbe has no producer). They get no synthetic probe.
+  ;; need-retrieval has no probe producer. It gets no synthetic probe.
   {:created-frame-worked :emit-frame
    :frame-containment-witnessed :emit-frame
    :unique-disposition :write-disposition
@@ -303,6 +317,15 @@
 (defn- recorded-measurement [state]
   (:result (latest-step state :record-measurement)))
 
+(defn- recorded-close-envelope [state]
+  (:result (latest-step state :emit-trace)))
+
+(defn- recorded-validation [state]
+  (:result (latest-step state :validate-trace)))
+
+(defn- recorded-authorization [state]
+  (:result (latest-step state :write-authorization)))
+
 (defn- emit-capability-probes-from-state [state _args]
   (->> prereg/required-capabilities
        (keep (fn [capability]
@@ -339,7 +362,6 @@
                   (assoc :measurement measurement))
         producer-keys {:registration :registration
                        :frame :frame
-                       :launch-gate :launch-gate-event
                        :store-snapshot :store-snapshot
                        :containment-probe :containment-probe
                        :measurement :measurement
@@ -355,13 +377,13 @@
                      (keep (fn [[entity-type output-key]]
                              (when-not (contains? outputs output-key)
                                entity-type)))
-                     vec)]
-    (when (seq missing)
-      (throw (ex-info (str "emit-trace missing entity producers: "
-                           (str/join ", " (map name missing)))
-                      {:failure :missing-trace-entity-producers
-                       :entity-types missing})))
-    (let [cycle-id (:current-cycle-id state)
+                     vec)
+        producer-failures
+        (mapv (fn [entity-type]
+                {:failure :missing-trace-entity-producer
+                 :entity-type entity-type})
+              missing)
+        cycle-id (:current-cycle-id state)
           cycle-entity {:cycle/id cycle-id
                         :cycle/opened-at (cycle-opened-at state)
                         ;; Emission is the closing record. The machine reads the
@@ -390,7 +412,6 @@
                     (concat
                      [cycle-entity]
                      frames
-                     (link :gate/cycle (output-entities outputs :launch-gate-event))
                      (link :snap/cycle (output-entities outputs :store-snapshot))
                      (mapv #(assoc % :cprobe/frame frame-id)
                            (output-entities outputs :containment-probe))
@@ -401,8 +422,71 @@
                      (output-entities outputs :memory-uses)
                      (link :rprobe/cycle (output-entities outputs :retrieval-probes))
                      (link :probe/cycle (output-entities outputs :capability-probes))
-                     (link :promo/cycle (output-entities outputs :promotion-result))))]
-      (apm-harness/derive-trace (:registration outputs) cycle-id entities))))
+                     (link :promo/cycle (output-entities outputs :promotion-result))))
+          projection (try
+                       {:trace (apm-harness/derive-trace
+                                (:registration outputs) cycle-id entities)}
+                       (catch Throwable t
+                         {:projection-failure
+                          {:failure :trace-projection-failed
+                           :message (.getMessage t)}}))
+          trace (some-> (:trace projection)
+                        (assoc :measurement-summary
+                               {:measured (count (get-in outputs
+                                                        [:measurement :meas/values]))
+                                :unset (count (get-in outputs
+                                                     [:measurement :meas/unset]))}))]
+      {:trace trace
+     :producer-failures (cond-> producer-failures
+                          (:projection-failure projection)
+                          (conj (:projection-failure projection)))}))
+
+(defn- validate-trace-from-state [state _args]
+  (let [{:keys [trace producer-failures]} (recorded-close-envelope state)
+        registration (get-in state [:cycle/outputs :registration])
+        report (prereg/report registration trace (:lean-repo state)
+                              (:agency-endpoint state)
+                              (:reg/solver-seat registration))
+        failures (vec (concat producer-failures (:failures report)))]
+    {:trace trace
+     :producer-failures (vec producer-failures)
+     :validation-report report
+     :failures failures
+     :launchable? (and (empty? producer-failures) (:launchable? report))}))
+
+(defn- write-authorization-from-state [state _args]
+  (let [{:keys [trace validation-report failures launchable?] :as validation}
+        (recorded-validation state)
+        output (:authorization-output state)
+        revision (:authorization-revision state)
+        at (now-string)]
+    (if-not launchable?
+      {:written? false :refused? true :at at :failures (vec failures)
+       :validation validation}
+      (do
+        (when-not (and (string? output) (not (str/blank? output)))
+          (throw (ex-info "authorization output is absent from cycle context"
+                          {:failure :authorization-output-unavailable})))
+        (when-not (and (string? revision)
+                       (re-matches #"[0-9a-f]{40}" revision))
+          (throw (ex-info "authorization revision is absent or malformed"
+                          {:failure :authorization-revision-unavailable})))
+        (let [registration (get-in state [:cycle/outputs :registration])
+              authorization
+              {:kind :apm-demonstration-round1-launch-authorization
+               :schema 1
+               :authorization-revision revision
+               :lean-revision (:lean-revision registration)
+               :registration-sha256
+               (apm-harness/sha256-bytes (.getBytes (pr-str registration) "UTF-8"))
+               :trace-sha256
+               (apm-harness/sha256-bytes (.getBytes (pr-str trace) "UTF-8"))
+               :problem (:problem registration)
+               :validation validation-report}]
+          (io/make-parents output)
+          (spit output (str (pr-str authorization) "\n"))
+          {:written? true :refused? false :at at :output output
+           :authorization authorization})))))
 
 (def problem-domain-config
   {:domain-id :problem
@@ -422,7 +506,9 @@
    :output-stamp-fn stamp-environment-outputs
    :derived-tools {:record-measurement record-measurement-from-state
                    :emit-capability-probes emit-capability-probes-from-state
-                   :emit-trace emit-trace-from-state}
+                   :emit-trace emit-trace-from-state
+                   :validate-trace validate-trace-from-state
+                   :write-authorization write-authorization-from-state}
    :output-invariants
    [{:id :environment-arms-match
      :requires #{:environment-revision :solver-attempt :student-attempts}
@@ -433,7 +519,11 @@
                     {:problem-id (:problem-id context)
                      :cycle/mode (:cycle/mode context)
                      :cycle/deposit-state (:cycle/deposit-state context)
-                     :cycle/paired-with (:cycle/paired-with context)})
+                     :cycle/paired-with (:cycle/paired-with context)
+                     :lean-repo (:lean-repo context)
+                     :agency-endpoint (:agency-endpoint context)
+                     :authorization-revision (:authorization-revision context)
+                     :authorization-output (:authorization-output context)})
    :autoconf-fn autoconf
    :fruit-fn fruit
    :exit-context-fn (fn [state]

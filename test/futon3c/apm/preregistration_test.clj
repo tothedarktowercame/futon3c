@@ -58,7 +58,6 @@
 (def trace
   {:problem problem
    :frame {:scaffold-hash "scaffold" :closing-hash "closing"}
-   :launch-gate-refused-without-witness? true
    :cycle-closed? true
    :disposition-ids ["terminal"]
    :memory-offers [{:offer/id "offer" :offer/memory-id "memory/known"}]

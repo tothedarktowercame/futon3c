@@ -16,7 +16,7 @@
  ;; --- binding to the Lean -------------------------------------------------
  :lean-registration "DarkTower.APMDemonstration.round1Registration"
  :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
- :lean-revision     "48c1fe496ed66a9d4ab61335adc8815156b1e063"
+ :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
 
  ;; Resource pins at cycle registration. Both solver and student attempts must
  ;; record this environment revision. The store snapshot is recorded but is

@@ -813,14 +813,16 @@
                    :args [{:cycle/id "forged" :cycle/closed-at "forged"}]}))
         cycle-entity (some #(when (:cycle/id %) %) (:entities @called))]
     (is (:ok result))
-    (is (= {:projected true} (:result result)))
+    (is (= {:projected true :measurement-summary {:measured 1 :unset 0}}
+           (get-in result [:result :trace])))
+    (is (empty? (get-in result [:result :producer-failures])))
     (is (= "cycle-1" (:cycle-id @called)))
     (is (= "cycle-1" (:cycle/id cycle-entity)))
     (is (= :store-mode (:cycle/mode cycle-entity)))
     (is (= "2026-08-15T00:00:00Z" (:cycle/opened-at cycle-entity)))
     (is (= closed-at (:cycle/closed-at cycle-entity))
         "the engine clock, not the caller, closes the trace")
-    (is (= #{"cycle-1" "frame-1" "gate-1" "snap-1" "cprobe-1"
+    (is (= #{"cycle-1" "frame-1" "snap-1" "cprobe-1"
              "meas-cycle-1" "attempt-1"}
            (set (keep apm-harness/entity-id (:entities @called))))
         "typed entities are assembled from cycle outputs")))
@@ -829,11 +831,11 @@
   (let [[p state] (started :store-mode)
         state (-> (trace-emission-state state)
                   (update :cycle/outputs dissoc :retrieval-probes))
-        result (runner/step p state {:tool :emit-trace :args []})]
-    (is (= :tool-execution-failed (:error/code result)))
-    (is (re-find #"retrieval-probe" (str result)))
-    (is (not (re-find #"capability-probe" (str result))))
-    (is (not (re-find #"measurement" (str result))))))
+        result (runner/step p state {:tool :emit-trace :args []})
+        missing (set (map :entity-type
+                          (get-in result [:result :producer-failures])))]
+    (is (:ok result))
+    (is (= #{:retrieval-probe} missing))))
 
 (deftest empty-offer-output-is-not-a-missing-producer
   (let [[p state] (started :store-mode)
@@ -850,9 +852,11 @@
     (let [missing (runner/step
                    p (update (trace-emission-state state) :cycle/outputs
                              dissoc :memory-offers)
-                   {:tool :emit-trace :args []})]
-      (is (= :tool-execution-failed (:error/code missing)))
-      (is (re-find #"memory-offer" (str missing))))))
+                   {:tool :emit-trace :args []})
+          types (set (map :entity-type
+                          (get-in missing [:result :producer-failures])))]
+      (is (:ok missing))
+      (is (contains? types :memory-offer)))))
 
 (deftest emit-trace-populates-through-the-REAL-projection
   ;; No with-redefs. The other emit-trace tests stub derive-trace, so they assert
@@ -892,13 +896,12 @@
                                       :promo/need-tags ["t"]}
                    :stratum-frozen-at 1 :assigned-at "t"})
         r (runner/step p st {:tool :emit-trace :args []})
-        trace (:result (last (get-in r [:state :steps])))]
+        trace (get-in (last (get-in r [:state :steps])) [:result :trace])]
     (is (:ok r) "the real projection must not throw")
     (is (= {:scaffold-hash "aa" :closing-hash "bb"} (:frame trace)))
     (is (= 2 (count (:cycle/attempts trace))) "solver + student attempts found")
     (is (= [{:offer/id "O1" :offer/memory-id "M1"}] (:memory-offers trace)))
     (is (= ["D1"] (:disposition-ids trace)))
-    (is (true? (:launch-gate-refused-without-witness? trace)))
     (is (true? (:containment-probe-passed? trace)))
     (is (= "S1" (:cycle/store-snapshot-id trace)))
     (is (= ["P1"] (:promoted-artifact-ids trace)))
@@ -1028,3 +1031,109 @@
     (is (= :tool-execution-failed (:error/code result)))
     (is (re-find #"silently omitted" (str result)))
     (is (re-find #"statement defects at review" (str result)))))
+
+(defn- close-tool-state [p context emit-envelope]
+  (let [state (:state (runner/start p context))]
+    (assoc state
+           :current-phase :close
+           :current-cycle-id "C-close"
+           :cycle/outputs {:registration {:lean-revision "lean-pin"
+                                          :problem {:problem-id "p"}
+                                          :reg/solver-seat "codex-4"}}
+           :steps [{:tool :emit-trace :result emit-envelope
+                    :evidence/id "e-emit-trace"}])))
+
+(deftest validate-trace-accumulates-producer-and-validator-failures
+  (let [backend (tools/make-mock-backend)
+        p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec backend)
+        context {:session-id "validate-close" :problem-id "p"
+                 :cycle/mode :store-mode
+                 :lean-repo "/machine/lean"
+                 :agency-endpoint "http://machine/agency"}
+        envelope {:trace {:trace/id "T"}
+                  :producer-failures
+                  [{:failure :missing-trace-entity-producer
+                    :entity-type :retrieval-probe}]}
+        called (atom nil)
+        result (with-redefs [prereg/report
+                             (fn [registration trace lean-repo agency solver]
+                               (reset! called [registration trace lean-repo
+                                               agency solver])
+                               {:failures [:f9-capability-probe-missing
+                                           :guidance-evidence-unavailable]
+                                :launchable? false})]
+                 (runner/step
+                  p (close-tool-state p context envelope)
+                  {:tool :validate-trace
+                   :args [{:lean-repo "/forged" :agency-endpoint "forged"}]}))
+        validation (:result result)]
+    (is (:ok result))
+    (is (= ["/machine/lean" "http://machine/agency" "codex-4"]
+           (subvec (vec @called) 2)))
+    (is (= #{:f9-capability-probe-missing
+             :guidance-evidence-unavailable
+             {:failure :missing-trace-entity-producer
+              :entity-type :retrieval-probe}}
+           (set (:failures validation)))
+        "the envelope accumulates every producer and validator failure")
+    (is (false? (:launchable? validation)))
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest write-authorization-retains-refusal-and-writes-no-file
+  (let [output (str (io/file (temp-state-root) "must-not-exist.edn"))
+        backend (tools/make-mock-backend)
+        p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec backend)
+        context {:session-id "refuse-auth" :problem-id "p"
+                 :cycle/mode :store-mode :authorization-output output
+                 :authorization-revision
+                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+        validation {:trace {:trace/id "T"}
+                    :validation-report {:launchable? false}
+                    :failures [:f9-capability-probe-missing]
+                    :launchable? false}
+        state (update (close-tool-state p context {:trace {:trace/id "T"}
+                                                   :producer-failures []})
+                      :steps conj
+                      {:tool :validate-trace :result validation
+                       :evidence/id "e-validate"})
+        result (runner/step p state {:tool :write-authorization :args []})]
+    (is (:ok result) "a retained refusal is a successful audit operation")
+    (is (= {:written? false :refused? true}
+           (select-keys (:result result) [:written? :refused?])))
+    (is (= [:f9-capability-probe-missing]
+           (get-in result [:result :failures])))
+    (is (false? (.exists (io/file output)))
+        "non-launchable validation can never create an authorization")
+    (is (= :write-authorization
+           (get-in result [:state :steps (dec (count (get-in result
+                                                               [:state :steps])))
+                           :tool]))
+        "the refusal remains in the auditable step record")
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest write-authorization-writes-only-a-launchable-report
+  (let [output (str (io/file (temp-state-root) "authorization.edn"))
+        backend (tools/make-mock-backend)
+        p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec backend)
+        context {:session-id "write-auth" :problem-id "p"
+                 :cycle/mode :store-mode :authorization-output output
+                 :authorization-revision
+                 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+        report {:launchable? true :failures []}
+        validation {:trace {:trace/id "T"}
+                    :validation-report report :failures [] :launchable? true}
+        state (update (close-tool-state p context {:trace {:trace/id "T"}
+                                                   :producer-failures []})
+                      :steps conj
+                      {:tool :validate-trace :result validation
+                       :evidence/id "e-validate"})
+        result (runner/step p state {:tool :write-authorization :args []})
+        written (edn/read-string (slurp output))]
+    (is (:ok result))
+    (is (true? (get-in result [:result :written?])))
+    (is (= :apm-demonstration-round1-launch-authorization (:kind written)))
+    (is (= report (:validation written)))
+    (is (empty? (tools/recorded-calls backend)))))

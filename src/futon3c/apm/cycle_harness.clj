@@ -81,7 +81,6 @@
   [registration cycle-id entities]
   (let [cycle (one entities #(= cycle-id (:cycle/id %)) :cycle)
         frame (one entities #(= cycle-id (:frame/cycle %)) :frame)
-        gate (one entities #(= cycle-id (:gate/cycle %)) :launch-gate)
         snapshot (one entities #(= cycle-id (:snap/cycle %)) :snapshot)
         containment (one entities #(= (:frame/id frame) (:cprobe/frame %))
                          :containment-probe)
@@ -97,8 +96,6 @@
     {:problem (:problem registration)
      :frame {:scaffold-hash (:frame/scaffold-hash frame)
              :closing-hash (:frame/closing-hash frame)}
-     :launch-gate-refused-without-witness?
-     (:gate/refused-without-witness? gate)
      :cycle-closed? (some? (:cycle/closed-at cycle))
      :disposition-ids (mapv :disp/id dispositions)
      :memory-offers (mapv #(select-keys % [:offer/id :offer/memory-id]) offers)

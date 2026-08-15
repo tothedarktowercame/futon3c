@@ -10,7 +10,7 @@
            [java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers]
            [java.time Duration]))
 
-(def required-lean-revision "48c1fe496ed66a9d4ab61335adc8815156b1e063")
+(def required-lean-revision "4331becf6f0c8471537adcc264a8fde7e12c94c9")
 (def required-lean-source "DarkTower/APMDemonstrationPreregistration.lean")
 (def required-lean-registration
   "DarkTower.APMDemonstration.round1Registration")
@@ -49,7 +49,7 @@
    :reg/solver-seat])
 
 (def required-trace-keys
-  [:problem :frame :launch-gate-refused-without-witness? :cycle-closed?
+  [:problem :frame :cycle-closed?
    :disposition-ids :memory-offers :memory-disposition-offer-ids
    :stratum-frozen-at :assigned-at :cycle/attempts :cycle/mode
    :cycle/deposit-state :cycle/paired-with :cycle/store-snapshot-id
@@ -190,7 +190,7 @@
                         (get-in trace [:measurement :meas/unset]))))
       (conj :malformed-measurement)
       (not (every? #(or (true? (get trace %)) (false? (get trace %)))
-                   [:launch-gate-refused-without-witness? :cycle-closed?
+                   [:cycle-closed?
                     :denominator-declared? :denominator-inferred-from-corpus?
                     :containment-claimed? :containment-probe-recorded?
                     :containment-probe-passed?]))
@@ -352,7 +352,6 @@
 
 (defn capability-holds? [capability trace]
   (case capability
-    :registration-gates-launch (:launch-gate-refused-without-witness? trace)
     :frame-containment-witnessed
     (or (not (:containment-claimed? trace))
         (and (:containment-probe-recorded? trace)
