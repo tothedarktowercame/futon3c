@@ -9367,3 +9367,29 @@ frame-1 runbook: ground-control dispatch opts MUST carry
 `:mission "M-apm-demonstration"` (or wire mission injection from cycle
 context alongside Fix B's `:base`). Per-key defaults audit otherwise verified
 against source; finding 3 remains closed.
+
+## W.5 PRE-FLIGHT ATTESTATION — frame-1 LAUNCH-READY (2026-08-15, claude-7)
+
+Every item with its evidence:
+
+| item | evidence |
+|---|---|
+| Fix 8 disposition pass-through | `f8c1a737`, reviewed, gates re-run (80/287/0) |
+| Fix 7 evidence-store required + loud | `58b2e1cb`, reviewed, 134/448/0 incl. cycle+proof green; exposed+fixed two latent snapshot-evidence schema defects |
+| Fix 10 memory_read (operator-ruled blocker) | `7f37893b`, reviewed; disclosed test failures verified PRE-EXISTING by provenance |
+| Harness re-pin AFTER last src change | registration `9adc5e47` pins `7f37893b` (path-scoped measure, tree clean) |
+| Joe's rulings recorded pre-launch | in the registration: (1) id-set-hash store-revision ADOPTED; (2) body-read repair + live validation required |
+| JVM reload + behavioral parity | 4/4 probes (write-substrate guard, disposition validation, memory-read resolution, timeout default) |
+| **LIVE LAUNCH GATE (Joe's bar)** | **PASSED: zai-1 quoted the body of `e-33cf23e7` through memory_read; verified verbatim by string equality, 306/306 chars.** Runner's own counterfactual: "would have collapsed my ~40-minute close-reading rediscovery into one read... precisely the entry I had to mark IGNORED" |
+| t94J02 open-state | compile-verified: one "declaration uses `sorry`" warning (line 18) at the pin |
+| Frame-1 packet template | `6f725248` (lake-env-lean bar, checkout injection, honesty clause) |
+| Runbook | README-problem-peripheral.md §Frame-1 runbook, this commit |
+
+**LAUNCH CHECKLIST (morning):** conductor start-context MUST carry
+`:evidence-store` (f1b backend — now refused loudly if absent) and
+`:mission` in every dispatch opts; parity probe before begin; proctor
+witnesses seat exclusivity at open and close; no src/scripts/deps.edn
+commits inside the 120-minute window; rider-ledger check of offers against
+the three rehearsal memory ids; refusal codes read against the README list.
+Board: no open jobs, no open parks. **The system is attested. Frame-1 waits
+on one word.**

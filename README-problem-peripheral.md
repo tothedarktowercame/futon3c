@@ -189,6 +189,24 @@ its own defaults:
 emacs --batch -l ../futon4/dev/check-parens.el -f arxana-check-parens-cli -- --no-defaults <files>
 ```
 
+## Frame-1 runbook (attested 2026-08-15, W.5)
+
+1. **Loaded-code parity before opening a cycle.** The serving JVM's loaded
+   namespaces can trail disk (rehearsal finding 1 — both directions matter:
+   stale code fails, and an open cycle is ISOLATED from disk fixes). Reload
+   via Drawbridge and run a behavioral parity probe before `:begin-problem-cycle`.
+2. **Every dispatch opts map carries `:mission "M-apm-demonstration"`.**
+   `dispatch!` defaults missing missions to another mission's label (finding 11).
+3. **Acceptance bar is `lake env lean <Main.lean>` + `#print axioms`** — root
+   `lake build` never compiles problem files (finding 9).
+4. **Selection and hole-state read compiled facts**: the compiler's
+   "declaration uses `sorry`" warnings, never grep or status.json (two
+   incidents: t94J02's status.json, a01A06's prose sorry).
+5. **Park on every dispatch** (README-park), absolute epoch-ms deadlines.
+6. **Hygiene note:** three test namespaces carry pre-existing red (transcript
+   persistence, ZAIF arm-choice, neighborhood `:at nil`) — not regressions;
+   fix before they hide a real one.
+
 ## Where things live
 
 | | |
