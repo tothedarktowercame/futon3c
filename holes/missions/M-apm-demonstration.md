@@ -8397,3 +8397,54 @@ proctor's exclusions later join against (I.50).
 **A3 took five dispatches because I kept writing one packet against an unbuilt
 layer.** The same shape is visible here — a generic engine change *and* a domain
 adoption — so it is split before the first dispatch rather than after the fourth.
+
+## I.52 State is not data — the runtime-keys amendment (operator approved)
+
+**Ninth stop, ninth time right.** Probed and confirmed: cycle state holds live
+runtime values — `:cycle-config` (functions) and `:evidence-store` (an active
+sink) — and `(edn/read-string (pr-str state))` throws *"No reader function for tag
+object"*. **My packet-1 contract assumed state was data. It is not.**
+
+Note the non-data is **nested**: a shallow type check over top-level values finds
+nothing, because `:cycle-config` is a map that merely *contains* functions.
+
+### The amendment
+
+`:state-runtime-keys #{…}` — declared per domain, opt-in like everything else.
+
+- **Save:** the engine passes state **minus** the runtime keys, so what is
+  persisted is data.
+- **Load:** the engine merges the **current** state's runtime keys into the loaded
+  data — `(merge loaded (select-keys current runtime-keys))`.
+
+**Re-attaching the current runtime is the correct semantics, not a workaround:** you
+want the **live** evidence sink, not a dead one deserialised from an old save. A
+restored cycle should write its evidence to the store that is actually open.
+
+### The hazard this creates, for packet 2 rather than the engine
+
+`:cycle/mode` is **data** (persisted); `:cycle-config` is **runtime**
+(re-attached) — and the config is *autoconf'd from the mode*. So loading a
+store-mode state while running harness-mode would give **harness config over
+store-mode data**, silently.
+
+**That is a regime violation** — the registration treats a mode switch as its own
+regime boundary — so it must not be silent. It belongs in `problem.clj`'s
+`:state-validate-fn`, which is exactly what that hook is for: generic keys are the
+engine's business, `:cycle/mode` is the domain's.
+
+### Two defects of mine, found while verifying
+
+1. **My `:cycle/id` guard was dead** — the engine stores `:current-cycle-id`;
+   `:cycle/id` is the key on the *backend result*. It could never fire. **Its test
+   passed only because the test built that key itself.**
+
+   > **A mutation test proves the code is reachable FROM THE TEST, not that it is
+   > reachable from reality.** My mutation and my assertion agreed with each other
+   > and with nothing else.
+
+2. Once rewired it was **too strict**, and **codex-4's existing test caught it**:
+   loading a state with no cycle id is a rewind to before the cycle began — the most
+   extreme legitimate step-back. Only a *different live* cycle is the hole.
+
+Both fixed in `4f1cbd9f`.
