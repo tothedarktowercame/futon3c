@@ -61,6 +61,33 @@
                         [:result :memory-offers 0 :body :memory-use
                          :memory-use/surfaced-memory-ids])))))
 
+(deftest role-channel-cannot-be-overridden-by-the-caller
+  ;; The role fixes the channel. A caller-supplied :push+pull reaching the
+  ;; student would be a containment breach of the same family as I.38's
+  ;; environment pass-note, so the precedence is asserted, not just written.
+  (let [calls (atom [])
+        dispatch-fn (fn [opts _] (swap! calls conj (:memory-channel opts))
+                      {:evidence {}})
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend) dispatch-fn)]
+    (tools/execute-tool backend :dispatch-student-fresh
+                        [{:memory-channel :push+pull} "packet"])
+    (tools/execute-tool backend :dispatch-solver
+                        [{:memory-channel :none} "packet"])
+    (is (= [:pull-only :push+pull] @calls))))
+
+(deftest failed-bell-is-a-tool-failure-not-an-escaping-exception
+  ;; ToolBackend promises {:ok true :result} | {:ok false :error}. run-dispatch!
+  ;; throws when Agency returns no job-id, so an unguarded call breaks that
+  ;; contract and the cycle cannot record its own failure.
+  (let [boom (fn [_ _] (throw (ex-info "Agency bell returned no job-id" {})))
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend) boom)
+        result (tools/execute-tool backend :dispatch-solver
+                                   [{:problem "p"} "packet"])]
+    (is (false? (:ok result)))
+    (is (re-find #"no job-id" (:error result)))))
+
 (deftest failed-recall-still-records-an-empty-offer
   (let [backend (problem/make-ground-control-backend
                  (tools/make-mock-backend)

@@ -109,15 +109,27 @@
   (execute-tool [_ tool-id args]
     (if-let [memory-channel (get dispatch-channels tool-id)]
       (let [[opts packet] args
-            dispatch-result (dispatch-fn (assoc (or opts {})
-                                                :memory-channel memory-channel)
-                                         packet)]
-        ;; This is the receipt emitted by the dispatcher that made the offer,
-        ;; not a second account synthesized by the cycle machine.  Even an
-        ;; empty/failed recall has one offered receipt.
-        {:ok true
-         :result (assoc dispatch-result
-                        :memory-offers [(:evidence dispatch-result)])})
+            ;; assoc LAST: the role fixes the channel and a caller cannot
+            ;; override it.  A caller-supplied :push to the student would be a
+            ;; containment breach, so this precedence is load-bearing.
+            dispatch-result (try (dispatch-fn (assoc (or opts {})
+                                                     :memory-channel memory-channel)
+                                              packet)
+                                 (catch Throwable t t))]
+        (if (instance? Throwable dispatch-result)
+          ;; A failed BELL is not a failed recall.  Recall is best-effort and
+          ;; degrades to an empty offer; the bell is the work itself, so it must
+          ;; surface as a structured tool failure rather than escape as an
+          ;; exception and break the ToolBackend contract.
+          {:ok false
+           :error (str "ground-control dispatch failed: "
+                       (.getMessage ^Throwable dispatch-result))}
+          ;; This is the receipt emitted by the dispatcher that made the offer,
+          ;; not a second account synthesized by the cycle machine.  Even an
+          ;; empty/failed recall has one offered receipt.
+          {:ok true
+           :result (assoc dispatch-result
+                          :memory-offers [(:evidence dispatch-result)])}))
       (tools/execute-tool inner-backend tool-id args))))
 
 (defn make-ground-control-backend
