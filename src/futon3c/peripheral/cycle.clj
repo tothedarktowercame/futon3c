@@ -369,7 +369,8 @@
                   new-cycle-id (when (= tool cycle-begin)
                                  (:cycle/id result))
                   last-phase (last (:phase-order config))
-                  step-record (cond-> {:tool tool :args args :result result}
+                  step-record (cond-> {:tool tool :args args :result result
+                                       :evidence/id (:evidence/id ev)}
                                 marker (assoc :branch-marker marker))
                   new-state (cond-> state-base
                               true (assoc :last-evidence-id (:evidence/id ev))

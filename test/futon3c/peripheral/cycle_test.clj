@@ -162,6 +162,26 @@
         step (runner/step p (:state cycle-step) {:tool :tool-a :args []})]
     (is (:ok step))))
 
+(deftest step-records-retain-their-own-evidence-chain-ids
+  (let [p (make-test-peripheral (make-test-mock))
+        start (runner/start p {:session-id "step-evidence-chain"})
+        first-step (runner/step p (:state start) {:tool :read :args ["a"]})
+        second-step (runner/step p (:state first-step)
+                                 {:tool :tool-a :args []})
+        first-id (get-in first-step [:evidence :evidence/id])
+        second-id (get-in second-step [:evidence :evidence/id])
+        records (get-in second-step [:state :steps])]
+    (is (= [first-id second-id] (mapv :evidence/id records))
+        "each record retains its own id, not the preceding evidence id")
+    (is (not= first-id second-id))
+    (is (= second-id (get-in second-step [:state :last-evidence-id]))
+        ":last-evidence-id remains the newest emitted evidence")
+    (is (= (get-in start [:evidence :evidence/id])
+           (get-in first-step [:evidence :evidence/in-reply-to])))
+    (is (= first-id
+           (get-in second-step [:evidence :evidence/in-reply-to]))
+        "step n+1 links to step n's retained evidence id")))
+
 ;; =============================================================================
 ;; Phase transitions
 ;; =============================================================================
