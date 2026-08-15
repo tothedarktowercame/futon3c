@@ -7,9 +7,11 @@
             [futon3c.apm.cycle-harness :as apm-harness]
             [futon3c.apm.preregistration :as prereg]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
+            [futon3c.evidence.backend :as evidence-backend]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.memory-write :as memory-write]
+            [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.substrate.client :as substrate])
   (:import [java.nio.file Files StandardCopyOption]
@@ -147,7 +149,7 @@
 
 (defn- state-snapshot [state tool result]
   (when (and (= tool :problem-save) (:ok result))
-    {:snapshot/subject {:ref/type :peripheral :ref/id "problem"}
+    {:snapshot/subject {:ref/type :problem :ref/id "problem"}
      :snapshot/body {:snapshot :problem-save
                      :problem-id (:problem-id state)
                      :cycle-id (:current-cycle-id state)
@@ -155,7 +157,10 @@
                      :phase (:current-phase state)
                      :cycles-completed (:cycles-completed state)
                      :step-count (count (:steps state))}
-     :snapshot/tags [:problem :snapshot]}))
+     ;; make-snapshot-evidence already supplies :problem and :snapshot.
+     ;; Repeating them here produces an invalid EvidenceEntry once the problem
+     ;; peripheral's required evidence store actually exercises this path.
+     :snapshot/tags []}))
 
 (defn- stamp-attempt-environment [attempt assignment harness-revision]
   (if (map? attempt)
@@ -1410,6 +1415,23 @@
                           (atom 0) (atom nil)
                           store-snapshotter clock record-memory-fn)))
 
+(defrecord EvidenceRequiredProblemPeripheral [inner]
+  runner/PeripheralRunner
+  (start [_ context]
+    (or (runner/validate-context :problem context
+                                 #{:session-id :evidence-store})
+        (when-not (or (instance? clojure.lang.IAtom (:evidence-store context))
+                      (satisfies? evidence-backend/EvidenceBackend
+                                  (:evidence-store context)))
+          (runner/runner-error :problem :invalid-context
+                               ":evidence-store must be an evidence store"
+                               :field :evidence-store))
+        (runner/start inner context)))
+  (step [_ state action]
+    (runner/step inner state action))
+  (stop [_ state reason]
+    (runner/stop inner state reason)))
+
 (defn make-problem
   ([] (make-problem (tools/make-mock-backend)))
   ([backend]
@@ -1432,13 +1454,14 @@
   ([backend dispatch-fn state-root provisioner-fn harness-measurer
     store-snapshotter clock record-memory-fn]
    (let [cycle-context (atom nil)]
-     (cycle/make-cycle-peripheral
-      (assoc problem-domain-config :cycle-context cycle-context) problem-spec
-      (make-problem-cycle-backend
-       (make-checkout-provisioning-backend
-        (make-ground-control-backend
-         (make-problem-state-backend backend state-root)
-         dispatch-fn)
-        provisioner-fn)
-       harness-measurer cycle-context store-snapshotter clock
-       record-memory-fn)))))
+     (->EvidenceRequiredProblemPeripheral
+      (cycle/make-cycle-peripheral
+       (assoc problem-domain-config :cycle-context cycle-context) problem-spec
+       (make-problem-cycle-backend
+        (make-checkout-provisioning-backend
+         (make-ground-control-backend
+          (make-problem-state-backend backend state-root)
+          dispatch-fn)
+         provisioner-fn)
+        harness-measurer cycle-context store-snapshotter clock
+        record-memory-fn))))))

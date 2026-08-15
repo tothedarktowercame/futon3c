@@ -18,6 +18,13 @@
 (def dispatch-packet
   (apply str (repeat 220 "p")))
 
+(defn- capturing-evidence-store []
+  (atom {:entries {} :order []}))
+
+(defn- start-problem [p context]
+  (runner/start p (assoc context :evidence-store
+                         (capturing-evidence-store))))
+
 (defn dispatch-state [phase]
   (let [calls (atom [])
         dispatch-fn (fn [opts packet]
@@ -26,7 +33,7 @@
                        :assembled-packet packet
                        :evidence {:body {:memory-channel (:memory-channel opts)}}})
         p (problem/make-problem (tools/make-mock-backend) dispatch-fn)
-        result (runner/start p {:session-id "s" :problem-id "p"
+        result (start-problem p {:session-id "s" :problem-id "p"
                                 :cycle/mode :store-mode})]
     [p (assoc (:state result) :current-phase phase) calls]))
 
@@ -109,7 +116,7 @@
                        :batch "b"})
         p (problem/make-problem (tools/make-mock-backend) dispatch-fn
                                 "/tmp/problem-test-state" provisioner)
-        start (runner/start p {:session-id "s" :problem-id "p"
+        start (start-problem p {:session-id "s" :problem-id "p"
                                :cycle/mode :store-mode})
         assigned (runner/step
                   p (assoc (:state start) :current-phase :register)
@@ -185,7 +192,7 @@
 
 (defn started [mode]
   (let [p (problem/make-problem (tools/make-mock-backend))
-        result (runner/start p {:session-id "s" :problem-id "p"
+        result (start-problem p {:session-id "s" :problem-id "p"
                                 :cycle/mode mode})]
     [p (:state result)]))
 
@@ -296,7 +303,7 @@
            (tools/make-mock-backend)
            (fn [_ _] (throw (ex-info "not dispatched" {})))
            root provisioner)
-        start (runner/start p {:session-id "checkout-register"
+        start (start-problem p {:session-id "checkout-register"
                                :problem-id "t94J02"
                                :cycle/mode :store-mode})
         state (assoc (:state start) :current-phase :register)
@@ -328,7 +335,7 @@
         backend (tools/make-mock-backend
                  {:advance-problem-phase {:cycle/phase :frame}})
         p (problem/make-problem backend)
-        start (runner/start p {:session-id "stamp-attempts"
+        start (start-problem p {:session-id "stamp-attempts"
                                :problem-id "t94J02"
                                :cycle/mode :store-mode})
         registered
@@ -396,7 +403,7 @@
         p (problem/make-problem backend
                                 (fn [_ _] {:job-id "job" :evidence {}})
                                 "/tmp/student-tree-test" provisioner)
-        start (runner/start p {:session-id "student-trees" :problem-id "p"
+        start (start-problem p {:session-id "student-trees" :problem-id "p"
                                :cycle/mode :store-mode})
         assigned (runner/step
                   p (assoc (:state start) :current-phase :register)
@@ -582,7 +589,7 @@
   (let [p (problem/make-problem (tools/make-mock-backend)
                                 (fn [_ _] (throw (ex-info "not dispatched" {})))
                                 root)
-        start (runner/start p {:session-id session-id
+        start (start-problem p {:session-id session-id
                                :problem-id "t94J02"
                                :cycle/mode mode})]
     [p (assoc (:state start)
@@ -745,7 +752,7 @@
         p (problem/make-problem backend (fn [_ _] {:evidence {}})
                                 "/tmp/custody"
                                 (fn [{:keys [arm]}] (get real (keyword arm))))
-        start (runner/start p {:session-id "custody" :problem-id "t94J02"
+        start (start-problem p {:session-id "custody" :problem-id "t94J02"
                                :cycle/mode :store-mode})
         ;; the machine runs the tool -- its result lands in :steps
         assigned (runner/step p (assoc (:state start) :current-phase :register)
@@ -789,7 +796,7 @@
                          {:harness-revision
                           "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                           :harness-tree-dirty? false})
-                      start (runner/start p context)]
+                      start (start-problem p context)]
                   (runner/step p (:state start)
                                {:tool :begin-problem-cycle
                                 :args ["M-demo" "round-1"]})))
@@ -807,7 +814,7 @@
   (let [p (harness-measured-problem
            {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             :harness-tree-dirty? false})
-        start (runner/start p {:session-id "double-begin" :problem-id "p"
+        start (start-problem p {:session-id "double-begin" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (runner/step p (:state start)
@@ -821,7 +828,7 @@
   (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         p (harness-measured-problem {:harness-revision revision
                                      :harness-tree-dirty? false})
-        start (runner/start p {:session-id "advance" :problem-id "p"
+        start (start-problem p {:session-id "advance" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (runner/step p (:state start)
@@ -849,7 +856,7 @@
   (let [p (harness-measured-problem
            {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             :harness-tree-dirty? false})
-        start (runner/start p {:session-id "no-cycle" :problem-id "p"
+        start (start-problem p {:session-id "no-cycle" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         advanced (runner/step p (:state start)
@@ -862,7 +869,7 @@
   (let [p (harness-measured-problem
            {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             :harness-tree-dirty? false})
-        start (runner/start p {:session-id "frame-emission" :problem-id "p"
+        start (start-problem p {:session-id "frame-emission" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (runner/step p (:state start)
@@ -1013,7 +1020,7 @@
              {:checkout (str "/frames/" arm) :base-revision revision})
            (fn [_] {:harness-revision revision :harness-tree-dirty? false})
            (constantly snapshot) clock)
-        start (runner/start p {:session-id "register-tools" :problem-id "p"
+        start (start-problem p {:session-id "register-tools" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (runner/step p (:state start)
@@ -1075,7 +1082,7 @@
                                 :base-revision revision})
            (fn [_] {:harness-revision revision :harness-tree-dirty? false})
            (constantly []) (constantly 0))
-        start (runner/start p {:session-id "f4-order" :problem-id "p"
+        start (start-problem p {:session-id "f4-order" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (:state (runner/step p (:state start)
@@ -1118,7 +1125,7 @@
   (let [p (harness-measured-problem
            {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             :harness-tree-dirty? false})
-        start (runner/start p {:session-id "dry-traverse" :problem-id "t94J02"
+        start (start-problem p {:session-id "dry-traverse" :problem-id "t94J02"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (runner/step p (:state start)
@@ -1136,7 +1143,7 @@
   (let [measured "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         p (harness-measured-problem {:harness-revision measured
                                      :harness-tree-dirty? false})
-        start (runner/start p {:session-id "harness-stamp" :problem-id "p"
+        start (start-problem p {:session-id "harness-stamp" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (runner/step p (:state start)
@@ -1170,7 +1177,7 @@
   (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         p (harness-measured-problem {:harness-revision revision
                                      :harness-tree-dirty? true})
-        start (runner/start p {:session-id "dirty-harness" :problem-id "p"
+        start (start-problem p {:session-id "dirty-harness" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (runner/step p (:state start)
@@ -1192,7 +1199,7 @@
         registered "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
         p (harness-measured-problem {:harness-revision measured
                                      :harness-tree-dirty? false})
-        start (runner/start p {:session-id "harness-pin" :problem-id "p"
+        start (start-problem p {:session-id "harness-pin" :problem-id "p"
                                :cycle/mode :store-mode
                                :harness-repo "/measured/harness"})
         begun (runner/step p (:state start)
@@ -1365,7 +1372,7 @@
   ;; tests stayed green. A stubbed collaborator hides the integration it stands in
   ;; for.
   (let [p (problem/make-problem (tools/make-mock-backend))
-        st (assoc (:state (runner/start p {:session-id "e2e" :problem-id "t94J02"
+        st (assoc (:state (start-problem p {:session-id "e2e" :problem-id "t94J02"
                                            :cycle/mode :store-mode}))
                   :current-phase :close :current-cycle-id "C1"
                   :steps [{:tool :record-measurement
@@ -1413,7 +1420,7 @@
   (let [backend (tools/make-mock-backend)
         p (cycle/make-cycle-peripheral problem/problem-domain-config
                                        problem/problem-spec backend)
-        state (:state (runner/start p {:session-id "cap-probes"
+        state (:state (start-problem p {:session-id "cap-probes"
                                        :problem-id "t94J02"
                                        :cycle/mode :store-mode}))
         steps [{:tool :emit-frame :evidence/id "e-frame"}
@@ -1445,7 +1452,7 @@
   (let [p (cycle/make-cycle-peripheral problem/problem-domain-config
                                        problem/problem-spec
                                        (tools/make-mock-backend))
-        state (:state (runner/start p {:session-id "missing-probe"
+        state (:state (start-problem p {:session-id "missing-probe"
                                        :problem-id "t94J02"
                                        :cycle/mode :store-mode}))
         result (runner/step
@@ -1476,7 +1483,7 @@
            (fn [_] {:harness-revision (apply str (repeat 40 "a"))
                     :harness-tree-dirty? false})
            (constantly []) (constantly 0))
-        start (:state (runner/start p {:session-id "adjudication-tools"
+        start (:state (start-problem p {:session-id "adjudication-tools"
                                        :problem-id "t94J02"
                                        :cycle/mode :store-mode
                                        :harness-repo "/harness"
@@ -1631,7 +1638,7 @@
   (let [backend (tools/make-mock-backend)
         p (cycle/make-cycle-peripheral problem/problem-domain-config
                                        problem/problem-spec backend)
-        state (:state (runner/start p {:session-id "measurement"
+        state (:state (start-problem p {:session-id "measurement"
                                        :problem-id "t94J02"
                                        :cycle/mode :store-mode}))
         result (runner/step p (measurement-state state)
@@ -1663,7 +1670,7 @@
   (let [p (cycle/make-cycle-peripheral problem/problem-domain-config
                                        problem/problem-spec
                                        (tools/make-mock-backend))
-        state (:state (runner/start p {:session-id "measurement-mutation"
+        state (:state (start-problem p {:session-id "measurement-mutation"
                                        :problem-id "t94J02"
                                        :cycle/mode :store-mode}))
         field "statement defects at review"
@@ -1678,7 +1685,7 @@
     (is (re-find #"statement defects at review" (str result)))))
 
 (defn- close-tool-state [p context emit-envelope]
-  (let [state (:state (runner/start p context))]
+  (let [state (:state (start-problem p context))]
     (assoc state
            :current-phase :close
            :current-cycle-id "C-close"
@@ -1790,7 +1797,7 @@
   ;; supply -- and "an empty collection proves its producer ran" was exactly the
   ;; rule it exploited.
   (let [p (problem/make-problem (tools/make-mock-backend))
-        base (:state (runner/start p {:session-id "inj" :problem-id "t94J02"
+        base (:state (start-problem p {:session-id "inj" :problem-id "t94J02"
                                       :cycle/mode :store-mode}))
         outs {:registration {:problem {:problem-id "t94J02" :difficulty-stratum "s"
                                        :regime "r" :locked-lemma-exposure []}
@@ -1880,7 +1887,7 @@
            (fn [_] {:checkout "/tmp/problem-id-test/co" :base-revision "rev"})
            (fn [_] {:harness-revision (apply str (repeat 40 "a"))
                     :harness-tree-dirty? false}))
-        state (:state (runner/start p {:session-id "S" :problem-id "t94J02"
+        state (:state (start-problem p {:session-id "S" :problem-id "t94J02"
                                        :cycle/mode :store-mode
                                        :harness-repo "/tmp/harness"}))
         first-begin (runner/step p state
@@ -2169,3 +2176,32 @@
                  {:cycle/step-index 6}])]
     (is (false? (:ok result)))
     (is (re-find #"one of" (:error result)))))
+
+(deftest problem-start-requires-evidence-store
+  (let [p (problem/make-problem)
+        result (runner/start p {:session-id "missing-evidence-store"
+                                :problem-id "p"
+                                :cycle/mode :store-mode})]
+    (is (not (:ok result)))
+    (is (= :missing-context (:error/code result)))
+    (is (= [:evidence-store] (get-in result [:error/context :missing])))
+    (is (re-find #":evidence-store" (:error/message result)))))
+
+(deftest problem-start-and-step-append-to-required-evidence-store
+  (let [store (capturing-evidence-store)
+        p (problem/make-problem)
+        start (runner/start p {:session-id "capturing-evidence"
+                               :problem-id "p"
+                               :cycle/mode :store-mode
+                               :evidence-store store})
+        step (runner/step p (:state start)
+                          {:tool :list-problems :args []})]
+    (is (:ok start))
+    (is (:ok step))
+    (is (= 2 (count (:order @store))))
+    (is (= #{:start :step}
+           (set (map #(get-in @store [:entries % :evidence/body :event])
+                     (:order @store)))))))
+
+(deftest make-problem-construction-does-not-require-evidence-store
+  (is (satisfies? runner/PeripheralRunner (problem/make-problem))))
