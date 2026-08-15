@@ -1374,3 +1374,41 @@
     (spit (io/file dir "src" "code.clj") "(ns code) ;; edited\n")
     (is (true? (:harness-tree-dirty? (#'problem/measure-harness-repository (str dir))))
         "an uncommitted edit to harness code MUST read as dirty")))
+
+;; DETERMINISTIC IS NOT THE SAME AS CONSTANT. The cycle id keys the save/load
+;; state directory (data/problem-state/<cycle-id>/, write-once), so it must be
+;; reproducible -- but a second cycle of the same session on the same problem
+;; with the same begin args must not reuse the first cycle's id. It did: the
+;; digest covered only session, problem and args. Two consequences, the second
+;; worse than the first: cycle 2 writes into cycle 1's version directory, and the
+;; :problem-load cross-cycle guard compares :current-cycle-id, so with identical
+;; ids it cannot fire -- cycle 2 could restore cycle 1's state as its own.
+(defn- begin-two-cycles-in-one-session []
+  (let [p (problem/make-problem
+           (tools/make-mock-backend) (fn [& _] {:ok true}) "/tmp/problem-id-test"
+           (fn [_] {:checkout "/tmp/problem-id-test/co" :base-revision "rev"})
+           (fn [_] {:harness-revision (apply str (repeat 40 "a"))
+                    :harness-tree-dirty? false}))
+        state (:state (runner/start p {:session-id "S" :problem-id "t94J02"
+                                       :cycle/mode :store-mode
+                                       :harness-repo "/tmp/harness"}))
+        first-begin (runner/step p state
+                                 {:tool :begin-problem-cycle :args ["M" "C"]})
+        ;; the engine clears these on the final advance; this is the state a
+        ;; second cycle legitimately begins from
+        cleared (dissoc (:state first-begin) :current-phase :current-cycle-id)
+        second-begin (runner/step p cleared
+                                  {:tool :begin-problem-cycle :args ["M" "C"]})]
+    [(get-in first-begin [:state :current-cycle-id])
+     (get-in second-begin [:state :current-cycle-id])]))
+
+(deftest two-cycles-in-one-session-get-distinct-ids
+  (let [[first-id second-id] (begin-two-cycles-in-one-session)]
+    (is (some? first-id))
+    (is (some? second-id))
+    (is (not= first-id second-id)
+        "a second cycle must not reuse the first cycle's state directory")))
+
+(deftest cycle-ids-are-reproducible-across-fresh-peripherals
+  (is (= (begin-two-cycles-in-one-session) (begin-two-cycles-in-one-session))
+      "replaying the same sequence of begins must reproduce the same ids"))

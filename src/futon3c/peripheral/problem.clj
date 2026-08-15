@@ -929,12 +929,25 @@
     {:harness-revision revision
      :harness-tree-dirty? (not (str/blank? status-out))}))
 
-(defrecord ProblemCycleBackend [inner-backend harness-measurer cycle-context]
+(defrecord ProblemCycleBackend [inner-backend harness-measurer cycle-context
+                                begin-seq]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
     (if (= tool-id :begin-problem-cycle)
+      ;; DETERMINISTIC BUT NOT CONSTANT. The id must be reproducible, because
+      ;; save/load state files are keyed by it (data/problem-state/<cycle-id>/,
+      ;; write-once). It must ALSO differ between two cycles of the same session:
+      ;; without the sequence number, a second cycle on the same problem with the
+      ;; same begin args got a byte-identical id, so it would write into the first
+      ;; cycle's version directory AND -- worse -- the :problem-load cross-cycle
+      ;; guard compares :current-cycle-id and so could not fire, letting cycle 2
+      ;; restore cycle 1's state as if it were its own.
+      ;;
+      ;; The counter is per-peripheral and starts at 0, so replaying the same
+      ;; sequence of begins from a fresh peripheral reproduces the same ids.
       (let [{:keys [session-id problem-id harness-repo]} @cycle-context
-            identity-input [session-id problem-id (vec args)]
+            seq-no (dec (swap! begin-seq inc))
+            identity-input [session-id problem-id seq-no (vec args)]
             digest (apm-harness/sha256-bytes
                     (.getBytes (pr-str identity-input) "UTF-8"))]
         {:ok true
@@ -944,7 +957,8 @@
       (tools/execute-tool inner-backend tool-id args))))
 
 (defn make-problem-cycle-backend [inner-backend harness-measurer cycle-context]
-  (->ProblemCycleBackend inner-backend harness-measurer cycle-context))
+  (->ProblemCycleBackend inner-backend harness-measurer cycle-context
+                         (atom 0)))
 
 (defn make-problem
   ([] (make-problem (tools/make-mock-backend)))
