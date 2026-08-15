@@ -8752,3 +8752,68 @@ kind of check it already performs for everything else.
 
 **Recorded as a live gap rather than fixed in passing** — folding it into A3.5 is how
 packets grow the "and" that I.47 warned about.
+
+## I.58 The validator and the cycle machine are looking at different objects
+
+**Scoping attempt-cap enforcement hit the same wall for the fourth time, so I traced
+it to the bottom instead of specifying around it.**
+
+The cap needs the trace to distinguish arms. It cannot:
+
+- `:cycle/attempts` projects **six fields**, none identifying the arm;
+- the trace carries **no** `:environment-checkouts`, so attempts cannot be
+  partitioned by checkout either.
+
+Following *why* produced the finding.
+
+### Two pipelines, joined by convention rather than code
+
+| | assembles from | validated? |
+|---|---|---|
+| **peripheral** — phases, tools, `:cycle/outputs`, stamping, invariants, required-outputs | the machine's own records | **no** |
+| **harness** — `run-cycle!` → `persist-entities!` → `derive-trace` → `report` | **caller-supplied `entities`** | **yes** |
+
+**`derive-trace [registration cycle-id entities]` reads only `entities`. Nothing
+connects `:cycle/outputs` to it.**
+
+> **So everything stamped today — the environment fields, the pin, the chain of
+> custody from provisioner to invariant — lands in `:cycle/outputs` and never
+> reaches the validator.** The validator validates a **relayed copy**, and the
+> launch authorization is written from that copy.
+
+`run-cycle!`'s docstring says *"`entities` are stage outputs supplied by the live
+cycle"* — which is the intent. **Nothing checks it.** The correspondence between what
+the machine wrote and what the validator sees is a convention.
+
+### And the join that would close it is unimplemented
+
+`problem.clj`'s `:close` phase declares `:emit-trace`, `:validate-trace`,
+`:write-authorization`. **A repo-wide search finds no implementation of any of
+them** — they exist as keywords in a tool set and nowhere else.
+
+**That is the signature defect at architectural scale.** Not a decorative field or an
+unwired predicate: *the two halves of the system that are supposed to check each
+other are connected by three tools that were declared and never built.*
+
+### What this means, stated carefully
+
+- **Everything hardened today is real** — the peripheral's gates fire, and the
+  mutations prove it.
+- **They protect the peripheral, not the artifact the authorization rests on.**
+- **Enforcing the attempt cap in the validator would enforce it on the relayed
+  copy** — true, and weaker than it sounds, which is why I stopped rather than
+  dispatched.
+
+### Recommendation
+
+**Close the join before adding more checks to either side.** `:emit-trace` should
+derive the trace from `:cycle/outputs` — the machine's own record — rather than the
+trace arriving from a caller. Then the validator and the cycle machine are looking at
+the same object, and every gate built today applies to the thing being authorized.
+
+**Attempt-cap enforcement is worth doing after that, not before.** It is a small
+check; putting it on the far side of an unverified relay is how a gate ends up
+measuring the wrong object.
+
+**Operator's call** — this is a structural change, and it is bigger than the packets
+that led to it.
