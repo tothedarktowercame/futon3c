@@ -97,3 +97,69 @@
 (deftest slice-one-fixture-has-only-single-writers
   (is (= [] (wiring/multiply-written
              (wiring/ingest apm-round1-pre-fix)))))
+
+(def site-sample
+  {:file "test/futon3c/diagramprover/fixtures/site_sample.clj"})
+
+(deftest conformance-finds-declaration-drift
+  (let [spec {:spec/id :declaration-drift
+              :boxes [{:box/id :present :site site-sample
+                       :reads [:f/declared-and-present]}
+                      {:box/id :absent :site site-sample
+                       :reads [:f/declared-but-absent]}]}
+        findings (wiring/conformance "." spec)]
+    (is (= [{:finding :declaration-without-occurrence
+             :box/id :absent
+             :field :f/declared-but-absent
+             :role :reads
+             :site site-sample}]
+           findings))
+    (is (not-any? #(= :f/declared-and-present (:field %)) findings))))
+
+(deftest conformance-finds-per-site-undeclared-occurrence
+  (let [spec {:spec/id :undeclared-occurrence
+              :boxes [{:box/id :at-site :site site-sample
+                       :reads [:f/declared-and-present]}
+                      {:box/id :universe-only
+                       :reads [:f/present-not-declared]}]}]
+    (is (= [{:finding :occurrence-without-declaration
+             :field :f/present-not-declared
+             :site site-sample
+             :declared-by []}]
+           (wiring/conformance "." spec)))))
+
+(deftest conformance-groups-boxes-sharing-a-site
+  (let [spec {:spec/id :shared-site
+              :boxes [{:box/id :reader :site site-sample
+                       :reads [:f/declared-and-present]}
+                      {:box/id :comment-owner :site site-sample
+                       :reads [:f/present-not-declared]}]}
+        findings (wiring/conformance "." spec)]
+    (is (empty? (filter #(= :occurrence-without-declaration (:finding %))
+                        findings)))
+    (is (= [] findings))))
+
+(deftest conformance-keyword-match-is-boundary-aware
+  (let [spec {:spec/id :keyword-boundary
+              :boxes [{:box/id :site-anchor :site site-sample}
+                      {:box/id :universe-only
+                       :reads [:environment-revision]}]}]
+    (is (= [] (wiring/conformance "." spec)))))
+
+(deftest declaration-without-site-is-exempt
+  (is (= []
+         (wiring/conformance
+          "."
+          {:spec/id :declaration-only
+           :boxes [{:box/id :no-site
+                    :reads [:f/absent-reader]
+                    :writes [:f/absent-writer]}]}))))
+
+(deftest namespace-sites-resolve-under-src
+  (is (= []
+         (wiring/conformance
+          "."
+          {:spec/id :namespace-site
+           :boxes [{:box/id :wiring-source
+                    :site {:ns "futon3c.diagramprover.wiring"}
+                    :reads [:declaration-without-occurrence]}]}))))

@@ -1,7 +1,8 @@
 (ns futon3c.diagramprover.wiring
   "Ingest mission wiring specs as typed open hypergraphs and report structural
   wiring findings."
-  (:require [futon3c.diagramprover.graph :as graph]))
+  (:require [clojure.string :as str]
+            [futon3c.diagramprover.graph :as graph]))
 
 (defn- fields-in [boxes]
   (->> boxes
@@ -84,3 +85,64 @@
                                   vec)}))))
        (sort-by (comp str :field))
        vec))
+
+(defn- site-path [repo-root site]
+  (cond
+    (:file site) (str (java.io.File. repo-root (:file site)))
+    (:ns site) (str (java.io.File.
+                     repo-root
+                     (str "src/"
+                          (-> (:ns site)
+                              (str/replace "." "/")
+                              (str/replace "-" "_"))
+                          ".clj")))
+    :else (throw (ex-info "Wiring site must name :file or :ns" {:site site}))))
+
+(defn- field-occurs? [text field]
+  (boolean
+   (re-find (re-pattern
+             (str (java.util.regex.Pattern/quote (str field)) "(?![\\w-])"))
+            text)))
+
+(defn conformance
+  "Compare declared box reads/writes with occurrences in their named sites.
+
+  Occurrence scanning is deliberately textual and counts comments. A commented
+  reader is useful drift to surface, and this cheap check intentionally avoids
+  pretending to provide parser-level or var-level precision. Boxes without a
+  site are exempt from conformance findings."
+  [repo-root {:keys [boxes]}]
+  (let [boxes (or boxes [])
+        field-universe (set (fields-in boxes))
+        boxes-by-site (group-by :site (filter :site boxes))
+        site-text (into {}
+                        (map (fn [[site _]]
+                               [site (slurp (site-path repo-root site))]))
+                        boxes-by-site)
+        missing-declarations
+        (for [box boxes
+              :let [site (:site box)]
+              :when site
+              [role fields] [[:reads (or (:reads box) [])]
+                             [:writes (or (:writes box) [])]]
+              field fields
+              :when (not (field-occurs? (get site-text site) field))]
+          {:finding :declaration-without-occurrence
+           :box/id (:box/id box)
+           :field field
+           :role role
+           :site site})
+        undeclared-occurrences
+        (for [[site site-boxes] boxes-by-site
+              :let [text (get site-text site)
+                    declared-here (set (fields-in site-boxes))]
+              field field-universe
+              :when (and (not (contains? declared-here field))
+                         (field-occurs? text field))]
+          {:finding :occurrence-without-declaration
+           :field field
+           :site site
+           :declared-by []})]
+    (->> (concat missing-declarations undeclared-occurrences)
+         (sort-by (juxt (comp str :finding) (comp str :field)))
+         vec)))
