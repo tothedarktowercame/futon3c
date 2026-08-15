@@ -8346,3 +8346,54 @@ proctor-owned.
 **Absent proctor record → the branch counts**, which is the default that cannot
 flatter. This is exactly I.44's shape: the measurement comes from a separately
 authored record, not from a flag set by the party being measured.
+
+## I.51 Third reason the precedent misled — and the engine contract, split into two packets
+
+**Eighth stop, eighth time right.** codex-4's finding: the backend receives only
+`tool-id` and **caller-supplied** `args` and never the authoritative state, so
+`:problem-save` cannot persist the peripheral's own state without asking the caller
+for it — self-report again. And `dispatch-step` never replaces state with a loaded
+result, so `:problem-load` cannot restore. Verified: `tools/dispatch-tool` takes
+`[tool-id args peripheral-spec backend]` — **no state parameter** — while
+`proof_backend` keeps its own `get-state`/`put-state!` cache.
+
+> **Proof's save/load persists BACKEND-OWNED DOMAIN state. Step-through needs
+> ENGINE-OWNED CYCLE state. Same verb, different object.**
+
+**That is the third distinct reason the "straightforward reinterpretation" was not
+one** — after *not additive* and *not atomic* (I.50). All three were invisible from
+the names: `:proof-save` / `:proof-load` / "version bump" reads exactly like the
+thing we wanted.
+
+### The engine contract
+
+**Opt-in, following the file's own precedent** (`:enforce-required-outputs?`,
+`:output-invariants` are both opt-in). Absent keys → engine behaviour unchanged, so
+proof and mission peripherals are untouched.
+
+| key | meaning |
+|---|---|
+| `:state-io-tools {:save t :load t}` | designates the save/load tools |
+| `:always-available-tools #{…}` | allowed in **any** phase — the complement of `setup-tools`, which is "no cycle active" |
+
+**Save:** the engine calls the backend with **its authoritative state prepended to
+args**, so what is persisted is what the engine holds, not what the caller claims.
+
+**Load:** on `{:ok true :result <state>}` the engine **validates then replaces** its
+own state. **Validation is the safety boundary** — without it, load is arbitrary
+state injection, and a peripheral that can be handed any state has no invariants at
+all. A failed validation must leave state **completely untouched**: no partial
+replacement.
+
+**Load also records a branch marker** in the step history, which is what the
+proctor's exclusions later join against (I.50).
+
+### Split into two packets — deliberately, and earlier than last time
+
+1. **The engine contract**, exercised against a synthetic test domain. **No real
+   domain adopts it.**
+2. **`problem.clj` adopts it**, plus the append-only store.
+
+**A3 took five dispatches because I kept writing one packet against an unbuilt
+layer.** The same shape is visible here — a generic engine change *and* a domain
+adoption — so it is split before the first dispatch rather than after the fourth.
