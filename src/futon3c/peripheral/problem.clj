@@ -897,13 +897,31 @@
   ([inner-backend dispatch-fn]
    (->GroundControlBackend inner-backend dispatch-fn)))
 
-(defn- measure-harness-repository [repo]
+(def ^:private harness-paths
+  ;; What "the harness" IS, for the purpose of freezing it: the retrieval and
+  ;; collection machinery, the provisioner, and the dependency set. NOT the
+  ;; mission record, the registration, the READMEs or the labs.
+  ["src" "scripts" "deps.edn"])
+
+(defn- measure-harness-repository
+  "Measure the harness revision as the commit that last changed the harness
+  PATHS -- not the repository HEAD.
+
+  HEAD moves on every note, mission-record entry and registration amendment, so
+  a HEAD-scoped pin is stale the moment it is written: the amendment that
+  records the pin is itself a commit, and a commit cannot contain its own sha.
+  Path-scoping makes the pin mean what it says -- this harness code ran -- and
+  keeps it stable while the surrounding prose moves. Same construction the
+  validator already uses for the Lean (`prereg/lean-source-revision`)."
+  [repo]
   (when-not (and (string? repo) (not (str/blank? repo)))
     (throw (ex-info "begin-problem-cycle requires :harness-repo" {})))
   (let [{rev-exit :exit rev-out :out rev-err :err}
-        (shell/sh "git" "-C" repo "rev-parse" "HEAD")
+        (apply shell/sh "git" "-C" repo "log" "-n" "1" "--format=%H" "--"
+               harness-paths)
         {status-exit :exit status-out :out status-err :err}
-        (shell/sh "git" "-C" repo "status" "--porcelain")
+        (apply shell/sh "git" "-C" repo "status" "--porcelain" "--"
+               harness-paths)
         revision (str/trim rev-out)]
     (when-not (and (zero? rev-exit)
                    (re-matches #"[0-9a-f]{40}" revision))

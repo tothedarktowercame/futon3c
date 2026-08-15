@@ -1,6 +1,7 @@
 (ns futon3c.peripheral.problem-test
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.java.shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.cycle-harness :as apm-harness]
@@ -1273,3 +1274,48 @@
                            :environment-revision wrong))
         result (advance-student-attempts outputs [{}])]
     (is (= :environment-revision-not-registered (:error/code result)))))
+
+;; The measurement is PATH-SCOPED, not HEAD-scoped. This is the difference
+;; between a pin that means "this harness code ran" and one that goes stale the
+;; moment anything else in the repo is committed -- including the very
+;; amendment that records the pin, since a commit cannot contain its own sha.
+;; Exercises the real git-backed measurer against a throwaway repository, so it
+;; does not depend on futon3c's own working-tree state.
+(defn- git! [dir & args]
+  (let [{:keys [exit err]} (apply clojure.java.shell/sh
+                                  (concat ["git" "-C" (str dir)] args))]
+    (assert (zero? exit) (str "git " (pr-str args) " failed: " err))))
+
+(defn- throwaway-harness-repo []
+  (let [dir (.toFile (Files/createTempDirectory
+                      "harness-scope" (make-array FileAttribute 0)))]
+    (git! dir "init" "-q")
+    (git! dir "config" "user.email" "t@t")
+    (git! dir "config" "user.name" "t")
+    (io/make-parents (io/file dir "src" "code.clj"))
+    (spit (io/file dir "src" "code.clj") "(ns code)\n")
+    (git! dir "add" "-A") (git! dir "commit" "-q" "-m" "harness code")
+    dir))
+
+(deftest harness-revision-is-the-harness-paths-commit-not-repository-head
+  (let [dir (throwaway-harness-repo)
+        harness-commit (str/trim (:out (clojure.java.shell/sh
+                                        "git" "-C" (str dir) "rev-parse" "HEAD")))
+        _ (do (spit (io/file dir "NOTES.md") "a note outside the harness\n")
+              (git! dir "add" "-A") (git! dir "commit" "-q" "-m" "a note"))
+        head (str/trim (:out (clojure.java.shell/sh
+                              "git" "-C" (str dir) "rev-parse" "HEAD")))
+        measured (#'problem/measure-harness-repository (str dir))]
+    (is (not= harness-commit head) "the note must have moved HEAD")
+    (is (= harness-commit (:harness-revision measured))
+        "a commit outside src/scripts/deps.edn must NOT move the harness pin")
+    (is (false? (:harness-tree-dirty? measured)))))
+
+(deftest harness-dirtiness-ignores-changes-outside-the-harness-paths
+  (let [dir (throwaway-harness-repo)]
+    (spit (io/file dir "NOTES.md") "an uncommitted note\n")
+    (is (false? (:harness-tree-dirty? (#'problem/measure-harness-repository (str dir))))
+        "an uncommitted note must not read as an unfrozen harness")
+    (spit (io/file dir "src" "code.clj") "(ns code) ;; edited\n")
+    (is (true? (:harness-tree-dirty? (#'problem/measure-harness-repository (str dir))))
+        "an uncommitted edit to harness code MUST read as dirty")))
