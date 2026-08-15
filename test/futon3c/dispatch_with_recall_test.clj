@@ -156,6 +156,50 @@
            (:score-kind (last audit))))
     (is (= 2 (:cutoff-position (last audit))))))
 
+(deftest eligible-memory-observation-is-post-anchor-and-pre-cutoff
+  (let [ranked [{:memory/id "e-first" :memory/body {:summary "anchor one"}}
+                {:memory/id "e-second" :memory/body {:summary "anchor two"}}
+                {:memory/id "e-third" :memory/body {:summary "anchor three"}}
+                {:memory/id "e-ineligible" :memory/body {:summary "other"}}]
+        eligible (vec (#'dispatch/eligible-memories ranked "anchor"
+                                                     (constantly nil)))
+        eligible-ids (->> eligible (map :memory/id) distinct vec)
+        limit 2
+        surfaced-ids (mapv :memory/id (take limit eligible))
+        legacy-surfaced-ids
+        (->> ranked
+             (filter #(#'dispatch/memory-contains-term? % "anchor"))
+             (take limit)
+             (mapv :memory/id))]
+    (is (= ["e-first" "e-second" "e-third"] eligible-ids))
+    (is (= ["e-first" "e-second"] surfaced-ids))
+    (is (> (count eligible-ids) (count surfaced-ids)))
+    (is (= surfaced-ids (subvec eligible-ids 0 (count surfaced-ids)))
+        "surfaced ids are the rank-order prefix of eligible ids")
+    (is (= legacy-surfaced-ids surfaced-ids)
+        "extracting eligibility does not change the previous surfaced ids")))
+
+(deftest eligible-and-surfaced-ids-agree-without-truncation
+  (let [ranked [{:memory/id "e-first" :memory/body {:summary "anchor one"}}
+                {:memory/id "e-second" :memory/body {:summary "anchor two"}}]
+        eligible (vec (#'dispatch/eligible-memories ranked "anchor"
+                                                     (constantly nil)))
+        eligible-ids (mapv :memory/id eligible)
+        surfaced-ids (mapv :memory/id (take 5 eligible))]
+    (is (= eligible-ids surfaced-ids))))
+
+(deftest offered-receipt-persists-the-eligible-vector
+  (let [entry (dispatch/offered-evidence
+               {:problem "a-test" :from "ground-control"}
+               {:status :ok
+                :eligible-memory-ids ["e-first" "e-second" "e-third"]
+                :memories [{:memory/id "e-first"} {:memory/id "e-second"}]}
+               "job-1" "session-1")]
+    (is (= ["e-first" "e-second" "e-third"]
+           (get-in entry [:body :eligible-memory-ids])))
+    (is (= ["e-first" "e-second"]
+           (get-in entry [:body :memory-use :memory-use/surfaced-ids])))))
+
 (deftest receipt-ranking-fetch-failure-is-loud-without-changing-fallback-order
   (let [candidates [{:memory/id "e-first"} {:memory/id "e-second"}]
         load (dispatch/load-receipt-ranking-stats

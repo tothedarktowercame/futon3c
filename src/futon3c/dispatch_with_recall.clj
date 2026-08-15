@@ -651,6 +651,25 @@
     (and (seq required)
          (every? present required))))
 
+(defn- eligible-memories
+  "Ranked memories that pass the required-term body check, before cutoff.
+
+  This boundary is observationally important: applying `take` here would make
+  eligibility indistinguishable from surfacing and recreate the F7 tautology."
+  [ranked required-term entry]
+  (keep
+   (fn [memory]
+     (let [memory
+           (if (and (map? (:memory/body memory))
+                    (memory-contains-term? memory required-term))
+             memory
+             (when-let [full-entry (entry (:memory/id memory))]
+               (when (map? (:evidence/body full-entry))
+                 (assoc memory :memory/body (:evidence/body full-entry)))))]
+       (when (and memory (memory-contains-term? memory required-term))
+         memory)))
+   ranked))
+
 (defn- receipt-entries
   [base timeout-ms]
   (let [response
@@ -1024,21 +1043,10 @@
         (assoc query-data
                :recall-system active-system
                :receipt-ranking ranking-audit)
+        eligible (vec (eligible-memories ranked required-term entry))
+        eligible-memory-ids (->> eligible (map :memory/id) distinct vec)
         memories
-        (->> ranked
-             (keep
-              (fn [memory]
-                (let [memory
-                      (if (and (map? (:memory/body memory))
-                               (memory-contains-term? memory required-term))
-                        memory
-                        (when-let [full-entry (entry (:memory/id memory))]
-                          (when (map? (:evidence/body full-entry))
-                            (assoc memory
-                                   :memory/body (:evidence/body full-entry)))))]
-                  (when (and memory
-                             (memory-contains-term? memory required-term))
-                    memory))))
+        (->> eligible
              (take limit)
              (mapv with-use-kind))]
     (cond->
@@ -1052,6 +1060,7 @@
       :ladder-query (:recall/query-used proposals)
       :pattern-ids (vec pattern-ids)
       :endpoints (vec endpoints)
+      :eligible-memory-ids eligible-memory-ids
       :memories memories}
       include-pre-cutoff-ranking?
       (assoc :pre-cutoff-ranking
@@ -1346,6 +1355,8 @@
                     :problem problem
                     :job-id job-id
                     :recall-status (:status recall-result)
+                    :eligible-memory-ids
+                    (vec (or (:eligible-memory-ids recall-result) []))
                     :recall-query (:query recall-result)
                     :recall-lexical-seed (vec (or (:lexical-seed recall-result) []))
                     :recall-index-as-of (:index-as-of recall-result)
