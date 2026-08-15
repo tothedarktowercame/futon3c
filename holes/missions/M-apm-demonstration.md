@@ -7623,3 +7623,87 @@ the invariants, and A1–A3 exist to prevent.
 
 **Not fixed here.** Regenerating `status.json` is corpus work, and corpus cleanup
 is out of scope by standing instruction. Recorded, and selection routed around it.
+
+## I.43 Ground control — mostly built already; the missing piece is a second pair of eyes
+
+**Joe, 2026-08-15:** *"let's pause and build the I.24 complement to the
+problem-peripheral. In War Machine terms, I'd call I.24 'ground control'. Here, we
+need a bit more than just one agent calling the shots."*
+
+**I-4 first (read before you write). It changed the task.**
+
+### What already exists
+
+| need | already built | note |
+|---|---|---|
+| ground-control dispatch | **`dispatch_with_recall.clj`, 1515 lines** | docstring: *"Ground-control dispatch with bounded, pattern-conditioned memory recall"* |
+| memory offers + receipts | `offered-evidence`, `aggregate-use-receipts` | `receipt-author` is literally `"ground-control"` |
+| operator escalation | `wm/operator-lane` `:silent`/`:brief`/`:nag` | earned interrupt; novelty-flows-down |
+| operator surface | `wm/operator-bulletin` | **counts `:silent` items without listing them** — no silent caps |
+| autonomy limits | `wm/guardrails` | outward ops (send/publish/email) are operator-only |
+| ablation | **`apply-withholding`** | preserves requested ids even when absent, *"so the offered receipt can distinguish a delivered intervention from a miss"* |
+| step-through | **`--dry-run`** | *"print packet and receipt; no bell or write"* |
+| park / bell discipline | Agency + `README-park.md` | already mandatory |
+
+**I.24 is therefore wiring, not writing** — with one genuine architectural
+addition, which is exactly the thing Joe put his finger on.
+
+### Two definitions this hands us for free
+
+**1. `memory-channels` `#{:push :push+pull :pull-only :none}` already exists per
+dispatch.** So the role discipline is *configuration*, not new code:
+
+- **Codex (solver):** `:push+pull` — offered memories, and free to go looking.
+- **Zai (student):** **`:pull-only`** — nothing pushed. If ground control selected
+  what Zai sees, **that selection would itself be the hint**; making Zai retrieve
+  is what makes retrieval measurable.
+
+**2. `harness-mode` finally has a concrete referent.** It was loosely "the
+retrieval and collection machinery". It is now, precisely: **the
+dispatch-with-recall configuration** — `--memory-channel`, `--receipt-alpha`,
+recall limits, ranking. So:
+
+- **store-mode:** channel pinned `:pull-only`, **the store varies**;
+- **harness-mode:** store pinned, **the dispatch config varies**.
+
+That closes a real looseness in the registration: the two modes now differ in
+named, recorded parameters rather than in description.
+
+### The missing piece: guide ≠ proctor
+
+**This is what "more than one agent calling the shots" is protecting against.**
+
+> **P1 predicts that guidance interventions decline. The guide is the thing being
+> measured. If the guide also records the interventions, P1 is self-certified** —
+> the identical failure class as I.40's rejected boolean and I.10's test.
+
+Joe asked for this earlier in other words: *"we need a way to double check that
+Claude proctors correctly for Zai."*
+
+**Separation of powers for the cycle:**
+
+| function | held by | why separate |
+|---|---|---|
+| **Conductor** | the cycle machine itself | advancing a phase must not be a judgement call — already gated by phase-tools, required-outputs, output-invariants |
+| **Guide** | `claude-guide` | guides Codex, writes deposits — **the treatment** |
+| **Proctor** | **a second Claude seat** | records RoleEvents, counts interventions, witnesses that the student had no direct channel — **the measurement** |
+| **Scribe** | `scribe` | promotes memories — already separate |
+
+**The conductor is deliberately not an agent.** Everything mechanical stays with
+the cycle machine; agents are only where judgement is genuinely required. That is
+what keeps "more than one agent" from becoming "more agents to disagree."
+
+**Precedent for the shape:** `operator-lane` is already verified against an
+**independently authored** invariant model (`logic/wm-operator-lane-invariants`,
+INV-1..INV-6). Author≠reviewer is house style here, not an innovation — it simply
+had not reached the measurement path.
+
+### Sequencing
+
+- **Packet A (dispatching now):** wire `:guided-solve` and `:student-attempts`
+  through `dispatch-with-recall` with per-role channel config, so `:memory-offers`
+  comes from the real machinery instead of a placeholder.
+- **Packet B (after review):** the proctor seat and independent RoleEvent
+  recording.
+- **Then:** cycle-level step-through. `--dry-run` gives it per dispatch; backing
+  up a *cycle* without invalidating output is still undesigned.
