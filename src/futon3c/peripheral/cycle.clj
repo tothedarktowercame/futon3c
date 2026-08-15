@@ -12,6 +12,7 @@
    - :setup-tools      #{tools} available when no cycle is active
    - :tool-ops         {tool -> :observe|:action} operation classification
    - :required-outputs {phase -> #{keys}} mandatory outputs before advancing
+   - :enforce-required-outputs? opt-in accumulated output gate (default false)
    - :cycle-begin-tool keyword for the tool that starts a cycle
    - :cycle-advance-tool keyword for the tool that advances phases
    - :state-init-fn    (fn [context] -> domain-state-map) additional state at start
@@ -29,7 +30,8 @@
      味 = required-outputs (evaluation: did this phase produce enough?)
      🔮 = phase gating (regulation: constrain tools to prevent harm)
      捨 = stop with reason (set-down when boundary is reached)"
-  (:require [futon3c.blackboard :as bb]
+  (:require [clojure.set]
+            [futon3c.blackboard :as bb]
             [futon3c.peripheral.common :as common]
             [futon3c.peripheral.evidence :as evidence]
             [futon3c.peripheral.runner :as runner]
@@ -80,6 +82,16 @@
   [{:keys [tool-ops]} tool]
   (get tool-ops tool))
 
+(defn- required-through-phase [config phase]
+  (let [phases (take-while #(not= phase %) (:phase-order config))
+        phases (conj (vec phases) phase)]
+    (apply clojure.set/union #{} (map #(get-in config [:required-outputs %] #{})
+                                      phases))))
+
+(defn- advance-payload [args]
+  (let [payload (nth args 2 {})]
+    (if (map? payload) payload {})))
+
 ;; =============================================================================
 ;; Evidence enrichment
 ;; =============================================================================
@@ -126,6 +138,22 @@
                              (str "Tool " tool " has no observe/action classification")
                              :tool tool)
 
+        (and (= tool cycle-advance)
+             (:enforce-required-outputs? config)
+             (seq (clojure.set/difference
+                   (required-through-phase config (:current-phase state))
+                   (set (keys (merge (:cycle/outputs state)
+                                     (advance-payload args)))))))
+        (let [available (set (keys (merge (:cycle/outputs state)
+                                          (advance-payload args))))
+              missing (clojure.set/difference
+                       (required-through-phase config (:current-phase state))
+                       available)]
+          (runner/runner-error (:domain-id config) :missing-required-outputs
+                               "Cannot advance with required outputs missing"
+                               :phase (:current-phase state)
+                               :missing (vec missing)))
+
         :else
         (let [dispatch-result (tools/dispatch-tool tool args spec backend)]
           (cond
@@ -153,8 +181,11 @@
                               true (assoc :last-evidence-id (:evidence/id ev))
                               true (update :steps conj {:tool tool :args args :result result})
                               new-phase (assoc :current-phase new-phase)
+                              new-phase (update :cycle/outputs merge
+                                                (advance-payload args))
                               new-cycle-id (assoc :current-cycle-id (:cycle/id result)
-                                                  :current-phase (first (:phase-order config)))
+                                                  :current-phase (first (:phase-order config))
+                                                  :cycle/outputs {})
                               ;; When cycle completes, clear active cycle
                               (= new-phase last-phase)
                               (-> (dissoc :current-phase :current-cycle-id)

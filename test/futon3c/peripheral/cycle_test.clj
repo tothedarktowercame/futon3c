@@ -169,6 +169,15 @@
     (is (:ok advance))
     (is (= :beta (get-in advance [:state :current-phase])))))
 
+(deftest required-output-enforcement-defaults-off
+  (let [p (make-test-peripheral (make-test-mock))
+        start (runner/start p {:session-id "default-off"})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        advanced (runner/step p (:state begun)
+                              {:tool :cycle-advance :args ["M" "C1" {}]})]
+    (is (:ok advanced))))
+
 (deftest cycle-completion-clears-phase
   (let [backend (tools/make-mock-backend
                  {:cycle-begin {:cycle/id "C1"
