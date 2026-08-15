@@ -139,6 +139,13 @@ machine is working and the known gaps are known:
 | `missing producer: retrieval-probe` | no producer exists (below) |
 | `:f9-capability-probe-missing` | `:need-retrieval` cannot be probed without one |
 | `:guidance-measurement-mismatch` | `record-measurement` cannot reach Agency evidence, so "attempts or closer hops" is unset while the validator computes it independently |
+| `:direct-channel-evidence-unavailable` | same cause as `:guidance-evidence-unavailable` — no live Agency evidence (offline validation) |
+
+Rehearsal-1 (2026-08-15, cycle `a01A06-1eb0b137…`) confirmed the three
+in-JVM codes empirically — and demonstrated that `:direct-channel-used` fires
+as a true positive (the conductor's own in-window bell to the student seat was
+caught). The retrieval-probe codes may clear once the recall channel fix is
+verified: the packet-F producer starves without working recall.
 
 **Anything else in a refusal is disqualifying** and means that cycle is not sound.
 A reviewer of frame-40 should be able to tell a healthy refusal from a broken one by

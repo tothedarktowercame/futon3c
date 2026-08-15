@@ -9235,3 +9235,66 @@ harness measurement is path-scoped (`src scripts deps.edn` → `414294a9` at
 freeze, tree clean); apm-lean pin `a92ffb6c` is an ancestor of HEAD; seats
 codex-4/zai-1 registered; substrate live. Rehearsal bells to codex-4 are
 outside any measurement window (none is open).
+
+## W.2 REHEARSAL-1 COMPLETE: the machine works, with a ledger (2026-08-15)
+
+**Cycle `a01A06-1eb0b137…` ran register → terminal sentinel in 33 steps, all
+phases, live**: real harness measurement (= pin, clean tree), real registration
+gate, real store snapshot (379 memory ids, truncation-guard armed), logical-
+clock F4 (frozen 4 < assigned 5), real worktrees (solver at register; student
+cut fresh at dispatch), two real agent legs (codex-4 job `…4fe26307`, zai-1 job
+`…31252e70` — both honest stale-premise reports, verified independently by the
+conductor), a real store-mode deposit between attempts, `:defective`
+adjudicated through the real disposition tool (the statement is mathematically
+false — L·logL control ≠ exponential tails, machine-checked counterexample in
+`cc87455`), and a close that produced measurement (3/14), 5 capability probes,
+a trace, a validation, and a **recorded refusal** (`:launchable? false`,
+nothing written).
+
+**Close-envelope empirics** (settles open item 3): failures =
+`missing producer: retrieval-probe` (downstream of finding 3 — no working
+recall, no receipt material for the packet-F producer; may clear post-fix),
+`:guidance-measurement-mismatch`, `:f9-capability-probe-missing` (both
+documented-benign), and **`:direct-channel-used` — a TRUE POSITIVE against the
+conductor**: claude-7's checkout-path mitigation bell (claude-7→zai-1,
+in-window) was a real guide→student containment breach and the proctoring
+caught it. The measurement measured its own operator. Fix C removes the need
+for that mitigation.
+
+**Findings ledger (all invisible to the stubbed traverse):**
+1. Stale loaded code in the serving JVM (runbook: loaded-code parity before
+   opening a cycle; also note its dual — an open cycle is ISOLATED from disk
+   fixes, which protected this run).
+2. Ground-control dispatch lacked `:base` — **FIXED `8a95b2e3`, reviewed.**
+3. **CRITICAL: recall dead in production, presenting as normal** (V3
+   instance-1's signature). TWO defects: `scored-use-stat` nil counts (fixed
+   `65e95d05`, reviewed) + nil `:recall-timeout-ms` at `bounded-recall`
+   (same parse-args-defaults class as :base; **fix A2 in flight**, live
+   verification by reviewer required). Review caught a false-green live
+   verification on the first fix.
+4. `:write-substrate` written-but-not-wired (**fix D in flight**); the
+   rehearsal deposit used the production writer directly.
+5. `:cycle/store-revision` has no defined semantics — rehearsal convention:
+   sha-256 of sorted snapshot ids (+deposits), first 40 hex. Frame-1 needs a
+   real decision.
+6. Provisioned checkout path absent from student packet text — **FIXED
+   `c415a558`, reviewed** (zai-1 had scavenged the path from metadata anyway).
+7. Cycle ran with no evidence store in context — evidence trail silently
+   skipped; frame-1 must wire it and make absence loud.
+8. The disposition tool drops `:disp/residual-sorries`/`:disp/axiom-clean?`
+   (measured 3 of 17 fields, not 5) — small wiring gap.
+Also: throwaway selection counted the WORD sorry (docstring prose), not
+executable holes — selection must read compiled facts (second instance;
+runbook).
+
+**Rider ledger (memories written during rehearsal):**
+`e-33cf23e7-a574-487f-ac5f-ad98302b8047` (a01A06-orlicz-claim-is-false,
+claude-7/rehearsal-1). Frame-1's reviewer checks its offers against this list.
+a98A01 remains protected alongside t94J02.
+
+**Verdict: we have a working system.** The coordination machine does its job
+end-to-end against live seams and refuses correctly at its gate. Frame-1
+blockers, all named: A2 live-verified, D landed, evidence-store wired (7),
+store-revision decided (5), runbook items (1, selection). The rehearsal cost
+one evening and converted seven invisible integration defects plus one
+false-green into fixes, tests, and runbook lines before the measured round.
