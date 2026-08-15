@@ -7783,3 +7783,79 @@ being protected is the provenance of a number, not its distribution list.
 **You cannot close every channel. You can make each one either counted or blocked,
 and name what is left** — which is the same discipline that closed the four
 pass-note channels (I.36–I.39).
+
+## I.44a Count by recipient, not by sender — and the same overclaim, twice
+
+**codex-4 stopped without editing.** Two gaps: one I had flagged as stop-worthy,
+one I had missed.
+
+**The one I missed is the better catch.** My packet said "count both channels" as
+if both came from the job log. They do not: **deposit receipts live in substrate
+evidence, not in the Agency jobs array.** codex-4 then applied my own central
+property to the gap I had left — *"otherwise a failed substrate query becomes a
+silent zero-deposit count."* It caught a conflation in my packet and extended my
+own rule to it, before building anything.
+
+### The larger finding, which its report prompted
+
+Checking its seat-naming claim, I verified how `caller` is populated:
+
+```python
+# scripts/agency_send.py:90
+body["caller"] = a.frm          # --from, a free string
+```
+
+> **The caller field is caller-supplied.** I.44 said the job log is
+> *"server-written… the guide cannot edit it."* **That overclaims — exactly as
+> I.40 did, one section later.**
+
+**Twice now I have said "derived, therefore unfakeable" without checking who
+writes the field.** The reusable check, stated so it is not needed a third time:
+
+> **For every field a gate depends on, ask: does the CLIENT write this, or does
+> the SERVER? "It's in a log" is not an answer.**
+
+### What is actually server-authored
+
+| field | authored by | fakeable by the guide? |
+|---|---|---|
+| the row exists at all | server | **no** |
+| `created-at` | server | **no** |
+| **`agent-id` (recipient)** | **server — must be a registered agent, or the bell fails `agent-not-found`** | **no** |
+| `caller` | **the client, via `--from`** | **YES** |
+| body | client | yes |
+
+### So: count by recipient, not by sender
+
+**Guidance = inbound dispatches to the solver seat within the cycle window,
+regardless of who claims to have sent them.**
+
+**Why this is strictly better than filtering on `caller`:**
+
+> A guide that spoofs `--from` **still produces a row addressed to `codex-4`**. To
+> keep a guidance bell out of the count it would have to **not send it** — which
+> is precisely the behaviour change P1 exists to measure. **Spoofing the label
+> buys nothing.**
+
+Filtering by sender would have been the fragile choice: a mislabelled bell
+*vanishes* from a sender-filtered count, which is the failure mode we care about,
+and it is the easier mistake to make.
+
+**Separating the opening dispatch from guidance:** guidance =
+`(inbound rows to solver in window) − (dispatches the cycle machine recorded)`.
+The subtrahend is the length of `:memory-offers`, which the machine wrote. **Two
+independent sources, neither of them the guide's.**
+
+### Answers to codex-4's two questions
+
+**Q1 — how is guide identity made authoritative?** *It is not, and it does not need
+to be.* A registered `claude-guide` roster identity is still worth having for
+bellback routing, but it is **not load-bearing for the measurement** — which is
+the stronger position, because an identity that does not matter cannot be spoofed
+into mattering.
+
+**Q2 — what supplies deposit receipts?** A **second evidence input**: substrate
+evidence filtered on `receipt-author "ground-control"` within the window, with
+**its own unavailable state** (`:deposit-evidence-unavailable`, distinct from
+`:guidance-evidence-unavailable`). **Two sources, two unavailable states, never
+summed** — as codex-4 correctly insisted.
