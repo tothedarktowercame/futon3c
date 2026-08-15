@@ -12,8 +12,15 @@
            [java.util UUID]))
 
 (def phase-order
+  ;; :completed is a TERMINAL SENTINEL with no tools, matching the proof
+  ;; peripheral's convention. The engine clears :current-phase and
+  ;; :current-cycle-id the moment an advance returns the LAST phase, so the last
+  ;; phase is a transition and never a state. With :close last, the machine
+  ;; passed straight through it and :emit-trace / :validate-trace /
+  ;; :write-authorization were unreachable -- which is why they were declared and
+  ;; never implemented. Written-but-not-wired, because the PHASE was unreachable.
   [:register :frame :guided-solve :intervene :student-attempts
-   :adjudicate :promote :close])
+   :adjudicate :promote :close :completed])
 
 (def advance :advance-problem-phase)
 
@@ -26,7 +33,8 @@
    :student-attempts #{:dispatch-student-fresh :read-attempt-result advance}
    :adjudicate #{:write-disposition :write-use advance}
    :promote #{:promote-artifact advance}
-   :close #{:emit-trace :validate-trace :write-authorization advance}})
+   :close #{:emit-trace :validate-trace :write-authorization advance}
+   :completed #{}})
 
 (def required-outputs
   {:register #{:registration :store-snapshot :stratum-frozen-at

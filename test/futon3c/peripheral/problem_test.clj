@@ -747,3 +747,17 @@
       (is (empty? @rolled) "no completed frame may be rolled back mid-cycle")
       (is (not-any? #(re-find #"solver" %) @rolled)
           "the solver's tree must survive a student provisioning failure"))))
+
+(deftest close-phase-is-inhabitable
+  ;; The engine clears the cycle when an advance returns the LAST phase, so the
+  ;; last phase is a transition and never a state. With :close last, its three
+  ;; tools were unreachable -- declared in a phase the machine passed straight
+  ;; through, which is why they were never implemented.
+  (let [[p state] (started :store-mode)
+        st (assoc state :current-phase :close :current-cycle-id "C1")
+        r (runner/step p st {:tool :emit-trace :args []})]
+    (is (not= :phase-tool-not-allowed (:error/code r))
+        ":close tools must be reachable when the machine is in :close")
+    (is (= :completed (last problem/phase-order)))
+    (is (empty? (get problem/base-phase-tools :completed))
+        "the terminal sentinel carries no tools")))

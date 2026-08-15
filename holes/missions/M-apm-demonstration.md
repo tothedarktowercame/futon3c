@@ -8879,3 +8879,59 @@ more:**
 > **The three genuinely-unproduced keys are the deliverable I asked for.** They name
 > phases that do not yet produce what the validator needs — which is the same class
 > of gap as the unenforced attempt cap, found by looking rather than assumed absent.
+
+## I.60 The `:close` phase was unreachable — which is why its three tools were never built
+
+**Thirteenth stop, and the deepest.** codex-4: *"the machine never inhabits `:close`;
+the next `:emit-trace` call is evaluated as a setup-phase tool and refused by phase
+gating."*
+
+Verified at `cycle.clj:378-380`:
+
+```clojure
+(= new-phase last-phase)
+(-> (dissoc :current-phase :current-cycle-id)
+    (update :cycles-completed inc))
+```
+
+> **The engine clears the cycle the moment an advance RETURNS the last phase.** So
+> the last phase is a **transition, not a state** — the machine passes through it
+> without ever being in it.
+
+The proof peripheral knows this: its `phase-order` ends `:completed`, a **terminal
+sentinel with no tools** (`proof_shapes.clj:392` — `:completed #{}`).
+**`problem.clj` ended with `:close`, which has three.**
+
+### This explains I.58 completely
+
+`:emit-trace`, `:validate-trace`, `:write-authorization` were **not an oversight**.
+They were **declared in a phase that could not be entered**, so no implementation
+could ever have been called. The two-pipeline split, the relayed trace, the
+validator looking at a different object — all downstream of one missing sentinel.
+
+> **Written but not wired up, one level higher than usual: not a function nobody
+> calls, but a PHASE nobody can be in.**
+
+**Fixed** (`phase-order` gains `:completed`, `base-phase-tools` gains
+`:completed #{}`), mutation-verified: removing the sentinel makes `:close` refuse
+its own tools again. **107 tests, 285 assertions, 0 failures.**
+
+### The second premise codex-4 falsified, and the decision it forces
+
+*"The authoritative state does not contain the complete cycle window — no close
+timestamp before completion."*
+
+Correct, and it is circular: the trace needs `:closed-at`, and the cycle closes by
+leaving `:close`.
+
+**Decision: `:emit-trace` stamps `:closed-at` at the moment it runs.** The trace *is*
+the closing record, so its emission time **is** the close time. That is honest rather
+than invented — and it must be the engine reading the clock, never a caller supplying
+a timestamp, for the same reason every other field here is machine-written.
+
+### Why this one matters beyond the fix
+
+**Thirteen stops, and this is the third that found something I had specified could
+not exist** — a stamp at a seam that never fires, a tool in a phase that cannot be
+entered, a count from a field nothing reads. The specification was confident every
+time; only the attempt to build it produced the falsification.
