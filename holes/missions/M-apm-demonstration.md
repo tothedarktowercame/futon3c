@@ -6611,3 +6611,80 @@ piece of work.
 
 **Recorded, not actioned.** Fourth structural stop in the sequence; fourth time
 the stop was worth more than the code.
+
+## I.31 `:required-outputs` semantics — accumulating, and one thing it cannot say
+
+**Joe, 2026-08-14:** *"(c) then (a) sounds reasonable… outputs per phase are also
+clear, **maybe the map accumulates across them?**"*
+
+**Yes — accumulating, and the engine should do the accumulating, not the
+config.**
+
+### Why accumulate
+
+| reading | advancing from phase *N* requires | catches |
+|---|---|---|
+| per-phase | phase *N*'s declared outputs | a phase that produced nothing |
+| **accumulating** | **the union of phases 1..N** | that **plus** a later phase deleting or overwriting an earlier entity |
+
+Per-phase is *sufficient* only if outputs are immutable once written. They very
+nearly are — the harness does `persist-roundtrip!` — but "nearly" is the word
+that has cost this mission fifteen findings.
+
+**The decisive argument is what accumulation buys at the end:** under
+accumulation, **`:close` cannot emit a trace unless every entity from every phase
+is present.** The trace needs 29 keys derived from entities across all eight
+phases, so the final gate becomes a **completeness check on the whole cycle**,
+for free, rather than a separate thing someone has to remember to write.
+
+### The engine accumulates; the config declares only what is NEW
+
+**IF** each phase's entry listed the accumulated set, **HOWEVER** `:close` would
+then restate every key from every phase, **THEN** the engine should compute the
+union and the config should declare only each phase's *new* outputs, **BECAUSE**
+a config where `:close` restates everything is **two lists of the same thing**,
+and two lists of the same thing is the drift that produced the stale
+ConstructionTargets table, the Registration double-schema, and I.21's fix.
+
+So the I.29 table stays exactly as written — each row is what that phase
+*newly* produces — and the engine reads it as cumulative.
+
+### ⚠ One thing the documented shape cannot express: cardinality
+
+`cycle.clj` documents `:required-outputs` as **`{phase -> #{keys}}`** — a set of
+**keys**. But `:student-attempts` must produce **three** `Attempt` entities, and
+*"three"* is not a key.
+
+**Options:**
+
+| | |
+|---|---|
+| **(i)** extend the value to a predicate `{phase -> (fn [state] …)}` | expressive; changes the documented shape for every consumer |
+| **(ii)** keys in the engine, **cardinality in the validator** against `:reg/attempt-caps` | keeps the engine's shape as documented; cardinality is already registration data |
+
+**Recommend (ii).** The attempt cap is a *registration* property — it is
+`:reg/attempt-caps {:s-student 3}` — so checking it against the registration is
+where it belongs, and the validator already inspects `:cycle/attempts`.
+**Putting a count in the engine would duplicate a number the registration owns**,
+and the registration is the thing under version control and pinned by sha.
+
+**Flagged as a decision rather than left as an omission**, because "the phase
+produced *some* attempts" passing where three were required is exactly the
+vacuity shape — and after A1, it is the shape I now expect to find.
+
+### The (c) work, now fully specified
+
+1. `cycle.clj` gains an **opt-in** `:enforce-required-outputs?` flag, default
+   **false** — so the proof peripheral is untouched and its populated
+   `ps/phase-required-outputs` map stays dormant.
+2. When true: before accepting the advance tool, require the **union of
+   `:required-outputs` for all phases up to and including the current one** to
+   be present in state.
+3. `problem-domain-config` sets it **true** and declares per-phase *new* outputs
+   per I.29.
+4. A test that **fails without the flag's enforcement** — a cycle missing one
+   entity from an earlier phase must refuse to advance at a later one. **That
+   test is the point**; without it we would have re-created the decorative key
+   one layer up.
+5. **(a) stays separate**: auditing `ps/phase-required-outputs` and flipping the
+   default is its own piece of work, on the proof peripheral's schedule.
