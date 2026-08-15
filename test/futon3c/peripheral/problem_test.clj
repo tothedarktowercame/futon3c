@@ -845,3 +845,48 @@
                    {:tool :emit-trace :args []})]
       (is (= :tool-execution-failed (:error/code missing)))
       (is (re-find #"memory-offer" (str missing))))))
+
+(deftest emit-trace-populates-through-the-REAL-projection
+  ;; No with-redefs. The other emit-trace tests stub derive-trace, so they assert
+  ;; it is CALLED but never run it -- and derive-trace locates entities by linking
+  ;; keys (:frame/cycle, :attempt/cycle, :offer/cycle...). Unstamped outputs made
+  ;; it throw "expected exactly one entity" on every real cycle while the stubbed
+  ;; tests stayed green. A stubbed collaborator hides the integration it stands in
+  ;; for.
+  (let [p (problem/make-problem (tools/make-mock-backend))
+        st (assoc (:state (runner/start p {:session-id "e2e" :problem-id "t94J02"
+                                           :cycle/mode :store-mode}))
+                  :current-phase :close :current-cycle-id "C1"
+                  :cycle/outputs
+                  {:registration {:problem {:problem-id "t94J02"
+                                            :difficulty-stratum "s"
+                                            :regime "r" :locked-lemma-exposure []}
+                                  :required-measurement-fields ["a"]}
+                   :frame {:frame/id "F1" :frame/scaffold-hash "aa"
+                           :frame/closing-hash "bb"}
+                   :launch-gate-event {:gate/refused-without-witness? true}
+                   :store-snapshot {:snap/id "S1" :snap/memory-ids ["m1"]}
+                   :containment-probe {:cprobe/claimed? true :cprobe/recorded? true
+                                       :cprobe/passed? true}
+                   :measurement {:meas/values {"a" 1} :meas/unset []}
+                   :solver-attempt {:cycle/environment-checkout "/solver"}
+                   :student-attempts [{:cycle/environment-checkout "/student"}]
+                   :disposition {:disp/id "D1"}
+                   :memory-offers [{:offer/id "O1" :offer/memory-id "M1"}]
+                   :memory-uses [{:use/offer "O1"}]
+                   :retrieval-probes [] :capability-probes []
+                   :promotion-result {:promo/artifact-id "P1" :promo/importable? true
+                                      :promo/need-tags ["t"]}
+                   :stratum-frozen-at 1 :assigned-at "t"})
+        r (runner/step p st {:tool :emit-trace :args []})
+        trace (:result (last (get-in r [:state :steps])))]
+    (is (:ok r) "the real projection must not throw")
+    (is (= {:scaffold-hash "aa" :closing-hash "bb"} (:frame trace)))
+    (is (= 2 (count (:cycle/attempts trace))) "solver + student attempts found")
+    (is (= [{:offer/id "O1" :offer/memory-id "M1"}] (:memory-offers trace)))
+    (is (= ["D1"] (:disposition-ids trace)))
+    (is (true? (:launch-gate-refused-without-witness? trace)))
+    (is (true? (:containment-probe-passed? trace)))
+    (is (= "S1" (:cycle/store-snapshot-id trace)))
+    (is (= ["P1"] (:promoted-artifact-ids trace)))
+    (is (string? (get-in trace [:cycle/window :closed-at])))))

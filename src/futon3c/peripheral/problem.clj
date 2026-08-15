@@ -239,22 +239,36 @@
                         :cycle/paired-with (:cycle/paired-with state)
                         :cycle/stratum-frozen-at (:stratum-frozen-at outputs)
                         :cycle/assigned-at (:assigned-at outputs)}
+          ;; derive-trace locates entities by LINKING KEYS -- :frame/cycle,
+          ;; :attempt/cycle, :offer/cycle and so on -- and phase outputs do not
+          ;; carry them. Passing outputs through unstamped made `one` throw
+          ;; "expected exactly one entity" on every real cycle; the unit tests
+          ;; missed it because they stub derive-trace, so the projection they
+          ;; assert is called is never actually run.
+          link (fn [k entities] (mapv #(assoc % k cycle-id) entities))
+          frames (link :frame/cycle (output-entities outputs :frame))
+          frame-id (:frame/id (first frames))
+          attempts (map-indexed
+                    (fn [i attempt]
+                      (assoc attempt :attempt/cycle cycle-id :attempt/seq i))
+                    (concat (output-entities outputs :solver-attempt)
+                            (output-entities outputs :student-attempts)))
           entities (vec
                     (concat
                      [cycle-entity]
-                     (output-entities outputs :frame)
-                     (output-entities outputs :launch-gate-event)
-                     (output-entities outputs :store-snapshot)
-                     (output-entities outputs :containment-probe)
-                     (output-entities outputs :measurement)
-                     (output-entities outputs :solver-attempt)
-                     (output-entities outputs :student-attempts)
-                     (output-entities outputs :disposition)
-                     (output-entities outputs :memory-offers)
+                     frames
+                     (link :gate/cycle (output-entities outputs :launch-gate-event))
+                     (link :snap/cycle (output-entities outputs :store-snapshot))
+                     (mapv #(assoc % :cprobe/frame frame-id)
+                           (output-entities outputs :containment-probe))
+                     (link :meas/cycle (output-entities outputs :measurement))
+                     attempts
+                     (link :disp/cycle (output-entities outputs :disposition))
+                     (link :offer/cycle (output-entities outputs :memory-offers))
                      (output-entities outputs :memory-uses)
-                     (output-entities outputs :retrieval-probes)
-                     (output-entities outputs :capability-probes)
-                     (output-entities outputs :promotion-result)))]
+                     (link :rprobe/cycle (output-entities outputs :retrieval-probes))
+                     (link :probe/cycle (output-entities outputs :capability-probes))
+                     (link :promo/cycle (output-entities outputs :promotion-result))))]
       (apm-harness/derive-trace (:registration outputs) cycle-id entities))))
 
 (def problem-domain-config
