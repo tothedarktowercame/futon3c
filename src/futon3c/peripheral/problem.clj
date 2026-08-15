@@ -261,6 +261,11 @@
   (when (:harness-tree-dirty? outputs)
     {:failure :harness-tree-dirty}))
 
+(defn- thread-current-phase [state tool args]
+  (if (= tool advance)
+    (conj (vec args) {:cycle/current-phase (:current-phase state)})
+    args))
+
 (defn- now-string []
   (str (Instant/now)))
 
@@ -563,6 +568,7 @@
    :state-runtime-keys #{:cycle-config :evidence-store}
    :state-validate-fn validate-loaded-state
    :state-snapshot-fn state-snapshot
+   :backend-args-fn thread-current-phase
    :output-stamp-fn stamp-environment-outputs
    :derived-tools {:record-measurement record-measurement-from-state
                    :emit-capability-probes emit-capability-probes-from-state
@@ -933,7 +939,8 @@
                                 begin-seq]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
-    (if (= tool-id :begin-problem-cycle)
+    (cond
+      (= tool-id :begin-problem-cycle)
       ;; DETERMINISTIC BUT NOT CONSTANT. The id must be reproducible, because
       ;; save/load state files are keyed by it (data/problem-state/<cycle-id>/,
       ;; write-once). It must ALSO differ between two cycles of the same session:
@@ -954,6 +961,18 @@
          :result (merge {:cycle/id (str problem-id "-" digest)
                          :cycle/opened-at (now-string)}
                         (harness-measurer harness-repo))})
+
+      (= tool-id advance)
+      (let [current-phase (:cycle/current-phase (last args))
+            current-index (.indexOf phase-order current-phase)
+            next-phase (when (<= 0 current-index)
+                         (get phase-order (inc current-index)))]
+        (if next-phase
+          {:ok true :result {:cycle/phase next-phase}}
+          {:ok false :error (str "advance-problem-phase has no open phase: "
+                                 current-phase)}))
+
+      :else
       (tools/execute-tool inner-backend tool-id args))))
 
 (defn make-problem-cycle-backend [inner-backend harness-measurer cycle-context]

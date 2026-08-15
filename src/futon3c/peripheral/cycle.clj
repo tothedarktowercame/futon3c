@@ -87,6 +87,8 @@
            (fn? (:state-validate-fn config)))
        (or (nil? (:output-stamp-fn config))
            (fn? (:output-stamp-fn config)))
+       (or (nil? (:backend-args-fn config))
+           (fn? (:backend-args-fn config)))
        (or (nil? (:derived-tools config))
            (and (map? (:derived-tools config))
                 (every? (fn [[tool-id derive]]
@@ -313,6 +315,9 @@
               backend-args (if (= tool state-save)
                              (into [persisted-state] args)
                              args)
+              backend-args (if-let [f (:backend-args-fn config)]
+                             (f state tool backend-args)
+                             backend-args)
               ;; A derived tool is computed inside the engine from authoritative
               ;; state. Backends never gain state access, and are not invoked.
               dispatch-result

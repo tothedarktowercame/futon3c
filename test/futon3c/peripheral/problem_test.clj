@@ -769,6 +769,47 @@
     (is (= :phase-tool-not-allowed (:error/code repeated)))
     (is (some? (get-in begun [:state :current-cycle-id])))))
 
+(deftest problem-phase-advance-moves-and-retains-its-payload
+  (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        p (harness-measured-problem {:harness-revision revision
+                                     :harness-tree-dirty? false})
+        start (runner/start p {:session-id "advance" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        payload {:registration :r
+                 :store-snapshot :s
+                 :stratum-frozen-at 1
+                 :environment-revision revision
+                 :harness-revision "FORGED"
+                 :environment-checkouts
+                 {:solver {:checkout "/solver" :base-revision revision}
+                  :student []}
+                 :payload-marker :retained}
+        advanced (runner/step p (:state begun)
+                              {:tool :advance-problem-phase
+                               :args ["M" "C" payload]})]
+    (is (:ok advanced))
+    (is (= :frame (get-in advanced [:state :current-phase])))
+    (is (= :retained
+           (get-in advanced [:state :cycle/outputs :payload-marker])))
+    (is (= revision
+           (get-in advanced [:state :cycle/outputs :harness-revision])))))
+
+(deftest problem-phase-advance-refuses-with-no-open-cycle
+  (let [p (harness-measured-problem
+           {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            :harness-tree-dirty? false})
+        start (runner/start p {:session-id "no-cycle" :problem-id "p"
+                               :cycle/mode :store-mode
+                               :harness-repo "/measured/harness"})
+        advanced (runner/step p (:state start)
+                              {:tool :advance-problem-phase
+                               :args ["M" "C" {}]})]
+    (is (= :phase-tool-not-allowed (:error/code advanced)))
+    (is (= :setup (get-in advanced [:error/context :phase])))))
+
 (deftest runner-driven-problem-traverse-stops-at-the-first-real-gate
   (let [p (harness-measured-problem
            {:harness-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
