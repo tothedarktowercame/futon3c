@@ -442,3 +442,17 @@
         r (runner/step p (:state begun) {:tool :state-load :args []})]
     (is (= :loaded-state-cycle-mismatch (:error/code r)))
     (is (nil? (:state r)))))
+
+(deftest identity-keys-cannot-be-declared-runtime-keys
+  ;; Validation runs after reattachment, so declaring :session-id or
+  ;; :current-cycle-id as runtime would make the engine compare current state
+  ;; against itself. Verified before this guard: with :session-id declared, a
+  ;; load of a FOREIGN session succeeded and installed its steps and
+  ;; :cycle/outputs under our own session id.
+  (is (cycle/valid-domain-config?
+       (assoc state-io-config :state-runtime-keys #{:cycle-config})))
+  (is (not (cycle/valid-domain-config?
+            (assoc state-io-config :state-runtime-keys #{:session-id}))))
+  (is (not (cycle/valid-domain-config?
+            (assoc state-io-config :state-runtime-keys
+                   #{:cycle-config :current-cycle-id})))))

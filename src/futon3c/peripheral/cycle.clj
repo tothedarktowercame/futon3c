@@ -46,6 +46,11 @@
 ;; Configuration validation
 ;; =============================================================================
 
+(def identity-keys
+  "State keys that establish WHOSE cycle this is. Never persistable-exempt: see
+  the :state-runtime-keys check below."
+  #{:session-id :current-cycle-id})
+
 (defn valid-domain-config?
   "Check that a domain config has the required keys."
   [config]
@@ -59,7 +64,17 @@
        (or (nil? (:always-available-tools config))
            (set? (:always-available-tools config)))
        (or (nil? (:state-runtime-keys config))
-           (set? (:state-runtime-keys config)))
+           (and (set? (:state-runtime-keys config))
+                ;; Identity keys must never be runtime keys. Validation runs
+                ;; AFTER reattachment, so declaring one of these would make the
+                ;; engine compare current state against itself and the guard
+                ;; would always pass -- verified: with :session-id declared, a
+                ;; load of a FOREIGN session succeeded and its steps and
+                ;; :cycle/outputs were installed relabelled as ours. A guard
+                ;; that configuration can silently switch off is not a guard.
+                (empty? (clojure.set/intersection
+                         (:state-runtime-keys config)
+                         identity-keys))))
        (or (nil? (:state-io-tools config))
            (let [{:keys [save load] :as state-io} (:state-io-tools config)]
              (and (= #{:save :load} (set (keys state-io)))
