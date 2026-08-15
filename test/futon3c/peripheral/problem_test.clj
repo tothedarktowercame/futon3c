@@ -644,7 +644,14 @@
     (is (false? (:ok r)))
     (is (re-find #"problem-load failed" (:error r)))))
 
-(deftest student-provisioning-failure-rolls-back-the-whole-assignment
+(deftest student-provisioning-failure-preserves-completed-frames
+  ;; Was: "rolls back the whole assignment" -- a requirement I gave in the A3.5
+  ;; packet and which is wrong mid-cycle. Verified before the fix: a transient
+  ;; failure on student attempt 2 rolled back the SOLVER's tree, which by then
+  ;; may hold the whole cycle's work. All-or-nothing is right at
+  ;; :assign-checkouts, where nothing has been done; here it inverts its own
+  ;; justification, since it existed so a retry would be possible and this made
+  ;; retry mean redoing the solve.
   (let [rolled (atom [])
         student-count (atom 0)
         provisioner
@@ -666,11 +673,9 @@
     (is (:ok assigned))
     (is (:ok first-attempt))
     (is (false? (:ok failed)))
-    (is (= 2 (:rolled-back failed)) "solver and student-1 both roll back")
-    (is (= #{"/tmp/solver"
-             (get-in first-attempt
-                     [:result :environment-checkout :checkout])}
-           (set (map :checkout @rolled))))))
+    (is (zero? (:rolled-back failed)))
+    (is (empty? @rolled)
+        "no completed frame may be destroyed by a later attempt's failure")))
 
 (deftest recorded-assignment-beats-a-relayed-one
   ;; :environment-checkouts otherwise arrives through the caller-supplied advance
@@ -711,3 +716,34 @@
         "the recorded assignment must win over the relayed one")
     (is (= "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
            (:environment-revision outputs)))))
+
+(deftest student-provisioning-failure-must-not-destroy-the-solver-tree
+  ;; Verified before this fix: a transient failure on student attempt 2 rolled
+  ;; back ["/tree/solver" "/tree/student-1"] -- deleting the worktree the solver
+  ;; may have spent the whole cycle working in. All-or-nothing is right at
+  ;; :assign-checkouts, where nothing has been done; mid-cycle it destroys work
+  ;; and makes retry mean redoing the solve.
+  (let [rolled (atom [])
+        n (atom 0)
+        provisioner (fn [{:keys [arm]}]
+                      (swap! n inc)
+                      (if (and (re-find #"^student-" (str arm)) (> @n 2))
+                        (throw (ex-info "transient git failure" {}))
+                        {:checkout (str "/tree/" arm)
+                         :base-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                         :branch (str "exp/" arm) :frame/id (str "f-" arm)}))
+        b (problem/make-checkout-provisioning-backend
+           (tools/make-mock-backend {:dispatch-student-fresh {:ok true}})
+           provisioner
+           (fn [f] (swap! rolled conj (:checkout f))))]
+    (tools/execute-tool b :assign-checkouts
+                        [{:problem "p" :batch "bt" :base-rev "HEAD"
+                          :solver-seat "codex-4" :student-seat "zai-1"
+                          :recall-system "v1"}])
+    (tools/execute-tool b :dispatch-student-fresh [{} "packet"])
+    (let [r (tools/execute-tool b :dispatch-student-fresh [{} "packet"])]
+      (is (false? (:ok r)))
+      (is (zero? (:rolled-back r)))
+      (is (empty? @rolled) "no completed frame may be rolled back mid-cycle")
+      (is (not-any? #(re-find #"solver" %) @rolled)
+          "the solver's tree must survive a student provisioning failure"))))

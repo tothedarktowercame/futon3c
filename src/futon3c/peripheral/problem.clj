@@ -420,15 +420,20 @@
                 frame (try (provisioner-fn (checkout-options context arm))
                            (catch Throwable t t))]
             (if (instance? Throwable frame)
-              (let [to-rollback @provisioned-frames]
-                (doseq [existing to-rollback]
-                  (try (rollback-fn existing) (catch Throwable _ nil)))
-                (reset! provisioned-frames [])
-                (reset! assignment-context nil)
-                {:ok false
-                 :error (str "student checkout provisioning failed: "
-                             (.getMessage ^Throwable frame))
-                 :rolled-back (count to-rollback)})
+              ;; Roll back NOTHING else. All-or-nothing is correct at
+              ;; :assign-checkouts, where no work has been done yet; here the
+              ;; solver may have spent the whole cycle in its tree. Rolling the
+              ;; assignment back on a student provisioning failure DELETED THE
+              ;; SOLVER'S WORKTREE AND BRANCH -- verified: a transient failure on
+              ;; student attempt 2 rolled back ["/tree/solver" "/tree/student-1"].
+              ;; That inverts the reason all-or-nothing exists: it was so a retry
+              ;; would be possible, and this made retry mean redoing the solve.
+              ;; frames.bb removes its own partial worktree internally, so a
+              ;; failed provision leaves nothing behind to undo.
+              {:ok false
+               :error (str "student checkout provisioning failed: "
+                           (.getMessage ^Throwable frame))
+               :rolled-back 0}
               (let [dispatch (tools/execute-tool
                               inner-backend tool-id
                               [(assoc (or opts {})
