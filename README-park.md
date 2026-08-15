@@ -87,6 +87,20 @@ curl -X POST localhost:7070/api/alpha/park -d '{
 # A relative duration like 1800000 reads as Jan 1970 and fires on the first sweep.
 ```
 
+**Never park on a job-id you have not received.** The park API accepts any string
+in `awaiting` and does not check it against the job registry, so a park on an
+invented or mistyped id is accepted, joins nothing, and sits until its deadline
+fires a wake with no work behind it. Observed 2026-08-15: claude-2 wrote the park
+call in the same shell block as the dispatch, with a placeholder id standing in
+for the job-id it did not have yet, then created the real park afterwards. The
+placeholder survived and woke the session ~20 minutes later with
+`invoke-job-not-found`.
+
+Take the `job-id` out of the dispatch response and park in a SECOND call. It is
+the same defect class the rest of this stack keeps producing -- a reference whose
+shape is fine and whose referent does not exist -- committed in the coordination
+layer instead of the code.
+
 The boot hook (`start-parked-on!`) runs `rehydrate!` + a 30s `sweep-deadlines!` daemon (NOT the
 Arxana Clock). The Emacs side auto-enables on load of `claude-repl-park.el`.
 
