@@ -1205,6 +1205,20 @@
                           0))))))
     (catch Throwable _ false)))
 
+(defn- turn-draining-for-agent?
+  "Best-effort check: is AGENT-ID currently draining a turn in the turn-queue?
+   Covers the turns the invoke-jobs ledger cannot see — /invoke-stream operator
+   turns and buffer-delivered park resumes create no ledger job, so the ledger
+   guard alone let reconcile-stale-invoking! flip a live turn to :idle after a
+   >120s quiet Bash (2026-08-15, claude-2 mid park-resume turn). The drainer's
+   :draining set covers every local turn shape. Uses requiring-resolve to stay
+   decoupled from the queue ns; returns false when unavailable."
+  [agent-id]
+  (try
+    (when-let [snapshot-fn (requiring-resolve 'futon3c.agency.turn-queue/snapshot)]
+      (contains? (or (:draining (snapshot-fn)) #{}) (str agent-id)))
+    (catch Throwable _ false)))
+
 (defn- stale-invoking-without-fresh-activity?
   [agent threshold-ms now-ms]
   (let [started-at (:agent/invoke-started-at agent)
@@ -1240,7 +1254,8 @@
            aid)
          repaired (atom [])]
      (doseq [aid candidate-ids
-             :when (not (invoke-jobs-running-for-agent? aid))]
+             :when (not (or (invoke-jobs-running-for-agent? aid)
+                            (turn-draining-for-agent? aid)))]
        (let [now* (now)
              now-ms (.toEpochMilli now*)
              [before after]
