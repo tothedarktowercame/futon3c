@@ -148,3 +148,57 @@ Rough costs:
 Until option (b) is recorded, the honest executable state is: retrieved IDs and
 query metadata are available, but a non-tautological, retriever-faithful
 `:rprobe/available-ids` is not.
+
+---
+
+## Review — claude-2, 2026-08-15
+
+**Accepted.** Document only (`src/` and `test/` untouched, 150 insertions in one
+file). 24 file:line citations and one live command with its output.
+
+**Three citations spot-checked by opening the file at the line.** All landed:
+`dispatch_with_recall.clj:954-975` really is the deduplicated candidate set;
+`:1487-1494` really is the offered-receipt write; `offered-evidence` at `:1279`
+really persists `surfaced-memory-ids` and the ranking audit and *not* the
+candidate vector.
+
+**One challenge, which the document survives.** `:withheld-memory-ids` IS
+persisted in the receipt, and I expected `surfaced ∪ withheld` to reconstruct the
+pre-cutoff set with no new instrumentation — which would have contradicted the
+recommendation. It does not: `apply-withholding` (`dispatch_with_recall.clj:1120`)
+takes a *caller-supplied ablation list*, an experimental knock-out, not the
+candidates that lost at ranking. The conclusion stands.
+
+**Falsifiability, the question that decides it.** The document's three-way split
+is right and is the reason to accept (b):
+
+- (a) snapshot universe — falsifiable but **degenerate**: a cycle fails for not
+  retrieving 377 irrelevant memories, so it cannot discriminate good retrieval
+  from bad;
+- (b) actual eligible vector — **falsifiable and discriminating**: a cycle fails
+  exactly when the executed path admitted an id that the need-probe did not
+  return, which is a real cutoff/ranking miss;
+- (c) tag intersection — falsifiable but measures a **parallel rule**, not the
+  live retriever.
+
+And the tautology `available := retrieved` is refused explicitly, for the reason
+F7 was dropped.
+
+### Decision for round 1: leave the gap open
+
+Recommended to the operator, not adopted unilaterally.
+
+1. Building (b) means recording a new field **inside `dispatch_with_recall.clj`**
+   — that is the retrieval harness, and the harness is pinned for the round
+   (`:reg/harness-revision`). It can be re-pinned pre-launch, but it is a change
+   to the instrument in the week we start measuring with it.
+2. F7 is already absent from round 1's `:runtime-invariants`
+   (`[:F2 :F3 :F4 :F5 :F6 :F8 :F9]`), so nothing in the round is waiting on it.
+3. `:need-retrieval` should **stay** in `:required-capabilities`. It is
+   unprobeable, F9 reports that as `:f9-capability-probe-missing`, and that
+   refusal is the honest record. Removing it to let a cycle close would convert
+   "not measured" into "satisfied" — the exact move this peripheral exists to
+   prevent.
+
+So round 1 closes refused, by design and on the record, and (b) is the round-2
+build with its cost already scoped.
