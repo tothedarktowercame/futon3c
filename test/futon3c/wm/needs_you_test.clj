@@ -2,7 +2,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
-            [futon3c.wm.needs-you :as needs-you])
+            [futon3c.wm.needs-you :as needs-you]
+            [futon3c.wm.operator-bulletin :as bulletin])
   (:import (java.io File)
            (java.nio.file Files)
            (java.nio.file.attribute FileAttribute)))
@@ -92,5 +93,54 @@
         (is (= ["item-0" "item-1" "wm-needs-overflow"] (mapv :id written)))
         (is (= "Review the WM ranked-actions or raise the needs-you cap for this run."
                (:unblock-action (last written)))))
+      (finally
+        (delete-tree! (.getParent (io/file path)))))))
+
+(defn- proctor-finding [id summary compromised?]
+  {:finding/id id
+   :finding/cycle-id "cycle/t94J02/1"
+   :finding/summary summary
+   :finding/compromised? compromised?})
+
+(deftest compromised-proctor-finding-survives-bulletin-as-nag
+  (let [item (needs-you/proctor-finding->needs-you-item
+              (proctor-finding :seat-contamination
+                               "solver seat was not exclusive" true))
+        projected (bulletin/build-bulletin [item])]
+    (is (= :nag (:lane item)))
+    (is (= [(:id item)] (mapv :id (:nag projected))))
+    (is (empty? (:brief projected)))
+    (is (zero? (:silent-count projected)))))
+
+(deftest ordinary-and-nothing-to-report-findings-are-recorded-as-brief
+  (let [ordinary (needs-you/proctor-finding->needs-you-item
+                  (proctor-finding :classification
+                                   "one guidance row was not helpful" false))
+        nothing (needs-you/proctor-finding->needs-you-item
+                 (proctor-finding :close-witness "nothing to report" false))
+        projected (bulletin/build-bulletin [ordinary nothing])]
+    (is (= [:brief :brief] (mapv :lane [ordinary nothing])))
+    (is (= #{(:id ordinary) (:id nothing)}
+           (set (map :id (:brief projected)))))
+    (is (= 2 (:total projected)))
+    (is (zero? (:silent-count projected)))))
+
+(deftest emit-proctor-finding-preserves-current-items
+  (let [path (temp-file)
+        existing {:id "existing" :lane :brief :g-total 0.0}]
+    (try
+      (needs-you/emit-needs-you! [existing] {:path path})
+      (needs-you/emit-proctor-finding!
+       (proctor-finding :close-witness "nothing to report" false)
+       {:path path})
+      (let [written (edn/read-string (slurp path))]
+        (is (= 2 (count written)))
+        (is (some #(= "existing" (:id %)) written))
+        (is (some #(and (= :apm-proctor (:source %))
+                        (= :brief (:lane %)))
+                  written))
+        (is (not-any? #(and (= :apm-proctor (:source %))
+                            (= :silent (:lane %)))
+                      written)))
       (finally
         (delete-tree! (.getParent (io/file path)))))))
