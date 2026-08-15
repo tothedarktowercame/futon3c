@@ -1579,6 +1579,25 @@ config at check time), conformance []. **Remaining for acceptance: the
 generality leg** — the same functor + checks on ≥2 non-APM configs
 (proof peripheral first).
 
+**Generality sibling #1 (proof peripheral) — DONE 2026-08-15**
+(`holes/labs/M-diagramprover/proof-wiring.edn` +
+`proof-wiring-findings-20260815.edn`). Same functor and all five checks,
+zero new machinery. The authoring-plus-checking process surfaced **three
+real latent findings in a config the tool was not built from**:
+(1) `proof-domain-config` never opts into `:enforce-required-outputs?`,
+so the canonical CR-1..8 contract gates nothing at advance time;
+(2) `proof_logic.clj` holds a private duplicate of `phase-order` and
+`phase-required-outputs` that has **drifted** — 9 phases, missing
+`:target-check` and its three outputs; (3) the duplicate is the copy the
+only live output-checking consumes (`query-missing-phase-outputs`), so
+enforcement-that-exists reads the stale contract. All three flagged to
+the proof peripheral's owners; fixes change cycle behavior and are not
+applied from WS-E. Also the second and third instances of the checker
+out-auditing its own author: the conformance pass exposed a broken
+authoring grep (`\b` after `?`), which is how the duplicate was found.
+Final truthful-map verdicts: all five checks clean. **Sibling #2 to be
+picked next (operator's call: WM flight loop or futon3b gate pipeline).**
+
 ### Explicitly parked / superseded
 
 - **TPG as tactic generator** (Phase 3b) — parked, off the critical

@@ -1,0 +1,49 @@
+;; WS-E generality sibling #1 — declared ownership map for the PROOF
+;; peripheral's phase-output contract (CR-1..8). Authored by claude-7
+;; (2026-08-15) from proof.clj + proof_shapes.clj + reader greps; checked by
+;; futon3c.diagramprover.wiring under contract (c).
+;;
+;; TWO FINDINGS ESTABLISHED DURING AUTHORING (recorded here because the map
+;; must be truthful, and truth is what surfaced them):
+;; 1. :enforce-required-outputs? is NOT set in proof-domain-config — the
+;;    engine's output gate is opt-in (cycle.clj), only problem.clj opts in.
+;;    The CR-1..8 required-outputs contract therefore gates nothing at
+;;    advance time. There is deliberately NO :required-outputs-gate box in
+;;    this map: declaring one would assert a reader that does not act.
+;;    Fix is one line but changes proof-cycle behavior — flagged to the
+;;    proof peripheral's owners, not applied here.
+;; 2. proof_logic.clj holds a PRIVATE DUPLICATE of phase-order and
+;;    phase-required-outputs, and the copies have DRIFTED: the duplicate is
+;;    9 phases, missing :target-check and its three outputs (:proof-plan
+;;    :formal-alignment :target-sanity). The duplicate is the copy that is
+;;    actually consumed (query-missing-phase-outputs -> :missing-phase-outputs),
+;;    so the only live output-checking reads the stale contract while the
+;;    canonical one gates nothing (finding 1). First draft of this map claimed
+;;    :saved? had no reader — the conformance check flagged its occurrence in
+;;    proof_logic, which is how the duplicate was found. (The authoring grep
+;;    was broken for :saved? — \b after ? — the checker's lookahead was not.)
+;;
+;; Reader boxes are declared at keyword-occurrence granularity (the checker's
+;; documented textual limitation): same-name keywords in unrelated namespaces
+;; (bridge.clj :approach etc.) are NOT declared as cycle-field readers.
+;; :phases is not stored here — the snapshot runner assoc's it from the live
+;; proof-shapes config at check time.
+{:spec/id :proof-peripheral-live
+ :boxes
+ [{:box/id :cycle-advance-payload
+   :site {:ns "futon3c.peripheral.proof-shapes"}
+   :writes [:blocker-id :approach :proof-plan :formal-alignment :target-sanity
+            :artifacts :validation-artifacts :classification :rationale
+            :ledger-changes :saved? :gates-passed]}
+  {:box/id :proof-logic
+   ;; reads via its own DUPLICATED (and drifted) contract copy — see note 2.
+   ;; :saved? included: consumed through the duplicate's :commit entry.
+   ;; :target-check's three outputs deliberately absent: the duplicate does
+   ;; not know they exist, which is the drift.
+   :site {:ns "futon3c.peripheral.proof-logic"}
+   :reads [:blocker-id :approach :artifacts :validation-artifacts
+           :classification :rationale :ledger-changes :saved? :gates-passed]}
+  {:box/id :apm-work-queue
+   :site {:ns "futon3c.agents.apm-work-queue"}
+   :reads [:proof-plan :formal-alignment :target-sanity :artifacts
+           :classification]}]}
