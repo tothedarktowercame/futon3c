@@ -107,7 +107,10 @@
      :assigned-at (:cycle/assigned-at cycle)
      :cycle/attempts
      (mapv #(select-keys % [:cycle/regime :cycle/store-revision
-                            :cycle/harness-revision :cycle/runner-freshness])
+                            :cycle/harness-revision
+                            :cycle/environment-checkout
+                            :cycle/environment-revision
+                            :cycle/runner-freshness])
            attempts)
      :cycle/mode (:cycle/mode cycle)
      :cycle/deposit-state (:cycle/deposit-state cycle)

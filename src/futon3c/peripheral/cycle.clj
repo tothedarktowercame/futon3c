@@ -17,6 +17,7 @@
    - :always-available-tools optional tools allowed during setup and every phase
    - :state-runtime-keys optional keys excluded from saves and retained across loads
    - :state-validate-fn optional (fn [current loaded] -> nil | failure map)
+   - :output-stamp-fn optional (fn [state advance-payload] -> advance-payload)
    - :cycle-begin-tool keyword for the tool that starts a cycle
    - :cycle-advance-tool keyword for the tool that advances phases
    - :state-init-fn    (fn [context] -> domain-state-map) additional state at start
@@ -83,6 +84,8 @@
                   (not= save load))))
        (or (nil? (:state-validate-fn config))
            (fn? (:state-validate-fn config)))
+       (or (nil? (:output-stamp-fn config))
+           (fn? (:output-stamp-fn config)))
        (or (nil? (:output-invariants config))
            (and (vector? (:output-invariants config))
                 (every? (fn [invariant]
@@ -226,9 +229,16 @@
           cycle-advance (:cycle-advance-tool config)
           state-save (get-in config [:state-io-tools :save])
           state-load (get-in config [:state-io-tools :load])
+          raw-advance-payload (when (= tool cycle-advance)
+                                (advance-payload args))
+          stamped-advance-payload
+          (when raw-advance-payload
+            (if-let [stamp (:output-stamp-fn config)]
+              (stamp state raw-advance-payload)
+              raw-advance-payload))
           advance-outputs (when (= tool cycle-advance)
                             (merge (:cycle/outputs state)
-                                   (advance-payload args)))
+                                   stamped-advance-payload))
           invariant-failure (when advance-outputs
                               (output-invariant-failure config advance-outputs))]
       (cond
@@ -251,10 +261,8 @@
              (:enforce-required-outputs? config)
              (seq (clojure.set/difference
                    (required-through-phase config (:current-phase state))
-                   (set (keys (merge (:cycle/outputs state)
-                                     (advance-payload args)))))))
-        (let [available (set (keys (merge (:cycle/outputs state)
-                                          (advance-payload args))))
+                   (set (keys advance-outputs)))))
+        (let [available (set (keys advance-outputs))
               missing (clojure.set/difference
                        (required-through-phase config (:current-phase state))
                        available)]
@@ -335,7 +343,7 @@
                               marker (update :branch-markers (fnil conj []) marker)
                               new-phase (assoc :current-phase new-phase)
                               new-phase (update :cycle/outputs merge
-                                                (advance-payload args))
+                                                stamped-advance-payload)
                               new-cycle-id (assoc :current-cycle-id (:cycle/id result)
                                                   :current-phase (first (:phase-order config))
                                                   :cycle/outputs {})

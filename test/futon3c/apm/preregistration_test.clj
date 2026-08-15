@@ -45,10 +45,14 @@
   [{:cycle/regime "regime/a"
     :cycle/store-revision revision-a
     :cycle/harness-revision revision-a
+    :cycle/environment-checkout "/frames/solver"
+    :cycle/environment-revision revision-a
     :cycle/runner-freshness true}
    {:cycle/regime "regime/a"
     :cycle/store-revision revision-a
     :cycle/harness-revision revision-a
+    :cycle/environment-checkout "/frames/student"
+    :cycle/environment-revision revision-a
     :cycle/runner-freshness true}])
 
 (def trace
@@ -102,6 +106,14 @@
 
 (deftest aligned-positive-witness-is-launchable
   (is (empty? (checked registration trace))))
+
+(deftest attempt-environment-fields-are-required-and-typed
+  (let [attempt (first attempts)]
+    (is (false? (prereg/attempt? (dissoc attempt :cycle/environment-checkout))))
+    (is (false? (prereg/attempt? (dissoc attempt :cycle/environment-revision))))
+    (is (false? (prereg/attempt?
+                 (assoc attempt :cycle/environment-revision "not-a-sha"))))
+    (is (true? (prereg/attempt? attempt)))))
 
 (deftest structural-errors-are-not-misreported-as-content-errors
   (let [failures (checked (dissoc registration :problem) trace)]

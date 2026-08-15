@@ -170,6 +170,17 @@
     (is (:ok advance))
     (is (= :beta (get-in advance [:state :current-phase])))))
 
+(deftest domain-without-output-stamp-preserves-the-advance-payload
+  (let [p (make-test-peripheral (make-test-mock))
+        start (runner/start p {:session-id "no-output-stamp"})
+        begun (runner/step p (:state start)
+                           {:tool :cycle-begin :args ["M" "B"]})
+        payload {:observed :caller-value}
+        advanced (runner/step p (:state begun)
+                              {:tool :cycle-advance :args ["M" "C1" payload]})]
+    (is (:ok advanced))
+    (is (= payload (get-in advanced [:state :cycle/outputs])))))
+
 (deftest required-output-enforcement-defaults-off
   (let [p (make-test-peripheral (make-test-mock))
         start (runner/start p {:session-id "default-off"})

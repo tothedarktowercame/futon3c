@@ -90,6 +90,8 @@
        (nonblank-string? (:cycle/regime x))
        (sha40? (:cycle/store-revision x))
        (sha40? (:cycle/harness-revision x))
+       (nonblank-string? (:cycle/environment-checkout x))
+       (sha40? (:cycle/environment-revision x))
        (boolean? (:cycle/runner-freshness x))))
 
 (defn memory-offer? [x]

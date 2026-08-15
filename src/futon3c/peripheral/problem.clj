@@ -90,6 +90,31 @@
                      :step-count (count (:steps state))}
      :snapshot/tags [:problem :snapshot]}))
 
+(defn- stamp-attempt-environment [attempt assignment]
+  (if (and (map? attempt) (map? assignment))
+    (assoc attempt
+           :cycle/environment-checkout (:checkout assignment)
+           :cycle/environment-revision (:base-revision assignment))
+    attempt))
+
+(defn- stamp-environment-outputs [state payload]
+  (let [assignments (or (get-in state [:cycle/outputs :environment-checkouts])
+                        (:environment-checkouts payload))
+        solver (:solver assignments)
+        student (:student assignments)
+        revision (:base-revision solver)]
+    (cond-> payload
+      (some? revision)
+      (assoc :environment-revision revision)
+
+      (contains? payload :solver-attempt)
+      (update :solver-attempt stamp-attempt-environment solver)
+
+      (sequential? (:student-attempts payload))
+      (update :student-attempts
+              #(mapv (fn [attempt]
+                       (stamp-attempt-environment attempt student)) %)))))
+
 (def problem-domain-config
   {:domain-id :problem
    :phase-order phase-order
@@ -105,6 +130,7 @@
    :state-runtime-keys #{:cycle-config :evidence-store}
    :state-validate-fn validate-loaded-state
    :state-snapshot-fn state-snapshot
+   :output-stamp-fn stamp-environment-outputs
    :output-invariants
    [{:id :environment-arms-match
      :requires #{:environment-revision :solver-attempt :student-attempts}

@@ -29,6 +29,8 @@
        {:attempt/id (str "attempt/" cycle-id "/1")
         :attempt/cycle cycle-id :attempt/seq 1 :cycle/regime "regime/a"
         :cycle/store-revision rev-a :cycle/harness-revision rev-a
+        :cycle/environment-checkout "/frames/solver"
+        :cycle/environment-revision rev-a
         :cycle/runner-freshness true}
        {:meas/id (str "meas/" cycle-id) :meas/cycle cycle-id
         :meas/values (zipmap prereg/required-measurement-fields
@@ -84,6 +86,8 @@
                     :attempt/cycle cycle-id :attempt/seq 2
                     :cycle/regime "regime/a" :cycle/store-revision rev-b
                     :cycle/harness-revision rev-b
+                    :cycle/environment-checkout "/frames/student"
+                    :cycle/environment-revision rev-a
                     :cycle/runner-freshness true})))))
 
 (deftest new-memory-in-harness-mode-is-refused

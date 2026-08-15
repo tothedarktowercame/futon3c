@@ -249,17 +249,83 @@
 (def outputs-through-student
   {:registration :r :store-snapshot :round-open :stratum-frozen-at 1
    :environment-revision "env-a" :harness-revision "harness-a"
-   :environment-checkouts {:solver {:checkout "/solver"}
-                           :student {:checkout "/student"}}
+   :environment-checkouts {:solver {:checkout "/solver"
+                                    :base-revision "env-a"}
+                           :student {:checkout "/student"
+                                     :base-revision "env-a"}}
    :frame :f :containment-probe :c
    :solver-attempt {:cycle/environment-revision "env-a"
                     :cycle/store-snapshot :solver-store}
    :ground-control-events [] :memory-offers [] :intervention :i})
 
+(deftest attempt-environments-are-stamped-from-checkout-assignment
+  (let [assigned-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        assignments {:solver {:checkout "/frames/solver"
+                              :base-revision assigned-revision}
+                     :student {:checkout "/frames/student"
+                               :base-revision assigned-revision}}
+        backend (tools/make-mock-backend
+                 {:advance-problem-phase {:cycle/phase :frame}})
+        p (problem/make-problem backend)
+        start (runner/start p {:session-id "stamp-attempts"
+                               :problem-id "t94J02"
+                               :cycle/mode :store-mode})
+        registered
+        (runner/step
+         p (assoc (:state start) :current-phase :register)
+         {:tool :advance-problem-phase
+          :args ["M" "C"
+                 {:registration :r :store-snapshot :s :stratum-frozen-at 1
+                  :environment-revision "caller-revision"
+                  :harness-revision "h"
+                  :environment-checkouts assignments}]})
+        guided-state (-> (:state registered)
+                         (assoc :current-phase :guided-solve)
+                         (update :cycle/outputs merge
+                                 {:frame :f :containment-probe :c}))
+        guided
+        (runner/step
+         p guided-state
+         {:tool :advance-problem-phase
+          :args ["M" "C"
+                 {:solver-attempt
+                  {:cycle/environment-checkout "/caller/solver"
+                   :cycle/environment-revision
+                   "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+                  :ground-control-events [] :memory-offers []}]})
+        student-state (-> (:state guided)
+                          (assoc :current-phase :student-attempts)
+                          (update :cycle/outputs assoc :intervention :i))
+        students
+        (runner/step
+         p student-state
+         {:tool :advance-problem-phase
+          :args ["M" "C"
+                 {:student-attempts
+                  [{:cycle/environment-checkout "/caller/student"
+                    :cycle/environment-revision
+                    "cccccccccccccccccccccccccccccccccccccccc"}]
+                  :memory-uses []}]})
+        outputs (get-in students [:state :cycle/outputs])]
+    (is (= assigned-revision (:environment-revision outputs))
+        "the registered pin is derived from the machine assignment")
+    (is (= {:cycle/environment-checkout "/frames/solver"
+            :cycle/environment-revision assigned-revision}
+           (:solver-attempt outputs)))
+    (is (= [{:cycle/environment-checkout "/frames/student"
+             :cycle/environment-revision assigned-revision}]
+           (:student-attempts outputs)))
+    (is (not= (get-in outputs [:solver-attempt :cycle/environment-checkout])
+              (get-in outputs [:student-attempts 0
+                               :cycle/environment-checkout])))))
+
 (deftest environment-mismatch-fails-at-first-complete-advance
   (let [[p state] (started :store-mode)
+        outputs (assoc-in outputs-through-student
+                          [:environment-checkouts :student :base-revision]
+                          "env-b")
         state (assoc state :current-phase :student-attempts
-                           :cycle/outputs outputs-through-student)
+                           :cycle/outputs outputs)
         result (runner/step
                 p state
                 {:tool :advance-problem-phase
@@ -314,6 +380,8 @@
    :cycle/attempts [{:cycle/regime "r"
                      :cycle/store-revision "1111111111111111111111111111111111111111"
                      :cycle/harness-revision "2222222222222222222222222222222222222222"
+                     :cycle/environment-checkout "/frames/solver"
+                     :cycle/environment-revision "1111111111111111111111111111111111111111"
                      :cycle/runner-freshness true}]
    :cycle/mode :store-mode :cycle/deposit-state :n/a :cycle/paired-with nil
    :cycle/store-snapshot-id "snap/1" :cycle/store-snapshot-memory-ids []
