@@ -18,6 +18,7 @@
    - :state-runtime-keys optional keys excluded from saves and retained across loads
    - :state-validate-fn optional (fn [current loaded] -> nil | failure map)
    - :output-stamp-fn optional (fn [state advance-payload] -> advance-payload)
+   - :derived-tools optional {tool-id (fn [state args] -> result)}
    - :cycle-begin-tool keyword for the tool that starts a cycle
    - :cycle-advance-tool keyword for the tool that advances phases
    - :state-init-fn    (fn [context] -> domain-state-map) additional state at start
@@ -86,6 +87,11 @@
            (fn? (:state-validate-fn config)))
        (or (nil? (:output-stamp-fn config))
            (fn? (:output-stamp-fn config)))
+       (or (nil? (:derived-tools config))
+           (and (map? (:derived-tools config))
+                (every? (fn [[tool-id derive]]
+                          (and (keyword? tool-id) (fn? derive)))
+                        (:derived-tools config))))
        (or (nil? (:output-invariants config))
            (and (vector? (:output-invariants config))
                 (every? (fn [invariant]
@@ -251,6 +257,24 @@
                              :phase (or (:current-phase state) :setup)
                              :allowed (vec (current-phase-tools config state)))
 
+        ;; Derived tools bypass backend dispatch, not the peripheral envelope.
+        ;; Preserve the same spec and scope gates dispatch-tool applies.
+        (and (get-in config [:derived-tools tool])
+             (not (tools/allowed? tool spec)))
+        (runner/runner-error (:domain-id config) :tool-not-allowed
+                             (str "Tool " tool
+                                  " is not in this peripheral's tool set")
+                             :tool tool
+                             :allowed (:peripheral/tools spec))
+
+        (and (get-in config [:derived-tools tool])
+             (not (tools/in-scope? tool args spec)))
+        (runner/runner-error (:domain-id config) :out-of-scope
+                             (str "Tool " tool
+                                  " args are outside this peripheral's scope")
+                             :tool tool :args (vec args)
+                             :scope (:peripheral/scope spec))
+
         ;; Operation classification must be total
         (nil? (tool-operation-kind config tool))
         (runner/runner-error (:domain-id config) :unclassified-tool
@@ -281,14 +305,24 @@
            :details (dissoc failure :failure :invariant/id)))
 
         :else
-        (let [runtime-keys (:state-runtime-keys config)
+        (let [derived-fn (get-in config [:derived-tools tool])
+              runtime-keys (:state-runtime-keys config)
               persisted-state (if runtime-keys
                                 (apply dissoc state runtime-keys)
                                 state)
               backend-args (if (= tool state-save)
                              (into [persisted-state] args)
                              args)
-              dispatch-result (tools/dispatch-tool tool backend-args spec backend)
+              ;; A derived tool is computed inside the engine from authoritative
+              ;; state. Backends never gain state access, and are not invoked.
+              dispatch-result
+              (if derived-fn
+                (try
+                  {:ok true :result (derived-fn state args)}
+                  (catch Throwable t
+                    {:ok false
+                     :error (str "derived tool failed: " (.getMessage t))}))
+                (tools/dispatch-tool tool backend-args spec backend))
               ;; Validate the exact candidate the engine would install. Runtime
               ;; resources belong to the live peripheral, so a rewind retains
               ;; them from current state rather than trusting serialized values.

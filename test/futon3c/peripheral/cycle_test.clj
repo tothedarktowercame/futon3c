@@ -95,7 +95,11 @@
 (deftest valid-domain-config-rejects-missing-keys
   (is (not (cycle/valid-domain-config? (dissoc test-config :domain-id))))
   (is (not (cycle/valid-domain-config? (dissoc test-config :phase-order))))
-  (is (not (cycle/valid-domain-config? (dissoc test-config :fruit-fn)))))
+  (is (not (cycle/valid-domain-config? (dissoc test-config :fruit-fn))))
+  (is (not (cycle/valid-domain-config?
+            (assoc test-config :derived-tools {:bad :not-a-function}))))
+  (is (cycle/valid-domain-config?
+       (assoc test-config :derived-tools {:derived (fn [_ _] :ok)}))))
 
 ;; =============================================================================
 ;; Lifecycle — start/stop
@@ -318,6 +322,70 @@
     (is (:ok step))
     (is (= [:caller-arg]
            (:args (last (tools/recorded-calls backend)))))))
+
+;; =============================================================================
+;; Engine-derived tools
+;; =============================================================================
+
+(def derived-spec
+  (update test-spec :peripheral/tools conj :derive-state))
+
+(defn- derived-config [derive]
+  (-> test-config
+      (update :setup-tools conj :derive-state)
+      (update :tool-ops assoc :derive-state :observe)
+      (assoc :derived-tools {:derive-state derive})))
+
+(deftest derived-tool-uses-engine-state-and-never-calls-backend
+  (let [backend (make-test-mock {:derive-state :backend-must-not-run})
+        config (derived-config
+                (fn [state args]
+                  {:from-state (:test-field state) :args args}))
+        p (cycle/make-cycle-peripheral config derived-spec backend)
+        start (runner/start p {:session-id "derived" :test-field :authoritative})
+        result (runner/step p (:state start)
+                            {:tool :derive-state :args [:caller]})]
+    (is (:ok result))
+    (is (= {:from-state :authoritative :args [:caller]} (:result result)))
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest derived-tool-still-obeys-phase-gating
+  (let [called (atom false)
+        backend (make-test-mock)
+        config (derived-config (fn [_ _] (reset! called true)))
+        p (cycle/make-cycle-peripheral config derived-spec backend)
+        start (runner/start p {:session-id "derived-gate"})
+        state (assoc (:state start) :current-phase :alpha)
+        result (runner/step p state {:tool :derive-state :args []})]
+    (is (= :phase-tool-not-allowed (:error/code result)))
+    (is (false? @called))
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest derived-tool-still-obeys-the-peripheral-spec
+  (let [called (atom false)
+        backend (make-test-mock)
+        config (derived-config (fn [_ _] (reset! called true)))
+        ;; test-spec deliberately does not list :derive-state.
+        p (cycle/make-cycle-peripheral config test-spec backend)
+        start (runner/start p {:session-id "derived-spec"})
+        result (runner/step p (:state start)
+                            {:tool :derive-state :args []})]
+    (is (= :tool-not-allowed (:error/code result)))
+    (is (false? @called))
+    (is (empty? (tools/recorded-calls backend)))))
+
+(deftest throwing-derived-tool-is-a-structured-failure
+  (let [backend (make-test-mock)
+        config (derived-config
+                (fn [_ _] (throw (ex-info "cannot derive" {}))))
+        p (cycle/make-cycle-peripheral config derived-spec backend)
+        start (runner/start p {:session-id "derived-throw"})
+        result (runner/step p (:state start)
+                            {:tool :derive-state :args []})]
+    (is (= :tool-execution-failed (:error/code result)))
+    (is (re-find #"cannot derive"
+                 (str (get-in result [:error/context :result :error]))))
+    (is (empty? (tools/recorded-calls backend)))))
 
 (deftest state-save-receives-authoritative-engine-state
   (let [seen (atom nil)
