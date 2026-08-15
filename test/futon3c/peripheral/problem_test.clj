@@ -768,7 +768,11 @@
   (assoc state
          :current-phase :close
          :current-cycle-id "cycle-1"
-         :steps [{:tool :emit-capability-probes :result []
+         :steps [{:tool :record-measurement
+                  :result {:meas/id "meas-cycle-1"
+                           :meas/values {"x" 1} :meas/unset {}}
+                  :evidence/id "e-measurement"}
+                 {:tool :emit-capability-probes :result []
                   :evidence/id "e-capability-probes"}]
          :cycle/opened-at "2026-08-15T00:00:00Z"
          :cycle/deposit-state :n/a
@@ -817,20 +821,19 @@
     (is (= closed-at (:cycle/closed-at cycle-entity))
         "the engine clock, not the caller, closes the trace")
     (is (= #{"cycle-1" "frame-1" "gate-1" "snap-1" "cprobe-1"
-             "meas-1" "attempt-1"}
+             "meas-cycle-1" "attempt-1"}
            (set (keep apm-harness/entity-id (:entities @called))))
         "typed entities are assembled from cycle outputs")))
 
 (deftest emit-trace-names-missing-entity-producers
   (let [[p state] (started :store-mode)
         state (-> (trace-emission-state state)
-                  (assoc :steps [])
-                  (update :cycle/outputs
-                          dissoc :retrieval-probes :capability-probes))
+                  (update :cycle/outputs dissoc :retrieval-probes))
         result (runner/step p state {:tool :emit-trace :args []})]
     (is (= :tool-execution-failed (:error/code result)))
     (is (re-find #"retrieval-probe" (str result)))
-    (is (re-find #"capability-probe" (str result)))))
+    (is (not (re-find #"capability-probe" (str result))))
+    (is (not (re-find #"measurement" (str result))))))
 
 (deftest empty-offer-output-is-not-a-missing-producer
   (let [[p state] (started :store-mode)
@@ -862,7 +865,10 @@
         st (assoc (:state (runner/start p {:session-id "e2e" :problem-id "t94J02"
                                            :cycle/mode :store-mode}))
                   :current-phase :close :current-cycle-id "C1"
-                  :steps [{:tool :emit-capability-probes :result []
+                  :steps [{:tool :record-measurement
+                           :result {:meas/values {"a" 1} :meas/unset {}}
+                           :evidence/id "e-measurement"}
+                          {:tool :emit-capability-probes :result []
                            :evidence/id "e-capability-probes"}]
                   :cycle/outputs
                   {:registration {:problem {:problem-id "t94J02"
@@ -960,3 +966,65 @@
            (set (map :probe/capability probes)))
         "capabilities with no attesting step get no probe")
     (is (some #{:f9-capability-probe-missing} content-failures))))
+
+(defn- measurement-state [state]
+  (assoc state
+         :current-phase :close
+         :current-cycle-id "C-measurement"
+         :cycle/outputs
+         {:registration
+          {:required-measurement-fields prereg/required-measurement-fields
+           :problem {:locked-lemma-exposure ["lemma/a" "lemma/b"]}}
+          :disposition {:disp/outcome :closed
+                        :disp/residual-sorries 0
+                        :disp/axiom-clean? true}}))
+
+(deftest record-measurement-covers-every-required-field-with-values-or-reasons
+  (let [backend (tools/make-mock-backend)
+        p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec backend)
+        state (:state (runner/start p {:session-id "measurement"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode}))
+        result (runner/step p (measurement-state state)
+                            {:tool :record-measurement
+                             :args [{:meas/values {"forged" 1}}]})
+        measurement (:result result)
+        values (:meas/values measurement)
+        unset (:meas/unset measurement)
+        covered (into (set (keys values)) (keys unset))]
+    (is (:ok result))
+    (is (every? covered prereg/required-measurement-fields)
+        "every registered field is measured or explicitly unset")
+    (is (= {:outcome :closed :residual 0 :axiom-clean? true
+            :locked-exposure ["lemma/a" "lemma/b"]}
+           {:outcome (get values "terminal disposition")
+            :residual (get values "residual executable sorries")
+            :axiom-clean? (get values "axiom cleanliness")
+            :locked-exposure (get values "locked-lemma exposure")}))
+    (is (every? (fn [[_ reason]]
+                  (and (string? reason) (not (str/blank? reason))))
+                unset)
+        "unset is evidence-bearing, never a blank label")
+    (is (not (contains? values "forged"))
+        "caller-supplied measurements are ignored")
+    (is (empty? (tools/recorded-calls backend))
+        "measurement is computed by the engine, not the backend")))
+
+(deftest record-measurement-refuses-a-mutated-silent-omission
+  (let [p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec
+                                       (tools/make-mock-backend))
+        state (:state (runner/start p {:session-id "measurement-mutation"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode}))
+        field "statement defects at review"
+        original @#'problem/measurement-unset-reasons
+        result (with-redefs [problem/measurement-unset-reasons
+                             (fn [missing]
+                               (dissoc (original missing) field))]
+                 (runner/step p (measurement-state state)
+                              {:tool :record-measurement :args []}))]
+    (is (= :tool-execution-failed (:error/code result)))
+    (is (re-find #"silently omitted" (str result)))
+    (is (re-find #"statement defects at review" (str result)))))

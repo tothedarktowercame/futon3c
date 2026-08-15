@@ -36,7 +36,7 @@
    :student-attempts #{:dispatch-student-fresh :read-attempt-result advance}
    :adjudicate #{:write-disposition :write-use advance}
    :promote #{:promote-artifact advance}
-   :close #{:emit-capability-probes :emit-trace :validate-trace
+   :close #{:record-measurement :emit-capability-probes :emit-trace :validate-trace
             :write-authorization advance}
    :completed #{}})
 
@@ -157,13 +157,24 @@
       (get-in state [:cycle/outputs :environment-checkouts])
       (:environment-checkouts payload)))
 
+(declare recorded-measurement)
+
 (defn- stamp-environment-outputs [state payload]
-  (let [assignments (recorded-assignment state payload)
+  (let [payload (if (= :close (:current-phase state))
+                  ;; Measurement is a derived step result, never an advance
+                  ;; payload assertion from the caller.
+                  (dissoc payload :measurement)
+                  payload)
+        measurement (recorded-measurement state)
+        assignments (recorded-assignment state payload)
         solver (:solver assignments)
         students (let [recorded (recorded-student-assignments state)]
                    (if (seq recorded) recorded (vec (:student assignments))))
         revision (:base-revision solver)]
     (cond-> payload
+      (some? measurement)
+      (assoc :measurement measurement)
+
       ;; The recorded assignment overwrites the caller's, exactly as the attempt
       ;; fields do -- the caller may relay it, but the machine owns it.
       (and (some? assignments) (contains? payload :environment-checkouts))
@@ -202,17 +213,95 @@
   ;; These pairings are deliberately narrower than "a nearby phase". Three
   ;; required capabilities currently have no step that exercises them:
   ;; registration-gates-launch (launch-gate-event is only an advance output),
-  ;; need-retrieval (RetrievalProbe has no producer), and measurement-populated
-  ;; (measurement is only an advance output). They get no synthetic probe.
+  ;; need-retrieval (RetrievalProbe has no producer). They get no synthetic probe.
   {:created-frame-worked :emit-frame
    :frame-containment-witnessed :emit-frame
    :unique-disposition :write-disposition
    :offer-use-disposition :write-use
    :promotion-importable :promote-artifact
-   :promotion-need-taggable :promote-artifact})
+   :promotion-need-taggable :promote-artifact
+   :measurement-populated :record-measurement})
 
 (defn- latest-step [state tool]
   (some #(when (= tool (:tool %)) %) (reverse (:steps state))))
+
+(defn- measurement-values [outputs]
+  (let [dispositions (output-entities outputs :disposition)
+        disposition (when (= 1 (count dispositions)) (first dispositions))
+        locked-exposure (get-in outputs
+                                [:registration :problem
+                                 :locked-lemma-exposure])]
+    (cond-> {}
+      (contains? disposition :disp/outcome)
+      (assoc "terminal disposition" (:disp/outcome disposition))
+
+      (contains? disposition :disp/residual-sorries)
+      (assoc "residual executable sorries"
+             (:disp/residual-sorries disposition))
+
+      (contains? disposition :disp/axiom-clean?)
+      (assoc "axiom cleanliness" (:disp/axiom-clean? disposition))
+
+      (vector? locked-exposure)
+      (assoc "locked-lemma exposure" locked-exposure))))
+
+(defn- unset-measurement-reason [field]
+  (case field
+    "statement defects at review"
+    "unset: no formalizer review record is present in cycle outputs"
+    "attempts or closer hops"
+    "unset: Agency-derived guidance evidence is not available to this tool"
+    "memories promoted"
+    "unset: promotion outputs do not identify which artifacts are memories"
+    "review escape rate"
+    "unset: requires a join of review and later gate histories"
+    "promoted then surfaced then used"
+    "unset: requires a cross-cycle promotion, offer, and use join"
+    "contract leaks"
+    "unset: no def-body freeze hash is recorded"
+    "duplicate declarations"
+    "unset: requires a corpus-wide declaration scan"
+    "promotion coverage"
+    "unset: requires the corpus-wide proved-helper denominator"
+    "unconsumed promotions"
+    "unset: requires downstream consumer evidence"
+    "import-only edges"
+    "unset: requires import and declaration-use analysis"
+    "scribe lane coverage"
+    "unset: no scribe-lane event is present in cycle outputs"
+    "arc-lane yield"
+    "unset: no arc-lane event is present in cycle outputs"
+    "rewrite rule offered and used"
+    "unset: no typed rewrite-rule offer/use join is present"
+    "unset: no matching machine-derived source is present in cycle outputs"))
+
+(defn- measurement-unset-reasons [missing-fields]
+  (into {} (map (juxt identity unset-measurement-reason)) missing-fields))
+
+(defn- record-measurement-from-state [state _args]
+  (let [outputs (:cycle/outputs state)
+        required (get-in outputs [:registration :required-measurement-fields])
+        values (measurement-values outputs)
+        unset (measurement-unset-reasons (remove #(contains? values %) required))
+        covered (into (set (keys values)) (keys unset))
+        missing (remove covered required)]
+    (when (seq missing)
+      (throw (ex-info (str "record-measurement silently omitted fields: "
+                           (str/join ", " missing))
+                      {:failure :measurement-field-silently-omitted
+                       :fields (vec missing)})))
+    (when-let [blank-reason (some (fn [[field reason]]
+                                   (when (str/blank? reason) field))
+                                 unset)]
+      (throw (ex-info "record-measurement produced a blank unset reason"
+                      {:failure :measurement-unset-reason-blank
+                       :field blank-reason})))
+    {:meas/id (str "meas/" (:current-cycle-id state))
+     :meas/values values
+     :meas/unset unset}))
+
+(defn- recorded-measurement [state]
+  (:result (latest-step state :record-measurement)))
 
 (defn- emit-capability-probes-from-state [state _args]
   (->> prereg/required-capabilities
@@ -239,11 +328,15 @@
   key means there is no evidence that the producer ran and fails here."
   [state _args]
   (let [recorded-probes (recorded-capability-probes state)
+        measurement (recorded-measurement state)
         ;; Capability probes are never accepted from the advance payload. Only
         ;; the engine-derived tool's retained step result can supply them.
-        outputs (cond-> (dissoc (:cycle/outputs state) :capability-probes)
+        outputs (cond-> (dissoc (:cycle/outputs state)
+                                :capability-probes :measurement)
                   (some? recorded-probes)
-                  (assoc :capability-probes recorded-probes))
+                  (assoc :capability-probes recorded-probes)
+                  (some? measurement)
+                  (assoc :measurement measurement))
         producer-keys {:registration :registration
                        :frame :frame
                        :launch-gate :launch-gate-event
@@ -327,7 +420,8 @@
    :state-validate-fn validate-loaded-state
    :state-snapshot-fn state-snapshot
    :output-stamp-fn stamp-environment-outputs
-   :derived-tools {:emit-capability-probes emit-capability-probes-from-state
+   :derived-tools {:record-measurement record-measurement-from-state
+                   :emit-capability-probes emit-capability-probes-from-state
                    :emit-trace emit-trace-from-state}
    :output-invariants
    [{:id :environment-arms-match
