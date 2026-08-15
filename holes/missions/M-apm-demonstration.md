@@ -8448,3 +8448,57 @@ engine's business, `:cycle/mode` is the domain's.
    extreme legitimate step-back. Only a *different live* cycle is the hole.
 
 Both fixed in `4f1cbd9f`.
+
+## I.53 A3 is smaller than I.47 estimated — the provisioner already derives
+
+**Read `scripts/frames.bb` (257 lines) before writing any packet.** Three of the
+four A3 requirements are already met by it:
+
+| A3 requirement | status in `frames.bb` |
+|---|---|
+| revision **derived**, not echoed | **already done** — `(run! "git" "-C" apm-root "rev-parse" (str base-rev "^{commit}"))` resolves the supplied ref to a concrete commit and records that as `:base-revision` |
+| checkouts **distinct** per arm | **structural** — `frame-id = <batch>-<problem>-<arm>`, `checkout = worktrees-root/<frame-id>`, so different arms cannot share a directory |
+| no clobbering | **already done** — dies if the checkout or record already exists |
+| a machine-owned path | **already done** — the path is derived, never supplied |
+
+**So A3's core claim — "derive, do not echo" — is satisfied by the provisioner as
+written.** I.47 estimated four packets against an unbuilt layer; most of it is
+built.
+
+### The one blocker, and it is one line
+
+```clojure
+(when-not (#{"mem" "ctl" "case"} (:arm o))
+  (die "--arm must be mem, ctl, or case"))
+```
+
+**Arms are hardcoded to the batch era's vocabulary.** `solver` and `student` are
+rejected. That is the whole obstruction.
+
+### A vocabulary collision, and the decision
+
+`frames.bb` restricts `--memory-channel` to `push|none`; `dispatch_with_recall`
+has `#{:push :push+pull :pull-only :none}`. **Two vocabularies for one word** — but
+they are at different granularities, and the mapping is honest rather than lossy:
+
+| role | dispatch channel | frame record | why it is accurate |
+|---|---|---|---|
+| solver | `:push+pull` | `push` | things are pushed to it |
+| student | `:pull-only` | `none` | **nothing is pushed** — the frame-level fact |
+
+**So `frames.bb`'s vocabulary does not need extending.** The frame records the
+regime; the dispatch records the mechanism.
+
+### A precedent in that file worth naming
+
+```clojure
+;; The runner's ACTUAL session id is knowable only after dispatch (job record).
+;; A minted UUID here asserted isolation that did not exist
+;; (claude-3, batch-2 session escalation).
+:session :recorded-at-close
+```
+
+**Someone already hit our exact failure mode here and fixed it the same way** — by
+recording *when it is knowable* rather than asserting at creation. The discipline
+this mission keeps rediscovering is already house practice in this file; it simply
+had not reached the cycle machine.
