@@ -6455,3 +6455,79 @@ Agency log is read independently, the validator refuses.**
 
 **Everything else is instantiation.** `register-agent!`, dispatch, the phase
 engine, evidence-on-projection and `run-cycle!` all exist.
+
+## I.29 `problem-domain-config` — specified before dispatch
+
+**Joe:** *"straightforward enough at this point that it could be one or several
+Codex dispatches."* Agreed — **but every stop today came from dispatching an
+incomplete spec.** So the config is written here first, and the packet points at
+it.
+
+### Structural decision, made rather than delegated: one cycle = one PROBLEM
+
+`cycle.clj` requires `:phase-order` to be **linear, no skipping**. But the
+student attempts interleave with interventions (attempt → deposit → attempt →
+deposit → attempt). Two readings:
+
+| | cycle = | consequence |
+|---|---|---|
+| **A (chosen)** | **one problem** | `:student-attempts` is **one phase** containing three cold dispatches with interventions between them. Phase order stays linear |
+| B | one attempt | the problem spans four cycles; Codex's and Zai's phase sequences diverge |
+
+**A**, because the peripheral is a *problem*-peripheral — **the problem is the
+unit** — and B would make the fruit a fragment rather than a cycle. Recorded as
+a decision, not discovered later.
+
+### `:phase-order`
+
+```clojure
+[:register :frame :guided-solve :intervene :student-attempts
+ :adjudicate :promote :close]
+```
+
+### `:phase-tools` — this table *is* the proctoring
+
+| phase | tools available | deliberately ABSENT |
+|---|---|---|
+| `:register` | `read-registration` `validate-registration` `snapshot-store` `freeze-stratum` | — |
+| `:frame` | `emit-frame` *(carries the F1 gate)* | — |
+| `:guided-solve` | `dispatch-solver` `guide-solver` `read-substrate` | `write-substrate`, any student tool |
+| `:intervene` | **store-mode:** `write-substrate` · **harness-mode:** `tune-harness` | **the other one**, always |
+| `:student-attempts` | `dispatch-student-fresh` `read-attempt-result` | **`write-substrate`, `tune-harness`, `guide-student`, any direct-dispatch-to-student** |
+| `:adjudicate` | `write-disposition` `write-use` | solver/student dispatch |
+| `:promote` | `promote-artifact` | — |
+| `:close` | `emit-trace` `validate-trace` `write-authorization` | everything else |
+
+> **`:student-attempts` is the load-bearing row.** There is no tool by which
+> Claude can reach Zai except a fresh dispatch, and no tool to write the store
+> while attempts run. **The covert channel is not forbidden — it is absent.**
+
+**`:intervene` before `:student-attempts`** is deliberate: the deposit for
+attempt *n+1* is written in a phase where student dispatch does not exist, so
+"write, then attempt" cannot become "attempt, peek, adjust".
+
+### `:required-outputs` — a phase cannot advance without its entities
+
+| phase | must produce |
+|---|---|
+| `:register` | `Registration` (verbatim + sha256), `StoreSnapshot`, `:cycle/stratum-frozen-at` |
+| `:frame` | `Frame`, `ContainmentProbe` |
+| `:guided-solve` | `Attempt` (solver), `RoleEvent :ground-control` ×N, `MemoryOffer`s |
+| `:intervene` | store-mode → memory writes; harness-mode → `:cycle/harness-revision` bump |
+| `:student-attempts` | 3 × `Attempt` with `:cycle/runner-freshness`, `MemoryUse` per offer |
+| `:adjudicate` | exactly one `Disposition`, `LaunchGateEvent` |
+| `:promote` | `Promotion` (may be empty — but **must say why**, per the P-obligation) |
+| `:close` | `Measurement`, then the trace |
+
+### `:fruit-fn` — where peripheral meets harness
+
+Returns **the trace** in the shape `mmca-clj`'s validator consumes (29 keys,
+derivation map at I.21). **This is the join**: the peripheral produces what the
+validator already checks, so nothing new is invented at the boundary.
+
+### Remaining config keys
+
+`:domain-id :problem` · `:cycle-begin-tool :begin-problem-cycle` ·
+`:cycle-advance-tool :advance-problem-phase` · `:tool-ops` classifying each tool
+`:observe` or `:action` · `:setup-tools` = `{:load-registration :list-problems}` ·
+`:state-init-fn` seeding `:cycle/mode`, `:cycle/deposit-state`, ids.
