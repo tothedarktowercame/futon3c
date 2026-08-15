@@ -6756,3 +6756,111 @@ currently watches it.
 | blackboard render for a cycle | **not started** |
 | (a) audit `ps/phase-required-outputs` | **not started, separate** |
 | **frame-1** | **Joe's call** |
+
+## I.33 Frame-1 as a stepped, re-runnable tuning frame — and the Codex phase
+
+**Joe, 2026-08-14:** *"rather than blasting through the whole thing, we should
+step through it — and like in a LISP setup, we should be able to **back up if we
+don't like what happens and rerun it without invalidating the output**… this is
+mainly for frame-1 so that we can tune the instrument and develop a **reference
+example and standard** for later frames… I don't want to blast through frame-1
+and say 'oh, Codex couldn't solve it after all'."*
+
+### Re-running after seeing the result is p-hacking — unless it is declared
+
+**The hazard is precise:** re-running an attempt *because you did not like the
+outcome* is selection on the outcome. It is legitimate here only because **the
+runs being re-run are not data.**
+
+**And that is already preregistered.** `:reg/frame-1-disclaimer true` records
+Joe's *"at frame-1 nothing is guaranteed at all"* — so frame-1 is, by prior
+commitment, **instrument-tuning rather than evidence.** The mechanism just has
+to make that legible in the record.
+
+### The mechanism: append-only with supersession, not deletion
+
+**Do not delete a bad attempt.** Backing up creates a **new** `Attempt` that
+**supersedes** the old one, and the superseded one keeps its reason.
+
+```
+:attempt/status      #{:tuning :recorded :superseded}
+:attempt/supersedes  <attempt-id>          ; the run being replaced
+:attempt/superseded-reason  "instruction defect: …"   ; REQUIRED when superseding
+```
+
+**IF** we deleted the run we disliked, **HOWEVER** the reason we disliked it is
+the most valuable thing frame-1 produces, **THEN** supersede rather than delete,
+**BECAUSE** the discarded attempts *are* the tuning record — *"the guidance did
+not say X, so Codex did Y"* is exactly the reference standard Joe wants for later
+frames, and deleting it destroys the only evidence of how the instrument was
+tuned.
+
+This is the store's own existing pattern — the liminf memory ran to **three
+generations** (`e-0b423578` gap → `e-ba5a8bee` over-general → `e-30e87097`
+direction-scoped) rather than being overwritten. **Supersession chains are how
+this project already records revision.**
+
+**All frame-1 attempts default to `:tuning`.** Nothing becomes `:recorded`
+without an explicit operator act. That way "back up and rerun" cannot silently
+produce data.
+
+### ⚠ The standing assumption, and why it needs bounding
+
+> Joe: *"One of our standing assumptions is that **Codex is going to be able to
+> solve all of these problems with enough effort & structured guidance**."*
+
+**Recorded as a standing assumption — and as stated it can absorb any failure.**
+*"With enough guidance"* has no bound, so every non-closure reads as *"guidance
+was insufficient"* and the assumption never meets evidence. That is the
+unfalsifiable shape, and this mission has spent a day removing those.
+
+**The caps already bound it, and that is the fix:**
+
+> **A1 (bounded form).** Within **10 guided attempts and 120 minutes**, Codex
+> closes a problem of this class. If it does not, **either** the guidance was
+> inadequate **or** the assumption is wrong — and **frame-1's job is to make the
+> first explanation cheap enough to exhaust.**
+
+**That is falsifiable**, and it is why stepping matters: by tuning guidance
+against a *known-solvable* problem until Codex closes it, we learn what adequate
+guidance looks like. **After frame-1, a failure inside the caps starts to be
+evidence against A1** — because by then "we did not know how to guide it" is no
+longer available for free.
+
+**So the stepping is not just caution. It is what converts A1 from an assumption
+into something that can later be tested.**
+
+### The Codex phase — what to settle in frame-1
+
+Joe: *"I want to make sure we get Codex's instructions across the up-to-10
+attempts set up reasonably well."*
+
+**Attempt 1 is not the same kind of thing as attempts 2–10**, and the design has
+not said so:
+
+| | what Codex receives |
+|---|---|
+| **attempt 1** | problem + closer profile + role card. **No guidance** — this is the unguided baseline, and it is the only attempt that measures Codex *alone* |
+| **attempts 2–10** | the above **plus** structured guidance from Ground Control, each intervention counted as a `RoleEvent :ground-control` |
+
+**Attempt 1 being unguided is worth fixing in the design**: it makes
+"guidance interventions" a count against a real zero, and it means P1's slope has
+a per-problem baseline rather than only a cross-problem one.
+
+**What frame-1 must produce as the reference standard:**
+
+1. **A guidance vocabulary** — what kinds of intervention we actually made
+   (pointed at a lemma? named a tactic? corrected a statement reading?
+   supplied a missing import?). Frame-1 discovers the categories; later frames
+   count them.
+2. **A worked example per category**, quoted verbatim, so later Ground Control
+   turns have something to imitate rather than reinvent.
+3. **The failure modes that were instruction defects rather than solver
+   defects** — recorded on the superseded attempts, which is what makes the
+   supersession chain worth keeping.
+
+**Open for Joe, and genuinely his:** should attempt 1 be unguided as above, or
+should frame-1 start guided on the grounds that we are tuning guidance rather
+than measuring it? **I would keep attempt 1 unguided** — it costs one attempt and
+buys the only clean baseline we will ever get on this problem — but it is a
+judgement about what frame-1 is for.
