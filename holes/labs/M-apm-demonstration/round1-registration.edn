@@ -21,6 +21,14 @@
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
  :reg/harness-revision     "70282341dd146419ea750e4fc32c74581b550e6f"
 
+ ;; The solver seat is a PARAMETER OF THE MEASUREMENT, not a location like the
+ ;; Lean repo or the Agency endpoint: guidance is counted as in-window Agency
+ ;; rows addressed to this seat, so naming a different seat at validation time
+ ;; would silently change the number. Pinned here, before the round, for the same
+ ;; reason :lean-revision is. An invocation naming a different seat is a loud
+ ;; :solver-seat-mismatch rather than a silent retarget.
+ :reg/solver-seat "codex-4"
+
  ;; --- what is being run ---------------------------------------------------
  :modules                [:R :F :S :A :M :P :X]
  :structural-invariants  [:F1]

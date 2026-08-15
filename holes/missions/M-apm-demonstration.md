@@ -7928,3 +7928,57 @@ fastidious.
 
 **The substrate half of packet B therefore shrinks to almost nothing**, and the
 Agency half is exactly as codex-4 scoped it.
+
+## I.44c Packet B landed — and two findings, one of them about how I run gates
+
+**codex-4 implemented (`f6b3830`, mmca-clj).** Reviewed as a gate:
+
+| check | method | result |
+|---|---|---|
+| counts | re-ran full suite | **127/357/0 — matches exactly** |
+| kondo | touched files | 0/0 — matches |
+| unavailable ≠ zero | **mutation** | red on `unavailable-agency-log-is-not-clean-evidence` |
+| recipient not sender | **mutation** (added a caller filter) | red on `guidance-counts-recipient-and-window-not-claimed-caller` |
+| opening dispatch excluded | **mutation** (dropped the subtraction) | red on `machine-opening-dispatch-is-not-guidance` |
+| substrate half not built | diff | correctly absent |
+
+**codex-4 added something I had not asked for and should have:**
+`:guidance-measurement-mismatch` — the trace's stored value must equal the derived
+count. **So the trace cannot disagree with the log either.**
+
+### Finding 1: the solver seat was caller-supplied — and the absence was mine
+
+codex-4 recorded as a local choice that the seat is *"caller-supplied to the
+validation invocation because it is absent from the trace and registration."* It
+was absent because I never put it there.
+
+> **The seat differs in kind from the other invocation inputs.** `lean-repo` and
+> `agency-endpoint` are **locations** — and a wrong `lean-repo` is caught by the
+> revision-mismatch check. **The seat is a parameter of the predicate**: change it
+> and the number changes, with nothing to disagree with.
+
+Whoever ran the validator could pick a seat with fewer inbound bells and get a
+lower guidance count. **Pinned in the registration** (`:reg/solver-seat`), written
+before the round and hashed, exactly as `:lean-revision` is — and **cross-checked
+rather than silently preferred**: a differing invocation is `:solver-seat-mismatch`,
+an absent pin is `:missing-solver-seat`. Cross-checking beats precedence because it
+also catches an operator invoking against the wrong seat, which precedence would
+quietly "correct".
+
+### Finding 2: I have been reporting a gate that was not checking the files
+
+`check-parens` **ignores every argument before a `--` separator**
+(`check-parens.el:170-174`). My invocations omitted it, so the tool fell back to its
+default file set and printed `OK` — and I reported that as the named files passing.
+
+**Re-run correctly** (`-- --no-defaults <files>`): mmca-clj **OK**, and the futon3c
+files from the earlier packets **OK**. **The results were right; the gate was not
+checking what I said it was.**
+
+> This is the provenance/selectivity check turned on my own instruments. Three
+> times I applied it to codex-4's data sources. **It applies equally to the
+> commands I run to verify claims** — `OK` from a tool is only evidence about
+> whatever the tool actually looked at.
+
+**Final state:** 128 tests, 360 assertions, 0 failures; kondo 0/0; check-parens OK
+on the named files; registration re-validated `shape []`, `content []`, seat pinned.
