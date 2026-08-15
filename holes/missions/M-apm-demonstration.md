@@ -7859,3 +7859,72 @@ evidence filtered on `receipt-author "ground-control"` within the window, with
 **its own unavailable state** (`:deposit-evidence-unavailable`, distinct from
 `:guidance-evidence-unavailable`). **Two sources, two unavailable states, never
 summed** — as codex-4 correctly insisted.
+
+## I.44b Deposits are not a guidance channel — and P1's "confound" is the hypothesis
+
+**codex-4 stopped a third time, and was right a third time.** Verified:
+`receipt-author` is used at `dispatch_with_recall.clj:661` to *query*, and the
+evidence written under it is `:event :memory-use, :phase :offered`
+(1337–1338). **So `author=ground-control` selects dispatch receipts, not
+deposits** — the filter I named in I.44a would have counted the opening dispatch's
+own offer receipt as a deposit.
+
+### The third instance of one mistake, and the fuller check
+
+I.40: values were tool-reported. I.44: `caller` is client-supplied. I.44a: the
+author field does not discriminate deposits. **Three times I have named a data
+source without verifying it.** The check I recorded last time was necessary and
+insufficient. The full form:
+
+> **1. Provenance — who writes this field, client or server?**
+> **2. Selectivity — does it select the thing I want, or a superset?**
+>
+> `author=ground-control` **passes provenance and fails selectivity.** Both must
+> hold.
+
+### But the real error was upstream: deposits are not a guidance channel
+
+codex-4 said choosing a discriminator *"changes what P1 measures"*, so it did not
+guess. Following that through, the premise itself is wrong:
+
+> **A deposit reaches the solver only through a dispatch — and that dispatch is
+> already counted.** A deposit that is never surfaced never reaches anyone. So a
+> deposit changes the **content of an offer**, not the **count of interventions**.
+
+There is no second guidance channel to close. I invented one in I.44 and then
+specified a filter for it.
+
+### And the thing that looked like a confound is the hypothesis
+
+If the guide gets better at depositing, guidance-bells fall while actual help holds
+steady. I would have logged that as a confound. It is not:
+
+> **P1 declining because guidance migrated from bells into the substrate is not a
+> confound — it is the entire thesis.** The claim under test is that the substrate
+> absorbs what the guide used to do live.
+
+Which makes the readout a **pair**, not a number:
+
+| bells | deposits | reading |
+|---|---|---|
+| ↓ | ↑ | **the memory system is working** — guidance migrated into the store |
+| ↓ | flat | genuine learning, or a dead cycle — needs the L(i) side to tell apart |
+| flat | ↑ | depositing without relief; the store is accumulating unused material |
+
+**A summed number would have destroyed exactly this distinction** — which is why
+codex-4's refusal to sum, back in the first packet, was load-bearing rather than
+fastidious.
+
+### Decision
+
+- **Deposit count is a separate, non-guidance quantity.**
+- **Source: the cycle machine's own `:intervention` output** for `:write-substrate`
+  — the machine records the tool call, as it records `:memory-offers`. **Not** a
+  filter over ground-control-authored evidence.
+- **Its unavailable state already exists**: a missing `:intervention` is
+  `:missing-required-outputs`. No new failure keyword needed.
+- **Residue:** the guide could write to the substrate out-of-band, bypassing the
+  tool. Nameable, not closable — recorded, as with the others.
+
+**The substrate half of packet B therefore shrinks to almost nothing**, and the
+Agency half is exactly as codex-4 scoped it.
