@@ -7982,3 +7982,63 @@ checking what I said it was.**
 
 **Final state:** 128 tests, 360 assertions, 0 failures; kondo 0/0; check-parens OK
 on the named files; registration re-validated `shape []`, `content []`, seat pinned.
+
+## I.45 The proctor card, A4 (seat exclusivity), and a cross-repo gap in A3's field
+
+### The proctor card is written and hashed
+
+`role-cards/proctor.md`, `63a64a87…`, registered as `:reg/role-cards :proctor`.
+Registration re-validates `shape []`, `content []`, five cards.
+
+Its three jobs: **witness seat exclusivity**, **classify**, **judge whether it
+helped**. Its three prohibitions — no guiding, no substrate writes, no contact
+with the student — are what make the seat worth having rather than restrictions on
+it. Ambiguous rows classify **as guidance**, because the prediction is that
+guidance *declines* and doubt should resolve in the direction that cannot flatter
+the hypothesis.
+
+### A4 — seat exclusivity, and it is not hypothetical
+
+Writing job 1 meant checking whether the seats are actually ours. They are not
+reserved:
+
+> On **2026-08-12 an unrelated pilot put 234 bells into the student seat in 105
+> minutes** (204 done, 30 failed). **Frame-1's teardown deadline is 120 minutes.**
+> There is also already one `claude-2 → zai-1` row (my own ARGUE dispatch,
+> 2026-08-14) of exactly the shape that trips `direct-channel-used`.
+
+Not currently active — that run finished three days ago. But nothing reserves the
+seats, and a recurrence inside a window would be **indistinguishable from
+contamination in one seat and from guidance in the other**.
+
+**A4: the solver and student seats are exclusive to the cycle for the window.**
+Recorded as `:reg/seat-exclusivity :witnessed-not-enforced` — nothing enforces it,
+the proctor witnesses it at open and close, and **a violation is a finding rather
+than something to adjust away.**
+
+### The caller field cuts both ways, and that is not a contradiction
+
+The guidance count **must ignore** `caller` (I.44a: it is client-supplied). The
+exclusivity witness **must read** it. Both are right:
+
+> **The threat models differ.** The guide has a motive to mislabel itself; an
+> unrelated pilot has none. The same untrusted field is **usable for spotting
+> strangers and unusable for counting guidance.**
+
+### A cross-repo gap that would have blocked launch
+
+Scoping A3 turned up a mismatch between the two repos:
+
+- **futon3c** `environment-arms-match` compares `:cycle/environment-revision` on
+  the solver attempt and every student attempt.
+- **mmca-clj** `attempt?` requires `:cycle/regime`, `:cycle/store-revision`,
+  `:cycle/harness-revision`, `:cycle/runner-freshness` — **not**
+  `:cycle/environment-revision`.
+- And `grep` over mmca-clj `src/` and `scripts/`: **nothing derives an environment
+  revision at all.**
+
+**So the field the invariant compares is never produced.** The failure is loud —
+pinned sha versus `nil` fails `:environment-mismatch-between-arms` — so this is a
+"will not launch" rather than a "silently wrong". **But A3 was never satisfiable**,
+which is the point: I.40a named A3 as an assumption and it turns out the machinery
+to even state it is absent on one side.
