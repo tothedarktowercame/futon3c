@@ -1,0 +1,12 @@
+{:snapshot/date "2026-08-15",
+ :conformance [],
+ :multiply-written [],
+ :phase-chain [],
+ :snapshot/futon2-commit "e001a33a74aa733971ff69a0c6af5153a249a635",
+ :snapshot/by "claude-7 (WS-E generality sibling 2)",
+ :written-never-read [],
+ :snapshot/spec :war-machine-belief-path-live,
+ :read-never-written [],
+ :snapshot/referent
+ "p4ng/plop-2026.tex glossary srcrefs -> futon2; entry point scripts/wm_scheduled_run.clj",
+ :snapshot/at-commit "0fb0850c53417166020ff0d22845b0480064877f"}

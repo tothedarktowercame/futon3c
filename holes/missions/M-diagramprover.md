@@ -1598,6 +1598,28 @@ authoring grep (`\b` after `?`), which is how the duplicate was found.
 Final truthful-map verdicts: all five checks clean. **Sibling #2 to be
 picked next (operator's call: WM flight loop or futon3b gate pipeline).**
 
+**Generality sibling #2 (War Machine belief path) — DONE 2026-08-15;
+WS-E ACCEPTANCE MET** (`holes/labs/M-diagramprover/wm-wiring.edn` +
+`wm-wiring-findings-20260815.edn`). Referent pinned first, at the
+operator's insistence: the PLoP paper (`p4ng/plop-2026.tex`) describes
+the **futon2** implementation — entry point
+`futon2/scripts/wm_scheduled_run.clj` (scheduled loop), belief path
+`futon2/src/futon2/aif/belief.clj`, production seam
+`futon2/scripts/futon2/report/war_machine.clj` — NOT the futon3c pilot
+peripheral; mapping the pilot would have been the day's third
+two-machines specimen. Map covers the paper's A/B/D `model-manifest`
+seam (the four trace stamps); the three content hashes are write-mostly
+by design with the paper-cited live-wiring test as their load-bearing
+reader — declared, not manufactured into a defect. All five checks
+clean, cross-repo, on a non-cycle-engine machine — the strongest form
+of the generality bar. **Acceptance summary: sensitivity (four recorded
+defect classes, three on live artifacts), specificity (post-fix states
+clean), generality (proof peripheral + futon2 War Machine). The
+lifecycle's priced hole is discharged in the same push.** Honest grade:
+the checks are detect-grade over declared+conformance-kept maps;
+by-construction unconstructibility (V.12's F1 lesson) remains the
+Lean/engine layer's territory.
+
 ### Explicitly parked / superseded
 
 - **TPG as tactic generator** (Phase 3b) — parked, off the critical

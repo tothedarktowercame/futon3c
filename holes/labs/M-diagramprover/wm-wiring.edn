@@ -1,0 +1,38 @@
+;; WS-E generality sibling #2 — declared ownership map for the WAR MACHINE
+;; belief path, the CURRENT implementation as described in
+;; ~/code/p4ng/plop-2026.tex (glossary \srcref anchors). Authored by claude-7
+;; (2026-08-15). Checked with repo-root /home/joe/code/futon2.
+;;
+;; Referent verification (the reason this map exists at all): the paper's War
+;; Machine is the FUTON2 implementation — scheduled loop entry point
+;; scripts/wm_scheduled_run.clj; belief path src/futon2/aif/belief.clj;
+;; production seam scripts/futon2/report/war_machine.clj — NOT the futon3c
+;; pilot peripheral. Mapping the pilot would have been the day's third
+;; two-machines specimen; the operator's insistence on pinning the referent
+;; prevented it.
+;;
+;; Scope: the A/B/D model-manifest seam the paper describes ("each trace
+;; stamps the selected likelihood mode and content hashes for A, B, and D").
+;; Deliberate declaration: the three content hashes are consumed at src
+;; grain only by the paper-cited live-wiring test — provenance stamps are
+;; write-mostly BY DESIGN (they exist for later audit, like flight
+;; evidence-refs); the test is the reader that makes them load-bearing.
+;; This sibling also exercises the checker on a machine that does NOT run
+;; on the futon3c cycle engine and lives in a different repo: no :phases
+;; section, spec-model generality only.
+{:spec/id :war-machine-belief-path-live
+ :boxes
+ [{:box/id :belief-model
+   ;; model-manifest stamps: A/B/D content hashes + selected likelihood mode
+   :site {:ns "futon2.aif.belief"}
+   :writes [:observation-model-hash :transition-model-hash
+            :initial-prior-hash :likelihood-mode]}
+  {:box/id :war-machine-report
+   ;; the production seam consumes the mode; hashes pass through untyped
+   :site {:file "scripts/futon2/report/war_machine.clj"}
+   :reads [:likelihood-mode]}
+  {:box/id :a-matrix-live-wiring-test
+   ;; the paper-cited wiring evidence: reads all four stamps
+   :site {:file "test/futon2/aif/a_matrix_live_wiring_test.clj"}
+   :reads [:observation-model-hash :transition-model-hash
+           :initial-prior-hash :likelihood-mode]}]}
