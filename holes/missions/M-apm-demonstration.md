@@ -7335,3 +7335,80 @@ already wanted.**
   noted as its available evidence.
 - **The store is deliberately the sole unfrozen resource** — the transfer
   mechanism, fallible and imperfect, and measured for exactly that reason.
+
+## I.40 The engine must derive invariants, not be told them
+
+**codex-4 stopped on I.39's structural premise, correctly.** Its finding:
+
+> `cycle.clj` enforces phase-tool membership and **accumulated presence of
+> required output keys**. It has **no content-validation hook**. Adding
+> `:environment-arms-match?` to required-outputs would reduce the check to *"an
+> asserted boolean supplied by a tool — the same decorative/self-certifying
+> failure class this work has been removing."*
+
+Confirmed at `cycle.clj:142-152`: the gate is
+`(clojure.set/difference required (set (keys outputs)))`. **Keys, not values.**
+
+**codex-4 is right, and it is right for the right reason** — it recognised that
+the obvious implementation would have manufactured instance #17 of the project's
+signature defect, and refused to build it. It also correctly established that the
+arms *are* distinguishable (`:solver-attempt` from `:guided-solve`; per-Attempt
+values inside `:student-attempts`), so the question was never *can we see both
+arms* but *who is authoritative for the comparison*.
+
+### The decision: an opt-in `:output-invariants` hook — and why that is not self-certification
+
+**The objection dissolves on one observation: the engine already holds both
+operands.**
+
+`:solver-attempt` and `:student-attempts` are **already required outputs**,
+produced by **different tools at different phases by different arms**. By the
+time `:adjudicate` is reachable, the engine has both in `:cycle/outputs`. So it
+can **derive** the equality itself — it never has to ask anyone whether the arms
+matched.
+
+> **A boolean a tool asserts is a claim. A predicate the engine computes over
+> data it already required is a measurement.** The difference is not where the
+> check lives; it is **who is permitted to be wrong about it**.
+
+This is exactly F1's shape (I.30): the emitter does not accept
+`:frame-changed? true` from its caller — it hashes both files **it already holds**
+and refuses. Nobody asserts the frame changed. `:output-invariants` is that move
+made general.
+
+**Shape:**
+
+```clojure
+{:id       :environment-arms-match
+ :requires #{:solver-attempt :student-attempts}
+ :check    (fn [outputs] ...)}   ; -> nil | failure map
+```
+
+Evaluated by the engine **at every advance, for any invariant whose `:requires`
+are all present** — so it fails as early as the data permits rather than waiting
+for a designated phase. Opt-in, exactly as `:enforce-required-outputs?` is, so no
+other domain is disturbed.
+
+**`:requires` is what keeps it total.** An invariant whose inputs never arrive
+never fires — and that is *not* a silent pass, because missing inputs are already
+`:missing-required-outputs`. The two gates compose: **presence is checked by one,
+content by the other, and neither can be satisfied by assertion.**
+
+### On codex-4's option B
+
+Its alternative — name an existing phase boundary as authoritative — **collapses
+into A**, because that boundary is only trustworthy if the value there is
+engine-derived anyway. But B is right about one thing, and it is kept:
+**`:adjudicate`'s launch gate is where a mismatch must have surfaced by**, since
+that is the "allowed to proceed" moment. So: the engine derives it continuously,
+and the launch gate is its deadline, not its source.
+
+### Recorded
+
+- `:output-invariants` as generic, opt-in cycle-machine machinery.
+- **The distinction that licenses it:** derived-from-required-data, not
+  supplied-by-tool.
+- The store snapshot is deliberately **not** an invariant operand — it is the one
+  resource permitted to differ across arms (I.39).
+- The proof peripheral could adopt this later. **Out of scope**; opt-in means it
+  costs nothing to leave unadopted.
