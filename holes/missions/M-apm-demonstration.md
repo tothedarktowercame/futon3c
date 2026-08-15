@@ -6159,3 +6159,73 @@ honest statement for the checkpoint is:
 **Recommendation:** write the runbook next, and treat Gaps 1 and 2 as its first
 two entries with their limits stated — rather than discovering at frame-1 that a
 stop rule cannot be evidenced. **Joe's call whether that precedes launch.**
+
+## I.25 Student attempts cut to 3, with escalation — and a mode-dependent subtlety
+
+**Joe, 2026-08-14:** *"10 per problem seems like a lot, given that we have many
+problems to get through. I'd drop Zai down to say 3 cold attempts per problem,
+and if no improvement is seen across all three, then we escalate to Joe,
+otherwise we continue to the next problem."*
+
+**Landed.** Registration and the Zai role card both updated; registration still
+validates `shape []`, `content []`; card hash re-pinned
+(`b1ee7de5…`) and verified against the file on disk.
+
+### Caps are now tiered — and are now *data*
+
+```clojure
+:reg/attempt-caps {:s-frontier 10   ; Codex, continuing closer-loop session
+                   :s-student  3}   ; Zai, cold per attempt
+```
+
+**Previously the cap lived only in a comment**, so it could not be checked. Now
+it is a field. Same defect as the pre-`:meas/values` measurement fields, caught
+before it mattered rather than after.
+
+The asymmetry is principled: Codex's ten attempts are **one continuing session**
+(the closer loop's value *is* iteration with context, and freshness is at the
+problem boundary); Zai's three are **three cold starts**, because in-context
+accumulation would compete with the substrate for credit.
+
+### Escalation is not a fifth outcome
+
+```clojure
+:reg/escalation {:trigger    :no-improvement-across-student-attempts
+                 :applies-in [:store-mode]
+                 :action     :escalate-to-operator
+                 :otherwise  :continue-to-next-problem}
+```
+
+Kept **orthogonal to the decision rule**, which stays total over four outcomes
+partitioning on `(residual, axiom-clean?, defect?)`. A cycle may be `:tier-b`
+**and** escalated. Making escalation a fifth outcome would have broken the
+totality argument from I.3 for no gain.
+
+### ⚠ The subtlety Joe's change exposes — "improvement" means different things by mode
+
+**This is worth stating because it would otherwise fire wrongly.**
+
+| mode | what three cold attempts measure | flat `L(i)` means |
+|---|---|---|
+| **store-mode** | Claude writes between attempts, so 1→2→3 face **different substrates** | **a real finding** — the deposits did not help. **Escalate.** |
+| **harness-mode** | the store is **frozen**, so the three are **three samples of one condition** | **variance, not absence of learning.** **Must not escalate.** |
+
+**IF** escalation triggers on flat `L(i)` across three cold attempts,
+**HOWEVER** in harness-mode those attempts share one substrate by design,
+**THEN** the trigger must be **mode-scoped**, **BECAUSE** otherwise every
+harness-mode round escalates on noise and the operator is paged for the
+experiment working as intended.
+
+Hence `:applies-in [:store-mode]`, written into the registration rather than
+left as a convention.
+
+### On n=3 and statistical power — stated, not relitigated
+
+Three cold attempts cannot separate "no improvement" from noise with any
+confidence. **That is fine, because the escalation is the mitigation, not the
+conclusion:** three attempts need only be enough to *trigger a human look*, and
+a human looking is a stronger check than a larger n would have been. The
+throughput argument is sound and the design absorbs the small n honestly.
+
+**Recorded so nobody later reads "3 attempts showed no improvement" as a
+finding.** It is a trigger, and the registration says so.

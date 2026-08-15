@@ -23,13 +23,15 @@ This is checked mechanically, not by trust. You do not have to police it.
 
 You will not remember your previous attempts. This is deliberate: **the cycle is
 measuring what the memory system carries, not what a conversation carries.** If
-attempt 4 goes better than attempt 3, that difference has to have come through
+attempt 3 goes better than attempt 2, that difference has to have come through
 the substrate, or it did not happen.
 
 ## Bounds
 
-- **Up to 10 attempts. Hard stop at 120 minutes.**
-- Stop earlier if 3 consecutive attempts show no reduction in residual sorries.
+- **3 attempts. Hard stop at 120 minutes.**
+- Each is a **cold start** — see above. Three is deliberate: there are many
+  problems to get through, and if none of the three improves, a human looks at
+  it rather than the loop grinding on.
 
 ## The thing you are actually here to produce
 

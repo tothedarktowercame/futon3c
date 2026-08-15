@@ -63,10 +63,36 @@
  :teardown-deadline 120           ; minutes after launch, hard stop
 
  :stop-rules [:budget-exceeded
-              :attempt-cap-reached          ; 10
+              :attempt-cap-reached
               :axiom-unclean-close
-              :no-progress                  ; 3 consecutive attempts
-              :teardown-deadline-passed]
+              :no-progress
+              :teardown-deadline-passed
+              :no-improvement-escalate]
+
+ ;; Attempt caps are TIERED (Joe, 2026-08-14): "3 cold attempts per problem...
+ ;; if no improvement is seen across all three, then we escalate to Joe,
+ ;; otherwise we continue to the next problem." Codex keeps 10 because its
+ ;; attempts are one continuing closer-loop session; Zai gets 3 because each is
+ ;; a cold start and we have many problems to get through.
+ ;; Previously these lived only in a comment, so they could not be checked.
+ :reg/attempt-caps {:s-frontier 10          ; Codex, continuing session
+                    :s-student  3}          ; Zai, cold per attempt
+
+ ;; Escalation is NOT a fifth proof outcome -- that would break the decision
+ ;; rule's totality (four outcomes partitioning on residual/axiom/defect).
+ ;; It is orthogonal: a cycle may be :tier-b AND escalated.
+ ;;
+ ;; NOTE ON WHAT "IMPROVEMENT" MEANS, and it differs by mode:
+ ;;   store-mode   -- Claude writes between attempts, so attempts 1->2->3 face
+ ;;                   DIFFERENT substrates and a flat L(i) is a real finding.
+ ;;   harness-mode -- the store is frozen, so three cold attempts are three
+ ;;                   samples of ONE condition; flatness there is variance, not
+ ;;                   absence of learning, and must NOT trigger escalation.
+ :reg/escalation {:trigger  :no-improvement-across-student-attempts
+                  :applies-in [:store-mode]
+                  :measure  "L(i) across the student's cold attempts"
+                  :action   :escalate-to-operator
+                  :otherwise :continue-to-next-problem}
 
  ;; Total by construction: the outcomes partition on
  ;; (residual-sorries, axiom-clean?, defect?), so every trace maps to exactly
@@ -96,7 +122,7 @@
  ;; decline caused by better framing reads as one caused by better substrate.
  :reg/role-cards
  {:codex-solver "ab12c46e4cbe0a992bc00c95d2b389673d60023b"
-  :zai-student  "6467820235471e556ca4490f10a0ed5b76c6757c"
+  :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
   :claude-guide "b475f85cb1114184329f7e7b0a5e423085201218"
   :scribe       "2e934652ea5d75f9f394455ab851d6344d73dcba"}
 
