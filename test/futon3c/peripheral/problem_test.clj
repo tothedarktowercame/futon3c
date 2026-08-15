@@ -76,6 +76,23 @@
     (is (= :environment-arms-match
            (get-in result [:error/context :invariant])))))
 
+(deftest malformed-operand-is-a-failure-not-a-crash-and-not-a-pass
+  ;; Invariant operands are supplied by TOOLS, so a malformed one must be
+  ;; rejected as a structured error. Crashing loses the cycle; passing would let
+  ;; a bad tool defeat the gate by emitting garbage instead of a mismatch.
+  (let [[p state] (started :store-mode)
+        state (assoc state :current-phase :student-attempts
+                           :cycle/outputs outputs-through-student)
+        result (runner/step
+                p state
+                {:tool :advance-problem-phase
+                 :args ["M" "C" {:student-attempts :not-a-sequence
+                                 :memory-uses []}]})]
+    (is (= :invariant-check-threw (:error/code result)))
+    (is (= :environment-arms-match
+           (get-in result [:error/context :invariant])))
+    (is (not (:ok result)))))
+
 (deftest differing-store-snapshots-are-explicitly-accepted
   (let [[p state] (started :store-mode)
         state (assoc state :current-phase :student-attempts

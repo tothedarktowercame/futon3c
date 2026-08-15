@@ -99,10 +99,19 @@
   (let [payload (nth args 2 {})]
     (if (map? payload) payload {})))
 
-(defn- output-invariant-failure [config outputs]
+(defn- output-invariant-failure
+  "First failing invariant whose :requires are all present in outputs, or nil.
+
+  A predicate that THROWS is itself a failure, never a pass: operands are
+  supplied by tools, so a malformed one must be rejected as a structured error
+  rather than crash the cycle or slip through the gate."
+  [config outputs]
   (some (fn [{:keys [id requires check]}]
           (when (clojure.set/subset? requires (set (keys outputs)))
-            (when-let [failure (check outputs)]
+            (when-let [failure (try (check outputs)
+                                    (catch Throwable t
+                                      {:failure :invariant-check-threw
+                                       :thrown (.getMessage t)}))]
               (assoc failure :invariant/id id))))
         (:output-invariants config)))
 
