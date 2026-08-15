@@ -9298,3 +9298,25 @@ blockers, all named: A2 live-verified, D landed, evidence-store wired (7),
 store-revision decided (5), runbook items (1, selection). The rehearsal cost
 one evening and converted seven invisible integration defects plus one
 false-green into fixes, tests, and runbook lines before the measured round.
+
+## W.3 Findings 3 and 4 CLOSED — recall channel live-verified (2026-08-15)
+
+Fix A2 (`524cc42f`) reviewed and accepted: timeout defaulted at both
+consumption sites, class audit also caught `limit`; reviewer's own live
+verification with production-shaped opts: `{:status :ok, :error nil}`.
+Fix D (`e233365f`) reviewed and accepted: `:write-substrate` wired to the
+production writer, never-throw boundary, no-cycle guard, injectable for
+tests. Gates re-run by reviewer: 109 tests / 419 assertions / 0 failures.
+
+**The write→offer loop is demonstrated live**: a realistic frame-vocabulary
+probe surfaced `e-codexpilot-build-an-Orlicz-bound-counterexample-from-a-
+borderline-power-singularity` — a pre-existing memory carrying exactly the
+x^(-1/2) counterexample technique the student used. Had recall been alive at
+solver dispatch, this was the offer. One specimen, the dead channel's cost.
+(The rehearsal deposit `e-33cf23e7` did not outrank it for this query —
+ranking reachability is F7/demand-side territory, deferred with both vectors
+now captured per packet F.)
+
+Frame-1 blockers remaining: evidence-store wired loud (finding 7),
+store-revision semantics decision (5), disposition field pass-through (8),
+runbook items (1, selection-from-compiled-facts). All small, all named.
