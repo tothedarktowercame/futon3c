@@ -9140,3 +9140,65 @@ whatever happens.
 **codex-4 refused to build either the tautology or the fabrication.** Right call:
 either would have produced a passing F7 that means nothing, which is worse than an
 absent one because it would look like evidence.
+
+## I.65 The generic gate is real — and that is exactly why it cannot emit a refusal
+
+**I promised Joe I would check rather than quote the Lean's intent.** Checked
+`DarkTower/ExperimentalDesign.lean`:
+
+```lean
+structure ReadyToRun (r : Registration Trace) (e : Evidence) (smoke : Trace) where
+  apparatus  : e.apparatusSound
+  discharged : ∀ o ∈ r.obligations, Discharged r e smoke o
+
+def Launch … (_w : ReadyToRun r e smoke) (run : …) : Trace := run r
+```
+
+> *"The gate is an argument, so there is no path that starts a run without it."*
+
+Plus a family of **`IsEmpty (ReadyToRun r e smoke)`** theorems — *proofs that the gate
+is uninhabitable* when obligations are undischarged.
+
+**The gate is genuine, and structural** — the same construction-guarantee shape A.10
+praised in the F1 repair. **Unlike the three defects ARGUE convicted, this one is
+well-founded.** My earlier "matches the Lean's intent" was weak reasoning that
+happened to reach a defensible place.
+
+### And that is precisely why option 2 fails
+
+`:registration-gates-launch` asks the **trace** to attest
+`:gate/refused-without-witness? = true` — an **observation** that a refusal occurred.
+
+> **A construction guarantee never refuses at runtime, because the refused path does
+> not exist to be taken.** There is no event, by design. Its strength *is* that it
+> leaves no trace.
+
+**So there is no evidence to cite. Not because the gate is missing — because the gate
+is the strong kind.**
+
+### And demanding the event would be CONTRA 2 in reverse
+
+ARGUE's second finding was **F1 demoted from a construction guarantee to a
+watchdog** — *"a watchdog asks 'did someone follow the discipline?'; this invariant
+makes the discipline impossible to violate."* That was repaired by making
+`WorkedFrame.changed` a **field**.
+
+> **Requiring `:registration-gates-launch` to produce a runtime refusal event asks the
+> launch gate to be a watchdog — the same demotion, applied to a different
+> invariant, in the opposite direction.**
+
+### Revised options
+
+1. **Discharge the capability BY CONSTRUCTION** — record that the obligation is met by
+   the Lean's uninhabitability theorems, and drop the runtime attestation. Matches
+   the Lean, matches A.10's F1 repair, and stops asking a construction guarantee to
+   behave like a watchdog. **Now the recommendation, on evidence rather than
+   deference.**
+2. **Build an APM runtime gate** that genuinely refuses and records — a watchdog *in
+   addition to* the construction guarantee, if runtime evidence is wanted for its own
+   sake. Honest, but it adds the weaker mechanism alongside the stronger one.
+3. Keep the capability as written and let round 1 fail F9 permanently.
+
+**IF** the Lean's gate were merely a field, **HOWEVER** it is a structure whose
+emptiness is proved, **THEN** the capability's demand is the category error, not the
+gate, **BECAUSE** you cannot observe an event whose non-occurrence is a theorem.
