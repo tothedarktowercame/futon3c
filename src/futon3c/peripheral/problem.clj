@@ -1006,7 +1006,9 @@
             ;; assoc LAST: the role fixes the channel and a caller cannot
             ;; override it.  A caller-supplied :push to the student would be a
             ;; containment breach, so this precedence is load-bearing.
-            dispatch-result (try (dispatch-fn (assoc (or opts {})
+            dispatch-result (try (dispatch-fn (assoc (merge
+                                                      {:base dispatch-with-recall/default-agency-base}
+                                                      (or opts {}))
                                                      :memory-channel memory-channel)
                                               packet)
                                  (catch Throwable t t))]

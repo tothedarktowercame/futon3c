@@ -1991,3 +1991,24 @@
     (is (true? (:promo/importable? entity)))
     (is (not (contains? entity :promo/importable))
         "the non-predicate spelling must not be emitted at all")))
+
+(deftest ground-control-dispatch-defaults-agency-base-without-changing-role-channel
+  (let [calls (atom [])
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend)
+                 (fn [opts _]
+                   (swap! calls conj opts)
+                   {:evidence {}}))]
+    (tools/execute-tool backend :dispatch-solver
+                        [{:memory-channel :none} "packet"])
+    (tools/execute-tool backend :dispatch-solver
+                        [{:base "http://elsewhere:1"
+                          :memory-channel :pull-only}
+                         "packet"])
+    (tools/execute-tool backend :dispatch-student-fresh
+                        [{:memory-channel :push+pull} "packet"])
+    (is (= dispatch-with-recall/default-agency-base
+           (:base (first @calls))))
+    (is (= "http://elsewhere:1" (:base (second @calls))))
+    (is (= [:push+pull :push+pull :pull-only]
+           (mapv :memory-channel @calls)))))
