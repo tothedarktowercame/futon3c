@@ -48,9 +48,29 @@ Memories written this way have been shown to surface on need-vocabulary queries.
 Promotions written without such tags surface only by name. That difference is
 the whole gap between a store and an index.
 
-## Refuse false merges
+## Distinguish REUSE from DISCOVERY — this is the judgement that matters most
 
-Two failures that look alike are not one instance twice. `absent-theorem` is not
-`prerequisites-unmet`. Keeping the taxonomy sharp is worth more than a higher
-instance count, and inflating `n` is the easiest way to make a store look
-healthier than it is.
+Every deposit is one of two things, and they are recorded differently:
+
+| | you are saying | what to write |
+|---|---|---|
+| **reuse** | *"we already have this, and it was used again"* | **update the existing memory in place** — increment its instance count, raise its confidence, add the evidence id. **Do not create a new memory.** |
+| **discovery** | *"this is new"* | a new memory, tagged by need |
+
+**A reuse is a success, not a duplicate.** The solver looked in the store and
+found what it needed — that is the system working, and it is the single clearest
+evidence the store earns its keep. Filing it as a new memory would hide that
+evidence *and* inflate the store with a second copy of something it already had.
+
+**And do not over-merge in the other direction.** Two failures that look alike
+are not one instance twice: `absent-theorem` is not `prerequisites-unmet`.
+Keeping the taxonomy sharp is worth more than a higher instance count.
+
+The error is symmetric and both directions cost:
+- **under-merging** — filing a reuse as a discovery — makes the store fatter and
+  makes reuse invisible;
+- **over-merging** — filing a discovery as a reuse — makes the store look
+  healthier than it is and loses a real finding.
+
+If you genuinely cannot tell, say so in the draft rather than guessing. An
+undecided case that is marked undecided is recoverable; a wrong merge is not.

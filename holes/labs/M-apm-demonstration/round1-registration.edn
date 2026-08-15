@@ -137,7 +137,7 @@
  {:codex-solver "ab12c46e4cbe0a992bc00c95d2b389673d60023b"
   :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
   :claude-guide "b475f85cb1114184329f7e7b0a5e423085201218"
-  :scribe       "2e934652ea5d75f9f394455ab851d6344d73dcba"}
+  :scribe       "d4a8863d3828244756483be5295c8926bdcff301"}
 
  ;; --- predictions, recorded BEFORE the round -----------------------------
  ;; A prediction written after the data is not a prediction.

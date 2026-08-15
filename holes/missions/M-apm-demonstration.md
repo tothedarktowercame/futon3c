@@ -7026,3 +7026,69 @@ for Lean; we do not measure duplicate *memories*.
 runs the same membership test the proctoring uses — a promoted memory whose
 content already matches something in the round-open `StoreSnapshot` is flagged.
 **Recorded as a measurable to add, not a blocker for frame-1.**
+
+## I.36 CORRECTION — reuse is the signal, not the noise
+
+**Joe, 2026-08-14:** *"I somewhat disagree about the re-deposit — **looking in
+the store is exactly the way to avoid duplicate lemmas**, by supporting effective
+reuse (whether verbatim or methodological). So, the Scribe should be able to tell
+the difference between 'we already have this, so I am reusing it' and 'I have
+just discovered an amazing fact about right triangles'."*
+
+**Right, and I.35's framing was backwards.** I treated Codex reading the store as
+a **contaminant** to filter. It is the **mechanism**. The store exists so that a
+solver finds what is already known instead of re-deriving it — which is precisely
+the cure for the duplicate-lemma problem D.14 and D.17 measured.
+
+### My proposed mitigation would have discarded the evidence for N3
+
+I suggested flagging a deposit whose content matches the round-open snapshot.
+**That flag would have fired on exactly the events that prove the store works.**
+
+> **A reuse is `promoted → later surfaced → used` — the join C1 found has never
+> been computed, and the most direct evidence available for N3 ("the store
+> records learning").** Filing it as a duplicate would have thrown away the
+> signal while congratulating itself on hygiene.
+
+**Fifteen findings about vacuity, and I still nearly built a filter that deletes
+the positive cases.**
+
+### The real duty is the Scribe's, and the mechanism already exists
+
+The distinction Joe names maps onto machinery already specified in
+`algorithms/zai-learning-loop.md`: *"instance accumulation updates confidence in
+place (n=1→n=2)"*.
+
+| | the scribe is saying | what is written |
+|---|---|---|
+| **reuse** | *"we already have this, it was used again"* | **update the existing memory in place** — instance count up, confidence up, evidence id appended. **No new memory.** |
+| **discovery** | *"this is new"* | a new memory, tagged by need |
+
+**So the counters separate cleanly** and neither inflates the other:
+`memories promoted` counts **discoveries**; reuse shows up as **instance
+accumulation on existing memories**. Conflating them was my error, and it is what
+would have produced the inflation I was worried about — **the inflation came from
+the mis-filing, not from the reading.**
+
+### The error is symmetric, and the card now says both directions
+
+The scribe card previously carried only *"refuse false merges"* — the
+**over-merging** guard. It said nothing about **under-merging**, which is the
+failure Joe just named.
+
+- **under-merge** (reuse filed as discovery) → store fattens, **reuse becomes
+  invisible**;
+- **over-merge** (discovery filed as reuse) → store looks healthier than it is,
+  a real finding is lost.
+
+Card updated with both, plus an escape hatch: *"if you genuinely cannot tell, say
+so in the draft rather than guessing — an undecided case that is marked undecided
+is recoverable; a wrong merge is not."* Hash re-pinned
+(`d4a8863d…`); registration re-validated **`shape []`, `content []`**.
+
+### One measurable this makes worth having
+
+**Reuse-to-discovery ratio.** A store that is working should show reuse rising
+relative to discovery as problems accumulate — the same shape as P1's guidance
+decline, from the store's side. **Recorded as a candidate measurable**, not added
+to the frozen vector, since the vector is pinned for round 1.
