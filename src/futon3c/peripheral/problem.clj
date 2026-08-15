@@ -393,10 +393,14 @@
             (reverse (:steps state)))))
 
 (def ^:private capability-attesting-tools
-  ;; These pairings are deliberately narrower than "a nearby phase". Three
-  ;; required capabilities currently have no step that exercises them:
-  ;; need-retrieval has no probe producer. It gets no synthetic probe.
-  {:created-frame-worked :emit-frame
+  ;; These pairings are deliberately narrower than "a nearby phase".
+  ;; :need-retrieval was the last capability with no step exercising it, and it
+  ;; got no synthetic probe -- correctly, while nothing produced a retrieval
+  ;; probe. :dispatch-solver now emits one (:rprobe with pre-cutoff available ids
+  ;; and post-cutoff retrieved ids), so the capability has a real attesting step
+  ;; and no longer has to report itself missing.
+  {:need-retrieval :dispatch-solver
+   :created-frame-worked :emit-frame
    :frame-containment-witnessed :emit-frame
    :unique-disposition :write-disposition
    :offer-use-disposition :write-use
