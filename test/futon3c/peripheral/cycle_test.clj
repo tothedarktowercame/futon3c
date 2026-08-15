@@ -3,7 +3,8 @@
 
    Tests the cycle machine in isolation using a minimal test domain config,
    proving that the extraction from proof.clj preserved all behavior."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
@@ -323,6 +324,52 @@
     (is (= :engine (:test-field (first @seen))))
     (is (not= fake (first @seen)))
     (is (= [fake :v1] (vec (rest @seen))))))
+
+(deftest state-save-excludes-runtime-values-and-round-trips-as-edn
+  (let [seen (atom nil)
+        nested-runtime {:callback (fn [] :not-edn)}
+        config (assoc state-io-config :state-runtime-keys
+                      #{:runtime :cycle-config :evidence-store})
+        backend (make-test-mock
+                 {:state-save
+                  (fn [_ args]
+                    (reset! seen (first args))
+                    {:ok true :result {:saved? true}})})
+        p (cycle/make-cycle-peripheral config state-io-spec backend)
+        start (runner/start p {:session-id "save-edn"})
+        state (assoc (:state start) :runtime nested-runtime :persisted :yes)
+        saved (runner/step p state {:tool :state-save :args []})
+        encoded (pr-str @seen)]
+    (is (:ok saved))
+    (is (not (contains? @seen :runtime)))
+    (is (= @seen (edn/read-string encoded)))
+    (is (= :yes (:persisted @seen)))))
+
+(deftest state-load-reattaches-current-runtime-before-validation
+  (let [validated (atom nil)
+        current-runtime {:sink :current}
+        stale-runtime {:sink :loaded}
+        loaded (atom nil)
+        config (assoc state-io-config
+                      :state-runtime-keys
+                      #{:runtime :cycle-config :evidence-store}
+                      :state-validate-fn
+                      (fn [_ candidate]
+                        (reset! validated (:runtime candidate))
+                        nil))
+        backend (make-test-mock
+                 {:state-load (fn [_ _] {:ok true :result @loaded})})
+        p (cycle/make-cycle-peripheral config state-io-spec backend)
+        start (runner/start p {:session-id "runtime-load"})
+        current (assoc (:state start) :runtime current-runtime)
+        candidate (assoc (:state start) :runtime stale-runtime :loaded? true)
+        _ (reset! loaded candidate)
+        result (runner/step p current {:tool :state-load :args [1]})]
+    (is (:ok result))
+    (is (= current-runtime @validated)
+        "domain validation sees the state that will actually be installed")
+    (is (= current-runtime (get-in result [:state :runtime])))
+    (is (true? (get-in result [:state :loaded?])))))
 
 (deftest valid-state-load-replaces-state-and-records-branch-marker
   (let [loaded (atom nil)

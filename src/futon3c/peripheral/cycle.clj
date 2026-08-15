@@ -15,6 +15,7 @@
    - :enforce-required-outputs? opt-in accumulated output gate (default false)
    - :state-io-tools  optional {:save tool :load tool}; save receives engine state
    - :always-available-tools optional tools allowed during setup and every phase
+   - :state-runtime-keys optional keys excluded from saves and retained across loads
    - :state-validate-fn optional (fn [current loaded] -> nil | failure map)
    - :cycle-begin-tool keyword for the tool that starts a cycle
    - :cycle-advance-tool keyword for the tool that advances phases
@@ -57,6 +58,8 @@
        (map? (:required-outputs config))
        (or (nil? (:always-available-tools config))
            (set? (:always-available-tools config)))
+       (or (nil? (:state-runtime-keys config))
+           (set? (:state-runtime-keys config)))
        (or (nil? (:state-io-tools config))
            (let [{:keys [save load] :as state-io} (:state-io-tools config)]
              (and (= #{:save :load} (set (keys state-io)))
@@ -255,12 +258,28 @@
            :details (dissoc failure :failure :invariant/id)))
 
         :else
-        (let [backend-args (if (= tool state-save) (into [state] args) args)
+        (let [runtime-keys (:state-runtime-keys config)
+              persisted-state (if runtime-keys
+                                (apply dissoc state runtime-keys)
+                                state)
+              backend-args (if (= tool state-save)
+                             (into [persisted-state] args)
+                             args)
               dispatch-result (tools/dispatch-tool tool backend-args spec backend)
+              ;; Validate the exact candidate the engine would install. Runtime
+              ;; resources belong to the live peripheral, so a rewind retains
+              ;; them from current state rather than trusting serialized values.
+              loaded-state (when (and (= tool state-load)
+                                      (:ok dispatch-result))
+                             (let [loaded (:result dispatch-result)]
+                               (if (map? loaded)
+                                 (merge loaded
+                                        (select-keys state runtime-keys))
+                                 loaded)))
               load-failure (when (and (= tool state-load)
                                       (:ok dispatch-result))
                              (loaded-state-failure config state
-                                                   (:result dispatch-result)))]
+                                                   loaded-state))]
           (cond
             (common/social-error? dispatch-result)
             dispatch-result
@@ -278,7 +297,9 @@
              :details (dissoc load-failure :failure))
 
             :else
-            (let [result (:result dispatch-result)
+            (let [result (if (= tool state-load)
+                           loaded-state
+                           (:result dispatch-result))
                   marker (when (= tool state-load) (branch-marker state args))
                   state-base (if marker result state)
                   ev (evidence/make-step-evidence
