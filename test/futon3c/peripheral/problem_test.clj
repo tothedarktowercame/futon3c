@@ -167,9 +167,90 @@
     (is (some #{:harness-revision}
               (get-in result [:error/context :missing])))))
 
+(deftest register-refuses-missing-environment-checkouts
+  (let [[p state] (started :store-mode)
+        state (assoc state :current-phase :register :cycle/outputs {})
+        result (runner/step
+                p state
+                {:tool :advance-problem-phase
+                 :args ["M" "C" {:registration :r :store-snapshot :s
+                                    :stratum-frozen-at 1
+                                    :environment-revision "env"
+                                    :harness-revision "harness"}]})]
+    (is (= :missing-required-outputs (:error/code result)))
+    (is (some #{:environment-checkouts}
+              (get-in result [:error/context :missing])))))
+
+(def checkout-options
+  {:batch "round-1"
+   :problem "t94J02"
+   :base-rev "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   :solver-seat "codex-4"
+   :student-seat "zai-1"
+   :recall-system "apm-v1"})
+
+(deftest assign-checkouts-provisions-both-arms-with-batch-qualified-branches
+  (let [calls (atom [])
+        revision "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        provisioner (fn [options]
+                      (swap! calls conj options)
+                      {:checkout (str "/frames/" (:arm options))
+                       :base-revision revision
+                       :branch (:branch options)
+                       :frame/id (str (:batch options) "-"
+                                      (:problem options) "-" (:arm options))})
+        backend (problem/make-checkout-provisioning-backend
+                 (tools/make-mock-backend) provisioner)
+        result (tools/execute-tool backend :assign-checkouts [checkout-options])
+        checkouts (get-in result [:result :environment-checkouts])]
+    (is (:ok result))
+    (is (= ["solver" "student"] (mapv :arm @calls))
+        "the machine invokes the provisioner exactly once per fixed arm")
+    (is (= ["exp/round-1-t94J02-solver"
+            "exp/round-1-t94J02-student"]
+           (mapv :branch @calls)))
+    (is (= ["push" "none"] (mapv :memory-channel @calls)))
+    (is (not= (get-in checkouts [:solver :checkout])
+              (get-in checkouts [:student :checkout])))
+    (is (= revision (get-in checkouts [:solver :base-revision])
+           (get-in checkouts [:student :base-revision])))))
+
+(deftest assign-checkouts-provisioner-failure-is-a-tool-failure
+  (let [backend (problem/make-checkout-provisioning-backend
+                 (tools/make-mock-backend)
+                 (fn [_] (throw (ex-info "branch collision" {}))))
+        result (tools/execute-tool backend :assign-checkouts [checkout-options])]
+    (is (false? (:ok result)))
+    (is (re-find #"branch collision" (:error result)))))
+
+(deftest assign-checkouts-is-wired-through-the-register-phase
+  (let [root (.toFile (Files/createTempDirectory
+                       "checkout-register-" (make-array FileAttribute 0)))
+        provisioner (fn [options]
+                      {:checkout (str "/frames/" (:arm options))
+                       :base-revision (:base-rev options)
+                       :branch (:branch options)
+                       :frame/id (str (:batch options) "-" (:problem options)
+                                      "-" (:arm options))})
+        p (problem/make-problem
+           (tools/make-mock-backend)
+           (fn [_ _] (throw (ex-info "not dispatched" {})))
+           root provisioner)
+        start (runner/start p {:session-id "checkout-register"
+                               :problem-id "t94J02"
+                               :cycle/mode :store-mode})
+        state (assoc (:state start) :current-phase :register)
+        result (runner/step p state
+                            {:tool :assign-checkouts :args [checkout-options]})]
+    (is (:ok result))
+    (is (= #{:solver :student}
+           (set (keys (get-in result [:result :environment-checkouts])))))))
+
 (def outputs-through-student
   {:registration :r :store-snapshot :round-open :stratum-frozen-at 1
    :environment-revision "env-a" :harness-revision "harness-a"
+   :environment-checkouts {:solver {:checkout "/solver"}
+                           :student {:checkout "/student"}}
    :frame :f :containment-probe :c
    :solver-attempt {:cycle/environment-revision "env-a"
                     :cycle/store-snapshot :solver-store}

@@ -2,6 +2,8 @@
   "Problem peripheral — one registered experimental problem per cycle."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
+            [clojure.string :as str]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.tools :as tools])
@@ -16,7 +18,7 @@
 
 (def base-phase-tools
   {:register #{:read-registration :validate-registration :snapshot-store
-               :freeze-stratum :pin-resources advance}
+               :freeze-stratum :pin-resources :assign-checkouts advance}
    :frame #{:emit-frame advance}
    :guided-solve #{:dispatch-solver :guide-solver :read-substrate advance}
    :intervene #{advance}
@@ -27,7 +29,7 @@
 
 (def required-outputs
   {:register #{:registration :store-snapshot :stratum-frozen-at
-               :environment-revision :harness-revision}
+               :environment-revision :harness-revision :environment-checkouts}
    :frame #{:frame :containment-probe}
    :guided-solve #{:solver-attempt :ground-control-events :memory-offers}
    :intervene #{:intervention}
@@ -134,6 +136,9 @@
 
 (def ^:private default-problem-state-root "data/problem-state")
 (def ^:private problem-state-write-lock (Object.))
+(def ^:private frames-script "/home/joe/code/futon3c/scripts/frames.bb")
+(def ^:private experiment-frames-root
+  "/home/joe/code/futon3c/data/experiment-frames")
 
 (defn- cycle-dir-within
   "Resolve the per-cycle directory and REQUIRE it to sit under root.
@@ -233,6 +238,77 @@
 (defn make-problem-state-backend [inner-backend root]
   (->ProblemStateBackend inner-backend root))
 
+(defn- require-provision-option [options key]
+  (let [value (get options key)]
+    (when-not (and (string? value) (not (str/blank? value)))
+      (throw (ex-info (str "assign-checkouts requires " key) {:key key})))
+    value))
+
+(defn- provision-frame! [options]
+  (let [problem (require-provision-option options :problem)
+        arm (require-provision-option options :arm)
+        batch (require-provision-option options :batch)
+        base-rev (require-provision-option options :base-rev)
+        seat (require-provision-option options :seat)
+        memory-channel (require-provision-option options :memory-channel)
+        recall-system (require-provision-option options :recall-system)
+        branch (require-provision-option options :branch)
+        frame-id (str batch "-" problem "-" arm)
+        command ["bb" frames-script "open"
+                 "--problem" problem "--arm" arm
+                 "--base-rev" base-rev "--seat" seat
+                 "--memory-channel" memory-channel
+                 "--recall-system" recall-system
+                 "--batch" batch "--branch" branch]
+        {:keys [exit err]} (apply shell/sh command)]
+    (when-not (zero? exit)
+      (throw (ex-info "frames.bb open failed"
+                      {:exit exit :error err :frame-id frame-id})))
+    (let [record (edn/read-string
+                  (slurp (io/file experiment-frames-root batch
+                                  (str frame-id ".edn"))))]
+      (select-keys record [:checkout :base-revision :branch :frame/id]))))
+
+(defn- checkout-options [options arm]
+  (let [arm-name (name arm)
+        batch (require-provision-option options :batch)
+        problem (require-provision-option options :problem)]
+    {:problem problem
+     :arm arm-name
+     :batch batch
+     :base-rev (require-provision-option options :base-rev)
+     :seat (require-provision-option options
+                                    (if (= arm :solver)
+                                      :solver-seat
+                                      :student-seat))
+     :memory-channel (if (= arm :solver) "push" "none")
+     :recall-system (require-provision-option options :recall-system)
+     ;; The script's default omits batch and collides on the second cycle.
+     :branch (str "exp/" batch "-" problem "-" arm-name)}))
+
+(defrecord CheckoutProvisioningBackend [inner-backend provisioner-fn]
+  tools/ToolBackend
+  (execute-tool [_ tool-id args]
+    (if (= tool-id :assign-checkouts)
+      (let [[options] args]
+        (try
+          {:ok true
+           :result
+           {:environment-checkouts
+            (into {}
+                  (map (fn [arm]
+                         [arm (provisioner-fn (checkout-options options arm))])
+                       [:solver :student]))}}
+          (catch Throwable t
+            {:ok false :error (str "assign-checkouts failed: " (.getMessage t))})))
+      (tools/execute-tool inner-backend tool-id args))))
+
+(defn make-checkout-provisioning-backend
+  ([inner-backend]
+   (make-checkout-provisioning-backend inner-backend provision-frame!))
+  ([inner-backend provisioner-fn]
+   (->CheckoutProvisioningBackend inner-backend provisioner-fn)))
+
 (defrecord GroundControlBackend [inner-backend dispatch-fn]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
@@ -277,12 +353,16 @@
   ([] (make-problem (tools/make-mock-backend)))
   ([backend]
    (make-problem backend dispatch-with-recall/run-dispatch!
-                 default-problem-state-root))
+                 default-problem-state-root provision-frame!))
   ([backend dispatch-fn]
-   (make-problem backend dispatch-fn default-problem-state-root))
+   (make-problem backend dispatch-fn default-problem-state-root provision-frame!))
   ([backend dispatch-fn state-root]
+   (make-problem backend dispatch-fn state-root provision-frame!))
+  ([backend dispatch-fn state-root provisioner-fn]
    (cycle/make-cycle-peripheral
     problem-domain-config problem-spec
     (make-ground-control-backend
-     (make-problem-state-backend backend state-root)
+     (make-checkout-provisioning-backend
+      (make-problem-state-backend backend state-root)
+      provisioner-fn)
      dispatch-fn))))
