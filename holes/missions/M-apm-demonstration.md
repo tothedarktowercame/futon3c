@@ -6864,3 +6864,93 @@ should frame-1 start guided on the grounds that we are tuning guidance rather
 than measuring it? **I would keep attempt 1 unguided** — it costs one attempt and
 buys the only clean baseline we will ever get on this problem — but it is a
 judgement about what frame-1 is for.
+
+## I.34 The first-half guidance techniques, recovered from the record
+
+**Joe:** *"we should look back at the first-50% techniques that were actually
+used, assuming they are on record… 'search in mathlib', 'look at mathlib for
+other related terms and concepts because the thing you want may be in there
+under another name', 'search Arxiv for related informal proofs that can be used
+as templates'."*
+
+**They are on record — and they are split across TWO instruction surfaces that
+do not share a technique set.** That fragmentation is itself the finding.
+
+### Surface 1 — `agents/apm_work_queue.clj`, the per-phase prompts
+
+**The HtDP recipe for attacking a `sorry`** (quoted):
+
+> 1. Write the type signature — what exactly are you trying to prove?
+> 2. **Search Mathlib** — what lemmas exist for this type? (`exact?`, `apply?`,
+>    grep for key terms)
+> 3. Sketch the composition — which lemmas chain together?
+> 4. Wire it — fill arguments, match types, `lake build`, read the error, fix,
+>    repeat.
+> *"This is how you SOLVE sorry, not how you document giving up."*
+
+Also there: **per-dependency "Mathlib status/search terms"** (in-Mathlib vs
+custom, plus concrete search terms); **critical path** (*"which dependency, if
+closed, unblocks the most downstream work?"*); the **recognition heuristic**
+(*"the pattern or hidden proof strategy that made this move visible"* and *"why
+this becomes thinkable here"*); a **statement-alignment check** before
+formalizing; and the **real-partial vs dunno-partial** distinction — *"a 'real
+partial' means you did steps 1–3 for every sorry, got stuck on a genuine API gap
+at step 4, and **can name exactly what blocked you**."*
+
+⚠ **And the standing assumption is already in this prompt, verbatim:**
+
+> *"Most qualifying-exam problems **CAN be fully closed** in Lean with Mathlib in
+> 15 minutes. **The work is wiring, not invention.**"*
+
+**So A1 is not new — it has been instruction text all along.** Which means the
+first half was already run under it, and its bounded form (I.33) is a
+sharpening of something already in force rather than a fresh commitment.
+
+### Surface 2 — `apm-driver/bridge_packets.py`
+
+**This is where Joe's "under another name" heuristic actually lives**, and in a
+sharper form than remembered:
+
+> *"grep LEMMA-INDEX.md for the **STATEMENT SHAPE, not just a name you
+> guessed**."*
+>
+> *"The single most common rejection is a bridge that the file ITSELF already
+> proves, forty lines above, **under another name**."*
+
+Plus: **finding existing Mathlib material counts as success** — *"(B) FIND
+existing Mathlib material that does the same job… tells us the gap was apparent
+rather than real"* — and an **evidence-of-absence discipline**: *"say which index
+build you searched."*
+
+> **"Search by statement shape, not by the name you guessed" is the guiding light
+> aimed at Mathlib.** It is the same failure as a01A12's memory and the 1,943
+> locked lemmas: the thing is present, and the vocabulary you would search by is
+> not the vocabulary it was filed under.
+
+### ⚠ What is NOT on record: the arXiv technique
+
+**Searched `apm_work_queue.clj` and every `apm-driver/*.py`: zero mentions of
+arXiv.** It appears only in `review-checklist.md` and `deep-research-census.md`
+— **documentation, not instructions.**
+
+So *"search arXiv for related informal proofs to use as templates"* was, at
+best, given ad hoc and never written into either instruction surface. **It is a
+technique Joe remembers using that no solver was systematically told.**
+
+### The finding that matters for frame-1
+
+**Two surfaces, two technique sets, no union anywhere.** A solver reached
+through the work queue got HtDP and Mathlib search; a solver reached through
+bridge packets got shape-search and the aliasing warning. **Which techniques an
+attempt received depended on which door it came through** — and nothing recorded
+which door that was.
+
+**That is precisely the "reference example and standard" gap.** Frame-1's Codex
+phase should:
+
+1. **Start from the union**, not from either surface — the recovered list above.
+2. **Add the arXiv technique explicitly**, since it was used and never written
+   down. Frame-1 is where an oral tradition becomes instruction text.
+3. **Tag each intervention with which technique it invoked**, so the guidance
+   vocabulary (I.33) is *counted* rather than described — and so P1's decline,
+   when it comes, can be attributed to a technique rather than to a mood.
