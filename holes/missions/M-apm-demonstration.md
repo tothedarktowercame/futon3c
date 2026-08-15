@@ -8167,3 +8167,61 @@ will not know. **That is the cost of the recommendation, stated plainly.**
 
 **Operator's call**, because it trades launch timing against enforcement, and
 launch timing is Joe's.
+
+## I.48 The earned interrupt cannot be earned — and the honest path is the one codex-4 flagged
+
+**Sixth stop, sixth time right, and this one is about machinery I had praised.**
+codex-4: the acknowledged set *"is not writable because it is not persisted
+anywhere"*. Verified, and more precisely than that:
+
+- **`:acknowledged?` appears only** in `operator_lane.clj`'s own destructuring and
+  in `logic/wm_operator_lane_invariants.clj`'s **test fixtures**. Nothing in
+  production supplies it.
+- **`newly-acknowledged` has exactly one caller: a test.** Written, tested, never
+  wired.
+- `data/wm/needs-you.edn` is **3 bytes** — empty.
+
+Since `nag?` is `(and in-joes-model? futon-important? risk-mode? acknowledged?)`
+and absent means false:
+
+> **The classifier can never produce `:nag`.** The only route to the nag lane is
+> **pre-laning** — `operator_lane_adapter:159` documents items arriving
+> `:lane "nag"`, and `operator_bulletin` respects it. **So the one path that works
+> bypasses the gate that was designed to earn it.**
+
+**I called this cluster "already built and principled" in I.43.** The classifier is
+built and principled and verified against an independent model. **The half that
+feeds it is not wired** — the project's signature defect, found inside the
+machinery I was reusing to avoid writing new machinery.
+
+*(Not claiming anything about nags historically fired — `needs-you.edn` is empty
+now and I have not checked its history. The claim is structural: the classifier
+path cannot reach `:nag`.)*
+
+### This reverses my decision, and codex-4's objection was the right one
+
+I told codex-4 to pre-acknowledge rather than pre-lane, because pre-laning
+*"bypasses classification"*. It flagged the contradiction. **Given that the
+classifier cannot reach `:nag` at all, pre-laning is not a shortcut — it is the
+only working path**, and the one the adapter already documents and respects.
+
+**So: pre-lane, and say plainly in the code why** — not because it is clever, but
+because the alternative does not exist. A comment that says "bypasses the
+classifier because the classifier's acknowledgement input is unwired" is worth more
+than a mechanism that pretends to be earned.
+
+### Scope
+
+**Fixing the acknowledgement wiring is not this mission's job** — it is the WM
+operator surface, and it affects every WM item, not just proctor findings. Recorded
+here; belongs in its own excursion.
+
+**For frame-1:** the proctor pre-lanes compromise findings as `:nag` **and** reports
+to Joe directly. One cycle, human in the loop — the same disposition as A3 and A4,
+and for the same reason.
+
+> Three of the four remaining items now have the same shape: **the enforcement
+> machinery is absent or inert, and frame-1 substitutes a person.** That is
+> defensible for one supervised cycle and is exactly what must not be true by
+> frame-10. **It should be stated as a group rather than discovered three more
+> times.**
