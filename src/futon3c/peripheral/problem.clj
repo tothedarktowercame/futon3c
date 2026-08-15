@@ -1307,17 +1307,51 @@
            :cprobe/passed? witness-recorded?}}})
 
       (= tool-id :write-disposition)
-      (let [options (first args)
+      (let [options (or (first args) {})
             cycle-id @active-cycle-id
             step-index (:cycle/step-index (last args))
             outcome (or (:disp/outcome options) (:outcome options))
-            allowed #{:closed :tier-a :tier-b :defective}]
-        (if (and cycle-id (contains? allowed outcome))
+            allowed #{:closed :tier-a :tier-b :defective}
+            residual-keys (filter #(contains? options %)
+                                  [:disp/residual-sorries :residual-sorries])
+            axiom-keys (filter #(contains? options %)
+                               [:disp/axiom-clean? :axiom-clean?])
+            invalid-residual
+            (some #(when-not (nat-int? (get options %)) %) residual-keys)
+            invalid-axiom
+            (some #(when-not (boolean? (get options %)) %) axiom-keys)
+            residual (if (contains? options :disp/residual-sorries)
+                       (:disp/residual-sorries options)
+                       (:residual-sorries options))
+            axiom-clean? (if (contains? options :disp/axiom-clean?)
+                           (:disp/axiom-clean? options)
+                           (:axiom-clean? options))]
+        (cond
+          invalid-residual
+          {:ok false
+           :error {:error/code :invalid-disposition-field
+                   :field invalid-residual
+                   :expected :nonnegative-integer}}
+
+          invalid-axiom
+          {:ok false
+           :error {:error/code :invalid-disposition-field
+                   :field invalid-axiom
+                   :expected :boolean}}
+
+          (and cycle-id (contains? allowed outcome))
           {:ok true
-           :result {:disp/id (str "disp/" cycle-id "/" step-index)
-                    :disp/cycle cycle-id
-                    :disp/outcome outcome
-                    :disp/step-index step-index}}
+           :result (cond-> {:disp/id (str "disp/" cycle-id "/" step-index)
+                            :disp/cycle cycle-id
+                            :disp/outcome outcome
+                            :disp/step-index step-index}
+                     (seq residual-keys)
+                     (assoc :disp/residual-sorries residual)
+
+                     (seq axiom-keys)
+                     (assoc :disp/axiom-clean? axiom-clean?))}
+
+          :else
           {:ok false
            :error (str "write-disposition requires an open cycle and one of "
                        allowed)}))

@@ -2100,3 +2100,72 @@
     (is (re-find #"store refused" (:error failed)))
     (is (= {:unchanged true} (:result delegated))
         "all other tools still delegate to the existing backend")))
+
+(defn- begun-problem-cycle-backend []
+  (let [backend (problem/make-problem-cycle-backend
+                 (tools/make-mock-backend)
+                 (constantly {})
+                 (atom {:session-id "session-disposition"
+                        :problem-id "p" :harness-repo "/harness"})
+                 (constantly []) (constantly 7))]
+    (tools/execute-tool backend :begin-problem-cycle [])
+    backend))
+
+(deftest write-disposition-passes-measurement-fields-through
+  (let [backend (begun-problem-cycle-backend)
+        result (tools/execute-tool
+                backend :write-disposition
+                [{:outcome :closed
+                  :disp/residual-sorries 0
+                  :disp/axiom-clean? true}
+                 {:cycle/step-index 9}])
+        entity (:result result)
+        values (#'problem/measurement-values {:disposition entity})]
+    (is (:ok result))
+    (is (= 0 (:disp/residual-sorries entity)))
+    (is (true? (:disp/axiom-clean? entity)))
+    (is (= 0 (get values "residual executable sorries")))
+    (is (true? (get values "axiom cleanliness")))))
+
+(deftest write-disposition-accepts-measurement-field-aliases
+  (let [result (tools/execute-tool
+                (begun-problem-cycle-backend) :write-disposition
+                [{:outcome :closed :residual-sorries 2 :axiom-clean? false}
+                 {:cycle/step-index 10}])]
+    (is (:ok result))
+    (is (= 2 (get-in result [:result :disp/residual-sorries])))
+    (is (false? (get-in result [:result :disp/axiom-clean?])))))
+
+(deftest write-disposition-omits-absent-measurement-fields
+  (let [result (tools/execute-tool
+                (begun-problem-cycle-backend) :write-disposition
+                [{:outcome :tier-a} {:cycle/step-index 3}])
+        entity (:result result)]
+    (is (:ok result))
+    (is (false? (contains? entity :disp/residual-sorries)))
+    (is (false? (contains? entity :disp/axiom-clean?)))))
+
+(deftest write-disposition-rejects-malformed-measurement-fields
+  (let [backend (begun-problem-cycle-backend)
+        residual (tools/execute-tool
+                  backend :write-disposition
+                  [{:outcome :closed :disp/residual-sorries -1}
+                   {:cycle/step-index 4}])
+        axiom (tools/execute-tool
+               backend :write-disposition
+               [{:outcome :closed :disp/axiom-clean? "yes"}
+                {:cycle/step-index 5}])]
+    (is (false? (:ok residual)))
+    (is (= :disp/residual-sorries (get-in residual [:error :field])))
+    (is (false? (:ok axiom)))
+    (is (= :disp/axiom-clean? (get-in axiom [:error :field])))))
+
+(deftest write-disposition-keeps-outcome-validation
+  (let [result (tools/execute-tool
+                (begun-problem-cycle-backend) :write-disposition
+                [{:outcome :not-allowed
+                  :disp/residual-sorries 0
+                  :disp/axiom-clean? true}
+                 {:cycle/step-index 6}])]
+    (is (false? (:ok result)))
+    (is (re-find #"one of" (:error result)))))
