@@ -70,7 +70,12 @@
       (edn/read-string (slurp f)))))
 
 (defn- save-state!
-  "Atomically save proof state to disk with version bump."
+  "Save proof state to disk, OVERWRITING the previous file, with a version bump.
+
+  NOT atomic (plain `spit`, no temp-file+rename: an interrupted write leaves a
+  truncated file) and NOT an archive (`:proof/version` is a counter; the prior
+  state is gone). The old docstring claimed both, and that claim cost a wrong
+  premise downstream — step-back-to-an-earlier-version is NOT available here."
   [cwd state]
   (let [problem-id (:proof/problem-id state)
         f (state-path cwd problem-id)

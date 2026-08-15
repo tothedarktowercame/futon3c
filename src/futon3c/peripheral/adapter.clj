@@ -261,7 +261,7 @@
                         "subjects [{ref/type, ref/id}]")
    ;; Proof-domain tools
    :proof-load       "Load proof state from disk"
-   :proof-save       "Save proof state (atomic write, version bump)"
+   :proof-save       "Save proof state (overwrites previous file; version counter, not an archive)"
    :ledger-query     "Query the proof ledger"
    :ledger-upsert    "Update a ledger item (enforces status policy)"
    :dag-check        "Check DAG acyclicity"
