@@ -8817,3 +8817,65 @@ measuring the wrong object.
 
 **Operator's call** — this is a structural change, and it is bigger than the packets
 that led to it.
+
+## I.59 Five encounters with one seam — build `:derived-tools`
+
+**Twelfth stop, and the same wall for the fifth time:** ordinary tools receive only
+caller arguments; engine state reaches only the save tool.
+
+| packet | how I routed around it |
+|---|---|
+| A3.3 stamping | built `:output-stamp-fn` at the outputs boundary |
+| A3.5 registration access | sidestepped — provision on demand |
+| attempt-cap enforcement | traced to the two-pipelines finding (I.58) |
+| `:emit-trace` | **stopped here** |
+
+**Four workarounds and a stop is not four coincidences.** The engine lacks a general
+way to compute a tool's result from its own authoritative state, and I have been
+inventing a narrow escape each time rather than naming the gap.
+
+### The mechanism, and it is the third member of a family that exists
+
+```clojure
+:derived-tools {tool-id (fn [state args] -> result)}
+```
+
+**The engine computes the result itself and never delegates to the backend.** Note
+what that is *not*: it is not "give the backend state". The backend's access does not
+widen at all.
+
+Alongside what is already there:
+
+| hook | shape | what the engine does with state |
+|---|---|---|
+| `:state-snapshot-fn` | `[state tool result]` | emits evidence |
+| `:output-stamp-fn` | `[state payload]` | transforms the advance payload |
+| **`:derived-tools`** | **`[state args]`** | **computes a result** |
+
+**`:emit-trace` is exactly this.** The trace *is* a projection of cycle state — it
+should never arrive from a backend that could be handed anything. Making it derived
+closes I.58's relay by construction rather than by convention.
+
+### The unmapped list — and codex-4's list understates what is reachable
+
+It enumerated against `:cycle/outputs`. **A derived tool reads STATE, which carries
+more:**
+
+- **already in state, not outputs:** `:cycle/mode`, `:cycle/deposit-state`,
+  `:cycle/paired-with` (all set by `state-init-fn`), and `:cycle-closed?` /
+  `:assigned-at` / `:cycle/window` are cycle-lifecycle facts the engine holds.
+- **genuinely unproduced by any phase:** `:available-artifact-ids`,
+  `:need-probe-retrieved-ids`, `:capability-probes`. **These three are the real
+  gap** — phases that do not yet emit what the validator requires.
+
+**Two good qualifications from codex-4, both kept:**
+
+- `:denominator-declared?` is **derivable from the stored registration** (non-empty
+  `:required-measurement-fields`), so it is not source-less;
+- `:denominator-inferred-from-corpus?` is a **specification constant `false`** per
+  I.21 — not runtime evidence, and should be recorded as a constant rather than
+  dressed up as one.
+
+> **The three genuinely-unproduced keys are the deliverable I asked for.** They name
+> phases that do not yet produce what the validator needs — which is the same class
+> of gap as the unenforced attempt cap, found by looking rather than assumed absent.
