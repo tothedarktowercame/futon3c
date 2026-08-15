@@ -16,7 +16,7 @@
  ;; --- binding to the Lean -------------------------------------------------
  :lean-registration "DarkTower.APMDemonstration.round1Registration"
  :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
- :lean-revision     "d0623df8992ec23c7c647cf30eac014221bbdb2d"
+ :lean-revision     "48c1fe496ed66a9d4ab61335adc8815156b1e063"
 
  ;; Resource pins at cycle registration. Both solver and student attempts must
  ;; record this environment revision. The store snapshot is recorded but is
@@ -35,7 +35,9 @@
  ;; --- what is being run ---------------------------------------------------
  :modules                [:R :F :S :A :M :P :X]
  :structural-invariants  [:F1]
- :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F7 :F8 :F9]
+ ;; F7 is absent deliberately: its round-one definition made "available"
+ ;; mean "retrieved", so the check could not fail and was not a measurement.
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
 
  ;; t94J02 — chosen because it was genuinely worked, not because it is short:
  ;; 22-line Main.lean carrying ONE code-level sorry, against a 9.3K proof-outline
@@ -152,8 +154,11 @@
                  :outcomes [:closed :tier-a :tier-b :defective]}
 
  :required-capabilities
- [:registration-gates-launch :frame-containment-witnessed
-  :created-frame-worked :unique-disposition :offer-use-disposition
+ ;; Launch gating is discharged by construction in DarkTower: Launch requires
+ ;; ReadyToRun, and failed obligations make ReadyToRun uninhabited. There is no
+ ;; runtime refusal event to probe without demoting that guarantee to a watchdog.
+ [:frame-containment-witnessed :created-frame-worked
+  :unique-disposition :offer-use-disposition
   :need-retrieval :promotion-importable :promotion-need-taggable
   :measurement-populated]
 

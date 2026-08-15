@@ -10,18 +10,24 @@
            [java.net.http HttpClient HttpRequest HttpResponse$BodyHandlers]
            [java.time Duration]))
 
-(def required-lean-revision "d0623df8992ec23c7c647cf30eac014221bbdb2d")
+(def required-lean-revision "48c1fe496ed66a9d4ab61335adc8815156b1e063")
 (def required-lean-source "DarkTower/APMDemonstrationPreregistration.lean")
 (def required-lean-registration
   "DarkTower.APMDemonstration.round1Registration")
 
 (def required-modules [:R :F :S :A :M :P :X])
 (def required-structural-invariants [:F1])
-(def required-runtime-invariants [:F2 :F3 :F4 :F5 :F6 :F7 :F8 :F9])
+(def required-runtime-invariants
+  ;; F7's round-one definition makes "available" mean "retrieved", so the
+  ;; predicate cannot fail. Do not preregister a tautology as a runtime check.
+  [:F2 :F3 :F4 :F5 :F6 :F8 :F9])
 
 (def required-capabilities
-  [:registration-gates-launch :frame-containment-witnessed
-   :created-frame-worked :unique-disposition :offer-use-disposition
+  ;; Launch gating is structural: the generic DarkTower Launch constructor
+  ;; requires ReadyToRun, whose failed-obligation cases are uninhabited. There
+  ;; is no APM runtime refusal event to attest.
+  [:frame-containment-witnessed :created-frame-worked
+   :unique-disposition :offer-use-disposition
    :need-retrieval :promotion-importable :promotion-need-taggable
    :measurement-populated])
 
