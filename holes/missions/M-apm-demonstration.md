@@ -9320,3 +9320,41 @@ now captured per packet F.)
 Frame-1 blockers remaining: evidence-store wired loud (finding 7),
 store-revision semantics decision (5), disposition field pass-through (8),
 runbook items (1, selection-from-compiled-facts). All small, all named.
+
+## W.4 Student full report — two new findings, rider ledger complete (2026-08-15)
+
+The original student job's park fired after cycle close; its full report adds
+to W.2/W.3 (cycle record unchanged — the substance was already driven via the
+follow-up bell's summary, and the worktree verification stands):
+
+**Finding 9 — the "lake build clean" acceptance bar is VACUOUS for problem
+files.** `problems/` has no `lean_lib` in lakefile.toml, so the root build
+never compiles `problems/*/lean/Main.lean` (D.21 defect #3 biting the
+ACCEPTANCE BAR: rehearsal-1's own frame demanded a gate that cannot fail).
+The student verified honestly via direct `lake env lean` (exit 0) and
+deposited a memory saying so. **Frame-1's acceptance bar must be
+`lake env lean <Main.lean>` + `#print axioms`, until problems/ joins the
+build.** Runbook + role-card check.
+
+**Finding 10 — the pull-side memory read stops at the envelope.** The student
+IGNORED `e-33cf23e7` with reason "body not readable through the graph tools."
+Verified: the `:memory/assert` edge carries name/hook/kind/domain but NO body;
+content lives in the paired evidence entry. The PUSH path compensates
+(packet summaries — "names before narration"); a PULL-ONLY student has no
+packet, so the student-side memory channel currently delivers envelopes
+without content. Frame-1 store-mode's student arm needs a content-bearing
+pull read (or the asymmetry recorded as a design fact in the registration).
+
+**Rider ledger, final for rehearsal-1** (frame-1's reviewer checks offers
+against these):
+- `e-33cf23e7-a574-487f-ac5f-ad98302b8047` (claude-7: orlicz claim false)
+- `e-907281cd-b003-418b-8311-73b8eab3d0ba` (zai-1: verify hole-state against
+  the frame branch, not dispatch text)
+- `e-2d8f82c7-e617-4fef-8230-b7193fec28e8` (zai-1: problems/ not on build
+  path; verify via lake env lean)
+The two student deposits are unprompted process-corrections with written
+referents — the demand-side loop firing inside the rehearsal.
+
+Provenance note: the statement-repair route on a01A06 was operator-authorized
+2026-07-30 (`dcf668a`) — the `:defective` disposition matches the recorded
+history, not just the mathematics.
