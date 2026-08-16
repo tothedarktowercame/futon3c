@@ -1,0 +1,109 @@
+;; FRAME-3 registration — MEASURED, round 1 continuation: THE MEMORY-ONLY
+;; CHALLENGE (variant b, operator-ruled, W.9). Written 2026-08-16 by
+;; claude-7. STUDENT-PRIMARY: the solver leg was spent in frame-2 (tier-a,
+;; 15-commit boundary artifact, firm cap); this frame tests whether a COLD
+;; student at the PIN closes apm_t00a05 from the store alone — transfer
+;; exceeding the depositor's completion. Ten maze-seed deposits written
+;; pre-open (W.9) so the open snapshot IS the seeded maze. Predecessor:
+;; frame-2 (t00A05, W.7).
+;;
+;; Purpose: the live rehearsal (open item 1) — same machinery as frame-1, real
+;; dispatch and real worktrees, on a THROWAWAY unit so t94J02 (round 1) and
+;; a98A01 (intended confirmation) stay clean. Selection criteria for t00A05:
+;; audit-clean in the driver era (zero future measurement value), OPEN at the
+;; environment pin (1 sorry in a 390-line Main.lean at a92ffb6c — real work
+;; exists and is known doable), a-family (structurally distant from t94J02's
+;; t-family, minimizing cross-problem recall leakage per the a01A12
+;; inverted-relevance specimen), and not a98A01.
+;;
+;; Riders (operator-accepted): distinct batch id "rehearsal-1"; every memory id
+;; written during the rehearsal is recorded in the mission record so frame-1's
+;; reviewer can check its offers against them — witnessed, not enforced.
+;;
+;; Pins: environment = the round-1 pin (same provisioning path exercised);
+;; harness = measured at freeze time by the path-scoped measurer
+;; (src scripts deps.edn -> 414294a9); Lean = the round-1 validator constants.
+{:kind   :apm-demonstration-round1-registration
+ :schema 1
+
+ :lean-registration "DarkTower.APMDemonstration.round1Registration"
+ :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
+ :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
+
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
+ :reg/harness-revision     "da717450ff4ec997febce27edb7fee9802ac968c"
+ :reg/solver-seat "codex-4"
+
+ :modules                [:R :F :S :A :M :P :X]
+ :structural-invariants  [:F1]
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
+
+ :problem {:problem-id            "t00A05"
+           :difficulty-stratum    "family=t;freeze-stmt-lines=127"
+           :regime                "6521fd3aa158da16a6d520a6c2eef19195ac54cd"
+           :locked-lemma-exposure []}
+
+ :variation {:kind     :measured
+             :endpoint "identity floor: a GLM-5.2-class student solver reaches the result given the deposit (ArXivLean June 2026, 4/48)"}
+
+ :claim :descriptive
+ :arms  [{:name "one problem, one-shot measurement"
+          :neutral? false
+          :axes []
+          :role :treatment}]
+
+ :replication-stage  :pilot
+ :pilot-units        [{:problem-id            "t00A05"
+                       :difficulty-stratum    "family=t;freeze-stmt-lines=127"
+                       :regime                "6521fd3aa158da16a6d520a6c2eef19195ac54cd"
+                       :locked-lemma-exposure []}]
+ :confirmation-units []
+
+ :estimated-cost    0.01
+ :budget-cap        0.05
+ :teardown-deadline 120
+
+ :stop-rules [:budget-exceeded
+              :attempt-cap-reached
+              :axiom-unclean-close
+              :no-progress
+              :teardown-deadline-passed
+              :no-improvement-escalate]
+
+ :reg/attempt-caps {:s-frontier 10
+                    :s-student  3}
+
+ :decision-rule {:id       :apm-round1-outcome
+                 :outcomes [:closed :tier-a :tier-b :defective]}
+
+ :required-capabilities
+ [:frame-containment-witnessed :created-frame-worked
+  :unique-disposition :offer-use-disposition
+  :need-retrieval :promotion-importable :promotion-need-taggable
+  :measurement-populated]
+
+ :required-measurement-fields
+ ["statement defects at review" "terminal disposition"
+  "residual executable sorries" "attempts or closer hops"
+  "axiom cleanliness" "memories promoted" "review escape rate"
+  "promoted then surfaced then used" "contract leaks"
+  "duplicate declarations" "locked-lemma exposure" "promotion coverage"
+  "unconsumed promotions" "import-only edges" "scribe lane coverage"
+  "arc-lane yield" "rewrite rule offered and used"]
+
+ ;; Role cards: the round-1 frozen hashes — the rehearsal exercises the same
+ ;; cards, which is part of what is being rehearsed.
+ :reg/role-cards
+ {:codex-solver "ab12c46e4cbe0a992bc00c95d2b389673d60023b"
+  :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
+  :claude-guide "b475f85cb1114184329f7e7b0a5e423085201218"
+  :scribe       "d4a8863d3828244756483be5295c8926bdcff301"
+  :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+
+ :reg/seat-exclusivity :witnessed-not-enforced
+
+ ;; No predictions: a rehearsal measures the MACHINERY, not the thesis.
+ :reg/predictions
+ [{:id :P1 :statement "Guidance interventions per cycle decline as problems seen increases."
+   :source "Joe, 2026-08-14" :note "frame-2 is the second point"}]
+ :reg/frame-1-disclaimer true}
