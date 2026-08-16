@@ -15,6 +15,39 @@
         "problem ids are graph endpoints, not conjunctive lexical terms")
     (is (some #{"nonnegative integral"} (:terms query)))))
 
+(deftest exact-problem-subject-is-graph-only-not-a-lexical-anchor
+  (let [problem-id "t94J02"
+        recalled-endpoints (atom nil)
+        recall-result
+        (with-redefs-fn
+          {(ns-resolve 'futon3c.dispatch-with-recall 'substrate-seams)
+           (fn [& _]
+             {:search (constantly {})
+              :projection (constantly {})
+              :entry (constantly nil)})
+           (ns-resolve 'futon3c.peripheral.memory-recall
+                       'propose-patterns-by-query)
+           (fn [& _]
+             {:candidates [] :content-matches [] :lexical-seed []})
+           (ns-resolve 'futon3c.peripheral.memory-recall
+                       'recall-by-endpoints)
+           (fn [_ endpoints _]
+             (reset! recalled-endpoints endpoints)
+             {:recalls []})}
+          #(deref
+            (future
+              (#'dispatch/recall-now
+               {:problem problem-id
+                :subjects [problem-id]
+                :problem-root "/definitely/not/a/problem/root"
+                :recall-timeout-ms 3000
+                :receipt-ranking? false}
+               "coarser topologies compact Hausdorff"))))]
+    (is (not-any? #{problem-id} (get-in recall-result [:query :terms])))
+    (is (not= problem-id (get-in recall-result [:query :required-term])))
+    (is (some #{problem-id} @recalled-endpoints)
+        "the exact problem id remains a graph recall endpoint")))
+
 (deftest recall-query-prioritizes-problem-files-and-records-sources
   (let [root (.toFile
               (java.nio.file.Files/createTempDirectory

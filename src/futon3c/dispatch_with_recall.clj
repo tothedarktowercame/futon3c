@@ -533,8 +533,12 @@
         ;; 3-term cap itself, which was added earlier the same day to fix a
         ;; 36-term conjunction. Interleaving keeps both vocabularies inside the
         ;; cap so the ladder can pair across them.
+        lexical-subjects
+        (remove #(= (str/lower-case (str/trim (str %)))
+                    (str/lower-case problem))
+                subjects)
         generated-terms (concat (when terrain [terrain])
-                                (round-robin [subjects source-terms]))
+                                (round-robin [lexical-subjects source-terms]))
         selected-terms (if (seq query-terms)
                          (map (comp str/trim str) query-terms)
                          generated-terms)
