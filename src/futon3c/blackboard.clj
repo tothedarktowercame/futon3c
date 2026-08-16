@@ -542,6 +542,86 @@
   (format-proof-state state))
 
 ;; -----------------------------------------------------------------------------
+;; :problem — APM problem-cycle state, staffing, attempts, live dispatch
+;; -----------------------------------------------------------------------------
+
+(defn- problem-phase-order []
+  ;; Do not require problem at namespace load time: problem -> cycle ->
+  ;; blackboard is the live dependency direction. Resolve only when rendering,
+  ;; after the problem peripheral has loaded, while keeping it the single source
+  ;; of truth for the phase chain.
+  (var-get (requiring-resolve 'futon3c.peripheral.problem/phase-order)))
+
+(defn- staffed [seat]
+  (if (and (some? seat) (not (str/blank? (str seat)))) seat "unstaffed"))
+
+(defn- attempt-count [attempts]
+  (cond
+    (nil? attempts) 0
+    (sequential? attempts) (count attempts)
+    :else 1))
+
+(defn- format-problem-state [state]
+  (let [problem-id (or (:problem-id state) "unknown")
+        mode (or (:cycle/mode state) "unknown")
+        phases (vec (butlast (problem-phase-order)))
+        phase (:current-phase state)
+        phase-index (when phase (.indexOf phases phase))
+        completed? (and (nil? phase) (pos? (:cycles-completed state 0)))
+        phase-label (cond
+                      completed? "COMPLETED (sentinel)"
+                      (nil? phase) "setup"
+                      (and phase-index (<= 0 phase-index))
+                      (str (name phase) " (" (inc phase-index) "/"
+                           (count phases) ")")
+                      :else (name phase))
+        outputs (:cycle/outputs state)
+        registration (:registration outputs)
+        conductor (:conductor state)
+        latest-dispatch
+        (some (fn [{:keys [tool result]}]
+                (when (#{:dispatch-solver :dispatch-student-fresh} tool)
+                  {:tool tool :job-id (:job-id result)
+                   :recipient (:ground-control/recipient result)}))
+              (reverse (:steps state)))
+        latest-student-dispatch
+        (some (fn [{:keys [tool result]}]
+                (when (= :dispatch-student-fresh tool)
+                  (:ground-control/recipient result)))
+              (reverse (:steps state)))
+        seats {:solver (or (:reg/solver-seat registration)
+                           (:solver-seat conductor))
+               :guide (or (:reg/guide-seat registration)
+                          (:guide conductor) (:agent conductor))
+               :student (or (:reg/student-seat registration)
+                            (:student conductor) latest-student-dispatch)
+               :proctor (or (:reg/proctor-seat registration)
+                            (:proctor conductor))
+               :scribe (or (:reg/scribe-seat registration)
+                           (:scribe conductor))}
+        caps (:reg/attempt-caps registration)
+        solver-count (attempt-count (:solver-attempt outputs))
+        student-count (attempt-count (:student-attempts outputs))]
+    (str "Problem: " problem-id "\n"
+         "Mode: " (name mode) "\n"
+         "Phase: " phase-label ": "
+         (str/join " > " (map name phases)) "\n"
+         "Seats: solver=" (staffed (:solver seats))
+         "  guide=" (staffed (:guide seats))
+         "  student=" (staffed (:student seats))
+         "  proctor=" (staffed (:proctor seats))
+         "  scribe=" (staffed (:scribe seats)) "\n"
+         "Attempts: solver " solver-count "/"
+         (or (:s-frontier caps) "?")
+         "  student " student-count "/" (or (:s-student caps) "?") "\n"
+         (when latest-dispatch
+           (str "Latest dispatch: " (name (:tool latest-dispatch))
+                "  job=" (or (:job-id latest-dispatch) "unknown") "\n")))))
+
+(defmethod render-blackboard :problem [_ state]
+  (format-problem-state state))
+
+;; -----------------------------------------------------------------------------
 ;; :mentor — observation state, trigger status, interventions
 ;; -----------------------------------------------------------------------------
 
