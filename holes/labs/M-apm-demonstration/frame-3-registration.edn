@@ -31,7 +31,7 @@
  :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
 
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "da717450ff4ec997febce27edb7fee9802ac968c"
+ :reg/harness-revision     "58f611aac98c51febc0c70f83fe29abd61764c9c"
  :reg/solver-seat "codex-4"
 
  :modules                [:R :F :S :A :M :P :X]
