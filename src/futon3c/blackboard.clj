@@ -590,6 +590,14 @@
 (defn- latest-tool-step [steps tool]
   (some #(when (= tool (:tool %)) %) (reverse steps)))
 
+(def ^:private guide-action-tools
+  #{:dispatch-solver :guide-solver :dispatch-student-fresh
+    :write-disposition :write-use :promote-artifact})
+
+(defn- latest-guide-step [steps]
+  (some #(when (contains? guide-action-tools (:tool %)) %)
+        (reverse steps)))
+
 (defn- seat-last-action [role steps outputs]
   (let [step-count (count steps)]
     (case role
@@ -599,16 +607,27 @@
                        (:solver-attempt outputs)
                        (:student-attempts outputs))
             completed (min (attempt-count attempts) (count dispatches))
-            step (or (last dispatches) nil)]
-        (if step
-          (str (name (:tool step)) " ("
-               (relative-step step-count (::index step)) ")"
-               (when (pos? completed) "; attempt recorded"))
-          (when (pos? (attempt-count attempts)) "attempt recorded")))
+            pending (drop completed dispatches)
+            pending-step (last pending)
+            completed-step (when (pos? completed)
+                             (nth dispatches (dec completed)))]
+        (cond
+          pending-step
+          (str "working (job "
+               (or (get-in pending-step [:result :job-id]) "unknown") ")")
+
+          (pos? (attempt-count attempts))
+          (str "attempt recorded"
+               (when completed-step
+                 (str " (" (relative-step step-count (::index completed-step))
+                      ")")))
+
+          :else nil))
 
       :guide
-      (when-let [step (latest-tool-step steps :guide-solver)]
-        (str "guide-solver (" (relative-step step-count (::index step)) ")"))
+      (when-let [step (latest-guide-step steps)]
+        (str (name (:tool step)) " ("
+             (relative-step step-count (::index step)) ")"))
 
       :scribe
       (when-let [step (latest-tool-step steps :record-scribe-lanes)]

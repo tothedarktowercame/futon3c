@@ -320,11 +320,16 @@
     (is (str/includes? rendered "scribe=unstaffed"))
     (is (str/includes? rendered "Attempts: solver 1/10  student 2/3"))
     (is (str/includes? rendered "Seat activity:"))
-    (is (str/includes? rendered "dispatch-solver (1 step ago); attempt recorded"))
-    (is (str/includes? rendered "dispatch-student-fresh (now); attempt recorded"))
+    (is (str/includes? rendered "solver   codex-4          attempt recorded (1 step ago)"))
+    (is (str/includes? rendered "guide    claude-7         dispatch-student-fresh (now)"))
+    (is (str/includes? rendered "student  zai-1            attempt recorded (now)"))
     (is (re-find #"scribe\s+unstaffed\s+unstaffed" rendered))
     (is (str/includes? awaiting-rendered
                        "awaiting codex-4 (job invoke-awaiting-solver)"))
+    (is (str/includes? awaiting-rendered
+                       "solver   codex-4          working (job invoke-awaiting-solver)"))
+    (is (str/includes? awaiting-rendered
+                       "guide    claude-7         dispatch-solver (now)"))
     (is (re-find #"proctor\s+unstaffed\s+unstaffed" awaiting-rendered))
     (is (re-find #"scribe\s+unstaffed\s+unstaffed" awaiting-rendered))
     (is (str/includes? rendered
