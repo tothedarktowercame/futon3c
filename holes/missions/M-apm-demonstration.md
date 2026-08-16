@@ -10210,3 +10210,21 @@ registered ARM — same problem stratum, same frozen card, pinned solver
 config, two arms (short-window vs sustained-attempt), guidance adjudicated
 from the Agency log by the proctor seat, not from the guide's testimony.
 The registration schema's `:arms` exists for exactly this.
+
+## W.22 P7 merged: the problem peripheral has an operator pane (2026-08-16)
+
+**P7 (blackboard adaptor, codex-3): reviewed and merged.** Checked: diff
+read — `requiring-resolve` at render time (no load cycle; `phase-order`
+stays the single source of truth), seats read the FUTURE `:reg/*-seat`
+keys (P5 forward-compatibility) with conductor-context fallbacks and print
+explicit `unstaffed`, attempt counts vs `:reg/attempt-caps`, latest
+dispatch job id for operator polling, `COMPLETED (sentinel)` rendering.
+kondo 0/0; check-parens OK; blackboard tests 28/100/0 re-run by reviewer.
+The pane goes live in the serving JVM at its next Drawbridge reload; the
+stale `*proof*` pane belongs to the old proof peripheral and is unchanged.
+
+**Machinery wrinkle observed (twice):** ANY park wake consumes the agent's
+standing parks, including parks on unrelated in-flight jobs — stale
+checklist wakes twice stripped the P7 park. Round-2 queue note: parks
+should be consumed per-dependency, or re-park must be the first act of any
+wake handler.
