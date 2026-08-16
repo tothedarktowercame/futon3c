@@ -10632,3 +10632,22 @@ Preflight executed on the operator's "OK to the next steps":
 its -PROPOSED suffix, and the f7-guide receives its opening bell (card +
 frame assignment); the machine runs; the lab manager watches the pane and
 reviews the close.
+
+## W.38 FROZEN; one last packet before ignition (2026-08-16)
+
+**Frame-7 registration FROZEN on the operator's word** (`3cde6e99` — the
+freeze commit also swept the round-1 frame artifacts and experiment-frame
+receipts into the record; better recorded than floating untracked).
+
+**Threshold finding, handled per protocol instead of trampled:** the
+production OPEN was never packaged. Takeover (impl-3) rebuilds from a live
+handle; a COLD open with the real provisioner/dispatch/store/measurer was
+only ever assembled by the round-1 /tmp drive scripts — the exact folklore
+W.19 outlawed, and it is gone with /tmp. The recorded round-1 problem-state
+files (data/problem-state/*/v*.edn) and frame artifact dirs preserve the
+assembly; **P10 dispatched** (ams-codex-1, `invoke-…f416e92e`,
+feat/conductor-open-route): `POST /api/alpha/conductor/open` recovers the
+production assembly from the record, calls the existing open-frame!, and
+installs the binding FOR THE REGISTRATION'S GUIDE SEAT (f7-guide), not the
+caller. On merge: author the f7 frame files, open, bell the fresh guide
+its card and assignment — and the lab manager steps back to the pane.
