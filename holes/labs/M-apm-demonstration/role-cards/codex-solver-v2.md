@@ -1,10 +1,9 @@
-# Role card: codex-solver v2 — DRAFT for operator freeze (regime boundary)
+# Role card: codex-solver v2 — FROZEN 2026-08-16 (Joe: "Let's try your v2 card with Codex")
 
 Drafted 2026-08-16 (claude-7) from frame-2's evidence (W.7): under process-only
 direction the solver closed four substantial bridges unaided; the burnt
 attempts were item-stepping the conductor should not have needed to do.
-Supersedes ab12c46e. NOT in force until frozen into a frame registration
-(hash change = regime boundary; P1's slope resets).
+Supersedes ab12c46e. IN FORCE from frame-4 (regime boundary declared there; P1's slope resets).
 
 ## The sustained attempt (the change)
 An attempt is a SIEGE, not a probe. Before any obstruction report:
