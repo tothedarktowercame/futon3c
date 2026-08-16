@@ -62,4 +62,23 @@
    :writes [:authorization]}
   {:box/id :required-outputs-gate
    :site {:ns "futon3c.peripheral.problem"}
-   :reads [:measurement :trace :validation :authorization]}]}
+   :reads [:measurement :trace :validation :authorization]}
+  ;; --- seams added 2026-08-16 (conducted era) — DECLARED POST-HOC (W.16):
+  ;; these landed without updating this map or re-running the checker.
+  ;; TRUTH of the offer defect: producer AND consumer both use the NAME
+  ;; :memory-offers, but the producer emits dispatch-receipt SHAPES while the
+  ;; trace consumes offer-entity shapes. Name-grain wiring checks CANNOT see
+  ;; this (the M-diagramprover grain-gap finding); the run-time trace-shape
+  ;; validator catches it at close. Shape-grade wire checking is the queued
+  ;; instrument extension.
+  {:box/id :ground-control-dispatch
+   :site {:ns "futon3c.peripheral.problem"}
+   :writes [:memory-offers]}
+  {:box/id :conductor-memory-offers-collector
+   :site {:ns "futon3c.apm.conductor"}
+   :reads [:memory-offers :environment-checkouts :environment-revision
+           :measurement]
+   :writes [:memory-offers]}
+  {:box/id :emit-trace-offer-consumer
+   :site {:ns "futon3c.peripheral.problem"}
+   :reads [:memory-offers]}]}

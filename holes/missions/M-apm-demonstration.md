@@ -9918,3 +9918,41 @@ ALL of it. Round-2 machinery queue, promoted to the top:
    and supersedes/re-attributes W.15's out-of-band batch.
 2. **Conductor-side operations into the conductor namespace**: seeding,
    verification, deposit paths — functions, not folklore.
+
+## W.16 Re-grounding (Joe, 2026-08-16): the instruments re-pointed; the memory ledger audited; a stop-order
+
+**Operator diagnosis, accepted in full:** "we built a formal specification…
+validated the wiring of the workshop… and now we seem to be tramping all
+over that." Machine-confirmed: the conducted era added seams (park
+machinery, memory_read, write-substrate, the conductor namespace) with the
+declared map NEVER updated and the checker NEVER re-run. Re-run today over
+the truthed map: conformance clean; `:memory-offers` MULTIPLY-WRITTEN
+(ground-control + conductor collector — the name-grain shadow of the shape
+bug); the conductor's undeclared reads caught; standing findings unchanged.
+**Instrument grain-gap finding (M-diagramprover):** the wiring checker
+validates NAMES; the offer defect was a SHAPE mismatch under one correct
+name — caught only by the run-time trace validator, three closes late.
+Shape-grade wire checking is the queued instrument extension. Discipline
+restored: the map re-runs at every src-touching merge (runbook line).
+
+**The usable-memories audit (Joe: "the first half of the APM problems
+produced proofs but almost no usable memories"):** round 1 is BETTER than
+the driver era but the original design's channel is DEAD:
+- **Push (dispatch-time offers): delivered ZERO memories all round** —
+  recall empty at every solver dispatch despite 16+ subject-tagged
+  memories (the undiagnosed matching miss). Every use went through PULL.
+- Pull uses, verdict-documented: ~11-12 distinct memories genuinely USED
+  (repair-shaping, route transfer, method transfer, calibration) of ~30
+  written; 7 of 10 maze seeds never opened by anyone.
+- Net: uses happened and mattered — but through the channel we did NOT
+  design to be primary, while the designed treatment channel silently
+  delivered nothing. That IS the driver-era signature, one level up.
+
+**STOP-ORDER (before any frame-7 / new mathematics):**
+1. Diagnose and fix the dispatch-recall miss (why empty against a
+   subject-rich store) — the treatment channel must demonstrably deliver;
+2. Conductor offer-shape fix (envelopes stop lying);
+3. Scribe lane wired live (the field becomes measurable);
+4. Shape-grade wire checks (the grain gap closed);
+all as reviewed packets THROUGH the machinery, each verified by the
+instruments we built for exactly this.
