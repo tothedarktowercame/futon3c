@@ -191,12 +191,14 @@
 
 (declare review-attachment!)
 
-(def ^:private mathematics-pattern-prefixes
-  ["math-informal/" "math-informal-CT/" "math-formalization/" "math-strategy/"])
-
-(defn- mathematics-pattern-id? [pattern-id]
+(defn- library-pattern-id? [pattern-id]
+  ;; "<library>/<pattern>" shape only. Which library directories exist is the
+  ;; adjudicator's and the multi_watcher's business (W.24 addendum: directories
+  ;; are created as needed and ingested automatically), so the runtime must not
+  ;; pin today's taxonomy in a prefix list.
   (and (nonblank-string? pattern-id)
-       (some #(str/starts-with? pattern-id %) mathematics-pattern-prefixes)))
+       (let [i (str/index-of pattern-id "/")]
+         (and (some? i) (pos? i) (< (inc i) (count pattern-id))))))
 
 (defn promote-memory-attachment!
   "Attach one caller-chosen pattern to a statusless memory, then approve that
@@ -217,8 +219,8 @@
      {:ok false :finding {:failure :promotion-pattern-id-missing
                           :memory-id memory-id}}
 
-     (not (mathematics-pattern-id? pattern-id))
-     {:ok false :finding {:failure :promotion-pattern-id-outside-math-taxonomy
+     (not (library-pattern-id? pattern-id))
+     {:ok false :finding {:failure :promotion-pattern-id-not-library-shaped
                           :memory-id memory-id
                           :pattern-id pattern-id}}
 

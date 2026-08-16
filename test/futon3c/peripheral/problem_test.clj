@@ -2312,6 +2312,10 @@
             missing-pattern (promote (begun-problem-cycle-backend)
                                      {:memory-id sibling-id
                                       :reviewer "reviewer"})
+            unshaped-pattern (promote (begun-problem-cycle-backend)
+                                      {:memory-id sibling-id
+                                       :pattern-id "no-library-segment"
+                                       :reviewer "reviewer"})
             review-id (get-in result [:result :promo/review-evidence-id])]
         (is (:ok result) result)
         (is (= :reviewed
@@ -2327,6 +2331,10 @@
                (get-in blank-pattern [:error :failure])))
         (is (= :promotion-pattern-id-missing
                (get-in missing-pattern [:error :failure])))
+        (is (= :promotion-pattern-id-not-library-shaped
+               (get-in unshaped-pattern [:error :failure]))
+            "a future library like math-informal-AT/... must be accepted, so
+             the check is shape-only and taxonomy stays with the adjudicator")
         (is (nil? (get-in @edges [sibling-id :hx/props :attachment-status])))))))
 
 (deftest write-disposition-accepts-measurement-field-aliases
