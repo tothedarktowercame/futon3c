@@ -304,3 +304,94 @@
         (agency/unregister-agent! agent-id)
         (agency/unregister-agent! "claude-unbound")
         (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest conductor-takeover-loads-the-named-version-and-preserves-parked-binding
+  (let [{:keys [config paths]} (fixture)
+        old-agent "claude-old"
+        old-session "surface-old"
+        new-agent "claude-new"
+        new-session "surface-new"
+        handler (http/make-handler {})
+        post! (fn [uri payload]
+                (let [response (handler {:request-method :post :uri uri
+                                         :body (json/generate-string payload)})
+                      body (json/parse-string (:body response) true)]
+                  (cond-> (assoc body :http/status (:status response))
+                    (string? (:error/code body)) (update :error/code keyword))))]
+    (binding/reset-bindings!)
+    (doseq [[agent session] [[old-agent old-session] [new-agent new-session]]]
+      (agency/register-agent!
+       {:agent-id agent :type :claude :session-id session
+        :invoke-fn (fn [_ _] {:result "unused" :session-id session})}))
+    (try
+      (let [opened (conductor/open-frame!
+                    (assoc config :conductor
+                           {:agent old-agent :session old-session
+                            :surface "problem-conductor"}))
+            {:keys [cycle-id version]} (binding/status old-agent old-session)
+            before @(:handle (binding/lookup old-agent old-session))
+            wrong (post! "/api/alpha/conductor/takeover"
+                         {:agent-id new-agent :session-id new-session
+                          :cycle-id cycle-id :version (dec version)})]
+        (is (:ok opened) (pr-str (:error opened)))
+        (is (= :conductor-version-stale (:error/code wrong)))
+        (is (= version (:version (binding/status old-agent old-session)))
+            "a refused takeover leaves the old authority intact")
+        (is (= :conductor-binding-exists
+               (:error/code
+                (post! "/api/alpha/conductor/takeover"
+                       {:agent-id old-agent :session-id old-session
+                        :cycle-id cycle-id :version version})))
+            "a live session cannot replace its binding through takeover")
+
+        ;; Simulate the old conductor process disappearing. The server-owned
+        ;; binding remains available for an explicit versioned transfer.
+        (agency/unregister-agent! old-agent)
+
+        (let [taken (post! "/api/alpha/conductor/takeover"
+                           {:agent-id new-agent :session-id new-session
+                            :cycle-id cycle-id :version version})
+              after-takeover (binding/status new-agent new-session)
+              wake-version (:version after-takeover)
+              wake (post! "/api/alpha/conductor/resume"
+                          {:agent-id new-agent :session-id new-session
+                           :cycle-id cycle-id :version wake-version})
+              stale-wake (post! "/api/alpha/conductor/resume"
+                                {:agent-id new-agent :session-id new-session
+                                 :cycle-id cycle-id :version version})]
+          (is (:ok taken) (pr-str taken))
+          (is (= false (:bound? (binding/status old-agent old-session))))
+          (is (:bound? after-takeover))
+          (is (> wake-version version)
+              "loading the named save is checkpointed as the next store version")
+          (is (= (get-in before [:state :current-phase])
+                 (:phase after-takeover)))
+          (is (:ok wake))
+          (is (= wake-version (:version (binding/status new-agent new-session)))
+              "waking a prose continuation does not mutate the handle")
+          (is (= :conductor-version-stale (:error/code stale-wake))
+              "stale parked metadata is refused before an action")
+
+          ;; Reconnect is transport state only: the server-owned cycle survives.
+          (agency/unregister-agent! new-agent)
+          (agency/register-agent!
+           {:agent-id new-agent :type :claude :session-id new-session
+            :invoke-fn (fn [_ _] {:result "unused" :session-id new-session})})
+          (is (:bound? (binding/status new-agent new-session)))
+
+          (let [routed (post! "/api/alpha/conductor/action"
+                              {:agent-id new-agent :session-id new-session
+                               :action-id "after-takeover"
+                               :operation "dispatch-solver"
+                               :args [{:mission "M-test"} "continued"]
+                               :cycle-id cycle-id :version wake-version})
+                authoritative @(:handle (binding/lookup new-agent new-session))]
+            (is (:ok routed) (pr-str routed))
+            (is (= 1 (count (filter #(= :dispatch-solver (:tool %))
+                                    (get-in authoritative [:state :steps]))))
+                "the taken-over cycle continues only through the typed route"))))
+      (finally
+        (binding/reset-bindings!)
+        (agency/unregister-agent! old-agent)
+        (agency/unregister-agent! new-agent)
+        (doseq [path paths] (Files/deleteIfExists path))))))

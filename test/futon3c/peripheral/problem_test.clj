@@ -2233,8 +2233,9 @@
                     {:id (str "park-" (count @parks))})
         backend (problem/make-ground-control-backend
                  (tools/make-mock-backend) dispatch-fn park-post context)
+        continuation {:conductor/cycle-id "cycle-1" :conductor/version 12}
         solver (tools/execute-tool
-                backend :dispatch-solver [{} "solver" {}])
+                backend :dispatch-solver [continuation "solver" {}])
         student (tools/execute-tool
                  backend :dispatch-student-fresh [{} "student" {}])
         guide (tools/execute-tool
@@ -2246,6 +2247,8 @@
     (is (= "claude-7" (get-in @parks [0 1 :agent])))
     (is (= "session-7" (get-in @parks [0 1 :session])))
     (is (= "emacs-repl" (get-in @parks [0 1 :surface])))
+    (is (= "cycle-1" (get-in @parks [0 1 :cycle-id])))
+    (is (= 12 (get-in @parks [0 1 :version])))
     (is (= "http://agency:7070" (get-in @parks [0 0])))
     (is (> (get-in @parks [0 1 :deadline-ms]) now)
         "the engine sends an absolute epoch deadline")

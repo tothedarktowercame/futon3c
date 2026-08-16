@@ -84,6 +84,32 @@
     (failure handle :mission-absent
              "dispatch requires a non-blank :mission")))
 
+(defn- initial-handle [config]
+  (let [evidence-store (or (:evidence-store config)
+                           (f1b/make-futon1b-backend
+                            (:evidence-store-url config)))
+        peripheral (or (:peripheral config) (problem/make-problem))
+        mode (:mode config)
+        context {:session-id (:session-id config)
+                 :problem-id (:problem-id config)
+                 :cycle/mode mode
+                 :cycle/deposit-state (or (:deposit-state config) :n/a)
+                 :evidence-store evidence-store
+                 :harness-repo (:harness-repo config)
+                 :lean-repo (:lean-repo config)
+                 :agency-endpoint (:agency-endpoint config)
+                 :authorization-revision (:authorization-revision config)
+                 :authorization-output (:authorization-output config)
+                 :conductor (:conductor config)
+                 :author (get-in config [:conductor :agent])}
+        started (runner/start peripheral context)
+        handle {:ok true :peripheral peripheral :state (:state started)
+                :log [] :deposits [] :config config}]
+    (if (:ok started)
+      handle
+      (failure handle (or (:error/code started) :start-refused)
+               (or (:error/message started) "problem peripheral refused start")))))
+
 (defn open-frame!
   "Open and register a frame, returning a handle at :guided-solve.
 
@@ -91,10 +117,7 @@
    problem/make-problem and the configured Futon1b backend."
   [config]
   (try
-    (let [evidence-store (or (:evidence-store config)
-                             (f1b/make-futon1b-backend
-                              (:evidence-store-url config)))
-          peripheral (or (:peripheral config) (problem/make-problem))
+    (let [
           ;; First-production findings (frame-3 mis-open, 2026-08-16): a nil
           ;; mode opened a malformed cycle; :deposit-state and :conductor were
           ;; never threaded, silently disabling deposit-state validity and
@@ -104,24 +127,9 @@
               (throw (ex-info (str "open-frame! requires :mode :store-mode or "
                                    ":harness-mode; got " (pr-str mode))
                               {:error/code :invalid-frame-mode})))
-          context {:session-id (:session-id config)
-                   :problem-id (:problem-id config)
-                   :cycle/mode mode
-                   :cycle/deposit-state (or (:deposit-state config) :n/a)
-                   :evidence-store evidence-store
-                   :harness-repo (:harness-repo config)
-                   :lean-repo (:lean-repo config)
-                   :agency-endpoint (:agency-endpoint config)
-                   :authorization-revision (:authorization-revision config)
-                   :authorization-output (:authorization-output config)
-                   :conductor (:conductor config)
-                   :author (get-in config [:conductor :agent])}
-          started (runner/start peripheral context)
-          initial {:ok true :peripheral peripheral :state (:state started)
-                   :log [] :deposits [] :config config}]
-      (if-not (:ok started)
-        (failure initial (or (:error/code started) :start-refused)
-                 (or (:error/message started) "problem peripheral refused start"))
+          initial (initial-handle config)]
+      (if (false? (:ok initial))
+        initial
         (let [{h1 :handle begin :result}
               (saved-step initial :begin-problem-cycle
                           [(:conductor config) (:problem-id config)])
@@ -171,7 +179,11 @@
 (defn- dispatch! [handle tool opts packet]
   (if-let [refusal (require-mission handle opts)]
     refusal
-    (:handle (saved-step handle tool [opts packet]))))
+    (let [parked-version (inc (binding/handle-version handle))
+          opts (assoc (or opts {})
+                      :conductor/cycle-id (:cycle-id handle)
+                      :conductor/version parked-version)]
+      (:handle (saved-step handle tool [opts packet])))))
 
 (defn dispatch-solver! [handle opts packet]
   (dispatch! handle :dispatch-solver opts packet))
@@ -287,3 +299,14 @@
           (:handle (checkpoint (assoc loaded :state restored)))))
       (catch Throwable t
         (failure handle :resume-threw (.getMessage t))))))
+
+(defn resume-fresh
+  "Rebuild the normal peripheral runtime, then load a named saved cycle."
+  ([source-handle cycle-id version]
+   (resume-fresh source-handle cycle-id version nil))
+  ([source-handle cycle-id version conductor-identity]
+   (let [config (cond-> (:config source-handle)
+                  conductor-identity
+                  (update :conductor merge conductor-identity))
+         fresh (initial-handle config)]
+     (if (false? (:ok fresh)) fresh (resume fresh cycle-id version)))))

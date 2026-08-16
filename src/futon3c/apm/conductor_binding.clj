@@ -8,7 +8,11 @@
   (and (string? x) (not (str/blank? x))))
 
 (defn handle-version [handle]
-  (count (filter #(= :problem-save (:tool %)) (:log handle))))
+  (or (some (fn [entry]
+              (when (= :problem-save (:tool entry))
+                (get-in entry [:result :version])))
+            (reverse (:log handle)))
+      (count (filter #(= :problem-save (:tool %)) (:log handle)))))
 
 (defn binding-key [agent-id session-id]
   [agent-id session-id])
@@ -60,6 +64,82 @@
      :cycle-id (:cycle-id binding) :version (:version binding)
      :phase (get-in @(:handle binding) [:state :current-phase])}
     {:ok true :bound? false :agent-id agent-id :session-id session-id}))
+
+(defn check-continuation
+  "Validate a parked continuation without changing or dispatching its handle."
+  [agent-id session-id cycle-id version]
+  (if-let [binding (lookup agent-id session-id)]
+    #_{:clj-kondo/ignore [:locking-suspicious-lock]}
+    (locking (:lock binding)
+      (cond
+        (not (identical? binding (lookup agent-id session-id)))
+        {:ok false :error/code :conductor-session-unbound}
+
+        (not= cycle-id (:cycle-id binding))
+        {:ok false :error/code :conductor-cycle-stale
+         :expected (:cycle-id binding) :received cycle-id}
+
+        (not= version (:version binding))
+        {:ok false :error/code :conductor-version-stale
+         :expected (:version binding) :received version}
+
+        :else
+        {:ok true :cycle-id cycle-id :version version
+         :phase (get-in @(:handle binding) [:state :current-phase])}))
+    {:ok false :error/code :conductor-session-unbound}))
+
+(defn- binding-for-cycle [cycle-id]
+  (some (fn [[key binding]]
+          (when (= cycle-id (:cycle-id binding)) [key binding]))
+        @!bindings))
+
+(defn- transfer-source!
+  [source-key source target-key agent-id session-id cycle-id version loader]
+  (cond
+    (not= version (:version source))
+    {:ok false :error/code :conductor-version-stale
+     :expected (:version source) :received version}
+
+    :else
+    (let [resumed (loader @(:handle source) cycle-id version)]
+      (if (false? (:ok resumed))
+        {:ok false :error/code :conductor-takeover-load-refused
+         :error (:error resumed)}
+        (let [next-version (handle-version resumed)
+              transferred (assoc source
+                                 :agent-id agent-id
+                                 :session-id session-id
+                                 :version next-version)]
+          (reset! (:handle source) resumed)
+          (swap! !bindings #(-> %
+                                (dissoc source-key)
+                                (assoc target-key transferred)))
+          {:ok true :cycle-id cycle-id :version next-version
+           :phase (get-in resumed [:state :current-phase])})))))
+
+(defn takeover!
+  "Transfer a named, saved cycle to a new Agency session.
+
+   LOADER rebuilds the runtime from the old authoritative handle and must load
+   exactly CYCLE-ID/VERSION. The registry lock makes the compare, load, and key
+   transfer one install-once operation."
+  [agent-id session-id cycle-id version loader]
+  (let [target-key (binding-key agent-id session-id)]
+    (locking !bindings
+      (cond
+        (get @!bindings target-key)
+        {:ok false :error/code :conductor-binding-exists}
+
+        :else
+        (if-let [[source-key source] (binding-for-cycle cycle-id)]
+          #_{:clj-kondo/ignore [:locking-suspicious-lock]}
+          (locking (:lock source)
+            (if (identical? source (get @!bindings source-key))
+              (transfer-source! source-key source target-key agent-id session-id
+                                cycle-id version loader)
+              {:ok false :error/code :conductor-session-unbound}))
+          {:ok false :error/code :conductor-cycle-unbound
+           :cycle-id cycle-id})))))
 
 (defn execute!
   "Atomically execute one typed action against the authoritative live handle.

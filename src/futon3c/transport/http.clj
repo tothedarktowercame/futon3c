@@ -6844,6 +6844,32 @@
                        (conductor-surface/status (get params "agent-id")
                                                  (get params "session-id"))))
 
+      (and (= :post method) (= "/api/alpha/conductor/takeover" uri))
+      (let [payload (parse-json-map (read-body request))
+            result (when payload
+                     (conductor-surface/takeover!
+                      (or (:agent-id payload) (get payload "agent-id"))
+                      (or (:session-id payload) (get payload "session-id"))
+                      (or (:cycle-id payload) (get payload "cycle-id"))
+                      (or (:version payload) (get payload "version"))))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
+      (and (= :post method) (= "/api/alpha/conductor/resume" uri))
+      (let [payload (parse-json-map (read-body request))
+            result (when payload
+                     (conductor-surface/resume-parked!
+                      (or (:agent-id payload) (get payload "agent-id"))
+                      (or (:session-id payload) (get payload "session-id"))
+                      (or (:cycle-id payload) (get payload "cycle-id"))
+                      (or (:version payload) (get payload "version"))))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
       ;; Operator queue control (2026-08-11): see what is queued behind an
       ;; agent, hold that queue, release it. Mounted here rather than in
       ;; make-handler's cond so a Drawbridge reload activates it without
