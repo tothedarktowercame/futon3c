@@ -10671,3 +10671,31 @@ opener. Ignition bell sent; the cycle is the guide's. The lab manager
 holds no seat and takes no cycle action. Queued findings from the launch:
 frames.bb stderr threading through assign-checkouts; open-route rollback
 of partial provisioning (rolled-back 0 on a half-provisioned frame).
+
+## W.40 The fresh guide's opening move — and two findings from inside the walls (2026-08-16)
+
+f7-guide's first cycle turn, unassisted: verified its contract against
+live status; verified the solver checkout AND the single-sorry hole state
+against the branch BEFORE dispatching (the round-1 discipline, self-
+applied); submitted the opening siege dispatch through the action route
+(version 36→37, action-id `f7-guide-act-1-…`); read its receipts from the
+SAVED state (v37.edn) rather than trusting its own memory — solver-config
+witness `{gpt-5.6-sol, max}` present (P8c holds live), engine park
+`park-bea250fc…` recorded, solver job `invoke-…35789b63` running.
+
+**Guide finding 1 (flagged, not tidied):** `GET /api/alpha/parked` lists
+`[]` despite the accepted park receipt in the saved state. Matches the lab
+manager's all-day observation — the LISTING endpoint under-reports;
+receipts in state are authoritative. Queued as a packet.
+
+**Guide finding 2 (bears on a registered prediction):** push recall
+surfaced ZERO memories on the opening dispatch (`available-ids []`).
+Root cause understood at the bench: `:recall-delivers` presupposed
+promoted round-1 memories exist — but promotion machinery (P3-impl)
+landed AFTER round 1 closed, and no retroactive promotion pass has ever
+run; every round-1 memory is still statusless, so recall correctly
+delivers zero. OPERATOR CHOICE: (a) let the prediction fail honestly and
+record it; (b) sanction a retroactive promotion pass over the round-1
+rider ledger (through promote-memory-attachment!, adjudicator-chosen
+pattern-ids, reviewer≠depositor) as a reviewed packet, giving f7's later
+dispatches something to find. The guide will record, not route around.
