@@ -6,22 +6,26 @@
  :receipt/date "2026-08-16"
  :receipt/pattern-commit "fc65959b333255e8bd7290b511cf5daaf82fa41b"
  :receipt/counts {:manifest 32 :approved 8 :reassigned 0 :rejected 24
-                  :promotion-written 7 :promotion-refused 1}
+                  :promotion-written 8 :promotion-refused 0}
  :receipt/execution-finding
  {:request-shape [:memory-id :pattern-id :reviewer]
   :ctx-domain :mathematics
-  :result :seven-written-one-refused
-  :finding {:failure :promotion-attachment-not-statusless
-            :memory-id "e-19ae2af6-d067-4ab2-b401-d8c52cf10018"
-            :attachment-status :proposed}
-  :interpretation "The corrected context promoted seven approvals. The watcher had already changed one new-pattern memory to :proposed, so the lifecycle statusless-only gate correctly refused it; no workaround was attempted."}
+  :result :eight-written
+  :direct-review-finding
+  {:memory-id "e-19ae2af6-d067-4ab2-b401-d8c52cf10018"
+   :existing-patterns ["math-formalization/stamp-siblings-from-one-compiled-branch"]
+   :approved-patterns ["math-formalization/stamp-siblings-from-one-compiled-branch"]
+   :pattern-match true
+   :first-projection :http-503-memory-projection-source-moved-after-quiescence
+   :retry {:ok true :idempotent-replay? true :cache-postcondition :fresh-endpoint-read}}
+  :interpretation "Seven statusless approvals used promote-memory-attachment!. The already-proposed branch-stamping attachment exactly matched the approved pattern and was completed through review-attachment! with independently authored codex-5 evidence."}
  :receipt/post-check
  {:queries [{:endpoint "t00A05" :component-count 24}
             {:endpoint "a01A06" :component-count 4}
             {:endpoint "t94J02" :component-count 4}]
   :approved-visible 8
-  :approved-reviewed 7
-  :finding "Seven approved ids are :reviewed. The branch-stamping id is visible but remains :proposed after a statusless-only refusal."
+  :approved-reviewed 8
+  :finding "All eight approved ids are :reviewed. The direct-review retry confirmed the branch-stamping review by a fresh endpoint read; the bulk subject projection was temporarily returning source-moved-after-quiescence during the final recheck."
   :projection-gaps
   [{:memory-id "e-5ba1c44d-8151-4975-aaad-d73cdd8279b8"
     :visible false :attachment-status nil
@@ -37,7 +41,7 @@
   {:memory-id "e-19ae2af6-d067-4ab2-b401-d8c52cf10018" :verdict :approved
    :pattern-id "math-formalization/stamp-siblings-from-one-compiled-branch"
    :why "Finite symmetry plus a fully compiled representative branch is a concrete reusable Lean workflow, not merely case-split advice."
-   :review-evidence-id nil :post-check {:promotion :refused-not-statusless :visible true :attachment-status :proposed}}
+   :review-evidence-id "e-3d2cc685-2878-4f20-b590-003996db77e9" :post-check {:promotion :direct-review-written :visible true :attachment-status :reviewed :cache-postcondition :fresh-endpoint-read}}
   {:memory-id "e-1f2d3d6d-e809-4867-a153-a7c05659fc33" :verdict :rejected
    :why "Confirmed skip: stale optimistic route status, superseded by later orientation and closure." :review-evidence-id nil :post-check :not-promoted}
   {:memory-id "e-209de11b-d283-4a15-a5d4-8763e949d34b" :verdict :rejected
