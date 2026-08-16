@@ -1121,6 +1121,8 @@
             payload {:agent (:agent conductor)
                      :session (:session conductor)
                      :surface (:surface conductor)
+                     :cycle-id (:conductor/cycle-id opts)
+                     :version (:conductor/version opts)
                      :awaiting [job-id]
                      :deadline-ms deadline-ms
                      :payload (or (:park-payload opts)

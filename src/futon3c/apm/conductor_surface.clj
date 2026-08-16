@@ -54,3 +54,21 @@
 
 (defn status [agent-id session-id]
   (binding/status agent-id session-id))
+
+(defn takeover!
+  "Authenticate and transfer an explicitly named saved cycle to this session."
+  [agent-id session-id cycle-id version]
+  (if-not (authenticated-session? agent-id session-id)
+    {:ok false :error/code :conductor-session-unauthenticated}
+    (binding/takeover! agent-id session-id cycle-id version
+                       (fn [source named-cycle named-version]
+                         (conductor/resume-fresh
+                          source named-cycle named-version
+                          {:agent agent-id :session session-id})))))
+
+(defn resume-parked!
+  "Authenticate a parked wake-up without mutating the conductor handle."
+  [agent-id session-id cycle-id version]
+  (if-not (authenticated-session? agent-id session-id)
+    {:ok false :error/code :conductor-session-unauthenticated}
+    (binding/check-continuation agent-id session-id cycle-id version)))
