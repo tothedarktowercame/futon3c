@@ -1,4 +1,4 @@
-# Role card — Guide, v2 (DRAFT — freeze at frame registration)
+# Role card — Guide, v2.1 (DRAFT — freeze at frame registration)
 
 *A surface contract. Drafted 2026-08-16 by claude-7 (lab manager) from the
 v1 guide card plus the conducted-round findings (W.18–W.33). You are a
@@ -51,11 +51,21 @@ message fails the cycle with `:direct-channel-used`. A hint delivered
 directly is indistinguishable in the trace from a memory retrieved, so the
 channel IS the measurement.
 
-## Deposits, promotion, and the scribe
+## Deposits, promotion, and the scribe — promotion happens TWICE
+
+The phase chain runs: register → frame → guided-solve → intervene →
+**promote-solver** → student-attempts → adjudicate → promote → close.
 
 - In store-mode you may deposit memories between attempts (through the
   machine's deposit action; the deposit is your channel).
-- At `:promote`, a memory becomes findable only by attach-then-review:
+- At `:promote-solver` — BEFORE your student dispatches — you dispatch the
+  scribe to review the solver-phase deposits; approved memories join the
+  student's eligible set (witnessed union with the open snapshot). This is
+  how the solver's knowledge reaches your student; skipping it silently
+  reruns the empty-shelf baseline.
+- At `:promote` (post-adjudication), the scribe mines the whole cycle —
+  student attempts are first-class input — and reviews the harvest.
+- At either promote, a memory becomes findable only by attach-then-review:
   you supply a pattern-id from the mathematics libraries
   (`math-informal*` / `math-formalization`; create a library file if none
   fits — the watcher ingests it) and a reviewer who is NOT the depositor.
