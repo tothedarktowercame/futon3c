@@ -9393,3 +9393,29 @@ commits inside the 120-minute window; rider-ledger check of offers against
 the three rehearsal memory ids; refusal codes read against the README list.
 Board: no open jobs, no open parks. **The system is attested. Frame-1 waits
 on one word.**
+
+## W.6-pre PROTOCOL RULING mid-frame-1 (Joe, 2026-08-16, ~09:00 UTC)
+
+**"If the Lean is incorrect but the original problem is correct, the protocol
+is: repair the Lean and redispatch."** Recorded as the statement-repair
+protocol, filling a gap the registration did not cover (its :defective outcome
+now means DEFECTIVE UNIT — informal problem unsound; a Lean-only defect with
+sound mathematics is repairable-in-cycle):
+- Repair is CONDUCTOR-authored on the frame branch under operator
+  authorization (a01A06 `dcf668a` precedent — the solver never repairs its
+  own target); machine-verified before commit; commit cites the ruling.
+- Redispatch continues the SAME cycle within its window; attempt records note
+  the statement revision each attempt targeted (pre-repair attempts stand as
+  defect-detection data).
+- Students provision at the pin, so post-repair student packets must name the
+  repair sha on the frame branch.
+- If the window cannot fit the redispatch, the cycle closes honestly at the
+  teardown deadline with the repair recorded, and the next frame opens on the
+  repaired statement.
+
+Applied immediately: repair `cb8af56` on exp/frame-1-t94J02-solver (both
+conjuncts' order conditions swapped; compiles with exactly the expected sorry
+warning; reviewer-verified counterexample recorded in the file). Solver
+redispatched: job `invoke-1786870913795-4565-0adbf43f`, 09:02 UTC, ~106 min
+of window remaining. Cold student attempt vs the DEFECTIVE statement left
+running — its finding is the replication datum.
