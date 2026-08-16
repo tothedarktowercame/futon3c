@@ -459,11 +459,15 @@
             {:ok true :state state :evidence ev})))))
 
   (step [_ state action]
-    (let [effective-config (or (:cycle-config state) config)
-          result (dispatch-step effective-config spec backend state action)]
-      (when (:ok result)
-        (bb/project! (:domain-id effective-config) (:state result)))
-      result))
+    (if-not (map? state)
+      (runner/runner-error (:domain-id config) :absent-state
+                           "Cycle step requires state from a successful start or load"
+                           :action action)
+      (let [effective-config (or (:cycle-config state) config)
+            result (dispatch-step effective-config spec backend state action)]
+        (when (:ok result)
+          (bb/project! (:domain-id effective-config) (:state result)))
+        result)))
 
   (stop [_ state reason]
     (let [effective-config (or (:cycle-config state) config)

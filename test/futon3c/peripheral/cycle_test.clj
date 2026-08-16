@@ -126,6 +126,18 @@
         start (runner/start p {:session-id "sess-3" :test-field "custom"})]
     (is (= "custom" (get-in start [:state :test-field])))))
 
+(deftest cycle-step-refuses-absent-state-before-tool-execution
+  (let [backend (make-test-mock)
+        p (make-test-peripheral backend)
+        result (runner/step p nil {:tool :cycle-begin :args ["M" "B"]})]
+    (fix/assert-valid! shapes/SocialError result)
+    (is (= :absent-state (:error/code result)))
+    (is (nil? (:state result)) "no context-less cycle state is synthesized")
+    (is (empty? (tools/recorded-calls backend))
+        "the begin tool never reaches its backend")
+    (is (nil? (get-in result [:state :current-cycle-id])))
+    (is (empty? (or (get-in result [:state :steps]) [])))))
+
 ;; =============================================================================
 ;; Phase gating
 ;; =============================================================================
