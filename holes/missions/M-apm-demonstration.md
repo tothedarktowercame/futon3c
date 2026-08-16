@@ -10364,3 +10364,27 @@ none — an unstaffed or silent seat records as missing; the conductor
 cannot paper over it). Implementation queued as five one-behaviour
 packets, none to codex-4 (reserved: solver seat + operator's handoff
 interview).
+
+## W.28 Operator ruling on P6: transport-enforced surface, typed bells, independent seats (Joe, 2026-08-16)
+
+**D1 = transport-enforced (option 3), directly** — operator: the IRC and
+Emacs REPL *surfaces* are the precedent; a conductor surface is another
+instance of the existing surface layer, not new infrastructure. **D2 =
+reuse the existing Agency typed-bells feature** (FUTON3C_TYPED_BELLS,
+query/answer/assert/challenge/agree/define/retract/suggest/request) for
+guidance typing rather than inventing a parallel mechanism. **D3 = seats
+independent, agreed** — with the addition that the `*problem*` pane should
+show "who is active doing what."
+
+Implementation (no codex-4; it is reserved for the operator's handoff-
+effectiveness interview):
+- **P6a-discovery** (read-only): map how existing surfaces route turns
+  through peripherals (irc-invoke-prompt, codex-repl surface contract,
+  warm-pouch routing, agent-chat) and propose the smallest conductor-
+  surface wiring. Discovery split from implementation per W.19.
+- **P6b**: guide-solver! emits TYPED bells; optional `:reg/guidance-regime`
+  pin = permitted types for in-cycle guidance to the solver seat;
+  off-regime types refused at ground-control; guidance count gains the
+  type column. Legacy registrations without the pin unaffected.
+- **P6c**: `:problem` blackboard pane renders per-seat activity (last
+  step per seat author, in-flight dispatch job + recipient + age).
