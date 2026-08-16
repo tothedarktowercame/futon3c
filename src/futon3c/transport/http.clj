@@ -60,6 +60,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.frame-seats :as frame-seats]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.mesh-qa :as mesh-qa]
             [futon3c.agency.invariants :as agency-invariants]
@@ -2526,6 +2527,47 @@
           nil))
 
       nil)))
+
+(defn- prepare-frame-seat
+  [config {:keys [agent-id agent-type]}]
+  (let [session-file (default-session-file-for-agent agent-type agent-id)
+        stale-file (some-> session-file java.io.File.)]
+    ;; A newly minted identity must not inherit an orphaned session left by an
+    ;; earlier process incarnation with the same deterministic frame seat id.
+    (if (and stale-file
+             (.exists ^java.io.File stale-file)
+             (not (.delete ^java.io.File stale-file)))
+      {:invoke-fn nil
+       :reason :stale-session-file-not-cleared
+       :session-file session-file}
+      (let [session-id-atom (make-session-id-atom nil session-file)]
+        {:invoke-fn (make-local-agent-invoke-fn
+                     agent-type
+                     {:agent-id agent-id
+                      :session-file session-file
+                      :session-id-atom session-id-atom
+                      :evidence-store (evidence-store-for-config config)
+                      :irc-send-fn (:irc-send-fn config)})
+         :session-reset-fn (make-session-reset-fn session-file session-id-atom)
+         :metadata {:session-file session-file}}))))
+
+(defn mint-frame-seats!
+  "Mint the five fresh, invoke-ready Agency seats for FRAME-ID."
+  [config frame-id]
+  (frame-seats/mint-seats!
+   {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
+                         (partial prepare-frame-seat config))}
+   frame-id))
+
+(defn- handle-frame-seat-mint
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not payload
+      (json-response 400 {:ok false :error "invalid-json"})
+      (let [result (mint-frame-seats!
+                    config
+                    (or (:frame-id payload) (get payload "frame-id")))]
+        (json-response (if (:ok result) 200 409) result)))))
 
 (defn- remote-home-refusal-response
   [agent-id]
@@ -7180,6 +7222,9 @@
 
           (and (= :post method) (= "/api/alpha/agents" uri))
           (handle-agents-register request config)
+
+          (and (= :post method) (= "/api/alpha/frames/mint-seats" uri))
+          (handle-frame-seat-mint request config)
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")
