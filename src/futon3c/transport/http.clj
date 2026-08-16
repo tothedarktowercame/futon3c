@@ -55,6 +55,7 @@
      to protocol/extract-params for consistency across HTTP and WS."
   (:require [futon3c.transport.protocol :as proto]
             [futon3c.apm.conductor-binding :as conductor-binding]
+            [futon3c.apm.conductor-open :as conductor-open]
             [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
@@ -6889,6 +6890,16 @@
                        :version (or (:version payload) (get payload "version"))
                        :operation (or (:operation payload) (get payload "operation"))
                        :args (or (:args payload) (get payload "args") [])}))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
+      (and (= :post method) (= "/api/alpha/conductor/open" uri))
+      (let [payload (parse-json-map (read-body request))
+            result (when payload
+                     (conductor-open/open!
+                      payload (:conductor-open-options config)))]
         (cond
           (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
           (:ok result) (json-response 200 result)
