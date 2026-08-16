@@ -10994,3 +10994,40 @@ terminal at :student-attempts v43 with the defect named. What the frame
 BOUGHT beyond the theorem: eleven machinery defects found and fixed or
 queued by actually living in the walls (the operator's build-only-if-
 needed ruling on impl-4 vindicated — the frame WAS the audit).
+
+## W.55 f7-guide's final report: THE TRANSFER HAPPENED — through the pull channel, unreceipted (2026-08-16)
+
+Abandonment verified: `{:ok true :abandoned? true}`, binding `bound? false`,
+no advance after the ruling; terminal state :student-attempts v43 with the
+refusal as envelope. Guide conduct: card-perfect through standdown.
+
+**The headline, from the guide's session-transcript salvage:** the
+memory-transfer thesis got its FIRST live demonstration this frame — and
+the cycle record cannot see it. Student attempt 2 ran memory_search +
+memory_read, FOUND AND ADOPTED the guide's route deposit (e-c0a2d2fe).
+Attempt 3 went retrieval-first and converted it into FIVE COMMITS closing
+part 1 of 3 (HEAD 2003a4f9, verified additive-only, exit 0, three clean
+part-1 theorems) before the runner's max-tool-rounds killed it
+mid-report. **Deposit → pull → committed use, end-to-end.** Unreceipted
+because pull-only dispatches generate no offer entities for write-use to
+reference. The operator's (b) ruling stands for the CYCLE record — but
+the "no memories were being used" premise holds only for the PUSH
+channel; the pull channel delivered, and the supplementary material now
+has real experimental value (preserved: student branch
+exp/f7-a98A01-student-afa29ce6… in apm-lean; session transcripts; the
+attempt-3 packet text flagged by the guide as a candidate rewrite rule —
+mechanical process constraints converted zai capability into artifacts).
+
+**New defects from the report, queued:** (1) pull-side receipt half for
+the offer/use schema — pull-based use is currently unmeasurable; (2)
+recall-delivers failed at ELIGIBILITY not ranking: rprobe available-ids
+was [] even for promoted memories — the eligible set draws from the
+OPEN-TIME store snapshot, so mid-frame promotions are invisible (same
+family as W.44; frame-8's snapshot will postdate the retro-pass, but the
+structural gap stands); (3) vocabulary seam: memory_record rejects
+:apm-problem where dispatch evidence writes it — two write paths, two
+vocabularies; (4) abandon! has no HTTP route (guide used Drawbridge —
+honest, noted); (5) parked listing [] throughout (guide-confirmed,
+already queued). Zai runner turn budget (~20-22k chars, max-tool-rounds
+~42min) identified as the binding constraint on student attempts — a
+registration-pin candidate for frame-8 (:reg/student-runner-budget).
