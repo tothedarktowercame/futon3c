@@ -9419,3 +9419,63 @@ warning; reviewer-verified counterexample recorded in the file). Solver
 redispatched: job `invoke-1786870913795-4565-0adbf43f`, 09:02 UTC, ~106 min
 of window remaining. Cold student attempt vs the DEFECTIVE statement left
 running — its finding is the replication datum.
+
+## W.6 FRAME-1 COMPLETE — the first measured tick (2026-08-16)
+
+**Cycle `t94J02-ad8b70a8…`: opened 08:48:34, sentinel ~09:14 UTC — 94 minutes
+inside the teardown deadline. Register→sentinel, zero engine stops, evidence
+trail live throughout.**
+
+**Timeline.** Register clean (harness = pin `7f37893b`; 382-id snapshot;
+worktree at `a92ffb6c`). Frame emitted+witnessed. Solver (codex-4) attempt 1:
+**honest defect refusal** — both conjuncts inverted (Mathlib `⊥`=discrete);
+reviewer-verified by compile + `Topology/Order.lean:30`. Operator protocol
+ruling (W.6-pre) applied: conductor repair `cb8af56`. Redispatch → **proof
+`c994347`**, reviewer-verified: zero sorry warnings, axioms exactly
+`[propext, Classical.choice, Quot.sound]`. In parallel, student (zai-1) cold
+attempt vs the DEFECTIVE statement: **independently found the same defect**
+(sharper: cited `isOpen_implies_isOpen_iff`, gave the T2-conjunct
+counterexample), self-repaired (ratified: mathematically identical to
+`cb8af56`), and **proved it independently** — `7a1e268` directly on the pin,
+reviewer-verified compile + axioms. Adjudication `:closed`, residual 0,
+axiom-clean true, through the fixed disposition tool.
+
+**THE TRANSFER DATUM.** The intervention deposit `e-5b5d46fe`
+(lattice-direction trap, written after solver attempt 1) was **read by the
+student via `memory_read` at task start, adversarially checked ("I nearly
+discarded this correct memory on a misread of the pretty-printed le_def"),
+confirmed against Mathlib source, and USED — "directly shaped the repair."**
+Write→pull→read→verify→use, closed in one measured frame, one day after the
+read leg existed. The student also deposited two new memories
+(`e-91fe51ff…` instance-synthesis trap; `e-084a8d0f…` order-verification
+lemmas) — the demand-side loop running unprompted, again.
+
+**Measurement.** 5 of 17 fields measured (rehearsal: 3): terminal disposition
+:closed, residual 0, axiom cleanliness true, locked-lemma exposure [],
+attempts-or-closer-hops (first measurement). L(1) baseline: 0 memory offers
+(empty-honest, verified), 0 guidance events. Refusal codes:
+`:guidance-measurement-mismatch`, `:f9-capability-probe-missing` (both
+README-benign), and `:direct-channel-used` — **model finding 13**: the
+conductor's own dispatches carry `:from claude-7` for bellback routing, and
+the predicate cannot distinguish conductor-routed dispatch from covert
+guidance; refine for round 2 (roster-registered conductor caller identity, or
+ground-control caller with preserved reply routing). **`missing producer:
+retrieval-probe` is GONE** — packet F's producer had live recall receipts to
+consume. Authorization: refused and recorded (accepted round-1 normal).
+**Model finding 12**: the student's memory USE was a PULL-use — no offer id
+exists, so `:write-use`/F3 cannot represent it; pull-use receipts need
+first-class schema in round 2.
+
+**Proctor witnesses.** Open: 0 jobs to measured seats since 06:00. Close:
+exactly 3 in-window jobs to the seats — the cycle's own three dispatches,
+nothing foreign. Seat exclusivity held, witnessed not enforced.
+
+**Rider ledger (final, 6):** `e-33cf23e7…`, `e-907281cd…`, `e-2d8f82c7…`
+(rehearsal); `e-5b5d46fe…` (frame-1 deposit, USED by the student);
+`e-91fe51ff…`, `e-084a8d0f…` (frame-1 student deposits).
+
+**For the operator:** two independent verified proofs exist on two frame
+branches (`c994347` solver, `7a1e268` student, same repaired statement) —
+upstream merge and the canonical-proof choice are yours; the statement repair
+is ratified in-cycle per your protocol ruling. P1's first point: guidance
+count 0 at frame-1. P2's horizon opens.
