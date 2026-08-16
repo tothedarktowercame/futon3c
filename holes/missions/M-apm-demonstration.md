@@ -10132,3 +10132,54 @@ hand-assoc'd phases), envelope validates, student attempts recorded,
 adjudication + promotion through the tools, scribe lanes run AND reported,
 proctor report filed through the operator lane. A frame missing any of these
 is not a frame; it is a solver run and gets recorded as such.
+
+## W.20 First conducted packet round under W.19: three merges, one honest refusal at a design fork (2026-08-16)
+
+**P0 (retro-proctor, ams-codex-2):** `proctor-report-round1.md` committed
+(`26cbf83d`, 174 lines; windows, seat exclusivity, sender-blind
+classification, per-frame uptake). Per the card's channel rule the guide has
+NOT read the counts; the operator reads them from git.
+
+**P1 (offer-shape, codex-3):** reviewed and merged (`e0ae4d77`). Checked:
+diff read; entity shape verified against `memory-offer?` and
+`surfaced-memory-ids`; clj-kondo 0/0; check-parens OK; conductor tests
+3/19/0 re-run by the reviewer; full-suite failures triaged as PRE-EXISTING
+on master (federation_sync, codex_cli ProcessBuilder, mfuton_override —
+environment-coupled; identical set reproduced on master). Note: F3
+offer-disposition coupling becomes live once offers are non-empty —
+adjudication must disposition each offer id; queued to frame-7 checks.
+
+**P2 (recall-miss discovery, ams-codex-1):** ACCEPTED. Root cause: round
+deposits carry no `:attachment-status`; recall admits only `:reviewed`;
+absent → `:unreviewed` → excluded. Reviewer reproduced the projection
+evidence independently (24 t00A05 edges, zero with attachment status).
+Secondary: problem-id leaked into the lexical anchor. The specification's
+own `:promote` phase is the missing step — had promotion run as designed,
+the memories were recallable.
+
+**P3b (lexical anchor, codex-3):** reviewed and merged (`f6dddfe3`).
+Checked: diff read (subjects filtered case-insensitively from lexical terms
+only; endpoints untouched); kondo 0/0; check-parens OK; recall tests
+35/152/0 re-run by reviewer.
+
+**P3 (promotion review, ams-codex-1): HONEST REFUSAL — design fork.** No
+source changed. `review-attachment!` requires a nonempty pattern attachment
+in exact agreement with the edge's `:roles :patterns`; a statusless problem
+deposit has none, so it cannot pass review as-is. Three options, operator
+decision required:
+1. **Promotion = attach-then-review**: a new explicit transition creates a
+   pattern attachment at promote, then `review-attachment!` approves it.
+2. **Loosen `review-attachment!`** to review pattern-less problem
+   attachments (contract change the diagnosis itself warned against).
+3. **Redefine acceptance** to only promote already-`:proposed` pattern
+   attachments (leaves ordinary problem deposits permanently unrecallable —
+   round 1 recurs).
+Conductor recommendation: option 1 — it matches the design's own semantics
+(scribe lanes produce pattern-scoped memories; promotion is where a memory
+is judged and attached) and the registration capabilities
+`:promotion-importable`/`:promotion-need-taggable`. AWAITING OPERATOR.
+
+**Protocol note:** two reviewer suite runs were lost to pouch teardown
+(`Bash` background is not durable for warm-pouch agents); triage was
+completed with targeted namespace runs instead. Durable runs go through
+`scripts/bg.py` per futon3c/CLAUDE.md.
