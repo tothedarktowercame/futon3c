@@ -48,6 +48,13 @@
    :required-capabilities :required-measurement-fields :reg/role-cards
    :reg/solver-seat])
 
+(def role-seat-keys
+  {:solver :reg/solver-seat
+   :guide :reg/guide-seat
+   :proctor :reg/proctor-seat
+   :scribe :reg/scribe-seat
+   :student :reg/student-seat})
+
 (def required-trace-keys
   [:problem :frame :cycle-closed?
    :disposition-ids :memory-offers :memory-disposition-offer-ids
@@ -108,39 +115,59 @@
 (defn registration-shape-failures [registration]
   (if-not (map? registration)
     [:registration-not-map]
-    (cond-> []
-      (some #(not (contains? registration %)) required-registration-keys)
-      (conj :registration-missing-required-key)
-      (not (problem? (:problem registration)))
-      (conj :malformed-problem)
-      (not (and (map? (:variation registration))
-                (#{:controlled :measured} (get-in registration [:variation :kind]))
-                (nonblank-string? (get-in registration [:variation :endpoint]))))
-      (conj :malformed-variation)
-      (not (number? (:estimated-cost registration)))
-      (conj :malformed-estimated-cost)
-      (not (number? (:budget-cap registration)))
-      (conj :malformed-budget-cap)
-      (not (or (nil? (:teardown-deadline registration))
-               (number? (:teardown-deadline registration))))
-      (conj :malformed-teardown-deadline)
-      (not (and (vector? (:stop-rules registration))
-                (seq (:stop-rules registration))
-                (every? keyword? (:stop-rules registration))))
-      (conj :malformed-stop-rules)
-      (not (and (map? (:decision-rule registration))
-                (keyword? (get-in registration [:decision-rule :id]))
-                (vector? (get-in registration [:decision-rule :outcomes]))
-                (seq (get-in registration [:decision-rule :outcomes]))
-                (every? keyword? (get-in registration
-                                         [:decision-rule :outcomes]))))
-      (conj :malformed-decision-rule)
-      (not (and (map? (:reg/role-cards registration))
-                (seq (:reg/role-cards registration))
-                (every? (fn [[role hash]]
-                          (and (keyword? role) (sha40? hash)))
-                        (:reg/role-cards registration))))
-      (conj :malformed-role-cards))))
+    (let [role-cards (:reg/role-cards registration)
+          carded-seat-failures
+          (if (map? role-cards)
+            (keep (fn [[role seat-key]]
+                    (when (and (contains? role-cards role)
+                               (not (nonblank-string? (get registration seat-key))))
+                      {:finding :unstaffed-carded-seat
+                       :role role
+                       :seat-key seat-key}))
+                  role-seat-keys)
+            [])]
+      (into
+       (cond-> []
+         (some #(not (contains? registration %)) required-registration-keys)
+         (conj :registration-missing-required-key)
+         (not (problem? (:problem registration)))
+         (conj :malformed-problem)
+         (not (and (map? (:variation registration))
+                   (#{:controlled :measured} (get-in registration [:variation :kind]))
+                   (nonblank-string? (get-in registration [:variation :endpoint]))))
+         (conj :malformed-variation)
+         (not (number? (:estimated-cost registration)))
+         (conj :malformed-estimated-cost)
+         (not (number? (:budget-cap registration)))
+         (conj :malformed-budget-cap)
+         (not (or (nil? (:teardown-deadline registration))
+                  (number? (:teardown-deadline registration))))
+         (conj :malformed-teardown-deadline)
+         (not (and (vector? (:stop-rules registration))
+                   (seq (:stop-rules registration))
+                   (every? keyword? (:stop-rules registration))))
+         (conj :malformed-stop-rules)
+         (not (and (map? (:decision-rule registration))
+                   (keyword? (get-in registration [:decision-rule :id]))
+                   (vector? (get-in registration [:decision-rule :outcomes]))
+                   (seq (get-in registration [:decision-rule :outcomes]))
+                   (every? keyword? (get-in registration
+                                            [:decision-rule :outcomes]))))
+         (conj :malformed-decision-rule)
+         (not (and (map? role-cards)
+                   (seq role-cards)
+                   (every? (fn [[role hash]]
+                             (and (keyword? role) (sha40? hash)))
+                           role-cards)))
+         (conj :malformed-role-cards)
+         (and (map? role-cards)
+              (contains? role-cards :guide)
+              (contains? role-cards :proctor)
+              (nonblank-string? (:reg/guide-seat registration))
+              (= (:reg/guide-seat registration)
+                 (:reg/proctor-seat registration)))
+         (conj :guide-proctor-not-separated))
+       carded-seat-failures))))
 
 (defn trace-shape-failures [trace]
   (if-not (map? trace)

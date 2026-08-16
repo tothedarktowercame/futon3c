@@ -350,6 +350,19 @@
   (when (:harness-tree-dirty? outputs)
     {:failure :harness-tree-dirty}))
 
+(defn- seat-registration-valid [outputs]
+  ;; Full shape validation remains observable through :validate-registration.
+  ;; This invariant makes the card/seat findings introduced here hard gates
+  ;; without retroactively turning every legacy partial registration used by
+  ;; the peripheral into a new refusal surface.
+  (let [failures (filter #(or (= :guide-proctor-not-separated %)
+                              (= :unstaffed-carded-seat (:finding %)))
+                         (prereg/registration-shape-failures
+                          (:registration outputs)))]
+    (when (seq failures)
+      {:failure :registration-shape-invalid
+       :findings (vec failures)})))
+
 (defn- thread-current-phase [state tool args]
   (case tool
     :advance-problem-phase
@@ -704,7 +717,10 @@
                    :validate-trace validate-trace-from-state
                    :write-authorization write-authorization-from-state}
    :output-invariants
-   [{:id :harness-tree-clean
+   [{:id :seat-registration-valid
+     :requires #{:registration}
+     :check seat-registration-valid}
+    {:id :harness-tree-clean
      :requires #{:harness-tree-dirty?}
      :check harness-tree-clean}
     {:id :environment-arms-match

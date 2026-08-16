@@ -252,6 +252,32 @@
     (is (some #{:environment-checkouts}
               (get-in result [:error/context :missing])))))
 
+(deftest register-refuses-an-unstaffed-carded-seat
+  (let [[p state] (started :store-mode)
+        state (assoc state :current-phase :register :cycle/outputs {})
+        result (runner/step
+                p state
+                {:tool :advance-problem-phase
+                 :args ["M" "C"
+                        {:registration
+                         {:reg/role-cards
+                          {:solver prereg/required-lean-revision
+                           :proctor prereg/required-lean-revision}
+                          :reg/solver-seat "codex-4"}
+                         :store-snapshot :s
+                         :stratum-frozen-at 1
+                         :environment-revision "env"
+                         :harness-revision "harness"
+                         :environment-checkouts {}}]})]
+    (is (= :registration-shape-invalid (:error/code result)))
+    (is (= :seat-registration-valid
+           (get-in result [:error/context :invariant])))
+    (is (some #(= {:finding :unstaffed-carded-seat
+                   :role :proctor
+                   :seat-key :reg/proctor-seat}
+                  %)
+              (get-in result [:error/context :details :findings])))))
+
 (def checkout-options
   {:batch "round-1"
    :problem "t94J02"

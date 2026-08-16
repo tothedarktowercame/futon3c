@@ -119,6 +119,40 @@
     (is (some #{:registration-missing-required-key} failures))
     (is (some #{:malformed-problem} failures))))
 
+(deftest carded-roles-require-staffed-and-separated-seats
+  (let [role-cards (zipmap [:solver :guide :proctor :scribe :student]
+                           (repeat prereg/required-lean-revision))
+        staffed (assoc registration
+                       :reg/role-cards role-cards
+                       :reg/guide-seat "claude-7"
+                       :reg/proctor-seat "ams-codex-2"
+                       :reg/scribe-seat "claude-8"
+                       :reg/student-seat "zai-1")]
+    (testing "one role-bearing finding identifies a missing proctor seat"
+      (is (some #(= {:finding :unstaffed-carded-seat
+                     :role :proctor
+                     :seat-key :reg/proctor-seat}
+                    %)
+                (prereg/registration-shape-failures
+                 (dissoc staffed :reg/proctor-seat)))))
+    (testing "guide and proctor seats must be distinct"
+      (is (some #{:guide-proctor-not-separated}
+                (prereg/registration-shape-failures
+                 (assoc staffed :reg/proctor-seat "claude-7")))))
+    (testing "fully staffed distinct carded roles add no failures"
+      (is (empty? (prereg/registration-shape-failures staffed))))
+    (testing "a non-map role-card value degrades to findings, never throws"
+      (is (some #{:malformed-role-cards}
+                (prereg/registration-shape-failures
+                 (assoc staffed :reg/role-cards "garbage")))))
+    (testing "absence of a role-card map adds no seat findings"
+      (let [failures (prereg/registration-shape-failures
+                      (dissoc staffed :reg/role-cards))]
+        (is (not-any? #(and (map? %)
+                            (= :unstaffed-carded-seat (:finding %)))
+                      failures))
+        (is (not (some #{:guide-proctor-not-separated} failures)))))))
+
 (deftest every-runtime-invariant-has-a-named-failure
   (doseq [[expected bad-trace]
           [[:f2-non-unique-disposition (assoc trace :disposition-ids [])]
