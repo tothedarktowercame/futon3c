@@ -9510,3 +9510,47 @@ Recorded for post-frame execution; none apply mid-cycle:
 4. **Typed guidance.** Split P1's count: process-nudge vs
    mathematical-content guidance — different treatment doses that the
    current single counter conflates.
+
+## W.7 FRAME-2 COMPLETE — the P1 specimen (2026-08-16)
+
+**Cycle `t00A05-45fb917f…`: opened 09:20:12, sentinel ~09:59 UTC — 81 minutes
+inside the deadline. `:tier-a`, residual 1, axiom-clean false — adjudicated
+FIRM at attempt 9 of 10, one stated lemma from closure, because the cap
+serves the round and the conductor's rules bind the conductor.**
+
+**The P1 specimen (the frame's purpose).** Solver: codex-4, 8 dispatches.
+Trajectory: honest obstruction (no winding/Jordan API — verified absent) →
+guidance x8, TYPED: 6 content + 2 process, raw rows 9 (one documented
+conductor-duplication, asterisk stands). **The content dose declined
+monotonically within the frame**: full route → gauge trick → one-sentence
+argument → route choice → zero-content sieges — and under the two
+process-only sieges codex closed the frontier identification, the
+ray-preserving gauge model, the sphere-loop package, and the perimeter
+decoder UNAIDED. **Boundary artifact: 15 verified commits** (every one
+compile-gated by the conductor), ending one stated continuity lemma from
+closure (rot-beta seam cancellation — formula recorded in the deposit).
+Construct-validity note (Joe, W.7-pre) empirically supported AND bounded:
+early attempts measured conductor trick-finding; late attempts measured
+sustained solver capability under process direction.
+
+**Students: deferred to frame-3** by window arithmetic — recorded as the
+design lesson: a solver-resistant unit consumes the window; student-loop
+frames need either easier units or the solver leg pre-closed.
+
+**Deposits (rider ledger grows to 8):** `e-1f2d3d6d…` (route map: one lemma
+from closure, everything keyed to commits), `e-84690e27…` (reusable
+technique: sup-norm sphere is a square; perimeter-walk chart;
+miss-a-point without Jordan).
+
+**Envelope:** measured 5/17; failures exactly
+[:guidance-measurement-mismatch :f9-capability-probe-missing] — both
+README-benign; NO :direct-channel-used (no student dispatch); authorization
+refused and recorded. Proctor: all in-window seat traffic = the cycle's own
+dispatches. Teardown: 81 minutes early.
+
+**Post-frame queue (from W.7-pre, now unblocked):** atomic dispatch+park in
+the tools; conductor namespace; required-route clauses; sustained-attempt
+role card (regime boundary at frame-3); typed-guidance schema. Plus: frame-3
+opens with t00A05's route map IN STORE — the next solver attempt starts one
+lemma from a closed theorem, which is itself the store-mode thesis at the
+solver tier.
