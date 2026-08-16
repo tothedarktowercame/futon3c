@@ -9892,3 +9892,29 @@ live per-frame — a seat with the frozen scribe card, a scribe-lane event in
 the envelope, and "scribe lane coverage" finally measurable. Queued with the
 conductor offer-shape fix, solver-config pinning, attempt-unit semantics,
 Sol-Max threading, and snapshot-scoped recall.
+
+## W.15-correction (Joe, 2026-08-16): the scribe pass was OFF-MACHINERY
+
+"Hold on — you just said 'scribe pass done' — it seems like we're going way
+off road from what we actually built." Correct, and the record is amended:
+**the scribe lane is NOT done.** W.15's five memories were written by raw
+`record-memory!` calls from a conductor scratch file — no cycle, no
+conductor fn, no tool-step record, no scribe-lane event. The content is
+banked (good content, honest provenance, P0 evidence entries exist — the
+writes are not evidence-less), but the ACTIVITY is machine-invisible:
+"scribe lane coverage" remains unmeasurable precisely because the pass
+produced no lane event. Status: content captured OUT-OF-BAND; scribe lane
+UNRUN. The memories stand (deleting good content would compound the error)
+but are marked for re-attribution when the live lane exists.
+
+**The pattern being named:** conductor-side operations have been drifting
+back to hand-rolled evals (maze seeding, between-trial deposits, gate
+verifications, this pass) even while frame-driving went through the
+conductor. The durability requirement — any agent runs this — applies to
+ALL of it. Round-2 machinery queue, promoted to the top:
+1. **The scribe lane, wired**: a scribe activity that runs through the
+   machine (seat with the frozen scribe card, lane event in the envelope,
+   the measurement field fillable) — its shakedown run re-covers round 1
+   and supersedes/re-attributes W.15's out-of-band batch.
+2. **Conductor-side operations into the conductor namespace**: seeding,
+   verification, deposit paths — functions, not folklore.
