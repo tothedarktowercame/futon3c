@@ -1,0 +1,116 @@
+;; Retroactive promotion pass, stage 2 of 2 — independent review and execution.
+;; Reviewer codex-5; session retro-promotion-2026-08-16; cycle retro-promotion-pass-1.
+;; The prescribed three-field promotion request was used without augmentation.
+{:receipt/mission "M-apm-demonstration"
+ :receipt/reviewer "codex-5"
+ :receipt/date "2026-08-16"
+ :receipt/pattern-commit "fc65959b333255e8bd7290b511cf5daaf82fa41b"
+ :receipt/counts {:manifest 32 :approved 8 :reassigned 0 :rejected 24
+                  :promotion-written 0 :promotion-refused 8}
+ :receipt/execution-finding
+ {:request-shape [:memory-id :pattern-id :reviewer]
+  :result :all-refused
+  :exception "memory lifecycle domain mismatch"
+  :data {:requested-domain nil :edge-domain :mathematics}
+  :review-evidence-id nil
+  :interpretation "Lifecycle shape/domain defect: the operator-prescribed request omits a domain, while the function requires it to match the memory edge. Refusals were recorded; no workaround was attempted."}
+ :receipt/post-check
+ {:queries [{:endpoint "t00A05" :component-count 24}
+            {:endpoint "a01A06" :component-count 4}
+            {:endpoint "t94J02" :component-count 4}]
+  :approved-visible 8
+  :approved-reviewed 0
+  :finding "All visible approved ids remain statusless because every promotion was refused."
+  :projection-gaps
+  [{:memory-id "e-5ba1c44d-8151-4975-aaad-d73cdd8279b8"
+    :visible false :attachment-status nil
+    :finding "Still absent from t00A05 projection; recall-infrastructure defect is distinct from attachment status."}
+   {:memory-id "e-8af4838f-a9eb-4012-a737-e4f9f2155106"
+    :visible false :attachment-status nil
+    :finding "Still absent from t00A05 projection; recall-infrastructure defect is distinct from attachment status."}]}
+ :receipt/entries
+ [{:memory-id "e-02552934-b755-4e40-9cbd-ba81b29a6ffe" :verdict :approved
+   :pattern-id "math-strategy/plan-first-attempt"
+   :why "The hook states an explicit, revisable lemma plan and isolates process guidance; sufficiently reusable proof-process practice."
+   :review-evidence-id nil :post-check {:promotion :refused-domain-mismatch :visible true :attachment-status nil}}
+  {:memory-id "e-19ae2af6-d067-4ab2-b401-d8c52cf10018" :verdict :approved
+   :pattern-id "math-formalization/stamp-siblings-from-one-compiled-branch"
+   :why "Finite symmetry plus a fully compiled representative branch is a concrete reusable Lean workflow, not merely case-split advice."
+   :review-evidence-id nil :post-check {:promotion :refused-domain-mismatch :visible true :attachment-status nil}}
+  {:memory-id "e-1f2d3d6d-e809-4867-a153-a7c05659fc33" :verdict :rejected
+   :why "Confirmed skip: stale optimistic route status, superseded by later orientation and closure." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-209de11b-d283-4a15-a5d4-8763e949d34b" :verdict :rejected
+   :why "Confirmed skip: problem-specific assembly plan; its transferable seam move is represented separately." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-3b12d47b-7872-4724-9814-1f57224dc96a" :verdict :rejected
+   :why "Confirmed skip: t00A05-specific toolkit declaration without an independent method grain." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-44de0908-82a0-4463-9be4-97f2e1213faa" :verdict :rejected
+   :why "Confirmed skip: discharged problem route map, duplicative of later closure history." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-4a42d7e9-68bb-48ef-9276-24da8c6ab5e4" :verdict :rejected
+   :why "Confirmed skip: two scoped antiderivative facts do not constitute a reusable pattern." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-54ea43ad-bdcf-4c0f-8bf6-2654e14a6ba3" :verdict :approved
+   :pattern-id "math-formalization/weld-range-lemmas-at-representation-seams"
+   :why "The hook supplies the seam failure shape, strict-range/direct-endpoint repair, and three variants; strong transferable formalization grain."
+   :review-evidence-id nil :post-check {:promotion :refused-domain-mismatch :visible true :attachment-status nil}}
+  {:memory-id "e-61355c4f-4e26-4d5e-839c-59c358e8c464" :verdict :rejected
+   :why "Confirmed skip: residual-state receipt fully discharged by closure." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-84690e27-6853-402d-bdbb-aa48c5f56825" :verdict :approved
+   :pattern-id "math-formalization/chart-a-polytope-sphere-by-perimeter-walk"
+   :why "It diagnoses an unavailable InnerProductSpace API and gives the correct explicit affine replacement for polyhedral spheres."
+   :review-evidence-id nil :post-check {:promotion :refused-domain-mismatch :visible true :attachment-status nil}}
+  {:memory-id "e-8cb27cef-bce9-477b-8bdf-7d57027c5627" :verdict :rejected
+   :why "The proposed structural-obstruction pattern requires a failed proof method characterized structurally; this hook is instead a standalone impossibility lemma, so the fit is false."
+   :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-9400816b-9988-4e0b-99fa-55053f7c01fb" :verdict :rejected
+   :why "Confirmed skip: volatile trial handoff superseded by later orientation." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-a2ea9f78-794a-4cb5-b797-7d6b8cd5c042" :verdict :approved
+   :pattern-id "math-informal/show-both-inequalities"
+   :why "The hook explicitly proves a set equality by both inclusions and supplies the engine used in both directions."
+   :review-evidence-id nil :post-check {:promotion :refused-domain-mismatch :visible true :attachment-status nil}}
+  {:memory-id "e-a36bde67-a104-4d04-9044-4c1d4965123a" :verdict :rejected
+   :why "Confirmed skip: end-of-trials state is two supersessions behind closure." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-aa0f8c68-d249-4d86-a542-d63815302709" :verdict :approved
+   :pattern-id "math-formalization/radialize-via-gauge-rescale"
+   :why "Names the exact Mathlib API, its frontier-to-sphere action, and ray preservation; reusable API-cluster knowledge."
+   :review-evidence-id nil :post-check {:promotion :refused-domain-mismatch :visible true :attachment-status nil}}
+  {:memory-id "e-af9c0faf-5b49-412f-a798-49d37cc3ed81" :verdict :rejected
+   :why "Confirmed skip: volatile compile-fix receipt consumed by subsequent trial orientation." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-b31f22f9-a01e-45a3-957a-dd29eb186235" :verdict :rejected
+   :why "Confirmed skip: superseded and discharged gap statement; seam content is retained at pattern grain elsewhere." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-b93c22fd-789a-4476-8327-c0c5d840e8eb" :verdict :rejected
+   :why "The proposed pattern requires engineered disjoint or independent components; this hook eliminates one exact differential by FTC and does not meet that precondition."
+   :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-cb262e0f-eb2b-4d39-8685-d718c9e97fbc" :verdict :rejected
+   :why "Spot-check confirmed valuable campaign calibration, but the available math shelves are the wrong retrieval domain; retain in the mission ledger." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-d26b2e5b-b6b6-4d20-b797-13e3d17e925b" :verdict :approved
+   :pattern-id "math-formalization/transfer-derivatives-via-eventuallyeq"
+   :why "Directly states the neighborhood-to-EventuallyEq-to-deriv_eq bridge and its general piecewise-function use."
+   :review-evidence-id nil :post-check {:promotion :refused-domain-mismatch :visible true :attachment-status nil}}
+  {:memory-id "e-e96764f7-f537-433f-b69a-26ba2564e2e6" :verdict :rejected
+   :why "Confirmed skip: intra-round dispatch pointer with no meaning outside its trial sequence." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-f5e2a58d-8828-4c98-b663-d77c4cce0370" :verdict :rejected
+   :why "Confirmed skip: region-specific declaration checklist, not a portable technique." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-fbcc7732-b918-4c33-a24a-e29955f26ea5" :verdict :rejected
+   :why "Spot-check confirmed it duplicates the earlier perimeter-walk memory selected for promotion." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-fde47b5b-7e8a-408b-b8ec-62866fdc2ea4" :verdict :rejected
+   :why "Confirmed skip: final-trial dispatch priorities, now discharged." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-5ba1c44d-8151-4975-aaad-d73cdd8279b8" :verdict :rejected
+   :why "The hook is a closure summary but does not establish that its listed pieces were independent or that final composition added nothing; insufficient evidence for the proposed pattern."
+   :review-evidence-id nil :post-check {:promotion :not-attempted :visible false :attachment-status nil :projection-gap true}}
+  {:memory-id "e-8af4838f-a9eb-4012-a737-e4f9f2155106" :verdict :rejected
+   :why "Spot-check confirmed experiment-configuration metadata, not mathematical shelf material."
+   :review-evidence-id nil :post-check {:promotion :not-attempted :visible false :attachment-status nil :projection-gap true}}
+  {:memory-id "e-2d8f82c7-e617-4fef-8230-b7193fec28e8" :verdict :rejected
+   :why "Spot-check found genuine build-verification value, but it is repo-local tooling knowledge and volatile, not a math pattern." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-33cf23e7-a574-487f-ac5f-ad98302b8047" :verdict :rejected
+   :why "Confirmed skip: bare problem-status fact; its reusable counterexample technique is already reviewed elsewhere." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-907281cd-b003-418b-8311-73b8eab3d0ba" :verdict :rejected
+   :why "Confirmed skip: APM wiring lesson belongs in the wiring queue, not the mathematics libraries." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-084a8d0f-9fc7-4d4b-bc9c-bf6e53ea8f54" :verdict :rejected
+   :why "Spot-check confirmed a terse volatile duplicate of the durable topology-order memory." :review-evidence-id nil :post-check :not-promoted}
+  {:memory-id "e-5b5d46fe-7c58-4d2a-b031-a16d0267c9ef" :verdict :approved
+   :pattern-id "math-strategy/convention-bridge"
+   :why "The hook explicitly bridges Mathlib's reversed lattice order to classical finer/coarser language and records the consequence; the existing convention pattern is adequate."
+   :review-evidence-id nil :post-check {:promotion :refused-domain-mismatch :visible true :attachment-status nil}}
+  {:memory-id "e-91fe51ff-ebdb-436a-be66-339af4b790e9" :verdict :rejected
+   :why "The hook says synthesis chose a wrong topology, not that two instances are propositionally equal; the proposed diamond pattern explicitly warns against transporting genuine differences. It is also volatile and too terse to justify a new fit."
+   :review-evidence-id nil :post-check :not-promoted}]}
