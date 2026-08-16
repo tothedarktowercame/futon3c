@@ -10651,3 +10651,23 @@ production assembly from the record, calls the existing open-frame!, and
 installs the binding FOR THE REGISTRATION'S GUIDE SEAT (f7-guide), not the
 caller. On merge: author the f7 frame files, open, bell the fresh guide
 its card and assignment — and the lab manager steps back to the pane.
+
+## W.39 IGNITION — frame-7 is running (2026-08-16, ~19:4xZ)
+
+Launch sequence, as executed: f7-guide orientation bell → the fresh guide's
+confirmation was CARD-PERFECT from zero history (channels, regime,
+substrate-only student rule, promotion mechanics, first move — the
+card+contract design IS a complete orientation); session established
+(`17dcbaaf…`). Open route armed post-restart (verified by its own refusal
+on an empty POST). Three gate refusals during the open, each correct and
+each named itself: (1) `emit-frame` refused same-mtime scaffold/closing
+snapshots (F1 discipline); (2-3) `assign-checkouts` refused over debris
+from the first partial attempt — root cause the `exp/`-prefixed branch
+left by attempt 1's successful provisioning (its error was swallowed two
+layers up: a known stderr-threading defect, queued). Full slate clean →
+**OPEN: cycle `a98A01-93f5be72…`, phase :guided-solve, version 36, all
+five fresh seats.** Binding verified bound to f7-guide's session, NOT the
+opener. Ignition bell sent; the cycle is the guide's. The lab manager
+holds no seat and takes no cycle action. Queued findings from the launch:
+frames.bb stderr threading through assign-checkouts; open-route rollback
+of partial provisioning (rolled-back 0 on a half-provisioned frame).
