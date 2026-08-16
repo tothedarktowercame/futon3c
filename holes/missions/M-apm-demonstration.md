@@ -11064,3 +11064,27 @@ flow), scribe-v2 freeze, and registration additions for frame-8:
 :reg/student-runner-budget candidate (zai's turn budget was the binding
 constraint, not ability). Restart activates: P13 chain, P14 reviewer
 auth, P15 truthful panes, P16-P18 on merge.
+
+## W.57 Spec blockers CLOSED: P16 + P17 + P18 merged — frame-8's specification is ready (2026-08-16)
+
+**P16 merged** (`c2b675e0` via merge): store-mode student eligibility =
+witnessed union (open snapshot ∪ machine-recorded promotion ids), caller
+cannot override, provenance persisted — the two-promote chain now
+actually DELIVERS solver memories to the student's eligible set.
+**P17 merged** (`eb7a3e03`): pull-use receipts at the tool layer (zai
+in-process; codex via MCP arg threading), keyed by job id, joined via
+recorded dispatch steps into :pull-uses — the channel that worked in f7
+is measurable in f8. **P18 merged** (`d6d88937`): stale pins refuse at
+the door; abandon has a route.
+
+**The frame-8 measurement story, now specified end to end:** solver
+solves → guide deposits → promote-solver (scribe reviews as itself, P12+
+P14) → student dispatch sees promoted ids (P16) with provenance → student
+pull-use recorded (P17) → adjudicate → promote (student mining, scribe
+lanes) → close, with the envelope able to SEE every link. Everything
+activates at the frame-8 restart.
+
+**Remaining for launch, all operator words:** (1) restart; (2) problem
+pick; (3) card freezes — scribe-v2 (review protocol), solver-v3 (already
+filed), guide-v2.1 (lab manager touch-up adding the two-promote flow —
+next act); (4) registration pins (student-runner-budget candidate noted).
