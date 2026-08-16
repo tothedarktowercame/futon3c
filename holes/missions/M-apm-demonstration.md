@@ -10601,3 +10601,34 @@ probe on the minted solver seat during preflight, failing loudly before
 the frame opens if the term is wrong. Next: mint f7 seats → verify a98A01
 statement at the pin → registration EDN with pins + BOTH card hashes
 (solver v3, guide v2) for operator freeze.
+
+## W.37 Frame-7 preflight complete — registration PROPOSED, awaiting the operator's freeze (2026-08-16)
+
+Preflight executed on the operator's "OK to the next steps":
+1. **Second restart verified** (18:58Z receipt, RESULT=ok) — mint route live.
+2. **Five fresh seats minted in one call**: `POST /frames/mint-seats "f7"` →
+   f7-solver (codex), f7-student (zai), f7-guide (claude), f7-proctor
+   (codex), f7-scribe (codex); all roster-visible, invoke-ready,
+   fresh-session — the reproducible-per-problem mechanism the operator
+   asked for, exercised live on its first frame.
+3. **Effort probe**: f7-solver invoked with the exact pin
+   {model gpt-5.6-sol, reasoning-effort max} → returned READY. The pin is
+   live-verified, not assumed.
+4. **a98A01 verified at the pin**: one executable sorry; the three
+   equivalences checked by hand by the lab manager (sup scale-invariance ⟺
+   α<0; t⁻⁴ tail ⟺ α<4; polar L¹ = C·k^(α−n), finite iff n≤3 ⟺ n≤3 ∧ α<n);
+   encoding notes honest; NO statement defects (the frame-1 class absent).
+5. **Cards frozen as files**: codex-solver-v3.md (`bd809108…`),
+   claude-guide-v2.md (`bbd14a90…`); student/proctor/scribe unchanged.
+6. **`frame-7-registration-PROPOSED.edn`** written with all pins, five
+   fresh seats, guidance regime #{:answer :suggest}, solver config, W.13
+   attempt semantics, seat-exclusivity :enforced-at-register, and two
+   pre-registered predictions (typed-guidance decline measured by the
+   proctor; first push-recall delivery of a promoted memory). Ran through
+   `registration-shape-failures` → ZERO findings: the P5 seat gate, the
+   guidance-regime shape check, and the solver-config shape check all pass.
+
+**Awaiting the operator's word to freeze.** On the word: the file drops
+its -PROPOSED suffix, and the f7-guide receives its opening bell (card +
+frame assignment); the machine runs; the lab manager watches the pane and
+reviews the close.

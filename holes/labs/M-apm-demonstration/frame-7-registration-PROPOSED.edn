@@ -1,0 +1,116 @@
+;; FRAME-7 registration — PROPOSED 2026-08-16 by claude-7 (lab manager).
+;; Becomes the frozen registration on the operator's word; until then it has
+;; no force. First fully-staffed, fully-walled frame: five FRESH minted seats
+;; (P9, frame-id "f7"), conductor surface transport-enforced (W.31), typed
+;; guidance under a regime pin (P6b), solver config pinned and witnessed
+;; (P8c), seat gates at :register (P5).
+;;
+;; Preflight evidence (W.36/W.37): restart receipts 18:40Z + 18:58Z; typed
+;; bells active (invalid type rejected at POST); f7-* seats minted invoke-ready
+;; with fresh sessions; effort probe on f7-solver with the exact pin returned
+;; READY; a98A01 verified at the environment pin — one executable sorry,
+;; statement's three equivalences checked by hand (sup scale-invariance;
+;; t^-4 tail; polar L1 = C·k^(α−n), finite iff n≤3), no defects found.
+{:kind   :apm-demonstration-round1-registration
+ :schema 1
+
+ :lean-registration "DarkTower.APMDemonstration.round1Registration"
+ :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
+ :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
+
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
+ :reg/harness-revision     "f2665c4ad9e5fdd80cb65211b3fcaa2e9da1edfb"
+
+ ;; Five FRESH seats, minted by POST /api/alpha/frames/mint-seats "f7".
+ :reg/solver-seat  "f7-solver"
+ :reg/student-seat "f7-student"
+ :reg/guide-seat   "f7-guide"
+ :reg/proctor-seat "f7-proctor"
+ :reg/scribe-seat  "f7-scribe"
+
+ ;; Typed guidance: plan-first structural. :answer responds to the solver's
+ ;; reported obstruction; :suggest is a process nudge. Content performatives
+ ;; are refused at the dispatch gate.
+ :reg/guidance-regime #{:answer :suggest}
+
+ ;; Solver config pinned and witnessed in receipts + trace (P8c). Verified
+ ;; live by the READY probe on f7-solver.
+ :reg/solver-config {:model "gpt-5.6-sol" :reasoning-effort "max"}
+
+ :modules                [:R :F :S :A :M :P :X]
+ :structural-invariants  [:F1]
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
+
+ :problem {:problem-id            "a98A01"
+           :difficulty-stratum    "family=a;round1-reserved-confirmation-unit"
+           :regime                "c1efdbda17ea42c23943c06a66fa4d23ced283db"
+           :locked-lemma-exposure []}
+
+ :variation {:kind     :measured
+             :endpoint "frame-7: first fully-staffed fresh-seat frame through the conductor surface; store-mode; full-cycle definition of done per W.19"}
+
+ :claim :descriptive
+ :arms  [{:name "fresh seats, conducted surface, one problem"
+          :neutral? false
+          :axes []
+          :role :treatment}]
+
+ :replication-stage  :pilot
+ :pilot-units        [{:problem-id            "a98A01"
+                       :difficulty-stratum    "family=a;round1-reserved-confirmation-unit"
+                       :regime                "c1efdbda17ea42c23943c06a66fa4d23ced283db"
+                       :locked-lemma-exposure []}]
+ :confirmation-units []
+
+ :estimated-cost    1.0
+ :budget-cap        5.0
+ :teardown-deadline 240
+
+ :stop-rules [:budget-exceeded
+              :attempt-cap-reached
+              :axiom-unclean-close
+              :no-progress
+              :teardown-deadline-passed
+              :no-improvement-escalate]
+
+ ;; W.13 semantics: an attempt is a DISPATCH, not a proof step.
+ :reg/attempt-caps {:s-frontier 10
+                    :s-student  3}
+
+ :decision-rule {:id       :apm-round1-outcome
+                 :outcomes [:closed :tier-a :tier-b :defective]}
+
+ :required-capabilities
+ [:frame-containment-witnessed :created-frame-worked
+  :unique-disposition :offer-use-disposition
+  :need-retrieval :promotion-importable :promotion-need-taggable
+  :measurement-populated]
+
+ :required-measurement-fields
+ ["statement defects at review" "terminal disposition"
+  "residual executable sorries" "attempts or closer hops"
+  "axiom cleanliness" "memories promoted" "review escape rate"
+  "promoted then surfaced then used" "contract leaks"
+  "duplicate declarations" "locked-lemma exposure" "promotion coverage"
+  "unconsumed promotions" "import-only edges" "scribe lane coverage"
+  "arc-lane yield" "rewrite rule offered and used"]
+
+ ;; git hash-object blob ids. Solver v3 and guide v2 freeze WITH this
+ ;; registration; student/proctor/scribe cards unchanged from round 1.
+ :reg/role-cards
+ {:codex-solver "bd8091080cd40a0bbf35f559a93976f454113b2b"
+  :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
+  :claude-guide "bbd14a90c7f79ecab3876e22d755a6a39fb4c118"
+  :scribe       "d4a8863d3828244756483be5295c8926bdcff301"
+  :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+
+ ;; Round 1 was :witnessed-not-enforced. Frame-7 seats are enforced at
+ ;; :register (P5) and the conductor is transport-bound (W.31).
+ :reg/seat-exclusivity :enforced-at-register
+
+ :reg/predictions
+ [{:id :p1-guidance-declines
+   :text "Typed guidance count for f7 is below the frame-6 count for a comparable close, measured from the Agency log by the proctor seat, not the guide."}
+  {:id :recall-delivers
+   :text "At least one promoted round-1 memory is surfaced to the solver by push recall during f7 (the first frame where promotion-reviewed memories exist)."}]
+ :reg/frame-1-disclaimer false}
