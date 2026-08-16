@@ -11031,3 +11031,36 @@ honest, noted); (5) parked listing [] throughout (guide-confirmed,
 already queued). Zai runner turn budget (~20-22k chars, max-tool-rounds
 ~42min) identified as the binding constraint on student attempts — a
 registration-pin candidate for frame-8 (:reg/student-runner-budget).
+
+## W.56 Spec audit for frame-8 (operator: "double check the specification is actually correct") (2026-08-16)
+
+Operator framing accepted: f7's student material = supplementary BASELINE
+(pull transfer demonstrated, unmeasured); the cycle machine runs "as
+specified" end to end; the question is whether the SPECIFICATION is
+correct for frame-8. **Audit verdict: NOT yet — two blockers, one lesson,
+two touch-ups.**
+
+**Blocker 1 (would repeat f7's miss):** the two-promote chain reviews
+solver memories at :promote-solver, but ELIGIBILITY draws from the
+open-time snapshot — promoted-mid-cycle stays invisible to the student.
+**P16** dispatched (ams-codex-1): store-mode eligible set = open snapshot
+∪ this cycle's recorded promotion receipts (witnessed union, not live
+queries); harness-mode untouched; provenance in the receipt.
+
+**Blocker 2 (the working channel is unmeasurable):** pull-based use
+generates no receipts, so frame-8's hoped-for "useful demonstration"
+would again be envelope-invisible. **P17** dispatched (codex-3): pull
+receipts recorded at the tool layer for seat agents in cycle-dispatched
+jobs, joined into the trace as :pull-uses. Records, never gates.
+
+**Lesson made unrepeatable:** **P18** dispatched (ams-codex-2): the open
+route validates harness/environment pins against LIVE measurement BEFORE
+any side effect (f7's five-phases-late refusal becomes an at-the-door
+refusal), plus the missing abandon HTTP route (f7-guide had to Drawbridge
+its standdown).
+
+**Touch-ups before freeze:** guide card v2.1 (mention the two-promote
+flow), scribe-v2 freeze, and registration additions for frame-8:
+:reg/student-runner-budget candidate (zai's turn budget was the binding
+constraint, not ability). Restart activates: P13 chain, P14 reviewer
+auth, P15 truthful panes, P16-P18 on merge.
