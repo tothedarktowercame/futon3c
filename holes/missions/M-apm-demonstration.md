@@ -10286,3 +10286,39 @@ ingests → P3-impl attaches the memory and reviews the attachment →
 recallable. P4's scribe lane design accordingly includes authoring new
 pattern FILES as lane output where a cycle warrants one; the split
 manifest stays editorial and non-blocking.
+
+## W.25 P3-impl merged; the master red decomposed into two real defects (2026-08-16)
+
+**P3-impl (attach-then-review, ams-codex-1): reviewed and merged
+(`6bb1ff91`).** Attachment follows memory_write's pattern-subject
+conventions and lands `:proposed`; `review-attachment!` runs unweakened on
+separately authored evidence; reviewer==depositor, statusless, and
+already-patterned guards all refuse with findings; `:promote-artifact`
+takes the path only when `:memory-id` is present. **Review finding fixed
+by reviewer:** the implementation hardcoded the four existing library
+directories as a prefix whitelist — it would refuse `math-informal-AT/…`
+the day the operator creates it, against the W.24 ruling. Replaced with a
+shape-only `<library>/<pattern>` check (`c9b12ec2`); taxonomy membership
+stays with the adjudicator. 88/326/0 re-run by reviewer.
+
+**The "baseline" red P3-impl reported was TWO defects, not one
+(`9f0f1073`):**
+1. **Seat-gate fixtures** — P5's gate legitimately refuses the frozen
+   round-1 registration; conductor/traverse fixtures now stage staffed
+   copies (frozen EDN untouched). *Reviewer's process finding against
+   himself: the P5 review ran the packet's namespaces but not the
+   consumers of the changed validator — consumer suites are now part of
+   the gate.*
+2. **Silent start-refusal (since `58b2e1cb`, Sat 21:15)** — the peripheral
+   requires `:evidence-store` at start; the smoke context predated that;
+   start REFUSED; and `runner/step` on the refusal's nil `:state` silently
+   began a CONTEXT-LESS cycle that died only at `:close` when
+   `:validate-trace` hit nil `:lean-repo` (a `shell/sh` odd-args throw
+   two frames from the cause). The smoke test had been red since Saturday
+   night with nobody noticing. Test now supplies the store and asserts
+   start `:ok`; the traverse stop map carries `:message`/`:context`.
+
+**Queued packet (new):** `cycle/step` accepting nil state — beginning a
+cycle from a start refusal — is another member of the
+silently-degrade-instead-of-refuse class (W.16's boundary-outside-guard,
+W.25's context-less cycle). The step path should refuse absent state.
