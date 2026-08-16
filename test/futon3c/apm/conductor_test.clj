@@ -14,6 +14,16 @@
 (def ^:private environment-revision (:reg/environment-revision registration))
 (def ^:private harness-revision (:reg/harness-revision registration))
 
+;; The frozen round-1 EDN predates the seat-key gate (:unstaffed-carded-seat,
+;; merged with feat/registration-seat-keys) and must not be edited, so the
+;; fixture stages a staffed copy under a temp path for the machine to read.
+(def ^:private staffed-registration
+  (assoc registration
+         :reg/guide-seat "conductor-test"
+         :reg/proctor-seat "proctor-test"
+         :reg/scribe-seat "scribe-test"
+         :reg/student-seat "zai-1"))
+
 (defn- fixture []
   (let [state-root (.toFile
                     (Files/createTempDirectory
@@ -26,6 +36,8 @@
                                       (make-array FileAttribute 0))
         authorization (Files/createTempFile "conductor-authorization-" ".edn"
                                             (make-array FileAttribute 0))
+        staffed-reg (Files/createTempFile "conductor-registration-" ".edn"
+                                          (make-array FileAttribute 0))
         deposit-seq (atom 0)
         dispatch-fn
         (fn [_ _]
@@ -51,11 +63,12 @@
     (spit (.toFile scaffold) "scaffold\n")
     (spit (.toFile closing) "closing\n")
     (spit (.toFile witness) "{:contained? true}\n")
+    (spit (.toFile staffed-reg) (pr-str staffed-registration))
     (Files/setLastModifiedTime scaffold (FileTime/fromMillis 1000))
     (Files/setLastModifiedTime closing (FileTime/fromMillis 2000))
     {:config
      {:session-id "conductor-test" :problem-id "t94J02" :mode :store-mode
-      :registration-path registration-path
+      :registration-path (str staffed-reg)
       :frame {:scaffold-path scaffold :closing-path closing
               :witness-path witness}
       :checkout {:batch "conductor-test" :base-rev environment-revision
@@ -67,7 +80,7 @@
       :authorization-revision (apply str (repeat 40 "a"))
       :authorization-output (str authorization)
       :conductor "conductor-test" :peripheral peripheral}
-     :paths [scaffold closing witness authorization]}))
+     :paths [scaffold closing witness authorization staffed-reg]}))
 
 (defn- solver-attempt []
   {:attempt/id "attempt/solver" :attempt/seq 0

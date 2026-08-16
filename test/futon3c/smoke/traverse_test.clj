@@ -9,8 +9,15 @@
            [java.nio.file.attribute FileAttribute FileTime]))
 
 (def ^:private registration
-  (edn/read-string
-   (slurp "holes/labs/M-apm-demonstration/round1-registration.edn")))
+  ;; The frozen round-1 EDN predates the seat-key gate (:unstaffed-carded-seat)
+  ;; and must not be edited; the traverse staffs the seats in-memory since the
+  ;; payload carries the registration map directly.
+  (assoc (edn/read-string
+          (slurp "holes/labs/M-apm-demonstration/round1-registration.edn"))
+         :reg/guide-seat "traverse-guide"
+         :reg/proctor-seat "traverse-proctor"
+         :reg/scribe-seat "traverse-scribe"
+         :reg/student-seat "zai-1"))
 
 ;; READ FROM THE REGISTRATION, not hard-coded. Both pins are compared against the
 ;; frozen registration by environment-arms-match, so a literal here means every
@@ -129,7 +136,11 @@
            (if (:ok result)
              {:state (:state result)}
              {:state state
-              :stop {:phase phase :tool tool :code (:error/code result)}}))))
+              :stop {:phase phase :tool tool :code (:error/code result)
+                     ;; carry the reason: a bare :tool-execution-failed cost a
+                     ;; debugging round-trip when :close reddened (W.25)
+                     :message (:error/message result)
+                     :context (:error/context result)}}))))
      {:state state}
      (get phase-tools phase))))
 
@@ -137,12 +148,18 @@
   (let [p (smoke-problem)
         context {:session-id "smoke" :problem-id "t94J02"
                  :cycle/mode :store-mode
+                 ;; required since 58b2e1cb (EvidenceRequiredProblemPeripheral);
+                 ;; without it start REFUSES, and stepping on the refusal's nil
+                 ;; :state silently begins a context-less cycle that only dies
+                 ;; at :close when :validate-trace needs :lean-repo (W.25)
+                 :evidence-store (atom {:entries {} :order []})
                  :harness-repo "/home/joe/code/futon3c"
                  :lean-repo "/home/joe/code/mathlib4"
                  :agency-endpoint "http://localhost:7070/api/alpha/invoke/jobs?limit=200"
                  :authorization-revision (apply str (repeat 40 "a"))
                  :authorization-output "/tmp/smoke-auth.edn"}
-        begun (runner/step p (:state (runner/start p context))
+        started (runner/start p context)
+        begun (runner/step p (:state started)
                            {:tool :begin-problem-cycle :args ["M" "C"]})
         register-facts (atom nil)
         close-envelope (atom nil)
@@ -177,6 +194,8 @@
                       {:stop {:phase phase :tool problem/advance
                               :code (:error/code advanced)}})))))
             {:completed? true :advances advances}))]
+    (is (:ok started)
+        "start must succeed; stepping past a start refusal runs context-less")
     (is (= :register (get-in begun [:state :current-phase])))
     (println "SMOKE register facts" (pr-str @register-facts))
     (println "SMOKE close envelope" (pr-str @close-envelope))
