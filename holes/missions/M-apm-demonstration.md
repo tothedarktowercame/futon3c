@@ -10476,3 +10476,20 @@ route. What remains before frame-7: the nil-state step refusal packet,
 the park single-delivery packet, the v3 solver card draft (from codex-4's
 testimony), a service restart to activate FUTON3C_TYPED_BELLS — and the
 operator's word.
+
+## W.32 Operator ruling: impl-4 deferred — try a problem first (Joe, 2026-08-16)
+
+"Let's leave impl-4 and see if we need it after we try another problem with
+the refreshed machine." The per-cycle proctor audit is NOT built now; the
+transport walls (W.31) get tested by inhabitation, and impl-4 is built only
+if frame-7 shows leakage the walls did not stop. Pre-frame-7 packets
+dispatched: **P8a** step-refuses-absent-state (codex-3,
+`invoke-…ffe1dc4f`), **P8b** park single-delivery (ams-codex-2,
+`invoke-…11bbc6e7`), **P8c** `:reg/solver-config` pin threading
+model/effort to the codex dispatch with receipt witness (ams-codex-1,
+`invoke-…b5460c2a` — pulled forward from the round-2 queue; frame-7 should
+not run with the solver's effort tier unpinned). Park `park-…` single,
+all three ids. Also pending before frame-7: v3 solver card draft (freeze
+at registration), service restart to activate FUTON3C_TYPED_BELLS
+(operator timing — it tears down warm pouches), frame-7 problem selection
+and regime/config pin values (operator).
