@@ -141,6 +141,10 @@
                  (assoc staffed :reg/proctor-seat "claude-7")))))
     (testing "fully staffed distinct carded roles add no failures"
       (is (empty? (prereg/registration-shape-failures staffed))))
+    (testing "a non-map role-card value degrades to findings, never throws"
+      (is (some #{:malformed-role-cards}
+                (prereg/registration-shape-failures
+                 (assoc staffed :reg/role-cards "garbage")))))
     (testing "absence of a role-card map adds no seat findings"
       (let [failures (prereg/registration-shape-failures
                       (dissoc staffed :reg/role-cards))]
