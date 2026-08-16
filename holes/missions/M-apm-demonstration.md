@@ -10083,3 +10083,52 @@ card's logic requires separation (guide ≠ proctor at minimum), and a
 `:register`-phase gate that refuses a registration whose carded seats are
 unassigned. This composes with W.18: the conductor peripheral is the
 room; the seat keys are who is allowed to stand where in it.
+
+## W.19 Operator ruling: no more artisanal dispatch — the machine as specified, fully staffed (Joe, 2026-08-16)
+
+**Operator:** "Until we have the actual system fully staffed and running my
+agents in each role which are not deviating from that role and 'offroading',
+we have no guarantee that relevant data will be captured or even that the
+orchestrated phases we have designed will run at all… I don't want an
+'artisanal' freeform approach to dispatch anymore… If the specification was
+being followed, memories would have been recorded, and Zai would be making
+attempts, and the memory system and harness would be improving."
+
+**Frame accounting, stated honestly:** frames 2–6 were five dispatch windows
+of ONE problem (t00A05). The numbering inflated because the conductor counted
+re-opens (including one premature close, W.12-post) as new frames. By the
+specification, a frame is a full problem cycle `:register → :close` through
+the engine — student attempts, adjudication, promotion, scribe lanes
+included. By that definition round 1 comprises **two problem cycles, neither
+complete by lane**: t94J02 (solver + partial student, scribe unrun at scale)
+and t00A05 (solver lane only). Henceforth: **frame = full cycle; dispatch
+windows are counted within a frame, not as frames.**
+
+**Round-2 operating order (this section is the contract; deviations are
+findings):**
+
+| packet | content | seat | state |
+|---|---|---|---|
+| P0 | retro-proctor audit of round-1 guidance counts (card-defined, off the Agency log; report to operator via git, not through the guide) | ams-codex-2 | DISPATCHED `invoke-1786892600448-4610-66cc5fb6` |
+| P1 | conductor offer-shape fix (branch `fix/conductor-offer-shape`; reviewer merges) | codex-3 | DISPATCHED `invoke-1786892580397-4608-bbd8cc55` |
+| P2 | recall-miss discovery — why the push channel delivered ZERO all round (diagnosis only) | ams-codex-1 | DISPATCHED `invoke-1786892590925-4609-8b61a64d` |
+| P3 | recall-miss fix (spec from P2, separate reviewed packet) | tbd | after P2 review |
+| P4 | scribe lane wired as a machine phase output (fresh-session scribe, lanes reported per card) | tbd | queued |
+| P5 | seat keys per carded role in registration schema + `:register` gate refusing unassigned seats | tbd | queued |
+| P6 | conductor peripheral (spec draft → operator ruling → implementation) | tbd | after P1–P5 |
+
+Park on all three dispatches: `park-e19833df-9192-4aed-a71a-0ece0ac05b56`,
+deadline 60 min, wake payload = per-packet review checklist.
+
+**Staffing for frame-7 (the first specification-complete frame; requires
+P1–P5 landed):** solver = codex-4 (reserved, not used for infra packets);
+student = zai-1; guide = claude-7; proctor = a distinct agent holding
+`proctor.md` (P0 is the seat's first job); scribe = fresh session
+(`ams-scribe-1` exists on the roster and is the natural seat). Guide ≠
+proctor ≠ scribe, per the cards' own logic.
+
+**Definition of done for a frame:** every phase entered by the ENGINE (no
+hand-assoc'd phases), envelope validates, student attempts recorded,
+adjudication + promotion through the tools, scribe lanes run AND reported,
+proctor report filed through the operator lane. A frame missing any of these
+is not a frame; it is a solver run and gets recorded as such.
