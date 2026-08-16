@@ -9816,3 +9816,16 @@ natural Sol-Max regime boundary: land the effort-threading packet + seat
 re-registration + `:reg/solver-config` registration field FIRST, then the
 assembly frame doubles as the effort-tier calibration (Sol Max on pure
 assembly vs default effort's 10-siege frame-5).
+
+## W.13-post Semantic correction (Joe, 2026-08-16): steps are not attempts
+
+"We have gotten back into a habit of calling each proof step an 'attempt'."
+Correct: an ATTEMPT is a distinct crack at the problem (a plan-level
+engagement); a STEP is one dispatch/report turn within it. Frame-6's
+dispatches are steps of ONE continuing attempt. Retroactive honesty note:
+frame-5's `:attempt-cap-reached` adjudication counted ten DISPATCHES against
+a cap whose unit the registration never defined — the close stands as
+recorded, but the ambiguity is now a registration-schema item for round 2:
+`:reg/attempt-caps` must define its unit (attempt = plan-level engagement;
+steps within an attempt uncapped, bounded by the window instead).
+Conductor packets stop numbering steps as attempts as of now.
