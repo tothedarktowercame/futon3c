@@ -10549,3 +10549,31 @@ terminal op (`scripts/codex-picker --new`); zai has `scripts/zai-picker`;
 scribe seat. Open question flagged to operator: does "all lanes" include
 the guide, or does claude-7 hold the guide seat for frame-7 (bound through
 the conductor surface), rotating later via the takeover path?
+
+## W.35 Operator ruling: fresh guide too; claude-7 becomes lab manager; minting must be callable (Joe, 2026-08-16)
+
+**"Yes, fresh guide as well (they'll get a card). You'll be here as a kind
+of lab manager to inspect and oversee the run as a whole. Ideally the
+fresh lanes would be minted automatically so that this becomes
+reproducible per turn not done by me (as we have 100s of problems to get
+through still)."**
+
+Three consequences:
+1. **The separation completes.** Every cycle seat is a fresh agent; the
+   conductor-surface machinery (W.31) is what makes a fresh guide viable —
+   its card plus the per-turn contract are its entire orientation, and its
+   cycle survives it via versioned takeover. claude-7 exits the cycle
+   entirely: lab manager — reviews, record, oversight, operator interface.
+   No seat, no cycle actions.
+2. **Guide card v2 DRAFTED** (`claude-guide-v2-DRAFT.md`): bound-surface
+   discipline, typed guidance under the regime pin, substrate-only student
+   channel, attach-then-review promotion, one-variable mode discipline,
+   earned closure. Freezes at frame registration alongside solver v3.
+3. **P9 dispatched** (codex-3, `invoke-…63a115fe`, feat/frame-seat-minting):
+   callable mint — POST a frame-id, get five fresh invoke-ready seats with
+   deterministic names shaped for the :reg/* keys; idempotent; refuses to
+   return seats that register but cannot be invoked. Registration is a
+   bare POST (codex-picker:200); the discovery inside the packet is what
+   makes each TYPE invoke-ready headlessly. Retirement at frame close is a
+   follow-up packet. Note also first typed bell sent under the live flag:
+   this dispatch itself carried bell-type "request".
