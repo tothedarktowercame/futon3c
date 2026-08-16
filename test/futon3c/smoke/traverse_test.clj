@@ -95,6 +95,8 @@
            :recall-system "futon1b"}]
          :write-disposition [{:outcome :closed}]
          :write-use [{:offer-id "offer/smoke"}]
+         ;; guidance must declare a typed-bell performative (feat/typed-guidance)
+         :guide-solver [{:bell-type :suggest} {:note "smoke continuation"}]
          :promote-artifact [{:artifact-id "artifact/smoke"
                              :importable? true
                              :need-tags ["smoke"]}]

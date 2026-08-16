@@ -792,3 +792,18 @@
          "job-1" "session-1")]
     (is (= :v1.2-receipt-ranked-instrumented
            (get-in entry [:body :recall-system])))))
+
+(deftest typed-guidance-becomes-an-agency-typed-bell
+  (let [posted (atom nil)]
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.dispatch-with-recall 'post-json)
+       (fn [url body timeout]
+         (reset! posted {:url url :body body :timeout timeout})
+         {:job-id "typed-job"})}
+      #(is (= {:job-id "typed-job"}
+              (#'dispatch/dispatch!
+               {:base "http://agency" :to "codex-4" :from "ground-control"
+                :mission "M-test" :bell-type :challenge}
+               "typed guidance"))))
+    (is (= "challenge" (get-in @posted [:body :type])))
+    (is (= "codex-4" (get-in @posted [:body :agent-id])))))

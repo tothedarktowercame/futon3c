@@ -112,10 +112,15 @@
        (nonblank-string? (:offer/id x))
        (nonblank-string? (:offer/memory-id x))))
 
+(def guidance-bell-types
+  "Agency typed-bell performatives permitted in a guidance regime."
+  #{:query :answer :assert :challenge :agree :define :retract :suggest :request})
+
 (defn registration-shape-failures [registration]
   (if-not (map? registration)
     [:registration-not-map]
     (let [role-cards (:reg/role-cards registration)
+          guidance-regime (:reg/guidance-regime registration)
           carded-seat-failures
           (if (map? role-cards)
             (keep (fn [[role seat-key]]
@@ -128,6 +133,12 @@
             [])]
       (into
        (cond-> []
+         (and (contains? registration :reg/guidance-regime)
+              (not (and (set? guidance-regime)
+                        (seq guidance-regime)
+                        (every? guidance-bell-types guidance-regime))))
+         (conj {:finding :invalid-guidance-regime
+                :value guidance-regime})
          (some #(not (contains? registration %)) required-registration-keys)
          (conj :registration-missing-required-key)
          (not (problem? (:problem registration)))

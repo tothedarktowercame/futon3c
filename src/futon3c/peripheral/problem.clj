@@ -213,6 +213,11 @@
               events))
           [] (:steps state)))
 
+(defn- guidance-trace-events [events]
+  (mapv #(select-keys % [:ground-control/recipient :ground-control/cycle
+                         :ground-control/type :job-id])
+        events))
+
 (defn- recorded-retrieval-probes [state]
   (->> (:steps state)
        reverse
@@ -419,7 +424,10 @@
     (conj (vec args)
           {:cycle/id (:current-cycle-id state)
            :solver-seat (get-in state
-                                [:cycle/outputs :registration :reg/solver-seat])})
+                                [:cycle/outputs :registration :reg/solver-seat])
+           :guidance-regime
+           (get-in state
+                   [:cycle/outputs :registration :reg/guidance-regime])})
 
     (:dispatch-solver :dispatch-student-fresh)
     (conj (vec args) {:cycle/id (:current-cycle-id state)
@@ -701,7 +709,10 @@
                           {:failure :trace-projection-failed
                            :message (.getMessage t)}}))
           trace (some-> (:trace projection)
-                        (assoc :measurement-summary
+                        (assoc :guidance-events
+                               (guidance-trace-events
+                                (:ground-control-events outputs))
+                               :measurement-summary
                                {:measured (count (get-in outputs
                                                         [:measurement :meas/values]))
                                 :unset (count (get-in outputs
@@ -1129,9 +1140,23 @@
       (= tool-id :guide-solver)
       (let [measured (last args)
             [opts packet] (butlast args)
-            solver-seat (:solver-seat measured)]
-        (if-not (and (string? solver-seat) (not (str/blank? solver-seat)))
+            solver-seat (:solver-seat measured)
+            bell-type (:bell-type opts)
+            regime (:guidance-regime measured)]
+        (cond
+          (not (and (string? solver-seat) (not (str/blank? solver-seat))))
           {:ok false :error "guide-solver has no registered solver seat"}
+
+          (nil? bell-type)
+          {:ok false :error "guide-solver requires :bell-type"}
+
+          (and (set? regime) (not (contains? regime bell-type)))
+          {:ok false
+           :error {:failure :guidance-type-off-regime
+                   :bell-type bell-type
+                   :guidance-regime regime}}
+
+          :else
           (let [dispatch-result
                 (try (dispatch-fn (assoc (or opts {}) :to solver-seat) packet)
                      (catch Throwable t t))]
@@ -1144,7 +1169,8 @@
                                           (:conductor @cycle-context)
                                           park-post-fn)
                            (assoc :ground-control/recipient solver-seat
-                                  :ground-control/cycle (:cycle/id measured)))}))))
+                                  :ground-control/cycle (:cycle/id measured)
+                                  :ground-control/type bell-type))}))))
 
       (contains? dispatch-channels tool-id)
       (let [[opts packet] (take 2 args)

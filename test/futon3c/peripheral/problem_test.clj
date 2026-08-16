@@ -1321,6 +1321,9 @@
           :student-attempts []
           :disposition []
           :memory-offers []
+          :ground-control-events
+          [{:job-id "guide-job" :ground-control/recipient "codex-4"
+            :ground-control/cycle "cycle-1" :ground-control/type :challenge}]
           :memory-uses []
           :retrieval-probes []
           :capability-probes []
@@ -1344,7 +1347,11 @@
                    :args [{:cycle/id "forged" :cycle/closed-at "forged"}]}))
         cycle-entity (some #(when (:cycle/id %) %) (:entities @called))]
     (is (:ok result))
-    (is (= {:projected true :measurement-summary {:measured 1 :unset 0}}
+    (is (= {:projected true
+            :guidance-events
+            [{:job-id "guide-job" :ground-control/recipient "codex-4"
+              :ground-control/cycle "cycle-1" :ground-control/type :challenge}]
+            :measurement-summary {:measured 1 :unset 0}}
            (get-in result [:result :trace])))
     ;; NOT empty: retrieval-probe has no producer, and this fixture previously
     ;; supplied :retrieval-probes in outputs to make the list empty -- i.e. it was
@@ -2135,6 +2142,35 @@
     (is (= [:push+pull :push+pull :pull-only]
            (mapv :memory-channel @calls)))))
 
+(deftest typed-guidance-obeys-the-optional-registration-regime
+  (let [calls (atom [])
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend)
+                 (fn [opts _]
+                   (swap! calls conj opts)
+                   {:job-id "guide-job"})
+                 (fn [_ _] {:id "park"})
+                 (atom nil))
+        measured {:solver-seat "codex-4" :cycle/id "cycle-1"}
+        untyped (tools/execute-tool backend :guide-solver
+                                    [{} "packet" measured])
+        permitted (tools/execute-tool
+                   backend :guide-solver
+                   [{:bell-type :suggest} "packet"
+                    (assoc measured :guidance-regime #{:suggest :challenge})])
+        refused (tools/execute-tool
+                 backend :guide-solver
+                 [{:bell-type :assert} "packet"
+                  (assoc measured :guidance-regime #{:suggest :challenge})])
+        legacy (tools/execute-tool backend :guide-solver
+                                   [{:bell-type :define} "packet" measured])]
+    (is (false? (:ok untyped)))
+    (is (= :suggest (get-in permitted [:result :ground-control/type])))
+    (is (= :guidance-type-off-regime (get-in refused [:error :failure])))
+    (is (= :define (get-in legacy [:result :ground-control/type])))
+    (is (= [:suggest :define] (mapv :bell-type @calls)))
+    (is (= ["codex-4" "codex-4"] (mapv :to @calls)))))
+
 (deftest student-dispatch-packet-names-its-provisioned-checkout
   (let [dispatches (atom [])
         frame {:checkout "/frames/batch/student-1"
@@ -2203,7 +2239,7 @@
                  backend :dispatch-student-fresh [{} "student" {}])
         guide (tools/execute-tool
                backend :guide-solver
-               [{:park-payload "continue guide"} "guide"
+               [{:park-payload "continue guide" :bell-type :suggest} "guide"
                 {:solver-seat "codex-4" :cycle/id "cycle-1"}])]
     (is (= 3 (count @parks)) "exactly one park per successful dispatch")
     (is (= ["job-1"] (get-in @parks [0 1 :awaiting])))

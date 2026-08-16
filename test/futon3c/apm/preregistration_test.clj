@@ -41,6 +41,17 @@
 (def revision-a "1111111111111111111111111111111111111111")
 (def revision-b "2222222222222222222222222222222222222222")
 
+(deftest guidance-regime-is-optional-and-validated-when-present
+  (is (not-any? #(= :invalid-guidance-regime (:finding %))
+                (prereg/registration-shape-failures registration)))
+  (is (not-any? #(= :invalid-guidance-regime (:finding %))
+                (prereg/registration-shape-failures
+                 (assoc registration :reg/guidance-regime
+                        #{:suggest :challenge}))))
+  (is (some #(= :invalid-guidance-regime (:finding %))
+            (prereg/registration-shape-failures
+             (assoc registration :reg/guidance-regime #{:suggest :unknown})))))
+
 (def attempts
   [{:cycle/regime "regime/a"
     :cycle/store-revision revision-a

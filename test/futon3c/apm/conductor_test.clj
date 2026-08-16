@@ -151,6 +151,24 @@
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))
 
+(deftest conductor-requires-and-records-typed-guidance
+  (let [{:keys [config paths]} (fixture)]
+    (try
+      (let [opened (conductor/open-frame! config)
+            untyped (conductor/guide-solver!
+                     opened {:mission "M-test"} "untyped guidance")
+            typed (conductor/guide-solver!
+                   opened :suggest {:mission "M-test"} "typed guidance")]
+        (is (= :guidance-type-absent
+               (get-in untyped [:error :error/code])))
+        (is (:ok typed) (pr-str (:error typed)))
+        (is (= :suggest
+               (->> (get-in typed [:state :steps])
+                    (filter #(= :guide-solver (:tool %)))
+                    last :result :ground-control/type))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
 (deftest open-frame-refuses-invalid-mode-and-threads-conductor
   (let [{:keys [config]} (fixture)]
     (let [bad (conductor/open-frame! (assoc config :mode nil))]

@@ -29,7 +29,8 @@
                      {:registration {:reg/solver-seat "codex-4"}})
         guided (runner/step p state
                             {:tool :guide-solver
-                             :args [{:to "attacker"} "please inspect"]})
+                             :args [{:to "attacker" :bell-type :suggest}
+                                    "please inspect"]})
         stamped (#'problem/stamp-environment-outputs
                  (:state guided)
                  {:solver-attempt {} :memory-offers []
@@ -39,6 +40,7 @@
     (is (= "codex-4" (get-in @calls [0 0 :to])))
     (is (= "guide-job" (:job-id (first events))))
     (is (= "codex-4" (:ground-control/recipient (first events))))
+    (is (= :suggest (:ground-control/type (first events))))
     (is (= 1 (get (#'problem/measurement-values
                    {:ground-control-events events})
                   "attempts or closer hops")))))
