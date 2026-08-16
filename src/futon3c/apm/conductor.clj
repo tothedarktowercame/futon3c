@@ -84,16 +84,27 @@
                              (f1b/make-futon1b-backend
                               (:evidence-store-url config)))
           peripheral (or (:peripheral config) (problem/make-problem))
+          ;; First-production findings (frame-3 mis-open, 2026-08-16): a nil
+          ;; mode opened a malformed cycle; :deposit-state and :conductor were
+          ;; never threaded, silently disabling deposit-state validity and
+          ;; the atomic dispatch+park integration. Validate and thread.
+          mode (:mode config)
+          _ (when-not (contains? #{:store-mode :harness-mode} mode)
+              (throw (ex-info (str "open-frame! requires :mode :store-mode or "
+                                   ":harness-mode; got " (pr-str mode))
+                              {:error/code :invalid-frame-mode})))
           context {:session-id (:session-id config)
                    :problem-id (:problem-id config)
-                   :cycle/mode (:mode config)
+                   :cycle/mode mode
+                   :cycle/deposit-state (or (:deposit-state config) :n/a)
                    :evidence-store evidence-store
                    :harness-repo (:harness-repo config)
                    :lean-repo (:lean-repo config)
                    :agency-endpoint (:agency-endpoint config)
                    :authorization-revision (:authorization-revision config)
                    :authorization-output (:authorization-output config)
-                   :author (:conductor config)}
+                   :conductor (:conductor config)
+                   :author (get-in config [:conductor :agent])}
           started (runner/start peripheral context)
           initial {:ok true :peripheral peripheral :state (:state started)
                    :log [] :deposits [] :config config}]

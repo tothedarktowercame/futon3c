@@ -129,3 +129,15 @@
                                                      (:log continued)))))))
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest open-frame-refuses-invalid-mode-and-threads-conductor
+  (let [{:keys [config]} (fixture)]
+    (let [bad (conductor/open-frame! (assoc config :mode nil))]
+      (is (false? (:ok bad)))
+      (is (re-find #"store-mode" (or (:error/message bad) (str bad)))))
+    (let [h (conductor/open-frame! (assoc config
+                                          :mode :store-mode
+                                          :deposit-state :with-deposit))]
+      (is (not (false? (:ok h))))
+      (is (= :store-mode (get-in h [:state :cycle/mode])))
+      (is (= :with-deposit (get-in h [:state :cycle/deposit-state]))))))

@@ -1018,10 +1018,14 @@
   :park/error but never rewrites a successful bell into a failed dispatch."
   [dispatch-result tool-id opts conductor park-post-fn]
   (let [job-id (:job-id dispatch-result)]
-    (if-not (and conductor job-id)
+    (if-not (and (map? conductor) (:agent conductor) job-id)
       dispatch-result
+      ;; Deadline default at CONSUMPTION (the bounded-recall lesson, 524cc42f)
+      ;; and computed INSIDE the guard's reach: a malformed conductor must
+      ;; degrade to :park/error, never crash the dispatch it decorates.
       (let [deadline-ms (+ (System/currentTimeMillis)
-                           (* 1000 (long (:park-deadline-s conductor))))
+                           (* 1000 (long (or (:park-deadline-s conductor)
+                                             2700))))
             payload {:agent (:agent conductor)
                      :session (:session conductor)
                      :surface (:surface conductor)
