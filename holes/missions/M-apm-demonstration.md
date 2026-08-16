@@ -10322,3 +10322,29 @@ stays with the adjudicator. 88/326/0 re-run by reviewer.
 cycle from a start refusal — is another member of the
 silently-degrade-instead-of-refuse class (W.16's boundary-outside-guard,
 W.25's context-less cycle). The step path should refuse absent state.
+
+## W.26 P4 merged — STOP-ORDER CLEAR (2026-08-16)
+
+**P4 (scribe lane outputs, ams-codex-2): reviewed and merged
+(`2926bd0c`).** Checked: lane set verified against scribe.md's four-lanes
+table BY THE REVIEWER (solve/arc/trajectory/challenge); refusals use the
+established derived-tool throw idiom; author must equal `:reg/scribe-seat`
+when staffed (unstaffed legacy registrations unaffected); "scribe lane
+coverage" and "arc-lane yield" populate from reports and keep their unset
+reasons otherwise; phase choice `:promote` reasoned in the commit. kondo
+0/0; check-parens OK; problem+cycle-harness 98/345/0 re-run by reviewer.
+**Consumer-suite gate (W.25 lesson) caught its first miss immediately:**
+the smoke traverse exercises every phase tool and the new tool correctly
+refused its empty stub args — fixed by reviewer (lane-report stub from the
+staffed seat, `f9eaada0`); conductor+traverse+preregistration 22/68/0
+after.
+
+**The W.16 stop-order is CLEAR.** All four conditions landed as reviewed
+packets: (1) recall miss diagnosed AND fixed (P2 `db25bf4d`, P3-impl
+`6bb1ff91`, P3b `f6dddfe3`); (2) conductor offer-shape fixed (P1
+`e0ae4d77`); (3) scribe lane wired (P4 `2926bd0c`); (4) wire/shape gates
+strengthened structurally (P5 seat keys `7b3b0c2a`, P7 operator pane
+`4f0ea998`, suite repairs `9f0f1073`). Round-2 build queue: **P6 conductor
+peripheral (spec → operator ruling → implementation)**, nil-state step
+refusal, park single-delivery semantics. New mathematics (frame-7) remains
+gated on the operator's word and on P6's staffing model, per W.19.
