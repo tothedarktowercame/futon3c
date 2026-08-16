@@ -10577,3 +10577,27 @@ Three consequences:
    makes each TYPE invoke-ready headlessly. Retirement at frame close is a
    follow-up packet. Note also first typed bell sent under the live flag:
    this dispatch itself carried bell-type "request".
+
+## W.36 P9 merged; frame-7 preflight begins (2026-08-16)
+
+**P9 (seat minting, codex-3): reviewed and merged (`db7d5274`).** Checked:
+deterministic seat map shaped for the `:reg/*` keys; injectable
+prepare-seat-fn reusing the SAME local claude/codex/zai invoke
+constructors as ordinary registration (no clones, no transport creation);
+minting under a lock; idempotent by existing-identity reuse; the seat map
+is returned ONLY when every seat is roster-visible AND invoke-ready —
+otherwise structured findings and no seat map. Discovery confirmed:
+registration alone is insufficient; per-type invoke-fns with fresh session
+files are the substance of readiness. 54/222/0 re-run by reviewer.
+
+**Frame-7 preflight state:** mint route merged but not live in the JVM
+(routes captured at server start; Drawbridge reload insufficient for the
+route table) — second detached restart scheduled by the lab manager via
+the operator's own receipt-writing script, delayed past turn end.
+Effort-vocabulary finding: codex_cli passes any nonblank string to
+`model_reasoning_effort`; validation is the Codex CLI's own — the
+`{"model" "gpt-5.6-sol" :reasoning-effort "max"}` pin gets a one-prompt
+probe on the minted solver seat during preflight, failing loudly before
+the frame opens if the term is wrong. Next: mint f7 seats → verify a98A01
+statement at the pin → registration EDN with pins + BOTH card hashes
+(solver v3, guide v2) for operator freeze.
