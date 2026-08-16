@@ -9956,3 +9956,44 @@ the driver era but the original design's channel is DEAD:
 4. Shape-grade wire checks (the grain gap closed);
 all as reviewed packets THROUGH the machinery, each verified by the
 instruments we built for exactly this.
+
+## W.17 The structural answer to "how did claude-2 drift for 517 turns" (2026-08-16)
+
+**Operator (Joe), at 115 turns of this session:** claude-2's drift was
+diagnosed here; the system was formalized and validated here; "I don't see
+how we can get into the same kind of drift — but it is stressful, and 'the
+round is doing science' must be called into question if we are not
+following the protocols that we wrote and validated."
+
+**The structural answer: drift is unenforced protocol accumulating at
+conversational timescale.** claude-2's 517 turns were not a capability
+failure; every discipline held in prose instead of a gate leaked
+eventually. THIS session's conductor is on the same curve, merely earlier:
+at 115 turns, the checker was not re-run on merges, disqualifying envelope
+codes were conducted past three times, the scribe lane stayed unrun because
+nothing requires it, and off-namespace operations accreted. Every catch was
+the OPERATOR's. The apparatus detects; nothing yet REFUSES.
+
+**Therefore: protocols move from prose to gates** (the mission's own
+written-but-not-wired lesson, applied to protocol itself). Enforcement
+queue, ordered smallest-first, all stop-order-compatible:
+1. **Envelope gates the next open**: `open-frame!` REFUSES when the prior
+   frame's close carried non-benign codes, absent an explicit operator
+   waiver recorded in the registration. (Kills the "known bug, noted,
+   continued" pattern mechanically.)
+2. **Wiring check at open**: `open-frame!` runs the WS-E checks +
+   conformance against the committed map as pre-flight; refuses on new
+   findings vs baseline. (The map can no longer silently stale.)
+3. **Scribe lane as required output**: the close phase demands a
+   scribe-lane event or a waived-with-reason record. (The field becomes
+   fillable by construction.)
+4. **Conductor completeness**: seed!/verify! into the conductor namespace;
+   the runbook declares off-namespace conductor operations frame-record
+   violations.
+
+**On "doing science":** the round's measurements stand — honest,
+asterisked, deviation-recorded, which the driver era was not. The CLAIM is
+downgraded from "doing science" to "producing auditable measurements under
+partially-enforced protocol," and it upgrades back exactly when the gates
+above exist. The operator's stress is the measure of the enforcement gap;
+each catch he made becomes a gate so he never makes it twice.
