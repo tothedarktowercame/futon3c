@@ -37,6 +37,10 @@ export FUTON3C_DURABLE_QUEUE_PATH="${FUTON3C_DURABLE_QUEUE_PATH:-${HOME}/.local/
 # Park-and-ride (parks completable on ANY dep via POST /api/alpha/park/complete,
 # commit 9657075d): enabled on Zone 2026-08-10 for ground-control task chaining.
 export FUTON3C_PARKED_ON="${FUTON3C_PARKED_ON:-1}"
+# Guidance uses Agency's reviewed typed-bell protocol. Keep the zone serving
+# profile aligned with dev-laptop-env; without this flag the server deliberately
+# treats :type as inert legacy payload and the guidance contract cannot hold.
+export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
 
 # The wrappers move child CLI processes out of the protected server cgroup and
 # into futon-agents.slice. ZAI makes API calls in-process and has no child CLI.

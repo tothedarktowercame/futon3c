@@ -4,6 +4,7 @@
    This namespace owns sequence, checkpointing, and a compact operation log.
    The problem peripheral remains the sole owner of cycle state and invariants."
   (:require [clojure.string :as str]
+            [futon3c.apm.preregistration :as prereg]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]))
@@ -164,8 +165,17 @@
 (defn dispatch-solver! [handle opts packet]
   (dispatch! handle :dispatch-solver opts packet))
 
-(defn guide-solver! [handle opts packet]
-  (dispatch! handle :guide-solver opts packet))
+(defn guide-solver!
+  ([handle _opts _packet]
+   (failure handle :guidance-type-absent
+            "guide-solver requires a typed-bell performative"))
+  ([handle bell-type opts packet]
+   (if (contains? prereg/guidance-bell-types bell-type)
+     (dispatch! handle :guide-solver (assoc (or opts {}) :bell-type bell-type)
+                packet)
+     (failure handle :guidance-type-invalid
+              "guide-solver requires a valid typed-bell performative"
+              {:bell-type bell-type}))))
 
 (defn dispatch-student! [handle opts packet]
   (dispatch! handle :dispatch-student-fresh opts packet))

@@ -1409,14 +1409,15 @@
       (throw (ex-info "HTTP write failed"
                       {:url url :status (:status response) :body parsed})))))
 
-(defn- dispatch! [{:keys [base to from mission]} packet]
+(defn- dispatch! [{:keys [base to from mission bell-type]} packet]
   (post-json
    (str (trim-base (or base default-agency-base)) "/api/alpha/bell")
-   {:agent-id to
-    :prompt packet
-    :caller from
-    :mission-id (or mission default-mission)
-    :mode "work"}
+   (cond-> {:agent-id to
+            :prompt packet
+            :caller from
+            :mission-id (or mission default-mission)
+            :mode "work"}
+     bell-type (assoc :type (name bell-type)))
    30000))
 
 (defn- record-offered! [{:keys [substrate-base]} evidence]
