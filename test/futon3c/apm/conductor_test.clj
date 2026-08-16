@@ -239,6 +239,41 @@
       (is (= :store-mode (get-in h [:state :cycle/mode])))
       (is (= :with-deposit (get-in h [:state :cycle/deposit-state]))))))
 
+(deftest conductor-surface-authenticates-promotion-reviewer
+  (let [agent-id "claude-review-actor"
+        session-id "review-actor-session"
+        captured (atom nil)
+        promotion {:memory-id "e-memory"
+                   :pattern-id "p4ng/pattern"
+                   :reviewer agent-id}
+        action {:action-id "review-action"
+                :cycle-id "cycle-review"
+                :version 1
+                :operation :adjudicate
+                :args [{:outcome :closed :promotion-result [promotion]}]}]
+    (agency/register-agent!
+     {:agent-id agent-id :type :claude
+      :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})
+      :session-id session-id})
+    (with-redefs [binding/execute!
+                  (fn [_ _ routed _]
+                    (reset! captured routed)
+                    {:ok true})]
+      (is (:ok (conductor-surface/execute-action!
+                agent-id session-id action)))
+      (is (= agent-id
+             (get-in @captured [:args 0 :promotion-result 0
+                                :acting-identity])))
+      (let [mismatched (assoc-in action
+                                 [:args 0 :promotion-result 0 :reviewer]
+                                 "some-other-reviewer")
+            result (conductor-surface/execute-action!
+                    agent-id session-id mismatched)]
+        (is (false? (:ok result)))
+        (is (= :reviewer-not-actor (:error/code result)))
+        (is (= :reviewer-not-actor
+               (get-in result [:finding :failure])))))))
+
 (deftest conductor-action-route-owns-one-live-handle
   (let [{:keys [config paths]} (fixture)
         agent-id "claude-7"

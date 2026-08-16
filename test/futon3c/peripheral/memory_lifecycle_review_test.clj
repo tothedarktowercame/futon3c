@@ -98,6 +98,51 @@
    :verdict :approve
    :pattern-ids [pattern-id]})
 
+(def statusless-edge
+  (-> proposed-edge
+      (update :hx/endpoints #(vec (remove #{pattern-id} %)))
+      (update-in [:hx/props :roles :subjects]
+                 #(vec (remove #{pattern-id} %)))
+      (assoc-in [:hx/props :roles :patterns] [])
+      (update :hx/props dissoc :attachment-status :witness-status)))
+
+(defn- promote-opts [graph entries]
+  (assoc (opts graph entries)
+         :fetch-entry #(get @entries %)
+         :append-evidence (fn [entry]
+                            (swap! entries assoc (:evidence/id entry) entry)
+                            {:ok true :entry entry})))
+
+(deftest promotion-reviewer-authentication-is-explicit
+  (let [promotion {:memory-id memory-id
+                   :pattern-id pattern-id
+                   :reviewer "claude-4"}]
+    (testing "a direct call without authenticated actor records that fact"
+      (let [graph (graph-fixture statusless-edge)
+            entries (atom {memory-id memory-entry})
+            result (lifecycle/promote-memory-attachment!
+                    ctx promotion (promote-opts graph entries))]
+        (is (:ok result))
+        (is (= [:reviewer-unauthenticated] (:findings result)))))
+    (testing "an authenticated matching actor passes without the finding"
+      (let [graph (graph-fixture statusless-edge)
+            entries (atom {memory-id memory-entry})
+            result (lifecycle/promote-memory-attachment!
+                    (assoc ctx :acting-identity "claude-4") promotion
+                    (promote-opts graph entries))]
+        (is (:ok result))
+        (is (empty? (:findings result)))))
+    (testing "an authenticated mismatched actor is refused before writes"
+      (let [graph (graph-fixture statusless-edge)
+            entries (atom {memory-id memory-entry})
+            result (lifecycle/promote-memory-attachment!
+                    (assoc ctx :acting-identity "claude-7") promotion
+                    (promote-opts graph entries))]
+        (is (false? (:ok result)))
+        (is (= :reviewer-not-actor (get-in result [:finding :failure])))
+        (is (empty? @(:posts graph)))
+        (is (= #{memory-id} (set (keys @entries))))))))
+
 (deftest approval-requires-independent-exact-review-evidence
   (testing "memory author cannot review their own attachment"
     (let [graph (graph-fixture proposed-edge)]

@@ -24,19 +24,38 @@
 (defn- authenticated-session? [agent-id session-id]
   (= session-id (:agent/session-id (agency/get-agent agent-id))))
 
-(defn- transport-args [operation args]
+(defn- authenticate-promotion-reviewers [agent-id disposition]
+  (if (map? disposition)
+    (update disposition :promotion-result
+            (fn [promotions]
+              (mapv #(assoc % :acting-identity (str agent-id))
+                    (or promotions []))))
+    disposition))
+
+(defn- reviewer-mismatch [agent-id operation args]
+  (when (= :adjudicate operation)
+    (some (fn [promotion]
+            (let [reviewer (:reviewer promotion)]
+              (when (and (string? reviewer) (not= (str agent-id) reviewer))
+                {:reviewer reviewer :acting-identity (str agent-id)})))
+          (:promotion-result (first args)))))
+
+(defn- transport-args [agent-id operation args]
   ;; JSON has no keyword value type. Decode the one closed enum in the public
   ;; conductor API at this transport boundary; arbitrary payload values remain
   ;; byte-for-byte data rather than being guessed into keywords.
-  (if (and (= :adjudicate operation) (map? (first args)))
-    (update-in (vec args) [0 :outcome]
-               #(if (string? %) (keyword %) %))
-    args))
+  (cond-> (vec args)
+    (and (= :adjudicate operation) (map? (first args)))
+    (update-in [0 :outcome] #(if (string? %) (keyword %) %))
+
+    (and (= :adjudicate operation) (map? (first args)))
+    (update 0 #(authenticate-promotion-reviewers agent-id %))))
 
 (defn execute-action!
   "Execute a closed-vocabulary conductor action for an authenticated session."
   [agent-id session-id action]
-  (let [operation (normalize-operation (:operation action))]
+  (let [operation (normalize-operation (:operation action))
+        mismatch (reviewer-mismatch agent-id operation (:args action))]
     (cond
       (not (authenticated-session? agent-id session-id))
       {:ok false :error/code :conductor-session-unauthenticated}
@@ -45,11 +64,16 @@
       {:ok false :error/code :conductor-operation-unknown
        :operation operation}
 
+      mismatch
+      {:ok false :error/code :reviewer-not-actor
+       :finding (assoc mismatch :failure :reviewer-not-actor)}
+
       :else
       (binding/execute!
        agent-id session-id (assoc action
                                   :operation operation
-                                  :args (transport-args operation (:args action)))
+                                  :args (transport-args agent-id operation
+                                                        (:args action)))
        (fn [handle op args]
          (apply (get operations op) handle args))))))
 
