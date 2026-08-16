@@ -10815,3 +10815,23 @@ performed it. Open defects carried forward: projection-gap packet
 (t00A05 subject projection drops two :current memories); W.44 offer-lane
 packet (mid-cycle deposits unreachable by own student). f7:
 :student-attempts continuing under the guide.
+
+## W.46 Operator ruling: student attempts are first-class mining material (Joe, 2026-08-16)
+
+"Memories should be mined from the student attempts too… Zai's stereotyped
+self-criticism was a key inspiration for this whole programme of work and
+we should not throw it away." Design audit: the cards already agree — the
+scribe's ARC lane (error→fix spans → rewrite rules) and TRAJECTORY lane
+(expensive/failed stretches → process memories) are built for exactly this
+material, and the v1 guide card named Zai's own phrasing as the raw
+material. **Machinery gap found on checking: the conductor surface has no
+:dispatch-scribe operation** — the guide can dispatch solver and student
+through the walls but cannot staff the scribe; P4's lane-report home would
+go unfilled by construction. **P12 dispatched** (codex-3,
+`invoke-…a2aa2df5`, feat/dispatch-scribe): mirrors dispatch-student!,
+phase-gated at :promote, seat from the registration, atomic dispatch+park;
+lane reports still authorship-locked to the scribe seat. Race against the
+live frame: if f7 reaches :promote first, "scribe lane coverage" records
+its honest unset and a post-close scribe pass mines the completed cycle —
+the material (job results, session logs) persists either way; nothing of
+Zai's narration is thrown away.
