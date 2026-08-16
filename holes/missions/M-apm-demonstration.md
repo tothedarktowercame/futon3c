@@ -10966,3 +10966,10 @@ a :closed disposition includes merge-back to the apm-lean mainline as
 part of the close checklist — queued as a small packet (machine close
 step or conductor close! addition) so this never depends on anyone
 remembering.**
+
+**W.53 completion:** verification passed on main for all three —
+`apm_t94j02`, `apm_t00a05`, `apm_a98a01` each compile and depend on
+exactly [propext, Classical.choice, Quot.sound]. **Pushed:
+apm-lean master `3093764..d937780`** (merges `25f7969` t94J02, `63ab8d5`
+t00A05, `d937780` a98A01). Dionysus can pull; the mission's mathematics
+is on the mainline.
