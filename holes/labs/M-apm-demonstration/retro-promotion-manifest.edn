@@ -1,0 +1,261 @@
+;; Retro-promotion manifest — M-apm-demonstration round-1 rider ledger
+;; Stage 1 of 2 (operator-sanctioned pilot, W.41): claude-8 proposes; codex-5
+;; independently reviews and approves. NO store writes were performed in
+;; building this manifest; it is judgment only.
+;;
+;; Ledger recovery: three subject projections on the futon1b substrate
+;; (port 7073, store migration-store-21) — t00A05 (24), a01A06 (3 after
+;; excluding the already-promoted e-codexpilot-… from M-codex-sorry-loop),
+;; t94J02 (3, one shared with t00A05) — cross-checked against the rider-ledger
+;; mentions in holes/missions/M-apm-demonstration.md (W.11, W.15). Two
+;; ledger-named memories (e-5ba1c44d…, e-8af4838f…) are ABSENT from the
+;; /api/alpha/memory/projection response for t00A05 despite being
+;; :state :current with subject t00A05 (verified via /api/alpha/hyperedges?end=);
+;; they are included here from the hyperedge query, and the projection gap is
+;; flagged for the operator. The liminf supersession chain
+;; (e-0b423578… / e-ba5a8bee… / e-30e87097…) predates round 1 and already
+;; carries memory-attachment-review records (pattern math/weak-conv…): excluded.
+;; Total: 32 memories. None carry :attachment-status.
+;;
+;; Depositor identities (reviewer must differ from depositor; codex-5 authored
+;; NONE of these, so codex-5 is a valid reviewer for all 32):
+;;   claude-7             — conductor deposits: frame-3 orientations, frame-3
+;;                          seeding batch, rehearsal-1 refutation, frame-6
+;;                          closure, frame-3 marker (15 memories)
+;;   claude-7-scribe-pass — W.15 conductor-authored scribe pass (5 memories)
+;;   problem-peripheral   — problem-peripheral seat, frames 1/2/4/5 (5 memories)
+;;   zai-1                — student deposits, zai session (7 memories)
+;; claude-7 (all aliases) and claude-8 (this proposer) are distinct agents;
+;; claude-8 deposited nothing in round 1.
+;;
+;; Proposal semantics (W.24 + addendum): :attach files the memory under an
+;; EXISTING pattern file in ~/code/futon3/library/. :new-pattern proposes a
+;; pattern FILE that does not yet exist — creation is the operator's editorial
+;; act; the attach is blocked until the file exists and the watcher ingests it.
+;; :skip means the memory stays in the store unpromoted (intra-problem /
+;; receipt / duplicate), invisible to push recall, as the operator expects for
+;; the majority.
+
+{:manifest/mission "M-apm-demonstration"
+ :manifest/stage :stage-1-proposals
+ :manifest/proposer "claude-8"
+ :manifest/reviewer "codex-5"
+ :manifest/date "2026-08-16"
+ :manifest/counts {:total 32 :attach 6 :new-pattern 6 :skip 20}
+
+ :manifest/entries
+ [;; ============ t00A05 (26 memories, incl. 2 projection-invisible) ============
+
+  {:memory-id "e-02552934-b755-4e40-9cbd-ba81b29a6ffe"
+   :name "apm-plan-first-practice"
+   :subject "t00A05" :session "round-1-scribe" :depositor "claude-7-scribe-pass"
+   :proposal :new-pattern
+   :pattern-id "math-strategy/plan-first-attempt"
+   :new-pattern-description "Author a numbered plan with explicit lemma statements before proving; revise the plan in-file on contact; guidance addresses the plan, not the mathematics."
+   :rationale "Genuine proof-process pattern with a measured datum (~7x less guidance per unit progress; conductor content hints 0-for-1, formally refuted). math-strategy is the proof-process shelf (cf. route-exploration-and-pivot) but no existing file covers plan-commitment; needs a new file — operator editorial act."}
+
+  {:memory-id "e-19ae2af6-d067-4ab2-b401-d8c52cf10018"
+   :name "lean-template-branch-stamping"
+   :subject "t00A05" :session "round-1-scribe" :depositor "claude-7-scribe-pass"
+   :proposal :new-pattern
+   :pattern-id "math-formalization/stamp-siblings-from-one-compiled-branch"
+   :new-pattern-description "For finite symmetric case analyses, build one branch end-to-end as compiling code first — it resolves every API uncertainty — then stamp the siblings mechanically."
+   :rationale "Transferable Lean-craft beyond t00A05 (any finite symmetric case split). Closest existing files (construction-cost-asymmetry, split-into-cases) don't cover the one-branch-then-stamp mechanic; fits the math-formalization technique genre exactly."}
+
+  {:memory-id "e-1f2d3d6d-e809-4867-a153-a7c05659fc33"
+   :name "t00A05-route-map-one-lemma-from-closure"
+   :subject "t00A05" :session "frame-2" :depositor "problem-peripheral"
+   :proposal :skip
+   :rationale "Stale intra-problem status: the 'one lemma from closure' claim was explicitly called optimistic by the frame-3 orientation (e-e96764f7…), and the problem has since closed. Historical record, not shelf material."}
+
+  {:memory-id "e-209de11b-d283-4a15-a5d4-8763e949d34b"
+   :name "t00a05-rot-beta-seam-and-telescope-assembly"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Intra-problem assembly plan, discharged by the frame-6 closure. Its one transferable grain — move the chart's cut to the excluded point — is preserved in the seam-weld scribe memory (e-54ea43ad…) proposed for promotion; the plan itself is t00A05-specific."}
+
+  {:memory-id "e-3b12d47b-7872-4724-9814-1f57224dc96a"
+   :name "t00a05-curve-projection-package"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Intra-problem toolkit specification (which facts to derive from IsC2 gamma for this problem). Pure seeding material; no transfer beyond t00A05."}
+
+  {:memory-id "e-44de0908-82a0-4463-9be4-97f2e1213faa"
+   :name "t00a05-route-map-10-steps"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Intra-problem route map, now discharged; the closed route is preserved at closure grain in e-5ba1c44d… (proposed for attach). Keeping both on the shelf would duplicate."}
+
+  {:memory-id "e-4a42d7e9-68bb-48ef-9276-24da8c6ab5e4"
+   :name "t00a05-two-angular-primitives"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Two standard calculus antiderivative facts scoped to this telescope. Textbook content, not a reusable pattern; recall value outside t00A05 is negligible."}
+
+  {:memory-id "e-54ea43ad-bdcf-4c0f-8bf6-2654e14a6ba3"
+   :name "lean-seam-weld-pattern"
+   :subject "t00A05" :session "round-1-scribe" :depositor "claude-7-scribe-pass"
+   :proposal :new-pattern
+   :pattern-id "math-formalization/weld-range-lemmas-at-representation-seams"
+   :new-pattern-description "Closed-endpoint range lemmas fail at representation seams (8/0, 2pi/0): prove the strict pre-end range, then handle the seam point directly via its decoded/closed value."
+   :rationale "Already demonstrated transfer WITHIN the round: three independently proved variants (interior seam, cut-eight, split-arc initial half). Applies to any quotient/periodic representation in Lean. No existing math-formalization file covers seams; strongest new-pattern candidate in the ledger."}
+
+  {:memory-id "e-61355c4f-4e26-4d5e-839c-59c358e8c464"
+   :name "t00a05-final-residual-assembly-only"
+   :subject "t00A05" :session "frame-5" :depositor "problem-peripheral"
+   :proposal :skip
+   :rationale "Residual-state receipt (supersedes e-b31f22f9…), fully discharged by frame-6 closure. Zero forward value once the problem is closed."}
+
+  {:memory-id "e-84690e27-6853-402d-bdbb-aa48c5f56825"
+   :name "supnorm-sphere-perimeter-walk-chart-technique"
+   :subject "t00A05" :session "frame-2" :depositor "problem-peripheral"
+   :proposal :new-pattern
+   :pattern-id "math-formalization/chart-a-polytope-sphere-by-perimeter-walk"
+   :new-pattern-description "When the unit sphere of a norm is polyhedral (no InnerProductSpace, stereographic charts inapplicable), chart it by an explicit affine perimeter walk; puncture-and-rotate for miss-a-point arguments."
+   :rationale "Transferable to any polyhedral norm ball in Mathlib work; the InnerProductSpace-gap diagnosis is exactly the kind of API-boundary knowledge the formalization shelf holds. Original deposit (frame-2); the frame-3 restatement e-fbcc7732… is skipped as its duplicate."}
+
+  {:memory-id "e-8cb27cef-bce9-477b-8bdf-7d57027c5627"
+   :name "t00a05-no-simple-loop-in-R"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :attach
+   :pattern-id "math-informal/structural-obstruction-as-theorem"
+   :rationale "The memory isolates 'the whole topological content' as a standalone impossibility theorem (no continuous R->R injective on [0,T) with matching endpoints) and names the proving route. Filing the obstruction as its own theorem is precisely the pattern's conclusion; the memory is a clean worked instance."}
+
+  {:memory-id "e-9400816b-9988-4e0b-99fa-55053f7c01fb"
+   :name "t00a05-trial2-step9-landed"
+   :subject "t00A05" :session "zai-e758a6da-…" :depositor "zai-1"
+   :proposal :skip
+   :rationale "Volatile progress receipt (trial-2 handoff). Served its handoff purpose in-round; the scratch-first method it carried was absorbed into the trial-3 orientation. Receipt, not pattern."}
+
+  {:memory-id "e-a2ea9f78-794a-4cb5-b797-7d6b8cd5c042"
+   :name "t00a05-level-set-equals-frontier"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :attach
+   :pattern-id "math-informal/show-both-inequalities"
+   :rationale "Set equality (level set = frontier) proved by both inclusions, with the radial strict-monotonicity engine driving each direction. The pattern's keywords name inclusion/subset/superset explicitly; the memory is a worked instance with a reusable engine choice."}
+
+  {:memory-id "e-a36bde67-a104-4d04-9044-4c1d4965123a"
+   :name "t00a05-final-state-three-trials"
+   :subject "t00A05" :session "zai-e758a6da-…" :depositor "zai-1"
+   :proposal :skip
+   :rationale "Volatile end-of-trials state receipt, superseded by e-b31f22f9… (which was itself superseded by e-61355c4f…). Two supersessions deep; historical only."}
+
+  {:memory-id "e-aa0f8c68-d249-4d86-a542-d63815302709"
+   :name "t00a05-radial-homeomorphism-gauge"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :new-pattern
+   :pattern-id "math-formalization/radialize-via-gauge-rescale"
+   :new-pattern-description "To transport a problem from the frontier of a compact convex region (0 interior) to the norm sphere, use Analysis.Convex.GaugeRescale's gaugeRescaleHomeomorph — it maps frontier onto the sphere and preserves nonnegative rays."
+   :rationale "Reusable Mathlib API-cluster knowledge in the exact genre of existing files (hilbert-projection-properties, measure-restrict-simplify). Would carry @instantiates math-informal/transport-across-isomorphism, following the transport-across-an-instance-diamond precedent."}
+
+  {:memory-id "e-af9c0faf-5b49-412f-a798-49d37cc3ed81"
+   :name "t00a05-trial1-frontier-and-compile-fixes"
+   :subject "t00A05" :session "zai-e758a6da-…" :depositor "zai-1"
+   :proposal :skip
+   :rationale "Volatile trial-1 receipt (frontier + compile-fix list). The API traps it recorded were consumed by the trial-2 orientation; nothing left generalizes."}
+
+  {:memory-id "e-b31f22f9-a01e-45a3-957a-dd29eb186235"
+   :name "t00a05-true-gap-v2-seam-correction"
+   :subject "t00A05" :session "frame-4" :depositor "problem-peripheral"
+   :proposal :skip
+   :rationale "Superseded gap statement (by e-61355c4f…), then discharged by closure. Its transferable content — the naive angle composition is periodic, the lift must accumulate the seam jump — survives at pattern grain in the proposed seam-weld file and in the closure deposit."}
+
+  {:memory-id "e-b93c22fd-789a-4476-8327-c0c5d840e8eb"
+   :name "t00a05-exact-part-ftc-elimination"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :attach
+   :pattern-id "math-informal/separate-into-independent-pieces"
+   :rationale "The move — kill the exact d/dt sin part by FTC FIRST, which 'decouples the third coordinate entirely' — is an instance of engineering an aggregate so one piece drops out independently. Worked instance with a clear ordering lesson (do the decoupling before anything else)."}
+
+  {:memory-id "e-cb262e0f-eb2b-4d39-8685-d718c9e97fbc"
+   :name "apm-round1-cost-calibration"
+   :subject "t00A05 t94J02" :session "round-1-scribe" :depositor "claude-7-scribe-pass"
+   :proposal :skip
+   :rationale "High-value CAMPAIGN datum (registration's 0.01 estimate off by >1 order of magnitude; variance dominates budgeting) but it is round-budgeting knowledge, not mathematics — the math libraries are the wrong shelf. It already lives in the mission ledger (W.15) where round-2 registration will read it. If the operator wants it push-recallable, that argues for a process-pattern shelf outside the four math libraries — flagged, not proposed."}
+
+  {:memory-id "e-d26b2e5b-b6b6-4d20-b797-13e3d17e925b"
+   :name "lean-eventuallyeq-deriv-bridge"
+   :subject "t00A05" :session "round-1-scribe" :depositor "claude-7-scribe-pass"
+   :proposal :new-pattern
+   :pattern-id "math-formalization/transfer-derivatives-via-eventuallyeq"
+   :new-pattern-description "To transfer a derivative between locally-equal functions: upgrade the pointwise identity to Filter.EventuallyEq via open conditions (strict inequalities, cut avoidance), then EventuallyEq.deriv_eq — no epsilon management."
+   :rationale "General-purpose Lean analysis craft, independent of t00A05 (any piecewise/locally-defined function). Closest existing file (coercion-bridge) covers a different bridge kind; genre match with the formalization shelf is exact."}
+
+  {:memory-id "e-e96764f7-f537-433f-b69a-26ba2564e2e6"
+   :name "t00a05-trial-2-orientation"
+   :subject "t00A05" :session "frame-3" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Dispatch orientation (pointer memory: 'open e-209de11b's body first'). Pure intra-round navigation; meaningless outside the trial sequence it steered."}
+
+  {:memory-id "e-f5e2a58d-8828-4c98-b663-d77c4cce0370"
+   :name "t00a05-region-toolkit-declarations"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Intra-problem toolkit spec (exact convexity/compactness facts to build for this region). Seeding material; no transfer."}
+
+  {:memory-id "e-fbcc7732-b918-4c33-a24a-e29955f26ea5"
+   :name "t00a05-perimeter-walk-chart-square-sphere"
+   :subject "t00A05" :session "frame-3-seeding" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Frame-3 seeded restatement of the frame-2 perimeter-walk technique (e-84690e27…), which carries the promotion proposal. One copy on the shelf; skip the duplicate."}
+
+  {:memory-id "e-fde47b5b-7e8a-408b-b8ec-62866fdc2ea4"
+   :name "t00a05-trial-3-orientation-final"
+   :subject "t00A05" :session "frame-3" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Final-trial dispatch orientation with fallback priorities. Intra-round steering; discharged."}
+
+  {:memory-id "e-5ba1c44d-8151-4975-aaad-d73cdd8279b8"
+   :name "t00a05-CLOSED-axiom-clean"
+   :subject "t00A05" :session "frame-6" :depositor "claude-7"
+   :proposal :attach
+   :pattern-id "math-strategy/compose-independent-lemmas"
+   :rationale "The closure deposit: full proof route (gauge radialization, perimeter chart, seam-corrected lift, orientation from signed area, four-case telescope), axiom-clean at 3c40250. The closing frame was assembly-only — every piece independently proved, composed in a final step adding nothing new — which is the pattern's conclusion verbatim. NOTE: this entry is ABSENT from the t00A05 memory projection despite :state :current (verified via hyperedges query); flagged for the operator as a projection defect the promotion should not silently inherit."}
+
+  {:memory-id "e-8af4838f-a9eb-4012-a737-e4f9f2155106"
+   :name "frame-3-challenge-configuration"
+   :subject "t00A05" :session "frame-3" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Experiment-configuration marker (memory-only challenge: cold student, pre-seeded store). Round-design receipt, not mathematics. Also absent from the t00A05 projection (same defect as e-5ba1c44d…)."}
+
+  ;; ============ a01A06 (3 memories) ============
+
+  {:memory-id "e-2d8f82c7-e617-4fef-8230-b7193fec28e8"
+   :name "apm-problems-tree-not-on-build-path"
+   :subject "a01A06" :session "zai-e758a6da-…" :depositor "zai-1"
+   :proposal :skip
+   :rationale "Repo-local build-hygiene note (lake build vacuous for problems/; verify via lake env lean). Operationally valuable for THIS repo but tooling, not mathematics; the math shelf is the wrong home. Volatile-flagged by its own depositor."}
+
+  {:memory-id "e-33cf23e7-a574-487f-ac5f-ad98302b8047"
+   :name "a01A06-orlicz-claim-is-false"
+   :subject "a01A06" :session "rehearsal-1" :depositor "claude-7"
+   :proposal :skip
+   :rationale "Problem-status fact (the stated claim is false as posed). The transferable counterexample craft behind the refutation is ALREADY promoted — codex-5's e-codexpilot-build-an-Orlicz-bound-counterexample… sits reviewed under math/measure-integration-api. Promoting the bare status fact would add recall noise, not technique."}
+
+  {:memory-id "e-907281cd-b003-418b-8311-73b8eab3d0ba"
+   :name "apm-dispatch-hole-state-must-be-verified-against-frame-branch"
+   :subject "a01A06" :session "zai-e758a6da-…" :depositor "zai-1"
+   :proposal :skip
+   :rationale "APM process lesson (a dispatch claimed a sorry the frame branch had already closed). Real wiring finding, but it belongs to the round-2 wiring queue where it is already recorded, not to the mathematics libraries."}
+
+  ;; ============ t94J02 (3 memories; e-cb262e0f… listed under t00A05) ============
+
+  {:memory-id "e-084a8d0f-9fc7-4d4b-bc9c-bf6e53ea8f54"
+   :name "mathlib-topologicalspace-order-verification"
+   :subject "t94J02" :session "zai-e758a6da-…" :depositor "zai-1"
+   :proposal :skip
+   :rationale "Volatile student restatement of the lattice-direction trap; the durable, better-stated version is e-5b5d46fe… (proposed for attach). Skip the duplicate."}
+
+  {:memory-id "e-5b5d46fe-7c58-4d2a-b031-a16d0267c9ef"
+   :name "mathlib-topologicalspace-lattice-direction-trap"
+   :subject "t94J02" :session "frame-1" :depositor "problem-peripheral"
+   :proposal :attach
+   :pattern-id "math-strategy/convention-bridge"
+   :rationale "Mathlib's TopologicalSpace order runs opposite to classical finer/coarser intuition (bot=discrete, sigma<tau means tau COARSER); the memory makes the convention identification explicit plus its payoff (coarser images of compact are compact). Convention-bridge's conclusion — make the identification explicit and prove it — is exactly this. Reviewer may alternatively prefer a math-formalization home; convention-bridge is the closest EXISTING file."}
+
+  {:memory-id "e-91fe51ff-ebdb-436a-be66-339af4b790e9"
+   :name "multi-topology-instance-synthesis-pins-wrong-topology"
+   :subject "t94J02" :session "zai-e758a6da-…" :depositor "zai-1"
+   :proposal :attach
+   :pattern-id "math-formalization/transport-across-an-instance-diamond"
+   :rationale "Instance-ambiguity craft: with multiple topologies on one type, typeclass synthesis silently pins the wrong one; pin with @. Closest existing file — its keyword set (instance, typeclass, coherence, mismatch) covers the failure mode, though a diamond is strictly two-paths-one-instance; if codex-5 judges the fit too loose, the fallback is a new pin-instances-under-multiplicity file. W.15 already names this deposit shelf-worthy ('instance-pinning')."}]}
