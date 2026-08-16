@@ -875,7 +875,7 @@
         advanced (runner/step p (:state begun)
                               {:tool :advance-problem-phase
                                :args ["M" "C" payload]})]
-    (is (:ok advanced))
+    (is (:ok advanced) (pr-str advanced))
     (is (= :frame (get-in advanced [:state :current-phase])))
     (is (= :retained
            (get-in advanced [:state :cycle/outputs :payload-marker])))
@@ -1663,6 +1663,91 @@
           :disposition {:disp/outcome :closed
                         :disp/residual-sorries 0
                         :disp/axiom-clean? true}}))
+
+(defn- scribe-report-state [state]
+  (assoc state
+         :current-phase :promote
+         :current-cycle-id "C-scribe"
+         :cycle/outputs
+         {:registration
+          {:reg/scribe-seat "ams-scribe-1"
+           :required-measurement-fields
+           ["scribe lane coverage" "arc-lane yield"]}}))
+
+(deftest staffed-scribe-lane-reports-populate-measurement
+  (let [p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec
+                                       (tools/make-mock-backend))
+        start (:state (start-problem p {:session-id "scribe-report"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode}))
+        solve (runner/step
+               p (scribe-report-state start)
+               {:tool :record-scribe-lanes
+                :args [{:lane :solve :ran? true :yield ["memory/solve"]
+                        :author "ams-scribe-1"}]})
+        arc (runner/step
+             p (:state solve)
+             {:tool :record-scribe-lanes
+              :args [{:lane :arc :ran? true
+                      :yield ["memory/arc-1" "memory/arc-2"]
+                      :author "ams-scribe-1"}]})
+        outputs (#'problem/stamp-environment-outputs
+                 (:state arc) (:cycle/outputs (:state arc)))
+        close-state (assoc (:state arc)
+                           :current-phase :close
+                           :cycle/outputs outputs)
+        measured (runner/step p close-state
+                              {:tool :record-measurement :args []})
+        values (get-in measured [:result :meas/values])]
+    (is (= [{:lane :solve :ran? true :yield ["memory/solve"]
+             :author "ams-scribe-1"}
+            {:lane :arc :ran? true
+             :yield ["memory/arc-1" "memory/arc-2"]
+             :author "ams-scribe-1"}]
+           (:scribe-lane-reports outputs)))
+    (is (= {:lanes-ran [:arc :solve] :ran 2 :total 4}
+           (get values "scribe lane coverage")))
+    (is (= 2 (get values "arc-lane yield")))))
+
+(deftest scribe-lane-report-refuses-unknown-lane-and-wrong-seat
+  (let [p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec
+                                       (tools/make-mock-backend))
+        start (:state (start-problem p {:session-id "scribe-refusal"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode}))
+        state (scribe-report-state start)
+        unknown (runner/step
+                 p state
+                 {:tool :record-scribe-lanes
+                  :args [{:lane :unknown :ran? true :yield []
+                          :author "ams-scribe-1"}]})
+        mismatch (runner/step
+                  p state
+                  {:tool :record-scribe-lanes
+                   :args [{:lane :arc :ran? true :yield []
+                           :author "other-seat"}]})]
+    (is (= :tool-execution-failed (:error/code unknown)))
+    (is (re-find #":unknown-scribe-lane" (pr-str unknown)))
+    (is (= :tool-execution-failed (:error/code mismatch)))
+    (is (re-find #":scribe-seat-mismatch" (pr-str mismatch)))))
+
+(deftest absent-scribe-reports-retain-explicit-unset-reasons
+  (let [p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec
+                                       (tools/make-mock-backend))
+        start (:state (start-problem p {:session-id "scribe-unset"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode}))
+        state (-> (scribe-report-state start)
+                  (assoc :current-phase :close))
+        measured (runner/step p state
+                              {:tool :record-measurement :args []})]
+    (is (= "unset: no scribe-lane event is present in cycle outputs"
+           (get-in measured [:result :meas/unset "scribe lane coverage"])))
+    (is (= "unset: no arc-lane event is present in cycle outputs"
+           (get-in measured [:result :meas/unset "arc-lane yield"])))))
 
 (deftest record-measurement-covers-every-required-field-with-values-or-reasons
   (let [backend (tools/make-mock-backend)
