@@ -10451,3 +10451,28 @@ version-conditional transfer, stale-resume refusal, binding survives
 park). Park `park-7b4e78e4`. When both merge, the conductor peripheral is
 OPERATIONAL: W.18's uninhabited role has a room with walls, a door, and a
 key that names the cycle version.
+
+## W.31 P6 COMPLETE: the conductor peripheral is operational (2026-08-16)
+
+**P6-impl-2 merged** (`d1939460`): every bound conductor turn opens with a
+live surface contract (problem, cycle, phase, version, delivery rule);
+unbound prompts byte-identical (tested). Reviewer fix: nil-phase render
+guard — prompt assembly never throws. **P6-impl-3 merged** (`c8ecb29e`):
+takeover requires the exact bound cycle AND persisted save version — never
+agent identity alone; live target bindings refuse replacement; transfer is
+atomic under the cycle lock; parked continuations carry cycle-id + the
+predicted post-dispatch version and a stale wake is refused BEFORE any
+dispatch without mutating the handle; reconnect leaves the binding intact;
+version semantics upgraded to the persisted problem-save version.
+Post-merge conductor+traverse suites 7/63/0 under the reviewer's hands.
+
+**The W.18 finding is closed by construction.** The conductor now has:
+entry only through a validated open (seat gates, P5); a binding that is
+the sole route to effectful acts (impl-1); a per-turn factual contract
+naming where it stands (impl-2); park/resume and takeover that pass
+through the same walls (impl-3); typed guidance (P6b); and an operator
+pane showing every seat (P7+P6c). Off-surface conduction has no transport
+route. What remains before frame-7: the nil-state step refusal packet,
+the park single-delivery packet, the v3 solver card draft (from codex-4's
+testimony), a service restart to activate FUTON3C_TYPED_BELLS — and the
+operator's word.
