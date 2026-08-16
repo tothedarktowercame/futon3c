@@ -19,6 +19,27 @@
    :type "function"
    :function {:name "memory_search" :arguments (json/generate-string args)}})
 
+(defn- memory-read-call [id evidence-id]
+  {:id id :type "function"
+   :function {:name "memory_read"
+              :arguments (json/generate-string {:evidence_id evidence-id})}})
+
+(deftest memory-read-records-the-body-id-as-an-actual-pull-use
+  (let [store (atom {:entries {} :order []})
+        ctx {:agent-id "zai-student" :cwd "/tmp"
+             :session-id-atom (atom "student-session")
+             :evidence-store store :dispatch-id "job-cycle-student"
+             :turn-id "turn-student" :round 2}]
+    (with-redefs [memory-backend/memory-read
+                  (fn [_ _]
+                    {:ok true :result {:items [{:id "e-memory-used"
+                                                :body {:content "used"}}]}})]
+      (#'zai/execute-tool nil ctx
+                          (memory-read-call "tc-read" "e-memory-used")))
+    (is (= ["e-memory-used"]
+           (mapv #(get-in % [:evidence/body :memory-id])
+                 (pull/pull-use-receipts store "job-cycle-student"))))))
+
 (deftest tool-site-records-overlapping-pull-offers-by-round
   (let [store (atom {:entries {} :order []})
         seen-contexts (atom [])

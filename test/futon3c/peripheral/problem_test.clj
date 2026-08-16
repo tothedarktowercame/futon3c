@@ -12,6 +12,7 @@
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.memory-recall :as memory-recall]
             [futon3c.peripheral.memory-write :as memory-write]
+            [futon3c.peripheral.pull-receipts :as pull-receipts]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
@@ -40,6 +41,34 @@
         result (start-problem p {:session-id "s" :problem-id "p"
                                 :cycle/mode :store-mode})]
     [p (assoc (:state result) :current-phase phase) calls]))
+
+(deftest cycle-dispatch-joins-pull-use-receipts-and-filters-non-cycle-reads
+  (let [store (capturing-evidence-store)
+        cycle-id "cycle-pull-1"
+        base-ctx {:evidence-store store :agent-id "zai-student"
+                  :session-id "student-session" :turn-id "turn-1" :round 1}
+        _ (pull-receipts/record-pull-uses!
+           (assoc base-ctx :dispatch-id "job-cycle") "memory_read"
+           {:ok true :result {:items [{:id "e-cycle-memory"}]}})
+        _ (pull-receipts/record-pull-uses!
+           (assoc base-ctx :dispatch-id "job-standalone") "memory_read"
+           {:ok true :result {:items [{:id "e-standalone-memory"}]}})
+        state {:evidence-store store :current-cycle-id cycle-id
+               :current-phase :student-attempts
+               :steps [{:tool :begin-problem-cycle
+                        :result {:cycle/id cycle-id}}
+                       {:tool :dispatch-student-fresh
+                        :result {:job-id "job-cycle"}}]}
+        outputs (#'problem/stamp-environment-outputs state {})]
+    (is (= [{:pull/memory-id "e-cycle-memory"
+             :pull/seat "zai-student"
+             :pull/tool "memory_read"
+             :pull/cycle cycle-id
+             :pull/job-id "job-cycle"
+             :pull/at (get-in outputs [:pull-uses 0 :pull/at])}]
+           (:pull-uses outputs)))
+    (is (not-any? #(= "e-standalone-memory" (:pull/memory-id %))
+                  (:pull-uses outputs)))))
 
 (deftest solver-dispatch-uses-push-plus-pull-and-returns-dispatcher-receipt
   (let [[p state calls] (dispatch-state :guided-solve)

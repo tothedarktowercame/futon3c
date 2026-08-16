@@ -674,7 +674,23 @@
               ;; Recording is observational. A receipt failure is loud but
               ;; cannot rewrite the search result seen by the runner.
               (binding [*out* *err*]
-                (println (str "[pull-receipt] write failed: " (.getMessage t)))))))]
+                (println (str "[pull-receipt] write failed: " (.getMessage t)))))))
+        _pull-use-receipts
+        (when (contains? pull-receipts/pull-use-tool-names name)
+          (try
+            (pull-receipts/record-pull-uses!
+             {:evidence-store evidence-store
+              :agent-id agent-id
+              :session-id (or (some-> session-id-atom deref)
+                              session-id-fallback)
+              :dispatch-id dispatch-id
+              :turn-id turn-id
+              :round round}
+             name result)
+            (catch Throwable t
+              (binding [*out* *err*]
+                (println (str "[pull-use-receipt] write failed: "
+                              (.getMessage t)))))))]
 
     {:detail (tool-call-detail tool-call args)
      :message {:role "tool"

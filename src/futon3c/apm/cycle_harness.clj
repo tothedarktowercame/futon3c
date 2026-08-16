@@ -90,6 +90,7 @@
         dispositions (for-cycle entities cycle-id :disp/cycle)
         offers (for-cycle entities cycle-id :offer/cycle)
         uses (filter (set (map :offer/id offers)) (map :use/offer entities))
+        pull-uses (for-cycle entities cycle-id :pull/cycle)
         retrievals (for-cycle entities cycle-id :rprobe/cycle)
         probes (for-cycle entities cycle-id :probe/cycle)
         promotions (for-cycle entities cycle-id :promo/cycle)]
@@ -100,6 +101,9 @@
      :disposition-ids (mapv :disp/id dispositions)
      :memory-offers (mapv #(select-keys % [:offer/id :offer/memory-id]) offers)
      :memory-disposition-offer-ids (vec uses)
+     :pull-uses (mapv #(select-keys % [:pull/memory-id :pull/seat :pull/tool
+                                       :pull/cycle :pull/job-id :pull/at])
+                      pull-uses)
      :stratum-frozen-at (:cycle/stratum-frozen-at cycle)
      :assigned-at (:cycle/assigned-at cycle)
      :cycle/attempts

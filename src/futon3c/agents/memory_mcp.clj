@@ -8,7 +8,8 @@
             [clojure.string :as str]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as store]
-            [futon3c.peripheral.memory-write :as memory-write])
+            [futon3c.peripheral.memory-write :as memory-write]
+            [futon3c.peripheral.pull-receipts :as pull-receipts])
   (:gen-class))
 
 (def memory-record-description
@@ -102,7 +103,7 @@
       "codex-memory-session"))
 
 (defn handle-request
-  [{:keys [agent-id session-file domain evidence-store record-memory-fn]}
+  [{:keys [agent-id session-file domain evidence-store record-memory-fn] :as ctx}
    {:keys [id method params]}]
   (let [record-memory-fn (or record-memory-fn memory-write/record-memory!)]
     (case method
@@ -140,7 +141,15 @@
 
         "memory_search"
         (let [items (store/query* evidence-store
-                                  (search-query (or (:arguments params) {})))]
+                                  (search-query (or (:arguments params) {})))
+              _ (pull-receipts/record-pull-uses!
+                 {:evidence-store evidence-store
+                  :agent-id agent-id
+                  :session-id (session-id session-file)
+                  :dispatch-id (:dispatch-id ctx)
+                  :turn-id (:dispatch-id ctx)
+                  :round 1}
+                 "memory_search" {:ok true :result {:items items}})]
           {:jsonrpc "2.0" :id id
            :result {:content [{:type "text"
                                :text (json/generate-string items)}]
@@ -152,11 +161,12 @@
       nil)))
 
 (defn -main
-  [& [agent-id session-file domain base-url]]
+  [& [agent-id session-file domain base-url dispatch-id]]
   (let [ctx {:agent-id agent-id
              :session-file session-file
              :domain (keyword domain)
-             :evidence-store (f1b/make-futon1b-backend base-url)}
+             :evidence-store (f1b/make-futon1b-backend base-url)
+             :dispatch-id dispatch-id}
         reader (io/reader System/in)
         writer (io/writer System/out)]
     (doseq [line (line-seq reader)]

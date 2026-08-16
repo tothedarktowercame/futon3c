@@ -15,6 +15,11 @@
   #{"memory_search" "pattern_memory" "library_search" "evidence_graph"
     "psr_search"})
 
+(def pull-use-tool-names
+  "Memory tools whose returned ids are auditable pull uses. The execution site
+   lacks cycle context; cycle traces join these observations through dispatch-id."
+  #{"memory_search" "memory_read"})
+
 (defn- returned-ids
   [tool-name result]
   (let [body (:result result)]
@@ -22,7 +27,7 @@
            "psr_search" (map :pattern-id (:candidates body))
            "library_search" (concat (map :id (:items body))
                                     (map :pattern-id (:candidates body)))
-           (map :id (:items body)))
+           (map #(or (:id %) (:evidence/id %)) (:items body)))
          (remove nil?)
          (map str)
          distinct
@@ -79,4 +84,46 @@
        (mapcat #(get-in % [:evidence/body :pull-surfaced-ids]))
        distinct
        sort
+       vec))
+
+(defn record-pull-uses!
+  "Record one use observation per memory id returned by a pull tool."
+  [{:keys [evidence-store agent-id session-id dispatch-id turn-id round]}
+   tool-name result]
+  (if-not (and (contains? pull-use-tool-names tool-name)
+               (seq (str dispatch-id)))
+    []
+    (mapv
+     (fn [memory-id]
+       (let [at (str (Instant/now))]
+         (boundary/append!
+          evidence-store
+          {:evidence/id (str "e-pull-use-" (UUID/randomUUID))
+           :evidence/subject {:ref/type :task :ref/id (str dispatch-id)}
+           :evidence/type :coordination
+           :evidence/claim-type :observation
+           :evidence/author (str agent-id)
+           :evidence/at at
+           :evidence/session-id (str dispatch-id)
+           :evidence/body {:event :memory-pull-use
+                           :memory-id memory-id
+                           :dispatch-id (str dispatch-id)
+                           :turn-id (str turn-id)
+                           :agent-id (str agent-id)
+                           :session-id (str session-id)
+                           :tool tool-name
+                           :round round
+                           :at at}
+           :evidence/tags [:memory-use :pull-used :tool-call]})))
+     (if (true? (:ok result)) (returned-ids tool-name result) []))))
+
+(defn pull-use-receipts
+  "Return actual pull-use observations for exactly one dispatch."
+  [evidence-store dispatch-id]
+  (->> (store/query* evidence-store
+                     {:query/subject {:ref/type :task :ref/id (str dispatch-id)}})
+       (filter #(and (= :memory-pull-use (get-in % [:evidence/body :event]))
+                     (= (str dispatch-id)
+                        (get-in % [:evidence/body :dispatch-id]))))
+       (sort-by (juxt #(get-in % [:evidence/body :round]) :evidence/at))
        vec))
