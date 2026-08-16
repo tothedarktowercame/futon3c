@@ -10916,3 +10916,20 @@ version in header; sentinel names WHICH cycle completed; distinct buffers
 per cycle if plumbing allows). P14 (reviewer auth) still in review.
 Frame-8 blocked only on: operator's problem pick, scribe-v2 freeze, f7
 close + reload.
+
+## W.51 Worse than overwrite: TEST-JVM renders leak to the operator's live pane (2026-08-16)
+
+Operator: "*problem* says t94J02 store-mode close (9/9) unstaffed —
+nothing identifies it as frame-7." The render CONVICTS ITSELF: t94J02 is
+the TEST fixtures' problem-id, and close (9/9) is the P13 nine-phase
+chain, which is NOT loaded in the serving JVM — so the render came from a
+TEST JVM (the lab manager's own P13/P14 review suite runs) pushing
+through the ambient emacs socket. project!'s no-op-in-tests guard does
+not hold for suite runs on this machine. Third observability deception
+today, escalating family: wrong machine's pane (W.21) → foreign live
+state (W.50) → test data presented as live (W.51). P15 scope EXTENDED
+(addendum belled to codex-3, same branch): projection becomes
+default-DENY, requiring an explicit serving-JVM-only opt-in set by the
+service scripts; root cause of the guard failure to be stated. f7 truth
+re-verified at each report: :student-attempts v43, bound — the frame has
+never wavered; only the WINDOW lies.
