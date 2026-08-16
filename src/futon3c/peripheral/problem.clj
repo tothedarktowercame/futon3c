@@ -32,7 +32,7 @@
   ;; passed straight through it and :emit-trace / :validate-trace /
   ;; :write-authorization were unreachable -- which is why they were declared and
   ;; never implemented. Written-but-not-wired, because the PHASE was unreachable.
-  [:register :frame :guided-solve :intervene :student-attempts
+  [:register :frame :guided-solve :intervene :promote-solver :student-attempts
    :adjudicate :promote :close :completed])
 
 (def advance :advance-problem-phase)
@@ -50,6 +50,7 @@
    :frame #{:emit-frame advance}
    :guided-solve #{:dispatch-solver :guide-solver :read-substrate advance}
    :intervene #{advance}
+   :promote-solver #{:dispatch-scribe :promote-artifact :record-scribe-lanes advance}
    :student-attempts #{:dispatch-student-fresh :read-attempt-result advance}
    :adjudicate #{:write-disposition :write-use advance}
    ;; The scribe card mines a completed solve. :promote is the first phase
@@ -66,6 +67,7 @@
    :frame #{:frame :containment-probe}
    :guided-solve #{:solver-attempt :ground-control-events :memory-offers}
    :intervene #{:intervention}
+   :promote-solver #{:promotion-result}
    :student-attempts #{:student-attempts :memory-uses}
    :adjudicate #{:disposition}
    :promote #{:promotion-result}
