@@ -1291,7 +1291,7 @@
   ;; mission record, the registration, the READMEs or the labs.
   ["src" "scripts" "deps.edn"])
 
-(defn- measure-harness-repository
+(defn measure-harness-repository
   "Measure the harness revision as the commit that last changed the harness
   PATHS -- not the repository HEAD.
 

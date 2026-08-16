@@ -6911,6 +6911,19 @@
                        (conductor-surface/status (get params "agent-id")
                                                  (get params "session-id"))))
 
+      (and (= :post method) (= "/api/alpha/conductor/abandon" uri))
+      (let [payload (parse-json-map (read-body request))
+            result (when payload
+                     (conductor-surface/abandon!
+                      (or (:agent-id payload) (get payload "agent-id"))
+                      (or (:session-id payload) (get payload "session-id"))
+                      (or (:cycle-id payload) (get payload "cycle-id"))
+                      (or (:version payload) (get payload "version"))))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          :else (json-response 409 result)))
+
       (and (= :post method) (= "/api/alpha/conductor/takeover" uri))
       (let [payload (parse-json-map (read-body request))
             result (when payload

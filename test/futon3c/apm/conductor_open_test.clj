@@ -67,6 +67,9 @@
                :frame {:scaffold (str scaffold) :closing (str closing)
                        :witness (str witness)}}
      :options {:peripheral peripheral
+               :harness-measurer
+               (fn [_] {:harness-revision harness-revision
+                        :harness-tree-dirty? false})
                :evidence-store (atom {:entries {} :order []})}
      :registration registration
      :paths [registration scaffold closing witness]}))
@@ -127,5 +130,31 @@
         (is (false? (:ok second-result)))
         (is (= :conductor-binding-exists (:error/code second-result)))
         (is (= 1 @calls)))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest stale-harness-pin-refuses-before-opening-or-provisioning
+  (let [{:keys [payload options paths]} (fixture)
+        opens (atom 0)
+        session-id "stale-pin-guide-session"
+        measured (apply str (repeat 40 "a"))]
+    (register-guide! session-id)
+    (try
+      (let [result (conductor-open/open!
+                    payload
+                    (assoc options
+                           :harness-measurer
+                           (fn [_] {:harness-revision measured
+                                    :harness-tree-dirty? false})
+                           :open-frame-fn
+                           (fn [_]
+                             (swap! opens inc)
+                             {:ok false :error/code :must-not-open})))]
+        (is (false? (:ok result)))
+        (is (= :harness-pin-stale (:error/code result)))
+        (is (= (:reg/harness-revision f7-registration) (:pinned result)))
+        (is (= measured (:measured result)))
+        (is (zero? @opens))
+        (is (nil? (binding/lookup "f7-guide" session-id))))
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))

@@ -80,6 +80,13 @@
 (defn status [agent-id session-id]
   (binding/status agent-id session-id))
 
+(defn abandon!
+  "Authenticate and abandon the caller's explicitly versioned live binding."
+  [agent-id session-id cycle-id version]
+  (if-not (authenticated-session? agent-id session-id)
+    {:ok false :error/code :conductor-session-unauthenticated}
+    (binding/abandon! agent-id session-id cycle-id version)))
+
 (defn takeover!
   "Authenticate and transfer an explicitly named saved cycle to this session."
   [agent-id session-id cycle-id version]

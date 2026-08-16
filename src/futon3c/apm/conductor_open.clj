@@ -37,6 +37,15 @@
     (string? mode) (keyword mode)
     :else mode))
 
+(defn- harness-pin-check [registration options]
+  (let [repo (or (:harness-repo options) "/home/joe/code/futon3c")
+        measure (or (:harness-measurer options)
+                    problem/measure-harness-repository)
+        measured (:harness-revision (measure repo))
+        pinned (:reg/harness-revision registration)]
+    (when (not= pinned measured)
+      (refusal :harness-pin-stale {:pinned pinned :measured measured}))))
+
 (defn- production-config
   [payload registration guide-session options]
   (let [frame (:frame payload)
@@ -146,16 +155,18 @@
                         {:guide-seat guide-seat})
 
                :else
-               (let [config (production-config payload registration
-                                               guide-session options)
-                     opened ((or (:open-frame-fn options)
-                                 conductor/open-frame!)
-                             config)]
-                 (if (false? (:ok opened))
-                   (merge {:ok false}
-                          (select-keys opened [:error :error/code :findings]))
-                   {:ok true
-                    :cycle-id (:cycle-id opened)
-                    :version (binding/handle-version opened)
-                    :phase (get-in opened [:state :current-phase])
-                    :seats (select-keys registration seat-keys)}))))))))))
+               (if-let [pin-refusal (harness-pin-check registration options)]
+                 pin-refusal
+                 (let [config (production-config payload registration
+                                                 guide-session options)
+                       opened ((or (:open-frame-fn options)
+                                   conductor/open-frame!)
+                               config)]
+                   (if (false? (:ok opened))
+                     (merge {:ok false}
+                            (select-keys opened [:error :error/code :findings]))
+                     {:ok true
+                      :cycle-id (:cycle-id opened)
+                      :version (binding/handle-version opened)
+                      :phase (get-in opened [:state :current-phase])
+                      :seats (select-keys registration seat-keys)})))))))))))
