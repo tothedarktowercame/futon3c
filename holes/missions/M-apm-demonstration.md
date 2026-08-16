@@ -10424,3 +10424,30 @@ Round-2 arm design refined: compare state-based vs siege-sustained, or
 test the seat's own "siege-once then state-based" as a third arm. His
 obstruction→response taxonomy maps onto P6b's bell types directly
 (challenge/assert from the seat; answer with ref back).
+
+## W.30 P6-impl-1 merged: the conductor binding is live code (2026-08-16)
+
+**P6-impl-1 (ams-codex-1): reviewed and merged (`e3ace273`).** Checked:
+install-once binding registry (`conductor_binding.clj`) — single handle
+atom per cycle, per-binding lock with identity re-check after acquisition,
+action-id receipt ledger refusing replays, version echo required on every
+action (stale cycle OR version refused), sentinel completion clears the
+binding, abandonment requires naming current cycle+version; closed
+operation vocabulary in `conductor_surface.clj` mapping ONLY to public
+conductor adapters (dispatch-solver/guide-solver/dispatch-student/
+record-solver-attempt/deposit/record-students/adjudicate/close) — no
+generic eval; HTTP routes `/api/alpha/conductor/action` (POST, 409 on
+refusal) and `/status` (GET, unbound = ordinary state). Merge conflict
+with P6b in conductor.clj requires (both additive) resolved by reviewer;
+kondo pair-lint 0/0 (single-file warning = false positive, var exists);
+post-merge combined suites 117/435/0 — typed guidance and the binding
+route compose. End-to-end proof: one routed dispatch = exactly one
+problem step; refusals = none; replay rejected; post-sentinel unrouteable.
+
+**P6-impl-2 dispatched** (codex-3, `invoke-…36cdef03`, surface-contract
+prompt from live binding status) and **P6-impl-3 dispatched** (ams-codex-1,
+`invoke-…a1d80a08`, takeover/park-resume through the binding — explicit
+version-conditional transfer, stale-resume refusal, binding survives
+park). Park `park-7b4e78e4`. When both merge, the conductor peripheral is
+OPERATIONAL: W.18's uninhabited role has a room with walls, a door, and a
+key that names the cycle version.
