@@ -275,6 +275,41 @@
       (is (str/includes? result "target=L-5"))
       (is (str/includes? result "30min")))))
 
+;; -----------------------------------------------------------------------------
+;; :problem adaptor
+;; -----------------------------------------------------------------------------
+
+(deftest problem-mid-cycle-and-sentinel-rendering
+  (let [mid-cycle
+        {:problem-id "t00A05"
+         :cycle/mode :store-mode
+         :current-phase :guided-solve
+         :cycles-completed 0
+         :conductor {:agent "claude-7" :proctor "claude-2"}
+         :cycle/outputs
+         {:registration {:reg/solver-seat "codex-4"
+                         :reg/attempt-caps {:s-frontier 10 :s-student 3}}
+          :solver-attempt {:attempt/id "solver/1"}
+          :student-attempts [{:attempt/id "student/1"}
+                             {:attempt/id "student/2"}]}
+         :steps [{:tool :dispatch-solver
+                  :result {:job-id "invoke-live-solver"}}
+                 {:tool :dispatch-student-fresh
+                  :result {:job-id "invoke-live-student"
+                           :ground-control/recipient "zai-1"}}]}
+        rendered (bb/render-blackboard :problem mid-cycle)
+        completed (bb/render-blackboard
+                   :problem
+                   (assoc mid-cycle :current-phase nil :cycles-completed 1))]
+    (is (str/includes? rendered "Problem: t00A05"))
+    (is (str/includes? rendered "Phase: guided-solve (3/8)"))
+    (is (str/includes? rendered "register > frame > guided-solve > intervene"))
+    (is (str/includes? rendered "scribe=unstaffed"))
+    (is (str/includes? rendered "Attempts: solver 1/10  student 2/3"))
+    (is (str/includes? rendered
+                       "Latest dispatch: dispatch-student-fresh  job=invoke-live-student"))
+    (is (str/includes? completed "Phase: COMPLETED (sentinel)"))))
+
 ;; =============================================================================
 ;; blackboard! primitive — elisp construction
 ;; =============================================================================
