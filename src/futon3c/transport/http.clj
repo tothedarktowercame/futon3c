@@ -54,6 +54,7 @@
    - realtime/request-param-resilience (L1, L3): delegates param extraction
      to protocol/extract-params for consistency across HTTP and WS."
   (:require [futon3c.transport.protocol :as proto]
+            [futon3c.apm.conductor-binding :as conductor-binding]
             [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
@@ -3164,6 +3165,23 @@
            "- E2E script command: `MINIBUFFER: {\"command\":\"run-script\",\"steps\":[{\"op\":\"switch-buffer\",\"buffer\":\"*codex-repl:codex-8*\"},{\"op\":\"forward-line\",\"count\":2},{\"op\":\"snapshot\"}]}`.\n"
            "- Example: `MINIBUFFER: {\"command\":\"refresh-context\"}` or `MINIBUFFER: Inspect current defun`.\n\n"))))
 
+(defn- problem-conductor-contract-block
+  "Render factual transport metadata for an agent's live conductor binding."
+  [agent-id]
+  (when-let [session-id (some-> (reg/get-agent (str agent-id))
+                                :agent/session-id)]
+    (let [{:keys [bound? problem-id cycle-id phase version]}
+          (conductor-binding/status (str agent-id) session-id)]
+      (when bound?
+        (str "Problem-conductor surface contract:\n"
+             "- Problem: " problem-id "\n"
+             "- Cycle: " cycle-id "\n"
+             ;; a cycle completed outside the route can leave a nil phase
+             ;; momentarily; prompt assembly must never throw
+             "- Current phase: " (if phase (name phase) "completed (sentinel)") "\n"
+             "- Version: " version "\n"
+             "- Delivery rule: effectful conductor operations are submitted as typed problem actions via /api/alpha/conductor/action with your action-id/cycle-id/version; reads are unrestricted.\n\n")))))
+
 (defn- wrap-agent-facing-surface
   "Apply authoritative surface header plus any live agent-facing projection."
   ([prompt surface caller agent-id]
@@ -3171,6 +3189,7 @@
   ([prompt surface caller agent-id thread]
    (str (wrap-surface-header "" surface caller agent-id thread)
         (or (surface-projection-block agent-id) "")
+        (or (problem-conductor-contract-block agent-id) "")
         prompt)))
 
 (defn- parse-minibuffer-directive
