@@ -210,7 +210,8 @@
           fetch-entry #(estore/get-entry* (:evidence-store ctx) %)
           post-hyperedge memory-write/post-hyperedge!
           append-evidence #(boundary/append! (:evidence-store ctx) %)}}]
-   (cond
+   (let [acting-identity (:acting-identity ctx)]
+    (cond
      (not (nonblank-string? memory-id))
      {:ok false :finding {:failure :promotion-memory-id-missing
                           :request request}}
@@ -227,6 +228,13 @@
      (not (nonblank-string? reviewer))
      {:ok false :finding {:failure :promotion-reviewer-missing
                           :memory-id memory-id}}
+
+     (and (nonblank-string? acting-identity)
+          (not= (str acting-identity) reviewer))
+     {:ok false :finding {:failure :reviewer-not-actor
+                          :memory-id memory-id
+                          :reviewer reviewer
+                          :acting-identity (str acting-identity)}}
 
      :else
      (let [edge (validate-edge! ctx memory-id
@@ -306,9 +314,12 @@
                             {:fetch-hyperedges fetch-hyperedges
                              :fetch-entry fetch-entry
                              :post-hyperedge post-hyperedge})]
-                       (assoc review-result
-                              :pattern-id pattern-id
-                              :review-evidence-id review-id)))))))))))))
+                       (cond-> (assoc review-result
+                                     :pattern-id pattern-id
+                                     :review-evidence-id review-id)
+                         (not (nonblank-string? acting-identity))
+                         (update :findings (fnil conj [])
+                                 :reviewer-unauthenticated)))))))))))))))
 
 (defn review-attachment!
   "Review one proposed pattern attachment using separately authored evidence.

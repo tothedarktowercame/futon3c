@@ -1602,6 +1602,7 @@
               (try
                 (memory-lifecycle/promote-memory-attachment!
                  {:agent-id (:reviewer options)
+                  :acting-identity (:acting-identity options)
                   :session-id (:session-id @cycle-context)
                   :cycle-id cycle-id
                   :domain :mathematics
@@ -1619,7 +1620,9 @@
            :error "promote-artifact requires an open cycle and :artifact-id"}
 
           (and memory-id (not (:ok review-result)))
-          {:ok false :error (:finding review-result)}
+          {:ok false
+           :error (let [finding (:finding review-result)]
+                    (assoc finding :error/code (:failure finding)))}
 
           :else
           {:ok true
@@ -1641,7 +1644,9 @@
                      memory-id
                      (assoc :promo/pattern-id (:pattern-id options)
                             :promo/review-evidence-id
-                            (:review-evidence-id review-result)))}))
+                            (:review-evidence-id review-result)
+                            :promo/review-findings
+                            (vec (:findings review-result))))}))
 
       :else
       (tools/execute-tool inner-backend tool-id args))))
