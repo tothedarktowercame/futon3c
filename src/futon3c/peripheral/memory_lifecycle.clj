@@ -189,6 +189,127 @@
          (= review-evidence-id
             (get-in edge [:hx/props :review :evidence-id])))))
 
+(declare review-attachment!)
+
+(defn- library-pattern-id? [pattern-id]
+  ;; "<library>/<pattern>" shape only. Which library directories exist is the
+  ;; adjudicator's and the multi_watcher's business (W.24 addendum: directories
+  ;; are created as needed and ingested automatically), so the runtime must not
+  ;; pin today's taxonomy in a prefix list.
+  (and (nonblank-string? pattern-id)
+       (let [i (str/index-of pattern-id "/")]
+         (and (some? i) (pos? i) (< (inc i) (count pattern-id))))))
+
+(defn promote-memory-attachment!
+  "Attach one caller-chosen pattern to a statusless memory, then approve that
+   attachment through the independently authored review path."
+  ([ctx request] (promote-memory-attachment! ctx request {}))
+  ([ctx {:keys [memory-id pattern-id reviewer] :as request}
+    {:keys [fetch-hyperedges fetch-entry post-hyperedge append-evidence]
+     :or {fetch-hyperedges substrate/hyperedges-by-end
+          fetch-entry #(estore/get-entry* (:evidence-store ctx) %)
+          post-hyperedge memory-write/post-hyperedge!
+          append-evidence #(boundary/append! (:evidence-store ctx) %)}}]
+   (cond
+     (not (nonblank-string? memory-id))
+     {:ok false :finding {:failure :promotion-memory-id-missing
+                          :request request}}
+
+     (not (nonblank-string? pattern-id))
+     {:ok false :finding {:failure :promotion-pattern-id-missing
+                          :memory-id memory-id}}
+
+     (not (library-pattern-id? pattern-id))
+     {:ok false :finding {:failure :promotion-pattern-id-not-library-shaped
+                          :memory-id memory-id
+                          :pattern-id pattern-id}}
+
+     (not (nonblank-string? reviewer))
+     {:ok false :finding {:failure :promotion-reviewer-missing
+                          :memory-id memory-id}}
+
+     :else
+     (let [edge (validate-edge! ctx memory-id
+                                (current-edge memory-id fetch-hyperedges))
+           memory-entry (fetch-entry memory-id)
+           depositor (:evidence/author memory-entry)]
+       (cond
+         (nil? memory-entry)
+         {:ok false :finding {:failure :promotion-memory-entry-missing
+                              :memory-id memory-id}}
+
+         (= reviewer depositor)
+         {:ok false :finding {:failure :promotion-reviewer-is-depositor
+                              :memory-id memory-id
+                              :depositor depositor
+                              :reviewer reviewer}}
+
+         (contains? (:hx/props edge) :attachment-status)
+         {:ok false :finding {:failure :promotion-attachment-not-statusless
+                              :memory-id memory-id
+                              :attachment-status
+                              (get-in edge [:hx/props :attachment-status])}}
+
+         :else
+         (let [existing-patterns (vec (get-in edge [:hx/props :roles :patterns]))]
+           (if (seq existing-patterns)
+             {:ok false :finding {:failure :promotion-patterns-already-present
+                                  :memory-id memory-id
+                                  :pattern-ids existing-patterns}}
+             (let [attached (-> edge
+                                (update :hx/endpoints
+                                        #(vec (distinct (conj (vec %) pattern-id))))
+                                (update-in [:hx/props :roles :subjects]
+                                           #(vec (distinct (conj (vec %) pattern-id))))
+                                (assoc-in [:hx/props :roles :patterns] [pattern-id])
+                                (assoc-in [:hx/props :attachment-status] :proposed))
+                   attachment-receipt (post-hyperedge ctx attached)]
+               (if-not (:ok attachment-receipt)
+                 {:ok false
+                  :finding {:failure :promotion-attachment-write-failed
+                            :memory-id memory-id
+                            :receipt attachment-receipt}}
+                 (let [review-id (str "e-" (UUID/randomUUID))
+                       reviewed-at (now)
+                       review-entry
+                       {:evidence/id review-id
+                        :evidence/subject {:ref/type :memory :ref/id memory-id}
+                        :evidence/type :memory
+                        :evidence/claim-type :observation
+                        :evidence/author reviewer
+                        :evidence/session-id (str (:session-id ctx))
+                        :evidence/at (str reviewed-at)
+                        :evidence/body
+                        {:review/event :memory-attachment-review
+                         :review/memory-id memory-id
+                         :review/pattern-ids [pattern-id]
+                         :review/verdict :approve
+                         :review/witness-status :independently-witnessed
+                         :review/provenance
+                         {:kind :promote-phase-adjudication
+                          :cycle-id (:cycle-id ctx)}}
+                        :evidence/tags [:memory :memory/attachment-review]}
+                       evidence-receipt (append-evidence review-entry)]
+                   (if-not (:ok evidence-receipt)
+                     {:ok false
+                      :finding {:failure :promotion-review-evidence-write-failed
+                                :memory-id memory-id
+                                :review-evidence-id review-id
+                                :receipt evidence-receipt}}
+                     (let [review-result
+                           (review-attachment!
+                            (assoc ctx :agent-id reviewer)
+                            {:memory-id memory-id
+                             :review-evidence-id review-id
+                             :verdict :approve
+                             :pattern-ids [pattern-id]}
+                            {:fetch-hyperedges fetch-hyperedges
+                             :fetch-entry fetch-entry
+                             :post-hyperedge post-hyperedge})]
+                       (assoc review-result
+                              :pattern-id pattern-id
+                              :review-evidence-id review-id)))))))))))))
+
 (defn review-attachment!
   "Review one proposed pattern attachment using separately authored evidence.
 

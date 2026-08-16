@@ -11,6 +11,7 @@
             [futon3c.evidence.backend :as evidence-backend]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.cycle :as cycle]
+            [futon3c.peripheral.memory-lifecycle :as memory-lifecycle]
             [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
@@ -1449,17 +1450,44 @@
       (let [options (first args)
             cycle-id @active-cycle-id
             step-index (:cycle/step-index (last args))
-            artifact-id (or (:promo/artifact-id options) (:artifact-id options))
+            memory-id (:memory-id options)
+            artifact-id (or (:promo/artifact-id options) (:artifact-id options)
+                            memory-id)
             importable? (true? (if (contains? options :promo/importable)
                                  (:promo/importable options)
                                  (:importable? options)))
             need-tags (vec (or (:promo/need-tags options)
-                               (:need-tags options) []))]
-        (if (and cycle-id (string? artifact-id) (not (str/blank? artifact-id)))
+                               (:need-tags options) []))
+            review-result
+            (when (and cycle-id memory-id)
+              (try
+                (memory-lifecycle/promote-memory-attachment!
+                 {:agent-id (:reviewer options)
+                  :session-id (:session-id @cycle-context)
+                  :cycle-id cycle-id
+                  :domain :mathematics
+                  :evidence-store
+                  (f1b/make-futon1b-backend (substrate/configured-url))}
+                 (select-keys options [:memory-id :pattern-id :reviewer]))
+                (catch Throwable t
+                  {:ok false
+                   :finding {:failure :promotion-attachment-review-threw
+                             :message (.getMessage t)}})))]
+        (cond
+          (not (and cycle-id (string? artifact-id)
+                    (not (str/blank? artifact-id))))
+          {:ok false
+           :error "promote-artifact requires an open cycle and :artifact-id"}
+
+          (and memory-id (not (:ok review-result)))
+          {:ok false :error (:finding review-result)}
+
+          :else
           {:ok true
-           :result {:promo/id (str "promo/" cycle-id "/" step-index)
-                    :promo/cycle cycle-id
-                    :promo/artifact-id artifact-id
+           :result (cond->
+                    {:promo/id (str "promo/" cycle-id "/" step-index)
+                     :promo/cycle cycle-id
+                     :promo/artifact-id artifact-id
                     ;; ONE key, the one derive-trace actually reads
                     ;; (cycle_harness.clj:136). Emitting both spellings was a
                     ;; hedge against not knowing which is canonical, and a hedge
@@ -1469,10 +1497,12 @@
                     ;; entities -- :cprobe/claimed?, :cprobe/recorded?,
                     ;; :cprobe/passed? -- and the last of those was silently wrong
                     ;; for exactly this reason.
-                    :promo/importable? importable?
-                    :promo/need-tags need-tags}}
-          {:ok false
-           :error "promote-artifact requires an open cycle and :artifact-id"}))
+                     :promo/importable? importable?
+                     :promo/need-tags need-tags}
+                     memory-id
+                     (assoc :promo/pattern-id (:pattern-id options)
+                            :promo/review-evidence-id
+                            (:review-evidence-id review-result)))}))
 
       :else
       (tools/execute-tool inner-backend tool-id args))))

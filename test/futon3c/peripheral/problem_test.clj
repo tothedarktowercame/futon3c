@@ -7,7 +7,11 @@
             [futon3c.apm.cycle-harness :as apm-harness]
             [futon3c.apm.preregistration :as prereg]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
+            [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.store :as estore]
             [futon3c.peripheral.cycle :as cycle]
+            [futon3c.peripheral.memory-recall :as memory-recall]
+            [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
@@ -2225,6 +2229,113 @@
     (is (true? (:disp/axiom-clean? entity)))
     (is (= 0 (get values "residual executable sorries")))
     (is (true? (get values "axiom cleanliness")))))
+
+(deftest promote-attaches-reviews-and-makes-only-that-memory-recallable
+  (let [pattern-id "math-formalization/transport-across-an-instance-diamond"
+        problem-id "t00A05"
+        memory-entry
+        (fn [id]
+          {:evidence/id id
+           :evidence/subject {:ref/type :problem :ref/id problem-id}
+           :evidence/type :memory
+           :evidence/claim-type :assert
+           :evidence/author "depositor"
+           :evidence/session-id "session-disposition"
+           :evidence/at "2026-08-16T00:00:00Z"
+           :evidence/body {:kind :content :name id :hook "hook"
+                           :body "transport an instance diamond"}})
+        edge
+        (fn [id]
+          {:hx/id (str "hx-" id)
+           :hx/type :memory/assert
+           :hx/endpoints [id problem-id]
+           :hx/props {:domain :mathematics :state :current
+                      :roles {:entry id :subjects [problem-id]
+                              :distills [] :session "session-disposition"}}})
+        promoted-id "e-promoted"
+        sibling-id "e-unpromoted"
+        entries (atom {promoted-id (memory-entry promoted-id)
+                       sibling-id (memory-entry sibling-id)})
+        edges (atom {promoted-id (edge promoted-id)
+                     sibling-id (edge sibling-id)})
+        fetch-hyperedges
+        (fn [endpoint _]
+          (->> (vals @edges)
+               (filter #(some #{endpoint} (:hx/endpoints %)))
+               vec))
+        post-hyperedge
+        (fn [_ updated]
+          (swap! edges assoc (get-in updated [:hx/props :roles :entry]) updated)
+          {:ok true :hyperedge updated})
+        append-evidence
+        (fn [_ entry]
+          (swap! entries assoc (:evidence/id entry) entry)
+          {:ok true :entry entry})
+        promote
+        (fn [backend request]
+          (tools/execute-tool backend :promote-artifact
+                              [request {:cycle/step-index 12}]))]
+    (with-redefs [substrate/hyperedges-by-end fetch-hyperedges
+                  estore/get-entry* (fn [_ id] (get @entries id))
+                  memory-write/post-hyperedge! post-hyperedge
+                  boundary/append! append-evidence]
+      (let [result (promote (begun-problem-cycle-backend)
+                            {:memory-id promoted-id
+                             :pattern-id pattern-id
+                             :reviewer "reviewer"})
+            projection
+            (memory-recall/recall-by-endpoints
+             {:domain :mathematics} [problem-id]
+             {:limit 10
+              :fetch-components
+              (fn [endpoints _]
+                {:groups
+                 (mapv (fn [endpoint]
+                         {:endpoint endpoint
+                          :components
+                          (mapv (fn [edge]
+                                  {:edge edge
+                                   :entry (get @entries
+                                               (get-in edge
+                                                       [:hx/props :roles :entry]))})
+                                (fetch-hyperedges endpoint {}))})
+                       endpoints)})})
+            recalled (mapv :memory/id (get-in projection [:recalls 0 :memories]))
+            self-review (promote (begun-problem-cycle-backend)
+                                 {:memory-id sibling-id
+                                  :pattern-id pattern-id
+                                  :reviewer "depositor"})
+            blank-pattern (promote (begun-problem-cycle-backend)
+                                   {:memory-id sibling-id
+                                    :pattern-id " "
+                                    :reviewer "reviewer"})
+            missing-pattern (promote (begun-problem-cycle-backend)
+                                     {:memory-id sibling-id
+                                      :reviewer "reviewer"})
+            unshaped-pattern (promote (begun-problem-cycle-backend)
+                                      {:memory-id sibling-id
+                                       :pattern-id "no-library-segment"
+                                       :reviewer "reviewer"})
+            review-id (get-in result [:result :promo/review-evidence-id])]
+        (is (:ok result) result)
+        (is (= :reviewed
+               (get-in @edges [promoted-id :hx/props :attachment-status])))
+        (is (= "reviewer" (get-in @entries [review-id :evidence/author])))
+        (is (not= (get-in @entries [promoted-id :evidence/author])
+                  (get-in @entries [review-id :evidence/author])))
+        (is (= [promoted-id] recalled))
+        (is (not (some #{sibling-id} recalled)))
+        (is (= :promotion-reviewer-is-depositor
+               (get-in self-review [:error :failure])))
+        (is (= :promotion-pattern-id-missing
+               (get-in blank-pattern [:error :failure])))
+        (is (= :promotion-pattern-id-missing
+               (get-in missing-pattern [:error :failure])))
+        (is (= :promotion-pattern-id-not-library-shaped
+               (get-in unshaped-pattern [:error :failure]))
+            "a future library like math-informal-AT/... must be accepted, so
+             the check is shape-only and taxonomy stays with the adjudicator")
+        (is (nil? (get-in @edges [sibling-id :hx/props :attachment-status])))))))
 
 (deftest write-disposition-accepts-measurement-field-aliases
   (let [result (tools/execute-tool
