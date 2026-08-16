@@ -332,6 +332,34 @@
       (get-in state [:cycle/outputs :environment-checkouts])
       (:environment-checkouts payload)))
 
+(defn- student-memory-eligibility
+  "Machine-owned eligibility for the student pull channel.
+
+  Harness mode remains frozen at the open snapshot. Store mode additionally
+  admits artifacts promoted by recorded tool results earlier in this cycle.
+  Both source vectors are retained so the receipt can audit the union."
+  [state]
+  (let [snapshot-ids (vec (or (get-in state
+                                      [:cycle/outputs :store-snapshot
+                                       :snap/memory-ids]) []))
+        promoted-ids (->> (get-in state [:cycle/outputs :promotion-result])
+                          (keep :promo/artifact-id)
+                          distinct
+                          vec)
+        store-mode? (= :store-mode (:cycle/mode state))
+        eligible-ids (->> (if store-mode?
+                            (concat snapshot-ids promoted-ids)
+                            snapshot-ids)
+                          distinct
+                          vec)]
+    {:eligible-memory-ids eligible-ids
+     :eligible-memory-provenance
+     {:policy (if store-mode?
+                :snapshot-union-cycle-promoted
+                :snapshot-only)
+      :snapshot-memory-ids snapshot-ids
+      :cycle-promoted-memory-ids (if store-mode? promoted-ids [])}}))
+
 (declare recorded-measurement recorded-close-envelope recorded-validation
          recorded-authorization)
 
@@ -481,8 +509,9 @@
                               [:cycle/outputs :registration :reg/solver-config])})
 
     :dispatch-student-fresh
-    (conj (vec args) {:cycle/id (:current-cycle-id state)
-                      :cycle/step-index (count (:steps state))})
+    (conj (vec args) (merge {:cycle/id (:current-cycle-id state)
+                             :cycle/step-index (count (:steps state))}
+                            (student-memory-eligibility state)))
 
     :dispatch-scribe
     (conj (vec args) {:cycle/id (:current-cycle-id state)
@@ -1254,6 +1283,11 @@
                                (or opts {}))
                         solver-config (merge solver-config)
                         scribe-seat (assoc :to scribe-seat)
+                        (= :dispatch-student-fresh tool-id)
+                        (assoc :eligible-memory-ids
+                               (:eligible-memory-ids measured)
+                               :eligible-memory-provenance
+                               (:eligible-memory-provenance measured))
                         true (assoc :memory-channel memory-channel))
             dispatch-result (try (dispatch-fn sent-opts
                                               packet)

@@ -1378,6 +1378,9 @@
                     :memory-use receipt}
              (:reason recall-result)
              (assoc :recall-reason (:reason recall-result))
+             (:eligible-memory-provenance recall-result)
+             (assoc :eligible-memory-provenance
+                    (:eligible-memory-provenance recall-result))
              (string? (:error recall-result))
              (assoc :recall-error-message
                     (subs (:error recall-result)
@@ -1473,6 +1476,8 @@
    :reason :memory-channel-no-push
    :query (recall-query opts packet
                         (read-bpm-terrains (default-terrain-readme)))
+   :eligible-memory-ids (vec (or (:eligible-memory-ids opts) []))
+   :eligible-memory-provenance (:eligible-memory-provenance opts)
    :memories []})
 
 (defn run-dispatch!
