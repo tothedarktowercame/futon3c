@@ -10517,3 +10517,35 @@ re-run by the reviewer; consumer suites green.
 4. Seat staffing confirmation: solver codex-4, student zai-1, guide
    claude-7 (bound through the conductor surface), proctor = distinct
    agent, scribe = ams-scribe-1 fresh session.
+
+## W.34 Frame-7 rulings: restart done, a98A01, pins confirmed, FRESH SEATS per problem (Joe, 2026-08-16)
+
+**Restart complete** (operator, 18:40Z, `restart-fdev-detached.sh`, RESULT=ok,
+Agency up in 2s). Post-restart verification by the conductor: roster intact
+(43 agents, all locals present — registration persists); **typed bells
+ACTIVE** (invalid performative now rejected at POST: `invalid-bell-type`);
+park single-delivery live with the new JVM.
+
+**Problem: a98A01** — the round-1 registration's reserved confirmation
+unit, untouched, a-family (near the rehearsal memories, so recall has
+something to find once promotion runs). Statement verification against the
+Lean happens BEFORE any dispatch (frame-1 lesson).
+
+**Pins confirmed**: `:reg/guidance-regime #{:answer :suggest}` (plan-first
+structural; the operator re-anchored codex-4's testimony: siege once, then
+state-based; mathematical guidance only when it changes the route —
+the compiler-visible residual drives the next packet); `:reg/solver-config`
+Sol at max effort pending CLI vocabulary check; v3 card TO FREEZE at
+registration; caps s-frontier 10 / s-student 3; store-mode.
+
+**Seats: OPERATOR OVERRULES accumulated seats — fresh versions of all
+lanes for this problem, and similarly per problem.** The identity floor
+becomes structural: agents do not accumulate across problems; ONLY THE
+STORE ACCUMULATES — which is the system's thesis made operational. The
+scribe card said it first: "anything that should accumulate has to
+accumulate in the substrate." Fresh-seat provisioning: codex spawn is a
+terminal op (`scripts/codex-picker --new`); zai has `scripts/zai-picker`;
+`ams-scribe-1` verified VIRGIN (zero jobs ever) and is usable as the fresh
+scribe seat. Open question flagged to operator: does "all lanes" include
+the guide, or does claude-7 hold the guide seat for frame-7 (bound through
+the conductor surface), rotating later via the takeover path?
