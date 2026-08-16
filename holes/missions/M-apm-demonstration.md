@@ -10255,3 +10255,22 @@ same seat keys, so an unstaffed seat is visible on the operator pane AND
 fatal at the gate. Remaining queue: P3 (operator ruling pending), P4
 (blocked on P3), P6 (conductor peripheral, after P1–P5 — now only P3/P4
 outstanding).
+
+## W.24 Operator ruling on P3: attach-then-review, patterns from the math libraries (Joe, 2026-08-16)
+
+**Ruling: option 1** — promotion first files the memory under a pattern,
+then approves the attachment. **Patterns are not arbitrary**: they are the
+`math-informal*` / `math-formalization` libraries in
+`~/code/futon3/library/` — mathematical content goes to a subject library
+(operator's examples: math-informal-AT, -GN, -GT), Lean proof-craft to the
+formalization side, "picking one, or creating one if none fits."
+
+**Library ground truth at ruling time:** `math-informal/` (universal
+heuristics), `math-informal-CT/` (only executed subject split),
+`math-formalization/`, `math-strategy/`; the full by-kind/by-subject split
+exists as claude-2's REVIEW manifest (`MANIFEST-math-split-proposal.md`,
+2026-08-13), not yet executed. The promotion mechanism therefore takes the
+pattern id as an argument (adjudicator chooses from the taxonomy); it does
+not depend on the split being executed, and growing the library remains an
+editorial act outside the runtime. P3-impl dispatched to ams-codex-1
+(diagnosis + refusal context); P4 scribe lane unblocks on its merge.
