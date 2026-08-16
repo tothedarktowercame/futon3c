@@ -9722,3 +9722,49 @@ Sequence stands: frame-4 (Codex, best-of-class start, one-shot expected,
 v2 card = regime boundary) closes t00A05; the harness round then opens on a
 FRESH unit with a curated maze (calibrated, pointer-free, fewer-better-
 ordered), seeded once, snapshot-scoped thereafter.
+
+## W.12 FRAME-4 COMPLETE — the v2 card validated; the conductor refuted; the envelope catches its own machinery (2026-08-16)
+
+**Cycle `t00A05-fdeb7627…`: closed `:tier-a` at the window line, 4 sieges,
+21 commits atop the best-of-class base. `apm_t00a05` remains one lemma open
+— and that lemma is now the most precisely characterized object in the
+round.**
+
+**The decisive card datum (Joe's one-shot test):** one-shot closure NO; card
+effect DRAMATIC. v1/frame-2: 8 attempts, 6 content + 2 process guidance rows
+→ toolkit staging. v2/frame-4: 4 sieges, 3 process + 1 content row → the
+ENTIRE global topology bridge (quotient chart continuity/injectivity/
+surjectivity, four crossings, per-arc FTC ×2, unwrapped angle + strict
+monotonicity, exact part zero) plus a formal refutation. Roughly 7× less
+conductor dose per unit progress. The <5-attempts refinement: confirmed.
+
+**The specimen of the day: the solver REFUTED the conductor's content hint**
+— the suggested direct composition is periodic (γ(0)=γ(2π) forces endpoint
+change 0), proved and committed (`ce6f1ac`) rather than flailed on. Mirror
+of frame-3 (student verified the conductor's memory TRUE; solver proved the
+conductor's hint FALSE — both correct). Conductor content guidance is now
+0-for-1 under the v2 regime at the frontier; the true remaining bridge (a
+path-LIFTED angle accumulating seam corrections, sign from signed area) is
+deposited as `e-b31f22f9…`, superseding `e-a36bde67…`.
+
+**The envelope disqualified its own close — correctly.** Codes
+[:malformed-memory-offers :f3-undispositioned-offer
+:f9-capability-not-realized :f9-capability-probe-missing]: the first fully-
+conducted close ceremony exposed a conductor bug — `memory-offers` collects
+dispatch RECEIPTS (no :offer/id) where the trace wants offer ENTITIES
+(frames 1-3 passed [] by hand and never hit it). The refusal list did
+exactly its job on exactly the machinery that most needed checking. Fix
+queued (small packet); this close stands as DISQUALIFIED-AS-RECORDED with
+the substantive record carried here and on the branch. Proctor: 4 in-window
+seat jobs, all the cycle's own.
+
+**t00A05 standing after four frames:** 36 verified commits across three
+tiers (frame-2 toolkit 15, frame-3 step-9 4 + method, frame-4 bridge 21),
+one lemma open, its construction specified, estimated one focused session.
+Protected state lifts to: "close it in frame-5 or round 2, from
+`e-b31f22f9…`."
+
+**Fix queue:** conductor memory-offers shape; recall case-sensitivity
+(dispatch recall persistently empty while memory_search hits — miss-mining
+candidate); snapshot-scoped recall (harness round); :write-substrate in
+:student-attempts phase.
