@@ -269,6 +269,26 @@
     (is (= ["e-first" "e-second"]
            (get-in entry [:body :memory-use :memory-use/surfaced-ids])))))
 
+(deftest pull-only-receipt-persists-machine-eligibility-provenance
+  (let [provenance {:policy :snapshot-union-cycle-promoted
+                    :snapshot-memory-ids ["memory/open"]
+                    :cycle-promoted-memory-ids ["memory/promoted"]}
+        result (#'dispatch/no-push-recall-result
+                {:problem "t94J02"
+                 :eligible-memory-ids ["memory/open" "memory/promoted"]
+                 :eligible-memory-provenance provenance}
+                "packet")
+        entry (dispatch/offered-evidence
+               {:problem "t94J02" :from "guide"
+                :memory-channel :pull-only}
+               result "job" "session")]
+    (is (= ["memory/open" "memory/promoted"]
+           (get-in entry [:body :eligible-memory-ids])))
+    (is (= provenance
+           (get-in entry [:body :eligible-memory-provenance])))
+    (is (= :memory-channel-no-push
+           (get-in entry [:body :recall-reason])))))
+
 (deftest production-recall-records-post-eligibility-pre-cutoff-vector
   (let [candidates [{:memory/id "e-first"
                      :memory/body {:summary "anchor one"}}

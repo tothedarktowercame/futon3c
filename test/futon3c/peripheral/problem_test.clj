@@ -99,6 +99,73 @@
                                       :rprobe/retrieved-ids []}]})]
     (is (= [recorded] (:retrieval-probes stamped)))))
 
+(defn- student-eligibility-dispatch [mode]
+  (let [calls (atom [])
+        dispatch-fn
+        (fn [opts _]
+          (swap! calls conj opts)
+          {:job-id "student-job"
+           :evidence
+           {:body {:eligible-memory-ids (:eligible-memory-ids opts)
+                   :eligible-memory-provenance
+                   (:eligible-memory-provenance opts)
+                   :memory-use {:memory-use/surfaced-ids []}}}})
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend) dispatch-fn)
+        p (cycle/make-cycle-peripheral problem/problem-domain-config
+                                       problem/problem-spec backend)
+        start (:state (start-problem p {:session-id "eligibility"
+                                       :problem-id "t94J02"
+                                       :cycle/mode mode}))
+        recorded-state
+        (assoc start
+               :current-phase :student-attempts
+               :current-cycle-id "cycle-eligibility"
+               :cycle/outputs
+               {:store-snapshot {:snap/memory-ids ["memory/open"]}}
+               :steps
+               [{:tool :begin-problem-cycle
+                 :result {:cycle/id "cycle-eligibility"}}
+                {:tool :promote-artifact
+                 :result {:promo/artifact-id "memory/promoted"}}])
+        state (assoc recorded-state :cycle/outputs
+                     (#'problem/stamp-environment-outputs
+                      recorded-state
+                      {:store-snapshot
+                       {:snap/memory-ids ["memory/open"]}
+                       :promotion-result
+                       [{:promo/artifact-id "memory/FORGED"}]}))
+        result (runner/step
+                p state
+                {:tool :dispatch-student-fresh
+                 :args [{:mission "M"} dispatch-packet]})]
+    {:result result :opts (first @calls)}))
+
+(deftest store-mode-student-eligibility-includes-cycle-promotions
+  (let [{:keys [result opts]} (student-eligibility-dispatch :store-mode)]
+    (is (:ok result))
+    (is (= ["memory/open" "memory/promoted"]
+           (:eligible-memory-ids opts)))
+    (is (= {:policy :snapshot-union-cycle-promoted
+            :snapshot-memory-ids ["memory/open"]
+            :cycle-promoted-memory-ids ["memory/promoted"]}
+           (:eligible-memory-provenance opts)))
+    (is (= (:eligible-memory-provenance opts)
+           (get-in result
+                   [:result :memory-offers 0 :body
+                    :eligible-memory-provenance])))
+    (is (= ["memory/open" "memory/promoted"]
+           (get-in result [:result :retrieval-probe :rprobe/available-ids])))))
+
+(deftest harness-mode-student-eligibility-remains-snapshot-only
+  (let [{:keys [result opts]} (student-eligibility-dispatch :harness-mode)]
+    (is (:ok result))
+    (is (= ["memory/open"] (:eligible-memory-ids opts)))
+    (is (= {:policy :snapshot-only
+            :snapshot-memory-ids ["memory/open"]
+            :cycle-promoted-memory-ids []}
+           (:eligible-memory-provenance opts)))))
+
 (deftest student-dispatch-is-pull-only-and-pushes-no-memories
   (let [recall-result {:status :ok
                        :memories [{:memory/id "must-not-reach-student"
