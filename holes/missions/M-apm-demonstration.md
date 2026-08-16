@@ -10183,3 +10183,30 @@ is judged and attached) and the registration capabilities
 (`Bash` background is not durable for warm-pouch agents); triage was
 completed with targeted namespace runs instead. Durable runs go through
 `scripts/bg.py` per futon3c/CLAUDE.md.
+
+## W.21 Operator visibility: the problem peripheral had no blackboard pane; dispatch-regime question logged (2026-08-16)
+
+**Finding (from Joe's `*proof*` buffer complaint):** `blackboard.clj` has
+render adaptors for seven peripherals — and NONE for `:problem`. The pane
+the operator watched all round was the OLD proof peripheral's stale state
+("Proof: unknown / Mode: SPEC"); the problem peripheral ran invisible. The
+visibility contract existed; the new machine was never wired to it. Packet
+**P7** dispatched to codex-3 (`invoke-1786893503122-4616-fab8fcd0`, branch
+`feat/problem-blackboard`, park `park-8fbe7e61…`): phase-with-position from
+`phase-order`, seats with explicit "unstaffed" markers, attempt counts vs
+caps, latest dispatch receipt, sentinel rendering.
+
+**Dispatch-regime question (artisanal short windows vs sustained siege):
+WE DO NOT KNOW WHAT WORKED BEST, and round 1 cannot answer it.** Frame-6
+closed t00A05 under the v2 sustained-attempt card with far less guidance,
+but attribution is impossible retrospectively: (a) frame-6 inherited ~100
+commits of cumulative progress from earlier windows; (b) the card change is
+a declared regime boundary — this record itself rules P1's slope unreadable
+across one; (c) solver config was never pinned (default reasoning effort,
+the `:reg/solver-config` gap); (d) the guidance counts were guide-self-
+reported (independent counts now in `proctor-report-round1.md`, operator's
+channel). **Round-2 design consequence:** dispatch-regime becomes a
+registered ARM — same problem stratum, same frozen card, pinned solver
+config, two arms (short-window vs sustained-attempt), guidance adjudicated
+from the Agency log by the proctor seat, not from the guide's testimony.
+The registration schema's `:arms` exists for exactly this.
