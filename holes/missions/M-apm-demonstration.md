@@ -9580,3 +9580,37 @@ memories, possibly granularized.
 conductor namespace) — durability for many-frame/many-agent operation;
 2. role card + typed-guidance schema (regime boundary declared);
 3. the memory-only frame.
+
+## W.8 Machinery landed; card drafted; deposit-sufficiency review (2026-08-16)
+
+**Machinery accepted:** atomic dispatch+park (`2baff217`) and the conductor
+namespace (`da717450`) — both reviewed, gates re-run. Frame-3 onward runs
+conducted: :conductor context in open-frame config, every dispatch
+self-parks, resume enables different-agent takeover. Re-pin ritual noted as
+a conductor candidate (open-frame! verifying pin-vs-measured as its first
+act).
+
+**Role card v2 DRAFTED** (`role-cards/codex-solver-v2-DRAFT.md`) — awaiting
+operator freeze; hash lands in the frame-3 registration; regime boundary
+declared there. **Typed guidance** adopted as convention (packets carry
+GUIDANCE TYPE: content|process; ledger counts both; stamping the type into
+the guide-solver event is a small future packet, designed-not-built).
+
+**Deposit-sufficiency review for the memory-only t00A05 challenge — one
+design decision for the operator.** The two deposits (route map
+`e-1f2d3d6d…`, technique `e-84690e27…`) describe work that lives on
+`exp/frame-2-t00A05-solver` — but a student worktree provisions at the PIN
+and cannot SEE those 15 commits. Two honest variants:
+  (a) **branch-continuation**: provision the student at the frame-2 branch
+      head (`44640a1` — frames.bb takes any rev as --base-rev; the challenge
+      registration pins that sha as its environment revision). The store
+      material + the staged commits = "close the remaining gap from the
+      store." Tests: deposit-guided completion.
+  (b) **cold-from-pin**: student starts at the pin with only the store; the
+      deposits would need to carry the actual lemma statements, not commit
+      pointers. Tests: full transfer, much harder, likely wants richer
+      deposits.
+Recommendation: (a) for the first memory-only frame — it matches "close the
+problem though Codex did not," keeps the protected lemma as the target, and
+(b) remains available as a harder follow-up. t00A05's open state remains
+protected either way.
