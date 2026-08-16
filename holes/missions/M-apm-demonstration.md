@@ -9614,3 +9614,28 @@ Recommendation: (a) for the first memory-only frame — it matches "close the
 problem though Codex did not," keeps the protected lemma as the target, and
 (b) remains available as a harder follow-up. t00A05's open state remains
 protected either way.
+
+## W.9 The maze is seeded — memory-only challenge locked to variant (b) (2026-08-16)
+
+**Operator ruling:** variant (b) — COLD FROM THE PIN, store-only, full
+transfer. "Zai is a chipwit: seed the maze with oil, coffee, pie and
+instructions, in such a way that it can get to the exit."
+
+**Ten maze-seed deposits written** (self-contained: real declaration shapes,
+formulas, strategies, Mathlib API names — NO commit pointers; the student
+cannot see the frame-2 branch and must not need to):
+route-map `e-44de0908…`, exact-part-FTC `e-b93c22fd…`, region-toolkit
+`e-f5e2a58d…`, level-set=frontier `e-a2ea9f78…`, radial-homeo `e-aa0f8c68…`,
+curve-package `e-3b12d47b…`, angular-primitives `e-4a42d7e9…`,
+no-simple-loop `e-8cb27cef…`, perimeter-chart `e-fbcc7732…`,
+rot-beta-assembly `e-209de11b…`. Rider ledger now 18 across the round.
+
+**Frame-3 design (awaiting launch word):** t00A05, cold student worktree at
+the pin `a92ffb6c` (sees none of frame-2's 15 commits), store-mode,
+STUDENT-PRIMARY (solver leg recorded as spent-in-frame-2, not run), up to 3
+cold zai-1 trials with between-trial seeding allowed, pull-only + memory_read
+live, conducted through the new `futon3c.apm.conductor` namespace (its first
+production outing) with `:conductor` context so every dispatch self-parks.
+Success = the student closes `apm_t00a05` axiom-clean from the store alone —
+transfer exceeding the depositor's completion. The frame-2 branch and the
+protected open state are untouched either way.
