@@ -121,6 +121,7 @@
     [:registration-not-map]
     (let [role-cards (:reg/role-cards registration)
           guidance-regime (:reg/guidance-regime registration)
+          solver-config (:reg/solver-config registration)
           carded-seat-failures
           (if (map? role-cards)
             (keep (fn [[role seat-key]]
@@ -139,6 +140,13 @@
                         (every? guidance-bell-types guidance-regime))))
          (conj {:finding :invalid-guidance-regime
                 :value guidance-regime})
+         (and (contains? registration :reg/solver-config)
+              (not (and (map? solver-config)
+                        (= #{:model :reasoning-effort} (set (keys solver-config)))
+                        (nonblank-string? (:model solver-config))
+                        (nonblank-string? (:reasoning-effort solver-config)))))
+         (conj {:finding :invalid-solver-config
+                :value solver-config})
          (some #(not (contains? registration %)) required-registration-keys)
          (conj :registration-missing-required-key)
          (not (problem? (:problem registration)))

@@ -491,11 +491,11 @@
    The returned fn accepts three arities:
      (f prompt)
      (f prompt session-id)
-     (f prompt session-id {:timeout-ms n})
-   The third exists so a per-call bound reaches the process. Previously the
-   only bound was the one captured here at registration, which made every
-   caller-supplied timeout unable to extend anything — it could only make an
-   outer layer give up sooner (README-agency-cap.md)."
+     (f prompt session-id {:timeout-ms n :model s :reasoning-effort s})
+   The third exists so measured per-call process configuration reaches the
+   process. Previously the only values were captured at registration, which
+   made caller-supplied bounds unable to extend anything and made model/effort
+   pins invisible to the CLI (README-agency-cap.md)."
   [{:keys [codex-bin profile model sandbox approval-policy reasoning-effort timeout-ms cwd
            mcp-server
            on-event on-runtime-event on-process-started on-process-exit]
@@ -507,7 +507,10 @@
         (fn [prompt session-id call-opts]
           (let [timeout-ms (if (contains? call-opts :timeout-ms)
                              (:timeout-ms call-opts)
-                             timeout-ms)]
+                             timeout-ms)
+                model (or (:model call-opts) model)
+                reasoning-effort (or (:reasoning-effort call-opts)
+                                     reasoning-effort)]
       (locking !lock
         (try
           (let [prompt-str (coerce-prompt prompt)

@@ -44,6 +44,20 @@
     (is (every? #(= "turn-identity-1" (:turn-id %)) stamped)
         "started, intermediate, and terminal events share one identity")))
 
+(deftest invoke-session-recovery-forwards-solver-process-options
+  (let [seen (atom nil)]
+    (with-redefs [reg/invoke-agent!
+                  (fn [_agent _prompt opts]
+                    (reset! seen opts)
+                    {:ok true :result "done"})]
+      (#'futon3c.transport.http/invoke-agent-with-session-recovery!
+       "codex-4" "solve" {:model "gpt-5.6-sol"
+                           :reasoning-effort "high"}
+       "job-config")
+      (is (= "gpt-5.6-sol" (:model @seen)))
+      (is (= "high" (:reasoning-effort @seen)))
+      (is (= "job-config" (:dispatch-id @seen))))))
+
 (use-fixtures
   :each
   (fn [f]

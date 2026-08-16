@@ -4515,7 +4515,8 @@ RESPOND WITH ONLY:
                                              (fn [_proc _exit]
                                                (clear-invoke-control! aid-val control-token))})
                                            next-prompt
-                                           next-session-id))
+                                           next-session-id
+                                           call-opts))
                              initial (call-codex prompt invoke-sid)]
                          (if (or (codex-work-claim-without-execution? prompt-str initial)
                                  (codex-task-reply-without-execution? prompt-str initial)

@@ -155,6 +155,42 @@
                         [{:memory-channel :none} "packet"])
     (is (= [:pull-only :push+pull] @calls))))
 
+(deftest registered-solver-config-is-sent-receipted-and-traced
+  (let [calls (atom [])
+        pin {:model "gpt-5.6-sol" :reasoning-effort "high"}
+        dispatch-fn (fn [opts _]
+                      (swap! calls conj opts)
+                      {:job-id "solver-config-job" :evidence {:body {}}})
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend) dispatch-fn)
+        pinned (tools/execute-tool
+                backend :dispatch-solver
+                [{:model "caller-model" :reasoning-effort "low"}
+                 "packet"
+                 {:cycle/id "cycle-pin" :cycle/step-index 3
+                  :solver-config pin}])
+        legacy (tools/execute-tool
+                backend :dispatch-solver
+                [{} "packet" {:cycle/id "cycle-legacy" :cycle/step-index 4}])
+        state {:current-phase :guided-solve
+               :current-cycle-id "cycle-pin"
+               :steps [{:tool :dispatch-solver :result (:result pinned)}]
+               :cycle/outputs {:registration {:reg/solver-seat "codex-4"
+                                              :reg/solver-config pin}}}
+        outputs (#'problem/stamp-environment-outputs state {})]
+    (is (= pin (select-keys (first @calls) [:model :reasoning-effort]))
+        "the registration pin overrides caller-supplied solver options")
+    (is (= :push+pull (:memory-channel (first @calls))))
+    (is (= pin (get-in pinned [:result :ground-control/solver-config])))
+    (is (= "cycle-pin" (get-in pinned [:result :ground-control/cycle])))
+    (is (not (contains? (second @calls) :model))
+        "an absent pin preserves the legacy dispatch shape")
+    (is (not (contains? (second @calls) :reasoning-effort)))
+    (is (not (contains? (:result legacy) :ground-control/solver-config)))
+    (is (= pin (get-in outputs [:solver-dispatches 0
+                                :ground-control/solver-config]))
+        "the machine-recorded receipt reaches the cycle trace inputs")))
+
 (deftest failed-bell-is-a-tool-failure-not-an-escaping-exception
   ;; ToolBackend promises {:ok true :result} | {:ok false :error}. run-dispatch!
   ;; throws when Agency returns no job-id, so an unguarded call breaks that
@@ -1369,6 +1405,23 @@
              "meas-cycle-1" "attempt-1"}
            (set (keep apm-harness/entity-id (:entities @called))))
         "typed entities are assembled from cycle outputs")))
+
+(deftest emit-trace-carries-the-solver-config-actually-dispatched
+  (let [[p state] (started :store-mode)
+        pin {:model "gpt-5.6-sol" :reasoning-effort "high"}
+        state (assoc-in (trace-emission-state state)
+                        [:cycle/outputs :solver-dispatches]
+                        [{:job-id "solver-job"
+                          :ground-control/recipient "codex-4"
+                          :ground-control/cycle "cycle-1"
+                          :ground-control/solver-config pin}])
+        result (with-redefs [apm-harness/derive-trace
+                             (fn [_registration _cycle-id _entities]
+                               {:projected true})]
+                 (runner/step p state {:tool :emit-trace :args []}))]
+    (is (:ok result))
+    (is (= pin (get-in result [:result :trace :solver-dispatches 0
+                               :ground-control/solver-config])))))
 
 (deftest emit-trace-names-missing-entity-producers
   (let [[p state] (started :store-mode)
