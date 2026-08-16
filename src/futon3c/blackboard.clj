@@ -28,13 +28,19 @@
 (declare emit-blackboard-evidence!)
 
 ;; =============================================================================
-;; Enable/disable — bind *enabled* to false in tests or non-interactive contexts
+;; Enable/disable — serving JVMs opt in; tests and CLI JVMs default denied
 ;; =============================================================================
 
+(defn- environment-opted-in? []
+  (contains? #{"1" "true" "yes"}
+             (some-> (System/getenv "FUTON3C_BLACKBOARD_PROJECT")
+                     str/lower-case)))
+
 (def ^:dynamic *enabled*
-  "When false, project! is a no-op. Defaults to true.
-   Bind to false in tests to avoid spawning emacsclient processes."
-  true)
+  "When false, project! is a no-op. Defaults to the serving-JVM-only
+   FUTON3C_BLACKBOARD_PROJECT opt-in. Tests may bind true around a projection
+   assertion; ordinary test and CLI JVMs cannot reach the operator's Emacs."
+  (environment-opted-in?))
 
 (defn- detect-emacs-socket
   "Auto-detect Emacs server socket from the process tree.

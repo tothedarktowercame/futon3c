@@ -421,6 +421,14 @@
     ;; :default returns nil, so project! should be a no-op
     (is (nil? (bb/project! :nonexistent {:any "state"})))))
 
+(deftest project-default-denies-non-serving-jvms
+  (let [calls (atom [])]
+    (with-redefs [bb/render-blackboard (fn [_ _] "must-not-project")
+                  bb/blackboard! (fn [& args] (swap! calls conj args))]
+      (is (false? bb/*enabled*))
+      (is (nil? (bb/project! :problem {:problem-id "test-fixture"})))
+      (is (empty? @calls)))))
+
 (deftest project-defaults-to-async-mode
   (testing "project! marks fire-and-forget projections async by default"
     (let [calls (atom [])]
@@ -430,7 +438,8 @@
                                                         :content content
                                                         :opts opts})
                                      {:ok true})]
-        (is (nil? (bb/project! :mission-control {:steps []})))
+        (binding [bb/*enabled* true]
+          (is (nil? (bb/project! :mission-control {:steps []}))))
         (is (= 1 (count @calls)))
         (is (= "*mission-control*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :async?])))))))
@@ -444,7 +453,8 @@
     (with-redefs [bb/blackboard! (fn [buffer-name content opts]
                                    (swap! calls conj [buffer-name content opts])
                                    {:ok true})]
-      (is (nil? (bb/project! :problem state)))
+      (binding [bb/*enabled* true]
+        (is (nil? (bb/project! :problem state))))
       (is (= ["*problem: a98A01-93f5be7*" "*problem*"]
              (mapv first @calls)))
       (is (= (second (first @calls)) (second (second @calls)))))))
@@ -463,7 +473,8 @@
                                      {:ok true})]
         (reset! bb/!display-agents-window true)
         (bb/set-external-hud-enabled! false)
-        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (binding [bb/*enabled* true]
+          (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}}))
         (is (= 1 (count @calls)))
         (is (= "*agents*" (:buffer-name (first @calls))))
         (is (not (contains? (:opts (first @calls)) :no-display)))))))
@@ -477,7 +488,8 @@
                                                         :opts opts})
                                      {:ok true})]
         (bb/set-agents-window-display! false)
-        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (binding [bb/*enabled* true]
+          (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}}))
         (is (= 1 (count @calls)))
         (is (= "*agents*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :no-display]))))
@@ -493,7 +505,8 @@
                                      {:ok true})]
         (bb/set-agents-window-display! true)
         (bb/set-external-hud-enabled! true)
-        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (binding [bb/*enabled* true]
+          (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}}))
         (is (= 1 (count @calls)))
         (is (= "*agents*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :no-display]))))
@@ -508,7 +521,8 @@
                                                         :content content
                                                         :opts opts})
                                      {:ok true})]
-        (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}})
+        (binding [bb/*enabled* true]
+          (bb/project-agents! {:agents {"agent-1" {:status :idle :metadata {}}}}))
         (is (= 1 (count @calls)))
         (is (true? (get-in @calls [0 :opts :async?])))))))
 
@@ -520,7 +534,8 @@
                                                         :content content
                                                         :opts opts})
                                      {:ok true})]
-        (bb/project-processes! [])
+        (binding [bb/*enabled* true]
+          (bb/project-processes! []))
         (is (= 1 (count @calls)))
         (is (= "*processes*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :async?])))))))

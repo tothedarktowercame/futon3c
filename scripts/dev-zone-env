@@ -41,6 +41,9 @@ export FUTON3C_PARKED_ON="${FUTON3C_PARKED_ON:-1}"
 # profile aligned with dev-laptop-env; without this flag the server deliberately
 # treats :type as inert legacy payload and the guidance contract cannot hold.
 export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
+# Only the serving JVM may project peripheral state into the operator's Emacs.
+# Test and CLI JVMs intentionally do not inherit this explicit opt-in.
+export FUTON3C_BLACKBOARD_PROJECT="${FUTON3C_BLACKBOARD_PROJECT:-1}"
 
 # The wrappers move child CLI processes out of the protected server cgroup and
 # into futon-agents.slice. ZAI makes API calls in-process and has no child CLI.

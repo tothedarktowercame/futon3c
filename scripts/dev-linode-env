@@ -29,6 +29,7 @@ export FUTON3C_ROLE="${FUTON3C_ROLE:-linode}"
 export FUTON3C_SITE="${FUTON3C_SITE:-lon}"
 export FUTON3C_BIND_HOST="${FUTON3C_BIND_HOST:-0.0.0.0}"
 export FUTON3C_PORT="${FUTON3C_PORT:-7070}"
+export FUTON3C_BLACKBOARD_PROJECT="${FUTON3C_BLACKBOARD_PROJECT:-1}"
 export FUTON3C_SELF_URL="${FUTON3C_SELF_URL:-http://172.236.28.208:7070}"
 
 # --- IRC: ngircd runs externally; built-in IRC disabled ---
