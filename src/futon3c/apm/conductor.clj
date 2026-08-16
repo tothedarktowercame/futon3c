@@ -203,6 +203,28 @@
 (defn dispatch-student! [handle opts packet]
   (dispatch! handle :dispatch-student-fresh opts packet))
 
+(def ^:private scribe-card-path
+  "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe.md")
+
+(defn- recorded-job-ids [state tool]
+  (->> (:steps state)
+       (keep (fn [step]
+               (when (= tool (:tool step))
+                 (get-in step [:result :job-id]))))
+       vec))
+
+(defn dispatch-scribe!
+  "Dispatch the registered scribe with machine-owned cycle references."
+  [handle opts packet]
+  (let [state (:state handle)
+        context {:problem-id (get-in handle [:config :problem-id])
+                 :cycle-id (:cycle-id handle)
+                 :solver-job-ids (recorded-job-ids state :dispatch-solver)
+                 :student-job-ids (recorded-job-ids state
+                                                    :dispatch-student-fresh)
+                 :scribe-card-path scribe-card-path}]
+    (dispatch! handle :dispatch-scribe (merge (or opts {}) context) packet)))
+
 (defn record-solver-attempt! [handle attempt extra-outputs]
   (try
     (:handle

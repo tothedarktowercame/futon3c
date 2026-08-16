@@ -55,7 +55,7 @@
    ;; The scribe card mines a completed solve. :promote is the first phase
    ;; after adjudication devoted to turning that completed work into reusable
    ;; artifacts, so lane reports live beside promotion rather than solving.
-   :promote #{:promote-artifact :record-scribe-lanes advance}
+   :promote #{:dispatch-scribe :promote-artifact :record-scribe-lanes advance}
    :close #{:record-measurement :emit-capability-probes :emit-trace :validate-trace
             :write-authorization advance}
    :completed #{}})
@@ -451,6 +451,13 @@
     :dispatch-student-fresh
     (conj (vec args) {:cycle/id (:current-cycle-id state)
                       :cycle/step-index (count (:steps state))})
+
+    :dispatch-scribe
+    (conj (vec args) {:cycle/id (:current-cycle-id state)
+                      :cycle/step-index (count (:steps state))
+                      :scribe-seat
+                      (get-in state
+                              [:cycle/outputs :registration :reg/scribe-seat])})
 
     :read-attempt-result
     (conj (vec args) {:cycle/outputs (:cycle/outputs state)})
@@ -854,7 +861,8 @@
 
 (def ^:private dispatch-channels
   {:dispatch-solver :push+pull
-   :dispatch-student-fresh :pull-only})
+   :dispatch-student-fresh :pull-only
+   :dispatch-scribe :pull-only})
 
 (def ^:private default-problem-state-root "data/problem-state")
 (def ^:private problem-state-write-lock (Object.))
@@ -1203,6 +1211,8 @@
             memory-channel (get dispatch-channels tool-id)
             solver-config (when (= :dispatch-solver tool-id)
                             (:solver-config measured))
+            scribe-seat (when (= :dispatch-scribe tool-id)
+                          (:scribe-seat measured))
             ;; assoc LAST: the role fixes the channel and a caller cannot
             ;; override it.  A caller-supplied :push to the student would be a
             ;; containment breach, so this precedence is load-bearing.
@@ -1210,6 +1220,7 @@
                                {:base dispatch-with-recall/default-agency-base}
                                (or opts {}))
                         solver-config (merge solver-config)
+                        scribe-seat (assoc :to scribe-seat)
                         true (assoc :memory-channel memory-channel))
             dispatch-result (try (dispatch-fn sent-opts
                                               packet)
@@ -1248,6 +1259,9 @@
                        solver-config
                        (assoc :ground-control/solver-config solver-config
                               :ground-control/recipient (:to sent-opts)
+                              :ground-control/cycle cycle-id)
+                       scribe-seat
+                       (assoc :ground-control/recipient scribe-seat
                               :ground-control/cycle cycle-id)
                        retrieval-probe
                        (assoc :retrieval-probe retrieval-probe))})))
