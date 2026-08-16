@@ -10799,3 +10799,19 @@ intent that the deposit IS the intervention. Alternative rejected:
 promoting mid-cycle (guide would review its own deposit — collapses the
 separation). Frame-7 continues untouched; its student lane measures the
 no-transfer baseline honestly.
+
+## W.45 Retro-promotion pass CLOSED: 8/8, fully receipted (2026-08-16)
+
+Final item completed via the direct review path: e-19ae2af6's existing
+:proposed attachment exactly matched the approved pattern; review evidence
+`e-3d2cc685…`; final status :reviewed; a transient projection 503 was
+resolved by idempotent replay of the same evidence id. **Pass totals:
+32 ledger entries → 12 proposed (claude-8) → 8 approved and written
+(codex-5), 4 rejected with reasons, 20 skips confirmed; 6 new pattern
+files authored in futon3 (`fc65959b`); receipts `9d30b4f1` + `4ad460fe`.**
+The promotion round is piloted end-to-end: propose → independent review →
+gated execution → post-check, every step bearing the identity that
+performed it. Open defects carried forward: projection-gap packet
+(t00A05 subject projection drops two :current memories); W.44 offer-lane
+packet (mid-cycle deposits unreachable by own student). f7:
+:student-attempts continuing under the guide.
