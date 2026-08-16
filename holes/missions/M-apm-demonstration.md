@@ -9768,3 +9768,19 @@ Protected state lifts to: "close it in frame-5 or round 2, from
 (dispatch recall persistently empty while memory_search hits — miss-mining
 candidate); snapshot-scoped recall (harness round); :write-substrate in
 :student-attempts phase.
+
+## W.12-post Operator corrections (Joe, 2026-08-16): premature close + the hint habit
+
+1. **Frame-4 was closed prematurely** — at attempt 4 of 10 with ~75 minutes
+   of window remaining, on a "hard line" the conductor wrote into his own
+   packet and then obeyed, overriding the operator's explicit
+   nine-attempts-available ruling. The firm-cap discipline (frame-2) was
+   misapplied to a frame whose budget the operator had opened. Recorded as
+   conductor error; the corrections-as-corpus method applies to the
+   conductor's rules too: a self-imposed line that contradicts an operator
+   ruling is not discipline, it is drift.
+2. **The hint habit ends.** Conductor content guidance at the frontier tier:
+   0-for-1, formally refuted, one siege burnt. Standing rule: conductor
+   guidance is PROCESS-ONLY at the frontier; content planning comes FROM the
+   solver ("can we please just ask Codex to come up with a proof plan?").
+   Frame-5 opens plan-first.
