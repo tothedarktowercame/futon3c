@@ -35,6 +35,7 @@
 (defn- store-path [] (or (config/env "FUTON3C_PARKED_ON_PATH") default-store))
 
 ;; state = {:records {rid record} :index {dep-id #{rid}}
+;;          :coalesced {[agent dep-id] rid}
 ;;          :ready-inbox {[agent session] [{:park-id :prompt} ...]}
 ;;          :leased {park-id {:agent :session :prompt :lease-deadline-ms}}}
 ;; where :index maps each still-awaited dep-id to the records waiting on it
@@ -44,7 +45,8 @@
 ;; redelivery, E-park-delivery-losses bug 3).
 (defonce ^:private !parked (atom nil))
 
-(defn- empty-state [] {:records {} :index {} :ready-inbox {} :leased {}})
+(defn- empty-state []
+  {:records {} :index {} :coalesced {} :ready-inbox {} :leased {}})
 
 ;; Default lease duration for a popped ready item (ms). After this without an
 ;; ACK, the sweep returns the item to the front of its queue for redelivery.
@@ -109,14 +111,18 @@
    (ready-push! agent session park-id prompt :within-turn))
   ([agent session park-id prompt mode]
    (ensure!)
-   (swap! !parked (fn [st]
-                    (-> st
-                        (update :ready-inbox
-                                (fn [ib]
-                                  (let [k [(str agent) (str session)]]
-                                    (assoc ib k (conj (get ib k [])
-                                                      {:park-id park-id :prompt prompt
-                                                       :mode (or mode :within-turn)}))))))))
+   (swap! !parked
+          (fn [st]
+            (let [already-queued?
+                  (some #(= park-id (:park-id %))
+                        (mapcat identity (vals (:ready-inbox st))))
+                  already-leased? (contains? (:leased st) park-id)]
+              (if (or already-queued? already-leased?)
+                st
+                (let [k [(str agent) (str session)]
+                      item {:park-id park-id :prompt prompt
+                            :mode (or mode :within-turn)}]
+                  (update-in st [:ready-inbox k] (fnil conj []) item))))))
    (persist! @!parked)))
 
 (defn- ready-key [agent session] [(str agent) (str session)])
@@ -160,7 +166,13 @@
            (fn [st]
              (if (contains? (:leased st) park-id)
                (do (reset! found? true)
-                   (update st :leased dissoc park-id))
+                   (-> st
+                       (update :leased dissoc park-id)
+                       (update :coalesced
+                               (fn [entries]
+                                 (into {} (remove (fn [[_ rid]]
+                                                    (= park-id rid)))
+                                       entries)))))
                st)))
     (persist! @!parked)
     @found?))
@@ -238,6 +250,13 @@
     (-> (reduce (fn [st dep] (update st :index index-disj dep rid)) state (:awaiting rec))
         (update :records dissoc rid))))
 
+(defn- forget-record
+  "Drop RID and its singleton coalescing key when no delivery will fire."
+  [state rid]
+  (let [key (get-in state [:records rid :coalesce-key])]
+    (cond-> (drop-record state rid)
+      key (update :coalesced dissoc key))))
+
 ;; ---------------------------------------------------------------------------
 ;; completion -> dep-keyed JOIN release (the genuine new logic, §3.3)
 ;; ---------------------------------------------------------------------------
@@ -255,7 +274,7 @@
             (assoc-in [:records rid] rec*)
             (update :just-released (fnil conj []) rec*)))
       ;; budget exhausted -> retract, do not fire
-      (drop-record state rid))))
+      (forget-record state rid))))
 
 (defn- apply-completion [state dep-id result now-ms]
   (let [rids (get-in state [:index dep-id])]
@@ -308,32 +327,53 @@
   (ensure!)
   (let [rid (str "park-" (UUID/randomUUID))
         awaiting (set awaiting)
+        coalesce-key (when (= 1 (count awaiting))
+                       [(str agent) (str (first awaiting))])
         budget (merge {:resumes-left 1 :max-depth 8} budget)
         mode (or mode :within-turn)
         rec {:id rid :agent agent :session session :surface surface
              :awaiting awaiting :arrived {}
              :payload payload :timer-due-ms timer-due-ms :deadline-ms deadline-ms
-             :budget budget :parked-at-ms now-ms :released? false :mode mode}]
+             :budget budget :parked-at-ms now-ms :released? false :mode mode
+             :coalesce-key coalesce-key}]
     (cond
       (and (empty? awaiting) (not timer-due-ms))
       (do (when resume! (resume! rec)) {:id rid :status :released-immediately})
 
       :else
-      (do
-        (swap! !parked (fn [st] (-> st
-                                    (assoc-in [:records rid] rec)
-                                    (update :index index-add rid awaiting))))
+      (let [chosen-id (atom nil)
+            active? (atom false)]
+        (swap! !parked
+               (fn [st]
+                 (if-let [existing-id (and coalesce-key
+                                           (get-in st [:coalesced coalesce-key]))]
+                   (do
+                     (reset! chosen-id existing-id)
+                     (if (get-in st [:records existing-id])
+                       (do
+                         (reset! active? true)
+                         (assoc-in st [:records existing-id]
+                                   (assoc rec :id existing-id)))
+                       st))
+                   (do
+                     (reset! chosen-id rid)
+                     (reset! active? true)
+                     (cond-> (-> st
+                                 (assoc-in [:records rid] rec)
+                                 (update :index index-add rid awaiting))
+                       coalesce-key (assoc-in [:coalesced coalesce-key] rid))))))
         (persist! @!parked)
-        ;; reconcile: any dep already terminal in the ledger -> fold it in now
-        (when ledger-lookup
+        ;; Reconcile only a live record. A duplicate whose first entry already
+        ;; released shares that entry's delivery and must not queue another.
+        (when (and @active? ledger-lookup)
           (doseq [dep awaiting]
             (let [j (ledger-lookup dep)]
               (when (and j (terminal-state? (:state j)))
                 (note-completion! dep (completion-result j)
                                   {:resume! resume! :now-ms now-ms})))))
-        (if (get-in @!parked [:records rid])
-          {:id rid :status :parked}
-          {:id rid :status :released})))))
+        (if (get-in @!parked [:records @chosen-id])
+          {:id @chosen-id :status :parked}
+          {:id @chosen-id :status :released})))))
 
 ;; ---------------------------------------------------------------------------
 ;; rehydrate! (R3, boot) + sweep-deadlines! (R4, the required timer)
@@ -395,7 +435,7 @@
                                       (not (some #{(:id r)} (map :id expired))))) recs)]
     (when (or (seq expired) (seq timers))
       (swap! !parked (fn [st]
-                       (reduce (fn [s r] (drop-record s (:id r)))
+                       (reduce (fn [s r] (forget-record s (:id r)))
                                st (concat expired timers))))
       (persist! @!parked))
     (doseq [r expired]
