@@ -9861,3 +9861,34 @@ reviewer-verified above). Teardown: well inside the window.
 (frame-1); t00A05 proved (frames 2-6); a01A06's false statement caught,
 repaired, and proved (rehearsal). Three theorems, every one axiom-clean,
 every adjudication honest, every asterisk kept.
+
+## W.15 Round-1 scribe pass + cost calibration (2026-08-16)
+
+**Operator concern (Joe): "we've done the Codex proof but not yet the scribe
+to capture memories from the latest rounds."** Correct — the scribe LANE
+never ran live in round 1 ("scribe lane coverage" unset in every envelope);
+the close-out deposits captured routes but not technique-grain learnings.
+
+**Scribe pass executed** (conductor-authored, flagged as such — the live
+scribe role is a round-2 wiring item): five distilled memories from the
+verified frame 4-6 reports, deduped against the existing ledger:
+- `e-54ea43ad…` seam-weld pattern (three proved variants);
+- `e-d26b2e5b…` EventuallyEq derivative bridge;
+- `e-19ae2af6…` template-branch stamping for symmetric case analyses;
+- `e-02552934…` plan-first practice (the ~7x guidance datum + the 0-for-1
+  conductor-hint record);
+- `e-cb262e0f…` **round-1 cost calibration** — the registration's own
+  mandate discharged: estimated-cost 0.01 replaced by the measurement
+  (one resistant unit = 6 frames / ~30 dispatches / ~108 commits / a full
+  operator day; one clean unit = 35 minutes; VARIANCE dominates budgeting).
+
+Existing student/boundary deposits already covered: sup-square chart
+(e-84690e27), instance-pinning (e-91fe51ff), scratch-first method
+(e-9400816b), full proof route (e-5ba1c44d). **Round rider ledger: ~30
+memories.**
+
+**Round-2 wiring item (from the operator's concern):** the scribe ROLE runs
+live per-frame — a seat with the frozen scribe card, a scribe-lane event in
+the envelope, and "scribe lane coverage" finally measurable. Queued with the
+conductor offer-shape fix, solver-config pinning, attempt-unit semantics,
+Sol-Max threading, and snapshot-scoped recall.
