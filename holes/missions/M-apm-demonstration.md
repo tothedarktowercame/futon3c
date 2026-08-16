@@ -9694,3 +9694,31 @@ on the trial-2/3 student branches; the scratch at /tmp/t00a05-k.lean;
 t00A05's remaining gap precisely mapped in `e-a36bde67…`. "Several focused
 hours" of assembly remain — a natural frame-4 for a revised-card codex, or
 round-2 material.
+
+## W.11 Harness-round design ruling (Joe, 2026-08-16)
+
+**The design:** NOT self-upgrading harnesses ("interesting if unexpected"),
+NOT predecessor-reports-in-harness ("too much junk DNA"). Instead:
+**the store RESETS to the seeded maze each trial** — every run is a fresh
+chipwit in the identical maze — and **the operators upgrade the harness
+between runs**, informed by **session-log analysis: where did the runner
+miss an opportunity to use a memory that would have advanced it?**
+
+Mechanical reading of "reset" (the store is shared; wholesale reset is not
+viable): **snapshot-scoped recall** — the runner's recall surfaces ONLY
+memories in the frame's open snapshot. This is precisely the enforcement
+mechanism for the invariant the validator already checks
+(`new-memory-in-harness-round`: surfaced ⊆ snapshot) — students may still
+write (it is in their nature), but writes cannot surface within the round.
+Build item for the harness-round machinery, queued.
+
+The retune loop = §7a's method applied to runner sessions: mine the misses,
+encode the fix into the harness, re-run the same maze, measure L(i).
+Frame-3 already proves misses are findable: 7 of 10 seeds unopened while
+trial 3 fought API-shape issues that at least two unopened bodies
+(angular-primitives, perimeter-chart) addressed directly.
+
+Sequence stands: frame-4 (Codex, best-of-class start, one-shot expected,
+v2 card = regime boundary) closes t00A05; the harness round then opens on a
+FRESH unit with a curated maze (calibrated, pointer-free, fewer-better-
+ordered), seeded once, snapshot-scoped thereafter.
