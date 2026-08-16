@@ -10874,3 +10874,27 @@ execution, the claimed `:reviewer` must equal the authenticated acting
 identity (the conductor-surface binding knows who is acting), refusing
 otherwise — the W.41 reviewer-must-act principle enforced in the machine
 rather than in packet prose.
+
+## W.49 Frame-8 prep: reviewer protocol carded, authentication packet out, seats minted (2026-08-16)
+
+Operator: frame-8 go; and the :reviewer needs a PROTOCOL — "without one
+they would be prone to rubber stamping." Response in three parts:
+1. **scribe-v2-DRAFT.md**: the review protocol as card law — fetch and
+   judge the content yourself; approve/reassign/reject with reasons;
+   zero-rejection passes are themselves suspicious; never approve what
+   you cannot judge (cannot-judge finding); shelf bar = does it
+   generalize; you execute your own approvals; student attempts are
+   first-class lane input (W.46 folded in). Freezes at frame-8
+   registration.
+2. **P14 dispatched** (ams-codex-2, `invoke-…2c957d05`): reviewer==actor
+   enforced on authenticated paths (:reviewer-not-actor refusal);
+   unauthenticated direct calls MARKED in receipts rather than silently
+   trusted. Lands inert; reloads with frame-8.
+3. **f8 seats minted**: f8-solver/student/guide/proctor/scribe, all
+   invoke-ready fresh — second exercise of the mint route, again one call.
+
+Frame-8 problem: 17+ open one-sorry problems at the pin surfaced by scan
+(a01A06, a01J01/05/06, a03J04/05, a93A04, a94A02/07/09, a94J02/06,
+a95J06, a96A02/06/07/08, …475 total in corpus). Operator picks; lab
+manager verifies the statement at the pin before any dispatch, as with
+a98A01.
