@@ -59,6 +59,66 @@
       (p/note-completion! "b1" "s-again" {:resume! (resume-into fired) :now-ms 1002})
       (is (= [(:id r)] @fired) "second delivery of the same dep is a no-op"))))
 
+(deftest completion-consumes-only-matching-park
+  (testing "one dependency wake leaves the same agent's unrelated park live"
+    (let [resumed (atom [])
+          resume! #(swap! resumed conj %)
+          first-park (p/park! {:agent "claude-1" :awaiting ["job-1"]
+                               :payload "first"}
+                              {:ledger-lookup (constantly nil)
+                               :resume! resume! :now-ms 1000})
+          second-park (p/park! {:agent "claude-1" :awaiting ["job-2"]
+                                :payload "second"}
+                               {:ledger-lookup (constantly nil)
+                                :resume! resume! :now-ms 1000})]
+      (p/note-completion! "job-1" "result-1"
+                          {:resume! resume! :now-ms 1001})
+      (is (= [(:id first-park)] (mapv :id @resumed)))
+      (is (= "result-1" (get-in (first @resumed) [:arrived "job-1"])))
+      (is (nil? (get-in (p/snapshot) [:records (:id first-park)])))
+      (is (= #{"job-2"}
+             (get-in (p/snapshot) [:records (:id second-park) :awaiting]))
+          "the unrelated park remains listed and indexed")
+      (is (= #{(:id second-park)}
+             (get-in (p/snapshot) [:index "job-2"]))))))
+
+(deftest reparking-running-dependency-replaces-instead-of-stacking
+  (testing "duplicate [agent job] parks share one record and one delivery"
+    (let [resumed (atom [])
+          resume! #(swap! resumed conj %)
+          first-park (p/park! {:agent "claude-1" :awaiting ["job-1"]
+                               :payload "old payload"}
+                              {:ledger-lookup (constantly {:state "running"})
+                               :resume! resume! :now-ms 1000})
+          replacement (p/park! {:agent "claude-1" :awaiting ["job-1"]
+                                :payload "new payload"}
+                               {:ledger-lookup (constantly {:state "running"})
+                                :resume! resume! :now-ms 1001})]
+      (is (= (:id first-park) (:id replacement)))
+      (is (= 1 (count (:records (p/snapshot)))))
+      (p/note-completion! "job-1" "done" {:resume! resume! :now-ms 1002})
+      (p/note-completion! "job-1" "done-again" {:resume! resume! :now-ms 1003})
+      (is (= 1 (count @resumed)))
+      (is (= "new payload" (:payload (first @resumed)))))))
+
+(deftest parking-completed-dependency-delivers-once
+  (testing "immediate reconcile fires once and a duplicate park does not stack"
+    (let [resumed (atom [])
+          resume! #(swap! resumed conj %)
+          ledger (constantly {:state "done" :result "complete payload"})
+          first-park (p/park! {:agent "claude-1" :awaiting ["job-1"]
+                               :payload "continue"}
+                              {:ledger-lookup ledger :resume! resume! :now-ms 1000})
+          duplicate (p/park! {:agent "claude-1" :awaiting ["job-1"]
+                              :payload "continue again"}
+                             {:ledger-lookup ledger :resume! resume! :now-ms 1001})]
+      (is (= :released (:status first-park)))
+      (is (= :released (:status duplicate)))
+      (is (= (:id first-park) (:id duplicate)))
+      (is (= 1 (count @resumed)))
+      (is (= "complete payload"
+             (get-in (first @resumed) [:arrived "job-1"]))))))
+
 (deftest case3-budget-exhaustion-retracts-no-fire
   (testing "a join that completes with no budget left is retracted, never resumed, no zombie"
     (let [fired (collector)
@@ -123,6 +183,16 @@ no-dep timer park resumes plainly"
       (is (= "prompt-1" (:prompt item)))
       (is (= 91000 (:lease-deadline-ms item)) "deadline = now + lease-ms")
       (is (p/ready-inbox-pending? "a1" "s1") "still pending: pk-2 in queue + pk-1 leased"))))
+
+(deftest ready-push-coalesces-a-park-entry
+  (testing "the same released park cannot stack duplicate inbox deliveries"
+    (p/ready-push! "a1" "s1" "pk-1" "prompt-1")
+    (p/ready-push! "a1" "s1" "pk-1" "prompt-duplicate")
+    (let [first-item (p/ready-lease-one! "a1" "s1" 1000 90000)]
+      (is (= "pk-1" (:park-id first-item)))
+      (is (= "prompt-1" (:prompt first-item)))
+      (is (nil? (p/ready-lease-one! "a1" "s1" 1000 90000))
+          "only one delivery was queued"))))
 
 (deftest background-ready-items-do-not-count-as-within-turn-pending
   (testing "background parks resume from the inbox but do not defer turn finalization"
