@@ -9479,3 +9479,34 @@ branches (`c994347` solver, `7a1e268` student, same repaired statement) —
 upstream merge and the canonical-proof choice are yours; the statement repair
 is ratified in-cycle per your protocol ruling. P1's first point: guidance
 count 0 at frame-1. P2's horizon opens.
+
+## W.7-pre Operator design notes mid-frame-2 (Joe, 2026-08-16, ~09:45 UTC)
+
+Recorded for post-frame execution; none apply mid-cycle:
+
+1. **Park repairs become machinery.** The conductor's park discipline
+   (single-execution, id-capture — see the duplication asterisk) moves into
+   the tools: dispatch+park ATOMIC inside :dispatch-solver / :guide-solver /
+   :dispatch-student-fresh (the engine holds the job id; it registers the
+   park itself). Plus: promote the hand-rolled drive evals into a conductor
+   namespace so any agent can run a frame identically. Two codex packets
+   after frame-2 closes. Rationale (Joe): "with 100s of frames to do we need
+   a durable working system that can be run by different agents."
+2. **Required-route clauses.** When a problem's text prescribes a method
+   ("use the Jordan curve theorem to show..."), the frame carries it and
+   workarounds are non-accepting; missing infrastructure becomes a
+   construction target in the demand-side build lane (votes -> build ->
+   callback), worked ACROSS frames — a debt paid once, never an excuse.
+   Frame-2's Jordan-free route stands: t00A05's statement names no method.
+3. **Role-card revision for the next regime segment** (a card change is a
+   REGIME BOUNDARY per the registration — P1's slope resets): sustained
+   attempts — exhaust own routes and Mathlib search, attempt full assembly,
+   obstruction reports only after genuine sustained effort, partials
+   committed throughout. Joe's construct-validity observation recorded for
+   the whitepaper: at current card, guidance partly measures the CONDUCTOR's
+   trick-finding, not the solver's direct capability ("we seem to be
+   measuring your ability to find clever tricks rather than Codex's ability
+   to solve the problem directly").
+4. **Typed guidance.** Split P1's count: process-nudge vs
+   mathematical-content guidance — different treatment doses that the
+   current single counter conflates.
