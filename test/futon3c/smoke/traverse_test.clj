@@ -97,7 +97,11 @@
          :write-use [{:offer-id "offer/smoke"}]
          :promote-artifact [{:artifact-id "artifact/smoke"
                              :importable? true
-                             :need-tags ["smoke"]}]}]
+                             :need-tags ["smoke"]}]
+         ;; author must equal the staffed :reg/scribe-seat (seat discipline)
+         :record-scribe-lanes [{:lane :solve :ran? true
+                                :yield ["memory/smoke-a"]
+                                :author "traverse-scribe"}]}]
     (reduce
      (fn [{:keys [state] :as walk} tool]
        (if (:stop walk)
