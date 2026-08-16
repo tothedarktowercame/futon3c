@@ -10719,3 +10719,30 @@ promotions land before the guide's next dispatch, frame-7 measures
 before/after INSIDE one frame — a sharper test than the registered
 prediction. The pane fix (P11, `46754e7d`) is live: guide row owns its
 acts; solver row reads "working (job …)" — which it is.
+
+## W.42 a98A01 CLOSED ON THE OPENING DISPATCH — and the machine never broke stride (2026-08-16)
+
+f7-solver's siege closed the whole theorem in ONE dispatch: all three
+equivalences, commit `addc3512` on `exp/f7-a98A01-solver`, zero sorry
+warnings, axioms exactly [propext, Classical.choice, Quot.sound] —
+**independently verified by the lab manager** (own compile via elan lake +
+own #print axioms probe on the checkout). The solver honestly reported
+`dispatch-recall-outcome=completed-empty` (the empty shelf, as predicted
+at W.40). Registration context: v3 card (siege once), Sol at max effort
+(P8c pin, witnessed), fresh seat.
+
+**The machine advanced without anyone watching:** the guide woke on the
+park, recorded the attempt, moved through :intervene, and dispatched
+f7-student — phase :student-attempts, version 41, discovered by the
+OPERATOR on the pane ("f7 student is working") before the lab manager's
+watch fired. The observability stack (P7/P6c/P11) did its job for exactly
+its intended audience.
+
+Notes for the record: (1) with a first-dispatch close, the within-frame
+before/after recall measurement on the solver lane is moot — the stocked-
+shelf test shifts to the student lane and future frames; (2) round-1
+comparison: t00A05 took six frames and ~108 commits; a98A01 took one
+dispatch — confounded by problem difficulty, but the fresh-seat +
+v3-card + max-effort regime could not have opened better; (3) student arm
+runs memory-channel "none" per checkout-options defaults — a design point
+to revisit when the student lane's memory condition matters.
