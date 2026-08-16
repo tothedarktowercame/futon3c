@@ -9784,3 +9784,35 @@ candidate); snapshot-scoped recall (harness round); :write-substrate in
    guidance is PROCESS-ONLY at the frontier; content planning comes FROM the
    solver ("can we please just ask Codex to come up with a proof plan?").
    Frame-5 opens plan-first.
+
+## W.13 FRAME-5 COMPLETE — plan-first vindicated; closed at the registered cap; residual = assembly only (2026-08-16)
+
+**Cycle `t00A05-19ac6e85…`: `:tier-a` at `:attempt-cap-reached` (the
+REGISTERED stop rule — not a conductor line), 10 sieges, 55 commits, closed
+~50 minutes inside the window.**
+
+**Plan-first (Joe's correction, W.12-post) is vindicated end to end:** the
+solver authored its own numbered plan, revised it three times in-file as
+contact demanded, and — with ZERO conductor content after attempt 1 —
+built the seam-corrected path lift (strictly increasing, endpoint gain
+exactly 2π: the construction whose naive form it had itself refuted in
+frame-4), formally discharged the orientation dichotomy from positive
+signed area, completed all four cut-location order cases, generic range
+lifting, and both temporal-seam range lemmas. Ten honest reports, ten
+verified landings, no thrash.
+
+**The residual is ASSEMBLY ONLY** — four-case split over proved orders,
+five compiled FTC intervals, interval additivity, Real.arctan_one on ±1
+ratios, telescope to 2π. Zero unproved mathematics. Deposited as
+`e-61355c4f…` (supersedes `e-b31f22f9…`).
+
+**Envelope:** measured 5/17; the conductor offer-shape bug codes again
+(fix still queued; close disqualified-as-recorded, substantive record here
+and on the branch). Proctor: all in-window seat traffic the cycle's own.
+
+**t00A05 across five frames: 91 verified commits, three tiers, one
+mechanical lemma from closure.** Frame-6 = the assembly close — and the
+natural Sol-Max regime boundary: land the effort-threading packet + seat
+re-registration + `:reg/solver-config` registration field FIRST, then the
+assembly frame doubles as the effort-tier calibration (Sol Max on pure
+assembly vs default effort's 10-siege frame-5).
