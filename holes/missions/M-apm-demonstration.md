@@ -10746,3 +10746,29 @@ dispatch — confounded by problem difficulty, but the fresh-seat +
 v3-card + max-effort regime could not have opened better; (3) student arm
 runs memory-channel "none" per checkout-options defaults — a design point
 to revisit when the student lane's memory condition matters.
+
+## W.43 Retro-promotion stage 2: independent review with teeth; execution refused on the lab manager's spec bug (2026-08-16)
+
+codex-5's review was NOT a rubber stamp: of claude-8's 12 promote
+proposals it approved 8 and REJECTED 4 (plus confirming all 20 skips;
+6 spot-checked, none wrongly skipped). Six new pattern files authored
+with provenance in futon3 (`fc65959b`); receipts committed (`d4e0912`).
+
+**All 8 executions were refused — `memory lifecycle domain mismatch,
+requested-domain nil` — because the LAB MANAGER'S stage-2 packet
+prescribed a ctx without `:domain :mathematics`.** The gate refused
+correctly; the reviewer recorded the refusals instead of improvising
+around them — the machinery and the seat discipline both held against
+the coordinator's own error, which is the W.18 thesis validating itself
+one more time, now with claude-7 on the outside. Execution retry
+dispatched with corrected ctx (`invoke-…f60a733f`); verdicts unchanged.
+
+**Projection-gap CONFIRMED as an independent recall defect**: both
+flagged ids (incl. the frame-6 closure deposit) remain absent from the
+t00A05 subject projection regardless of attachment status. Queued as a
+packet: the projection layer drops :current memory edges under
+conditions unknown — this caps what ANY promotion can make findable and
+therefore blocks clean interpretation of recall measurements until fixed.
+
+Meanwhile f7: :student-attempts, v42 — the guide is conducting its
+student lane unassisted.
