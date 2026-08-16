@@ -9554,3 +9554,29 @@ role card (regime boundary at frame-3); typed-guidance schema. Plus: frame-3
 opens with t00A05's route map IN STORE — the next solver attempt starts one
 lemma from a closed theorem, which is itself the store-mode thesis at the
 solver tier.
+
+## W.7-post Operator reflection + the memory-only challenge (Joe, 2026-08-16)
+
+**Refinement (testable):** "Codex could probably have closed this in <5
+attempts, given the correct instructions." The 8-dispatch trajectory
+re-read as an ablation: 2 process packets = role-card text; 6 content
+packets = store material (2 already deposited). Frame-3 hypothesis: revised
+card + current store → the last t00A05 lemma falls in ≤2 attempts with zero
+content guidance. Each burnt attempt was tuition: every step is now encoded
+or encodable.
+
+**THE MEMORY-ONLY CHALLENGE (design registered, runs after follow-ups):**
+can Zai, cold, pull-only, close t00A05's remaining gap FROM THE STORE ALONE
+— closing what Codex (per cap) did not? Strongest form of the store-mode
+thesis: transfer exceeding the depositor's completion. Requirements:
+(a) **t00A05's open state is PROTECTED as of now** — nobody closes the
+rot-beta lemma outside the experiment; the frame branch stays as-is
+(15 commits, one hole). Protected list: t94J02-post-round, a98A01, t00A05.
+(b) A student-primary frame variant (solver leg marked spent, not run).
+(c) Deposit sufficiency review before dispatch: the route map + technique
+memories, possibly granularized.
+
+**Follow-up order (executing):** 1. machinery packets (atomic dispatch+park;
+conductor namespace) — durability for many-frame/many-agent operation;
+2. role card + typed-guidance schema (regime boundary declared);
+3. the memory-only frame.
