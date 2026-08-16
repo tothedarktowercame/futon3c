@@ -56,6 +56,7 @@
   (if-let [binding (lookup agent-id session-id)]
     {:ok true :bound? true
      :agent-id agent-id :session-id session-id
+     :problem-id (get-in @(:handle binding) [:config :problem-id])
      :cycle-id (:cycle-id binding) :version (:version binding)
      :phase (get-in @(:handle binding) [:state :current-phase])}
     {:ok true :bound? false :agent-id agent-id :session-id session-id}))

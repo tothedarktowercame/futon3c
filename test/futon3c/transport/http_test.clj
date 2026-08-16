@@ -8,6 +8,8 @@
             [cheshire.core :as json]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.transport.http :as http]
+            [futon3c.apm.conductor-binding :as conductor-binding]
+            [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.transport.peripheral-events]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.agency.parked-on :as parked-on]
@@ -1162,6 +1164,55 @@
         (is (str/includes? prompt "Write surface `minibuffer`: emit lines `MINIBUFFER: <text-or-json>`"))
         (is (str/includes? prompt "\"command\":\"eval-sexp\""))
         (is (str/includes? prompt "\"command\":\"run-script\""))))))
+
+(deftest wrap-agent-facing-surface-includes-live-problem-conductor-contract
+  (let [agent-id "claude-contract"
+        session-id "contract-session"
+        original "Drive the next cycle action."
+        handle {:ok true
+                :cycle-id "cycle-contract-1"
+                :config {:problem-id "t94J02"}
+                :state {:current-phase :guided-solve}
+                :log [{:tool :problem-save}]}
+        previous (#'futon3c.transport.http/wrap-surface-header
+                  "" "emacs-repl" "joe" agent-id nil)]
+    (reg/register-agent!
+     {:agent-id {:id/value agent-id :id/type :continuity}
+      :type :claude
+      :invoke-fn (fn [_ _] {:result "ok" :session-id session-id})
+      :session-id session-id})
+    (try
+      (testing "an unbound session receives byte-identical pre-contract text"
+        (is (= (str previous original)
+               (#'futon3c.transport.http/wrap-agent-facing-surface
+                original "emacs-repl" "joe" agent-id))))
+      (is (:ok (conductor-binding/install! agent-id session-id handle)))
+      (testing "a bound prompt reports live problem, phase, cycle, and version"
+        (let [prompt (#'futon3c.transport.http/wrap-agent-facing-surface
+                      original "emacs-repl" "joe" agent-id)]
+          (is (str/includes? prompt "Problem: t94J02"))
+          (is (str/includes? prompt "Cycle: cycle-contract-1"))
+          (is (str/includes? prompt "Current phase: guided-solve"))
+          (is (str/includes? prompt "Version: 1"))
+          (is (str/includes? prompt "/api/alpha/conductor/action"))
+          (is (str/includes? prompt "reads are unrestricted"))))
+      (let [advanced (with-redefs-fn
+                       {#'futon3c.apm.conductor-surface/operations
+                        {:test (fn [h]
+                                 (-> h
+                                     (assoc-in [:state :current-phase] :intervene)
+                                     (update :log conj {:tool :problem-save})))}}
+                       #(conductor-surface/execute-action!
+                         agent-id session-id
+                         {:action-id "advance-contract" :cycle-id "cycle-contract-1"
+                          :version 1 :operation :test :args []}))
+            prompt (#'futon3c.transport.http/wrap-agent-facing-surface
+                    original "emacs-repl" "joe" agent-id)]
+        (is (:ok advanced))
+        (is (str/includes? prompt "Current phase: intervene"))
+        (is (str/includes? prompt "Version: 2")))
+      (finally
+        (conductor-binding/reset-bindings!)))))
 
 (deftest maybe-route-surface-writes-strips-and-relays-minibuffer-directives
   (testing "MINIBUFFER directives are removed from visible output and relayed to Emacs"
