@@ -663,15 +663,38 @@
        "quiet")
      "\n")))
 
+(defn- problem-cycle-id [state]
+  (or (:current-cycle-id state)
+      (some (fn [{:keys [tool result]}]
+              (when (= :begin-problem-cycle tool)
+                (:cycle/id result)))
+            (reverse (:steps state)))))
+
+(defn- short-cycle-id [cycle-id]
+  (when cycle-id
+    (let [s (str cycle-id)]
+      (if (<= (count s) 12) s (subs s (- (count s) 7))))))
+
+(defn- problem-save-version [state]
+  (some (fn [{:keys [tool result]}]
+          (when (= :problem-save tool)
+            (:version result)))
+        (reverse (:steps state))))
+
 (defn- format-problem-state [state]
   (let [problem-id (or (:problem-id state) "unknown")
+        cycle-id (problem-cycle-id state)
+        cycle-short (or (short-cycle-id cycle-id) "none")
+        save-version (problem-save-version state)
+        rendered-step (count (:steps state))
         mode (or (:cycle/mode state) "unknown")
         phases (vec (butlast (problem-phase-order)))
         phase (:current-phase state)
         phase-index (when phase (.indexOf phases phase))
         completed? (and (nil? phase) (pos? (:cycles-completed state 0)))
         phase-label (cond
-                      completed? "COMPLETED (sentinel)"
+                      completed? (str "COMPLETED (sentinel): " problem-id "/"
+                                      cycle-short)
                       (nil? phase) "setup"
                       (and phase-index (<= 0 phase-index))
                       (str (name phase) " (" (inc phase-index) "/"
@@ -704,7 +727,10 @@
         caps (:reg/attempt-caps registration)
         solver-count (attempt-count (:solver-attempt outputs))
         student-count (attempt-count (:student-attempts outputs))]
-    (str "Problem: " problem-id "\n"
+    (str "Problem: " problem-id
+         "  Cycle: " cycle-short
+         "  Save: " (if save-version (str "v" save-version) "unsaved")
+         "  Rendered-at: step " rendered-step "\n"
          "Mode: " (name mode) "\n"
          "Phase: " phase-label ": "
          (str/join " > " (map name phases)) "\n"
@@ -1478,6 +1504,13 @@
        (when-let [content (render-blackboard peripheral-id state)]
          (let [buf-name (str "*" (name peripheral-id) "*")
                opts (merge {:async? true} opts)]
+           ;; Keep the traditional singleton as the latest-write view, while
+           ;; making concurrent problem cycles independently inspectable.
+           (when (and (= :problem peripheral-id) (problem-cycle-id state))
+             (blackboard!
+              (str "*problem: " (or (:problem-id state) "unknown") "-"
+                   (short-cycle-id (problem-cycle-id state)) "*")
+              content opts))
            (blackboard! buf-name content opts)
            (emit-blackboard-evidence! peripheral-id state content)
            nil))

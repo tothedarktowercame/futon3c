@@ -283,6 +283,7 @@
   (let [mid-cycle
         {:problem-id "t00A05"
          :cycle/mode :store-mode
+         :current-cycle-id "t00A05-cycle-93f5be7"
          :current-phase :guided-solve
          :cycles-completed 0
          :conductor {:agent "claude-7" :proctor "claude-2"}
@@ -292,7 +293,10 @@
           :solver-attempt {:attempt/id "solver/1"}
           :student-attempts [{:attempt/id "student/1"}
                              {:attempt/id "student/2"}]}
-         :steps [{:tool :dispatch-solver
+         :steps [{:tool :begin-problem-cycle
+                  :result {:cycle/id "t00A05-cycle-93f5be7"}}
+                 {:tool :problem-save :result {:version 43}}
+                 {:tool :dispatch-solver
                   :result {:job-id "invoke-live-solver"}}
                  {:tool :dispatch-student-fresh
                   :result {:job-id "invoke-live-student"
@@ -313,8 +317,16 @@
                             :ground-control/recipient "codex-4"}}]})
         completed (bb/render-blackboard
                    :problem
-                   (assoc mid-cycle :current-phase nil :cycles-completed 1))]
+                   (assoc mid-cycle :current-phase nil :current-cycle-id nil
+                          :cycles-completed 1))
+        other-cycle (bb/render-blackboard
+                     :problem
+                     (assoc mid-cycle
+                            :current-cycle-id "t00A05-cycle-a12bc34"))]
     (is (str/includes? rendered "Problem: t00A05"))
+    (is (str/includes? rendered "Cycle: 93f5be7"))
+    (is (str/includes? rendered "Save: v43"))
+    (is (str/includes? rendered "Rendered-at: step 4"))
     (is (str/includes? rendered "Phase: guided-solve (3/9)"))
     (is (str/includes? rendered
                        "intervene > promote-solver > student-attempts"))
@@ -336,7 +348,10 @@
     (is (re-find #"scribe\s+unstaffed\s+unstaffed" awaiting-rendered))
     (is (str/includes? rendered
                        "Latest dispatch: dispatch-student-fresh  job=invoke-live-student"))
-    (is (str/includes? completed "Phase: COMPLETED (sentinel)"))))
+    (is (str/includes? completed
+                       "Phase: COMPLETED (sentinel): t00A05/93f5be7"))
+    (is (not= rendered other-cycle))
+    (is (str/includes? other-cycle "Cycle: a12bc34"))))
 
 ;; =============================================================================
 ;; blackboard! primitive — elisp construction
@@ -419,6 +434,20 @@
         (is (= 1 (count @calls)))
         (is (= "*mission-control*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :async?])))))))
+
+(deftest problem-projection-keeps-latest-and-cycle-specific-buffers
+  (let [calls (atom [])
+        state {:problem-id "a98A01"
+               :current-cycle-id "a98A01-cycle-93f5be7"
+               :current-phase :frame
+               :steps []}]
+    (with-redefs [bb/blackboard! (fn [buffer-name content opts]
+                                   (swap! calls conj [buffer-name content opts])
+                                   {:ok true})]
+      (is (nil? (bb/project! :problem state)))
+      (is (= ["*problem: a98A01-93f5be7*" "*problem*"]
+             (mapv first @calls)))
+      (is (= (second (first @calls)) (second (second @calls)))))))
 
 ;; Note: project! with a real peripheral-id would call emacsclient,
 ;; which we don't want in the test suite. The render tests above
