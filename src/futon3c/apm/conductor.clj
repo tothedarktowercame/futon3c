@@ -200,8 +200,21 @@
               "guide-solver requires a valid typed-bell performative"
               {:bell-type bell-type}))))
 
+(defn- recorded-results [state tool]
+  (->> (:steps state)
+       (keep (fn [step]
+               (when (= tool (:tool step)) (:result step))))
+       vec))
+
 (defn dispatch-student! [handle opts packet]
-  (dispatch! handle :dispatch-student-fresh opts packet))
+  (let [handle (if (= :promote-solver (get-in handle [:state :current-phase]))
+                 (:handle
+                  (advance handle
+                           {:promotion-result
+                            (recorded-results (:state handle)
+                                              :promote-artifact)}))
+                 handle)]
+    (dispatch! handle :dispatch-student-fresh opts packet)))
 
 (def ^:private scribe-card-path
   "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe.md")

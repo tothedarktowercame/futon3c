@@ -68,6 +68,7 @@
                      :cycle/runner-freshness :cold}
     :ground-control-events [] :memory-offers []}
    :intervene {:intervention {:kind :store-write}}
+   :promote-solver {:promotion-result []}
    :student-attempts
    {:student-attempts [{:attempt/id "a-student" :attempt/seq 1
                         :cycle/regime "r" :cycle/store-revision "s"
@@ -212,5 +213,5 @@
            (:assigned-at @register-facts)))
     (is (not-any? #(= :retrieval-probe (:entity-type %))
                   (:producer-failures @close-envelope)))
-    (is (= {:completed? true :advances 8} outcome)
-        "all eight real phases advance through :completed, which clears state")))
+    (is (= {:completed? true :advances 9} outcome)
+        "all nine real phases advance through :completed, which clears state")))

@@ -315,7 +315,9 @@
                    :problem
                    (assoc mid-cycle :current-phase nil :cycles-completed 1))]
     (is (str/includes? rendered "Problem: t00A05"))
-    (is (str/includes? rendered "Phase: guided-solve (3/8)"))
+    (is (str/includes? rendered "Phase: guided-solve (3/9)"))
+    (is (str/includes? rendered
+                       "intervene > promote-solver > student-attempts"))
     (is (str/includes? rendered "register > frame > guided-solve > intervene"))
     (is (str/includes? rendered "scribe=unstaffed"))
     (is (str/includes? rendered "Attempts: solver 1/10  student 2/3"))

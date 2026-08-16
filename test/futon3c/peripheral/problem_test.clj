@@ -390,7 +390,8 @@
    :solver-attempt {:cycle/environment-revision "env-a"
                     :cycle/environment-checkout "/solver"
                     :cycle/store-snapshot :solver-store}
-   :ground-control-events [] :memory-offers [] :intervention :i})
+   :ground-control-events [] :memory-offers [] :intervention :i
+   :promotion-result []})
 
 (deftest attempt-environments-are-stamped-from-checkout-assignment
   (let [assigned-revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -429,7 +430,9 @@
                   :ground-control-events [] :memory-offers []}]})
         student-state (-> (:state guided)
                           (assoc :current-phase :student-attempts)
-                          (update :cycle/outputs assoc :intervention :i))
+                          (update :cycle/outputs assoc
+                                  :intervention :i
+                                  :promotion-result []))
         students
         (runner/step
          p student-state
@@ -1601,6 +1604,7 @@
                            :ground-control-events []
                            :memory-offers []
                            :intervention {}
+                           :promotion-result []
                            :student-attempts
                            [{:cycle/environment-revision "env"
                              :cycle/harness-revision
@@ -1808,6 +1812,53 @@
            (get-in measured [:result :meas/unset "scribe lane coverage"])))
     (is (= "unset: no arc-lane event is present in cycle outputs"
            (get-in measured [:result :meas/unset "arc-lane yield"])))))
+
+(deftest promotions-and-scribe-reports-aggregate-across-both-promote-phases
+  (let [promotion {:promo/id "promo/recorded"
+                   :promo/artifact-id "recorded/artifact"
+                   :promo/importable? true
+                   :promo/need-tags ["recorded"]}
+        p (cycle/make-cycle-peripheral
+           problem/problem-domain-config problem/problem-spec
+           (tools/make-mock-backend {:promote-artifact promotion}))
+        start (:state (start-problem p {:session-id "two-promotions"
+                                       :problem-id "t94J02"
+                                       :cycle/mode :store-mode}))
+        state (-> (scribe-report-state start)
+                  (assoc :current-phase :promote-solver)
+                  (assoc-in [:cycle/outputs :memory-offers]
+                            [{:offer/id "offer/solver"}]))
+        p1 (runner/step p state
+                        {:tool :promote-artifact
+                         :args [{:artifact-id "solver/artifact"
+                                 :importable? true :need-tags ["solver"]}]})
+        s1 (runner/step p (:state p1)
+                        {:tool :record-scribe-lanes
+                         :args [{:lane :solve :ran? true
+                                 :yield ["solver/artifact"]
+                                 :author "ams-scribe-1"}]})
+        post-student (assoc (:state s1) :current-phase :promote)
+        p2 (runner/step p post-student
+                        {:tool :promote-artifact
+                         :args [{:artifact-id "student/artifact"
+                                 :importable? true :need-tags ["student"]}]})
+        s2 (runner/step p (:state p2)
+                        {:tool :record-scribe-lanes
+                         :args [{:lane :trajectory :ran? true
+                                 :yield ["student/artifact"]
+                                 :author "ams-scribe-1"}]})
+        outputs (#'problem/stamp-environment-outputs
+                 (:state s2) (:cycle/outputs (:state s2)))]
+    (is (:ok p1))
+    (is (:ok s1))
+    (is (:ok p2))
+    (is (:ok s2))
+    (is (= ["recorded/artifact" "recorded/artifact"]
+           (mapv :promo/artifact-id (:promotion-result outputs))))
+    (is (= [:solve :trajectory]
+           (mapv :lane (:scribe-lane-reports outputs))))
+    (is (= [{:offer/id "offer/solver"}] (:memory-offers outputs))
+        "F3's offer input survives both promotion advances")))
 
 (deftest record-measurement-covers-every-required-field-with-values-or-reasons
   (let [backend (tools/make-mock-backend)
