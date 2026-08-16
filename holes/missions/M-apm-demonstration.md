@@ -10853,3 +10853,24 @@ guide dispatches the scribe to review — nothing proxies authorship).
 Lands INERT for frame-8: frame-7 is live mid-cycle and completes under
 its own chain; no mid-frame regime change. W.44's offer-lane proposal is
 WITHDRAWN in favor of this.
+
+## W.48 P13 merged inert: the two-promote chain awaits frame-8; a reviewer-authentication hole confirmed (2026-08-16)
+
+**P13 reviewed and merged (`de8fd3b8`), NOT reloaded** — frame-7 completes
+under its 8-phase chain; frame-8 opens under
+register → frame → guided-solve → intervene → **promote-solver** →
+student-attempts → adjudicate → promote → close. Cross-phase aggregation
+of promotions/lanes proven by test; F3 offers intact; traverse walks nine
+real phases; the pane derives (3/9) automatically. The one combined-run
+failure was the pre-existing timing-sensitive async-emacsclient test
+(green isolated, in both the implementer's and reviewer's runs).
+
+**Reviewer-authentication hole CONFIRMED (predates P13, queued):**
+`:promote-artifact` accepts a caller-supplied `:reviewer` that is never
+authenticated against the ACTING session — a guide could claim reviewer
+authorship without the reviewer acting. The retro-pass avoided this only
+by discipline (codex-5 executed its own approvals). Packet queued: at
+execution, the claimed `:reviewer` must equal the authenticated acting
+identity (the conductor-surface binding knows who is acting), refusing
+otherwise — the W.41 reviewer-must-act principle enforced in the machine
+rather than in packet prose.
