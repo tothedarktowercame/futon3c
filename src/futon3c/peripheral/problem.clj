@@ -52,7 +52,10 @@
    :intervene #{advance}
    :student-attempts #{:dispatch-student-fresh :read-attempt-result advance}
    :adjudicate #{:write-disposition :write-use advance}
-   :promote #{:promote-artifact advance}
+   ;; The scribe card mines a completed solve. :promote is the first phase
+   ;; after adjudication devoted to turning that completed work into reusable
+   ;; artifacts, so lane reports live beside promotion rather than solving.
+   :promote #{:promote-artifact :record-scribe-lanes advance}
    :close #{:record-measurement :emit-capability-probes :emit-trace :validate-trace
             :write-authorization advance}
    :completed #{}})
@@ -220,6 +223,41 @@
                  (:retrieval-probe result))))
        vec))
 
+(def scribe-lanes
+  ;; Source: holes/labs/M-apm-demonstration/role-cards/scribe.md, "Four lanes".
+  #{:solve :arc :trajectory :challenge})
+
+(defn- record-scribe-lanes-from-state [state args]
+  (let [report (first args)
+        lane (:lane report)
+        ran? (:ran? report)
+        yield (:yield report)
+        author (:author report)
+        staffed-seat (get-in state
+                              [:cycle/outputs :registration :reg/scribe-seat])]
+    (when-not (contains? scribe-lanes lane)
+      (throw (ex-info ":unknown-scribe-lane — unknown scribe lane"
+                      {:failure :unknown-scribe-lane :lane lane})))
+    (when-not (boolean? ran?)
+      (throw (ex-info ":malformed-scribe-lane-report — ran? must be boolean"
+                      {:failure :malformed-scribe-lane-report
+                       :field :ran?})))
+    (when-not (and (vector? yield) (every? prereg/nonblank-string? yield))
+      (throw (ex-info ":malformed-scribe-lane-report — yield must be a vector of memory ids"
+                      {:failure :malformed-scribe-lane-report
+                       :field :yield})))
+    (when-not (prereg/nonblank-string? author)
+      (throw (ex-info ":malformed-scribe-lane-report — author must be a staffed seat name"
+                      {:failure :malformed-scribe-lane-report
+                       :field :author})))
+    (when (and (prereg/nonblank-string? staffed-seat)
+               (not= staffed-seat author))
+      (throw (ex-info ":scribe-seat-mismatch — author does not match registered seat"
+                      {:failure :scribe-seat-mismatch
+                       :registered staffed-seat
+                       :author author})))
+    (select-keys report [:lane :ran? :yield :author])))
+
 (defn- recorded-student-assignments [state]
   ;; :steps spans the whole peripheral session, including completed cycles.
   ;; Reset at the latest assignment so attempt 1 of a new cycle cannot be
@@ -281,6 +319,8 @@
         dispositions (recorded-cycle-tool-results state :write-disposition)
         memory-uses (recorded-cycle-tool-results state :write-use)
         promotions (recorded-cycle-tool-results state :promote-artifact)
+        scribe-lane-reports
+        (recorded-cycle-tool-results state :record-scribe-lanes)
         retrieval-probes (recorded-retrieval-probes state)
         frozen-at (:cycle/stratum-frozen-at
                    (recorded-tool-result state :freeze-stratum))
@@ -324,6 +364,9 @@
 
       (seq promotions)
       (assoc :promotion-result promotions)
+
+      (seq scribe-lane-reports)
+      (assoc :scribe-lane-reports scribe-lane-reports)
 
       (seq retrieval-probes)
       (assoc :retrieval-probes retrieval-probes)
@@ -439,6 +482,19 @@
 (defn- measurement-values [outputs]
   (let [dispositions (output-entities outputs :disposition)
         disposition (when (= 1 (count dispositions)) (first dispositions))
+        scribe-reports (:scribe-lane-reports outputs)
+        ran-lanes (when (seq scribe-reports)
+                    (->> scribe-reports
+                         (filter :ran?)
+                         (map :lane)
+                         distinct
+                         sort
+                         vec))
+        arc-yield (when (seq scribe-reports)
+                    (->> scribe-reports
+                         (filter #(and (= :arc (:lane %)) (:ran? %)))
+                         (mapcat :yield)
+                         count))
         locked-exposure (get-in outputs
                                 [:registration :problem
                                  :locked-lemma-exposure])]
@@ -458,7 +514,14 @@
 
       (sequential? (:ground-control-events outputs))
       (assoc "attempts or closer hops"
-             (count (:ground-control-events outputs))))))
+             (count (:ground-control-events outputs)))
+
+      (seq scribe-reports)
+      (assoc "scribe lane coverage"
+             {:lanes-ran ran-lanes
+              :ran (count ran-lanes)
+              :total (count scribe-lanes)}
+             "arc-lane yield" arc-yield))))
 
 (defn- unset-measurement-reason [field]
   (case field
@@ -713,6 +776,7 @@
    :backend-args-fn thread-current-phase
    :output-stamp-fn stamp-environment-outputs
    :derived-tools {:record-measurement record-measurement-from-state
+                   :record-scribe-lanes record-scribe-lanes-from-state
                    :emit-capability-probes emit-capability-probes-from-state
                    :emit-trace emit-trace-from-state
                    :validate-trace validate-trace-from-state

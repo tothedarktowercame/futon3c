@@ -54,6 +54,19 @@
     (is (= entity (harness/persist-roundtrip! store cycle-id entity)))
     (is (= entity ((:read! store) cycle-id)))))
 
+(deftest scribe-lane-measurements-survive-trace-derivation
+  (let [coverage {:lanes-ran [:arc :solve] :ran 2 :total 4}
+        entities (mapv (fn [entity]
+                         (if (:meas/id entity)
+                           (assoc entity :meas/values
+                                  {"scribe lane coverage" coverage
+                                   "arc-lane yield" 2})
+                           entity))
+                       (base-entities))
+        values (get-in (trace-with entities) [:measurement :meas/values])]
+    (is (= coverage (get values "scribe lane coverage")))
+    (is (= 2 (get values "arc-lane yield")))))
+
 (deftest scaffold-identical-frame-is-refused-before-persistence
   (let [store (harness/memory-store)
         path (Files/createTempFile "apm-frame" ".lean"
