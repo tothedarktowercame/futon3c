@@ -298,6 +298,19 @@
                   :result {:job-id "invoke-live-student"
                            :ground-control/recipient "zai-1"}}]}
         rendered (bb/render-blackboard :problem mid-cycle)
+        awaiting-rendered
+        (bb/render-blackboard
+         :problem
+         {:problem-id "t00A05"
+          :cycle/mode :store-mode
+          :current-phase :guided-solve
+          :cycle/outputs
+          {:registration {:reg/solver-seat "codex-4"
+                          :reg/guide-seat "claude-7"
+                          :reg/student-seat "zai-1"}}
+          :steps [{:tool :dispatch-solver
+                   :result {:job-id "invoke-awaiting-solver"
+                            :ground-control/recipient "codex-4"}}]})
         completed (bb/render-blackboard
                    :problem
                    (assoc mid-cycle :current-phase nil :cycles-completed 1))]
@@ -306,6 +319,14 @@
     (is (str/includes? rendered "register > frame > guided-solve > intervene"))
     (is (str/includes? rendered "scribe=unstaffed"))
     (is (str/includes? rendered "Attempts: solver 1/10  student 2/3"))
+    (is (str/includes? rendered "Seat activity:"))
+    (is (str/includes? rendered "dispatch-solver (1 step ago); attempt recorded"))
+    (is (str/includes? rendered "dispatch-student-fresh (now); attempt recorded"))
+    (is (re-find #"scribe\s+unstaffed\s+unstaffed" rendered))
+    (is (str/includes? awaiting-rendered
+                       "awaiting codex-4 (job invoke-awaiting-solver)"))
+    (is (re-find #"proctor\s+unstaffed\s+unstaffed" awaiting-rendered))
+    (is (re-find #"scribe\s+unstaffed\s+unstaffed" awaiting-rendered))
     (is (str/includes? rendered
                        "Latest dispatch: dispatch-student-fresh  job=invoke-live-student"))
     (is (str/includes? completed "Phase: COMPLETED (sentinel)"))))

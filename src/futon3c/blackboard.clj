@@ -561,6 +561,89 @@
     (sequential? attempts) (count attempts)
     :else 1))
 
+(defn- indexed-steps [state]
+  (mapv (fn [index step] (assoc step ::index index))
+        (range) (:steps state)))
+
+(defn- relative-step [step-count index]
+  (let [distance (- (dec step-count) index)]
+    (cond
+      (zero? distance) "now"
+      (= 1 distance) "1 step ago"
+      :else (str distance " steps ago"))))
+
+(defn- role-dispatches [steps role]
+  (let [tool (case role
+               :solver :dispatch-solver
+               :student :dispatch-student-fresh)]
+    (filterv #(= tool (:tool %)) steps)))
+
+(defn- pending-dispatches [steps outputs]
+  (mapcat
+   (fn [[role attempts]]
+     (let [dispatches (role-dispatches steps role)
+           completed (attempt-count attempts)]
+       (map #(assoc % ::role role) (drop completed dispatches))))
+   [[:solver (:solver-attempt outputs)]
+    [:student (:student-attempts outputs)]]))
+
+(defn- latest-tool-step [steps tool]
+  (some #(when (= tool (:tool %)) %) (reverse steps)))
+
+(defn- seat-last-action [role steps outputs]
+  (let [step-count (count steps)]
+    (case role
+      (:solver :student)
+      (let [dispatches (role-dispatches steps role)
+            attempts (if (= role :solver)
+                       (:solver-attempt outputs)
+                       (:student-attempts outputs))
+            completed (min (attempt-count attempts) (count dispatches))
+            step (or (last dispatches) nil)]
+        (if step
+          (str (name (:tool step)) " ("
+               (relative-step step-count (::index step)) ")"
+               (when (pos? completed) "; attempt recorded"))
+          (when (pos? (attempt-count attempts)) "attempt recorded")))
+
+      :guide
+      (when-let [step (latest-tool-step steps :guide-solver)]
+        (str "guide-solver (" (relative-step step-count (::index step)) ")"))
+
+      :scribe
+      (when-let [step (latest-tool-step steps :record-scribe-lanes)]
+        (str "record-scribe-lanes ("
+             (relative-step step-count (::index step)) ")"))
+
+      :proctor nil)))
+
+(defn- format-seat-activity [seats state outputs]
+  (let [steps (indexed-steps state)
+        pending (->> (pending-dispatches steps outputs)
+                     (sort-by ::index)
+                     vec)
+        latest-pending (last pending)]
+    (str
+     "Seat activity:\n"
+     (apply str
+            (for [role [:solver :guide :student :proctor :scribe]
+                  :let [seat (get seats role)
+                        staffed? (and (some? seat)
+                                      (not (str/blank? (str seat))))
+                        action (when staffed?
+                                 (seat-last-action role steps outputs))]]
+              (format "  %-8s %-16s %s\n"
+                      (name role) (staffed seat)
+                      (or action (if staffed? "quiet" "unstaffed")))))
+     "In-flight: "
+     (if latest-pending
+       (let [role (::role latest-pending)
+             seat (staffed (get seats role))
+             job-id (or (get-in latest-pending [:result :job-id]) "unknown")]
+         (str "awaiting " seat " (job " job-id ")"))
+       "quiet")
+     "\n")))
+
 (defn- format-problem-state [state]
   (let [problem-id (or (:problem-id state) "unknown")
         mode (or (:cycle/mode state) "unknown")
@@ -614,6 +697,7 @@
          "Attempts: solver " solver-count "/"
          (or (:s-frontier caps) "?")
          "  student " student-count "/" (or (:s-student caps) "?") "\n"
+         (format-seat-activity seats state outputs)
          (when latest-dispatch
            (str "Latest dispatch: " (name (:tool latest-dispatch))
                 "  job=" (or (:job-id latest-dispatch) "unknown") "\n")))))
