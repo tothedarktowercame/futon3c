@@ -394,6 +394,47 @@
         (agency/unregister-agent! "claude-unbound")
         (doseq [path paths] (Files/deleteIfExists path))))))
 
+(deftest conductor-abandon-route-authenticates-and-releases-live-binding
+  (let [agent-id "claude-abandon"
+        session-id "abandon-session"
+        cycle-id "cycle-abandon"
+        handler (http/make-handler {})
+        handle {:cycle-id cycle-id
+                :state {:current-phase :guided-solve}
+                :log []}
+        post! (fn [version]
+                (let [response
+                      (handler {:request-method :post
+                                :uri "/api/alpha/conductor/abandon"
+                                :body (json/generate-string
+                                       {:agent-id agent-id
+                                        :session-id session-id
+                                        :cycle-id cycle-id
+                                        :version version})})]
+                  (assoc (json/parse-string (:body response) true)
+                         :http/status (:status response))))]
+    (binding/reset-bindings!)
+    (agency/register-agent!
+     {:agent-id agent-id :type :claude
+      :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})
+      :session-id session-id})
+    (try
+      (is (:ok (binding/install! agent-id session-id handle)))
+      (let [stale (post! 1)]
+        (is (= 409 (:http/status stale)))
+        (is (= "conductor-abandonment-stale" (:error/code stale)))
+        (is (some? (binding/lookup agent-id session-id))))
+      (let [released (post! 0)]
+        (is (= 200 (:http/status released)))
+        (is (:abandoned? released))
+        (is (nil? (binding/lookup agent-id session-id))))
+      (let [unbound (post! 0)]
+        (is (= 409 (:http/status unbound)))
+        (is (= "conductor-session-unbound" (:error/code unbound))))
+      (finally
+        (binding/reset-bindings!)
+        (agency/reset-registry!)))))
+
 (deftest conductor-takeover-loads-the-named-version-and-preserves-parked-binding
   (let [{:keys [config paths]} (fixture)
         old-agent "claude-old"
