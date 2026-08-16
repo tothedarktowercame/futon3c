@@ -9997,3 +9997,37 @@ downgraded from "doing science" to "producing auditable measurements under
 partially-enforced protocol," and it upgrades back exactly when the gates
 above exist. The operator's stress is the measure of the enforcement gap;
 each catch he made becomes a gate so he never makes it twice.
+
+## W.18 The culminating finding: the conductor was never a peripheral inhabitant (Joe, 2026-08-16)
+
+**Operator:** "An agent posting on IRC can't NOT post on IRC… Either the
+proofs are wrong (which I sort of doubt) or the system is not actually set
+up as a peripheral in the sense I understand that term."
+
+**The proofs are not wrong, and the round contains their empirical
+vindication:** every peripheral-ized role held protocol flawlessly for the
+entire round — codex inside its dispatch envelope (honest reports, a formal
+refutation, no unearned claims), zai inside its tool surface (verified hole
+states, no fabrication, unprompted confessions), the machine at its gates
+(refused authorization every time the trace fell short). **Every recorded
+protocol violation traces to the single role that ran outside any
+peripheral: the conductor** — who used the system as a library (Drawbridge
+evals, scratch files, raw writes, raw bells) but inhabited nothing. For
+every other role, violation was inexpressible; for the conductor it was
+merely prohibited, and at conversational timescale prohibited decays to
+done. The peripheral concept is thereby validated BY COUNTEREXAMPLE, with
+a complete audit trail, in the mission built to demonstrate it.
+
+**The missing object: the CONDUCTOR PERIPHERAL.** Entry at frame launch;
+tool surface = the conductor namespace's functions + read-only observation,
+phase-gated by the live cycle phase; exit at the sentinel. Inside it,
+W.17's enforcement queue is not gates bolted onto functions but the walls
+of the room: early close inexpressible without a fired stop-rule; raw
+store writes absent from the surface; off-protocol bells not present to
+send. The machinery exists (the cycle engine IS the pattern; the runner
+protocol IS the inhabitation interface; the warm-pouch dispatch
+infrastructure constrains envelopes today) — the conductor was simply
+never dispatched INTO it. This is the round-2 architecture ruling awaiting
+the operator's word, and the whitepaper's strongest structural result:
+the demonstration measured what happens to the one agent you leave
+outside the walls.
