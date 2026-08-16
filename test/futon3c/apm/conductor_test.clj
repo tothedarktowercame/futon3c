@@ -5,6 +5,7 @@
             [futon3c.agency.registry :as agency]
             [futon3c.apm.conductor :as conductor]
             [futon3c.apm.conductor-binding :as binding]
+            [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.tools :as tools]
             [futon3c.transport.http :as http])
@@ -44,8 +45,8 @@
                                           (make-array FileAttribute 0))
         deposit-seq (atom 0)
         dispatch-fn
-        (fn [_ _]
-          {:ok true :job-id "job-test"
+        (fn [opts _]
+          {:ok true :job-id "job-test" :sent-opts opts
            :evidence {:body {:job-id "job-test"
                              :eligible-memory-ids ["memory/a" "memory/b"]
                              :memory-use
@@ -171,6 +172,59 @@
                     (filter #(= :guide-solver (:tool %)))
                     last :result :ground-control/type))))
       (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest conductor-dispatches-the-registered-scribe-only-at-promote
+  (let [{:keys [config paths]} (fixture)
+        agent-id "scribe-dispatch-guide"
+        session-id "scribe-dispatch-session"]
+    (try
+      (let [opened (conductor/open-frame! config)
+            out-of-phase (conductor/dispatch-scribe!
+                          opened {:mission "M-test"} "mine this cycle")
+            promoted (-> opened
+                         (assoc-in [:state :current-phase] :promote)
+                         (update-in [:state :steps] conj
+                                    {:tool :dispatch-solver
+                                     :result {:job-id "solver-job"}}
+                                    {:tool :dispatch-student-fresh
+                                     :result {:job-id "student-job"}}))
+            dispatched (conductor/dispatch-scribe!
+                        promoted {:mission "M-test"} "mine this cycle")]
+        (is (false? (:ok out-of-phase)))
+        (is (:ok dispatched) (pr-str (:error dispatched)))
+        (is (= :dispatch-scribe
+               (->> (get-in dispatched [:state :steps])
+                    (remove #(= :problem-save (:tool %))) last :tool)))
+        (is (= "scribe-test"
+               (->> (get-in dispatched [:state :steps])
+                    (filter #(= :dispatch-scribe (:tool %))) last
+                    :result :ground-control/recipient)))
+        (let [sent-opts (->> (get-in dispatched [:state :steps])
+                             (filter #(= :dispatch-scribe (:tool %))) last
+                             :result :sent-opts)]
+          (is (= "t94J02" (:problem-id sent-opts)))
+          (is (= (:cycle-id promoted) (:cycle-id sent-opts)))
+          (is (= ["solver-job"] (:solver-job-ids sent-opts)))
+          (is (= ["student-job"] (:student-job-ids sent-opts)))
+          (is (= "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe.md"
+                 (:scribe-card-path sent-opts))))
+        (agency/register-agent!
+         {:agent-id agent-id :type :claude
+          :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})})
+        (agency/update-agent! agent-id :agent/session-id session-id)
+        (is (:ok (binding/install! agent-id session-id promoted)))
+        (let [{:keys [cycle-id version]} (binding/status agent-id session-id)
+              routed
+              (conductor-surface/execute-action!
+               agent-id session-id
+               {:action-id "scribe-1" :cycle-id cycle-id :version version
+                :operation :dispatch-scribe
+                :args [{:mission "M-test"} "mine through surface"]})]
+          (is (:ok routed) (pr-str routed))))
+      (finally
+        (binding/reset-bindings!)
+        (agency/unregister-agent! agent-id)
         (doseq [path paths] (Files/deleteIfExists path))))))
 
 (deftest open-frame-refuses-invalid-mode-and-threads-conductor

@@ -8,6 +8,7 @@
   {:dispatch-solver conductor/dispatch-solver!
    :guide-solver conductor/guide-solver!
    :dispatch-student conductor/dispatch-student!
+   :dispatch-scribe conductor/dispatch-scribe!
    :record-solver-attempt conductor/record-solver-attempt!
    :deposit conductor/deposit!
    :record-students conductor/record-students!
