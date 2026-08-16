@@ -1,6 +1,7 @@
 (ns futon3c.peripheral.problem
   "Problem peripheral — one registered experimental problem per cycle."
   (:require [clojure.edn :as edn]
+            [clojure.data.json :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -14,7 +15,10 @@
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.substrate.client :as substrate])
-  (:import [java.nio.file Files StandardCopyOption]
+  (:import [java.net URI]
+           [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers
+            HttpResponse$BodyHandlers]
+           [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
            [java.time Instant]
            [java.util UUID]))
@@ -990,7 +994,50 @@
    (->CheckoutProvisioningBackend inner-backend provisioner-fn rollback-fn
                                   (atom nil) (atom []))))
 
-(defrecord GroundControlBackend [inner-backend dispatch-fn]
+(defn- post-park!
+  [base payload]
+  (let [request (-> (HttpRequest/newBuilder)
+                    (.uri (URI/create (str (str/replace base #"/$" "")
+                                           "/api/alpha/park")))
+                    (.header "content-type" "application/json")
+                    (.POST (HttpRequest$BodyPublishers/ofString
+                            (json/write-str payload)))
+                    (.build))
+        response (.send (HttpClient/newHttpClient) request
+                        (HttpResponse$BodyHandlers/ofString))
+        status (.statusCode response)
+        body (json/read-str (.body response) :key-fn keyword)]
+    (if (<= 200 status 299)
+      body
+      (throw (ex-info "park endpoint refused request"
+                      {:status status :body body})))))
+
+(defn- park-dispatch
+  "Attach the engine-owned park receipt to a successful raw dispatch result.
+  Parking is deliberately best-effort after dispatch: failure is retained as
+  :park/error but never rewrites a successful bell into a failed dispatch."
+  [dispatch-result tool-id opts conductor park-post-fn]
+  (let [job-id (:job-id dispatch-result)]
+    (if-not (and conductor job-id)
+      dispatch-result
+      (let [deadline-ms (+ (System/currentTimeMillis)
+                           (* 1000 (long (:park-deadline-s conductor))))
+            payload {:agent (:agent conductor)
+                     :session (:session conductor)
+                     :surface (:surface conductor)
+                     :awaiting [job-id]
+                     :deadline-ms deadline-ms
+                     :payload (or (:park-payload opts)
+                                  (str "Await " (name tool-id)
+                                       " job " job-id))}]
+        (try
+          (let [park-result (park-post-fn (:park-base conductor) payload)]
+            (assoc dispatch-result :park/id (:id park-result)))
+          (catch Throwable t
+            (assoc dispatch-result :park/error
+                   {:message (.getMessage t)})))))))
+
+(defrecord GroundControlBackend [inner-backend dispatch-fn park-post-fn cycle-context]
   tools/ToolBackend
   (execute-tool [_ tool-id args]
     (cond
@@ -1008,9 +1055,11 @@
                :error (str "guide-solver dispatch failed: "
                            (.getMessage ^Throwable dispatch-result))}
               {:ok true
-               :result (assoc dispatch-result
-                              :ground-control/recipient solver-seat
-                              :ground-control/cycle (:cycle/id measured))}))))
+               :result (-> (park-dispatch dispatch-result tool-id opts
+                                          (:conductor @cycle-context)
+                                          park-post-fn)
+                           (assoc :ground-control/recipient solver-seat
+                                  :ground-control/cycle (:cycle/id measured)))}))))
 
       (contains? dispatch-channels tool-id)
       (let [[opts packet] (take 2 args)
@@ -1052,7 +1101,9 @@
                    :rprobe/available-ids (vec eligible-ids)
                    :rprobe/retrieved-ids (vec retrieved-ids)})]
             {:ok true
-             :result (cond-> (assoc dispatch-result
+             :result (cond-> (assoc (park-dispatch dispatch-result tool-id opts
+                                                   (:conductor @cycle-context)
+                                                   park-post-fn)
                                     :memory-offers [(:evidence dispatch-result)])
                        retrieval-probe
                        (assoc :retrieval-probe retrieval-probe))})))
@@ -1070,7 +1121,9 @@
    (make-ground-control-backend inner-backend
                                 dispatch-with-recall/run-dispatch!))
   ([inner-backend dispatch-fn]
-   (->GroundControlBackend inner-backend dispatch-fn)))
+   (make-ground-control-backend inner-backend dispatch-fn post-park! (atom nil)))
+  ([inner-backend dispatch-fn park-post-fn cycle-context]
+   (->GroundControlBackend inner-backend dispatch-fn park-post-fn cycle-context)))
 
 (def ^:private harness-paths
   ;; What "the harness" IS, for the purpose of freezing it: the retrieval and
@@ -1461,7 +1514,7 @@
         (make-checkout-provisioning-backend
          (make-ground-control-backend
           (make-problem-state-backend backend state-root)
-          dispatch-fn)
+          dispatch-fn post-park! cycle-context)
          provisioner-fn)
         harness-measurer cycle-context store-snapshotter clock
         record-memory-fn))))))

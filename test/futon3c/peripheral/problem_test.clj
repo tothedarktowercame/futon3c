@@ -2064,6 +2064,72 @@
     (is (empty? @failed-dispatches)
         "a failed provision must not reach the inner dispatch")))
 
+(deftest successful-dispatches-atomically-register-conductor-parks
+  (let [parks (atom [])
+        now (System/currentTimeMillis)
+        context (atom {:conductor {:agent "claude-7"
+                                   :session "session-7"
+                                   :surface "emacs-repl"
+                                   :park-deadline-s 2700
+                                   :park-base "http://agency:7070"}})
+        dispatch-count (atom 0)
+        dispatch-fn (fn [_ _]
+                      (let [n (swap! dispatch-count inc)]
+                        {:job-id (str "job-" n)
+                         :evidence {:body {}}}))
+        park-post (fn [base payload]
+                    (swap! parks conj [base payload])
+                    {:id (str "park-" (count @parks))})
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend) dispatch-fn park-post context)
+        solver (tools/execute-tool
+                backend :dispatch-solver [{} "solver" {}])
+        student (tools/execute-tool
+                 backend :dispatch-student-fresh [{} "student" {}])
+        guide (tools/execute-tool
+               backend :guide-solver
+               [{:park-payload "continue guide"} "guide"
+                {:solver-seat "codex-4" :cycle/id "cycle-1"}])]
+    (is (= 3 (count @parks)) "exactly one park per successful dispatch")
+    (is (= ["job-1"] (get-in @parks [0 1 :awaiting])))
+    (is (= "claude-7" (get-in @parks [0 1 :agent])))
+    (is (= "session-7" (get-in @parks [0 1 :session])))
+    (is (= "emacs-repl" (get-in @parks [0 1 :surface])))
+    (is (= "http://agency:7070" (get-in @parks [0 0])))
+    (is (> (get-in @parks [0 1 :deadline-ms]) now)
+        "the engine sends an absolute epoch deadline")
+    (is (= "continue guide" (get-in @parks [2 1 :payload])))
+    (is (= "park-1" (get-in solver [:result :park/id])))
+    (is (= "park-2" (get-in student [:result :park/id])))
+    (is (= "park-3" (get-in guide [:result :park/id])))))
+
+(deftest park-failure-is-loud-without-rewriting-dispatch-success
+  (let [context (atom {:conductor {:agent "claude-7"
+                                   :session "session-7"
+                                   :surface "emacs-repl"
+                                   :park-deadline-s 10
+                                   :park-base "http://agency:7070"}})
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend)
+                 (fn [_ _] {:job-id "job-ok" :evidence {:body {}}})
+                 (fn [_ _] (throw (ex-info "park unavailable" {})))
+                 context)
+        result (tools/execute-tool backend :dispatch-solver [{} "packet" {}])]
+    (is (:ok result))
+    (is (= "park unavailable" (get-in result [:result :park/error :message])))))
+
+(deftest absent-conductor-does-not-attempt-parking
+  (let [park-calls (atom 0)
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend)
+                 (fn [_ _] {:job-id "job-ok" :evidence {:body {}}})
+                 (fn [_ _] (swap! park-calls inc) {:id "must-not-exist"})
+                 (atom {:session-id "s"}))
+        result (tools/execute-tool backend :dispatch-solver [{} "packet" {}])]
+    (is (:ok result))
+    (is (zero? @park-calls))
+    (is (not (contains? (:result result) :park/id)))))
+
 (deftest write-substrate-uses-the-production-writer-contract
   (let [payload {:name "cycle-memory"
                  :kind :feedback
