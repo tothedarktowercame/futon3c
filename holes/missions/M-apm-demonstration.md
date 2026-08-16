@@ -10348,3 +10348,19 @@ strengthened structurally (P5 seat keys `7b3b0c2a`, P7 operator pane
 peripheral (spec → operator ruling → implementation)**, nil-state step
 refusal, park single-delivery semantics. New mathematics (frame-7) remains
 gated on the operator's word and on P6's staffing model, per W.19.
+
+## W.27 P6 spec drafted for operator ruling (2026-08-16)
+
+`P6-conductor-peripheral-spec.md` written and committed — the conductor
+peripheral as wiring of existing parts (the cycle engine is the room; the
+runner protocol is the inhabitation interface; the conductor namespace
+becomes the only effectful surface). Three decisions on the operator's
+desk: **D1** enforcement strength (recommend: audited single entry-point
+now — per-cycle proctor audit failing the cycle on `:off-surface-action`
+— transport-enforced later); **D2** typed guidance with a
+`:reg/guidance-regime` pin (recommend: yes — plan-first becomes a pin,
+not a memory); **D3** no relay access to other seats' tools (recommend:
+none — an unstaffed or silent seat records as missing; the conductor
+cannot paper over it). Implementation queued as five one-behaviour
+packets, none to codex-4 (reserved: solver seat + operator's handoff
+interview).
