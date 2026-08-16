@@ -1,9 +1,13 @@
 (ns futon3c.apm.conductor-test
   (:require [clojure.edn :as edn]
+            [cheshire.core :as json]
             [clojure.test :refer [deftest is]]
+            [futon3c.agency.registry :as agency]
             [futon3c.apm.conductor :as conductor]
+            [futon3c.apm.conductor-binding :as binding]
             [futon3c.peripheral.problem :as problem]
-            [futon3c.peripheral.tools :as tools])
+            [futon3c.peripheral.tools :as tools]
+            [futon3c.transport.http :as http])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute FileTime]))
 
@@ -180,3 +184,123 @@
       (is (not (false? (:ok h))))
       (is (= :store-mode (get-in h [:state :cycle/mode])))
       (is (= :with-deposit (get-in h [:state :cycle/deposit-state]))))))
+
+(deftest conductor-action-route-owns-one-live-handle
+  (let [{:keys [config paths]} (fixture)
+        agent-id "claude-7"
+        session-id "conductor-surface-session"
+        handler (http/make-handler {})
+        request!
+        (fn [payload]
+          (let [response
+                (handler
+                 {:request-method :post :uri "/api/alpha/conductor/action"
+                  :body (json/generate-string
+                         (merge {:agent-id agent-id :session-id session-id}
+                                payload))})]
+            (cond-> (assoc (json/parse-string (:body response) true)
+                           :http/status (:status response))
+              (string? (:error/code (json/parse-string (:body response) true)))
+              (update :error/code keyword))))
+        status!
+        (fn [agent session]
+          (let [response
+                (handler
+                 {:request-method :get :uri "/api/alpha/conductor/status"
+                  :query-string (str "agent-id=" agent "&session-id=" session)})]
+            (json/parse-string (:body response) true)))
+        action!
+        (fn [id operation args]
+          (let [{:keys [cycle-id version]} (binding/status agent-id session-id)]
+            (request! {:action-id id :operation (name operation) :args args
+                       :cycle-id cycle-id :version version})))]
+    (binding/reset-bindings!)
+    (agency/register-agent!
+     {:agent-id agent-id :type :claude
+      :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})
+      :session-id session-id})
+    (agency/register-agent!
+     {:agent-id "claude-unbound" :type :claude
+      :invoke-fn (fn [_ _] {:result "unused" :session-id "no-session"})
+      :session-id "no-session"})
+    (try
+      (let [opened (conductor/open-frame!
+                    (assoc config :conductor
+                           {:agent agent-id :session session-id
+                            :surface "problem-conductor"}))
+            before (count (get-in opened [:state :steps]))
+            out-of-phase (action! "a-wrong" :dispatch-student
+                                  [{:mission "M-test"} "student"])
+            after-refusal (count (get-in @(:handle (binding/lookup agent-id session-id))
+                                         [:state :steps]))
+            dispatched (action! "a-solver" :dispatch-solver
+                                [{:mission "M-test"} "solver"])
+            after-dispatch @(:handle (binding/lookup agent-id session-id))
+            replay (let [{:keys [cycle-id]} (binding/status agent-id session-id)]
+                     (request! {:action-id "a-solver" :operation "dispatch-solver"
+                                :args [{:mission "M-test"} "solver"]
+                                :cycle-id cycle-id
+                                :version (binding/handle-version after-dispatch)}))]
+        (is (:ok opened) (pr-str (:error opened)))
+        (is (= :phase-tool-not-allowed (:error/code out-of-phase)))
+        (is (= before after-refusal) "a refused phase action records no step")
+        (is (:ok dispatched))
+        (is (= 1 (count (filter #(= :dispatch-solver (:tool %))
+                                (get-in after-dispatch [:state :steps]))))
+            "the routed action creates exactly one dispatch step")
+        (is (= :conductor-action-duplicate (:error/code replay)))
+        (is (= 1 (count (filter #(= :dispatch-solver (:tool %))
+                                (get-in @(:handle (binding/lookup agent-id session-id))
+                                        [:state :steps]))))
+            "a replay cannot create a second step")
+        (is (= :conductor-session-unbound
+               (:error/code
+                (request! {:agent-id "claude-unbound"
+                           :session-id "no-session"
+                           :action-id "a-unbound" :operation "close"
+                           :args [] :cycle-id "none" :version 0}))))
+        (is (= false (:bound? (status! "nobody" "no-session")))
+            "read-only status is available without a binding")
+        (let [{:keys [cycle-id version]} (binding/status agent-id session-id)]
+          (is (= :conductor-operation-unknown
+                 (:error/code
+                  (request! {:action-id "a-unknown" :operation "eval"
+                             :args [] :cycle-id cycle-id :version version}))))
+          (is (= :conductor-cycle-stale
+                 (:error/code
+                  (request! {:action-id "a-stale-cycle" :operation "deposit"
+                             :args [{}] :cycle-id "old-cycle"
+                             :version version}))))
+          (is (= :conductor-version-stale
+                 (:error/code
+                  (request! {:action-id "a-stale-version" :operation "deposit"
+                             :args [{}] :cycle-id cycle-id
+                             :version (dec version)})))))
+
+        (is (:ok (action! "a-attempt" :record-solver-attempt
+                          [(solver-attempt) {}])))
+        (is (:ok (action! "a-deposit" :deposit
+                          [{:name "deposit" :kind :feedback :hook "test"
+                            :body {:lesson "surface"}
+                            :subjects [{:ref/type :problem :ref/id "t94J02"}]}])))
+        (is (:ok (action! "a-student" :dispatch-student
+                          [{:mission "M-test"} "student"])))
+        (is (:ok (action! "a-students" :record-students
+                          [[(student-attempt)] []])))
+        (let [adjudicated (action! "a-adjudicate" :adjudicate
+                                   [{:outcome :tier-a :residual-sorries 1
+                                     :axiom-clean? false :promotion-result []}])]
+          (is (:ok adjudicated) (pr-str adjudicated)))
+        (let [closed (action! "a-close" :close [])]
+          (is (:ok closed) (pr-str closed)))
+        (is (= false (:bound? (status! agent-id session-id))))
+        (is (= :conductor-session-unbound
+               (:error/code
+                (request! {:action-id "a-after" :operation "close" :args []
+                           :cycle-id (:cycle-id opened) :version 0})))
+            "the sentinel removes the transport route"))
+      (finally
+        (binding/reset-bindings!)
+        (agency/unregister-agent! agent-id)
+        (agency/unregister-agent! "claude-unbound")
+        (doseq [path paths] (Files/deleteIfExists path))))))
