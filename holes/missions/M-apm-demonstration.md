@@ -9829,3 +9829,35 @@ recorded, but the ambiguity is now a registration-schema item for round 2:
 `:reg/attempt-caps` must define its unit (attempt = plan-level engagement;
 steps within an attempt uncapped, bounded by the window instead).
 Conductor packets stop numbering steps as attempts as of now.
+
+## W.14 FRAME-6 COMPLETE — apm_t00a05 CLOSED, AXIOM-CLEAN. The relay finishes. (2026-08-16)
+
+**Adjudication: `:closed`, residual 0, axiom-clean TRUE — the round's first
+fully-closed measured unit with the proof completed in-frame.**
+
+`'apm_t00a05' depends on axioms: [propext, Classical.choice, Quot.sound]`
+— codex-4's verbatim line, INDEPENDENTLY REVERIFIED by the conductor's own
+compile and #print axioms on the worktree (zero sorry warnings, clean tree,
+closing commits `9865770` + `3c40250`).
+
+**The six-frame relay, complete:** frame-2 (v1 card, 8 guided steps):
+the 15-lemma toolkit. Frame-3 (memory-only students): step 9 + the
+scratch-first method + the honest negative that recalibrated deposit
+quality. Frame-4 (v2 card): the global topology bridge, 21 commits, one
+refuted conductor hint. Frame-5 (plan-first): the solver's own plan, the
+seam-corrected lift, orientation discharged, 55 commits to the registered
+cap. Frame-6 (same worker, continuing session, per the operator's
+context-over-configuration ruling): both telescopes, all four assembly
+branches, every seam weld, the final dispatch — closure in 12 steps of one
+continuing attempt. **~108 verified commits, three agent tiers, one
+theorem, zero conductor mathematics in the closing frame.**
+
+**Deposit:** `e-5ba1c44d…` (the closure + full proof route). Envelope:
+measured 5/17; the known conductor offer-shape codes persist (fix queued;
+disqualified-as-recorded as before — the substantive closure is
+reviewer-verified above). Teardown: well inside the window.
+
+**Round-1 mathematics concludes:** t94J02 repaired + proved twice
+(frame-1); t00A05 proved (frames 2-6); a01A06's false statement caught,
+repaired, and proved (rehearsal). Three theorems, every one axiom-clean,
+every adjudication honest, every asterisk kept.
