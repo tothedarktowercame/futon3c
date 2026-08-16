@@ -21,6 +21,21 @@
                 % "[\"codex-2\",\"/tmp/sid\",\"mathematics\"")
               provisioned))))
 
+(deftest per-call-dispatch-id-is-appended-to-memory-mcp-args
+  (let [seen (atom nil)
+        invoke (codex-cli/make-invoke-fn
+                {:codex-bin "codex" :cwd "/tmp"
+                 :mcp-server {:command "/tmp/memory-mcp"
+                              :args ["codex-solver" "/tmp/sid"
+                                     "mathematics" "http://store"]}})]
+    (with-redefs [codex-cli/run-codex-stream!
+                  (fn [cmd _ _]
+                    (reset! seen cmd)
+                    {:exit 0 :timed-out? false :session-id "sid"
+                     :text "done" :stderr "" :raw-output ""})]
+      (invoke "solve" nil {:dispatch-id "job-codex-cycle"}))
+    (is (some #(str/includes? % "job-codex-cycle") @seen))))
+
 (deftest parse-output-prefers-agent-message-and-thread-id
   (testing "thread.started + item.completed agent_message"
     (let [raw (str "{\"type\":\"thread.started\",\"thread_id\":\"tid-123\"}\n"

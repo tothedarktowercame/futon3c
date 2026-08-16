@@ -510,7 +510,11 @@
                              timeout-ms)
                 model (or (:model call-opts) model)
                 reasoning-effort (or (:reasoning-effort call-opts)
-                                     reasoning-effort)]
+                                     reasoning-effort)
+                call-mcp-server
+                (cond-> mcp-server
+                  (and mcp-server (:dispatch-id call-opts))
+                  (update :args conj (str (:dispatch-id call-opts))))]
       (locking !lock
         (try
           (let [prompt-str (coerce-prompt prompt)
@@ -520,7 +524,7 @@
                                   :sandbox sandbox
                                   :approval-policy approval-policy
                                   :reasoning-effort reasoning-effort
-                                  :mcp-server mcp-server
+                                  :mcp-server call-mcp-server
                                   :session-id session-id})
                 {:keys [exit timed-out? text error-text stderr raw-output execution]
                  :as stream-result}
@@ -553,7 +557,7 @@
                                        :sandbox sandbox
                                        :approval-policy approval-policy
                                        :reasoning-effort reasoning-effort
-                                       :mcp-server mcp-server
+                                       :mcp-server call-mcp-server
                                        :session-id nil})
                     r2 (run-codex-stream! cmd2 prompt-str {:timeout-ms timeout-ms
                                                            :cwd cwd

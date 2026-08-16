@@ -13,6 +13,7 @@
             [futon3c.peripheral.cycle :as cycle]
             [futon3c.peripheral.memory-lifecycle :as memory-lifecycle]
             [futon3c.peripheral.memory-write :as memory-write]
+            [futon3c.peripheral.pull-receipts :as pull-receipts]
             [futon3c.peripheral.runner :as runner]
             [futon3c.peripheral.tools :as tools]
             [futon3c.substrate.client :as substrate])
@@ -241,6 +242,31 @@
                  (:retrieval-probe result))))
        vec))
 
+(defn- recorded-pull-uses [state]
+  (let [evidence-store (:evidence-store state)
+        cycle-id (:current-cycle-id state)]
+    (if-not evidence-store
+      []
+      (->> (:steps state)
+           reverse
+           (take-while #(not= :begin-problem-cycle (:tool %)))
+           reverse
+           (filter #(#{:dispatch-solver :dispatch-student-fresh} (:tool %)))
+           (mapcat
+            (fn [{:keys [result]}]
+              (let [job-id (:job-id result)]
+                (when job-id
+                  (for [receipt (pull-receipts/pull-use-receipts
+                                 evidence-store job-id)
+                        :let [body (:evidence/body receipt)]]
+                    {:pull/memory-id (:memory-id body)
+                     :pull/seat (:agent-id body)
+                     :pull/tool (:tool body)
+                     :pull/cycle cycle-id
+                     :pull/job-id job-id
+                     :pull/at (:at body)})))))
+           vec))))
+
 (def scribe-lanes
   ;; Source: holes/labs/M-apm-demonstration/role-cards/scribe.md, "Four lanes".
   #{:solve :arc :trajectory :challenge})
@@ -336,6 +362,7 @@
         frame-output (recorded-frame-output state)
         dispositions (recorded-cycle-tool-results state :write-disposition)
         memory-uses (recorded-cycle-tool-results state :write-use)
+        pull-uses (recorded-pull-uses state)
         promotions (recorded-cycle-tool-results state :promote-artifact)
         scribe-lane-reports
         (recorded-cycle-tool-results state :record-scribe-lanes)
@@ -379,6 +406,9 @@
 
       (seq memory-uses)
       (assoc :memory-uses memory-uses)
+
+      (seq pull-uses)
+      (assoc :pull-uses pull-uses)
 
       (seq promotions)
       (assoc :promotion-result promotions)
@@ -726,6 +756,7 @@
                      (link :disp/cycle (output-entities outputs :disposition))
                      (link :offer/cycle (output-entities outputs :memory-offers))
                      (output-entities outputs :memory-uses)
+                     (output-entities outputs :pull-uses)
                      (link :rprobe/cycle (output-entities outputs :retrieval-probes))
                      (link :probe/cycle (output-entities outputs :capability-probes))
                      (link :promo/cycle (output-entities outputs :promotion-result))))

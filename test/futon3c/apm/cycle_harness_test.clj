@@ -67,6 +67,16 @@
     (is (= coverage (get values "scribe lane coverage")))
     (is (= 2 (get values "arc-lane yield")))))
 
+(deftest pull-use-shape-survives-trace-derivation
+  (let [pull-use {:pull/memory-id "e-memory-used"
+                  :pull/seat "zai-student"
+                  :pull/tool "memory_read"
+                  :pull/cycle cycle-id
+                  :pull/job-id "job-cycle-student"
+                  :pull/at "2026-08-16T21:00:00Z"}]
+    (is (= [pull-use]
+           (:pull-uses (trace-with (conj (base-entities) pull-use)))))))
+
 (deftest scaffold-identical-frame-is-refused-before-persistence
   (let [store (harness/memory-store)
         path (Files/createTempFile "apm-frame" ".lean"

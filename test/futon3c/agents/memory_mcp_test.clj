@@ -6,6 +6,7 @@
             [futon3c.agents.memory-provisioning :as provisioning]
             [futon3c.evidence.store :as store]
             [futon3c.peripheral.memory-write :as memory-write]
+            [futon3c.peripheral.pull-receipts :as pull-receipts]
             [futon3c.peripheral.real-backend :as real-backend]
             [futon3c.peripheral.tools :as tools]))
 
@@ -92,6 +93,21 @@
            (get-in response [:result :content 0 :text])))
     (is (false? @record-called?))
     (is (false? (get-in response [:result :isError])))))
+
+(deftest cycle-dispatch-id-reaches-codex-memory-search-receipt
+  (let [seen (atom nil)]
+    (with-redefs [store/query* (fn [_ _] [{:evidence/id "e-codex-used"}])
+                  pull-receipts/record-pull-uses!
+                  (fn [ctx tool result]
+                    (reset! seen [ctx tool result]) [])]
+      (mcp/handle-request
+       {:agent-id "codex-solver" :session-file nil :domain :mathematics
+        :dispatch-id "job-codex-cycle" :evidence-store ::store}
+       {:jsonrpc "2.0" :id 5 :method "tools/call"
+        :params {:name "memory_search" :arguments {:tags ["lean"]}}}))
+    (is (= "job-codex-cycle" (get-in @seen [0 :dispatch-id])))
+    (is (= "memory_search" (second @seen)))
+    (is (= "e-codex-used" (get-in @seen [2 :result :items 0 :evidence/id])))))
 
 (deftest unknown-mcp-tool-still-returns-invalid-params
   (let [response (mcp/handle-request
