@@ -10772,3 +10772,30 @@ therefore blocks clean interpretation of recall measurements until fixed.
 
 Meanwhile f7: :student-attempts, v42 — the guide is conducting its
 student lane unassisted.
+
+## W.44 Operator's question exposes a sequencing conflict: mid-cycle deposits cannot reach this cycle's student (2026-08-16)
+
+Operator: "surely we should not have passed to the student phase without
+recording memories from the solver phase!" The record shows the guide DID
+record — `:intervention {:kind :store-write}` at :intervene wrote
+`e-c0a2d2fe…` ("a98A01-dilation-convergence-route"): the full three-part
+route with the exact Mathlib APIs the solver used, provenance-stamped,
+through the machine. The guide's conduct was card-perfect.
+
+**But the student never saw it: every surfaced-ids in the cycle is [].**
+Root cause is STRUCTURAL, not conduct: under attach-then-review (W.24),
+push recall surfaces only :reviewed memories; promotion sits at :promote —
+AFTER :student-attempts in the phase order. Therefore a mid-cycle deposit
+is invisible to this cycle's own student BY CONSTRUCTION. Round 1's maze
+variant dodged this by seeding the store BEFORE the cycle; the new gate
+closes that improvisation without opening a sanctioned lane.
+
+**Proposed fix (round-2 packet, NOT mid-frame):** intervention deposits
+flow into the student dispatch's OFFER set — the in-cycle offer machinery
+(:memory-offers, F3-dispositioned) is exactly the channel for "this
+cycle's guide vouches for this memory now"; store-wide findability still
+waits for :promote review. Keeps the gate intact, restores the design
+intent that the deposit IS the intervention. Alternative rejected:
+promoting mid-cycle (guide would review its own deposit — collapses the
+separation). Frame-7 continues untouched; its student lane measures the
+no-transfer baseline honestly.
