@@ -9639,3 +9639,58 @@ production outing) with `:conductor` context so every dispatch self-parks.
 Success = the student closes `apm_t00a05` axiom-clean from the store alone —
 transfer exceeding the depositor's completion. The frame-2 branch and the
 protected open state are untouched either way.
+
+## W.10 FRAME-3 COMPLETE — the memory-only challenge: an honest negative with the round's richest data (2026-08-16)
+
+**Cycle `t00A05-c4e7843d…`: closed `:tier-a` at trial cap, ~90 minutes inside
+the teardown deadline. ZAI DID NOT CLOSE WHAT CODEX COULD NOT — and the
+negative is clean, calibrated, and instructive.**
+
+**The L(i) trajectory (the measurement):** trial 1 — route located via the
+store, zero landings (window lost to blind elaboration + an optimistic map);
+trial 2 — FOUR verified lemmas (route step 9: rot def, continuity, seam,
+seam-cancel) plus a SELF-INVENTED method upgrade (scratch-first, 3s compiles)
+banked for the successor; trial 3 — K-continuity paper-verified with two API
+sites unelaborated, honest revert, true-gap memory for posterity. Monotone
+improvement across cold trials, mediated ENTIRELY by the store.
+
+**The verdict in the student's own words:** "memory accelerated the middle of
+the route, not the end" — and "the route map's optimistic calibration was the
+binding constraint across all three trials, not retrieval."
+
+**Findings (whitepaper-grade):**
+- **Deposit QUALITY is a first-order treatment variable.** The conductor's
+  optimistic "one lemma from closure" cost ~one window of three. Presence
+  is not the treatment; calibration is part of the dose.
+- **Curation failure mode:** a stale pointer-bearing deposit (frame-2 era,
+  pre-variant-b) let trial 1 merge the staged branch — variant (b) silently
+  became variant (a-emergent). Memory-only designs need withhold-lists or
+  supersession of pointer-bearing memories BEFORE dispatch.
+- **Attention economics:** 7 of 10 maze seeds were never opened in any
+  trial; the orientation→handoff→assembly trio dominated. Fewer,
+  better-ordered memories beat many.
+- **Supersession works in the wild:** trial 3 IGNORED trial 1's frontier as
+  "fully superseded" by trial 2's — the discipline the store-revision
+  convention assumes, observed unprompted.
+- **Emergent handoff protocol:** each student banked frontier + verified
+  texts + API traps + method notes for its successor — inter-trial
+  transfer through the store, invented by the students.
+- **Machinery findings:** no :write-substrate in :student-attempts phase
+  (between-trial deposits have no tool path — queue); conductor first-prod
+  fixes landed mid-frame (58f611aa); adjudicate! takes the BARE disposition
+  (conductor doc note).
+
+**Envelope:** measured 5/17; failures [:direct-channel-used (finding-13
+signature, 3 student dispatches) :f9-capability-probe-missing] — and for the
+FIRST time no :guidance-measurement-mismatch: zero solver rows, count
+agreement. Authorization refused, recorded.
+
+**Rider ledger (round total 24):** frame-3 added marker `e-8af4838f…`,
+conductor orientations `e-e96764f7…` `e-fde47b5b…` (direct-written per the
+phase-gate gap), student memories `e-af9c0faf…` `e-9400816b…` `e-a36bde67…`.
+
+**State preserved:** the cumulative branch (frame-2 toolkit + step 9) lives
+on the trial-2/3 student branches; the scratch at /tmp/t00a05-k.lean;
+t00A05's remaining gap precisely mapped in `e-a36bde67…`. "Several focused
+hours" of assembly remain — a natural frame-4 for a revised-card codex, or
+round-2 material.
