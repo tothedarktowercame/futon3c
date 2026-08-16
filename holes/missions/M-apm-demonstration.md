@@ -10274,3 +10274,15 @@ pattern id as an argument (adjudicator chooses from the taxonomy); it does
 not depend on the split being executed, and growing the library remains an
 editorial act outside the runtime. P3-impl dispatched to ams-codex-1
 (diagnosis + refusal context); P4 scribe lane unblocks on its merge.
+
+**W.24 addendum (operator correction, 2026-08-16):** the library↔store link
+ALREADY EXISTS — `multi_watcher` ingests library pattern files into the
+store automatically ("put them into files, they go into the store
+automatically"). No bridge packet is needed; the conductor's proposed P8
+is dropped unbuilt. The full promotion pipeline is therefore: author the
+pattern file in the right library directory (creating the directory if
+none fits — operator rules this insignificant, not a blocker) → watcher
+ingests → P3-impl attaches the memory and reviews the attachment →
+recallable. P4's scribe lane design accordingly includes authoring new
+pattern FILES as lane output where a cycle warrants one; the split
+manifest stays editorial and non-blocking.
