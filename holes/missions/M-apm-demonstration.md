@@ -10493,3 +10493,27 @@ all three ids. Also pending before frame-7: v3 solver card draft (freeze
 at registration), service restart to activate FUTON3C_TYPED_BELLS
 (operator timing — it tears down warm pouches), frame-7 problem selection
 and regime/config pin values (operator).
+
+## W.33 Pre-frame-7 packets complete (2026-08-16)
+
+**P8a merged** (`8fa4d81c`): cycle step refuses non-map state with
+`:absent-state` before any effect — the W.25 silent-begin hole closed at
+the source. **P8b merged** (`e19f6116`): parks coalesce per [agent, job];
+re-park replaces payload; completion consumes only matching records;
+ready-inbox dedups; deadline path unchanged — live at next service
+restart. **P8c merged** (see merge commit): optional `:reg/solver-config`
+{:model :reasoning-effort} pin, shape-validated, threaded through the
+real dispatch path to codex_cli argv, witnessed in dispatch receipts and
+the close trace's `:solver-dispatches`. All three reviewed with gates
+re-run by the reviewer; consumer suites green.
+
+**Everything before frame-7 is now on the operator's desk:**
+1. Service restart timing (activates FUTON3C_TYPED_BELLS + park fixes;
+   tears down warm pouches including the conductor's).
+2. Frame-7 problem selection.
+3. Registration pin values: `:reg/guidance-regime` (suggested:
+   #{:answer :suggest} for plan-first), `:reg/solver-config` (Sol Max?),
+   v3 solver card freeze y/n.
+4. Seat staffing confirmation: solver codex-4, student zai-1, guide
+   claude-7 (bound through the conductor surface), proctor = distinct
+   agent, scribe = ams-scribe-1 fresh session.
