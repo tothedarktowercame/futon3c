@@ -10973,3 +10973,24 @@ exactly [propext, Classical.choice, Quot.sound]. **Pushed:
 apm-lean master `3093764..d937780`** (merges `25f7969` t94J02, `63ab8d5`
 t00A05, `d937780` a98A01). Dionysus can pull; the mission's mathematics
 is on the mainline.
+
+## W.54 Operator ruling (b): frame-7 disposed defective-registration (Joe, 2026-08-16)
+
+Ruling: the refusal envelope stands as the cycle's honest terminal state.
+Operator's reasoning: "there were enough other flaws that the student
+cycle here was pretty meaningless… no memories were being used" — the
+shelf was empty at every dispatch and the phase order made mid-cycle
+deposits unreachable (W.44), so the memory-transfer measurement was
+structurally absent; the REPL/session logs persist as supplementary
+material. Ruling delivered to f7-guide (typed bell; NOTE: the FIRST
+delivery attempt was refused by the live typed-bells gate — answer
+without --ref is malformed — the machinery catching the lab manager's own
+protocol slip in the act of transmitting a ruling about honest refusals).
+Guide executing (b): no further advances, governed abandonment, final
+report. Frame-7's ledger: mathematics CLOSED and home (apm_a98a01 on
+apm-lean main); one route memory deposited through the machine; guide
+card-perfect end to end including the terminal refusal; cycle record
+terminal at :student-attempts v43 with the defect named. What the frame
+BOUGHT beyond the theorem: eleven machinery defects found and fixed or
+queued by actually living in the walls (the operator's build-only-if-
+needed ruling on impl-4 vindicated — the frame WAS the audit).
