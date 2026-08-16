@@ -10228,3 +10228,30 @@ standing parks, including parks on unrelated in-flight jobs — stale
 checklist wakes twice stripped the P7 park. Round-2 queue note: parks
 should be consumed per-dependency, or re-park must be the first act of any
 wake handler.
+
+## W.23 P5 merged: unstaffed carded seats are now a :register refusal (2026-08-16)
+
+**P5 (seat keys + register gate, ams-codex-2): reviewed and merged
+(`7b3b0c2a`).** Checked: diff read — `role-seat-keys` maps all five carded
+roles to `:reg/*-seat` keys; per-role `{:finding :unstaffed-carded-seat
+:role … :seat-key …}` findings; `:guide-proctor-not-separated` enforces the
+proctor card's measurement/treatment split at the schema; a new
+`:seat-registration-valid` output-invariant makes both hard gates at
+`:register` advance; frozen round-1 EDNs untouched; legacy registrations
+without role-card maps unaffected. kondo 0/0; check-parens OK;
+preregistration+problem tests re-run by reviewer.
+
+**Review finding, fixed by reviewer (carve-out b):** a non-map
+`:reg/role-cards` (e.g. a string) made `registration-shape-failures` THROW
+from an unguarded `contains?` instead of returning `:malformed-role-cards`
+— validators degrade to findings, never exceptions. `map?` guard +
+regression test (`e4acda66`), 105/358/0 after fix.
+
+**Consequence:** the W.18 seat-collapse failure mode is now inexpressible
+at registration time — a round-2 registration that freezes five card
+hashes must name five staffed seats, guide ≠ proctor, or the machine
+refuses to leave `:register`. Composes with P7: the blackboard renders the
+same seat keys, so an unstaffed seat is visible on the operator pane AND
+fatal at the gate. Remaining queue: P3 (operator ruling pending), P4
+(blocked on P3), P6 (conductor peripheral, after P1–P5 — now only P3/P4
+outstanding).
