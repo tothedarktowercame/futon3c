@@ -10933,3 +10933,20 @@ default-DENY, requiring an explicit serving-JVM-only opt-in set by the
 service scripts; root cause of the guard failure to be stated. f7 truth
 re-verified at each report: :student-attempts v43, bound — the frame has
 never wavered; only the WINDOW lies.
+
+## W.52 P15 + addendum merged: panes identify themselves; projection default-deny (2026-08-16)
+
+Root cause of the W.51 leak, stated and fixed: `blackboard/*enabled*`
+DEFAULTED TRUE, so every test/CLI JVM on the machine could reach the
+operator's Emacs through the ambient socket. Now: projection requires
+`FUTON3C_BLACKBOARD_PROJECT` (set by the three serving profiles; a test
+proves an ordinary test JVM cannot project); every :problem render
+carries problem-id + cycle-short + save version + step count; sentinels
+name WHICH cycle completed; per-cycle buffers (`*problem: <id>*`) give an
+unstompable per-frame view beside the singleton. Merged (`see log`) but
+NOT reloaded — the live JVM predates the env flag, so a lone reload would
+blind the pane (implementer's advisory, accepted over the reviewer's
+earlier reload plan). Activates whole at the frame-8 restart. Operator
+guidance meanwhile: the pane may still show impostors; conductor status +
+saved state are the trustworthy instruments; from frame-8, watch the
+per-cycle buffer.
