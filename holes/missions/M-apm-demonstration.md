@@ -10835,3 +10835,21 @@ live frame: if f7 reaches :promote first, "scribe lane coverage" records
 its honest unset and a post-close scribe pass mines the completed cycle —
 the material (job results, session logs) persists either way; nothing of
 Zai's narration is thrown away.
+
+## W.47 Operator ruling: promotion happens TWICE per cycle (Joe, 2026-08-16)
+
+"Promote needs to happen twice, otherwise the solver's memories aren't
+going to be findable by the student (1st) and the student's memories will
+be lost (2nd)." Design resolution of the W.44 sequencing conflict, and
+CLEANER than the lab manager's offer-lane proposal — one mechanism
+(attach-then-review), used twice; the student's recall measurement stays
+real recall. The 2nd promote already exists (current :promote, post-
+student, where P12's scribe mines). The 1st is the missing piece:
+**P13 dispatched** (ams-codex-1, `invoke-…c8526d61`,
+feat/promote-solver-phase): insert :promote-solver between :intervene and
+:student-attempts with the :promote tool set; derivations proven
+cross-phase by test; the reviewer-must-act constraint carried in (the
+guide dispatches the scribe to review — nothing proxies authorship).
+Lands INERT for frame-8: frame-7 is live mid-cycle and completes under
+its own chain; no mid-frame regime change. W.44's offer-lane proposal is
+WITHDRAWN in favor of this.
