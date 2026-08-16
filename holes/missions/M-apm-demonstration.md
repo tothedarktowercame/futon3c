@@ -10898,3 +10898,21 @@ Frame-8 problem: 17+ open one-sorry problems at the pin surfaced by scan
 a95J06, a96A02/06/07/08, …475 total in corpus). Operator picks; lab
 manager verifies the statement at the pin before any dispatch, as with
 a98A01.
+
+## W.50 Pane singleton overwrite: the operator read a foreign sentinel (2026-08-16)
+
+Operator: "*problem* says COMPLETED (sentinel) — nothing indicates in
+flight. But I see f7-student executing." Ground truth verified at the
+bench: f7's cycle is LIVE — saved state v43 at :student-attempts,
+cycles-completed 0, binding bound — the pane's COMPLETED cannot be a
+render of that state. Mechanism: the *problem* buffer is a
+last-writer-wins SINGLETON per domain-id; any :problem-domain peripheral
+session in the JVM (a student runner's short-lived session, a failed open
+attempt) overwrites it, unlabeled. The operator was actively misled by
+observability for the second time today (W.21: wrong machine's pane;
+now: right machine, foreign state). **P15 dispatched** (codex-3,
+`invoke-…aa3feabb`): renders self-identify (problem-id + cycle-id +
+version in header; sentinel names WHICH cycle completed; distinct buffers
+per cycle if plumbing allows). P14 (reviewer auth) still in review.
+Frame-8 blocked only on: operator's problem pick, scribe-v2 freeze, f7
+close + reload.
