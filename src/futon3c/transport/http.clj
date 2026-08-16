@@ -3176,7 +3176,9 @@
         (str "Problem-conductor surface contract:\n"
              "- Problem: " problem-id "\n"
              "- Cycle: " cycle-id "\n"
-             "- Current phase: " (name phase) "\n"
+             ;; a cycle completed outside the route can leave a nil phase
+             ;; momentarily; prompt assembly must never throw
+             "- Current phase: " (if phase (name phase) "completed (sentinel)") "\n"
              "- Version: " version "\n"
              "- Delivery rule: effectful conductor operations are submitted as typed problem actions via /api/alpha/conductor/action with your action-id/cycle-id/version; reads are unrestricted.\n\n")))))
 
