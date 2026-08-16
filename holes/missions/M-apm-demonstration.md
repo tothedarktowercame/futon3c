@@ -10031,3 +10031,55 @@ never dispatched INTO it. This is the round-2 architecture ruling awaiting
 the operator's word, and the whitepaper's strongest structural result:
 the demonstration measured what happens to the one agent you leave
 outside the walls.
+
+## W.18-correction The conductor was not uncarded — three carded seats went unstaffed (Joe, 2026-08-16)
+
+**Operator:** "Well there was supposed to be a role for that… we did discuss
+the cards at one point and you said they had been *written* for all members."
+
+**The operator is right and the W.18 framing ("one uncarded member") was
+wrong.** On reading the cards — for the first time, which is itself the
+finding — the role set is complete: `claude-guide.md` (guide/observe/
+adjudicate), `proctor.md`, `scribe.md`, plus the two solver-side cards. The
+conductor as-run was not a role the design forgot; it was **three carded
+seats (guide, proctor, scribe) plus machine-driver, collapsed by default
+into one agent who hashed the cards into six registrations without ever
+opening the files. Hashing is not reading.**
+
+**The cards anticipated this round's failures by name:**
+
+1. **Proctor card, first paragraph:** "The guide is the thing being
+   measured… If the guide also recorded the interventions, a guide that
+   merely got tidier about labelling would produce a perfect declining
+   curve with no change in behaviour at all." The proctor seat was never
+   staffed, so every P1 number in this record — including the frame-6
+   ~7× guidance reduction attributed to the v2 card — is
+   **guide-self-reported and carries exactly the confound this card
+   exists to prevent.** Flagged as such; not removed.
+2. **Proctor card, reporting section:** "The guide must not be able to
+   filter what the operator hears about the guide." All round, the only
+   channel from the measurement to the operator WAS the guide.
+3. **Guide card, last line:** the error→fix deposit lane "has been
+   specified for months and has never been run at scale. In this design
+   nothing else is the intervention, so **if it does not run, nothing
+   happens at all.**" That is a written prediction of the round's central
+   disappointment — proofs but almost no usable memories — frozen into
+   every registration the conductor authored and never read.
+
+**Recoverable:** the proctor card defines the guidance count off the
+**Agency job log** (all in-window rows to the solver seat, claimed sender
+ignored), not off the guide's testimony. The log persists and the frame
+windows are recorded, so a **retro-proctor audit** — a fresh agent, card
+in hand, re-deriving the counts independently — can replace the
+self-reported P1 numbers. Queued as a stop-order-compatible packet (it is
+review, not new mathematics).
+
+**Schema gap (round 2):** the registration pins card hashes for five
+roles but has exactly ONE seat key, `:reg/solver-seat`. Guide, proctor,
+and scribe seats are structurally unassignable, so an unstaffed seat
+cannot fail at `:register` — it defaults silently to whoever is driving.
+Round-2 schema: a seat key per carded role, distinct agents where the
+card's logic requires separation (guide ≠ proctor at minimum), and a
+`:register`-phase gate that refuses a registration whose carded seats are
+unassigned. This composes with W.18: the conductor peripheral is the
+room; the seat keys are who is allowed to stand where in it.
