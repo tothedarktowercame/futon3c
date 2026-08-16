@@ -10388,3 +10388,39 @@ effectiveness interview):
   type column. Legacy registrations without the pin unaffected.
 - **P6c**: `:problem` blackboard pane renders per-seat activity (last
   step per seat author, in-flight dispatch job + recipient + age).
+
+## W.29 P6 wave one: pane + typed guidance merged, surface discovery accepted, solver-side testimony filed (2026-08-16)
+
+**P6c merged** (`e60dc3c2`): per-seat activity in the `:problem` pane —
+step-relative recency only, awaiting/quiet/unstaffed explicit, proctor
+quiet by design. Pane hot-reloaded. **P6a accepted** (`0964ff5a`): the
+transport seam exists — ws.clj tool_action → serialized runner/step under
+lock (spot-checked at :335-360), registry lacks :problem (spot-checked);
+genuinely new = binding registry + typed action route + contract prompt +
+takeover. **P6-impl-1 dispatched** to ams-codex-1 (`invoke-…06c28854`,
+branch feat/conductor-binding) scoped to the binding + route with the
+discovery's own refusal matrix and end-to-end proof. **P6b merged**
+(`5d9ca12d`): guidance requires an Agency typed-bell performative at both
+conductor and ground-control; optional `:reg/guidance-regime` pin,
+legacy-safe; `:ground-control/type` in events and trace; zone profile
+gains FUTON3C_TYPED_BELLS (activates at next service restart — flag was
+absent from the live JVM, honestly reported by the implementer). Consumer
+gate caught the traverse's untyped stub; reviewer fixed (`1d64e030`).
+
+**codex-4 interview filed verbatim** (`codex-4-handoff-interview.md`,
+`1275f0bc`) — solver-side testimony on dispatch regimes. Convergences
+with the dispatch-side ledger: stops-as-findings load-bearing (= the
+honest-refusal pattern, both sides independently); unchecked content
+prescriptions harmful (= the frame-4 refuted hint; plan-first vindicated
+with the seat's own mechanism); artifact-driven residual loop (= W.13
+attempt semantics). NEW, visible only from inside the seat: **siege
+framing's value is one-time** — it establishes persistence once; repeated
+zero-content sieges only amplify urgency, and urgency pushes local
+patching over right abstraction. **Queued: v3 solver card draft** (siege
+preamble once at frame open, then state-based template turns with
+branch-head/verified-state/goal/inputs/obstruction/constraints fields; a
+card change is a regime boundary — freeze at round-2 registration).
+Round-2 arm design refined: compare state-based vs siege-sustained, or
+test the seat's own "siege-once then state-based" as a third arm. His
+obstruction→response taxonomy maps onto P6b's bell types directly
+(challenge/assert from the seat; answer with ref back).
