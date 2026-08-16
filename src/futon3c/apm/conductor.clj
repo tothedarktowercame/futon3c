@@ -4,6 +4,7 @@
    This namespace owns sequence, checkpointing, and a compact operation log.
    The problem peripheral remains the sole owner of cycle state and invariants."
   (:require [clojure.string :as str]
+            [futon3c.apm.conductor-binding :as binding]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]))
@@ -149,8 +150,18 @@
                             :containment-witness-path
                             (some-> (:witness-path frame) str)
                             :containment-claimed? (some? (:witness-path frame))}])
-              {h9 :handle} (advance h8 {})]
-          (assoc h9 :cycle-id (get-in h9 [:state :current-cycle-id])))))
+              {h9 :handle} (advance h8 {})
+              opened (assoc h9 :cycle-id (get-in h9 [:state :current-cycle-id]))
+              conductor (:conductor config)
+              agent-id (when (map? conductor) (:agent conductor))
+              session-id (when (map? conductor) (:session conductor))]
+          (if (and agent-id session-id (not (false? (:ok opened))))
+            (let [installed (binding/install! agent-id session-id opened)]
+              (if (:ok installed)
+                opened
+                (failure opened (:error/code installed)
+                         "problem conductor binding refused" installed)))
+            opened))))
     (catch Throwable t
       (failure {:ok false :peripheral nil :state nil :log [] :deposits []
                 :config config}
