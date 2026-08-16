@@ -30,8 +30,8 @@
         dispatch-fn
         (fn [_ _]
           {:ok true :job-id "job-test"
-           :evidence {:offer/id "offer/test"
-                      :body {:eligible-memory-ids ["memory/a" "memory/b"]
+           :evidence {:body {:job-id "job-test"
+                             :eligible-memory-ids ["memory/a" "memory/b"]
                              :memory-use
                              {:memory-use/surfaced-ids ["memory/a"]}}}})
         provisioner
@@ -109,7 +109,15 @@
             "the final advance reaches the terminal sentinel")
         (is (false? (get-in closed [:envelope :launchable?])))
         (is (seq (get-in closed [:envelope :failures]))
-            "round-one closes with an honest refusal envelope"))
+            "round-one closes with an honest refusal envelope")
+        (is (= [{:offer/id "offer/job-test/0"
+                 :offer/memory-id "memory/a"}]
+               (mapv #(select-keys % [:offer/id :offer/memory-id])
+                     (get-in closed [:state :cycle/outputs :memory-offers])))
+            "the conductor converts the dispatch receipt into offer entities")
+        (is (not-any? #{:malformed-memory-offers}
+                      (get-in closed [:envelope :failures]))
+            "conductor-collected receipts validate as memory-offer entities"))
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))
 

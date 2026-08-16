@@ -58,13 +58,22 @@
   (saved-step handle problem/advance
               ["apm-conductor" (:problem-id (:config handle)) payload]))
 
+(defn- receipt-offers [receipt]
+  (let [body (:body receipt)
+        job-id (:job-id body)
+        memory-ids (get-in body [:memory-use :memory-use/surfaced-ids])]
+    (map-indexed (fn [index memory-id]
+                   {:offer/id (str "offer/" job-id "/" index)
+                    :offer/memory-id memory-id})
+                 memory-ids)))
+
 (defn- memory-offers [state]
   (->> (:steps state)
        (keep (fn [{:keys [tool result]}]
                (when (#{:dispatch-solver :dispatch-student-fresh} tool)
                  (:memory-offers result))))
        (mapcat identity)
-       (remove nil?)
+       (mapcat receipt-offers)
        vec))
 
 (defn- require-mission [handle opts]
