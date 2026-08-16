@@ -10950,3 +10950,19 @@ earlier reload plan). Activates whole at the frame-8 restart. Operator
 guidance meanwhile: the pane may still show impostors; conductor status +
 saved state are the trustworthy instruments; from frame-8, watch the
 per-cycle buffer.
+
+## W.53 Operator ruling: results flow home — apm-lean mainline catch-up (Joe, 2026-08-16)
+
+"Isolation environments for solvers doesn't mean we shouldn't save
+results!" Audit found ALL FOUR round-1/f7 solved problems stranded on
+frame branches — main still carried a sorry for each. Merged home:
+t94J02 (`c994347`, includes the statement repair), t00A05 (`3c40250`,
+the six-frame relay), a98A01 (`addc3512`). a01A06 stays open HONESTLY —
+the rehearsal produced refusals, not a proof, and its statement is
+recorded false-as-stated. Verification compiles + axiom probes running
+on main before push (bg job; apm-lean remote confirmed:
+github-holtz/apm-lean for the Dionysus pull). **Protocol going forward:
+a :closed disposition includes merge-back to the apm-lean mainline as
+part of the close checklist — queued as a small packet (machine close
+step or conductor close! addition) so this never depends on anyone
+remembering.**
