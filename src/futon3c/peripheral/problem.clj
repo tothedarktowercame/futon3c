@@ -218,6 +218,17 @@
                          :ground-control/type :job-id])
         events))
 
+(defn- recorded-solver-dispatches [state]
+  (->> (:steps state)
+       (keep (fn [{:keys [tool result]}]
+               (when (and (= :dispatch-solver tool)
+                          (:ground-control/solver-config result))
+                 (select-keys result [:ground-control/recipient
+                                      :ground-control/cycle
+                                      :ground-control/solver-config
+                                      :job-id]))))
+       vec))
+
 (defn- recorded-retrieval-probes [state]
   (->> (:steps state)
        reverse
@@ -383,7 +394,8 @@
       (assoc :assigned-at assigned-at)
 
       (= :guided-solve (:current-phase state))
-      (assoc :ground-control-events (recorded-guide-events state))
+      (assoc :ground-control-events (recorded-guide-events state)
+             :solver-dispatches (recorded-solver-dispatches state))
 
       (contains? payload :solver-attempt)
       (update :solver-attempt stamp-attempt-environment solver harness-revision)
@@ -429,7 +441,14 @@
            (get-in state
                    [:cycle/outputs :registration :reg/guidance-regime])})
 
-    (:dispatch-solver :dispatch-student-fresh)
+    :dispatch-solver
+    (conj (vec args) {:cycle/id (:current-cycle-id state)
+                      :cycle/step-index (count (:steps state))
+                      :solver-config
+                      (get-in state
+                              [:cycle/outputs :registration :reg/solver-config])})
+
+    :dispatch-student-fresh
     (conj (vec args) {:cycle/id (:current-cycle-id state)
                       :cycle/step-index (count (:steps state))})
 
@@ -716,7 +735,11 @@
                                {:measured (count (get-in outputs
                                                         [:measurement :meas/values]))
                                 :unset (count (get-in outputs
-                                                     [:measurement :meas/unset]))}))]
+                                                     [:measurement :meas/unset]))}))
+          trace (cond-> trace
+                  (seq (:solver-dispatches outputs))
+                  (assoc :solver-dispatches
+                         (vec (:solver-dispatches outputs))))]
       {:trace trace
      :producer-failures (cond-> producer-failures
                           (:projection-failure projection)
@@ -1178,13 +1201,17 @@
       (let [[opts packet] (take 2 args)
             measured (last args)
             memory-channel (get dispatch-channels tool-id)
+            solver-config (when (= :dispatch-solver tool-id)
+                            (:solver-config measured))
             ;; assoc LAST: the role fixes the channel and a caller cannot
             ;; override it.  A caller-supplied :push to the student would be a
             ;; containment breach, so this precedence is load-bearing.
-            dispatch-result (try (dispatch-fn (assoc (merge
-                                                      {:base dispatch-with-recall/default-agency-base}
-                                                      (or opts {}))
-                                                     :memory-channel memory-channel)
+            sent-opts (cond-> (merge
+                               {:base dispatch-with-recall/default-agency-base}
+                               (or opts {}))
+                        solver-config (merge solver-config)
+                        true (assoc :memory-channel memory-channel))
+            dispatch-result (try (dispatch-fn sent-opts
                                               packet)
                                  (catch Throwable t t))]
         (if (instance? Throwable dispatch-result)
@@ -1218,6 +1245,10 @@
                                                    (:conductor @cycle-context)
                                                    park-post-fn)
                                     :memory-offers [(:evidence dispatch-result)])
+                       solver-config
+                       (assoc :ground-control/solver-config solver-config
+                              :ground-control/recipient (:to sent-opts)
+                              :ground-control/cycle cycle-id)
                        retrieval-probe
                        (assoc :retrieval-probe retrieval-probe))})))
 

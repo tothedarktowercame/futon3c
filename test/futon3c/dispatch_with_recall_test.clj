@@ -807,3 +807,17 @@
                "typed guidance"))))
     (is (= "challenge" (get-in @posted [:body :type])))
     (is (= "codex-4" (get-in @posted [:body :agent-id])))))
+
+(deftest solver-config-reaches-the-agency-bell-payload
+  (let [posted (atom nil)]
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.dispatch-with-recall 'post-json)
+       (fn [_url body _timeout]
+         (reset! posted body)
+         {:job-id "configured-job"})}
+      #(#'dispatch/dispatch!
+        {:to "codex-4" :from "ground-control" :mission "M-test"
+         :model "gpt-5.6-sol" :reasoning-effort "high"}
+        "configured solver"))
+    (is (= "gpt-5.6-sol" (:model @posted)))
+    (is (= "high" (:reasoning-effort @posted)))))

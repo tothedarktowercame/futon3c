@@ -52,6 +52,23 @@
             (prereg/registration-shape-failures
              (assoc registration :reg/guidance-regime #{:suggest :unknown})))))
 
+(deftest solver-config-is-optional-and-shape-validated-when-present
+  (let [pin {:model "gpt-5.6-sol" :reasoning-effort "high"}]
+    (is (not-any? #(= :invalid-solver-config (:finding %))
+                  (prereg/registration-shape-failures registration)))
+    (is (not-any? #(= :invalid-solver-config (:finding %))
+                  (prereg/registration-shape-failures
+                   (assoc registration :reg/solver-config pin))))
+    (doseq [malformed [{:model "gpt-5.6-sol"}
+                       {:model "" :reasoning-effort "high"}
+                       {:model "gpt-5.6-sol" :reasoning-effort "high"
+                        :unwitnessed true}
+                       "default"]]
+      (is (some #(= :invalid-solver-config (:finding %))
+                (prereg/registration-shape-failures
+                 (assoc registration :reg/solver-config malformed)))
+          (pr-str malformed)))))
+
 (def attempts
   [{:cycle/regime "regime/a"
     :cycle/store-revision revision-a

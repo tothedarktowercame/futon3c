@@ -3432,9 +3432,10 @@
    The retry is intentionally narrow. File/incoming session precedence remains
    unchanged for normal invokes; only the Claude CLI's authoritative
    \"No conversation found\" response clears backing continuity."
-  [agent-id prompt timeout-ms dispatch-id]
+  [agent-id prompt invoke-options dispatch-id]
   (let [aid (str agent-id)
-        invoke-options {:timeout-ms timeout-ms :dispatch-id (str dispatch-id)}
+        invoke-options (assoc (or invoke-options {})
+                              :dispatch-id (str dispatch-id))
         first-result (reg/invoke-agent! aid prompt invoke-options)]
     (if (claude-missing-conversation-result? aid first-result)
       (let [reset-result (reg/reset-session! aid)]
@@ -3486,7 +3487,8 @@
       (preclock-dispatch! agent-id mission-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
             raw-result (invoke-agent-with-session-recovery!
-                        (str agent-id) effective-prompt timeout-ms job-id)
+                        (str agent-id) effective-prompt
+                        {:timeout-ms timeout-ms} job-id)
             result (maybe-route-surface-writes agent-id raw-result)
             result (enrich-result-with-stream-execution job-id result)
             sid (:session-id result)
@@ -3549,7 +3551,8 @@
 (defn- run-invoke-job!
   "Execute a queued invoke job to terminal state.
    Used by async bell worker and can be reused by other async surfaces."
-  [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store]}]
+  [{:keys [job-id agent-id prompt caller surface timeout-ms mission-id evidence-store
+           model reasoning-effort]}]
   (let [ev-opts (when mission-id [:mission-id mission-id])]
     (try
       (mark-invoke-job-running! job-id)
@@ -3584,7 +3587,10 @@
                          (supervise-invoke-future!
                           job-id timeout-ms
                           #(invoke-agent-with-session-recovery!
-                            aid effective-prompt nil job-id))
+                            aid effective-prompt
+                            {:timeout-ms timeout-ms
+                             :model model :reasoning-effort reasoning-effort}
+                            job-id))
                          (finally
                            (if prev-sink
                              (reg/set-invoke-event-sink! aid prev-sink)
@@ -3970,6 +3976,12 @@
             ref (when typed? (nonblank-str (bell-ref-payload payload)))
             timeout-ms (some-> (or (:timeout-ms payload) (get payload "timeout-ms"))
                                long)
+            model (some-> (or (:model payload) (get payload "model"))
+                          str str/trim not-empty)
+            reasoning-effort
+            (some-> (or (:reasoning-effort payload)
+                        (get payload "reasoning-effort"))
+                    str str/trim not-empty)
             evidence-store (evidence-store-for-config config)]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
@@ -4032,6 +4044,8 @@
                                                   :caller caller
                                                   :surface surface
                                                   :timeout-ms timeout-ms
+                                                  :model model
+                                                  :reasoning-effort reasoning-effort
                                                   :mission-id mission-id
                                                   :evidence-store evidence-store}))
                       deliver-result (fn [result]

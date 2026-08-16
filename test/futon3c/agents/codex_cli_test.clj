@@ -187,6 +187,19 @@
       (is (= [60000 5400000 nil 60000] (mapv :timeout-ms @calls))
           "registration default, per-call override, explicit unbounded, 1-arity"))))
 
+(deftest make-invoke-fn-accepts-per-call-model-and-reasoning-effort
+  (let [seen (atom nil)
+        invoke (codex-cli/make-invoke-fn
+                {:model "registration-model" :reasoning-effort "low"})]
+    (with-redefs [codex-cli/run-codex-stream!
+                  (fn [args _prompt _opts]
+                    (reset! seen args)
+                    {:exit 0 :timed-out? false :text "ok" :raw-output ""})]
+      (invoke "prompt" nil {:model "pinned-model"
+                            :reasoning-effort "high"})
+      (is (some #{"pinned-model"} @seen))
+      (is (some #{"model_reasoning_effort=\"high\""} @seen)))))
+
 (deftest make-invoke-fn-preserves-exception-class-when-message-is-blank
   (let [invoke (codex-cli/make-invoke-fn {:codex-bin "codex"
                                           :model nil
