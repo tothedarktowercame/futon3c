@@ -10699,3 +10699,23 @@ record it; (b) sanction a retroactive promotion pass over the round-1
 rider ledger (through promote-memory-attachment!, adjudicator-chosen
 pattern-ids, reviewer≠depositor) as a reviewed packet, giving f7's later
 dispatches something to find. The guide will record, not route around.
+
+## W.41 Operator sanctions the retroactive promotion pass — pilot of the promotion round (Joe, 2026-08-16)
+
+Ruling: run the pass ("we might as well do it anyway as a pilot of the
+promotion round"), with the operator's own prior: intra-problem transfer
+likely dominates inter-problem — the pass tests the pipeline either way.
+Staffing: **claude-8 proposes, codex-5 reviews and executes** (both fresh;
+receipts are the standard). Design keeps the review honest: claude-8
+builds a MANIFEST (per-memory pattern-id or honest skip, with rationale
+and recorded depositor) but executes nothing; codex-5 independently
+spot-checks and runs `promote-memory-attachment!` per approved entry AS
+the reviewer, so the review evidence bears the identity that judged.
+Depositor≠reviewer enforced by the fn; entries deposited by codex-5 (none
+expected) refused. Stage 1 dispatched (`invoke-…e7b13c86`,
+park `park-cbdf19a8…`). Mid-frame timing is deliberate: f7's opening
+dispatch already measured the empty shelf (zero recall, W.40); if
+promotions land before the guide's next dispatch, frame-7 measures
+before/after INSIDE one frame — a sharper test than the registered
+prediction. The pane fix (P11, `46754e7d`) is live: guide row owns its
+acts; solver row reads "working (job …)" — which it is.
