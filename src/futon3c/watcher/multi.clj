@@ -103,6 +103,13 @@
     (conj (vec endpoints) (str "dir:" (first endpoints) "→" (second endpoints)))
     endpoints))
 
+(def ^:private store-timeout-ms
+  "Timeouts sized to the MEASURED store, not to hope. E-apm-A3-ingest-efficiency
+   measures ~3 s/doc and a pattern carries ~15 documents, so the old 10 s POST /
+   15 s GET were below the cost of the work they were waiting for -- which is why
+   timeouts were the normal case rather than the exception."
+  60000)
+
 (defn post-hyperedge!
   "Write a hyperedge. `opts` may carry `{:encoding :edn}`.
 
@@ -131,6 +138,7 @@
                              :body (if edn?
                                      (pr-str payload)
                                      (json/generate-string payload))
+                             :timeout store-timeout-ms
                              :throw false})
             ok? (= 200 (:status resp))]
         ;; dual-write leg (reindex-not-port): no-op unless
@@ -138,8 +146,15 @@
         (when ok?
           (file-ingest/post-futon1b! {:hx-type hx-type :endpoints endpoints
                                       :labels labels :props props}))
-        {:ok? ok?})
-      (catch Exception _ {:ok? false}))))
+        (cond-> {:ok? ok?}
+          (not ok?) (assoc :status (:status resp)
+                           :body (some-> (:body resp) str (subs 0 (min 300 (count (str (:body resp)))))))))
+      ;; Carry the cause. Swallowing it meant a caller could only ever report
+      ;; "write failed", which is indistinguishable between a refused penholder,
+      ;; a timeout and a malformed body -- three failures with three different
+      ;; repairs.
+      (catch Exception e {:ok? false :error (.getMessage e)
+                          :exception (.getName (class e))}))))
 
 (defn http-get-edn [url]
   (let [resp (http/get url {:headers {"X-Penholder" PENHOLDER}
@@ -516,6 +531,8 @@
           (when-not (:ok? posted)
             (throw (ex-info "replacement memory attachment write failed; stale edge retained"
                             {:old-pattern-id old-id :new-pattern-id new-id
+                             :failed-edge-id (:hx/id replacement)
+                             :cause (dissoc posted :ok?)
                              :old-edge-ids (mapv :hx/id stale)})))
           (let [landed (fetch-attachment-hyperedges new-id)]
             (when-not (some #(verified-attachment-replacement?
@@ -529,13 +546,6 @@
                                   stale)))
       {:ok true :count (count stale)
        :old-pattern-id old-id :new-pattern-id new-id})))
-
-(def ^:private store-timeout-ms
-  "Timeouts sized to the MEASURED store, not to hope. E-apm-A3-ingest-efficiency
-   measures ~3 s/doc and a pattern carries ~15 documents, so the old 10 s POST /
-   15 s GET were below the cost of the work they were waiting for -- which is why
-   timeouts were the normal case rather than the exception."
-  60000)
 
 (defn fetch-pattern-entity-ids
   "Resolve canonical names to their stored IDs while retaining name-shaped IDs.
