@@ -57,15 +57,28 @@ def disk_ids():
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    prefix = args[0] if args else ""
+    argv = sys.argv[1:]
     orphan_list = None
-    if "--orphan-list" in sys.argv:
-        orphan_list = sys.argv[sys.argv.index("--orphan-list") + 1]
+    if "--orphan-list" in argv:
+        i = argv.index("--orphan-list")
+        orphan_list = argv[i + 1]
+        # Drop BOTH the flag and its value. Taking only flags out left the
+        # VALUE as a positional, so `--orphan-list /tmp/x` silently became
+        # prefix="/tmp/x" -- which matched nothing and reported a clean store.
+        # A census that reads clean because it scoped to nothing is worse than
+        # one that errors.
+        argv = argv[:i] + argv[i + 2:]
+    args = [a for a in argv if not a.startswith("--")]
+    prefix = args[0] if args else ""
 
     store = {i for i in store_ids() if i.startswith(prefix)}
     disk = {i for i in disk_ids() if i.startswith(prefix)}
     orphans, missing = sorted(store - disk), sorted(disk - store)
+
+    if prefix and not store and not disk:
+        print(f"REFUSING: prefix {prefix!r} matches no store rows AND no files. "
+              f"That is a scope error, not a clean store.", file=sys.stderr)
+        return 2
 
     scope = f"prefix={prefix!r}" if prefix else "whole library"
     print(f"PATTERN STORE CENSUS ({scope})")
