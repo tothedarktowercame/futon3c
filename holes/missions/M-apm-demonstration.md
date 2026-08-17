@@ -11515,3 +11515,32 @@ miss, now a measured quantity. Residual: outputs-side join for offer
 receipts is a src packet candidate. Substrate note: the projection
 endpoint starved for ~5 min on quiescence under continuous writes
 (watcher burst), then cleared — same class as claude-8's 503.
+
+## W.76 Tags interface merged: the P25 prospective lesson becomes expressible (2026-08-17)
+
+codex-3's packet (444a3ce0, merged b89280ac): memory_record accepts an
+optional tags argument on both seat surfaces (Claude MCP + Zai runner,
+schema-capped at 8). The writer trims, keyword-normalizes, dedupes, and
+appends AFTER the system pair [:memory :memory/assert], which cannot be
+displaced or duplicated (a caller tag "memory" is silently dropped by
+the system-tag filter). Invalid tag lists (non-list, >8, blank or
+non-string members) refuse before writing with a :tags field error.
+
+Review gate, stated: read the full diff; ran clj-kondo on all five
+changed files (0/0), arxana-check-parens-cli (OK), and the two suites
+scoped through the cognitect runner myself — 27 tests, 307 assertions,
+0 failures, matching the packet report exactly. Verified both required
+tests exist and bite: the round-trip test goes through the REAL
+memory-backend/memory-search filter (tagged entry found under
+tags ["a03J04"], untagged sibling NOT found — the discriminating
+assertion), and the no-tags case asserts byte-identical
+[:memory :memory/assert]. memory_backend.clj untouched per the
+read-only constraint (confirmed by the diff stat, not the report).
+The reviewer's noted baseline failure (backend neighborhood test,
+:at nil) is in an untouched file — pre-existing, not introduced.
+
+Live at the f9 restart with P21/P24/P25. With this, W.74's interface
+finding is closed: a deposit can carry the problem-id tag P25's lesson
+asked for, and tag-recall and subject-fallback now cover the same seam
+from both sides — belt and suspenders on the retrieval miss that f8
+made famous.
