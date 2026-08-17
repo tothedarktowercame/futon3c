@@ -1,5 +1,6 @@
 (ns futon3c.watcher.multi-test
   (:require [clojure.java.io :as io]
+            [clojure.walk :as walk]
             [clojure.test :refer [deftest is testing]]
             [futon3c.cyder :as cyder]
             [futon3c.watcher.multi :as sut]))
@@ -16,6 +17,28 @@
     (.mkdirs dir)
     (spit f "# Mission\n")
     f))
+
+(defn- attachment-edge [edge-id memory-id pattern-id reviewer]
+  {:hx/id edge-id
+   :hx/type :memory/assert
+   :hx/endpoints [memory-id pattern-id]
+   :hx/labels ["memory" "reviewed"]
+   :hx/props {:attachment-status "reviewed"
+              :roles {:subjects [pattern-id]
+                      :patterns [pattern-id]}
+              :review {:pattern-ids [pattern-id]
+                       :reviewer reviewer}
+              :review-history [{:pattern-ids [pattern-id]
+                                :reviewer reviewer
+                                :decision :approve}]}})
+
+(defn- contains-exact-value? [form value]
+  (let [found? (volatile! false)]
+    (walk/postwalk (fn [x]
+                     (when (= value x) (vreset! found? true))
+                     x)
+                   form)
+    @found?))
 
 (deftest flexiarg-retraction-is-one-atomic-document-set
   (let [calls (atom [])
@@ -80,6 +103,10 @@
 (deftest flexiarg-rename-ingests-new-before-retracting-old
   (let [calls (atom [])]
     (with-redefs [sut/ingest-event! (fn [m] (swap! calls conj [:ingest (:path m)]))
+                  sut/repoint-pattern-attachments!
+                  (fn [old-id new-id]
+                    (swap! calls conj [:attachments old-id new-id])
+                    {:ok true :count 2})
                   sut/retract-flexiarg! (fn [path]
                                          (swap! calls conj [:retract path])
                                          {:ok? true :count 8})
@@ -89,10 +116,69 @@
                            :root "/repo" :label "repo" :run-id 1
                            :event-n 2 :hash "same"})
       (is (= [[:ingest "/repo/library/new/sample.flexiarg"]
+              [:attachments "old/sample" "new/sample"]
               [:retract "/repo/library/old/sample.flexiarg"]
               [:event "/repo/library/old/sample.flexiarg"
                "/repo/library/new/sample.flexiarg"]]
              @calls)))))
+
+(deftest flexiarg-rename-repoints-every-attachment-and-all-nested-props
+  (let [old-id "math-formalization/layer-cake-crossover-split"
+        new-id "math-formalization-CA/layer-cake-crossover-split"
+        stale [(attachment-edge "hx-mem-one" "e-solver" old-id "reviewer-a")
+               (attachment-edge "hx-mem-two" "e-student" old-id "reviewer-b")]
+        landed (atom [])
+        calls (atom [])]
+    (with-redefs [sut/fetch-attachment-hyperedges
+                  (fn [pattern-id]
+                    (if (= old-id pattern-id) stale @landed))
+                  sut/post-hyperedge!
+                  (fn [hx-type endpoints labels props]
+                    (swap! calls conj [:post endpoints])
+                    (swap! landed conj {:hx/id (str "canonical-" (first endpoints))
+                                        :hx/type hx-type :hx/endpoints endpoints
+                                        :hx/labels labels :hx/props props})
+                    {:ok? true})
+                  sut/retract-documents!
+                  (fn [documents]
+                    (swap! calls conj [:retract documents])
+                    {:ok true :outcome :retracted :count (count documents)})]
+      (let [result (sut/repoint-pattern-attachments! old-id new-id)]
+        (is (= 2 (:count result)))
+        (is (= 2 (count @landed)) "both memory edges are migrated")
+        (is (= :retract (first (last @calls)))
+            "stale edges retract only after every replacement posts and verifies")
+        (is (= #{"hx-mem-one" "hx-mem-two"}
+               (set (map :id (second (last @calls))))))
+        (doseq [edge @landed]
+          (is (not (contains-exact-value? edge old-id)))
+          (is (= "reviewed" (get-in edge [:hx/props :attachment-status])))
+          (is (= [new-id] (get-in edge [:hx/props :roles :subjects])))
+          (is (= [new-id] (get-in edge [:hx/props :roles :patterns])))
+          (is (= [new-id] (get-in edge [:hx/props :review :pattern-ids])))
+          (is (= [new-id]
+                 (get-in edge [:hx/props :review-history 0 :pattern-ids])))
+          (is (contains? #{"reviewer-a" "reviewer-b"}
+                         (get-in edge [:hx/props :review :reviewer]))))))))
+
+(deftest failed-attachment-repost-retains-every-stale-edge
+  (let [old-id "old/pattern"
+        new-id "new/pattern"
+        stale [(attachment-edge "hx-old" "e-one" old-id "reviewer")]
+        retracts (atom [])]
+    (with-redefs [sut/fetch-attachment-hyperedges
+                  (fn [pattern-id] (if (= old-id pattern-id) stale []))
+                  sut/post-hyperedge! (fn [& _] {:ok? false})
+                  sut/retract-documents! (fn [documents]
+                                           (swap! retracts conj documents)
+                                           {:ok true :count (count documents)})]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"stale edge retained"
+                            (sut/repoint-pattern-attachments! old-id new-id)))
+      (is (empty? @retracts)
+          "a failed create never retracts the reviewed source attachment")
+      (is (= stale (sut/fetch-attachment-hyperedges old-id))
+          "the old edge remains queryable"))))
 
 (deftest run-cycle-skips-post-file-work-when-stop-requested
   (testing "shutdown gate suppresses heartbeat and commit ingest"

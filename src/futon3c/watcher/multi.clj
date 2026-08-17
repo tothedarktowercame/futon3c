@@ -24,6 +24,7 @@
             [clojure.java.shell :as sh]
             [clojure.set]
             [babashka.http-client :as http]
+            [clojure.walk :as walk]
             [cheshire.core :as json]
             [futon3c.cyder :as cyder]
             [futon3c.transport.ws.invoke :as ws-invoke]
@@ -443,6 +444,69 @@
                  (java.net.URLEncoder/encode entity-id "UTF-8")
                  "&limit=100")]
     (vec (or (:relations (http-get-edn url)) []))))
+
+(declare retract-documents!)
+
+(defn fetch-attachment-hyperedges
+  "Fetch memory attachment hyperedges naming a pattern endpoint."
+  [pattern-id]
+  (let [url (str FUTON1A "/api/alpha/hyperedges?end="
+                 (java.net.URLEncoder/encode pattern-id "UTF-8")
+                 "&limit=50")]
+    (->> (or (:hyperedges (http-get-edn url)) [])
+         (filter #(= "memory/assert" (type-str (:hx/type %))))
+         vec)))
+
+(defn- replace-exact
+  [form old-id new-id]
+  (walk/postwalk #(if (= old-id %) new-id %) form))
+
+(defn- contains-exact?
+  [form target]
+  (let [found? (volatile! false)]
+    (walk/postwalk (fn [x]
+                     (when (= target x) (vreset! found? true))
+                     x)
+                   form)
+    @found?))
+
+(defn- verified-attachment-replacement?
+  [expected actual old-id]
+  (and (= (type-str (:hx/type expected)) (type-str (:hx/type actual)))
+       (= (:hx/endpoints expected) (:hx/endpoints actual))
+       (= (:hx/props expected) (:hx/props actual))
+       (not (contains-exact? actual old-id))))
+
+(defn repoint-pattern-attachments!
+  "Create and verify replacement memory attachments before atomically
+   retracting the stale edge documents. Every exact occurrence of the old
+   pattern id is replaced, including nested review history."
+  [old-id new-id]
+  (if (= old-id new-id)
+    {:ok true :count 0 :old-pattern-id old-id :new-pattern-id new-id}
+    (let [stale (fetch-attachment-hyperedges old-id)
+          replacements (mapv #(replace-exact % old-id new-id) stale)]
+      (doseq [replacement replacements]
+        (let [posted (post-hyperedge! (type-str (:hx/type replacement))
+                                      (:hx/endpoints replacement)
+                                      (:hx/labels replacement)
+                                      (:hx/props replacement))]
+          (when-not (:ok? posted)
+            (throw (ex-info "replacement memory attachment write failed; stale edge retained"
+                            {:old-pattern-id old-id :new-pattern-id new-id
+                             :old-edge-ids (mapv :hx/id stale)})))
+          (let [landed (fetch-attachment-hyperedges new-id)]
+            (when-not (some #(verified-attachment-replacement?
+                              replacement % old-id)
+                            landed)
+              (throw (ex-info "replacement memory attachment did not verify; stale edge retained"
+                              {:old-pattern-id old-id :new-pattern-id new-id
+                               :old-edge-ids (mapv :hx/id stale)}))))))
+      (when (seq stale)
+        (retract-documents! (mapv #(hash-map :table :hyperedges :id (:hx/id %))
+                                  stale)))
+      {:ok true :count (count stale)
+       :old-pattern-id old-id :new-pattern-id new-id})))
 
 (def ^:private store-timeout-ms
   "Timeouts sized to the MEASURED store, not to hope. E-apm-A3-ingest-efficiency
@@ -887,16 +951,20 @@
 (defn handle-rename!
   [{:keys [from to root label run-id event-n hash]}]
   (if (flexiarg-pattern-id from)
-    (do
+    (let [old-pattern-id (flexiarg-pattern-id from)
+          new-pattern-id (or (flexiarg-pattern-id to)
+                             (throw (ex-info "flexiarg rename target is not a library pattern"
+                                             {:from from :to to})))]
       (ingest-event! {:path to :root root :label label
                       :run-id run-id :event-n event-n
                       :source "rename-ingest"})
-      (let [retracted (retract-flexiarg! from)]
+      (let [attachments (repoint-pattern-attachments! old-pattern-id new-pattern-id)
+            retracted (retract-flexiarg! from)]
         (rename-event! {:from from :to to :hash hash
                         :root root :label label
                         :run-id run-id :event-n event-n})
-        (println (format "[rename-pattern] %s → %s retracted=%d"
-                         from to (:count retracted)))))
+        (println (format "[rename-pattern] %s → %s attachments=%d retracted=%d"
+                         from to (:count attachments) (:count retracted)))))
     (let [old-vertices (source-file-vertices label from)]
       (ingest-event! {:path to :root root :label label
                       :run-id run-id :event-n event-n
