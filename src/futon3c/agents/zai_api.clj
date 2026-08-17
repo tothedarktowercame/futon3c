@@ -986,6 +986,17 @@ CALLS contains maps of tool name, arguments, and result digest."
   24)
 
 (def ^:private default-auto-continue-max 8)
+(def ^:private final-report-reserve-ms (* 5 60 1000))
+
+(defn- budget-auto-continue-max
+  "Scale the interior tool-round allowance with a cycle runner wall-clock pin.
+   The historical 30-minute envelope used eight continuations; keep that
+   ratio so max-tool-rounds does not bind before a longer outer envelope."
+  [wall-clock-minutes]
+  (when (and (integer? wall-clock-minutes) (pos? wall-clock-minutes))
+    (max default-auto-continue-max
+         (long (Math/ceil (* default-auto-continue-max
+                             (/ wall-clock-minutes 30.0)))))))
 
 (defn- parse-nonnegative-int
   [x fallback]
@@ -1006,10 +1017,15 @@ CALLS contains maps of tool name, arguments, and result digest."
 
 (defn- auto-continue-message
   [n cap]
-  (str "[harness auto-continue " n "/" cap
-       ": round budget exhausted mid-task. Continue working toward the task set "
-       "at the start of this turn. When the task is actually complete, reply "
-       "with a final summary and make no tool calls.]"))
+  (if (= n cap)
+    (str "[harness auto-continue " n "/" cap
+         ": FINAL REPORT RESERVE. Stop starting new work and make no more tool "
+         "calls. Report the committed artifacts, validation, and any precise "
+         "remaining obstruction now.]")
+    (str "[harness auto-continue " n "/" cap
+         ": round budget exhausted mid-task. Continue working toward the task set "
+         "at the start of this turn. When the task is actually complete, reply "
+         "with a final summary and make no tool calls.]")))
 
 (defn- max-tool-rounds-result
   [sid final-text]
@@ -1093,21 +1109,44 @@ CALLS contains maps of tool name, arguments, and result digest."
   "Run one logical Z.AI turn. Kept as a top-level var so a namespace reload can
    update already-registered invoke closures."
   [{:keys [client opts api-key !messages backend tool-opts agent-id sid
-           !repeats auto-continue-max] :as ctx}]
+           !repeats auto-continue-max deadline-ms] :as ctx}]
   (let [auto-continue-max (configured-auto-continue-max auto-continue-max)]
     (loop [remaining tool-round-budget
            final-text ""
            auto-continues 0
            mid-work? false
-           round-n 1]
-      (if (zero? remaining)
+           round-n 1
+           report-reserved? false]
+      (let [remaining-ms (when deadline-ms
+                           (- deadline-ms (System/currentTimeMillis)))]
+        (cond
+          (and remaining-ms (<= remaining-ms 0))
+          (assoc (max-tool-rounds-result sid final-text)
+                 :error "wall-clock-budget")
+
+          (and remaining-ms
+               (<= remaining-ms final-report-reserve-ms)
+               (not report-reserved?))
+          (do
+            (swap! !messages conj
+                   {:role "user"
+                    :content (auto-continue-message auto-continue-max
+                                                    auto-continue-max)})
+            ;; One model round is reserved for a report. If it insists on a
+            ;; tool call, the next zero-round branch stops the turn rather
+            ;; than letting work consume the reporting reserve.
+            (recur 1 final-text auto-continues false round-n true))
+
+          (zero? remaining)
         (if (and mid-work? (< auto-continues auto-continue-max))
           (let [n (inc auto-continues)
                 text (auto-continue-message n auto-continue-max)]
             (swap! !messages conj {:role "user" :content text})
             (sink! agent-id {:type "text" :text (str "[auto-continue " n "/" auto-continue-max "]")})
-            (recur tool-round-budget final-text n false round-n))
+            (recur tool-round-budget final-text n false round-n report-reserved?))
           (max-tool-rounds-result sid final-text))
+
+          :else
         (let [_decision (maybe-zaif-decision!
                           (assoc ctx
                                  :round round-n
@@ -1115,7 +1154,14 @@ CALLS contains maps of tool name, arguments, and result digest."
                                                    (filter #(= (:role %) "user"))
                                                    last
                                                    :content)))
-              resp (chat! client (assoc opts :api-key api-key) @!messages)
+              resp (chat! client
+                          (cond-> (assoc opts :api-key api-key)
+                            remaining-ms
+                            (assoc :timeout-ms
+                                   (max 1 (min (long (or (:timeout-ms opts)
+                                                        remaining-ms))
+                                               remaining-ms))))
+                          @!messages)
               err (:error resp)]
           (if err
             {:result nil
@@ -1189,7 +1235,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :text text
                                    :calls (transcript-calls details executed)})
                   (swap! !messages into (mapv :message executed))
-                  (recur (dec remaining) (str final-text text) auto-continues true (inc round-n)))
+                  (recur (dec remaining) (str final-text text) auto-continues true
+                         (inc round-n) report-reserved?))
                 (do
                   (persist-round! {:evidence-store (:evidence-store ctx)
                                    :agent-id agent-id :sid sid
@@ -1198,7 +1245,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :text (if (str/blank? text) final-text text)
                                    :calls [] :final? true})
                   {:result (if (str/blank? text) final-text text)
-                   :session-id sid})))))))))
+                   :session-id sid}))))))))))
 
 (defn make-invoke-fn
   "Return an Agency invoke-fn backed by Z.AI tool calling."
@@ -1283,6 +1330,18 @@ CALLS contains maps of tool name, arguments, and result digest."
             ;; Direct calls have no Agency job, so their generated turn id is
             ;; the dispatch id and the turn-start record binds them explicitly.
             dispatch-id (str (or (:dispatch-id invoke-context) turn-id))
+            runner-budget (:student-runner-budget invoke-context)
+            call-timeout-ms (or (:timeout-ms invoke-context) timeout-ms)
+            deadline-ms (when (and (integer? call-timeout-ms)
+                                   (pos? call-timeout-ms))
+                          (+ (System/currentTimeMillis) call-timeout-ms))
+            wall-clock-minutes
+            (or (:wall-clock-minutes runner-budget)
+                (when (and (integer? call-timeout-ms) (pos? call-timeout-ms))
+                  (long (Math/ceil (/ call-timeout-ms 60000.0)))))
+            turn-auto-continue-max
+            (or (budget-auto-continue-max wall-clock-minutes)
+                auto-continue-max)
             ;; stuck-means-signal detector (mistakes-ledger §11): consecutive
             ;; identical tool calls with identical results get a warning
             ;; injected at 3 and a stop-and-bell instruction at 5. Fresh per
@@ -1333,7 +1392,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                               :prompt prompt})
         (swap! !messages conj {:role "user" :content (str prompt)})
         (run-tool-rounds! {:client client
-                           :opts opts
+                           :opts (assoc opts :timeout-ms call-timeout-ms)
                            :api-key key*
                            :!messages !messages
                            :backend backend
@@ -1342,8 +1401,9 @@ CALLS contains maps of tool name, arguments, and result digest."
                            :sid sid
                            :dispatch-id dispatch-id
                            :turn-id turn-id
+                           :deadline-ms deadline-ms
                            :evidence-store evidence-store
                            :!repeats !repeats
                            :profile profile*
                            :zaif-inputs-fn zaif-inputs-fn
-                           :auto-continue-max auto-continue-max}))))))))
+                           :auto-continue-max turn-auto-continue-max}))))))))

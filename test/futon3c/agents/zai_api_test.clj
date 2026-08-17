@@ -129,6 +129,21 @@
         (is (= "redefined for zai-test" (:result resp)))
         (is (= "sid-hot" (:session-id resp)))))))
 
+(deftest cycle-student-budget-scales-the-interior-runner-envelope
+  (let [invoke (make-invoke {})
+        captured (atom nil)]
+    (with-redefs [zai/run-tool-rounds! (fn [ctx]
+                                        (reset! captured ctx)
+                                        {:result "captured"
+                                         :session-id "budget-session"})]
+      (invoke "work" "budget-session"
+              {:dispatch-id "budget-job"
+               :timeout-ms 3600000
+               :student-runner-budget {:wall-clock-minutes 60}})
+      (is (= 3600000 (get-in @captured [:opts :timeout-ms])))
+      (is (= 16 (:auto-continue-max @captured))
+          "60 minutes doubles the historical 30-minute continuation allowance"))))
+
 (deftest transcript-records-prompt-round-profile-and-stable-turn-id
   (let [store (atom {:entries {} :order []})
         invoke (make-invoke {:evidence-store store :profile :zai})]

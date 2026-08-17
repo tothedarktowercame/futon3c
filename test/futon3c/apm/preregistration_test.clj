@@ -69,6 +69,22 @@
                  (assoc registration :reg/solver-config malformed)))
           (pr-str malformed)))))
 
+(deftest student-runner-budget-is-optional-and-shape-validated-when-present
+  (is (not-any? #(= :invalid-student-runner-budget (:finding %))
+                (prereg/registration-shape-failures registration)))
+  (is (not-any? #(= :invalid-student-runner-budget (:finding %))
+                (prereg/registration-shape-failures
+                 (assoc registration :reg/student-runner-budget
+                        {:wall-clock-minutes 45}))))
+  (doseq [malformed [{:wall-clock-minutes 0}
+                     {:wall-clock-minutes 60.0}
+                     {:wall-clock-minutes 60 :extra true}
+                     "60"]]
+    (is (some #(= :invalid-student-runner-budget (:finding %))
+              (prereg/registration-shape-failures
+               (assoc registration :reg/student-runner-budget malformed)))
+        (pr-str malformed))))
+
 (def attempts
   [{:cycle/regime "regime/a"
     :cycle/store-revision revision-a

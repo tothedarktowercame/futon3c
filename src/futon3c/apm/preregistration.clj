@@ -122,6 +122,7 @@
     (let [role-cards (:reg/role-cards registration)
           guidance-regime (:reg/guidance-regime registration)
           solver-config (:reg/solver-config registration)
+          student-runner-budget (:reg/student-runner-budget registration)
           carded-seat-failures
           (if (map? role-cards)
             (keep (fn [[role seat-key]]
@@ -147,6 +148,14 @@
                         (nonblank-string? (:reasoning-effort solver-config)))))
          (conj {:finding :invalid-solver-config
                 :value solver-config})
+         (and (contains? registration :reg/student-runner-budget)
+              (not (and (map? student-runner-budget)
+                        (= #{:wall-clock-minutes}
+                           (set (keys student-runner-budget)))
+                        (integer? (:wall-clock-minutes student-runner-budget))
+                        (pos? (:wall-clock-minutes student-runner-budget)))))
+         (conj {:finding :invalid-student-runner-budget
+                :value student-runner-budget})
          (some #(not (contains? registration %)) required-registration-keys)
          (conj :registration-missing-required-key)
          (not (problem? (:problem registration)))

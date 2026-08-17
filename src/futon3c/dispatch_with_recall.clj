@@ -1412,7 +1412,9 @@
       (throw (ex-info "HTTP write failed"
                       {:url url :status (:status response) :body parsed})))))
 
-(defn- dispatch! [{:keys [base to from mission bell-type model reasoning-effort]} packet]
+(defn- dispatch!
+  [{:keys [base to from mission bell-type model reasoning-effort timeout-ms
+           student-runner-budget]} packet]
   (post-json
    (str (trim-base (or base default-agency-base)) "/api/alpha/bell")
    (cond-> {:agent-id to
@@ -1422,7 +1424,10 @@
             :mode "work"}
      bell-type (assoc :type (name bell-type))
      model (assoc :model model)
-     reasoning-effort (assoc :reasoning-effort reasoning-effort))
+     reasoning-effort (assoc :reasoning-effort reasoning-effort)
+     timeout-ms (assoc :timeout-ms timeout-ms)
+     student-runner-budget
+     (assoc :student-runner-budget student-runner-budget))
    30000))
 
 (defn- record-offered! [{:keys [substrate-base]} evidence]
