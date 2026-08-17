@@ -411,9 +411,14 @@ What I checked, rather than accepted:
   pagination: **0 of 1,344 `pattern/library` and 0 of 10,169 `pattern/clause`**
   rows violate it. Recorded here because the fix rests on it and a future change
   that mints an entity whose id is not its name would break it silently.
-- **The preserved properties have real tests.**
-  `pattern-entity-resolution-throws-on-transport-failure` fails if the throw is
-  removed (the call would return `[]` and the assertion on `some?` fails), and
+- **The preserved properties have real tests, and I mutation-tested the
+  load-bearing one rather than reasoning about it.** In a detached worktree at
+  `2a1f1660` I replaced the transport-failure `throw` with a silent
+  `{:entities [] :next-cursor nil}` — the exact regression that cost 16 of 31
+  retractions on 2026-08-17 — and re-ran the suite: **3 failures and 1 error,
+  all four inside `pattern-entity-resolution-throws-on-transport-failure`**, no
+  collateral. The guard is real and specific. (Worktree, not the main tree:
+  codex-6 was live in `multi.clj` at the time.) Also
   `pattern-entity-resolution-paginates-and-retains-both-id-shapes` asserts both
   the name-shaped and resolved ids come back, plus that the `after=` cursor is
   followed.
@@ -422,7 +427,13 @@ Two notes, neither blocking:
 
 - The throw test covers the exception path but not the non-200 path, which
   throws "store refused query". Worth a second assertion when that file is next
-  touched.
+  touched — the mutation above exercised the exception path only.
+- The legacy-duplicate drain is covered by
+  `flexiarg-retraction-drains-legacy-same-name-duplicates`, updated for the new
+  design: first resolution pass returns `["demo/sample" "legacy-uuid"]`, second
+  returns empty, and it asserts 2 batches with the second retracting both ids.
+  `flexiarg-retraction-still-refuses-past-legacy-batch-limit` confirms the
+  refusal still fires after canonical plus three legacy batches.
 - Dropping `pattern/clause` from the legacy-duplicate discovery pass is argued
   from history (legacy hyperedges minted duplicate *pattern* entities, not
   clause entities). The measurement above supports it today; it is an
