@@ -148,6 +148,37 @@
         (is (not (contains? names (str pid "/counterfactual"))))
         (is (empty? @hyperedges))))))
 
+(deftest flexiarg-ingest-emits-semantic-relations-and-cross-list-property
+  (let [entities (atom [])
+        relations (atom [])]
+    (with-redefs [sut/collect-file
+                  (fn [_]
+                    {:vars [{:pattern/id "demo/source"
+                             :pattern/title "Source"
+                             :pattern/directives
+                             {:cross-list ["CA" "FA"]
+                              :why ["demo/general"]
+                              :see-also ["demo/peer"]}
+                             :pattern/slots
+                             [{:slot/name-key "conclusion" :slot/text "Claim"}]}]})
+                  file-ingest/post-entities-batch!
+                  (fn [payload]
+                    (swap! entities into payload)
+                    {:ok? true :count (count payload)
+                     :entities (mapv #(assoc % :id (:id %)) payload)})
+                  file-ingest/post-relations-batch!
+                  (fn [payload]
+                    (swap! relations into payload)
+                    {:ok? true :count (count payload) :relations payload})]
+      (let [result (file-ingest/ingest-flexiarg! {:path "unused"})
+            pattern (first @entities)]
+        (is (= ["CA" "FA"] (get-in pattern [:props "pattern/cross-list"])))
+        (is (= #{[":pattern/has-conclusion" "demo/source/conclusion"]
+                 [":pattern/has-semantic-why" "demo/general"]
+                 [":pattern/has-semantic-see-also" "demo/peer"]}
+               (set (map (juxt :type :dst) @relations))))
+        (is (= 3 (:relations result)))))))
+
 (deftest clojure-dispatch-keeps-code-ingest-path
   (let [calls (atom [])]
     (with-redefs [file-ingest/collect-repo (fn [_] {:root :context})

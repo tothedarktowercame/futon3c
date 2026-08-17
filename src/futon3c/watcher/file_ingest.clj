@@ -1342,7 +1342,11 @@
           (:pattern/slots v))))
 
 (defn ingest-flexiarg!
-  "Write one flexiarg as canonical pattern/clause entities and relations only."
+  "Write one flexiarg as canonical pattern/clause entities and relations.
+
+   Semantic targets must already exist: the atomic relation endpoint refuses
+   the whole batch if any endpoint is absent. Cross-list categories remain a
+   property of the pattern entity and are never emitted as relations."
   [{:keys [path]}]
   (let [vars (:vars (flexiarg/collect-file path))
         stats (atom {:patterns 0 :clauses 0 :relations 0 :failed 0
@@ -1354,10 +1358,15 @@
                                 (when-let [text (pattern-facet-text v facet)]
                                   {:facet facet :text text})))
                         vec)
+            cross-list (vec (get-in v [:pattern/directives :cross-list]))
+            semantic-targets {:semantic-why (vec (get-in v [:pattern/directives :why]))
+                              :semantic-see-also (vec (get-in v [:pattern/directives
+                                                                 :see-also]))}
             entity-specs (into [{:id pid
                                  :name pid
                                  :type "pattern/library"
                                  :external-id pid
+                                 :props {"pattern/cross-list" cross-list}
                                  :source (or (:pattern/title v) pid)}]
                                (map (fn [{:keys [facet text]}]
                                       (let [clause-name (str pid "/" (name facet))]
@@ -1371,14 +1380,26 @@
             returned (:entities entity-r)
             pattern-entity (first returned)
             clause-entities (subvec (vec returned) 1)
-            relation-specs
+            clause-relation-specs
             (mapv (fn [{:keys [facet]} clause-entity]
                     {:type (str ":pattern/has-" (name facet))
                      :src (:id pattern-entity)
                      :dst (:id clause-entity)
                      :provenance {:note (str ":pattern/has-" (name facet))
                                   :source "multi-watcher-flexiarg"}})
-                  facets clause-entities)]
+                  facets clause-entities)
+            semantic-relation-specs
+            (mapv (fn [[semantic-kind target]]
+                    (let [relation-type (str ":pattern/has-" (name semantic-kind))]
+                      {:type relation-type
+                       :src (:id pattern-entity)
+                       :dst target
+                       :provenance {:note relation-type
+                                    :source "multi-watcher-flexiarg"}}))
+                  (mapcat (fn [[semantic-kind targets]]
+                            (map #(vector semantic-kind %) targets))
+                          semantic-targets))
+            relation-specs (into clause-relation-specs semantic-relation-specs)]
         (swap! stats update :patterns inc)
         (swap! stats update :clauses + (count facets))
         (swap! stats update :facets into (mapv (comp name :facet) facets))
