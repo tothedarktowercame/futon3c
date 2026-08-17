@@ -10,7 +10,8 @@
 ;;   e.g. bb transfer_checks.bb \
 ;;     data/problem-state/a98A01-93f5be72…  (f7 baseline)
 ;;
-;; Read-only: reads the saved cycle state and queries the substrate.
+;; Reads the saved cycle state, queries the substrate, and overwrites the
+;; stable machine-readable receipt <problem-state-dir>/transfer-checks.edn.
 
 (require '[clojure.edn :as edn]
          '[clojure.string :as str]
@@ -74,8 +75,6 @@
         promo-ids (->> (:promotion-result outputs)
                        (keep #(or (:memory-id %) (:promo/artifact-id %))))
         student-steps (steps-of state :dispatch-student-fresh)
-        first-student-idx (some (fn [[i s]] (when (= :dispatch-student-fresh (:tool s)) i))
-                                (map-indexed vector (:steps state)))
         pull-uses (:pull-uses outputs)
         checks
         [;; C1 — deposit attribution names the seat (packet queued; expect FAIL until built)
@@ -142,10 +141,24 @@
      :checks checks
      :score (str (count (filter :pass? checks)) "/" (count checks))}))
 
+(defn write-receipt! [dir result]
+  (let [receipt-path (fs/path dir "transfer-checks.edn")
+        receipt {:problem-id (:problem result)
+                 :state-file (:state-file result)
+                 :taken-at (str (java.time.Instant/now))
+                 :checks (:checks result)
+                 :score (:score result)}]
+    ;; One current reading per problem-state directory. Overwrite rather than
+    ;; append: a rerun replaces the complete EDN value, so it cannot duplicate
+    ;; a frame or leave readers to guess which entry is authoritative.
+    (spit (str receipt-path) (str (pr-str receipt) "\n"))
+    (str receipt-path)))
+
 (let [dir (first *command-line-args*)]
   (when-not dir (println "usage: bb transfer_checks.bb <problem-state-dir>") (System/exit 2))
-  (let [{:keys [state-file problem checks score]} (run-checks dir)]
+  (let [{:keys [state-file problem checks score] :as result} (run-checks dir)]
     (println "== transfer checks ==" problem "(" state-file ")")
     (doseq [{:keys [check pass? evidence]} checks]
       (println (format "%-32s %s  %s" (name check) (if pass? "PASS" "FAIL") (pr-str evidence))))
-    (println "score:" score)))
+    (println "score:" score)
+    (write-receipt! dir result)))
