@@ -11261,3 +11261,19 @@ real wiring); V2 §4.3's structural sensitivity becomes replayable at
 dispatch time via the P16 provenance. The two series together are the
 systematic evaluation: pipeline health × spectral richness, with either
 divergence a design finding.
+
+## W.66 P22 merged + hot-reloaded; frame-8 unblocked with the P14-correct flow (2026-08-17)
+
+Urgent packet turned around in ~35 minutes with the frame held safe
+throughout. Review: promote-artifact!/record-scribe-lanes! mirror
+dispatch-scribe!, engine-gated; scope surgically conductor+surface only
+(P21 stays inert; C1's f8 prediction intact). **The P14 finding is the
+important design clarification:** promote-artifact WITH :memory-id
+EXECUTES the lifecycle review (problem.clj:1674) and the lifecycle
+refuses acting≠reviewer (memory_lifecycle.clj:232) — so the reviewer-
+must-act principle holds even against the guide's convenience: the
+scribe executes its own verdict in its own dispatched job; the guide
+records the RESULT via :artifact-id. Unblock bell delivered with the
+five-step flow ending in P16 provenance verification at the student
+dispatch. The hold cost: ~35 minutes and nothing else — verdict
+preserved, no baseline silently rerun, no walls breached.
