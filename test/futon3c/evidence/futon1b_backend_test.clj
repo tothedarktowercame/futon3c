@@ -38,6 +38,26 @@
         (is (str/includes? @seen-url "/api/alpha/evidence/count?"))
         (is (str/includes? @seen-url "tags=open"))))))
 
+(deftest canonical-problem-query-includes-legacy-subject-types
+  (let [seen-urls (atom [])
+        store (sut/make-futon1b-backend "http://legacy-subject-store.test")]
+    (with-redefs [http/get
+                  (fn [url _]
+                    (swap! seen-urls conj url)
+                    (delay
+                      {:status 200
+                       :body (cond
+                               (str/includes? url "subject-type=apm-problem")
+                               "{:entries [{:evidence/id \"legacy\", :evidence/subject {:ref/type :apm-problem, :ref/id \"a01\"}, :evidence/at \"2026-08-01T00:00:00Z\"}]}"
+                               :else "{:entries []}")}))]
+      (is (= ["legacy"]
+             (mapv :evidence/id
+                   (backend/-query
+                    store {:query/subject {:ref/type :problem :ref/id "a01"}}))))
+      (is (= #{"problem" "apm-problem" "bpm-problem"}
+             (set (map #(second (re-find #"subject-type=([^&]+)" %))
+                       @seen-urls)))))))
+
 (deftest repeated-bounded-query-is-cached-and-write-invalidates
   (let [gets (atom 0)
         posts (atom 0)

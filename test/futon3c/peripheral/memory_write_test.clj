@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agents.zai-api :as zai]
+            [futon3c.dispatch-with-recall :as dispatch]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.adapter :as adapter]
             [futon3c.peripheral.memory-backend :as memory-backend]
@@ -132,6 +133,37 @@
                (get-in edge [:hx/props :attachment-status])))
         (is (= ["math-formalization/tactic-algebra-interference"]
                (get-in edge [:hx/props :roles :patterns])))))))
+
+(deftest problem-subject-vocabulary-joins-both-writers-and-legacy-rows
+  (let [problem-id "a94A06"
+        store (empty-store)
+        hyperedges (atom {})
+        payload (assoc (first (fixtures))
+                       :subjects [{:ref/type :apm-problem :ref/id problem-id}])
+        offered (dispatch/offered-evidence
+                 {:problem problem-id :from "guide" :memory-channel :push}
+                 {:memories [] :eligible-memory-ids [] :query {}}
+                 "job-vocabulary" "session-vocabulary")]
+    (with-redefs [memory-write/post-hyperedge! (graph-stub hyperedges)]
+      (let [receipt (memory-write/record-memory!
+                     (assoc test-ctx :evidence-store store) payload)
+            written (estore/get-entry* store (:id receipt))
+            canonical {:ref/type :problem :ref/id problem-id}
+            legacy (assoc written
+                          :evidence/id "e-legacy-apm-problem"
+                          :evidence/subject
+                          {:ref/type :apm-problem :ref/id problem-id})]
+        (is (:ok receipt))
+        (is (= canonical (:evidence/subject written)))
+        (is (= canonical (:subject offered)))
+        ;; Simulate an existing pre-normalization row without rewriting it.
+        (swap! store (fn [state]
+                       (-> state
+                           (assoc-in [:entries (:evidence/id legacy)] legacy)
+                           (update :order conj (:evidence/id legacy)))))
+        (is (= #{(:id receipt) "e-legacy-apm-problem"}
+               (set (map :evidence/id
+                         (estore/query* store {:query/subject canonical})))))))))
 
 (deftest evidence-failure-returns-fixed-id-and-social-error
   (let [receipt (memory-write/record-memory!

@@ -7,6 +7,7 @@
 
    AtomBackend wraps a Clojure atom with {:entries {} :order []},
    providing the same CAS-based semantics as the original store.clj."
+  (:require [futon3c.evidence.subject :as subject])
   (:import [java.time Instant]
            [java.time.format DateTimeParseException]))
 
@@ -81,7 +82,10 @@
         entries (if include-ephemeral?
                   entries
                   (remove #(true? (:evidence/ephemeral? %)) entries))
-        entries (if subject (filter #(= subject (:evidence/subject %)) entries) entries)
+        entries (if subject
+                  (filter #(subject/equivalent? subject (:evidence/subject %))
+                          entries)
+                  entries)
         entries (if type (filter #(= type (:evidence/type %)) entries) entries)
         entries (if claim-type (filter #(= claim-type (:evidence/claim-type %)) entries) entries)
         entries (if author (filter #(= author (:evidence/author %)) entries) entries)

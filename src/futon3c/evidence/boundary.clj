@@ -44,6 +44,7 @@
    Mission: M-invariant-queue-unstuck (futon3c/holes/missions/)."
   (:require [futon3c.evidence.backend :as backend]
             [futon3c.evidence.invariant :as invariant]
+            [futon3c.evidence.subject :as subject]
             [futon3c.evidence.store :as store]
             [futon3c.marks :as marks]
             [futon3c.social.shapes :as shapes]
@@ -114,7 +115,9 @@
   (cond
     (nil? subject) subject
     (and (map? subject) (contains? subject :ref/type))
-    (update subject :ref/type (partial coerce-keyword :evidence/subject))
+    (-> subject
+        (update :ref/type (partial coerce-keyword :evidence/subject))
+        subject/normalize-ref)
     :else subject))
 
 (defn- coerce-entry-fields
