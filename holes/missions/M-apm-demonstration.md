@@ -11111,3 +11111,29 @@ attempts are scored on committed progress + memory use (pull receipts now
 visible), not closure. The v1 zai-student card's spirit — Zai's honest
 self-criticism as raw material — pairs with this: a progress-scored lane
 keeps partial work and its narration first-class.
+
+## W.59 Five-defect closeout complete; frame-8 readiness FINAL (2026-08-17)
+
+**P19 merged**: `:reg/student-runner-budget` pin, 60-minute default, a
+REAL wall-clock deadline (the believed 30-min limiter no longer existed —
+the binding caps were interior rounds×blocks, now scaled 24×9→24×17),
+and the final five minutes reserved for a no-new-work reporting round —
+f7's five stranded commits can never recur unreported. **P20 merged**
+(`00413082`): canonical :problem subject vocabulary, single normalizer at
+every layer, legacy aliases readable, store untouched. All five W.55
+defects are now closed: P16 eligibility, P17 pull receipts, P18 door
+checks + abandon route, P19 budget, P20 vocabulary.
+
+**FRAME-8 READINESS — everything below is operator words, nothing else
+remains:**
+1. **Restart** — arms all merges since the 18:58 JVM: P13 two-promote
+   chain, P14 reviewer auth, P15 truthful panes + default-deny
+   projection, P16-P20.
+2. **Problem pick** — open one-sorry candidates at the pin: a01J01/05/06,
+   a03J04/05, a93A04, a94A02/07/09, a94J02/06, a95J06, a96A02/06/07/08…
+3. **Freezes** — scribe-v2 (review protocol), guide-v2.1 (two-promote
+   flow), solver-v3 (carries over).
+4. **Registration** — pins: guidance regime #{:answer :suggest}, solver
+   config {gpt-5.6-sol, max}, student-runner-budget {:wall-clock-minutes
+   60}; f8 seats already minted and invoke-ready; the P18 door check will
+   verify the harness pin AT OPEN this time.
