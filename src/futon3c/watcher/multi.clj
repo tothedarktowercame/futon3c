@@ -444,18 +444,37 @@
                  "&limit=100")]
     (vec (or (:relations (http-get-edn url)) []))))
 
+(def ^:private store-timeout-ms
+  "Timeouts sized to the MEASURED store, not to hope. E-apm-A3-ingest-efficiency
+   measures ~3 s/doc and a pattern carries ~15 documents, so the old 10 s POST /
+   15 s GET were below the cost of the work they were waiting for -- which is why
+   timeouts were the normal case rather than the exception."
+  60000)
+
 (defn fetch-pattern-entity-ids
   "Resolve canonical names to their stored IDs while retaining name-shaped IDs.
    The latter are included because legacy pattern hyperedges could mint a
-   same-name entity alongside the UUID-backed canonical record."
+   same-name entity alongside the UUID-backed canonical record.
+
+   THROWS on a transport failure rather than returning fewer names. Returning []
+   for \"I could not ask\" is indistinguishable from \"nothing is there\", and
+   retract-flexiarg! reads an empty result as `done` -- so a slow store used to
+   end the retraction loop early and report success with rows still standing.
+   Measured 2026-08-17: 16 of 31 retractions silently no-opped that way."
   [names]
   (->> names
        (mapcat (fn [entity-name]
                  (let [url (str FUTON1A "/api/alpha/entity/"
                                 (java.net.URLEncoder/encode entity-name "UTF-8"))
-                       resp (http/get url {:headers {"X-Penholder" PENHOLDER}
-                                           :throw false
-                                           :timeout 15000})
+                       resp (try
+                              (http/get url {:headers {"X-Penholder" PENHOLDER}
+                                             :throw false
+                                             :timeout store-timeout-ms})
+                              (catch Exception e
+                                (throw (ex-info "cannot resolve pattern entity: store unreachable"
+                                                {:outcome :unknown
+                                                 :entity-name entity-name
+                                                 :cause (.getMessage e)}))))
                        resolved (when (= 200 (:status resp))
                                   (some-> (:body resp) edn/read-string :entity :id))]
                    (if resolved [entity-name resolved] []))))
@@ -463,22 +482,40 @@
        vec))
 
 (defn retract-documents!
-  "Atomically retract derived documents, failing closed on any non-200 reply."
+  "Atomically retract derived documents. THREE outcomes, not two.
+
+   A timeout means the CLIENT stopped waiting; it says nothing about whether the
+   store did the work. Reporting it as failure is a lie in the dangerous
+   direction -- the caller retries a completed retraction, or reports a repair
+   that did not happen. Observed 2026-08-17: a retraction reported
+   \"request timed out\" and the row was gone (1345 -> 1344 rows).
+
+     :retracted  200 + :ok        -- done
+     :refused    a non-200 reply  -- definitely did not happen, safe to retry
+     :unknown    timeout/transport -- MAY have happened; VERIFY before retrying"
   [documents]
   (let [payload {:documents (vec documents)}
-        resp (http/post (str FUTON1A "/api/alpha/documents/retract")
-                        {:headers {"Content-Type" "application/edn"
-                                   "X-Penholder" PENHOLDER}
-                         :body (pr-str payload)
-                         :throw false
-                         :timeout 10000})
+        resp (try
+               (http/post (str FUTON1A "/api/alpha/documents/retract")
+                          {:headers {"Content-Type" "application/edn"
+                                     "X-Penholder" PENHOLDER}
+                           :body (pr-str payload)
+                           :throw false
+                           :timeout store-timeout-ms})
+               (catch Exception e
+                 (throw (ex-info "pattern document retraction OUTCOME UNKNOWN -- the client timed out, the store may have applied it; re-query before retrying"
+                                 {:outcome :unknown
+                                  :document-count (count documents)
+                                  :document-ids (mapv :id documents)
+                                  :cause (.getMessage e)}))))
         body (when (string? (:body resp))
                (try (edn/read-string (:body resp))
                     (catch Exception _ (:body resp))))]
     (if (and (= 200 (:status resp)) (:ok body))
-      body
-      (throw (ex-info "pattern document retraction failed"
-                      {:status (:status resp) :body body
+      (assoc body :outcome :retracted)
+      (throw (ex-info "pattern document retraction refused by the store"
+                      {:outcome :refused
+                       :status (:status resp) :body body
                        :document-count (count documents)})))))
 
 (defn retract-flexiarg!
