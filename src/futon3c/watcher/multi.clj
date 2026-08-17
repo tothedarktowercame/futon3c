@@ -509,6 +509,30 @@
        (= (:hx/props expected) (:hx/props actual))
        (not (contains-exact? actual old-id))))
 
+(defn- post-replacement!
+  "Post one replacement edge, retrying the store's transient rebuild refusal.
+
+   The substrate rebuilds its memory-projection index under a watermark taken
+   after quiescence, and refuses with 503 :memory-projection-source-moved-after-
+   quiescence when a concurrent write moves that watermark mid-build
+   (futon1b_graph.clj). A repoint of 40+ edges is exactly the traffic that
+   provokes it, and it is a race, not a bad write: the same call succeeds
+   moments later. Replacement writes are idempotent -- hx/id derives from the
+   endpoint set, so a re-post of one that already landed is a no-op -- so
+   retrying is safe. Only 503 is retried; a 403 or a malformed body would fail
+   identically every time and must surface at once."
+  [replacement]
+  (loop [attempt 1]
+    (let [posted (post-hyperedge! (type-str (:hx/type replacement))
+                                  (:hx/endpoints replacement)
+                                  (:hx/labels replacement)
+                                  (:hx/props replacement)
+                                  {:encoding :edn})]
+      (if (or (:ok? posted) (not= 503 (:status posted)) (>= attempt 5))
+        posted
+        (do (Thread/sleep (* 2000 attempt))
+            (recur (inc attempt)))))))
+
 (defn repoint-pattern-attachments!
   "Create and verify replacement memory attachments before atomically
    retracting the stale edge documents. Every exact occurrence of the old
@@ -523,11 +547,7 @@
         ;; type in them has to survive the round trip or the verification below
         ;; can never pass -- and if the verification were loosened instead, the
         ;; edge would land with :reviewed silently downgraded to "reviewed".
-        (let [posted (post-hyperedge! (type-str (:hx/type replacement))
-                                      (:hx/endpoints replacement)
-                                      (:hx/labels replacement)
-                                      (:hx/props replacement)
-                                      {:encoding :edn})]
+        (let [posted (post-replacement! replacement)]
           (when-not (:ok? posted)
             (throw (ex-info "replacement memory attachment write failed; stale edge retained"
                             {:old-pattern-id old-id :new-pattern-id new-id
