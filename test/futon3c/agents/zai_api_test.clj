@@ -258,3 +258,25 @@
     (is (= {:evidence-id "e-one"} (second @captured)))
     (is (identical? store (:evidence-store (first @captured))))
     (is (true? (get-in executed [:result :ok])))))
+
+(deftest memory-search-dispatches-the-f8-query-shape-to-shared-semantics
+  (let [captured (atom nil)
+        store (atom {:entries {} :order []})
+        call {:id "tc-memory-search"
+              :type "function"
+              :function {:name "memory_search"
+                         :arguments "{\"tags\":[\"a03J04\"],\"limit\":10}"}}
+        executed
+        (with-redefs [memory-backend/memory-search
+                      (fn [ctx args]
+                        (reset! captured [ctx args])
+                        {:ok true :result {:items [{:id "e-d11811de"}]}})]
+          (#'zai/execute-tool
+           (tools/make-mock-backend)
+           {:agent-id "f8-student" :session-id-atom (atom "sid")
+            :evidence-store store}
+           call))]
+    (is (= {:tags ["a03J04"] :limit 10} (second @captured)))
+    (is (identical? store (:evidence-store (first @captured))))
+    (is (= "e-d11811de"
+           (get-in executed [:result :result :items 0 :id])))))

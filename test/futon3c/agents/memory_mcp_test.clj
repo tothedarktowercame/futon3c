@@ -94,6 +94,29 @@
     (is (false? @record-called?))
     (is (false? (get-in response [:result :isError])))))
 
+(deftest lone-tag-memory-search-adds-problem-subject-fallback
+  (let [queries (atom [])
+        tag-hit {:evidence/id "e-tag"}
+        subject-hit {:evidence/id "e-subject"}]
+    (with-redefs [store/query*
+                  (fn [_ query]
+                    (swap! queries conj query)
+                    (if (:query/tags query) [tag-hit] [subject-hit]))
+                  pull-receipts/record-pull-uses! (fn [& _] {:ok true})]
+      (let [response (mcp/handle-request
+                      {:agent-id "codex-2" :session-file nil
+                       :domain :mathematics :evidence-store ::store}
+                      {:jsonrpc "2.0" :id 4 :method "tools/call"
+                       :params {:name "memory_search"
+                                :arguments {:tags ["a03J04"] :limit 10}}})]
+        (is (= [{:query/limit 10 :query/tags [:a03J04]}
+                {:query/limit 10
+                 :query/subject {:ref/type :problem :ref/id "a03J04"}}]
+               @queries))
+        (is (= [tag-hit subject-hit]
+               (json/parse-string
+                (get-in response [:result :content 0 :text]) true)))))))
+
 (deftest cycle-dispatch-id-reaches-codex-memory-search-receipt
   (let [seen (atom nil)]
     (with-redefs [store/query* (fn [_ _] [{:evidence/id "e-codex-used"}])

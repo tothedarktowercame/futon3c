@@ -160,6 +160,40 @@
                    true)))
              (concat durable-hits default-hits))))
 
+(defn- problem-id-tag? [tag]
+  (boolean (and tag
+                (re-matches #"(?i)(?:[a-z][0-9]{2}[aj][0-9]{2}|bpm-.+)"
+                            (name tag)))))
+
+(defn search-queries
+  "Expand a search query with the procedural subject fallback used by both
+   harness memory_search surfaces. Existing tag matching remains first and
+   unchanged. A lone problem-id-shaped tag also names a problem subject,
+   covering the common shorthand without changing ordinary or multi-tag
+   semantics."
+  [q]
+  (let [tags (:query/tags q)]
+    (cond-> [q]
+      (and (nil? (:query/subject q))
+           (= 1 (count tags))
+           (problem-id-tag? (first tags)))
+      (conj (-> q
+                (dissoc :query/tags)
+                (assoc :query/subject {:ref/type :problem
+                                       :ref/id (name (first tags))}))))))
+
+(defn merge-search-results
+  "Stable union: legacy tag-query results retain priority; fallback adds only
+   previously unseen evidence ids."
+  [result-groups]
+  (let [seen (volatile! #{})]
+    (filterv (fn [entry]
+               (let [id (:evidence/id entry)]
+                 (when-not (@seen id)
+                   (vswap! seen conj id)
+                   true)))
+             (mapcat identity result-groups))))
+
 (defn- graph-call
   "Call a store-taking graph fn against the durable store, falling back to
    the default store when the durable store is absent or returns nothing."
@@ -295,7 +329,7 @@
             (seq tags) (assoc :query/tags (mapv (fn [t]
                                                   (if (keyword? t) t (keyword t)))
                                                 tags)))
-        entries (evidence-query q)]
+        entries (merge-search-results (map evidence-query (search-queries q)))]
     {:ok true
      :result (envelope {:store :evidence
                         :filters (dissoc q :query/limit)}
