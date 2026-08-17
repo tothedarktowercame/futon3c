@@ -204,6 +204,9 @@
                   :body {:type "string" :description "Self-contained memory fact."}
                   :why {:type "string"}
                   :how_to_apply {:type "string" :description "Retrieval predicate or application condition."}
+                  :tags {:type "array" :maxItems 8
+                         :items {:type "string" :minLength 1}
+                         :description "Optional searchable caller tags; system memory tags remain first."}
                   :subjects {:type "array"
                              :minItems 1
                              :description (str "REQUIRED. At least one; first is the primary "
