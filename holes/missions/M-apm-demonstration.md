@@ -11277,3 +11277,33 @@ records the RESULT via :artifact-id. Unblock bell delivered with the
 five-step flow ending in P16 provenance verification at the student
 dispatch. The hold cost: ~35 minutes and nothing else — verdict
 preserved, no baseline silently rerun, no walls breached.
+
+## W.67 First curation reading (Programme S, point S-0): the store fragments instead of connecting (2026-08-17)
+
+Operator reframe accepted: V3 = building, RESTRUCTURING, and validating
+the store as we go — interactively at this pace, with each repeated
+manual act becoming a requirement for the automatic-mode assurances.
+
+**S-0 baseline, read from the live store:** 9 reviewed memories on 9
+pattern nodes, 1:1, ZERO pattern sharing — the reviewed graph is a
+perfect star-forest; degeneracy-break (S2-i) has NOT occurred. Mechanism
+identified in the receipts: the reviewer's quality bar REJECTED the four
+attach-to-existing proposals (broad patterns) and approved bespoke
+single-purpose pattern files — high per-memory fit, zero connective
+structure. **Fragmentation is the empirical mess-mode of promotion into
+an unstructured store, caught at n=9.**
+
+Curation levers, in order of weight:
+1. **Multi-pattern attachment**: promote-memory-attachment! takes ONE
+   pattern-id but the edge schema holds a patterns VECTOR — attaching a
+   memory to 2+ honest patterns creates sharing immediately (design
+   packet candidate; smallest spectral lever).
+2. **Reviewer guidance (scribe card v2.2)**: prefer attach-to-existing
+   when honest; a bespoke pattern needs a reason a shared one fails;
+   bespoke-rate per pass is a reported statistic.
+3. **Consolidation passes**: periodic merge of bespoke patterns into
+   families (the six formalization technique patterns plausibly share a
+   parent) — the restructuring half of "as we go", receipted like the
+   promotion pass.
+4. The un-executed math-split manifest gains empirical stakes: subject
+   directories are the natural shared parents.
