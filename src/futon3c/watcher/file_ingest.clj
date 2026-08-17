@@ -1358,10 +1358,9 @@
                                 (when-let [text (pattern-facet-text v facet)]
                                   {:facet facet :text text})))
                         vec)
-            cross-list (vec (get-in v [:pattern/directives :cross-list]))
-            semantic-targets {:semantic-why (vec (get-in v [:pattern/directives :why]))
-                              :semantic-see-also (vec (get-in v [:pattern/directives
-                                                                 :see-also]))}
+            cross-list (vec (:pattern/cross-list v))
+            semantic-targets {:semantic-why (vec (:pattern/why v))
+                              :semantic-see-also (vec (:pattern/see-also v))}
             entity-specs (into [{:id pid
                                  :name pid
                                  :type "pattern/library"

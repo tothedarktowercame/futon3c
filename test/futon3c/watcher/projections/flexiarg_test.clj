@@ -12,6 +12,9 @@
 (def fulab-multiarg-path
   "/home/joe/code/futon3/library/fulab/fulab-patterns.multiarg")
 
+(def proof-architecture-path
+  "/home/joe/code/futon3/library/math-strategy/proof-architecture.flexiarg")
+
 (deftest collect-multiarg-projects-every-declared-pattern
   (testing ".multiarg is watched and every @arg block becomes a pattern var"
     (is (contains? sut/src-exts "multiarg"))
@@ -19,6 +22,13 @@
       (is (= 11 (count vars)))
       (is (= "fulab/clock-in" (:pattern/id (first vars))))
       (is (= "fulab/tradeoff-record" (:pattern/id (last vars)))))))
+
+(deftest collect-file-exposes-semantic-pattern-fields
+  (let [v (-> (sut/collect-file proof-architecture-path) :vars first)]
+    (is (= ["math-informal/separate-into-independent-pieces"]
+           (:pattern/why v)))
+    (is (= [] (:pattern/see-also v)))
+    (is (= ["CA" "FA"] (:pattern/cross-list v)))))
 
 (deftest collect-file-projects-canonical-pattern-packet
   (testing "the watcher reuses the canonical parser and keeps structured slots"
@@ -155,10 +165,9 @@
                   (fn [_]
                     {:vars [{:pattern/id "demo/source"
                              :pattern/title "Source"
-                             :pattern/directives
-                             {:cross-list ["CA" "FA"]
-                              :why ["demo/general"]
-                              :see-also ["demo/peer"]}
+                             :pattern/cross-list ["CA" "FA"]
+                             :pattern/why ["demo/general"]
+                             :pattern/see-also ["demo/peer"]
                              :pattern/slots
                              [{:slot/name-key "conclusion" :slot/text "Claim"}]}]})
                   file-ingest/post-entities-batch!
