@@ -11376,3 +11376,23 @@ multi_watcher will ingest them into the store like every other pattern —
 meaning the patterns ABOUT cascade formation are themselves nodes the
 future cascade can hang from, which is the pattern-language method
 closing its own loop.
+
+## W.71 f8 endgame: ruling (a) — close honestly, mine retroactively; two f9 packets from the guide's findings (2026-08-17)
+
+Guide's hold at :close (third correct hold in two frames). Findings:
+(1) **Student ran 9 of 60 minutes, self-terminated mid-sentence** —
+substantive proof plan in text, ZERO commits, no report; the P19 reserve
+never engaged because the runner died long before wall clock (interior
+cap or self-termination; runner-lane finding). Recorded honestly as
+no-committed-artifact-plan-only. (2) **PREDICTION 2 FAILS AT THE
+RETRIEVAL LAYER, measured precisely**: one pull receipt (P17 working),
+tag-query ["a03J04"], surfaced [] — while e-d11811de sat reviewed AND
+eligible with provenance. Eligibility delivered; retrieval didn't. The
+sharpest finding of the frame: the last unwitnessed gap is inside the
+search tool. (3) **adjudicate! consumes :promote** (advances twice) — the
+mining pass has no phase to run in; same class as W.64's surface gap,
+one phase later. **Ruling (a): close now through the machine; the
+envelope records the mining misses honestly; the mining runs as a
+sanctioned retro pass (W.41 precedent) with f8-scribe post-close; P24
+(adjudicate stops at :promote) and P25 (memory_search subject seam,
+discovery-first with both hypotheses) dispatched for f9.**
