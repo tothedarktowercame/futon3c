@@ -19,6 +19,14 @@
     (spit f "# Mission\n")
     f))
 
+(defn- temp-pattern-file [filename body]
+  (let [root (doto (java.io.File/createTempFile "pattern-manifest-" "")
+               (.delete)
+               (.mkdirs))
+        f (io/file root filename)]
+    (spit f body)
+    f))
+
 (defn- attachment-edge [edge-id memory-id pattern-id reviewer]
   {:hx/id edge-id
    :hx/type :memory/assert
@@ -103,16 +111,17 @@
 
 (deftest flexiarg-delete-retracts-instead-of-marking-code-stale
   (let [calls (atom [])]
-    (with-redefs [sut/retract-flexiarg! (fn [path]
-                                         (swap! calls conj [:retract path])
-                                         {:ok? true :count 8})
+    (with-redefs [sut/retract-pattern-id! (fn [pattern-id]
+                                           (swap! calls conj [:retract pattern-id])
+                                           {:ok? true :count 8})
                   sut/source-file-vertices (fn [& _]
                                              (throw (ex-info "code scan forbidden" {})))
                   sut/deletion-event! (fn [m] (swap! calls conj [:event (:path m)]))]
       (sut/handle-deletion! {:path "/repo/library/demo/gone.flexiarg"
                              :root "/repo" :label "repo" :run-id 1
-                             :event-n 2 :hash "old"})
-      (is (= [[:retract "/repo/library/demo/gone.flexiarg"]
+                             :event-n 2 :hash "old"
+                             :prior-manifest ["demo/sample"]})
+      (is (= [[:retract "demo/sample"]
               [:event "/repo/library/demo/gone.flexiarg"]]
              @calls)))))
 
@@ -154,25 +163,121 @@
 
 (deftest flexiarg-rename-ingests-new-before-retracting-old
   (let [calls (atom [])]
-    (with-redefs [sut/ingest-event! (fn [m] (swap! calls conj [:ingest (:path m)]))
+    (with-redefs [sut/ingest-event! (fn [m]
+                                     (swap! calls conj [:ingest (:path m)])
+                                     {:status :pattern :failed 0})
                   sut/repoint-pattern-attachments!
                   (fn [old-id new-id]
                     (swap! calls conj [:attachments old-id new-id])
                     {:ok true :count 2})
-                  sut/retract-flexiarg! (fn [path]
-                                         (swap! calls conj [:retract path])
-                                         {:ok? true :count 8})
+                  sut/retract-pattern-id! (fn [pattern-id]
+                                           (swap! calls conj [:retract pattern-id])
+                                           {:ok? true :count 8})
                   sut/rename-event! (fn [m] (swap! calls conj [:event (:from m) (:to m)]))]
       (sut/handle-rename! {:from "/repo/library/old/sample.flexiarg"
                            :to "/repo/library/new/sample.flexiarg"
                            :root "/repo" :label "repo" :run-id 1
-                           :event-n 2 :hash "same"})
+                           :event-n 2 :hash "same"
+                           :prior-manifest ["old/sample"]
+                           :current-manifest ["new/sample"]})
       (is (= [[:ingest "/repo/library/new/sample.flexiarg"]
               [:attachments "old/sample" "new/sample"]
-              [:retract "/repo/library/old/sample.flexiarg"]
+              [:retract "old/sample"]
               [:event "/repo/library/old/sample.flexiarg"
                "/repo/library/new/sample.flexiarg"]]
              @calls)))))
+
+(deftest multiarg-deletion-retracts-complete-prior-manifest-only
+  (let [fixture (temp-pattern-file
+                 "throwaway.multiarg"
+                 "@arg throwaway/one\n! conclusion: One\n\n@arg throwaway/two\n! conclusion: Two\n")
+        manifest (sut/declaration-manifest (.getPath fixture))
+        retracted (atom [])]
+    (try
+      (is (= ["throwaway/one" "throwaway/two"] manifest))
+      (is (.delete fixture) "throwaway source is absent before deletion cleanup")
+      (with-redefs [sut/retract-pattern-id!
+                    (fn [pattern-id]
+                      (swap! retracted conj pattern-id)
+                      {:ok true :count 8})
+                    sut/deletion-event! (fn [_] nil)]
+        (sut/handle-deletion! {:path (.getPath fixture)
+                               :root (.getPath (.getParentFile fixture))
+                               :label "throwaway" :run-id 1 :event-n 1
+                               :hash "old" :prior-manifest manifest}))
+      (is (= manifest @retracted)
+          "every declared id, and no pathname-derived id, is retracted")
+      (finally
+        (.delete (.getParentFile fixture))))))
+
+(deftest multiarg-rename-fails-closed-before-prior-retraction
+  (let [calls (atom [])
+        args {:from "/tmp/old.multiarg" :to "/tmp/new.multiarg"
+              :root "/tmp" :label "throwaway" :run-id 1 :event-n 1
+              :hash "same" :prior-manifest ["throwaway/old-a" "throwaway/shared"]
+              :current-manifest ["throwaway/new-a" "throwaway/shared"]}]
+    (with-redefs [sut/ingest-event! (fn [_]
+                                     (swap! calls conj :ingest)
+                                     {:status :error :error "fixture refusal"})
+                  sut/repoint-pattern-attachments! (fn [& _]
+                                                     (swap! calls conj :attachments))
+                  sut/retract-pattern-id! (fn [_] (swap! calls conj :retract))
+                  sut/rename-event! (fn [_] (swap! calls conj :event))]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"prior declarations retained"
+                            (sut/handle-rename! args)))
+      (is (= [:ingest] @calls)
+          "failed replacement ingest cannot repoint or retract prior rows"))))
+
+(deftest multiarg-rename-ingests-before-reconciling-every-dropped-id
+  (let [calls (atom [])]
+    (with-redefs [sut/ingest-event! (fn [_]
+                                     (swap! calls conj :ingest)
+                                     {:status :pattern :failed 0})
+                  sut/retract-pattern-id! (fn [pattern-id]
+                                           (swap! calls conj [:retract pattern-id])
+                                           {:ok true :count 8})
+                  sut/rename-event! (fn [_] (swap! calls conj :event))]
+      (sut/handle-rename!
+       {:from "/tmp/old.multiarg" :to "/tmp/new.multiarg"
+        :root "/tmp" :label "throwaway" :run-id 1 :event-n 1 :hash "same"
+        :prior-manifest ["throwaway/one" "throwaway/shared" "throwaway/two"]
+        :current-manifest ["throwaway/shared"]})
+      (is (= [:ingest
+              [:retract "throwaway/one"]
+              [:retract "throwaway/two"]
+              :event]
+             @calls)))))
+
+(deftest changed-multiarg-reconciles-only-dropped-declaration-after-ingest
+  (let [fixture (temp-pattern-file
+                 "changed.multiarg"
+                 "@arg throwaway/keep\n! conclusion: Keep\n\n@arg throwaway/drop\n! conclusion: Drop\n")
+        root (.getPath (.getParentFile fixture))]
+    (try
+      (let [prior (sut/enriched-snapshot root)]
+        (spit fixture "@arg throwaway/keep\n! conclusion: Keep changed\n")
+        (let [current (sut/incremental-snapshot root prior)
+              prior-manifest (get-in prior [(.getPath fixture) :declaration-manifest])
+              current-manifest (get-in current [(.getPath fixture) :declaration-manifest])
+              calls (atom [])]
+          (is (= ["throwaway/drop" "throwaway/keep"] prior-manifest))
+          (is (= ["throwaway/keep"] current-manifest))
+          (with-redefs [sut/ingest-event! (fn [_]
+                                           (swap! calls conj :ingest)
+                                           {:status :pattern :failed 0})
+                        sut/retract-pattern-id! (fn [pattern-id]
+                                                 (swap! calls conj [:retract pattern-id])
+                                                 {:ok true :count 8})]
+            (sut/reconcile-pattern-change!
+             {:path (.getPath fixture) :root root :label "throwaway"
+              :run-id 1 :event-n 1 :source "test"
+              :prior-manifest prior-manifest
+              :current-manifest current-manifest}))
+          (is (= [:ingest [:retract "throwaway/drop"]] @calls))))
+      (finally
+        (.delete fixture)
+        (.delete (.getParentFile fixture))))))
 
 (deftest flexiarg-rename-repoints-every-attachment-and-all-nested-props
   (let [old-id "math-formalization/layer-cake-crossover-split"
@@ -263,6 +368,7 @@
 
 (deftest watched-recognizes-stack-mission-docs
   (testing "watcher mission docs live under stack repos' holes/missions paths"
+    (is (true? (sut/watched? "/home/joe/code/futon3/library/demo/family.multiarg")))
     (is (true? (sut/watched? "/home/joe/code/futon7/holes/missions/M-self-documenting-stack.md")))
     (is (true? (sut/watched? "/home/joe/code/futon2/resources/sorrys.edn")))
     (is (false? (sut/watched? "/home/joe/npt/missions/M-ukrns-wp.md")))

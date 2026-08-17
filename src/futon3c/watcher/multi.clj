@@ -39,7 +39,7 @@
                    (System/getenv "FUTON1A_URL") "http://localhost:7071"))
 (def PENHOLDER (or (System/getenv "FUTON1A_PENHOLDER") "api"))
 
-(def WATCHED-EXTS #{"clj" "cljs" "cljc" "el" "py" "flexiarg" "md"})
+(def WATCHED-EXTS #{"clj" "cljs" "cljc" "el" "py" "flexiarg" "multiarg" "md"})
 (def NOISE-PATTERN
   #"/\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/")
 
@@ -464,11 +464,31 @@
 (def ^:private canonical-pattern-facets
   ["conclusion" "context" "if" "however" "then" "because" "next-steps"])
 
+(declare file-ext)
+
 (defn flexiarg-pattern-id
   "Derive the qualified pattern id from a library flexiarg path, including
    families with nested directories. Returns nil for every other path."
   [path]
   (second (re-find #"(?:^|/)library/(.+)\.flexiarg$" (str path))))
+
+(defn pattern-source-file?
+  "True for either declaration-based pattern source extension. Identity still
+   comes from declarations, never from this predicate or the pathname."
+  [path]
+  (contains? #{"flexiarg" "multiarg"} (file-ext (str path))))
+
+(defn declaration-manifest
+  "Return every pattern id declared by PATH. Parsing failures propagate so a
+   cycle cannot replace a usable prior manifest with incomplete knowledge."
+  [path]
+  (when (pattern-source-file? path)
+    (->> (:vars (file-ingest/collect-file path))
+         (map :pattern/id)
+         (remove nil?)
+         distinct
+         sort
+         vec)))
 
 (defn fetch-pattern-relations
   [entity-id]
@@ -672,18 +692,16 @@
                        :status (:status resp) :body body
                        :document-count (count documents)})))))
 
-(defn retract-flexiarg!
-  "Retract a file-derived pattern, its canonical clauses, and its owned
+(defn retract-pattern-id!
+  "Retract one explicitly declared pattern id, its canonical clauses, and its owned
    pattern/has-* relations in verified atomic batches. The canonical entity
    IDs equal their names, so retract them directly and rely on the substrate's
    indexed post-commit verification. Then drain UUID-backed legacy duplicates
    with one type-scoped listing per pass. Legacy hyperedges minted duplicate
    pattern entities, not clause entities, so only the pattern name needs this
    discovery pass."
-  [path]
-  (let [pattern-id (or (flexiarg-pattern-id path)
-                       (throw (ex-info "not a library flexiarg path" {:path path})))
-        entity-names (cons pattern-id
+  [pattern-id]
+  (let [entity-names (cons pattern-id
                            (map #(str pattern-id "/" %) canonical-pattern-facets))
         relations (->> (fetch-pattern-relations pattern-id)
                        (filter #(str/starts-with?
@@ -703,7 +721,7 @@
           (do
             (when (>= batch 4)
               (throw (ex-info "pattern duplicates remain after retraction limit"
-                              {:path path :pattern-id pattern-id
+                              {:pattern-id pattern-id
                                :entity-ids entity-ids})))
             (let [pattern-ids (->> entity-ids
                                    (filter #(or (= pattern-id %)
@@ -722,6 +740,26 @@
                              (map #(hash-map :table :relations :id %) relations))
                   result (retract-documents! documents)]
               (recur (inc batch) (+ total (:count result))))))))))
+
+(defn retract-flexiarg!
+  "Backward-compatible single-pattern path entry point. New lifecycle code
+   consumes declaration manifests and calls retract-pattern-id! directly."
+  [path]
+  (let [pattern-id (or (flexiarg-pattern-id path)
+                       (throw (ex-info "not a library flexiarg path" {:path path})))]
+    (retract-pattern-id! pattern-id)))
+
+(defn retract-declaration-manifest!
+  "Retract exactly the explicitly declared pattern IDs in MANIFEST."
+  [manifest]
+  (reduce (fn [acc pattern-id]
+            (let [result (retract-pattern-id! pattern-id)]
+              (-> acc
+                  (update :patterns inc)
+                  (update :documents + (:count result 0))
+                  (update :results conj result))))
+          {:ok true :patterns 0 :documents 0 :results []}
+          manifest))
 
 (defn- prop-get [h k]
   (let [props (:hx/props h)
@@ -889,7 +927,10 @@
 
 (defn enriched-snapshot [root]
   (->> (walk-root root)
-       (map (fn [[p meta]] [p (assoc meta :hash (sha-256 p))]))
+       (map (fn [[p meta]]
+              [p (cond-> (assoc meta :hash (sha-256 p))
+                   (pattern-source-file? p)
+                   (assoc :declaration-manifest (declaration-manifest p)))]))
        (into {})))
 
 (defn changed-fingerprint? [old-meta new-meta]
@@ -902,10 +943,18 @@
     (reduce-kv
      (fn [acc path meta]
        (let [old-meta (get cache path)
-             hash (if (changed-fingerprint? old-meta meta)
+             changed? (changed-fingerprint? old-meta meta)
+             hash (if changed?
                     (sha-256 path)
-                    (or (:hash old-meta) (sha-256 path)))]
-         (assoc acc path (assoc meta :hash hash))))
+                    (or (:hash old-meta) (sha-256 path)))
+             manifest (when (pattern-source-file? path)
+                        (if changed?
+                          (declaration-manifest path)
+                          (or (:declaration-manifest old-meta)
+                              (declaration-manifest path))))]
+         (assoc acc path (cond-> (assoc meta :hash hash)
+                           (pattern-source-file? path)
+                           (assoc :declaration-manifest manifest)))))
      {}
      fingerprints)))
 
@@ -1035,14 +1084,34 @@
       "hash" hash "source" "cross-root-move"})
     (println (format "[cross-root-move] %s → %s" from to))))
 
+(defn- require-pattern-ingest!
+  [result context]
+  (when-not (and (= :pattern (:status result))
+                 (zero? (or (:failed result) 0)))
+    (throw (ex-info "pattern replacement ingest failed; prior declarations retained"
+                    (assoc context :ingest-result result))))
+  result)
+
+(defn reconcile-pattern-change!
+  "Ingest the complete replacement before retracting declarations dropped
+   from the prior manifest. Any ingest failure throws before cleanup."
+  [{:keys [path root label run-id event-n source prior-manifest current-manifest]}]
+  (let [result (ingest-event! {:path path :root root :label label
+                               :run-id run-id :event-n event-n :source source})]
+    (require-pattern-ingest! result {:path path})
+    (let [dropped (sort (clojure.set/difference (set prior-manifest)
+                                                 (set current-manifest)))
+          retracted (retract-declaration-manifest! dropped)]
+      {:ingest result :dropped dropped :retracted retracted})))
+
 (defn handle-deletion!
-  [{:keys [path root label run-id event-n hash]}]
-  (if (flexiarg-pattern-id path)
-    (let [retracted (retract-flexiarg! path)]
+  [{:keys [path root label run-id event-n hash prior-manifest]}]
+  (if (some? prior-manifest)
+    (let [retracted (retract-declaration-manifest! prior-manifest)]
       (deletion-event! {:path path :root root :label label
                         :run-id run-id :event-n event-n :hash hash})
-      (println (format "[deletion-pattern] %s documents=%d"
-                       path (:count retracted))))
+      (println (format "[deletion-pattern] %s patterns=%d documents=%d"
+                       path (:patterns retracted) (:documents retracted))))
     (let [victims (source-file-vertices label path)
           stale (mark-vertices-stale! victims "deletion"
                                       {"edge/witness-stale-source-file" path
@@ -1053,22 +1122,28 @@
                        path (:written stale) (:failed stale))))))
 
 (defn handle-rename!
-  [{:keys [from to root label run-id event-n hash]}]
-  (if (flexiarg-pattern-id from)
-    (let [old-pattern-id (flexiarg-pattern-id from)
-          new-pattern-id (or (flexiarg-pattern-id to)
-                             (throw (ex-info "flexiarg rename target is not a library pattern"
-                                             {:from from :to to})))]
-      (ingest-event! {:path to :root root :label label
-                      :run-id run-id :event-n event-n
-                      :source "rename-ingest"})
-      (let [attachments (repoint-pattern-attachments! old-pattern-id new-pattern-id)
-            retracted (retract-flexiarg! from)]
+  [{:keys [from to root label run-id event-n hash
+           prior-manifest current-manifest]}]
+  (if (some? prior-manifest)
+    (let [result (ingest-event! {:path to :root root :label label
+                                 :run-id run-id :event-n event-n
+                                 :source "rename-ingest"})]
+      (require-pattern-ingest! result {:from from :to to})
+      (let [old-only (sort (clojure.set/difference (set prior-manifest)
+                                                   (set current-manifest)))
+            new-only (sort (clojure.set/difference (set current-manifest)
+                                                   (set prior-manifest)))
+            attachments (if (and (= 1 (count old-only)) (= 1 (count new-only)))
+                          (repoint-pattern-attachments! (first old-only)
+                                                        (first new-only))
+                          {:ok true :count 0})
+            retracted (retract-declaration-manifest! old-only)]
         (rename-event! {:from from :to to :hash hash
                         :root root :label label
                         :run-id run-id :event-n event-n})
-        (println (format "[rename-pattern] %s → %s attachments=%d retracted=%d"
-                         from to (:count attachments) (:count retracted)))))
+        (println (format "[rename-pattern] %s → %s attachments=%d patterns=%d documents=%d"
+                         from to (:count attachments) (:patterns retracted)
+                         (:documents retracted)))))
     (let [old-vertices (source-file-vertices label from)]
       (ingest-event! {:path to :root root :label label
                       :run-id run-id :event-n event-n
@@ -1260,6 +1335,7 @@
         cross-root-tos (set (map :to cross-root-moves))]
     (doseq [{:keys [root label snapshot cache moves ingest-paths first-cycle?]} plans]
       (let [{:keys [renamed deleted added]} moves
+            cycle-ok? (atom true)
             ingest-paths (vec (remove cross-root-tos ingest-paths))
             deleted (vec (remove cross-root-froms deleted))
             cross-root-count (count (filter #(or (= root (:from-root %))
@@ -1286,24 +1362,38 @@
                              n label (count dispatch-paths) (count snapshot)))
             (doseq [p dispatch-paths]
               (mark-subtask! {:phase :file-ingest :repo label :path p})
-              (let [ev-n (swap! event-n inc)]
-                (ingest-event! {:path p :root root :label label
-                                :run-id run-id :event-n ev-n
-                                :source (if (and first-cycle? cold-scan?)
-                                          "cold-scan"
-                                          "fs-watch")}))))
+              (let [ev-n (swap! event-n inc)
+                    source (if (and first-cycle? cold-scan?)
+                             "cold-scan"
+                             "fs-watch")
+                    current-manifest (get-in snapshot [p :declaration-manifest])]
+                (if (some? current-manifest)
+                  (reconcile-pattern-change!
+                   {:path p :root root :label label :run-id run-id
+                    :event-n ev-n :source source
+                    :prior-manifest (or (get-in cache [p :declaration-manifest]) [])
+                    :current-manifest current-manifest})
+                  (ingest-event! {:path p :root root :label label
+                                  :run-id run-id :event-n ev-n
+                                  :source source})))))
           (doseq [p deleted]
             (mark-subtask! {:phase :deletion :repo label :path p})
             (let [ev-n (swap! event-n inc)]
               (handle-deletion! {:path p :root root :label label
                                  :run-id run-id :event-n ev-n
-                                 :hash (get-in cache [p :hash])})))
+                                 :hash (get-in cache [p :hash])
+                                 :prior-manifest
+                                 (get-in cache [p :declaration-manifest])})))
           (doseq [{:keys [from to hash]} renamed]
             (mark-subtask! {:phase :rename :repo label :from from :to to})
             (let [ev-n (swap! event-n inc)]
               (handle-rename! {:from from :to to :hash hash
                                :root root :label label
-                               :run-id run-id :event-n ev-n})))
+                               :run-id run-id :event-n ev-n
+                               :prior-manifest
+                               (get-in cache [from :declaration-manifest])
+                               :current-manifest
+                               (get-in snapshot [to :declaration-manifest])})))
           (when-not (stop-requested?)
             (heartbeat! {:root root :label label :run-id run-id
                          :cycle-n n
@@ -1314,13 +1404,15 @@
                          :n-added (count added)
                          :n-cross-root-moves cross-root-count}))
           (catch Throwable t
+            (reset! cycle-ok? false)
             (binding [*out* *err*]
               (println (format "[cycle %d] %s: file-ingest/heartbeat error (commit-ingest still runs): %s"
                                n label (.getMessage t))))))
         (when (and commit-ingest? (not (stop-requested?)))
           (ingest-new-commits-for-root!
            {:root root :label label :cycle-n n}))
-        (swap! per-root-cache assoc root snapshot)))
+        (when @cycle-ok?
+          (swap! per-root-cache assoc root snapshot))))
     (doseq [{:keys [from to from-root to-root from-label to-label hash]} cross-root-moves]
       (mark-subtask! {:phase :cross-root-move
                       :from-repo from-label
