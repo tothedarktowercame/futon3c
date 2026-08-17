@@ -111,7 +111,8 @@
                         :body {:lesson "ledger"}
                         :subjects [{:ref/type :problem :ref/id "t94J02"}]})
             student (conductor/dispatch-student!
-                     deposited {:mission "M-test"} "student packet")
+                     deposited {:mission "M-test" :to "caller-spoofed-seat"}
+                     "student packet")
             adjudicating (conductor/record-students!
                           student [(student-attempt)] [])
             closing (conductor/adjudicate!
@@ -123,6 +124,11 @@
         (is (= :guided-solve (get-in opened [:state :current-phase])))
         (is (= :mission-absent (get-in missing-mission [:error :error/code])))
         (is (= ["memory/deposit-1"] (:deposits deposited)))
+        (is (= "zai-1"
+               (->> (get-in student [:state :steps])
+                    (filter #(= :dispatch-student-fresh (:tool %)))
+                    last :result :sent-opts :to))
+            "the registered student seat overrides a caller-supplied :to")
         (is (nil? (get-in closed [:state :current-phase]))
             "the final advance reaches the terminal sentinel")
         (is (false? (get-in closed [:envelope :launchable?])))
@@ -339,10 +345,22 @@
                  {:action-id "scribe-lane-record"
                   :cycle-id cycle-id :version next-version
                   :operation :record-scribe-lanes
-                  :args [{:lane :solve :ran? true :yield ["memory/solver"]
+                  :args [{:lane "solve" :ran? true :yield ["memory/solver"]
                           :author "scribe-test"}]})]
             (is (:ok routed-promotion) (pr-str routed-promotion))
-            (is (:ok routed-lane) (pr-str routed-lane)))))
+            (is (:ok routed-lane) (pr-str routed-lane))
+            (let [lane-version (:version (:receipt routed-lane))
+                  unknown-lane
+                  (conductor-surface/execute-action!
+                   agent-id session-id
+                   {:action-id "scribe-lane-unknown"
+                    :cycle-id cycle-id :version lane-version
+                    :operation :record-scribe-lanes
+                    :args [{:lane "not-a-lane" :ran? true :yield []
+                            :author "scribe-test"}]})]
+              (is (false? (:ok unknown-lane)))
+              (is (= :tool-execution-failed
+                     (get-in unknown-lane [:error :error/code])))))))
       (finally
         (binding/reset-bindings!)
         (agency/unregister-agent! agent-id)

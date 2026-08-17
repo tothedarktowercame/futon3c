@@ -213,8 +213,13 @@
                            {:promotion-result
                             (recorded-results (:state handle)
                                               :promote-artifact)}))
-                 handle)]
-    (dispatch! handle :dispatch-student-fresh opts packet)))
+                 handle)
+        student-seat (get-in handle
+                             [:state :cycle/outputs :registration
+                              :reg/student-seat])]
+    ;; Machine-owned registration wins over a caller-supplied recipient.
+    (dispatch! handle :dispatch-student-fresh
+               (assoc (or opts {}) :to student-seat) packet)))
 
 (def ^:private scribe-card-path
   "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe.md")
