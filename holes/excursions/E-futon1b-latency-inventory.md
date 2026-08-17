@@ -289,6 +289,22 @@ review is auditable:
   file; `watcher/multi.clj` was untouched and its last commit is still
   `1ce6e282` (codex-3's edit had not landed).
 
+**Amendment reviewed separately (`1095dd8b`, "Classify latency inventory
+against Dionysus mission").** It landed before the review above, so the file I
+reviewed was already the amended one and my corrections sit on top of it. Checked
+specifically: all four findings carry a SURVIVES / ALREADY-KNOWN / OBSOLETED
+label with a cited commit or doc section; every futon1b line reference is
+sha-qualified (`futon1b@5838929…`, on the line above the path in the multi-line
+citations); futon1b HEAD is still `master` at `5838929` with a clean tree and no
+checkout or merge of the Dionysus branch in its reflog. Reproduced its cached
+projection read from its own command: **1.843 / 1.471 / 1.145 ms** against a
+reported 1.18–1.84 ms.
+
+One stale note: codex-5's completion message still summarises the first finding
+as "8 full scans: 4 pages x 2 scans". That is the figure corrected above — the
+committed census pays 2. The artifact is right; only the bell summary predates
+the correction.
+
 **Verdict: accepted with the correction applied.** The methodology is the
 strong part — the negative results are properly measured rather than asserted,
 the global-lock hypothesis was killed with a real concurrency experiment
