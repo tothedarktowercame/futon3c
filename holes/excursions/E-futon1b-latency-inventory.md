@@ -27,7 +27,7 @@ live PID (`2280223`). None of its absolute timings are compared with mine.
 
 | result | full scans per top-level operation | quiet measurement | loaded measurement |
 |---|---:|---:|---:|
-| **SURVIVES — confirmed:** paginated pattern entity census recomputes a full type count on every page | **8** at current counts | 287 ms for the extra count scan; **>=2.296 s** lower bound for eight scans | 10.74–13.24 s per page; **~43–53 s** for four pages |
+| **SURVIVES — confirmed:** `entities-query` recomputes a full type count on every page | **2 per page.** Committed census pays 2 (one type, one page); a two-type paginated read would pay 8 — see the review correction below | 287 ms for the extra count scan | 10.74–13.24 s per page (codex-5); **12.89–14.42 s reproduced independently by claude-2**; ~43–53 s if four pages are walked |
 | **OBSOLETED in source; observable in old live process:** projection rebuild dies when the watermark moves | up to 40 rebuild opportunities for a 40-edge repoint, but observed count not instrumented | cached projection read 1.18–1.84 ms; rebuild itself not isolated | three of four 40-edge repoints previously produced the watermark-moved 503; one observed 503 occupied ~19 s |
 | **SURVIVES — killed hypothesis:** the global memory-projection mutation lock is itself an 8x multiplier | lock acquisitions = 8, but no eightfold wall-time product | three no-op mutations: 35.8 ms, 73.8 ms, 1.270 s | 8 concurrent no-ops: each 17.03–17.28 s, batch wall 17.28 s, not ~136 s |
 | **ALREADY-KNOWN — killed hypothesis:** other single-id GET routes share `fetch-entity`'s name-scan fallback | 1 point query per id (evidence chains loop, but remain point queries) | implementation uses `xt/id` equality | no scan signature found; loaded point/no-op read can still inherit store-wide delay |
@@ -49,26 +49,49 @@ loaded page took 10–13 seconds today.
 
 ### Call path, scan, and loop
 
-1. `futon3c.watcher.multi/fetch-pattern-entity-ids` calls `fetch-type` for
-   `pattern/library` and `pattern/clause`.
-2. `fetch-type` loops over `/api/alpha/entities?type=...&limit=5000`, following
-   `:next-cursor` until empty
-   (`futon3c@1ce6e282cf7482c04cb8b03f458307d331f50647`,
-   `src/futon3c/watcher/multi.clj:581-620`).
-3. `futon1b@5838929efe59183c623706493c3e7520bef33923`,
+1. A caller reads `/api/alpha/entities?type=...&limit=5000`, following
+   `:next-cursor` until empty.
+2. `futon1b@5838929efe59183c623706493c3e7520bef33923`,
    `futon1b_server.clj:539`, dispatches each page to
    `futon1b-graph/entities-query`.
-4. `entities-query` (`futon1b@5838929efe59183c623706493c3e7520bef33923`,
+3. `entities-query` (`futon1b@5838929efe59183c623706493c3e7520bef33923`,
    `futon1b_graph.clj:361-386`) executes **two** queries from
    `:entities` per page: the requested ordered page and a separate unbounded
    type-total query. The latter exists only to return the same `:count` on
    every page.
 
-Current counts were `pattern/library=1,353` and `pattern/clause=10,181`.
-At the hard page cap of 5,000 that is one library page plus three clause pages:
-four page calls x two entity-table scans = **eight scans** per
-`fetch-pattern-entity-ids` call. The loop looks like four harmless HTTP calls;
-the endpoint looks like one harmless page; their product is the trap.
+> **CORRECTED ON REVIEW (claude-2, 2026-08-17).** The original text named
+> `futon3c.watcher.multi/fetch-pattern-entity-ids` calling a `fetch-type`
+> helper at `multi.clj:581-620` as the caller. **No such function exists** — at
+> the cited sha `1ce6e282` those lines are `fetch-pattern-entity-ids` itself,
+> which issues one `/api/alpha/entity/<name>` GET per name and never touches
+> the `entities?type=` endpoint; `fetch-type` and `:next-cursor` appear nowhere
+> in that file, and `multi.clj` had no uncommitted changes at review time. The
+> endpoint finding below is unaffected and was reproduced; only the attribution
+> and therefore the severity were wrong. Corrected severity follows.
+
+The second query is a full scan of the type on every page, and it exists only
+so `:count` can be identical on each one. That much is established from source:
+two `fxt/safe-q` calls, the second unbounded. Note the two scans are not equally
+expensive — the page query projects `[*]` while the count query projects only
+`[xt/id entity/type]` — so the count scan is the cheaper of the two, which is
+consistent with the 287 ms anchor below.
+
+**Who actually pays it, at review time.** The only committed caller in futon3c
+is `scripts/pattern_store_census.py:53`, and it requests `pattern/library`
+alone with no cursor follow — so today's census costs **2 scans, not 8**. The
+four-page/eight-scan figure describes a two-type paginated read that existed
+only as an ad-hoc probe during this session's math-library work, not as
+committed code. Current counts (`pattern/library=1,349`,
+`pattern/clause=10,169`, both drifting downward while the orphan drain runs)
+would make such a read one library page plus three clause pages.
+
+**This is therefore a prospective trap, and that is why it is worth keeping.**
+A bulk paginated resolver over both types is one of the two approaches offered
+to codex-3 in the open name-resolution packet. If that approach is taken, this
+endpoint turns 4 page calls into 8 scans underneath it, and a resolver called
+16 times per pattern deletion would inherit 128. The finding should be read as
+a constraint on that fix, not as a description of code that exists today.
 
 ### Measurements
 
@@ -233,3 +256,45 @@ ps -fp "$(ss -ltnp | sed -n 's/.*:7073 .*pid=\([0-9]*\).*/\1/p')"
 
 That topology discrepancy matters for reproducibility and should be resolved
 before a follow-up packet requires live-JVM private-var instrumentation.
+
+## Review (claude-2, 2026-08-17)
+
+Reviewed at `0ba49db4186bd1d9dfc86f66732ca6cee86f30d4`. What I checked, so the
+review is auditable:
+
+- **Reproduced a number myself**, from the report's own command rather than
+  trusting it: `pattern/library` 13.52 s / 310,511 B, `pattern/clause` 14.42 s /
+  3,071,776 B, library repeats 12.89 s and 13.07 s. codex-5 reported
+  10.74–13.24 s. Same regime, mine slightly higher with two Codex jobs in
+  flight. **Finding established.**
+- **Verified the core claim at source**, not from the prose: `entities-query`
+  really does issue two `fxt/safe-q` calls, the second an unbounded scan of the
+  type existing only to populate `:count`.
+- **Rejected the call path.** See the correction above; the cited function does
+  not exist at the cited sha or in the working tree. Severity was overstated by
+  4x against committed code, and misattributed to a function that cannot
+  produce it.
+- **Row counts drift** between codex-5's reading (1,353 / 10,181), mine
+  (1,349 / 10,169) and an earlier one today (1,355 / 10,175). That is the
+  orphan-drain retracting `math/*` rows, not an inconsistency — but any future
+  measurement here should state its counts, as this report correctly did.
+- **`:next-cursor` is real** and is the intended pagination mechanism
+  (`entities-query` returns it when the window is full).
+  `scripts/pattern_store_census.py` does not use it and does not paginate at
+  all; it relies on a single 5,000-row page and warns on truncation. That is a
+  latent correctness gap in the census, separate from this latency finding, and
+  it should be fixed when the census is next touched.
+- **No JVM was restarted**: futon1b still PID 2280223, futon3c still PID
+  2286732, matching the pre-packet observation. The commit touched only this
+  file; `watcher/multi.clj` was untouched and its last commit is still
+  `1ce6e282` (codex-3's edit had not landed).
+
+**Verdict: accepted with the correction applied.** The methodology is the
+strong part — the negative results are properly measured rather than asserted,
+the global-lock hypothesis was killed with a real concurrency experiment
+(8 concurrent no-ops in 17.28 s wall, not ~136 s), the OBSOLETED/observable
+distinction on the 503 is stated exactly right, and the report explicitly
+declines to compare cross-host BEFORE numbers. The one defect is a call-path
+attribution that source inspection contradicts — which is precisely the failure
+mode this excursion exists to catch, so it is recorded rather than quietly
+edited away.
