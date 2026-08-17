@@ -11349,3 +11349,22 @@ decode over JSON (closed vocab), dispatch-student derives its seat from
 the registration (guide finding #6 fixed). f8-guide belled: record the
 preserved solve-lane report at :promote; no interruption to its student
 park.
+
+## W.70 Cascade formation analyzed as patterns; decision deferred to evidence (2026-08-17)
+
+Operator: upstreams change dynamically and cascades are often wanted
+on-the-fly — hard-coding an upstream tends against that; "develop some
+pattern-based analysis of exactly this problem before we make a
+decision." Done: `docs/cascade-formation-patterns.md` — five patterns
+with conditions/actions/because-clauses drawn from the mission's own
+record: DECLARED SKELETON (sparse, plural, defeasible — what makes edges
+witnessable), ON-THE-FLY CASCADE (Moran's AA — contextual relevance
+can't be pre-declared), EDGES EARN PERMANENCE (the bridge: derived edges
+receipted on use, promoted to declaration by review — §6's demand-side
+principle applied to structure, the same attach-then-review economy as
+memories), REPOINTABLE DECLARATIONS (revision-process quality; tombstones
+not silent drops), THE SLICE IS THE UNIT OF USE (skeleton for measuring,
+slice for acting, provenance separating them — the P16 idiom). Three
+falsifiers stated, each observable within frames. **Proposed: implement
+only the use-receipts first, run 2-3 frames, let the data choose.**
+Awaiting the operator's read.
