@@ -11221,3 +11221,25 @@ answer, and the analyst role's three-phase evolution — bench now, carded
 seat when cadence stabilizes (fresh per N frames, accumulates ONLY into
 the store and record), auto-drafting the whitepaper's ladder section
 eventually. Frame-8 concurrently: solver siege running.
+
+## W.64 f8-guide finds the surface gap at :promote-solver; frame HELD correctly; P22 urgent (2026-08-17)
+
+a03J04 CLOSED first-dispatch (commits a300b828+dbe92c61, guide's OWN
+independent compile + axiom probe — the verification discipline now
+reproduces in fresh guides); intervene deposit e-d11811de; scribe review
+REAL (approve, new pattern file math-formalization/layer-cake-crossover-
+split, own compile witness). THEN: :promote-artifact refused
+:conductor-operation-unknown — **P13 gave the engine the op at
+:promote-solver, P12 gave the surface dispatch-scribe, nobody gave the
+surface promote-artifact or record-scribe-lanes.** The only creator of
+promotion steps is adjudicate! at :promote — W.47's first promote was
+unreachable BY CONSTRUCTION through the walls. The guide HELD: no student
+dispatch (would silently rerun the empty shelf), no Drawbridge dodge,
+verdict preserved, ruling requested — its card working exactly as
+written, third consecutive exemplary fresh guide. **P22 dispatched
+urgent** (codex-3): both ops mirrored on dispatch-scribe!, with an
+explicit P14-semantics question (the scribe's verdict vs reviewer==actor
+at the surface — do not weaken P14; state the correct execution flow).
+Hot-reload on merge per P12 precedent (engine untouched). Guide findings
+ledger for v2.2: :mission opts, deposit subjects shape, dispatch-scribe
+:problem opts, all undocumented — plus this gap.
