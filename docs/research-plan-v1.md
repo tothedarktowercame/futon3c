@@ -234,3 +234,57 @@ specific pattern is reachable through its general parents).
 5. The because-clause discipline (Moran's best-aged sentence: transparent
    beats correct; evidence detachable and replaceable) is already our
    witness standard — the cascade makes it navigable.
+
+---
+
+## 10. The Analyst, concretely (v1.3, 2026-08-17): duties, prerequisites,
+## and the cascade as its first jurisdiction
+
+**What two frames of bench practice established as the seat's duties**
+(each performed manually at least once; the practice was the
+requirements-gathering):
+- A. At frame close: run transfer checks; append the series entry
+  (`analysis/series.edn` — founded and backfilled with f7/f8; the format
+  is the seat's contract; append-only, every claim receipted).
+- B. Spectral/S capture per frame (components, sharing, λ₂ when
+  non-degenerate) beside the checks score.
+- C. Cascade bookkeeping (once Pattern-3 receipts exist): collect edge
+  use-receipts into promotion manifests for independent review — the
+  Analyst PROPOSES structure, a reviewer seat judges it, exactly the
+  memory-promotion economy at the edge level.
+- D. Curation readings: bespoke-rate, sharing count, duplicate-pattern
+  candidates, consolidation proposals (the W.67 fragmentation reading was
+  the prototype).
+- E. Case-study accretion + defect-ledger classification (CS-1..4).
+- F. PROPOSE design packets from divergences; never dispatch — the
+  operator or lab manager dispatches. (Divergence examples that would
+  have been Analyst product: predicted-5/6-measured-3/6; the C3
+  false-fail; the P25 two-correct-layers finding.)
+- G. Whitepaper §5 accretion from the series.
+
+**Prerequisites before a carded Analyst can act (the operator's "what
+needs to be in place"), in build order:**
+1. **Cascade use-receipts** (Pattern 3's observation half) — the ONE
+   build item all five cascade patterns agree on regardless of the
+   declared/derived decision; without it, duties C and D have no data.
+   Small packet; awaits the operator's word.
+2. **Instruments as receipted invocations**: transfer_checks + S capture
+   with stable output locations (exists as bench scripts; needs only the
+   convention, not new machinery).
+3. **Close-hook wake topology**: the Analyst wakes at frame close (a
+   completion bell to the analyst seat from close!), never mid-frame —
+   the quiet-down property the operator requires, made structural.
+4. **Read-surface completeness**: mostly done; residuals are the known
+   projection gap and parked-listing under-report.
+5. **The Analyst card**: duties A-G, propose-never-dispatch, verdicts
+   with reasons, fresh-per-N-frames, memory = store + record + series
+   file only. Drafted AFTER 1-3 exist so the card describes a real
+   surface (the guide cards' lesson: cards that describe unbuilt
+   machinery generate holds).
+
+**Sequencing proposal:** f9 runs with the lab manager still on the
+bench (duties A-G manual, third data point, validating the close-hook
+timing); the use-receipts packet lands during f9; the Analyst card is
+drafted from the by-then-stable practice; f10 or f11 seats the first
+carded Analyst. Full closure = every role in the room, including the one
+that watches the room.

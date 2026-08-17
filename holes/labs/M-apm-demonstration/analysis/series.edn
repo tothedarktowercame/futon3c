@@ -1,0 +1,47 @@
+;; The frame series — the Analyst's accumulator.
+;; One entry per closed frame; append-only; each claim carries its receipt.
+;; This file is the Analyst seat's ONLY routine write surface (besides
+;; proposals); its format is the seat's contract. Founded 2026-08-17 by
+;; claude-7 (lab manager), backfilled from the mission record.
+[{:frame "f7"
+  :problem "a98A01"
+  :closed "2026-08-16"
+  :disposition :defective-registration            ;; ruling (b), W.54
+  :mathematics {:closed? true :dispatches 1 :axiom-clean? true
+                :merged "apm-lean d937780"}
+  :transfer-checks {:score "2/6"
+                    :fails [:C1 :C2 :C3 :C4]
+                    :receipt "W.61"}
+  :loss-components {:surfaced 0                   ;; push empty; eligible pre-P16 invisible
+                    :used-receipted 0             ;; pull worked but unmeasured (pre-P17)
+                    :used-unreceipted 1           ;; e-c0a2d2fe via pull, transcript-verified (W.55)
+                    :converted-artifacts 5}       ;; student commits, part 1 of 3, unreported
+  :store-delta {:deposits 1 :promotions 0 :new-patterns 0}
+  :spectral {:reviewed-memories 8 :patterns 8 :shared-nodes 0
+             :note "post retro-pass; perfect star-forest (W.67 S-0)"}
+  :headline "Transfer happened invisibly (pull, unreceipted); five predicates separated (CS-1); machine end-to-end for the first time"
+  :defects-found 11 :defects-fixed-or-queued 11}
+
+ {:frame "f8"
+  :problem "a03J04"
+  :closed "2026-08-17"
+  :disposition :closed                            ;; honest refusal envelope, W.72
+  :mathematics {:closed? true :dispatches 1 :axiom-clean? true
+                :merged nil}                      ;; merge-back pending (protocol queued)
+  :transfer-checks {:score "3/6"
+                    :fails [:C1 :C3 :C4]
+                    :predicted "5/6"
+                    :divergence "C3 suspected false-fail (instrument extraction path; guide verified provenance at receipt level); C4 = pull-join to outputs under diagnosis"
+                    :receipt "W.72"}
+  :loss-components {:surfaced 419                 ;; eligible incl. e-d11811de w/ provenance
+                    :used-receipted 0             ;; one pull receipt, surfaced [] (P25 seam)
+                    :used-unreceipted 0
+                    :converted-artifacts 0}       ;; student plan-only, 9/60 min (runner finding)
+  :store-delta {:deposits 4                       ;; e-d11811de + 3 retro-mined
+                :promotions 1                     ;; e-d11811de (in-cycle, witnessed chain)
+                :proposed 3                       ;; retro manifest, claude-8 reviewing
+                :new-patterns 2}                  ;; layer-cake; isolate-computational-kernel
+  :spectral {:reviewed-memories 9 :patterns 10 :shared-nodes 0
+             :note "capture pending claude-8 verdicts; first shared node possible"}
+  :headline "First fully witnessed transfer chain (deposit->review->promotion->eligibility w/ provenance); sharpest finding: eligibility delivered, retrieval didn't (P25: two correct layers composed into the miss)"
+  :defects-found 9 :defects-fixed-or-queued 9}]
