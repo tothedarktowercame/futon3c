@@ -9,6 +9,8 @@
    :guide-solver conductor/guide-solver!
    :dispatch-student conductor/dispatch-student!
    :dispatch-scribe conductor/dispatch-scribe!
+   :promote-artifact conductor/promote-artifact!
+   :record-scribe-lanes conductor/record-scribe-lanes!
    :record-solver-attempt conductor/record-solver-attempt!
    :deposit conductor/deposit!
    :record-students conductor/record-students!
@@ -33,12 +35,20 @@
     disposition))
 
 (defn- reviewer-mismatch [agent-id operation args]
-  (when (= :adjudicate operation)
+  (case operation
+    :adjudicate
     (some (fn [promotion]
             (let [reviewer (:reviewer promotion)]
               (when (and (string? reviewer) (not= (str agent-id) reviewer))
                 {:reviewer reviewer :acting-identity (str agent-id)})))
-          (:promotion-result (first args)))))
+          (:promotion-result (first args)))
+
+    :promote-artifact
+    (let [reviewer (:reviewer (first args))]
+      (when (and (string? reviewer) (not= (str agent-id) reviewer))
+        {:reviewer reviewer :acting-identity (str agent-id)}))
+
+    nil))
 
 (defn- transport-args [agent-id operation args]
   ;; JSON has no keyword value type. Decode the one closed enum in the public
@@ -49,7 +59,10 @@
     (update-in [0 :outcome] #(if (string? %) (keyword %) %))
 
     (and (= :adjudicate operation) (map? (first args)))
-    (update 0 #(authenticate-promotion-reviewers agent-id %))))
+    (update 0 #(authenticate-promotion-reviewers agent-id %))
+
+    (and (= :promote-artifact operation) (map? (first args)))
+    (update 0 assoc :acting-identity (str agent-id))))
 
 (defn execute-action!
   "Execute a closed-vocabulary conductor action for an authenticated session."
