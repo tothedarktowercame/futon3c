@@ -11544,3 +11544,62 @@ finding is closed: a deposit can carry the problem-id tag P25's lesson
 asked for, and tag-recall and subject-fallback now cover the same seam
 from both sides — belt and suspenders on the retrieval miss that f8
 made famous.
+
+## W.77 Analyst succession: claude-2 takes the seat (2026-08-17)
+
+**Seat:** `claude-2`, on the roster and invoke-ready; an Opus lane, not
+frame-scoped. Frame seats (f8-guide and successors) are minted per problem
+via `POST /api/alpha/frames/mint-seats` and are not mine to reuse.
+
+**Read before accepting**, in claude-7's stated order: the succession handoff
+(`analysis/HANDOFF-analyst-succession.md`, all 178 lines — machine state,
+armed-but-inert set, the protocols that bite, substrate facts, S-capture
+method); `docs/research-plan-v1.md` §10 (duties A–G and the five build-out
+prerequisites) and §11 (the operator's sawmill-dual ruling); the mission arc
+W.61–W.76, reading W.72–W.76 in full and the earlier headers for shape. Also
+read `analysis/series.edn` end to end, since the handoff names its format as
+the seat's contract rather than a convenience.
+
+**What I understand the ruling to change.** §11 retires propose-only: the
+defect pipeline runs at the cadence of the problem pipeline, and the backlog
+closes inside the machine cycle rather than through the operator's attention.
+Concretely I own divergence → small belled packet → park → review the gate
+with my own hands → merge → register the hypothesis the fix implies. The
+operator gates DECISIONS; I gate IMPLEMENTATIONS. W.75/W.76 are the template
+and I will hold my own reviews to their standard: read the diff, run the
+gates myself, and state what was checked rather than restating the packet's
+own report.
+
+**The four f9 hypotheses I now own** (handoff §7, adjudicated at f9 close):
+
+1. **Transfer checks 6/6** — C1 flips when P21 seat attribution goes live at
+   the restart. f8 rescored 5/6 under instrument v2 with C1 the lone honest
+   fail, so this is a single-predicate prediction, not a hope.
+2. **First tag-recall hit** — a deposit tagged with the problem id is found
+   by the student's `memory_search tags [<problem-id>]`. The tags interface
+   (W.76) and P25's subject fallback (W.73) approach the f8 retrieval miss
+   from opposite sides; this predicts they meet.
+3. **Student lane, component (c) of the loss function** — with the 60-minute
+   budget (P19) and a stocked shelf, uses co-occurring with commits. f8's
+   student was plan-only at 9/60 minutes and converted nothing, so this is
+   the first frame where (c) can be non-zero.
+4. **S-2: does sharing grow unprompted?** — whether the scribe attaches to
+   existing patterns without review pressure, or whether shared nodes only
+   appear when a reviewer pushes for them. S-0 was a perfect star-forest;
+   S-1 produced the first shared node under review. S-2 is the trend test.
+
+**Holding as instructed.** No frame-9 open, no packets dispatched, until Joe
+gives the word. Two items sit on his desk: the cascade use-receipts packet
+(plan §10 prerequisite 1, and the gate on duties C and D) and the f9
+registration. The JVM has not been restarted, so P21/P24/P25 and the tags
+interface remain armed and inert — the restart is an operator-visible event
+and f9's opening is the moment they go live together.
+
+One correction I will carry into the seat, from the handoff's own protocol
+list: I put a placeholder job-id in a park's `awaiting` two days ago and it
+woke a session on its deadline with `invoke-job-not-found`. The park API
+accepts any string there and never checks it against the job registry.
+Recorded in `README-park.md`; the rule is to take the job-id out of the
+dispatch response and park in a second call.
+
+— claude-2, accepting the Analyst seat, 2026-08-17
