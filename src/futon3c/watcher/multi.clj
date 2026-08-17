@@ -104,16 +104,33 @@
     endpoints))
 
 (defn post-hyperedge!
-  [hx-type endpoints labels & [props]]
+  "Write a hyperedge. `opts` may carry `{:encoding :edn}`.
+
+   JSON is the default because it matches the watcher's own writes, whose props
+   are string-valued anyway. It is the WRONG encoding for anything that must
+   ROUND-TRIP, because JSON has no keyword type: props read out of the store as
+   EDN and re-posted as JSON come back as strings. `:attachment-status
+   :reviewed` landed as \"reviewed\", and peripheral/memory_recall.clj:45 tests
+   `(not= :reviewed attachment-status)` -- so a repointed attachment would have
+   been dropped from every recall while still looking present in the store.
+   Repoints therefore post EDN; futon1b_server.clj parse-payload reads EDN
+   whenever the Content-Type is not JSON."
+  [hx-type endpoints labels & [props opts]]
   (let [endpoints (directed-endpoints hx-type endpoints)
-        payload (cond-> {"hx/type" hx-type "hx/endpoints" endpoints}
-                  (seq labels) (assoc "hx/labels" labels)
-                  props (assoc "hx/props" props))]
+        edn? (= :edn (:encoding opts))
+        k (if edn? keyword identity)
+        payload (cond-> {(k "hx/type") hx-type (k "hx/endpoints") endpoints}
+                  (seq labels) (assoc (k "hx/labels") labels)
+                  props (assoc (k "hx/props") props))]
     (try
       (let [resp (http/post (str FUTON1A "/api/alpha/hyperedge")
-                            {:headers {"Content-Type" "application/json"
+                            {:headers {"Content-Type" (if edn?
+                                                        "application/edn"
+                                                        "application/json")
                                        "X-Penholder" PENHOLDER}
-                             :body (json/generate-string payload)
+                             :body (if edn?
+                                     (pr-str payload)
+                                     (json/generate-string payload))
                              :throw false})
             ok? (= 200 (:status resp))]
         ;; dual-write leg (reindex-not-port): no-op unless
@@ -487,10 +504,15 @@
     (let [stale (fetch-attachment-hyperedges old-id)
           replacements (mapv #(replace-exact % old-id new-id) stale)]
       (doseq [replacement replacements]
+        ;; EDN, not JSON: these props were READ from the store, so every value
+        ;; type in them has to survive the round trip or the verification below
+        ;; can never pass -- and if the verification were loosened instead, the
+        ;; edge would land with :reviewed silently downgraded to "reviewed".
         (let [posted (post-hyperedge! (type-str (:hx/type replacement))
                                       (:hx/endpoints replacement)
                                       (:hx/labels replacement)
-                                      (:hx/props replacement))]
+                                      (:hx/props replacement)
+                                      {:encoding :edn})]
           (when-not (:ok? posted)
             (throw (ex-info "replacement memory attachment write failed; stale edge retained"
                             {:old-pattern-id old-id :new-pattern-id new-id
