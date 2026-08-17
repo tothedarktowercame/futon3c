@@ -274,6 +274,80 @@
         (is (= :reviewer-not-actor
                (get-in result [:finding :failure])))))))
 
+(deftest promote-phase-tools-are-conductor-and-surface-routable
+  (let [{:keys [config paths]} (fixture)
+        agent-id "promote-guide"
+        session-id "promote-guide-session"]
+    (try
+      (let [opened (conductor/open-frame! config)
+            refused (conductor/promote-artifact!
+                     opened {:artifact-id "artifact/too-early"})
+            promote-state (assoc-in opened [:state :current-phase]
+                                    :promote-solver)
+            promoted (conductor/promote-artifact!
+                      promote-state
+                      {:artifact-id "artifact/solver"
+                       :importable? true :need-tags ["solver"]})
+            wrong-author
+            (conductor/record-scribe-lanes!
+             promoted {:lane :solve :ran? true :yield []
+                       :author "not-the-scribe"})
+            recorded
+            (conductor/record-scribe-lanes!
+             promoted {:lane :solve :ran? true
+                       :yield ["memory/solver"] :author "scribe-test"})]
+        (is (false? (:ok refused)) "the engine keeps phase authority")
+        (is (:ok promoted) (pr-str (:error promoted)))
+        (is (= :promote-artifact
+               (->> (get-in promoted [:state :steps])
+                    (remove #(= :problem-save (:tool %))) last :tool)))
+        (is (false? (:ok wrong-author)) "P4 rejects a non-scribe author")
+        (is (:ok recorded) (pr-str (:error recorded)))
+        (is (= "scribe-test"
+               (->> (get-in recorded [:state :steps])
+                    (filter #(= :record-scribe-lanes (:tool %)))
+                    last :result :author)))
+
+        (agency/register-agent!
+         {:agent-id agent-id :type :claude
+          :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})
+          :session-id session-id})
+        (is (:ok (binding/install! agent-id session-id promote-state)))
+        (let [{:keys [cycle-id version]} (binding/status agent-id session-id)
+              mismatched
+              (conductor-surface/execute-action!
+               agent-id session-id
+               {:action-id "promotion-wrong-reviewer"
+                :cycle-id cycle-id :version version
+                :operation :promote-artifact
+                :args [{:artifact-id "artifact/reviewed"
+                        :reviewer "scribe-test"}]})]
+          (is (= :reviewer-not-actor (:error/code mismatched))
+              "P14 forbids the guide from impersonating the scribe")
+          (let [routed-promotion
+                (conductor-surface/execute-action!
+                 agent-id session-id
+                 {:action-id "promotion-by-actor"
+                  :cycle-id cycle-id :version version
+                  :operation :promote-artifact
+                  :args [{:artifact-id "artifact/reviewed"
+                          :reviewer agent-id}]})
+                next-version (:version (:receipt routed-promotion))
+                routed-lane
+                (conductor-surface/execute-action!
+                 agent-id session-id
+                 {:action-id "scribe-lane-record"
+                  :cycle-id cycle-id :version next-version
+                  :operation :record-scribe-lanes
+                  :args [{:lane :solve :ran? true :yield ["memory/solver"]
+                          :author "scribe-test"}]})]
+            (is (:ok routed-promotion) (pr-str routed-promotion))
+            (is (:ok routed-lane) (pr-str routed-lane)))))
+      (finally
+        (binding/reset-bindings!)
+        (agency/unregister-agent! agent-id)
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
 (deftest conductor-action-route-owns-one-live-handle
   (let [{:keys [config paths]} (fixture)
         agent-id "claude-7"

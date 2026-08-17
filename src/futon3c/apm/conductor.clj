@@ -238,6 +238,16 @@
                  :scribe-card-path scribe-card-path}]
     (dispatch! handle :dispatch-scribe (merge (or opts {}) context) packet)))
 
+(defn promote-artifact!
+  "Record one promotion through the phase-gated problem tool."
+  [handle opts]
+  (:handle (saved-step handle :promote-artifact [(or opts {})])))
+
+(defn record-scribe-lanes!
+  "Record one scribe lane report through the phase-gated problem tool."
+  [handle opts]
+  (:handle (saved-step handle :record-scribe-lanes [(or opts {})])))
+
 (defn record-solver-attempt! [handle attempt extra-outputs]
   (try
     (:handle
