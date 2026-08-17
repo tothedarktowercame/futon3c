@@ -1345,9 +1345,7 @@
                          [(:memory/id memory) kind])))
                (:memories recall-result))
          :memory-use/withheld-ids withheld-ids)]
-    {:subject {:ref/type (if (str/starts-with? problem "bpm-")
-                           :bpm-problem
-                           :apm-problem)
+    {:subject {:ref/type :problem
                :ref/id problem}
      :type :pattern-outcome
      :claim-type :observation

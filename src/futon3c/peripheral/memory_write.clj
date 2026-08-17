@@ -7,6 +7,7 @@
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.evidence.subject :as evidence-subject]
             [futon3c.social.shapes :as shapes]
             [org.httpkit.client :as http])
   (:import [java.time Instant]
@@ -43,11 +44,7 @@
 
 (defn- normalize-subject
   [subject]
-  (cond-> subject
-    (and (map? subject)
-         (string? (:ref/type subject))
-         (not (str/blank? (:ref/type subject))))
-    (update :ref/type #(keyword (str/replace % #"^:" "")))))
+  (evidence-subject/normalize-ref subject))
 
 (defn- normalize-payload
   [payload]

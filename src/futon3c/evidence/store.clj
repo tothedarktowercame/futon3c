@@ -8,6 +8,7 @@
    R9 (structured events): entries are typed maps (EvidenceEntry), not free text.
    R4 (loud failure): operations return typed results; no silent failures."
   (:require [futon3c.evidence.backend :as backend]
+            [futon3c.evidence.subject :as subject]
             [futon3c.social.shapes :as shapes])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -121,17 +122,23 @@
   "Query a specific store.
    Returns [EvidenceEntry], excluding ephemeral entries by default."
   [store evidence-query]
-  (if-not (shapes/valid? shapes/EvidenceQuery evidence-query)
-    []
-    (backend/-query (resolve-backend store) evidence-query)))
+  (let [evidence-query (cond-> evidence-query
+                         (:query/subject evidence-query)
+                         (update :query/subject subject/normalize-ref))]
+    (if-not (shapes/valid? shapes/EvidenceQuery evidence-query)
+      []
+      (backend/-query (resolve-backend store) evidence-query))))
 
 (defn count*
   "Count entries in a specific store.
    Excludes ephemeral entries by default."
   [store evidence-query]
-  (if-not (shapes/valid? shapes/EvidenceQuery evidence-query)
-    0
-    (backend/-count (resolve-backend store) evidence-query)))
+  (let [evidence-query (cond-> evidence-query
+                         (:query/subject evidence-query)
+                         (update :query/subject subject/normalize-ref))]
+    (if-not (shapes/valid? shapes/EvidenceQuery evidence-query)
+      0
+      (backend/-count (resolve-backend store) evidence-query))))
 
 (defn query
   "Query the default store. Returns [EvidenceEntry] (excludes ephemeral by default)."

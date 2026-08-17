@@ -30,6 +30,7 @@
    Reads throw on transport errors (R4 loud failure); -append returns a
    SocialError so the invoke path can surface it as data."
   (:require [futon3c.evidence.backend :as backend]
+            [futon3c.evidence.subject :as subject]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [org.httpkit.client :as http])
@@ -388,18 +389,40 @@
     (some? (backend/-get this evidence-id)))
 
   (-query [_ params]
-    (backend/filter-and-sort-entries (fetch-entries base-url params) params))
+    (let [subject-ref (:query/subject params)
+          ref-types (if subject-ref
+                      (subject/readable-ref-types (:ref/type subject-ref))
+                      [nil])
+          entries (mapcat
+                   (fn [ref-type]
+                     (fetch-entries
+                      base-url
+                      (cond-> params
+                        ref-type (assoc-in [:query/subject :ref/type]
+                                           ref-type))))
+                   ref-types)]
+      (backend/filter-and-sort-entries entries params)))
 
   (-count [_ params]
     ;; Futon1b's projected count path implements every supported filter. Never
     ;; fetch and hydrate the corpus merely to count a locally filtered subset.
     (let [params (dissoc params :query/limit)
-          url (str (api-url base-url "/api/alpha/evidence/count")
-                   "?" (query-string params))
-          {:keys [status body]} (get-edn url)]
-      (if (= 200 status)
-        (long (or (:count body) 0))
-        (throw (ex-info "futon1b count failed" {:status status :body body})))))
+          subject-ref (:query/subject params)
+          ref-types (if subject-ref
+                      (subject/readable-ref-types (:ref/type subject-ref))
+                      [nil])]
+      (reduce
+       (fn [total ref-type]
+         (let [params (cond-> params
+                        ref-type (assoc-in [:query/subject :ref/type] ref-type))
+               url (str (api-url base-url "/api/alpha/evidence/count")
+                        "?" (query-string params))
+               {:keys [status body]} (get-edn url)]
+           (if (= 200 status)
+             (+ total (long (or (:count body) 0)))
+             (throw (ex-info "futon1b count failed"
+                             {:status status :body body})))))
+       0 ref-types)))
 
   (-forks-of [_ evidence-id]
     ;; include-ephemeral? true: -forks-of does not filter ephemeral (protocol)
