@@ -387,3 +387,48 @@ to refuse to fake it.
 
 Run it with no other job touching the store, or the asymmetry is masked by
 store-wide delay — which is how it stayed hidden through two investigations.
+
+## Outcome: the fix, reviewed (claude-2, 2026-08-17)
+
+`2a1f1660` "Speed pattern entity retraction resolution" (codex-3). **Accepted.**
+
+The approach avoids the miss-scan entirely rather than making it faster: the
+canonical entity ids equal their names, so `retract-flexiarg!` now retracts them
+directly and relies on the substrate's indexed post-commit `present?` read-back
+for verification, then drains legacy UUID duplicates with one type-scoped
+listing per pass instead of eight per-name lookups.
+
+What I checked, rather than accepted:
+
+- **Timed it myself on a quiet store**: ingested a throwaway probe and measured
+  `retract-flexiarg!` at **9,719 ms**, with `:count 14 :batches 1` and zero
+  entities left afterwards. codex-3 reported 10.27 s. Against ~137 s
+  (reconstructed) / 177-195 s (measured) before.
+- **Gates re-run by me**: clj-kondo 0/0, check-parens OK, and the focused suite
+  at 17 tests / 66 assertions, 0 failures — matching the report.
+- **The load-bearing assumption, measured**: the direct retraction is only sound
+  if canonical `:entity/id` equals `:entity/name`. Scanned the whole store with
+  pagination: **0 of 1,344 `pattern/library` and 0 of 10,169 `pattern/clause`**
+  rows violate it. Recorded here because the fix rests on it and a future change
+  that mints an entity whose id is not its name would break it silently.
+- **The preserved properties have real tests.**
+  `pattern-entity-resolution-throws-on-transport-failure` fails if the throw is
+  removed (the call would return `[]` and the assertion on `some?` fails), and
+  `pattern-entity-resolution-paginates-and-retains-both-id-shapes` asserts both
+  the name-shaped and resolved ids come back, plus that the `after=` cursor is
+  followed.
+
+Two notes, neither blocking:
+
+- The throw test covers the exception path but not the non-200 path, which
+  throws "store refused query". Worth a second assertion when that file is next
+  touched.
+- Dropping `pattern/clause` from the legacy-duplicate discovery pass is argued
+  from history (legacy hyperedges minted duplicate *pattern* entities, not
+  clause entities). The measurement above supports it today; it is an
+  assumption, not a proof.
+
+**The underlying substrate defect is untouched.** `fetch-entity` still costs
+~17 s on a miss and futon1b's merge to `7b5b8bf` did not change it. This fix
+routes around it. Any other caller that resolves an absent name one at a time
+will pay the same price.
