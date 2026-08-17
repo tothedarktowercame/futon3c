@@ -118,12 +118,21 @@
             closing (conductor/adjudicate!
                      adjudicating
                      {:outcome :tier-a :residual-sorries 1 :axiom-clean? false
-                      :promotion-result []})
+                      :promotion-result
+                      [{:artifact-id "artifact/backward-compatible"
+                        :importable? true :need-tags ["compat"]}]})
             closed (conductor/close! closing)]
         (is (:ok opened) (pr-str (:error opened)))
         (is (= :guided-solve (get-in opened [:state :current-phase])))
         (is (= :mission-absent (get-in missing-mission [:error :error/code])))
         (is (= ["memory/deposit-1"] (:deposits deposited)))
+        (is (= :promote (get-in closing [:state :current-phase]))
+            "adjudicate parks at the explicit post-adjudication work phase")
+        (is (= ["artifact/backward-compatible"]
+               (->> (get-in closing [:state :steps])
+                    (filter #(= :promote-artifact (:tool %)))
+                    (mapv #(get-in % [:result :promo/artifact-id]))))
+            "legacy adjudication promotions are recorded without consuming the phase")
         (is (= "zai-1"
                (->> (get-in student [:state :steps])
                     (filter #(= :dispatch-student-fresh (:tool %)))
@@ -471,7 +480,8 @@
         (let [adjudicated (action! "a-adjudicate" :adjudicate
                                    [{:outcome :tier-a :residual-sorries 1
                                      :axiom-clean? false :promotion-result []}])]
-          (is (:ok adjudicated) (pr-str adjudicated)))
+          (is (:ok adjudicated) (pr-str adjudicated))
+          (is (= "promote" (:phase adjudicated))))
         (let [closed (action! "a-close" :close [])]
           (is (:ok closed) (pr-str closed)))
         (is (= false (:bound? (status! agent-id session-id))))
