@@ -236,7 +236,11 @@
                   :volatile {:type "boolean" :description "True when valid-until-changed."}}
                  ["name" "hook" "kind" "body" "subjects"])}
    {:name "memory_search"
-    :description "Search the evidence store by filters (type, claim-type, author, since, tags). Returns the memory envelope {:frame :query :items}. Read-only."
+    :description (str "Search the evidence store by filters (type, claim-type, "
+                      "author, since, tags). A lone problem-id tag also matches that "
+                      "subject id; prefer subject {ref/type: problem, ref/id: ID} "
+                      "when scoping by problem. Returns the memory envelope "
+                      "{:frame :query :items}. Read-only.")
     :parameters (json-schema
                  {:subject {:type "object" :description "ArtifactRef {:ref/type :ref/id} to scope the search to one subject."}
                   :type {:type "string"

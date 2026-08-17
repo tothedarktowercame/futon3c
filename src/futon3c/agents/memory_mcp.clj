@@ -8,6 +8,7 @@
             [clojure.string :as str]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as store]
+            [futon3c.peripheral.memory-backend :as memory-backend]
             [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.pull-receipts :as pull-receipts])
   (:gen-class))
@@ -46,7 +47,9 @@
 
 (def memory-search-description
   (str "Search the evidence store by subject, type, claim type, author, "
-       "timestamp, or tags. Returns matching evidence entries. Read-only."))
+       "timestamp, or tags. A lone problem-id tag also matches that subject; "
+       "prefer subject {ref/type: problem, ref/id: ID} when scoping by problem. "
+       "Returns matching evidence entries. Read-only."))
 
 (def memory-search-schema
   {:type "object"
@@ -140,8 +143,12 @@
                     :isError (not (:ok receipt))}})
 
         "memory_search"
-        (let [items (store/query* evidence-store
-                                  (search-query (or (:arguments params) {})))
+        (let [query (search-query (or (:arguments params) {}))
+              items (->> (memory-backend/search-queries query)
+                         (map #(store/query* evidence-store %))
+                         memory-backend/merge-search-results
+                         (take (:query/limit query))
+                         vec)
               _ (pull-receipts/record-pull-uses!
                  {:evidence-store evidence-store
                   :agent-id agent-id

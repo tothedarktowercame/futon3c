@@ -126,3 +126,32 @@
     (is (= :evidence-id (get-in invalid [:error :error/field])))
     (is (not (contains? list-item :body))
         "memory_search remains an envelope view without body leakage")))
+
+(deftest lone-tag-search-also-matches-the-problem-subject
+  (let [entry (fn [id subject tags at]
+                {:evidence/id id :evidence/subject subject
+                 :evidence/type :memory :evidence/claim-type :assert
+                 :evidence/author "guide" :evidence/at at
+                 :evidence/body {:name id} :evidence/tags tags})
+        subject-only (entry "e-subject-only"
+                            {:ref/type :problem :ref/id "a03J04"}
+                            [:memory :memory/assert]
+                            "2026-08-17T07:09:12Z")
+        tagged (entry "e-tagged"
+                      {:ref/type :problem :ref/id "other"}
+                      [:memory :a03J04]
+                      "2026-08-17T07:10:12Z")]
+    (is (:ok (estore/append! subject-only)))
+    (is (:ok (estore/append! tagged)))
+    (let [single (memory-backend/memory-search
+                  {} {:tags ["a03J04"] :limit 10})
+          multi (memory-backend/memory-search
+                 {} {:tags ["a03J04" "memory"] :limit 10})]
+      (is (= ["e-tagged" "e-subject-only"]
+             (mapv :id (get-in single [:result :items]))))
+      (is (= ["e-tagged"]
+             (mapv :id (get-in multi [:result :items])))
+          "multi-tag AND behavior remains tag-only and unchanged")
+      (is (= [{:query/tags [:lean]}]
+             (memory-backend/search-queries {:query/tags [:lean]}))
+          "ordinary single-tag queries remain exactly one tag query"))))
