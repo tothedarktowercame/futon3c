@@ -11368,3 +11368,11 @@ slice for acting, provenance separating them — the P16 idiom). Three
 falsifiers stated, each observable within frames. **Proposed: implement
 only the use-receipts first, run 2-3 frames, let the data choose.**
 Awaiting the operator's read.
+
+**W.70 addendum:** the five cascade-formation patterns are now in the
+standard library — `futon3/library/cascades/` in flexiarg format, with
+provenance headers naming the mission record and Moran 1971. The
+multi_watcher will ingest them into the store like every other pattern —
+meaning the patterns ABOUT cascade formation are themselves nodes the
+future cascade can hang from, which is the pattern-language method
+closing its own loop.
