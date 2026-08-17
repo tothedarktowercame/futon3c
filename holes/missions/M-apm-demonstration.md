@@ -11137,3 +11137,25 @@ remains:**
    config {gpt-5.6-sol, max}, student-runner-budget {:wall-clock-minutes
    60}; f8 seats already minted and invoke-ready; the P18 door check will
    verify the harness pin AT OPEN this time.
+
+## W.60 FRAME-8 RUNNING — first frame under the audited specification (2026-08-17)
+
+Launch on the operator's word, with the problem pick delegated: **a03J04**
+(weak-L¹ → L^p embedding; statement + constant verified by hand at the
+pin). Cards frozen (scribe-v2 `02441d9d`, guide-v2.1 `75fda67f`,
+solver-v3 carries); f7 team deregistered; registration FROZEN
+(`96b05f2f`) with all pins incl. student-runner-budget 60min and three
+predictions instrumented BY the new machinery (eligibility provenance,
+pull receipts, progress+reserve). Restart 06:35Z armed everything.
+f8-guide orientation: card-perfect confirmation, second consecutive fresh
+guide oriented by card+contract alone. **OPEN ON FIRST ATTEMPT — the P18
+door check passed with the pin matching (f7's defect class refused at the
+threshold by design, admitted correctly here). Cycle `a03J04-f99b8521…`,
+:guided-solve, v9, ignition delivered.**
+
+**Session role expansion (operator):** while frames run, this session
+works the ANALYSIS layer — the e-c0a2d2fe case study as whitepaper
+supporting material, and the loss function ("are memories increasingly
+transferring and being used") as the lens connecting per-frame claims to
+memory design. Frame-8 is the first frame whose trace can actually feed
+that loss function directly.
