@@ -491,3 +491,70 @@ proto-patterns from his existing Math.StackExchange pass — both raise supply
 neither is blocked by it. They are the input side; use-receipts are the
 measurement side. Worth keeping distinct so that "we mined more patterns" is
 never mistaken for "cascades were shown to help".
+
+---
+
+## Mining supply: two corrections from Joe (2026-08-17)
+
+The corpus at `apm-lean/problems` holds **475** problems, **462** with an
+informal solution write-up (median 6.4 KB), of which only **12** are attached to
+any maths pattern. So the raw material for raising patterns-per-problem is
+already on disk; no GPU run is needed to begin. Joe's proposal — hand-mine a few
+old problems, selected per new problem attempted — is aimed straight at the
+binding constraint.
+
+Two corrections to what I proposed, both of which change the plan.
+
+### 1. Do NOT mine the partial problems — they are the solve queue
+
+I recommended mining the `partial` set because those write-ups are the richest
+(11–14 KB against 8–10 KB for completed ones) and because our largest patterns —
+`missing-dependency-protocol` (48 attachments), `corpus-trust-protocol` (21) —
+were themselves mined from being stuck.
+
+**That recommendation was wrong and would have contaminated the experiment.**
+The partial problems are exactly the ones the frames are going to attempt.
+Mining them means handing a future frame patterns extracted from the solution it
+is supposed to find — leakage, and of the worst kind, because the resulting
+transfer-check improvements would look like the memory system working.
+
+Confirmed: f8's problem `a03J04` is classified `partial`; the queue draws from
+that set (278 partial-ish, 119 done-ish, 65 informal-only).
+
+**The precise criterion is not the classification but whether the problem has
+already been attempted.** f7's `a98A01` is classified `complete` and was still
+run as a frame, so `complete` does not by itself mean "never to be used".
+Safe-to-mine = already attempted, or completed and not in the forward queue.
+Classification is a usable proxy, not the rule.
+
+This leaves **108 unmined done-ish problems** with write-ups — ample for a first
+pass, and the pool grows as frames retire problems from the queue.
+
+### 2. Attachment count is a supply statistic, not evidence of usefulness
+
+Parts 1–3 of this excursion repeatedly used attachment counts as *payload* — 48
+memories on `missing-dependency-protocol` treated as 48 units of value. Joe:
+*"mined and having attachments is not the same as being selected and attested to
+as useful."*
+
+That is right, and it invalidates the framing rather than a number. A pattern
+with 48 attachments has been *written to* 48 times. Nothing in that count says
+an agent ever chose it, used it, or was helped by it. `yield@3` in Part 2 and the
+95-memory cascade reach in Part 1 measure **how much material is reachable**,
+which is a property of the graph, not of the machine's usefulness.
+
+The quantity that would settle it is the `used` field in the cascade receipt
+(`47f421b9`), joined to the route: *of the memories surfaced via `:why-hop`, how
+many were selected and attested as used?* Until that has run in a frame, every
+number in this document is about reachability alone. Stated plainly so that a
+later reader does not mistake reach for value — the two are one join apart and
+the join has not been made.
+
+### Consequence for mining
+
+Mined patterns should be judged by whether they are later **selected and
+attested**, not by how many attachments they accrued. That makes mining
+self-limiting in a useful way: mine a few, run a frame, see which mined patterns
+appear in receipts with `used`, and let that steer the next selection. Review of
+mined patterns is still worth doing — Joe's call — even though extraction
+happens outside the cycle and its gate.
