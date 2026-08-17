@@ -510,7 +510,12 @@
 
     :dispatch-student-fresh
     (conj (vec args) (merge {:cycle/id (:current-cycle-id state)
-                             :cycle/step-index (count (:steps state))}
+                             :cycle/step-index (count (:steps state))
+                             :student-runner-budget
+                             (or (get-in state
+                                         [:cycle/outputs :registration
+                                          :reg/student-runner-budget])
+                                 {:wall-clock-minutes 60})}
                             (student-memory-eligibility state)))
 
     :dispatch-scribe
@@ -1273,6 +1278,10 @@
             memory-channel (get dispatch-channels tool-id)
             solver-config (when (= :dispatch-solver tool-id)
                             (:solver-config measured))
+            student-runner-budget
+            (when (= :dispatch-student-fresh tool-id)
+              (or (:student-runner-budget measured)
+                  {:wall-clock-minutes 60}))
             scribe-seat (when (= :dispatch-scribe tool-id)
                           (:scribe-seat measured))
             ;; assoc LAST: the role fixes the channel and a caller cannot
@@ -1282,6 +1291,11 @@
                                {:base dispatch-with-recall/default-agency-base}
                                (or opts {}))
                         solver-config (merge solver-config)
+                        student-runner-budget
+                        (assoc :student-runner-budget student-runner-budget
+                               :timeout-ms
+                               (* 60 1000
+                                  (:wall-clock-minutes student-runner-budget)))
                         scribe-seat (assoc :to scribe-seat)
                         (= :dispatch-student-fresh tool-id)
                         (assoc :eligible-memory-ids
@@ -1325,6 +1339,11 @@
                                     :memory-offers [(:evidence dispatch-result)])
                        solver-config
                        (assoc :ground-control/solver-config solver-config
+                              :ground-control/recipient (:to sent-opts)
+                              :ground-control/cycle cycle-id)
+                       student-runner-budget
+                       (assoc :ground-control/student-runner-budget
+                              student-runner-budget
                               :ground-control/recipient (:to sent-opts)
                               :ground-control/cycle cycle-id)
                        scribe-seat

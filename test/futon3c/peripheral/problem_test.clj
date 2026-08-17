@@ -2732,3 +2732,31 @@
 
 (deftest make-problem-construction-does-not-require-evidence-store
   (is (satisfies? runner/PeripheralRunner (problem/make-problem))))
+
+(deftest student-runner-budget-is-defaulted-pinned-and-receipted
+  (let [calls (atom [])
+        dispatch-fn (fn [opts _packet]
+                      (swap! calls conj opts)
+                      {:job-id "student-budget-job" :evidence {:body {}}})
+        backend (problem/make-ground-control-backend
+                 (tools/make-mock-backend) dispatch-fn)
+        pinned-budget {:wall-clock-minutes 45}
+        pinned (tools/execute-tool
+                backend :dispatch-student-fresh
+                [{} "packet" {:cycle/id "cycle-pinned"
+                               :cycle/step-index 2
+                               :student-runner-budget pinned-budget}])
+        defaulted (tools/execute-tool
+                   backend :dispatch-student-fresh
+                   [{} "packet" {:cycle/id "cycle-default"
+                                  :cycle/step-index 3}])]
+    (is (= pinned-budget (:student-runner-budget (first @calls))))
+    (is (= (* 45 60 1000) (:timeout-ms (first @calls))))
+    (is (= {:wall-clock-minutes 60}
+           (:student-runner-budget (second @calls))))
+    (is (= (* 60 60 1000) (:timeout-ms (second @calls))))
+    (is (= pinned-budget
+           (get-in pinned [:result :ground-control/student-runner-budget])))
+    (is (= {:wall-clock-minutes 60}
+           (get-in defaulted
+                   [:result :ground-control/student-runner-budget])))))

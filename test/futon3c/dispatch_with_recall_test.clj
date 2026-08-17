@@ -841,3 +841,18 @@
         "configured solver"))
     (is (= "gpt-5.6-sol" (:model @posted)))
     (is (= "high" (:reasoning-effort @posted)))))
+
+(deftest student-runner-budget-reaches-the-agency-bell-payload
+  (let [posted (atom nil)
+        budget {:wall-clock-minutes 60}]
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.dispatch-with-recall 'post-json)
+       (fn [_url body _timeout]
+         (reset! posted body)
+         {:job-id "student-budget-job"})}
+      #(#'dispatch/dispatch!
+        {:to "zai-1" :from "ground-control" :mission "M-test"
+         :timeout-ms 3600000 :student-runner-budget budget}
+        "configured student"))
+    (is (= 3600000 (:timeout-ms @posted)))
+    (is (= budget (:student-runner-budget @posted)))))
