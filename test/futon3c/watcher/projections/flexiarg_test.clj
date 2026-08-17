@@ -9,6 +9,17 @@
 (def orchestration-pattern-path
   "/home/joe/code/futon3/library/orchestration/state-in-substrate-deltas-in-messages.flexiarg")
 
+(def fulab-multiarg-path
+  "/home/joe/code/futon3/library/fulab/fulab-patterns.multiarg")
+
+(deftest collect-multiarg-projects-every-declared-pattern
+  (testing ".multiarg is watched and every @arg block becomes a pattern var"
+    (is (contains? sut/src-exts "multiarg"))
+    (let [{:keys [vars]} (sut/collect-file fulab-multiarg-path)]
+      (is (= 11 (count vars)))
+      (is (= "fulab/clock-in" (:pattern/id (first vars))))
+      (is (= "fulab/tradeoff-record" (:pattern/id (last vars)))))))
+
 (deftest collect-file-projects-canonical-pattern-packet
   (testing "the watcher reuses the canonical parser and keeps structured slots"
     (let [{:keys [ns aliases vars tests is-test?]} (sut/collect-file orchestration-pattern-path)
