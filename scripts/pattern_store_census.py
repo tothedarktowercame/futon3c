@@ -26,6 +26,7 @@ import glob
 import os
 import re
 import sys
+import urllib.parse
 import urllib.request
 
 STORE = os.environ.get("FUTON_SUBSTRATE_URL", "http://127.0.0.1:7073")
@@ -79,26 +80,42 @@ def main():
 
     if "--attachments" in sys.argv and orphans:
         # Classify orphans so a sweep can be backgrounded SAFELY. An orphan with
-        # reviewed attachments is a MISSING PATTERN (write the file); one with
-        # none is surplus (retract the row). Retracting the first kind destroys
+        # memory attachments is a MISSING PATTERN (write the file); one with none
+        # is surplus (retract the row). Retracting the first kind destroys
         # reviewed edges -- math-formalization/notation-semantics-traps had six.
-        import json
+        #
+        # Counts come from the RAW hyperedge query, not the memory projection.
+        # The projection groups edges and under-reports: it said layer-cake-
+        # crossover-split had 1 attachment when there were 2 (one per memory),
+        # and a classifier that under-counts to ZERO would mark a live pattern
+        # retract-safe. This is the same query watcher/multi.clj
+        # fetch-attachment-hyperedges uses, so the classifier and the repointer
+        # agree about what an attachment is.
         print("\n  ORPHAN CLASSIFICATION")
-        write_these, retract_these = [], []
+        write_these, retract_these, unaskable = [], [], []
         for o in orphans:
-            req = urllib.request.Request(
-                f"{STORE}/api/alpha/memory/projection",
-                data=json.dumps({"endpoints": [o], "limit": 20}).encode(),
-                headers={"Content-Type": "application/json"})
+            url = (f"{STORE}/api/alpha/hyperedges?end="
+                   f"{urllib.parse.quote(o, safe='')}&limit=50")
             try:
-                body = urllib.request.urlopen(req, timeout=60).read().decode()
-                n = body.count("hyperedge-id")
+                body = urllib.request.urlopen(url, timeout=90).read().decode()
             except Exception as e:
-                print(f"     ?  {o}  (could not ask: {e})")
+                # FAIL CLOSED. "I could not ask" is not "nothing is there" --
+                # the same conflation that made retract-flexiarg! report success
+                # on a slow store this morning. An unaskable orphan is never
+                # retract-safe.
+                unaskable.append(o)
+                print(f"     ?????? {o}  COULD NOT ASK: {e}")
                 continue
-            (write_these if n else retract_these).append(o)
-            print(f"     {'WRITE  ' if n else 'RETRACT'} {o}  attachments={n}")
-        print(f"\n  -> write the pattern for {len(write_these)}, retract {len(retract_these)}")
+            edges = body.count(":hx/id")
+            memory_edges = body.count("memory/assert")
+            (write_these if edges else retract_these).append(o)
+            print(f"     {'WRITE  ' if edges else 'RETRACT'} {o}  "
+                  f"edges={edges} memory/assert={memory_edges}")
+        print(f"\n  -> write the pattern for {len(write_these)}, "
+              f"retract {len(retract_these)}, UNASKABLE {len(unaskable)}")
+        if unaskable:
+            print("     Unaskable orphans are excluded from the retract list by "
+                  "design. Re-run when the store answers.")
         if orphan_list:
             with open(orphan_list, "w") as fh:
                 fh.write("\n".join(retract_these) + ("\n" if retract_these else ""))
