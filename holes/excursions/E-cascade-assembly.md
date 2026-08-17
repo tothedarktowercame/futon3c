@@ -450,3 +450,44 @@ same way as one applying it. The co-attachment graph is cleaner (an attachment
 is an act, not a mention) but far smaller. Neither has been checked against
 whether the reached material actually helped, which remains the quantity that
 matters and the reason prerequisite 2 exists.
+
+---
+
+## What Part 3 changes about prerequisite 1 (use-receipts)
+
+This excursion is groundwork for build item 1, not item 1. But Part 3 changed
+what item 1 has to record, so the definition is worth pinning before it is
+built.
+
+**A use-receipt must record the ROUTE, not just the hit.** If reach rides
+co-incidence and ordering rides authored edges (Part 3), then a receipt saying
+only *"memory X was surfaced and used"* cannot distinguish:
+
+- the memory a plain leaf lookup would have found anyway;
+- the memory reached only via co-attachment with another problem;
+- the memory reached only via an authored `@why` hop.
+
+Those are three different claims about the machinery, and only the third
+justifies the authoring cost of `@why`. A receipt without the route makes the
+cascade unfalsifiable — it will always appear to work, because the leaf hits are
+in the same bucket as the structural ones.
+
+Minimum fields, therefore: memory id, the route that surfaced it (`leaf` /
+`co-incidence` / `@why-hop`, with hop count), whether it was used, and the frame
+it was taken in.
+
+**And patterns-per-problem should be in the same receipt.** Part 3 identified it
+as the most leveraged number available — the mature corpus runs at 5.4
+patterns per document, the math corpus at 1.9, and connectivity comes from that
+number rather than from authored edges. It is currently tracked **nowhere**
+(grep across futon3c finds it only in this file). It is cheap to record at
+attach time and it is the leading indicator for whether cascades will have
+anything to traverse.
+
+**Supply is a separate axis from receipts.** Two routes discussed with Joe on
+2026-08-17 — GPU mining over already-solved problems and their transcripts, and
+proto-patterns from his existing Math.StackExchange pass — both raise supply
+(more patterns, and more attachments per problem). Neither is item 1, and
+neither is blocked by it. They are the input side; use-receipts are the
+measurement side. Worth keeping distinct so that "we mined more patterns" is
+never mistaken for "cascades were shown to help".
