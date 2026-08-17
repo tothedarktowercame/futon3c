@@ -11159,3 +11159,25 @@ supporting material, and the loss function ("are memories increasingly
 transferring and being used") as the lens connecting per-frame claims to
 memory design. Frame-8 is the first frame whose trace can actually feed
 that loss function directly.
+
+## W.61 The e-c0a2d2fe checks: the loss function gets an instrument (2026-08-17)
+
+Operator: the case study becomes "known failing tests… we hopefully see
+pass on material generated in frame-8." Built:
+`analysis/transfer_checks.bb` — six checks, one per gap in the memory's
+f7 journey, runnable per frame against saved state + substrate.
+**f7 baseline: 2/6.**
+- C1 deposit-attribution FAIL (author "problem-peripheral" not the seat —
+  packet still queued, expected to keep failing until built)
+- C2 promoted-before-student FAIL (deposit statusless — P13 should flip)
+- C3 eligibility-includes-promoted FAIL (no provenance, no promoted ids —
+  P16 should flip)
+- C4 pull-uses-receipted FAIL (the invisible working channel — P17
+  should flip)
+- C5 projection-completeness PASS on this sample (limitation noted: the
+  known projection-gap ids are non-intervention memories outside this
+  check's sample)
+- C6 canonical-subject PASS
+**Predicted f8: 5/6.** The per-frame score IS the transfer loss function,
+measured; C1's persistence keeps the queue honest. Frame-8 meanwhile:
+cycle open, guide conducting.
