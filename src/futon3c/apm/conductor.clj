@@ -4,11 +4,91 @@
    This namespace owns sequence, checkpointing, and a compact operation log.
    The problem peripheral remains the sole owner of cycle state and invariants."
   (:require [clojure.string :as str]
+            [babashka.http-client :as http-client]
+            [cheshire.core :as json]
+            [futon3c.agency.registry :as agency]
             [futon3c.apm.conductor-binding :as binding]
             [futon3c.apm.preregistration :as prereg]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.problem :as problem]
             [futon3c.peripheral.runner :as runner]))
+
+(defn- default-close-hook
+  [{:keys [agency-base analyst-seat caller prompt]}]
+  (let [response (http-client/post
+                  (str agency-base "/api/alpha/bell")
+                  {:headers {"Content-Type" "application/json"}
+                   :body (json/generate-string
+                          {:agent-id analyst-seat
+                           :caller caller
+                           :surface "bell"
+                           :mode "brief"
+                           :prompt prompt})
+                   :throw false
+                   :timeout 10000})]
+    (if (= 202 (:status response))
+      {:status :sent :http-status 202}
+      {:status :failed :reason :bell-refused
+       :http-status (:status response)})))
+
+(defn- analyst-wake!
+  [closed]
+  (let [config (:config closed)
+        seat (some-> (:analyst-seat config) str str/trim not-empty)
+        problem-id (:problem-id config)
+        cycle-id (:cycle-id closed)
+        envelope (:envelope closed)
+        payload {:event :apm/frame-closed
+                 :problem-id problem-id
+                 :cycle-id cycle-id
+                 :launchable? (:launchable? envelope)
+                 :failure-count (count (:failures envelope))}]
+    (cond
+      (nil? seat)
+      {:status :skipped :reason :analyst-seat-not-configured
+       :payload payload}
+
+      (nil? (agency/get-agent seat))
+      {:status :skipped :reason :analyst-seat-unregistered
+       :analyst-seat seat :payload payload}
+
+      :else
+      (try
+        (let [hook (or (:close-hook config) default-close-hook)
+              result (hook {:agency-base
+                            (or (:agency-base config)
+                                (get-in config [:conductor :park-base])
+                                "http://localhost:7070")
+                            :analyst-seat seat
+                            :caller (or (get-in config [:conductor :agent])
+                                        "apm-conductor")
+                            :payload payload
+                            :prompt (str "APM frame closed; run Analyst close checks and "
+                                         "append the series entry.\n" (pr-str payload))})]
+          (merge {:analyst-seat seat :payload payload} result))
+        (catch Throwable t
+          {:status :failed :reason :close-hook-threw
+           :analyst-seat seat :payload payload
+           :error/message (.getMessage t)})))))
+
+(defn- report-analyst-wake! [wake]
+  (when-not (= :sent (:status wake))
+    (binding [*out* *err*]
+      (println (str "[apm.conductor] Analyst wake "
+                    (name (or (:status wake) :unknown))
+                    (when-let [reason (:reason wake)]
+                      (str ": " (name reason)))
+                    (when-let [seat (:analyst-seat wake)]
+                      (str " seat=" seat))))))
+  wake)
+
+(defn- safe-analyst-wake! [closed]
+  (try
+    (report-analyst-wake! (analyst-wake! closed))
+    (catch Throwable t
+      (report-analyst-wake!
+       {:status :failed :reason :wake-boundary-threw
+        :error/message (.getMessage t)}))))
 
 (defn- failure [handle code message & [details]]
   (cond-> (assoc handle :ok false
@@ -321,13 +401,19 @@
                                 ["apm-conductor"
                                  (:problem-id (:config h6)) {}])
           failures (vec (concat (:producer-failures trace-envelope)
-                                (:failures validation)))]
-      (assoc h7
-             :envelope {:measurement measurement
-                        :failures failures
-                        :launchable? (true? (:launchable? validation))}
-             :cycle-id (or (:cycle-id handle)
-                           (get-in handle [:state :current-cycle-id]))))
+                                (:failures validation)))
+          closed (assoc h7
+                        :envelope {:measurement measurement
+                                   :failures failures
+                                   :launchable? (true? (:launchable? validation))}
+                        :cycle-id (or (:cycle-id handle)
+                                      (get-in handle [:state :current-cycle-id])))]
+      (if (and (not (false? (:ok closed)))
+               (nil? (get-in closed [:state :current-phase])))
+        (assoc closed :analyst-wake
+               (safe-analyst-wake! closed))
+        (assoc closed :analyst-wake
+               {:status :skipped :reason :close-incomplete})))
     (catch Throwable t
       (failure handle :close-threw (.getMessage t)))))
 

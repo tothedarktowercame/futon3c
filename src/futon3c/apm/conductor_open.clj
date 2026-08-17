@@ -40,6 +40,7 @@
 (defn- harness-pin-check [registration options]
   (let [repo (or (:harness-repo options) "/home/joe/code/futon3c")
         measure (or (:harness-measurer options)
+                    #_{:clj-kondo/ignore [:private-call]}
                     problem/measure-harness-repository)
         measured (:harness-revision (measure repo))
         pinned (:reg/harness-revision registration)]
@@ -81,6 +82,10 @@
      :lean-repo (or (:lean-repo options) "/home/joe/code/mathlib4")
      :agency-endpoint (or (:agency-endpoint options)
                           (str agency-base "/api/alpha/invoke/jobs?limit=200"))
+     :agency-base agency-base
+     :analyst-seat (or (:analyst-seat options)
+                       (System/getenv "FUTON3C_APM_ANALYST_SEAT"))
+     :close-hook (:close-hook options)
      :conductor {:agent guide-seat
                  :session guide-session
                  :surface :problem

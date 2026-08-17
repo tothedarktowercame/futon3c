@@ -97,6 +97,97 @@
    :cycle/regime "round-1" :cycle/store-revision "store-2"
    :cycle/runner-freshness :cold})
 
+(defn- close-ready-handle [config]
+  (let [opened (conductor/open-frame! config)
+        solver (conductor/dispatch-solver! opened {:mission "M-test"} "packet")
+        solver-recorded (conductor/record-solver-attempt!
+                         solver (solver-attempt) {})
+        intervened (conductor/deposit!
+                    solver-recorded
+                    {:name "close-test-deposit" :kind :feedback :hook "test"
+                     :body {:lesson "advance through intervene"}
+                     :subjects [{:ref/type :problem :ref/id "t94J02"}]})
+        student (conductor/dispatch-student!
+                 intervened {:mission "M-test"} "student packet")
+        students-recorded (conductor/record-students!
+                           student [(student-attempt)] [])]
+    (conductor/adjudicate!
+     students-recorded
+     {:outcome :tier-a :residual-sorries 1 :axiom-clean? false})))
+
+(deftest close-emits-one-analyst-wake-even-for-valid-failure-envelope
+  (let [{:keys [config paths]} (fixture)
+        wakes (atom [])
+        config (assoc config
+                      :analyst-seat "analyst-test"
+                      :close-hook (fn [wake]
+                                    (swap! wakes conj wake)
+                                    {:status :sent}))]
+    (try
+      (with-redefs [agency/get-agent (fn [seat]
+                                      (when (= "analyst-test" seat)
+                                        {:agent/id seat}))]
+        (let [closed (conductor/close! (close-ready-handle config))
+              wake (first @wakes)
+              payload (:payload wake)]
+          (is (:ok closed) (pr-str (:error closed)))
+          (is (= 1 (count @wakes)))
+          (is (= :sent (get-in closed [:analyst-wake :status])))
+          (is (= "t94J02" (:problem-id payload)))
+          (is (= (:cycle-id closed) (:cycle-id payload)))
+          (is (false? (:launchable? payload)))
+          (is (= (count (get-in closed [:envelope :failures]))
+                 (:failure-count payload)))
+          (is (pos? (:failure-count payload))
+              "a completed refusal envelope still wakes the Analyst")))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest close-without-analyst-seat-still-completes
+  (let [{:keys [config paths]} (fixture)]
+    (try
+      (let [closed (conductor/close! (close-ready-handle config))]
+        (is (:ok closed) (pr-str (:error closed)))
+        (is (nil? (get-in closed [:state :current-phase])))
+        (is (= {:status :skipped
+                :reason :analyst-seat-not-configured}
+               (select-keys (:analyst-wake closed) [:status :reason]))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest unregistered-analyst-seat-is-loud-and-non-fatal
+  (let [{:keys [config paths]} (fixture)
+        hook-called? (atom false)
+        config (assoc config
+                      :analyst-seat "missing-analyst"
+                      :close-hook (fn [_]
+                                    (reset! hook-called? true)
+                                    {:status :sent}))]
+    (try
+      (with-redefs [agency/get-agent (constantly nil)]
+        (let [closed (conductor/close! (close-ready-handle config))]
+          (is (:ok closed) (pr-str (:error closed)))
+          (is (= {:status :skipped
+                  :reason :analyst-seat-unregistered
+                  :analyst-seat "missing-analyst"}
+                 (select-keys (:analyst-wake closed)
+                              [:status :reason :analyst-seat])))
+          (is (false? @hook-called?))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest incomplete-close-never-wakes-analyst
+  (let [wakes (atom [])
+        closed (with-redefs [agency/get-agent (constantly {:agent/id "analyst-test"})]
+                 (conductor/close!
+                  {:ok true :peripheral nil :state nil :log [] :deposits []
+                   :config {:problem-id "broken"
+                            :analyst-seat "analyst-test"
+                            :close-hook #(swap! wakes conj %)}}))]
+    (is (false? (:ok closed)))
+    (is (= :close-incomplete (get-in closed [:analyst-wake :reason])))
+    (is (empty? @wakes))))
+
 (deftest conductor-runs-a-refused-cycle-and-keeps-its-rider-ledger
   (let [{:keys [config paths]} (fixture)]
     (try
