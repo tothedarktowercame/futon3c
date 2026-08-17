@@ -11195,3 +11195,14 @@ t00A05-era technique memories whose content doesn't match a03J04's
 lexical anchors; EXPECTED, and the real test is the student's eligible
 set + pull after :promote-solver (predictions 1-2). The guide explicitly
 declined to route around it.
+
+## W.62 P21 merged: deposits name their seat (2026-08-17)
+
+C1's fix, reviewed and merged: cycle deposits carry
+`:evidence/author = <guide seat>` (machine-owned, caller-spoofing
+ignored) plus `:evidence/via "problem-peripheral"` — who acted AND what
+carried it. Non-cycle writes unchanged; store not rewritten; the
+reviewer≠depositor gate reads the same field and now sees real seats, so
+self-review is refusable in fact. Inert until the next restart: C1 stays
+FAIL for f8 BY PREDICTION and flips for f9 — the transfer-checks
+instrument dates each fix's activation by which frame's score it moves.
