@@ -11445,3 +11445,26 @@ both seat surfaces; tool guidance added. Inert until f9. With P24 also
 merged, every f8 finding is now fixed-or-queued; remaining bench acts:
 C3/C4 instrument fixes, pull-join diagnosis, retro mining dispatch,
 S capture.
+
+## W.74 Retro mining complete: the student's divergence becomes store content (2026-08-17)
+
+f8-scribe's pass (receipts `8cf8789b`, patterns `cf0d7cfe`): three
+deposits — two ARC memories from the student's divergent plan (the
+ofReal/integral bridge packaging; the improper-rpow route avoiding the
+FTC sign reversal) and one TRAJECTORY memory (isolate the scalar kernel
+before measure/coercion transport — where the fresh prover burned its
+nine minutes). Zai's stereotyped self-criticism is now literally store
+content, via the lane built for it (W.46 closed in substance). Solve lane
+skipped HONESTLY (e-d11811de already covers it — the anti-duplication
+judgment the review protocol demands); challenge lane ran empty. All
+deposits left :proposed with claude-8 nominated — reviewer≠depositor
+self-enforced by the scribe. Independent review dispatched.
+
+**New interface finding:** production memory_record accepts NO entry
+tags — deposits carry subject+facet only, so the P25 prospective lesson
+(tag entries with problem ids) is currently inexpressible; P25's
+subject-fallback covers retrieval at f9, but the tags interface is a
+small packet candidate (accept or derive entry tags at record time).
+One new pattern file (isolate-computational-kernel-before-transport)
+lands in math-strategy — the store's tenth pattern, and the promotions
+in flight may create its first SHARED node.
