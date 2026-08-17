@@ -11396,3 +11396,35 @@ envelope records the mining misses honestly; the mining runs as a
 sanctioned retro pass (W.41 precedent) with f8-scribe post-close; P24
 (adjudicate stops at :promote) and P25 (memory_search subject seam,
 discovery-first with both hypotheses) dispatched for f9.**
+
+## W.72 FRAME-8 CLOSED — honest refusal envelope; transfer score 3/6; the instrument meets its own audit (2026-08-17)
+
+Cycle a03J04-f99b8521… closed at the sentinel (v30, binding dissolved).
+Envelope: :closed, 0 residual sorries, axiom-clean, 7 capability probes
+TRUE, 12 fields honestly unset with reasons; authorization REFUSED with
+six failures — including **:f7-missed-available-artifact: the envelope's
+own invariant caught the retrieval miss independently of the guide's
+report** (two witnesses, one from the machine). Honest refusal per
+rehearsal-1 precedent.
+
+**Transfer series: f7=2/6 → f8=3/6 measured (5/6 predicted).** Prediction
+audit: C1 FAIL as predicted (P21 inert until f9). C2 PASS as predicted —
+promoted-before-student, the frame's core demonstration. C5/C6 PASS.
+**C3 FAIL is suspected FALSE** — the guide verified eligibility
+provenance at the receipt level (v20.edn, quoted content); the check's
+extraction path likely reads the wrong key — the instrument now gets
+audited by the frame it measured, which is the method eating its own
+cooking. **C4 FAIL is a real question**: the tool-layer pull receipt
+exists (e-pull-offer-da391a75) but :pull-uses in cycle outputs is empty —
+the join from tool-layer receipts to outputs needs diagnosis (bench
+item, with the C3 check fix).
+
+Guide's standdown findings, queued: client-timeout hazard (adjudicate/
+close run minutes server-side; clients need long timeouts + state-based
+verification, or an async action variant); empty-awaiting parks queue a
+spurious resume; the student's DIVERGENT plan text is prime arc-lane
+material (measurability workarounds the solver never needed — where a
+fresh prover burns time). All mining pointers preserved in the final
+report. **Next bench acts: fix C3/C4 extraction, diagnose the pull-join,
+dispatch the retro mining pass (f8-scribe, W.41 precedent), first S
+capture.** Third consecutive fresh guide: card-perfect through standdown.
