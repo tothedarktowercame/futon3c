@@ -221,3 +221,59 @@ Rename and deletion handling must consume that prior manifest, retracting or
 reconciling every owned pattern id only after the replacement file has been
 successfully ingested. Until that exists, multiarg deletion must not be treated
 as cleanup-complete.
+
+## 7a. Multiarg ownership gap — RESOLVED (910b71df), with one operator action outstanding
+
+codex-6 implemented the manifest repair it specified in section 7, after
+belling for authorization rather than editing the reserved API. Reviewed and
+**accepted** by claude-2, 2026-08-17.
+
+What landed:
+
+- `WATCHED-EXTS` (`multi.clj:42`) now contains `"multiarg"`. It did not before,
+  while `projections/flexiarg.clj:10 src-exts` did — so the **live watcher had
+  never seen a `.multiarg` file at all**, for create, change or delete. Their
+  rows reached the store by some other ingest path.
+- Watcher snapshots retain every declaration id per pattern file; deletion
+  retracts exactly the prior manifest; rename and changed declarations ingest
+  first and then retract only dropped ids.
+- `retract-flexiarg!` is now a thin path→id wrapper over `retract-pattern-id!`.
+  The id-based entry point takes ids directly — **no path is fabricated**, which
+  was the invariant that made this a bell rather than a workaround.
+
+Verified rather than accepted: clj-kondo clean, check-parens OK, and the watcher
+suites re-run by me at **28 tests / 124 assertions, 0 failures** (21/76 in
+`multi-test` plus 7/48 in `projections.flexiarg-test` — codex-6's "28" was both
+namespaces, not a discrepancy). The fail-closed test asserts what did NOT happen
+(`@calls` is `[:ingest]` alone: a failed replacement ingest performs no repoint
+and no retraction), which is the right shape for that property. Substrate PIDs
+unchanged; the watcher stayed stopped.
+
+### The outstanding action, which the summary understated
+
+codex-6 correctly reported that with the configured `cold-scan? false` the nine
+newly recognized `.multiarg` files are **adopted as baseline and will not ingest
+on an ordinary restart**, preserving the no-cold-scan contract. That is honest
+and it is the right default — it is emphatically not the silent-baseline failure
+that lost the math reorg earlier the same day, because it is stated.
+
+But it is presented as merely preserving a contract, and it is more than that.
+**Three declarations that the census reports as MISSING live in exactly those
+newly-watched files**, and were confirmed absent from the store on review
+(`{:error "Entity not found"}`, against `fulab/clock-in` as a present control):
+
+```
+blues/twelve-bar-form   futon3a/holes/labs/llm-fold/blues-cascade.multiarg
+music/fugue-subject     futon3a/holes/labs/llm-fold/music-cascade.multiarg
+popiii/preface          futon4/test/testing.multiarg
+```
+
+So a deliberate cold scan or explicit dispatch is **required**, not merely
+available: an ordinary restart adopts these three as baseline and they stay
+missing indefinitely, now under a watcher that believes it is tracking them.
+The remaining four MISSING ids are in `.flexiarg` files under staging and
+candidate directories and are a separate question.
+
+**Operator action for Joe, when the watcher is restarted:** cold-scan the three
+files above (or dispatch them explicitly), then re-run
+`scripts/pattern_store_census.py` and confirm MISSING drops from 7 to 4.
