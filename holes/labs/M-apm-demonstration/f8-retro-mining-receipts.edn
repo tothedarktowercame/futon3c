@@ -1,0 +1,115 @@
+;; Frame-8 retro mining pass, outside the closed cycle.
+;; Scribe/depositor: f8-scribe. Independent reviewer proposed: claude-8.
+;; Sources were fetched from the live invoke-job endpoint; deposits and their
+;; attachment projections were re-fetched from futon1b on port 7073.
+{:receipt/mission "M-apm-demonstration"
+ :receipt/frame "f8"
+ :receipt/problem "a03J04"
+ :receipt/cycle-id "a03J04-f99b8521fba78ce977107ff66cc6bdc08bc371677f6c87557a4aba9ceeb21cb1"
+ :receipt/scribe "f8-scribe"
+ :receipt/session-id "01a00e90-717b-7211-b0f5-603674607b46"
+ :receipt/date "2026-08-17"
+ :receipt/mode :retro-outside-closed-cycle
+ :receipt/pattern-commit "cf0d7cfe0e5c2743f56cf85b00be25ca6d7299ab"
+
+ :receipt/sources
+ [{:kind :solver-job :id "invoke-1786949395697-4674-f2e29278"
+   :finding "First-dispatch axiom-clean close; scalar crossover helpers and short final transport wrapper."}
+  {:kind :student-job :id "invoke-1786951698203-4688-fd3a684f"
+   :finding "Truncated plan-only attempt; repeated whole-theorem redesign exposed measurability, coercion, and improper-FTC time burns."}
+  {:kind :review-job :id "invoke-1786950740091-4678-1a157ca9"}
+  {:kind :promotion-job :id "invoke-1786951351643-4685-70fc05b6"}
+  {:kind :review-evidence :id "e-d2c0e14e-7550-4579-8ed8-66d258a80266"}]
+
+ :receipt/lane-report
+ {:solve {:ran? true
+          :yield ["e-d11811de-955e-4f02-bd32-12510df8ad31"]
+          :finding "No new deposit: the reviewed/importable crossover-route memory already covers the solver's final proof shape and named APIs; another closure summary would duplicate it."}
+  :arc {:ran? true
+        :yield ["e-b3ed662d-b86d-405f-bc78-88a8b89a088d"
+                "e-1484814c-a707-4526-a3f6-8ba51dbb54d7"]
+        :finding "Two scoped error-to-fix rules: use the packaged ofReal/integral bridge per scalar piece; use the packaged improper-rpow integral instead of a sign-fragile FTC reconstruction."}
+  :trajectory {:ran? true
+               :yield ["e-4f55c284-65c9-4c07-b94d-6263ba8c6edc"]
+               :finding "The student's correct mathematics became a long serial API plan because scalar computation and measure/coercion transport were interleaved; the solver's scalar-kernel-first architecture avoided that multiplication."}
+  :challenge {:ran? true
+              :yield []
+              :finding "No substrate claim needed correction. The student's FTC nonneg/nonpos flip was self-corrected inside the trace and is preserved as an arc memory with the compiled solver lemma as machine witness, not promoted to a challenge record."}}
+
+ :receipt/deposits
+ [{:memory-id "e-b3ed662d-b86d-405f-bc78-88a8b89a088d"
+   :name "lean-lintegral-ofReal-piece-bridge"
+   :lane :arc
+   :author "f8-scribe"
+   :pattern-id "math-formalization/coercion-bridge"
+   :attachment-status :proposed
+   :post-check {:hyperedge-count 1 :subject "a03J04" :domain :mathematics}}
+  {:memory-id "e-1484814c-a707-4526-a3f6-8ba51dbb54d7"
+   :name "lean-improper-rpow-tail-use-packaged-integral"
+   :lane :arc
+   :author "f8-scribe"
+   :pattern-id "math-formalization/layer-cake-crossover-split"
+   :attachment-status :proposed
+   :post-check {:hyperedge-count 1 :subject "a03J04" :domain :mathematics}}
+  {:memory-id "e-4f55c284-65c9-4c07-b94d-6263ba8c6edc"
+   :name "scalar-kernel-first-avoids-transport-time-burn"
+   :lane :trajectory
+   :author "f8-scribe"
+   :pattern-id "math-strategy/isolate-computational-kernel-before-transport"
+   :attachment-status :proposed
+   :post-check {:hyperedge-count 1 :subject "a03J04" :domain :mathematics}}]
+
+ :receipt/proposed-promotions
+ {:stage :independent-review-required
+  :proposer "f8-scribe"
+  :reviewer "claude-8"
+  :reason "All three new memories were deposited by f8-scribe; reviewer must differ from depositor. No promotion call was attempted for them."
+  :entries
+  [{:memory-id "e-b3ed662d-b86d-405f-bc78-88a8b89a088d"
+    :pattern-id "math-formalization/coercion-bridge"
+    :verdict-proposed :approve
+    :need-tags ["lintegral ofReal conversion" "restricted-measure measurability" "ENNReal-to-real bridge" "nonnegative scalar integral"]
+    :importable true
+    :rationale "The before/after rewrite is scoped and directly witnessed by the divergent and compiled routes; reviewer should still judge whether coercion-bridge is sufficiently specific."}
+   {:memory-id "e-1484814c-a707-4526-a3f6-8ba51dbb54d7"
+    :pattern-id "math-formalization/layer-cake-crossover-split"
+    :verdict-proposed :approve
+    :need-tags ["improper rpow integral" "FTC sign mismatch" "negative exponent positive value" "Ioi power tail"]
+    :importable true
+    :rationale "A concrete lemma-selection repair with a machine witness; fits the existing crossover pattern's tail step."}
+   {:memory-id "e-4f55c284-65c9-4c07-b94d-6263ba8c6edc"
+    :pattern-id "math-strategy/isolate-computational-kernel-before-transport"
+    :verdict-proposed :approve
+    :need-tags ["proof plan balloons" "measurability time burn" "scalarize integral estimate" "separate transport wrapper"]
+    :importable true
+    :rationale "The contrast is cross-problem process knowledge, not merely a03J04 history; a new pattern file was authored with explicit upstream comments."}]}
+
+ :receipt/prior-review
+ {:memory-id "e-d11811de-955e-4f02-bd32-12510df8ad31"
+  :reviewer "f8-scribe"
+  :review-evidence-id "e-d2c0e14e-7550-4579-8ed8-66d258a80266"
+  :attachment-status :reviewed
+  :pattern-id "math-formalization/layer-cake-crossover-split"
+  :witness-status :independently-witnessed}
+
+ :receipt/skips
+ [{:source :solver-final-summary
+   :reason "No additional solve memory: it is a terse receipt whose reusable content is already fully represented by e-d11811de-955e-4f02-bd32-12510df8ad31."}
+  {:candidate :rpow-inverse-ae-congruence
+   :reason "Not deposited separately: it was an uncompiled workaround invented to establish measurability, and the more useful rule is to avoid needing it by using the packaged integral bridge on independently integrable pieces."}
+  {:candidate :manual-HasFiniteIntegral-construction
+   :reason "Not deposited separately: the compiled route uses lintegral_ofReal_ne_top_iff_integrable directly; this is included in the existing crossover-route memory."}]
+
+ :receipt/tag-finding
+ {:requested "Include the problem id among searchable entry tags per P25."
+  :actual "The production memory_record schema has no tags field and memory-write stamps only [:memory :memory/assert] on evidence entries."
+  :action "Each deposit uses the required problem subject and an :a03J04 facet; no unsupported payload field or direct store mutation was used. Subject search works, but tag=a03J04 will not until the production interface accepts caller tags or derives a subject tag."}
+
+ :receipt/pattern-files
+ [{:pattern-id "math-formalization/layer-cake-crossover-split"
+   :status :existing-from-frame-review}
+  {:pattern-id "math-strategy/isolate-computational-kernel-before-transport"
+   :status :authored-this-pass
+   :upstream-comment ["math-informal/separate-into-independent-pieces"
+                      "math-formalization/coercion-bridge"
+                      "math-strategy/plan-first-attempt"]}]}
