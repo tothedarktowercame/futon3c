@@ -62,7 +62,10 @@
     (update 0 #(authenticate-promotion-reviewers agent-id %))
 
     (and (= :promote-artifact operation) (map? (first args)))
-    (update 0 assoc :acting-identity (str agent-id))))
+    (update 0 assoc :acting-identity (str agent-id))
+
+    (and (= :record-scribe-lanes operation) (map? (first args)))
+    (update-in [0 :lane] #(if (string? %) (keyword %) %))))
 
 (defn execute-action!
   "Execute a closed-vocabulary conductor action for an authenticated session."
