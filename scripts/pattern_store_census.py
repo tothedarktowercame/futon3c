@@ -48,11 +48,43 @@ def store_ids():
     return ids
 
 
+ID_LINE = re.compile(r"^@(?:flexiarg|arg|multiarg)\s+(\S+)", re.M)
+
+
 def disk_ids():
+    """Pattern ids DECLARED IN THE FILES, not derived from their paths.
+
+    Deriving from the path was wrong twice over, and both errors inflate the
+    orphan count with patterns that exist:
+
+      * .multiarg files were not globbed at all -- 9 of them, and
+        pacspine/pacspine.multiarg alone declares 12 patterns.
+      * MULTI-PATTERN files declare many ids regardless of extension.
+        fulab/fulab-patterns.flexiarg declares 11 (fulab/clock-in,
+        fulab/pattern-dep, ...), none of them "fulab/fulab-patterns".
+
+    1161 files declare 1281 ids. Reading paths saw 1152 and reported the
+    difference as orphans. The id line is the authority -- projection.clj:213
+    reads @arg, @flexiarg and @multiarg in that order -- so read what the file
+    DECLARES, never what its name suggests.
+    """
     out = set()
-    for f in glob.glob(os.path.join(LIBRARY, "**", "*.flexiarg"), recursive=True):
-        rel = os.path.relpath(f, LIBRARY)
-        out.add(os.path.splitext(rel)[0])
+    for f in glob.glob(os.path.join(LIBRARY, "**", "*.flexiarg"), recursive=True) + \
+             glob.glob(os.path.join(LIBRARY, "**", "*.multiarg"), recursive=True):
+        try:
+            text = open(f, errors="replace").read()
+        except OSError:
+            continue
+        found = ID_LINE.findall(text)
+        if found:
+            out.update(found)
+        else:
+            # No id line at all: fall back to the path so the file is not
+            # invisible, and say so rather than silently dropping it.
+            rel = os.path.relpath(f, LIBRARY)
+            out.add(os.path.splitext(rel)[0])
+            print(f"  NOTE: no @flexiarg/@arg/@multiarg id line in {rel}; "
+                  f"falling back to the path", file=sys.stderr)
     return out
 
 
