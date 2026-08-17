@@ -64,6 +64,17 @@
   [payload]
   (select-keys payload [:name :hook :kind :body :why :how-to-apply]))
 
+(def ^:private system-memory-tags [:memory :memory/assert])
+
+(defn- caller-tags [tags]
+  (if (and (sequential? tags) (every? string? tags))
+    (->> tags
+         (map #(keyword (str/replace (str/trim %) #"^:" "")))
+         (remove (set system-memory-tags))
+         distinct
+         vec)
+    []))
+
 (defn- memory-entry
   [{:keys [agent-id session-id via]} payload evidence-id]
   (cond-> {:evidence/id evidence-id
@@ -72,7 +83,8 @@
            :evidence/claim-type :assert
            :evidence/at (now-str)
            :evidence/body (entry-body payload)
-           :evidence/tags [:memory :memory/assert]}
+           :evidence/tags (into system-memory-tags
+                                (caller-tags (or (:tags payload) [])))}
     agent-id (assoc :evidence/author (str agent-id))
     session-id (assoc :evidence/session-id (str session-id))
     via (assoc :evidence/via (str via))))
@@ -129,7 +141,22 @@
    which the recording agent cannot act on. Return the missing fields so the
    agent can self-correct in its next call."
   [ctx {:keys [name body subjects] :as payload} evidence-id]
-  (let [interface-errors
+  (let [tags (:tags payload)
+        tag-errors
+        (cond-> []
+          (and (some? tags) (not (sequential? tags)))
+          (conj {:field :tags :want "optional list of at most 8 strings"
+                 :got tags})
+
+          (and (sequential? tags) (> (count tags) 8))
+          (conj {:field :tags :want "at most 8 caller tags" :got tags})
+
+          (and (sequential? tags)
+               (not-every? #(and (string? %)
+                                  (not (str/blank? (str/trim %))))
+                           tags))
+          (conj {:field :tags :want "trimmed, non-empty strings" :got tags}))
+        interface-errors
         (cond-> []
           (not (and (string? name) (not (str/blank? name))))
           (conj {:field :name :want "non-blank string — short recall handle"})
@@ -142,7 +169,7 @@
                  :want "at least one EvidenceEntry ArtifactRef {:ref/type <allowed keyword> :ref/id <string>}"}))
         subject-errors (when (seq subjects) (subject-contract-errors subjects))
         contract-errors (entry-contract-errors (memory-entry ctx payload evidence-id))]
-    (vec (concat interface-errors subject-errors contract-errors))))
+    (vec (concat tag-errors interface-errors subject-errors contract-errors))))
 
 (defn- resolve-distill
   [{:keys [turn-id round]} distill]

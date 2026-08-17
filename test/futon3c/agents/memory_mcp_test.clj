@@ -22,9 +22,10 @@
                   {}
                   {:jsonrpc "2.0" :id 1 :method "tools/list"})
         listed (get-in response [:result :tools])
-        description (:description (first (filter #(= "memory_record" (:name %))
-                                                 listed)))]
+        record-tool (first (filter #(= "memory_record" (:name %)) listed))
+        description (:description record-tool)]
     (is (= #{"memory_record" "memory_search"} (set (map :name listed))))
+    (is (= 8 (get-in record-tool [:inputSchema :properties :tags :maxItems])))
     (doseq [required ["name (non-blank string)"
                       "body (memory content)"
                       "subjects [{ref/type, ref/id}]"]]
@@ -45,12 +46,14 @@
          {:jsonrpc "2.0" :id 2 :method "tools/call"
           :params {:name "memory_record"
                    :arguments {:name "n" :body "b"
+                               :tags ["a03J04"]
                                :subjects [{"ref/type" "mission"
                                            "ref/id" "M"}]}}})]
     (is (= "codex-2" (get-in @seen [0 :agent-id])))
     (is (= :mathematics (get-in @seen [0 :domain])))
     (is (= ::store (get-in @seen [0 :evidence-store])))
     (is (= "n" (get-in @seen [1 :name])))
+    (is (= ["a03J04"] (get-in @seen [1 :tags])))
     (is (false? (get-in response [:result :isError])))))
 
 (deftest memory-search-queries-explicit-store-and-never-records

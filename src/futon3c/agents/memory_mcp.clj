@@ -41,6 +41,9 @@
     :how_to_apply {:type "string"}
     :distills {:type "array" :items {:type "string"}}
     :facets {:type "array" :items {:type "string"}}
+    :tags {:type "array" :maxItems 8
+           :items {:type "string" :minLength 1}
+           :description "Optional searchable caller tags; system memory tags remain first."}
     :volatile {:type "boolean"}}
    :required ["name" "body" "subjects"]
    :additionalProperties false})

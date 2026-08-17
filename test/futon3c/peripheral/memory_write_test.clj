@@ -236,6 +236,47 @@
       (is (true? (:ok receipt)))
       (is (contains? ids (:id receipt))))))
 
+(deftest caller-tags-round-trip-through-existing-memory-search-filter
+  (with-redefs [memory-write/post-hyperedge! (graph-stub (atom {}))]
+    (let [payload (first (fixtures))
+          tagged (memory-write/record-memory!
+                  (assoc test-ctx :evidence-store estore/!store)
+                  (assoc payload :tags [" a03J04 " "memory" "a03J04"]))
+          untagged (memory-write/record-memory!
+                    (assoc test-ctx :evidence-store estore/!store)
+                    payload)
+          tagged-entry (estore/get-entry (:id tagged))
+          untagged-entry (estore/get-entry (:id untagged))
+          search (memory-backend/memory-search
+                  {} {:tags ["a03J04"] :limit 10})
+          ids (set (map :id (get-in search [:result :items])))]
+      (is (true? (:ok tagged)))
+      (is (true? (:ok untagged)))
+      (is (= [:memory :memory/assert :a03J04]
+             (:evidence/tags tagged-entry))
+          "caller tags are trimmed, keyword-normalized, deduplicated, and follow system tags")
+      (is (= [:memory :memory/assert]
+             (:evidence/tags untagged-entry))
+          "omitting tags preserves the previous evidence-entry behavior")
+      (is (contains? ids (:id tagged)))
+      (is (not (contains? ids (:id untagged)))))))
+
+(deftest invalid-caller-tags-refuse-before-writing
+  (let [store (empty-store)
+        ctx (assoc test-ctx :evidence-store store)
+        payload (first (fixtures))
+        invalid-tags [["one" "two" "three" "four" "five" "six" "seven" "eight" "nine"]
+                      ["valid" "   "]
+                      ["valid" 3]
+                      "not-a-list"]]
+    (doseq [tags invalid-tags]
+      (let [receipt (memory-write/record-memory! ctx (assoc payload :tags tags))]
+        (is (false? (:ok receipt)))
+        (is (= :tags
+               (->> (get-in receipt [:error :error/context :fields])
+                    (some #(when (= :tags (:field %)) (:field %))))))))
+    (is (empty? (:entries @store)))))
+
 (deftest memory-record-tool-obeys-ablation-and-adapter-boundary
   (let [names (fn [mode] (set (map :name (#'zai/specs-for-mode mode))))
         spec {:peripheral/id :memory-test
@@ -254,6 +295,7 @@
 (deftest tool-description-carries-kind-boundary-rule-verbatim
   (let [spec (first (filter #(= "memory_record" (:name %))
                             @#'zai/tool-specs))]
+    (is (= 8 (get-in spec [:parameters :properties :tags :maxItems])))
     (is (str/includes?
          (:description spec)
          "derived-from-a-failure-with-a-why → feedback; documented contract/scope fact → reference"))))
