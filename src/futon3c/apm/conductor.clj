@@ -295,16 +295,21 @@
                        (if (false? (:ok h))
                          (reduced h)
                          (:handle (saved-step h :promote-artifact [promotion]))))
-                     h2 promotions)
-          {h4 :handle} (advance h3 {:promotion-result promotions})]
-      h4)
+                     h2 promotions)]
+      ;; :promote is an active work phase. Leave it reachable so the guide can
+      ;; dispatch the post-adjudication scribe and record its outputs.
+      h3)
     (catch Throwable t
       (failure handle :adjudicate-threw (.getMessage t)))))
 
 (defn close! [handle]
   (try
-    (let [{h1 :handle measurement :result}
-          (saved-step handle :record-measurement [])
+    (let [promotions (recorded-results (:state handle) :promote-artifact)
+          h0 (if (= :promote (get-in handle [:state :current-phase]))
+               (:handle (advance handle {:promotion-result promotions}))
+               handle)
+          {h1 :handle measurement :result}
+          (saved-step h0 :record-measurement [])
           {h2 :handle} (saved-step h1 :emit-capability-probes [])
           {h3 :handle trace-envelope :result} (saved-step h2 :emit-trace [])
           {h4 :handle validation :result} (saved-step h3 :validate-trace [])
