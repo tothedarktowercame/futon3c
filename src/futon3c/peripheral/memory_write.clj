@@ -65,7 +65,7 @@
   (select-keys payload [:name :hook :kind :body :why :how-to-apply]))
 
 (defn- memory-entry
-  [{:keys [agent-id session-id]} payload evidence-id]
+  [{:keys [agent-id session-id via]} payload evidence-id]
   (cond-> {:evidence/id evidence-id
            :evidence/subject (first (:subjects payload))
            :evidence/type :memory
@@ -74,7 +74,8 @@
            :evidence/body (entry-body payload)
            :evidence/tags [:memory :memory/assert]}
     agent-id (assoc :evidence/author (str agent-id))
-    session-id (assoc :evidence/session-id (str session-id))))
+    session-id (assoc :evidence/session-id (str session-id))
+    via (assoc :evidence/via (str via))))
 
 (defn- validation-messages
   [validation-error]

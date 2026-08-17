@@ -1525,7 +1525,9 @@
       (let [cycle-id @active-cycle-id]
         (if-not cycle-id
           {:ok false :error "write-substrate has no open cycle"}
-          (let [ctx {:agent-id "problem-peripheral"
+          (let [ctx {:agent-id (or (:author @cycle-context)
+                                   "problem-peripheral")
+                     :via "problem-peripheral"
                      :session-id (:session-id @cycle-context)
                      :domain :mathematics
                      :evidence-store
