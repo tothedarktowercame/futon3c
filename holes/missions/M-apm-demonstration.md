@@ -11243,3 +11243,21 @@ at the surface — do not weaken P14; state the correct execution flow).
 Hot-reload on merge per P12 precedent (engine untouched). Guide findings
 ledger for v2.2: :mission opts, deposit subjects shape, dispatch-scribe
 :problem opts, all undocumented — plus this gap.
+
+## W.65 Research plan v1.1: the Laplacian programme unstalled (operator correction, 2026-08-17)
+
+Operator: the plan lacked v2's hypergraph-Laplacian layer — "continue to
+think not only in terms of getting the memory system to work, but
+designing and evaluating it systematically." Added as Programme S: V2's
+spectral programme died on a DEGENERATE deployed graph (star-forests,
+λ₂=1.0 trivially, "more dispatching cannot fix this") — **attach-then-
+review changed the graph class**: promotions add memory→pattern cross-
+links, so the corpus is no longer closed under star growth. Per-frame
+spectral series (Zhou operator, component structure, λ₂ normalised +
+unnormalised) beside the transfer checks; three pre-registered
+predictions (degeneracy-break date; λ₂ departs 1.0 downward per the
+inverted-threshold finding; eventually below a configuration null =
+real wiring); V2 §4.3's structural sensitivity becomes replayable at
+dispatch time via the P16 provenance. The two series together are the
+systematic evaluation: pipeline health × spectral richness, with either
+divergence a design finding.

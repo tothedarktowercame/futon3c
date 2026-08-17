@@ -133,3 +133,56 @@ section (§5) essentially auto-drafted.
    description.
 4. Queue the guide-card v2.2 touch-ups (:mission documentation) for the
    f9 freeze window.
+
+---
+
+## 8. The theory layer (v1.1 addition, operator's correction 2026-08-17):
+## the hypergraph Laplacian programme, unstalled
+
+V2's formal spine (whitepaper-v2 §4.3–4.5, related-work: Zhou–Huang–
+Schölkopf degree-normalised hypergraph Laplacian, no clique expansion)
+ended at a wall: **the deployed memory graph was degenerate** — its
+largest component a single hyperedge, λ₂ = 1.0 by construction — and V2
+concluded "more dispatching cannot fix this because the corpus grows as
+star-forests and is closed under adding memories." λ₂ was validated as a
+real structure statistic on the git-history graph (~15 SD below the
+configuration-model null) but unaskable on the store itself.
+
+**Attach-then-review changed the graph class.** Promotion creates
+memory→pattern attachment edges — cross-links between problem-subject
+stars and shared pattern nodes. The corpus is no longer closed under
+star-forest growth: every promote-solver/promote pass adds edges of
+exactly the kind whose absence made the store spectrally trivial. The
+retro-pass alone attached 8 memories across 12 patterns (6 newly
+authored); every frame adds more.
+
+**Programme S (spectral series):**
+- S1. Per-frame: capture the reviewed-memory hypergraph (typed edges,
+  Zhou operator, NO clique expansion) and record component structure +
+  λ₂ (normalised and unnormalised) alongside the transfer-checks score.
+- S2. Pre-registered predictions: (i) within a small number of frames
+  the largest reviewed component contains >1 hyperedge (degeneracy
+  broken — a DATE, not a value); (ii) λ₂ departs 1.0 and, per V2's
+  inverted-threshold finding, DECREASES as pattern-sharing richness
+  grows; (iii) once ≥ some minimal size, the real λ₂ falls below a
+  configuration-model null as the git graph did — the store develops
+  "real wiring", not just degree sequence.
+- S3. Structural sensitivity (V2 §4.3) becomes REPLAYABLE AT DISPATCH
+  TIME: the §4.3 caption's own complaint ("without dispatch-time
+  snapshots this measures the graph at capture time") is resolved by the
+  open-time snapshots + P16 eligibility provenance — arm-removal
+  perturbations can now be evaluated against the graph AS THE DISPATCH
+  SAW IT.
+- S4. Tooling: locate and reuse the V2 spectral tooling (the λ₂/null
+  computation used for the git-history result) rather than rebuilding;
+  wire it as a per-frame bench step next to transfer_checks.bb.
+
+**Why this is "designing and evaluating systematically", not just making
+it work:** the transfer checks (§1) measure whether the pipeline lets
+memories move; Programme S measures whether the STORE ITSELF is
+developing the connective structure that retrieval theory says it needs.
+The two series together — pipeline health and spectral richness — are
+the systematic evaluation: if transfer improves while λ₂ stays
+degenerate, transfer is running on lexical luck; if λ₂ richens while
+transfer stalls, retrieval is failing structure it could use. Either
+divergence is a design finding; convergence is the thesis.
