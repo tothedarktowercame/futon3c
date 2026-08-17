@@ -148,6 +148,44 @@ CLOJURE
 Use `--data-binary @-` with a heredoc to avoid shell escaping issues
 with double quotes in Clojure code.
 
+## /eval reports EVERY runtime exception as a syntax error
+
+**This is the single most time-wasting gotcha on this endpoint.** `/eval` uses
+`load-string`, which compiles and runs in one step, so an exception thrown at
+*run* time surfaces wrapped in a `CompilerException`:
+
+```
+(/ 1 0)                                            -> {:ok false,
+                                                       :error "Syntax error macroexpanding at (1:1)."}
+(try (/ 1 0) (catch Throwable t (.getMessage t)))  -> {:ok true, :value "Divide by zero"}
+```
+
+Nothing is wrong with your parentheses. **Wrap the call in `try`/`catch` and you
+get the real message.**
+
+A genuine syntax error IS distinguishable, but only by the wording:
+
+| what happened | what you see |
+|---|---|
+| runtime exception | `Syntax error macroexpanding at (1:1).` |
+| actual malformed form | `Syntax error reading source at (2:1).` |
+
+`macroexpanding` at `(1:1)` on a form you know parses = a runtime throw.
+
+**Worked example (2026-08-17).** `(futon3c.watcher.multi/retract-flexiarg! "/tmp/x.flexiarg")`
+reported a syntax error. Wrapped in `try`/`catch` it said
+`ExceptionInfo :: not a library flexiarg path` — the function's own guard,
+working correctly. Twenty minutes went into blaming the heredoc, which was
+never involved: the same forms fail identically via `--data-binary "<form>"`.
+Two unrelated mistakes had been attributed to it — a zero-arg call to a
+one-arity function, and this guard.
+
+**Corollary: a timeout is not a failure.** Long store writes exceed the eval
+timeout and return `"request timed out"` while the writes land anyway. Verified
+on `retract-flexiarg!`: the call timed out, and the pattern row was gone
+(1345 → 1344 rows). Re-check state before retrying, or you will double-apply.
+For anything long, use `scripts/bg.py` rather than a foreground eval.
+
 ## Emacs Integration
 
 The claude-repl REPL reads `.admintoken` automatically for Drawbridge
