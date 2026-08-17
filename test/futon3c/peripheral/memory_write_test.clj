@@ -94,11 +94,31 @@
             entry (estore/get-entry* store (:id receipt))]
         (is (true? (:ok receipt)))
         (is (= "zai-fixture" (:evidence/author entry)))
+        (is (not (contains? entry :evidence/via))
+            "ordinary non-cycle memory writes retain their existing shape")
         (is (= "zai-session-fixture" (:evidence/session-id entry)))
         (is (= :mathematics
                (get-in (first (vals @hyperedges)) [:hx/props :domain])))
         (is (not (contains? (:evidence/body entry) :author)))
         (is (not (contains? (:evidence/body entry) :session-id)))))))
+
+(deftest cycle-mediation-records-seat-as-author-and-plumbing-as-via
+  (let [store (empty-store)
+        hyperedges (atom {})
+        payload (assoc (first (fixtures))
+                       :author "spoofed-caller"
+                       :evidence/author "also-spoofed")]
+    (with-redefs [memory-write/post-hyperedge! (graph-stub hyperedges)]
+      (let [receipt (memory-write/record-memory!
+                     (assoc test-ctx
+                            :agent-id "f9-guide"
+                            :via "problem-peripheral"
+                            :evidence-store store)
+                     payload)
+            entry (estore/get-entry* store (:id receipt))]
+        (is (:ok receipt))
+        (is (= "f9-guide" (:evidence/author entry)))
+        (is (= "problem-peripheral" (:evidence/via entry)))))))
 
 (deftest explicit-distills-are-endpoints-and-current-round-is-a-reference
   (let [store (empty-store)

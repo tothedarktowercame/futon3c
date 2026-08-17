@@ -143,6 +143,21 @@
         (is (empty? @(:posts graph)))
         (is (= #{memory-id} (set (keys @entries))))))))
 
+(deftest promotion-refuses-the-actual-seat-depositor
+  (let [seat "f9-guide"
+        graph (graph-fixture statusless-edge)
+        entries (atom {memory-id (assoc memory-entry
+                                        :evidence/author seat
+                                        :evidence/via "problem-peripheral")})
+        result (lifecycle/promote-memory-attachment!
+                (assoc ctx :acting-identity seat)
+                {:memory-id memory-id :pattern-id pattern-id :reviewer seat}
+                (promote-opts graph entries))]
+    (is (false? (:ok result)))
+    (is (= :promotion-reviewer-is-depositor
+           (get-in result [:finding :failure])))
+    (is (= seat (get-in result [:finding :depositor])))))
+
 (deftest approval-requires-independent-exact-review-evidence
   (testing "memory author cannot review their own attachment"
     (let [graph (graph-fixture proposed-edge)]

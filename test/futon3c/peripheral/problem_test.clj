@@ -2489,10 +2489,12 @@
                  :kind :feedback
                  :hook "when rehearsing"
                  :body {:finding "the write path is live"}
+                 :author "spoofed-caller"
                  :subjects [{:ref/type :problem :ref/id "p"}]}
         calls (atom [])
         context (atom {:session-id "session-1"
                        :problem-id "p"
+                       :author "f9-guide"
                        :harness-repo "/harness"})
         writer (fn [ctx actual]
                  (swap! calls conj [ctx actual])
@@ -2518,7 +2520,10 @@
     (is (= 1 (count @calls)) "no-open-cycle refusal must not invoke the writer")
     (is (identical? payload actual) "the payload object passes through unchanged")
     (is (= "session-1" (:session-id ctx)))
-    (is (= "problem-peripheral" (:agent-id ctx)))
+    (is (= "f9-guide" (:agent-id ctx)))
+    (is (= "problem-peripheral" (:via ctx)))
+    (is (not= (:author payload) (:agent-id ctx))
+        "caller payload cannot spoof the machine-owned cycle author")
     (is (= :mathematics (:domain ctx)))
     (is (some? (:evidence-store ctx)))
     (is (= "e-memory-1" (get-in written [:result :memory-id])))
