@@ -1,4 +1,4 @@
-# Role card — Scribe, v2 (DRAFT — freeze at frame registration)
+# Role card — Scribe, v2 (FROZEN at frame-8 registration, operator word 2026-08-17)
 
 *A surface contract. v2 adds the REVIEW PROTOCOL: under the two-promote
 chain (W.47) the scribe is also the promotion reviewer, and a reviewer

@@ -54,7 +54,7 @@
 {"problem-id": "a94A05", "status": "clean", "claims": 2, "extra-axioms": {}}
 {"problem-id": "a94A06", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "a94A08", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "a94A09", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp81td4959.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ConstructionTargets/SchwarzPick.olean' of module ConstructionTargets.SchwarzPick does not exist"}
+{"problem-id": "a94A09", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp918t7y28.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ConstructionTargets/SchwarzPick.olean' of module ConstructionTargets.SchwarzPick does not exist"}
 {"problem-id": "a94A10", "status": "clean", "claims": 9, "extra-axioms": {}}
 {"problem-id": "a94J01", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a94J02", "status": "clean", "claims": 10, "extra-axioms": {}}
@@ -103,6 +103,7 @@
 {"problem-id": "a97J02", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a97J03", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a97J04", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "a98A01", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "a98A05", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a98A06", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a98J01", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -179,6 +180,7 @@
 {"problem-id": "m99A05", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "m99J05", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t00A04", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "t00A05", "status": "clean", "claims": 159, "extra-axioms": {}}
 {"problem-id": "t00J03", "status": "clean", "claims": 6, "extra-axioms": {}}
 {"problem-id": "t00J04", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "t00J06", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -205,6 +207,7 @@
 {"problem-id": "t94A02", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "t94A05", "status": "clean", "claims": 2, "extra-axioms": {}}
 {"problem-id": "t94J01", "status": "clean", "claims": 4, "extra-axioms": {}}
+{"problem-id": "t94J02", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t94J03", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t95A02", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t95A03", "status": "clean", "claims": 1, "extra-axioms": {}}

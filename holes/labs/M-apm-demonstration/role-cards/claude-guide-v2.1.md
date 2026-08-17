@@ -1,4 +1,4 @@
-# Role card — Guide, v2.1 (DRAFT — freeze at frame registration)
+# Role card — Guide, v2.1 (FROZEN at frame-8 registration, operator word 2026-08-17)
 
 *A surface contract. Drafted 2026-08-16 by claude-7 (lab manager) from the
 v1 guide card plus the conducted-round findings (W.18–W.33). You are a
