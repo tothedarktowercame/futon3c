@@ -11088,3 +11088,26 @@ activates at the frame-8 restart.
 pick; (3) card freezes — scribe-v2 (review protocol), solver-v3 (already
 filed), guide-v2.1 (lab manager touch-up adding the two-promote flow —
 next act); (4) registration pins (student-runner-budget candidate noted).
+
+## W.58 Operator ruling: zai budget 60 minutes; the student lane measures PROGRESS, not reproduction (Joe, 2026-08-17)
+
+"Zai is currently capped at 30 minutes, but that was for interactive use…
+Let's up it to 60, because we don't want it to go forever, but also want
+to give them a reasonable chance to use memories and have some successes.
+If we get the codex solves banked, we don't actually NEED independent Zai
+reproductions — what's more interesting is whether they make progress."
+
+Five-defect closeout: pull receipts (P17), eligibility (P16), abandon
+route (P18) already merged; **P19 dispatched** (ams-codex-1): find the
+real caps (30-min wall clock, max-tool-rounds, char budget), 60-minute
+default with wall clock as the binding constraint and a REPORTING RESERVE
+so work never again dies unreported (f7 attempt-3's five stranded
+commits), `:reg/student-runner-budget` pin; **P20 dispatched**
+(ams-codex-2): one canonical memory-subject vocabulary across both write
+paths, legacy entries normalized at read, store not rewritten.
+
+**Measurement consequence recorded for frame-8 adjudication:** student
+attempts are scored on committed progress + memory use (pull receipts now
+visible), not closure. The v1 zai-student card's spirit — Zai's honest
+self-criticism as raw material — pairs with this: a progress-scored lane
+keeps partial work and its narration first-class.
