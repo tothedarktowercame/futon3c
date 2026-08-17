@@ -11,9 +11,11 @@
                 :merged "apm-lean d937780"}
   :transfer-checks {:score "2/6"
                     :fails [:C1 :C2 :C3 :C4]
-                    :receipt "W.61"}
-  :loss-components {:surfaced 0                   ;; push empty; eligible pre-P16 invisible
-                    :used-receipted 0             ;; pull worked but unmeasured (pre-P17)
+                    :receipt "W.61"
+                    :instrument-v2 {:score "3/6" :fails [:C1 :C2 :C3]
+                                    :note "C4 flips: 3 pull-OFFER receipts existed in the store all along, surfaced incl. e-c0a2d2fe — transfer was receipted at offer level, invisible only to instrument v1. No use receipts (use-recording landed with P17, post-f7). W.75"}}
+  :loss-components {:surfaced 1                   ;; e-c0a2d2fe pull-offered, receipted (W.75 correction; push empty, eligible pre-P16 invisible)
+                    :used-receipted 0             ;; use-recording not yet live (P17 post-dates the student)
                     :used-unreceipted 1           ;; e-c0a2d2fe via pull, transcript-verified (W.55)
                     :converted-artifacts 5}       ;; student commits, part 1 of 3, unreported
   :store-delta {:deposits 1 :promotions 0 :new-patterns 0}
@@ -31,17 +33,23 @@
   :transfer-checks {:score "3/6"
                     :fails [:C1 :C3 :C4]
                     :predicted "5/6"
-                    :divergence "C3 suspected false-fail (instrument extraction path; guide verified provenance at receipt level); C4 = pull-join to outputs under diagnosis"
-                    :receipt "W.72"}
+                    :divergence "RESOLVED (W.75): C3 confirmed instrument false-fail (eligible set under [:result :recall …]); C4 redefined to read offer receipts from the store (outputs never join them)"
+                    :receipt "W.72"
+                    :instrument-v2 {:score "5/6" :fails [:C1]
+                                    :note "prediction landed exactly; C1 the lone honest fail, P21 arms at f9 -> predicted 6/6. W.75"}}
   :loss-components {:surfaced 419                 ;; eligible incl. e-d11811de w/ provenance
-                    :used-receipted 0             ;; one pull receipt, surfaced [] (P25 seam)
+                    :used-receipted 0             ;; 1 pull-offer receipt, surfaced [] — the P25 miss, measured
                     :used-unreceipted 0
                     :converted-artifacts 0}       ;; student plan-only, 9/60 min (runner finding)
   :store-delta {:deposits 4                       ;; e-d11811de + 3 retro-mined
-                :promotions 1                     ;; e-d11811de (in-cycle, witnessed chain)
-                :proposed 3                       ;; retro manifest, claude-8 reviewing
+                :promotions 4                     ;; e-d11811de in-cycle + 3 retro (claude-8 3/3 approve, receipts 2b6e4329, W.75)
+                :proposed 0                       ;; review executed; all :reviewed on substrate
                 :new-patterns 2}                  ;; layer-cake; isolate-computational-kernel
-  :spectral {:reviewed-memories 9 :patterns 10 :shared-nodes 0
-             :note "capture pending claude-8 verdicts; first shared node possible"}
+  :spectral {:reviewed-memories 12 :patterns 11 :shared-nodes 1
+             :shared [["math-formalization/layer-cake-crossover-split" 2]]
+             :whole-store {:reviewed-edges 34 :patterns 12
+                           :legacy-hub ["math-formalization/tactic-algebra-interference" 22]
+                           :dangling-proposed 2}
+             :note "S-1 (W.75): first SHARED node — solver route (e-d11811de) and student divergence (e-1484814c) meet at layer-cake. Mission scope excludes the pre-mission claude-9-era hub."}
   :headline "First fully witnessed transfer chain (deposit->review->promotion->eligibility w/ provenance); sharpest finding: eligibility delivered, retrieval didn't (P25: two correct layers composed into the miss)"
   :defects-found 9 :defects-fixed-or-queued 9}]

@@ -11468,3 +11468,50 @@ small packet candidate (accept or derive entry tags at record time).
 One new pattern file (isolate-computational-kernel-before-transport)
 lands in math-strategy — the store's tenth pattern, and the promotions
 in flight may create its first SHARED node.
+
+## W.75 Review verified, first shared node, instrument v2: the series' predictions land (2026-08-17)
+
+claude-8's independent review (receipts `2b6e4329`): 3/3 approved,
+executed as claude-8 in session f8-retro-review. Lab-manager
+verification, stated: read the receipts diff; fetched all three
+review-evidence entries directly from the substrate (e-90815103,
+e-d3c38d6a…abff9, e-136a81dd — correct memory-ids, :approve,
+:independently-witnessed, reviewer claude-8); projected all three
+patterns and confirmed every edge :attachment-status "reviewed" with
+review-history stamped. Review judged, not stamped: reassignment
+genuinely weighed for e-1484814c (kept at layer-cake because
+integral_Ioi_rpow_of_lt is that pattern's named tail step — recall
+belongs where the error arises); zero-rejections explicitly flagged per
+card item 3. **Gate finding:** promote-memory-attachment! REFUSES
+:proposed attachments (statusless requirement) — the attach-then-review
+economy's own promote verb doesn't speak its main path; claude-8
+recorded the refusal and reviewed via review-attachment!, not around
+the gate. Small packet candidate.
+
+**S-1 capture — the star-forest branches.** Mission scope: 12 reviewed
+memories over 11 patterns, and layer-cake-crossover-split is the FIRST
+SHARED NODE (e-d11811de in-cycle + e-1484814c retro — the solver's
+route and the student's divergence now meet at the pattern both
+instantiate). Whole-store: 34 reviewed edges over 12 patterns, including
+a pre-mission 22-memory hub on tactic-algebra-interference (claude-9
+reviews, 2026-07-30 era) and two dangling :proposed attachments
+(monotone-approximation, split-into-cases — round-1 debris, curation
+item). The mission's promotion economy no longer produces only stars.
+
+**Instrument v2 (transfer_checks.bb).** C3's fail was CONFIRMED
+false — the eligible set lives under [:result :recall …], one level
+below the check's read; fixed. C4's pull-join diagnosed: OFFER receipts
+(the denominator, including empty-result searches) exist only in the
+store keyed by dispatch id — cycle outputs never join them; the check
+now queries the store directly. **f8 rescores 5/6 — exactly as
+predicted** (C1 the lone honest fail; P21 arms at f9 → predicted 6/6).
+f7 rescores 2/6→3/6, with an upgrade to CS-1: e-c0a2d2fe's surfacing to
+the f7 student WAS receipted at the offer level all along
+(e-pull-offer records, :pull-surfaced-ids includes it) — the transfer
+was never invisible in the store, only invisible to the first
+instrument. f7 has offers but no use receipts (use-recording landed
+with P17, after f7's student); f8 has 1 offer, surfaced [] — the P25
+miss, now a measured quantity. Residual: outputs-side join for offer
+receipts is a src packet candidate. Substrate note: the projection
+endpoint starved for ~5 min on quiescence under continuous writes
+(watcher burst), then cleared — same class as claude-8's 503.

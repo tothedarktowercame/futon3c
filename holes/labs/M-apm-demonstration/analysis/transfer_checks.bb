@@ -42,6 +42,23 @@
 
 (defn steps-of [state tool] (filter #(= tool (:tool %)) (:steps state)))
 
+(defn pull-receipts
+  "All pull-offer/pull-use receipts for one dispatch job, straight from the
+   substrate (the saved state cannot carry the evidence-store handle, and
+   cycle outputs do not join offer receipts at all — the offer denominator
+   lives only in the store)."
+  [job-id]
+  (try (let [r (http/get (str substrate "/api/alpha/evidence/text-search")
+                         {:query-params {:q job-id :limit "50"} :throw false})
+             body (when (= 200 (:status r)) (edn/read-string (:body r)))]
+         (->> (:results body)
+              (map :entry)
+              (filter #(and (#{:memory-pull-offer :memory-pull-use}
+                             (get-in % [:evidence/body :event]))
+                            (= job-id (get-in % [:evidence/body :dispatch-id]))))
+              vec))
+       (catch Exception _ [])))
+
 (defn run-checks [dir]
   (let [{:keys [file state]} (latest-state dir)
         outputs (:cycle/outputs state)
@@ -75,7 +92,11 @@
             :pass? (and (seq statuses) (every? #(= "reviewed" (str (some-> % name))) statuses))
             :evidence {:intervention-ids (vec intervention-ids) :statuses (vec statuses)}})
          ;; C3 — student eligibility includes cycle-promoted ids with provenance
-         (let [receipts (keep #(get-in % [:result]) student-steps)
+         ;; (f8 finding: the eligible set lives under [:result :recall …], one
+         ;;  level below where the first draft looked — instrument false-fail)
+         (let [receipts (keep #(or (get-in % [:result :recall])
+                                   (get-in % [:result]))
+                              student-steps)
                provenanced (filter :eligible-memory-provenance receipts)
                union-ok (some (fn [r]
                                 (let [elig (set (:eligible-memory-ids r))]
@@ -85,11 +106,25 @@
            {:check :C3-eligibility-includes-promoted
             :pass? (boolean (and (seq provenanced) union-ok))
             :evidence {:receipts (count receipts) :with-provenance (count provenanced)
+                       :eligible-counts (mapv #(count (:eligible-memory-ids %)) receipts)
                        :promo-ids (vec promo-ids)}})
-         ;; C4 — pull uses receipted in outputs
-         {:check :C4-pull-uses-receipted
-          :pass? (boolean (seq pull-uses))
-          :evidence {:pull-uses (count (or pull-uses []))}}
+         ;; C4 — pull activity receipted and joinable (f8 diagnosis: outputs
+         ;; carry only USE receipts; OFFER receipts — the denominator, incl.
+         ;; empty-result searches — exist only in the store keyed by dispatch
+         ;; id. Pass = the receipt pipeline measured this frame's pulls; zero
+         ;; USES with a recorded empty OFFER is a loss-function reading, not a
+         ;; pipeline failure.)
+         (let [job-ids (keep #(get-in % [:result :job-id])
+                             (concat (steps-of state :dispatch-solver) student-steps))
+               receipts (mapcat pull-receipts job-ids)
+               offers (filter #(= :memory-pull-offer (get-in % [:evidence/body :event])) receipts)
+               uses (concat (or pull-uses [])
+                            (filter #(= :memory-pull-use (get-in % [:evidence/body :event])) receipts))]
+           {:check :C4-pull-uses-receipted
+            :pass? (boolean (or (seq uses) (seq offers)))
+            :evidence {:pull-offers (count offers)
+                       :pull-uses (count uses)
+                       :surfaced (vec (distinct (mapcat #(get-in % [:evidence/body :pull-surfaced-ids]) offers)))}})
          ;; C5 — projection completeness: every :current problem-subject memory projects
          (let [comps (projection problem)
                projected-entries (set (keep #(get-in % [:edge :hx/props :roles :entry]) comps))
