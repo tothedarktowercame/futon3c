@@ -21,8 +21,9 @@ failures were of the same kind it exists to detect.
 
 - `.multiarg` files were never globbed. There are **9**;
   `pacspine/pacspine.multiarg` alone declares **12** patterns.
-- Multi-pattern files declare many ids regardless of extension.
-  `fulab/fulab-patterns.flexiarg` declares **11** — `fulab/clock-in`,
+- Multi-pattern files declare many ids regardless of extension. The formerly
+  mislabeled `fulab/fulab-patterns.flexiarg`, now
+  `fulab/fulab-patterns.multiarg`, declares **11** — `fulab/clock-in`,
   `fulab/pattern-dep`, … — and none of them is `fulab/fulab-patterns`.
 
 **1161 files declare 1281 ids; the path-derived scan saw 1152** and reported the
@@ -53,12 +54,60 @@ fetch-attachment-hyperedges` uses — so classifier and repointer agree about wh
 an attachment is. It also FAILS CLOSED: an unaskable orphan reaches neither
 list.
 
+## 3a. Repointing through JSON silently downgraded keywords (FIXED, 28114d76)
+
+Not a census bug, but the same class: a repair that reports success and damages
+what it repairs.
+
+`watcher/multi.clj repoint-pattern-attachments!` re-posted props it had READ
+from the store, and `post-hyperedge!` serialised them as JSON. **JSON has no
+keyword type.** `:attachment-status :reviewed` landed as `"reviewed"`, along
+with `:domain`, `:kind`, `:state`, `:witness-status` and the `:verdict` keys
+inside `:review-history`.
+
+`peripheral/memory_recall.clj:45` tests `(not= :reviewed attachment-status)`, so
+a string-valued repointed attachment is **excluded from every recall while still
+looking present in the store** — visible to `hyperedges`, invisible to the thing
+that uses it.
+
+codex-3's whole-`:hx/props` equality check caught this by refusing every
+repoint, and the guard failed closed, so nothing was lost. The tempting repair
+was to loosen the verification, which would have shipped the damage. The
+verification was right; the **encoding** was wrong. `futon1b_server.clj`
+`parse-payload` reads EDN whenever the Content-Type is not JSON, so the fix was
+local: `{:encoding :edn}` on the repoint path only.
+
+**Acceptance test that distinguishes the two repairs** — run the real recall,
+not the raw hyperedge query:
+
+```clojure
+(mapv (fn [v] {:endpoint (:endpoint v) :memories (count (:memories v))
+               :audit (:audit v)})
+      (:recalls (futon3c.peripheral.memory-recall/recall-by-endpoints
+                  {:domain :mathematics} ["<pattern-id>"] {:limit 60})))
+;; attachment-excluded 0  <- what the encoding fix buys
+;; attachment-excluded N  <- what loosening the verifier would have produced
+```
+
+Two more defects surfaced underneath it, both now fixed:
+
+- `post-hyperedge!` had **no `:timeout`** and its `catch` discarded the
+  exception, so every failure reported as a bare "write failed" —
+  indistinguishable between a 403, a timeout and a malformed body (`209ab13a`).
+- The substrate answers **503
+  `:memory-projection-source-moved-after-quiescence`** when a concurrent write
+  moves the watermark mid-index-rebuild (`futon1b_graph.clj:1022`). A 40-edge
+  repoint provokes it routinely; it is a race, not a bad write. Now retried with
+  backoff, and only for 503 (`1ce6e282`).
+
 ## 4. What remains, for Codex
 
-**63 orphans library-wide** under the corrected census, of which **19 are APM's
-`math/*`** and are being handled in the mission (see below). The remaining ~44
-need the same treatment as everything above: classify before touching, and
-verify the classification is not an artifact of the tool.
+**63 orphans library-wide** under the corrected census, of which **19 were APM's
+`math/*`**. Those are now **closed** (2026-08-17): all 19 patterns were written
+from their own attached memories, ingested, and their 191 attachments repointed
+to the new subject-category ids with every old id drained to 0 edges. The
+remaining ~44 need the same treatment as everything above: classify before
+touching, and verify the classification is not an artifact of the tool.
 
 Specific questions worth answering:
 
@@ -89,3 +138,86 @@ census's orphans are the same measurement taken twice, four days apart, and the
 A3 figure was computed the same path-derived way — so **it may also be
 overstated** and should be recomputed with the corrected scan before any
 conclusion is drawn from the two numbers.
+
+## 6. The census used the wrong source boundary (FIXED, 2026-08-17)
+
+The corrected declaration parser still compared the store only with
+`futon3/library/`. The live multi-watcher does not have that boundary. Its boot
+configuration watches 14 repository roots, and `file_ingest.clj` sends every
+`.flexiarg` and `.multiarg` outside the shared excluded-directory set through
+the pattern projector.
+
+Reproducing that source surface changes the result materially:
+
+| measurement | `futon3/library` only | actual watcher surface |
+|---|---:|---:|
+| store rows | 1345 | 1345 |
+| declared ids on disk | 1282 | 1333 |
+| row with no declaration | 63 | **19** |
+| declaration with no row | 0 | **7** |
+
+Thus **none of the 44 non-math rows is an orphan**. All 44 have a live source
+declaration. Important classes and provenance include:
+
+- `alfworld/*`, `realtime/*`, and `social/evidence-landscape` in
+  `futon3c/library/`;
+- the multi-pattern `futon3a/holes/labs/llm-fold/{blues,music}-cascade.multiarg`;
+- the multi-pattern `futon4/test/testing.multiarg` (`popiii/*`);
+- cascade-fold experimental files under
+  `futon3a/holes/labs/M-memes-arrows/structure-learned-patterns/`;
+- `futon3/holes/futon-stack.flexiarg` and `futon5/reference/*.flexiarg`.
+
+The original corrected classifier's `WRITE 19 / RETRACT 44` result was still
+unsafe: the 44 zero-attachment rows were not retractable debris, because their
+source files remain in the live ingest domain. The actual orphan population is
+exactly the 19 known `math/*` rows, all with memory attachments; this excursion
+does not prescribe their repair because that work is already active elsewhere.
+
+The watcher-wide comparison also exposes seven missing rows that the
+single-library census could not see:
+
+```
+blues/twelve-bar-form
+math-formalization/replace-enumeration-with-structural-counting
+math-strategy/construct-through-a-finite-correspondence
+music/fugue-subject
+peeragogy/calling-in-not-out
+peeragogy/check-in-rhythm
+popiii/preface
+```
+
+The script now uses the 14 roots from `dev/bootstrap.clj`, prunes the same
+directory names as the watcher, reads declarations from both supported pattern
+extensions, and no longer invents an id from the path when a file has no id
+line. This is deliberately a census fix only: no store row was retracted and no
+missing row was force-ingested. The remaining structural risk is duplicated
+declarations across live source files; the watcher-wide census should report
+those explicitly in a follow-on rather than silently choosing one authority.
+
+## 7. Multiarg rename/deletion ownership gap (OPEN, 2026-08-17)
+
+After the mislabeled multi-pattern files were renamed to `.multiarg`, a live
+`pattern/library` entity scan found **zero occurrences of all nine old
+`.flexiarg` filenames**.
+Canonical pattern and clause entities do not carry `source-file`, so these
+extension-only renames did not themselves leave filename references dangling.
+Old names still occur in generated exports and historical census artifacts;
+those are historical observations, not live source authorities.
+
+The watcher nevertheless has an asymmetric lifecycle:
+
+- collection and dispatch explicitly accept both `.flexiarg` and `.multiarg`;
+- `multi.clj/flexiarg-pattern-id`, which selects pattern-aware rename and
+  deletion cleanup, accepts only `library/**/*.flexiarg` and derives exactly
+  one id from the path;
+- a `.multiarg` deletion therefore falls into generic code-vertex staleness and
+  does not retract its pattern entities or clauses.
+
+Changing the regex to accept `.multiarg` would violate the declaration-is-
+authority invariant: one multiarg file owns many ids, and generally owns no id
+matching its pathname. The structural repair is for watcher snapshot/cache
+metadata to retain the complete declaration manifest for every pattern file.
+Rename and deletion handling must consume that prior manifest, retracting or
+reconciling every owned pattern id only after the replacement file has been
+successfully ingested. Until that exists, multiarg deletion must not be treated
+as cleanup-complete.
