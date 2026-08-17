@@ -319,3 +319,134 @@ which is the quantity we actually care about and cannot measure without the
 transfer checks; and every shape here leaves ~48 nodes isolated because 55 edges
 cannot connect 103 nodes — the comparison is between *sparse* shapes, which is
 the honest regime today but will not be the regime at ×10.
+
+---
+
+# Part 3 — The naturalistic graph, and what it says about the small one
+
+Joe, after Part 2: *"so far this seems inconclusive… what if we look at the
+scale of the whole futon3/library? They don't all have whys and hows, but they
+do exist as part of a graph — linked by missions that cite them."*
+
+He was right that Parts 1–2 were inconclusive: they analysed 55 edges authored
+by one agent in one afternoon. This part uses a graph nobody authored.
+
+## Method, and the trap avoided
+
+Scanned 271 mission/excursion documents across futon3, futon3b, futon3c and
+futon4 for references to any of the **1,302** library pattern ids (103
+namespaces).
+
+**One document, `futon3c/holes/excursions/pipeline-semilattice-clusters.md`,
+cites 267 patterns** — a catalogue of cluster output, not a mission using
+patterns in the course of work. It alone is 37% of all incidences, and under
+clique expansion would generate 35,511 of 38,355 pairwise edges — **93% of the
+graph from one file**. Excluded, and kept as a bipartite/hypergraph structure
+throughout: a document citing *k* patterns is one incidence relation, not
+k(k−1)/2 pairwise ones. This is the error `retrieval-whitepaper-v2.md` §4.5
+records as having *"already inverted a metric for us once"*.
+
+## Three graphs over the same library
+
+| | authored `@why`/`@see-also` | mission co-citation | problem co-attachment |
+|---|---|---|---|
+| population | math patterns | engineering patterns | math patterns |
+| relation | an authored claim | a doc cites both | a problem attaches memories to both |
+| nodes | 103 (20 edged) | **273** | 30 |
+| edges / incidences | 55 | **446** (83 docs) | 134 (70 problems) |
+| components | **60** | **12** | 7 |
+| giant component | 43% | **92%** | 57% |
+| mean 2-hop reach | 8.7 *(at 3 hops)* | **19.0** | 3.5 |
+| items per document/problem | — | mean 5.4 | **mean 1.9** |
+
+### 1. The three structures are very nearly disjoint
+
+- Of **55** authored semantic edges, only **2** have both endpoints cited by any
+  mission, and only **1** has its endpoints co-cited in the same document.
+- Of **103** math patterns, only **13** are cited by any mission document.
+- **273** patterns appear in the citation graph, **44** in the authored graph,
+  and only **8** in both.
+
+They are not competing descriptions of one structure. They describe different
+populations doing different work: **missions cite engineering patterns**
+(`realtime/`, `aif/`, `futon-theory/`, `agent/`, `peripherals/`), while
+**mathematics patterns are used by problems**, and that usage is recorded as
+memory attachments rather than as citations.
+
+This is why Parts 1–2 could not conclude. They analysed the authored math graph
+in isolation, which is the youngest and thinnest of the three.
+
+### 2. The mature graph is well-connected, and nobody authored it
+
+The mission co-citation graph puts **92% of cited patterns in one component**
+with a mean 2-hop reach of **19 peers** — against the authored graph's 43% and
+8.7. Its connectivity does not come from high-degree patterns: **64% of cited
+patterns are cited exactly once**. It comes from the *documents*, each of which
+touches a mean of 5.4 patterns and thereby relates them.
+
+That is what a pattern-usage graph looks like once real work has flowed through
+it, and **it accrues for free** — no one wrote those relations down as edges.
+
+### 3. The math domain's bottleneck is not missing `@why` edges
+
+The problem co-attachment graph is the correct analogue for mathematics, and it
+is thin: 70 problems, 30 patterns, 134 incidences, giant component 57%, mean
+2-hop reach 3.5.
+
+The decisive number is **1.9 patterns per problem** (median 2, max 5), against
+**5.4 patterns per document** in the mature corpus. Connectivity in the mature
+graph is manufactured by documents that touch several patterns at once. Math
+problems touch barely two.
+
+So the cheapest way to make math cascades richer is **not** to author more
+`@why` edges. It is to raise patterns-per-problem — an attach-time behaviour, in
+the machine's own loop, not an authoring chore. Going from 1.9 to 5.4 would do
+more for reach than doubling the authored edge count, and it is the kind of
+thing the cycle can be made to do rather than a human.
+
+Note also that only **30 of 103** math patterns have ever been attached to at
+all. The library is largely unused, not largely unconnected.
+
+## Reimagining assembly from the big context down
+
+Part 1 offered five strategies over the authored edges. The three-graph
+comparison replaces that framing:
+
+**Reach should ride co-incidence; ordering should ride authored edges.**
+
+- **Co-incidence (problem×pattern, mission×pattern) supplies breadth.** It is
+  free, empirical, already covers 92% of the mature corpus in one component, and
+  needs no authoring discipline to keep pace with the library. It is the only
+  structure that will not lag.
+- **`@why` supplies direction and explanation.** Co-incidence is undirected and
+  makes no claim: it says *these were used together*, never *this governs that*.
+  The specific→general ordering that makes a cascade readable as an argument
+  exists only in the authored edges.
+- They are complementary, and — measured above — currently **almost disjoint**,
+  so using either alone forfeits most of the library.
+
+This also retires the framing of Part 1 §3 options A–C as alternatives. They are
+orderings over a reach set; the reach set should come from co-incidence.
+
+## What would settle the remaining questions
+
+- **Does patterns-per-problem actually move?** It is a measurable property of
+  the cycle and the most leveraged number found here. Track it per frame; it is
+  the natural companion to the S-readings.
+- **Do the two structures converge as the math corpus matures?** Today 1 of 55
+  authored edges is co-cited. If the fraction rises as problems accumulate, the
+  authored edges are predicting real usage; if it stays flat, they are a private
+  taxonomy and should be justified on other grounds.
+- **Is the engineering graph's 92% the right target, or an artifact of documents
+  that enumerate?** The catalogue exclusion moved 267 incidences; a second such
+  document would move the number again. The giant-component figure should be
+  re-derived with an explicit rule for what counts as *use* rather than mention.
+
+## Caveat
+
+The citation graph is built by string-matching pattern ids in prose, so it
+counts *mentions*, not uses — a document arguing against a pattern cites it the
+same way as one applying it. The co-attachment graph is cleaner (an attachment
+is an act, not a mention) but far smaller. Neither has been checked against
+whether the reached material actually helped, which remains the quantity that
+matters and the reason prerequisite 2 exists.
