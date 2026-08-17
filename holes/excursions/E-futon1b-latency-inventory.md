@@ -298,3 +298,76 @@ declines to compare cross-host BEFORE numbers. The one defect is a call-path
 attribution that source inspection contradicts — which is precisely the failure
 mode this excursion exists to catch, so it is recorded rather than quietly
 edited away.
+
+## SURVIVES — confirmed: an ABSENT name costs ~200x a present one
+
+Found by claude-2 on 2026-08-17 while reviewing a packet that came back blocked
+on the timing bound. This is the mechanism behind the original
+`fetch-entity` / `retract-flexiarg!` finding, and neither the first
+investigation nor the blocked packet isolated it.
+
+`fetch-entity` (`futon1b@5838929`, `futon1b_graph.clj:121-133`) is an `or` over
+three queries: `xt/id`, then `entities-by-name`, then `entity/external-id`.
+
+- On a **hit**, the `or` short-circuits at the first query that matches.
+- On a **miss**, there is nothing to short-circuit: all three full scans run to
+  completion and return nothing.
+
+Measured on a QUIET store (the orphan drain stopped, no other job running), so
+this is not contention:
+
+```text
+present name  math-strategy/proof-architecture      77 ms
+present name  math-strategy/corpus-trust-protocol   93 ms
+absent  name  math-strategy/ZZZ-nope-1           17,049 ms
+absent  name  math-strategy/ZZZ-nope-2           17,448 ms
+```
+
+### Why this is the whole cost of a pattern deletion
+
+`retract-flexiarg!` loops until `fetch-pattern-entity-ids` returns empty. So its
+passes are asymmetric in exactly the wrong way:
+
+```text
+find pass    — 8 PRESENT names  →   ~0.7 s   (measured: 743 ms for 8)
+retract POST — 13 documents     →   ~0.6 s   (measured: 617 ms)
+confirm pass — 8 ABSENT names   → ~136.0 s   (8 x ~17 s)
+                                  ---------
+                                    ~137 s
+```
+
+That reconstructs the 177,180 ms full `retract-flexiarg!` measured under load
+earlier the same day. **The terminating condition is the expense**, not the work.
+
+### Consequence for the fix
+
+The blocked packet concluded that the one post-retraction lookup needed to
+reveal a hidden legacy UUID duplicate is irreducible without an indexed
+exact-name lookup in futon1b. That is correct *for a per-name lookup* and
+incorrect as a general claim: the same question — "does any entity with this
+name still exist?" — is answerable from one type-scoped listing.
+
+```text
+GET /api/alpha/entities?type=pattern/library&limit=5000, quiet: 9.77 s, 9.35 s
+```
+
+One 9.8 s listing in place of eight 17 s miss-scans is ~14x, client-side, with
+no substrate change. It is bounded below by `entities-query`'s own two scans per
+page (see the finding above), so ~10 s is the floor available today; **under 5 s
+is not reachable without the indexed lookup**, and the earlier packet was right
+to refuse to fake it.
+
+### Reproduction
+
+```clojure
+;; via Drawbridge /eval, wrapped in try/catch
+(let [t (fn [f] (let [s (System/nanoTime) r (f) e (System/nanoTime)]
+                  [(quot (- e s) 1000000) (count r)]))]
+  {:present (t #(futon3c.watcher.multi/fetch-pattern-entity-ids
+                  ["math-strategy/proof-architecture"]))
+   :absent  (t #(futon3c.watcher.multi/fetch-pattern-entity-ids
+                  ["math-strategy/ZZZ-nope-1"]))})
+```
+
+Run it with no other job touching the store, or the asymmetry is masked by
+store-wide delay — which is how it stayed hidden through two investigations.
