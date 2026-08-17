@@ -205,3 +205,117 @@ Every number here comes from a graph authored by one agent in one afternoon.
 The 3-hop chain is a single instance. `a95A01`'s three-pattern agreement is a
 single confirmation. This document is a map of the design space with real
 coordinates attached — not evidence that cascades work.
+
+---
+
+# Part 2 — Graph shapes under a Laplacian, measured (2026-08-17)
+
+At Joe's direction, after §1's finding that the graph is a star-forest with no
+interior: *"hub saturation is 'better than' just isolated stars… but we could
+readily imagine different shapes that might work better in one way or another."*
+
+Grounded in `docs/retrieval-whitepaper-v2.md` §4.5, which already establishes
+the relevant caution — V1's spectral admissibility criterion (λ₂ > 0.1) was
+**retracted** for anti-correlating with useful structure, because the deployed
+graph's largest component was a single hyperedge attaining **λ₂ = 1.0 by
+construction**, and because *"the corpus grows as star-forests and is closed
+under adding memories."* That is exactly the shape §1 measured, arrived at
+independently.
+
+## Method
+
+Real graph: 103 nodes, 55 edges, payload = 230 measured memory attachments.
+Candidate shapes built on the **same budget** (103 nodes, 55 edges) so the
+comparison is not confounded by size. λ₂ is the second eigenvalue of the
+degree-normalised graph Laplacian on the largest component (Jacobi solver, pure
+Python — no numpy on this host). `yield@3` is the mean number of memories
+reachable within 3 hops from a random seed.
+
+## Result
+
+| shape | λ₂ | comps | maxdeg | yield@3 |
+|---|---:|---:|---:|---:|
+| **actual (star-forest)** | **0.1024** | 60 | 8 | **65.5** |
+| single hub | **1.0000** | 48 | 55 | 125.0 |
+| few hubs (5) | **1.0000** | 48 | 11 | 26.8 |
+| balanced tree (b=3) | 0.1071 | 48 | 4 | 52.9 |
+| path/chain | 0.1734 | 48 | 2 | 14.3 |
+| ring + shortcuts | 0.1744 | 49 | 2 | 15.6 |
+
+### 1. v2's inversion reproduces on our own graph, on a different operator
+
+The single-hub shape — the flooding pathology §1 warned about — scores
+**λ₂ = 1.0000, the maximum**. `few hubs (5)` also scores 1.0000 while yielding
+**4.7× less** (26.8 vs 125.0), so λ₂ does not even separate two shapes with
+wildly different retrieval behaviour. Meanwhile `path/chain` has the best
+non-degenerate λ₂ (0.1734) and the **worst** yield (14.3).
+
+**λ₂ ranks these shapes roughly inversely to what a cascade wants.** v2 found
+this with the Zhou degree-normalised *hypergraph* operator on a commit corpus;
+this is the ordinary graph Laplacian on the pattern corpus. The retraction
+generalises — it was not an artifact of that operator or that corpus.
+
+Worth noting for its own sake: the real graph sits at **λ₂ = 0.1024**, almost
+exactly on V1's retracted 0.1 floor. It would *pass* a criterion that was
+withdrawn for being uninformative. Nothing should be read into that except that
+the floor is meaningless here.
+
+### 2. Shape sets reachability; payload PLACEMENT sets yield
+
+The table above assigns the real payload multiset to nodes by degree (the
+realistic assumption: heavily-used patterns accrete memories). Re-running with
+payload assigned **at random**, 5 trials each:
+
+| shape | yield@3 (degree-assigned) | yield@3 (random, mean) | random range |
+|---|---:|---:|---:|
+| single hub | 125.0 | 64.2 | 28.4 – 109.0 |
+| few hubs (5) | 26.8 | 15.8 | 12.7 – 23.6 |
+| balanced tree | 52.9 | 16.0 | 6.0 – 27.4 |
+| path/chain | 14.3 | 8.6 | 4.8 – 13.6 |
+| ring + shortcuts | 15.6 | 8.9 | 4.9 – 13.8 |
+
+The **ranking** is stable — hub-ish shapes reach more, chain-like shapes reach
+least — but the **magnitudes roughly halve**, and single hub alone spans
+28.4–109.0 across trials. So *where the memories sit* moves yield as much as the
+topology does. Arguing about shape in isolation is under-determined; a shape
+proposal has to come with a claim about which patterns accrete payload.
+
+### 3. A metric I proposed in §4 does not survive — retracting it
+
+§4 called for a hub fan-in policy and I proposed measuring "flooding" as the
+largest single contributor's share of reached payload. Under degree-assigned
+payload, `path/chain` scores 0.09 (excellent) and `single hub` 0.11. Under
+random assignment the same shapes score **0.52 and 0.33**. The metric flipped by
+5× on `path/chain` without the graph changing at all.
+
+**Flooding as I defined it is a property of the payload distribution, not of the
+shape.** It should not be used to rank topologies. The underlying concern from
+§4 stands — two patterns hold 41% of all attachments — but it needs a measure
+that is invariant to how payload was assigned, and I do not have one yet.
+
+## What this changes about §3's options
+
+- **Do not gate on λ₂.** Neither as an admissibility criterion nor as a shape
+  score. v2 retracted it once; this reproduces the reason on our data.
+- **`few hubs` is the trap.** It is the shape a growing library drifts into
+  naturally — a handful of strategy patterns accreting everything — and it
+  scores worst-but-one on yield while looking perfect on λ₂. The current
+  star-forest is genuinely better than the shape it is drifting toward, which is
+  the opposite of the intuition that consolidation helps.
+- **The actual graph is a reasonable compromise already** (yield 65.5, second
+  only to the degenerate single hub, at maxdeg 8). Joe's read that hub
+  saturation beats isolated stars is right, and the current shape sits between
+  them rather than at either extreme.
+- **Depth is cheap, breadth is not.** Chain-like shapes have good λ₂ and poor
+  yield because 3 hops on a degree-2 graph reaches ~4 nodes. If cascades are to
+  be shallow (§4 projects depth 5–6 at ×10), the graph needs branching, not
+  length.
+
+## Caveats
+
+Same as §6, plus: these shapes are synthetic and regular, whereas a real library
+would be irregular; `yield@3` counts memories reached, not memories that helped,
+which is the quantity we actually care about and cannot measure without the
+transfer checks; and every shape here leaves ~48 nodes isolated because 55 edges
+cannot connect 103 nodes — the comparison is between *sparse* shapes, which is
+the honest regime today but will not be the regime at ×10.
