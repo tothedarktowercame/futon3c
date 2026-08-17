@@ -11307,3 +11307,25 @@ Curation levers, in order of weight:
    promotion pass.
 4. The un-executed math-split manifest gains empirical stakes: subject
    directories are the natural shared parents.
+
+## W.68 PREDICTION 1 CONFIRMED — the witnessed transfer chain, end to end (2026-08-17)
+
+f8-guide's receipt-level verification (v20.edn, not memory): the student
+dispatch's :eligible-memory-provenance = {:policy
+:snapshot-union-cycle-promoted, :cycle-promoted-memory-ids
+["e-d11811de…"]} — **the solver's route memory, deposited through the
+machine, reviewed BY the scribe AS the scribe (review-evidence
+e-d2c0e14e…), recorded as a machine step, reached the student's eligible
+set with provenance.** Every link receipted. f7's invisible pull-luck is
+f8's witnessed pipeline. Student running (job invoke-…fd3a684f, fresh
+checkout at pin, 60-min budget with reserve); prediction 2 (:pull-uses)
+measures next.
+
+Guide findings #5-7 this frame: recording promote-artifact must OMIT
+:reviewer (P14 refuses reviewer≠actor even on the recording path —
+review identity travels via review-evidence-id; flow-doc nuance);
+record-scribe-lanes DEAD over JSON transport (:lane decodes as string
+"solve", keyword check throws — P23 dispatched); dispatch-student
+requires explicit :to though the registration pins the seat (asymmetric
+with dispatch-scribe — folded into P23). Lane report preserved in the
+scribe job + guide bell; recordable at :promote once P23 lands.
