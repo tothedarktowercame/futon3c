@@ -42,21 +42,21 @@
    :lane :arc
    :author "f8-scribe"
    :pattern-id "math-formalization/coercion-bridge"
-   :attachment-status :proposed
+   :attachment-status :reviewed  ;; promoted by claude-8 review, 2026-08-17
    :post-check {:hyperedge-count 1 :subject "a03J04" :domain :mathematics}}
   {:memory-id "e-1484814c-a707-4526-a3f6-8ba51dbb54d7"
    :name "lean-improper-rpow-tail-use-packaged-integral"
    :lane :arc
    :author "f8-scribe"
    :pattern-id "math-formalization/layer-cake-crossover-split"
-   :attachment-status :proposed
+   :attachment-status :reviewed  ;; promoted by claude-8 review, 2026-08-17
    :post-check {:hyperedge-count 1 :subject "a03J04" :domain :mathematics}}
   {:memory-id "e-4f55c284-65c9-4c07-b94d-6263ba8c6edc"
    :name "scalar-kernel-first-avoids-transport-time-burn"
    :lane :trajectory
    :author "f8-scribe"
    :pattern-id "math-strategy/isolate-computational-kernel-before-transport"
-   :attachment-status :proposed
+   :attachment-status :reviewed  ;; promoted by claude-8 review, 2026-08-17
    :post-check {:hyperedge-count 1 :subject "a03J04" :domain :mathematics}}]
 
  :receipt/proposed-promotions
@@ -112,4 +112,40 @@
    :status :authored-this-pass
    :upstream-comment ["math-informal/separate-into-independent-pieces"
                       "math-formalization/coercion-bridge"
-                      "math-strategy/plan-first-attempt"]}]}
+                      "math-strategy/plan-first-attempt"]}]
+:receipt/independent-review
+ {:reviewer "claude-8"
+  :session-id "f8-retro-review"
+  :cycle-id "f8-retro-mining-1"
+  :date "2026-08-17"
+  :protocol "scribe-v2 card, review section: memories fetched and judged from the substrate; all three pattern files opened and read (futon3 cf0d7cfe); verdicts executed by the reviewer as claude-8."
+  :instructed-path-finding
+  {:call "promote-memory-attachment!"
+   :refusal :promotion-attachment-not-statusless
+   :note "All three attachments landed :proposed at deposit time (attach-then-review), so the statusless promote path refuses by design; recorded per entry, then reviewed via review-attachment! on separately authored evidence. Refusal was a gate finding, not routed around."}
+  :verdicts
+  [{:memory-id "e-b3ed662d-b86d-405f-bc78-88a8b89a088d"
+    :verdict :approve
+    :pattern-id "math-formalization/coercion-bridge"
+    :review-evidence-id "e-90815103-0550-4e2d-a9d4-16b50039e738"
+    :attachment-status :reviewed
+    :witness-status :independently-witnessed
+    :reason "Scoped before/after rewrite (ad-hoc toReal/measurability transport -> IntegrableOn+nonneg then ofReal_integral_eq_lintegral_ofReal) is exactly the pattern's named-reusable-bridge amelioration; API is genre-consistent with the pattern's LEAN block."}
+   {:memory-id "e-1484814c-a707-4526-a3f6-8ba51dbb54d7"
+    :verdict :approve
+    :pattern-id "math-formalization/layer-cake-crossover-split"
+    :review-evidence-id "e-d3c38d6a-77a6-4466-9f4f-6e015a2abff9"
+    :attachment-status :reviewed
+    :witness-status :independently-witnessed
+    :reason "Reassignment to a more general improper-integral home was considered (the rule generalizes beyond layer-cake) and rejected: no existing file fits (reduce-to-known-result is the informal parent at the wrong altitude; rpow-exponent-limit covers limits, not integrals), and the crossover pattern names integral_Ioi_rpow_of_lt as its tail step - where this error arose and where recall is needed."}
+   {:memory-id "e-4f55c284-65c9-4c07-b94d-6263ba8c6edc"
+    :verdict :approve
+    :pattern-id "math-strategy/isolate-computational-kernel-before-transport"
+    :review-evidence-id "e-136a81dd-d034-4baa-8aab-8e7c32c5111d"
+    :attachment-status :reviewed
+    :witness-status :independently-witnessed
+    :reason "Cross-problem process knowledge; the new pattern file is well-formed with declared upstreams. Pattern and memory share provenance (both authored from this contrast) - acceptable: the file is editorial library content, the memory its instance. Witness basis is an n=1 paired solver/student trace contrast, authored by neither depositor nor reviewer."
+    :transient-failure {:first-attempt :hyperedge-write-503-memory-projection-source-moved-after-quiescence
+                        :resolution "retry with same review-evidence-id returned :idempotent-replay? true - the review had landed; post-check confirms :reviewed"}}]
+  :zero-rejections-statement "Per card item 3: zero rejections across three items is noted explicitly. The proposals are survivors of the scribe's own aggressive pre-filter (no solve deposit to avoid duplicating e-d11811de; two candidates skipped; no challenge inflation), and reassignment was genuinely weighed for e-1484814c. Three approvals over three pre-filtered items is judged, not stamped."}
+}
