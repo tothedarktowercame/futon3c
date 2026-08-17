@@ -79,6 +79,7 @@
      :pattern/title (:pattern/title packet)
      :pattern/source-path (:pattern/source-path packet)
      :pattern/conclusion (:pattern/conclusion packet)
+     :pattern/directives directives
      :pattern/projection-version (:pattern/projection-version packet)
      :pattern/references (vec (:pattern/references packet))
      :pattern/keywords (vec (:pattern/keywords packet))
@@ -96,7 +97,8 @@
 (defn collect-file
   "Project one .flexiarg/.multiarg file into the substrate-2 metadata shape."
   [path]
-  (let [packets (projection/parse-file path)
+  (let [packets (projection/parse-file path {:report? false})
+        _ (projection/report-unknown-directives! packets)
         ok-packets (filter #(= :ok (:pattern/status %)) packets)
         headers (keep packet->header ok-packets)
         first-header (first headers)]

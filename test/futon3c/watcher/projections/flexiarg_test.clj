@@ -1,5 +1,6 @@
 (ns futon3c.watcher.projections.flexiarg-test
   (:require [clojure.string :as str]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [babashka.http-client :as http]
             [futon3c.watcher.file-ingest :as file-ingest]
@@ -24,6 +25,7 @@
              (:pattern/id v)))
       (is (= "Lift State Into Shared Substrate; Keep Messages As Deltas"
              (:pattern/title v)))
+      (is (map? (:pattern/directives v)))
       (is (= ["📁/?"] (:pattern/sigils-raw v)))
       (is (true? (:pattern/sigil-pending v)))
       (is (= 10 (count (:pattern/slots v))))
@@ -76,6 +78,26 @@
           (is (= "conclusion" (get-in first-slot [:props "slot/name-key"])))
           (is (str/includes? (get-in first-slot [:props "slot/text"])
                              "lift state into a shared substrate")))))))
+
+(deftest watcher-reports-only-unknown-directives-per-file
+  (let [file (io/file (System/getProperty "java.io.tmpdir")
+                      (str "flexiarg-directives-" (java.util.UUID/randomUUID)
+                           ".flexiarg"))]
+    (try
+      (spit file (str "@flexiarg demo/reporter\n"
+                      "@bits 01010101\n"
+                      "@wibble invented\n"
+                      "! conclusion:\n  reporter fixture\n"))
+      (let [result (atom nil)
+            output (with-out-str (reset! result (sut/collect-file file)))
+            directives (get-in @result [:vars 0 :pattern/directives])]
+        (is (not (contains? directives :bits)))
+        (is (not (contains? directives :wibble)))
+        (is (str/includes? output "FLEXIARG DIRECTIVE UNKNOWN"))
+        (is (str/includes? output "@wibble=1"))
+        (is (not (str/includes? output "@bits=")))
+        (is (not (str/includes? output "known-not-ingested"))))
+      (finally (.delete file)))))
 
 (deftest flexiarg-dispatch-emits-canonical-entities-and-relations-only
   (let [path "/home/joe/code/futon3/library/baldwin/two-claims-not-one.flexiarg"
