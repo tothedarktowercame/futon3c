@@ -11343,3 +11343,9 @@ upstreams when authoring bespoke; retrieval as cascade walk (Moran's AA
 — the structural answer to the push-recall lexical mismatch); Programme S
 restated over cascade connectivity. Order of work per operator: cascade
 first, multi-pattern attachment on that ground.
+
+**W.69 addendum:** P23 merged (`see log`) + hot-reloaded — lane reports
+decode over JSON (closed vocab), dispatch-student derives its seat from
+the registration (guide finding #6 fixed). f8-guide belled: record the
+preserved solve-lane report at :promote; no interruption to its student
+park.
