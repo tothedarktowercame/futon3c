@@ -577,25 +577,63 @@
    retract-flexiarg! reads an empty result as `done` -- so a slow store used to
    end the retraction loop early and report success with rows still standing.
    Measured 2026-08-17: 16 of 31 retractions silently no-opped that way."
-  [names]
-  (->> names
-       (mapcat (fn [entity-name]
-                 (let [url (str FUTON1A "/api/alpha/entity/"
-                                (java.net.URLEncoder/encode entity-name "UTF-8"))
-                       resp (try
-                              (http/get url {:headers {"X-Penholder" PENHOLDER}
-                                             :throw false
-                                             :timeout store-timeout-ms})
-                              (catch Exception e
-                                (throw (ex-info "cannot resolve pattern entity: store unreachable"
-                                                {:outcome :unknown
-                                                 :entity-name entity-name
-                                                 :cause (.getMessage e)}))))
-                       resolved (when (= 200 (:status resp))
-                                  (some-> (:body resp) edn/read-string :entity :id))]
-                   (if resolved [entity-name resolved] []))))
-       distinct
-       vec))
+  ([names]
+   (fetch-pattern-entity-ids names ["pattern/library" "pattern/clause"]))
+  ([names entity-types]
+   (let [names (vec names)
+         fetch-page (fn [entity-type after]
+                     (let [url (str FUTON1A "/api/alpha/entities?type="
+                                    (java.net.URLEncoder/encode entity-type "UTF-8")
+                                    "&limit=5000"
+                                    (when after
+                                      (str "&after="
+                                           (java.net.URLEncoder/encode after "UTF-8"))))]
+                       (try
+                         (let [resp (http/get url {:headers {"X-Penholder" PENHOLDER}
+                                                   :throw false
+                                                   :timeout store-timeout-ms})]
+                           (when-not (= 200 (:status resp))
+                             (throw (ex-info "cannot list pattern entities: store refused query"
+                                             {:outcome :unknown :entity-type entity-type
+                                              :status (:status resp) :body (:body resp)})))
+                           (edn/read-string (:body resp)))
+                         (catch Exception e
+                           (if (= :unknown (:outcome (ex-data e)))
+                             (throw e)
+                             (throw (ex-info "cannot list pattern entities: store unreachable"
+                                             {:outcome :unknown :entity-type entity-type
+                                              :cause (.getMessage e)})))))))
+         fetch-type (fn [entity-type]
+                     (loop [after nil pages 0 accumulated []]
+                       (when (>= pages 100)
+                         (throw (ex-info "pattern entity listing exceeded page limit"
+                                         {:outcome :unknown :entity-type entity-type
+                                          :pages pages})))
+                       (let [{:keys [entities next-cursor]} (fetch-page entity-type after)
+                             accumulated' (into accumulated entities)]
+                         (if next-cursor
+                           (recur next-cursor (inc pages) accumulated')
+                           accumulated'))))]
+     (->> entity-types
+         (mapcat (fn [entity-type]
+                   (let [entities (fetch-type entity-type)]
+                     (mapcat
+                      (fn [entity-name]
+                        (when-let [resolved
+                                   (->> entities
+                                        (filter #(or (= entity-name (:entity/id %))
+                                                     (= entity-name (:entity/name %))
+                                                     (= entity-name (:entity/external-id %))))
+                                        (sort-by (fn [entity]
+                                                   [(if (= entity-name (:entity/id entity)) 0 1)
+                                                    (if (= entity-name (:entity/name entity)) 0 1)
+                                                    (str (:entity/id entity))]))
+                                        first
+                                        :entity/id)]
+                          [entity-name resolved]))
+                      names))))
+         distinct
+         vec))))
 
 (defn retract-documents!
   "Atomically retract derived documents. THREE outcomes, not two.
@@ -636,16 +674,30 @@
 
 (defn retract-flexiarg!
   "Retract a file-derived pattern, its canonical clauses, and its owned
-   pattern/has-* relations in verified atomic batches. Legacy same-name
-   duplicates are revealed only after the first ID is gone, so repeat until
-   the canonical names no longer resolve."
+   pattern/has-* relations in verified atomic batches. The canonical entity
+   IDs equal their names, so retract them directly and rely on the substrate's
+   indexed post-commit verification. Then drain UUID-backed legacy duplicates
+   with one type-scoped listing per pass. Legacy hyperedges minted duplicate
+   pattern entities, not clause entities, so only the pattern name needs this
+   discovery pass."
   [path]
   (let [pattern-id (or (flexiarg-pattern-id path)
                        (throw (ex-info "not a library flexiarg path" {:path path})))
         entity-names (cons pattern-id
-                           (map #(str pattern-id "/" %) canonical-pattern-facets))]
-    (loop [batch 0 total 0]
-      (let [entity-ids (fetch-pattern-entity-ids entity-names)]
+                           (map #(str pattern-id "/" %) canonical-pattern-facets))
+        relations (->> (fetch-pattern-relations pattern-id)
+                       (filter #(str/starts-with?
+                                 (type-str (:relation/type %))
+                                 "pattern/has-"))
+                       (keep :relation/id)
+                       distinct)
+        canonical-documents (concat
+                             (map #(hash-map :table :entities :id %) entity-names)
+                             (map #(hash-map :table :relations :id %) relations))
+        canonical-result (retract-documents! canonical-documents)]
+    (loop [batch 1 total (:count canonical-result)]
+      (let [entity-ids (fetch-pattern-entity-ids [pattern-id]
+                                                 ["pattern/library"])]
         (if (empty? entity-ids)
           {:ok true :count total :batches batch :pattern-id pattern-id}
           (do

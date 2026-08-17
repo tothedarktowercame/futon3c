@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.walk :as walk]
             [clojure.test :refer [deftest is testing]]
+            [babashka.http-client :as http]
             [futon3c.cyder :as cyder]
             [futon3c.watcher.multi :as sut]))
 
@@ -50,8 +51,11 @@
                     [{:relation/id "rel-a" :relation/type :pattern/has-if}
                      {:relation/id "rel-ignored" :relation/type :unrelated}])
                   sut/fetch-pattern-entity-ids
-                  (fn [names]
-                    (if (= 1 (swap! entity-lookups inc)) names []))
+                  (fn [names entity-types]
+                    (swap! entity-lookups inc)
+                    (is (= ["demo/sample"] names))
+                    (is (= ["pattern/library"] entity-types))
+                    [])
                   sut/retract-documents!
                   (fn [documents]
                     (swap! calls conj documents)
@@ -65,6 +69,37 @@
         (is (= #{{:table :relations :id "rel-a"}}
                (set (filter #(= :relations (:table %)) documents))))
         (is (= 8 (count (filter #(= :entities (:table %)) documents))))))))
+
+(deftest pattern-entity-resolution-throws-on-transport-failure
+  (with-redefs [http/get (fn [& _]
+                           (throw (java.net.ConnectException. "store down")))]
+    (let [failure (try
+                    (sut/fetch-pattern-entity-ids ["demo/sample"])
+                    nil
+                    (catch clojure.lang.ExceptionInfo e e))]
+      (is (some? failure))
+      (is (= :unknown (:outcome (ex-data failure))))
+      (is (= "pattern/library" (:entity-type (ex-data failure))))
+      (is (re-find #"store unreachable" (.getMessage failure))))))
+
+(deftest pattern-entity-resolution-paginates-and-retains-both-id-shapes
+  (let [urls (atom [])]
+    (with-redefs [http/get
+                  (fn [url _]
+                    (swap! urls conj url)
+                    {:status 200
+                     :body (if (re-find #"after=" url)
+                             (pr-str {:entities
+                                      [{:entity/type :pattern/library
+                                        :entity/id "legacy-uuid"
+                                        :entity/name "demo/sample"
+                                        :entity/external-id "demo/sample"}]})
+                             (pr-str {:entities [] :next-cursor "page-1"}))})]
+      (is (= ["demo/sample" "legacy-uuid"]
+             (sut/fetch-pattern-entity-ids ["demo/sample"]
+                                           ["pattern/library"])))
+      (is (= 2 (count @urls)))
+      (is (re-find #"after=page-1" (second @urls))))))
 
 (deftest flexiarg-delete-retracts-instead-of-marking-code-stale
   (let [calls (atom [])]
@@ -82,10 +117,10 @@
              @calls)))))
 
 (deftest flexiarg-retraction-drains-legacy-same-name-duplicates
-  (let [lookups (atom [["demo/sample"] ["legacy-uuid"] []])
+  (let [lookups (atom [["demo/sample" "legacy-uuid"] []])
         batches (atom [])]
     (with-redefs [sut/fetch-pattern-entity-ids
-                  (fn [_]
+                  (fn [_ _]
                     (let [result (first @lookups)]
                       (swap! lookups subvec 1)
                       result))
@@ -96,9 +131,26 @@
                     {:ok true :count (count documents)})]
       (let [result (sut/retract-flexiarg! "/repo/library/demo/sample.flexiarg")]
         (is (= 2 (:batches result)))
-        (is (= 2 (:count result)))
+        (is (= 10 (:count result)))
+        (is (= 8 (count (first @batches))))
         (is (= ["demo/sample" "legacy-uuid"]
-               (mapv (comp :id first) @batches)))))))
+               (mapv :id (second @batches))))))))
+
+(deftest flexiarg-retraction-still-refuses-past-legacy-batch-limit
+  (let [retractions (atom 0)]
+    (with-redefs [sut/fetch-pattern-entity-ids
+                  (fn [_ _] ["demo/sample" "legacy-uuid"])
+                  sut/fetch-pattern-relations (constantly [])
+                  sut/retract-documents!
+                  (fn [documents]
+                    (swap! retractions inc)
+                    {:ok true :count (count documents)})]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"duplicates remain after retraction limit"
+                            (sut/retract-flexiarg!
+                             "/repo/library/demo/sample.flexiarg")))
+      (is (= 4 @retractions)
+          "canonical plus three legacy batches run before the limit fires"))))
 
 (deftest flexiarg-rename-ingests-new-before-retracting-old
   (let [calls (atom [])]
@@ -133,7 +185,7 @@
                   (fn [pattern-id]
                     (if (= old-id pattern-id) stale @landed))
                   sut/post-hyperedge!
-                  (fn [hx-type endpoints labels props]
+                  (fn [hx-type endpoints labels props & _opts]
                     (swap! calls conj [:post endpoints])
                     (swap! landed conj {:hx/id (str "canonical-" (first endpoints))
                                         :hx/type hx-type :hx/endpoints endpoints
