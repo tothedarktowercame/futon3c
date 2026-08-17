@@ -118,8 +118,9 @@ per-frame series entry, case studies, design findings to the operator.
 Phase 2 (when cadence stabilizes): **analyst as a carded seat** — a
 fresh agent per N frames whose card mandates: consume each closed
 frame's trace + checks + reports; append one accumulator entry (what
-moved, what stalled, what contradicts the thesis); propose (never
-dispatch) design packets. Per-turn accumulation with the same
+moved, what stalled, what contradicts the thesis); convert divergences
+into dispatched-and-closed packets (§11 ruling supersedes the original
+"propose, never dispatch" wording here). Per-turn accumulation with the same
 fresh-seat/store-accumulates discipline as every other role — the
 analyst's memory IS the store and the mission record, not its context.
 Phase 3: the accumulator entries become the whitepaper's ladder-results
@@ -256,10 +257,15 @@ requirements-gathering):
   candidates, consolidation proposals (the W.67 fragmentation reading was
   the prototype).
 - E. Case-study accretion + defect-ledger classification (CS-1..4).
-- F. PROPOSE design packets from divergences; never dispatch — the
-  operator or lab manager dispatches. (Divergence examples that would
-  have been Analyst product: predicted-5/6-measured-3/6; the C3
-  false-fail; the P25 two-correct-layers finding.)
+- F. **[REVISED v1.4, operator's ruling 2026-08-17]** Convert divergences
+  into packets AND close them: dispatch by bell (small packets, parks,
+  the standard protocol), review at the gate personally, merge, and
+  register the hypothesis the fix implies for the next cycle. The
+  earlier "propose-never-dispatch" line is retired — see §11.
+  (Divergence examples that were this duty's product: predicted-5/6-
+  measured-3/6; the C3 false-fail; the P25 two-correct-layers finding —
+  each became a dispatched packet, a reviewed merge, and an f9
+  prediction.)
 - G. Whitepaper §5 accretion from the series.
 
 **Prerequisites before a carded Analyst can act (the operator's "what
@@ -276,11 +282,11 @@ needs to be in place"), in build order:**
    the quiet-down property the operator requires, made structural.
 4. **Read-surface completeness**: mostly done; residuals are the known
    projection gap and parked-listing under-report.
-5. **The Analyst card**: duties A-G, propose-never-dispatch, verdicts
-   with reasons, fresh-per-N-frames, memory = store + record + series
-   file only. Drafted AFTER 1-3 exist so the card describes a real
-   surface (the guide cards' lesson: cards that describe unbuilt
-   machinery generate holds).
+5. **The Analyst card**: duties A-G (F as revised — dispatch-and-close,
+   not propose-only), verdicts with reasons, fresh-per-N-frames, memory
+   = store + record + series file only. Drafted AFTER 1-3 exist so the
+   card describes a real surface (the guide cards' lesson: cards that
+   describe unbuilt machinery generate holds).
 
 **Sequencing proposal:** f9 runs with the lab manager still on the
 bench (duties A-G manual, third data point, validating the close-hook
@@ -288,3 +294,46 @@ timing); the use-receipts packet lands during f9; the Analyst card is
 drafted from the by-then-stable practice; f10 or f11 seats the first
 carded Analyst. Full closure = every role in the room, including the one
 that watches the room.
+
+---
+
+## 11. The sawmill dual (v1.4, operator's ruling 2026-08-17): the
+## Analyst closes its own backlog
+
+The operator's framing: this system is the DUAL of the APM/BPM problem
+series. Queue any list of PhD-level (or below) mathematics problems and
+the machine rips through them like a sawmill. For that to hold, the saw
+stays sharp, the boards aligned, the wheels oiled — i.e., the DEFECT
+pipeline must run at the same cadence as the PROBLEM pipeline.
+"Proposing packets from divergences" generates a backlog; **it is part
+of the Analyst's role to ensure that backlog is closed within the
+running of the machine cycle.** Propose-only was a bottleneck routed
+through the operator's attention; the ruling removes it.
+
+**The eat-its-own-tail loop, per cycle:**
+1. Frame closes → Analyst wakes (close-hook) → checks + series entry
+   (duties A-B).
+2. Divergences → SMALL packets, dispatched by bell to idle lanes, each
+   with a park (the standard protocol — the Analyst is a full protocol
+   citizen, not a special case).
+3. Bellbacks → the Analyst runs the review gate itself (read the diff,
+   run the gates, state what was checked), fixes small findings
+   directly, merges.
+4. Each merged fix registers a HYPOTHESIS for the next cycle in the
+   series entry (the "predicted" field — f8's predicted-5/6 and f9's
+   predicted-6/6 are the form). The next frame's checks adjudicate it.
+5. Anything requiring an operator decision (design rulings, budget,
+   scope) is surfaced, not sat on — the operator gates DECISIONS, the
+   Analyst gates IMPLEMENTATIONS.
+
+What stays with the operator: rulings (like this one), frame
+registrations, budgets, anything touching frozen artifacts or role
+cards. What the Analyst now owns end-to-end: the defect-to-merged-fix-
+to-hypothesis pipeline that frames 7-8 ran through the lab manager's
+hands (~25 defects, all closed in-cycle or same-day — that throughput
+is the empirical case that the loop works; the ruling makes it the
+seat's job rather than the lab manager's heroics).
+
+Precedent note for the card: W.75/W.76 are the template — wake on
+completion, verify with own hands, state what was checked, merge,
+record, predict.
