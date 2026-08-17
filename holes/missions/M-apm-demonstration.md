@@ -11206,3 +11206,18 @@ reviewer≠depositor gate reads the same field and now sees real seats, so
 self-review is refusable in fact. Inert until the next restart: C1 stays
 FAIL for f8 BY PREDICTION and flips for f9 — the transfer-checks
 instrument dates each fix's activation by which frame's score it moves.
+
+## W.63 Research plan v1: the programme alongside the frames (2026-08-17)
+
+Operator: brush the V3 whitepaper + notes into a research plan running
+alongside the solving work, with an eventual per-turn "analyst"
+accumulator role. **`docs/research-plan-v1.md` written**: the transfer
+loss function operationalized (pipeline-health via transfer_checks +
+substantive components a–d over the witnessed chain), per-frame data
+cadence (trace, score, guide report, transcripts, merged math), four
+experimental arms from the round-1 queue, four case studies (CS-1
+e-c0a2d2fe drafting next), four open design questions the frames should
+answer, and the analyst role's three-phase evolution — bench now, carded
+seat when cadence stabilizes (fresh per N frames, accumulates ONLY into
+the store and record), auto-drafting the whitepaper's ladder section
+eventually. Frame-8 concurrently: solver siege running.
