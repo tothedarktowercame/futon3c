@@ -186,3 +186,51 @@ the systematic evaluation: if transfer improves while λ₂ stays
 degenerate, transfer is running on lexical luck; if λ₂ richens while
 transfer stalls, retrieval is failing structure it could use. Either
 divergence is a design finding; convergence is the thesis.
+
+## 9. The cascade layer (v1.2, operator's direction 2026-08-17):
+## pattern→pattern structure BEFORE multi-pattern attachment
+
+Source: futon5a/essays/moran-1971-agent-cascades — Moran's reading of the
+MSC cascade (Alexander et al. 1968) as the control structure of a
+knowledge base: patterns as productions (condition / action / BECAUSE),
+edges as which-enables-which context dependencies, the whole a
+general→specific SEMILATTICE (multiple parents; overlaps are where the
+intelligence lives), and the 1971 warning that a thousand-pattern cascade
+is useless as a wall chart — it must be queried dynamically against the
+current problem state (Moran's AA = retrieval-augmented pattern
+application, specified before it was buildable).
+
+**Resolution of the W.67 fragmentation finding.** The reviewer's bespoke
+patterns were CORRECT as attachments (high fit) and the store's
+fragmentation is real — because the missing structure is not
+memory→pattern sharing but PATTERN→PATTERN edges. layer-cake-crossover-
+split SPECIALIZES separate-into-independent-pieces; the six formalization
+techniques plausibly share upstream parents. As cascade edges these
+relations connect the graph without diluting attachment fit. **Order of
+work (operator): cascade first; multi-pattern attachment on that ground
+afterward** — attachments then travel meaningfully (a memory on a
+specific pattern is reachable through its general parents).
+
+**Mechanism (proposed, smallest honest version):**
+1. The .flexiarg format grows an explicit upstream field (Alexander's own
+   patterns cite their larger-scale contexts) — e.g. `upstream:
+   math-informal/separate-into-independent-pieces` — authored in the
+   pattern FILE, where the because-clause lives; the multi_watcher
+   ingests it as a typed pattern→pattern edge (:specializes /
+   :enables). Curation stays editorial-with-receipts, exactly like
+   pattern authoring today.
+2. Reviewer guidance (scribe v2.2): authoring a bespoke pattern REQUIRES
+   naming its upstream(s) — the cascade grows with every promotion
+   instead of needing consolidation passes.
+3. Retrieval consequence (design question 1 answered structurally):
+   technique transfer becomes a CASCADE WALK — match general patterns
+   against problem state, descend to specifics carrying attached
+   memories — Moran's AA, on our store. Push recall's lexical anchor
+   mismatch (W.61) is exactly the wall-chart failure Moran predicted.
+4. Programme S extension: λ₂ now measures CASCADE connectivity (pattern-
+   pattern edges dominate the spectral structure); prediction S2-i
+   restates as "the cascade's largest component grows monotonically with
+   promotion passes."
+5. The because-clause discipline (Moran's best-aged sentence: transparent
+   beats correct; evidence detachable and replaceable) is already our
+   witness standard — the cascade makes it navigable.

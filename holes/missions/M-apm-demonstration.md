@@ -11329,3 +11329,17 @@ record-scribe-lanes DEAD over JSON transport (:lane decodes as string
 requires explicit :to though the registration pins the seat (asymmetric
 with dispatch-scribe — folded into P23). Lane report preserved in the
 scribe job + guide bell; recordable at :promote once P23 lands.
+
+## W.69 Operator direction: the cascade layer grounds multi-pattern attachment (2026-08-17)
+
+Moran-1971 (futon5a essay) applied: patterns as productions wired by
+which-enables-which edges, a general→specific semilattice — and the
+resolution of W.67's fragmentation: the reviewer's bespoke patterns were
+RIGHT as attachments; the missing structure is PATTERN→PATTERN edges
+(layer-cake-crossover-split :specializes separate-into-independent-
+pieces), not diluted memory sharing. Research plan v1.2 §9: flexiarg
+upstream field → watcher-ingested cascade edges; scribe v2.2 requires
+upstreams when authoring bespoke; retrieval as cascade walk (Moran's AA
+— the structural answer to the push-recall lexical mismatch); Programme S
+restated over cascade connectivity. Order of work per operator: cascade
+first, multi-pattern attachment on that ground.
