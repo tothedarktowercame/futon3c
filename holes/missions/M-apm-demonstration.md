@@ -11181,3 +11181,17 @@ f7 journey, runnable per frame against saved state + substrate.
 **Predicted f8: 5/6.** The per-frame score IS the transfer loss function,
 measured; C1's persistence keeps the queue honest. Frame-8 meanwhile:
 cycle open, guide conducting.
+
+**W.61 addendum — f8 opening move receipts (2026-08-17):** solver siege
+dispatched (act-1, v9→10, job `invoke-…f2e29278`, engine park with
+checklist payload); solver-config witness present; pre-dispatch checkout
+verification per the W.40 discipline. Two guide findings, recorded:
+(1) `:mission-absent` gate refusal on first submission — the `:mission`
+requirement is documented NOWHERE in cards or frame text; the guide
+recovered it from frame-7's saved state. Fix queued for guide card v2.2 /
+ignition template (card frozen mid-frame; no change now). (2) Solver's
+opening push recall: empty shelf (`completed-empty`) — the promoted-8 are
+t00A05-era technique memories whose content doesn't match a03J04's
+lexical anchors; EXPECTED, and the real test is the student's eligible
+set + pull after :promote-solver (predictions 1-2). The guide explicitly
+declined to route around it.
