@@ -19,6 +19,108 @@
 (def ^:private environment-revision (:reg/environment-revision registration))
 (def ^:private harness-revision (:reg/harness-revision registration))
 
+(defn- cascade-edge [memory-id pattern-id problem-id]
+  {:hx/type :memory/assert
+   :hx/props {:attachment-status :reviewed
+              :roles {:entry memory-id
+                      :patterns [pattern-id]
+                      :subjects [problem-id pattern-id]}}})
+
+(defn- cascade-readers [attachments why]
+  {:attachments-fn #(get attachments % [])
+   :why-targets-fn #(get why % [])})
+
+(deftest minimum-cascade-leaf-only
+  (let [edge (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [edge] "pattern/seed" [edge]
+                         "a01A01" [edge]}
+                        {})
+                       {:cap 10}))]
+    (is (= [["memory/leaf" {:route :leaf :hops 0}]] (:routes result)))
+    (is (= 1 (:patterns-per-problem result)))
+    (is (false? (:truncated? result)))))
+
+(deftest minimum-cascade-follows-authored-why-hops
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        hop1 (cascade-edge "memory/one" "pattern/one" "a02A02")
+        hop2 (cascade-edge "memory/two" "pattern/two" "a03A03")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf] "pattern/seed" [leaf]
+                         "a01A01" [leaf]
+                         "pattern/one" [hop1] "pattern/two" [hop2]}
+                        {"pattern/seed" ["pattern/one"]
+                         "pattern/one" ["pattern/two"]})
+                       {:cap 10}))]
+    (is (= [["memory/leaf" {:route :leaf :hops 0}]
+            ["memory/one" {:route :why-hop :hops 1
+                           :pattern "pattern/one"}]
+            ["memory/two" {:route :why-hop :hops 2
+                           :pattern "pattern/two"}]]
+           (:routes result)))))
+
+(deftest minimum-cascade-keeps-the-cheapest-route
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        via-why (cascade-edge "memory/shared" "pattern/why" "a02A02")
+        via-coincidence (cascade-edge "memory/shared" "pattern/co" "a01A01")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf] "pattern/seed" [leaf]
+                         "a01A01" [leaf via-coincidence]
+                         "pattern/why" [via-why]
+                         "pattern/co" [via-coincidence]}
+                        {"pattern/seed" ["pattern/why"]})
+                       {:cap 10}))]
+    (is (= {:route :why-hop :hops 1 :pattern "pattern/why"}
+           (second (some #(when (= "memory/shared" (first %)) %) (:routes result)))))))
+
+(deftest minimum-cascade-receipts-its-cap
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        edges (into {} (for [n (range 3)]
+                         [(str "pattern/" n)
+                          [(cascade-edge (str "memory/" n)
+                                         (str "pattern/" n)
+                                         (str "a0" (inc n) "A0" (inc n)))]]))
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        (merge {"memory/leaf" [leaf]
+                                "pattern/seed" [leaf]
+                                "a01A01" [leaf]}
+                               edges)
+                        {"pattern/seed" ["pattern/0" "pattern/1" "pattern/2"]})
+                       {:cap 2}))]
+    (is (= 3 (:expanded-available result)))
+    (is (= 2 (:expanded-count result)))
+    (is (= 3 (count (:routes result))) "leaf plus two expanded memories")
+    (is (true? (:truncated? result)))
+    (is (= 2 (:cap result)))))
+
+(deftest enabled-cascade-offer-exposes-density-and-truncation
+  (with-redefs [conductor/expand-memory-cascade
+                (fn [_ _]
+                  {:routes [["memory/leaf" {:route :leaf :hops 0}]
+                            ["memory/extra" {:route :why-hop :hops 1}]]
+                   :patterns-per-problem 3
+                   :cap 100
+                   :expanded-available 101
+                   :truncated? true})]
+    (let [offers (conductor/cascade-receipt-offers
+                  {:body {:job-id "job-cascade"
+                          :memory-use {:memory-use/surfaced-ids
+                                       ["memory/leaf"]}}}
+                  {:memory-cascade-enabled? true})]
+      (is (= [:leaf :why-hop] (mapv :offer/route offers)))
+      (is (= [0 1] (mapv :offer/hops offers)))
+      (is (every? #(= 3 (:offer/patterns-per-problem %)) offers))
+      (is (every? true? (map :offer/cascade-truncated? offers)))
+      (is (every? #(= 101 (:offer/cascade-expanded-available %)) offers)))))
+
 ;; The frozen round-1 EDN predates the seat-key gate (:unstaffed-carded-seat,
 ;; merged with feat/registration-seat-keys) and must not be edited, so the
 ;; fixture stages a staffed copy under a temp path for the machine to read.
@@ -235,10 +337,11 @@
         (is (seq (get-in closed [:envelope :failures]))
             "round-one closes with an honest refusal envelope")
         (is (= [{:offer/id "offer/job-test/0"
-                 :offer/memory-id "memory/a"}]
-               (mapv #(select-keys % [:offer/id :offer/memory-id])
-                     (get-in closed [:state :cycle/outputs :memory-offers])))
-            "the conductor converts the dispatch receipt into offer entities")
+                 :offer/memory-id "memory/a"
+                 :offer/route :leaf
+                 :offer/hops 0}]
+               (get-in closed [:state :cycle/outputs :memory-offers]))
+            "cascade-off preserves the old offer and labels it as a leaf")
         (is (not-any? #{:malformed-memory-offers}
                       (get-in closed [:envelope :failures]))
             "conductor-collected receipts validate as memory-offer entities"))

@@ -158,3 +158,21 @@
         (is (nil? (binding/lookup "f7-guide" session-id))))
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest production-open-threads-the-optional-memory-cascade-flag
+  (let [{:keys [payload options paths]} (fixture)
+        captured (atom nil)
+        session-id "cascade-flag-guide-session"]
+    (register-guide! session-id)
+    (try
+      (let [result (conductor-open/open!
+                    (assoc payload :memory-cascade-enabled? true)
+                    (assoc options :open-frame-fn
+                           (fn [config]
+                             (reset! captured config)
+                             {:ok true :cycle-id "cycle/test"
+                              :state {:current-phase :guided-solve}})))]
+        (is (:ok result))
+        (is (true? (:memory-cascade-enabled? @captured))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))

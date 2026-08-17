@@ -77,6 +77,20 @@
     (is (= [pull-use]
            (:pull-uses (trace-with (conj (base-entities) pull-use)))))))
 
+(deftest cascade-route-and-truncation-survive-trace-derivation
+  (let [offer {:offer/id "offer/cascade/1"
+               :offer/cycle cycle-id
+               :offer/memory-id "memory/known"
+               :offer/route :why-hop
+               :offer/hops 2
+               :offer/via-pattern "math-strategy/missing-dependency-protocol"
+               :offer/patterns-per-problem 3
+               :offer/cascade-cap 100
+               :offer/cascade-truncated? true
+               :offer/cascade-expanded-available 113}]
+    (is (= [(dissoc offer :offer/cycle)]
+           (:memory-offers (trace-with (conj (base-entities) offer)))))))
+
 (deftest scaffold-identical-frame-is-refused-before-persistence
   (let [store (harness/memory-store)
         path (Files/createTempFile "apm-frame" ".lean"

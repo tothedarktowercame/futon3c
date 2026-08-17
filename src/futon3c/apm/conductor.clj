@@ -4,6 +4,7 @@
    This namespace owns sequence, checkpointing, and a compact operation log.
    The problem peripheral remains the sole owner of cycle state and invariants."
   (:require [clojure.string :as str]
+            [clojure.edn :as edn]
             [babashka.http-client :as http-client]
             [cheshire.core :as json]
             [futon3c.agency.registry :as agency]
@@ -11,7 +12,10 @@
             [futon3c.apm.preregistration :as prereg]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.problem :as problem]
-            [futon3c.peripheral.runner :as runner]))
+            [futon3c.peripheral.runner :as runner]
+            [futon3c.substrate.client :as substrate]))
+
+(def ^:private default-memory-cascade-cap 100)
 
 (defn- default-close-hook
   [{:keys [agency-base analyst-seat caller prompt]}]
@@ -140,22 +144,189 @@
   (saved-step handle problem/advance
               ["apm-conductor" (:problem-id (:config handle)) payload]))
 
-(defn- receipt-offers [receipt]
+(defn- response-edn [response context]
+  (if (= 200 (:status response))
+    (edn/read-string (:body response))
+    (throw (ex-info "memory cascade substrate read failed"
+                    (assoc context :status (:status response)
+                           :body (:body response))))))
+
+(defn- cascade-get [base path query-params]
+  (response-edn
+   (http-client/get (str (str/replace base #"/+$" "") path)
+                    {:query-params query-params
+                     :throw false :timeout 60000})
+   {:path path :query-params query-params}))
+
+(defn- qualified-name [x]
+  (if (keyword? x)
+    (if-let [ns (namespace x)] (str ns "/" (name x)) (name x))
+    (str x)))
+
+(defn- reviewed-attachment? [edge]
+  (and (= "memory/assert" (qualified-name (:hx/type edge)))
+       (= "reviewed"
+          (qualified-name
+           (or (get-in edge [:hx/props :attachment-status])
+               (:prop/attachment-status edge))))))
+
+(defn- attachment-memory-id [edge]
+  (or (get-in edge [:hx/props :roles :entry])
+      (get-in edge [:prop/roles :entry])))
+
+(defn- attachment-patterns [edge]
+  (vec (or (get-in edge [:hx/props :roles :patterns])
+           (get-in edge [:prop/roles :patterns]) [])))
+
+(defn- attachment-problems [edge]
+  ;; APM problem ids are the only machine-identified problem endpoints in the
+  ;; historical attachment shape; the remaining :subjects are hooks, missions,
+  ;; and pattern ids. Keep this deliberately narrow rather than treating every
+  ;; subject as a co-incidence bridge.
+  (->> (or (get-in edge [:hx/props :roles :subjects])
+           (get-in edge [:prop/roles :subjects]) [])
+       (filter #(and (string? %) (re-matches #"[A-Za-z]\d{2}[A-Z]\d{2}" %)))
+       vec))
+
+(defn- live-cascade-readers [config]
+  (let [base (or (:evidence-store-url config) (substrate/configured-url))]
+    {:attachments-fn
+     (fn [endpoint]
+       (->> (:hyperedges
+             (cascade-get base "/api/alpha/hyperedges"
+                          {:end endpoint :type "memory/assert" :limit 5000}))
+            (filter reviewed-attachment?)
+            vec))
+     :why-targets-fn
+     (fn [pattern-id]
+       (->> (:relations
+             (cascade-get base "/api/alpha/relations"
+                          {:from pattern-id :limit 100}))
+            (keep (fn [relation]
+                    (when (= "pattern/has-semantic-why"
+                             (qualified-name (:relation/type relation)))
+                      (or (:relation/to relation) (:relation/dst relation)))))
+            distinct
+            vec))}))
+
+(defn expand-memory-cascade
+  "Expand surfaced memories through reviewed pattern attachments.
+
+   `attachments-fn` returns memory/assert edges for an endpoint;
+   `why-targets-fn` returns authored @why targets for a pattern. The result is
+   bounded after cheapest-route deduplication. `:expanded-count` excludes the
+   leaf memories already surfaced by retrieval."
+  [seed-memory-ids {:keys [attachments-fn why-targets-fn cap]
+                    :or {cap default-memory-cascade-cap}}]
+  (let [seed-memory-ids (vec (distinct seed-memory-ids))
+        seed-memory-set (set seed-memory-ids)
+        seed-edges (mapcat attachments-fn seed-memory-ids)
+        seed-patterns (vec (distinct (mapcat attachment-patterns seed-edges)))
+        ;; Authored why edges form a directed graph. Record the shortest
+        ;; distance from any seed pattern.
+        why-patterns
+        (loop [queue (into clojure.lang.PersistentQueue/EMPTY
+                           (map #(vector % 0) seed-patterns))
+               seen (zipmap seed-patterns (repeat 0))]
+          (if (empty? queue)
+            (dissoc seen nil)
+            (let [[pattern hops] (peek queue)
+                  queue (pop queue)
+                  next-hop (inc hops)
+                  targets (remove #(contains? seen %) (why-targets-fn pattern))]
+              (recur (into queue (map #(vector % next-hop) targets))
+                     (reduce #(assoc %1 %2 next-hop) seen targets)))))
+        why-patterns (apply dissoc why-patterns seed-patterns)
+        ;; Co-incidence is exactly pattern -> problem -> pattern. Only the
+        ;; original seed patterns initiate it; it does not recursively flood.
+        seed-pattern-edges (mapcat attachments-fn seed-patterns)
+        seed-problems (vec (distinct (mapcat attachment-problems
+                                             seed-pattern-edges)))
+        coincident-patterns
+        (->> seed-problems
+             (mapcat attachments-fn)
+             (mapcat attachment-patterns)
+             (remove (set seed-patterns))
+             distinct
+             (map #(vector % 2))
+             (into {}))
+        pattern-routes
+        ;; On equal cost retain the authored why route (the left map). The
+        ;; receipt then distinguishes authored structure from an incidental
+        ;; co-incidence without claiming a cheaper path.
+        (merge-with (fn [a b] (if (<= (:hops a) (:hops b)) a b))
+                    (into {} (map (fn [[pattern hops]]
+                                    [pattern {:route :why-hop :hops hops
+                                              :pattern pattern}])
+                                  why-patterns))
+                    (into {} (map (fn [[pattern hops]]
+                                    [pattern {:route :co-incidence :hops hops
+                                              :pattern pattern}])
+                                  coincident-patterns)))
+        structural
+        (for [[pattern route] pattern-routes
+              edge (attachments-fn pattern)
+              :let [memory-id (attachment-memory-id edge)]
+              :when (and memory-id (not (seed-memory-set memory-id)))]
+          [memory-id route])
+        cheapest
+        (reduce (fn [by-memory [memory-id route]]
+                  (update by-memory memory-id
+                          #(if (or (nil? %) (< (:hops route) (:hops %)))
+                             route %)))
+                {} structural)
+        ordered (->> cheapest
+                     (sort-by (fn [[memory-id {:keys [route hops]}]]
+                                [hops ({:why-hop 0 :co-incidence 1} route 2)
+                                 memory-id]))
+                     vec)
+        selected (take cap ordered)]
+    {:routes (into (mapv #(vector % {:route :leaf :hops 0}) seed-memory-ids)
+                   selected)
+     :seed-patterns seed-patterns
+     :patterns-per-problem (count seed-patterns)
+     :expanded-count (count selected)
+     :expanded-available (count ordered)
+     :cap cap
+     :truncated? (> (count ordered) cap)}))
+
+(defn cascade-receipt-offers
+  "Turn one dispatch receipt into route-labelled, optionally expanded offers."
+  [receipt config]
   (let [body (:body receipt)
         job-id (:job-id body)
-        memory-ids (get-in body [:memory-use :memory-use/surfaced-ids])]
-    (map-indexed (fn [index memory-id]
-                   {:offer/id (str "offer/" job-id "/" index)
-                    :offer/memory-id memory-id})
-                 memory-ids)))
+        memory-ids (vec (get-in body [:memory-use :memory-use/surfaced-ids]))
+        enabled? (true? (:memory-cascade-enabled? config))
+        expansion (when enabled?
+                    (expand-memory-cascade
+                     memory-ids
+                     (merge (live-cascade-readers config)
+                            {:cap default-memory-cascade-cap})))
+        routes (or (:routes expansion)
+                   (mapv #(vector % {:route :leaf :hops 0}) memory-ids))]
+    (map-indexed
+     (fn [index [memory-id route]]
+       (cond-> {:offer/id (str "offer/" job-id "/" index)
+                :offer/memory-id memory-id
+                :offer/route (:route route)
+                :offer/hops (:hops route)}
+         enabled?
+         (assoc :offer/patterns-per-problem (:patterns-per-problem expansion)
+                :offer/cascade-cap (:cap expansion)
+                :offer/cascade-truncated? (:truncated? expansion)
+                :offer/cascade-expanded-available
+                (:expanded-available expansion))
+         (and enabled? (:pattern route))
+         (assoc :offer/via-pattern (:pattern route))))
+     routes)))
 
-(defn- memory-offers [state]
+(defn- memory-offers [state config]
   (->> (:steps state)
        (keep (fn [{:keys [tool result]}]
                (when (#{:dispatch-solver :dispatch-student-fresh} tool)
                  (:memory-offers result))))
        (mapcat identity)
-       (mapcat receipt-offers)
+       (mapcat #(cascade-receipt-offers % config))
        vec))
 
 (defn- require-mission [handle opts]
@@ -338,7 +509,8 @@
     (:handle
      (advance handle
               (merge {:solver-attempt attempt
-                      :memory-offers (memory-offers (:state handle))}
+                      :memory-offers (memory-offers (:state handle)
+                                                    (:config handle))}
                      extra-outputs)))
     (catch Throwable t
       (failure handle :record-solver-threw (.getMessage t)))))
