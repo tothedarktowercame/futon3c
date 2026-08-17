@@ -11428,3 +11428,20 @@ fresh prover burns time). All mining pointers preserved in the final
 report. **Next bench acts: fix C3/C4 extraction, diagnose the pull-join,
 dispatch the retro mining pass (f8-scribe, W.41 precedent), first S
 capture.** Third consecutive fresh guide: card-perfect through standdown.
+
+## W.73 P25 merged: the retrieval seam was TWO correct behaviors composing into a miss (2026-08-17)
+
+Adjudication: both hypotheses TRUE. (A) memory_search's tag filter
+consults only :evidence/tags, AND-semantics, never subjects
+(backend.clj:94-97). (B) e-d11811de's tags were [:memory :memory/assert]
+— the scribe's nine need-tags were PROMOTION metadata, never mutations of
+the immutable entry — so the tag query missing it was technically
+correct. **The frame's sharpest finding decomposes into two locally-
+correct layers whose composition loses the memory** — the same shape as
+W.44 (two correct rules composing into a wall), now in retrieval. Fix
+merged: a lone problem-id-shaped tag additionally runs the canonical
+subject query (P20's normalizer underneath), deduped, tag-priority,
+both seat surfaces; tool guidance added. Inert until f9. With P24 also
+merged, every f8 finding is now fixed-or-queued; remaining bench acts:
+C3/C4 instrument fixes, pull-join diagnosis, retro mining dispatch,
+S capture.
