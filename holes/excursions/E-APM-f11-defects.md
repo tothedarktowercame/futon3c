@@ -781,3 +781,60 @@ reviewer, take the `:reviewer-not-actor` refusal, and record it as the receipt.
 
 That is the correct call, and it is worth recording that the machine offered a
 route to a green number that only an agent's judgement declined.
+
+
+## D35. There is NO authoring shape whose independent review can be machine-recorded **[verified]**
+
+This is the synthesis, and it is stronger than any of the individual defects
+that compose it.
+
+f11-scribe **approved** the student's memory `e-e0dabbd2`
+(`STUDENT-MEMORY-VERDICT: approve`, pattern
+`math-formalization/notation-semantics-traps`) — and then reported
+`STUDENT-MEMORY-REVIEW-EVIDENCE-ID: NONE`, because the memory's edge is
+**statusless with an empty pattern set**, so the seat could not produce review
+evidence consumable by the independent promotion path without acting through the
+conductor-only statusless path, which would not be independent.
+
+Put the two authoring shapes side by side:
+
+| edge shape | produced by | review path available | why it fails |
+|---|---|---|---|
+| `:proposed` + patterns | `memory_record` with a pattern (the guide's deposit) | independent review | the keyword `:verdict` cannot cross the transport — **D31** |
+| statusless, no patterns | `memory_record` without a pattern (the student's) | attach-then-review only | requires reviewer **==** acting conductor — **D3** |
+
+**So every authoring shape is blocked, by a different defect.** That is the
+complete explanation of why f9, f10 and f11 all gained zero reviewed
+attachments — not one cause but a pincer, and fixing either defect alone leaves
+the other shape stranded.
+
+**And with D33, the gate is mute in both directions:** a rejection leaves no mark
+on the hyperedge, and an approval cannot be written as evidence. f11 produced one
+genuine rejection (the guide's deposit) and one genuine approval (the student's),
+**and neither exists anywhere in machine-readable form.** Both survive only in a
+scribe's prose report — which is D6's failure shape, fixed for conductor refusals
+and unfixed for the entire review lifecycle.
+
+The scribe also volunteered a `ZERO-REJECTIONS-CHECK` — stating that it rejected
+nothing this pass, that this was not a rubber stamp, that there was one memory to
+judge, that it read it and checked its parser claim against the compiled student
+source, and that approval evidence was withheld only because the edge shape fails
+the executable path. That is the right way to report a clean pass, and it is what
+makes the finding above legible rather than looking like inaction.
+
+## D36. Four evidence writes were refused with HTTP 403 before a supported path worked **[reported by f11-scribe]**
+
+*"My first four write attempts were refused with HTTP 403 and landed no entries;
+retry through the supported EDN penholder backend succeeded, and all four final
+evidence entries and proposed hyperedges round-trip."*
+
+All four lane deposits are confirmed present in the store by ground control
+(`e-21628d1f`, `e-5d25a33c`, `e-da3c4035`, `e-8931a4eb`; 1,543–1,734 bytes), so
+the retry worked and nothing was lost.
+
+But a seat doing exactly what its card asks hit four 403s first, and only a
+different backend path succeeded. Not verified at source by ground control.
+Worth a small packet: either the unsupported path should not be reachable, or the
+403 should say which backend to use. A defect that costs four failed attempts and
+is recoverable only by knowing the answer already is a defect in the interface,
+not in the agent.
