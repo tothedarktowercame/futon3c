@@ -434,3 +434,67 @@ failures recorded here as D22** — the same seven that f9 and f10 both carry. T
 first close had found them and the finding died with it; the second close found
 them again only at f10, by hand. **A defect can be discovered and lost, and the
 only evidence that it was ever found is a phrase in a bell.**
+
+---
+
+## 9. Appended by claude-2 (ground control) after analyst-1's close, 2026-08-18
+
+### D24 — succession UNBLOCKED, but the router is STILL BROKEN **[verified]**
+
+`analyst-2` is now minted, invoke-ready, on Opus. **The defect D24 describes is
+not fixed** — only its consequence for succession is.
+
+- `POST /api/alpha/frames/mint-analyst` still returns **404**. Re-check with the
+  curl in D24; it is still the right test.
+- The seat was minted by calling `frame-seats/mint-analyst!` over Drawbridge with
+  an explicit `:prepare-seat-fn`.
+
+On analyst-1's objection, which was correct and is worth preserving: it declined
+to hand-assemble a mint because a hand-built preparer "would yield a seat that
+looks minted while carrying an unverified invoke path." Two things resolve that
+without overriding the judgement:
+
+1. **`:prepare-seat-fn` is the documented injection point, not a bypass.**
+   `http/mint-analyst-seat!` itself resolves the preparer as
+   `(or (:frame-seat-prepare-fn config) (partial prepare-frame-seat config))` —
+   a config-supplied preparer is the sanctioned path. So the machine still did the
+   tenure bookkeeping: derived `analyst-2` from the tenure, enforced the `:claude`
+   type check, held the mint lock, stayed idempotent on an active tenure, applied
+   `{:analyst-tenure 2 :fresh-session? true}` and the standard capabilities, and
+   ran its own readiness check. Only the invoke-fn was supplied.
+2. **The invoke path was then verified rather than assumed** — a readiness probe
+   (job `invoke-1787054367773`) returned `analyst-2, running on Claude Opus 5`.
+   That is the check whose absence analyst-1 was unwilling to accept, and it is
+   available to any future minter.
+
+Also note `prepare-frame-seat` reads `config` for exactly two things —
+`(evidence-store-for-config config)` and `(:irc-send-fn config)` — and
+`evidence-store-for-config` (`http.clj:1435`) does **not** fall back to a live
+atom. So a naive `{}` config would have minted a seat with a nil evidence store.
+analyst-1's caution was well founded; the fix is to supply the invoke-fn directly
+rather than to fake a config.
+
+**Still owned by ground control:** rebuilding the handler and re-installing it on
+port 7070, which is what actually fixes D24. Deferred deliberately —
+`runtime/agents.clj:168 make-http-handler` assembles peripherals and the evidence
+store through `runtime-config`, and a mis-reconstructed config would trade one
+dead endpoint for a subtly degraded server. Not a JVM restart (I-0 holds), but an
+operator decision. Nothing is blocked on it now.
+
+### D1 — partially mitigated at the seat level, NOT fixed **[verified]**
+
+`analyst-2` was minted **with `:model "claude-opus-5"` set at mint time**, so it
+is the first seat this period that did not need a live-state re-registration
+after minting. This proves the shape of the fix: the preparer can set the model.
+
+`mint-seats!` and `mint-analyst!` still accept no model argument, so **every seat
+minted through the endpoints still defaults to Fable**. D1 stands.
+
+### D18 — note for whoever reconciles the two readings
+
+analyst-1 resolved this from the frame records (`:none` in both frames). Ground
+control's `:pull-only` reading came from the **recall/dispatch record** in the
+saved cycle state, not the frame record. Both are correct and they are different
+fields; there is no contradiction, and the resolution is analyst-1's. Recorded
+because two agents reading "the memory channel" reached different strings from
+the same frame, which is itself a legibility defect in the state shape.
