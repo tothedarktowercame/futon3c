@@ -52,7 +52,7 @@
  ;; Verified 2026-08-18: that command evaluated at frame-8's freeze reproduces
  ;; frame-8's declared 77f884065f459b090c78ade2c970933912cf6154 exactly.
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "ca8be17fbba2837a81e3883558eacc457f39865a"
+ :reg/harness-revision     "b81cabc89fc3bcdf28cd33fd3a29c58887cec190"
 
  ;; Five FRESH seats, to be minted by POST /api/alpha/frames/mint-seats "f9".
  :reg/solver-seat  "f10-solver"
@@ -137,9 +137,19 @@
   "promoted then surfaced then used" "contract leaks"
   "duplicate declarations" "locked-lemma exposure" "promotion coverage"
   "unconsumed promotions" "import-only edges" "scribe lane coverage"
-  "arc-lane yield" "rewrite rule offered and used"
-  ;; new in f9
-  "offers by route" "patterns per problem" "cascade truncation"]
+  "arc-lane yield" "rewrite rule offered and used"]
+
+ ;; The three cascade measurements f9 introduces -- offers by route,
+ ;; patterns-per-problem, cascade truncation -- are deliberately NOT added to
+ ;; :required-measurement-fields above. That vector is an EXACT-MATCH constant in
+ ;; apm/preregistration.clj (required-measurement-fields, 17 entries); adding to
+ ;; it fails registration-content-failures with :wrong-required-measurement-fields
+ ;; and would make f9/f10 the only frames that diverge from it. The measurements
+ ;; are carried by the cascade receipt itself (futon3c 47f421b9: :offer/route,
+ ;; :offer/hops, :offer/via-pattern, patterns-per-problem, truncation) and are
+ ;; adjudicated through :reg/predictions, so nothing is lost by keeping the
+ ;; frozen vector frozen.
+ :reg/cascade-measurements ["offers by route" "patterns per problem" "cascade truncation"]
 
  :reg/role-cards
  {:codex-solver "bd8091080cd40a0bbf35f559a93976f454113b2b"
