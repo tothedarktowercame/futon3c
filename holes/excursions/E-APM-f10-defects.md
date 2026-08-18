@@ -968,3 +968,32 @@ is designed — and specifically, whether the gap is the solver failing to call 
 receipt tool, or the tool being unreachable from the solver's surface as
 `:write-use` was for the guide (D25). Those need different fixes, and the D25
 precedent makes the second hypothesis worth checking first.
+
+### D2 — FIXED (`73a6b0c246efb697f5b0f9347d7a867e6885f51a`) **[verified]**
+
+**Structural.** `guidance-count` now subtracts `(count (:solver-dispatches
+trace))` — one opening per dispatch — instead of the flattened per-memory offer
+list. The measure is invariant to how many memories a dispatch happens to offer,
+which is the property that broke when the cascade landed.
+
+A compatibility branch keeps the historical per-offer subtrahend for traces
+predating the `:solver-dispatches` field, so frames 2-8's published counts do not
+shift. **No clamping** — a negative count was the symptom, and clamping would
+have hidden the defect while leaving the number meaningless.
+
+**Better than the packet asked for.** Ground control expected f9 and f10 to be
+stuck with their wrong values, since the fix only had to protect f2-f8. In fact
+both traces already carry `:solver-dispatches` (a vector of dispatch records,
+each with `:ground-control/recipient`), so they take the NEW branch and are
+**retroactively corrected**: f10 becomes 1 dispatch − 1 opening = **0**, which is
+the true value, in place of the −101 in its record. The series numbers are
+recoverable rather than merely frozen.
+
+Ground control checked this rather than asserting it: the concern that f9/f10
+would fall into the legacy branch was reasonable and simply wrong, and grepping
+the two saved traces settled it in one step.
+
+**Gates re-run by ground control:** clj-kondo 0/0; check-parens OK; APM suite
+56 tests / 250 assertions / 0 failures with the namespace set enumerated from
+disk. **Mutation-verified:** forcing the legacy branch (`if false`) gives 1
+failure against a clean 0, and reproduces −101 on the 102-offer case.
