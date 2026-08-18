@@ -28,6 +28,7 @@
 {"problem-id": "a03J01", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a03J02", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a03J03", "status": "clean", "claims": 3, "extra-axioms": {}}
+{"problem-id": "a03J04", "status": "clean", "claims": 12, "extra-axioms": {}}
 {"problem-id": "a03J06", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a03J07", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a03J08", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -54,7 +55,7 @@
 {"problem-id": "a94A05", "status": "clean", "claims": 2, "extra-axioms": {}}
 {"problem-id": "a94A06", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "a94A08", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "a94A09", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp918t7y28.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ConstructionTargets/SchwarzPick.olean' of module ConstructionTargets.SchwarzPick does not exist"}
+{"problem-id": "a94A09", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpmirb1xdy.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ConstructionTargets/SchwarzPick.olean' of module ConstructionTargets.SchwarzPick does not exist"}
 {"problem-id": "a94A10", "status": "clean", "claims": 9, "extra-axioms": {}}
 {"problem-id": "a94J01", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a94J02", "status": "clean", "claims": 10, "extra-axioms": {}}
