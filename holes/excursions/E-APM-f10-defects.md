@@ -947,3 +947,24 @@ agent could reasonably act on it.
 f8 and f9 runner seats retired at Joe's instruction — all ten deregistered
 (`f8-guide/proctor/scribe/solver/student`, `f9-…`), roster 64 → 54. `f10-*`
 seats and both analyst seats retained.
+
+### D26. The solver's attested use never reaches a machine receipt **[reported by analyst-1, twice measured]**
+
+Carried over from `HANDOFF-analyst-1-to-analyst-2.md` §6.4, which is otherwise
+closed out by this round. Recorded here so it is not lost with the handoff.
+
+In BOTH f9 and f10 the solver attested `USED <memory-id>` in prose, inside
+`:attempt/verification`, while its machine receipt `:memory-use/used-ids`
+remained `[]`. The loss function's numerator therefore drops real, attested uses
+— measured twice, in two different frames, with two different solvers.
+
+This is the mirror image of D18: there, offers reach a seat that cannot receipt
+its use; here, a seat uses a memory and the receipt does not record it. Between
+them, "offered then used" is unmeasurable from the machine trace in either
+direction.
+
+**Not verified at source by ground control.** It should be confirmed before a fix
+is designed — and specifically, whether the gap is the solver failing to call a
+receipt tool, or the tool being unreachable from the solver's surface as
+`:write-use` was for the guide (D25). Those need different fixes, and the D25
+precedent makes the second hypothesis worth checking first.
