@@ -172,7 +172,9 @@
  ;; SATISFIES frame-2's cross-problem recall-leakage criterion rather than
  ;; departing from it (see the header comment). Declaring a departure that
  ;; does not hold would have had the Analyst adjudicate a fiction.
-   {:id :analyst-tenure-n2
+   {:id :claude-seat-model-opus
+   :text "f10's guide seat runs claude-opus-5; f9's guide ran Fable 5. NOT a designed contrast -- POST /api/alpha/frames/mint-seats builds claude seats with no :model (transport/http.clj:2497 assocs :model only when requested), so minted claude seats default to Fable, and the Fable quota was exhausted between f9 and f10. It killed f9's Analyst mid-analysis at 08:47Z and then killed f10's guide orientation bell at 09:34Z (job invoke-1787045640498). The seat was re-registered on Opus, changing the MODEL AND NOTHING ELSE -- no :cwd was introduced, since f9-guide had none. Declared because it is a real between-frame difference in a frame pair that is already not a controlled comparison; the Analyst should read any f9/f10 guidance difference with this in view. Related: f9's Analyst also completed its close on Opus after failing on Fable, so the Analyst seat is Opus across both frames and is NOT a source of f9/f10 difference. Ground control (claude-2), pre-open."}
+  {:id :analyst-tenure-n2
    :text "The Analyst serves N = 2 frames (f9, f10) while every other seat is minted fresh per frame. Ruled 2026-08-18; plan §6 stands with N pinned at 2."}]
 
  :reg/predictions
