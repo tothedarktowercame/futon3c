@@ -398,6 +398,9 @@
                           opened {:mission "M-test"} "mine this cycle")
             promoted (-> opened
                          (assoc-in [:state :current-phase] :promote)
+                         (assoc-in [:state :cycle/outputs :registration
+                                    :reg/role-cards :scribe]
+                                   "02441d9df4b8a05355790a51f1e535bf9e9465d4")
                          (update-in [:state :steps] conj
                                     {:tool :dispatch-solver
                                      :result {:job-id "solver-job"}}
@@ -421,8 +424,18 @@
           (is (= (:cycle-id promoted) (:cycle-id sent-opts)))
           (is (= ["solver-job"] (:solver-job-ids sent-opts)))
           (is (= ["student-job"] (:student-job-ids sent-opts)))
-          (is (= "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe.md"
+          (is (= "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
                  (:scribe-card-path sent-opts))))
+        (let [unresolved (conductor/dispatch-scribe!
+                          (assoc-in promoted
+                                    [:state :cycle/outputs :registration
+                                     :reg/role-cards :scribe]
+                                    (apply str (repeat 40 "f")))
+                          {:mission "M-test"} "mine this cycle")]
+          (is (false? (:ok unresolved)))
+          (is (= :scribe-card-unresolved (get-in unresolved [:error :error/code])))
+          (is (= (apply str (repeat 40 "f"))
+                 (get-in unresolved [:error :error/context :pinned-blob]))))
         (agency/register-agent!
          {:agent-id agent-id :type :claude
           :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})})

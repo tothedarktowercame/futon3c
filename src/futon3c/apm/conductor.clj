@@ -5,6 +5,8 @@
    The problem peripheral remains the sole owner of cycle state and invariants."
   (:require [clojure.string :as str]
             [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [babashka.http-client :as http-client]
             [cheshire.core :as json]
             [futon3c.agency.registry :as agency]
@@ -513,8 +515,29 @@
     (dispatch! handle :dispatch-student-fresh
                (assoc (or opts {}) :to student-seat) packet)))
 
-(def ^:private scribe-card-path
-  "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe.md")
+(defn- resolve-scribe-card-path
+  [pinned-blob]
+  (when (and (string? pinned-blob) (re-matches #"[0-9a-f]{40}" pinned-blob))
+    (let [{root-exit :exit root-out :out}
+          (shell/sh "git" "rev-parse" "--show-toplevel")
+          root (some-> root-out str/trim not-empty)]
+      (when (and (zero? root-exit) root)
+        (let [{tree-exit :exit tree-out :out}
+              (shell/sh "git" "-C" root "ls-tree" "-r" "HEAD")
+              matches (when (zero? tree-exit)
+                        (->> (str/split-lines tree-out)
+                             (keep (fn [line]
+                                     (let [[metadata path] (str/split line #"\t" 2)
+                                           [_ kind blob] (str/split metadata #"\s+")]
+                                       (when (and (= "blob" kind)
+                                                  (= pinned-blob blob)
+                                                  (string? path)
+                                                  (str/includes? path "/role-cards/"))
+                                         path))))
+                             vec))]
+          (when (= 1 (count matches))
+            (let [card (io/file root (first matches))]
+              (when (.isFile card) (.getCanonicalPath card)))))))))
 
 (defn- recorded-job-ids [state tool]
   (->> (:steps state)
@@ -527,13 +550,20 @@
   "Dispatch the registered scribe with machine-owned cycle references."
   [handle opts packet]
   (let [state (:state handle)
-        context {:problem-id (get-in handle [:config :problem-id])
-                 :cycle-id (:cycle-id handle)
-                 :solver-job-ids (recorded-job-ids state :dispatch-solver)
-                 :student-job-ids (recorded-job-ids state
-                                                    :dispatch-student-fresh)
-                 :scribe-card-path scribe-card-path}]
-    (dispatch! handle :dispatch-scribe (merge (or opts {}) context) packet)))
+        pinned-blob (get-in state [:cycle/outputs :registration
+                                   :reg/role-cards :scribe])
+        scribe-card-path (resolve-scribe-card-path pinned-blob)]
+    (if-not scribe-card-path
+      (failure handle :scribe-card-unresolved
+               "registered scribe role card could not be uniquely resolved"
+               {:pinned-blob pinned-blob})
+      (let [context {:problem-id (get-in handle [:config :problem-id])
+                     :cycle-id (:cycle-id handle)
+                     :solver-job-ids (recorded-job-ids state :dispatch-solver)
+                     :student-job-ids (recorded-job-ids state
+                                                        :dispatch-student-fresh)
+                     :scribe-card-path scribe-card-path}]
+        (dispatch! handle :dispatch-scribe (merge (or opts {}) context) packet)))))
 
 (defn promote-artifact!
   "Record one promotion through the phase-gated problem tool."
