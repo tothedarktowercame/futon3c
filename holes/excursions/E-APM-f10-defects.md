@@ -904,3 +904,46 @@ The lesson, now four times over in this period: **a delta is only evidence
 against a baseline measured the same way.** Compare against the parent commit,
 not against a mutated tree, and never against a guessed namespace set. The valid
 mutation probe was the dedicated test, run alone.
+
+## 13. Post-restart verification (2026-08-18, after Joe restarted the JVM)
+
+### D24 — VERIFIED FIXED AND LIVE **[verified]**
+
+`RESULT=ok`, agency up after 2s. The check from D24:
+
+```
+POST /api/alpha/frames/mint-analyst  ->  409 invalid-tenure   (was 404 unknown endpoint)
+POST /api/alpha/frames/mint-seats    ->  409 missing-frame-id
+```
+
+Both routed. The endpoint now reaches its handler and refuses on content rather
+than on existence. **D24 is closed.**
+
+### CORRECTION — registrations DO survive a restart **[verified]**
+
+Several entries above, and the two live re-registration scripts, carry the claim
+*"Live-state registration: does NOT survive a futon3c restart."* **That is
+wrong.** After the restart, all 64 agents came back with `local invoke-fn
+registered`, zero missing, and `analyst-1`, `analyst-2` and `f10-guide` all
+retained `claude-opus-5`.
+
+And the model survived *through the invoke path*, not merely in metadata — which
+is the distinction that matters, since a generic restore that rebuilt invoke-fns
+without the model would have silently returned every claude seat to Fable, i.e.
+D1 all over again with the roster still claiming Opus. Verified by probe, not by
+reading the roster: `analyst-2` was belled and answered *"analyst-2, running on
+Claude Opus 5 (claude-opus-5)."*
+
+Consequence: the hand re-registrations that rescued `analyst-1` and `f10-guide`
+were durable, not stopgaps. The D1 source fix is still the right fix — it removes
+the need to re-register at all — but the urgency framing in D1 ("do not survive a
+restart") overstated the risk.
+
+Recorded because it is a factual claim this file asserted more than once and an
+agent could reasonably act on it.
+
+### Housekeeping
+
+f8 and f9 runner seats retired at Joe's instruction — all ten deregistered
+(`f8-guide/proctor/scribe/solver/student`, `f9-…`), roster 64 → 54. `f10-*`
+seats and both analyst seats retained.
