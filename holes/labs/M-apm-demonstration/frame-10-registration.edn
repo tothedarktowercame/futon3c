@@ -52,7 +52,7 @@
  ;; Verified 2026-08-18: that command evaluated at frame-8's freeze reproduces
  ;; frame-8's declared 77f884065f459b090c78ade2c970933912cf6154 exactly.
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "b81cabc89fc3bcdf28cd33fd3a29c58887cec190"
+ :reg/harness-revision     "05ab95caf84255244a0d355c90e36412a9427ca8"
 
  ;; Five FRESH seats, to be minted by POST /api/alpha/frames/mint-seats "f9".
  :reg/solver-seat  "f10-solver"
