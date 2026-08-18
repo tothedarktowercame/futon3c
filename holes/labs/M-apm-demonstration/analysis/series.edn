@@ -440,16 +440,19 @@
      was never recorded in ANY version of this cycle, so the touch-set size has no value at
      all. With an empty touch-set both hypotheses predict zero offers. Worth keeping as the
      generalisation error it is: f10 measured a touch-set of 2 and f11 assumed one."}
-   {:id :refusals-are-traceable :verdict :inapplicable-and-unverifiable
+   {:id :refusals-are-traceable :verdict :refuted
     :evidence
-    "No conductor action was refused, so by the registration's own rule this is inapplicable
-     rather than confirmed. But I cannot verify that nothing was refused: the guide's own
-     close plan states it would submit a promotion naming f11-scribe as reviewer and 'record
-     the refusal' as the receipt. :promotion-result is [] and :action-refusals is nil in the
-     cycle outputs AND in every one of the 60 steps (the 9 string hits for 'action-refusals'
-     in the saved state are all the registration's own prediction text). So either the attempt
-     was never made or it left no trace — and D6's fix was precisely to make that
-     distinguishable. Recorded as an open question, not as a pass."}
+    "I first recorded this as inapplicable-and-unverifiable: :promotion-result is [] and
+     :action-refusals is nil in the cycle outputs AND in every one of the 60 steps (the 9
+     string hits for 'action-refusals' in the saved state are all the registration's own
+     prediction text), so I could not tell whether the guide's stated promotion attempt was
+     never made or was made and left no trace. RESOLVED WHILE I WAS WRITING, by ground
+     control's D37 (a15d734d, E-APM-f11-defects.md): the attempt WAS made, naming f11-scribe
+     as reviewer, and was refused :reviewer-not-actor — and the refusal was dropped because
+     conductor_surface/execute-action! returns from its own cond BEFORE reaching
+     record-action-refusal!. So an action WAS refused and it is NOT in the trace: the
+     prediction is REFUTED, not inapplicable, and D6's fix has a hole in exactly the path
+     that matters. Verdict corrected on ground control's evidence, not mine."}
    {:id :analyst-survives-two-frames :verdict :partial-frame-1-of-2
     :evidence
     "Duties A, B and F completed at this close: checks re-run by me from the command (not
@@ -488,7 +491,17 @@
            one in-scope promotion -> PASS, 5/6). This is the mirror image of F3's vacuous PASS:
            the same frame has one check failing on no input and another passing on no input,
            and both move a number the seat reports."
-    :status :packet-dispatched :ref "P28 / invoke-1787075238508-4903-a34c339d, park-a28b01b7"}
+    :status :fixed-and-gated
+    :ref "P28 / codex-3 / commit b57b29f0; job invoke-1787075238508-4903-a34c339d, park-a28b01b7. Filed as D39 in E-APM-f11-defects.md (D37 was taken by ground control mid-close)."
+    :review "GATED BY ME, not accepted on report. git show --name-only: transfer_checks.bb only.
+             (a) f11 -> C3 INAPPLICABLE, 'score: 4/6  (inapplicable: C3 -- no cycle promotions in
+             scope)'. (b) f10 regression guard -> C3 PASS, score 5/6, :inapplicable []. (c) the
+             packet's mutation -> C3 PASS, 5/6. (d) MY OWN GUARD MUTATION, which the packet did not
+             ask for and which is the whole risk of this change: an in-scope promotion that is NOT
+             in the eligible set must still FAIL rather than be laundered into INAPPLICABLE -- it
+             does, FAIL at 4/6. Receipt carries :inapplicable? true with :reason and a top-level
+             :inapplicable vector; :score is still n/6 and the denominator did not move.
+             check-parens exit 0."}
 
    {:id :f11-a2
     :text "THE STUDENT ARM IS NOT AN EMPTY-SHELF BASELINE AND THE TRACE SAYS OTHERWISE. The
@@ -540,9 +553,15 @@
            naming f11-scribe as reviewer and record the :reviewer-not-actor refusal as the
            receipt — the honest move, and the right one. :promotion-result is [] and no
            :action-refusals receipt exists anywhere in the state, and no matching evidence is
-           in the substrate. Whether the attempt was made is unrecoverable from the machine.
-           D6's fix (585a980e) was supposed to make exactly this distinguishable."
-    :status :surfaced}]
+           in the substrate. I could not tell from the machine whether the attempt was made.
+           RESOLVED by ground control's D37 (a15d734d) while this entry was being written: it
+           was made and refused :reviewer-not-actor, and execute-action! returns before
+           record-action-refusal! ever runs. So the trace's silence is the defect, not the
+           guide's conduct — and it is a hole in D6's fix, which ground control had gated.
+           Ground control also filed D38: with zero offers, write-uses! reduces over an empty
+           :memory-offers and records nothing, so a no-op write-use is indistinguishable from
+           never calling it. Both are the same shape as this frame's two vacuity findings."
+    :status :resolved-by-ground-control-d37 :ref "D37, D38 in E-APM-f11-defects.md"}]
 
   :headline
   "The object under test was broken, and the frame proved it: t01A05's frozen clause 2 is

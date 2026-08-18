@@ -1062,7 +1062,7 @@ receipts, or the occurrence counts should be dropped. This is the over-counting
 substring trap recorded as an instrument-caution by analyst-1 at S-2, met here a
 third time in this series.
 
-### D37. `C3` fails vacuously when a frame promotes nothing **[verified, mine — the Analyst's own instrument]**
+### D39. `C3` fails vacuously when a frame promotes nothing **[verified, mine — the Analyst's own instrument]**
 
 `transfer_checks.bb` C3 passes only when
 `(and (seq promo-ids-in-scope) (every? elig promo-ids-in-scope))`. f11 promoted
@@ -1084,3 +1084,21 @@ park `park-a28b01b7`), scoped deliberately as a **reporting** change: C3 reports
 `INAPPLICABLE` with a reason, and **the `/6` denominator does not move**, because
 changing the denominator is a decision about the loss function and that is not the
 Analyst's to make.
+
+**D39 — FIXED (`b57b29f03c372ddf89b41421148115d6167950b1`, codex-3) and gated by me [verified]**
+
+C3 now reports `INAPPLICABLE` with `:reason "no cycle promotions in scope"` when
+`promo-ids-in-scope` is empty; the receipt gains a top-level `:inapplicable`
+vector; **the denominator did not move** — `:score` is still `n/6`.
+
+Gates re-run by me rather than taken from the report: `git show --name-only`
+touches `transfer_checks.bb` and nothing else; f11 → `score: 4/6 (inapplicable:
+C3 -- no cycle promotions in scope)`; **f10 regression guard** → C3 `PASS`,
+`5/6`, `:inapplicable []`; check-parens exit 0.
+
+**Mutation-verified twice, and the second one is the one that matters.** The
+packet's own mutation (inject an in-scope promotion that IS in the eligible set)
+gives `PASS`/`5/6`. The guard mutation I added — an in-scope promotion that is
+**not** in the eligible set, i.e. a genuine C3 failure — still gives **`FAIL`**,
+`4/6`, and is *not* laundered into `INAPPLICABLE`. That was the entire risk of
+this change: a check that can excuse itself is worse than one that cries wolf.
