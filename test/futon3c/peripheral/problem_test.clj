@@ -453,6 +453,25 @@
     (is (false? (:ok result)))
     (is (re-find #"branch collision" (:error result)))))
 
+(deftest frame-provisioning-preserves-command-stderr-in-tool-failure
+  (let [git-error "fatal: a branch named 'exp/round-1-t94J02-solver' already exists"
+        options (assoc checkout-options
+                       :arm "solver"
+                       :seat "codex-4"
+                       :memory-channel "push"
+                       :branch "exp/round-1-t94J02-solver")
+        backend (problem/make-checkout-provisioning-backend
+                 (tools/make-mock-backend)
+                 (fn [opts]
+                   (with-redefs [clojure.java.shell/sh
+                                 (fn [& _]
+                                   {:exit 128 :out "" :err git-error})]
+                     (#'problem/provision-frame! opts))))
+        result (tools/execute-tool backend :assign-checkouts [options])]
+    (is (false? (:ok result)))
+    (is (str/includes? (:error result) git-error))
+    (is (str/includes? (:error result) "exit 128"))))
+
 (deftest assign-checkouts-is-wired-through-the-register-phase
   (let [root (.toFile (Files/createTempDirectory
                        "checkout-register-" (make-array FileAttribute 0)))

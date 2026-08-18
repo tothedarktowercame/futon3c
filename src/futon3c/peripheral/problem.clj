@@ -1059,10 +1059,16 @@
                  "--memory-channel" memory-channel
                  "--recall-system" recall-system
                  "--batch" batch "--branch" branch]
-        {:keys [exit err]} (apply shell/sh command)]
+        {:keys [exit out err]} (apply shell/sh command)]
     (when-not (zero? exit)
-      (throw (ex-info "frames.bb open failed"
-                      {:exit exit :error err :frame-id frame-id})))
+      (let [details (->> [err out]
+                         (remove str/blank?)
+                         (str/join "\n"))]
+        (throw (ex-info (str "frames.bb open failed (exit " exit ")"
+                             (when-not (str/blank? details)
+                               (str ":\n" details)))
+                        {:exit exit :stdout out :stderr err
+                         :frame-id frame-id}))))
     (let [record (edn/read-string
                   (slurp (io/file experiment-frames-root batch
                                   (str frame-id ".edn"))))]

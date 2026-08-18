@@ -21,6 +21,28 @@
   (binding [*out* *err*] (println (str "ERROR: " message)))
   (System/exit 2))
 
+(defn resolve-lake []
+  (let [home (System/getProperty "user.home")
+        candidates [(fs/which "lake")
+                    (fs/path home ".elan" "bin" "lake")]]
+    (some #(when (and % (fs/executable? %)) (fs/canonicalize %)) candidates)))
+
+(defn ensure-lake-on-default-path! []
+  (let [home (System/getProperty "user.home")
+        bin-dir (fs/path home ".local" "bin")
+        launcher (fs/path bin-dir "lake")
+        lake (resolve-lake)]
+    (when-not lake
+      (die "lake not found on PATH or in the elan toolchain under ~/.elan/bin"))
+    ;; Frame-agent launch environments already include ~/.local/bin.  Link the
+    ;; resolved elan launcher there so every freshly provisioned checkout gets
+    ;; the same toolchain without embedding this machine's absolute home path.
+    (fs/create-dirs bin-dir)
+    (when-not (= (when (fs/exists? launcher) (fs/canonicalize launcher)) lake)
+      (when (fs/exists? launcher)
+        (die (str "refusing to replace non-toolchain launcher: " launcher)))
+      (fs/create-sym-link launcher lake))))
+
 (defn parse-options [args]
   (loop [xs args, result {}]
     (if (empty? xs)
@@ -36,7 +58,7 @@
       (die (str "missing required option --" (clojure.core/name name)))))
   options)
 
-(defn run! [& command]
+(defn run-command! [& command]
   (let [{:keys [exit out err]} (apply process/sh command)]
     (when-not (zero? exit)
       (die (str "command failed (" exit "): " (str/join " " command)
@@ -111,14 +133,15 @@
         checkout (str (fs/path worktrees-root frame-id))
         branch (or (:branch o) (str "exp/" (:problem o) "-" (:arm o)))
         record-path (fs/path frames-root (:batch o) (str frame-id ".edn"))
-        revision (run! "git" "-C" apm-root "rev-parse"
-                       (str (:base-rev o) "^{commit}"))]
+        revision (run-command! "git" "-C" apm-root "rev-parse"
+                               (str (:base-rev o) "^{commit}"))]
     (when (fs/exists? record-path) (die (str "frame already exists: " record-path)))
     (when (fs/exists? checkout) (die (str "checkout already exists: " checkout)))
-    (run! "git" "-C" apm-root "worktree" "add" "-b" branch checkout revision)
+    (ensure-lake-on-default-path!)
+    (run-command! "git" "-C" apm-root "worktree" "add" "-b" branch checkout revision)
     (try
-      (run! "cp" "-al" (str (fs/path apm-root ".lake"))
-            (str (fs/path checkout ".lake")))
+      (run-command! "cp" "-al" (str (fs/path apm-root ".lake"))
+                    (str (fs/path checkout ".lake")))
       (let [frame {:frame/id frame-id
                    :problem (:problem o)
                    :arm (keyword (:arm o))
@@ -201,10 +224,10 @@
     ;; Close-time auto-commit (amendment 9 / case-studies hardening):
     ;; the frame corpus is versioned; a record that only exists in the
     ;; working tree has no past.
-    (run! "git" "-C" "/home/joe/code/futon3c" "add" (str path))
-    (run! "git" "-C" "/home/joe/code/futon3c" "commit" "-m"
-          (str "frame close: " (:frame/id final) " (" (name status) ")")
-          "--" (str path))
+    (run-command! "git" "-C" "/home/joe/code/futon3c" "add" (str path))
+    (run-command! "git" "-C" "/home/joe/code/futon3c" "commit" "-m"
+                  (str "frame close: " (:frame/id final) " (" (name status) ")")
+                  "--" (str path))
     (println (str/upper-case (name status)) (:frame/id final))
     (println "lake output hash source: --axioms-file")
     (println (str "twin diff: " (pr-str (:twin-diff final))))
