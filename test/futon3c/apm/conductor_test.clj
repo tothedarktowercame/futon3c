@@ -501,6 +501,43 @@
         (is (= :reviewer-not-actor
                (get-in result [:finding :failure])))))))
 
+(deftest conductor-surface-decodes-and-validates-promotion-verdict
+  (let [agent-id "claude-review-verdict"
+        session-id "review-verdict-session"
+        reached-verdict (atom nil)
+        action {:action-id "review-verdict-action"
+                :cycle-id "cycle-review" :version 1
+                :operation :promote-artifact
+                :args [{:artifact-id "artifact/reviewed"
+                        :reviewer agent-id
+                        :verdict "approve"}]}]
+    (agency/register-agent!
+     {:agent-id agent-id :type :claude
+      :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})
+      :session-id session-id})
+    (try
+      (with-redefs [conductor/promote-artifact!
+                    (fn [handle opts]
+                      (reset! reached-verdict (:verdict opts))
+                      handle)
+                    binding/execute!
+                    (fn [_ _ routed executor _]
+                      (executor {:ok true} (:operation routed) (:args routed))
+                      {:ok true})]
+        (is (:ok (conductor-surface/execute-action!
+                  agent-id session-id action)))
+        (is (= :approve @reached-verdict)
+            "the promotion lifecycle receives the keyword verdict")
+        (let [invalid (conductor-surface/execute-action!
+                       agent-id session-id
+                       (assoc-in action [:args 0 :verdict] "rubber-stamp"))]
+          (is (false? (:ok invalid)))
+          (is (= :promotion-verdict-invalid (:error/code invalid)))
+          (is (= :promotion-verdict-invalid
+                 (get-in invalid [:finding :failure])))))
+      (finally
+        (agency/unregister-agent! agent-id)))))
+
 (deftest promote-phase-tools-are-conductor-and-surface-routable
   (let [{:keys [config paths]} (fixture)
         agent-id "promote-guide"
