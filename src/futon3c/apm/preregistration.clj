@@ -376,10 +376,16 @@
   Caller is deliberately ignored: it is client-authored and therefore cannot
   be a trustworthy part of the measurement predicate."
   [trace jobs solver-seat]
-  (- (count (filter #(and (= solver-seat (:agent-id %))
-                          (inside-cycle-window? trace %))
-                    jobs))
-     (count (:memory-offers trace))))
+  (let [openings (if (contains? trace :solver-dispatches)
+                   (count (:solver-dispatches trace))
+                   ;; Historical traces predate per-dispatch receipts. Their
+                   ;; one-offer-per-opening representation remains the only
+                   ;; reproducible opening count for published measurements.
+                   (count (:memory-offers trace)))]
+    (- (count (filter #(and (= solver-seat (:agent-id %))
+                            (inside-cycle-window? trace %))
+                      jobs))
+       openings)))
 
 (defn guidance-observation
   "Observe the guidance count, with the solver seat taken from the REGISTRATION.

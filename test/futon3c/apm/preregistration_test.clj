@@ -341,6 +341,25 @@
 (deftest machine-opening-dispatch-is-not-guidance
   (is (zero? (prereg/guidance-count trace [opening-job] "codex-4"))))
 
+(deftest guidance-count-uses-openings-not-cascade-offer-cardinality
+  (let [offer (fn [i]
+                {:offer/id (str "offer/dispatch/" i)
+                 :offer/memory-id (str "memory/" i)
+                 :offer/route (if (zero? i) :leaf :why-hop)
+                 :offer/hops (if (zero? i) 0 1)})
+        cascade-trace (assoc trace :solver-dispatches [{:job-id "dispatch"}])]
+    (is (zero? (prereg/guidance-count
+                (assoc cascade-trace :memory-offers [(offer 0)])
+                [opening-job] "codex-4"))
+        "one dispatch with one offer is one machine opening")
+    (is (zero? (prereg/guidance-count
+                (assoc cascade-trace :memory-offers (mapv offer (range 102)))
+                [opening-job] "codex-4"))
+        "one dispatch remains one opening when its cascade offers 102 memories")
+    (is (zero? (prereg/guidance-count (dissoc trace :solver-dispatches)
+                                      [opening-job] "codex-4"))
+        "a cascade-off legacy trace reproduces today's zero count")))
+
 (deftest stored-guidance-measurement-must-match-agency-derived-count
   (let [jobs [opening-job
               {:agent-id "codex-4" :caller "spoofed"
