@@ -206,7 +206,11 @@
     (doseq [{:keys [check pass? evidence]} checks]
       (println (format "%-32s %s  %s" (name check) (if pass? "PASS" "FAIL") (pr-str evidence))))
     (println "score:" score)
-    (println "trace-validation: launchable?" (:launchable? trace-validation)
-             " failures:" (:failure-count trace-validation)
-             " " (pr-str (:failures trace-validation)))
+    ;; `failures: 0` would read as "no invariant failures" when the truth is
+    ;; "never measured". The :absent case must not print a count.
+    (if (= :absent (:launchable? trace-validation))
+      (println "trace-validation: NOT MEASURED (no :validate-trace step in this state)")
+      (println "trace-validation: launchable?" (:launchable? trace-validation)
+               " failures:" (:failure-count trace-validation)
+               " " (pr-str (:failures trace-validation))))
     (write-receipt! dir result)))
