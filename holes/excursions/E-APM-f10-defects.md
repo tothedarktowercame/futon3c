@@ -637,3 +637,85 @@ across different scopes nearly produced a reported regression.
 populated, so `:required-capabilities :offer-use-disposition` — declared by all
 nine registrations from frame 2 to frame 10 and unreachable in every one of them
 — is satisfiable for the first time from frame 11 onward.
+
+## 10. Corrections from the promotion-deadlock discovery (`1e277974`)
+
+codex-6's discovery report (`holes/excursions/E-promotion-deadlock-discovery.md`)
+corrects four entries above. Ground control re-derived every load-bearing claim
+at source before accepting them. **The corrections stand; the entries above are
+wrong where they conflict.**
+
+**D3 — my proposed fix was wrong, and wrong for a good reason.** I wrote that the
+conductor might "pass the actual reviewer's identity (the scribe's)". It cannot,
+and this is not a small threading change:
+
+- `memory_lifecycle.clj:232-237` rejects any reviewer that differs from
+  `:acting-identity` (`:reviewer-not-actor`), and `:240-253` rejects a reviewer
+  equal to the depositor. For a guide-authored deposit both are the guide, so
+  the two conditions are **jointly unsatisfiable** — a two-sided vise, not one
+  awkward check.
+- `conductor_surface.clj:38-50` rejects the mismatch at the authenticated surface
+  *before* lifecycle code runs.
+- `conductor_test.clj:530-540` asserts exactly this with the message **"P14
+  forbids the guide from impersonating the scribe"**. It is a deliberate,
+  tested anti-impersonation rule — not an oversight to be relaxed.
+
+The real gap is that **the system has no operation for consuming an already
+authored review.** `promote-memory-attachment!` is an attach-and-self-generate
+shortcut whose preconditions describe an *unattached* memory.
+
+**D4 — I assigned the blame to the wrong component.** I wrote that "writing the
+memory well is what disqualifies it", implying `memory_record` is at fault. It
+is not: `memory_write.clj:206-222` deliberately marks an agent-supplied pattern
+`:proposed` so an unreviewed claim cannot masquerade as reviewed, which is the
+correct safe write. And `review-attachment!` (`memory_lifecycle.clj:350-371,
+388-408`) **already** implements the proposed → reviewed transition. The faulty
+component is the promotion **dispatcher's precondition**, which rejects the very
+state the review path expects. The machinery exists; it is unreachable.
+
+**D5 — CONFIRMED but narrower than I stated.** I wrote that a student-recorded
+memory is "unpromotable by the conductor, full stop". Correct for *currently
+minted* seats, wrong as a universal: ZAI's `memory_record` defaults the domain to
+`:zaif-work` (`zai_api.clj:601-617`) and the frame-seat preparer never supplies
+one (`http.clj:2532-2554`), although the ZAI constructor supports it
+(`http.clj:2513-2524`). It is a **configuration omission**, not an intrinsic
+property of student authorship.
+
+**D6 — CONFIRMED and worse than I recorded.** I wrote that failed actions never
+reach the handle. In fact the conductor *does* log the refusal transiently
+(`conductor.clj:104-129`), but `conductor_binding.clj:175-194` returns
+`{:ok false …}` without ever calling `(reset! (:handle binding) next-handle)` —
+only the success branch advances handle, receipt and version. **Even the
+transient log is discarded at the binding boundary.**
+
+### What this vindicates
+
+Splitting discovery from implementation is what caught this. Had the D3 packet
+been dispatched as an implementation carrying my hypothesis, it would have built
+a scribe-name threading fix that the authenticated surface rejects and a tested
+invariant forbids — and the most likely way to make it "work" would have been to
+weaken P14. The middle gate is the whole value.
+
+### Accepted implementation order
+
+1. **D5** — blocked on an operator ruling (below), then a small scoped config change.
+2. **D3+D4 together** — one coherent design change: an "apply existing review"
+   path that derives the reviewer from immutable `:evidence/author` and
+   dispatches on actual edge state. Implementing either as a relaxed comparison
+   is unsafe and is rejected.
+3. **D6** — durable refusal receipts; orthogonal, but should land before the next
+   experiment if refusals are to be diagnosable from the trace.
+
+### OPERATOR RULING NEEDED (D5)
+
+Is APM frame knowledge `:mathematics`, or is student working memory intentionally
+`:zaif-work`?
+
+- If the former: mint the student seat with `:memory-domain :mathematics`,
+  threaded explicitly through the seat spec rather than inferred from an `fN-`
+  name.
+- If the latter: cross-domain promotion needs an explicit, auditable import /
+  re-home operation.
+
+Weakening `validate-edge!` is not an option in either case — it would let an edge
+be reviewed under the wrong domain policy.
