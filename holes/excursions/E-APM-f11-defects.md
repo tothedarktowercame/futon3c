@@ -219,3 +219,77 @@ expensive failure mode available.
 It also vindicates the frame's instruction to treat a prior pass's conclusions
 as evidence rather than verdict: the shipped `proof-outline.md` recorded this
 residual as an API gap, and it is not one.
+
+
+---
+
+## WHO IS TO BLAME — the original problem, or the formalisation? (Joe's question, answered)
+
+**The downstream formalisation. The original problem is sound, standard, and
+repairable.** Ground control read the source bundle to settle this.
+
+### What the original problem asks (`problem.md`, raw TeX)
+
+Given `π : X̃ → X` a `k`-sheeted covering where `X, X̃` are **compact oriented
+manifolds of dimension n** and **π is orientation-preserving**:
+
+- **(a)** construct such a cover for surfaces (`n = 2`), for any `k`;
+- **(b)** show `∫_X̃ π*ω = k ∫_X ω` for any `ω ∈ Ωⁿ(X)`;
+- **(c)** for compact oriented submanifolds `Z₁, Z₂ ⊂ X` with
+  `dim Z₁ + dim Z₂ = n`, show `π⁻¹(Zᵢ)` are compact oriented submanifolds and
+  `I_X̃(Z̃₁, Z̃₂) = k · I_X(Z₁, Z₂)`.
+
+The informal solution confirms the intent: *"The orientation hypothesis is
+exactly what makes each of the k local change-of-variables come with a + sign
+rather than cancelling."* Orientations are **given data** throughout. The word
+"connected" appears **nowhere** in the source — and it does not need to, because
+the original never asks anyone to construct an orientation.
+
+### Two distinct formalisation defects
+
+**1. A hypothesis was converted into a conclusion.** The original *gives* an
+oriented `X̃`. The frozen Lean instead demands
+`∀ o : Orientation n X, ∃ ot : Orientation n X̃, FundamentalClassRelation π ot o`
+— i.e. it asks the solver to **construct** the upstairs orientation. That is
+what makes it false for disconnected covers: the original's oriented `X̃` is an
+assumption that simply excludes the two-point counterexample, whereas the
+formalisation invites it.
+
+**2. The formalised content is not the original's content.** The original's
+mathematical substance is an **integral identity** (b) and an
+**intersection-number identity** (c), over differential forms and signed point
+counts. The frozen theorem contains **neither**. It replaces both with an
+orientation-lifting claim in top integral singular homology.
+
+This also explains an earlier finding in this file: `proof-outline.md` claims
+four lemmas are proved, including `t01A05_pullback_integral_eq` and
+`t01A05_preimage_intersectionNumber_eq` — which are exactly (b) and (c). Those
+names are absent from `Main.lean` because **an earlier formalisation did encode
+the original content and the file was later rewritten to state something else.**
+The outline is a surviving description of the version that was replaced.
+
+### Recommended action: REPAIR, not discard
+
+- **Do not discard.** The source problem is a standard, correct exercise.
+- **The minimal repair — adding `[ConnectedSpace X̃]` — is not sufficient.** It
+  would probably make the frozen statement *true*, but the statement would still
+  not be this problem. It would leave (b) and (c) unformalised.
+- **The correct repair** is to formalise (b) and (c) with orientation as a
+  **hypothesis**, as the source has it — recovering the content the earlier
+  version apparently had.
+- This is an operator/design decision, not a solver's: it changes the frozen
+  statement, so it belongs to whoever owns the problem bundle, not to a frame.
+
+### The corpus-level implication, which is the reason this matters beyond t01A05
+
+A formalisation drifted far enough from its source to state a **different and
+false theorem**, and the drift survived into a frame as a frozen statement.
+Nothing in the pipeline compared the Lean against the TeX. If it happened here
+it can have happened elsewhere in the ~207 open problems, and the check is
+cheap and mechanical: does the frozen theorem mention the objects the source
+asks about? Here the source asks for integrals over `Ωⁿ` and intersection
+numbers, and the frozen statement mentions neither.
+
+**This is a more valuable finding than the counterexample itself.** The
+counterexample says one problem is broken; this says the pipeline can produce
+broken problems without noticing, and suggests a specific audit.
