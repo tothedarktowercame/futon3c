@@ -72,9 +72,26 @@
         ;; interventions may be recorded under the intervene advance payload
         intervention-ids (or (seq interventions)
                              (some-> (get-in outputs [:intervention :memory-id]) vector))
-        promo-ids (->> (:promotion-result outputs)
-                       (keep #(or (:memory-id %) (:promo/artifact-id %))))
+        promotions (->> (:promotion-result outputs)
+                        (keep (fn [promotion]
+                                (when-let [memory-id (or (:memory-id promotion)
+                                                        (:promo/artifact-id promotion))]
+                                  {:memory-id memory-id
+                                   :promo-id (:promo/id promotion)
+                                   :step-index
+                                   (some->> (:promo/id promotion)
+                                            str
+                                            (re-find #"/(\d+)$")
+                                            second
+                                            parse-long)})))
+                        vec)
+        promo-ids (mapv :memory-id promotions)
         student-steps (steps-of state :dispatch-student-fresh)
+        student-dispatch-step
+        (first (keep-indexed (fn [index step]
+                               (when (= :dispatch-student-fresh (:tool step))
+                                 index))
+                             (:steps state)))
         pull-uses (:pull-uses outputs)
         checks
         [;; C1 — deposit attribution names the seat (packet queued; expect FAIL until built)
@@ -97,16 +114,34 @@
                                    (get-in % [:result]))
                               student-steps)
                provenanced (filter :eligible-memory-provenance receipts)
+               in-scope-promotions
+               (filter #(or (nil? student-dispatch-step)
+                            (nil? (:step-index %))
+                            (< (:step-index %) student-dispatch-step))
+                       promotions)
+               late-promotions
+               (filter #(and (some? student-dispatch-step)
+                             (some? (:step-index %))
+                             (>= (:step-index %) student-dispatch-step))
+                       promotions)
+               promo-ids-in-scope (mapv :memory-id in-scope-promotions)
                union-ok (some (fn [r]
                                 (let [elig (set (:eligible-memory-ids r))]
-                                  (and (seq promo-ids)
-                                       (every? elig promo-ids))))
+                                  (and (seq promo-ids-in-scope)
+                                       (every? elig promo-ids-in-scope))))
                               receipts)]
            {:check :C3-eligibility-includes-promoted
             :pass? (boolean (and (seq provenanced) union-ok))
             :evidence {:receipts (count receipts) :with-provenance (count provenanced)
                        :eligible-counts (mapv #(count (:eligible-memory-ids %)) receipts)
-                       :promo-ids (vec promo-ids)}})
+                       :promo-ids (vec promo-ids)
+                       :student-dispatch-step student-dispatch-step
+                       :promo-ids-in-scope promo-ids-in-scope
+                       :promo-ids-excluded-late (mapv :memory-id late-promotions)
+                       :promo-ids-unparseable
+                       (->> promotions
+                            (filter #(nil? (:step-index %)))
+                            (mapv :memory-id))}})
          ;; C4 — pull activity receipted and joinable (f8 diagnosis: outputs
          ;; carry only USE receipts; OFFER receipts — the denominator, incl.
          ;; empty-result searches — exist only in the store keyed by dispatch
