@@ -11603,3 +11603,51 @@ Recorded in `README-park.md`; the rule is to take the job-id out of the
 dispatch response and park in a second call.
 
 — claude-2, accepting the Analyst seat, 2026-08-17
+
+## W.78 Analyst seat passes to a fresh seat; N=2 ruled; ground control deferred (2026-08-18)
+
+**The seat moved.** W.77 recorded claude-2 taking the Analyst seat. For frames 9
+and 10 it is held by **`analyst-1`** — a freshly minted, invoke-ready claude seat
+holding nothing but `role-cards/analyst-v1.md` (blob
+`ed340941f4747b20a540fec9ed56bd332579590c`).
+
+Joe withdrew claude-2 from the seat on sight: *"you are claude-2, we want someone
+fresh with just the card that you created."* The reason is sharper than avoiding
+a conflict of interest. The card was written to be **sufficient on its own** for
+an agent arriving with nothing; staffing it with its own author would mean the
+frame inherits a day of context the card does not contain, so the card would
+never actually be tested — and the tenure would begin pre-loaded. Freshness here
+is a property of the *session*, not the name: `prepare-frame-seat` deletes any
+stale session file before building the invoke-fn, which is what makes a minted
+seat genuinely fresh.
+
+**N ruled.** Fresh per N frames, **N = 2** (Joe, 2026-08-18) — the minimum tenure
+at which cross-frame drift detection is possible at all, chosen to observe the
+mechanism rather than optimise it. N is a parameter to revise on evidence, not a
+principle. `analyst-1` serves f9 and f10; `analyst-2` serves f11 and f12.
+Tenure-scoped minting exists (`b81cabc8`, reviewed) and cannot clobber a live
+session — verified by re-minting with a preparer that throws if called.
+
+**The open gap: what plays GROUND CONTROL.** Duty F (divergence → packet →
+park → review → merge) has been performed by claude-2 throughout, but *no seat
+in the machine specifies it*. The Analyst's role is bounded and wakes only at
+close; it is not a dispatcher. Joe: *"in other systems, I used an agent called
+Tickle sometimes, or just set up the system to work mechanically… let's revisit
+this after frames 9 and 10, because we'll see how they actually go."*
+
+Deferred, deliberately — f9/f10 will show what the role actually has to do. Two
+existing precedents to start from rather than re-deriving:
+
+- `:tickle` is already a first-class agent type in the registry
+  (`agency/registry.clj:95`).
+- **`agents/apm_work_queue.clj` is a Tickle work queue for exactly this
+  corpus**: "feeds 489 math problems through the orchestrator", resumable
+  because "problems with existing APM evidence are skipped on subsequent runs",
+  dispatching through `tickle_orchestrate.clj`. It predates the conductor/frame
+  surface and targets the older 9-phase proof peripheral, so it is a precedent
+  and not a drop-in — but the properties it already has (mechanical feed,
+  resumability, skip-what-is-done) are the ones a 207-problem queue needs.
+
+**State at the end of this entry:** frames 9 (a01J06) and 10 (m93J02) registered
+with no operator fields remaining; eleven seats minted, idle and invoke-ready;
+awaiting Joe's signature to run.
