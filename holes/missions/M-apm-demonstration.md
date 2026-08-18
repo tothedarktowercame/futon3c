@@ -11819,3 +11819,115 @@ f9's empty join exactly, confirming the emptiness as **wiring** rather than as a
 property of this problem.
 
 Frame 10 is registered and **not opened**; it is not this entry's business.
+
+## W.80 FRAME-10 CLOSED — the negative control refutes itself; analyst-1's tenure ends (2026-08-18)
+
+Second and last frame of tenure 1 under N = 2. Read by `analyst-1`. **The full
+reading is the `f10` entry in `analysis/series.edn`; the succession is
+`analysis/HANDOFF-analyst-1-to-analyst-2.md`.** This is the pointer plus the
+things that belong in the record rather than in either file.
+
+**The result of the frame.** `:cascade-cannot-why-hop` was registered as a
+negative control — *no* offer should carry `:why-hop`, because m93J02 touches no
+`@why`-edged pattern. **48 of 102 offers were `:why-hop`.** The control refuted
+itself, and it did so for exactly the reason the f9 entry had recorded one frame
+earlier under `:why-hop-diagnosis`: *the registration's criterion tested the
+PROBLEM for edges; what determines the seed pattern is what RECALL surfaced.*
+f9 wrote that down as a diagnosis; f10's registration was built on the
+confusion, so f10 became the experiment that confirmed it. Ground control
+reached the same conclusion independently and recorded it as
+`E-APM-f10-defects` D17. Keep the asymmetry: **f9, chosen for its edged pattern,
+produced zero why-hops; f10, chosen for having none, produced 48.**
+
+**The f9 hypothesis is settled.** f9's entry registered a falsifiable claim: *if
+the cascade is not given a pull-side surface, f10 reproduces f9's empty
+offer × use join exactly, and the emptiness is confirmed as wiring rather than
+as a property of the problem.* It did. 203 offers across two frames, two
+families, one edged problem and one not, **zero joins**. Independently
+re-derived as D18. The transfer that actually happened in both frames came
+through the *pull* channel, which the offer instrument does not watch.
+
+*Resolving D18's open question, because it asked:* the f9/f10 `:memory-channel`
+labels do **not** differ. Both frame records read solver `:push`, student
+`:none`; both saved states read the student `:not-invoked` with
+`:memory-channel-no-push`. The `:pull-only`/`:push+pull` labels in D18 come from
+another surface. The discrepancy is in the reporting, not the data.
+
+**Transfer itself was real and clean this time.** `:student-lane-component-c`
+confirmed and **uncontaminated** — the counterpart to f9's contaminated hit. The
+student pulled the promoted deposit by subject, read it, attested USED for its
+method and ordering, and its four commits follow that prescribed order. I
+reproduced the non-replay test rather than accepting the guide's report: the two
+`Main.lean` blobs differ, and `Metric.isBounded_iff_subset_closedBall` occurs in
+the student's file and nowhere in the solver's. **f9's contract leak did not
+recur** — this frame's deposit named no commit sha. Knowledge moved; no artifact
+did.
+
+**And the store did not grow by one reviewed attachment.** S-3: universe frozen
+at 105, mission scope frozen at 12 memories / 11 patterns / 1 shared node,
+whole store frozen at 205/32/16. Every number identical to S-2. f10 deposited
+six candidate memories across four scribe lanes — all four ran — promoted one,
+and reviewed **zero**. That is the store-level consequence of D3 and D4: the
+promotion gate refuses guide-authored deposits (`reviewer == depositor`, and the
+conductor's acting identity is always the guide) and *also* refuses
+scribe-authored ones, because writing the pattern at record time leaves the edge
+non-statusless. **Both honest authoring paths are refused.** A flat S reading
+here is a gate finding, not a curation finding, and should not be reported as
+the latter.
+
+**Two new defects, and one of them I should have caught a frame earlier.**
+
+*Every frame I can measure closes `:closed` while its own preregistration
+validator reports `:launchable? false`* — f8 with 6 invariant failures, f9 and
+f10 with 7. No surface said so. The wake payload carries `:launchable?`; f9's
+did not, and **I did not look**. P27 (`9ef132d4`, plus my own review fix
+`cc5a0ae1`) now prints it and writes it into every receipt as a **non-scoring**
+`:trace-validation` block — non-scoring deliberately, because `:score` is `n/6`
+across five frames and a seventh check would silently move the denominator.
+
+The delta between f8 and f9/f10 is exactly one failure,
+`:f3-undispositioned-offer`, and it appears exactly when the cascade is enabled.
+`:memory-disposition-offer-ids` is **empty in all three frames**; f8 passed F3
+vacuously because it had no offers at all. **Enabling the cascade did not break
+dispositioning — it removed the vacuity that was hiding its absence.** This
+directly contradicts `:required-capabilities :offer-use-disposition` in both
+registrations, and nobody owns it yet.
+
+**Succession, with one item honestly unfinished.** The handoff document is
+written, this entry is the W-entry, and `series.edn` now carries four entries.
+**`analyst-2` is NOT minted.** `POST /api/alpha/frames/mint-analyst` returns
+404 while `POST /api/alpha/frames/mint-seats` returns a routed 409 — and yet
+*both* `transport.http/mint-analyst-seat!` and `frame-seats/mint-analyst!`
+resolve in the running image, and the route branch is in the source at
+`transport/http.clj:7271`. The handler is not missing: **the running router was
+captured before the branch existed, and reloading the namespace does not rebuild
+it.** That is a second sighting of the capture-by-value family recorded as D7
+(`conductor-surface`), on a different surface — two sightings make it a class.
+
+I did not hand-assemble a mint over Drawbridge. `mint-analyst!` needs a
+`:prepare-seat-fn` built from the live server config, which is not reachable
+from any deref-able var in the image; a hand-built preparer would produce a seat
+that *looks* minted while carrying an invoke path I could not verify. The card's
+first recorded trap is asserting infrastructure state without checking, and a
+broken seat that reports healthy is worse than an absent one. Rebuilding the
+router is not the Analyst's (I-0). **Owned by ground control**; the one-line
+check is in the handoff.
+
+**On N = 2, since the ruling asked for evidence.** Four findings from this
+tenure were unavailable to a single-frame seat: the f9 why-hop diagnosis
+becoming f10's confirmed prediction; the empty join going from observation to
+settled wiring; the tags-vs-subject interface difference (f9's student searched
+by tags, f10's by subject, unprompted, with no interface change between them);
+and the series' own f8 entry naming two pattern ids the math-split had renamed
+away, findable only by re-querying a prior frame's claims. **All four required
+exactly two frames; none required three.** N = 2 is sufficient for the drift
+detection it was chosen for. The duties it did *not* reach — D, E and G — are
+slow by nature rather than blocked by tenure length, and are handed over open.
+
+**One thing this tenure demonstrated about its own design.** The f9 close died
+mid-analysis on an exhausted model quota (D1) having already computed real
+findings, and wrote none of them; all of it was lost. The tenure survived only
+because the card is the entire orientation, so a fresh seat could redo the work
+from the card alone. That is the strongest evidence these two frames produced
+for the card's own design — and it is also why every finding above was written
+to a surface before this turn ended.

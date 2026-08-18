@@ -329,3 +329,108 @@ deposit from naming a sha. A lint on deposits would make it structural.
   is structural or a convention (see D21 — the difference matters).
 - Defects found *by* the machine about *its own* premises (D17) belong here too.
   Frames that only record harness bugs will miss the ones in their own design.
+
+---
+
+## 8. Appended by analyst-1 at the f10 close (2026-08-18)
+
+Per §7. Four items: two new defects, one resolution of an open question in this
+file, and one correction to the record. All **[verified]** — each was re-derived
+by me at source, and I say below exactly how, so ground control can mark them
+`[reported]` instead if my derivation does not satisfy it.
+
+### D22. Every frame closes `:closed` while its own validator says `:launchable? false` **[verified by analyst-1]**
+
+`validate-trace` records `:launchable?` and a `:failures` vector in the saved
+cycle state. It has been **false in every frame I can measure**, and nothing
+surfaced it: the disposition records a clean close, the wake payload for f9 did
+not carry the field, and I missed it entirely at f9.
+
+| frame | cascade | `:launchable?` | failures |
+|---|---|---|---|
+| f8 `a03J04` | off | false | 6 |
+| f9 `a01J06` | on | false | 7 |
+| f10 `m93J02` | on | false | 7 |
+
+Derived by reading the `:validate-trace` step out of the latest version file in
+each of the three `data/problem-state/` directories.
+
+**Visibility fixed** — P27 (`9ef132d4`) plus my review fix (`cc5a0ae1`) add a
+**non-scoring** `:trace-validation {:launchable? :failures :failure-count}` block
+to the receipt and a printed line. Non-scoring deliberately: `:score` is `n/6`
+across five frames, and a seventh check would silently move the denominator.
+The *underlying* failures are untouched and unowned.
+
+### D23. `:memory-disposition-offer-ids` is empty in every frame, so F3 fails whenever the cascade is on **[verified by analyst-1]**
+
+F3 (`preregistration.clj:451`) requires `memory-offer-ids ⊆
+:memory-disposition-offer-ids`. Measured from each frame's validated trace:
+
+| frame | offers | disposition-offer-ids | F3 |
+|---|---|---|---|
+| f8 | 0 | 0 | passes **vacuously** |
+| f9 | 101 | 0 | fails |
+| f10 | 102 | 0 | fails |
+
+**Enabling the cascade did not break dispositioning — it removed the vacuity
+that was hiding its absence.** Nothing has ever dispositioned an offer. This
+contradicts `:required-capabilities :offer-use-disposition`, declared in both
+the f9 and f10 registrations, and it is the one failure separating f8's list of
+6 from f9/f10's list of 7.
+
+Unowned. Note for whoever takes it: *reporting* dispositions is implementation;
+*deciding* what disposition an offer earns is a design ruling and not the
+Analyst's.
+
+### D24. `mint-analyst` is unrouted while its handler is loaded — a second sighting of D7's class **[verified by analyst-1]**
+
+`POST /api/alpha/frames/mint-analyst` → **404 Unknown endpoint**.
+`POST /api/alpha/frames/mint-seats` with the same empty body → **409
+missing-frame-id**, i.e. routed. Yet over Drawbridge, *both*
+`futon3c.transport.http/mint-analyst-seat!` and
+`futon3c.agency.frame-seats/mint-analyst!` resolve in the running image, and the
+route branch is in the source at `transport/http.clj:7271`.
+
+So the handler is not missing: **the running router closure was captured before
+the branch existed, and reloading the namespace's functions does not rebuild
+it.** That is the same failure mode as **D7** (`conductor-surface` captures
+operation functions by value) on a different surface. Two sightings make it a
+class rather than an incident, and the class is: *a captured surface that hot
+reloads cannot reach.* Worth a sweep for others.
+
+**This blocks succession.** `analyst-2` is unminted. I did not hand-assemble a
+mint over Drawbridge: `mint-analyst!` needs a `:prepare-seat-fn` built from the
+live server config, which is not reachable from any deref-able var in the image,
+and a hand-built preparer would yield a seat that looks minted while carrying an
+unverified invoke path. Owned by ground control. Check with:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+  localhost:7070/api/alpha/frames/mint-analyst \
+  -H 'Content-Type: application/json' -d '{}'   # 409 = routed, 404 = still stale
+```
+
+### D18 — the open label question, RESOLVED **[verified by analyst-1]**
+
+D18 asks not to assume the f9/f10 `:memory-channel` labels interchange. They do
+not differ at all:
+
+- frame records: f9 solver `:push` / student `:none`; f10 solver `:push` /
+  student `:none` — identical;
+- saved cycle state, both frames: student recall `:not-invoked`, reason
+  `:memory-channel-no-push`; solver `:ok`.
+
+The `:pull-only` / `:push+pull` labels quoted in D18 do not come from the frame
+records or the cycle state. **The discrepancy is in the reporting surface, not
+in the data**, and D18's substantive conclusion is unaffected.
+
+### Correction to D1's table **[analyst-1, first-hand]**
+
+D1 records that f9's analyst "died mid-analysis after ~3 min, having already run
+the checks and reached 'seven named validator failures'. **All work lost.**"
+First-hand confirmation of the loss, and one detail worth adding because it
+matters for D22: those seven were almost certainly the **`:validate-trace`
+failures recorded here as D22** — the same seven that f9 and f10 both carry. The
+first close had found them and the finding died with it; the second close found
+them again only at f10, by hand. **A defect can be discovered and lost, and the
+only evidence that it was ever found is a phrase in a bell.**
