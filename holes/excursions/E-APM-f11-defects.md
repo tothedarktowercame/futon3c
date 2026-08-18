@@ -293,3 +293,107 @@ numbers, and the frozen statement mentions neither.
 **This is a more valuable finding than the counterexample itself.** The
 counterexample says one problem is broken; this says the pipeline can produce
 broken problems without noticing, and suggests a specific audit.
+
+
+---
+
+## D30. The harness pin check verifies the source tree, not the running image **[verified, mine]**
+
+f11's registration declares `:reg/harness-revision 01fb2de0`. The pin check at
+open (`conductor_open.clj` `harness-pin-check`) compares that against
+`problem/measure-harness-repository`, i.e. against **git**. It passed.
+
+**The running JVM does not have 01fb2de0.** It was restarted at 15:39:49Z, and
+three commits landed after:
+
+| commit | time | in process? |
+|---|---|---|
+| 7c93a9ea D25/D7 | 14:56:28Z | yes |
+| c3be0e9f D3/D4 promotion | 15:09:36Z | yes |
+| 38d75981 D5 student domain | 15:12:04Z | yes |
+| 585a980e D6 refusal receipts | 15:19:28Z | yes |
+| eb81db29 D24 handler | 15:24:35Z | yes |
+| **73a6b0c2 D2 guidance count** | 15:49:37Z | **NO** |
+| **ca0f297e D8 scribe card** | 15:50:42Z | **NO** |
+| **01fb2de0 D9/D10 provisioning** | 15:51:47Z | **NO** |
+
+So **a frame can declare and pass a harness revision it is not running.** The
+pin's whole purpose is to make a frame's code state reproducible, and it verifies
+the wrong artefact.
+
+**This is ground control's error compounding a machine gap.** I told Joe the
+source was ready to restart, he restarted, and I then dispatched D2/D8/D9/D10 —
+the four I had earlier forgotten — which landed afterwards. I then pinned f11 at
+the source head without checking whether the process had it. The machine let me.
+
+**Detected by f11's guide**, from evidence rather than suspicion: it saw
+`:dispatch-scribe` record `role-cards/scribe.md`, recognised it as the verbatim
+pre-`ca0f297e` constant, and inferred the loaded conductor predated that commit.
+It then probed `write-use` to establish that 7c93a9ea *was* loaded, bounding the
+gap from both sides.
+
+**Consequences for f11's predictions, which must be reported as reload-gap
+outcomes and NOT as source defects:**
+
+- `:scribe-card-pinned-resolves` — **REFUTED IN THE LIVE CYCLE.** D8 is correct
+  in source and absent from the process.
+- `:guidance-count-non-negative` — will pass **VACUOUSLY**. D2 is not loaded, so
+  the old per-offer subtrahend is live; but recall was empty, so
+  `(count (:memory-offers trace))` is 0 and the broken subtraction cannot
+  manifest. A pass here is *not* evidence that D2 works. Report it as vacuous.
+
+**Fix candidates:** have the pin check consult the running image (e.g. a
+revision stamped into the process at load), or refuse to open when the loaded
+revision is unknown. Either is better than verifying git and calling it the
+harness.
+
+## D31. `:verdict` cannot be expressed over the conductor surface **[reported by f11-guide, source-level]**
+
+`memory-lifecycle/review-attachment!` requires `verdict` to be a **keyword** in
+`#{:approve :challenge :reject}`, but `conductor-surface/transport-args` decodes
+only two closed enums (`:adjudicate :outcome`, `:record-scribe-lanes :lane`) —
+its own comment says "the one closed enum". JSON has no keyword type, so a live
+guide sending `:verdict "approve"` over HTTP hands a **string** to a function
+requiring a keyword, and it surfaces as `:promotion-attachment-review-threw`.
+
+**So the D3/D4-repaired promotion path is unreachable from a live guide** — the
+same shape as D25 one layer up: the operation is correct, and the transport
+cannot express its argument. Fix is one coercion beside the existing two.
+
+Not verified at source by ground control, and **deliberately not fixed
+mid-frame** (see the ruling below).
+
+## D32. A cycle affords exactly one guide deposit, taken before any review exists **[reported by f11-guide, structural]**
+
+`:write-substrate` is added only to the `:intervene` phase, phases are linear,
+and `conductor/deposit!` advances out of `:intervene` on every call. Therefore a
+guide gets **exactly one deposit per cycle, and it must be taken before any
+review of it can exist.**
+
+Consequence: **review feedback can never be acted on within the cycle.** When
+f11's scribe rejected the guide's deposit and noted that "a cleaned revision
+would merit resubmission", that was mechanically impossible. **Any frame whose
+review rejects gains zero attachments by construction** — which also explains why
+f10 deposited a single mega-memory rather than several targeted ones.
+
+This is the structural reason `:reviewed-attachment-gained` can fail in a frame
+where every repaired component worked correctly.
+
+## The review gate worked, and that is the finding
+
+f11's guide deposited `e-a39ff1b3` (pattern
+`math-strategy/structural-obstruction-as-theorem`, edge `:proposed`, domain
+`:mathematics` — exactly the authoring shape D4 and D5 were repaired to accept).
+`f11-scribe` re-ran the elaboration, re-ran `#print axioms`, compared the
+refutation binder-for-binder, and **rejected it** because the body named a commit
+sha, which the guide's own dispatch had told it to reject.
+
+**So `:reviewed-attachment-gained` is failing for an honest reason: an
+independent reviewer read the work and said no.** Not because of D3, D4 or D5 —
+authoring produced precisely the edge those repairs were built to accept. The
+gate is real, and author != reviewer held under a case where the author would
+have preferred otherwise.
+
+The guide logged its own error rather than appealing: its dispatch wording was
+stricter than its content needed, since a base-revision pin is *provenance* that
+an absence claim requires ("empty at this pin"), not a pointer to a solution.
