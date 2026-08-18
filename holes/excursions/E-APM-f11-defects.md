@@ -653,3 +653,60 @@ characterisation** is acceptable — but only with a proof that it is satisfiabl
 and not trivially satisfiable, which is the same gate in another form. What is
 not acceptable is dropping the content, in either the honest or the disguised
 version.
+
+
+---
+
+## D33. A rejected memory is still usable, and the rejection may leave no trace on the edge **[partly verified]**
+
+f11's student attested **`USED e-a39ff1b3`** — *"disconnected-witness probe +
+compiled `→ False` record strategy — drove the whole plan"*. That memory is
+`e-a39ff1b3-dbbe-4783-aa00-cd293ac77e0d`, author **`f11-guide`**, 6,938 bytes,
+named `false-clause-probe-disconnected-witness-and-compiled-refutation`.
+
+**It is the deposit f11-scribe REJECTED.**
+
+So the frame's one real instance of knowledge transfer ran through a memory that
+failed review. Verified: the memory exists in the store under that author, and
+the student's own receipt attests using it. The transfer was genuine rather than
+cosmetic — the student's file is 223 lines with 3 residuals against the solver's
+375 with 2, i.e. **independent work**, and it re-proved the refutation by a
+different route (biproduct isos to `ℤ × ℤ`, then
+`not_isAddCyclic_prod_of_infinite_nontrivial`) rather than replaying the solver's.
+
+**What this means for the review gate.** Rejection controls *attachment status*;
+it does not control *availability*. A rejected memory stays in the store and stays
+reachable, so the gate governs whether knowledge counts as reviewed, not whether
+it can be used. That is arguably correct — but it is not what "rejected" suggests,
+and nothing in the frame's measurements distinguishes the two.
+
+**NOT fully verified, and it matters:** whether the rejection is recorded on the
+memory's edge at all. The evidence entry shows `:memory/assert :apm` and ground
+control found no `:attachment-status` on it — but attachment status lives on the
+**hyperedge**, not the evidence entry, so that absence may be an artefact of
+looking in the wrong place. **Do not treat "the rejection is unrecorded" as
+established.** If it turns out to be true, the store cannot distinguish *never
+reviewed* from *reviewed and rejected*, and a later cascade could surface a
+rejected memory as merely unreviewed — which would matter a great deal. That is
+one query away and should be settled before it is repeated as fact.
+
+**Compounds D32.** A cycle affords one deposit, taken before any review exists,
+so a rejection cannot be acted on within the frame. If the rejection also leaves
+no durable mark, then the reviewer's work survives only in its own prose report —
+the same failure shape as D6, which was fixed for conductor refusals and may be
+unfixed for review verdicts.
+
+### Consequence for f11's headline
+
+`:reviewed-attachment-gained` **fails**, and the reason is now precise: authoring
+produced exactly the `:proposed`/`:mathematics` edge D4 and D5 were repaired to
+accept, an independent reviewer read it and said no on a criterion the guide
+itself had set, and D32 made a corrected resubmission impossible. **None of
+D3/D4/D5 is implicated** — they are loaded and correct.
+
+But the *purpose* the attachment would have served was achieved anyway: knowledge
+moved from the guide to the student and demonstrably shaped the student's work.
+This is the second frame running where **real transfer occurred through a channel
+the instruments do not count** — f10 through pull rather than push (D18), f11
+through a rejected rather than a reviewed memory. The measure and the phenomenon
+have now diverged twice, in two different ways.
