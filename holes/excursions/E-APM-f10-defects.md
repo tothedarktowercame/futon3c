@@ -1077,103 +1077,17 @@ commit touches, not the namespaces belonging to the commit's subject. A
 two-line change to a file outside the packet's main area is exactly where this
 hides — and D6's `problem.clj` change was two lines.
 
-### D27. A registration whose predictions omit the objective **[verified, mine]**
+---
 
-Ground control registered f11 with **eight predictions, none of which concerned
-solving the problem.** All eight were about plumbing: reviewed attachments,
-disposition population, guidance count, card resolution, cascade routing,
-refusal traceability, analyst tenure.
+## 14. Continued in `E-APM-f11-defects.md`
 
-Joe caught it: *"what do you mean 'not the close'? You're going off map."*
+Defects **D27 onward** were found during frame 11 and are recorded in
+`holes/excursions/E-APM-f11-defects.md`. Numbering continues there rather than
+restarting, so references to D1–D26 in commit messages, park payloads and series
+entries stay unambiguous.
 
-**The error.** The corpus has ~207 open problems and the machine is being built
-to go through them. The memory apparatus — cascade, promotion, disposition — is
-**instrumental to that**. Registering only the instruments makes the instrument
-the objective, and produces a frame where *failing to solve the problem while
-populating a disposition field reads as success.* That is precisely backwards.
-
-It is the same family as D17 (a prediction's premise computed over the wrong
-set), but worse: there the premise was wrong, here the subject was.
-
-**What was and was not lost in f11.** The close is still *measured* — 
-`:decision-rule` outcomes are `[:closed :tier-a :tier-b :defective]` and the
-required measurement fields include "terminal disposition", "residual executable
-sorries", "attempts or closer hops" and "axiom cleanliness". So the primary
-result is recorded and will be reported. What is missing is a **pre-registered
-expectation** about it, which is weaker: the close becomes a measurement rather
-than an adjudicated prediction.
-
-**Why f11 was not re-registered.** The solver was already dispatched and working
-when this was caught (`:dispatch-solver` recorded at v10). A registration is
-frozen at open, and editing one mid-frame would break the freeze property the
-whole experiment depends on — the property that stops predictions being fitted
-to results. Correcting the specification would have cost the solver's live work
-and the integrity of the freeze. f11 runs as registered, with this defect
-recorded against it.
-
-**Fixed in f12** (unopened, so legitimately editable), which now leads with:
-- `:problem-closed` — the primary outcome, stated as such;
-- `:memory-contributes-to-close` — a surfaced memory attested as USED in the
-  work that closes or advances the problem, which is the link that makes the
-  apparatus worth having;
-- everything else explicitly ranked below, with `:reviewed-attachment-gained`
-  relabelled "SUPPORTING, NOT HEADLINE".
-
-**The standing rule:** every frame registration must predict the close first.
-Instrument predictions are how the close is expected to be *achieved*, and are
-ranked beneath it. A frame that repairs its own plumbing and does not solve its
-problem has failed, however green its other measures read.
-
-### D28. `:write-use` is reachable but order-dependent, and fails silently **[verified]**
-
-Found by f11's guide **by reading, before it could bite**, and confirmed at
-source by ground control. This is a residual gap in D25's fix.
-
-- `:write-use` is legal in exactly one phase: `problem.clj:56`,
-  `:adjudicate #{:write-disposition :write-use advance}`.
-- `conductor/adjudicate!` (`conductor.clj:627`) does `write-disposition` and
-  then **`(advance h1 {})` at line 632** — advancing out of `:adjudicate`.
-
-So a guide that does the natural thing — adjudicate the cycle, then attend to
-dispositions — finds the only window for `:write-use` already closed, gets no
-error, and leaves `:memory-disposition-offer-ids` empty exactly as f8, f9 and
-f10 did. **D25 made the operation reachable; it did not make it reachable at a
-time a guide would naturally call it.**
-
-f11's guide caught this while planning and sequenced `write-use` BEFORE
-`adjudicate`. The next guide may not. Options, smallest first: have
-`adjudicate!` disposition recorded offers itself before advancing; or refuse to
-advance with undispositioned offers; or expose the ordering constraint in the
-card. Not fixed here — f11 is live and the harness is frozen for its duration.
-
-### D29. f11 cannot test the cascade predictions: the store has no reviewed attachment to surface **[verified]**
-
-f11's dispatch recall returned `dispatch-recall-outcome=completed-empty`, and the
-saved state confirms `recall-status :recall-empty`, `eligible-memory-ids []`,
-`surfaced-ids []`, and — by structural walk deduped on `:offer/id` — **0 offers**.
-
-Why: f10 deposited and "promoted" `e-17bd0295`, which still exists (8,168 bytes),
-but D3/D4 prevented the review transition from completing, so its attachment edge
-never became reviewed. Recall surfaces *reviewed* attachments. The store
-therefore holds memories that are not reachable as reviewed attachments.
-
-**Consequence for adjudication, which the Analyst must not misread.** Two of
-f11's registered predictions are untestable in this frame's actual conditions:
-
-- `:offer-disposition-populated` — there are no offers to disposition. An empty
-  `:memory-disposition-offer-ids` here means **INAPPLICABLE**, not refuted, and
-  specifically does NOT mean D25 failed.
-- `:cascade-seeds-from-recall` — nothing was surfaced, so nothing seeded.
-  INAPPLICABLE.
-
-`:reviewed-attachment-gained` remains fully testable, and is now the sharper
-question: **f11's job is to BOOTSTRAP.** It must deposit and complete a
-promotion so that a reviewed attachment exists at all. Only then can f12 test
-whether the cascade reaches it.
-
-**This compounds D27.** Having registered predictions about the instruments
-rather than the objective, ground control then failed to mark two of them
-conditional — while explicitly marking two others conditional in the same
-registration. The rule from D27 needs a second clause: **a prediction whose
-precondition the frame itself must first create is a prediction about a LATER
-frame.** f11 creates the store state that f12 can measure.
+Notably, D28 in that file is a **residual gap in D25 from this file**:
+`:write-use` was made reachable, but only in a phase window that
+`conductor/adjudicate!` closes before a guide would naturally call it. A fix
+recorded here as complete turned out to be complete only in the sense the test
+measured.
