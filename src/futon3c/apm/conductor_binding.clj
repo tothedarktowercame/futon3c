@@ -144,8 +144,12 @@
 (defn execute!
   "Atomically execute one typed action against the authoritative live handle.
    EXECUTOR receives [handle operation args] and returns the next handle."
-  [agent-id session-id {:keys [action-id cycle-id version operation args]} executor]
-  (if-let [binding (lookup agent-id session-id)]
+  ([agent-id session-id action executor]
+   (execute! agent-id session-id action executor nil))
+  ([agent-id session-id
+    {:keys [action-id cycle-id version operation args] :as action}
+    executor refusal-recorder]
+   (if-let [binding (lookup agent-id session-id)]
     #_{:clj-kondo/ignore [:locking-suspicious-lock]}
     (locking (:lock binding)
       (cond
@@ -172,12 +176,30 @@
         (let [current @(:handle binding)
               next-handle (executor current operation (vec (or args [])))]
           (if (false? (:ok next-handle))
-            {:ok false
-             :error/code (or (get-in next-handle [:error :error/code])
-                             :conductor-action-refused)
-             :error (:error next-handle)
-             :cycle-id (:cycle-id binding)
-             :version (:version binding)}
+            (let [recorded (when refusal-recorder
+                             (refusal-recorder current action next-handle))]
+              (if (and recorded (not (false? (:ok recorded))))
+                (let [next-version (handle-version recorded)
+                      receipt {:action-id action-id :operation operation
+                               :cycle-id (:cycle-id binding)
+                               :version next-version :ok false}]
+                  (reset! (:handle binding) recorded)
+                  (reset! (:receipts binding)
+                          (assoc @(:receipts binding) action-id receipt))
+                  (swap! !bindings update (binding-key agent-id session-id)
+                         assoc :version next-version)
+                  {:ok false
+                   :error/code (or (get-in next-handle [:error :error/code])
+                                   :conductor-action-refused)
+                   :error (:error next-handle)
+                   :cycle-id (:cycle-id binding)
+                   :version next-version})
+                {:ok false
+                 :error/code (or (get-in next-handle [:error :error/code])
+                                 :conductor-action-refused)
+                 :error (:error next-handle)
+                 :cycle-id (:cycle-id binding)
+                 :version (:version binding)}))
             (let [next-version (handle-version next-handle)
                   receipt {:action-id action-id :operation operation
                            :cycle-id (:cycle-id binding)
@@ -192,8 +214,8 @@
                 (swap! !bindings dissoc (binding-key agent-id session-id)))
               {:ok true :receipt receipt :completed? completed?
                :phase (get-in next-handle [:state :current-phase])})))))
-    {:ok false :error/code :conductor-session-unbound
-     :agent-id agent-id :session-id session-id}))
+     {:ok false :error/code :conductor-session-unbound
+      :agent-id agent-id :session-id session-id})))
 
 (defn abandon!
   "Governed removal: the caller must name the current cycle and version."

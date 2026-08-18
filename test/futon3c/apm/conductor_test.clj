@@ -470,7 +470,7 @@
       :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})
       :session-id session-id})
     (with-redefs [binding/execute!
-                  (fn [_ _ routed _]
+                  (fn [_ _ routed _ _]
                     (reset! captured routed)
                     {:ok true})]
       (is (:ok (conductor-surface/execute-action!
@@ -618,10 +618,12 @@
                            {:agent agent-id :session session-id
                             :surface "problem-conductor"}))
             before (count (get-in opened [:state :steps]))
+            outputs-before (get-in opened [:state :cycle/outputs])
             out-of-phase (action! "a-wrong" :dispatch-student
-                                  [{:mission "M-test"} "student"])
-            after-refusal (count (get-in @(:handle (binding/lookup agent-id session-id))
-                                         [:state :steps]))
+                                  [{:mission "M-test"} "TOP-SECRET-PACKET"])
+            refused-handle @(:handle (binding/lookup agent-id session-id))
+            refusal (-> refused-handle :state :cycle/action-refusals first)
+            after-refusal (count (get-in refused-handle [:state :steps]))
             dispatched (action! "a-solver" :dispatch-solver
                                 [{:mission "M-test"} "solver"])
             after-dispatch @(:handle (binding/lookup agent-id session-id))
@@ -632,7 +634,27 @@
                                 :version (binding/handle-version after-dispatch)}))]
         (is (:ok opened) (pr-str (:error opened)))
         (is (= :phase-tool-not-allowed (:error/code out-of-phase)))
-        (is (= before after-refusal) "a refused phase action records no step")
+        (is (= (inc before) after-refusal)
+            "a refused action durably checkpoints exactly once")
+        (is (= :problem-save (-> refused-handle :state :steps last :tool)))
+        (is (= outputs-before (get-in refused-handle [:state :cycle/outputs]))
+            "a refusal cannot mutate phase outputs")
+        (is (= :guided-solve (get-in refused-handle [:state :current-phase])))
+        (is (empty? (filter #(= :dispatch-student-fresh (:tool %))
+                            (get-in refused-handle [:state :steps])))
+            "the refused action itself is never recorded as successful")
+        (is (= {:refusal/action-id "a-wrong"
+                :refusal/tool :dispatch-student}
+               (select-keys refusal
+                            [:refusal/action-id :refusal/tool])))
+        (is (= :phase-tool-not-allowed
+               (get-in refusal [:refusal/error :error/code])))
+        (is (= before (:refusal/step-index refusal)))
+        (is (not (re-find #"TOP-SECRET-PACKET" (pr-str refusal)))
+            "raw packet data is absent from the durable receipt")
+        (is (empty? (filter #(= :promote-artifact (:tool %))
+                            (get-in refused-handle [:state :steps])))
+            "a refusal cannot contribute to promotion counts")
         (is (:ok dispatched))
         (is (= 1 (count (filter #(= :dispatch-solver (:tool %))
                                 (get-in after-dispatch [:state :steps]))))
@@ -698,7 +720,10 @@
                          last :result :trace)]
           (is (:ok closed) (pr-str closed))
           (is (pos? (count (:memory-disposition-offer-ids trace)))
-              "the emitted trace records dispositioned offer ids"))
+              "the emitted trace records dispositioned offer ids")
+          (is (= "a-wrong" (-> trace :action-refusals first
+                               :refusal/action-id))
+              "the durable refusal reaches the emitted cycle trace"))
         (is (= false (:bound? (status! agent-id session-id))))
         (is (= :conductor-session-unbound
                (:error/code

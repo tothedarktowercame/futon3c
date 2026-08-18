@@ -92,7 +92,8 @@
                                   :args (transport-args agent-id operation
                                                         (:args action)))
        (fn [handle op args]
-         (apply (get operations op) handle args))))))
+         (apply (get operations op) handle args))
+       conductor/record-action-refusal!))))
 
 (defn status [agent-id session-id]
   (binding/status agent-id session-id))

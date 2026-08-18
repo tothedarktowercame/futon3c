@@ -133,6 +133,46 @@
     {:handle handle}
     (raw-step handle :problem-save [])))
 
+(def ^:private refusal-diagnostic-keys
+  #{:artifact-id :lane :memory-id :offer-id :outcome :pattern-id :reviewer})
+
+(defn- bounded-string [x]
+  (let [s (str x)]
+    (if (> (count s) 160) (str (subs s 0 160) "…") s)))
+
+(defn- refusal-diagnostic [arg]
+  (if (map? arg)
+    {:arg/type :map
+     :arg/keys (->> (keys arg) (map str) sort vec)
+     :arg/diagnostic
+     (into {}
+           (keep (fn [[k v]]
+                   (when (and (contains? refusal-diagnostic-keys k)
+                              (or (string? v) (keyword? v)
+                                  (boolean? v) (number? v)))
+                     [k (if (string? v) (bounded-string v) v)])))
+           arg)}
+    {:arg/type (cond
+                 (string? arg) :string
+                 (sequential? arg) :collection
+                 (nil? arg) :nil
+                 :else :scalar)}))
+
+(defn record-action-refusal!
+  "Checkpoint a sanitized refusal on the last authoritative, non-failed handle."
+  [handle {:keys [action-id operation args]} failed-handle]
+  (let [error (:error failed-handle)
+        receipt {:refusal/action-id action-id
+                 :refusal/tool operation
+                 :refusal/args (mapv refusal-diagnostic (or args []))
+                 :refusal/error (select-keys error
+                                             [:error/component :error/code
+                                              :error/message])
+                 :refusal/step-index (count (get-in handle [:state :steps]))}
+        recorded (update-in handle [:state :cycle/action-refusals]
+                            (fnil conj []) receipt)]
+    (:handle (checkpoint recorded))))
+
 (defn- saved-step [handle tool args]
   (let [{h :handle result :result} (raw-step handle tool args)]
     (if (false? (:ok h))

@@ -805,6 +805,8 @@
                         (assoc :guidance-events
                                (guidance-trace-events
                                 (:ground-control-events outputs))
+                               :action-refusals
+                               (vec (:cycle/action-refusals state))
                                :measurement-summary
                                {:measured (count (get-in outputs
                                                         [:measurement :meas/values]))
