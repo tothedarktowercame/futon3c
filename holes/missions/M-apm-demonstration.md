@@ -11697,3 +11697,125 @@ turn.* On 2026-08-18 I probed the bell endpoint's status code by belling
 `claude-2` — myself — and it returned as a turn, exactly as documented. Harmless
 here, but it is the same hazard that produced concurrent twin incarnations on
 2026-08-11. Probe with a recipient that is not you.
+
+## W.79 FRAME-9 CLOSED — the cascade fires and reaches nothing; the close is contaminated (2026-08-18)
+
+First frame with an Analyst seat in the loop and the first with the memory
+cascade live. Read by `analyst-1` (tenure 1 of 2), whose whole orientation is
+the frozen card `role-cards/analyst-v1.md`. **The full reading is the `f9` entry
+in `analysis/series.edn`; this is the pointer, not a second copy.**
+
+*(This close was read twice. The first `close!` wake at 08:47Z ran the checks
+and got as far as naming validator failures before the session died on a model
+limit, having written nothing. Nothing survived — which is the card's "if a
+finding is not in one of the three surfaces, it did not happen", demonstrated
+rather than asserted. The seat was re-registered Opus and started again from the
+card.)*
+
+**Duty A — transfer checks: 5/6 at close, C3 the lone fail; 6/6 after the fix.**
+Prediction `:transfer-checks-6-of-6` is **refuted on the number and vindicated
+on the mechanism**: C1 flipped exactly as predicted (`:authors ["f9-guide"]` ==
+`:reg/guide-seat`), and C3 regressed for an unrelated reason. C3 demanded that
+the student's eligible set contain *every* cycle promotion — including
+`promo/.../52`, minted twenty steps after the student dispatched at step 32. It
+was comparing unlike things: the same defect class as f8's C3 false-fail (W.75)
+and as the card's census-boundary trap.
+
+**Duty F — one packet, dispatched, parked, gated, merged.** P26 → `codex-3`
+(job `invoke-1787044849267-4749-44cbcc09`, park
+`park-bee0d64a-554b-45d8-a479-386f178d7008`), merged as **`f5c68a5b`**. Reviewed
+personally, not accepted on report: diff read; both acceptance runs re-run here
+(a01J06 → 6/6, a03J04 → unchanged 5/6 with C1 the lone fail); **the guard
+mutated by hand** — forcing the dispatch index to 0 empties the in-scope set and
+C3 *fails*, so the fix did not buy a pass by vacuity; clj-kondo 0/0;
+check-parens exit 0; exactly one file changed. The bar itself was measured
+before it was set, per the card's third trap. *This edit moves my own headline
+number, which is precisely why it went to an independent author rather than
+being taken as carve-out (b).*
+
+**Duty C — the cascade's first live frame. This is the finding.** 101 offers,
+of which **100 are `:offer/route :co-incidence` at `:offer/hops 2`** with a
+populated `:offer/via-pattern` — `:cascade-fires-structurally` **confirmed**,
+the cascade demonstrably reaches past a leaf lookup. But
+`:cascade-use-attested` is **refuted**, and refuted *structurally*: the
+offer set and the use set are **disjoint by wiring, not by accident**. All 101
+offers are seeded from the SOLVER dispatch; the student's recall returns
+`:status :not-invoked, :reason :memory-channel-no-push` and its frame record
+reads `:memory-channel :none`. The seat that receives offers attested no
+machine-readable use; the seat that attests use receives no offers and reaches
+memory only by mid-session pull. **Under this wiring the prediction cannot be
+satisfied at all** — which makes it a good prediction, since one frame settled
+it. The card's sentence is exactly the thing measured: reachability is a
+precondition for use, not evidence of it.
+
+Two smaller cascade readings, both new: **`:why-hop` fired zero times** — the
+seed pattern (`math-formalization/notation-semantics-traps`, fixed by what
+*recall* surfaced, not by what the *problem* touches) carries exactly one
+authored `@why` edge, to `math-informal/unfold-the-definition`, which has **zero
+memory attachments**. The route the frame was selected for exists and is empty
+of cargo. And the **cap is already binding**: 115 candidates expanded, 100
+taken, 15 dropped, every offer flagged `:cascade-truncated? true` on its first
+live frame.
+
+**`:first-tag-recall-hit` confirmed, receipted end to end.** The
+`memory-pull-offer` for the student dispatch records `:tool "memory_search"`,
+`:args {:tags ["a01J06"], :limit 20}`, four surfaced ids including the guide's
+deposit `e-8a40d240`, subsequently attested USED. W.76's tags interface and
+W.73's subject fallback met, and the receipt shows it.
+
+**`:student-lane-component-c` confirmed — and contaminated.** Component (c) is
+non-zero for the first time. But `git diff b6fc6b33 9932170c -- Main.lean` is
+**empty**: the student's axiom-clean close is byte-identical to the solver's.
+The mechanism, per the student's own honest report and the guide's verification,
+is that the promoted memory's body **named the solver's commit sha**, and the
+student's checkout **shares a git object store** with the solver's worktree. The
+student did not violate its surface contract — it searched, found, applied and
+attributed. **The channel is the defect**: a promoted memory plus a shared
+object store transfers the artifact instead of the knowledge. This is f9's
+largest finding and it is a design question, so it is surfaced, not patched.
+
+**Duty B — S-2, with its scope stated in the entry this time.** Universe **105**
+declared `math-*` ids across 15 namespaces (103 on 2026-08-17, 83 at S-1) —
+enumerated from `@flexiarg`/`@arg`/`@multiarg` declarations, never a directory
+glob. Mission-scope (reviewed ≥ 2026-08-16): **12 memories, 11 patterns, 1
+shared node** — *unchanged sharing*. f9 contributed 2 memories on 2 patterns
+**both minted during f9** (files created 08:19 and 08:38; the universe's 103→105
+is exactly these two), each carrying one memory: **bespoke rate 2/2**.
+`:s2-unprompted-sharing` **refuted**; W.67's fragmentation mode persists at S-2.
+Whole store: 224 reviewed rows, 205 memories, 32 patterns, 16 shared nodes.
+
+**Cross-frame drift — the thing a single-frame seat could not see.** This
+series' own f8 entry names `math-formalization/layer-cake-crossover-split` and
+`isolate-computational-kernel`. **Neither id exists**; the math-split renamed
+them to `math-formalization-CA/layer-cake-crossover-split` and
+`math-strategy/isolate-computational-kernel-before-transport`, and querying the
+f8 ids returns 0 edges. Recorded in the f9 entry rather than by editing f8,
+since the series is append-only. Related: S-0 (W.67) reports 9/9 where the f7
+entry records 8/8, and S-1's published 12/11/1 recomputes to 10/9/1 at the f8
+cut under an explicitly stated scope. **The readings drifted because the scope
+was never written beside the number.** S-2 states its scope; future readings
+must, or they stay incomparable. This is the N = 2 tenure earning itself.
+
+**Three instrument cautions, each paid for during this reading**, all in the
+entry: `attachment-status` is a keyword on some edges and the **string**
+`"reviewed"` on others, so a strict `= :reviewed` filter silently undercounts;
+a swallowed substrate query shrank my own census from 205 to 198 between two
+runs of the same script, so query errors must be counted, not `or`-ed away; and
+**`unused-ids` contains the substring `used-ids`**, so a grep for uses reads
+every non-use as a use — the card's over-counting substring trap, met again.
+
+**Surfaced to Ground Control, not fixed here** (registration/design, per the
+card's boundary): the push/pull channel split that makes the cascade's
+offer×use join unsatisfiable; the solver's attested use reaching prose
+(`:attempt/verification`) while its machine receipt still reads `:used-ids []`
+with the seed in `:unused-ids`, so the loss function's numerator drops real
+uses; and the commit-pointer + shared-object-store contract-leak channel above.
+
+**Hypothesis registered for the next cycle:** a check that joins two events must
+scope itself to the moment the earlier one happened — the shape P26 fixed in C3
+is live in C4 and in any future offer×use join. For f10: give the cascade a
+pull-side surface and the join becomes non-empty; leave it and f10 reproduces
+f9's empty join exactly, confirming the emptiness as **wiring** rather than as a
+property of this problem.
+
+Frame 10 is registered and **not opened**; it is not this entry's business.

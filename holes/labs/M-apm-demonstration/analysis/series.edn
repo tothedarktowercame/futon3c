@@ -52,4 +52,116 @@
                            :dangling-proposed 2}
              :note "S-1 (W.75): first SHARED node — solver route (e-d11811de) and student divergence (e-1484814c) meet at layer-cake. Mission scope excludes the pre-mission claude-9-era hub."}
   :headline "First fully witnessed transfer chain (deposit->review->promotion->eligibility w/ provenance); sharpest finding: eligibility delivered, retrieval didn't (P25: two correct layers composed into the miss)"
-  :defects-found 9 :defects-fixed-or-queued 9}]
+  :defects-found 9 :defects-fixed-or-queued 9}
+
+ {:frame "f9"
+  :problem "a01J06"
+  :closed "2026-08-18"
+  :disposition :closed
+  :analyst "analyst-1 (tenure 1 of 2; f9 is frame 1, f10 is the last)"
+  :mathematics {:closed? true :dispatches 2 :axiom-clean? true
+                :residual-sorries 0
+                :solver-commit "b6fc6b33" :student-commit "9932170c"
+                :merged nil
+                :note "BOTH attempts close axiom-clean, but `git diff b6fc6b33 9932170c -- Main.lean` is EMPTY: the student attempt is a wholesale adoption of the solver's commit, not an independent derivation. Guide-verified, student-attested. Receipt: :student-attempts[0] :attempt/verification, v46.edn."}
+
+  ;; --- duty A ---------------------------------------------------------
+  :transfer-checks {:score "5/6"                   ;; as measured at close, with the instrument as it stood
+                    :score-post-fix "6/6"            ;; after P26 (f5c68a5b) corrected C3's temporal scope; receipt re-run 2026-08-18T09:23:40Z
+                    :fails [:C3]
+                    :predicted "6/6"
+                    :receipt "data/problem-state/a01J06-32e6e4c2.../transfer-checks.edn (re-run by analyst-1 2026-08-18, reproduced 5/6)"
+                    :c1-flipped? true                ;; the PREDICTED half landed: authors ["f9-guide"] == :reg/guide-seat. P21 seat attribution is live.
+                    :divergence "C3 is an INSTRUMENT TEMPORAL-SCOPE ERROR, not a transfer failure. C3 demands the student's eligible set contain EVERY cycle promotion. a01J06 promoted twice: promo/.../28 (e-8a40d240) at step 28 and promo/.../52 (e-a75efe47) at step 52. The student dispatched at step 32. The eligible set (437 ids) CONTAINS e-8a40d240 and cannot contain e-a75efe47, which did not exist for another 20 steps. Same defect class as f8's C3 false-fail (W.75) and as the card's census-boundary trap: the check compares unlike things."
+                    :packet {:id "P26" :dispatched-to "codex-3"
+                             :job "invoke-1787044849267-4749-44cbcc09"
+                             :park "park-bee0d64a-554b-45d8-a479-386f178d7008"
+                             :bar "a01J06 -> C3 PASS 6/6; a03J04 -> unchanged 5/6 with C1 the lone fail (both MEASURED before the bar was set); guard-mutation must make C3 fail"
+                             :state :merged
+                             :sha "f5c68a5b"
+                             :review "Gated personally by analyst-1, not accepted on report. Checked: (1) read the diff -- step index parsed from :promo/id with #\"/(\\d+)$\", unparseable promotions KEPT in scope (fail-safe), union-ok still requires a NON-EMPTY in-scope set; (2) re-ran a01J06 myself -> C3 PASS, 6/6, evidence shows :student-dispatch-step 32, in-scope [e-8a40d240], excluded-late [e-a75efe47]; (3) re-ran a03J04 myself -> still 5/6, C1 the lone FAIL, C3 PASS with excluded-late []; (4) MUTATED THE GUARD myself on a copy -- forced student-dispatch-step to 0, C3 FAILED with :promo-ids-in-scope [], proving no vacuous pass -- then discarded the copy and re-ran the real instrument to restore the authoritative receipt (the mutation run had overwritten transfer-checks.edn with a 5/6 reading); (5) clj-kondo 0 errors 0 warnings; arxana-check-parens-run exit 0; (6) git show --name-only confirms EXACTLY ONE file changed."}}
+
+  ;; --- duty C: the cascade's first frame -------------------------------
+  :cascade {:enabled? true :cap 100
+            :offers 101
+            :by-route {:leaf 1 :co-incidence 100 :why-hop 0}
+            :hops {0 1, 2 100}
+            :via-pattern-present-on-all-non-leaf? true
+            :patterns-per-problem 1
+            :expanded-available 115 :truncated? true :dropped-at-cap 15
+            :seeded-from "the SOLVER dispatch only (all 101 offer ids are prefixed offer/invoke-1787039327262-4733-c4f8c867/). The student's dispatch recall returned :status :not-invoked, :reason :memory-channel-no-push, surfaced-ids [] -- so it seeded nothing."
+            :uses {:memory-uses 1 :pull-use-receipts 5 :distinct-pulled-ids 4}
+            :offer-use-join 0
+            :note "THE READING OF f9. Offers and uses are on DISJOINT CHANNELS BY CONSTRUCTION. The cascade rides the PUSH channel, and the frame record gives the solver :memory-channel :push and the student :memory-channel :none. The seat that receives offers (solver) attested no machine-readable use; the seat that attests use (student) receives no offers and reached memory only by mid-session pull. The join `used x route` is therefore empty not by accident but by wiring."}
+
+  :why-hop-diagnosis
+  {:seed-memory "e-codexpilot-require-model-invariants-to-link-enumerated-data-with-derived-counts"
+   :seed-pattern "math-formalization/notation-semantics-traps"
+   :authored-why-target "math-informal/unfold-the-definition"
+   :target-attachments 0
+   :finding "The authored @why route the frame was SELECTED for does exist -- the seed pattern carries exactly one pattern/has-semantic-why edge -- but its target has ZERO memory attachments, so the route yields no offers. :why-hop is structurally present and empty of cargo. The registration's selection criterion (:reg/known-departures :family-distance, 'the edged-pattern requirement needed for :why-hop to fire') tested the PROBLEM for edges; what actually determines the seed pattern is what RECALL surfaced. Those are different tests."}
+
+  :loss-components {:surfaced-push 101              ;; solver, cascade-expanded
+                    :surfaced-pull 4                ;; student, memory_search tags [a01J06]
+                    :used-receipted 1               ;; e-8a40d240, student, :use/channel "pull", co-occurring commit 9932170c
+                    :used-unreceipted 1             ;; the SOLVER attested USE of the leaf seed in prose only (:attempt/verification); its machine receipt still reads :status :pending-outcome, :used-ids [], seed in :unused-ids
+                    :converted-artifacts 1          ;; one student commit -- but content-identical to the solver's; see :mathematics :note
+                    :note "Component (c) is non-zero for the first time, as predicted -- and contaminated. The use that co-occurs with a commit is the adoption of a commit POINTER carried in the memory body, resolved through a shared git object store. Transfer of an artifact, not of knowledge."}
+
+  :store-delta {:deposits 2 :promotions 2 :new-patterns 2 :bespoke-rate "2/2"}
+
+  ;; --- duty B: S-2 ------------------------------------------------------
+  :spectral {:reading "S-2"
+             :universe 105                          ;; DECLARED math-* ids across 15 namespaces, enumerated from @flexiarg/@arg/@multiarg lines, 2026-08-18. Was 103 on 2026-08-17 and 83 at S-1. The +2 ARE f9's own two mints (files created 08:19 and 08:38 today).
+             :scope "reviewed memory/assert attachments with review timestamp >= 2026-08-16 (first mission frame close)"
+             :reviewed-memories 12 :patterns 11 :shared-nodes 1
+             :shared [["math-formalization-CA/layer-cake-crossover-split" 2]]
+             :f9-contribution {:memories 2 :patterns 2 :shared 0}
+             :whole-store {:reviewed-rows 224 :reviewed-memories 205 :patterns 32 :shared-nodes 16
+                           :legacy-hubs [["math-strategy/missing-dependency-protocol" 48]
+                                         ["math-formalization-CA/measure-integration-api" 46]
+                                         ["math-formalization-CV/holomorphic-disk-api" 25]
+                                         ["math-formalization/tactic-algebra-interference" 22]]}
+             :note "Mission-scope sharing did NOT grow: still exactly one shared node, inherited from f8. f9 added two memories on two FRESHLY MINTED bespoke patterns -- 100% bespoke rate, zero attach-to-existing. The fragmentation mode of W.67 (S-0) persists at S-2."
+             :instrument-cautions
+             ["attachment-status is a KEYWORD :reviewed on some edges and the STRING \"reviewed\" on others. A strict (= :reviewed ...) filter silently undercounts; normalize with name/str. transfer_checks.bb C2 already does this deliberately."
+              "A substrate query that fails and is swallowed by (or ... []) silently shrinks the census: two runs of my first draft reported 198 and 205 reviewed memories. Count query errors explicitly and retry. The 205 figure above was taken with errors=0."
+              "'unused-ids' CONTAINS the substring 'used-ids'. A grep for used-ids matches every unused-ids receipt and reads a non-use as a use. This is the card's over-counting substring trap, met again."]}
+
+  ;; --- adjudication of :reg/predictions (all six) -----------------------
+  :predictions
+  [{:id :transfer-checks-6-of-6 :verdict :refuted
+    :measured "5/6"
+    :evidence "C1 flipped exactly as the prediction's mechanism said (authors [\"f9-guide\"]); C3 regressed for an unrelated instrument reason. The prediction's REASONING was right and its NUMBER was wrong."}
+   {:id :first-tag-recall-hit :verdict :confirmed
+    :evidence "memory-pull-offer receipt, dispatch invoke-1787041367456-4740-a9e0c825: :tool \"memory_search\", :args {:tags [\"a01J06\"], :limit 20}, 4 surfaced ids including the guide's deposit e-8a40d240, which was then attested USED. W.76's tags interface and W.73's subject fallback met, receipted end to end."}
+   {:id :student-lane-component-c :verdict :confirmed-but-contaminated
+    :evidence "One :memory-use, :use/attempt attempt/f9/student-0, mechanism text names co-occurring commit 9932170c. Component (c) is non-zero. BUT the commit is byte-identical to the solver's b6fc6b33; the mechanism was adopting a commit pointer from the memory body across a shared git object store. Counted as non-zero and flagged: this measures artifact reachability, not knowledge transfer."}
+   {:id :s2-unprompted-sharing :verdict :refuted
+    :evidence "Both f9 attachments went to patterns minted during f9: f9-scribe -> math-informal/convert-growth-counts-to-summability-by-geometric-shells (file created 2026-08-18 08:19), f9-guide -> math-formalization/separate-proof-transfer-from-artifact-replay (08:38). Each carries exactly 1 reviewed memory. Universe 103 -> 105 accounts for precisely these two. Mission-scope shared-nodes unchanged at 1."}
+   {:id :cascade-fires-structurally :verdict :confirmed
+    :evidence "100 of 101 offers carry :offer/route :co-incidence with :offer/hops 2 and a populated :offer/via-pattern -- memories that a leaf lookup would not have surfaced. The cascade demonstrably reaches beyond retrieval."}
+   {:id :cascade-use-attested :verdict :refuted
+    :evidence "Zero non-leaf offers were used by anyone; the offer set and the use set are disjoint. Three independent reasons, each measured: (i) the only seat with offers (solver) attested use of the LEAF seed alone; (ii) even that leaf use never reached a machine receipt -- :memory-use/used-ids stayed [] with the seed in :unused-ids; (iii) the seat that did attest use (student) is :memory-channel :none and receives no offers at all. The card's distinction holds exactly as stated: reachability is a precondition for use, not evidence of it, and f9 is the frame that separates them."}]
+
+  ;; --- cross-frame drift (why this seat serves N=2) ---------------------
+  :drift
+  [{:id :series-pattern-ids-renamed
+    :text "This series' own f8 entry names :shared [[\"math-formalization/layer-cake-crossover-split\" 2]] and :new-patterns including isolate-computational-kernel. NEITHER ID EXISTS. The math-split (MANIFEST-math-split-RULED.md) renamed them to math-formalization-CA/layer-cake-crossover-split and math-strategy/isolate-computational-kernel-before-transport. Querying the f8 ids against the store returns 0 edges. A single-frame agent could not see this; recorded here rather than by editing f8, since this file is append-only."}
+   {:id :s-readings-not-comparable-as-published
+    :text "S-0 (W.67) reports 9 reviewed memories / 9 patterns; the f7 series entry records 8/8. S-1 reports 12/11/1 at f8 close; recomputed today under an explicitly stated scope the f8 cut is 10/9/1 and the f9 cumulative is 12/11/1. The readings drifted because the scope was never written down with the number. S-2 above states its scope in the entry. Future readings must do the same or they continue to be incomparable."}]
+
+  :defects
+  [{:id :d1 :text "transfer_checks.bb C3 compares the student's eligible set against post-dispatch promotions" :status :fixed-and-merged :ref "P26 / f5c68a5b, reviewed at the gate by analyst-1"}
+   {:id :d2 :text "The memory cascade rides the push channel only; the student seat is :memory-channel :none, so cascade offers can never reach the seat that attests use. :cascade-use-attested is unsatisfiable under this wiring." :status :surfaced-to-ground-control :note "NOT the Analyst's to fix -- changing the student's channel is a frame-registration/design ruling."}
+   {:id :d3 :text "A solver's attested memory USE reaches only prose (:attempt/verification); the machine receipt stays :pending-outcome with :used-ids []. The loss function's numerator drops real uses." :status :surfaced-to-ground-control}
+   {:id :d4 :text "The :why-hop route fired zero times: the seed pattern's single authored @why target has no memory attachments. Frame selection tested the problem for edges; the seed pattern is fixed by recall instead." :status :recorded}
+   {:id :d5 :text "Cascade truncation dropped 15 of 115 expanded candidates at cap 100, and every offer is flagged :cascade-truncated? true. The cap is binding on its first live frame." :status :recorded}
+   {:id :d6 :text "e-c9c30595 orphan entry -- the memory/assert edge write was lost and the entry superseded by a new id. Guide-recorded in the close report." :status :recorded-by-guide}
+   {:id :d7 :text "Contract-leak channel: a promoted memory body carrying a commit sha, plus a git object store shared between solver and student checkouts, transfers the ARTIFACT rather than the knowledge. The student did not violate its surface contract -- it searched, found, applied and attributed. The channel is the defect." :status :surfaced-to-ground-control :note "This is f9's largest finding and it is a design question, not an implementation one."}
+   {:id :d8 :text "conductor surface captures operation functions by value, so hot reloads of futon3c.apm.conductor do not reach it." :status :known-ledgered-post-f10 :note "Do not fix; already in the ledger."}]
+
+  :headline "The cascade fires and reaches nothing: 100 structurally-routed offers to the solver, 1 attested use by the student, and an empty join -- because offers ride the push channel and the student has none. Separately, the frame's close is contaminated: the student's axiom-clean commit is byte-identical to the solver's, adopted via a commit pointer in a promoted memory across a shared object store."
+  :defects-found 8 :defects-fixed-or-queued 1                ;; d1 fixed and merged; d2/d3/d7 surfaced to ground control as design questions; d4/d5/d6 recorded; d8 already ledgered
+  :hypothesis-for-next-cycle
+  "P26 implies: a check that joins two events must scope itself to the moment the earlier one happened. The same shape is now live in C4 (which joins offer receipts to a dispatch id) and in any future offer-x-use join. Predict for f10: if the cascade is given a pull-side surface, the offer/use join becomes non-empty; if it is not, f10 reproduces f9's empty join exactly, and the emptiness is confirmed as wiring rather than as a property of this problem."}]
