@@ -159,6 +159,38 @@
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))
 
+(deftest matching-loaded-harness-revision-passes-both-pin-checks
+  (let [pinned (:reg/harness-revision f7-registration)
+        check (var-get #'futon3c.apm.conductor-open/harness-pin-check)]
+    (is (nil? (check f7-registration
+                     {:loaded-harness-revision pinned
+                      :harness-measurer
+                      (fn [_] {:harness-revision pinned})})))))
+
+(deftest mismatched-loaded-harness-revision-is-distinct-from-stale-git
+  (let [pinned (:reg/harness-revision f7-registration)
+        loaded (apply str (repeat 40 "b"))
+        check (var-get #'futon3c.apm.conductor-open/harness-pin-check)
+        result (check f7-registration
+                      {:loaded-harness-revision loaded
+                       :harness-measurer
+                       (fn [_] {:harness-revision pinned})})]
+    (is (= :harness-image-pin-mismatch (:error/code result)))
+    (is (= pinned (:pinned result)))
+    (is (= loaded (:loaded result)))))
+
+(deftest unknown-loaded-harness-revision-is-a-hard-refusal
+  (let [pinned (:reg/harness-revision f7-registration)
+        check (var-get #'futon3c.apm.conductor-open/harness-pin-check)
+        result (check f7-registration
+                      {:loaded-harness-revision nil
+                       :harness-measurer
+                       (fn [_] {:harness-revision pinned})})]
+    (is (= :harness-image-revision-unknown (:error/code result)))
+    (is (= pinned (:pinned result)))
+    (is (contains? result :loaded))
+    (is (nil? (:loaded result)))))
+
 (deftest production-open-takes-cascade-and-analyst-pins-from-registration
   (let [{:keys [payload options registration paths]} (fixture)
         captured (atom nil)
