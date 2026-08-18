@@ -132,10 +132,8 @@ frame.** f11 creates the store state that f12 can measure.
 Not defects yet — questions f11 will answer, listed so they are not lost if the
 frame's own report is:
 
-- **Does t01A05 close?** The primary outcome (D27). One `sorry` at line 97
-  discharges the whole theorem: a concrete torus clause and a general
-  covering-space clause. Frames 9 and 10 each closed on the solver's first
-  dispatch.
+- **Does t01A05 close?** ANSWERED, and the answer is that **it cannot**: see
+  the statement defect below.
 - **Does `:reviewed-attachment-gained` hold?** This is the one memory-side
   prediction f11 CAN test (D29), and it is a bootstrap: the store currently has
   no reviewed attachment for recall to surface, so f11 must create the first one
@@ -165,3 +163,59 @@ frame's own report is:
   mixed-type frame; the two claude guides for f11 and f12 still needed
   re-registration by hand. Contrast D5's `:memory-domain`, which is per-seat in
   `seat-specs` and is the shape the model should have taken.
+
+
+---
+
+## STATEMENT DEFECT in t01A05 — verified by ground control
+
+**This is f11's primary result, and it is not a close.** The frozen theorem
+`apm_t01a05` is **false as stated**, so the problem is not merely unsolved — it
+is unprovable.
+
+f11's solver formalised the refutation as `t01A05_generalClause_isFalse`
+(commit `396d4ee7`, branch `exp/frame-11-t01A05-solver`). Its hypothesis is the
+frozen theorem's **second conjunct quoted verbatim** — identical typeclass
+hypotheses and structure, differing only in the binder name `hk` → `_hk` — and
+it concludes `→ False`.
+
+**The counterexample.** Take `n = 0`, `k = 2`, `X` a point, `Xtilde` two points,
+`π` the fold map. That is a genuine two-sheeted cover, and a 0-manifold is a
+discrete set of points, so the instantiation is legal under the frozen
+hypotheses. But upstairs `H₀ ≅ ℤ × ℤ`, which cannot admit the orientation
+isomorphism to `ℤ` that `T01A05Orientation` requires. The clause promises a
+lifted orientation that provably cannot exist.
+
+**Root cause:** the frozen statement carries `[T2Space Xtilde]`,
+`[CompactSpace Xtilde]`, `[ChartedSpace …]` and `[IsManifold …]` but **no
+`[ConnectedSpace Xtilde]`**, so disconnected covers are admitted. Either that
+hypothesis or a componentwise orientation definition is required.
+
+**Verified by ground control, not accepted on report:**
+
+| check | result |
+|---|---|
+| All five claimed commits | present |
+| Frozen statement vs pin | **byte-identical** (20-line signature diffed) |
+| Elaboration, re-run on a `/tmp` copy | `EXIT=0`, 0 errors — lean's own status, not a pipeline's |
+| **Axioms of the refutation** | `[propext, Classical.choice, Quot.sound]` — **no `sorryAx`** |
+| `t01A05_twoPointCover_isTwoSheeted` | same three axioms |
+| Solver worktree | clean, untouched by the audit |
+
+**Consequence.** The residual at `h_general_fundamental_class_multiple` is
+structurally undischargeable; no amount of Mathlib API closes it. The other
+residual, `h_torus_degree_multiple`, is a genuine API gap (no torus/circle
+homology computation, Künneth, or covering-transfer degree theorem in Mathlib)
+and is a different kind of open.
+
+**Why this is a good outcome.** The frame text named a statement defect as "a
+reportable result and not a failure to solve", and the registration carries
+"statement defects at review" as a required measurement field and `:defective`
+as a decision-rule outcome. For a corpus of ~207 open problems, a machine that
+can *formally establish* that a problem is mis-stated is worth as much as one
+that closes it — an unbounded search against a false statement is the most
+expensive failure mode available.
+
+It also vindicates the frame's instruction to treat a prior pass's conclusions
+as evidence rather than verdict: the shipped `proof-outline.md` recorded this
+residual as an API gap, and it is not one.
