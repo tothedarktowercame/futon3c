@@ -397,3 +397,41 @@ have preferred otherwise.
 The guide logged its own error rather than appealing: its dispatch wording was
 stricter than its content needed, since a base-revision pin is *provenance* that
 an absence claim requires ("empty at this pin"), not a pointer to a solution.
+
+
+---
+
+## A verdict dispute, settled against the guide — `:cascade-seeds-from-recall`
+
+f11's guide reported this prediction as **corroborated**: *"nothing surfaced,
+nothing seeded, even though the problem touches patterns."* Ground control had
+recorded it as **INAPPLICABLE** (D29). The guide's reading is the more
+interesting one, so it was checked rather than overruled.
+
+**The premise does not hold, or at least is not established:**
+
+- `grep -rc 't01A05' futon3/library/` — **zero** files reference the problem.
+- `:offer/patterns-per-problem` was **never recorded in any version** of the
+  cycle, so the touch-set size is nowhere established. (In f10 it was recorded as
+  2.)
+- The store entries carrying subject `t01A05` are recall *observations*
+  (`:recall-status :not-invoked`, `:memory-channel-no-push`), not pattern
+  attachments.
+
+**Why this matters logically.** The prediction discriminates between two
+hypotheses: seeding follows the problem's touch-set, versus seeding follows
+recall-surfaced memories. It is corroborated only if the touch-set is NON-EMPTY
+while offers are empty — that is the whole discriminating power. If the touch-set
+is empty, zero offers is what BOTH hypotheses predict, and the frame separates
+them not at all.
+
+So the verdict is **INAPPLICABLE**, and specifically *not* corroborated. The
+guide asserted a premise it had not measured; the datum that would have supported
+it is exactly the one the cycle never recorded.
+
+This is worth keeping as a worked example rather than a correction: the guide was
+reasoning correctly about what would count as evidence, and reached for a
+premise that felt safe. **f10 is where that premise came from** — there the
+problem did touch patterns (2 of them), and the contrast with an empty touch-set
+was never a live consideration. The error is generalising a measured fact from
+one frame into an assumed fact in the next.
