@@ -1123,3 +1123,57 @@ recorded against it.
 Instrument predictions are how the close is expected to be *achieved*, and are
 ranked beneath it. A frame that repairs its own plumbing and does not solve its
 problem has failed, however green its other measures read.
+
+### D28. `:write-use` is reachable but order-dependent, and fails silently **[verified]**
+
+Found by f11's guide **by reading, before it could bite**, and confirmed at
+source by ground control. This is a residual gap in D25's fix.
+
+- `:write-use` is legal in exactly one phase: `problem.clj:56`,
+  `:adjudicate #{:write-disposition :write-use advance}`.
+- `conductor/adjudicate!` (`conductor.clj:627`) does `write-disposition` and
+  then **`(advance h1 {})` at line 632** — advancing out of `:adjudicate`.
+
+So a guide that does the natural thing — adjudicate the cycle, then attend to
+dispositions — finds the only window for `:write-use` already closed, gets no
+error, and leaves `:memory-disposition-offer-ids` empty exactly as f8, f9 and
+f10 did. **D25 made the operation reachable; it did not make it reachable at a
+time a guide would naturally call it.**
+
+f11's guide caught this while planning and sequenced `write-use` BEFORE
+`adjudicate`. The next guide may not. Options, smallest first: have
+`adjudicate!` disposition recorded offers itself before advancing; or refuse to
+advance with undispositioned offers; or expose the ordering constraint in the
+card. Not fixed here — f11 is live and the harness is frozen for its duration.
+
+### D29. f11 cannot test the cascade predictions: the store has no reviewed attachment to surface **[verified]**
+
+f11's dispatch recall returned `dispatch-recall-outcome=completed-empty`, and the
+saved state confirms `recall-status :recall-empty`, `eligible-memory-ids []`,
+`surfaced-ids []`, and — by structural walk deduped on `:offer/id` — **0 offers**.
+
+Why: f10 deposited and "promoted" `e-17bd0295`, which still exists (8,168 bytes),
+but D3/D4 prevented the review transition from completing, so its attachment edge
+never became reviewed. Recall surfaces *reviewed* attachments. The store
+therefore holds memories that are not reachable as reviewed attachments.
+
+**Consequence for adjudication, which the Analyst must not misread.** Two of
+f11's registered predictions are untestable in this frame's actual conditions:
+
+- `:offer-disposition-populated` — there are no offers to disposition. An empty
+  `:memory-disposition-offer-ids` here means **INAPPLICABLE**, not refuted, and
+  specifically does NOT mean D25 failed.
+- `:cascade-seeds-from-recall` — nothing was surfaced, so nothing seeded.
+  INAPPLICABLE.
+
+`:reviewed-attachment-gained` remains fully testable, and is now the sharper
+question: **f11's job is to BOOTSTRAP.** It must deposit and complete a
+promotion so that a reviewed attachment exists at all. Only then can f12 test
+whether the cascade reaches it.
+
+**This compounds D27.** Having registered predictions about the instruments
+rather than the objective, ground control then failed to mark two of them
+conditional — while explicitly marking two others conditional in the same
+registration. The rule from D27 needs a second clause: **a prediction whose
+precondition the frame itself must first create is a prediction about a LATER
+frame.** f11 creates the store state that f12 can measure.
