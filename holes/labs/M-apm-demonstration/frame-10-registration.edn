@@ -97,7 +97,7 @@
            :locked-lemma-exposure []}
 
  :variation {:kind     :measured
-             :endpoint "frame-9: same Analyst, all other seats fresh; a problem with NO edged pattern, so :why-hop cannot fire"}
+             :endpoint "frame-10: same Analyst (tenure 2 of 2), all other seats fresh; a problem with NO edged pattern, so :why-hop cannot fire"}
 
  :claim :descriptive
  :arms  [{:name "fresh seats, same analyst (tenure 2 of 2), cascade on, no edged pattern"
@@ -165,16 +165,21 @@
  :reg/seat-exclusivity :enforced-at-register
 
  :reg/known-departures
- [{:id :family-distance
-   :text "a01J06 is a-family, as f8's a03J04 was. Frame-2 chose structural distance to limit cross-problem recall leakage. Accepted here because the edged-pattern requirement — needed for :why-hop to fire at all — is satisfied by only 9 problems in the corpus, and the alternative (m93J02) touches none."}
-  {:id :analyst-tenure-n2
+ [
+ ;; NOTE (claude-2, ground control, 2026-08-18, pre-open): f9's
+ ;; :family-distance departure was carried here by copy-paste and has been
+ ;; REMOVED. It does not apply to f10: m93J02 is m-family, so this frame
+ ;; SATISFIES frame-2's cross-problem recall-leakage criterion rather than
+ ;; departing from it (see the header comment). Declaring a departure that
+ ;; does not hold would have had the Analyst adjudicate a fiction.
+   {:id :analyst-tenure-n2
    :text "The Analyst serves N = 2 frames (f9, f10) while every other seat is minted fresh per frame. Ruled 2026-08-18; plan §6 stands with N pinned at 2."}]
 
  :reg/predictions
  [{:id :transfer-checks-6-of-6
-   :text "C1 flips when P21 seat attribution goes live, taking the transfer checks to 6/6. f8 measured 5/6 with C1 the lone honest fail, re-verified by the Analyst on 2026-08-17 (a03J04, score 5/6)."}
+   :text "C1 flips when P21 seat attribution goes live, taking the transfer checks to 6/6. f8 measured 5/6 with C1 the lone honest fail, re-verified by the Analyst on 2026-08-17 (a03J04, score 5/6). CONTEXT ADDED PRE-OPEN (claude-2, not a change to the prediction): P26 (futon3c f5c68a5b) landed after f9 and corrected C3's temporal scope, so C1 is now the only structural obstacle to 6/6; f9 re-read 6/6 post-fix. The prediction and its threshold are unchanged."}
   {:id :first-tag-recall-hit
-   :text "A deposit tagged with the problem id is found by the student's memory_search tags [a01J06] — the tags interface (W.76) and P25's subject fallback (W.73) meet."}
+   :text "A deposit tagged with the problem id is found by the student's memory_search tags [m93J02] — the tags interface (W.76) and P25's subject fallback (W.73) meet."}
   {:id :student-lane-component-c
    :text "With the 60-minute budget and a stocked shelf, at least one student memory use co-occurs with a commit; component (c) of the loss function is non-zero for the first time."}
   {:id :s2-unprompted-sharing
