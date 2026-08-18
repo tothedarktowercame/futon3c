@@ -719,3 +719,75 @@ Is APM frame knowledge `:mathematics`, or is student working memory intentionall
 
 Weakening `validate-edge!` is not an option in either case — it would let an edge
 be reviewed under the wrong domain policy.
+
+## 11. Write-path repairs — D3, D4, D5 (2026-08-18)
+
+### D3 + D4 — FIXED (`c3be0e9f240df0b0bfba2e6d77f6a217ae1cd995`) **[verified]**
+
+**Structural.** `apply-existing-attachment-review!` (`memory_lifecycle.clj`) is
+the operation the system was missing: it consumes independently authored review
+evidence and applies it to an exact `:proposed` edge.
+
+The property got **stronger, not weaker**. Reviewer identity and session are
+both derived from the persisted evidence entry — `(:evidence/author review-entry)`
+and `(:evidence/session-id review-entry)` — never from the request. The
+docstring states the rule: *"The caller supplies the evidence id and reviewed
+facts, never an authorship claim."* Deriving authorship from immutable evidence
+is a stronger guarantee than trusting a caller's assertion, which is what the
+old shortcut did.
+
+That derivation also resolves the second obstruction honestly: because reviewer
+and session come from the same entry, the invocation-identity check at
+`memory_lifecycle.clj:137-146` is *satisfied* rather than bypassed.
+
+`promote-memory-attachment!` now dispatches on state — a request naming review
+evidence takes the new path; a statusless, patternless memory keeps the original
+attach-and-review behaviour unchanged.
+
+**Gates, re-run by ground control:** the reject-outright check first —
+`conductor_test.clj` is not in the diff, the P14 "guide cannot impersonate the
+scribe" assertion is intact, and the conductor suite passes 19/135/0. clj-kondo
+0/0; check-parens OK; changed namespaces 111 tests / 435 assertions / 0 failures.
+`:reviewer-not-actor` and the surface check are unrelaxed, and
+`promotion-reviewer-is-depositor` now appears **twice** — the new path enforces
+it too.
+
+**Mutation-verified.** Reverting the derivation to caller-supplied
+(`(:reviewer request)`) produces 2 errors where the clean run has 0.
+
+### D5 — FIXED (`38d759818284b3be0e95496776c08a4544754928`) **[verified]**
+
+**Structural**, and resolved by operator ruling: *"`:mathematics` seems
+reasonable"* (Joe, 2026-08-18). APM frame knowledge belongs to the mathematics
+lifecycle.
+
+The domain is carried as **data in the seat specification** —
+`[:reg/student-seat "student" :zai :mathematics]`, a fourth element in the seat
+tuple — and threaded through `mint-one!` and the production `prepare-frame-seat`
+into the ZAI invoke options. Only the student seat carries it; the other four
+get `nil`. It is explicitly **not** inferred from an `fN-` name prefix, which
+would have silently misfiled any seat that did not match the convention.
+
+`zai_api.clj` is not in the diff: the global ZAI default remains `:zaif-work`
+(`zai_api.clj:615,1268`), so domain isolation for non-frame ZAI work is intact.
+`validate-edge!` and the domain check are untouched — the edge now carries the
+right domain rather than the check being taught not to care.
+
+**Gates, re-run by ground control:** clj-kondo 0/0; check-parens OK; 29 tests /
+339 assertions / 0 failures across `frame-seats-test` and `memory-write-test`,
+enumerated from disk.
+
+**Mutation-verified independently.** Disabling the forwarding in the production
+preparer (`http.clj:2553` — the one site of five that is `prepare-frame-seat`)
+gives 1 failure, matching codex-5's reported result. Its previous packet's test
+was vacuous under exactly this check; this one is not.
+
+### Consequence: the write path is open
+
+D25 opened disposition, D3/D4 opened promotion of independently reviewed
+deposits, D5 opened the student lane. For the first time since frame 2 a frame
+can **deposit → disposition → promote** end to end. Frames 9 and 10 closed two
+problems axiom-clean and gained **zero** reviewed attachments; that specific
+failure mode is now repaired at source in all three legs.
+
+Not yet verified end to end in a live frame — that is what frame 11 measures.
