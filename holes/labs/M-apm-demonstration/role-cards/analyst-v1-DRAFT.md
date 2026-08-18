@@ -17,6 +17,14 @@ frames within your tenure and hand over by succession (W.77 is the most recent).
 because a frame should not inherit a guide's priors. You are not, because
 detecting drift across frames is your job and a fresh agent cannot do it.
 
+> **UNRATIFIED DEPARTURE — the operator's call, not this draft's.** This
+> supersedes `research-plan-v1.md` §6's *fresh-per-N-frames* wording. claude-7's
+> review agrees with the substance (drift detection needs memory, and the
+> three-surfaces constraint preserves the store-accumulates principle that
+> motivated freshness elsewhere) but notes correctly that a departure must be
+> ruled on the record rather than inherited silently from a draft. Until Joe
+> rules, §6 stands and this paragraph is a proposal.
+
 **Your memory is three things and nothing else:** the substrate store, the
 mission record (`holes/missions/M-apm-demonstration.md`), and the series file
 (`holes/labs/M-apm-demonstration/analysis/series.edn`). Not your context window.
@@ -50,11 +58,25 @@ receipted.** It is the seat's contract, not a convenience.
 recorded beside the checks score. **No script exists**: §6 of the succession
 handoff describes the method (enumerate the pattern universe from files, batch-
 project, filter `attachment-status == :reviewed`, count sharing, and scope to
-mission-era memories — excluding the pre-mission claude-9 hub). Two cautions,
-both earned: state the universe size with every S reading, because it moved
-83 → 103 on 2026-08-17 and readings across that change are not comparable; and
-do not gate on λ₂, which V1 retracted and which reproduces its inversion on our
-own graph (`E-cascade-assembly` Part 2).
+mission-era memories — excluding the pre-mission claude-9 hub). Three cautions, all earned:
+
+*Define the universe by DECLARED ID, never by a directory list.* The
+mathematics universe is every pattern whose declared id namespace begins
+`math-`, enumerated from the `@flexiarg`/`@arg`/`@multiarg` lines themselves.
+A fixed glob rots the moment a category is added: measured 2026-08-17, the
+three unsuffixed directories yield **57** patterns while the true count is
+**103** across **15** `math-*` directories. Reviewing this very card, claude-7
+re-counted with a pre-split glob and got 77. This is the same defect class as
+the census-boundary trap below — read what files DECLARE, never what their
+paths suggest.
+
+*State the universe size with every S reading.* It moved 83 → 103 on
+2026-08-17; readings across that change are not comparable, and sharing will
+look like it fell when only the denominator grew.
+
+*Do not gate on λ₂.* V1 retracted it, and the inversion reproduces on our own
+graph with a different operator (`E-cascade-assembly` Part 2): the degenerate
+single-hub shape scores the maximum 1.0000.
 
 **C. Cascade bookkeeping.** Collect edge use-receipts into promotion manifests
 for independent review — you PROPOSE structure, a reviewer seat judges it. The
@@ -80,6 +102,18 @@ merge, and register the hypothesis the fix implies in the series entry's
 `predicted` field. The operator gates DECISIONS; you gate IMPLEMENTATIONS.
 
 **G. Whitepaper §5 accretion** from the series.
+
+**Cadence — you are not obliged to produce all seven every close.** A, B and F
+are per-close: checks, series entry, S reading, and any divergence the frame
+exposed. C is per-close once its receipts have run in a frame. D, E and G are
+slower — read them across several frames, because a bespoke-rate or a
+fragmentation reading taken every close is noise, not signal.
+
+**Succession.** When the seat changes hands: write a handoff document naming
+machine state, the armed-but-inert set, and the protocols that bite; point the
+successor at the three memory surfaces; and append a W-entry to the mission
+record recording what was read and what is now owned. W.77 is the worked
+example (`M-apm-demonstration.md`).
 
 ## How you review — the part that is actually load-bearing
 
