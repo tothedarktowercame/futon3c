@@ -159,20 +159,52 @@
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))
 
-(deftest production-open-threads-the-optional-memory-cascade-flag
-  (let [{:keys [payload options paths]} (fixture)
+(deftest production-open-takes-cascade-and-analyst-pins-from-registration
+  (let [{:keys [payload options registration paths]} (fixture)
         captured (atom nil)
-        session-id "cascade-flag-guide-session"]
+        session-id "cascade-pin-guide-session"
+        frozen (assoc f7-registration
+                      :reg/memory-cascade-enabled? true
+                      :reg/memory-cascade-cap 37
+                      :reg/analyst-seat "analyst-frozen")]
+    (spit (.toFile registration) (pr-str frozen))
     (register-guide! session-id)
     (try
       (let [result (conductor-open/open!
-                    (assoc payload :memory-cascade-enabled? true)
-                    (assoc options :open-frame-fn
+                    ;; Forged runtime values must not override the frozen arm.
+                    (assoc payload :memory-cascade-enabled? false)
+                    (assoc options :analyst-seat "analyst-runtime"
+                           :open-frame-fn
                            (fn [config]
                              (reset! captured config)
                              {:ok true :cycle-id "cycle/test"
                               :state {:current-phase :guided-solve}})))]
         (is (:ok result))
-        (is (true? (:memory-cascade-enabled? @captured))))
+        (is (true? (:memory-cascade-enabled? @captured)))
+        (is (= 37 (:memory-cascade-cap @captured)))
+        (is (= "analyst-frozen" (:analyst-seat @captured))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest production-open-preserves-legacy-defaults-when-pins-are-absent
+  (let [{:keys [payload options paths]} (fixture)
+        captured (atom nil)
+        session-id "cascade-default-guide-session"]
+    (register-guide! session-id)
+    (try
+      (let [result (conductor-open/open!
+                    ;; Historical registrations remain authoritative even if a
+                    ;; caller tries to introduce a new arm at runtime.
+                    (assoc payload :memory-cascade-enabled? true)
+                    (assoc options :analyst-seat "analyst-runtime"
+                           :open-frame-fn
+                           (fn [config]
+                             (reset! captured config)
+                             {:ok true :cycle-id "cycle/test"
+                              :state {:current-phase :guided-solve}})))]
+        (is (:ok result))
+        (is (false? (:memory-cascade-enabled? @captured)))
+        (is (nil? (:memory-cascade-cap @captured)))
+        (is (nil? (:analyst-seat @captured))))
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))

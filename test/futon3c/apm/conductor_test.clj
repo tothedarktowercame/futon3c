@@ -102,24 +102,29 @@
     (is (= 2 (:cap result)))))
 
 (deftest enabled-cascade-offer-exposes-density-and-truncation
-  (with-redefs [conductor/expand-memory-cascade
-                (fn [_ _]
-                  {:routes [["memory/leaf" {:route :leaf :hops 0}]
-                            ["memory/extra" {:route :why-hop :hops 1}]]
-                   :patterns-per-problem 3
-                   :cap 100
-                   :expanded-available 101
-                   :truncated? true})]
-    (let [offers (conductor/cascade-receipt-offers
-                  {:body {:job-id "job-cascade"
-                          :memory-use {:memory-use/surfaced-ids
-                                       ["memory/leaf"]}}}
-                  {:memory-cascade-enabled? true})]
-      (is (= [:leaf :why-hop] (mapv :offer/route offers)))
-      (is (= [0 1] (mapv :offer/hops offers)))
-      (is (every? #(= 3 (:offer/patterns-per-problem %)) offers))
-      (is (every? true? (map :offer/cascade-truncated? offers)))
-      (is (every? #(= 101 (:offer/cascade-expanded-available %)) offers)))))
+  (let [expansion-opts (atom nil)]
+    (with-redefs [conductor/expand-memory-cascade
+                  (fn [_ opts]
+                    (reset! expansion-opts opts)
+                    {:routes [["memory/leaf" {:route :leaf :hops 0}]
+                              ["memory/extra" {:route :why-hop :hops 1}]]
+                     :patterns-per-problem 3
+                     :cap (:cap opts)
+                     :expanded-available 101
+                     :truncated? true})]
+      (let [offers (conductor/cascade-receipt-offers
+                    {:body {:job-id "job-cascade"
+                            :memory-use {:memory-use/surfaced-ids
+                                         ["memory/leaf"]}}}
+                    {:memory-cascade-enabled? true
+                     :memory-cascade-cap 37})]
+        (is (= 37 (:cap @expansion-opts)))
+        (is (= [:leaf :why-hop] (mapv :offer/route offers)))
+        (is (= [0 1] (mapv :offer/hops offers)))
+        (is (every? #(= 3 (:offer/patterns-per-problem %)) offers))
+        (is (every? #(= 37 (:offer/cascade-cap %)) offers))
+        (is (every? true? (map :offer/cascade-truncated? offers)))
+        (is (every? #(= 101 (:offer/cascade-expanded-available %)) offers))))))
 
 ;; The frozen round-1 EDN predates the seat-key gate (:unstaffed-carded-seat,
 ;; merged with feat/registration-seat-keys) and must not be edited, so the

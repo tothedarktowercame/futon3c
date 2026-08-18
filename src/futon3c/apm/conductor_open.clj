@@ -83,11 +83,13 @@
      :agency-endpoint (or (:agency-endpoint options)
                           (str agency-base "/api/alpha/invoke/jobs?limit=200"))
      :agency-base agency-base
-     ;; Deliberately off by default: frame operators opt into the crude,
-     ;; receipted memory cascade per open request without changing code.
-     :memory-cascade-enabled? (true? (:memory-cascade-enabled? payload))
-     :analyst-seat (or (:analyst-seat options)
-                       (System/getenv "FUTON3C_APM_ANALYST_SEAT"))
+     ;; These are frozen experimental arms, not caller preferences. The parsed
+     ;; and validated registration is their only authority; omission preserves
+     ;; the pre-f9 defaults for historical registrations.
+     :memory-cascade-enabled?
+     (true? (:reg/memory-cascade-enabled? registration))
+     :memory-cascade-cap (:reg/memory-cascade-cap registration)
+     :analyst-seat (:reg/analyst-seat registration)
      :close-hook (:close-hook options)
      :conductor {:agent guide-seat
                  :session guide-session

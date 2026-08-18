@@ -301,7 +301,8 @@
                     (expand-memory-cascade
                      memory-ids
                      (merge (live-cascade-readers config)
-                            {:cap default-memory-cascade-cap})))
+                            {:cap (or (:memory-cascade-cap config)
+                                      default-memory-cascade-cap)})))
         routes (or (:routes expansion)
                    (mapv #(vector % {:route :leaf :hops 0}) memory-ids))]
     (map-indexed
