@@ -915,3 +915,49 @@ and `:mathematics` — which is the one shape D32 leaves actionable by a later
 frame's reviewer. The frame could not complete a review itself; it left work a
 successor can complete. That is the honest form of progress available under
 D31/D32/D35, and the guide identified it as the bequest without being prompted.
+
+
+### D38. A no-op `write-use` is indistinguishable from never calling it **[verified]**
+
+Ground control could not corroborate the guide's D28 claim from the trace, and
+the reason is a defect rather than a discrepancy.
+
+The guide reported: *"write-use is reachable and I ran it in-phase at
+`:adjudicate` (v17, no-op)"*. The terminal state contains **no `:write-use` step
+at all** — `:write-disposition` is at step index 34 and `:write-use` appears
+nowhere.
+
+Cause, at `conductor.clj:611-625`: `write-uses!` `reduce`s over
+`(get-in handle [:state :cycle/outputs :memory-offers])`. With **zero offers the
+reduction body never executes**, so `saved-step` is never called and the handle
+returns unchanged. The operation succeeds and records nothing.
+
+**Consequences, all real:**
+
+1. **The guide's claim is unfalsifiable from the trace.** "I ran write-use and
+   there were no offers" and "I never ran write-use" produce byte-identical
+   state. This is not an accusation — the claim is plausible and the guide had no
+   reason to invent it — but D28 cannot be *verified*, only believed, and a
+   verification protocol that reduces to belief has failed at that point.
+2. **It explains the `:f9-capability-not-realized` validator failure.** The
+   missing capabilities were `offer-use-disposition`, `promotion-importable` and
+   `promotion-need-taggable`. The first is missing precisely because no
+   `:write-use` step exists for the capability probe to find. So D25 made the
+   operation reachable and the capability remains unrealisable whenever the offer
+   list is empty — which is every frame with an empty store.
+3. **It compounds D34.** That frame already contains a trace asserting
+   `surfaced-ids []` while `:pull-uses` names a memory 23 times. Now it also
+   contains a silence that could mean either of two things. Two independent ways
+   in which f11's trace does not say what happened.
+
+**Fix shape:** `write-uses!` should record a step even when the offer list is
+empty — a `:write-use` with an empty offer set, or a distinct
+`:write-use-noop` — so that *having dispositioned nothing* is recorded as an act
+rather than as an absence. The general rule this is an instance of: **an
+operation that legitimately does nothing must still leave evidence that it ran**,
+or its execution is unauditable and any capability keyed to it is unprovable.
+
+Verified separately at the close: `close!` belled `analyst-2` **exactly once**
+(caller `f11-guide`, 17:36:53Z, running), against the single earlier job being
+ground control's 15:44 readiness probe. The f11 series entry is not yet present —
+`series.edn` holds f7, f8, f9, f10 — which is expected while the Analyst runs.
