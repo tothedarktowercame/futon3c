@@ -1,11 +1,13 @@
-;; FRAME-9 registration — DRAFT by claude-2 (Analyst), 2026-08-18. NOT SIGNED.
-;; Frame registrations are the operator's per research-plan-v1 §11; this is a
-;; draft for Joe's ruling. EXACTLY ONE field needs him: the Analyst card freeze,
-;; which is blocked on the plan-§6 ruling. Everything else that was marked
-;; CONFIRM in the first draft turned out to be a CONVENTION, not a decision --
-;; round constants or computations -- and has been derived. See the notes at
-;; each field. Joe, 2026-08-18: "if it is a convention to ask me something,
-;; please think about how that can be avoided."
+;; FRAME-9 registration — claude-2 (Analyst), 2026-08-18. Awaiting the operator's signature only.
+;; Frame registrations are the operator's per research-plan-v1 §11.
+;; ALL FIELDS NOW SET. The five fields the first draft marked CONFIRM were
+;; conventions, not decisions -- round constants or computations -- and were
+;; derived (Joe, 2026-08-18: "if it is a convention to ask me something, please
+;; think about how that can be avoided"). The one genuine decision, plan §6's
+;; fresh-per-N wording, was RULED on 2026-08-18: fresh per N, N = 2.
+;;
+;; f9 is the FIRST of this Analyst's two frames; f10 is the second and last.
+;; Succession follows f10.
 
 ;;
 ;; Purpose: first frame with an ANALYST SEAT in the loop, and the first frame
@@ -78,9 +80,11 @@
  :reg/proctor-seat "f9-proctor"
  :reg/scribe-seat  "f9-scribe"
 
- ;; NOT frame-scoped and NOT freshly minted: the Analyst persists across frames
- ;; by design (drift detection needs memory). Seated by succession at W.77.
+ ;; NOT freshly minted per frame: the Analyst serves N = 2 frames, because
+ ;; detecting drift ACROSS frames is its duty and a single-frame agent cannot do
+ ;; it. Seated by succession at W.77; f9 is tenure frame 1 of 2.
  :reg/analyst-seat "claude-2"
+ :reg/analyst-tenure {:n 2 :frame-index 1 :frames ["f9" "f10"]}
 
  :reg/guidance-regime #{:answer :suggest}
  :reg/solver-config {:model "gpt-5.6-sol" :reasoning-effort "max"}
@@ -154,19 +158,18 @@
   :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd"
   :scribe       "02441d9df4b8a05355790a51f1e535bf9e9465d4"
   :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"
-  ;; THE ONE GENUINE OPERATOR DECISION IN THIS FILE. The Analyst card cannot be
-  ;; frozen until plan §6's fresh-per-N-frames wording is ruled on; the card
-  ;; supersedes it and claude-7's review agreed on substance while correctly
-  ;; insisting the ruling be on the record. Blob id below is the current draft.
-  :analyst      "5445dac9ebd7ea1b378de34e0b7e4bc4db4d9cc1"}
+  ;; FROZEN. Ratified 2026-08-18: fresh per N frames with N = 2, the minimum
+  ;; tenure at which drift detection across frames is possible at all. N is a
+  ;; parameter to be revised on evidence, not a principle.
+  :analyst      "ed340941f4747b20a540fec9ed56bd332579590c"}
 
  :reg/seat-exclusivity :enforced-at-register
 
  :reg/known-departures
  [{:id :family-distance
    :text "a01J06 is a-family, as f8's a03J04 was. Frame-2 chose structural distance to limit cross-problem recall leakage. Accepted here because the edged-pattern requirement — needed for :why-hop to fire at all — is satisfied by only 9 problems in the corpus, and the alternative (m93J02) touches none."}
-  {:id :analyst-not-fresh
-   :text "The Analyst seat persists across frames, unlike every other seat. Supersedes plan §6's fresh-per-N-frames wording; UNRATIFIED pending Joe."}]
+  {:id :analyst-tenure-n2
+   :text "The Analyst serves N = 2 frames (f9, f10) while every other seat is minted fresh per frame. Ruled 2026-08-18; plan §6 stands with N pinned at 2."}]
 
  :reg/predictions
  [{:id :transfer-checks-6-of-6
