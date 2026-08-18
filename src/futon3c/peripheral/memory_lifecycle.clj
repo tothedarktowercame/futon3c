@@ -200,18 +200,84 @@
        (let [i (str/index-of pattern-id "/")]
          (and (some? i) (pos? i) (< (inc i) (count pattern-id))))))
 
+(defn apply-existing-attachment-review!
+  "Apply independently authored review evidence to an exact proposed edge.
+
+   Reviewer identity and session are derived only from the persisted review
+   evidence. The caller supplies the evidence id and reviewed facts, never an
+   authorship claim."
+  ([ctx request] (apply-existing-attachment-review! ctx request {}))
+  ([ctx {:keys [memory-id review-evidence-id pattern-ids] :as request}
+    {:keys [fetch-hyperedges fetch-entry post-hyperedge]
+     :or {fetch-hyperedges substrate/hyperedges-by-end
+          fetch-entry #(estore/get-entry* (:evidence-store ctx) %)
+          post-hyperedge memory-write/post-hyperedge!}}]
+   (let [edge (validate-edge! ctx memory-id
+                              (current-edge memory-id fetch-hyperedges))
+         memory-entry (fetch-entry memory-id)
+         review-entry (fetch-entry review-evidence-id)
+         reviewer (:evidence/author review-entry)
+         review-session (:evidence/session-id review-entry)
+         depositor (:evidence/author memory-entry)
+         edge-status (get-in edge [:hx/props :attachment-status])
+         edge-patterns (vec (get-in edge [:hx/props :roles :patterns]))]
+     (cond
+       (nil? memory-entry)
+       {:ok false :finding {:failure :promotion-memory-entry-missing
+                            :memory-id memory-id}}
+
+       (nil? review-entry)
+       {:ok false :finding {:failure :promotion-review-evidence-missing
+                            :memory-id memory-id
+                            :review-evidence-id review-evidence-id}}
+
+       (= reviewer depositor)
+       {:ok false :finding {:failure :promotion-reviewer-is-depositor
+                            :memory-id memory-id
+                            :depositor depositor
+                            :reviewer reviewer
+                            :review-evidence-id review-evidence-id}}
+
+       (not= :proposed edge-status)
+       {:ok false :finding {:failure :promotion-attachment-not-proposed
+                            :memory-id memory-id
+                            :attachment-status edge-status}}
+
+       (not (exact-patterns? pattern-ids edge-patterns))
+       {:ok false :finding {:failure :promotion-patterns-review-mismatch
+                            :memory-id memory-id
+                            :edge-patterns edge-patterns
+                            :review-patterns pattern-ids}}
+
+       :else
+       (review-attachment!
+        (assoc ctx :agent-id reviewer :session-id review-session)
+        (select-keys request
+                     [:memory-id :review-evidence-id :verdict :pattern-ids])
+        {:fetch-hyperedges fetch-hyperedges
+         :fetch-entry fetch-entry
+         :post-hyperedge post-hyperedge})))))
+
 (defn promote-memory-attachment!
-  "Attach one caller-chosen pattern to a statusless memory, then approve that
-   attachment through the independently authored review path."
+  "Promote through one of two state-dependent paths.
+
+   A statusless, patternless memory retains the original attach-and-review
+   path. A request naming persisted review evidence applies that independently
+   authored review to an exact proposed attachment."
   ([ctx request] (promote-memory-attachment! ctx request {}))
-  ([ctx {:keys [memory-id pattern-id reviewer] :as request}
+  ([ctx {:keys [memory-id pattern-id reviewer review-evidence-id] :as request}
     {:keys [fetch-hyperedges fetch-entry post-hyperedge append-evidence]
      :or {fetch-hyperedges substrate/hyperedges-by-end
           fetch-entry #(estore/get-entry* (:evidence-store ctx) %)
           post-hyperedge memory-write/post-hyperedge!
           append-evidence #(boundary/append! (:evidence-store ctx) %)}}]
-   (let [acting-identity (:acting-identity ctx)]
-    (cond
+   (if (nonblank-string? review-evidence-id)
+     (apply-existing-attachment-review!
+      ctx request {:fetch-hyperedges fetch-hyperedges
+                   :fetch-entry fetch-entry
+                   :post-hyperedge post-hyperedge})
+     (let [acting-identity (:acting-identity ctx)]
+      (cond
      (not (nonblank-string? memory-id))
      {:ok false :finding {:failure :promotion-memory-id-missing
                           :request request}}
@@ -319,7 +385,7 @@
                                      :review-evidence-id review-id)
                          (not (nonblank-string? acting-identity))
                          (update :findings (fnil conj [])
-                                 :reviewer-unauthenticated)))))))))))))))
+                                 :reviewer-unauthenticated))))))))))))))))
 
 (defn review-attachment!
   "Review one proposed pattern attachment using separately authored evidence.

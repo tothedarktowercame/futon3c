@@ -10,6 +10,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.cycle :as cycle]
+            [futon3c.peripheral.memory-lifecycle :as memory-lifecycle]
             [futon3c.peripheral.memory-recall :as memory-recall]
             [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.pull-receipts :as pull-receipts]
@@ -2674,6 +2675,25 @@
     (is (:ok result))
     (is (= 2 (get-in result [:result :disp/residual-sorries])))
     (is (false? (get-in result [:result :disp/axiom-clean?])))))
+
+(deftest promotion-threads-existing-independent-review
+  (let [captured (atom nil)
+        request {:memory-id "e-guide-memory"
+                 :pattern-ids ["math-strategy/exact-pattern"]
+                 :verdict :approve
+                 :review-evidence-id "e-scribe-review"}]
+    (with-redefs [memory-lifecycle/promote-memory-attachment!
+                  (fn [_ctx promotion]
+                    (reset! captured promotion)
+                    {:ok true
+                     :review-evidence-id (:review-evidence-id promotion)})]
+      (let [result (tools/execute-tool
+                    (begun-problem-cycle-backend) :promote-artifact
+                    [request {:cycle/step-index 13}])]
+        (is (:ok result) result)
+        (is (= request @captured))
+        (is (= "e-scribe-review"
+               (get-in result [:result :promo/review-evidence-id])))))))
 
 (deftest write-disposition-omits-absent-measurement-fields
   (let [result (tools/execute-tool

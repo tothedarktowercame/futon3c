@@ -1694,7 +1694,9 @@
                   :domain :mathematics
                   :evidence-store
                   (f1b/make-futon1b-backend (substrate/configured-url))}
-                 (select-keys options [:memory-id :pattern-id :reviewer]))
+                 (select-keys options [:memory-id :pattern-id :reviewer
+                                       :pattern-ids :verdict
+                                       :review-evidence-id]))
                 (catch Throwable t
                   {:ok false
                    :finding {:failure :promotion-attachment-review-threw
