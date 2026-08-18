@@ -61,10 +61,18 @@
  :reg/proctor-seat "f10-proctor"
  :reg/scribe-seat  "f10-scribe"
 
- ;; NOT freshly minted per frame: the Analyst serves N = 2 frames, because
- ;; detecting drift ACROSS frames is its duty and a single-frame agent cannot do
- ;; it. Seated by succession at W.77; f9 is tenure frame 1 of 2.
- :reg/analyst-seat "claude-2"
+ ;; A FRESH SEAT, minted like the others and holding NOTHING but the card.
+ ;; It is tenure-scoped, not frame-scoped: one analyst serves N = 2 frames, so
+ ;; the id is analyst-1 (f9, f10), analyst-2 (f11, f12), and so on.
+ ;;
+ ;; It is deliberately NOT claude-2. An earlier draft named claude-2 -- the
+ ;; agent that wrote the card and did the surrounding work -- and Joe withdrew
+ ;; it (2026-08-18): "you are claude-2, we want someone fresh with just the card
+ ;; that you created". Staffing the seat with its own author would have made the
+ ;; card untestable, since the frame would inherit a day of context the card
+ ;; does not contain, and would have started the N = 2 tenure pre-loaded. The
+ ;; card was written to be sufficient alone; this is the test of that.
+ :reg/analyst-seat "analyst-1"
  :reg/analyst-tenure {:n 2 :frame-index 2 :frames ["f9" "f10"]}
 
  :reg/guidance-regime #{:answer :suggest}
