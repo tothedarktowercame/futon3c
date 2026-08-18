@@ -498,3 +498,50 @@ saved cycle state, not the frame record. Both are correct and they are different
 fields; there is no contradiction, and the resolution is analyst-1's. Recorded
 because two agents reading "the memory channel" reached different strings from
 the same frame, which is itself a legibility defect in the state shape.
+
+### D25. `:write-use` exists, is correctly phase-gated, and is unreachable from the conductor surface **[verified]**
+
+Filed by f10-guide post-standdown; re-derived at source by ground control. **This
+locates D23**, which analyst-1 could only record as unowned.
+
+The chain, each link checked:
+
+1. The tool exists and is gated to the right phase —
+   `peripheral/problem.clj:56`: `:adjudicate #{:write-disposition :write-use advance}`.
+   Its handler is real (`problem.clj:1663`, refusing without an open cycle and an
+   `:offer-id`).
+2. `apm/conductor_surface.clj` `operations` is the **complete** set of what a
+   guide may submit. It has **eleven** entries — dispatch-solver, guide-solver,
+   dispatch-student, dispatch-scribe, promote-artifact, record-scribe-lanes,
+   record-solver-attempt, deposit, record-students, adjudicate, close — and
+   **zero** occurrences of `write-use`.
+3. `conductor/adjudicate!` steps only `:write-disposition` (line 545), `advance`
+   (546) and `:promote-artifact` (550). It never steps `:write-use`.
+4. **The clincher, from the capability map at `problem.clj:574`:**
+   `:offer-use-disposition :write-use`. The required capability *is* this tool.
+
+So `:memory-disposition-offer-ids` is empty in f8, f9 and f10 because **no guide
+can populate it** — not because three successive guides neglected to. f10's guide
+states it checked the operations map at ignition and `:write-use` was never on
+its surface.
+
+**All nine registrations (frames 2–10) declare `:required-capabilities
+:offer-use-disposition`.** Every one of them has therefore declared a capability
+that is unreachable by construction, and the machine has never contradicted them.
+
+Why it only became visible now: before the cascade there were no offers, so an
+empty disposition set was vacuously correct. Enabling the cascade did not break
+dispositioning — **it removed the vacuity that hid its absence.** With 102 offers
+and no reachable tool, the gap is loud in every subsequent frame.
+
+**Fix location** is one entry in `conductor_surface.clj/operations`, routing to a
+conductor fn that steps `:write-use` at `:adjudicate`, taking offer-ids from the
+recorded `:memory-offers`. Note this is *not* the "no relay to other seats' tools"
+boundary: dispositioning offers is the conductor's own act in the conductor's own
+phase, so nothing in P6 argues against exposing it.
+
+**Pairs with D3/D4.** Those keep memories from being promoted; this keeps offers
+from being dispositioned. Together they explain the store-level result of f9 and
+f10: two axiom-clean closes, 203 offers, and **zero reviewed attachments gained**.
+The cycle machine is closing problems without accumulating knowledge, and all
+three defects sit in the write path rather than in any agent's conduct.
