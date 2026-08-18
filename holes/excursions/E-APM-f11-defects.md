@@ -500,3 +500,57 @@ agrees.
 The repair touches `Main.lean`, `proof-outline.md` and `status.json`, and
 **changes a frozen statement**. That is Joe's decision, not a frame's and not
 ground control's. No implementation packet has been dispatched.
+
+
+### D30 — FIXED IN SOURCE (`cfc275a0` + review fix), **NOT LIVE UNTIL RESTART** **[verified]**
+
+A `defonce` captures the harness revision when `conductor-open` first loads, and
+`harness-pin-check` now refuses in three ordered branches:
+
+1. `:harness-image-revision-unknown` — the loaded revision cannot be established;
+2. `:harness-image-pin-mismatch` — the pin differs from the loaded image;
+3. `:harness-pin-stale` — the pin differs from the git tree (the original check,
+   retained).
+
+Mismatch receipts carry both `:pinned` and `:loaded`. The `defonce` is
+load-bearing exactly as the comment says: a Drawbridge reload must not move the
+stamp forward to whatever happens to be in git, because then the check would
+certify a reload it cannot actually verify.
+
+**Review finding, fixed in review by ground control.** As submitted, the `loaded`
+resolution had a third branch:
+
+```clojure
+(contains? options :harness-measurer) pinned
+```
+
+so **any caller injecting the documented git-measurer DI hook got
+`loaded = pinned`, making the new check a silent no-op.** That is the same family
+as D25 and D31 — a correct mechanism with an unintended bypass — and it sat in
+the very code whose purpose is to stop silent bypasses. Only two existing tests
+relied on it (the three new tests already pass `:loaded-harness-revision`
+explicitly, and that branch is checked first), so the branch was removed and
+those two tests now declare the loaded image explicitly. The escape hatch is now
+something a caller must *say*, not something it gets for free by injecting an
+unrelated hook.
+
+(Ground control's first attempt at that edit referenced a `pinned` binding that
+does not exist in the second test's scope. Caught by reading the `let` rather
+than by running it; corrected to `(:reg/harness-revision f7-registration)`.)
+
+**Gates re-run by ground control:** clj-kondo 0/0; check-parens OK; APM suite
+60 tests / 263 assertions / 0 failures, namespaces enumerated from disk.
+**Mutation-verified:** stripping the image checks to git-only gives **6
+failures** — twice codex-5's reported 3, because removing the bypass made two
+further tests actually exercise the check.
+
+**THE RECURSION, which matters operationally.** This fix cannot verify itself
+until the JVM runs it. The process currently serving still has the git-only
+check, so **right now a frame can still open against a pin the image does not
+have** — the defect is fixed in source and live nowhere. Until Joe restarts:
+
+- f12 must NOT be opened.
+- All three batch registrations must be re-pinned AFTER the final source commit.
+- After the restart, the check becomes self-enforcing: any registration pinning
+  anything other than the loaded revision will refuse, which is the desired
+  behaviour and also the confirmation that the fix works.

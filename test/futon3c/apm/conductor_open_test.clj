@@ -67,6 +67,9 @@
                :frame {:scaffold (str scaffold) :closing (str closing)
                        :witness (str witness)}}
      :options {:peripheral peripheral
+               ;; Declared explicitly: injecting a git measurer must NOT be a
+               ;; back door around the running-image check (D30).
+               :loaded-harness-revision harness-revision
                :harness-measurer
                (fn [_] {:harness-revision harness-revision
                         :harness-tree-dirty? false})
@@ -143,6 +146,10 @@
       (let [result (conductor-open/open!
                     payload
                     (assoc options
+                           ;; Explicit, per D30: the image check is not skipped
+                           ;; merely because a git measurer was injected.
+                           :loaded-harness-revision
+                           (:reg/harness-revision f7-registration)
                            :harness-measurer
                            (fn [_] {:harness-revision measured
                                     :harness-tree-dirty? false})

@@ -56,11 +56,6 @@
                  (contains? options :loaded-harness-revision)
                  (:loaded-harness-revision options)
 
-                 ;; Existing test dependency injection models the git
-                 ;; measurement only; absent an explicit image override it
-                 ;; assumes the fixture registration is the loaded image.
-                 (contains? options :harness-measurer) pinned
-
                  :else loaded-harness-revision)]
     (cond
       (nil? loaded)
