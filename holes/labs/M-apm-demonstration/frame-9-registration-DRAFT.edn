@@ -1,0 +1,172 @@
+;; FRAME-9 registration — DRAFT by claude-2 (Analyst), 2026-08-18. NOT SIGNED.
+;; Frame registrations are the operator's per research-plan-v1 §11; this is a
+;; draft for Joe's ruling. Fields marked CONFIRM below are his to set.
+;;
+;; Purpose: first frame with an ANALYST SEAT in the loop, and the first frame
+;; in which the memory cascade runs and is receipted.
+;;
+;; Problem selection — a01J06. Criteria, each verified rather than inherited:
+;;   * OPEN AT THE PIN, verified by elaboration, not by metadata. `lake env lean`
+;;     under the pinned project exits 0 and emits exactly one
+;;     `declaration uses `sorry`` diagnostic in a 174-line Main.lean. This
+;;     matters: on 2026-08-18 a corpus audit found `status.json` wrong for 139
+;;     of 443 bundles, INCLUDING the previously-favoured f9 candidate a02J03,
+;;     which declares 3 sorries and in fact elaborates clean with none. Frame
+;;     selection must require a fresh elaboration; the label is a hypothesis.
+;;     (futon3c holes/excursions/E-apm-bundle-sorry-drift.md; apm-lean 6062223.)
+;;   * a-family, as f8 was. Frame-2 chose family distance to limit cross-problem
+;;     recall leakage; that is NOT satisfied here and is a KNOWN DEPARTURE — see
+;;     :reg/known-departures.
+;;   * TOUCHES AN EDGED PATTERN, so the cascade's :why-hop route can fire rather
+;;     than every offer being :leaf. This is the point of running f9 at all.
+;;
+;; Prior exposure — DECLARED, not hidden. Operator ruling 2026-08-18: prior work
+;; surfacing on a related problem is "a test of the system working much as
+;; designed", not leakage; leakage would be deliberately mining a solution in
+;; for this frame. The exposure is one reviewed :feedback memory deposited by
+;; M-codex-sorry-loop in the ordinary course of its work:
+;;   e-codexpilot-preflight-domain-guards-and-inferred-bound-types-in-analysis-statements
+;;   attached to math-strategy/corpus-trust-protocol
+;;             and math-formalization/notation-semantics-traps
+;;   naming problems a02J03, a02J07, a92J07, a93A02.
+;; a01J06 is NOT itself named in that memory, so the exposure reaches it only
+;; structurally — via the patterns — which is exactly the channel f9 measures.
+;;
+;; THE ANALYST HANDOFF PATTERN (Joe asked; recording it here so the frame does
+;; not depend on anyone remembering it):
+;;   The Analyst wakes ONCE, AT CLOSE, and never mid-frame. futon3c
+;;   apm/conductor.clj `close!` sends exactly one completion bell to the seat
+;;   named by :analyst-seat (or FUTON3C_APM_ANALYST_SEAT) after a terminal close
+;;   succeeds; an incomplete or thrown close does not wake it, and a missing or
+;;   off-roster seat is reported as :skipped without breaking close. The payload
+;;   carries problem id, cycle id, :launchable? and a failure count — enough to
+;;   begin without reconstructing context. Built and reviewed 2026-08-17
+;;   (futon3c b27bccf7). On waking the Analyst performs duties A, B and F:
+;;   transfer checks + series entry, an S reading, and divergence -> small belled
+;;   packet -> park -> personal review at the gate -> merge -> register the
+;;   hypothesis the fix implies. It does NOT touch a frame in flight.
+
+{:kind   :apm-demonstration-round1-registration
+ :schema 1
+
+ ;; CONFIRM — carried from frame-8; the Lean preregistration anchor is Joe's.
+ :lean-registration "DarkTower.APMDemonstration.round1Registration"
+ :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
+ :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
+
+ ;; CONFIRM — environment pin carried from frame-8; harness measured at freeze
+ ;; time by the path-scoped measurer, not by me.
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
+ :reg/harness-revision     "CONFIRM-at-freeze"
+
+ ;; Five FRESH seats, to be minted by POST /api/alpha/frames/mint-seats "f9".
+ :reg/solver-seat  "f9-solver"
+ :reg/student-seat "f9-student"
+ :reg/guide-seat   "f9-guide"
+ :reg/proctor-seat "f9-proctor"
+ :reg/scribe-seat  "f9-scribe"
+
+ ;; NOT frame-scoped and NOT freshly minted: the Analyst persists across frames
+ ;; by design (drift detection needs memory). Seated by succession at W.77.
+ :reg/analyst-seat "claude-2"
+
+ :reg/guidance-regime #{:answer :suggest}
+ :reg/solver-config {:model "gpt-5.6-sol" :reasoning-effort "max"}
+ :reg/student-runner-budget {:wall-clock-minutes 60}
+
+ ;; NEW IN f9: the minimum working cascade (futon3c 47f421b9), default false,
+ ;; enabled here. Offers carry :offer/route (:leaf | :why-hop | :co-incidence),
+ ;; :offer/hops, :offer/via-pattern, patterns-per-problem, and explicit
+ ;; truncation at the cap. Without the route field the cascade is unfalsifiable:
+ ;; leaf hits would sit in the same bucket as structural ones.
+ :reg/memory-cascade-enabled? true
+ :reg/memory-cascade-cap 100
+
+ :modules                [:R :F :S :A :M :P :X]
+ :structural-invariants  [:F1]
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
+
+ :problem {:problem-id            "a01J06"
+           :difficulty-stratum    "family=a;one-executable-hole;174-line-Main"
+           :regime                "CONFIRM-at-freeze"
+           :locked-lemma-exposure []}
+
+ :variation {:kind     :measured
+             :endpoint "frame-8: analyst seat in the loop at close; memory cascade enabled and receipted for the first time"}
+
+ :claim :descriptive
+ :arms  [{:name "fresh seats, conducted surface, analyst at close, cascade on"
+          :neutral? false
+          :axes []
+          :role :treatment}]
+
+ :replication-stage  :pilot
+ :pilot-units        [{:problem-id            "a01J06"
+                       :difficulty-stratum    "family=a;one-executable-hole;174-line-Main"
+                       :regime                "CONFIRM-at-freeze"
+                       :locked-lemma-exposure []}]
+ :confirmation-units []
+
+ :estimated-cost    1.0
+ :budget-cap        5.0
+ :teardown-deadline 240
+
+ :stop-rules [:budget-exceeded :attempt-cap-reached :axiom-unclean-close
+              :no-progress :teardown-deadline-passed :no-improvement-escalate]
+
+ :reg/attempt-caps {:s-frontier 10 :s-student 3}
+
+ :decision-rule {:id       :apm-round1-outcome
+                 :outcomes [:closed :tier-a :tier-b :defective]}
+
+ :required-capabilities
+ [:frame-containment-witnessed :created-frame-worked
+  :unique-disposition :offer-use-disposition
+  :need-retrieval :promotion-importable :promotion-need-taggable
+  :measurement-populated]
+
+ :required-measurement-fields
+ ["statement defects at review" "terminal disposition"
+  "residual executable sorries" "attempts or closer hops"
+  "axiom cleanliness" "memories promoted" "review escape rate"
+  "promoted then surfaced then used" "contract leaks"
+  "duplicate declarations" "locked-lemma exposure" "promotion coverage"
+  "unconsumed promotions" "import-only edges" "scribe lane coverage"
+  "arc-lane yield" "rewrite rule offered and used"
+  ;; new in f9
+  "offers by route" "patterns per problem" "cascade truncation"]
+
+ :reg/role-cards
+ {:codex-solver "bd8091080cd40a0bbf35f559a93976f454113b2b"
+  :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
+  :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd"
+  :scribe       "02441d9df4b8a05355790a51f1e535bf9e9465d4"
+  :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"
+  ;; CONFIRM — the Analyst card is a DRAFT and is not frozen. It also contains
+  ;; one UNRATIFIED DEPARTURE from plan §6 (not-fresh-per-frame) awaiting Joe's
+  ;; ruling. Freezing it by blob hash is the operator's call.
+  :analyst      "5445dac9ebd7ea1b378de34e0b7e4bc4db4d9cc1"}
+
+ :reg/seat-exclusivity :enforced-at-register
+
+ :reg/known-departures
+ [{:id :family-distance
+   :text "a01J06 is a-family, as f8's a03J04 was. Frame-2 chose structural distance to limit cross-problem recall leakage. Accepted here because the edged-pattern requirement — needed for :why-hop to fire at all — is satisfied by only 9 problems in the corpus, and the alternative (m93J02) touches none."}
+  {:id :analyst-not-fresh
+   :text "The Analyst seat persists across frames, unlike every other seat. Supersedes plan §6's fresh-per-N-frames wording; UNRATIFIED pending Joe."}]
+
+ :reg/predictions
+ [{:id :transfer-checks-6-of-6
+   :text "C1 flips when P21 seat attribution goes live, taking the transfer checks to 6/6. f8 measured 5/6 with C1 the lone honest fail, re-verified by the Analyst on 2026-08-17 (a03J04, score 5/6)."}
+  {:id :first-tag-recall-hit
+   :text "A deposit tagged with the problem id is found by the student's memory_search tags [a01J06] — the tags interface (W.76) and P25's subject fallback (W.73) meet."}
+  {:id :student-lane-component-c
+   :text "With the 60-minute budget and a stocked shelf, at least one student memory use co-occurs with a commit; component (c) of the loss function is non-zero for the first time."}
+  {:id :s2-unprompted-sharing
+   :text "Sharing grows without review pressure: the scribe attaches to an EXISTING pattern rather than minting a new one. S readings must state the universe size (103 math ids as of 2026-08-18, up from 83 at S-1) or they are not comparable."}
+  {:id :cascade-fires-structurally
+   :text "At least one offer in the f9 trace carries :offer/route :why-hop or :co-incidence with hops >= 1 — i.e. a memory reaches the solver that a leaf lookup would not have surfaced. Falsifiable: if every offer is :leaf, the cascade added nothing on this problem."}
+  {:id :cascade-use-attested
+   :text "STRONGER, and the one that matters: at least one non-:leaf offer is attested USED. Reachability is a precondition for use, not evidence of it; this is the join that has never been made."}]
+
+ :reg/frame-1-disclaimer false}
