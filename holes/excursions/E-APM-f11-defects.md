@@ -1102,3 +1102,82 @@ gives `PASS`/`5/6`. The guard mutation I added — an in-scope promotion that is
 **not** in the eligible set, i.e. a genuine C3 failure — still gives **`FAIL`**,
 `4/6`, and is *not* laundered into `INAPPLICABLE`. That was the entire risk of
 this change: a check that can excuse itself is worse than one that cries wolf.
+
+
+---
+
+## CORRECTIONS from f11-guide, post-stand-down — D33 and D35 were both overstated
+
+Verified by ground control at the substrate. Both corrections tighten findings
+that were too strong, and the second changes what f12 may honestly predict.
+
+### D33 was wrong about the MECHANISM; the gap is a DUTY
+
+Ground control wrote that "a refused review leaves no durable mark on the
+hyperedge", and inferred the store cannot distinguish never-reviewed from
+reviewed-and-rejected.
+
+**The mechanism records reviews durably and is widely used.** Census over 400
+`memory/assert` edges: **286 carry `:prop/review`** and **151 are
+`:attachment-status :reviewed`**. `review-attachment!` maps `:reject` to a
+retained `:proposed` status *with the review recorded* — so a refusal can be
+durable.
+
+The real gap is narrower and still real: **a reviewer that declines has no
+obligation and no prompt to write refusal evidence**, f11's scribe wrote none,
+and the guide cannot write it on the reviewer's behalf. So `e-a39ff1b3` sits
+`:proposed` with no history — not because the store cannot hold the verdict, but
+because nothing required anyone to record it. **The fix is a duty on the
+reviewer, not a mechanism that does not exist.**
+
+### D35 was right about INDEPENDENT review and wrong that both shapes are blocked
+
+D35 said no authoring shape can have its **independent** review machine-recorded.
+That part stands. But the table implied both shapes are simply blocked, and one
+is not.
+
+f11's guide pulled f9's actual `promote-artifact` args (cycle `a01J06-32e6e4c2`,
+v46). f9 made two promotions; the one that carried an attachment was:
+
+    {:memory-id "e-a75efe47…"
+     :pattern-id "math-formalization/separate-proof-transfer-from-artifact-replay"
+     :reviewer "f9-guide" :acting-identity "f9-guide"}
+
+depositor **f9-scribe**, reviewer **f9-guide**, edge now `:reviewed`, verdict
+`:approve`. So **the route that works is attach-then-review with the GUIDE as
+reviewer of a scribe-authored, STATUSLESS memory.** f9-scribe's own three
+`:memory-attachment-review` evidence entries were never consumed by the machine.
+
+**Corrected picture:**
+
+| edge shape | route | works? | independent? |
+|---|---|---|---|
+| statusless, no patterns | attach-then-review | **YES** (f9 did it) | **NO** — guide reviews its own frame's deposit |
+| `:proposed` + patterns | consume independent review | blocked by D31 transport | would be |
+
+### The sting: good authoring forecloses the working route
+
+`memory_lifecycle.clj:322,330` refuses attach-then-review on an edge that already
+carries a status (`:promotion-attachment-not-statusless`) or patterns
+(`:promotion-patterns-already-present`).
+
+f11's four scribe deposits are `:proposed` **with** pattern subjects — the shape
+ground control asked for, and precisely the shape `c3be0e9f` was built to serve.
+**They can therefore ONLY use the blocked route. A patternless deposit would have
+been promotable today.** The better-authored artefact is the unpromotable one.
+
+### CONSEQUENCE FOR f12's REGISTRATION — act on this before opening
+
+`:reviewed-attachment-gained` must NOT be registered as if independent review
+were reachable. What is reachable is a **guide-reviewed** attachment of a
+statusless, patternless deposit. Either predict that explicitly, or state the
+qualifier. Registering the unqualified claim would register a capability the
+harness does not have — the D27 error in a new place.
+
+### And f11's zero was partly a judgement, not only a refusal
+
+`e-e0dabbd2` (student-authored, statusless) **was promotable by exactly f9's
+route**, with the guide as reviewer. The guide declined deliberately, having just
+been told not to manufacture the headline by patching the harness, and said so at
+the time. The series must not read "f11 gained zero attachments" as "f11 could
+not have gained one." It could have, dishonestly.
