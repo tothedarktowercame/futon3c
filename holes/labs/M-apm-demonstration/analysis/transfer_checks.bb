@@ -93,6 +93,14 @@
                                  index))
                              (:steps state)))
         pull-uses (:pull-uses outputs)
+        trace-step (first (steps-of state :validate-trace))
+        trace-failures (vec (or (get-in trace-step [:result :failures]) []))
+        trace-validation
+        {:launchable? (if trace-step
+                        (get-in trace-step [:result :launchable?] :absent)
+                        :absent)
+         :failures trace-failures
+         :failure-count (count trace-failures)}
         checks
         [;; C1 — deposit attribution names the seat (packet queued; expect FAIL until built)
          (let [authors (keep #(some-> % fetch-entry :evidence/author) intervention-ids)]
@@ -174,7 +182,8 @@
             :evidence {:subject-types (vec (distinct subs))}})]]
     {:state-file file :problem problem
      :checks checks
-     :score (str (count (filter :pass? checks)) "/" (count checks))}))
+     :score (str (count (filter :pass? checks)) "/" (count checks))
+     :trace-validation trace-validation}))
 
 (defn write-receipt! [dir result]
   (let [receipt-path (fs/path dir "transfer-checks.edn")
@@ -182,7 +191,8 @@
                  :state-file (:state-file result)
                  :taken-at (str (java.time.Instant/now))
                  :checks (:checks result)
-                 :score (:score result)}]
+                 :score (:score result)
+                 :trace-validation (:trace-validation result)}]
     ;; One current reading per problem-state directory. Overwrite rather than
     ;; append: a rerun replaces the complete EDN value, so it cannot duplicate
     ;; a frame or leave readers to guess which entry is authoritative.
@@ -191,9 +201,12 @@
 
 (let [dir (first *command-line-args*)]
   (when-not dir (println "usage: bb transfer_checks.bb <problem-state-dir>") (System/exit 2))
-  (let [{:keys [state-file problem checks score] :as result} (run-checks dir)]
+  (let [{:keys [state-file problem checks score trace-validation] :as result} (run-checks dir)]
     (println "== transfer checks ==" problem "(" state-file ")")
     (doseq [{:keys [check pass? evidence]} checks]
       (println (format "%-32s %s  %s" (name check) (if pass? "PASS" "FAIL") (pr-str evidence))))
     (println "score:" score)
+    (println "trace-validation: launchable?" (:launchable? trace-validation)
+             " failures:" (:failure-count trace-validation)
+             " " (pr-str (:failures trace-validation)))
     (write-receipt! dir result)))
