@@ -7076,6 +7076,37 @@
 
       :else nil)))
 
+(defonce ^:private !installed-handler
+  ;; The server retains `installed-handler` across Drawbridge namespace reloads;
+  ;; defonce keeps the live target reachable instead of orphaning its atom.
+  (atom nil))
+
+(defonce ^:private !handler-builder
+  (atom nil))
+
+(defn- installed-handler
+  [request]
+  (if-let [handler @!installed-handler]
+    (handler request)
+    (json-response 503 {:ok false :error "handler-not-installed"})))
+
+(defn rebuild-handler!
+  "Atomically replace the handler served by `start-server!`.
+
+   With no argument, rebuild from the original `make-handler` config captured
+   at server installation. With an explicit handler, install that value and
+   retain its rebuild function when it was produced by `make-handler`."
+  ([]
+   (if-let [build @!handler-builder]
+     (rebuild-handler! (build))
+     (throw (ex-info "installed handler has no rebuild function" {}))))
+  ([handler]
+   (when-not (fn? handler)
+     (throw (ex-info "handler must be invocable" {:handler handler})))
+   (reset! !installed-handler handler)
+   (reset! !handler-builder (::rebuild-fn (meta handler)))
+   handler))
+
 (defn make-handler
   "Create an HTTP request handler wired to the social pipeline.
 
@@ -7086,7 +7117,8 @@
    Returns a Ring handler fn that routes to the social pipeline."
   [config]
   (let [started-at (Instant/now)]
-    (fn [request]
+    (with-meta
+      (fn [request]
       (try
         (let [method (:request-method request)
               uri (:uri request)]
@@ -7416,7 +7448,8 @@
           ;; interrupted). Convert to a clean 503 instead of letting an
           ;; ERROR log + stacktrace surface during graceful shutdown.
           (Thread/interrupted)  ; clear the interrupt flag
-          (json-response 503 {:ok false :error "shutting-down"}))))))
+          (json-response 503 {:ok false :error "shutting-down"}))))
+      {::rebuild-fn #(make-handler config)})))
 
 (defn start-server!
   "Start HTTP server on port. Returns {:server stop-fn :port p :started-at t}.
@@ -7429,7 +7462,8 @@
   [handler port]
   (let [!server (atom nil)
         !stopped? (atom false)
-        server (hk/run-server handler {:port port
+        _ (rebuild-handler! handler)
+        server (hk/run-server installed-handler {:port port
                                        :legacy-return-value? false
                                        :error-logger (make-http-kit-error-logger !server)})
         _ (reset! !server server)

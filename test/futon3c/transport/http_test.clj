@@ -2365,6 +2365,44 @@
 ;; start-server! test — real port binding (L7: verify-after-start)
 ;; =============================================================================
 
+(deftest installed-handler-can-be-rebuilt-without-restarting-server
+  (let [free-port (with-open [ss (java.net.ServerSocket. 0)]
+                    (.getLocalPort ss))
+        route-enabled? (atom false)
+        constructions (atom 0)
+        request! (fn []
+                   (let [client (java.net.http.HttpClient/newHttpClient)
+                         request (-> (java.net.http.HttpRequest/newBuilder
+                                      (java.net.URI/create
+                                       (str "http://localhost:" free-port "/new-route")))
+                                     (.GET)
+                                     (.build))]
+                     (.send client request
+                            (java.net.http.HttpResponse$BodyHandlers/ofString))))]
+    (letfn [(build-handler []
+              (swap! constructions inc)
+              (let [route-enabled-at-construction? @route-enabled?]
+                (with-meta
+                  (fn [request]
+                    (if (and route-enabled-at-construction?
+                             (= "/new-route" (:uri request)))
+                      {:status 200 :headers {} :body "new route"}
+                      {:status 404 :headers {} :body "not found"}))
+                  {:futon3c.transport.http/rebuild-fn build-handler})))]
+      (let [server-info (http/start-server! (build-handler) free-port)]
+        (try
+          (is (= 404 (.statusCode (request!))))
+          (is (= 1 @constructions))
+          (reset! route-enabled? true)
+          (http/rebuild-handler!)
+          (is (= 200 (.statusCode (request!))))
+          (is (= "new route" (.body (request!))))
+          ;; One initial construction plus one explicit rebuild. Requests only
+          ;; dereference the installed handler atom.
+          (is (= 2 @constructions))
+          (finally
+            ((:server server-info))))))))
+
 (deftest start-server-binds-and-verifies-port
   (testing "start-server! binds port and verifies it is listening (L7)"
     (let [;; Find a free port
