@@ -710,3 +710,74 @@ This is the second frame running where **real transfer occurred through a channe
 the instruments do not count** — f10 through pull rather than push (D18), f11
 through a rejected rather than a reviewed memory. The measure and the phenomenon
 have now diverged twice, in two different ways.
+
+
+## D33 — the owed query, SETTLED, and D34: the trace contradicts itself
+
+**D33's speculative half is now established.** Ground control queried the
+**hyperedge** (the right place, which the earlier check missed): the edge for
+`e-a39ff1b3` carries **no `:attachment-status`**.
+
+State the finding in its robust form, because the precise value is less important
+than what is absent: whether the edge shows nothing or shows `:proposed`, **it
+does not and cannot show "rejected"**. A refused review leaves no durable mark on
+the memory it refused. So the store cannot distinguish *never reviewed* from
+*reviewed and rejected*, and a later cascade or recall would treat a refused
+memory exactly as it treats an unexamined one.
+
+Combined with D32 — one deposit per cycle, taken before any review exists — the
+reviewer's verdict survives **only in the reviewer's own prose report**. That is
+the identical failure shape as D6, which was fixed for conductor refusals
+(`585a980e`, durable `:action-refusals` receipts) and is unfixed for review
+verdicts.
+
+### D34. The pull channel bypasses the review gate, and the trace records both stories **[verified]**
+
+Found by f11's guide. The student's eligible set was the 312-memory open snapshot
+plus zero promotions; the guide's deposit was **not in it**, and its review had
+already **rejected** it. The student surfaced it anyway via `memory_search`
+(round 1, 16:57:27Z), read it via `memory_read` (round 6), and reported that it
+"drove the whole plan".
+
+So the gate governs the **push** channel and the attachment status. It does not
+govern **availability by pull**. Refused, then used.
+
+**And the machine's own trace says both things at once.** Verified by ground
+control in the saved state:
+
+| record | says |
+|---|---|
+| `:memory-use/surfaced-ids` | `[]` — **11 occurrences, all empty** |
+| `:pull-uses` receipts | `e-a39ff1b3` appears **23 times** |
+
+The dispatch receipt asserts nothing was surfaced while the pull receipts record,
+in detail, the memory that was. **The student arm is therefore not the
+empty-shelf baseline the trace implies** — and any analysis reading
+`surfaced-ids` as the measure of what a seat saw will be exactly wrong about this
+frame.
+
+This is the third divergence in three frames between the phenomenon and the
+instrument: f10 transferred via pull while the metric watched push (D18); f11
+transferred via a **rejected** memory (D33); and here the trace contains two
+mutually contradictory records of the same event. The guide declined to
+hand-write a duplicate into `:memory-uses`, correctly — the `:pull-uses`
+projection is the authoritative record, and a hand-made entry keyed to offer ids
+would have muddied it rather than fixed the contradiction.
+
+### The guide's refusal to manufacture the headline
+
+The only remaining promotion route was the student's memory `e-e0dabbd2` — which
+is `:mathematics` (so D5 holds live) but **statusless**, because `memory_record`
+attaches no patterns. That splits the two paths by authoring shape: a `:proposed`
+edge can take an independent review but needs the keyword `:verdict` the
+transport cannot express (**D31**); a statusless edge can only take
+attach-then-review, which requires the reviewer to *be* the acting conductor —
+the guide itself.
+
+The guide declined: making itself the reviewer of the student's memory would
+manufacture the headline that ground control had just refused to manufacture by
+patching the harness. It will instead submit one promotion naming `f11-scribe` as
+reviewer, take the `:reviewer-not-actor` refusal, and record it as the receipt.
+
+That is the correct call, and it is worth recording that the machine offered a
+route to a green number that only an agent's judgement declined.
