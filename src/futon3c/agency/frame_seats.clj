@@ -4,11 +4,11 @@
             [futon3c.agency.registry :as registry]))
 
 (def ^:private seat-specs
-  [[:reg/solver-seat "solver" :codex]
-   [:reg/student-seat "student" :zai]
-   [:reg/guide-seat "guide" :claude]
-   [:reg/proctor-seat "proctor" :codex]
-   [:reg/scribe-seat "scribe" :codex]])
+  [[:reg/solver-seat "solver" :codex nil]
+   [:reg/student-seat "student" :zai :mathematics]
+   [:reg/guide-seat "guide" :claude nil]
+   [:reg/proctor-seat "proctor" :codex nil]
+   [:reg/scribe-seat "scribe" :codex nil]])
 
 (def ^:private mint-lock (Object.))
 
@@ -16,7 +16,7 @@
   "Return the deterministic registration-shaped seat map for FRAME-ID."
   [frame-id]
   (into {}
-        (map (fn [[registration-key suffix _agent-type]]
+        (map (fn [[registration-key suffix _agent-type _memory-domain]]
                [registration-key (str frame-id "-" suffix)]))
         seat-specs))
 
@@ -24,12 +24,13 @@
   (get-in (registry/registry-status) [:agents agent-id]))
 
 (defn- mint-one!
-  [prepare-seat-fn model frame-id [registration-key suffix agent-type]]
+  [prepare-seat-fn model frame-id [registration-key suffix agent-type memory-domain]]
   (let [agent-id (str frame-id "-" suffix)]
     (when-not (registry/get-agent agent-id)
       (let [{:keys [invoke-fn session-reset-fn metadata] :as prepared}
             (prepare-seat-fn (cond-> {:agent-id agent-id :agent-type agent-type}
-                               model (assoc :model model)))]
+                               model (assoc :model model)
+                               memory-domain (assoc :memory-domain memory-domain)))]
         (if-not (fn? invoke-fn)
           {:finding :seat-not-invoke-ready
            :seat registration-key
@@ -84,7 +85,7 @@
               (into [] (keep (partial mint-one! prepare-seat-fn model frame-id)) seat-specs)
               readiness-findings
               (->> seat-specs
-                   (keep (fn [[registration-key suffix agent-type]]
+                   (keep (fn [[registration-key suffix agent-type _memory-domain]]
                            (let [agent-id (str frame-id "-" suffix)
                                  agent (registry/get-agent agent-id)
                                  info (readiness agent-id)]

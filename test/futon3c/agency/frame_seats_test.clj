@@ -193,3 +193,21 @@
       ;; and is ABSENT — not nil-valued — when unrequested, so the CLI default
       ;; is untouched for every seat minted the way frames 2..10 minted theirs
       (is (not (contains? without-opts :model))))))
+
+(deftest production-frame-mint-gives-only-student-mathematics-memory-domain
+  (let [captured (atom [])]
+    (with-redefs [futon3c.transport.http/make-local-agent-invoke-fn
+                  (fn [agent-type opts]
+                    (swap! captured conj [agent-type opts])
+                    (fn [_prompt _session-id] {:result :stub :session-id nil}))]
+      (is (:ok (http/mint-frame-seats! {} "domain-frame"))))
+    (let [by-id (into {} (map (fn [[agent-type opts]]
+                                [(:agent-id opts) [agent-type opts]]))
+                      @captured)
+          [student-type student-opts] (get by-id "domain-frame-student")]
+      (is (= :zai student-type))
+      (is (= :mathematics (:memory-domain student-opts)))
+      (doseq [agent-id ["domain-frame-solver" "domain-frame-guide"
+                        "domain-frame-proctor" "domain-frame-scribe"]]
+        (is (not (contains? (second (get by-id agent-id)) :memory-domain))
+            agent-id)))))

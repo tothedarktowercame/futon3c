@@ -2530,7 +2530,7 @@
       nil)))
 
 (defn- prepare-frame-seat
-  [config {:keys [agent-id agent-type model]}]
+  [config {:keys [agent-id agent-type model memory-domain]}]
   (let [session-file (default-session-file-for-agent agent-type agent-id)
         stale-file (some-> session-file java.io.File.)]
     ;; A newly minted identity must not inherit an orphaned session left by an
@@ -2549,7 +2549,8 @@
                               :session-id-atom session-id-atom
                               :evidence-store (evidence-store-for-config config)
                               :irc-send-fn (:irc-send-fn config)}
-                       model (assoc :model model)))
+                       model (assoc :model model)
+                       memory-domain (assoc :memory-domain memory-domain)))
          :session-reset-fn (make-session-reset-fn session-file session-id-atom)
          :metadata {:session-file session-file}}))))
 
