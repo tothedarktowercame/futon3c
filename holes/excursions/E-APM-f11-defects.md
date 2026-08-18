@@ -585,3 +585,71 @@ is in source and the serving JVM does not have it, so the student-memory
 promotion route remains blocked in the live cycle. If f11's
 `:reviewed-attachment-gained` fails at `:promote`, D31 is the cause to record —
 not a promotion-logic failure, and not D3/D4, which are loaded and correct.
+
+
+---
+
+## "Deferred because Mathlib lacks it" is how vacuous formalisations get made
+
+**Joe, 2026-08-18: *"I don't know what you mean about (c) deferred, we aren't
+slaves to Mathlib."*** He is right, and ground control accepted a bad inference.
+
+codex-6 recommended a reduced statement "with part (c) explicitly deferred,
+because the pinned Mathlib has neither packaged integration of top forms over
+oriented manifolds nor geometric intersection numbers". Ground control gated its
+**evidence** — the vacuity finding, which was excellent and correct — and then
+accepted the **recommendation built on it** without challenging the step from
+*the library lacks a packaged notion* to *therefore omit the content*.
+
+**Formalising mathematics means defining the notions you need.** Where a library
+lacks one, you build it; that is ordinary practice, not an exception. A graduate
+topology exercise about integrals and intersection numbers is not out of scope
+because `Mathlib` has not packaged those notions — it is simply work.
+
+### The sharp point: this is the mechanism that produced `:= 0`
+
+The earlier formalisation defined
+
+```lean
+def t01A05IntersectionNumber ... : ℤ := 0
+def t01A05Integral (ω) : ℝ := ω 0
+```
+
+Those are not what someone writes when they intend to cheat. They are what
+someone writes under exactly the pressure "the library has no intersection
+number, and I still need something that type-checks". **Accepting the library's
+absence as a boundary, while still requiring a compiling artefact, forces a
+definition chosen for provability rather than for truth.** The recommendation to
+"defer (c)" and the decision to "define it as 0" come from the same premise. One
+omits the content honestly; the other omits it while appearing not to.
+
+So the premise is the defect, and it should be rejected in both forms.
+
+### The repair requirement, revised
+
+The repair must state (b) and (c) **faithfully**, defining whatever notions are
+needed:
+
+- **(b)** `∫_X̃ π*ω = k ∫_X ω` — integration of a top form over a compact
+  oriented manifold.
+- **(c)** `I_X̃(Z̃₁,Z̃₂) = k · I_X(Z₁,Z₂)` — signed intersection counting, plus
+  that `π⁻¹(Zᵢ)` are compact oriented submanifolds.
+- Both orientations **given as hypotheses**, per the source. That part of the
+  earlier analysis stands.
+
+**And a mechanical anti-vacuity gate, which is the durable lesson:**
+
+> Any definition introduced by a formalisation must come with a proof that it
+> takes a **non-trivial value somewhere** — for `t01A05IntersectionNumber`, an
+> exhibited case where it is provably nonzero.
+
+`:= 0` fails that gate instantly, and so would `ω 0` as an "integral" once asked
+to agree with a known integral in one concrete case. This is cheap to state,
+cheap to check, and it is the check whose absence let a vacuous encoding pass
+review and sit in the corpus.
+
+If a full definition is genuinely out of reach at this pin, an **axiomatic
+characterisation** is acceptable — but only with a proof that it is satisfiable
+and not trivially satisfiable, which is the same gate in another form. What is
+not acceptable is dropping the content, in either the honest or the disguised
+version.
