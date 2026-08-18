@@ -1,6 +1,12 @@
 ;; FRAME-9 registration — DRAFT by claude-2 (Analyst), 2026-08-18. NOT SIGNED.
 ;; Frame registrations are the operator's per research-plan-v1 §11; this is a
-;; draft for Joe's ruling. Fields marked CONFIRM below are his to set.
+;; draft for Joe's ruling. EXACTLY ONE field needs him: the Analyst card freeze,
+;; which is blocked on the plan-§6 ruling. Everything else that was marked
+;; CONFIRM in the first draft turned out to be a CONVENTION, not a decision --
+;; round constants or computations -- and has been derived. See the notes at
+;; each field. Joe, 2026-08-18: "if it is a convention to ask me something,
+;; please think about how that can be avoided."
+
 ;;
 ;; Purpose: first frame with an ANALYST SEAT in the loop, and the first frame
 ;; in which the memory cascade runs and is receipted.
@@ -49,15 +55,21 @@
 {:kind   :apm-demonstration-round1-registration
  :schema 1
 
- ;; CONFIRM — carried from frame-8; the Lean preregistration anchor is Joe's.
+ ;; ROUND CONSTANT, not a per-frame decision: identical in frames 2, 5, 7 and 8.
+ ;; It changes only when the round changes, which is an operator event.
  :lean-registration "DarkTower.APMDemonstration.round1Registration"
  :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
  :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
 
- ;; CONFIRM — environment pin carried from frame-8; harness measured at freeze
- ;; time by the path-scoped measurer, not by me.
+ ;; BOTH COMPUTED, not decided.
+ ;; environment-revision: the round's environment pin (a92ffb6c in frames 2, 7
+ ;; and 8; frame-5 differed because the environment differed). It changes when
+ ;; the environment is reprovisioned, not per frame.
+ ;; harness-revision: `git -C futon3c log -1 --format=%H -- src scripts deps.edn`.
+ ;; Verified 2026-08-18: that command evaluated at frame-8's freeze reproduces
+ ;; frame-8's declared 77f884065f459b090c78ade2c970933912cf6154 exactly.
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "CONFIRM-at-freeze"
+ :reg/harness-revision     "ca8be17fbba2837a81e3883558eacc457f39865a"
 
  ;; Five FRESH seats, to be minted by POST /api/alpha/frames/mint-seats "f9".
  :reg/solver-seat  "f9-solver"
@@ -88,7 +100,7 @@
 
  :problem {:problem-id            "a01J06"
            :difficulty-stratum    "family=a;one-executable-hole;174-line-Main"
-           :regime                "CONFIRM-at-freeze"
+           :regime                "e7b9ec02599b36845c68ca053416787a23ac29a8"
            :locked-lemma-exposure []}
 
  :variation {:kind     :measured
@@ -103,7 +115,7 @@
  :replication-stage  :pilot
  :pilot-units        [{:problem-id            "a01J06"
                        :difficulty-stratum    "family=a;one-executable-hole;174-line-Main"
-                       :regime                "CONFIRM-at-freeze"
+                       :regime                "e7b9ec02599b36845c68ca053416787a23ac29a8"
                        :locked-lemma-exposure []}]
  :confirmation-units []
 
@@ -142,9 +154,10 @@
   :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd"
   :scribe       "02441d9df4b8a05355790a51f1e535bf9e9465d4"
   :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"
-  ;; CONFIRM — the Analyst card is a DRAFT and is not frozen. It also contains
-  ;; one UNRATIFIED DEPARTURE from plan §6 (not-fresh-per-frame) awaiting Joe's
-  ;; ruling. Freezing it by blob hash is the operator's call.
+  ;; THE ONE GENUINE OPERATOR DECISION IN THIS FILE. The Analyst card cannot be
+  ;; frozen until plan §6's fresh-per-N-frames wording is ruled on; the card
+  ;; supersedes it and claude-7's review agreed on substance while correctly
+  ;; insisting the ruling be on the record. Blob id below is the current draft.
   :analyst      "5445dac9ebd7ea1b378de34e0b7e4bc4db4d9cc1"}
 
  :reg/seat-exclusivity :enforced-at-register
