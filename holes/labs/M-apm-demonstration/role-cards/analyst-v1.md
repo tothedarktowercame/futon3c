@@ -110,6 +110,16 @@ exposed. C is per-close once its receipts have run in a frame. D, E and G are
 slower — read them across several frames, because a bespoke-rate or a
 fragmentation reading taken every close is noise, not signal.
 
+**Minting your successor.** `POST /api/alpha/frames/mint-analyst {"tenure": N}`
+(futon3c `b81cabc8`). Tenure-scoped, not frame-scoped: `analyst-1` serves f9-f10,
+`analyst-2` serves f11-f12. Re-minting an existing tenure is idempotent and
+CANNOT clear a live session — the preparer that deletes session files is not
+called for an existing identity, verified 2026-08-18 by re-minting with a
+preparer that throws if invoked. **NOTE: as of 2026-08-18 the route returns 404
+until the HTTP handler is reconstructed**; `analyst-1` was minted through the
+hot-loaded function instead. Check the route responds before relying on it for
+tenure 2.
+
 **Succession is scheduled, not incidental.** N = 2, so the seat changes hands
 after every second frame and you always know which frame is your last. When it
 does: write a handoff document naming
