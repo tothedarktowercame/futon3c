@@ -584,3 +584,56 @@ Status of the surrounding defect: the fix is structural, in source, and survives
 a restart — unlike the live-state re-registrations that recovered `analyst-1` and
 `f10-guide`. `analyst-2` had already been minted with a model at mint time via
 `:prepare-seat-fn`, so the shape was proven before it was generalised.
+
+### D25 and D7 — FIXED (`7c93a9eafae7dcd2f641dbd94ed4e6929b8eb566`) **[verified]**
+
+Both are **structural** fixes in source, not conventions: they survive a restart
+and cannot be un-done by an agent forgetting a practice.
+
+**D25.** `conductor/write-uses!` (`conductor.clj`) dispositions every offer the
+cycle recorded, reducing over `(get-in handle [:state :cycle/outputs
+:memory-offers])`, keeping `:offer/id`, `distinct`, and stepping `:write-use` for
+each; it short-circuits on the first failure via `reduced` and catches
+`Throwable` into the standard `failure` shape. `:write-use #'conductor/write-uses!`
+is now the twelfth entry in the conductor surface `operations` map.
+
+Reading from `:cycle/outputs` with `distinct` also sidesteps **D12** at the
+source — offers appear in both `:cycle/outputs` and `:steps`, so a naive
+collection would have dispositioned each offer twice.
+
+**D7.** Every entry in `operations` is now a **Var** (`#'conductor/dispatch-solver!`
+…) rather than a captured value, so hot reloads of `futon3c.apm.conductor` reach
+the surface. This is the defect that bit frame 9 mid-run with "Wrong number of
+args (1) passed to memory-offers" and forced ground control to reload
+`conductor-surface` as a pre-flight before every open. That pre-flight is no
+longer required.
+
+**Gates re-run by ground control, not accepted on report:**
+
+| check | result |
+|---|---|
+| clj-kondo (both src files + test) | 0 errors, 0 warnings |
+| `check-parens` | OK |
+| `futon3c.apm.conductor-test` | 19 tests / 135 assertions / 0 failures |
+| full APM suite (4 namespaces) | 55 tests / 234 assertions / 0 failures |
+| scope of change | 3 files; `problem.clj`, the capability map and all registrations untouched |
+
+**Mutation-verified, and it held.** Deleting the `:write-use` line from the
+`operations` map produces **3 failures** in `conductor-test`. The test genuinely
+covers the operation's reachability rather than passing vacuously — the contrast
+with the D1 review, where the equivalent mutation changed nothing, is why this
+check is worth running every time.
+
+**A scope-comparison note, recorded because it nearly became a false finding.**
+Ground control's first run of "the full APM suite" gave 46 tests / 222 assertions
+against the reported 55 / 234. That was not a discrepancy: the namespace list was
+guessed, inventing `conductor-binding-test` (does not exist) and omitting
+`cycle-harness-test`. Enumerated correctly from `test/futon3c/apm/*_test.clj`, the
+numbers match exactly. **Always enumerate the namespace set from disk before
+comparing test counts** — this is the third time in this period that comparing
+across different scopes nearly produced a reported regression.
+
+**Consequence for the series:** `:memory-disposition-offer-ids` can now be
+populated, so `:required-capabilities :offer-use-disposition` — declared by all
+nine registrations from frame 2 to frame 10 and unreachable in every one of them
+— is satisfiable for the first time from frame 11 onward.
