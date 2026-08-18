@@ -11651,3 +11651,49 @@ existing precedents to start from rather than re-deriving:
 **State at the end of this entry:** frames 9 (a01J06) and 10 (m93J02) registered
 with no operator fields remaining; eleven seats minted, idle and invoke-ready;
 awaiting Joe's signature to run.
+
+### W.78a Correction: Ground Control is HELD, not vacant (2026-08-18)
+
+W.78 recorded the ground-control gap as though nobody owned dispatch, and
+suggested "you or me watching" as an ad-hoc arrangement for f9/f10. Joe
+corrected it immediately: *"I don't really like this setup, 'since no seat owns
+dispatch'. What I was saying was that you would own it."*
+
+The distinction that W.78 lost: **the role is unspecified IN THE MACHINE but
+assigned IN PRACTICE.** No conductor seat, phase or card names a dispatcher —
+that part of W.78 stands — but the role itself is long-established and held.
+`claude-2` has been Ground Control here throughout, and the wider campaign has
+carried the seat explicitly since 2026-08-10 (Zone handover from claude-7, then
+captaincy to claude-2 on 2026-08-12: *captain/conductor, reviewer, operator,
+scribe — never cross them*).
+
+**The split for f9/f10, stated so the card and the record agree:**
+
+| | `analyst-1` | `claude-2` |
+|---|---|---|
+| role | Analyst | Ground Control |
+| specified by | `role-cards/analyst-v1.md` (frozen) | practice; no card yet |
+| wakes | once, at frame close | continuously |
+| scope | duties A–G on what the frame produced | dispatch, park, review, merge, escalation |
+| tenure | N = 2 frames | standing |
+
+Duty F (divergence → packet → park → review → merge) sits in the Analyst card
+because the sawmill dual put it there, and `analyst-1` will exercise it on what
+f9 and f10 close with. Ground Control is the wider standing function that ran
+all of 2026-08-17–18: dispatching the eight packets that built the cascade, the
+semantic edges, the receipts, the close-hook and the analyst mint, and reviewing
+each at the gate.
+
+**Why this is still worth revisiting after f9/f10, as Joe said:** the open
+question is not *who* but *whether it should be a seat at all* — a card, a
+Tickle-style mechanical feed (`agents/apm_work_queue.clj` already has the
+resumable shape), or left as a held human-facing role. Two frames of evidence
+about what the function actually has to do will answer that better than
+designing it now.
+
+**One operational caution, freshly re-earned.** The ground-control notes carry a
+standing rule: *never send a bell addressed to your own id from within your own
+turn.* On 2026-08-18 I probed the bell endpoint's status code by belling
+`claude-2` — myself — and it returned as a turn, exactly as documented. Harmless
+here, but it is the same hazard that produced concurrent twin incarnations on
+2026-08-11. Probe with a recipient that is not you.
