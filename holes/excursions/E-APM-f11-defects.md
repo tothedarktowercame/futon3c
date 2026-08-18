@@ -838,3 +838,80 @@ Worth a small packet: either the unsupported path should not be reachable, or th
 403 should say which backend to use. A defect that costs four failed attempts and
 is recoverable only by knowing the answer already is a defect in the interface,
 not in the agent.
+
+
+## f11 CLOSED — three corrections at the close, in both directions
+
+### The guide corrected ground control on D2, and it was right
+
+Ground control ruled `:guidance-count-non-negative` would pass **vacuously**,
+reasoning that zero offers make the broken subtrahend zero so the bug cannot
+manifest. **Wrong.** The live count is
+`(jobs to f11-solver in window) − (count :memory-offers)` = `1 − 0` = **1**,
+against a true guidance count of **0** — because with zero offers the subtrahend
+no longer cancels the solver DISPATCH.
+
+Same defect, opposite sign: f9/f10 read −100/−101 because their offer counts were
+huge; f11 reads +1 because its offer count is zero. It also produced the
+`:guidance-measurement-mismatch` validator failure, which is independent
+confirmation. The correct report is **"passes at 1 while the defect is live and
+visible"**, not "vacuous".
+
+The error in ground control's reasoning: treating "the subtrahend is zero" as
+"the subtrahend is harmless". The defect is that the subtrahend is the **wrong
+quantity**; at zero it under-subtracts instead of over-subtracting.
+
+### Ground control corrects the guide on finding C — `attempt?` IS satisfiable
+
+The guide reported `preregistration/attempt?` unsatisfiable by construction:
+six required keys, but the `cycle_harness` projection `select-keys`-ing only five
+and dropping `:cycle/runner-freshness`.
+
+**It is not dropped.** `cycle_harness.clj:116-120` lists all six, including
+`:cycle/runner-freshness` on line 120, and `git log -S` shows it has been there
+since `09ef5471` (2026-08-15T13:57:41Z) — well before the 15:39:49Z restart, so
+the running image has it too. `attempt?` is satisfiable.
+
+This matters more than a factual tidy-up: `:malformed-cycle-attempts` fired for
+**exactly the reason the guide already owned** — it did not supply
+`:cycle/regime` or `:cycle/store-revision`. Its structural diagnosis partly
+excused a gap that was entirely fillable. **If the next guide believes
+`attempt?` cannot be satisfied, it will not try**, and a clearable validator
+failure becomes permanent by rumour.
+
+### D37. Transport-level refusals leave no trace — a gap in D6 that ground control passed **[verified]**
+
+The guide is right, and this is a defect in a fix ground control gated and
+approved. Its one promotion attempt (naming `f11-scribe` as reviewer, the
+design-intended independent reviewer) was refused `:reviewer-not-actor`, and the
+trace's `:action-refusals` is **`[]`**.
+
+Cause: `conductor_surface/execute-action!` returns the refusal from its own
+`cond` **before** reaching `binding/execute!`, and `record-action-refusal!` lives
+in the binding layer. So D6 (`585a980e`) made **engine-level** refusals durable
+and left **transport-level** ones invisible: `:reviewer-not-actor`,
+`:conductor-operation-unknown`, stale cycle/version, unauthenticated.
+
+**That is precisely the class a guide following the design hits.** D6 was
+reviewed against engine refusals and its coverage boundary was never questioned —
+the same review gap as the D6-introduced regression found only when a later
+packet happened to run `problem-test`.
+
+### The cascade dispute, settled with the decisive fact
+
+The guide reported `:cascade-seeds-from-recall` **corroborated** for a third
+time, on the premise that "t01A05 touches patterns". It does not, and the
+decisive fact is in the guide's own store delta: **f11's `+6 memories` are the
+first memories t01A05 ever had.** Before this frame the problem had zero
+memories, therefore zero attached patterns, therefore an **empty touch-set** — so
+zero offers is what *both* hypotheses predict and the frame discriminates
+nothing. Verdict stands: **INAPPLICABLE**.
+
+### What f11 actually bequeathed
+
+Store delta: **+6 memories, 0 reviewed attachments, 0 promotions.** But four of
+the six are scribe deposits carrying `:proposed` edges **with** pattern subjects
+and `:mathematics` — which is the one shape D32 leaves actionable by a later
+frame's reviewer. The frame could not complete a review itself; it left work a
+successor can complete. That is the honest form of progress available under
+D31/D32/D35, and the guide identified it as the bequest without being prompted.
