@@ -853,3 +853,54 @@ re-parents to the futon3c JVM and survives turn teardown — exactly what
 `CLAUDE.md` prescribes for work that must outlive a turn. A `DONE-EXIT` marker
 was appended so a completed run is distinguishable from a killed one, which a
 quiet output file is not.
+
+### D24 — FIXED IN SOURCE (`eb81db299fde3929c255a61e1bda1809150f8692`), **NOT YET LIVE** **[verified]**
+
+**Structural**, and deliberately inert until the operator restarts the server.
+**`mint-analyst` still returns 404 and will keep doing so until then.** Do not
+record this defect as closed on the strength of the commit.
+
+`start-server!` keeps its `[handler port]` signature — the four demo/smoke
+scripts that pass an explicit handler are unaffected — but now installs the
+handler into a `defonce` atom and hands http-kit a stable indirection
+(`installed-handler`) that derefs that atom per request. `rebuild-handler!`
+swaps it atomically.
+
+Two details make it correct rather than merely clever:
+
+- **The `defonce` is load-bearing.** After a namespace reload, http-kit still
+  holds the *old* `installed-handler` fn object — but that object reads the same
+  `defonce` atom, so a rebuild still reaches it. A plain `def` would orphan the
+  live target, which is the very failure mode this defect is about. The comment
+  cites the `http.clj:812` precedent.
+- **`make-handler` attaches `{::rebuild-fn #(make-handler config)}` as metadata**,
+  so the zero-arity rebuild closes over the ORIGINAL startup config. Nothing has
+  to reconstruct `runtime-config`, which was the risk that made ground control
+  refuse to attempt a live rebuild by hand earlier.
+
+Handler construction stays out of the request path (the test asserts exactly two
+constructions across many requests).
+
+**Gates re-run by ground control:** clj-kondo 0/0; check-parens OK; the running
+server was NOT touched (`/api/alpha/agents` → 200, `mint-analyst` → 404 as
+expected, two JVMs per the I-0 override). Dedicated test passes 1 test /
+5 assertions / 0 failures, and **fails with 2 failures** when http-kit is
+reverted to the captured value.
+
+### A measurement that nearly became a false regression report
+
+Running the whole `http-test` namespace gave **38 failures / 3 errors** with the
+fix, and only **17** with the one-line mutation applied. Read naively that says
+D24 introduced 21 failures.
+
+It did not. At `eb81db29^` — the commit immediately before D24 — `http-test`
+already shows **38 failures / 3 errors**, identical to after. **D24 introduced
+zero regressions.** The mutation number was the misleading one: reverting the
+indirection changes which handler each test server serves, so a suite with seven
+`start-server!` call sites shifts for reasons that have nothing to do with
+whether the feature works.
+
+The lesson, now four times over in this period: **a delta is only evidence
+against a baseline measured the same way.** Compare against the parent commit,
+not against a mutated tree, and never against a guessed namespace set. The valid
+mutation probe was the dedicated test, run alone.
