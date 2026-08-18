@@ -133,23 +133,28 @@
                              (>= (:step-index %) student-dispatch-step))
                        promotions)
                promo-ids-in-scope (mapv :memory-id in-scope-promotions)
+               inapplicable? (empty? promo-ids-in-scope)
                union-ok (some (fn [r]
                                 (let [elig (set (:eligible-memory-ids r))]
                                   (and (seq promo-ids-in-scope)
                                        (every? elig promo-ids-in-scope))))
                               receipts)]
-           {:check :C3-eligibility-includes-promoted
-            :pass? (boolean (and (seq provenanced) union-ok))
-            :evidence {:receipts (count receipts) :with-provenance (count provenanced)
-                       :eligible-counts (mapv #(count (:eligible-memory-ids %)) receipts)
-                       :promo-ids (vec promo-ids)
-                       :student-dispatch-step student-dispatch-step
-                       :promo-ids-in-scope promo-ids-in-scope
-                       :promo-ids-excluded-late (mapv :memory-id late-promotions)
-                       :promo-ids-unparseable
-                       (->> promotions
-                            (filter #(nil? (:step-index %)))
-                            (mapv :memory-id))}})
+           (cond->
+            {:check :C3-eligibility-includes-promoted
+             :pass? (boolean (and (seq provenanced) union-ok))
+             :evidence {:receipts (count receipts) :with-provenance (count provenanced)
+                        :eligible-counts (mapv #(count (:eligible-memory-ids %)) receipts)
+                        :promo-ids (vec promo-ids)
+                        :student-dispatch-step student-dispatch-step
+                        :promo-ids-in-scope promo-ids-in-scope
+                        :promo-ids-excluded-late (mapv :memory-id late-promotions)
+                        :promo-ids-unparseable
+                        (->> promotions
+                             (filter #(nil? (:step-index %)))
+                             (mapv :memory-id))}}
+             inapplicable?
+             (assoc :inapplicable? true
+                    :reason "no cycle promotions in scope")))
          ;; C4 — pull activity receipted and joinable (f8 diagnosis: outputs
          ;; carry only USE receipts; OFFER receipts — the denominator, incl.
          ;; empty-result searches — exist only in the store keyed by dispatch
@@ -183,6 +188,7 @@
     {:state-file file :problem problem
      :checks checks
      :score (str (count (filter :pass? checks)) "/" (count checks))
+     :inapplicable (mapv :check (filter :inapplicable? checks))
      :trace-validation trace-validation}))
 
 (defn write-receipt! [dir result]
@@ -192,6 +198,7 @@
                  :taken-at (str (java.time.Instant/now))
                  :checks (:checks result)
                  :score (:score result)
+                 :inapplicable (:inapplicable result)
                  :trace-validation (:trace-validation result)}]
     ;; One current reading per problem-state directory. Overwrite rather than
     ;; append: a rerun replaces the complete EDN value, so it cannot duplicate
@@ -201,11 +208,22 @@
 
 (let [dir (first *command-line-args*)]
   (when-not dir (println "usage: bb transfer_checks.bb <problem-state-dir>") (System/exit 2))
-  (let [{:keys [state-file problem checks score trace-validation] :as result} (run-checks dir)]
+  (let [{:keys [state-file problem checks score inapplicable trace-validation] :as result}
+        (run-checks dir)]
     (println "== transfer checks ==" problem "(" state-file ")")
-    (doseq [{:keys [check pass? evidence]} checks]
-      (println (format "%-32s %s  %s" (name check) (if pass? "PASS" "FAIL") (pr-str evidence))))
-    (println "score:" score)
+    (doseq [{:keys [check pass? inapplicable? evidence]} checks]
+      (println (format "%-32s %s  %s" (name check)
+                       (cond inapplicable? "INAPPLICABLE" pass? "PASS" :else "FAIL")
+                       (pr-str evidence))))
+    (if (seq inapplicable)
+      (let [details (->> checks
+                         (filter :inapplicable?)
+                         (map (fn [{:keys [check reason]}]
+                                (str (first (str/split (name check) #"-"))
+                                     " -- " reason)))
+                         (str/join "; "))]
+        (println (str "score: " score "  (inapplicable: " details ")")))
+      (println "score:" score))
     ;; `failures: 0` would read as "no invariant failures" when the truth is
     ;; "never measured". The :absent case must not print a count.
     (if (= :absent (:launchable? trace-validation))
