@@ -1076,3 +1076,50 @@ rather than ignoring the key.
 commit touches, not the namespaces belonging to the commit's subject. A
 two-line change to a file outside the packet's main area is exactly where this
 hides — and D6's `problem.clj` change was two lines.
+
+### D27. A registration whose predictions omit the objective **[verified, mine]**
+
+Ground control registered f11 with **eight predictions, none of which concerned
+solving the problem.** All eight were about plumbing: reviewed attachments,
+disposition population, guidance count, card resolution, cascade routing,
+refusal traceability, analyst tenure.
+
+Joe caught it: *"what do you mean 'not the close'? You're going off map."*
+
+**The error.** The corpus has ~207 open problems and the machine is being built
+to go through them. The memory apparatus — cascade, promotion, disposition — is
+**instrumental to that**. Registering only the instruments makes the instrument
+the objective, and produces a frame where *failing to solve the problem while
+populating a disposition field reads as success.* That is precisely backwards.
+
+It is the same family as D17 (a prediction's premise computed over the wrong
+set), but worse: there the premise was wrong, here the subject was.
+
+**What was and was not lost in f11.** The close is still *measured* — 
+`:decision-rule` outcomes are `[:closed :tier-a :tier-b :defective]` and the
+required measurement fields include "terminal disposition", "residual executable
+sorries", "attempts or closer hops" and "axiom cleanliness". So the primary
+result is recorded and will be reported. What is missing is a **pre-registered
+expectation** about it, which is weaker: the close becomes a measurement rather
+than an adjudicated prediction.
+
+**Why f11 was not re-registered.** The solver was already dispatched and working
+when this was caught (`:dispatch-solver` recorded at v10). A registration is
+frozen at open, and editing one mid-frame would break the freeze property the
+whole experiment depends on — the property that stops predictions being fitted
+to results. Correcting the specification would have cost the solver's live work
+and the integrity of the freeze. f11 runs as registered, with this defect
+recorded against it.
+
+**Fixed in f12** (unopened, so legitimately editable), which now leads with:
+- `:problem-closed` — the primary outcome, stated as such;
+- `:memory-contributes-to-close` — a surfaced memory attested as USED in the
+  work that closes or advances the problem, which is the link that makes the
+  apparatus worth having;
+- everything else explicitly ranked below, with `:reviewed-attachment-gained`
+  relabelled "SUPPORTING, NOT HEADLINE".
+
+**The standing rule:** every frame registration must predict the close first.
+Instrument predictions are how the close is expected to be *achieved*, and are
+ranked beneath it. A frame that repairs its own plumbing and does not solve its
+problem has failed, however green its other measures read.
