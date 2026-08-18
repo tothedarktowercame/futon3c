@@ -1506,6 +1506,11 @@
             :guidance-events
             [{:job-id "guide-job" :ground-control/recipient "codex-4"
               :ground-control/cycle "cycle-1" :ground-control/type :challenge}]
+            ;; :action-refusals was added to the emitted trace by D6 (585a980e,
+            ;; durable refusal receipts). This assertion is exact map equality,
+            ;; so the new key must be declared. Empty is correct here: the
+            ;; fixture refuses nothing.
+            :action-refusals []
             :measurement-summary {:measured 1 :unset 0}}
            (get-in result [:result :trace])))
     ;; NOT empty: retrieval-probe has no producer, and this fixture previously

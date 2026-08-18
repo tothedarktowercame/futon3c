@@ -1028,3 +1028,51 @@ detecting both the wrong card and the missing refusal path.
 
 Three frames' worth of guides declaring the pinned card authoritative in their
 packets is no longer necessary.
+
+### D9 + D10 — FIXED (`01fb2de0`) **[verified]**
+
+**D9 (stderr swallowed).** Both layers now propagate. In `scripts/frames.bb`,
+`run-command!` dies with `command failed (<exit>): <command>\n<stderr>`. In
+`peripheral/problem.clj` the thrown exception's *message* now embeds the exit
+code and the combined stderr/stdout, with both also in ex-data. The message
+matters: the caller logged only that, which is why frame 9's four failed opens
+showed `assign-checkouts: frames.bb open failed` while git was saying
+`fatal: a branch named 'exp/a01J06-ctl' already exists`.
+
+**D10 (`lake` not on PATH).** `ensure-lake-on-default-path!` resolves the
+toolchain via `fs/which` or `~/.elan/bin`, then symlinks it into `~/.local/bin`,
+which frame-agent launch environments already include. It uses
+`System/getProperty "user.home"` rather than embedding this machine's home path,
+and **refuses to replace a launcher it did not create** rather than clobbering
+one. Provisioning now calls it before adding the worktree, so a fresh checkout
+has the toolchain without an agent discovering it the hard way — as the student,
+the guide and ground control each did in f10.
+
+**Gates re-run by ground control:** clj-kondo 0/0; check-parens OK; frames.bb
+parses under babashka; `problem-test` 101 tests / 384 assertions / 0 failures
+*after* the fix below.
+
+codex-6 committed the work but returned an empty summary, so this was gated from
+the diff rather than from a report.
+
+### A regression introduced by D6 that D6's own review missed **[verified, fixed in review]**
+
+`problem-test/emit-trace-reuses-existing-projection-and-machine-cycle-facts`
+asserts **exact map equality** on the emitted trace. D6 (`585a980e`) added
+`:action-refusals` to that trace — correctly — which broke the assertion.
+
+**Ground control's D6 review did not catch it.** D6 touched four files including
+`peripheral/problem.clj`, but the review ran only the APM namespaces
+(55/244/0, all green) because that is where the conductor work lived. The
+peripheral suite was never run for that commit, and the failure sat undetected
+until the D9/D10 review happened to run `problem-test`.
+
+Fixed in review by declaring the new key in the expected map, with a comment
+naming D6 as its origin. **Verified not to be a loosening:** mutating the
+producer to emit `[:bogus]` still fails the assertion, so it tests the value
+rather than ignoring the key.
+
+**The rule this yields:** run the test namespaces belonging to *every* file a
+commit touches, not the namespaces belonging to the commit's subject. A
+two-line change to a file outside the packet's main area is exactly where this
+hides — and D6's `problem.clj` change was two lines.
