@@ -554,3 +554,34 @@ have** — the defect is fixed in source and live nowhere. Until Joe restarts:
 - After the restart, the check becomes self-enforcing: any registration pinning
   anything other than the loaded revision will refuse, which is the desired
   behaviour and also the confirmation that the fix works.
+
+
+### D31 — FIXED IN SOURCE (`0bb6dc67f46b455951b86c61cbbbd87f39dc1622`), **NOT LIVE UNTIL RESTART** **[verified]**
+
+`transport-args` now decodes `:verdict` for `promote-artifact`, and
+`invalid-promotion-verdict` refuses anything outside the closed set
+`#{:approve :challenge :reject}` with `:promotion-verdict-invalid`, returning the
+allowed values in the finding.
+
+**The ordering is right, which is the part that mattered.** In `execute-action!`
+the checks run: authenticated session → operation known → **`reviewer-mismatch`
+(P14)** → invalid verdict → dispatch. So a bad verdict is refused at the
+transport boundary and never reaches `review-attachment!`, and P14 still takes
+precedence over it — impersonation is refused before argument validity, which is
+the correct priority.
+
+The coercion itself is deliberately narrow: only `promote-artifact`'s `:verdict`,
+and no general string→keyword rule, so arbitrary payload values stay
+byte-for-byte data. The stale "the one closed enum" comment was updated.
+
+**Gates re-run by ground control:** clj-kondo 0/0; check-parens OK; APM suite
+60 tests / 263 assertions / 0 failures with namespaces enumerated from disk.
+**Mutation-verified:** removing only the coercion (leaving the refusal) gives 1
+failure, matching the reported result. `memory_lifecycle.clj` and
+`apm/conductor.clj` untouched.
+
+**Consequence for f11, which is still running:** this does NOT help it. The fix
+is in source and the serving JVM does not have it, so the student-memory
+promotion route remains blocked in the live cycle. If f11's
+`:reviewed-attachment-gained` fails at `:promote`, D31 is the cause to record —
+not a promotion-logic failure, and not D3/D4, which are loaded and correct.
