@@ -961,3 +961,126 @@ Verified separately at the close: `close!` belled `analyst-2` **exactly once**
 (caller `f11-guide`, 17:36:53Z, running), against the single earlier job being
 ground control's 15:44 readiness probe. The f11 series entry is not yet present —
 `series.edn` holds f7, f8, f9, f10 — which is expected while the Analyst runs.
+
+---
+
+## Appended by analyst-2 at the f11 close (2026-08-18)
+
+Per the f10 file's §7. Three items: one correction to D33/D35 that reopens a
+question they closed, one numeric correction to D34, and one new defect in the
+Analyst's own instrument. All **[verified]** — each re-derived by me against the
+substrate, with the query stated so ground control can re-run it and mark them
+`[reported]` instead if my derivation does not satisfy it.
+
+Census used throughout, run twice with byte-identical results:
+`GET http://127.0.0.1:7073/api/alpha/hyperedges?type=memory/assert&limit=5000`
+→ 469 edges, query-errors 0.
+
+### D35 and D33 are REFUTED IN THEIR STRONG FORM, and the difference matters **[verified]**
+
+D35 concludes: *"There is NO authoring shape whose independent review can be
+machine-recorded."* D33, settled: *"A refused review leaves no durable mark on
+the memory it refused… the store cannot distinguish never reviewed from reviewed
+and rejected."*
+
+Both are refuted by the store:
+
+- **206 of 469 memory/assert edges carry `:prop/review` AND `:prop/review-history`**,
+  each `{:evidence-id … :reviewer … :verdict … :pattern-ids [...] :reviewed-at …}`.
+  Verdict distribution: `:approve` 201, `"approve"` 4, **`:reject` 1**, absent 263.
+- **The one rejection is durable and visible.** Edge
+  `hx:memory/assert:…e-a09-shrink-radius-rouche-fixed-point…`, reviewer
+  `claude-2`, `:verdict :reject`, `:reviewed-at "2026-08-10T15:47:40Z"`,
+  `:attachment-status :proposed`. It also survives into the **projection**
+  surface: `POST /api/alpha/memory/projection {"endpoints":["a94A09"]}` returns
+  that edge with `review` and `review-history` present in `hx/props`.
+- So the store distinguishes *never reviewed* from *reviewed and rejected*
+  perfectly well. What is true is narrower and should replace the strong claim:
+  **`:attachment-status` alone does not distinguish them** — it stays `proposed`
+  on rejection — and **f11's rejection specifically was never written to the
+  edge at all** (`e-a39ff1b3`'s edge has `attachment-status "proposed"` and no
+  `:prop/review`). D33's *specific* observation about f11 stands; its
+  generalisation to the store does not.
+
+**And the sharper half — three of those reviews were written by this mission's
+own frame seats:**
+
+| reviewer | reviewed-at | pattern | edge status |
+|---|---|---|---|
+| `f8-scribe` | 2026-08-17T07:22:49Z | `math-formalization-CA/layer-cake-crossover-split` | `"reviewed"` |
+| `f9-scribe` | 2026-08-18T08:42:52Z | `math-informal/convert-growth-counts-to-summability-by-geometric-shells` | `:reviewed` |
+| `f9-guide`  | 2026-08-18T08:43:49Z | `math-formalization/separate-proof-transfer-from-artifact-replay` | `:reviewed` |
+
+Each was written as an independent evidence entry —
+`:evidence/body {:review/event :memory-attachment-review, :review/verdict :approve,
+:review/witness-status :independently-witnessed,
+:review/provenance {:kind :promote-phase-adjudication, :cycle-id "frame-9/a01J06"}}`
+with `:evidence/author` the reviewing seat — and crosswise, so `author != reviewer`
+held. That is exactly the shape D35 says is unavailable, exercised successfully by
+frame seats **ten hours before f11 ran**.
+
+**So the correct reading is a REGRESSION, not a structural pincer.** The window is
+f9's close → f11's registration, which this file's own
+`:harness-changed-since-f10` declares as twelve fixes (D1 D2 D3 D4 D5 D6 D7 D8 D9
+D10 D24 D25).
+
+**What I am NOT asserting:** which change removed f9's working route, or whether
+the cause is simply the stale image (D30's family — and note the frame's
+`:dispatch-scribe` args carry the pre-`ca0f297e` `scribe.md`, so the running image
+is demonstrably behind the tree). That is a **discovery** question and it is
+ground control's to scope, not mine to guess at.
+
+**Why it should be asked before f12 is registered.** If f9's route still exists,
+f12 can bootstrap a reviewed attachment *live*, without waiting on a restart, and
+the mission is not blocked in the way D35 concludes it is. Registering f12 on the
+premise that every authoring shape is blocked would be registering on a premise
+the store contradicts. Related, same window and worth one look at the same time:
+f11-scribe hit four HTTP 403s writing evidence (**D36**) where f9-scribe wrote
+review evidence without incident.
+
+### D34's numbers, corrected — the conclusion stands, the evidence is ~8× smaller **[verified]**
+
+D34's table reads `:memory-use/surfaced-ids` "**11 occurrences, all empty**"
+against `:pull-uses` receipts "`e-a39ff1b3` appears **23 times**". Those are not
+commensurable: the first counts occurrences of a *key*, the second occurrences of
+an *id* anywhere in the saved state, including the guide's own prose verification
+text.
+
+The structured count is **3** — two `memory_search` and one `memory_read` — out of
+6 pull receipts across 4 distinct memory ids:
+
+```
+bb -e '(count (filter #(= "e-a39ff1b3-…" (:pull/memory-id %))
+                      (:pull-uses (:cycle/outputs (read-string (slurp "…/v31.edn"))))))'
+;; => 3
+```
+
+And 23 **rots**: the raw occurrence count is 23 in `v20`–`v27`, 26 in `v28`, 29 in
+`v29` and **32** in `v30`/`v31` — of the same frame, as later steps appended prose.
+The contradiction D34 identifies is real and important; the number should be 3
+receipts, or the occurrence counts should be dropped. This is the over-counting
+substring trap recorded as an instrument-caution by analyst-1 at S-2, met here a
+third time in this series.
+
+### D37. `C3` fails vacuously when a frame promotes nothing **[verified, mine — the Analyst's own instrument]**
+
+`transfer_checks.bb` C3 passes only when
+`(and (seq promo-ids-in-scope) (every? elig promo-ids-in-scope))`. f11 promoted
+nothing, so C3 **fails by construction with no input**, and f11's 4/6 reads as a
+regression against f10's 5/6 when nothing in the plumbing changed.
+
+Mutation-verified rather than reasoned: copying f11's `v31.edn`, injecting one
+synthetic in-scope promotion (`e-001b61c3…`, already in the student's 462-id
+eligible set, `promo/…/28` against a student dispatch at step 30) and changing
+nothing else flips C3 to **PASS** and the score to **5/6**.
+
+Note the symmetry with F3, in the same frame: **F3 passed vacuously on zero
+offers while C3 failed vacuously on zero promotions.** Two of the frame's
+validators moved on no input, in opposite directions, and both feed numbers the
+Analyst reports.
+
+Packet **P28** dispatched to `codex-3` (`invoke-1787075238508-4903-a34c339d`,
+park `park-a28b01b7`), scoped deliberately as a **reporting** change: C3 reports
+`INAPPLICABLE` with a reason, and **the `/6` denominator does not move**, because
+changing the denominator is a decision about the loss function and that is not the
+Analyst's to make.
