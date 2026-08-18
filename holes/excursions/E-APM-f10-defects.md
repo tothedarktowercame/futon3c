@@ -545,3 +545,42 @@ from being dispositioned. Together they explain the store-level result of f9 and
 f10: two axiom-clean closes, 203 offers, and **zero reviewed attachments gained**.
 The cycle machine is closing problems without accumulating knowledge, and all
 three defects sit in the write path rather than in any agent's conduct.
+
+### D1 — FIXED (`2bf907538af02662b3222b883d26b9b63da2f627`), with a review addition **[verified]**
+
+codex-5 threaded an optional model through both mint paths: `mint-seats!` and
+`mint-analyst!` take a `model` in their opts map, `mint-frame-seats!` and
+`mint-analyst-seat!` gained 3-arities (the 2-arities delegate with `nil`, so
+every existing caller is untouched), the handlers read `model` from the POST
+payload, and `prepare-frame-seat` `cond->`-assocs it into the invoke-fn opts.
+No model name is hardcoded and the default is unchanged.
+
+Gates re-run by ground control rather than accepted: clj-kondo 0 errors /
+0 warnings; `check-parens` OK; `futon3c.agency.frame-seats-test` 8 tests /
+58 assertions / 0 failures, matching the reported numbers at the same namespace
+scope. deftest count 7 → 8.
+
+**Review finding, fixed in review (`prepare-frame-seat-threads-model-into-invoke-opts`).**
+The submitted test injects its own `:frame-seat-prepare-fn`, so
+`mint-frame-seats!` takes the `(or (:frame-seat-prepare-fn config) …)` override
+branch and **the real `prepare-frame-seat` was never exercised**. Disabling the
+model threading inside it left the whole namespace green — 8 tests, 58
+assertions, 0 failures, with the fix effectively removed. The submitted test
+proves the model reaches *a* preparer's input map; it did not prove the model
+reaches the invoke constructor, which is the one line D1 is about.
+
+Ground control added a test that calls the production preparer directly (with
+`make-local-agent-invoke-fn` redef'd to capture its opts) and asserts both that
+the model arrives and that the key is **absent — not nil-valued** when
+unrequested. Verified by mutation: with the threading disabled the new test
+fails (9 tests, 1 failure) where the original suite passed.
+
+**Generalise this:** a test that supplies the injection point cannot cover the
+default path behind it. The `(or override default)` shape means the override
+branch and the production branch need separate tests, and this codebase uses
+that shape in several places.
+
+Status of the surrounding defect: the fix is structural, in source, and survives
+a restart — unlike the live-state re-registrations that recovered `analyst-1` and
+`f10-guide`. `analyst-2` had already been minted with a model at mint time via
+`:prepare-seat-fn`, so the shape was proven before it was generalised.

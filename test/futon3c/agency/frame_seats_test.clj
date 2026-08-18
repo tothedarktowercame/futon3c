@@ -164,3 +164,32 @@
       (is (nil? (:result ((:agent/invoke-fn (registry/get-agent
                                              "default-frame-guide"))
                           "probe" nil)))))))
+
+;; Added by claude-2 (ground control) during review of 2bf90753.
+;;
+;; The test above injects its own :frame-seat-prepare-fn, so mint-frame-seats!
+;; takes the (or (:frame-seat-prepare-fn config) ...) override branch and the
+;; REAL prepare-frame-seat is never exercised. Disabling the model threading
+;; inside prepare-frame-seat therefore left the whole namespace green — which
+;; is precisely the D1 regression it is supposed to catch.
+;;
+;; This covers the production preparer directly: it is the only line that puts
+;; :model into the invoke-fn opts, so if it regresses every minted claude seat
+;; silently falls back to the CLI default.
+(deftest prepare-frame-seat-threads-model-into-invoke-opts
+  (let [captured (atom [])
+        prepare (var-get #'futon3c.transport.http/prepare-frame-seat)]
+    (with-redefs [futon3c.transport.http/make-local-agent-invoke-fn
+                  (fn [agent-type opts]
+                    (swap! captured conj [agent-type opts])
+                    (fn [_prompt _session-id] {:result :stub :session-id nil}))]
+      (prepare {} {:agent-id "pfs-with-model"
+                   :agent-type :claude
+                   :model "claude-opus-5"})
+      (prepare {} {:agent-id "pfs-no-model" :agent-type :claude}))
+    (let [[[_ with-opts] [_ without-opts]] @captured]
+      ;; the model reaches the invoke constructor
+      (is (= "claude-opus-5" (:model with-opts)))
+      ;; and is ABSENT — not nil-valued — when unrequested, so the CLI default
+      ;; is untouched for every seat minted the way frames 2..10 minted theirs
+      (is (not (contains? without-opts :model))))))
