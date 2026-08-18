@@ -435,3 +435,68 @@ premise that felt safe. **f10 is where that premise came from** — there the
 problem did touch patterns (2 of them), and the contrast with an empty touch-set
 was never a live consideration. The error is generalising a measured fact from
 one frame into an assumed fact in the next.
+
+
+---
+
+## The t01A05 history is worse than ground control diagnosed: vacuous, then false
+
+codex-6's repair-plan discovery (`c109baa7`,
+`holes/excursions/E-t01A05-repair-plan.md`) **corrects** the blame analysis
+above, and the correction matters.
+
+Ground control wrote that "an earlier formalisation encoded the right content and
+the file was later rewritten to state something else", inferring this from
+`proof-outline.md` naming `t01A05_pullback_integral_eq` and
+`t01A05_preimage_intersectionNumber_eq` — the original's (b) and (c).
+
+**The earlier formalisation encoded the right NAMES and vacuous CONTENT.**
+Verified by ground control at revision `b9c6503` (also present at `f84008b`):
+
+```lean
+def t01A05IntersectionNumber {n d₁ d₂ : ℕ} {X : TopCat}
+    (Z₁ : T01A05OrientedSubmanifold d₁ X)
+    (Z₂ : T01A05OrientedSubmanifold d₂ X) : ℤ := 0
+
+def t01A05Integral {n : ℕ} {X : TopCat} (ω : T01A05TopForm n X) : ℝ :=
+  ω 0
+```
+
+The intersection number is **literally defined as `0`**. So part (c),
+`I_X̃(Z̃₁,Z̃₂) = k · I_X(Z₁,Z₂)`, was discharged as `0 = k · 0`. The "integral" is
+evaluation of a functional at index 0 — not an integral, and not the original's
+`∫_X̃ π*ω`.
+
+**So the real history is: vacuous-but-true → meaningful-but-false.** Neither
+version formalises the source problem. The rewrite traded a theorem that said
+nothing for a theorem that says something untrue — which is arguably the better
+of the two, since a false statement can be *detected* and a vacuous one passes
+review forever.
+
+**Consequence for the repair: recovery is not an option.** Ground control's
+"recovering beats re-deriving" instruction was based on a wrong premise, and the
+discovery packet is what caught it. This is the second time in this session that
+splitting discovery from implementation prevented building on a bad premise — the
+first was D3, where the fix ground control proposed would have required weakening
+a tested invariant.
+
+codex-6's recommendation, which ground control accepts as sound: a **reduced,
+non-vacuous singular-homology statement taking both orientations as GIVEN**, with
+part (c) explicitly deferred, because the pinned Mathlib has neither packaged
+integration of top forms over oriented manifolds nor geometric intersection
+numbers. A reduced statement that is true and faithful is worth more than a full
+one that is neither.
+
+Also confirmed: adding `[ConnectedSpace Xtilde]` may block the counterexample but
+does not restore fidelity — as ground control judged, and codex-6 independently
+agrees.
+
+**Scope respected:** the report is the only file committed; no file under
+`apm-lean/problems/` was modified, and f11's evidence branch is untouched at
+`ca69928`.
+
+### AWAITING OPERATOR SIGN-OFF
+
+The repair touches `Main.lean`, `proof-outline.md` and `status.json`, and
+**changes a frozen statement**. That is Joe's decision, not a frame's and not
+ground control's. No implementation packet has been dispatched.
