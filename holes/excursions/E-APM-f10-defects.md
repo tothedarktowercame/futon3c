@@ -791,3 +791,65 @@ problems axiom-clean and gained **zero** reviewed attachments; that specific
 failure mode is now repaired at source in all three legs.
 
 Not yet verified end to end in a live frame — that is what frame 11 measures.
+
+### D6 — FIXED (`585a980e6aecfd803a958483532ad5370ee39518`) **[verified]**
+
+**Structural.** Refused conductor actions now leave a durable receipt, so a
+refusal is diagnosable from the cycle trace instead of existing only in an
+agent's prose report.
+
+The design avoids the trap the discovery flagged. `conductor_binding.clj`
+calls the recorder with **`current`** — the last valid authoritative handle —
+never with the poisoned `next-handle`. Committing the failed handle would have
+set `:ok false` and short-circuited every subsequent `raw-step`
+(`conductor.clj:97-102,111-114`), poisoning the rest of the frame.
+
+`record-action-refusal!` records `:refusal/action-id`, `:refusal/tool`,
+`:refusal/error` (only `:error/component`, `:error/code`, `:error/message`),
+`:refusal/step-index`, and sanitized args, then checkpoints. It also returns the
+**new version** in the refusal envelope, so a caller retrying after a refusal is
+not stranded on a stale version — and falls back to the previous behaviour
+unchanged if no recorder is supplied.
+
+**Sanitization is an allowlist, which is the right direction.** Only seven
+diagnostic keys are kept (`:artifact-id :lane :memory-id :offer-id :outcome
+:pattern-id :reviewer`), values must be scalar, strings are capped at 160
+characters, and a non-map argument is reduced to its *type* alone. A denylist
+would have leaked whatever nobody thought of.
+
+**Gates re-run by ground control:** clj-kondo 0/0; check-parens OK; APM suite
+55 tests / 244 assertions / 0 failures with the namespace set enumerated from
+disk. **Mutation-verified independently:** making `record-action-refusal!`
+return `nil` produces **5 failures**, matching the reported result.
+
+The test is the strongest of this round. It plants a canary string
+(`TOP-SECRET-PACKET`) as an argument and asserts it is absent from the durable
+receipt; asserts phase and `:cycle/outputs` are unchanged; asserts the refused
+action is never recorded as successful and cannot contribute to promotion
+counts; and asserts a **subsequent valid action still succeeds**, which is the
+no-poisoning property stated as a test rather than a claim.
+
+## 12. Test-suite baseline — the "unrelated failures" claim, SETTLED **[verified]**
+
+Two agents reported wider-suite failures as pre-existing. That was plausible but
+unverified, so ground control ran the peripheral suite at the pre-work pin
+`05ab95ca` in an isolated `git worktree` and compared:
+
+| | tests | assertions | failures | errors |
+|---|---:|---:|---:|---:|
+| baseline `05ab95ca` (before any of this work) | 631 | 2693 | **18** | **18** |
+| HEAD (D1, D3/D4, D5, D6, D7, D25 all landed) | 634 | 2732 | **17** | **15** |
+
+**The failures pre-date the entire week's work**, and HEAD has one fewer failure
+and three fewer errors than the baseline. The 18/18 that codex-6 quoted matches
+the baseline exactly — it ran before D5 landed. Nothing in this round introduced
+a regression, and the failing namespaces (`mission_control`, `registry`,
+`war_machine_pilot`, `integration`) are untouched by any of it.
+
+Method note: this took three attempts. Two `run_in_background` runs were killed
+with zero output, and each time the honest report was "unverified" rather than a
+guess. The run only completed when launched through `scripts/bg.py`, which
+re-parents to the futon3c JVM and survives turn teardown — exactly what
+`CLAUDE.md` prescribes for work that must outlive a turn. A `DONE-EXIT` marker
+was appended so a completed run is distinguishable from a killed one, which a
+quiet output file is not.
