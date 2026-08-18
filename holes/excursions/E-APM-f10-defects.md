@@ -997,3 +997,34 @@ the two saved traces settled it in one step.
 56 tests / 250 assertions / 0 failures with the namespace set enumerated from
 disk. **Mutation-verified:** forcing the legacy branch (`if false`) gives 1
 failure against a clean 0, and reproduces −101 on the 102-offer case.
+
+### D8 — FIXED (`ca0f297e945a88e6af236b8ce8609cf8a8095839`) **[verified]**
+
+**Structural**, and stronger than the packet asked for. Ground control specified
+"resolve from the registration's pinned `:reg/role-cards` entry"; codex-5
+resolved by **blob SHA** instead of by path — it reads the pinned blob from the
+frozen registration and locates the file whose content hashes to it via
+`git ls-tree -r HEAD`, restricted to `/role-cards/`, requiring **exactly one**
+match.
+
+That is the better contract: the registration pins *content*, so resolving by
+content means a card edited after freezing no longer resolves, rather than
+silently injecting different text under the same filename. Path resolution would
+have missed exactly that case.
+
+**No fallback exists.** On zero matches, ambiguity, or a malformed pin the
+conductor emits `(failure handle :scribe-card-unresolved …)` carrying the pinned
+blob. Silent substitution was the defect, so a refusal is the correct outcome.
+
+**Verified functionally, not just by test:** the real pin
+`02441d9df4b8a05355790a51f1e535bf9e9465d4` resolves to exactly one path,
+`holes/labs/M-apm-demonstration/role-cards/scribe-v2.md` — the card frames 8, 9
+and 10 all pinned and all had to work around by hand.
+
+**Gates re-run by ground control:** clj-kondo 0/0; check-parens OK; APM suite
+56 tests / 250 assertions / 0 failures, namespaces enumerated from disk.
+**Mutation-verified:** restoring the hardcoded `scribe.md` gives 4 failures,
+detecting both the wrong card and the missing refusal path.
+
+Three frames' worth of guides declaring the pinned card authoritative in their
+packets is no longer necessary.
