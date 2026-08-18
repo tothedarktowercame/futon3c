@@ -128,3 +128,39 @@
     (is (= "analyst-3" (:analyst-seat body)))
     (is (= :claude (:type roster)))
     (is (true? (:invoke-ready? roster)))))
+
+(deftest mint-http-routes-thread-optional-model-without-changing-absent-input
+  (let [prepared (atom [])
+        prepare-seat (fn [seat]
+                       (swap! prepared conj seat)
+                       {:invoke-fn (fn [_prompt _session-id]
+                                     {:result (:model seat) :session-id nil})})
+        handler (http/make-handler {:frame-seat-prepare-fn prepare-seat})
+        post! (fn [uri payload]
+                (handler {:request-method :post
+                          :uri uri
+                          :body (java.io.ByteArrayInputStream.
+                                 (.getBytes (json/write-value-as-string payload)
+                                            "UTF-8"))}))]
+    (is (= 200 (:status (post! "/api/alpha/frames/mint-seats"
+                               {:frame-id "model-frame"
+                                :model "requested-model"}))))
+    (is (= 200 (:status (post! "/api/alpha/frames/mint-seats"
+                               {:frame-id "default-frame"}))))
+    (is (= 200 (:status (post! "/api/alpha/frames/mint-analyst"
+                               {:tenure 11 :model "requested-model"}))))
+    (is (= 200 (:status (post! "/api/alpha/frames/mint-analyst"
+                               {:tenure 12}))))
+    (let [by-id (into {} (map (juxt :agent-id identity)) @prepared)]
+      (is (= "requested-model" (:model (get by-id "model-frame-guide"))))
+      (is (= "requested-model" (:model (get by-id "analyst-11"))))
+      (is (= {:agent-id "default-frame-guide" :agent-type :claude}
+             (get by-id "default-frame-guide")))
+      (is (= {:agent-id "analyst-12" :agent-type :claude}
+             (get by-id "analyst-12")))
+      (is (= "requested-model"
+             (:result ((:agent/invoke-fn (registry/get-agent "model-frame-guide"))
+                       "probe" nil))))
+      (is (nil? (:result ((:agent/invoke-fn (registry/get-agent
+                                             "default-frame-guide"))
+                          "probe" nil)))))))

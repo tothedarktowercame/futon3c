@@ -24,11 +24,12 @@
   (get-in (registry/registry-status) [:agents agent-id]))
 
 (defn- mint-one!
-  [prepare-seat-fn frame-id [registration-key suffix agent-type]]
+  [prepare-seat-fn model frame-id [registration-key suffix agent-type]]
   (let [agent-id (str frame-id "-" suffix)]
     (when-not (registry/get-agent agent-id)
       (let [{:keys [invoke-fn session-reset-fn metadata] :as prepared}
-            (prepare-seat-fn {:agent-id agent-id :agent-type agent-type})]
+            (prepare-seat-fn (cond-> {:agent-id agent-id :agent-type agent-type}
+                               model (assoc :model model)))]
         (if-not (fn? invoke-fn)
           {:finding :seat-not-invoke-ready
            :seat registration-key
@@ -63,7 +64,7 @@
 
    Existing deterministic identities make the operation idempotent.  A seat
    map is returned only when every identity is roster-visible and invoke-ready."
-  [{:keys [prepare-seat-fn]} frame-id]
+  [{:keys [prepare-seat-fn model]} frame-id]
   (let [frame-id (some-> frame-id str str/trim not-empty)]
     (cond
       (nil? frame-id)
@@ -80,7 +81,7 @@
       (locking mint-lock
         (let [seats (seat-map frame-id)
               findings
-              (into [] (keep (partial mint-one! prepare-seat-fn frame-id)) seat-specs)
+              (into [] (keep (partial mint-one! prepare-seat-fn model frame-id)) seat-specs)
               readiness-findings
               (->> seat-specs
                    (keep (fn [[registration-key suffix agent-type]]
@@ -118,7 +119,7 @@
    An existing identity is returned without calling PREPARE-SEAT-FN. This is
    the idempotency boundary: re-minting an active tenure never resets or
    deletes its Analyst session."
-  [{:keys [prepare-seat-fn]} tenure]
+  [{:keys [prepare-seat-fn model]} tenure]
   (cond
     (not (and (integer? tenure) (pos? tenure)))
     {:ok false
@@ -147,7 +148,8 @@
 
               :else
               (let [{:keys [invoke-fn session-reset-fn metadata] :as prepared}
-                    (prepare-seat-fn {:agent-id agent-id :agent-type :claude})]
+                    (prepare-seat-fn (cond-> {:agent-id agent-id :agent-type :claude}
+                                       model (assoc :model model)))]
                 (if-not (fn? invoke-fn)
                   {:finding :seat-not-invoke-ready
                    :agent-id agent-id

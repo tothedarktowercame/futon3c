@@ -2530,7 +2530,7 @@
       nil)))
 
 (defn- prepare-frame-seat
-  [config {:keys [agent-id agent-type]}]
+  [config {:keys [agent-id agent-type model]}]
   (let [session-file (default-session-file-for-agent agent-type agent-id)
         stale-file (some-> session-file java.io.File.)]
     ;; A newly minted identity must not inherit an orphaned session left by an
@@ -2544,21 +2544,25 @@
       (let [session-id-atom (make-session-id-atom nil session-file)]
         {:invoke-fn (make-local-agent-invoke-fn
                      agent-type
-                     {:agent-id agent-id
-                      :session-file session-file
-                      :session-id-atom session-id-atom
-                      :evidence-store (evidence-store-for-config config)
-                      :irc-send-fn (:irc-send-fn config)})
+                     (cond-> {:agent-id agent-id
+                              :session-file session-file
+                              :session-id-atom session-id-atom
+                              :evidence-store (evidence-store-for-config config)
+                              :irc-send-fn (:irc-send-fn config)}
+                       model (assoc :model model)))
          :session-reset-fn (make-session-reset-fn session-file session-id-atom)
          :metadata {:session-file session-file}}))))
 
 (defn mint-frame-seats!
   "Mint the five fresh, invoke-ready Agency seats for FRAME-ID."
-  [config frame-id]
-  (frame-seats/mint-seats!
-   {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
-                         (partial prepare-frame-seat config))}
-   frame-id))
+  ([config frame-id]
+   (mint-frame-seats! config frame-id nil))
+  ([config frame-id model]
+   (frame-seats/mint-seats!
+    (cond-> {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
+                                  (partial prepare-frame-seat config))}
+      model (assoc :model model))
+    frame-id)))
 
 (defn- handle-frame-seat-mint
   [request config]
@@ -2567,16 +2571,20 @@
       (json-response 400 {:ok false :error "invalid-json"})
       (let [result (mint-frame-seats!
                     config
-                    (or (:frame-id payload) (get payload "frame-id")))]
+                    (or (:frame-id payload) (get payload "frame-id"))
+                    (or (:model payload) (get payload "model")))]
         (json-response (if (:ok result) 200 409) result)))))
 
 (defn mint-analyst-seat!
   "Mint the fresh, invoke-ready Agency Analyst for TENURE."
-  [config tenure]
-  (frame-seats/mint-analyst!
-   {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
-                         (partial prepare-frame-seat config))}
-   tenure))
+  ([config tenure]
+   (mint-analyst-seat! config tenure nil))
+  ([config tenure model]
+   (frame-seats/mint-analyst!
+    (cond-> {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
+                                  (partial prepare-frame-seat config))}
+      model (assoc :model model))
+    tenure)))
 
 (defn- handle-analyst-seat-mint
   [request config]
@@ -2585,7 +2593,8 @@
       (json-response 400 {:ok false :error "invalid-json"})
       (let [result (mint-analyst-seat!
                     config
-                    (or (:tenure payload) (get payload "tenure")))]
+                    (or (:tenure payload) (get payload "tenure"))
+                    (or (:model payload) (get payload "model")))]
         (json-response (if (:ok result) 200 409) result)))))
 
 (defn- remote-home-refusal-response
