@@ -538,6 +538,22 @@
     (catch Throwable t
       (failure handle :record-students-threw (.getMessage t)))))
 
+(defn write-uses!
+  "Disposition every memory offer recorded by this cycle."
+  [handle]
+  (try
+    (reduce (fn [h offer-id]
+              (if (false? (:ok h))
+                (reduced h)
+                (:handle (saved-step h :write-use [{:offer-id offer-id}]))))
+            handle
+            (->> (get-in handle [:state :cycle/outputs :memory-offers])
+                 (keep :offer/id)
+                 distinct
+                 vec))
+    (catch Throwable t
+      (failure handle :write-uses-threw (.getMessage t)))))
+
 (defn adjudicate! [handle disposition]
   (try
     (let [promotions (vec (or (:promotion-result disposition) []))

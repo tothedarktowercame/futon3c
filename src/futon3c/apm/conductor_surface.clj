@@ -5,17 +5,18 @@
             [futon3c.apm.conductor-binding :as binding]))
 
 (def ^:private operations
-  {:dispatch-solver conductor/dispatch-solver!
-   :guide-solver conductor/guide-solver!
-   :dispatch-student conductor/dispatch-student!
-   :dispatch-scribe conductor/dispatch-scribe!
-   :promote-artifact conductor/promote-artifact!
-   :record-scribe-lanes conductor/record-scribe-lanes!
-   :record-solver-attempt conductor/record-solver-attempt!
-   :deposit conductor/deposit!
-   :record-students conductor/record-students!
-   :adjudicate conductor/adjudicate!
-   :close conductor/close!})
+  {:dispatch-solver #'conductor/dispatch-solver!
+   :guide-solver #'conductor/guide-solver!
+   :dispatch-student #'conductor/dispatch-student!
+   :dispatch-scribe #'conductor/dispatch-scribe!
+   :promote-artifact #'conductor/promote-artifact!
+   :record-scribe-lanes #'conductor/record-scribe-lanes!
+   :record-solver-attempt #'conductor/record-solver-attempt!
+   :deposit #'conductor/deposit!
+   :record-students #'conductor/record-students!
+   :write-use #'conductor/write-uses!
+   :adjudicate #'conductor/adjudicate!
+   :close #'conductor/close!})
 
 (defn- normalize-operation [operation]
   (cond

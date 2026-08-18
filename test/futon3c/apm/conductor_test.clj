@@ -676,13 +676,29 @@
                           [{:mission "M-test"} "student"])))
         (is (:ok (action! "a-students" :record-students
                           [[(student-attempt)] []])))
+        (let [used (action! "a-write-use" :write-use [])
+              state (get-in @(:handle (binding/lookup agent-id session-id))
+                            [:state])]
+          (is (:ok used) (pr-str used))
+          (is (= (mapv :offer/id
+                       (get-in state [:cycle/outputs :memory-offers]))
+                 (->> (:steps state)
+                      (filter #(= :write-use (:tool %)))
+                      (mapv #(get-in % [:result :use/offer]))))
+              "the conductor dispositions every recorded offer through the surface"))
         (let [adjudicated (action! "a-adjudicate" :adjudicate
                                    [{:outcome :tier-a :residual-sorries 1
                                      :axiom-clean? false :promotion-result []}])]
           (is (:ok adjudicated) (pr-str adjudicated))
           (is (= "promote" (:phase adjudicated))))
-        (let [closed (action! "a-close" :close [])]
-          (is (:ok closed) (pr-str closed)))
+        (let [authoritative (:handle (binding/lookup agent-id session-id))
+              closed (action! "a-close" :close [])
+              trace (->> (get-in @authoritative [:state :steps])
+                         (filter #(= :emit-trace (:tool %)))
+                         last :result :trace)]
+          (is (:ok closed) (pr-str closed))
+          (is (pos? (count (:memory-disposition-offer-ids trace)))
+              "the emitted trace records dispositioned offer ids"))
         (is (= false (:bound? (status! agent-id session-id))))
         (is (= :conductor-session-unbound
                (:error/code
