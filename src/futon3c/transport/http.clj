@@ -2570,6 +2570,24 @@
                     (or (:frame-id payload) (get payload "frame-id")))]
         (json-response (if (:ok result) 200 409) result)))))
 
+(defn mint-analyst-seat!
+  "Mint the fresh, invoke-ready Agency Analyst for TENURE."
+  [config tenure]
+  (frame-seats/mint-analyst!
+   {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
+                         (partial prepare-frame-seat config))}
+   tenure))
+
+(defn- handle-analyst-seat-mint
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not payload
+      (json-response 400 {:ok false :error "invalid-json"})
+      (let [result (mint-analyst-seat!
+                    config
+                    (or (:tenure payload) (get payload "tenure")))]
+        (json-response (if (:ok result) 200 409) result)))))
+
 (defn- remote-home-refusal-response
   [agent-id]
   (json-response 409 {:ok false
@@ -7249,6 +7267,9 @@
 
           (and (= :post method) (= "/api/alpha/frames/mint-seats" uri))
           (handle-frame-seat-mint request config)
+
+          (and (= :post method) (= "/api/alpha/frames/mint-analyst" uri))
+          (handle-analyst-seat-mint request config)
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")

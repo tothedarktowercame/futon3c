@@ -111,3 +111,77 @@
             {:ok true
              :frame-id frame-id
              :seats seats}))))))
+
+(defn mint-analyst!
+  "Register the fresh, locally invocable Analyst identity for TENURE.
+
+   An existing identity is returned without calling PREPARE-SEAT-FN. This is
+   the idempotency boundary: re-minting an active tenure never resets or
+   deletes its Analyst session."
+  [{:keys [prepare-seat-fn]} tenure]
+  (cond
+    (not (and (integer? tenure) (pos? tenure)))
+    {:ok false
+     :error :invalid-tenure
+     :findings [{:finding :invalid-tenure :tenure tenure}]}
+
+    (not (fn? prepare-seat-fn))
+    {:ok false
+     :error :missing-seat-preparer
+     :findings [{:finding :missing-seat-preparer}]}
+
+    :else
+    (locking mint-lock
+      (let [agent-id (str "analyst-" tenure)
+            existing (registry/get-agent agent-id)
+            finding
+            (cond
+              (and existing (not= :claude (:agent/type existing)))
+              {:finding :seat-type-mismatch
+               :agent-id agent-id
+               :expected-type :claude
+               :actual-type (:agent/type existing)}
+
+              existing
+              nil
+
+              :else
+              (let [{:keys [invoke-fn session-reset-fn metadata] :as prepared}
+                    (prepare-seat-fn {:agent-id agent-id :agent-type :claude})]
+                (if-not (fn? invoke-fn)
+                  {:finding :seat-not-invoke-ready
+                   :agent-id agent-id
+                   :agent-type :claude
+                   :detail (dissoc prepared :invoke-fn :session-reset-fn)}
+                  (let [registered
+                        (registry/register-agent!
+                         {:agent-id {:id/value agent-id :id/type :continuity}
+                          :type :claude
+                          :invoke-fn invoke-fn
+                          :session-reset-fn session-reset-fn
+                          :capabilities [:explore :edit :test :coordination/execute]
+                          :metadata (merge {:analyst-tenure tenure
+                                            :fresh-session? true}
+                                           metadata)})]
+                    (when (and (map? registered) (= false (:ok registered)))
+                      {:finding :seat-registration-failed
+                       :agent-id agent-id
+                       :agent-type :claude
+                       :detail registered})))))
+            info (readiness agent-id)
+            readiness-finding
+            (when (and (nil? finding) (not (true? (:invoke-ready? info))))
+              {:finding :seat-not-invoke-ready
+               :agent-id agent-id
+               :agent-type :claude
+               :diagnostic (:invoke-diagnostic info)})
+            findings (cond-> [] finding (conj finding)
+                                      readiness-finding (conj readiness-finding))]
+        (if (seq findings)
+          {:ok false
+           :error :analyst-mint-incomplete
+           :tenure tenure
+           :findings findings}
+          {:ok true
+           :tenure tenure
+           :analyst-seat agent-id})))))

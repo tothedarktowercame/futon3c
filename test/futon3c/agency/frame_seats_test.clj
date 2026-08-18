@@ -49,6 +49,41 @@
     (is (= 5 @calls))
     (is (= 5 (count (registry/registered-agents))))))
 
+(deftest mint-registers-tenure-scoped-analyst
+  (let [calls (atom [])
+        result (frame-seats/mint-analyst!
+                {:prepare-seat-fn (fn [seat]
+                                    (swap! calls conj seat)
+                                    (ready-seat seat))}
+                1)
+        agent (registry/get-agent "analyst-1")
+        roster (get-in (registry/registry-status) [:agents "analyst-1"])]
+    (is (= {:ok true :tenure 1 :analyst-seat "analyst-1"} result))
+    (is (= [{:agent-id "analyst-1" :agent-type :claude}] @calls))
+    (is (= :claude (:agent/type agent)))
+    (is (true? (:invoke-ready? roster)))
+    (is (true? (get-in agent [:agent/metadata :fresh-session?])))))
+
+(deftest analyst-remint-preserves-live-session
+  (let [calls (atom 0)
+        resets (atom 0)
+        opts {:prepare-seat-fn
+              (fn [seat]
+                (swap! calls inc)
+                (assoc (ready-seat seat)
+                       :session-reset-fn #(swap! resets inc)))}
+        first-result (frame-seats/mint-analyst! opts 7)]
+    (registry/update-agent! "analyst-7"
+                            {:agent/session-id "live-tenure-session"
+                             :agent/status :invoking})
+    (let [second-result (frame-seats/mint-analyst! opts 7)
+          analyst (registry/get-agent "analyst-7")]
+      (is (= first-result second-result))
+      (is (= 1 @calls))
+      (is (zero? @resets))
+      (is (= "live-tenure-session" (:agent/session-id analyst)))
+      (is (= :invoking (:agent/status analyst))))))
+
 (deftest non-invocable-seat-is-a-structured-finding
   (let [result
         (frame-seats/mint-seats!
@@ -78,3 +113,18 @@
     (is (true? (:ok body)))
     (is (= "http-frame-solver" (get-in body [:seats :reg/solver-seat])))
     (is (= 5 (count (:seats body))))))
+
+(deftest mint-analyst-http-route
+  (let [handler (http/make-handler {:frame-seat-prepare-fn ready-seat})
+        response (handler {:request-method :post
+                           :uri "/api/alpha/frames/mint-analyst"
+                           :body (java.io.ByteArrayInputStream.
+                                  (.getBytes (json/write-value-as-string
+                                              {:tenure 3})
+                                             "UTF-8"))})
+        body (json/read-value (:body response) json/keyword-keys-object-mapper)
+        roster (get-in (registry/registry-status) [:agents "analyst-3"])]
+    (is (= 200 (:status response)))
+    (is (= "analyst-3" (:analyst-seat body)))
+    (is (= :claude (:type roster)))
+    (is (true? (:invoke-ready? roster)))))
