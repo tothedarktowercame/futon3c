@@ -305,25 +305,36 @@ disagreement rather than one side of it.
 
 ---
 
-## D49 — the registration's declared harness revision is never checked against the harness [verified]
+## D49 — WITHDRAWN, then restated narrowly [corrected]
 
-f12, f13 and f14 all declared `:reg/harness-revision e6721ca0…` (2026-08-18
-17:54). The recall read-path fix landed after that and moved the pin:
+**As first written this was wrong and I am striking it.** I recorded that
+"nobody compares `:reg/harness-revision` with the live pin". That check exists:
+`conductor_open.clj:48-69` `harness-pin-check` is three-way and refuses
+`:harness-image-revision-unknown`, `:harness-image-pin-mismatch` (pinned vs the
+LOADED IMAGE) and `:harness-pin-stale` (pinned vs measured git).
 
-    d893280a 2026-08-19T06:36  Demote recall anchor to ranking boost
-    10937528 2026-08-19T06:51  Anchor receipts record the population the df was computed against
+So f12 is clean on this axis, not dirty. The JVM booted 2026-08-19 06:12:40 (all
+frame seats carry a 06:12:52 registered-at). At that moment the pin WAS
+`e6721ca0`; `d893280a` (06:36) and `10937528` (06:51) landed after. f12 opened
+with all three revisions in agreement and ran the image its registration named.
 
-f12's solver was first active at 07:20. **f12 therefore ran on harness code its
-own registration did not name, and nothing anywhere reported it.** The f12
-envelope carries no pin failure. `cfc275a0` (my D30 fix) verifies the pin against
-the LOADED IMAGE; `preregistration.clj` verifies `:lean-revision` against the
-Lean checkout. Nobody compares `:reg/harness-revision` with
-`git log -1 --format=%H -- src scripts deps.edn`. The gap is exactly the one that
-matters: a registration can name any harness it likes.
+**What is true, and is the real finding: the recall read-path fix has never
+executed.** It landed 24 and 39 minutes after the JVM that ran f12 started, so
+f12's every-dispatch `completed-empty` recall came from the OLD hard-AND path.
+The fix is in git and has never been in an image.
 
-Not fixed. Needs a check at `open` that refuses a registration whose declared
-harness revision is not the live pin, with an explicit override that records the
-divergence rather than hiding it.
+**What remains as a defect, narrowly:** `harness-pin-check` runs at `open` only.
+A frame that opens clean and then has its tree move underneath it — which is
+exactly what happened to f12 between 06:12 and 07:20 — has no later checkpoint.
+The image did not change, so f12's RESULT is sound; but the frame record does
+not distinguish "the tree matched throughout" from "the tree moved and the image
+saved us". A close-time re-measure would.
+
+**Consequence for f13, and it is a gate:** `807935f4` re-pins f13/f14 to
+`10937528`. The loaded image is still `e6721ca0`. `open` will therefore REFUSE
+f13 with `:harness-image-pin-mismatch` — correctly. **f13 cannot launch until the
+JVM is restarted.** After a restart, f13 becomes the first frame in the series
+whose recall path is the fixed one.
 
 ## D50 — the batch registrations were copied from f12 and not re-edited [verified, MINE, FIXED]
 
