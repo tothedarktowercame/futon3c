@@ -572,10 +572,6 @@ else:
       fi
     fi
 
-    if [[ -z "${sid}" ]]; then
-      sid="$(latest_session_id || true)"
-    fi
-
     if [[ -n "${sid}" ]]; then
       printf '%s' "${sid}" > "${session_file}"
       echo "Opening Emacs Codex REPL (session ${sid})."

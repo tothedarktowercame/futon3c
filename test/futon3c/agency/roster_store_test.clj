@@ -177,8 +177,29 @@
     (is (= 1 (:attempted r1)))
     (is (= 1 (:restored r1)))
     (is (= 1 (:restored r2)))
+    (is (empty? (:session-collisions r1)))
     (is (= ["codex-replay"] (sort (keys @registered))))
     (is (true? (get-in @registered ["codex-replay" :restored-detached?])))))
+
+(deftest restore-on-boot-refuses-every-alias-in-a-session-collision
+  (spit (roster/roster-store-path)
+        (pr-str {:version 1
+                 :agents [{:agent-id "codex-1" :type :codex :session-id "shared"}
+                          {:agent-id "codex-3" :type :codex :session-id "shared"}
+                          {:agent-id "codex-4" :type :codex :session-id "distinct"}]}))
+  (System/setProperty "FUTON3C_AGENT_RESTORE" "true")
+  (let [restored (atom [])
+        report (roster/restore-on-boot!
+                (fn [payload]
+                  (swap! restored conj (:agent-id payload))
+                  {:ok true :agent-id (:agent-id payload)}))]
+    (is (= ["codex-4"] @restored))
+    (is (= 3 (:attempted report)))
+    (is (= 1 (:restored report)))
+    (is (= [{:session-id "shared" :agent-ids ["codex-1" "codex-3"]}]
+           (:session-collisions report)))
+    (is (= ["session-collision" "session-collision" nil]
+           (mapv :err (:results report))))))
 
 (deftest restored-agent-is-detached-not-falsely-idle
   (let [handler (make-handler)

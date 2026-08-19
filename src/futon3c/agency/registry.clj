@@ -160,6 +160,16 @@
 
 (defn- now [] (Instant/now))
 
+(defn- session-owner
+  "Return the id of another agent that already owns SESSION-ID, if any."
+  [registry agent-id session-id]
+  (when session-id
+    (some (fn [[other-id agent]]
+            (when (and (not= other-id agent-id)
+                       (= session-id (:agent/session-id agent)))
+              other-id))
+          registry)))
+
 (defn- activity-quiet-ms
   "Milliseconds since AT — how long an invoking lane has been silent.
 
@@ -512,8 +522,18 @@
                                     (str "Agent already registered: " aid-val)
                                     :existing-id aid-val)})
                    m)
-               (do (reset! result agent-record)
-                   (assoc m aid-val agent-record)))))
+               (if-let [owner (session-owner m aid-val session-id)]
+                 (do (reset! result
+                             {:ok false
+                              :error (make-social-error
+                                      :session-already-owned
+                                      (str "Session already owned by " owner)
+                                      :agent-id aid-val
+                                      :session-id session-id
+                                      :owner-id owner)})
+                     m)
+                 (do (reset! result agent-record)
+                     (assoc m aid-val agent-record))))))
     (let [r @result]
       ;; Fire on-register hook asynchronously for federation announcement
       (when (and (map? r) (:agent/id r))
@@ -571,9 +591,22 @@
                ;; Auto-touch unless the caller supplies :agent/last-active
                ;; explicitly (federation proxies mirror the REMOTE'S value —
                ;; stamping sync time made every proxy reset to idle-0 each cycle).
-               (let [updated (merge agent {:agent/last-active (now)} updates)]
-                 (reset! result updated)
-                 (assoc m aid-val updated))
+               (let [next-session-id (if (contains? updates :agent/session-id)
+                                       (:agent/session-id updates)
+                                       (:agent/session-id agent))]
+                 (if-let [owner (session-owner m aid-val next-session-id)]
+                   (do (reset! result
+                               {:ok false
+                                :error (make-social-error
+                                        :session-already-owned
+                                        (str "Session already owned by " owner)
+                                        :agent-id aid-val
+                                        :session-id next-session-id
+                                        :owner-id owner)})
+                       m)
+                   (let [updated (merge agent {:agent/last-active (now)} updates)]
+                     (reset! result updated)
+                     (assoc m aid-val updated))))
                (do (reset! result
                            {:ok false
                             :error (make-social-error
