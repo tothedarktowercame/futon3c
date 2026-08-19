@@ -935,4 +935,156 @@
    with author != reviewer holding. Trace failures 6 -> 5 for a real reason this time. Against
    that: D5 has regressed on the student's domain, two refusals left no receipt, and the trace
    has now been wrong about what the student did in three consecutive frames."
-  :defects-found 5 :defects-fixed-or-queued 1}]
+  :defects-found 5 :defects-fixed-or-queued 1}
+
+ ;; ===========================================================================
+ ;; FRAME 13 — m99J06 — HALTED AND VOID
+ ;; ===========================================================================
+ {:frame 13
+  :problem "m99J06"
+  :closed false
+  :halted true
+  :void true
+  :void-reason
+  "PROTOCOL-defective-problem.md, ruled by Joe 2026-08-19: a flaw in the problem
+   stops the line. apm_m99J06_H01Model is provably UNINHABITED for every H
+   (theorem apm_m99J06_H01Model_isEmpty, axiom-clean, commit 25186f29 on
+   exp/frame-13-m99J06-solver). The frame stopped at v21 :promote-solver. NO
+   student was dispatched, nothing was adjudicated through the machine, and the
+   cycle was never advanced to :close. This entry is a report, not a close."
+  :disposition :defective
+  :repairable true
+  :repair
+  "realizes stops pinning val where nothing observes it. Three options, ranked by
+   f13-guide and confirmed by ground control:
+   (a) val : H -> apm_m99J06_L2 -- IMPOSSIBLE. isH01Pair demands
+       AbsolutelyContinuousOnInterval and u 0 = 0, u 1 = 0; none is
+       a.e.-invariant, and an endpoint IS a null set. The original repair
+       stopped at weakDeriv for this reason, not by oversight.
+   (b) val w =ᵐ[apm_m99J06_intervalMeasure] u -- SOUND. Shipped as 7d5f934 on
+       repair/m99J06-val-ae. Trace survives via represents.
+   (c) Set.EqOn (val w) u (Icc 0 1) -- PREFERRED. Keeps the endpoints pointwise
+       (0, 1 in Icc 0 1), so the surjectivity claim carries its own boundary
+       condition."
+  :requeue-caveat
+  "THE REPAIR MAKES A MODEL POSSIBLE, IT DOES NOT EXHIBIT ONE. Reached
+   independently by f13-guide and ground control. m99J06 must be requeued with a
+   CONSTRUCTION TARGET -- build H01(0,1) as a Hilbert space and produce an actual
+   apm_m99J06_H01Model term -- or the next frame is entitled to close it
+   vacuously for a new reason. The anti-vacuity clause must attach to the
+   requeued PROBLEM, not only to definitions a solver introduces."
+
+  ;; --- predictions: adjudicated by f13-guide, verified by ground control ----
+  :predictions
+  [{:id :problem-closed-on-artifact :verdict :confirmed
+    :evidence "Re-run by ground control in the worktree, not taken from report:
+               lake env lean exit 0, zero sorry, #print axioms
+               [propext, Classical.choice, Quot.sound] for both apm_m99j06 and
+               apm_m99J06_H01Model_isEmpty on a /tmp copy with the repo
+               untouched, frozen block byte-identical to the pin (21 lines), the
+               only deletion in the whole frame is `sorry`, and the close is
+               `exact isEmptyElim M` against the REAL apm_m99J06_H01Model with
+               the test_ copy deleted."}
+   {:id :problem-solved :verdict :refuted
+    :evidence "The model is provably empty. Nothing about Galerkin approximation
+               in H01(0,1) was established. THE PAIR IS THE FINDING: neither
+               verdict may be quoted without the disposition."}
+   {:id :memory-contributes-to-close :verdict :confirmed
+    :evidence "FIRST IN THE SERIES, WITH ATTESTATION. Solver returned per-id
+               disposition over all five surfaced memories unprompted:
+               USED e-1b72bb47 (propagate-local-api-mismatches-to-global-theorem-
+               semantics) and USED e-7c6631c9 (audit-elaborated-regularity-
+               semantics-before-proof-search), both authored by f12-scribe from
+               f12's harvest; three IGNORED with stated reasons. f12 promoted
+               them, f13 recall surfaced them, f13's solver used them to reach
+               its result. The accumulate -> surface -> use loop, closed."}
+   {:id :reviewed-attachment-gained :verdict :confirmed
+    :evidence "e-62615b79 -> :attachment-status :reviewed, patterns
+               [math-strategy/structural-obstruction-as-theorem], reviewer
+               f13-guide, review evidence e-1044dc37. Guide-reviewed, NOT
+               independent -- exactly the qualified form the prediction names."}
+   {:id :scribe-card-pinned-resolves :verdict :confirmed
+    :evidence "scribe-card-path -> role-cards/scribe-v2.md; git rev-parse
+               HEAD:<path> = 02441d9d = the pinned blob. Machine-resolved, no
+               guide declaration."}
+   {:id :refusals-are-traceable :verdict :confirmed-with-caveat
+    :evidence "All four promote-artifact refusals are in :cycle/action-refusals
+               with action-id, tool and args. Every one reads :error/message
+               'Tool execution failed' -- the trace records THAT, never WHY
+               (D43)."}
+   {:id :guidance-count-exact :verdict :confirmed-at-observable-layer
+    :evidence ":ground-control-events []; zero guidance bells sent. 0 recorded =
+               0 sent. The derived measurement field is a :close output and was
+               not reached."}
+   {:id :cascade-seeds-from-recall :verdict :confirmed
+    :evidence "Offers 0-4 are :offer/route :leaf, :offer/hops 0 on exactly the
+               five recall-surfaced ids; the remaining 100 expand from them. Not
+               the touch-set."}
+   {:id :offer-disposition-populated :verdict :not-reached
+    :evidence ":write-use is available only at :adjudicate (problem.clj:56) and
+               the halt precedes it. NOT REFUTED -- unreachable by the halt, and
+               it must not be scored as a failure. This is a cost of the
+               stop-the-line protocol, not a result."}
+   {:id :student-memory-promotable :verdict :inapplicable
+    :evidence "Student never dispatched. The prediction's own text says a frame
+               where it records nothing neither confirms nor refutes."}
+   {:id :analyst-survives-two-frames :verdict :inapplicable
+    :evidence "D56. The prediction text names analyst-2, who is not seated;
+               analyst-3 is at tenure 1 of 2 and owes succession at f14. There is
+               no reading f13 could satisfy or refute. Prediction text defective;
+               f13's registration stays frozen."}]
+
+  :cascade {:patterns-per-problem 2 :cap 100 :truncated? true
+            :expanded-available 128
+            :note "28 OFFERS DROPPED BY THE CAP. Said out loud rather than left
+                   implicit in a truncation flag."}
+
+  :read-path
+  "THE OR-JOIN FIRED; THE QUERY DID NOT. The extractor found sobolev, galerkin,
+   riesz, inner_eq, apm_m99j06_h01model. The query issued was
+   'finding OR equality OR clause OR strong'. Two causes: default-query-term-limit
+   is 4 (line 21) and the three-source round-robin puts galerkin at position 5, so
+   the cap truncates one slot before every distinctive term; and text-keywords
+   orders each source by PROBLEM-CORPUS IDF, which against a corpus of mathematics
+   ranks prose words rarest -- line 424's own comment already names this inversion.
+   One memory arrived by :content-match, ranked 27th of 30 in a seed where 27 hits
+   were coordination chatter; the cascade delivered the other four.
+   AND: neither anchor-df-band NOR 6bfe5808 (scoped df) was ever on the path --
+   query-anchor-term-memory-df runs only under --anchor-source memory-df, and the
+   default is :problem-idf. The wave-2 rung would not have repaired this dispatch
+   either: memory-df changes required-term, the ranking anchor, and the damage is
+   in the QUERY. Ground control had claimed both read-path fixes were visible in
+   this dispatch; one was."
+
+  :defects-found 6
+  :defects "D57 parked-listing, D58 mode-less cycle opens, D59 m99J06 encoding
+            (corrected: the half-repair was principled), D60 the query is prose
+            junk, D61 hand park upserts the engine's, D62 promotion is non-atomic
+            and poisons on failure. Plus: :promotion-result is harvested into
+            cycle outputs ONLY by dispatch-student! (conductor.clj:504-509), so
+            halting before the student LOSES the record of promotions that did
+            land -- the store is correct and the trace will under-report. That is
+            a cost the stop-the-line protocol creates and the machine does not
+            yet handle."
+
+  :retractions
+  "f13-guide retracted two of its own findings unprompted: 'the engine-owned park
+   did not fire' (wrong -- v10.edn carried :park/id at dispatch time; D57 masked
+   it) and 'the promotion gate is broken' (wrong -- promotion 4 went end to end).
+   Ground control made the same park inference twice and over-claimed the
+   read-path result. Both are recorded because a series that hides its
+   retractions cannot be audited."
+
+  :headline
+  "The problem was defective and the line stopped -- the first frame run under
+   the stop-the-line protocol. m99J06's model is provably uninhabited: realizes
+   pins val pointwise on all of R while inner_eq observes it only on [0,1], and
+   the file's own docstring had already diagnosed exactly this bug and repaired
+   it for weakDeriv alone, for the principled reason that val carries the trace.
+   THE FRAME IS VOID FOR SOLVING AND ITS INSTRUMENT FINDINGS STAND: the
+   accumulate -> surface -> use loop closed for the first time in the series,
+   attested per-id by the solver over all five surfaced memories, with both USED
+   memories authored by f12's scribe. Three consecutive frames have now found
+   three defective formalisations by three different mechanisms, each of which
+   compiled and each of which survived a superficial audit -- which is the
+   argument for making proof attempts cheap rather than for auditing harder."}]

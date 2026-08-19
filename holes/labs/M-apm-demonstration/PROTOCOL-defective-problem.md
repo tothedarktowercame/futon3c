@@ -76,3 +76,33 @@ it is not small. Every frame drawn from it is a coin flip between measuring the
 machine and finding a broken formalisation. A formalisation audit is therefore
 not housekeeping; it is the precondition for the series measuring what it claims
 to measure.
+
+
+## A cost the protocol creates, found by running it once (f13-guide, 2026-08-19)
+
+`:promotion-result` is harvested into cycle outputs **only by `dispatch-student!`**
+(`conductor.clj:504-509`). So a frame that halts before the student **loses the
+trace record of promotions that actually landed.** The store is correct — the
+memory is there, `:reviewed`, with its review evidence — but the cycle trace
+under-reports the frame's gain, and an Analyst reading only the trace would score
+`:reviewed-attachment-gained` as unearned.
+
+This is not a pre-existing defect. **Stopping the line created it**, because the
+harvest was written on the assumption that every frame reaches the student. Any
+frame halted under this protocol must therefore carry its promotion record in the
+halt REPORT, and the series entry must take it from there rather than from the
+trace. f13's does.
+
+Fixing it properly means moving the harvest to the promotion itself rather than
+to the student dispatch. Queued.
+
+## Scoring rule: `:not-reached` is not `:refuted`
+
+A halt makes some predictions unreachable. f13's `:offer-disposition-populated`
+is the case: `:write-use` is available only at `:adjudicate` (`problem.clj:56`),
+which the halt precedes.
+
+**An unreachable prediction is scored `:not-reached` and never `:refuted`.**
+Refuting it would charge the protocol's cost to the machine's capability, and the
+series would show the apparatus getting worse each time we correctly stopped a
+frame early.

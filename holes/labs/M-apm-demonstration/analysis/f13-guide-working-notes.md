@@ -366,3 +366,55 @@ What stands regardless of the cause:
   half-applied one. That is the part that turns a retryable blip into lost work.
 
 I retract "the promotion gate is broken" from my previous report. It is not.
+
+## HALT (operator, via claude-2) — frozen at v21 `:promote-solver`
+
+No student dispatch, no advance, no adjudicate/promote/close. State frozen at
+version 21, phase `:promote-solver`.
+
+### Evidence gathered for adjudication BEFORE the halt
+
+- `:scribe-card-path "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"`.
+  `git rev-parse HEAD:<that path>` = `02441d9df4b8a05355790a51f1e535bf9e9465d4`
+  = the registration's `:reg/role-cards :scribe`. Machine-resolved by blob, no
+  guide declaration. **`:scribe-card-pinned-resolves` CONFIRMED.**
+- `:ground-control-events []`. I sent ZERO guidance bells. Recorded 0, true 0.
+- `:cycle/action-refusals` has **4** entries (the four `promote-artifact`
+  refusals), each with action-id, tool and an args diagnostic.
+  **`:refusals-are-traceable` CONFIRMED** — with the D43 caveat that every one
+  records `:error/message "Tool execution failed"` and not the reason.
+- **105 distinct memory offers**, all keyed to the solver dispatch job.
+  Offers 0-4 are `:offer/route :leaf, :offer/hops 0` on exactly the five
+  recall-surfaced ids; the rest expand from them. 5 offers are `:why-hop`.
+  Cascade measurements available: patterns-per-problem **2**, cascade-cap
+  **100**, `:offer/cascade-truncated? true`, cascade-expanded-available **128**
+  (so 28 offers were dropped by the cap).
+- `:promotion-result` is **absent from cycle outputs**. See defect below.
+
+### Store gain that IS real but is NOT in the cycle trace
+
+`e-62615b79-8ae2-470b-8b28-465dd87f50c7` is `:attachment-status :reviewed`,
+pattern `math-strategy/structural-obstruction-as-theorem`, reviewer f13-guide,
+review evidence `e-1044dc37-8ed8-4c37-9549-171448c9f6b7`,
+`:witness-status :independently-witnessed`. Verifiable directly in the store.
+
+But `:promotion-result` is only harvested into cycle outputs by
+`dispatch-student!` (conductor.clj:504-509 advances with
+`{:promotion-result (recorded-results state :promote-artifact)}`). Halting
+before the student therefore LOSES the cycle-output record of a promotion that
+did land. The store is right and the trace will under-report it.
+
+### In flight at halt, NOT promoted, awaiting a ruling
+
+Scribe pass 3 returned three VIRGIN memories (verified statusless/patternless
+by the scribe and re-checkable):
+- `e-d800ce7f-9f4b-4b36-a2e7-c8ffeddb0c92` — audit analytic observation domains
+  and equality semantics against literal representation equality
+- `e-b9a5385d-47f2-420b-955c-ccce623d9427` — repair BOTH sides of realization;
+  quotienting only the derivative data leaves the raw-value inconsistency
+- `e-39c6d8d5-3979-492c-9935-cd586c816edc` — treat a file's self-certified
+  encoding cleanliness as an audit hypothesis when nearby prose documents only
+  a partial repair
+
+The third was the scribe's own addition after I invited it to judge; it is the
+"Encoding questions: None" tell, generalised. I have NOT promoted them.
