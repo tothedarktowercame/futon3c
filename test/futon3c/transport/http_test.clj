@@ -203,11 +203,45 @@
                       {:query-string "agent=claude-1&session=sid&mode=all"} nil))
           body (json/parse-string (:body response) true)]
       (is (= [{:id "bg"
+               :agent "claude-1"
+               :session "sid"
+               :surface nil
                :awaiting ["job-1"]
                :deadline-ms 123
                :mode "background"}]
              (:parked body)))
       (is (false? (:more-pending body))))))
+
+(deftest parked-bare-operator-view-shows-all-outstanding-parks
+  (testing "GET /parked without an agent is the documented global visibility view"
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 parked-on/snapshot
+                                 (fn []
+                                   {:records
+                                    {"within" {:id "within"
+                                               :agent "claude-2"
+                                               :session "s2"
+                                               :surface "emacs-repl"
+                                               :awaiting #{"job-2"}
+                                               :deadline-ms 456
+                                               :mode :within-turn
+                                               :released? false}
+                                     "background" {:id "background"
+                                                   :agent "codex-3"
+                                                   :session "s3"
+                                                   :surface "bell"
+                                                   :awaiting #{"job-3"}
+                                                   :deadline-ms 789
+                                                   :mode :background
+                                                   :released? false}}})]
+                     ((var-get #'http/handle-parked) {} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 200 (:status response)))
+      (is (= #{["within" "claude-2" "s2" "emacs-repl" "within-turn"]
+               ["background" "codex-3" "s3" "bell" "background"]}
+             (set (map (juxt :id :agent :session :surface :mode)
+                       (:parked body)))))
+      (is (true? (:more-pending body))))))
 
 (deftest invoke-job-public-view-exposes-auto-bellback-decision
   (let [decision {:suppressed? true

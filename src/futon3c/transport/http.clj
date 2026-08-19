@@ -3932,17 +3932,24 @@
   (let [agent (req-query-param request "agent")
         session (req-query-param request "session")
         mode (req-query-param request "mode")
-        all-modes? (= "all" (some-> mode str/trim str/lower-case))
-        recs (when (and (parked-on-enabled?) agent)
+        operator-view? (str/blank? (str agent))
+        all-modes? (or operator-view?
+                       (= "all" (some-> mode str/trim str/lower-case)))
+        recs (when (parked-on-enabled?)
                (->> (vals (:records (parked-on/snapshot)))
-                    (filter (fn [r] (and (= (str (:agent r)) (str agent))
+                    (filter (fn [r] (and (or operator-view?
+                                                (= (str (:agent r)) (str agent)))
                                          (or (str/blank? (str session))
                                              (= (str (:session r)) (str session)))
                                          (not (:released? r))
                                          (or all-modes?
                                              (= (or (:mode r) :within-turn)
                                                 :within-turn)))))
-                    (mapv (fn [r] {:id (:id r) :awaiting (vec (:awaiting r))
+                    (mapv (fn [r] {:id (:id r)
+                                   :agent (:agent r)
+                                   :session (:session r)
+                                   :surface (:surface r)
+                                   :awaiting (vec (:awaiting r))
                                    :deadline-ms (:deadline-ms r)
                                    :mode (or (:mode r) :within-turn)}))))
         ;; A ready resume already in the inbox (dep completed, poller not yet fired)
@@ -3952,7 +3959,9 @@
                                                            :within-turn))
         within-turn-pending (some #(= (:mode %) :within-turn) recs)]
     (json-response 200 {:ok true :parked (vec (or recs []))
-                        :more-pending (boolean (or within-turn-pending inbox-pending))})))
+                        :more-pending (boolean (or (and operator-view? (seq recs))
+                                                   within-turn-pending
+                                                   inbox-pending))})))
 
 (defn- handle-park
   "POST /api/alpha/park — register a continuation (E-repl-continuations Car 2b):
