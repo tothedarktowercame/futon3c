@@ -757,6 +757,22 @@
       (when-let [sink (get-sink (str agent-id))]
         (try (sink event) (catch Throwable _))))))
 
+(defn- normalized-usage
+  "Translate a successful z.ai completion's usage block into the vendor-neutral
+  per-turn cost schema. Optional detail counters are omitted when absent."
+  [resp]
+  (when-let [usage (:usage resp)]
+    (cond-> {:cost/input-tokens (:prompt_tokens usage)
+             :cost/output-tokens (:completion_tokens usage)
+             :cost/total-tokens (:total_tokens usage)
+             :cost/source :zai}
+      (some? (get-in usage [:prompt_tokens_details :cached_tokens]))
+      (assoc :cost/cached-input-tokens
+             (get-in usage [:prompt_tokens_details :cached_tokens]))
+      (some? (get-in usage [:completion_tokens_details :reasoning_tokens]))
+      (assoc :cost/reasoning-tokens
+             (get-in usage [:completion_tokens_details :reasoning_tokens])))))
+
 ;; --- U1: transcript persistence (M-zaif-harness) --------------------------
 ;; sink! above feeds the invoke-jobs ring buffer: display-grade, in-memory,
 ;; gone on JVM restart — which left an agent's claims about its own past
@@ -908,16 +924,17 @@
 (defn- persist-round!
   "Append one durable, turn-addressable round record.
 CALLS contains maps of tool name, arguments, and result digest."
-  [{:keys [evidence-store agent-id sid turn-id profile round text calls final?]}]
+  [{:keys [evidence-store agent-id sid turn-id profile round text calls final? usage]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-round
-     :body {:round round
-            :final (boolean final?)
-            :text (transcript-truncate text transcript-text-cap)
-            :calls (vec calls)}})))
+     :body (merge {:round round
+                   :final (boolean final?)
+                   :text (transcript-truncate text transcript-text-cap)
+                   :calls (vec calls)}
+                  usage)})))
 
 (defn- sha256-8 [s]
   (let [md (java.security.MessageDigest/getInstance "SHA-256")]
@@ -1174,7 +1191,10 @@ CALLS contains maps of tool name, arguments, and result digest."
             {:result nil
              :session-id sid
              :error (result-string err)}
-            (let [message (get-in resp [:choices 0 :message])
+            (let [usage (normalized-usage resp)
+                  _ (when usage
+                      (sink! agent-id (assoc usage :type "usage")))
+                  message (get-in resp [:choices 0 :message])
                   text (assistant-text message)
                   tool-calls (seq (:tool_calls message))]
               (swap! !messages conj message)
@@ -1240,7 +1260,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :turn-id (:turn-id ctx) :profile (:profile ctx)
                                    :round round-n
                                    :text text
-                                   :calls (transcript-calls details executed)})
+                                   :calls (transcript-calls details executed)
+                                   :usage usage})
                   (swap! !messages into (mapv :message executed))
                   (recur (dec remaining) (str final-text text) auto-continues true
                          (inc round-n) report-reserved?))
@@ -1250,7 +1271,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :turn-id (:turn-id ctx) :profile (:profile ctx)
                                    :round round-n
                                    :text (if (str/blank? text) final-text text)
-                                   :calls [] :final? true})
+                                   :calls [] :final? true :usage usage})
                   {:result (if (str/blank? text) final-text text)
                    :session-id sid}))))))))))
 
