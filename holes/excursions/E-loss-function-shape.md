@@ -428,3 +428,63 @@ project and it is arguably part of every frame's cost. Excluded because it spans
 all frames and cannot be attributed to one without a per-frame split that does
 not exist. Worth saying rather than quietly omitting: **the true cost of a frame
 is higher than 44.8M, and the missing term is the orchestrator.**
+
+## THE LOAD IS GROUND CONTROL. Claude:Codex is 67x, and 91% of Claude is one session.
+
+Joe, 2026-08-19: *"Codex 65% remaining, claude 82% used. So even if we are
+dispatching problem solving AND coding to Codex we're not really balancing the
+load properly."* Measured across every session file written today.
+
+### Claude, by session
+
+    session    total tokens   uncached-in     output    msgs
+    87332988  4,734,994,468    55,008,600 10,762,941    9794   <- claude-2, GROUND CONTROL
+    626dc23f    304,178,454     4,300,808  1,019,862     707   <- claude-10
+    9699e8b8     58,707,769     2,170,433    327,078     335
+    c57ea1de     45,229,974     2,590,086    218,044     284   <- f12-guide
+    530f6875     42,007,935     3,072,343    240,285     256   <- f13-guide
+    578e66fa     18,673,639     1,667,497    135,118     161   <- f15-guide
+    TOTAL     5,203,826,766    68,828,384 12,703,343
+
+### Codex, all seven sessions today
+
+    CODEX TOTAL      77,455,687     2,180,095    257,096
+
+    ratio claude:codex   67.2x total    49.4x output
+
+### What this overturns
+
+An hour ago I told Joe "the guide is 94% of frame cost". True — and **frames are
+2% of Claude spend.** The three frame guides together are 106M against ground
+control's 4.73 BILLION. **Ground control is 91% of all Claude consumption.**
+
+The coding-handoff protocol works: coding does go to Codex. Codex spent 77M all
+day. It is simply not where the load is. **Nothing in the protocol addresses
+orchestration, and orchestration is 67x the thing the protocol moves.**
+
+### Why the orchestrator session is so large
+
+9,794 assistant messages at a mean context near 480k. The dominant term is not
+output (10.8M) — it is **cache reads: every tool call re-reads the whole
+context.** Ground control's working style today has been many small sequential
+shell calls, frequently three to six per turn, each one a full context re-read.
+That thoroughness found real defects all day; it also *is* the load.
+
+### Levers, ranked by measured impact
+
+1. **Batch tool calls.** One combined call costs one context read; six sequential
+   calls cost six. This is the dominant term and it is entirely ground control's
+   to fix. No protocol change required, no other agent involved.
+2. **Use the proctor seat.** It is a CODEX seat, it has never been dispatched in
+   five frames, and the mechanical verification it exists for — re-running
+   `lake env lean`, `#print axioms`, gate re-runs — is currently done by the
+   guide (Claude) and by ground control (Claude). This is an existing, unused,
+   correctly-typed lever for exactly the work that is burning the wrong quota.
+3. **Fewer, denser bells.** Six bells to f13-guide were six full guide turns.
+   Already noted as a routing hazard; it is also a spend one.
+4. Shorter orchestrator context — not directly controllable, and the smallest
+   term of the four.
+
+The honest summary: the protocol balanced the load it was written for, and the
+load moved. Ground control did not notice because ground control was never
+measuring itself.
