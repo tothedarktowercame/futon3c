@@ -162,10 +162,9 @@ Ground control corroborates this from the other end, independently of the frame:
 - the landed read-path fix (hard-AND → boost, `d893280a` + `10937528`) returns
   **0 results for f12's actual 18-term set** against the live store, and 0 for the
   anchor alone — so the query-shape fix alone would not have surfaced anything;
-- the FTS sidecar reports `{:indexed 29, :errors 121, :ready true}` with
-  `SQLITE_BUSY … database is locked`. The index holds ~29 documents and reports
-  itself ready. That is a SECOND, independent retrieval blocker, upstream of
-  query shape, that nobody had looked at. Owner: claude-11.
+- ~~the FTS sidecar reports `{:indexed 29, :errors 121, :ready true}`~~ —
+  **STRUCK. My inference was wrong; see D52.** The index was level with the
+  store throughout. The retrieval blocker is query SHAPE after all.
 
 ---
 
@@ -478,3 +477,84 @@ mint path cannot be what discriminates the two frames. Offered as unconfirmed,
 tested, closed — which is the disposal this file exists to record.
 
 **The write path is where to look.** Open, unassigned.
+
+
+---
+
+## D52 — the recall lexical query is a CONJUNCTION, and the union follow-up was written down and never done [verified]
+
+### First, a correction I have to make plainly
+
+I reported to Joe and to f12-guide that the FTS sidecar was dropping writes —
+`{:indexed 29, :errors 121, :ready true}` with `SQLITE_BUSY` — and that the index
+was "effectively empty" and could not validate the read-path unblock. **That was
+wrong, and it was wrong in the exact way this file spends its length warning
+about: I read three numbers off a status payload and inferred a population from
+their ratio, without checking a single id.**
+
+claude-11 checked it the way I had told f12-guide to check things — every failed
+id looked up individually:
+
+    on-append! failures logged : 125  (125 distinct ids)
+      ABSENT from ev_fts       : 0
+      ABSENT from ev_attr      : 0
+    index and store level at 150,428 throughout
+
+The three numbers were incommensurable windows: `:indexed 29` is the LAST
+catch-up run, `:errors 121` is CUMULATIVE over 28.5 hours, and `:ready` is
+literally `(some? ds)` — "the sidecar is attached", not a coverage claim. 87 of
+the 125 came from one hour of a 2,384-document replay contending with a catch-up
+scan for sqlite's single writer. Steady state is ~1.7% of live appends, all
+repaired by the next sweep; the cost is latency, not loss — about one document in
+sixty unfindable for up to one sweep interval. Nothing was dropped.
+
+The surface invited the reading. That does not make the inference sound, and the
+instrument was registering fine.
+
+### The real blocker, verified
+
+The endpoint is CONJUNCTIVE on space-separated terms, and this was ALREADY KNOWN.
+`dispatch_with_recall.clj` carries a `MEASURED 2026-07-30` comment recording the
+falloff (1 term = 5 hits, 3 = 3, 7 = 2, 12 = 1, 29 = 0) and ends:
+
+    ;; FOLLOW-UP: several short queries unioned would beat one short query;
+    ;; this is the minimal measured fix, not the best possible one.
+
+**That follow-up was never done, and it is now the whole blocker.** Re-measured
+on the live store 2026-08-19, scoped to `type=:memory`:
+
+    q=hilbert                            16
+    q=weak-convergence                   19
+    q=hilbert weak-convergence           11    <- intersection, not union
+    q=computes                            1
+    q=hilbert weak-convergence computes   0    <- ONE rare term zeroes it
+    q=hilbert OR computes                17    <- 16 + 1; OR is supported
+
+The four-term cap does not save it, because anchor selection PREFERS rare terms
+and a rare term inside a conjunction floors the result set. `d893280a` demoted
+the anchor from a hard filter to a ranking boost — but the term still sits in the
+conjunctive query, so the hard filter was not removed, it was relocated.
+
+`recall-query` builds `:query (str/join " " terms)`. The fix is `" OR "`.
+
+Dispatched to codex-3 as a single-behaviour packet
+(`invoke-1787129392639-5011-5c4b710b`, park `park-35681b94`), with a hermetic
+acceptance test on the built query string and a required mutation check.
+
+### Scoped df, from claude-11, independently re-run here
+
+    term                unscoped (150,436)   type=:memory (781)
+    hilbert                    366                  16
+    weak-convergence           396                  19
+    computes                   395                   1
+    carrier                     87                   2
+
+Unscoped, `computes` (395) and `weak-convergence` (396) are THE SAME NUMBER — so
+no band over whole-index df can separate a dead anchor from a live one, and the
+`[3 150]` band failing was never a calibration problem. Scoped, the dead anchors
+sit at 1 and 2 against winners at 16 and 19. The response now carries
+`:population :filtered | :whole-index-unfiltered` and echoes `:filters`, so the
+receipt can record which question was answered instead of asserting it.
+
+This resolves the `:basis {:retrieval :scoped-df-pending}` slot in
+`E-loss-function-shape.md` — it is a field change now, not a placeholder.
