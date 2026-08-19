@@ -769,3 +769,51 @@ FIX for all future packets: **"clj-kondo clean FOR THE FILES YOU TOUCH, and the
 repo-wide count unchanged from the parent commit."** Both are checkable, both are
 honest, and the second catches a fix that lints its own file while breaking
 another.
+
+## D56 — `:analyst-survives-two-frames` names the wrong analyst, and in f13 that makes it UNADJUDICABLE [verified, MINE]
+
+Caught by **f13-guide at its orientation ack**, before conducting anything — the
+gate working the way it is supposed to.
+
+The prediction text in both f13 and f14 read:
+
+    "analyst-2 completes duties A, B and F at this close AND executes its
+     succession: handoff document, memory-surface pointer, W-entry."
+
+copied forward from f12, where analyst-2 WAS the seated analyst. The structured
+fields were correct in both: `:reg/analyst-seat "analyst-3"`,
+`:reg/analyst-tenure {:n 2 :frame-index 1 :frames ["f13" "f14"]}`.
+
+The two frames fail differently, and f13's is the worse:
+
+- **f14** — substance right, name wrong. analyst-3 IS at tenure 2 of 2 there and
+  DOES owe succession. Repairable, and repaired.
+- **f13** — **unadjudicable**. analyst-3 is at tenure 1 of 2 and owes succession
+  at f14, not f13. There is no reading of the text that f13 could satisfy or
+  refute. f13-guide will adjudicate it `:inapplicable` against the machine-
+  readable fields and report the prediction text as defective, which is the
+  correct disposal and is exactly what the five-value vocabulary is for.
+
+**f13's registration is FROZEN and stays as-is.** It is open and running; a
+pre-registration edited after the frame starts is not a pre-registration. The
+defect is carried in the record instead.
+
+f14 is repaired ahead of its open, along with two more instances the same ack
+surfaced:
+
+- the preamble still said "analyst-2, tenure 2 of 2 — its LAST frame" and
+  pointed at `HANDOFF-analyst-1-to-analyst-2.md`;
+- the pin comment still read "RE-TAKEN TWICE ON 2026-08-19, now 7b188d8c" while
+  the field said `3b1eb78d` (and now `62bfc210`).
+
+That is the **third and fourth** instance of D50 in one file, after the four I
+repaired this morning. The pattern is not "I forgot once". The structured fields
+are correct every time and the PROSE — which is what the guide and the Analyst
+actually read — is the previous frame's. A registration should be authored by
+diffing it against its predecessor field by field, or generated, not copied.
+
+**And the guide caught what I did not.** I repaired six copy-forward defects in
+these files this morning, then re-read them twice while re-pinning, and missed
+this one four times. The orientation ack found it in one pass because a fresh
+reader with the fields in hand is a different instrument from the author
+re-reading their own text.

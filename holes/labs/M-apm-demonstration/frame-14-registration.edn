@@ -7,7 +7,7 @@
 ;; intersection numbers, form integration or homology, so none is gated on the
 ;; ConstructionTargets work under separate discussion.
 ;; Previous frame in the batch: m99J06. This is
-;; analyst-2's SECOND and LAST frame; succession is a scheduled duty of THIS
+;; analyst-3's SECOND and LAST frame; succession is a scheduled duty of THIS
 ;; frame, not the next tenure's problem.
 ;;
 ;; THE POINT OF THIS FRAME. Frames 9 and 10 each closed their problem
@@ -44,12 +44,21 @@
 ;; satisfying the cross-problem recall-leakage criterion against the
 ;; immediately preceding frame.
 ;;
-;; ANALYST. analyst-2, tenure 2 of 2 — its LAST frame. Succession (handoff
+;; ANALYST. analyst-3, tenure 2 of 2 — its LAST frame. Succession (handoff
 ;; document, memory-surface pointer, W-entry) is a scheduled duty of this frame.
-;; analyst-1 completed its own succession at f10's close and its handoff is at
-;; analysis/HANDOFF-analyst-1-to-analyst-2.md; the same is expected here.
+;; analyst-2 completed its own succession at f12's close and its handoff is at
+;; analysis/HANDOFF-analyst-2-to-analyst-3.md; the same is expected here.
+;; (Read analyst-2, analyst-1 and f10 before this correction: another instance
+;; of the copy-forward that D50 records. Corrected 2026-08-19 after f13-guide
+;; caught the same class of error in f13's own analyst prediction at its
+;; orientation ack — see the :analyst-survives-two-frames text below.)
 ;;
-;; HARNESS PIN. RE-TAKEN TWICE ON 2026-08-19, now 7b188d8c.
+;; HARNESS PIN: 62bfc210, and see :reg/known-departures — the field is
+;; authority, this comment is not. It read '7b188d8c' while the field said
+;; 3b1eb78d until f13-guide flagged the drift at its orientation ack; that was
+;; the THIRD not-re-edited-preamble instance in one file. History below is
+;; retained because it explains what f12 actually ran.
+;; SUPERSEDED PREAMBLE FOLLOWS:
 ;; The batch was registered pinned at e6721ca0. Three read-path commits landed
 ;; after that: d893280a (demote the recall anchor from hard filter to ranking
 ;; boost), 10937528 (anchor-df basis receipts), 7b188d8c (join the lexical
@@ -193,6 +202,6 @@
   {:id :refusals-are-traceable
    :text "Any conductor action refused during this frame appears in the emitted trace as an :action-refusals receipt. In f10 three promotion refusals existed ONLY in the guide's prose report and the machine trace was consistent with a clean run (D6, fixed 585a980e). If nothing is refused this frame the prediction is inapplicable, not confirmed — say so."}
   {:id :analyst-survives-two-frames
-   :text "analyst-2 completes duties A, B and F at this close AND executes its succession: handoff document, memory-surface pointer, W-entry. analyst-1 completed the equivalent at f10. Two tenures completing succession is the point at which N=2 is a mechanism rather than an anecdote."}]
+   :text "analyst-3 completes duties A, B and F at this close AND executes its succession: handoff document, memory-surface pointer, W-entry. analyst-2 completed the equivalent at f12 and analyst-1 at f10. Two tenures completing succession is the point at which N=2 is a mechanism rather than an anecdote.\n\nNAMED THE WRONG ANALYST UNTIL 2026-08-19. This text was copied forward from f12, where the seated analyst WAS analyst-2. f13-guide caught it at its orientation ack, in f13's copy, where it is worse than wrong: analyst-3 is at tenure 1 of 2 in f13 and owes succession HERE at f14, not there, so f13's copy of this prediction is UNADJUDICABLE and f13-guide will correctly report it inapplicable with the text marked defective. Here the substance was right and only the name was wrong. Both are the D50 copy-forward failure: the structured fields were correct throughout and the PROSE, which is what the guide and the Analyst actually read, was f12's."}]
 
  :reg/frame-1-disclaimer false}
