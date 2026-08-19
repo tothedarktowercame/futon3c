@@ -782,7 +782,14 @@
                      (assoc :cost/reasoning-tokens
                             (get-in usage [:completion_tokens_details :reasoning_tokens])))]
       (when (seq counters)
-        (assoc counters :cost/source :zai)))))
+        ;; :cost/model is the model the SERVER says served this turn, read off
+        ;; the response, not the model we asked for. A frame that re-casts a
+        ;; seat onto a different model has no other post-hoc evidence of which
+        ;; one actually ran: the mint's :casting block is derived from the cast
+        ;; and so reports the request, which cannot detect a failure anywhere
+        ;; between minting and the API call.
+        (cond-> (assoc counters :cost/source :zai)
+          (some? (:model resp)) (assoc :cost/model (:model resp)))))))
 
 ;; --- U1: transcript persistence (M-zaif-harness) --------------------------
 ;; sink! above feeds the invoke-jobs ring buffer: display-grade, in-memory,
