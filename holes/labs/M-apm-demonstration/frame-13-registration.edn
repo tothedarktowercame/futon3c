@@ -72,6 +72,10 @@
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
  :reg/harness-revision     "7b188d8c7a215146f98996b62fa06bccaaa4123e"
 
+ ;; Frame identity, so the operator surface can say WHICH FRAME at a glance
+ ;; instead of leaving it to be inferred from the seat-name prefix.
+ :reg/frame-id     "f13"
+
  :reg/solver-seat  "f13-solver"
  :reg/student-seat "f13-student"
  :reg/guide-seat   "f13-guide"
