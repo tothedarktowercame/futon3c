@@ -597,3 +597,104 @@ about what "used" means.
 
 This is the measurement the whole frame was built for: the student's ONLY route
 to the solver's knowledge is the two promoted memories.
+
+---
+
+## Student attempt — gate-reviewed, and the transfer measurement is IN
+
+Commit `a793f7e` on `exp/frame-15-m93J06-student-deefb9b8…`, single commit on
+base `a92ffb6c`.
+
+**Verified by me, independently:**
+
+1. **Containment**: `git log` in the student tree contains NONE of the solver's
+   three commits (`a68fa7e3`, `27546a85`, `9ff4f866`) — grep count 0. It could
+   not see the solution.
+2. **Definitions untouched**: first 146 lines md5 `66dff80d…`, identical to base.
+3. **Frozen statement unchanged**: SHA-256 of the statement block is
+   `15df85c8…`, the same hash as the frozen original and as the solver's.
+4. **Scope**: one file, +97/−1, the single deletion being the bundled `sorry`.
+5. **Declaration audit** (including `private`/`protected`/attribute prefixes):
+   four theorems and one private theorem. No `def`, `axiom`, `instance`,
+   `set_option`, `attribute`, `notation`.
+6. **Recompiled**: EXIT=0, exactly THREE `declaration uses sorry` (167/176/184),
+   matching the three named residuals.
+7. **`#print axioms` run by me** (the student's own run was a temporary append,
+   reverted before commit, so this needed re-doing):
+
+        'apm_m93j06'       [propext, sorryAx, Classical.choice, Quot.sound]
+        'apm_m93j06_conj5' [propext, Classical.choice, Quot.sound]
+
+### Result: real, verifiable progress in 60 minutes from a fresh agent
+
+| conjunct | student | note |
+|---|---|---|
+| 1 | NAMED RESIDUAL | `apm_m93j06_conj1_residual`, full conjunct statement |
+| 2 | NAMED RESIDUAL | `apm_m93j06_conj2_residual` |
+| 3 | NAMED RESIDUAL | `apm_m93j06_conj3_residual` |
+| 4 | CLOSED | cited the pre-existing lemma, correctly, and did not re-derive it |
+| 5 | **CLOSED, AXIOM-CLEAN** | `apm_m93j06_conj5` + private `…_gronwall_forward` |
+
+One opaque bundled `sorry` → three localised per-clause residuals, each carrying
+its nearest-API note and empty searches, plus one conjunct closed axiom-clean.
+
+**And it closed conjunct 5 by a DIFFERENT ROUTE than the solver.** The student
+used Mathlib's `norm_le_gronwallBound_of_norm_deriv_right_le` with
+`gronwallBound_ε0`, applied to `s ↦ φ s a − φ s b`, handling `t < 0` via the
+reversed-time flow. The solver used `dist_le_of_trajectories_ODE`. Two
+independent axiom-clean proofs of the same conjunct, from two agents that could
+not see each other. That is a genuine replication of conjunct 5.
+
+## THE HEADLINE MEASUREMENT: promoted → surfaced → used BREAKS AT *SURFACED*
+
+The student's attestation, verbatim in substance:
+
+- `psr_search "Lean ODE Picard-Lindelof global solution Gronwall flow"` returned
+  pattern candidates `futon-theory/interface-loop`,
+  `math-formalization/coercion-bridge`, **`math-informal/local-to-global`** —
+  every one reported `no-reviewed-attachment`. Attested **IGNORED**, with the
+  reason that they were generic hooks with no Lean/ODE/Mathlib content.
+- `memory_search` on tags `m93J06` / `frame-15` returned **EMPTY**.
+
+**The two memories I had promoted forty minutes earlier were never surfaced to
+the student at all.** Not surfaced-and-unused: never offered.
+
+I verified the mechanism rather than guessing at it:
+
+    math-informal/local-to-global              →  0 memory attachments
+    math-strategy/construction-before-estimates →  2 edges (ours among them, :reviewed)
+
+**The student's semantic search found the RIGHT pattern name and that node was
+empty.** The diagonal memory's own tags literally include `:local-to-global`,
+and the pattern it hangs off is `construction-before-estimates`. Nothing
+reconciles a memory's tags with the pattern it is shelved on, so the reader
+searched the correct aisle and the book was on a different one.
+
+And the cascade could not bridge the gap either: the relations out of
+`construction-before-estimates` are its own clause nodes plus
+`math-strategy/proof-architecture`,
+`math-strategy/isolate-computational-kernel-before-transport`, and
+`math-informal/construct-an-explicit-witness`. **There is no edge to
+`math-informal/local-to-global`.**
+
+The second failure is independent and simpler: the student searched by TAG for
+the problem id, but memories carry the problem as a SUBJECT
+(`:evidence/subject {:ref/type :problem :ref/id "m93J06"}`), not as a tag. A
+subject query finds 12 m93J06 memories in the store including both of ours; the
+tag query the student naturally reached for finds none.
+
+### The uncomfortable part, stated plainly
+
+**I made this worse by reviewing well.** I moved the diagonal memory off the
+scribe's proposed `proof-architecture` onto `construction-before-estimates`
+because it is the more precise home — and it is. Neither pattern is the one the
+student's search reached. Had I seen the student's query first I would have
+chosen `math-informal/local-to-global`, which is where a reader looking for this
+technique actually goes. **The reviewer picks the shelf by content; the reader
+searches by need; the machine has no step that reconciles them.** A more careful
+review produced a less findable memory, and nothing in the loop can detect that.
+
+This is the sharpest form of the frame's result: it is not that the memories
+were unhelpful. It is that the pipeline has an unmeasured join between
+promotion and retrieval, and this frame is the first to instrument both ends at
+once and see the gap.
