@@ -289,3 +289,123 @@ explicitly (Lipschitz dependence + localised differentiability step; close under
 a stated extra hypothesis; split into named pieces) so a partial is committed
 rather than discarded. Halt-and-report instruction repeated for the case where
 the conjunct turns out false.
+
+---
+
+## Solver attempt 3 — **m93J06 IS CLOSED.** Full gate review.
+
+Commit `9ff4f866` ("solve m93J06 flow regularity"). Chain: `a68fa7e3` (conjunct
+5) → `27546a85` (conjuncts 1 and 3) → `9ff4f866` (conjunct 2 + full closure).
+
+**Everything below I ran myself. I did not take the solver's report for any of it.**
+
+1. **Recompiled.** `lake env lean problems/m93J06/lean/Main.lean` → EXIT=0,
+   **0 `declaration uses sorry`, 0 errors**, four cosmetic linter warnings.
+2. **`grep -cE "\bsorry\b|\badmit\b"` over the whole file → 0.**
+3. **Frozen statement SHA-256 reproduced independently:**
+   `15df85c8bd0c9110014df51b491e50e949508a7e98b53aab5ad22f05e112352d`,
+   identical to the same line range at base `a92ffb6c`. Matches the solver's
+   claimed hash.
+4. **First 146 lines byte-identical to base** (md5 `66dff80d…`). Every frozen
+   definition — `apm_m93j06_Solves`, `apm_m93j06_IsFlow` and the early lemmas —
+   is provably untouched.
+5. **Purely additive diff**: +963/−3 on Main.lean, the 3 deletions being two
+   lines of boundary-note prose and the original bundled `sorry`.
+6. **Declaration audit of every added top-level line**: no `def`, `axiom`,
+   `instance`, `structure`, `class`, `abbrev`, `notation`, `macro`, `opaque`,
+   `partial`, `unsafe`, `local`, `open`, `set_option`, `attribute`, or `@[…]`.
+   All additions are `lemma`s. Also exactly ONE `theorem apm_m93j06` in the file
+   — no shadowing declaration.
+7. **`#print axioms apm_m93j06` run by me:**
+
+        'apm_m93j06' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+   **AXIOM-CLEAN.** No `sorryAx`.
+
+### Verdict on the artifact axis
+
+m93J06 is CLOSED: zero executable sorries, axiom-clean, frozen statement
+mechanically unchanged, in 3 solver dispatches. `:problem-closed-on-artifact` is
+confirmed on its FIRST disjunct (the strong one), not the residual-reduction
+fallback.
+
+Why the kernel makes this a strong gate: the frozen definitions are
+byte-identical, the statement hash matches, and no axiom or elaboration-affecting
+declaration was added — so there is no route by which the theorem could have been
+made easier outside the kernel. Everything else is Lean's problem, and Lean
+accepted it.
+
+### What was proved, per conjunct
+
+1. **Global Picard–Lindelöf** (∃! solution on all of ℝ) — built from scratch:
+   uniform local Picard radius `1/(2(L+1))`, compatibility of nested symmetric
+   solutions, and the diagonal `y t := γ (|t| + 1) t` glued into a global
+   integral curve. This is the compact-exhaustion/continuation constructor the
+   frozen file's own boundary note said Mathlib does not contain.
+2. **C¹ dependence on initial data** — local uniqueness, strict order
+   preservation of the flow, compact flow tubes, local Lipschitz dependence, the
+   divided-slope variational equation, and the derivative formula
+   `exp (∫ s in 0..t, ∂ᵧ f s (φ s a))`. The solver proved the STRONGER statement
+   that every time slice is C¹, not merely slices near 0.
+3. Flow existence — falls out of 1 by choosing the unique trajectory pointwise.
+4. Hölder non-uniqueness — citation, free, as registered.
+5. Two-sided exponential Lipschitz bound — forward Grönwall plus the reversed
+   field for negative time.
+
+### MEMORY MEASUREMENT — dispatch 3: 5 surfaced, 5 IGNORED, 0 USED
+
+**SOLVER-PHASE TOTAL: 15 offers delivered, 0 USED, 15 IGNORED.**
+
+The same five measure-theory memories were surfaced all three times, with a
+specific and checkable refusal reason each time. The problem closed anyway, and
+the mathematics that closed it — a global Picard construction and a variational
+C¹-dependence argument — is exactly the kind of transferable technique the store
+exists to hold.
+
+## Cascade measurements (registration asked for three; here they are)
+
+From the recorded offers in `v14.edn`:
+
+- **offers by route** (per dispatch): 5 `:leaf`, 48 `:why-hop`, 52
+  `:co-incidence` = **105 offers per dispatch**, 315 across the three.
+- **patterns per problem**: **1**. Exactly one seed pattern hangs off the five
+  recall-surfaced memories; the cascade reached 10 distinct patterns from it.
+- **cascade truncation**: `:truncated? true`, `expanded-available 132` against
+  `cap 100` — **32 expansions dropped per dispatch**.
+
+### THE OFFER COUNT IS NOT WHAT IT LOOKS LIKE — read this before quoting it
+
+**105 "offers" per dispatch, but only the 5 `:leaf` ones were ever shown to the
+solver.** `:memory-use/surfaced-ids` carries 5; the solver's packet listed 5; the
+solver attested on exactly 5, three times. The 100 cascade-expanded offers are
+computed in `cascade-receipt-offers`, which runs from `memory-offers` inside
+`record-solver-attempt!` — i.e. **at RECORD time, after the solver has already
+finished**. They are a post-hoc trace artifact, not something anybody was
+offered.
+
+So "315 offers, 15 dispositioned" would be a false reading of this frame, and
+`:offer-disposition-populated` must be adjudicated with that distinction stated.
+The solver could not have dispositioned the other 300: it never saw them.
+
+`:cascade-seeds-from-recall` is CONFIRMED — the expansion is seeded from the
+patterns attached to the recall-surfaced memories, exactly as the registration
+predicted, and not from the problem's own touch-set.
+
+## New defect — a long action reports the session as UNBOUND, not busy
+
+`record-solver-attempt` took **~7 minutes**, because `memory-offers` expands the
+cascade at record time and each substrate query costs ~2.5s (measured), over
+3 receipts × 5 seeds and their pattern/problem neighbourhoods.
+
+While it was running, a second action against the same binding returned:
+
+    409 {"ok":false,"error/code":"conductor-session-unbound"}
+
+The session was NOT unbound — the status endpoint reports `bound? true` and the
+first action landed correctly (v13 → v14, phase `intervene`). A busy binding is
+reported with the same error code as a dead one. **This is dangerous**: the
+documented response to `:conductor-session-unbound` is to re-bind or take over,
+and doing that against a still-running action would race the cycle's own state.
+It needs a distinct code (`:conductor-action-in-progress`).
+
+Replay protection did work — the action-id was not double-executed.
