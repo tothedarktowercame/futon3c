@@ -114,6 +114,101 @@
     (is (= "http-frame-solver" (get-in body [:seats :reg/solver-seat])))
     (is (= 5 (count (:seats body))))))
 
+(defn- post-seat-mint [handler payload]
+  (let [response (handler
+                  {:request-method :post
+                   :uri "/api/alpha/frames/mint-seats"
+                   :body (java.io.ByteArrayInputStream.
+                          (.getBytes (json/write-value-as-string payload)
+                                     "UTF-8"))})]
+    [(:status response)
+     (json/read-value (:body response) json/keyword-keys-object-mapper)]))
+
+(deftest absent-cast-preserves-default-seat-types-and-identities
+  (let [result (frame-seats/mint-seats! {:prepare-seat-fn ready-seat}
+                                         "default-cast")
+        expected-types {:solver :codex
+                        :student :zai
+                        :guide :claude
+                        :proctor :codex
+                        :scribe :codex}]
+    (is (:ok result))
+    (doseq [[suffix agent-type] expected-types]
+      (let [agent-id (str "default-cast-" (name suffix))]
+        (is (= agent-id (get (:seats result)
+                             (keyword "reg" (str (name suffix) "-seat")))))
+        (is (= agent-type (:agent/type (registry/get-agent agent-id))))
+        (is (= {:agent-type agent-type}
+               (get-in result [:casting (name suffix)])))))))
+
+(deftest per-seat-cast-overrides-guide-and-scribe-only
+  (let [prepared (atom [])
+        result (frame-seats/mint-seats!
+                {:prepare-seat-fn (fn [seat]
+                                    (swap! prepared conj seat)
+                                    (ready-seat seat))
+                 :model "global-model"
+                 :cast {:guide {:type "zai" :model "glm-5.3"}
+                        :scribe {:type "zai" :model "glm-5.3"}}}
+                "recast")
+        by-id (into {} (map (juxt :agent-id identity)) @prepared)]
+    (is (:ok result))
+    (is (= :zai (:agent-type (get by-id "recast-guide"))))
+    (is (= :zai (:agent-type (get by-id "recast-scribe"))))
+    (is (= :codex (:agent-type (get by-id "recast-solver"))))
+    (is (= :zai (:agent-type (get by-id "recast-student"))))
+    (is (= :codex (:agent-type (get by-id "recast-proctor"))))
+    (is (= "glm-5.3" (get-in result [:casting "guide" :model])))
+    (is (= "global-model" (get-in result [:casting "solver" :model])))
+    (is (not-any? (fn [[_ casting]]
+                    (and (contains? casting :model) (nil? (:model casting))))
+                  (:casting result)))
+    (is (not-any? #(and (contains? % :model) (nil? (:model %))) @prepared))))
+
+(deftest frame-seat-cast-refuses-unknown-seat-and-type
+  (let [handler (http/make-handler {:frame-seat-prepare-fn ready-seat})
+        [seat-status seat-body]
+        (post-seat-mint handler {:frame-id "bad-seat"
+                                 :cast {:guid {:type "zai"}}})
+        [type-status type-body]
+        (post-seat-mint handler {:frame-id "bad-type"
+                                 :cast {:guide {:type "unknown-vendor"}}})]
+    (is (= 400 seat-status))
+    (is (= "guid" (get-in seat-body [:findings 0 :seat])))
+    (is (= #{"guide" "proctor" "scribe" "solver" "student"}
+           (set (get-in seat-body [:findings 0 :accepted-seats]))))
+    (is (= 400 type-status))
+    (is (= "unknown-vendor"
+           (get-in type-body [:findings 0 :agent-type])))
+    (is (= #{"claude" "codex" "zai"}
+           (set (get-in type-body [:findings 0 :accepted-types]))))))
+
+(deftest frame-seat-cast-refuses-typos-rather-than-dropping-them
+  ;; A misspelled override key or a non-string type must not be accepted and
+  ;; silently dropped. That is the ?tag= / ?df= shape: 200 with a plausible
+  ;; result, and a caller who asked for a Zai guide gets a Claude one.
+  (let [handler (http/make-handler {:frame-seat-prepare-fn ready-seat})
+        [typo-status typo-body]
+        (post-seat-mint handler {:frame-id "typo-key"
+                                 :cast {:guide {:tpye "zai"}}})
+        [model-status model-body]
+        (post-seat-mint handler {:frame-id "typo-model"
+                                 :cast {:guide {:modle "glm-5.3"}}})
+        [numeric-status numeric-body]
+        (post-seat-mint handler {:frame-id "numeric-type"
+                                 :cast {:guide {:type 5}}})]
+    (is (= 400 typo-status))
+    (is (= :unknown-override-key
+           (keyword (get-in typo-body [:findings 0 :finding]))))
+    (is (= ["tpye"] (get-in typo-body [:findings 0 :keys])))
+    (is (= #{"model" "type"}
+           (set (get-in typo-body [:findings 0 :accepted-keys]))))
+    (is (= 400 model-status))
+    (is (= ["modle"] (get-in model-body [:findings 0 :keys])))
+    (is (= 400 numeric-status))
+    (is (= :invalid-agent-type
+           (keyword (get-in numeric-body [:findings 0 :finding]))))))
+
 (deftest mint-analyst-http-route
   (let [handler (http/make-handler {:frame-seat-prepare-fn ready-seat})
         response (handler {:request-method :post

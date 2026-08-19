@@ -2557,12 +2557,15 @@
 (defn mint-frame-seats!
   "Mint the five fresh, invoke-ready Agency seats for FRAME-ID."
   ([config frame-id]
-   (mint-frame-seats! config frame-id nil))
+   (mint-frame-seats! config frame-id nil nil))
   ([config frame-id model]
+   (mint-frame-seats! config frame-id model nil))
+  ([config frame-id model cast]
    (frame-seats/mint-seats!
     (cond-> {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
                                   (partial prepare-frame-seat config))}
-      model (assoc :model model))
+      model (assoc :model model)
+      (some? cast) (assoc :cast cast))
     frame-id)))
 
 (defn- handle-frame-seat-mint
@@ -2573,8 +2576,13 @@
       (let [result (mint-frame-seats!
                     config
                     (or (:frame-id payload) (get payload "frame-id"))
-                    (or (:model payload) (get payload "model")))]
-        (json-response (if (:ok result) 200 409) result)))))
+                    (or (:model payload) (get payload "model"))
+                    (or (:cast payload) (get payload "cast")))]
+        (json-response (cond
+                         (:ok result) 200
+                         (= :invalid-seat-cast (:error result)) 400
+                         :else 409)
+                       result)))))
 
 (defn mint-analyst-seat!
   "Mint the fresh, invoke-ready Agency Analyst for TENURE."
