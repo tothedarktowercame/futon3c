@@ -1394,6 +1394,27 @@
     RECORDED AS A CROSSING, not as a mistake by either seat: an async flag sent while
     the job it describes was still running read a file the job had already changed.
     E-crossed-bells is the standing lesson and this is a new instance of it."
+   :P30-premise-flag-retracted
+   "SETTLED, and by the guide itself. f15-guide retracted the flag at 9d6add7b after
+    re-checking at the object rather than taking my word: git grep -c store-revision on
+    problem.clj gives 0 at 91f562bf^ and 7 at 91f562bf, and the two commits are 89
+    seconds apart. It kept the wrong section in its log, marked superseded, so the
+    mistake stays auditable — which is the property this series depends on and is worth
+    recording as behaviour, not just as an outcome.
+    THE OPERATIONAL LESSON IS THE THING TO CARRY, and it is the guide's own words:
+    WHEN A FLAG CONCERNS WORK IN FLIGHT, READ THE PINNED REVISION, NOT THE WORKING TREE.
+    Every other verification it did this frame was against a pin or a blob; the one
+    place it read HEAD while a job it knew was running had that file open is the one
+    place it was wrong. This generalises past bells: any claim about a running job's
+    premise is stale by construction if it is measured on the working tree. It belongs
+    with E-crossed-bells rather than beside it — crossing is the mechanism, reading
+    HEAD is what turns a crossing into a false finding.
+    Note also which way the evidence ran: the guide's ARCHITECTURAL objection (a
+    caller-supplied store digest is forgeable, and forgeability is exactly wrong for
+    the field :both-channels-varied depends on) was CORRECT, and a01A06 is an instance
+    of the very route it objected to. It aimed a right principle at the fix instead of
+    at the thing the fix repaired. A wrong flag carrying a right principle is worth more
+    than a correct silence, and the retraction cost one round-trip."
    :dispatch-note
    "Picked codex-3 on analyst-2's rule — prefer an agent that has actually completed a job
     this session (codex-3 delivered P28 and P29) over one merely listed idle. It was also

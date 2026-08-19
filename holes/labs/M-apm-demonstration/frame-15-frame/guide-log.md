@@ -1097,3 +1097,19 @@ second writer. Root-causing needs a REPL, which is codex-3's to use, not mine.
   deposit — the third consecutive frame failing C2 on the guide's own statusless
   store-write, which is the same mechanism as the "forced dead memory" finding
   above.
+
+### Footnote for E-crossed-bells: the reconciliation crossed too
+
+The P30 exchange crossed **twice**. My flag crossed analyst-3's gate report; then
+analyst-3's auto-bellback of the same content crossed my retraction. Both sides
+verified at the object and converged on the same answer independently, so the
+double crossing cost nothing here — but it is the exact condition
+`CLAUDE.md` names for switching to a whistle, and it arose in a thread where both
+parties were already being careful.
+
+The generalisable bit is narrower than "bells cross": **a flag about a running
+job's premise is stale by construction if it reads the working tree rather than
+the job's base commit.** The fix is not a whistle, it is reading
+`<job-base>^ -- <path>` instead of `HEAD`. A whistle would have reconciled the
+crossing without correcting the underlying mistake, because the mistake was in
+what I read, not in how the message was routed.
