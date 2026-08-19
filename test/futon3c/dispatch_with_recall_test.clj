@@ -3,6 +3,39 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.dispatch-with-recall :as dispatch]))
 
+(deftest evidence-document-frequencies-uses-memory-population-receipt
+  (let [requested-url (atom nil)
+        fetch #'dispatch/evidence-document-frequencies]
+    (testing "the request is scoped and the substrate receipt is preserved"
+      (with-redefs-fn
+        {(ns-resolve 'babashka.http-client 'get)
+         (fn [url _opts]
+           (reset! requested-url url)
+           {:body (pr-str {:df {"computes" 1}
+                           :indexed 781
+                           :population :filtered
+                           :filters {:type ":memory"}})})}
+        #(is (= {:df {"computes" 1}
+                 :indexed 781
+                 :population :filtered
+                 :filters {:type ":memory"}
+                 :source (str "http://substrate/api/alpha/evidence/text-search"
+                              "?df=computes&type=:memory")}
+                (fetch "http://substrate" ["computes"]))))
+      (is (str/includes? @requested-url "type=:memory")))
+    (testing "an omitted population is explicitly unstated"
+      (with-redefs-fn
+        {(ns-resolve 'babashka.http-client 'get)
+         (fn [_url _opts]
+           {:body (pr-str {:df {"computes" 1} :indexed 781})})}
+        #(is (= :unstated
+                (:population (fetch "http://substrate" ["computes"]))))))
+    (testing "HTTP failure remains best-effort"
+      (with-redefs-fn
+        {(ns-resolve 'babashka.http-client 'get)
+         (fn [& _] (throw (ex-info "offline" {})))}
+        #(is (nil? (fetch "http://substrate" ["computes"])))))))
+
 (deftest recall-query-uses-terrain-and-subjects
   (let [query (dispatch/recall-query
                {:problem "bpm-1-5-1"

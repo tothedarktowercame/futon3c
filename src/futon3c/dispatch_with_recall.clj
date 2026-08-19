@@ -437,19 +437,21 @@
   (try
     (let [base (trim-base (or substrate-base (substrate/configured-url)))
           url (str base "/api/alpha/evidence/text-search?df="
-                   (encode (str/join "," terms)))
+                   (encode (str/join "," terms))
+                   "&type=:memory")
           response (http/get url {:headers {"Accept" "application/edn"}
                                   :timeout 15000 :throw false})
           parsed (edn/read-string (:body response))]
       (when (map? (:df parsed))
-        ;; Return the POPULATION alongside the counts. futon1b's ?df= silently
-        ;; ignores type/tags/subject filters (measured by claude-11, 2026-08-19:
-        ;; ?df=hilbert&type=:memory returns the whole-index 357, HTTP 200, no
-        ;; warning), so a df is meaningless without saying what it counted over.
+        ;; The type filter is honoured as of claude-11's 2026-08-19 deploy.
+        ;; Preserve the substrate's receipt of which population was counted. If
+        ;; a future change silently stops scoping, :population will expose that
+        ;; fact instead of letting the number quietly move populations.
         ;; :indexed is the denominator the band must be read against.
         {:df (:df parsed)
          :indexed (:indexed parsed)
-         :population :whole-index-unfiltered
+         :population (get parsed :population :unstated)
+         :filters (:filters parsed)
          :source url}))
     (catch Throwable _ nil)))
 
