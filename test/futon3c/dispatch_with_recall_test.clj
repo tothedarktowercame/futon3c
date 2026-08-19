@@ -225,7 +225,7 @@
            (:score-kind (last audit))))
     (is (= 2 (:cutoff-position (last audit))))))
 
-(deftest eligible-memory-observation-is-post-anchor-and-pre-cutoff
+(deftest eligible-memory-observation-is-pre-cutoff-without-anchor-filtering
   (let [ranked [{:memory/id "e-first" :memory/body {:summary "anchor one"}}
                 {:memory/id "e-second" :memory/body {:summary "anchor two"}}
                 {:memory/id "e-third" :memory/body {:summary "anchor three"}}
@@ -240,13 +240,76 @@
              (filter #(#'dispatch/memory-contains-term? % "anchor"))
              (take limit)
              (mapv :memory/id))]
-    (is (= ["e-first" "e-second" "e-third"] eligible-ids))
+    (is (= ["e-first" "e-second" "e-third" "e-ineligible"] eligible-ids))
     (is (= ["e-first" "e-second"] surfaced-ids))
     (is (> (count eligible-ids) (count surfaced-ids)))
     (is (= surfaced-ids (subvec eligible-ids 0 (count surfaced-ids)))
         "surfaced ids are the rank-order prefix of eligible ids")
     (is (= legacy-surfaced-ids surfaced-ids)
-        "extracting eligibility does not change the previous surfaced ids")))
+        "anchor hits remain first when the input ranking already puts them first")))
+
+(deftest absent-anchor-does-not-empty-relevant-candidates
+  (let [ranked [{:memory/id "e-riesz"
+                 :memory/body {:summary "Riesz representation in Hilbert space"}}
+                {:memory/id "e-weak"
+                 :memory/body {:summary "weak Hessian convergence"}}]
+        eligible (vec (#'dispatch/eligible-memories
+                       ranked "computes" (constantly nil)))]
+    (is (= ["e-riesz" "e-weak"] (mapv :memory/id eligible)))
+    (is (every? (comp false? :dispatch/anchor-satisfied?) eligible))))
+
+(deftest anchor-boost-outranks-common-companion-only-match
+  (let [eligible (#'dispatch/eligible-memories
+                  [{:memory/id "e-common"
+                    :memory/body {:summary "additive estimate"}}
+                   {:memory/id "e-anchor"
+                    :memory/body {:summary "computes spectral index"}}]
+                  "computes" (constantly nil))
+        boosted (#'dispatch/rank-with-anchor-boost eligible)]
+    (is (= ["e-anchor" "e-common"] (mapv :memory/id boosted)))
+    (is (= [true false]
+           (mapv :dispatch/anchor-satisfied? boosted)))))
+
+(deftest frame-12-term-set-surfaces-riesz-memories-with-missing-anchor
+  (let [proposal-query (atom nil)
+        candidates [{:memory/id "e-hilbert-riesz"
+                     :memory/body
+                     {:summary "Riesz representation for a Hilbert functional"}}
+                    {:memory/id "e-weak-hessian"
+                     :memory/body
+                     {:summary "weak Hessian convergence under additive bounds"}}]
+        recall-result
+        (with-redefs-fn
+          {#'dispatch/recall-query
+           (fn [& _] {:required-term "computes"
+                      :terms ["computes" "riesz" "weak-hessian" "additive"]
+                      :query "computes riesz weak-hessian additive"})
+           (ns-resolve 'futon3c.dispatch-with-recall 'substrate-seams)
+           (fn [& _]
+             {:search (constantly {})
+              :projection (constantly {})
+              :entry (constantly nil)})
+           (ns-resolve 'futon3c.peripheral.memory-recall
+                       'propose-patterns-by-query)
+           (fn [_ query _]
+             (reset! proposal-query query)
+             {:candidates [] :content-matches candidates
+              :lexical-seed [] :index-as-of "frame-12-fixture"})
+           (ns-resolve 'futon3c.peripheral.memory-recall
+                       'recall-by-endpoints)
+           (fn [& _] {:recalls []})}
+          #(deref
+            (future
+              (#'dispatch/recall-now
+               {:problem "frame-12-problem" :subjects [] :limit 2
+                :recall-timeout-ms 3000 :receipt-ranking? false}
+               "Hilbert-space variational problem"))))]
+    (is (= "computes riesz weak-hessian additive" @proposal-query))
+    (is (= :ok (:status recall-result)))
+    (is (= ["e-hilbert-riesz" "e-weak-hessian"]
+           (mapv :memory/id (:memories recall-result))))
+    (is (= {:term "computes" :satisfied? false}
+           (:anchor recall-result)))))
 
 (deftest eligible-and-surfaced-ids-agree-without-truncation
   (let [ranked [{:memory/id "e-first" :memory/body {:summary "anchor one"}}
@@ -268,6 +331,16 @@
            (get-in entry [:body :eligible-memory-ids])))
     (is (= ["e-first" "e-second"]
            (get-in entry [:body :memory-use :memory-use/surfaced-ids])))))
+
+(deftest offered-receipt-records-anchor-boost-observation
+  (let [entry (dispatch/offered-evidence
+               {:problem "a-test" :from "ground-control"}
+               {:status :ok
+                :anchor {:term "computes" :satisfied? false}
+                :memories [{:memory/id "e-riesz"}]}
+               "job-anchor" "session-anchor")]
+    (is (= {:term "computes" :satisfied? false}
+           (get-in entry [:body :recall-anchor])))))
 
 (deftest pull-only-receipt-persists-machine-eligibility-provenance
   (let [provenance {:policy :snapshot-union-cycle-promoted
@@ -301,7 +374,8 @@
         recall-result
         (with-redefs-fn
           {#'dispatch/recall-query
-           (fn [& _] {:required-term "anchor" :terms ["anchor"]})
+           (fn [& _] {:required-term "anchor" :terms ["anchor"]
+                      :query "anchor"})
            (ns-resolve 'futon3c.dispatch-with-recall 'substrate-seams)
            (fn [& _]
              {:search (constantly {})
@@ -332,7 +406,7 @@
         eligible-ids (get-in receipt [:body :eligible-memory-ids])
         surfaced-ids (get-in receipt [:body :memory-use
                                       :memory-use/surfaced-ids])]
-    (is (= ["e-first" "e-second" "e-third"] eligible-ids))
+    (is (= ["e-first" "e-second" "e-third" "e-ineligible"] eligible-ids))
     (is (= ["e-first" "e-second"] surfaced-ids))
     (is (> (count eligible-ids) (count surfaced-ids)))
     (is (= surfaced-ids (subvec eligible-ids 0 (count surfaced-ids))))))

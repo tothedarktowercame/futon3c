@@ -656,23 +656,31 @@
          (every? present required))))
 
 (defn- eligible-memories
-  "Ranked memories that pass the required-term body check, before cutoff.
+  "Ranked relevant memories, hydrated for anchor observation, before cutoff.
 
   This boundary is observationally important: applying `take` here would make
   eligibility indistinguishable from surfacing and recreate the F7 tautology."
   [ranked required-term entry]
-  (keep
+  (map
    (fn [memory]
-     (let [memory
-           (if (and (map? (:memory/body memory))
-                    (memory-contains-term? memory required-term))
-             memory
-             (when-let [full-entry (entry (:memory/id memory))]
-               (when (map? (:evidence/body full-entry))
-                 (assoc memory :memory/body (:evidence/body full-entry)))))]
-       (when (and memory (memory-contains-term? memory required-term))
-         memory)))
+     (let [memory (if (map? (:memory/body memory))
+                    memory
+                    (if-let [body (some-> (entry (:memory/id memory))
+                                          :evidence/body)]
+                      (assoc memory :memory/body body)
+                      memory))]
+       (assoc memory :dispatch/anchor-satisfied?
+              (boolean (and required-term
+                            (memory-contains-term? memory required-term))))))
    ranked))
+
+(defn- rank-with-anchor-boost
+  "Stable anchor boost over an already-ranked eligible set.
+
+  Anchor matches precede misses; each partition retains the underlying ranking,
+  so the anchor influences surfacing without becoming an eligibility filter."
+  [eligible]
+  (sort-by #(if (:dispatch/anchor-satisfied? %) 0 1) eligible))
 
 (defn- receipt-entries
   [base timeout-ms]
@@ -948,15 +956,15 @@
             :trace-id trace-id
             :search-evidence search
             :recall-batch-fn batch-recall}))
-        ;; The highest-IDF term is a required anchor, not merely one rung in a
-        ;; weakening ladder. Querying it alone also prevents the proposal
-        ;; layer's bounded OR fallback from letting a common companion term
-        ;; carry the match. No anchor support is a typed recall-empty result.
+        ;; Search the selected vocabulary as a bounded OR. The highest-IDF term
+        ;; remains an observable ranking boost below, rather than a hard gate:
+        ;; rarity must improve precision without making an absent word erase
+        ;; relevant companion-term matches.
         proposals
-        (if required-term
-          (assoc (propose-with required-term)
-                 :recall/tier :required-term
-                 :recall/query-used required-term)
+        (if-not (str/blank? (:query query-data))
+          (assoc (propose-with (:query query-data))
+                 :recall/tier :selected-terms
+                 :recall/query-used (:query query-data))
           {:candidates []
            :content-matches []
            :lexical-seed []
@@ -1053,9 +1061,11 @@
                :recall-system active-system
                :receipt-ranking ranking-audit)
         eligible (vec (eligible-memories ranked required-term entry))
-        eligible-memory-ids (->> eligible (map :memory/id) distinct vec)
+        boosted (vec (rank-with-anchor-boost eligible))
+        anchor-satisfied? (boolean (some :dispatch/anchor-satisfied? eligible))
+        eligible-memory-ids (->> boosted (map :memory/id) distinct vec)
         memories
-        (->> eligible
+        (->> boosted
              (take limit)
              (mapv with-use-kind))]
     (cond->
@@ -1067,6 +1077,7 @@
       :index-as-of (:index-as-of proposals)
       :ladder-rung (:recall/tier proposals)
       :ladder-query (:recall/query-used proposals)
+      :anchor {:term required-term :satisfied? anchor-satisfied?}
       :pattern-ids (vec pattern-ids)
       :endpoints (vec endpoints)
       :eligible-memory-ids eligible-memory-ids
@@ -1370,6 +1381,10 @@
                     :recall-index-as-of (:index-as-of recall-result)
                     :recall-ladder-rung (or (:ladder-rung recall-result) :unavailable)
                     :recall-ladder-query (:ladder-query recall-result)
+                    :recall-anchor (or (:anchor recall-result)
+                                       {:term (get-in recall-result
+                                                      [:query :required-term])
+                                        :satisfied? false})
                     :withheld-memory-ids withheld-ids
                     :withholding-delivered-ids
                     (vec (:withholding-delivered-ids recall-result))
