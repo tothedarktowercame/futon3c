@@ -179,7 +179,7 @@
                         (.getBytes (str s) "UTF-8"))]
     (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
 
-(defn- store-revision [snapshot]
+(defn- snapshot-store-revision [snapshot]
   (when (some? (:snap/memory-ids snapshot))
     (sha1-hex (str/join "\n" (sort (:snap/memory-ids snapshot))))))
 
@@ -401,7 +401,7 @@
         harness (recorded-harness-measurement state)
         harness-revision (:harness-revision harness)
         store-snapshot (recorded-tool-result state :snapshot-store)
-        store-revision (store-revision store-snapshot)
+        store-revision (snapshot-store-revision store-snapshot)
         frame-output (recorded-frame-output state)
         dispositions (recorded-cycle-tool-results state :write-disposition)
         memory-uses (recorded-cycle-tool-results state :write-use)

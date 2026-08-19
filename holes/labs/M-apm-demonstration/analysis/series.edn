@@ -1344,6 +1344,56 @@
     environment and harness revisions and simply omits this one. Mutation-verified: stamping
     a valid sha on both attempts takes trace-shape-failures from
     [:malformed-cycle-attempts] to []. Failure count 3 -> 2."
+   :P30-review
+   "MERGED AND GATED — 91f562bf (codex-3), plus my own follow-up rename. Two files:
+    src/futon3c/peripheral/problem.clj (+25/-4) and its test (+60);
+    preregistration.clj untouched, as the packet required.
+    WHAT I CHECKED, so the review is auditable:
+    (1) read the diff; the producer now derives a sha1 of the SORTED :snap/memory-ids
+        from the recorded :snapshot-store result and stamps both the solver attempt and
+        every student attempt, guarded by (some? :snap/memory-ids);
+    (2) re-ran the replay myself — as-is [:malformed-cycle-attempts], stamped [];
+    (3) reproduced codex-3's reported digest 657817917344652f6e9d389d6693f792bc065eb5
+        INDEPENDENTLY with shell sha1sum, not with the function under review;
+    (4) TWO MUTATIONS THE PACKET DID NOT ASK FOR, both caught by the suite:
+        remove the sort -> the order-independence assertion fails
+        (657817... vs b06cd01f...); remove the nil guard -> a missing snapshot
+        fabricates da39a3ee... (sha1 of the empty string) and three assertions fail,
+        including a PRE-EXISTING one. The guard is load-bearing and the tests see it;
+    (5) re-ran clj-kondo (0/0 on both touched files) and the namespace suite myself:
+        103 tests, 387 assertions, 0 failures, 0 errors — codex-3's numbers reproduce;
+    (6) verified the honest flag it raised: repo-wide clojure -X:test is NOT green.
+        The failures are in futon3c.agency.federation-sync-test (proxy registration
+        returning :skipped-own-site) and dev-irc-summary arity errors. Neither file
+        mentions problem.clj, store-revision or stamp-attempt; grep count is 0 in both.
+        Pre-existing and unrelated, and codex-3 was right to say so rather than claim
+        a green suite.
+    ONE FINDING, FIXED BY ME rather than re-belled: the private fn store-revision was
+    shadowed by a same-named local in the let that calls it and by the parameter of
+    stamp-attempt-environment. It worked (let binds sequentially) but any later call in
+    that scope would break confusingly. Renamed the fn to snapshot-store-revision;
+    re-linted and re-ran the suite green."
+   :P30-premise-flag-resolved
+   "f15-guide flagged (3704b0eb) that P30's premise was wrong — 'a machine-owned
+    store-revision stamp EXISTS' at problem.clj:182-196, 404, 473-486 — and suggested
+    redirecting codex-3 to root-cause why the existing stamp did not fire, comparing
+    against the a01A06 rehearsal which carries the field.
+    THE FLAG IS AN ARTIFACT OF READING THE FILE AFTER P30 LANDED, and I settled it at
+    the object rather than by argument. codex-3 committed 17:59:32; the guide's commit
+    is 18:01:01; the line numbers it cites are the POST-P30 line numbers.
+    git grep store-revision at 91f562bf^ -- src/ returns ONLY the two consumer sites
+    (preregistration.clj:104,481 and cycle_harness.clj:118); problem.clj had ZERO
+    occurrences before P30 and has 7 after. The premise was correct at dispatch time.
+    AND a01A06 IS NOT A REGRESSION WITNESS. Its :cycle/store-revision arrives in the
+    :args of :advance-problem-phase at steps 15 and 21 — HAND-SUPPLIED BY THE CALLER,
+    appearing in a :result only downstream where emit-trace carries it forward. No
+    machine ever wrote it. So a01A06 is evidence FOR a machine-owned stamp, not for a
+    lost writer: a caller-supplied store digest is exactly the forgeable route the
+    guide itself argues is wrong for the field :both-channels-varied depends on. That
+    architectural point is the guide's and it is right; P30 is what satisfies it.
+    RECORDED AS A CROSSING, not as a mistake by either seat: an async flag sent while
+    the job it describes was still running read a file the job had already changed.
+    E-crossed-bells is the standing lesson and this is a new instance of it."
    :dispatch-note
    "Picked codex-3 on analyst-2's rule — prefer an agent that has actually completed a job
     this session (codex-3 delivered P28 and P29) over one merely listed idle. It was also
