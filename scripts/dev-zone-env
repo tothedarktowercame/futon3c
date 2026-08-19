@@ -28,7 +28,7 @@ export FUTON3C_REGISTER_VSCODE_CODEX="${FUTON3C_REGISTER_VSCODE_CODEX:-false}"
 # Agent identity and IRC nick are local names.  The `ams-` area code is added
 # only at federation boundaries when another site addresses this lane.
 export FUTON3C_CODEX_AGENT_ID="${FUTON3C_CODEX_AGENT_ID:-codex-1}"
-export FUTON3C_CODEX_NICK="${FUTON3C_CODEX_NICK:-codex}"
+export FUTON3C_CODEX_NICK="${FUTON3C_CODEX_NICK:-codex-1}"
 
 # A ZAI lane is created through Agency's public auto-registration boundary by
 # systemd's ExecStartPost helper. This keeps one registration implementation.
