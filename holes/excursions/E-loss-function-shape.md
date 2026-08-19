@@ -149,3 +149,63 @@ makes the mismatch self-evident on sight; the band is the fix, the receipt is
 what makes the fix checkable. Landed for the recall anchor
 (futon3c `10937528`); the same treatment is owed to the guidance count, the
 transfer channel, and the accumulation denominator.
+
+
+---
+
+## State as of f13's close, and what f15 can add (2026-08-19)
+
+Joe asked where this stands and whether f15 can populate it.
+
+### Populated
+
+`:loss-components` sits in `series.edn` per frame and is populated **f7–f13**.
+f13's was ABSENT until today and has been backfilled — the worst possible frame
+to have omitted, since it is the first with a non-zero attested numerator.
+**f14 never opened**, so there is nothing from it and never will be.
+
+    frame   used-attested
+    f7-f10  (field absent from the schema of the day)
+    f11     1     off-instrument, via a REJECTED memory
+    f12     0     a producer frame: converted-artifacts 6, numerator zero
+    f13     2     FIRST ATTESTED — and both memories are f12's
+
+### The one real datum the series has
+
+f12 deposited 6 converted artifacts and scored a zero numerator. f13 then
+attested `USED` on two of them. **That is f12's denominator paying into f13's
+numerator** — precisely the thing f12's own note said the loss function as
+shaped could not express. It can now, but only by reading two frames together,
+which is an argument for a cross-frame view rather than a per-frame one.
+
+### The three slots still unfilled, and why
+
+1. **COST.** Frame records carry no wall-clock, no duration, no attempt cost.
+   `:cost-delta` has never been populated for any frame. This is the band that
+   makes rate-of-return computable and it has no instrument at all.
+2. **`:basis {:retrieval …}`.** Still pending, and for a DIFFERENT reason than
+   this document originally recorded. The scoped-df work landed (`6bfe5808`) but
+   is not on the code path: `query-anchor-term-memory-df` runs only under
+   `--anchor-source memory-df` and the default is `:problem-idf`. So the slot
+   cannot be filled by flipping a field; the fix is D60 and it ranks the wrong
+   object (the anchor, not the query terms).
+3. **`:used-receipted`.** Zero in every frame, including f13 where two uses were
+   attested. The trace has never once recorded a use that the seats reported.
+   f13's is explained — the halt preceded `dispatch-student!`, which is the only
+   thing that harvests `:promotion-result` — but f9–f12 had no such excuse.
+
+### What f15 can populate that no predecessor could
+
+f15 is the first frame with a problem VERIFIED SOUND, a working read path, and
+memory-use instrumentation. So for the first time:
+
+- `:used-attested` will mean *"accumulated knowledge helped solve a real
+  problem"* rather than *"helped detect a broken one"*, whichever way it falls;
+- `:converted-artifacts` will count work on four genuine conjuncts;
+- and a **zero** will be informative rather than ambiguous, because the
+  registration pre-declares that the store holds essentially no ODE material
+  (`gronwall` 0, `flow` 0, `ode` 2, `picard` 1). A zero is then a statement
+  about corpus COVERAGE, not about the mechanism.
+
+It still cannot populate COST. That instrument does not exist and should be
+built before f16, or the rate-of-return band stays permanently empty.

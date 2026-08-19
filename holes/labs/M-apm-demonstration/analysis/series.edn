@@ -940,7 +940,7 @@
  ;; ===========================================================================
  ;; FRAME 13 — m99J06 — HALTED AND VOID
  ;; ===========================================================================
- {:frame 13
+ {:frame "f13"
   :problem "m99J06"
   :closed false
   :halted true
@@ -1033,6 +1033,38 @@
                analyst-3 is at tenure 1 of 2 and owes succession at f14. There is
                no reading f13 could satisfy or refute. Prediction text defective;
                f13's registration stays frozen."}]
+
+  ;; --- loss components ------------------------------------------------
+  ;; ABSENT UNTIL 2026-08-19, and this was the worst frame to omit them from:
+  ;; f13 is the FIRST frame in the series with a non-zero attested numerator,
+  ;; so the one frame that moved the metric was the one missing from it.
+  :loss-components
+  {:surfaced-push 0
+   :surfaced-pull 5
+   :pull-offers 106            ; 5 leaf (hop 0) + 100 cascade (hop 2) + 1 unrouted
+   :pull-uses 0                ; per the TRACE, which is wrong — see :used-attested
+   :used-receipted 0
+   :used-attested 2            ; <-- FIRST NON-ZERO IN THE SERIES
+   :converted-artifacts 1      ; solver commit 25186f29, the IsEmpty close
+   :note
+   "THE NUMERATOR MOVED FOR THE FIRST TIME, AND THE TRACE CANNOT SEE IT. The
+    solver returned per-id disposition over all five surfaced memories unprompted:
+    USED e-1b72bb47 and e-7c6631c9 (both f12-scribe's, from f12's harvest),
+    IGNORED for the other three with stated reasons. That is the first attested
+    transfer in the series and the first time f12's :converted-artifacts 6 paid
+    into a later frame's numerator — the thing the f12 note said the loss
+    function could not express.
+
+    :used-receipted is 0 and :pull-uses is 0 because the CYCLE STATE records
+    memory-use steps = 0: the frame halted at :promote-solver under
+    PROTOCOL-defective-problem.md, and :promotion-result is harvested into cycle
+    outputs only by dispatch-student! (conductor.clj:504-509). So the trace
+    under-reports and the attestation is carried here from the solver's reply
+    instead. Reading this frame from the trace alone would score it zero.
+
+    AND THE FRAME IS VOID FOR SOLVING. The two memories were used to establish
+    that the model is UNINHABITED. What transferred was defect-detection, not
+    mathematics. The numerator is real and it is not yet the numerator we want."}
 
   :cascade {:patterns-per-problem 2 :cap 100 :truncated? true
             :expanded-available 128
