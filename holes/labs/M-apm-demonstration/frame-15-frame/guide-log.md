@@ -309,7 +309,7 @@ Commit `9ff4f866` ("solve m93J06 flow regularity"). Chain: `a68fa7e3` (conjunct
 4. **First 146 lines byte-identical to base** (md5 `66dff80d…`). Every frozen
    definition — `apm_m93j06_Solves`, `apm_m93j06_IsFlow` and the early lemmas —
    is provably untouched.
-5. **Purely additive diff**: +963/−3 on Main.lean, the 3 deletions being two
+5. **Purely additive diff**: +960/−3 on Main.lean (`git diff --numstat`; the `--stat` column reads 963 because it totals changed lines, insertions PLUS deletions — my earlier figure misread that column), the 3 deletions being two
    lines of boundary-note prose and the original bundled `sorry`.
 6. **Declaration audit of every added top-level line**: no `def`, `axiom`,
    `instance`, `structure`, `class`, `abbrev`, `notation`, `macro`, `opaque`,
@@ -934,3 +934,52 @@ after the replay, nothing re-run:
 Recommendation: park resumes should carry the park-id and a
 delivered-already/ack marker, so a continuation can tell a first delivery from a
 replay without reconstructing what it did last turn.
+
+---
+
+## Close ACCEPTED by ground control (claude-2), independently re-verified
+
+claude-2 re-ran the load-bearing checks rather than accepting them: worktree
+clean at `9ff4f86`, 0 sorries, `lake env lean` exit 0, `#print axioms
+apm_m93j06 → [propext, Classical.choice, Quot.sound]`, and the same
+`md5 66dff80d…` on the first 146 lines at base and head. Both axes confirmed.
+Recorded as the first genuine solve since f10, and the first ever on a problem
+verified sound in advance.
+
+### One number of mine was wrong — corrected above
+
+I reported the solver diff as **+963/−3**; the true figure is **+960/−3**.
+`git diff --numstat` gives 960 insertions and 3 deletions; the `--stat` column
+renders **963** because it totals changed lines (insertions PLUS deletions), and
+I read that column as insertions. claude-2's independent count was right.
+Corrected in the diff-audit entry rather than left standing, since the Analyst
+reads these as receipts.
+
+Declaration counts reconcile exactly: 12 declarations matching `apm_m93j06` at
+base, 40 at head → **28 new**, matching claude-2's count.
+
+### Carried forward by ground control
+
+- **Re-homing `e-4f6b5d49…` to `math-informal/local-to-global` is QUEUED and
+  blocked on D62** until promotion is atomic. My refusal to make that trade
+  inside the frame was accepted.
+- `:malformed-cycle-attempts` accepted as my error; validate-on-record accepted
+  as the fix for the harness half.
+- **`:measurement-populated` unsatisfiable** taken as the most consequential
+  defect in the report.
+- Two rules adopted verbatim: aggregate `USED` counts must be filtered against
+  `:memory-use/surfaced-ids`; and "315 offers, 15 dispositioned" is a false
+  reading because only the 5 leaves were ever shown.
+
+### Frame cost, recorded for the series
+
+    f15-guide   75,234,338      f15-solver  17,659,846      f15-scribe  1,286,232
+    TOTAL       94,180,416 tokens  /  960 LOC, 28 decls, 4 conjuncts, :closed
+
+The guide is ~80% of frame cost, consistent with f13: **conducting costs more
+than solving.** This is the first frame in the series where that denominator
+divides into a non-zero yield.
+
+**FRAME 15 CLOSED AND ACCEPTED.** f15-guide does not persist beyond this frame;
+everything that should outlive it is in the three reviewed memories, this log,
+and the close report.
