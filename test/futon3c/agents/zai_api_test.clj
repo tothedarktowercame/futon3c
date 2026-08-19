@@ -24,6 +24,10 @@
   {:choices [{:message {:role "assistant"
                         :content text}}]})
 
+(defn- text-response-with-usage
+  [text usage]
+  (assoc (text-response text) :usage usage))
+
 (defn- fake-tool-result
   [_backend _tool-opts tc]
   {:detail {:id (:id tc)
@@ -163,6 +167,55 @@
         (is (= turn-id (get-in round [:evidence/body :turn-id])))
         (is (= true (get-in round [:evidence/body :final])))
         (is (= "proved" (get-in round [:evidence/body :text])))))))
+
+(deftest records-normalized-zai-usage-per-round
+  (let [full-usage {:prompt_tokens 101
+                    :prompt_tokens_details {:cached_tokens 23}
+                    :completion_tokens 47
+                    :completion_tokens_details {:reasoning_tokens 11}
+                    :total_tokens 148}
+        expected {:cost/input-tokens 101
+                  :cost/cached-input-tokens 23
+                  :cost/output-tokens 47
+                  :cost/reasoning-tokens 11
+                  :cost/total-tokens 148
+                  :cost/source :zai}]
+    (doseq [[usage expected-cost]
+            [[full-usage expected]
+             [(dissoc full-usage :prompt_tokens_details)
+              (dissoc expected :cost/cached-input-tokens)]
+             [(dissoc full-usage :completion_tokens_details)
+              (dissoc expected :cost/reasoning-tokens)]
+             ;; A required field absent must be OMITTED, not written as nil.
+             [(dissoc full-usage :prompt_tokens)
+              (dissoc expected :cost/input-tokens)]
+             [(dissoc full-usage :total_tokens :completion_tokens)
+              (dissoc expected :cost/total-tokens :cost/output-tokens)]
+             [nil nil]]]
+      (let [store (atom {:entries {} :order []})
+            events (atom [])
+            invoke (make-invoke {:evidence-store store})]
+        (with-redefs [zai/chat! (fn [_client _opts _messages]
+                                  (if usage
+                                    (text-response-with-usage "still works" usage)
+                                    (text-response "still works")))
+                      zai/sink! (fn [_agent-id event] (swap! events conj event))]
+          (is (= "still works" (:result (invoke "measure" nil))))
+          (let [round (->> (:order @store)
+                           (map #(get-in @store [:entries %]))
+                           (filter #(= :turn-round
+                                       (get-in % [:evidence/body :event])))
+                           first)
+                body (:evidence/body round)
+                cost (select-keys body (keys expected))
+                usage-events (filter #(= "usage" (:type %)) @events)]
+            (is (= (or expected-cost {}) cost))
+            (is (not-any? (fn [[_ v]] (nil? v))
+                          (filter (fn [[k _]] (= "cost" (namespace k))) body)))
+            (is (= (if expected-cost
+                     [(assoc expected-cost :type "usage")]
+                     [])
+                   (vec usage-events)))))))))
 
 (deftest zaif-profile-records-prompt-decision-and-final-round
   (let [store (atom {:entries {} :order []})
