@@ -63,6 +63,13 @@
   (or (some-> (System/getenv "FUTON1B_APPEND_TIMEOUT_MS") parse-long)
       30000))
 
+(def append-retry-ms
+  ;; Connection refusal proves that the store received nothing, so retry that
+  ;; transport failure through a bounded restart window. A request timeout is
+  ;; deliberately excluded below because the write may have landed.
+  (or (some-> (System/getenv "FUTON1B_APPEND_RETRY_MS") parse-long)
+      90000))
+
 (def query-cache-ttl-ms
   ;; The War Machine and AIF stack are read-mostly projections. Their HTTP
   ;; handlers can ask the same bounded question several times per scheduler
@@ -334,50 +341,70 @@
                       :trace-id trace-id
                       :detail (.getMessage ^Exception serialization-error)
                       :invalid-edn (:invalid-edn serialized))
-        (let [{:keys [status body error]}
-              @(http/post (api-url base-url "/api/alpha/evidence")
-                          {:timeout append-timeout-ms
-                           :as :text
-                           :headers {"content-type" "application/edn"
-                                     "x-penholder" (penholder)
-                                     "x-trace-id" trace-id}
-                           :body (:body serialized)})
-              parsed (read-edn body)]
-          (cond
-            error
-            (social-error (if (timeout-error? error)
-                            :store-timeout
-                            :store-unreachable)
-                          (if (timeout-error? error)
-                            "futon1b persistence timed out"
-                            "futon1b server unreachable")
-                          :evidence-id eid :trace-id trace-id
-                          :detail (str error))
+        (let [url (api-url base-url "/api/alpha/evidence")
+              options {:timeout append-timeout-ms
+                       :as :text
+                       :headers {"content-type" "application/edn"
+                                 "x-penholder" (penholder)
+                                 "x-trace-id" trace-id}
+                       :body (:body serialized)}
+              started-ns (System/nanoTime)
+              elapsed-ms (fn []
+                           (quot (- (System/nanoTime) started-ns) 1000000))
+              unreachable-error
+              (fn [error attempts elapsed]
+                (social-error :store-unreachable
+                              "futon1b server unreachable"
+                              :evidence-id eid :trace-id trace-id
+                              :detail (str error)
+                              :attempts attempts :elapsed-ms elapsed))]
+          (loop [attempt 0]
+            (let [{:keys [status body error]} @(http/post url options)
+                  parsed (read-edn body)
+                  attempts (inc attempt)]
+              (cond
+                (and error (timeout-error? error))
+                (social-error :store-timeout
+                              "futon1b persistence timed out"
+                              :evidence-id eid :trace-id trace-id
+                              :detail (str error))
 
-            (= 201 status)
-            {:ok true
-             :entry (or (:entry parsed) validated)
-             :trace-id trace-id}
+                error
+                (let [elapsed (elapsed-ms)
+                      remaining (- (max 0 (long append-retry-ms)) elapsed)
+                      backoff (* 100 (bit-shift-left 1 attempt))]
+                  (if (pos? remaining)
+                    (let [sleep-ms (min backoff remaining)]
+                      (Thread/sleep sleep-ms)
+                      (if (< sleep-ms remaining)
+                        (recur (inc attempt))
+                        (unreachable-error error attempts (elapsed-ms))))
+                    (unreachable-error error attempts elapsed)))
 
-            (and (= 409 status) (= :reply-not-found (:error parsed)))
-            (social-error :reply-not-found
-                          "in-reply-to references missing entry"
-                          :in-reply-to (:evidence/in-reply-to validated)
-                          :evidence-id eid :trace-id trace-id)
+                (= 201 status)
+                {:ok true
+                 :entry (or (:entry parsed) validated)
+                 :trace-id trace-id}
 
-            (and (= 409 status) (= :fork-not-found (:error parsed)))
-            (social-error :fork-not-found "fork-of references missing entry"
-                          :fork-of (:evidence/fork-of validated)
-                          :evidence-id eid :trace-id trace-id)
+                (and (= 409 status) (= :reply-not-found (:error parsed)))
+                (social-error :reply-not-found
+                              "in-reply-to references missing entry"
+                              :in-reply-to (:evidence/in-reply-to validated)
+                              :evidence-id eid :trace-id trace-id)
 
-            (= 409 status)
-            (social-error :duplicate-id "Evidence id already exists"
-                          :evidence-id eid :trace-id trace-id)
+                (and (= 409 status) (= :fork-not-found (:error parsed)))
+                (social-error :fork-not-found "fork-of references missing entry"
+                              :fork-of (:evidence/fork-of validated)
+                              :evidence-id eid :trace-id trace-id)
 
-            :else
-            (social-error :store-rejected "futon1b rejected the append"
-                          :evidence-id eid :trace-id trace-id
-                          :status status :body parsed))))))
+                (= 409 status)
+                (social-error :duplicate-id "Evidence id already exists"
+                              :evidence-id eid :trace-id trace-id)
+
+                :else
+                (social-error :store-rejected "futon1b rejected the append"
+                              :evidence-id eid :trace-id trace-id
+                              :status status :body parsed))))))))
 
   (-get [_ evidence-id]
     (let [{:keys [status body]}
