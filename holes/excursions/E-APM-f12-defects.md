@@ -912,3 +912,60 @@ Also observed: the agent+session listing returned one row with
 listing truncates. Not diagnosed further.
 
 Not fixed — f13 is mid-flight and a fix moves the harness pin. Queued for f15.
+
+## D58 — `conductor-open` accepts a cycle with NO `:mode`, and it degrades four phases later [verified]
+
+Raised by f13-guide as a question, not a defect, which is how it should have
+been found much earlier.
+
+`conductor_open.clj` reads `:mode` straight from the open payload through
+`normalize-mode`, with **no default and no validation**. A payload omitting it
+opens cleanly, registers, frames, dispatches, and only fails at `:intervene`,
+because `autoconf` (`peripheral/problem.clj:143`) resolves the intervention tool
+by `(case (:cycle/mode context) :store-mode :write-substrate :harness-mode
+:tune-harness nil)`. With mode nil the tool is nil, `:intervene` carries
+`advance` and nothing else, and the guide cannot deposit at all.
+
+It costs a second thing: `eligible-memory-ids` (`problem.clj:349-361`) unions
+cycle-promoted ids into the student's set only under `store-mode?`. Without it
+the policy is `:snapshot-only` and the `:promote-solver` → student link does not
+exist — so the frame would run to completion and refute
+`:memory-contributes-to-close` for a plumbing reason indistinguishable from a
+real negative.
+
+f13 is fine: `:cycle/mode :store-mode` and `:cycle/deposit-state :with-deposit`
+in the persisted state, two independently written fields agreeing.
+
+**A mode-less cycle should refuse at open.** A frame that opens green and
+silently cannot deposit is the same failure class as everything else in this
+file: the check that passes because it never looked. Not fixed — f13 is
+mid-flight and a fix moves the pin. Queued for f15 with D54 and D57.
+
+## f13 in progress — the solver reproduced the vacuity argument unaided
+
+Within ~2 minutes of dispatch the solver produced `Inhabitation.lean` in its
+worktree proving `IsEmpty (test_H01Model H)` by the same route f13-guide had
+hypothesised privately and deliberately withheld — and by a slightly cleaner
+argument (show `⟪w₀,w₀⟫ = 0` and `⟪ws,ws⟫ = 0` separately rather than `w = w'`).
+
+The guide gave no guidance. The measurement is intact.
+
+**The attribution trap, named before the result rather than after.** Two of the
+five surfaced memories are procedurally exact for the move the solver made —
+`propagate-local-api-mismatches-to-global-theorem-semantics` says "run a
+consequence pass: list the definitions depending on the mismatched notion, test
+whether their carrier becomes empty". That makes this the most temptingly
+attributable coincidence the series has produced. `:memory-contributes-to-close`
+turns on the solver's own per-id `USED`/`IGNORED` attestation and on nothing
+else. Crediting the coincidence would put a false positive on the single measure
+the apparatus exists to move.
+
+Flagged to the guide: the packet named two memories but **five** were eligible,
+so the `IGNORED` accounting must cover the other three or the disposition is
+incomplete.
+
+**Review bar agreed in advance** (f13-guide's formulation, adopted as the gate):
+a green `Inhabitation.lean` beside an untouched `sorry` is not a close, and a
+close routed through the copied `test_H01Model` is not a proof of the frozen
+theorem. A faithful copy makes the ARGUMENT transfer, not the PROOF —
+`IsEmpty (test_H01Model H)` is not `IsEmpty (apm_m99J06_H01Model H)` to Lean.

@@ -69,3 +69,45 @@ changes the route.
 - **The engine-owned park did not fire.** `park-dispatch` only posts when the
   cycle context carries `:agent`; `/api/alpha/parked` was empty after the
   dispatch, so I parked by hand. Report at close.
+
+## Update, 11:34 — the solver is reproducing the argument unaided
+
+`problems/m99J06/lean/Inhabitation.lean` appeared in the solver's worktree
+(untracked, in progress) within ~2 minutes of dispatch. It builds
+`test_isH01Pair` / `test_H01Model` as a local copy and is proving
+
+    example {H} [NormedAddCommGroup H] [InnerProductSpace ℝ H] :
+      IsEmpty (test_H01Model H)
+
+by exactly the route in the hypothesis above, with the same `spike` witness
+(`fun x => if x = 2 then 1 else 0`) — and slightly cleaner: instead of
+`w = w'` it shows `⟪w,w⟫ = 0` and `⟪ws,ws⟫ = 0` separately, so `w0 = ws = 0`
+and then `M.val 0 = 0` versus `M.val 0 = spike`.
+
+**No guidance was given.** The solver got there from the packet's demand for a
+witness alone. The measurement is intact.
+
+### Review point that makes or breaks the witness (mine, for adjudication)
+
+The witness is stated about a COPY (`test_H01Model`), not about
+`apm_m99J06_H01Model`. Diffed the copied block against Main.lean lines 32-57
+modulo the `apm_m99J06_`/`test_` prefix: **textually identical except one line
+break** (`abbrev X_L2 :=` on one line rather than two). So the copy is
+faithful and an `IsEmpty` result transfers.
+
+But at review I require the CLOSE in `Main.lean` to be stated against the real
+`apm_m99J06_H01Model` — a green `Inhabitation.lean` alongside an unchanged
+`sorry` is not a close, and a close routed through the copy is not a proof of
+the frozen theorem.
+
+## Corrections to the notes above
+
+- The engine-owned park finding STANDS, but my evidence was sloppy:
+  `GET /api/alpha/parked` with no params returns `[]` with
+  `more-pending: true`. The real query is `GET /api/alpha/parked?agent=f13-guide`,
+  which shows exactly ONE park — mine (`park-c016b9a7-…`, mode `within-turn`).
+  So: no engine park, my hand park is alive.
+- Job telemetry reads `execution {:executed? false :tool-events 0}` while the
+  solver is demonstrably writing files. The live signal is the agent record's
+  `invoke-activity-at` (11:34:08, 21s quiet), not the job's execution counters.
+  Do not read `executed? false` as wedged.
