@@ -409,3 +409,47 @@ and doing that against a still-running action would race the cycle's own state.
 It needs a distinct code (`:conductor-action-in-progress`).
 
 Replay protection did work — the action-id was not double-executed.
+
+---
+
+## Phase progress: guided-solve → intervene → promote-solver
+
+    f15-record-solver-attempt-1   v13 -> v14   (attempt/f15/solver-0, 3 commits,
+                                                axiom-clean? true, sorries 0,
+                                                closer-hops 3)
+    f15-deposit-1                 v14 -> v16   e-1929b416-4264-4fd5-a22d-403b8ed02560
+    f15-dispatch-scribe-1         v16 -> v17   job invoke-1787158354719-5086-ad53417c
+                                                park park-145b5236-6aec-482a-abe6-645fc8dc55d1
+
+### :scribe-card-pinned-resolves — CONFIRMED
+
+The machine injected
+
+    :scribe-card-path "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
+
+resolved from the registration's pinned blob `02441d9d…`, with no guide
+declaring it authoritative by hand. D8's fix reached the running image. That is
+the second of the two "did the source fix actually land" tests this frame was
+sequenced to make. All three solver job ids were passed through to the scribe.
+
+### STRUCTURAL FINDING — the guide is FORCED to write an unpromotable memory
+
+`:intervene`'s only non-advance tool in store-mode is `:write-substrate`
+(`autoconf`, problem.clj:143-153), and the only conductor operation that reaches
+it is `deposit!`, which advances the phase as its last act. **So the single
+deposit is mandatory: there is no way out of `:intervene` except by writing
+exactly one memory.**
+
+And by D41 that memory can never be promoted — `promote-artifact` requires
+reviewer == acting-identity (always the guide) AND reviewer ≠ depositor, and
+`write-substrate` stamps the conductor as author. So the machine COMPELS the
+guide to write into the store and simultaneously GUARANTEES the write can never
+become findable.
+
+This is not a new defect so much as D41's consequence made concrete and
+unavoidable: it is not that a guide *may* waste a deposit, it is that every
+frame in store-mode must produce exactly one dead memory. Mine is
+`e-1929b416-4264-4fd5-a22d-403b8ed02560` (the diagonal globalization technique).
+I told the scribe it exists, told it why it is dead, and asked it to re-author
+the technique in its own judgment if it clears the shelf bar — rather than skip
+it as "already recorded".
