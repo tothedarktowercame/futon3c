@@ -28,7 +28,6 @@
 {"problem-id": "a03J01", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a03J02", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a03J03", "status": "clean", "claims": 3, "extra-axioms": {}}
-{"problem-id": "a03J04", "status": "clean", "claims": 12, "extra-axioms": {}}
 {"problem-id": "a03J06", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a03J07", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a03J08", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -104,7 +103,6 @@
 {"problem-id": "a97J02", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a97J03", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a97J04", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "a98A01", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "a98A05", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a98A06", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a98J01", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -181,7 +179,6 @@
 {"problem-id": "m99A05", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "m99J05", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t00A04", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "t00A05", "status": "clean", "claims": 159, "extra-axioms": {}}
 {"problem-id": "t00J03", "status": "clean", "claims": 6, "extra-axioms": {}}
 {"problem-id": "t00J04", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "t00J06", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -208,7 +205,6 @@
 {"problem-id": "t94A02", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "t94A05", "status": "clean", "claims": 2, "extra-axioms": {}}
 {"problem-id": "t94J01", "status": "clean", "claims": 4, "extra-axioms": {}}
-{"problem-id": "t94J02", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t94J03", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t95A02", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t95A03", "status": "clean", "claims": 1, "extra-axioms": {}}

@@ -1209,3 +1209,77 @@ Three things stand regardless of cause, and they are the defect:
 
 (3) is what converts a retryable blip into lost work. Fix (3) first: a caller who
 can see *which* failure occurred can retry the safe one and stop on the other.
+
+## D60 QUANTIFIED — reproduced live in f15, and it is costing the measurement
+
+Second consecutive frame, different problem, different mathematics, same shape.
+
+    f13 (m99J06, Hilbert/Galerkin) : "finding OR equality OR clause OR strong"
+    f15 (m93J06, ODE flows)        : "exponent OR closing OR conjunct OR existence"
+
+**The defect is structural, not intermittent.** Both times all four slots went to
+vocabulary shared by every problem in the corpus.
+
+### The extractor is not the problem — the ORDERING and the CAP are
+
+f15's term sources, read from the cycle state:
+
+    :problem-md       ("exponent" "existence" "older" "happens" "cauchy" "parts" "uniqueness" "takes")
+    :proof-outline-md ("closing" "data" "declaration" "dependence" "globalization" "holder" "interface" "picard")
+    :stdin-packet     ("conjunct" "bell" "lake" "named" "nothing" "surfaced" "verbatim" "apm_m93j06")
+
+**`picard`, `holder`, `globalization` and `dependence` are all THERE**, extracted
+correctly, sitting at positions 4–8 of the proof-outline list. The round-robin
+takes position 1 from each source and then position 2 of the first, and the cap
+is 4 — so it took `closing` from a list whose position 8 is `picard`.
+
+They rank below prose because `text-keywords` sorts rarest-first by
+PROBLEM-CORPUS IDF, and against a corpus of mathematics the rare words are the
+prose words. Line 424's own comment says exactly this: *"problem-corpus IDF
+selects artifact vocabulary and INVERTS relevance."*
+
+### What it costs, measured rather than asserted
+
+Scoped to `type=:memory` on the live store:
+
+    picard 1 | lipschitz 6 | holder 8 | uniqueness 23 | ode 2 | initial value 2
+    gronwall 0 | flow 0 | "ordinary differential" 0
+
+    the query D60 issued  : "exponent OR closing OR conjunct OR existence"  -> 40 hits
+    the query it should   : "picard OR holder OR globalization OR dependence" -> 11 hits
+
+**The failure is precision, not emptiness.** The issued query returns MORE, not
+fewer — 40 generic hits from which the cascade selected five memories about
+integration and measure theory, for a problem about ODE flows on `ℝ`. The
+correctly-termed query reaches 11, including the Lipschitz/Hölder/Picard cluster
+the problem is actually about.
+
+**So the store DOES hold relevant material and the frame is not seeing it.** That
+distinction is the whole finding: had the store been empty of ODE memories, no
+query fix would have helped and f15 would be measuring what it can. It is not
+empty.
+
+### Consequence for f15's verdict, stated BEFORE the solver answers
+
+If `:memory-contributes-to-close` comes back 0/5 `USED`, that is **NOT** evidence
+the mechanism fails. It is evidence that the first sound-problem measurement drew
+a seed with no mathematical overlap, chosen by a defect we had already recorded
+and declared in the registration. f15-guide reached the same reading
+independently and recorded it as its reading rather than as the measurement,
+which is correct: only the solver's per-id disposition settles use, and neither
+of us may infer `IGNORED` from our own sense that the memories look off-topic.
+
+`:problem-closed-on-artifact` and `:problem-solved` are unaffected — they measure
+the artifact and the mathematics, not the retrieval.
+
+### The fix, now precisely specified
+
+1. Raise or remove `default-query-term-limit` (currently 4).
+2. Stop ordering query terms by problem-corpus IDF. Against a mathematics corpus
+   it ranks prose rarest. Order by the MEMORY population's df — which is what
+   `6bfe5808` computes and which is currently unreachable because
+   `query-anchor-term-memory-df` runs only under `--anchor-source memory-df`.
+
+Note (2) means the scoped-df work is not useless after all: it computes the right
+quantity and is wired to the wrong consumer. It ranks the ANCHOR; it should rank
+the QUERY TERMS.
