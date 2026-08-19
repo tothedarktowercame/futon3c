@@ -360,3 +360,71 @@ Found while looking for zai turns, and it is the `?df=` bug's twin:
 A nonsense tag returns a record. The parameter is accepted and dropped, with no
 warning and a 200. Anyone filtering evidence by tag has been getting an
 unfiltered population and a plausible-looking answer. Owner: claude-11.
+
+
+## THE SOLVER IS 6% OF THE FRAME. Every cost figure above was ~17x too small.
+
+Joe: *"we could find a way to include the cost of Guide + Scribe + Proctor +
+Analyst — probably not cheap."* Measured, and it is the largest correction in
+this document.
+
+Claude seats write full per-message usage to
+`~/.claude/projects/<project>/<session-id>.jsonl`
+(`input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`,
+`output_tokens`, `output_tokens_details.thinking_tokens`), and the Agency
+registry holds each seat's session-id. So a whole-frame cost has been computable
+all along.
+
+### Frame 13, every seat that actually ran
+
+    seat          kind        total tokens   uncached-in    output   reasoning
+    f13-solver    codex          2,606,048       101,830    18,970       7,504
+    f13-scribe    codex            147,228         6,067     1,641         244
+    f13-guide     claude        42,007,935     3,072,343   240,285     118,507
+    ---------------------------------------------------------------------------
+    FRAME TOTAL                 44,761,211     3,180,240   260,896
+
+    guide share of total tokens : 93.8%
+    solver share                :  5.8%
+    guide / solver, uncached-in : 30x
+    guide / solver, output      : 12.7x
+
+**Conducting costs more than solving, by more than an order of magnitude.**
+
+f13-student, f13-proctor and analyst-3 never ran, so they cost nothing — which
+is the lazy-seat argument made in tokens rather than in seat counts.
+
+### What this invalidates
+
+Every cost figure earlier in this document — f12 31.6M, f13 2.6M, f15 5.2M — is
+**the solver dispatch alone**, i.e. roughly 6% of what the frame spent. The
+rate-of-return denominator has been understated by about 17x throughout. The
+LOC/token agreement at 12x still holds, because both were measured on the same
+(solver-only) population; it says nothing about frame cost.
+
+### What it changes about the design
+
+The savings are not where I have been looking. Probe mode and lazy seats were
+argued from the proctor never being dispatched in five frames — true, but the
+proctor costs zero precisely because it never runs. **The expensive thing is
+guide turns**, and a probe still pays for a guide. A probe is cheap because its
+guide session is SHORT, not because it has fewer seats.
+
+That also sharpens the traffic-discipline point: six bells to f13-guide were not
+just a routing hazard, they were most of the frame's budget.
+
+### Caveat, stated because the ratio depends on it
+
+The guide's 42M is dominated by cache reads (38.9M of 42.0M). Cached input is
+cheap in money terms, so the TOKEN ratio and the MONEY ratio differ. On uncached
+input the guide is still 30x the solver, so the direction holds on either
+measure — but a table quoting "44.8M tokens" for a frame must say that ~87% of it
+is cache reads or it will be read as spend.
+
+### Not counted here
+
+Ground control's own session (claude-2). It is the largest Claude session in the
+project and it is arguably part of every frame's cost. Excluded because it spans
+all frames and cannot be attributed to one without a per-frame split that does
+not exist. Worth saying rather than quietly omitting: **the true cost of a frame
+is higher than 44.8M, and the missing term is the orchestrator.**
