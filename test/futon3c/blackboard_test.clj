@@ -364,7 +364,7 @@
          :problem
          (assoc base :cycle/outputs
                 {:registration {:reg/frame-id "f13"
-                                :reg/solver-seat "f13-solver"}}))
+                                :reg/solver-seat "f12-solver"}}))
         inferred
         (bb/render-blackboard
          :problem
