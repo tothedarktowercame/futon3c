@@ -594,3 +594,36 @@ Claude-11's own first verifier reported 0/24 resolving because it read the first
 a guard built against population errors, failing by making one. Neither of us
 would have found it alone: it surfaced because the claim was offered for checking
 and the check was actually attempted rather than waved through.
+
+## D53 — C2 locates a hyperedge by SUBSTRING-MATCHING the id into a stringified structure [verified]
+
+Found by applying claude-11's generalisation — *anything that concludes about
+structured data by matching text in it* — to my own tooling, minutes after they
+stated it. `analysis/transfer_checks.bb:113`:
+
+    edge (some #(when (str/includes? (str %) (str id)) %) comps)
+    ... (get-in edge [:edge :hx/props :attachment-status])
+
+This is the C2 check, "solver-phase deposits REVIEWED before the first student
+dispatch". It finds "the edge for this evidence id" by stringifying each
+component and substring-matching. Two failure modes, both silent:
+
+- `some` returns the FIRST component whose *text* contains the id. A component
+  that merely MENTIONS the id — a provenance field, a quoted body, a reference —
+  wins over the component whose identity is the id. C2 then reads that wrong
+  component's `:attachment-status`.
+- If no component's text happens to contain the id, `edge` is nil, `get-in`
+  returns nil, and C2 reports a FAIL that is an instrument artifact.
+
+Neither raises. Both produce a pass/fail that an Analyst adjudicates predictions
+from — `:reviewed-attachment-gained` among them, which f12 turned on four
+attachments. This is the same class as claude-11's prefix-truncated verifier and
+my own `e-`-id scrape, in the tool the series trusts.
+
+The C3 comment three lines below records that this file has ALREADY produced one
+instrument false-fail (f8: the eligible set lived one level below where the first
+draft looked). So this is the second, in the same file, by a different geometry.
+
+NOT FIXED. Needs the component shape read directly rather than guessed —
+dispatched as its own packet. Until then, treat any C2 result in `series.edn` as
+unverified, including f11's and f12's.
