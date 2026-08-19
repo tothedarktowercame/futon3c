@@ -201,3 +201,75 @@ Per-memory attestation returned unprompted and complete over all five:
   `letI : IsEmpty (apm_m99J06_H01Model H) := …; exact isEmptyElim M`.
   My stated review bar is met.
 - Independent compile + axiom audit: bg job `bg-1787139511615-1`.
+
+## VERIFIED — I re-ran the acceptance checks myself (bg-1787139511615-1)
+
+    --- ACCEPTANCE COMPILE (verbatim command) ---
+    problems/m99J06/lean/Main.lean:69:6: warning: unused variable `hddu`
+    problems/m99J06/lean/Main.lean:158:17: warning: unused variable `hf`
+    ACCEPTANCE_EXIT=0
+    --- AXIOM AUDIT (guide copy, repo untouched) ---
+    'apm_m99j06' depends on axioms: [propext, Classical.choice, Quot.sound]
+    'apm_m99J06_H01Model_isEmpty' depends on axioms: [propext, Classical.choice, Quot.sound]
+    AXIOM_EXIT=0
+
+Zero `sorry` diagnostics. Frozen block byte-identical to the pin. Close is
+`letI : IsEmpty (apm_m99J06_H01Model H) := apm_m99J06_H01Model_isEmpty;
+exact isEmptyElim M` — against the REAL structure. Every claim in the solver's
+report reproduced.
+
+## RETRACTION — the engine-owned park DID fire
+
+My earlier finding was WRONG and I am retracting it in full.
+
+Evidence: `v10.edn`, written 11:29:27 (dispatch time, before my hand park at
+11:30:18), already carries `:park/id "park-c016b9a7-6172-45ec-b363-b6f47a6a0aab"`
+on the `:dispatch-solver` step, and `:park/error` is ABSENT. The engine created
+that park. My hand POST at 11:30:18 with the same (agent, session, awaiting)
+was an **idempotent upsert** — it returned the SAME id and replaced the
+engine's 2700s deadline with my 3600s one (park deadline reads 12:30:18 =
+11:30:18 + 3600, not 12:14:25 = 11:29:25 + 2700).
+
+Confirmed live: the `:dispatch-scribe` action auto-parked as
+`park-6f011667-9bf4-43bd-9724-0ba29d633f64` with no action from me.
+
+What actually happened: D57 (`GET /api/alpha/parked` returns nothing without
+`?agent=`) hid the engine's park, I read the empty list as "not parked", and
+reported a defect that does not exist. D57 is real; "the conductor does not
+park its dispatches" is not. Worth keeping as a lesson: a masking defect
+manufactures a plausible second defect downstream of it.
+
+Live consequence worth knowing: a hand park by an agent whose engine already
+parked SILENTLY REPLACES the engine's deadline and wake payload. Benign here
+(longer deadline, richer checklist); not benign if someone shortens one.
+
+## Conductor actions can exceed a 2-minute client timeout
+
+`record-solver-attempt` took ~3.5 min wall-clock; my `curl` timed out at 2m and
+the action completed server-side regardless (v10 -> v11). The `action-id`
+dedupe (`:conductor-action-duplicate`) makes a retry SAFE, so the correct
+response to a client timeout is poll-then-retry, never assume failure.
+
+## Cycle progress
+
+- v11 `:intervene` — solver attempt recorded (`attempt/f13/solver-0`, commit
+  25186f29, axiom-clean, 0 residual sorries, 1 closer hop).
+- v13 `:promote-solver` — deposited
+  `check-pointwise-realizes-against-the-metric-support-before-proving`
+  (statusless, patternless). NOTE: authored by `f13-guide`, so **I cannot
+  promote it** (D41). It is on the shelf for a future frame's reviewer.
+- v14 — scribe dispatched, job `invoke-1787140125766-5056-613d10d4`,
+  auto-parked `park-6f011667-…`.
+
+Promotion targets when the scribe reports: pattern-ids proven to work in f12 are
+`math-strategy/structural-obstruction-as-theorem` (the emptiness IS the theorem
+— exact fit) and `math-formalization/notation-semantics-traps` (pointwise vs
+a.e.). Reviewer must be `f13-guide`; depositor must be `f13-scribe`.
+
+## The promote -> recall loop closed across frames
+
+The two memories the solver USED (`e-1b72bb47…`, `e-7c6631c9…`) are exactly two
+of f12's promoted artifacts, from f12's own `:promo/artifact-id` records. So
+f12 promoted them, f13's dispatch recall surfaced them, and f13's solver
+attested using them to reach its result. That is the full loop, end to end,
+for the first time in the series.

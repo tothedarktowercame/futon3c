@@ -1034,3 +1034,97 @@ solver of good ones. That is a real capability and worth saying plainly — but 
 also means the selectable pool has an unmeasured defect rate, and every frame
 spent on a defective problem is a frame not spent measuring transfer. A
 formalisation audit is now a higher-value target than the next frame.
+
+## CORRECTION — I over-claimed the read-path result. Verified in source, 2026-08-19
+
+f13-guide's analysis of the offered receipt is right and corrects me on the
+load-bearing point. Checked against the source rather than taken from the report.
+
+### `6bfe5808` — my scoped-df fix — was NEVER ON THE PATH
+
+`recall-query` line 562: `anchor-source (or (:anchor-source opts) :problem-idf)`.
+Line 571: `required-term (if (= :memory-df anchor-source) …)`. So
+`query-anchor-term-memory-df` — and therefore `anchor-df-band` AND the
+`&type=:memory` scoping I dispatched, reviewed, gated and re-pinned twice for —
+runs **only under `--anchor-source memory-df`**, which is not the default. The
+comment at line 424-430 says so outright:
+
+    ;; Selectable per dispatch with --anchor-source; default remains problem-idf
+    ;; so live behavior is unchanged until an arm flips it
+    ;; (A2b: experiment, don't ship).
+
+The receipt confirms it: `:anchor-source :problem-idf`. I told Joe both read-path
+fixes were visible in the f13 dispatch record. **One was. The other is behind a
+flag marked "don't ship" and could not have affected this frame.**
+
+I even noted `:receipt-ranking {:stats-found? false :mode
+:deterministic-base-order}` and said "scoped df contributed nothing to this
+dispatch" — and then failed to ask WHY, which would have found this.
+
+### What the OR join actually bought — real, and smaller than I said
+
+Of the five surfaced, `:memory-use/surfacing-via` shows **one** came via
+`:content-match` (`e-1b72bb47`) and four via `:pattern`. The lexical seed was 30
+hits of which **27 were `:evidence-type :coordination`** — chat turns, not
+memories — and `e-1b72bb47` ranked **27th of 30**.
+
+So: the OR join delivered exactly one memory, at rank 27, and the pattern cascade
+delivered the rest. That one memory is one of the two the solver attested `USED`,
+so the fix is not cosmetic — a conjunctive query would have cut it. But
+"the read path fired" is too generous a summary of a query that returned 27 chat
+turns and one relevant memory in last place.
+
+### The real defect, which f13-guide found and I did not — D60
+
+The query issued was:
+
+    finding OR equality OR clause OR strong
+
+Four generic prose words. The extractor had found the right vocabulary —
+`sobolev`, `galerkin`, `riesz`, `inner_eq`, `apm_m99j06_h01model`,
+`finite-dimensional` — and none of it was used, because:
+
+- `default-query-term-limit` is **4** (line 21), and `recall-query` line 552
+  round-robins the three source term-lists. **`galerkin` sits at round-robin
+  position 5.** The cap cuts one slot short of every distinctive term.
+- `text-keywords` sorts each source rarest-first by PROBLEM-CORPUS IDF. Against
+  a corpus of mathematics, the rare words are the prose words. Line 424's own
+  comment already names this: *"problem-corpus IDF selects artifact vocabulary
+  and INVERTS relevance"*.
+
+**And the wave-2 rung as built would not repair it.** `memory-df` changes
+`required-term` only — the term that gets a ranking boost. The query terms are
+unchanged. The damage is in the QUERY; the built fix targets the ANCHOR. So the
+work I did today on df scoping addresses a different thing from the thing that is
+broken, and would not have helped even with the flag flipped.
+
+Not fixed. This is the next real read-path packet, and it is a bigger one than
+either fix so far: raise or remove the term cap, and rank query terms by
+something other than problem-corpus IDF.
+
+## D61 — a hand park silently overwrites the engine's park [f13-guide, verified by them]
+
+Retracting their own earlier finding, f13-guide established that `park-dispatch`
+DID fire — `v10.edn` was written at 11:29:27, before their 11:30:18 hand park,
+and already carried `:park/id "park-c016b9a7-…"` with no error. D57 hid it; they
+read the empty list as "not parked" and derived a second defect from the first.
+I made the same inference twice.
+
+The live consequence they kept from it: **a hand park by an agent whose engine
+already parked is an idempotent upsert on the same id — it silently replaces the
+engine's deadline and payload.** Theirs lengthened 2700s to 3600s, which is
+benign. Shortening one, or replacing a checklist payload with a thinner one,
+would not be, and nothing reports that it happened.
+
+## Also from f13
+
+- **D41 confirmed live**: the guide deposited
+  `check-pointwise-realizes-against-the-metric-support-before-proving` at v13,
+  statusless and patternless, and cannot promote it because it authored it. It
+  sits on the shelf for a later frame's reviewer. The scribe route is the one
+  that works.
+- **D48 recurs**: `record-solver-attempt` took ~3.5 min and the client timed out
+  at 2. The action completed server-side and `action-id` dedupe makes retry safe.
+  **The correct response to a client timeout on a conductor action is
+  poll-then-retry, never assume failure** — a timed-out POST is indistinguishable
+  from a wedged conductor.
