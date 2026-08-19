@@ -230,38 +230,52 @@ Wall-clock is there and free.
     f13         7m17              1            77        1      :defective (uninhabited)
     f15         9m53              ?             ?        ?      running
 
-### LOC and lemma count are YIELD, not COST — and as cost they INVERT
+### LOC IS COST, and it works — I had the sign backwards
 
-f12 produced **931 lines and 23 lemmas** across three dispatches. f13 produced
-**77 lines and one lemma** in a single dispatch. On LOC, f12 outscores f13 by
-twelve to one.
+**Corrected by Joe, 2026-08-19.** I wrote that LOC "inverts as a cost measure"
+and "rewards the long way round" because f12's 931 lines outscore f13's 77. That
+reasoning had the sign wrong: **high LOC = high cost.** f12 spent 931 lines and
+23 declarations across three dispatches; f13 spent 77 lines and one declaration
+in a single dispatch. LOC-as-cost therefore ranks f13 as **twelve times cheaper**
+for an equally valuable result — which is exactly what we want it to say, and
+exactly what I said it failed to.
 
-**Both closed their theorem. Both closed it vacuously. And f13's single lemma is
-the better result** — it is the frame that found the defect on the first
-dispatch, and the only frame in the series with attested memory transfer.
+The measure penalises the long way round. It does not reward it. I was reading
+LOC as a score to be maximised and then objecting that the wrong frame won.
 
-So LOC as a cost model **rewards the long way round**: a solver that finds the
-one-line argument scores lowest, and a solver that builds 900 lines of machinery
-for a vacuous statement scores highest. That is the same failure shape as
-everything else in this excursion — a number that is fine until you ask what
-population it is over.
+### Why LOC is unambiguously on the cost side
 
-### The split that works
+The PRODUCT of a frame is the theorem — closed, or its residual reduced. The
+lines of Lean are what it took to get there. So:
 
-- **COST** = wall-clock + dispatch count. Both directly comparable across
-  agents, both already recorded, neither requiring new instrumentation.
-  Dispatches is the better of the two for rate-of-return: it counts *attempts*,
-  and an attempt is what a frame spends.
-- **YIELD** = LOC, new declarations, conjuncts closed, residual reduction —
-  **always paired with the disposition.** LOC beside `:defective` is not the
-  same quantity as LOC beside `:closed`, and a table that omits the disposition
-  column will rank f12 first.
-- **Tokens** — worth recording if cheap, but the honest note is that they were
-  never available, not that they were rejected for incomparability.
+- **COST** = LOC + new declarations + dispatch count + wall-clock. All four are
+  directly comparable across agents, as Joe said: a line of Lean is a line of
+  Lean whoever wrote it, and none of them require new instrumentation.
+- **YIELD** = the disposition, and only the disposition. Closed / residual
+  reduced / defective-and-proved-so.
 
-### The one number that survives all of it
+That is cleaner than the split I proposed, because it stops LOC from having to be
+two things at once.
 
-`converted-artifacts` per dispatch, read against the disposition. f13:
-1 artifact, 1 dispatch, `:defective`. f12: 6 artifacts, 3 dispatches,
-`:defective`. Neither is yet a return, because neither problem was sound —
-which is why f15 is the first frame where the ratio can mean anything.
+### The disposition still has to travel — for a different reason than I gave
+
+I said the disposition must accompany LOC because otherwise the table ranks f12
+first. Wrong reason. The real one: **cost without knowing what was bought is
+meaningless.** 931 lines for a vacuous close and 77 lines for a vacuous close are
+both expenditures against nothing; the ratio between them only becomes a rate of
+return when the disposition says something was actually acquired.
+
+    frame  wall-clock  dispatches  LOC   decls  disposition
+    f12       6m06         3        931    23   :defective (vacuous)
+    f13       7m17         1         77     1   :defective (uninhabited)
+    f15       9m53         ?          ?     ?   running — first SOUND problem
+
+f13 is the cheapest frame in the series by every cost column except wall-clock,
+and it is the only one with attested transfer. f15 is the first whose cost can
+be divided by a yield that is not zero.
+
+### Tokens
+
+Still not available: an Agency job record carries no token or usage field of any
+kind. The cross-model comparability question is moot until something records
+them, and wall-clock is free in the meantime.
