@@ -768,3 +768,138 @@ it up as a defect. It is not one: that empty list is scribe dispatch **1**, at
 `:promote-solver`, before the student had run — correctly empty. Scribe dispatch
 **2** carries `["invoke-1787159146808-5088-10991dba"]`. My first regex match
 took the earlier occurrence. No defect; the machine is right.
+
+---
+
+# CLOSE — `completed? true`, phase `null`, v356
+
+    f15-promote-3      v344 -> v345   e-56ae9c01 onto the NEW pattern
+                                      math-formalization-CA/ode-gronwall-api
+    f15-promote-lane-1..4  v345 -> v349
+    f15-close-1        v349 -> v356   cycle closed
+
+**Promotions 3/3 clean, each one at a time with a gap, each verified `:reviewed`
+in the store before the next was issued.**
+
+## Scribe pass 2 — it authored a pattern, and the watcher ingested it
+
+One deposit, `e-56ae9c01…`: when to choose `dist_le_of_trajectories_ODE` versus
+`norm_le_gronwallBound_of_norm_deriv_right_le`, plus the shared reversed-time
+construction for `t < 0`. It is the *replication* memory — the two independent
+routes to conjunct 5 — and it exists only because the student worked blind and
+landed on a different API than the solver.
+
+I asked it to propose the pattern **a reader would search for**, not only the
+best content fit, and it did exactly that: content fit
+`math-informal/reduce-to-known-result`, reader-search home the new
+`math-formalization-CA/ode-gronwall-api`, recommendation to take the reader
+home. It authored the file, the watcher ingested it (10 relations live), and it
+carries `@see-also math-informal/local-to-global` — the node the student's
+search actually reached. Promoted onto the reader home.
+
+**Caveat I must state:** the cascade traverses `pattern/has-semantic-why` ONLY
+(`why-targets-fn`, conductor.clj). A `@see-also` edge does NOT feed it. So the
+new pattern's link to `local-to-global` helps tools that read see-also and does
+nothing for the cascade.
+
+### I DECLINED to re-home the diagonal memory, deliberately
+
+The scribe's ruling was that `math-informal/local-to-global` is the right home
+for `e-4f6b5d49…` and that precision should not override the query path. **I
+agree with the ruling and did not act on it.** Re-promoting an already-`:reviewed`
+edge onto a second pattern hits the exact predicate D62 makes dangerous: the
+attach lands before the review, and a refusal after the attach poisons the
+memory permanently. The memory is currently good. Trading a live, reviewed
+memory for a better shelf position, on a promotion path known to be non-atomic,
+is not a trade I will make inside a frame. **Recommendation for ground control:
+re-home `e-4f6b5d49…` to `math-informal/local-to-global`, or add a `@why` (not
+`@see-also`) edge, once promotion is atomic.**
+
+## The machine's own verdict: `:launchable? false`, three failures
+
+    :malformed-cycle-attempts
+    :f7-missed-available-artifact
+    :f9-capability-not-realized
+
+### 1. `:malformed-cycle-attempts` — MY ERROR, and it is uncorrectable
+
+`attempt?` requires `:cycle/store-revision` as a 40-char sha. **I did not supply
+it** in either the solver or the student attempt record. I inferred the attempt
+shape from frame 13's persisted state, which also lacks the field — f13 halted
+before close, so its malformed attempts were never validated and the gap was
+invisible. The rehearsal frame a01A06 DID carry it.
+
+Mine, and I am recording it rather than leaving it for the Analyst to find.
+
+**But note the harness shape too**: attempt records are validated ONLY at close,
+330-odd versions after they are written, with no route back — `record-solver-attempt`
+is a `:guided-solve` tool and the phase is long gone. A validate-on-record would
+have cost one second and caught it. As it stands the machine accepts a malformed
+attempt silently and reports it when nothing can be done.
+
+### 2. `:f7-missed-available-artifact` — the machine found the retrieval gap too
+
+    :available-artifact-ids     513
+    :need-probe-retrieved-ids    15
+
+F7 requires available ⊆ retrieved. **498 available artifacts were never
+retrieved.** This is the harness's own instrument independently reaching the
+conclusion I reached by hand from the student's report and the `:rprobe` numbers.
+Three independent routes to the same finding: the student's attestation, the
+retrieval probe, and F7.
+
+### 3. `:f9-capability-not-realized` — exactly TWO capabilities fail
+
+All eight probes were RECORDED (`:f9-capability-probe-missing` correctly absent).
+Computed from the trace:
+
+| capability | holds? | evidence |
+|---|---|---|
+| frame-containment-witnessed | ✓ | probe recorded and passed |
+| created-frame-worked | ✓ | scaffold `7117a38b…` ≠ closing `952b184b…` |
+| unique-disposition | ✓ | exactly 1 disposition id |
+| offer-use-disposition | ✓ | **315 of 315 offers dispositioned** |
+| need-retrieval | ✗ | 513 available ⊄ 15 retrieved |
+| promotion-importable | ✓ | 3 of 3 |
+| promotion-need-taggable | ✓ | 3 of 3 |
+| measurement-populated | ✗ | **8 of 17 required fields** |
+
+**`:offer-disposition-populated` is CONFIRMED** — F3 passes, the first time in a
+cascade-enabled frame.
+
+### `:measurement-populated` IS UNSATISFIABLE BY CONSTRUCTION — new defect
+
+`record-measurement` takes NO arguments, derives everything itself, and is not
+in the conductor's operations map — only `close!` calls it. It computes 8 fields:
+
+    terminal disposition · residual executable sorries · axiom cleanliness ·
+    locked-lemma exposure · attempts or closer hops · memories promoted ·
+    scribe lane coverage · arc-lane yield
+
+The registration requires 17. The nine it never computes:
+
+    statement defects at review · review escape rate ·
+    promoted then surfaced then used · contract leaks · duplicate declarations ·
+    promotion coverage · unconsumed promotions · import-only edges ·
+    rewrite rule offered and used
+
+**No conductor action can supply them.** A required capability that no reachable
+action satisfies — the same shape as D31 and D40: declared, and unreachable.
+
+And the sharpest instance: **"promoted then surfaced then used" — the exact
+measurement this whole frame was built to make — is a required field the machine
+does not compute.** I measured it by hand. Every frame that ever declared this
+capability has failed it for this reason, and it would read as a frame defect
+rather than a harness gap unless someone said so.
+
+## `:guidance-count-exact` — CONFIRMED
+
+Measurement reads `"attempts or closer hops" 0`. The true count of typed
+guidance bells is 0: D40 refused the only typed route, and both guidance packets
+rode inside `dispatch-solver` openings, which the subtrahend cancels exactly
+(3 jobs − 3 openings = 0). D2's repair holds — f9 read −100 and f10 −101.
+
+**But note the hazard this creates**: because D40 forces guidance into the
+dispatch channel, the guidance metric is structurally BLIND to guidance that was
+actually given. This frame gave two substantive guidance packets and the honest
+recorded count is 0. Both statements are true and they must be reported together.
