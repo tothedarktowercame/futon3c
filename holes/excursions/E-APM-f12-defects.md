@@ -558,3 +558,39 @@ receipt can record which question was answered instead of asserting it.
 
 This resolves the `:basis {:retrieval :scoped-df-pending}` slot in
 `E-loss-function-shape.md` — it is a field change now, not a placeholder.
+
+## D52 addendum — OR costs nothing in ranking [verified independently, 2026-08-19]
+
+I declined to endorse claude-11's ranking claim on its word, could not resolve
+the document identities with my own extractor, and said so. The reason my
+extractor failed turned out to be the hydrated response burying the id past the
+chunk; `hydrate=false` fixes it. Re-run here end to end:
+
+    OR  ("hilbert OR weak-convergence", type=:memory): 24 results, 24 distinct, 0 unresolved
+    AND ("hilbert weak-convergence",    type=:memory): 11 results, 11 distinct, 0 unresolved
+    ranks of the 11 AND-docs inside the OR result: [1 2 3 4 5 6 7 8 9 10 11]
+    contiguous prefix: TRUE
+    last AND-doc score -16.535 | first non-AND score -9.016 | GAP 7.519
+
+**OR returns exactly what AND returned, in the same order, and then continues.**
+BM25 scores a both-term document above an either-term one, and the separation is
+a 7.5-point cliff rather than a gradient — so the ordering is structural, not an
+accident of this term pair. `candidates` overfetches `(max 50 (* 4 k))` before
+the limit, so a union of a few hundred still yields the best-ranked 50.
+
+AND was therefore never a precision/recall trade. It was truncation of a list
+that was already correctly ordered.
+
+**This retires half of a caveat I gave Joe** — that OR would fix emptiness but
+ranking would be the next problem and f13 might show memories surfaced and none
+used. The half that is retired: OR does not push good results down. The half
+that stands: term SELECTION may still fail to include a term the right memory
+contains, which is what claude-11's scoped df addresses and what is not yet
+dispatched. `computes` scoped df = 1 is a term that can only ever match one
+document, and the anchor logic prefers exactly that kind of term.
+
+Claude-11's own first verifier reported 0/24 resolving because it read the first
+200 bytes of each document looking for a field that sits past the truncation —
+a guard built against population errors, failing by making one. Neither of us
+would have found it alone: it surfaced because the claim was offered for checking
+and the check was actually attempted rather than waved through.
