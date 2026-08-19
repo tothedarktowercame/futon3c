@@ -627,3 +627,64 @@ draft looked). So this is the second, in the same file, by a different geometry.
 NOT FIXED. Needs the component shape read directly rather than guessed —
 dispatched as its own packet. Until then, treat any C2 result in `series.edn` as
 unverified, including f11's and f12's.
+
+## Review of `6bfe5808` (scoped df) and `b410cec0` (problem pane) — PASS, with a process error of my own
+
+**`6bfe5808` — scope recall df to memories.** Diff is confined to
+`evidence-document-frequencies`: `&type=:memory` appended to the URL,
+`:population` read from the response with `:unstated` as the fallback,
+`:filters` preserved, nil-on-failure unchanged. `anchor-df-band` untouched, as
+the packet required. Three hermetic tests stub the HTTP client and cover the
+scoped receipt, the omitted-population case, and the failure case.
+
+**`b410cec0` — frame id and quiet completed panes.** `frame-id-from-seats`
+requires EVERY staffed seat to carry the same `fN-` prefix before it will infer
+one, and the field is omitted rather than printed as "unknown" — the conservative
+reading the packet asked for. `completed?` is threaded into both
+`seat-last-action` and `format-seat-activity`.
+
+Gates re-run here: clj-kondo 0/0 (exit 0), check-parens OK via
+`arxana-check-parens-cli` (exit 0).
+
+**Test evidence, by baseline comparison rather than mutation.** Measured in an
+isolated worktree so as not to disturb the shared checkout:
+
+    b410cec0^ : 32 tests, 127 assertions, 7 failures
+    b410cec0  : 77 tests, 305 assertions, 3 failures  (both namespaces)
+
+The baseline failure output is the defect verbatim:
+
+    solver   f12-solver       working (job invoke-f12-solver-3)
+    In-flight: awaiting f12-solver (job invoke-f12-solver-3)
+
+at `Phase: COMPLETED (sentinel)`. So the new tests genuinely bite and the fix
+genuinely removes it. The 3 remaining failures are
+`project-default-denies-non-serving-jvms` and
+`async-emacsclient-keeps-independent-panel-lanes`, both carrying
+`[bb] async emacsclient ... exceeded bounded grace; reaping` — emacsclient
+timing, pre-existing, unrelated to rendering.
+
+**Not delivered: the wall-clock field.** The packet's third item asked for a
+timestamp on the last step if the state already carried one, and said to report
+and change nothing if it did not. Nothing was added and I have not seen the
+report. Treat as open.
+
+### MY ERROR — `git commit -am` in a shared checkout swept up another agent's work
+
+`git log -S` on the new deftest names says
+`problem-header-renders-frame-from-registration-or-seats` and
+`completed-problem-never-renders-stale-dispatches-as-working` were committed by
+**`3274008f`** — MY commit, "Verify the OR ranking claim independently". I used
+`git commit -qam`, which stages everything modified in the tree, and codex-6 was
+editing `blackboard_test.clj` in that same working copy at that moment.
+
+So ~40 lines of codex-6's tests are attributed to a commit message about BM25
+ranking, and `b410cec0` shows a misleading `test/... | 2 +-` because its own
+tests had already been carried off. Nothing was lost and nothing half-written
+landed, but that was luck: had I committed a few seconds earlier I would have
+committed a syntactically incomplete test file under an unrelated message.
+
+This is the same hazard as the branch-stacking incident earlier in the series —
+several agents, one checkout. **Rule: never `git commit -a` in this tree. Stage
+explicit paths.** Recorded because the attribution is now wrong in the history
+and a later reader tracing the HUD fix would not find its tests.
