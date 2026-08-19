@@ -817,3 +817,98 @@ these files this morning, then re-read them twice while re-pinning, and missed
 this one four times. The orientation ack found it in one pass because a fresh
 reader with the fields in hand is a different instrument from the author
 re-reading their own text.
+
+---
+
+# f13 — THE READ PATH FIRED (verified from the cycle state, 2026-08-19)
+
+First non-empty recall in the f9–f13 series. Read from
+`data/problem-state/m99J06-a0a723b1…/v10.edn`, not from the guide's report.
+
+    :status          :ok
+    :ladder-query    "finding OR equality OR clause OR strong"
+    :terms           ["finding" "equality" "clause" "strong"]
+    :anchor          {:term "equality", :satisfied? false}
+    :eligible-memory-ids  5
+    :withheld-memory-ids  []
+    :pattern-ids     ["math-formalization/notation-semantics-traps"]
+
+**Both fixes are visible in that one record.**
+
+1. `:ladder-query` is OR-joined. `7b188d8c` is executing in a live frame.
+2. **`:anchor {:satisfied? false}` and recall returned five memories anyway.**
+   Under the pre-`d893280a` code an unsatisfied anchor was a hard filter and
+   this dispatch would have returned zero. The demotion to a ranking boost is
+   what made the difference, and this is the first frame where it can be seen.
+
+## What surfaced — five, not the two the guide named
+
+- `e-1b72bb47` — *propagate-local-api-mismatches-to-global-theorem-semantics*
+  (f12-scribe, via `:content-match`)
+- `e-7c6631c9` — *audit-elaborated-regularity-semantics-before-proof-search*
+  (f12-scribe, via `:pattern`)
+- `e-codexpilot-audit-the-hidden-typeclass-preconditions-of-the-proof-engine`
+- **`e-codexpilot-distinguish-ContDiff-top-analytic-from-ContDiff-infinity-smooth`**
+- `e-codexpilot-pair-a-machine-checked-refutation-with-a-machine-checked-statement-repair`
+
+The fourth is the one that matters for the series argument. **That is the
+`ContDiff ℝ ⊤` = `ω` finding** — the same fact that sat in a01A03's problem file
+since 2026-07-30, that f12's student re-derived from scratch and filed as an
+*unsatisfied non-triviality obligation* because recall never returned it, and
+that f12's guide then had to establish independently. It is now in front of a
+solver, on a different problem, without anyone naming it.
+
+That is the accumulate → surface leg of the capability the whole apparatus
+exists to demonstrate, observed for the first time. **It is NOT yet transfer**:
+`:memory-contributes-to-close` requires attested USE, the packet demands per-id
+`USED`/`IGNORED`, and surfaced-and-unused remains a real outcome to be reported
+as one.
+
+All five carry `:memory/domain :mathematics` (the D5 fix holding) and
+`:memory/attachment-status :reviewed`.
+
+One caveat in the same record, unprompted:
+`:receipt-ranking {:stats-found? false :mode :deterministic-base-order
+:degraded? false :reason :stats-absent}` — the ranking stats were absent, so
+ordering fell back to deterministic base order. Recall succeeded on the OR join
+alone; the scoped-df ranking contributed nothing to THIS dispatch. Do not credit
+it with the result.
+
+## D57 — `GET /api/alpha/parked` shows nothing, and two agents misdiagnosed it [verified]
+
+f13-guide reported "the engine-owned park did not fire — `/api/alpha/parked` was
+empty immediately after a successful dispatch", and concluded the conductor is
+not parking its own dispatches. I had concluded twice today that my own parks
+were being "lost". **Both conclusions are wrong and both came from the same bad
+call.**
+
+The dispatch step records:
+
+    :park/id     "park-c016b9a7-6172-45ec-b363-b6f47a6a0aab"
+    :park/error  nil
+
+So `park-dispatch` fired correctly. Probing the listing directly:
+
+    POST /api/alpha/park                     -> {"status":"parked","ok":true}
+    GET  /api/alpha/parked                   -> parked []      <- filters on agent=nil
+    GET  /api/alpha/parked?mode=all          -> parked []      <- THE DEFECT
+    GET  /api/alpha/parked?agent=…&session=… -> parked [ … ]   <- the park is there
+
+`handle-parked` (`http.clj:3925`) filters on `(= (str (:agent r)) (str agent))`
+and `(not (:released? r))`. With no params, agent is nil and nothing matches —
+so the bare call cannot ever return anything. Its own docstring says
+**"mode=all is the operator visibility"** mode, and `mode=all` returns empty too.
+That is the defect: the operator-visibility path is broken, not the parking.
+
+This matters beyond tidiness. `CLAUDE.md:117` instructs agents to state job-ids
+and park-ids "so Joe can poll `GET /api/alpha/invoke/jobs/<id>` and
+`GET /api/alpha/parked`" — the exact call that always answers empty. Operator
+visibility into parked work has been silently absent, and the failure presents as
+*work not being parked*, which is the more alarming reading and the one two
+agents reached independently within an hour.
+
+Also observed: the agent+session listing returned one row with
+`"more-pending": true` while a second park of mine was outstanding, so the
+listing truncates. Not diagnosed further.
+
+Not fixed — f13 is mid-flight and a fix moves the harness pin. Queued for f15.
