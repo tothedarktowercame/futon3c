@@ -595,6 +595,10 @@
                          (filter #(and (= :arc (:lane %)) (:ran? %)))
                          (mapcat :yield)
                          count))
+        promoted-memory-ids (->> (:promotion-result outputs)
+                                 (filter #(and (contains? % :promo/artifact-id)
+                                               (contains? % :promo/pattern-id)))
+                                 (mapv :promo/artifact-id))
         locked-exposure (get-in outputs
                                 [:registration :problem
                                  :locked-lemma-exposure])]
@@ -616,6 +620,11 @@
       (assoc "attempts or closer hops"
              (count (:ground-control-events outputs)))
 
+      (contains? outputs :promotion-result)
+      (assoc "memories promoted"
+             {:count (count promoted-memory-ids)
+              :ids promoted-memory-ids})
+
       (seq scribe-reports)
       (assoc "scribe lane coverage"
              {:lanes-ran ran-lanes
@@ -630,7 +639,7 @@
     "attempts or closer hops"
     "unset: Agency-derived guidance evidence is not available to this tool"
     "memories promoted"
-    "unset: promotion outputs do not identify which artifacts are memories"
+    "unset: no promotion-result is present in cycle outputs"
     "review escape rate"
     "unset: requires a join of review and later gate histories"
     "promoted then surfaced then used"
