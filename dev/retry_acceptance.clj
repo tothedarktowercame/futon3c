@@ -25,6 +25,6 @@
       (println "APPEND-RETURNED-AFTER-MS" dt)
       (println "APPEND-OK" (boolean (:ok r)))
       (println "APPEND-ERROR-CODE" (pr-str (:error/code r)))
-      (println "APPEND-ATTEMPTS" (pr-str (:attempts r)))
+      (println "APPEND-ATTEMPTS" (pr-str (or (:attempts r) (get-in r [:error/context :attempts]))))
       (println "APPEND-ID" id)
       (flush))))

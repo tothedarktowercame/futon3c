@@ -64,6 +64,16 @@ restart:
 test:
 	$(CLOJURE) -X:test
 
+# The suite is already red at base and its integration tests bind ports that
+# the live stack holds, so `make test` is not a pass/fail gate. Use this to ask
+# the answerable question -- did this change make it worse? See the script.
+test-diff:
+	bash scripts/test-differential.sh $(BASE)
+
+# Single namespace, the gate that actually discriminates.
+test-ns:
+	$(CLOJURE) -M:test -n $(NS)
+
 claude:
 	./scripts/claude-picker $(ARGS)
 

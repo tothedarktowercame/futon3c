@@ -75,8 +75,18 @@
   ;; Connection refusal proves that the store received nothing, so retry that
   ;; transport failure through a bounded restart window. A request timeout is
   ;; deliberately excluded below because the write may have landed.
+  ;;
+  ;; 300s, not 90s: the window is only useful if it outlasts a real restart,
+  ;; and measured stop->healthy times are 42s and 61s on Zone but 84s, 85s and
+  ;; 93s on the laptop. A 90s default lost the write on the 93s run -- the
+  ;; retry behaved correctly and the evidence was gone anyway. Size this above
+  ;; the SLOWEST restart you expect, not the typical one.
+  ;;
+  ;; The cost is that a caller blocks for up to this long during a genuine
+  ;; outage, which is the argument for the durable-spool follow-on: the spool
+  ;; is what lets the window be short again.
   (or (some-> (System/getenv "FUTON1B_APPEND_RETRY_MS") parse-long)
-      90000))
+      300000))
 
 (def query-cache-ttl-ms
   ;; The War Machine and AIF stack are read-mostly projections. Their HTTP
