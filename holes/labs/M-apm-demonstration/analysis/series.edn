@@ -573,4 +573,355 @@
    inside a twelve-fix window, not the structural pincer it has been written up as. Meanwhile
    both of the frame's own instruments moved on no input: F3 passed vacuously on zero offers
    and C3 failed vacuously on zero promotions, and 7 -> 6 trace failures is not progress."
-  :defects-found 4 :defects-fixed-or-queued 1}]
+  :defects-found 4 :defects-fixed-or-queued 1}
+
+ {:frame "f12"
+  :problem "m03J01"
+  :closed "2026-08-19"
+  :disposition :defective                          ;; SECOND consecutive :defective, and again the problem was at fault.
+  :analyst "analyst-2 (tenure 2 of 2 — LAST frame of this seat; succession below)"
+  :mathematics
+  {:closed? false :axiom-clean? true :residual-sorries 0 :solver-dispatches 3 :student-dispatches 1
+   :solver {:commit "59c87d63" :residual-sorries 0 :commits 6 :axiom-clean? true :closer-hops 3}
+   :student {:commit "b004252" :residual-sorries 2 :axiom-clean? false}
+   :headline-result
+   "THE SOLVER CLOSED IT — 0 residual sorries, axiom-clean, frozen statement unchanged — AND THE
+    GUIDE REFUSED TO RECORD IT AS A CLOSE. In this Mathlib `ContDiff ℝ ⊤` elaborates to
+    `ContDiff ℝ ω` (REAL-ANALYTIC), not `ContDiff ℝ ∞` (smooth). m03J01's frozen
+    `apm_m03J01_testFunction` therefore demands analytic compactly-supported test functions —
+    a class that is EMPTY in positive dimension — so the theorem is VACUOUS for n ≥ 1. The
+    guide dispositioned :defective on the defect rather than on the close, in its own words
+    'so that no consumer of this corpus reads m03J01 as a solved Dirichlet problem.'
+    That is the correct call and it is the most important thing in this frame."
+   :series-significance
+   "TWO CONSECUTIVE FRAMES, TWO STATEMENT DEFECTS, BY TWO DIFFERENT MECHANISMS: f11's t01A05
+    clause was FALSE (refutable, and refuted twice independently); f12's m03J01 is VACUOUS
+    (satisfiable only trivially, because a notation trap emptied the quantified class). Both
+    were found only because a solver was pointed at them hard enough to finish. This is now a
+    corpus-level finding with n=2 problems in this seat's tenure and a third on record
+    (E-APM-f11-defects: t01A05 was 'vacuous first, then false'). The apparatus is, at present,
+    a better detector of broken formalisations than a solver of good ones — which is a real
+    result about the corpus, not a failure of the machine."}
+
+  ;; --- duty A -----------------------------------------------------------
+  :transfer-checks
+  {:score "5/6"
+   :fails [:C2] :inapplicable []
+   :receipt "data/problem-state/m03J01-cee36266.../transfer-checks.edn (re-run by me from the command)"
+   :series "f7 3/6 · f8 6/6 · f9 5/6 · f10 5/6 · f11 4/6 (C3 vacuous) · f12 5/6"
+   :C2 "HONEST FAIL, and a different mechanism from f11's. The guide's own :write-substrate
+        intervention e-42953d74 is STATUSLESS with no patterns and was never promoted — I
+        confirmed status nil, patterns nil, review nil on its edge. The four promotions this
+        frame were of the SCRIBE's deposits, not the guide's, so C2's subject was never a
+        candidate. C2 asks about the guide's intervention specifically; the frame's promotion
+        activity went round it."
+   :C3 "PASSES WITH REAL CONTENT for the first time in this tenure, and this is the quiet
+        result worth keeping. The student's recall carries
+        :eligible-memory-provenance {:policy :snapshot-union-cycle-promoted,
+        :cycle-promoted-memory-ids [e-7c6631c9 e-1b72bb47]} — the two in-scope promotions ARE
+        in its 470-id eligible set. promote -> eligible is wired end to end and now
+        demonstrated, not assumed. (P28's INAPPLICABLE path was correctly NOT taken: there
+        were promotions, so the check had input.)"}
+
+  :trace-validation
+  {:launchable? false :failure-count 5
+   :failures [:malformed-cycle-attempts :wrong-arms :f7-missed-available-artifact
+              :f9-capability-not-realized :f9-capability-probe-missing]
+   :across-frames {"f8" 6 "f9" 7 "f10" 7 "f11 (0 offers)" 6 "f12 (0 offers)" 5}
+   :finding
+   "6 -> 5 IS REAL PROGRESS, unlike f11's 7 -> 6. The failure that vanished is
+    :guidance-measurement-mismatch, and it vanished because the measurement is now CORRECT:
+    :guidance-count reads 0 against a true 0. Contrast f11, where the count read 1 against a
+    true 0 with the same zero-offer conditions. D2 (73a6b0c2) reached the running image with
+    the restart between the frames. Caveat stated so nobody over-reads it: a frame that sent
+    NO guidance tests the fix only in its zero case; the -100/-101 regime needs a frame that
+    actually sends guidance.
+    Capability probes went 5/8 -> 7/8. The ONLY missing probe is :offer-use-disposition, and
+    it is missing for the same reason as in f11: zero offers. Fifth consecutive
+    :launchable? false close."}
+
+  ;; --- duty C -----------------------------------------------------------
+  :cascade
+  {:enabled? true :cap 100 :offers 0 :offer-use-join :inapplicable
+   :note
+   "Zero offers for the SECOND frame running, and the reason has changed, which matters. In
+    f11 recall found nothing because the store held no reviewed attachment to surface (D29).
+    In f12 the store DID hold reviewed attachments — but the four this frame created were
+    created AFTER recall ran, and the solver's three dispatches all show an empty recall.
+    So the shelf is no longer empty; the frame just stocked it too late to read from it.
+    THIS IS THE FIRST FRAME THAT HANDS ITS SUCCESSOR A NON-EMPTY SHELF. f13 is the first
+    frame in which :cascade-seeds-from-recall and :offer-disposition-populated are testable
+    at all, and my successor should expect ground control to register them as such."}
+
+  ;; --- duty B: S-5 ------------------------------------------------------
+  :spectral
+  {:reading "S-5"
+   :universe 105
+   :universe-method "DECLARED ids from @flexiarg/@arg/@multiarg under futon3/library across 15 math-* namespaces. UNCHANGED S-2 through S-5. ZERO new pattern files in three frames."
+   :scope "reviewed memory/assert hyperedges with :prop/review :reviewed-at >= 2026-08-16 (same as S-4, so S-4 and S-5 ARE comparable to each other)"
+   :method "GET /api/alpha/hyperedges?type=memory/assert&limit=5000, run twice, byte-identical, query-errors 0."
+   :reviewed-memories 18 :patterns 16 :shared-nodes 2
+   :shared [["math-formalization/notation-semantics-traps" 2]
+            ["math-formalization-CA/layer-cake-crossover-split" 2]]
+   :f12-contribution {:memories 4 :patterns 3 :shared 1 :bespoke-mints 0}
+   :whole-store {:edges 478 :reviewed 219 :proposed 18 :statusless 241
+                 :with-review-prop 210 :math-patterns 35 :shared-nodes 16}
+   :delta-from-S4 "mission memories 14 -> 18, patterns 13 -> 16, SHARED NODES 1 -> 2. The first
+                   growth in mission-scope sharing since f8."
+   :finding
+   "THE STORE GREW FOR THE FIRST TIME SINCE f9, and the fragmentation mode of W.67 is broken.
+    f12 added FOUR reviewed attachments — e-7c6631c9 and e-1b72bb47 (both to
+    math-formalization/notation-semantics-traps), e-2ad2b4fe (math-formalization-CA/measure-
+    integration-api) and e-46c3e6e5 (math-strategy/structural-obstruction-as-theorem).
+    ALL FOUR named PRE-EXISTING patterns; ZERO bespoke mints. Bespoke rate across the series:
+    f9 100% (2 fresh mints for 2 attachments) -> f11 0% of 2 attempts (neither landed) ->
+    f12 0% of 4 attachments (all landed). The behaviour I read as a signal at S-4 on n=2
+    attempts is now a result on n=4 landed attachments.
+    HONEST QUALIFIER ON THE NEW SHARED NODE: both of its memories are f12's own, so this is
+    WITHIN-frame sharing, not cross-frame reuse — a weaker thing than the number suggests, and
+    the distinction should be carried forward rather than smoothed over. The genuine
+    cross-frame thread is real but lives outside the count: f11's REJECTED guide deposit named
+    math-strategy/structural-obstruction-as-theorem, and one frame later f12's scribe put a
+    reviewed memory on that same pattern. The insight survived the rejection and reached the
+    store through a different seat."
+   :instrument-cautions
+   ["THE HYPEREDGES ENDPOINT SILENTLY DEFAULTS TO limit=100 AND TRUNCATES WITH NO INDICATION.
+     No limit param returns exactly 100 of 478 edges. This is not hypothetical: ground control's
+     census in E-APM-f11-defects reports '151 are :attachment-status :reviewed' over 'more than
+     400 edges', and limit=400 against this store returns 148 reviewed — so that 151 is a
+     truncated page, while the true figure at that time was 215. A truncated census reads as a
+     DECLINE. ALWAYS pass limit=5000 and ALWAYS print the edge count beside the result."
+    "I could NOT reproduce the other half of that census — '286 carry :prop/review' — under any
+     filter I tried (my figure is 210 of 478; sum of review-history ENTRIES is 228; edges with
+     >=1 pattern is 237). Recorded as an unreconciled disagreement rather than as an error on
+     either side: two readings of one population are in the record and at most one is right."
+    "attachment-status is a keyword on some edges and the string \"reviewed\" on others —
+     still true at S-5, still normalize with name/str."
+    "Cross-tabulate rather than trusting one field: 219 reviewed, 210 with :prop/review, 209
+     both, 10 reviewed-with-no-review-record (legacy), 1 with-review-but-not-reviewed (the
+     rejection). If those do not add up, the query is wrong."]}
+
+  ;; --- adjudication of :reg/predictions (all ten) ------------------------
+  :predictions
+  [{:id :problem-closed :verdict :refuted-on-the-object
+    :measured "0 residual sorries, axiom-clean true, frozen statement unchanged — and :defective"
+    :evidence
+    "The literal conditions the prediction names were all MET, and the frame still correctly
+     refused to call it a close, because the statement it closed is vacuous for n >= 1. I
+     record this as refuted rather than confirmed because the prediction's own text says the
+     objective is to SOLVE the problem and that 'a frame that repairs its own plumbing and does
+     not solve its problem has failed'. Nothing was solved: the machine proved an empty
+     statement. But the failure is the corpus's, not the solver's — reading this as a solver
+     miss would be exactly backwards. Two frames, two defective problems."}
+   {:id :memory-contributes-to-close :verdict :refuted
+    :evidence
+    "No memory use is attested anywhere: :memory-uses [], :pull-uses absent, and C4 records
+     ONE pull-offer with ZERO pull-uses. f10 produced the series' only uncontaminated instance
+     and it has not recurred in f11 (where the one real transfer went through a REJECTED memory
+     off-instrument) or here (where nothing was used at all). SHAPE CHANGE WORTH FLAGGING: C4's
+     :surfaced list for that single offer contains PATTERN ids — 'eight-gates/ward-off-boundary',
+     'math-formalization-CA/hilbert-projection-properties', 'proof-search/sorry-boundary-
+     clustering' and two more — where f11's surfaced list contained memory e-ids. The pull
+     surface returned patterns, not memories. I did not diagnose why; it is worth one look
+     before anyone builds a use-join on that field."}
+   {:id :reviewed-attachment-gained :verdict :confirmed-as-qualified
+    :measured "FOUR reviewed attachments; the store's first growth since f9"
+    :evidence
+    "THE THREE-FRAME ZERO IS BROKEN. All four are :attachment-status :reviewed in the substrate
+     with a durable :prop/review carrying reviewer, verdict :approve, pattern-ids and
+     reviewed-at. AND THE QUALIFIER HELD EXACTLY AS REGISTERED: the reviewer on all four is
+     f12-guide, i.e. the acting conductor, so this is a GUIDE-reviewed attachment and NOT a
+     demonstration of independent review. Author != reviewer did hold — f12-scribe authored all
+     four (verified via :evidence/author on each memory), f12-guide reviewed all four (verified
+     via :evidence/author on each review-evidence id) — which is f9's crosswise shape, exactly
+     the route f11-guide identified from f9's actual promote-artifact args. The registration
+     was corrected on that evidence before this frame opened, and the corrected prediction is
+     the one that came true. Independent review remains blocked by D31."}
+   {:id :offer-disposition-populated :verdict :inapplicable
+    :evidence "Zero offers again, so nothing to disposition; :offer-use-disposition is the sole
+               missing capability probe. Second consecutive frame inapplicable. See :cascade —
+               f13 is the first frame where this is testable, because f12 is the first to leave
+               reviewed attachments behind for recall to find."}
+   {:id :guidance-count-exact :verdict :confirmed
+    :measured "guidance-count 0, true value 0, :guidance-measurement-mismatch absent"
+    :evidence
+    "The cleanest confirmation of the frame and a genuine live-fix landing. f9 -100, f10 -101,
+     f11 +1, f12 0 — and the trace failure disappeared with it. Note that my f11 entry recorded
+     the guide's report saying 0 while the machine said 1, and flagged that two surfaces
+     disagreed about a number; ground control's f12 registration independently identified that
+     +1 as the SAME defect with the opposite sign. The flag was worth raising."}
+   {:id :scribe-card-pinned-resolves :verdict :confirmed
+    :measured ":scribe-card-path .../role-cards/scribe-v2.md on BOTH dispatch-scribe steps"
+    :evidence
+    "Machine receipt from the step args, not prose. f11 refuted this with the pre-ca0f297e
+     scribe.md; the restart between the frames landed D8. Together with :guidance-count-exact
+     this frame confirms TWO source fixes reaching the running image, which is the D30 failure
+     the batch was sequenced to avoid — and it worked."}
+   {:id :student-memory-promotable :verdict :refuted
+    :measured ":domain :zaif-work on e-47dbb7db-a2a7-491a-837e-06ee8671da07"
+    :evidence
+    "D5 HAS REGRESSED, OR NEVER COVERED THIS PATH. The prediction is conditional on the student
+     recording, and the cycle output :attempt/memory-recorded is NIL — which would have led me
+     to report INAPPLICABLE. It is wrong. The student DID record: the guide's own scribe packet
+     states its promotion of the student memory e-47dbb7db 'was refused with memory lifecycle
+     domain mismatch against the :mathematics pin. This was supposed to have been fixed.' I
+     verified at the store rather than on the prose: the edge exists, :prop/domain :zaif-work,
+     statusless, no patterns. So the student memory was refused ON DOMAIN GROUNDS — precisely
+     f10's e-3a3aed11 failure, which 38d75981 was gated as fixing.
+     AND IT IS A CROSS-FRAME CONTRADICTION ONLY THIS SEAT CAN SEE: f11's student memory
+     e-e0dabbd2 carried :domain mathematics and I confirmed that prediction one frame ago. Same
+     student type, one frame apart, no interface change between them, opposite domains. D5 is
+     not reliably fixed and the fix's gate did not catch it."}
+   {:id :cascade-seeds-from-recall :verdict :inapplicable
+    :evidence "Third consecutive inapplicable. Nothing surfaced, so nothing seeded; and as at
+               f11 the discriminating premise (a non-empty touch-set) is not established —
+               :offer/patterns-per-problem was again never recorded in any version."}
+   {:id :refusals-are-traceable :verdict :confirmed-with-qualifier
+    :measured "THREE :refusal receipts in the emitted trace, with action-ids and step-indices"
+    :evidence
+    "I FIRST RECORDED THIS AS REFUTED AND I WAS WRONG — the correction is mine and the credit is
+     ground control's D43. I looked for :action-refusals in :cycle/outputs and in all 83 step
+     results, found nil, and asserted absence. The receipts live in the EMITTED TRACE
+     (validate-trace's :result :trace), which I had dropped from my own inspection to keep the
+     output small. They are there: f12-guide-solver-1 at step 20 (:guidance-type-invalid),
+     f12-promote-3 at step 45 (the guide's deliberate pattern-attached experiment) and
+     f12-promote-student-1 at step 69 (the student memory), each with an action-id, a tool, an
+     args shape and a step-index. So the D6/D37 fix reached the live path and the prediction is
+     CONFIRMED on its literal terms.
+     THE QUALIFIER IS D43's AND IT IS REAL: both promotion refusals carry only
+     :error/code :tool-execution-failed with the message 'Tool execution failed'. The two facts
+     that matter — :promotion-attachment-not-statusless, and the student memory's domain
+     mismatch — are NOT in the receipt. We now trace the event and drop the payload.
+     A NOTE ON MY OWN METHOD, since my f11 adjudication used the same insufficient one: I
+     re-checked f11's emitted trace after finding this, and it genuinely carries
+     :action-refusals [] — so f11's REFUTED verdict was right on the facts. It was right by
+     luck, not by method. The lesson for my successor is in the handoff: the emitted trace is a
+     THIRD place to look, distinct from :cycle/outputs and from step results, and it is where
+     the preregistration validator actually reads from."}
+   {:id :analyst-survives-two-frames :verdict :confirmed
+    :evidence
+    "Duties A, B and F completed at BOTH closes of this tenure: checks re-run from the command
+     both times, S-4 and S-5 taken by hand and each run twice, two series entries appended, and
+     one packet per frame dispatched-parked-gated-merged (P28/b57b29f0 at f11, P29 at f12), each
+     with a bar measured before it was set and each gated with a mutation the packet did not ask
+     for. Succession executed: handoff document, W-entry, and — unlike my predecessor — THE
+     SUCCESSOR IS MINTED AND ITS INVOKE PATH WAS PROBED. See :succession."}]
+
+  :store-delta
+  {:deposit-candidates 7 :promotions 4 :reviewed 4 :new-patterns 0 :bespoke-mints 0
+   :promoted [["e-7c6631c9" "math-formalization/notation-semantics-traps"]
+              ["e-1b72bb47" "math-formalization/notation-semantics-traps"]
+              ["e-2ad2b4fe" "math-formalization-CA/measure-integration-api"]
+              ["e-46c3e6e5" "math-strategy/structural-obstruction-as-theorem"]]
+   :depositor "f12-scribe (all four)" :reviewer "f12-guide (all four)"
+   :guide-intervention {:id "e-42953d74" :status nil :patterns nil :promoted? false}
+   :student-memory {:id "e-47dbb7db" :domain :zaif-work :promotable? false}
+   :scribe-lanes {:ran 3 :total 4 :challenge-never-ran true
+                  :note "EIGHT lane reports for FOUR lanes — two scribe passes. :challenge
+                         reported ran? false BOTH times and yielded nothing all frame, so lane
+                         coverage is 3/4 and the challenge lane has now produced nothing in a
+                         frame that had an excellent thing to challenge. Also e-1b72bb47 is
+                         reported as the yield of BOTH :arc and :trajectory, so lane yields
+                         double-count at least one memory and 'arc-lane yield 2' is not a count
+                         of distinct arc memories."}}
+
+  :loss-components
+  {:surfaced-push 0 :surfaced-pull 5 :pull-offers 1 :pull-uses 0
+   :used-receipted 0 :used-attested 0 :converted-artifacts 6
+   :note "Numerator zero this frame — no memory use attested by any seat. The denominator side
+          finally moved instead: four reviewed attachments deposited for FUTURE frames to
+          surface. f12 is a producer frame, not a consumer one, and the loss function as
+          currently shaped cannot express that a frame's contribution is to the next frame's
+          numerator. See E-loss-function-shape."}
+
+  ;; --- defects ----------------------------------------------------------
+  :defects
+  [{:id :f12-a1
+    :text "D5 REGRESSION: the f12 student's memory e-47dbb7db is :domain :zaif-work and its
+           promotion was refused on domain mismatch, while f11's student memory one frame
+           earlier was :domain mathematics. Same student type, no interface change. Verified at
+           the store, not from prose. The fix 38d75981 was gated and is not holding."
+    :status :surfaced :owner :ground-control :priority :before-f13}
+   {:id :f12-a2
+    :text ":attempt/memory-recorded IS NIL FOR A STUDENT THAT DID RECORD. Reading that field
+           alone gives INAPPLICABLE for :student-memory-promotable when the truth is REFUTED.
+           In f11 the same field was populated. Any adjudication of a student-memory prediction
+           must go to the store, not to the cycle output — and my successor should treat this
+           as the third instance of the standing pattern in this series: f10 pull-vs-push,
+           f11 surfaced-ids-vs-pull-receipts, f12 memory-recorded-vs-store. The trace has been
+           wrong about what the student did in three consecutive frames."
+    :status :surfaced}
+   {:id :f12-a3
+    :text "RETRACTED — THIS WAS MY ERROR, KEPT VISIBLE RATHER THAN DELETED. I recorded that
+           two refusals had left no receipt because :action-refusals was nil in :cycle/outputs
+           and in every step result. It is nil in both of those places and that is not where it
+           lives: the emitted trace carries THREE :refusal receipts with action-ids and
+           step-indices. Ground control's D43 had it right. What survives of the finding is
+           D43's own narrower point, which I confirm: both promotion refusals record
+           :tool-execution-failed / 'Tool execution failed' and drop the actual causes, so the
+           two most informative facts of the frame are absent from the receipt that exists to
+           carry them. Recorded as a retraction because a wrong assertion about infrastructure
+           state is the first trap on this seat's own card, and I walked into it."
+    :status :retracted-by-me :ref "D43"}
+   {:id :f12-a4
+    :text "THE FRAME'S BIGGEST RESULT IS ABSENT FROM ITS OWN MEASUREMENT. 'memories promoted'
+           is a REQUIRED measurement field and is recorded as 'unset: promotion outputs do not
+           identify which artifacts are memories' — false for this frame, whose four
+           :promotion-result entries each carry :promo/artifact-id, :promo/pattern-id and
+           :promo/review-evidence-id. Packet P29 dispatched."
+    :status :packet-dispatched :ref "P29 / invoke-1787127501525-4998-2a06ac1d, park-4cbe823e"}
+   {:id :f12-a5
+    :text "CENSUS TRUNCATION HAZARD, and it has already produced a wrong number in the record:
+           /api/alpha/hyperedges defaults to limit=100 with no truncation signal, and a
+           limit=400 page yields 148 reviewed where the true count is 219. Ground control's
+           census reporting '151 reviewed' is consistent with exactly this. A truncated census
+           reads as a decline in the store, which is the opposite of what happened."
+    :status :surfaced-with-workaround}]
+
+  ;; --- succession -------------------------------------------------------
+  :succession
+  {:handoff "holes/labs/M-apm-demonstration/analysis/HANDOFF-analyst-2-to-analyst-3.md"
+   :w-entry "W.81"
+   :successor "analyst-3 (tenure 3, frames f13–f14) — MINTED AND PROBED"
+   :mint
+   "THE BLOCKER ANALYST-1 HIT IS GONE. POST /api/alpha/frames/mint-analyst returns 409 on an
+    empty body (routed) where it returned 404 for analyst-1, so D-f10-d3's stale-router
+    condition is cleared. I posted {\"tenure\": 3} and got {:ok true :tenure 3 :analyst-seat
+    \"analyst-3\"}. Ground control had already pre-minted the seat at 06:12 today, so my mint
+    exercised the IDEMPOTENCY the card claims and did not disturb the existing identity —
+    which is the first live confirmation of that claim.
+    ROSTER-VERIFIED: analyst-3, type claude, model claude-opus-5, tenure 3, invoke-ready true.
+    PROBED, not merely minted: I sent it a readiness bell
+    (invoke-1787127429683-4995-e9b82991) which reached state done, so the invoke path executes
+    end to end. Its one-line reply routes back to me as a completion bell and may land after
+    this entry is written; the path is proven either way, and analyst-1's rule — a seat that
+    looks minted with an unverified invoke path is worse than an absent one — is satisfied."
+   :n-evidence
+   "SECOND TENURE, SECOND CLEAN SUCCESSION — N=2 is now a mechanism rather than an anecdote,
+    which is what this registration asked for. What the SECOND frame bought that the first
+    could not, all four requiring exactly two frames and none requiring three:
+      1. the D5 regression is only visible as a contradiction between f11's :mathematics
+         student memory and f12's :zaif-work one;
+      2. f11's C3 vacuous FAIL and f12's C3 substantive PASS together show the check's
+         denominator problem AND its repair working, which one frame shows neither of;
+      3. 7->6 (vacuous) versus 6->5 (real) trace-failure movement is only distinguishable
+         across two closes;
+      4. the rejected f11 deposit's pattern reappearing under a reviewed f12 memory.
+    I have no evidence bearing on whether N=3 would buy more, and say so rather than inferring
+    it. One thing DID change from analyst-1's report: it wrote that duties D, E and G were
+    'slow by nature, not blocked by tenure length'. On D specifically that is now wrong — the
+    bespoke-rate reading became a result at f12 precisely BECAUSE there were two frames of
+    attachment behaviour to compare. D is a two-frame duty; E and G remain open."}
+
+  :headline
+  "The solver closed m03J01 with zero sorries, axiom-clean, and the guide correctly refused to
+   call it solved: `ContDiff ℝ ⊤` is analytic, not smooth, so the frozen statement is vacuous
+   for n >= 1. Two frames, two defective problems, two different mechanisms — the apparatus is
+   currently a better detector of broken formalisations than a solver of good ones, and that is
+   a finding about the corpus. On the memory side the three-frame zero broke: FOUR reviewed
+   attachments, all on pre-existing patterns, zero bespoke mints, and the first growth in
+   mission sharing since f8 — by the guide-reviewed route the record was corrected to predict,
+   with author != reviewer holding. Trace failures 6 -> 5 for a real reason this time. Against
+   that: D5 has regressed on the student's domain, two refusals left no receipt, and the trace
+   has now been wrong about what the student did in three consecutive frames."
+  :defects-found 5 :defects-fixed-or-queued 1}]

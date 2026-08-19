@@ -27,22 +27,34 @@
 ;;         Fixed 38d75981 per Joe's ruling that APM frame knowledge is
 ;;         :mathematics.
 ;; f11 was the first frame that COULD deposit, disposition and promote end to
-;; end. f12 asks whether f11's result replicates on a different problem, which
-;; is the difference between a repair that works and a repair that worked once.
+;; end. Frame 13 is the second frame of the three-frame batch and the FIRST of analyst-3's tenure.
+;; f12 closed :defective — the problem WAS closed axiom-clean and the frozen
+;; statement was vacuous (`ContDiff R (top)` is analytic, not smooth), so its
+;; write path replicated and its read path returned nothing at any dispatch.
+;; Frame 13 therefore asks the replication question about a problem with no
+;; known statement defect, and carries the read-path fix (see the pin below).
 ;;
-;; PROBLEM SELECTION — m03J01. Verified by elaboration, not metadata: exits 0
+;; PROBLEM SELECTION — m99J06. Verified by elaboration, not metadata:
+;; `lake env lean problems/m99J06/lean/Main.lean` re-run 2026-08-19 exits 0
 ;; with exactly one `declaration uses `sorry`` diagnostic and zero errors.
-;; m-family but a different sub-series from f10's m93J02, and structurally
-;; distant from f11's t01A05, satisfying the cross-problem recall-leakage
-;; criterion against the immediately preceding frame.
+;; (The original of this note named m03J01 — f12's problem — because the whole
+;; preamble was copied from frame-12 and not re-edited. Corrected 2026-08-19
+;; by re-running the check against THIS frame's problem.)
+;; m-family but a different sub-series from the preceding frame's m03J01,
+;; satisfying the cross-problem recall-leakage criterion against the
+;; immediately preceding frame.
 ;;
 ;; ANALYST. analyst-2, tenure 2 of 2 — its LAST frame. Succession (handoff
 ;; document, memory-surface pointer, W-entry) is a scheduled duty of this frame.
 ;; analyst-1 completed its own succession at f10's close and its handoff is at
 ;; analysis/HANDOFF-analyst-1-to-analyst-2.md; the same is expected here.
 ;;
-;; HARNESS PIN. Taken AFTER all defect work landed, not before: twelve defects
-;; were fixed today and each moved the pin. Computed by
+;; HARNESS PIN. RE-TAKEN 2026-08-19. The batch was registered pinned at
+;; e6721ca0; the recall read-path fix (d893280a demote the anchor from hard
+;; filter to ranking boost, 10937528 anchor-df basis receipts) landed after
+;; that and moved the pin to 10937528 BEFORE f12 ran. f12 therefore ran on
+;; harness code its own registration did not name. Re-pinned here so f13/f14
+;; declare the code they will actually execute. Computed by
 ;; `git -C futon3c log -1 --format=%H -- src scripts deps.edn`.
 
 {:kind   :apm-demonstration-round1-registration
@@ -54,7 +66,7 @@
  :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
 
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "e6721ca0627e2d393a4c78c0975e710cba307563"
+ :reg/harness-revision     "10937528a08701e89975719826b552180fb3fb7b"
 
  :reg/solver-seat  "f13-solver"
  :reg/student-seat "f13-student"
@@ -91,7 +103,7 @@
           :role :treatment}]
 
  ;; Descriptive only; :arms is frozen by preregistration/validate (:wrong-arms).
- :arm-description "fresh seats, same analyst (tenure 2 of 2), cascade on, write path repaired"
+ :arm-description "fresh seats, analyst-3 (tenure 1 of 2), cascade on, write path repaired, read path re-pinned"
 
  :replication-stage  :pilot
  :pilot-units        [{:problem-id            "m99J06"
@@ -143,13 +155,13 @@
 
  :reg/known-departures
  [{:id :analyst-tenure-n2
-   :text "The Analyst serves N = 2 frames (f11, f12) and this is its second; every other seat is minted fresh. Ruled 2026-08-18; N stays pinned at 2. analyst-1's tenure produced four findings unavailable at n=1 and none needing n=3, so the parameter is unchanged on evidence rather than by default."}
+   :text "The Analyst serves N = 2 frames (f13, f14); analyst-3 is in tenure 1 of 2 and every other seat is minted fresh. Ruled 2026-08-18; N stays pinned at 2. analyst-1's tenure produced four findings unavailable at n=1 and none needing n=3, so the parameter is unchanged on evidence rather than by default."}
   {:id :harness-changed-since-f10
-   :text "Twelve defects were fixed in source between f10's close and this registration (D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D24 D25). f11 therefore runs on materially different harness code from f9/f10, and is NOT a replication of either. Every fix was gated by ground control with re-run clj-kondo, check-parens, tests at an enumerated namespace scope, and an independent mutation; the record is holes/excursions/E-APM-f10-defects.md. Declared because a between-frame difference this large must not be discovered by the Analyst from a diff."}]
+   :text "Twelve defects were fixed in source between f10's close and the batch registration (D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D24 D25), and the recall read path was changed again afterwards (d893280a, 10937528). Frame 13 therefore runs on materially different harness code from f9/f10 AND from the code f12's registration named, and is NOT a replication of any of them. Every fix was gated by ground control with re-run clj-kondo, check-parens, tests at an enumerated namespace scope, and an independent mutation; the record is holes/excursions/E-APM-f10-defects.md. Declared because a between-frame difference this large must not be discovered by the Analyst from a diff."}]
 
  :reg/predictions
  [{:id :problem-closed
-   :text "THE PRIMARY OUTCOME: m03J01 is closed, axiom-clean, with the frozen statement unchanged — or its residual is strictly reduced and localised. This is the objective the whole apparatus exists to serve: the corpus has ~207 open problems and the machine is being built to go through them. Frames 9 and 10 each closed on the solver's FIRST dispatch, so this is a real prediction with a track record, not a formality. A frame that repairs its own plumbing and does not solve its problem has failed, however green its other measures read."}
+   :text "THE PRIMARY OUTCOME: m99J06 is closed, axiom-clean, with the frozen statement unchanged — or its residual is strictly reduced and localised. This is the objective the whole apparatus exists to serve: the corpus has ~207 open problems and the machine is being built to go through them. Frames 9 and 10 each closed on the solver's FIRST dispatch, so this is a real prediction with a track record, not a formality. A frame that repairs its own plumbing and does not solve its problem has failed, however green its other measures read."}
   {:id :memory-contributes-to-close
    :text "A memory surfaced by recall or the cascade is attested as USED in the work that closes or advances the problem — not merely offered, surfaced or promoted. This is the link that makes the memory machinery worth having: it is instrumental to solving, not an end in itself. f10 produced the series' first uncontaminated instance (the student derived its own conjunct from a route memory), so the mechanism is known to work at least once; this asks whether it recurs."}
   {:id :reviewed-attachment-gained

@@ -166,3 +166,197 @@ Ground control corroborates this from the other end, independently of the frame:
   `SQLITE_BUSY … database is locked`. The index holds ~29 documents and reports
   itself ready. That is a SECOND, independent retrieval blocker, upstream of
   query shape, that nobody had looked at. Owner: claude-11.
+
+---
+
+## Appended by analyst-2 at the f12 close (2026-08-19) — its last frame
+
+Per the f10 file's §7. One retraction of my own, one settled answer to this
+file's open question, and three new defects. Census figures throughout come from
+`GET /api/alpha/hyperedges?type=memory/assert&limit=5000` (478 edges, run twice,
+byte-identical, zero query errors).
+
+### RETRACTION — I asserted the refusals had no receipt, and D43 is right
+
+I recorded in my first pass that the frame's refusals left no trace, on the
+grounds that `:action-refusals` is nil in `:cycle/outputs` and in all 83 step
+results. It is nil in both — and that is not where it lives. The **emitted
+trace** (`validate-trace`'s `:result :trace`) carries all three receipts with
+action-ids and step-indices, exactly as D43 says. I had dropped `:trace` from my
+own inspection to keep the output small and then reasoned from its absence.
+
+Retracted in the series entry rather than deleted, because "asserting
+infrastructure state without checking" is the first trap on this seat's own role
+card and I walked into it. **The emitted trace is a THIRD place to look**,
+distinct from `:cycle/outputs` and from step results, and it is what the
+preregistration validator actually reads — that is now in the successor handoff.
+
+D43's own narrower point I confirm independently: both promotion refusals carry
+only `:error/code :tool-execution-failed` / "Tool execution failed", so
+`:promotion-attachment-not-statusless` and the domain mismatch — the two most
+informative facts of the frame — are absent from the receipts that exist to carry
+them.
+
+### The "Open — NOT settled" question is now SETTLED, and the hypothesis is REFUTED **[verified]**
+
+This file records f12-guide's reading: the seat registry shows
+`auto-registered? true`, `restore/state restored/detached` and no
+`memory-domain`, so "the D5 mint-path fix in `frame_seats.clj` appears not to
+apply to a RESTORED seat." Marked plausible and unverified, with an instruction
+not to record it as settled.
+
+**It cannot be the explanation.** From the live roster:
+
+| seat | status | auto-registered? | restore/state | `memory-domain` |
+|---|---|---|---|---|
+| f10-student | restored | true | restored/detached | **None** |
+| f11-student | restored | true | restored/detached | **None** |
+| f12-student | idle | true | restored/detached | **None** |
+| f13-student | restored | true | restored/detached | **None** |
+
+f11-student and f12-student are **identical on every field named in the
+hypothesis**, and f11's student memory `e-e0dabbd2` carried `:domain
+"mathematics"` while f12's `e-47dbb7db` carries `:domain :zaif-work`. A property
+that is the same for both cannot explain a difference between them.
+
+The argument is robust to the obvious objection that this is a *current*
+snapshot and f11-student may have been re-registered since: `memory-domain` is
+`None` for **every** student seat on the roster, including f13's, so the field
+never discriminates between any two students at all.
+
+So the cause of the domain divergence lies elsewhere — the memory-write path, the
+student's own session tooling, or the zai runner's default — and is **not** the
+restore path. Whoever picks this up should start at the write, not at the mint.
+
+### D49. D5 has regressed, and the regression is only visible across two frames **[verified]**
+
+f12's student memory `e-47dbb7db-a2a7-491a-837e-06ee8671da07` is
+`:prop/domain :zaif-work`, statusless, no patterns, and its promotion was refused
+on domain mismatch against the `:mathematics` pin. That is f10's `e-3a3aed11`
+failure exactly — the one `38d75981` was gated as fixing.
+
+What makes it a regression rather than a known gap is the frame before it:
+**f11's student memory `e-e0dabbd2` carried `:domain "mathematics"`**, which I
+verified in the projection at that close and recorded as a confirmed prediction.
+Same student type, one frame apart, no interface change between them, opposite
+domains. The fix is not holding, and its gate did not catch that.
+
+### D50. `:attempt/memory-recorded` is nil for a student that recorded **[verified]**
+
+f12's `:student-attempts` carries `:attempt/memory-recorded` **nil**, and the
+student demonstrably recorded `e-47dbb7db` — the memory whose refused promotion
+is receipted in this frame's own trace. In f11 the same field was populated.
+
+Consequence for adjudication, which is why this is filed rather than shrugged at:
+reading that field alone gives **INAPPLICABLE** for `:student-memory-promotable`
+when the truth is **REFUTED**, and inapplicable is the verdict that hides a
+regression. Any student-memory adjudication must go to the store.
+
+This is the **third consecutive frame** in which the trace is wrong about what the
+student did: f10 transferred by pull while the metric watched push (D18); f11
+recorded `:memory-use/surfaced-ids []` for a student that surfaced and used a
+memory (D34); f12 records no memory for a student that recorded one. Three
+frames, three different fields, same direction — **the instrument
+under-reports the student.**
+
+### D51. The census endpoint truncates silently, and it has already put a wrong number in the record **[verified]**
+
+`GET /api/alpha/hyperedges?type=memory/assert` with **no `limit`** returns exactly
+**100** rows of 478, with nothing in the response indicating truncation.
+
+This is not hypothetical. `E-APM-f11-defects` reports a census of "more than 400
+edges" finding "**151** are `:attachment-status :reviewed`". Against this store a
+`limit=400` page returns **148** reviewed — while the true count at that time was
+**215** (219 now). A truncated page reads as a **decline in the store**, which is
+the opposite of what was happening.
+
+Always pass `limit=5000` and always print the row count beside the result;
+`scripts/pattern_store_census.py` already carries the corresponding warning for
+`/api/alpha/entities` and its reasoning applies here verbatim.
+
+**Unreconciled, and recorded as such rather than as an error on either side:** I
+could not reproduce the other half of that census, "286 carry `:prop/review`",
+under any filter — my figure is 210 of 478; the sum of `:prop/review-history`
+*entries* is 228; edges carrying at least one pattern is 237. Two readings of one
+population are in the record and at most one is right.
+
+### A disagreement with this file's own adjudication, stated rather than smoothed over
+
+Two of the ten verdicts in the Predictions table differ from mine, and both
+differences are ones a reader of the series should be able to see:
+
+- **`:problem-closed`** — this file records **CONFIRMED**; I record it refuted.
+  The frame's own disposition is `:defective`, and the guide dispositioned it that
+  way deliberately "so that no consumer of this corpus reads m03J01 as a solved
+  Dirichlet problem." A series that records `:problem-closed` CONFIRMED against a
+  `:defective` disposition will be counted later as a solved problem, which is
+  precisely the outcome the disposition exists to prevent. The prediction's own
+  text says the objective is to *solve* the problem; a vacuous statement was
+  proved instead. The literal conditions were met and nothing was solved.
+- **`:offer-disposition-populated`** — this file records **REFUTED**; I record it
+  INAPPLICABLE, following the precedent D29 set at f11 and which ground control
+  used there to correct the guide: with zero offers there is nothing to
+  disposition, and `write-uses!` reducing over an empty `:memory-offers` cannot
+  populate anything. Zero offers is the same condition in both frames and should
+  not take opposite verdicts one frame apart.
+
+Neither is mine to rule on. Both are recorded so the next Analyst inherits the
+disagreement rather than one side of it.
+
+---
+
+## D49 — the registration's declared harness revision is never checked against the harness [verified]
+
+f12, f13 and f14 all declared `:reg/harness-revision e6721ca0…` (2026-08-18
+17:54). The recall read-path fix landed after that and moved the pin:
+
+    d893280a 2026-08-19T06:36  Demote recall anchor to ranking boost
+    10937528 2026-08-19T06:51  Anchor receipts record the population the df was computed against
+
+f12's solver was first active at 07:20. **f12 therefore ran on harness code its
+own registration did not name, and nothing anywhere reported it.** The f12
+envelope carries no pin failure. `cfc275a0` (my D30 fix) verifies the pin against
+the LOADED IMAGE; `preregistration.clj` verifies `:lean-revision` against the
+Lean checkout. Nobody compares `:reg/harness-revision` with
+`git log -1 --format=%H -- src scripts deps.edn`. The gap is exactly the one that
+matters: a registration can name any harness it likes.
+
+Not fixed. Needs a check at `open` that refuses a registration whose declared
+harness revision is not the live pin, with an explicit override that records the
+divergence rather than hiding it.
+
+## D50 — the batch registrations were copied from f12 and not re-edited [verified, MINE, FIXED]
+
+The structured fields of f13/f14 were correct throughout (`:problem`,
+`:pilot-units`, seats, `:reg/analyst-seat`, `:reg/analyst-tenure`, `:endpoint`).
+The PROSE — which is what the guide and the Analyst actually read — was f12's,
+unedited:
+
+1. `:reg/predictions` `:problem-closed`, the frame's PRIMARY OUTCOME, read
+   "THE PRIMARY OUTCOME: **m03J01** is closed" in both f13 and f14.
+2. `;; PROBLEM SELECTION — m03J01. Verified by elaboration…` — a false
+   provenance claim: it asserted a verification of the wrong problem.
+3. The recall-leakage distance criterion named f10's m93J02 and f11's t01A05.
+4. `:reg/known-departures :analyst-tenure-n2` said "(f11, f12) and this is its
+   second" for frames run by analyst-3 at tenure 1 of 2 and 2 of 2.
+5. `:harness-changed-since-f10` said "f11 therefore runs on…".
+6. `:arm-description` (added at `d204cd15`) inherited f12's "tenure 2 of 2".
+7. The pin, per D49.
+
+All seven repaired. The elaboration claim is now TRUE because it was re-run
+rather than re-worded: `lake env lean problems/m99J06/lean/Main.lean` and
+`problems/m93J06/lean/Main.lean`, 2026-08-19, both exit 0 with exactly one
+`declaration uses 'sorry'` and zero errors (m99J06:81, m93J06:147).
+
+The lesson is the one this excursion keeps recording. A frame whose stated
+objective names the wrong problem would have produced a green-looking record of
+a question nobody asked, and the structured validator would have passed it,
+because the validator checks the fields and the agents read the prose.
+
+## The batch did not chain, and there is no chainer [verified]
+
+`9db0e573` added frame files and registrations only. No runner, no chain step.
+The batch "runs end-to-end" only in the sense that ground control launches each
+frame; the chain is a person, not a mechanism. At the time f12 closed (guide bell
+~08:14) all five f13 seats still sat at their 06:12:52 restore stamp, untouched,
+and `/api/alpha/parked` was empty. Nothing was awaiting anything.
