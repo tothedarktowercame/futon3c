@@ -91,3 +91,117 @@ pattern cascade carried the load. Note the pattern cascade carried it toward
   enqueue on completion — surface `problem` is not a buffer surface).
 - On wake: read the solver report, record the attempt, then decide guidance
   (typed `:answer` to a REPORTED residual only) vs advance.
+
+---
+
+## Solver attempt 1 — REVIEWED AS A GATE, verified independently
+
+Commit `a68fa7e3` on `exp/frame-15-m93J06-solver`. Scope clean: only
+`problems/m93J06/` (Main.lean, proof-outline.md, status.json). Worktree clean.
+
+**What I checked myself, not taking the report's word:**
+
+1. **Re-ran the compile.** `lake env lean problems/m93J06/lean/Main.lean`,
+   EXIT=0, exactly two `declaration uses sorry` (lines 202, 241) and four
+   linter warnings. Reproduces the solver's verbatim output exactly.
+2. **Diffed the frozen statement.** Old `Main.lean:147-169` vs new `263-285`:
+   IDENTICAL. The only deleted lines in the whole diff are two lines of the
+   boundary-note prose and the bundled `sorry`. No definition above the theorem
+   was touched.
+3. **Grepped the diff for `axiom`, `native_decide`, `implemented_by`, `unsafe`,
+   `admit`** — none.
+4. **Ran `#print axioms` PER DECLARATION**, which the solver did not:
+
+        apm_m93j06                        [propext, sorryAx, Classical.choice, Quot.sound]
+        apm_m93j06_flow_exp_bound         [propext, Classical.choice, Quot.sound]
+        apm_m93j06_not_holder_unique      [propext, Classical.choice, Quot.sound]
+        apm_m93j06_global_exists_unique…  [propext, sorryAx, Classical.choice, Quot.sound]
+
+   **Conjunct 5 (`apm_m93j06_flow_exp_bound`) is closed AXIOM-CLEAN on its own.**
+   That is new mathematics delivered by this frame and it is not visible from
+   the theorem-level axiom print, which `sorryAx` swamps.
+
+### Accounting for the Analyst — state it this way or it will be over-credited
+
+| conjunct | status | honest reading |
+|---|---|---|
+| 1 Picard–Lindelöf | NAMED RESIDUAL | uniqueness half COMPILED via `ODE_solution_unique_univ`; existence half is the residual |
+| 2 C¹ flow regularity | NAMED RESIDUAL | only the trivial `t = 0` identity case discharged; punctured case is the residual |
+| 3 linear growth | closed MODULO residual 1 | no clause-specific hole, but `choose`s trajectories from residual 1 — **not** an independent close |
+| 4 Hölder non-uniqueness | CLOSED, free | citation of the pre-existing lemma, as registered. Not work. |
+| 5 exponential Lipschitz | **CLOSED, AXIOM-CLEAN** | the one genuinely new closed conjunct |
+
+**The `sorry` count went 1 → 2 and that is not a regression.** The acceptance bar
+is a disjunction and it is the SECOND disjunct that is met: the single bundled
+theorem-level `sorry` became named per-clause residuals, each a standalone lemma
+carrying its nearest-API note and its empty searches. Anyone quoting "sorries
+went up" without that decomposition is misreading the artifact.
+
+Both residual lemmas are honest localizations, not weakenings: residual 1 states
+existence ONLY (the ∃! wrapper is proved from it), and residual 2 states the
+punctured version (the full conjunct is proved from it plus `flow_zero`).
+
+### MEMORY MEASUREMENT — dispatch 1: 5 surfaced, 5 IGNORED, 0 USED
+
+The solver returned a per-id disposition with a specific, checkable reason for
+each: `eLpNorm` finite-exponent, additive `eLpNorm` approximation, radial R³
+integration, measurable-space instance diamonds, weak-L² layer-cake. All five
+are measure/integration theory; the problem is ODE flows on ℝ. The reasons match
+what the ids say they are — this is not a blanket dismissal.
+
+**This is a REAL OUTCOME, not a null result, and it must be reported as one.**
+
+## Dispatch 2 — guidance, and a second D60 datapoint
+
+    action-id f15-guide-solver-1   REFUSED (see below)      v10 -> v11
+    action-id f15-dispatch-solver-2                         v11 -> v12
+    job-id    invoke-1787154576940-5079-19a9b984
+    park-id   park-59f7cae0-d688-43f0-b420-e7becb6bdb2a
+
+Scoped to residual 1 ONLY (it gates conjuncts 1 and 3 together), with the route
+change stated as: BUILD the constructor, do not search for it a third time —
+the solver's empty searches and the file's own boundary note independently
+agree Mathlib has none. Conjunct 5's axiom-clean close declared banked so it is
+not regressed. Residual 2 explicitly out of scope for this attempt.
+
+### D40 — RE-MEASURED AT PIN e1925203, STILL LIVE
+
+`guide-solver` with `bell-type` "suggest" over HTTP:
+
+    409 :guidance-type-invalid — "guide-solver requires a valid typed-bell performative"
+    error/context {:bell-type "suggest"}
+
+The string is never decoded to a keyword. So **the true count of typed guidance
+bells this frame is 0**, and guidance was delivered as a `dispatch-solver`
+packet labelled as such, per ground control's standing instruction. Record the
+guidance-bell count as 0 — that is not an evasion, it is the only reachable path.
+
+### :refusals-are-traceable — CONFIRMED, and D43 needs REFINING
+
+The refusal IS in the persisted trace as an `:action-refusals` receipt
+(`:refusal/action-id "f15-guide-solver-1"`, `:refusal/tool :guide-solver`,
+step-index 20), carrying `:error/code :guidance-type-invalid` and its message.
+f10's D6 — refusals existing only in the guide's prose — is fixed.
+
+**But D43 as written ("receipts say only 'Tool execution failed'") is now only
+half true, and the surviving half is sharper.** The receipt carries the code and
+message; what it DISCARDS is `:error/context`. `record-action-refusal!` selects
+exactly `[:error/component :error/code :error/message]` from the error, so the
+offending value — here `{:bell-type "suggest"}`, the single most diagnostic fact
+about this refusal — is present in the live HTTP response and ABSENT from the
+trace. `:refusal/args` sanitizes it to `{:arg/type :string}`. An analyst reading
+only the trace can see THAT a guidance bell was refused and WHICH rule refused
+it, but not what was actually sent.
+
+### D60 — second datapoint, and the packet text does not move the query
+
+    dispatch 1: exponent OR closing OR conjunct OR existence
+    dispatch 2: exponent OR closing OR residual OR existence
+
+One word changed. Dispatch 2's packet is saturated with `Picard`, `Lipschitz`,
+`ODE`, `continuation`, `compact exhaustion`, `flow` — and NONE of it reached the
+query. The same five measure-theory memories surfaced again, by the same routes
+(1 `:content-match`, 4 `:pattern`). So the retrieval is not merely
+under-selective, it is **insensitive to the dispatch text**: two packets with
+very different mathematical vocabulary produced near-identical prose-word
+queries and an identical memory set.
