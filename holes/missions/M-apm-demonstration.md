@@ -11931,3 +11931,125 @@ because the card is the entire orientation, so a fresh seat could redo the work
 from the card alone. That is the strongest evidence these two frames produced
 for the card's own design — and it is also why every finding above was written
 to a surface before this turn ended.
+
+## W.81 FRAMES 11–12 CLOSED — the write path opens, two problems turn out defective; analyst-2's tenure ends (2026-08-19)
+
+**Seat:** analyst-2, tenure 2 of the Analyst seat under the N = 2 ruling, frames
+f11 (t01A05) and f12 (m03J01). Both closed `:defective`. Succession complete:
+handoff at `analysis/HANDOFF-analyst-2-to-analyst-3.md`, series entries f11 and
+f12 appended, successor **minted and invoke-probed**.
+
+### What was read, and what is now owned
+
+Read on entry: the frozen role card (`ed340941`), analyst-1's handoff, the four
+existing series entries, and `E-APM-f10-defects`. Owned and discharged: duties A
+(transfer checks, both frames, re-run from the command), B (S-4 and S-5, taken by
+hand, each census run twice), C (inapplicable both frames — zero offers), and F
+(one packet per frame, dispatched, parked, gated with a mutation the packet did
+not ask for, merged).
+
+### The mathematics is the headline, and it is not about the machine
+
+**Two consecutive frames, two defective problems, two different mechanisms.**
+t01A05's frozen clause 2 is **false** — refuted axiom-clean by the solver and
+re-refuted by a different route by the student. m03J01 is **vacuous**: in this
+Mathlib `ContDiff ℝ ⊤` elaborates to `ContDiff ℝ ω` (real-analytic), not
+`ContDiff ℝ ∞`, so its compactly-supported test class is empty in positive
+dimension. The f12 solver closed m03J01 with **zero residual sorries,
+axiom-clean, frozen statement unchanged** — and the guide dispositioned
+`:defective` anyway, "so that no consumer of this corpus reads m03J01 as a solved
+Dirichlet problem." That refusal is the best conduct of the tenure.
+
+Ground control's grep sweep finds **five further candidate problems** carrying
+the same `⊤`-with-compact-support configuration, none recompiled. **At present
+this apparatus is a better detector of broken formalisations than a solver of
+good ones.** That is a finding about the corpus, and it is larger than any
+harness defect recorded in these two frames.
+
+### The write path opened; the read path did not
+
+f9 and f10 gained zero reviewed attachments, and f11 gained zero — where the
+standing explanation was that *no authoring shape* could have an independent
+review machine-recorded. **That explanation was wrong, and the store said so.**
+206 of 469 `memory/assert` edges carried a durable `:prop/review` with a verdict,
+one of them a `:reject`; three had been written by frame seats — `f8-scribe`,
+`f9-scribe`, `f9-guide` — crosswise so that author ≠ reviewer, **ten hours before
+f11 ran**. So the zero was a regression inside a twelve-fix window, not a
+structural pincer. f11-guide then recovered f9's actual `promote-artifact` args
+and identified the working route exactly: **attach-then-review, guide as reviewer
+of a scribe-authored statusless deposit.** The f12 registration was corrected on
+that evidence before opening.
+
+**f12 then did it: four reviewed attachments, the store's first growth since
+f9.** Depositor `f12-scribe`, reviewer `f12-guide`, author ≠ reviewer holding.
+All four named **pre-existing** patterns — **zero bespoke mints** — against f9's
+100% mint rate, which breaks the fragmentation mode recorded at W.67, and
+mission-scope sharing grew 1 → 2 for the first time since f8.
+
+**And the read path stayed shut.** Both frames produced **zero cascade offers**,
+so `:offer-disposition-populated` and `:cascade-seeds-from-recall` were
+inapplicable throughout. f12 is the first frame to leave a non-empty shelf
+behind, which makes **f13 the first frame in the series where either prediction
+is testable at all**.
+
+### Instruments that moved on no input, and one that was silently truncating
+
+The tenure's methodological result: **in a single frame (f11), invariant F3
+passed vacuously on zero offers while transfer-check C3 failed vacuously on zero
+promotions** — two validators, no input, opposite directions, both feeding
+numbers this seat reports. Proved by mutation, not argued; packet **P28**
+(`b57b29f0`) now reports C3 `INAPPLICABLE` **without moving the `/6`
+denominator**, since redefining the loss function is not the Analyst's call.
+The same discipline distinguishes f11's trace-failure movement 7 → 6 (**vacuous**)
+from f12's 6 → 5 (**real** — the guidance measurement became correct).
+
+Separately, `/api/alpha/hyperedges` **silently defaults to `limit=100`** and
+returns 100 of 478 rows with no truncation signal. This had already put a wrong
+figure in the record: a ~400-row page reports 151 reviewed where the true count
+was 215, so a truncated census reads as the store *shrinking* at precisely the
+moment it began to grow.
+
+### Corrections, including one of my own
+
+Filed against the record: D34's "23 occurrences" of a memory id was a raw grep
+count that grew to 32 within the same frame, where the structured receipt count
+is **3**. D51: **D5 has regressed** — f12's student memory is `:domain
+:zaif-work` and unpromotable while f11's was `:mathematics`, same seat type, one
+frame apart; and f12-guide's hypothesis that the restore path explains it is
+**refuted**, because `memory-domain` is `None` for *every* student seat and so
+cannot discriminate between two of them. D52: the trace has now been wrong about
+what the student did in **three consecutive frames**.
+
+**And one retraction.** I reported that f12's refusals left no receipt, having
+looked in `:cycle/outputs` and every step result. They are in the **emitted
+trace**, which I had dropped from my own inspection — ground control's D43 was
+right. Kept visible in the series rather than deleted, because "asserting
+infrastructure state without checking" is the first trap on this seat's own card.
+The lesson is now in the handoff as a rule: a fact can live in three
+non-agreeing places, and the store beats all three.
+
+### On N = 2
+
+**Two tenures have now completed succession, so N = 2 is a mechanism rather than
+an anecdote** — which is what the f12 registration asked for. Four findings from
+this tenure required exactly two frames and none required three: the D5
+regression is visible *only* as a contradiction between f11's and f12's student
+memories; C3's vacuous fail and its substantive pass one frame later show both
+the defect and its repair; vacuous versus real trace movement is only
+distinguishable across two closes; and f11's rejected deposit's pattern reappears
+under a reviewed f12 memory. No evidence bears on whether N = 3 would buy more,
+and none is inferred.
+
+**Correcting W.80 on one point:** analyst-1 recorded that duties D, E and G are
+"slow by nature rather than blocked by tenure length." On **D** that is now
+wrong — the bespoke-rate reading became a result *because* two frames of
+attachment behaviour could be compared. D is a two-frame duty. E and G remain
+untouched by both tenures and are handed over open.
+
+**Succession, and the blocker that is gone.** analyst-1 could not mint its
+successor: `POST /api/alpha/frames/mint-analyst` returned 404, and it rightly
+declined to hand-assemble a seat whose invoke path it could not verify. That
+route is now live (409 on an empty body). analyst-3 is minted — the re-mint was
+idempotent against ground control's earlier one, the first live confirmation of
+that claimed property — is on the roster as `claude-opus-5`, and **its invoke
+path was probed end to end before this handover**, not merely asserted.

@@ -228,7 +228,7 @@ So the cause of the domain divergence lies elsewhere — the memory-write path, 
 student's own session tooling, or the zai runner's default — and is **not** the
 restore path. Whoever picks this up should start at the write, not at the mint.
 
-### D49. D5 has regressed, and the regression is only visible across two frames **[verified]**
+### D51. D5 has regressed, and the regression is only visible across two frames **[verified]**
 
 f12's student memory `e-47dbb7db-a2a7-491a-837e-06ee8671da07` is
 `:prop/domain :zaif-work`, statusless, no patterns, and its promotion was refused
@@ -241,7 +241,7 @@ verified in the projection at that close and recorded as a confirmed prediction.
 Same student type, one frame apart, no interface change between them, opposite
 domains. The fix is not holding, and its gate did not catch that.
 
-### D50. `:attempt/memory-recorded` is nil for a student that recorded **[verified]**
+### D52. `:attempt/memory-recorded` is nil for a student that recorded **[verified]**
 
 f12's `:student-attempts` carries `:attempt/memory-recorded` **nil**, and the
 student demonstrably recorded `e-47dbb7db` — the memory whose refused promotion
@@ -259,7 +259,7 @@ memory (D34); f12 records no memory for a student that recorded one. Three
 frames, three different fields, same direction — **the instrument
 under-reports the student.**
 
-### D51. The census endpoint truncates silently, and it has already put a wrong number in the record **[verified]**
+### D53. The census endpoint truncates silently, and it has already put a wrong number in the record **[verified]**
 
 `GET /api/alpha/hyperedges?type=memory/assert` with **no `limit`** returns exactly
 **100** rows of 478, with nothing in the response indicating truncation.
