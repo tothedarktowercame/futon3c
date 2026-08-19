@@ -8,6 +8,7 @@ rates so sessions are comparable in the unit that is actually billed.
   ./claude-spend.py            # per project dir
   ./claude-spend.py -s         # per session, plus cost decomposition
   ./claude-spend.py --ttl      # per session: inter-turn gaps, always-5m vs always-1h
+  ./claude-spend.py --burn     # per-day burn per vendor, for the weekly burn-down target
 
 The --ttl simulation reproduces measured spend to within 0.1% on the sessions
 it was checked against, so its counterfactual arm is worth believing.
@@ -44,6 +45,51 @@ def cost(a):
 
 root = os.path.expanduser('~/.claude/projects')
 
+def burn_report(days=14):
+    """Per-day burn per vendor. The target is FULL utilisation of all three
+    subscriptions each week, so read this for idle days, not for big numbers.
+
+    Two known gaps, both of which understate non-Claude burn:
+      - Codex: local ~/.codex/sessions only. Off-site seats (ams-*, oxf-*) keep
+        their rollouts on their own boxes and are invisible here.
+      - Zai: no usage capture at all until repair/zai-token-usage is merged.
+    """
+    cl, clt = collections.Counter(), collections.Counter()
+    for path in glob.glob(os.path.join(root, '*', '*.jsonl')):
+        for line in open(path, errors='replace'):
+            try: d = json.loads(line)
+            except ValueError: continue
+            u = (d.get('message') or {}).get('usage'); t = d.get('timestamp')
+            if not u or not t: continue
+            cd = u.get('cache_creation') or {}
+            cc = u.get('cache_creation_input_tokens', 0) or 0
+            c5 = cd.get('ephemeral_5m_input_tokens', 0) or 0 if cd else cc
+            c1 = cd.get('ephemeral_1h_input_tokens', 0) or 0 if cd else 0
+            cl[t[:10]] += ((u.get('input_tokens', 0) or 0) * IN
+                           + (u.get('cache_read_input_tokens', 0) or 0) * RD
+                           + c5 * W5 + c1 * W1H
+                           + (u.get('output_tokens', 0) or 0) * OUT) / 1e6
+            clt[t[:10]] += 1
+    cx, cxs = collections.Counter(), collections.Counter()
+    for path in glob.glob(os.path.expanduser('~/.codex/sessions/**/rollout-*.jsonl'), recursive=True):
+        last = lastts = None
+        for line in open(path, errors='replace'):
+            if '"token_count"' not in line: continue
+            try: d = json.loads(line)
+            except ValueError: continue
+            tu = ((d.get('payload') or d).get('info') or {}).get('total_token_usage')
+            if tu: last, lastts = tu, d.get('timestamp') or lastts
+        if last:
+            day = (lastts or os.path.basename(path)[8:18])[:10]
+            cx[day] += last['total_tokens']; cxs[day] += 1
+    print(f"{'date':12} {'claude $':>10} {'cl turns':>9} {'codex tok':>15} {'cx sess':>8}  idle")
+    for day in sorted(set(cl) | set(cx))[-days:]:
+        flag = 'CODEX IDLE' if not cx[day] else ''
+        print(f"{day:12} {cl[day]:10.2f} {clt[day]:9} {cx[day]:15,} {cxs[day]:8}  {flag}")
+    print("\nZai: UNMEASURABLE — repair/zai-token-usage is unmerged. A three-way")
+    print("burn-down cannot be run with one arm blind. Merge it first.")
+    print("Codex figures are LOCAL rollouts only; off-site seats are not counted.")
+
 def ttl_report():
     def when(x): return datetime.fromisoformat(x.replace('Z', '+00:00')).timestamp()
     print(f"{'session':10} {'turns':>6} {'<5m':>6} {'5-60m':>6} {'>60m':>6} "
@@ -79,6 +125,9 @@ def ttl_report():
     print("\nA cold miss rewrites the ENTIRE context, not the delta — which is why the")
     print("per-prefix break-even rule (1h wins iff P(5-60m gap) > 65%) gives the wrong")
     print("answer for big-context sessions. Compare the simulated totals, not the gaps.")
+
+if '--burn' in sys.argv:
+    burn_report(); sys.exit(0)
 
 if '--ttl' in sys.argv:
     ttl_report(); sys.exit(0)

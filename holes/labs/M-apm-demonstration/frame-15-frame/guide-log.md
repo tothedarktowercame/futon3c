@@ -698,3 +698,33 @@ This is the sharpest form of the frame's result: it is not that the memories
 were unhelpful. It is that the pipeline has an unmeasured join between
 promotion and retrieval, and this frame is the first to instrument both ends at
 once and see the gap.
+
+---
+
+## Adjudicated: **:closed**
+
+    f15-record-students-1  v25 -> v26    (attempt/f15/student-0, 3 residuals,
+                                          axiom-clean? false, commit a793f7e)
+    f15-write-use-1        v26 -> v341   ALL 315 offer ids dispositioned
+    f15-adjudicate-1       v341 -> v343  outcome :closed, residual-sorries 0,
+                                          axiom-clean? true
+    f15-dispatch-scribe-2  v343 -> v344  post-adjudication mine
+
+`:offer-disposition-populated` — the write-use pass completed over every offer
+id, 315 of 315, so F3's subset check has the material it needs at trace
+derivation. It ran, and that is the capability becoming satisfiable rather than
+merely declared.
+
+### COST FINDING — dispositioning offers costs 287 MB and 315 versions
+
+`write-uses!` issues one `saved-step` per offer, and every `saved-step`
+checkpoints a FULL state snapshot. So dispositioning this frame's offers wrote
+**315 state files, ~870 KB each and growing, 287 MB total**, took ~5 minutes,
+and advanced the version counter from 26 to 341.
+
+The version inflation is the part that will bite someone: a frame's version
+number now says almost nothing about how much conducting happened — 315 of my
+341 versions are one bulk bookkeeping action. And the disk cost scales with the
+CASCADE size, not with what was actually offered to anyone: 300 of those 315
+offers were never shown to a single agent (see the offer-inflation finding
+above). **We paid 287 MB to disposition 300 offers that nobody was ever made.**
