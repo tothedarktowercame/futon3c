@@ -205,3 +205,87 @@ query. The same five measure-theory memories surfaced again, by the same routes
 under-selective, it is **insensitive to the dispatch text**: two packets with
 very different mathematical vocabulary produced near-identical prose-word
 queries and an identical memory set.
+
+---
+
+## Solver attempt 2 — RESIDUAL 1 CLOSED. Gate review, verified independently.
+
+Commit `27546a85` ("m93J06 build global Picard continuation"), +512/−3 on
+Main.lean, scope clean (only `problems/m93J06/`), worktree clean.
+
+**What I checked myself:**
+
+1. **Re-ran the compile.** EXIT=0, exactly ONE `declaration uses sorry`, line
+   612. Reproduces the solver's output.
+2. **First 146 lines byte-identical to base** (md5 `66dff80d312b18f73e7ff1d7a803fef6`
+   both sides). This is the strongest form of the "definitions untouched" check:
+   `apm_m93j06_Solves` and `apm_m93j06_IsFlow` are provably the frozen ones, so
+   the theorem cannot have been made easier by weakening what it quantifies over.
+   `Solves f y₀ y := y 0 = y₀ ∧ ∀ t, HasDerivAt y (f t (y t)) t` — a genuine
+   solution on ALL of ℝ, not a local one.
+3. **Frozen statement diffs clean** (old 147-169 vs new 634-656). The change is
+   purely additive: the only 3 deleted lines in the whole diff are two lines of
+   boundary-note prose and the old bundled `sorry`.
+4. **All 14 new declarations are `lemma`s.** No `def`, `structure`, `instance`,
+   `axiom`, `native_decide`, `implemented_by`, `unsafe`, or `set_option`.
+   Consequence for a required measurement: **no new definitions were introduced,
+   so the "definition must take a non-trivial value in a concrete case" rule is
+   INAPPLICABLE this frame** — not passed, not failed.
+5. **Ran `#print axioms` per declaration myself:**
+
+        apm_m93j06_global_exists_of_continuous_lipschitz  [propext, Classical.choice, Quot.sound]
+        apm_m93j06_global_exists_unique_of_…              [propext, Classical.choice, Quot.sound]
+        apm_m93j06_flow_exists_of_continuous_lipschitz    [propext, Classical.choice, Quot.sound]
+        apm_m93j06_flow_exp_bound                         [propext, Classical.choice, Quot.sound]
+        apm_m93j06_isIntegralCurve_abs_add_one_of_…       [propext, Classical.choice, Quot.sound]
+        apm_m93j06                                        [propext, sorryAx, Classical.choice, Quot.sound]
+
+### Status: FOUR of five conjuncts closed axiom-clean
+
+| conjunct | status |
+|---|---|
+| 1 Picard–Lindelöf global ∃! | **CLOSED, axiom-clean** |
+| 2 C¹ flow regularity | NAMED RESIDUAL (the only `sorry`, line 612) |
+| 3 linear growth ⟹ flow | **CLOSED, axiom-clean** (no longer modulo residual 1) |
+| 4 Hölder non-uniqueness | CLOSED by citation (free, pre-existing) |
+| 5 exponential Lipschitz bound | **CLOSED, axiom-clean** |
+
+`sorry` count 1 → 2 → **1**, and the surviving one is a NAMED per-clause lemma
+rather than the original bundled theorem-level hole.
+
+### What was actually built, and why it is the frame's result
+
+The construction is the compact-exhaustion/gluing argument the frozen file's own
+boundary note said Mathlib lacks, and it is legible: for each radius `a` obtain a
+solution on `Ioo (-a) a`; prove nested symmetric solutions agree; then define
+`y t := γ (|t| + 1) t` and prove that this diagonal IS a global integral curve.
+The `|t| + 1` diagonal is what avoids needing a direct-limit construction.
+Uniqueness is then Mathlib's `ODE_solution_unique_univ`. Nine supporting lemmas,
+all axiom-clean.
+
+The Lean kernel is the gate here and it is a strong one: since the frozen
+definitions are byte-identical and `apm_m93j06` typechecks against the unchanged
+statement with `sorryAx` reachable ONLY through conjunct 2, conjuncts 1/3/4/5
+are proved outright. My job was to confirm nothing outside the kernel was gamed
+— statement edits, added axioms, `native_decide`, hidden sorries — and none was.
+
+### MEMORY MEASUREMENT — dispatch 2: 5 surfaced, 5 IGNORED, 0 USED
+
+Same five memories, same routes, reasons again specific and checkable. Running
+total across the solver phase: **10 offers, 0 USED, 10 IGNORED.**
+
+The conjunct-1 construction is exactly the kind of transferable work the store
+exists to accumulate — and NOTHING in the store contributed to it.
+
+## Dispatch 3 — the last residual
+
+    action-id f15-dispatch-solver-3                      v12 -> v13
+    job-id    invoke-1787155612296-5082-1844680c
+    park-id   park-df0ea42f-a748-497e-a739-351d9dfcc02c
+
+Scoped to residual 2 alone (line 612), with conjuncts 1/3/4/5 declared banked.
+Closing it makes the whole frozen theorem axiom-clean. Fallback shapes stated
+explicitly (Lipschitz dependence + localised differentiability step; close under
+a stated extra hypothesis; split into named pieces) so a partial is committed
+rather than discarded. Halt-and-report instruction repeated for the case where
+the conjunct turns out false.
