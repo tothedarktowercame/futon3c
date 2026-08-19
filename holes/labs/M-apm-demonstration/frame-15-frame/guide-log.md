@@ -453,3 +453,147 @@ frame in store-mode must produce exactly one dead memory. Mine is
 I told the scribe it exists, told it why it is dead, and asked it to re-author
 the technique in its own judgment if it clears the shelf bar — rather than skip
 it as "already recorded".
+
+---
+
+## Scribe review and promotion — I judged, I did not stamp
+
+Scribe returned two deposits, ordered by its own assessment of promotion value,
+plus an honest lane report.
+
+### My review of deposit 1 — `e-4f6b5d49…` "globalize-compatible-local-objects-by-pointwise-diagonal"
+
+Read the content myself. It is BETTER than my own dead deposit: it abstracts the
+method away from ODEs ("compatible family on an exhaustion → pointwise diagonal
+with a dominating index"), keeps the concrete instance, and — the part that
+matters — records the non-obvious working step: *to prove a local property of
+the diagonal at `t`, freeze one radius larger than a neighbourhood of `t` and
+rewrite the varying-radius diagonal to that fixed member*. It also states its
+own failure condition (uniqueness fails, or overlap agreement needs extra
+choices). Generalizes. **APPROVE.**
+
+**But I REASSIGNED its pattern.** The scribe proposed
+`math-strategy/proof-architecture`. I checked the alternatives rather than
+accepting it:
+
+- `math-strategy/exhaustion-as-theorem` — **a false friend.** Despite the name
+  it is about exhausting a *technique class* to prove a barrier is fundamental,
+  nothing to do with compact exhaustion of a domain. Rejected as a home.
+- `math-strategy/construction-before-estimates` — "when a proof needs an object
+  assembled from infinitely many pieces, define the whole object and prove it
+  well defined BEFORE proving anything about its size", context "a construction
+  given by cases over an infinite family". That is exactly this memory: prove
+  overlap compatibility first, then define the diagonal, then rewrite locally
+  before taking derivatives. It is also `@why math-strategy/proof-architecture`,
+  so it sits strictly UNDER the scribe's proposal — a more specific home that
+  preserves cascade reachability to the general one.
+
+Promoted onto `construction-before-estimates`. Verified in the store afterwards:
+`attachment-status reviewed`, `patterns ["math-strategy/construction-before-estimates"]`,
+`reviewer f15-guide`.
+
+### My review of deposit 2 — `e-00c94a8d…` "differentiate-scalar-flows-through-divided-slopes"
+
+Read it myself. Names the layers and the reduction between each pair —
+no-crossing → quotient `q = (φ(s,b) − φ(s,a))/(b−a)` → divided slope `A` with
+`q' = A·q` → positivity from strict order preservation → log-integrate to
+`q(t) = exp ∫A` → compact tube for a uniform bound → dominated convergence →
+continuity → assemble `ContDiff`. Crucially it states its own scope limit: the
+scalar order/no-crossing step is essential and higher dimensions need a matrix
+variational equation. **APPROVE on the scribe's proposed pattern**
+`math-strategy/proof-architecture` — here the fit is exact, because the memory
+IS a layer architecture. Verified `reviewed` in the store.
+
+### D62 — promoted ONE AT A TIME, with gaps. 2/2 clean.
+
+Against frame 13's 3/3 failure when three promotions ran back-to-back in one
+shell loop. Each promotion was confirmed to have reached `:reviewed` (not stuck
+at `:proposed`) BEFORE the next was issued. This is a second datapoint for
+f13-guide's hypothesis, offered as such and not as proof.
+
+`:reviewed-attachment-gained` — **CONFIRMED, and it is GUIDE-reviewed.** Per the
+registration's qualifier this does NOT demonstrate independent review: depositor
+`f15-scribe`, reviewer `f15-guide`, which is the only reachable path (D41/D42).
+
+### Card/machine mismatch — the reviewer's verdict vocabulary does not exist
+
+The scribe card gives the reviewer three verdicts: **approve / reassign /
+reject**. The machine's `promotion-verdicts` is `#{:approve :challenge :reject}`.
+So `reassign` — the verdict I actually needed and used — **is not expressible**;
+it survives only as "approve with a different `pattern-id`", which records in the
+trace as a plain approval and loses the fact that the reviewer overrode the
+proposer's pattern choice. And `:challenge` has no meaning in the card at all.
+A frame that reassigns is indistinguishable in the trace from one that rubber-
+stamps, which is precisely the distinction the review protocol exists to make.
+
+### Scribe's gate refusal, recorded because the receipt cannot
+
+First deposit attempt was refused: it used subject type `commit`, while the
+ArtifactRef contract requires `git-commit`. **The refused attempt still minted
+an evidence id, `e-54eafdd3-be5a-4918-96c2-db6c2c30c09f`** — an orphan id for a
+memory that does not exist. `record-memory!` mints before validating ("the
+evidence id is minted before validation or I/O and is returned on every
+failure"), which is deliberate, but it means refused deposits leave id-shaped
+debris that a later reader can mistake for a lost memory.
+
+### Lanes recorded: solve (ran, 2 memories), arc (ran, 0), trajectory (ran, 0), challenge (not run)
+
+The scribe ran `arc` on the solver transcript and found real error→fix spans —
+equality orientation for `ODE_solution_unique_univ`, explicit interval-
+integrability endpoints, converting the diagonal divided slope to `deriv`,
+fully qualifying filter/measure APIs — and deposited NONE of them, judging them
+too thin individually to clear the transfer bar. `trajectory` likewise ran and
+deposited nothing, on the ground that the expensive stretches were already
+represented by the two solve memories. I accept both judgements: an empty lane
+honestly reported beats a padded one, and the scribe said which lanes ran rather
+than reporting yield as if it were coverage.
+
+## THE SCRIBE REPORTED THREE `USED` AND NONE OF THEM COUNTS
+
+The scribe's attestation block reads:
+
+    USED e-1929b416…  (my deposit) — read as an independent comparator
+    USED e-4f6b5d49…  — verification search confirmed it is statusless/patternless
+    USED e-00c94a8d…  — verification search confirmed it is statusless/patternless
+
+**Not one is an instance of `:memory-contributes-to-close`, and a naive
+aggregator would score this frame 3 USED.**
+
+- `e-1929b416…` was not retrieved. **I named it in the scribe's packet and told
+  it to read it.** That is guide-directed reading through the dispatch channel,
+  not the memory machinery working.
+- `e-4f6b5d49…` and `e-00c94a8d…` are **the scribe's own deposits, minutes old**,
+  "used" to check its own writes were statusless. That is self-verification, not
+  memory use.
+
+The attestation channel accepts `USED` for memories that were never retrieved,
+including ones the attester authored itself in the same session. Nothing checks
+the claimed id against the surfaced set. **Any aggregate `USED` count in this
+series must be filtered against `:memory-use/surfaced-ids` before it means
+anything.** Recorded because this is exactly the failure mode the frame was
+warned about — inferring use from resemblance — arriving from the direction
+nobody was watching: not a false positive of judgement, but a category error
+about what "used" means.
+
+**Solver-phase measurement stands unchanged: 15 offers, 0 USED, 15 IGNORED.**
+
+## Student dispatched — the clean transfer test
+
+    f15-dispatch-student-1   v23 -> v25
+    job    invoke-1787159146808-5088-10991dba
+    park   park-45a6b939-0776-4342-bc18-45ea650981e1
+    budget 60 min wall clock, attempt cap 3
+
+- **Eligible set: 495 memories, and BOTH promoted memories are in it.** My own
+  unpromotable deposit is correctly absent.
+- **Containment verified by hand**: student checkout
+  `frame-15-m93J06-student-deefb9b8…` is at `a92ffb6c`, its `Main.lean` is the
+  265-line frozen file with ONE `sorry`, and `git log` shows the solver's three
+  commits are NOT in its history. It cannot see the solution.
+- The packet does not leak the route: no diagonal, no divided slopes, no commit
+  shas, no statement of whether anyone else succeeded. Same acceptance bar, same
+  partial-credit shapes, same per-id attestation demand with the same
+  anti-inflation language.
+
+This is the measurement the whole frame was built for: the student's ONLY route
+to the solver's knowledge is the two promoted memories.
