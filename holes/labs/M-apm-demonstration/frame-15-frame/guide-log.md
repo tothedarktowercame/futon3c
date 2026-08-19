@@ -867,7 +867,25 @@ Computed from the trace:
 **`:offer-disposition-populated` is CONFIRMED** — F3 passes, the first time in a
 cascade-enabled frame.
 
-### `:measurement-populated` IS UNSATISFIABLE BY CONSTRUCTION — new defect
+### `:measurement-populated` — CORRECTED: it HOLDS, and it is UNDETECTING
+
+**My original claim in this section was WRONG and analyst-3 caught it.** I wrote
+that this capability fails and is unsatisfiable. It does not fail. I looked only
+at `:meas/values` (8 fields) and never checked `:meas/unset`.
+
+`preregistration.clj:318-321`: `measurement-fields` is
+`(concat (keys :meas/values) (keys :meas/unset))`. The v356 trace carries
+`:meas/unset` with exactly the nine fields I listed as missing. 8 + 9 = 17, so
+the subset check passes and **`:measurement-populated` HOLDS**. Therefore
+**exactly ONE capability fails, `:need-retrieval`** — not two, as my close report
+said.
+
+Analyst-3's framing is the correct one and is WORSE than what I filed: the
+capability is **undetecting, not unsatisfiable**. It is satisfied by *declaring*
+a field unset, and analyst-3 mutation-verified that moving all 8 measured fields
+into `:meas/unset` leaves it TRUE — it holds with zero measured values.
+
+The substantive complaint below stands unchanged and is subsumed, not softened.
 
 `record-measurement` takes NO arguments, derives everything itself, and is not
 in the conductor's operations map — only `close!` calls it. It computes 8 fields:
@@ -983,3 +1001,66 @@ divides into a non-zero yield.
 **FRAME 15 CLOSED AND ACCEPTED.** f15-guide does not persist beyond this frame;
 everything that should outlive it is in the three reviewed memories, this log,
 and the close report.
+
+---
+
+## POST-CLOSE CORRECTIONS (analyst-3 close checks, verified by me)
+
+### Accepted: `:measurement-populated` holds — one capability fails, not two
+
+Corrected in place above. `measurement-fields` concatenates `:meas/values` AND
+`:meas/unset` keys; the trace declares the nine uncomputed fields as unset, so
+all 17 are "present". **`:need-retrieval` is the only failing capability.** The
+capability is undetecting rather than unsatisfiable — satisfied by declaring a
+field unset, and mutation-verified TRUE with zero measured values. Analyst-3's
+version is the one to carry.
+
+### FLAGGED BACK: P30's premise is wrong — a machine-owned store-revision stamp EXISTS
+
+analyst-3 dispatched codex-3 to stamp `:cycle/store-revision`, "which nothing in
+`src/` ever writes." It is written:
+
+    problem.clj:182-184  store-revision = sha1 of the sorted :snap/memory-ids
+    problem.clj:186-196  stamp-attempt-environment assocs :cycle/store-revision
+    problem.clj:404      bound from (recorded-tool-result state :snapshot-store)
+    problem.clj:473-486  applied to :solver-attempt AND :student-attempts
+
+So `:malformed-cycle-attempts` is **not a missing feature — it is a stamp that
+did not fire**, and its input was present: the `:snapshot-store` step is in
+`:steps` at v9, v14 and v356 and carries **493 `:snap/memory-ids`**, and
+`recorded-tool-result` scans all steps in reverse rather than the current phase.
+
+This also revises my own earlier account. I recorded `:malformed-cycle-attempts`
+as my error for omitting the field. On the evidence it is NOT a guide-supplied
+field at all — the machine owns it, and a guide supplying it would be the second
+forgeable route the peripheral explicitly refuses at `:register` (its comment on
+removing `:pin-resources`). A forgeable store digest is exactly wrong for the
+field `:both-channels-varied` depends on. **What remains mine is that I did not
+notice the field was absent from my attempt record; what is not mine is having
+failed to supply it.**
+
+Belled to analyst-3 (`invoke-1787162412909-5098-b6697c41`) while codex-3's P30
+job was still running, with the suggested redirect: root-cause why the existing
+stamp did not fire — comparing against a01A06, which HAS the field at the much
+older harness `414294a9`, so this may be a regression — rather than adding a
+second writer. Root-causing needs a REPL, which is codex-3's to use, not mine.
+
+### Also accepted from analyst-3
+
+- **Report 105 offers, not 315.** Matches what this log already recorded (5 leaf
+  / 48 why-hop / 52 co-incidence per dispatch, 105 distinct memory ids); their
+  3.0×-on-every-route measurement confirms no dedup across the three dispatches.
+- **`:offer-disposition-populated` CONFIRMED carries a qualifier**: `:write-use`
+  takes only `:offer-id`, there is no verdict field anywhere, and the
+  `used × route` join the scribe card asks for cannot be computed. The CONFIRMED
+  is on the prediction as written (non-empty list) and must not be cited as
+  evidence that offers were dispositioned in the ordinary sense.
+- **`:both-channels-varied` has never been able to fire** (store-revision nil
+  everywhere ⇒ `(distinct [nil nil])` = 1). That is analyst-3's finding and it is
+  a better one than anything I filed about this field: the series' two-channel
+  experimental control has been unenforceable throughout, failing silently behind
+  what reads as a shape nit.
+- Transfer checks **5/6**; C2 fails on `e-1929b416`, my forced `:intervene`
+  deposit — the third consecutive frame failing C2 on the guide's own statusless
+  store-write, which is the same mechanism as the "forced dead memory" finding
+  above.
