@@ -104,7 +104,22 @@
                "packet"
                {})]
     (is (= "hilbert OR weak-convergence OR computes" (:query query))
-        "a zero-match term must not intersect away the other term matches")))
+        "a zero-match term must not intersect away the other term matches")
+    ;; THE CONNECTIVE MUST BE UPPERCASE, and this is not style.
+    ;; futon1b_text.clj `match-string` double-quotes every token before it
+    ;; reaches MATCH, passing through ONLY bare uppercase `AND`/`OR`. A
+    ;; lowercase `or` is quoted into a literal search term and, since the
+    ;; default operator is AND, the whole query becomes
+    ;; `"hilbert" AND "or" AND "computes"` -- zero hits, HTTP 200, empty
+    ;; result, indistinguishable from "no matches". Measured on the live store
+    ;; 2026-08-19: "hilbert OR computes" -> 17, "hilbert or computes" -> 0,
+    ;; "hilbert Or computes" -> 0. This lane's entire history is :recall-empty
+    ;; readings that were plumbing, so the case is pinned here rather than
+    ;; trusted. (claude-11, futon1b owner.)
+    (is (re-find #" OR " (:query query))
+        "the connective must be the uppercase operator")
+    (is (not (re-find #"(?<![A-Z]) or | Or | oR " (:query query)))
+        "a lowercase or mixed-case `or` is quoted into a literal term and silently zeroes the query")))
 
 (deftest substrate-call-deadline-does-not-preempt-total-recall-budget
   (let [timeout-fn
