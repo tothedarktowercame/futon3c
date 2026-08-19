@@ -63,6 +63,31 @@
   (or (some-> (System/getenv "FUTON1B_APPEND_TIMEOUT_MS") parse-long)
       30000))
 
+(def append-retry-max-backoff-ms
+  ;; Ceiling on ONE backoff sleep. Uncapped 100*2^n doubling leaves a ~39s
+  ;; stretch at the end of a 90s window where the store is never probed, so a
+  ;; restart completing inside that gap still loses the write (measured: a
+  ;; Dionysus restart took 84s, inside the gap).
+  (or (some-> (System/getenv "FUTON1B_APPEND_RETRY_MAX_BACKOFF_MS") parse-long)
+      5000))
+
+(def append-retry-ms
+  ;; Connection refusal proves that the store received nothing, so retry that
+  ;; transport failure through a bounded restart window. A request timeout is
+  ;; deliberately excluded below because the write may have landed.
+  ;;
+  ;; 300s, not 90s: the window is only useful if it outlasts a real restart,
+  ;; and measured stop->healthy times are 42s and 61s on Zone but 84s, 85s and
+  ;; 93s on the laptop. A 90s default lost the write on the 93s run -- the
+  ;; retry behaved correctly and the evidence was gone anyway. Size this above
+  ;; the SLOWEST restart you expect, not the typical one.
+  ;;
+  ;; The cost is that a caller blocks for up to this long during a genuine
+  ;; outage, which is the argument for the durable-spool follow-on: the spool
+  ;; is what lets the window be short again.
+  (or (some-> (System/getenv "FUTON1B_APPEND_RETRY_MS") parse-long)
+      300000))
+
 (def query-cache-ttl-ms
   ;; The War Machine and AIF stack are read-mostly projections. Their HTTP
   ;; handlers can ask the same bounded question several times per scheduler
@@ -334,50 +359,84 @@
                       :trace-id trace-id
                       :detail (.getMessage ^Exception serialization-error)
                       :invalid-edn (:invalid-edn serialized))
-        (let [{:keys [status body error]}
-              @(http/post (api-url base-url "/api/alpha/evidence")
-                          {:timeout append-timeout-ms
-                           :as :text
-                           :headers {"content-type" "application/edn"
-                                     "x-penholder" (penholder)
-                                     "x-trace-id" trace-id}
-                           :body (:body serialized)})
-              parsed (read-edn body)]
-          (cond
-            error
-            (social-error (if (timeout-error? error)
-                            :store-timeout
-                            :store-unreachable)
-                          (if (timeout-error? error)
-                            "futon1b persistence timed out"
-                            "futon1b server unreachable")
-                          :evidence-id eid :trace-id trace-id
-                          :detail (str error))
+        (let [url (api-url base-url "/api/alpha/evidence")
+              options {:timeout append-timeout-ms
+                       :as :text
+                       :headers {"content-type" "application/edn"
+                                 "x-penholder" (penholder)
+                                 "x-trace-id" trace-id}
+                       :body (:body serialized)}
+              started-ns (System/nanoTime)
+              elapsed-ms (fn []
+                           (quot (- (System/nanoTime) started-ns) 1000000))
+              unreachable-error
+              (fn [error attempts elapsed]
+                (social-error :store-unreachable
+                              "futon1b server unreachable"
+                              :evidence-id eid :trace-id trace-id
+                              :detail (str error)
+                              :attempts attempts :elapsed-ms elapsed))]
+          (loop [attempt 0]
+            (let [{:keys [status body error]} @(http/post url options)
+                  parsed (read-edn body)
+                  attempts (inc attempt)]
+              (cond
+                (and error (timeout-error? error))
+                (social-error :store-timeout
+                              "futon1b persistence timed out"
+                              :evidence-id eid :trace-id trace-id
+                              :detail (str error))
 
-            (= 201 status)
-            {:ok true
-             :entry (or (:entry parsed) validated)
-             :trace-id trace-id}
+                error
+                (let [elapsed (elapsed-ms)
+                      remaining (- (max 0 (long append-retry-ms)) elapsed)]
+                  (if (pos? remaining)
+                    ;; Sleep to the window edge at most, then ALWAYS attempt
+                    ;; again: giving up part-way through a sleep discards
+                    ;; window that is still usable, and the previous shape
+                    ;; could sleep through the store coming back.
+                    (let [backoff (min (* 100 (bit-shift-left 1 (min attempt 16)))
+                                       (long append-retry-max-backoff-ms))
+                          sleep-ms (min backoff remaining)]
+                      (Thread/sleep sleep-ms)
+                      (recur (inc attempt)))
+                    (unreachable-error error attempts elapsed)))
 
-            (and (= 409 status) (= :reply-not-found (:error parsed)))
-            (social-error :reply-not-found
-                          "in-reply-to references missing entry"
-                          :in-reply-to (:evidence/in-reply-to validated)
-                          :evidence-id eid :trace-id trace-id)
+                (= 201 status)
+                {:ok true
+                 :entry (or (:entry parsed) validated)
+                 :trace-id trace-id}
 
-            (and (= 409 status) (= :fork-not-found (:error parsed)))
-            (social-error :fork-not-found "fork-of references missing entry"
-                          :fork-of (:evidence/fork-of validated)
-                          :evidence-id eid :trace-id trace-id)
+                (and (= 409 status) (= :reply-not-found (:error parsed)))
+                (social-error :reply-not-found
+                              "in-reply-to references missing entry"
+                              :in-reply-to (:evidence/in-reply-to validated)
+                              :evidence-id eid :trace-id trace-id)
 
-            (= 409 status)
-            (social-error :duplicate-id "Evidence id already exists"
-                          :evidence-id eid :trace-id trace-id)
+                (and (= 409 status) (= :fork-not-found (:error parsed)))
+                (social-error :fork-not-found "fork-of references missing entry"
+                              :fork-of (:evidence/fork-of validated)
+                              :evidence-id eid :trace-id trace-id)
 
-            :else
-            (social-error :store-rejected "futon1b rejected the append"
-                          :evidence-id eid :trace-id trace-id
-                          :status status :body parsed))))))
+                ;; A bare 409 on a RETRY is our own earlier attempt having
+                ;; landed. Evidence ids are client-minted, so a duplicate of
+                ;; this exact payload can only be us; reporting failure here
+                ;; would mask a write that actually succeeded -- the same
+                ;; class of lie as losing it silently, with the sign flipped.
+                (and (= 409 status) (pos? attempt))
+                {:ok true
+                 :entry (or (:entry parsed) validated)
+                 :trace-id trace-id
+                 :recovered-after-retry true}
+
+                (= 409 status)
+                (social-error :duplicate-id "Evidence id already exists"
+                              :evidence-id eid :trace-id trace-id)
+
+                :else
+                (social-error :store-rejected "futon1b rejected the append"
+                              :evidence-id eid :trace-id trace-id
+                              :status status :body parsed))))))))
 
   (-get [_ evidence-id]
     (let [{:keys [status body]}

@@ -124,7 +124,8 @@
                :evidence/body {}
                :evidence/tags []}
         store (sut/make-futon1b-backend "http://store.test")]
-    (with-redefs [http/get (fn [_ _] (delay {:status 404 :body "{}"}))
+    (with-redefs [sut/append-retry-ms 0
+                  http/get (fn [_ _] (delay {:status 404 :body "{}"}))
                   http/post (fn [_ _]
                               (delay {:error (java.net.SocketTimeoutException.
                                                "read timed out")}))]
@@ -136,6 +137,117 @@
                                                "connection refused")}))]
       (is (= :store-unreachable
              (:error/code (backend/-append store entry)))))))
+
+(deftest append-retries-connection-refusal-then-succeeds
+  (let [attempts (atom 0)
+        entry {:evidence/id "e-retry-success"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "test"
+               :evidence/at "2026-08-19T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags []}
+        store (sut/make-futon1b-backend "http://store.test")]
+    (with-redefs [sut/append-retry-ms 1000
+                  http/post (fn [_ _]
+                              (let [attempt (swap! attempts inc)]
+                                (delay
+                                  (if (<= attempt 2)
+                                    {:error (java.net.ConnectException.
+                                              "connection refused")}
+                                    {:status 201
+                                     :body (pr-str {:entry entry})}))))]
+      (let [result (backend/-append store entry)]
+        (is (:ok result))
+        (is (= entry (:entry result)))
+        (is (= 3 @attempts) "two refused connections plus one confirmed write")))))
+
+(deftest append-timeout-is-never-retried
+  (let [attempts (atom 0)
+        entry {:evidence/id "e-no-retry-timeout"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "test"
+               :evidence/at "2026-08-19T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags []}
+        store (sut/make-futon1b-backend "http://store.test")]
+    (with-redefs [sut/append-retry-ms 1000
+                  http/post (fn [_ _]
+                              (swap! attempts inc)
+                              (delay {:error (java.net.SocketTimeoutException.
+                                               "read timed out")}))]
+      (is (= :store-timeout (:error/code (backend/-append store entry))))
+      (is (= 1 @attempts)))))
+
+(deftest append-duplicate-id-is-never-retried
+  (let [attempts (atom 0)
+        entry {:evidence/id "e-no-retry-duplicate"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "test"
+               :evidence/at "2026-08-19T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags []}
+        store (sut/make-futon1b-backend "http://store.test")]
+    (with-redefs [sut/append-retry-ms 1000
+                  http/post (fn [_ _]
+                              (swap! attempts inc)
+                              (delay {:status 409 :body "{:error :duplicate-id}"}))]
+      (is (= :duplicate-id (:error/code (backend/-append store entry))))
+      (is (= 1 @attempts)))))
+
+(deftest append-unreachable-exhaustion-carries-receipt
+  (let [attempts (atom 0)
+        retry-window 120
+        entry {:evidence/id "e-retry-exhausted"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "test"
+               :evidence/at "2026-08-19T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags []}
+        store (sut/make-futon1b-backend "http://store.test")]
+    (with-redefs [sut/append-retry-ms retry-window
+                  http/post (fn [_ _]
+                              (swap! attempts inc)
+                              (delay {:error (java.net.ConnectException.
+                                               "connection refused")}))]
+      (let [result (backend/-append store entry)]
+        (is (= :store-unreachable (:error/code result)))
+        (is (= @attempts (get-in result [:error/context :attempts])))
+        ;; 3, not 2: the loop now makes one final probe AT the deadline
+        ;; instead of sleeping to the window edge and giving up unprobed.
+        ;; The old shape could sleep straight through the store returning.
+        (is (= 3 @attempts))
+        (is (<= retry-window (get-in result [:error/context :elapsed-ms])))))))
+
+(deftest append-retry-sleep-is-capped-at-window
+  (let [attempts (atom 0)
+        retry-window 25
+        entry {:evidence/id "e-retry-window"
+               :evidence/type :coordination
+               :evidence/claim-type :step
+               :evidence/author "test"
+               :evidence/at "2026-08-19T00:00:00Z"
+               :evidence/body {}
+               :evidence/tags []}
+        store (sut/make-futon1b-backend "http://store.test")
+        started (System/nanoTime)]
+    (with-redefs [sut/append-retry-ms retry-window
+                  http/post (fn [_ _]
+                              (swap! attempts inc)
+                              (delay {:error (java.net.ConnectException.
+                                               "connection refused")}))]
+      (let [result (backend/-append store entry)
+            wall-ms (quot (- (System/nanoTime) started) 1000000)]
+        (is (= :store-unreachable (:error/code result)))
+        ;; The invariant that matters is the wall-clock bound below, not
+        ;; the attempt count. One probe AT the deadline is required: a
+        ;; restart completing during the final sleep must still be caught.
+        (is (= 2 @attempts) "one final probe at the deadline, then stop")
+        (is (<= wall-ms (+ retry-window 100))
+            "the retry loop stays within the configured window plus scheduler tolerance")))))
 
 (deftest append-delegates-reference-validation-to-the-store
   (let [gets (atom 0)
@@ -202,3 +314,68 @@
                (get-in result [:error/context :invalid-edn])))
         (is (zero? @posts)
             "an unreadable payload never opens a store connection")))))
+
+(deftest append-retry-backoff-is-capped-so-the-store-keeps-being-probed
+  (testing "uncapped 100*2^n leaves the store unprobed for tens of seconds at
+            the end of the window; a restart finishing in that gap would still
+            lose the write"
+    (let [attempts (atom 0)
+          entry {:evidence/id "e-retry-capped"
+                 :evidence/type :coordination
+                 :evidence/claim-type :step
+                 :evidence/author "test"
+                 :evidence/at "2026-08-19T00:00:00Z"
+                 :evidence/body {}
+                 :evidence/tags []}
+          store (sut/make-futon1b-backend "http://store.test")]
+      (with-redefs [sut/append-retry-ms 2000
+                    sut/append-retry-max-backoff-ms 50
+                    http/post (fn [_ _]
+                                (swap! attempts inc)
+                                (delay {:error (java.net.ConnectException.
+                                                 "connection refused")}))]
+        (backend/-append store entry)
+        ;; uncapped doubling reaches 2s in ~5 attempts; capped at 50ms the
+        ;; window admits far more, i.e. the store is actually being polled
+        (is (> @attempts 10)
+            "capped backoff must keep probing rather than sleeping in blocks")))))
+
+(deftest append-duplicate-after-a-retry-is-our-own-write-landing
+  (testing "evidence ids are client-minted, so a 409 on a RETRY means our
+            earlier attempt succeeded; reporting failure would mask it"
+    (let [attempts (atom 0)
+          entry {:evidence/id "e-retry-recovered-duplicate"
+                 :evidence/type :coordination
+                 :evidence/claim-type :step
+                 :evidence/author "test"
+                 :evidence/at "2026-08-19T00:00:00Z"
+                 :evidence/body {}
+                 :evidence/tags []}
+          store (sut/make-futon1b-backend "http://store.test")]
+      (with-redefs [sut/append-retry-ms 2000
+                    sut/append-retry-max-backoff-ms 10
+                    http/post (fn [_ _]
+                                (let [n (swap! attempts inc)]
+                                  (delay
+                                    (if (= 1 n)
+                                      {:error (java.net.ConnectException. "connection refused")}
+                                      {:status 409 :body "{:error :duplicate-id}"}))))]
+        (let [result (backend/-append store entry)]
+          (is (:ok result) "a duplicate after a retry is a success, not a failure")
+          (is (:recovered-after-retry result))
+          (is (= 2 @attempts)))))))
+
+(deftest append-duplicate-on-the-FIRST-attempt-is-still-an-error
+  (testing "only a duplicate seen after a retry is attributable to us"
+    (let [entry {:evidence/id "e-first-attempt-duplicate"
+                 :evidence/type :coordination
+                 :evidence/claim-type :step
+                 :evidence/author "test"
+                 :evidence/at "2026-08-19T00:00:00Z"
+                 :evidence/body {}
+                 :evidence/tags []}
+          store (sut/make-futon1b-backend "http://store.test")]
+      (with-redefs [sut/append-retry-ms 2000
+                    http/post (fn [_ _]
+                                (delay {:status 409 :body "{:error :duplicate-id}"}))]
+        (is (= :duplicate-id (:error/code (backend/-append store entry))))))))
