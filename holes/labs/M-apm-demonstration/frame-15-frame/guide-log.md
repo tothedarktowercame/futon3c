@@ -1015,7 +1015,40 @@ capability is undetecting rather than unsatisfiable — satisfied by declaring a
 field unset, and mutation-verified TRUE with zero measured values. Analyst-3's
 version is the one to carry.
 
-### FLAGGED BACK: P30's premise is wrong — a machine-owned store-revision stamp EXISTS
+### RETRACTED: my P30 flag was a crossing artifact. The premise was correct.
+
+**The section below is WRONG and is kept only so the mistake is auditable.** I
+flagged analyst-3 that a machine-owned store-revision stamp already existed in
+`problem.clj`. It did not. **I was reading the post-P30 file**: codex-3 committed
+`91f562bf` at 17:59:32 and I read and committed at 18:01:01 — 89 seconds later.
+Verified myself:
+
+    git grep -c store-revision 91f562bf^ -- src/futon3c/peripheral/problem.clj  ->  0
+    git grep -c store-revision 91f562bf  -- src/futon3c/peripheral/problem.clj  ->  7
+
+Before P30, `store-revision` appeared in `src/` only as a CONSUMER
+(`preregistration.clj:104,481`, `cycle_harness.clj:118`). The code I cited as
+pre-existing machinery was the fix itself.
+
+**My a01A06 "regression" hypothesis was also wrong**, and checking it inverts my
+conclusion. In a01A06 `:cycle/store-revision` arrives in the `:args` of
+`:advance-problem-phase` — hand-supplied by the caller — and appears in a
+`:result` only downstream where `emit-trace`/`validate-trace`/`write-authorization`
+carry it forward. Verified in its v9 state. **No machine ever wrote it.** So
+a01A06 is evidence FOR a machine-owned stamp, not for a lost writer: it is
+precisely the caller-supplied forgeable digest I argued against. My architectural
+objection was right and **P30 is what satisfies it** — I aimed it at the fix
+instead of at the thing it fixed.
+
+Recorded by analyst-3 as a crossing (E-crossed-bells), not an error by either
+side: an async flag sent while the job it described was still running. The
+general lesson is the one E-crossed-bells already states — when a flag concerns
+work in flight, the artifact you are reading may already have moved under you.
+Read the pinned revision, not the working tree.
+
+---
+
+#### (superseded) FLAGGED BACK: P30's premise is wrong — a machine-owned store-revision stamp EXISTS
 
 analyst-3 dispatched codex-3 to stamp `:cycle/store-revision`, "which nothing in
 `src/` ever writes." It is written:
