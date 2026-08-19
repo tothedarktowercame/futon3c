@@ -16,6 +16,9 @@
 (def ^:private accepted-agent-types
   #{:claude :codex :zai})
 
+(def ^:private accepted-override-keys
+  #{:type :model})
+
 (def ^:private mint-lock (Object.))
 
 (defn seat-map
@@ -88,13 +91,36 @@
                  [{:finding :invalid-seat-override :seat seat}]
 
                  :else
-                 (let [agent-type (some-> (:type override) keyword)]
-                   (when (and (some? agent-type)
-                              (not (contains? accepted-agent-types agent-type)))
-                     [{:finding :unknown-agent-type
+                 (let [unknown-keys (remove accepted-override-keys (keys override))
+                       raw-type (:type override)]
+                   (cond
+                     ;; A misspelled override key must not be accepted and
+                     ;; dropped. Same shape as the ?tag= filter and ?df=:
+                     ;; {:guide {:tpye "zai"}} would otherwise return 200 and
+                     ;; silently mint the default Claude guide.
+                     (seq unknown-keys)
+                     [{:finding :unknown-override-key
                        :seat seat
-                       :agent-type (name agent-type)
-                       :accepted-types (vec (sort (map name accepted-agent-types)))}]))))
+                       :keys (vec (sort (map name unknown-keys)))
+                       :accepted-keys (vec (sort (map name accepted-override-keys)))}]
+
+                     ;; keyword returns nil for a non-string/symbol, so a
+                     ;; numeric or boolean type would read as "no override".
+                     (and (some? raw-type)
+                          (not (or (string? raw-type) (keyword? raw-type))))
+                     [{:finding :invalid-agent-type
+                       :seat seat
+                       :agent-type (pr-str raw-type)
+                       :accepted-types (vec (sort (map name accepted-agent-types)))}]
+
+                     :else
+                     (let [agent-type (some-> raw-type keyword)]
+                       (when (and (some? agent-type)
+                                  (not (contains? accepted-agent-types agent-type)))
+                         [{:finding :unknown-agent-type
+                           :seat seat
+                           :agent-type (name agent-type)
+                           :accepted-types (vec (sort (map name accepted-agent-types)))}]))))))
              cast)))))
 
 (defn- effective-seat-specs [model cast]
