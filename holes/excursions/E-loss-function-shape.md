@@ -274,8 +274,47 @@ f13 is the cheapest frame in the series by every cost column except wall-clock,
 and it is the only one with attested transfer. f15 is the first whose cost can
 be divided by a yield that is not zero.
 
-### Tokens
+### Tokens ARE available — I said "unavailable" when I meant "I did not look"
 
-Still not available: an Agency job record carries no token or usage field of any
-kind. The cross-model comparability question is moot until something records
-them, and wall-clock is free in the meantime.
+**Corrected by Joe, 2026-08-19.** The Agency job record carries no token field,
+which is true and is where I stopped. Codex writes `token_count` events into its
+rollout files, and the job record's `session-id` is the filename key:
+
+    ~/.codex/sessions/YYYY/MM/DD/rollout-<ts>-<session-id>.jsonl
+    {"payload":{"type":"token_count","info":{"total_token_usage":{...}}}}
+
+Extracted for the three solver dispatches that have run on this apparatus:
+
+    frame  total tokens  uncached in   output  reasoning  LOC  disp  wall
+    f12      31,599,193      676,459  105,454     46,767  931    3   6m06
+    f13       2,606,048      101,830   18,970      7,504   77    1   7m17
+    f15       5,160,559      235,071   27,440     14,606    ?    1   9m53
+
+### The result worth having: LOC and total tokens agree
+
+    f12/f13 by total tokens : 12.12x
+    f12/f13 by LOC          : 12.09x
+
+Two independently measured cost proxies, agreeing to two significant figures on
+the one comparison available. That is n=2 and must not be over-read — but it is
+direct support for Joe's original point that **LOC is a good cross-agent cost
+proxy**, and LOC is free where tokens need a rollout-file join.
+
+### The caveat that changes the number
+
+`total_tokens` is dominated by CACHED input — 30.8M of f12's 31.5M. Cached input
+is re-read context, so total tokens scales with turn count more than with work.
+On uncached input + output + reasoning, the ratio is different:
+
+    f12 ~828k   f13 ~128k   ->  6.5x, not 12x
+
+So **which token measure you pick changes the answer by a factor of two**, and
+neither is wrong — they measure different things. `total_tokens` tracks how long
+the agent was in context; the uncached figure tracks how much new work it did.
+State which one a table means, or the number is another unstated population.
+
+### Zai/Codex comparability
+
+Untested. These three are all Codex. A Zai dispatch would need its own rollout
+equivalent located before any cross-agent token comparison is claimed, and until
+then LOC remains the only measure demonstrated comparable across agent types.
