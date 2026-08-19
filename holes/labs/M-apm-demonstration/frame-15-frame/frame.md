@@ -2,7 +2,17 @@
 
 ## Target
 `problems/m93J06/lean/Main.lean` is 265 lines and carries exactly one executable
-`sorry`, at line 147, discharging the whole of `theorem apm_m93j06`.
+`sorry`, at **line 265** — the last line of the file, after a ~100-line boundary
+note that sits INSIDE the theorem body (lines ~160-264). `theorem apm_m93j06 :`
+begins at line 147; that is the statement, not the hole.
+
+**Two different revisions are both called "the pin" in this series; they are not
+the same object.** `:lean-revision 4331becf` is a MATHLIB4 revision and resolves
+only in `/home/joe/code/mathlib4`. The apm-lean anchor — the one to diff the
+frozen statement against — is `:reg/environment-revision`
+`a92ffb6c9cda32a33df0d259df552b1dbc611daf`, and it is also the base your
+worktree is cut from. Use `a92ffb6c`, or the `Main.lean` blob
+`793cfe3b51305ee997c7ba60a17553633999063e`.
 
 The frozen theorem is a conjunction of FIVE clauses about ODE flows on `ℝ`:
 
@@ -63,4 +73,10 @@ concrete case.
   bundled `sorry` becomes named per-clause residuals.
 - Whatever remains open is localised, with nearest API and empty searches
   recorded beside it.
-- Do not modify `problems/m93J06/lean/Soundness.lean`; it belongs to the probe.
+- `problems/m93J06/lean/Soundness.lean` will NOT be in your worktree. It exists
+  only on `probe/m93J06-soundness`, and your checkout is cut from `a92ffb6c`.
+  That is deliberate: the probe's ten witnesses establish that the problem is
+  SOUND, which is a fact ground control needed before spending this frame. They
+  are not proof material for you and are not being withheld as a hint — nothing
+  in them bears on the four conjuncts you have to prove. Do not go looking for
+  the file.
