@@ -63,6 +63,14 @@
   (or (some-> (System/getenv "FUTON1B_APPEND_TIMEOUT_MS") parse-long)
       30000))
 
+(def append-retry-max-backoff-ms
+  ;; Ceiling on ONE backoff sleep. Uncapped 100*2^n doubling leaves a ~39s
+  ;; stretch at the end of a 90s window where the store is never probed, so a
+  ;; restart completing inside that gap still loses the write (measured: a
+  ;; Dionysus restart took 84s, inside the gap).
+  (or (some-> (System/getenv "FUTON1B_APPEND_RETRY_MAX_BACKOFF_MS") parse-long)
+      5000))
+
 (def append-retry-ms
   ;; Connection refusal proves that the store received nothing, so retry that
   ;; transport failure through a bounded restart window. A request timeout is
@@ -371,14 +379,17 @@
 
                 error
                 (let [elapsed (elapsed-ms)
-                      remaining (- (max 0 (long append-retry-ms)) elapsed)
-                      backoff (* 100 (bit-shift-left 1 attempt))]
+                      remaining (- (max 0 (long append-retry-ms)) elapsed)]
                   (if (pos? remaining)
-                    (let [sleep-ms (min backoff remaining)]
+                    ;; Sleep to the window edge at most, then ALWAYS attempt
+                    ;; again: giving up part-way through a sleep discards
+                    ;; window that is still usable, and the previous shape
+                    ;; could sleep through the store coming back.
+                    (let [backoff (min (* 100 (bit-shift-left 1 (min attempt 16)))
+                                       (long append-retry-max-backoff-ms))
+                          sleep-ms (min backoff remaining)]
                       (Thread/sleep sleep-ms)
-                      (if (< sleep-ms remaining)
-                        (recur (inc attempt))
-                        (unreachable-error error attempts (elapsed-ms))))
+                      (recur (inc attempt)))
                     (unreachable-error error attempts elapsed)))
 
                 (= 201 status)
@@ -396,6 +407,17 @@
                 (social-error :fork-not-found "fork-of references missing entry"
                               :fork-of (:evidence/fork-of validated)
                               :evidence-id eid :trace-id trace-id)
+
+                ;; A bare 409 on a RETRY is our own earlier attempt having
+                ;; landed. Evidence ids are client-minted, so a duplicate of
+                ;; this exact payload can only be us; reporting failure here
+                ;; would mask a write that actually succeeded -- the same
+                ;; class of lie as losing it silently, with the sign flipped.
+                (and (= 409 status) (pos? attempt))
+                {:ok true
+                 :entry (or (:entry parsed) validated)
+                 :trace-id trace-id
+                 :recovered-after-retry true}
 
                 (= 409 status)
                 (social-error :duplicate-id "Evidence id already exists"
