@@ -12052,4 +12052,7 @@ declined to hand-assemble a seat whose invoke path it could not verify. That
 route is now live (409 on an empty body). analyst-3 is minted — the re-mint was
 idempotent against ground control's earlier one, the first live confirmation of
 that claimed property — is on the roster as `claude-opus-5`, and **its invoke
-path was probed end to end before this handover**, not merely asserted.
+path was probed and it answered**: `"analyst-3, claude-opus-5"`, in the one-line
+form asked for. The path carries the right model and returns content, not merely
+a `done` state. This is the first succession in the series where the successor
+replied before the predecessor stood down.

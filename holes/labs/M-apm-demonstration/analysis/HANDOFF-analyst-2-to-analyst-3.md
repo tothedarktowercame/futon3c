@@ -8,11 +8,13 @@ Read `role-cards/analyst-v1.md` first. It is frozen at blob `ed340941` and it is
 still the whole orientation — my predecessor said so and it held for me too.
 This document is the delta.
 
-**Unlike my predecessor, I am handing you a seat that exists.** `analyst-3` is
-minted, on the roster, `claude-opus-5`, `invoke-ready? true`, and I probed its
-invoke path end to end before writing this rather than trusting the roster entry.
-The mint route is live: `POST /api/alpha/frames/mint-analyst` returns 409 on an
-empty body (routed), not the 404 that blocked analyst-1.
+**Unlike my predecessor, I am handing you a seat that exists — and that
+answered.** `analyst-3` is minted, on the roster, `claude-opus-5`,
+`invoke-ready? true`. I probed its invoke path rather than trusting the roster
+entry, and the reply came back: **"analyst-3, claude-opus-5"**. So the path
+carries the right model and returns content, not merely a `done` state. The mint
+route is live: `POST /api/alpha/frames/mint-analyst` returns 409 on an empty body
+(routed), not the 404 that blocked analyst-1.
 
 ---
 
@@ -178,13 +180,24 @@ Two packets, one per frame, both single-file and both with a bar I **measured
 before setting it**:
 
 - **P28** (`b57b29f0`, codex-3) — C3 vacuity, above. Merged and gated.
-- **P29** (`invoke-1787127501525-4998-2a06ac1d`, oxf-codex-10) — populate the
-  required measurement field `"memories promoted"`, which reads *"unset:
-  promotion outputs do not identify which artifacts are memories"* in a frame that
-  promoted four memories and recorded a `:promo/pattern-id` and
-  `:promo/review-evidence-id` for every one. **Check its state and finish the
-  review if it landed after my close** — the checklist is in park
-  `park-4cbe823e`.
+- **P29** — populate the required measurement field `"memories promoted"`, which
+  reads *"unset: promotion outputs do not identify which artifacts are memories"*
+  in a frame that promoted four memories and recorded a `:promo/pattern-id` and
+  `:promo/review-evidence-id` for every one. **This one is probably yours.**
+  Its first attempt (`invoke-1787127501525-…`, oxf-codex-10) died in **transport,
+  not in work** — `"Proxy invoke failed: HTTP "` after **zero** tool events, so
+  nothing was written and there is no partial state to clean up. Re-dispatched
+  unchanged to **codex-3** as `invoke-1787128184311-5007-ee50bf5b`, park
+  `park-fb79f17c`, whose payload holds the full review checklist.
+
+  **The dispatch lesson, which cost me a wasted round-trip:** I picked
+  oxf-codex-10 because it was the only general codex the roster listed as `idle`,
+  while `codex-3`/`codex-5`/`codex-6` read `restored` or `invoking`. Roster
+  `idle` is not liveness. **Prefer a local agent that has actually completed a
+  job this session** — codex-3 had cleanly delivered P28 an hour earlier — over a
+  remote one merely listed as idle. And always check the job state a few seconds
+  after dispatch: a transport failure looks exactly like a slow start until you
+  look (`tool-events: 0` for sixteen minutes was the tell).
 
 **The rule that decided both:** *does this edit move a number I report?* Both
 did, so both went out even though I held the full diagnosis and could have typed
