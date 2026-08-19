@@ -209,3 +209,59 @@ memory-use instrumentation. So for the first time:
 
 It still cannot populate COST. That instrument does not exist and should be
 built before f16, or the rate-of-return band stays permanently empty.
+
+
+## COST — what is actually available, measured 2026-08-19
+
+Joe proposed tokens, lemma count, and LOC, noting LOC is directly comparable
+across agents. Measured rather than assumed:
+
+### Tokens are NOT available
+
+An Agency job record carries `created-at`, `started-at`, `finished-at`, `state`,
+`execution`, `events`, `result` — and **no token or usage field of any kind**.
+So the cross-model comparability worry is moot until something records them.
+Wall-clock is there and free.
+
+### What the three candidate measures actually say
+
+    frame  solver wall-clock  dispatches  LOC added  new decls  disposition
+    f12         6m06              3           931       23      :defective (vacuous)
+    f13         7m17              1            77        1      :defective (uninhabited)
+    f15         9m53              ?             ?        ?      running
+
+### LOC and lemma count are YIELD, not COST — and as cost they INVERT
+
+f12 produced **931 lines and 23 lemmas** across three dispatches. f13 produced
+**77 lines and one lemma** in a single dispatch. On LOC, f12 outscores f13 by
+twelve to one.
+
+**Both closed their theorem. Both closed it vacuously. And f13's single lemma is
+the better result** — it is the frame that found the defect on the first
+dispatch, and the only frame in the series with attested memory transfer.
+
+So LOC as a cost model **rewards the long way round**: a solver that finds the
+one-line argument scores lowest, and a solver that builds 900 lines of machinery
+for a vacuous statement scores highest. That is the same failure shape as
+everything else in this excursion — a number that is fine until you ask what
+population it is over.
+
+### The split that works
+
+- **COST** = wall-clock + dispatch count. Both directly comparable across
+  agents, both already recorded, neither requiring new instrumentation.
+  Dispatches is the better of the two for rate-of-return: it counts *attempts*,
+  and an attempt is what a frame spends.
+- **YIELD** = LOC, new declarations, conjuncts closed, residual reduction —
+  **always paired with the disposition.** LOC beside `:defective` is not the
+  same quantity as LOC beside `:closed`, and a table that omits the disposition
+  column will rank f12 first.
+- **Tokens** — worth recording if cheap, but the honest note is that they were
+  never available, not that they were rejected for incomparability.
+
+### The one number that survives all of it
+
+`converted-artifacts` per dispatch, read against the disposition. f13:
+1 artifact, 1 dispatch, `:defective`. f12: 6 artifacts, 3 dispatches,
+`:defective`. Neither is yet a return, because neither problem was sound —
+which is why f15 is the first frame where the ratio can mean anything.
