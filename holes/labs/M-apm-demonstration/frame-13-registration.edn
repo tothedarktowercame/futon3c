@@ -70,7 +70,7 @@
  :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
 
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "7b188d8c7a215146f98996b62fa06bccaaa4123e"
+ :reg/harness-revision     "b410cec0b5fc090d3cf7850f1aa8ad076c319e9d"
 
  ;; Frame identity, so the operator surface can say WHICH FRAME at a glance
  ;; instead of leaving it to be inferred from the seat-name prefix.
