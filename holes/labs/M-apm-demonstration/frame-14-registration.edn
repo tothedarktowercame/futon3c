@@ -85,10 +85,13 @@
              :endpoint "frame-14: fresh seats, analyst-3 tenure 2 of 2; second frame on the repaired write path, testing whether f11's result replicates"}
 
  :claim :descriptive
- :arms  [{:name "fresh seats, same analyst (tenure 2 of 2), cascade on, write path repaired"
+ :arms  [{:name "one problem, one-shot measurement"
           :neutral? false
           :axes []
           :role :treatment}]
+
+ ;; Descriptive only; :arms is frozen by preregistration/validate (:wrong-arms).
+ :arm-description "fresh seats, same analyst (tenure 2 of 2), cascade on, write path repaired"
 
  :replication-stage  :pilot
  :pilot-units        [{:problem-id            "m93J06"
