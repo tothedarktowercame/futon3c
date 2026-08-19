@@ -441,7 +441,16 @@
           response (http/get url {:headers {"Accept" "application/edn"}
                                   :timeout 15000 :throw false})
           parsed (edn/read-string (:body response))]
-      (when (map? (:df parsed)) (:df parsed)))
+      (when (map? (:df parsed))
+        ;; Return the POPULATION alongside the counts. futon1b's ?df= silently
+        ;; ignores type/tags/subject filters (measured by claude-11, 2026-08-19:
+        ;; ?df=hilbert&type=:memory returns the whole-index 357, HTTP 200, no
+        ;; warning), so a df is meaningless without saying what it counted over.
+        ;; :indexed is the denominator the band must be read against.
+        {:df (:df parsed)
+         :indexed (:indexed parsed)
+         :population :whole-index-unfiltered
+         :source url}))
     (catch Throwable _ nil)))
 
 (defn- query-anchor-term-memory-df
@@ -450,7 +459,8 @@
   no term is in band or the df fetch fails."
   [terms substrate-base]
   (let [terms (vec (remove str/blank? terms))
-        dfs (evidence-document-frequencies substrate-base terms)
+        df-result (evidence-document-frequencies substrate-base terms)
+        dfs (:df df-result)
         [lo hi] anchor-df-band
         in-band (when dfs
                   (filterv #(let [d (get dfs % 0)] (<= lo d hi)) terms))]
@@ -1077,7 +1087,9 @@
       :index-as-of (:index-as-of proposals)
       :ladder-rung (:recall/tier proposals)
       :ladder-query (:recall/query-used proposals)
-      :anchor {:term required-term :satisfied? anchor-satisfied?}
+      :anchor (cond-> {:term required-term :satisfied? anchor-satisfied?}
+                (:anchor-df-basis query-data)
+                (assoc :df-basis (:anchor-df-basis query-data)))
       :pattern-ids (vec pattern-ids)
       :endpoints (vec endpoints)
       :eligible-memory-ids eligible-memory-ids
