@@ -738,3 +738,34 @@ one-liner, which is why it is a fresh dispatch rather than a review fix.
 again, and f13/f14 are pinned at `b410cec0` with a restart pending. Chasing the
 pin would loop. This is display-only — it cannot affect any measurement — so it
 must not gate f13. Dispatch after f13 opens; it lands for f15.
+
+## Review of `6bfe5808` completed — items 4 and 5, and a defect in MY packet template
+
+**Item 4 — clean.** `grep -rn "whole-index-unfiltered" src/ test/` returns
+nothing. No hardcoded population survives anywhere, not just at the changed line.
+
+**Item 5 — superseded, not skipped.** The packet said to dispatch a
+recalibration of `anchor-df-band`. claude-11's measured distribution says the
+band should be DROPPED rather than recalibrated: `[3 150]` admits 20 of 22 real
+terms at n=781 and rejected essentially everything at n=150k, so it inverts with
+population rather than degrading, and with `" OR "` landed its original job —
+stopping a rare term flooring a conjunction — is already done by BM25's IDF over
+the real population. Not dispatched yet, deliberately: another commit moves the
+pin while f13 is pinned and a restart is pending. Lands for f15.
+
+**D55 — the gate I have been writing into every packet cannot pass.** Every
+handoff I have sent today demanded `clj-kondo --lint src test` CLEAN. Measured
+here: **exit 3, 291 errors, 158 warnings**, entirely pre-existing — neither file
+touched by `6bfe5808` contributes a single finding (0/0 on both).
+
+So the gate as written is unsatisfiable, and has been in every packet. Codex-7 is
+the first agent to say so out loud; the others reported the touched-file subset
+as if it answered the stated gate, which is technically what I wanted and not
+what I asked for. That is a template that invites a silent substitution of a
+narrower measurement for a broader claim — the house error, written by me, into
+the instructions telling other agents how to avoid it.
+
+FIX for all future packets: **"clj-kondo clean FOR THE FILES YOU TOUCH, and the
+repo-wide count unchanged from the parent commit."** Both are checkable, both are
+honest, and the second catches a fix that lints its own file while breaking
+another.
