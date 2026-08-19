@@ -1119,4 +1119,299 @@
    memories authored by f12's scribe. Three consecutive frames have now found
    three defective formalisations by three different mechanisms, each of which
    compiled and each of which survived a superficial audit -- which is the
-   argument for making proof attempts cheap rather than for auditing harder."}]
+   argument for making proof attempts cheap rather than for auditing harder."}
+
+ ;; ===========================================================================
+ ;; FRAME 15 — m93J06 — CLOSED (first non-defective close in three frames)
+ ;; ===========================================================================
+ {:frame "f15"
+  :problem "m93J06"
+  :closed "2026-08-19"
+  :disposition :closed
+  :analyst "analyst-3 (tenure 3, frame 1 of 2 — succession is NOT due here; it falls at f16,
+            per :analyst-survives-two-frames in this frame's registration)"
+  :frame-numbering
+  "f13 (m99J06) is VOID and f14 was never run: f14's registration named m93J06 and was
+   superseded by f15's, which names the same problem. So this is my FIRST closed frame,
+   not my second, and the series jumps f12 -> f15 with one void report between."
+
+  :mathematics
+  {:closed? true :axiom-clean? true :residual-sorries 0 :solver-dispatches 3 :student-dispatches 1
+   :student {:residual-sorries 3 :axiom-clean? false
+             :outcome "three-named-residuals-plus-conjunct-5-closed"}
+   :headline-result
+   "THE STREAK OF DEFECTIVE PROBLEMS ENDED. f11, f12 and f13 each stopped on a broken
+    formalisation (false clause / vacuous class / uninhabited model). m93J06 closed
+    :closed, 0 residual executable sorries, axiom-clean, verified independently by the
+    guide. This is the first frame since f10 whose disposition is a mathematical result
+    rather than a corpus finding — which also means it is the first frame in three where
+    the memory question could be asked of a SOUND problem at all."}
+
+  ;; --- duty A -----------------------------------------------------------
+  :transfer-checks
+  {:score "5/6"
+   :fails [:C2] :inapplicable []
+   :receipt "data/problem-state/m93J06-d4159d1e.../transfer-checks.edn — re-run by me from
+             the command (bb analysis/transfer_checks.bb <dir>), not read from a receipt."
+   :series "f7 3/6 · f8 6/6 · f9 5/6 · f10 5/6 · f11 4/6 (C3 vacuous) · f12 5/6 · f13 VOID · f15 5/6"
+   :C2 "HONEST FAIL, and the THIRD consecutive frame in which C2 fails on the guide's own
+        intervention. The single intervention is {:kind :store-write, :memory-id
+        e-1929b416}; its projected edge carries :attachment-status nil. Same shape as f12
+        (statusless guide deposit, never promoted) — the frame's three promotions were of
+        other deposits, so C2's subject was again never a promotion candidate. Three
+        frames, one mechanism: an :intervene store-write produces a deposit that nothing
+        downstream is wired to pick up. That is now a pattern, not an incident."
+   :C3 "PASSES with real content, and the evidence is worth reading against the read-path
+        finding below: the student's eligible set was 495 ids and INCLUDED both in-scope
+        cycle promotions (e-4f6b5d49, e-00c94a8d); the third (e-56ae9c01, step 687) is
+        correctly excluded as late. So promote -> eligible is wired. It is retrieval that
+        is not."
+   :C4 "pull-offers 2, pull-uses 0. :pull-uses is [] in the trace as well."}
+
+  :trace-validation
+  {:launchable? false :failure-count 3
+   :failures [:malformed-cycle-attempts :f7-missed-available-artifact :f9-capability-not-realized]
+   :across-frames {"f8" 6 "f9" 7 "f10" 7 "f11 (0 offers)" 6 "f12 (0 offers)" 5 "f15" 3}
+   :movement-is-real
+   "5 -> 3, and BOTH clearances are substantive, not vacuous. :wrong-arms cleared because
+    the arms were corrected in the registration (d204cd15). :f9-capability-probe-missing
+    cleared because all eight capability probes are now RECORDED with evidence ids — in
+    f12 the missing one was :offer-use-disposition, missing because there were no offers
+    to probe. I checked f12's persisted trace directly rather than trusting the series
+    text for this comparison."
+   :three-failures-are-two-causes
+   "THE COUNT OVERSTATES THE DAMAGE. :f7-missed-available-artifact and
+    :f9-capability-not-realized are the SAME subset test computed twice —
+    (subset? :available-artifact-ids :need-probe-retrieved-ids) is both F7's predicate and
+    the :need-retrieval capability's predicate. I evaluated all eight capabilities against
+    the real trace with futon3c.apm.preregistration/capability-holds?: exactly ONE fails,
+    :need-retrieval. So f15's three failures are one structural nil field plus the read
+    path, counted twice. Whoever reports failure counts across frames should know the
+    denominator is not independent."}
+
+  ;; --- correction of the guide's own close report ------------------------
+  :adjudication-disagreement
+  {:with "f15-guide (frame-15-frame/guide-log.md, section 'The machine's own verdict')"
+   :claim "'exactly TWO capabilities fail' — :need-retrieval and :measurement-populated
+           ('8 of 17 required fields')."
+   :my-verdict "ONE fails. :measurement-populated HOLDS."
+   :evidence
+   "preregistration.clj:319 measurement-fields = (concat (keys :meas/values) (keys :meas/unset)).
+    A required field is 'populated' if it appears in EITHER map. The f15 trace carries all
+    17 required fields: 8 with values, 9 declared unset WITH REASONS. Computed directly:
+    (remove (set (measurement-fields tr)) (:required-measurement-fields tr)) => (). The guide
+    counted :meas/values alone."
+   :and-the-finding-is-worse-not-smaller
+   "MUTATION-VERIFIED. Moving all 8 measured fields into :meas/unset with a reason string
+    leaves :measurement-populated TRUE — the capability holds with ZERO measured values.
+    It fails only when a required field is absent from BOTH maps. So the capability that is
+    supposed to guarantee the 17 required measurements exist is dischargeable by declaring
+    all 17 unmeasured. The guide's SUBSTANTIVE complaint stands and is important — no
+    conductor action computes the nine unset fields, including 'promoted then surfaced then
+    used', the exact measurement this frame existed to make — but it is not a case of an
+    unsatisfiable capability. It is the opposite: a capability that cannot detect the gap it
+    names. This is the THIRD vacuity mode in the series after analyst-2's pair (F3 vacuous
+    PASS on zero offers, C3 vacuous FAIL on zero promotions): vacuous pass by self-declared
+    exemption."}
+
+  ;; --- duty C — the cascade receipts RAN, for the first time --------------
+  :cascade
+  {:first-live-run true
+   :note "Duty C was 'untested' in the role card because the receipts (47f421b9) had never
+          run in a frame. They ran here. This is the first cascade bookkeeping the seat has
+          ever been able to do from real data."
+   :offers 315 :distinct-memories 105 :inflation "3.0x"
+   :by-route {:leaf [15 5] :why-hop [144 48] :co-incidence [156 52]}
+   :inflation-finding
+   "EXACTLY 3.0x ON EVERY ROUTE (15/5, 144/48, 156/52). Three solver dispatches each
+    re-offered the identical recall set and the offers accumulate without dedup. Any count
+    of 'offers' in this frame is a count of dispatches times memories. Report 105, not 315."
+   :truncation "Recorded explicitly and correctly: :cascade-cap 100, :cascade-truncated? true,
+                :cascade-expanded-available 132. The truncation signal works."
+   :used-x-route-join
+   "THE JOIN THE ROLE CARD ASKS FOR CANNOT BE COMPUTED, AND THAT IS THE FINDING. The card
+    says the join that matters is used x route. There is no `used`. :write-use takes exactly
+    one argument, :offer-id (315 of 315 steps carry only that key); the resulting use record
+    is #:use{:id .. :offer ..} and carries no disposition, verdict, or attester in ANY of the
+    three places a fact can live — cycle outputs, step result, or emitted trace. I checked
+    all three before asserting this.
+    CONSEQUENCE FOR :offer-disposition-populated, which f15-guide adjudicated CONFIRMED and
+    which was the check inapplicable for three frames running: F3 and the
+    :offer-use-disposition capability are satisfied by 315 rows that record only that an
+    offer existed. Writing a use is unconditional. The capability is real in the sense that
+    it now runs; it is empty in the sense that it cannot fail while the conductor writes one
+    use per offer. I do not dispute the CONFIRMED verdict — the prediction as written asks
+    only that the id list be non-empty — but the verdict must never be cited as evidence
+    that offers were dispositioned in the ordinary sense of the word."}
+
+  ;; --- duty B — spectral capture S-6 ------------------------------------
+  :spectral
+  {:reading "S-6"
+   :universe 106
+   :universe-note
+   "FIRST GROWTH IN FIVE FRAMES. analyst-2 recorded 105 unchanged S-2 -> S-5 with no math-*
+    pattern file created in four frames. One file was created 2026-08-19:
+    math-formalization-CA/ode-gronwall-api.flexiarg, still UNTRACKED in futon3/library.
+    Enumerated by DECLARED id from @flexiarg/@arg/@multiarg lines across 15 math-* dirs, per
+    the card's warning against globs."
+   :instrument-check
+   "MY METHOD REPRODUCES analyst-2's S-5 EXACTLY before I report S-6 — universe 105 when the
+    one file created today is excluded, and mission scope 18/16/2 when the four memories
+    reviewed after f12 are excluded. So S-5 and S-6 ARE comparable, unlike S-3 vs S-4 whose
+    script no longer existed. Boundary used: a PATTERN is a namespaced endpoint (contains
+    '/'). Stating it because my first pass counted problem ids, commit shas and session ids
+    as patterns and reported 13 shared nodes; the true figure is 3."
+   :mission-scope {:memories 22 :patterns 19 :shared-nodes 3}
+   :whole-store {:edges 498 :reviewed 223 :with-review-record 213}
+   :shared-nodes-qualifier
+   "The one new shared node is math-strategy/structural-obstruction-as-theorem, and it became
+    shared through f13's memory — the VOID frame. f15's own three promotions each landed on a
+    DISTINCT pattern and added zero sharing. Do not attribute the growth to this frame."
+   :instrument-change
+   "GET /api/alpha/hyperedges IS NO LONGER ON PORT 7070 — it returns
+    {:error true :code not-found}. The substrate is a separate JVM on 7073 (the I-0 override
+    in CLAUDE.md, 2026-08-10) and answers there, in EDN not JSON. analyst-2's handoff says
+    7070; that instruction has rotted. Use
+    curl 'http://localhost:7073/api/alpha/hyperedges?type=memory/assert&limit=5000'.
+    The limit=100 default trap analyst-2 recorded is still live and still matters: always
+    pass limit and always print the row count."}
+
+  ;; --- duty D — curation ------------------------------------------------
+  :curation
+  {:bespoke-rate
+   "BESPOKE MINTING RETURNED, AFTER analyst-2 REPORTED IT BROKEN. Series: f9 2 of 2 bespoke
+    (100%); f11 0 of 2 attempted; f12 0 of 4, all on pre-existing patterns; f15 1 of 3.
+    Provenance checked in git, not by mtime alone: math-strategy/construction-before-estimates
+    and math-strategy/proof-architecture were committed 2026-08-17 (04ad315), so they are
+    pre-existing; math-formalization-CA/ode-gronwall-api.flexiarg is untracked and dated
+    today, so it is a fresh mint.
+    QUALIFIER I WANT MY SUCCESSOR TO HAVE: this is n=1 against analyst-2's n=1 (f12), on
+    three attachments. analyst-2 was right that D needs two frames; it also needs more than
+    three data points per frame. Do not read 33% as a trend."}
+
+  ;; --- the tenure question: the READ path -------------------------------
+  :read-path
+  {:inherited-question
+   "analyst-2 handed this tenure one question: f12 made four memories eligible and the one
+    agent who needed them retrieved none. f15 answers it in two halves that point opposite
+    ways, and the halves must be reported together."
+   :solver-half-works
+   "ALL FIVE prior-frame promoted memories I could name were surfaced to the solver among
+    f15's 105 distinct offers: e-1b72bb47 and e-7c6631c9 (f12's, the two f13's solver
+    attested USED), e-2ad2b4fe and e-46c3e6e5 (f12-era m03J01), e-62615b79 (f13, the void
+    frame). Cross-frame accumulate -> surface is working and I measured it by id, not by
+    resemblance. The solver's own retrieval probe read 6 available / 5 retrieved."
+   :student-half-does-not
+   "THE STUDENT'S RETRIEVAL PROBE READS 495 AVAILABLE, 0 RETRIEVED. Zero. And the two
+    in-frame promotions were IN that 495-id available set — I found e-4f6b5d49 and
+    e-00c94a8d at the tail of the probe's :available-ids. So this is not an eligibility
+    failure and it is not a promotion failure; both of those are wired and demonstrated.
+    ELIGIBILITY IS NOT RETRIEVAL, and the gap between them is now the whole question.
+    f12 read 470 available / 0 retrieved. Two frames, same zero, larger denominator."
+   :and-the-validator-agrees
+   "F7 requires available subset-of retrieved, so it fails by 490 ids, and :need-retrieval is
+    the single failing capability. Three independent instruments — the student's own probe,
+    F7, and the capability evaluation — reach the same finding. f15-guide reached it by hand
+    from the student's report as well. That is four routes and no dissent."}
+
+  :store-delta
+  {:since-f12 "+20 edges (478 -> 498), +4 reviewed (219 -> 223)"
+   :this-frame "3 reviewed attachments, all guide-reviewed by f15-guide with durable
+                :prop/review records carrying evidence ids; author != reviewer holds
+                (depositor was the solver/scribe lane, reviewer f15-guide)."
+   :independent-review "STILL UNREACHABLE (D42). Every reviewed attachment in the store to
+                        date is guide-reviewed. Nothing in this frame changes that."}
+
+  ;; --- duty F -----------------------------------------------------------
+  :packets
+  {:P29-verified
+   "analyst-2's P29 LANDED AND WORKS — I verified it in production rather than reading its
+    report. The required measurement field 'memories promoted' now reads
+    {:count 3 :ids [e-4f6b5d49 e-00c94a8d e-56ae9c01]}, where f12's trace had nil.
+    Measurement summary moved 7 measured / 10 unset -> 8 / 9.
+    HONEST QUALIFIER: it did NOT move a validator verdict. :measurement-populated already
+    held in f12, because a field declared unset counts as populated (see
+    :adjudication-disagreement). P29 improved the record, not the score."
+   :P30-dispatched
+   "P30 — stamp :cycle/store-revision on attempt records. codex-3, job
+    invoke-1787162080655-5095-81f53731, park park-6b6d3754-a30d-45fb-8dfd-3bd4badc3e3a
+    (payload holds the full review checklist including two mutations the packet does not
+    ask for). Job state checked at +5s: running, tool events flowing — not the transport
+    failure analyst-2 lost a round-trip to.
+    WHY IT MOVES A NUMBER I REPORT: attempt? requires a 40-hex :cycle/store-revision and
+    NOTHING IN src/ EVER WRITES IT — nil in every attempt of f12 and f15. The sole producer
+    site is stamp-attempt-environment (problem.clj:176), which already stamps the
+    environment and harness revisions and simply omits this one. Mutation-verified: stamping
+    a valid sha on both attempts takes trace-shape-failures from
+    [:malformed-cycle-attempts] to []. Failure count 3 -> 2."
+   :dispatch-note
+   "Picked codex-3 on analyst-2's rule — prefer an agent that has actually completed a job
+    this session (codex-3 delivered P28 and P29) over one merely listed idle. It was also
+    the most recently active codex on the roster."}
+
+  ;; --- surfaced to ground control, NOT decided by me ----------------------
+  :surfaced-not-mine
+  [{:id :both-channels-varied-is-dead
+    :severity "highest thing I found"
+    :what
+    "The experimental control that says a round may vary the STORE or the HARNESS but not
+     both (:both-channels-varied, preregistration.clj:479) requires
+     (> (count (distinct store-revisions)) 1). Store revision is nil in every attempt, so
+     (distinct [nil nil]) has count 1 and THE GUARD CANNOT FIRE, EVER. Mutation-verified: I
+     forced the harness revisions to differ while leaving store-revision nil and the guard
+     still returned false; with both genuinely varied it returns true. The apparatus's core
+     two-channel discipline has been unenforceable for the whole series, and it fails
+     SILENTLY — :malformed-cycle-attempts fires instead, which reads as a shape nit rather
+     than 'your control variable is missing'."
+    :why-not-mine
+    "P30 populates the field, which is mechanical and mine. But even populated, ONE snapshot
+     is taken per cycle, so the digest is constant across a cycle's attempts and the guard
+     still cannot fire. Whether each attempt should carry its own store snapshot is a design
+     ruling about what the experiment controls, and the card says design rulings are not the
+     Analyst's. I told codex-3 explicitly NOT to 'fix' it."}
+   {:id :measurement-populated-self-exemption
+    :what "See :adjudication-disagreement. Whether a required measurement may be discharged
+           by declaring it unset with a reason is a decision about the loss function, which
+           is the same reason analyst-2 refused to move C3's /6 denominator."}
+   {:id :attempts-validated-only-at-close
+    :what "f15-guide's own observation and I concur: attempt records are shape-validated 330
+           versions after they are written, with no route back — record-solver-attempt is a
+           :guided-solve tool and the phase is long gone by close. The machine accepts a
+           malformed attempt silently and reports it when nothing can be done. Deliberately
+           OUT of P30's scope as a separate behaviour change."}]
+
+  :predictions-cross-check
+  "I did not re-adjudicate the frame's predictions — f15-guide adjudicated them and ground
+   control verifies. I checked the three I could measure independently:
+   :offer-disposition-populated CONFIRMED and I agree on the letter of it, with the
+   emptiness caveat above recorded so it is not over-cited;
+   :reviewed-attachment-gained CONFIRMED and guide-reviewed, which I confirmed at the
+   substrate (3 edges, :prop/review with reviewer f15-guide, verdict :approve);
+   :refusals-are-traceable CONFIRMED, and I note an improvement on D43 that the guide's own
+   log calls a refinement: the single refusal records WHY, not merely THAT —
+   :code :guidance-type-invalid with a message, where f12's two refusals both read
+   :tool-execution-failed. D43 is narrower than it was.
+   :cascade-seeds-from-recall CONFIRMED — this and :offer-disposition-populated were both
+   inapplicable for three frames for want of offers, and f15 is their first live test, which
+   is the thing analyst-2's handoff asked me to say out loud if it happened."
+
+  :defects-found 4
+  :defects-fixed-or-queued 1
+
+  :headline
+  "THE PROBLEM WAS SOUND AND THE MACHINE CLOSED IT — first non-defective disposition since
+   f10, ending a three-frame run of broken formalisations — AND THE FRAME'S OWN QUESTION CAME
+   BACK SPLIT. Cross-frame memory reaches the solver: all five prior-frame promoted memories
+   I could name were surfaced among 105 distinct offers, and the cascade receipts ran for the
+   first time in the series, making duty C possible at all. The student retrieved 0 of 495
+   available, with two of this frame's own promotions sitting inside its eligible set: the
+   promote -> eligible wiring is demonstrated and RETRIEVAL is the gap, which is a sharper
+   statement of analyst-2's inherited question, not an answer to it. Against that, three
+   instruments turned out to measure less than they appear to: 315 offers are 105 memories
+   counted three times; 315 'dispositions' are 315 rows that record only that an offer
+   existed, because :write-use takes no verdict; and :measurement-populated passes with nine
+   of seventeen fields unmeasured because declaring a field unset counts as populating it.
+   The two-channel experimental control has never been able to fire at all. The frame that
+   finally solved its problem is also the frame in which the instruments were caught
+   flattering themselves."}
+]
