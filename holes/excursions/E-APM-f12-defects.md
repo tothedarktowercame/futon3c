@@ -1283,3 +1283,72 @@ the artifact and the mathematics, not the retrieval.
 Note (2) means the scoped-df work is not useless after all: it computes the right
 quantity and is wired to the wrong consumer. It ranks the ANCHOR; it should rank
 the QUERY TERMS.
+
+## D63 — the cascade uses patterns as ROUTERS and never OFFERS them. The transferable layer is the one thing never surfaced.
+
+Joe, 2026-08-19: *"it's pretty obvious that any 'leaf' memories retrieved will be
+irrelevant if the associated problem is new. What's more interesting is whether
+any of the higher-level patterns in the cascade might be relevant in such
+conditions."*
+
+Measured on f13's completed cascade (106 deduped offers):
+
+    by route : {:leaf 5, :co-incidence 100}
+    by hops  : {0 5, 2 100}
+
+There is **no hop 1**. Leaves sit at hop 0 with `:offer/via-pattern nil`; every
+one of the 100 expansions sits at hop 2 and carries the pattern it came THROUGH
+in `:offer/via-pattern`. **A pattern is never itself an offer.** The machine uses
+the abstraction as a router and puts only the leaves at either end in front of
+the solver.
+
+### The bridging patterns, and the split that matters
+
+    math-formalization-CA/measure-integration-api                    37   domain-specific
+    math-strategy/missing-dependency-protocol                        33   DOMAIN-GENERAL
+    math-strategy/proof-architecture                                  7   DOMAIN-GENERAL
+    math-formalization-CV/entire-and-singularity-api                  6   domain-specific
+    math-formalization-FA/weak-convergence-hilbert                    5   domain-specific
+    math-formalization-CA/series-evaluation-api                       4   domain-specific
+    math-formalization-FA/inner-product-space-api                     3   domain-specific
+    math-formalization-CA/uniform-continuity-boundedness              2   domain-specific
+    math-informal/convert-growth-counts-to-summability                1
+    math-strategy/structural-obstruction-as-theorem                   1   DOMAIN-GENERAL
+    math-formalization/separate-proof-transfer-from-artifact-replay   1   DOMAIN-GENERAL
+
+**42 of 100 expansions came through domain-general `math-strategy/*` or
+unqualified `math-formalization/*` patterns.** The `-CA/-CV/-FA` suffixes mark
+subject areas and are the ones that cannot cross problems.
+
+### And this is what actually transferred
+
+The two memories f13's solver attested `USED` were **hop-0 leaves**, not cascade
+expansions — `e-1b72bb47` and `e-7c6631c9`, both from f12, both carrying the
+pattern `math-formalization/notation-semantics-traps`, which is **unqualified,
+i.e. domain-general**. Both are procedural: *run a consequence pass; audit the
+elaborated semantics before proof search.* Neither is a fact about Hilbert spaces.
+
+So the transferable unit is not "leaf vs pattern". It is **domain-general vs
+domain-specific**, and the two things that crossed from f12 to f13 were leaves
+whose CONTENT was procedural and whose PATTERN was domain-general.
+
+### The consequence, which is Joe's point sharpened
+
+For a genuinely new problem the leaves cannot help — they are about other
+mathematics. The layer with a chance of transferring is the domain-general
+strategy pattern. **And that layer is precisely the one the cascade never
+offers.** `math-strategy/missing-dependency-protocol` routed a third of f13's
+cascade and was never itself shown to anyone; what the solver saw were 33
+measure-theory memories on the far side of it.
+
+This reframes what f15 can measure. If its solver returns 0/5 `USED`, the
+finding is not "memories do not transfer" and not only "D60 chose a bad seed" —
+it is that **the machine is structurally incapable of offering the one thing
+most likely to be relevant to a new problem.**
+
+### Testable next, cheaply
+
+Offer the bridging pattern itself as a hop-1 offer, ranked ahead of its
+expansions, and measure whether solvers attest `USED` on patterns at a higher
+rate than on the leaves they route to. That is a change to the offer builder,
+not to retrieval, and it is independent of D60.
