@@ -1128,3 +1128,84 @@ would not be, and nothing reports that it happened.
   **The correct response to a client timeout on a conductor action is
   poll-then-retry, never assume failure** — a timed-out POST is indistinguishable
   from a wedged conductor.
+
+
+## CORRECTION to D59 — the half-repair was PRINCIPLED, not an oversight
+
+I wrote that m99J06's formaliser applied its own diagnosis to `weakDeriv` and
+"left `val` a bare function" as a mechanical slip. f13-guide corrects this and it
+is right:
+
+**`val` cannot be made an `Lp` class.** `apm_m99J06_isH01Pair` demands
+`AbsolutelyContinuousOnInterval u 0 1` and `u 0 = 0 ∧ u 1 = 0`. **None of those
+is a.e.-invariant** — absolute continuity is a pointwise property not preserved
+under modification on a null set, and a single endpoint IS a null set. You
+cannot state them of an equivalence class without choosing a representative.
+
+The asymmetry is therefore structural: `weakDeriv` is only ever observed under an
+integral, so quotienting it is free; `val` carries the trace and genuinely needs
+the continuous representative. **The original repair stopped exactly where it
+had to.** What it failed to do was notice that `realizes` still pinned `val`
+where nothing observed it.
+
+So repair option (a) from my packet is not merely worse, it is impossible.
+codex-3 chose (b) and gave the same reason independently.
+
+### The three repair options, ranked
+
+- **(a)** `val : H → apm_m99J06_L2` — IMPOSSIBLE. Breaks `represents`.
+- **(b)** `realizes` weakened to `val w =ᵐ[intervalMeasure] u` — SOUND, and what
+  `7d5f934` ships. The trace survives via `represents` rather than via
+  `realizes`.
+- **(c)** `Set.EqOn (val w) u (Icc 0 1)` — f13-guide's, and better. One line, one
+  field, kills the spike witness, and **preserves the endpoints pointwise**
+  because `0, 1 ∈ Icc 0 1`, keeping the boundary condition in the field that
+  asserts surjectivity, where a reader looks for it.
+
+(b) is landed and acceptable; (c) is the preferred form if anyone touches it
+again. Not re-dispatched — the difference does not justify a round trip.
+
+### The requeue carries a construction target
+
+Both f13-guide and I reached this independently: **the repair makes a model
+possible, it does not exhibit one.** Whoever requeues m99J06 must carry a
+construction target — build H¹₀(0,1) as a Hilbert space and produce an actual
+`apm_m99J06_H01Model` term — or the next frame is entitled to close it vacuously
+again for a different reason. The frame brief's anti-vacuity clause must attach
+to the requeued PROBLEM, not just to definitions a solver introduces.
+
+## RETRACTION — the promotion gate is not broken. `:reviewed-attachment-gained` CONFIRMED
+
+f13-guide reported promotion broken, then retracted it. The scribe's fresh
+deposit `e-62615b79` promoted cleanly on the first attempt:
+
+    attachment-status : :reviewed
+    patterns          : ["math-strategy/structural-obstruction-as-theorem"]
+    reviewer          : f13-guide,  witness-status :independently-witnessed
+    review evidence   : e-1044dc37
+
+So `:reviewed-attachment-gained` is CONFIRMED in the qualified form the
+prediction names — guide-reviewed attachment of a scribe-authored statusless,
+patternless deposit, not independent review.
+
+## D62 — promotion is non-atomic, and a failure after the attach poisons the memory permanently
+
+What separated the four attempts: promotions 1–3 ran **back to back in one shell
+loop** and all three failed after the attach; promotion 4 ran **alone**, minutes
+later, and went end to end. `review-attachment!` documents a read-after-write
+postcondition — it refuses success until the read observes the new review
+version. f13-guide's hypothesis is that bunched promotions lose that race against
+the substrate's hyperedge query cache, offered explicitly as **3/3 bunched failed
+and 1/1 spaced succeeded — suggestive, not conclusive.**
+
+Three things stand regardless of cause, and they are the defect:
+
+1. **Promotion is non-atomic** — the attach is posted before the review is applied.
+2. **A failure after the attach poisons the memory permanently** for that path.
+   Three memories are now readable in the store, stuck at `:proposed`, with no
+   in-envelope route forward.
+3. **The receipt says only "Tool execution failed" (D43)**, so nobody can tell a
+   harmless pre-flight refusal from a destructive half-applied one.
+
+(3) is what converts a retryable blip into lost work. Fix (3) first: a caller who
+can see *which* failure occurred can retry the safe one and stop on the other.

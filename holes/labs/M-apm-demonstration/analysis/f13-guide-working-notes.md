@@ -273,3 +273,96 @@ of f12's promoted artifacts, from f12's own `:promo/artifact-id` records. So
 f12 promoted them, f13's dispatch recall surfaced them, and f13's solver
 attested using them to reach its result. That is the full loop, end to end,
 for the first time in the series.
+
+## DEFECT — `promote-memory-attachment!` is NOT ATOMIC and poisons on failure
+
+Sequence, all verified:
+
+1. Scribe deposited three memories, all authored `f13-scribe`, all
+   `:evidence/type :memory`, all with NO status and NO patterns on the entry.
+   I checked each entry before promoting.
+2. `promote-artifact` x3, reviewer `f13-guide` (≠ depositor), verdicts
+   `approve`, pattern-ids `math-formalization/notation-semantics-traps` and
+   `math-strategy/structural-obstruction-as-theorem` (both proven in f12).
+   **All three refused.**
+3. The refusal receipts say only `:error/message "Tool execution failed"` —
+   **D43 exactly**. I re-issued one with a fresh action-id and read the full
+   HTTP body, which DOES carry the finding:
+   `failure: promotion-attachment-not-statusless, attachment-status: proposed`.
+4. Live hyperedge read: all three now carry `:attachment-status :proposed`
+   **and the pattern-id I supplied**. No `memory-attachment-review` evidence
+   exists in the store for any of them (only f12's, from 08:05).
+
+So the attach at `memory_lifecycle.clj:333-340` posts pattern + `:proposed`
+BEFORE the review evidence is written (346-370) and the review applied. When
+the later step fails, the edge is left in exactly the state lines 321 and 328
+refuse. **The promotion is then permanently unretryable through that path, and
+one failed promotion poisons the memory.** The two operator-visible symptoms —
+a harmless pre-flight refusal and a destructive half-applied one — are
+indistinguishable in the receipt.
+
+The three edges were NOT born `:proposed`: each carries the specific pattern-id
+I passed, so the attach step is what wrote the status. My own guide deposit,
+never promoted, is untouched.
+
+Not diagnosed: WHY the post-attach step failed. No review evidence was written,
+so it failed at or before that append. f12 promoted four memories through this
+same path successfully at 08:05 today, so something between f12 and f13
+changed — `:append-retry-live` (f1322302, c035df5c, 99176882) is the declared
+departure that landed in that window and is the first place to look.
+
+### What I did about it
+Dispatched the scribe a second time (`dispatch-scribe/2`, v19) for ONE fresh
+virgin memory, told it the mechanism plainly, and asked it to correct me if
+re-recording is the wrong move. I will promote that one with the full HTTP
+response captured. If it fails identically I stop burning memories and record
+`:reviewed-attachment-gained` as refuted with the mechanism; if it succeeds I
+ask for the remaining two.
+
+Frame state so far: THREE proposed attachments, ZERO reviewed.
+
+## CORRECTION — the promotion gate is NOT broken; it lost a race
+
+`e-62615b79-8ae2-470b-8b28-465dd87f50c7` (fresh scribe deposit, virgin edge,
+verified statusless/patternless by the scribe AND by me before the call)
+**promoted cleanly on the first try**:
+
+    attachment-status : :reviewed
+    patterns          : ["math-strategy/structural-obstruction-as-theorem"]
+    reviewer          : f13-guide
+    witness-status    : :independently-witnessed
+    review evidence   : e-1044dc37-8ed8-4c37-9549-171448c9f6b7
+                        (:review/event :memory-attachment-review,
+                         :review/verdict :approve, provenance cycle = this one)
+
+So **`:reviewed-attachment-gained` is CONFIRMED** in exactly the qualified form
+the prediction names: a GUIDE-reviewed attachment of a scribe-authored,
+statusless, patternless deposit. Not independent review — as predicted.
+
+What actually distinguishes the four calls:
+- promotions 1,2,3 ran BACK TO BACK in one shell loop; all three failed after
+  the attach;
+- promotion 4 ran ALONE, several minutes later; it succeeded end to end.
+
+`review-attachment!`'s own docstring states a read-after-write postcondition —
+it "refuses success until that read observes the new review version". Leading
+hypothesis: bunched promotions lose that race against the substrate's hyperedge
+query cache, and losing it leaves the edge attached-but-unreviewed, which lines
+321/328 then refuse permanently.
+
+**This is a hypothesis, not a proof.** Evidence for: 3/3 bunched failed, 1/1
+spaced succeeded, and the documented postcondition is exactly a read-after-write
+check. Not ruled out: something else about the first batch. Test in progress —
+scribe dispatched a third time (`dispatch-scribe/3`, v21) to re-record the other
+two rules as fresh memories; I will promote them ONE AT A TIME WITH A GAP. If
+both succeed spaced, that is evidence for the race and I will report it with
+that caveat.
+
+What stands regardless of the cause:
+- the promotion is **non-atomic** — attach is posted before review is applied;
+- a failure after the attach **poisons the memory permanently** for that path;
+- the refusal receipt says only "Tool execution failed" (**D43**), so the
+  operator cannot distinguish a harmless pre-flight refusal from a destructive
+  half-applied one. That is the part that turns a retryable blip into lost work.
+
+I retract "the promotion gate is broken" from my previous report. It is not.
