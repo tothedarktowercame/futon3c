@@ -318,3 +318,45 @@ State which one a table means, or the number is another unstated population.
 Untested. These three are all Codex. A Zai dispatch would need its own rollout
 equivalent located before any cross-agent token comparison is claimed, and until
 then LOC remains the only measure demonstrated comparable across agent types.
+
+### Zai tokens: the turns are logged, the usage block is not
+
+Joe: *"Zai turns are logged into the Evidence Landscape, so the raw data as it
+comes back from z.ai must be somewhere."* Checked. The first half is right and
+the second does not follow.
+
+**What IS in the store.** Zai turns are there as coordination evidence:
+
+    {:evidence/body {:event "chat-turn" :transport … :role "user"
+                     :turn-id "codex-3-turn-12" :text "…"}
+     :evidence/type :coordination :evidence/tags [… :turn …]}
+
+**What is NOT.** No `usage` block, no `prompt_tokens`, no `completion_tokens`.
+The body is a distilled chat-turn, not the raw response envelope. A whole-store
+search for `total_tokens` returns exactly one hit — *this conversation's own
+prompt preview*, because Joe's message quoting the codex JSON was itself indexed
+seconds earlier. A false positive from the question being asked.
+
+**And there is no zai rollout file.** Codex writes
+`~/.codex/sessions/YYYY/MM/DD/rollout-<ts>-<session-id>.jsonl`; the zai side has
+`/tmp/futon-zai-session-id-<seat>` (an id) and `~/.zai-key`, and nothing that
+persists responses. `agents/zaif_controller.clj` captures no usage field.
+
+So the raw data existed in the transport and was dropped. **Getting zai tokens
+needs the transport to capture the `usage` block at response time and write it
+into the evidence record** — small, and the prerequisite for any cross-agent
+token comparison. Until then LOC remains the only cost measure demonstrated
+comparable across agent types.
+
+### Incidental: the evidence `tag` filter is silently ignored
+
+Found while looking for zai turns, and it is the `?df=` bug's twin:
+
+    GET /api/alpha/evidence?limit=1&tag=:zai-turn
+      -> a record tagged [:codex :repl :turn :user]
+    GET /api/alpha/evidence?limit=1&tag=:definitely-not-a-real-tag-xyzzy
+      -> the SAME record, count 1
+
+A nonsense tag returns a record. The parameter is accepted and dropped, with no
+warning and a 200. Anyone filtering evidence by tag has been getting an
+unfiltered population and a plausible-looking answer. Owner: claude-11.
