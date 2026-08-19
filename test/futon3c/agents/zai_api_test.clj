@@ -186,6 +186,11 @@
               (dissoc expected :cost/cached-input-tokens)]
              [(dissoc full-usage :completion_tokens_details)
               (dissoc expected :cost/reasoning-tokens)]
+             ;; A required field absent must be OMITTED, not written as nil.
+             [(dissoc full-usage :prompt_tokens)
+              (dissoc expected :cost/input-tokens)]
+             [(dissoc full-usage :total_tokens :completion_tokens)
+              (dissoc expected :cost/total-tokens :cost/output-tokens)]
              [nil nil]]]
       (let [store (atom {:entries {} :order []})
             events (atom [])

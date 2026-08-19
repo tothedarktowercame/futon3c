@@ -762,16 +762,27 @@
   per-turn cost schema. Optional detail counters are omitted when absent."
   [resp]
   (when-let [usage (:usage resp)]
-    (cond-> {:cost/input-tokens (:prompt_tokens usage)
-             :cost/output-tokens (:completion_tokens usage)
-             :cost/total-tokens (:total_tokens usage)
-             :cost/source :zai}
-      (some? (get-in usage [:prompt_tokens_details :cached_tokens]))
-      (assoc :cost/cached-input-tokens
-             (get-in usage [:prompt_tokens_details :cached_tokens]))
-      (some? (get-in usage [:completion_tokens_details :reasoning_tokens]))
-      (assoc :cost/reasoning-tokens
-             (get-in usage [:completion_tokens_details :reasoning_tokens])))))
+    ;; Every field is guarded, including the three the SDK declares required.
+    ;; A proxy or a partial error response does not honour a pydantic
+    ;; annotation, and a cost key present-but-nil is the :ids failure shape:
+    ;; a map of the right form that reads as data and is not. Omit, never nil —
+    ;; and emit no record at all when no counter survived, rather than a bare
+    ;; {:cost/source :zai} that would count as a turn with zero tokens.
+    (let [counters (cond-> {}
+                     (some? (:prompt_tokens usage))
+                     (assoc :cost/input-tokens (:prompt_tokens usage))
+                     (some? (:completion_tokens usage))
+                     (assoc :cost/output-tokens (:completion_tokens usage))
+                     (some? (:total_tokens usage))
+                     (assoc :cost/total-tokens (:total_tokens usage))
+                     (some? (get-in usage [:prompt_tokens_details :cached_tokens]))
+                     (assoc :cost/cached-input-tokens
+                            (get-in usage [:prompt_tokens_details :cached_tokens]))
+                     (some? (get-in usage [:completion_tokens_details :reasoning_tokens]))
+                     (assoc :cost/reasoning-tokens
+                            (get-in usage [:completion_tokens_details :reasoning_tokens])))]
+      (when (seq counters)
+        (assoc counters :cost/source :zai)))))
 
 ;; --- U1: transcript persistence (M-zaif-harness) --------------------------
 ;; sink! above feeds the invoke-jobs ring buffer: display-grade, in-memory,
