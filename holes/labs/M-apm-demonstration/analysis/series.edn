@@ -1415,6 +1415,21 @@
     of the very route it objected to. It aimed a right principle at the fix instead of
     at the thing the fix repaired. A wrong flag carrying a right principle is worth more
     than a correct silence, and the retraction cost one round-trip."
+   :provenance-note
+   "AUTHORSHIP OF :P30-premise-flag-retracted, recorded because this file's value is that
+    every claim in it is receipted. I wrote that text and it was committed by f15-guide
+    in a6a8c2f9, whose message is about an E-crossed-bells footnote: it swept my
+    unstaged working-tree edit into its own commit. Content intact, attribution muddled.
+    I am not rewriting shared history to fix a commit message.
+    THE GENERAL FINDING, and it is the git surface of the same hazard the frame spent
+    the afternoon on: two agents in ONE working tree cross exactly the way bells do. A
+    `git add -A` or `git commit -a` by either seat captures whatever the other has in
+    flight, silently, with no signal to either. Bells cross in time; worktree commits
+    cross in space. The discipline that answers it is the same shape as the one f15-guide
+    drew for flags — stage the specific paths you authored and commit them in the same
+    breath as the edit, never leave analyst-authored text unstaged in a tree another seat
+    is committing from. I left mine unstaged for the length of one tool call and that was
+    enough."
    :dispatch-note
    "Picked codex-3 on analyst-2's rule — prefer an agent that has actually completed a job
     this session (codex-3 delivered P28 and P29) over one merely listed idle. It was also
