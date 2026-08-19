@@ -70,7 +70,7 @@
  :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
 
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "3b1eb78d4a26ef8dd1c28b670169aff491eb24d8"
+ :reg/harness-revision     "62bfc21063df08ab984f6cf2904ee78dcceb965d"
 
  ;; Frame identity, so the operator surface can say WHICH FRAME at a glance
  ;; instead of leaving it to be inferred from the seat-name prefix.
@@ -164,6 +164,8 @@
  :reg/known-departures
  [{:id :analyst-tenure-n2
    :text "The Analyst serves N = 2 frames (f13, f14); analyst-3 is in tenure 1 of 2 and every other seat is minted fresh. Ruled 2026-08-18; N stays pinned at 2. analyst-1's tenure produced four findings unavailable at n=1 and none needing n=3, so the parameter is unchanged on evidence rather than by default."}
+  {:id :codex-session-ownership-changed
+   :text "Three commits landed in src/ between the batch re-pin and this frame's open, by another agent, and the JVM was restarted onto them at 11:18:34: f2cccbb0 and 7b2d7cdd (use the local Codex identity in zone defaults / match the zone Codex nick to local identity) and 62bfc210 (enforce singular ownership of Codex sessions). They touch agency/registry.clj, agency/roster_store.clj, scripts/dev-zone-env and scripts/codex-picker - i.e. seat identity and session ownership, which is the machinery this frame's solver and student seats are dispatched through. Ground control did NOT author or review them. Declared rather than silently absorbed: harness-pin-check refused this frame's open on :harness-image-pin-mismatch (pinned 3b1eb78d, loaded 62bfc210) and the pin was moved to the loaded revision, so f13 is NOT running the code its batch was registered against. If a seat-identity or duplicate-session anomaly appears in this frame, these commits are the first place to look."}
   {:id :append-retry-live
    :text "RESTART-TIME WRITE BEHAVIOUR CHANGED between f12 and this frame. futon3c evidence appends now RETRY on :store-unreachable with a 300s window (f1322302, c035df5c, 99176882, claude-11) instead of returning a SocialError immediately. Before this, README-fts.md §7 was correct that an evidence write outage is LOSSY - no spool, no retry - and f12 ran under that condition. The 300s default is sized off measured stop-to-healthy times (42s and 61s on Zone, 84-93s on a laptop), so a substrate restart no longer drops writes. Declared because a frame whose write path stopped being lossy must not have that discovered from a diff, and because any comparison of f13 against f9-f12 on write-loss grounds is not like-for-like."}
   {:id :harness-changed-since-f10
