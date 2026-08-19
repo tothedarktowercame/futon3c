@@ -377,3 +377,18 @@
                                 revision-b))]
     (is (some #{:both-channels-varied}
               (checked registration bad-trace)))))
+(deftest pattern-offers-are-valid-without-a-memory-id
+  (is (prereg/memory-offer?
+       {:offer/id "offer/job/1"
+        :offer/pattern-id "math-strategy/x"
+        :offer/route :pattern
+        :offer/hops 1}))
+  (is (not (prereg/memory-offer?
+            {:offer/id "offer/job/1"
+             :offer/route :pattern
+             :offer/hops 1})))
+  (is (= ["memory/x"]
+         (vec (prereg/surfaced-memory-ids
+               {:memory-offers
+                [{:offer/memory-id "memory/x"}
+                 {:offer/pattern-id "math-strategy/x"}]})))))

@@ -100,8 +100,10 @@
      :cycle-closed? (some? (:cycle/closed-at cycle))
      :disposition-ids (mapv :disp/id dispositions)
      :memory-offers
-     (mapv #(select-keys % [:offer/id :offer/memory-id :offer/route :offer/hops
-                            :offer/via-pattern
+     (mapv #(select-keys % [:offer/id :offer/memory-id :offer/pattern-id
+                            :offer/route :offer/hops :offer/via-pattern
+                            :offer/routed-count :offer/pattern-hook
+                            :offer/pattern-body :offer/pattern-content
                             :offer/patterns-per-problem :offer/cascade-cap
                             :offer/cascade-truncated?
                             :offer/cascade-expanded-available])

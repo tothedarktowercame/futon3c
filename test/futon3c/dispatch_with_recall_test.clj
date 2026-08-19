@@ -103,12 +103,15 @@
       (is (= [:problem-md :proof-outline-md :stdin-packet]
              (mapv :source sources)))
       (is (= (.getPath problem-file) (:path (first sources))))
-      (is (= ["epsilon" "criterion" "boilerplate" "bound"]
+      (is (= ["epsilon" "criterion" "bound" "contradiction" "quotient"
+              "cauchy" "uniformly" "sequence" "continuous"]
              (:terms query))
           "the bounded lexical query round-robins across ranked sources")
+      (is (not-any? #{"boilerplate" "dispatch" "packet"}
+                    (:terms query)))
       (is (not-any? #{"generic"} (:terms query))))))
 
-(deftest recall-query-term-cap-is-parameterised-with-shipped-default-preserved
+(deftest recall-query-term-cap-reaches-beyond-the-old-four-term-bound
   (let [base {:problem "a-test"
               :subjects []
               :problem-root "/definitely/not/a/problem/root"
@@ -117,8 +120,12 @@
         default-query (dispatch/recall-query base "packet" {})
         eight-query (dispatch/recall-query
                      (assoc base :query-term-limit 8) "packet" {})]
-    (is (= dispatch/default-query-term-limit 4))
-    (is (= ["one" "two" "three" "four"] (:terms default-query)))
+    (is (= dispatch/default-query-term-limit 12))
+    (is (= ["one" "two" "three" "four" "five" "six" "seven" "eight"
+            "nine"]
+           (:terms default-query)))
+    (is (some #{"eight"} (:terms default-query))
+        "the shipped cap reaches a distinctive term beyond position four")
     (is (= ["one" "two" "three" "four" "five" "six" "seven" "eight"]
            (:terms eight-query)))
     (is (= :explicit-analysis-terms
@@ -885,8 +892,13 @@
          packet {})]
     (is (= :mathematical-fields
            (get-in query [:term-sources 0 :scope])))
+    (is (some #{"tendsto"} (get-in query [:term-sources 0 :terms]))
+        "the receipt retains available packet terms")
     (is (some #{"cauchytransform"} (:terms query)))
-    (is (some #{"tendsto"} (:terms query)))
+    (is (not-any? #{"tendsto" "integral" "outside" "contour" "disk"
+                    "tendsto_zero"}
+                  (:terms query))
+        "terms available only from stdin do not feed the issued query")
     (is (not-any? #{"route" "search" "report" "concretely"}
                   (:terms query)))))
 

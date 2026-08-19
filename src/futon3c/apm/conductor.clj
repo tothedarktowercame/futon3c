@@ -200,6 +200,15 @@
                      :throw false :timeout 60000})
    {:path path :query-params query-params}))
 
+(defn- cascade-pattern [base pattern-id]
+  (let [path (str "/api/alpha/entity/"
+                  (java.net.URLEncoder/encode (str pattern-id) "UTF-8"))]
+    (response-edn
+     (http-client/get (str (str/replace base #"/+$" "") path)
+                      {:headers {"Accept" "application/edn"}
+                       :throw false :timeout 60000})
+     {:path path :pattern-id pattern-id})))
+
 (defn- qualified-name [x]
   (if (keyword? x)
     (if-let [ns (namespace x)] (str ns "/" (name x)) (name x))
@@ -249,7 +258,31 @@
                              (qualified-name (:relation/type relation)))
                       (or (:relation/to relation) (:relation/dst relation)))))
             distinct
-            vec))}))
+            vec))
+     :pattern-fn
+     (fn [pattern-id]
+       ;; Pattern content is additive. A missing legacy entity must not hide
+       ;; the named pattern offer or break an otherwise valid memory cascade.
+       (try
+         (cascade-pattern base pattern-id)
+         (catch Throwable _ nil)))}))
+
+(defn domain-general-pattern-id?
+  "True when PATTERN-ID's pre-slash family has no uppercase subject suffix."
+  [pattern-id]
+  (let [family (first (str/split (str pattern-id) #"/" 2))]
+    (not (boolean (re-find #"-[A-Z]{2,}$" family)))))
+
+(defn- pattern-surface-content [surface]
+  (let [entity (or (:entity surface) surface)
+        props (or (:entity/props entity) (:props entity) entity)
+        hook (or (:hook props) (:pattern/hook props))
+        body (or (:body props) (:pattern/body props))
+        content (when (and (map? props) (seq props)) props)]
+    (cond-> {}
+      (some? hook) (assoc :offer/pattern-hook hook)
+      (some? body) (assoc :offer/pattern-body body)
+      content (assoc :offer/pattern-content content))))
 
 (defn expand-memory-cascade
   "Expand surfaced memories through reviewed pattern attachments.
@@ -258,7 +291,7 @@
    `why-targets-fn` returns authored @why targets for a pattern. The result is
    bounded after cheapest-route deduplication. `:expanded-count` excludes the
    leaf memories already surfaced by retrieval."
-  [seed-memory-ids {:keys [attachments-fn why-targets-fn cap]
+  [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn cap]
                     :or {cap default-memory-cascade-cap}}]
   (let [seed-memory-ids (vec (distinct seed-memory-ids))
         seed-memory-set (set seed-memory-ids)
@@ -322,9 +355,24 @@
                                 [hops ({:why-hop 0 :co-incidence 1} route 2)
                                  memory-id]))
                      vec)
-        selected (take cap ordered)]
+        selected (vec (take cap ordered))
+        offered-pattern-ids
+        (->> selected
+             (keep (comp :pattern second))
+             (filter domain-general-pattern-id?)
+             distinct
+             vec)
+        pattern-surfaces
+        (if pattern-fn
+          (into {}
+                (keep (fn [pattern-id]
+                        (when-let [surface (pattern-fn pattern-id)]
+                          [pattern-id surface])))
+                offered-pattern-ids)
+          {})]
     {:routes (into (mapv #(vector % {:route :leaf :hops 0}) seed-memory-ids)
                    selected)
+     :pattern-surfaces pattern-surfaces
      :seed-patterns seed-patterns
      :patterns-per-problem (count seed-patterns)
      :expanded-count (count selected)
@@ -346,13 +394,49 @@
                             {:cap (or (:memory-cascade-cap config)
                                       default-memory-cascade-cap)})))
         routes (or (:routes expansion)
-                   (mapv #(vector % {:route :leaf :hops 0}) memory-ids))]
+                   (mapv #(vector % {:route :leaf :hops 0}) memory-ids))
+        routed-counts (frequencies (keep (comp :pattern second) routes))
+        leaves (filterv #(= :leaf (get-in % [1 :route])) routes)
+        expanded (remove #(= :leaf (get-in % [1 :route])) routes)
+        pattern-and-memory-items
+        (:items
+         (reduce
+          (fn [{:keys [seen items]} [_ route :as memory-route]]
+            (let [pattern-id (:pattern route)
+                  emit-pattern? (and pattern-id
+                                     (domain-general-pattern-id? pattern-id)
+                                     (not (contains? seen pattern-id)))
+                  pattern-item
+                  [nil (merge {:route :pattern
+                               :hops 1
+                               :pattern-id pattern-id
+                               :routed-count (get routed-counts pattern-id)}
+                              (pattern-surface-content
+                               (get-in expansion
+                                       [:pattern-surfaces pattern-id])))]]
+              {:seen (cond-> seen emit-pattern? (conj pattern-id))
+               :items (cond-> items
+                        emit-pattern? (conj pattern-item)
+                        true (conj memory-route))}))
+          {:seen #{} :items []}
+          expanded))
+        ordered-items (into leaves pattern-and-memory-items)]
     (map-indexed
      (fn [index [memory-id route]]
        (cond-> {:offer/id (str "offer/" job-id "/" index)
-                :offer/memory-id memory-id
                 :offer/route (:route route)
                 :offer/hops (:hops route)}
+         memory-id
+         (assoc :offer/memory-id memory-id)
+         (:pattern-id route)
+         (assoc :offer/pattern-id (:pattern-id route)
+                :offer/routed-count (:routed-count route))
+         (:offer/pattern-hook route)
+         (assoc :offer/pattern-hook (:offer/pattern-hook route))
+         (:offer/pattern-body route)
+         (assoc :offer/pattern-body (:offer/pattern-body route))
+         (:offer/pattern-content route)
+         (assoc :offer/pattern-content (:offer/pattern-content route))
          enabled?
          (assoc :offer/patterns-per-problem (:patterns-per-problem expansion)
                 :offer/cascade-cap (:cap expansion)
@@ -361,7 +445,7 @@
                 (:expanded-available expansion))
          (and enabled? (:pattern route))
          (assoc :offer/via-pattern (:pattern route))))
-     routes)))
+     ordered-items)))
 
 (defn- memory-offers [state config]
   (->> (:steps state)

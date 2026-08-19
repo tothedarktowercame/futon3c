@@ -110,7 +110,13 @@
 (defn memory-offer? [x]
   (and (map? x)
        (nonblank-string? (:offer/id x))
-       (nonblank-string? (:offer/memory-id x))))
+       (not= (nonblank-string? (:offer/memory-id x))
+             (nonblank-string? (:offer/pattern-id x)))
+       (or (and (nonblank-string? (:offer/memory-id x))
+                (not= :pattern (:offer/route x)))
+           (and (nonblank-string? (:offer/pattern-id x))
+                (= :pattern (:offer/route x))
+                (= 1 (:offer/hops x))))))
 
 (def guidance-bell-types
   "Agency typed-bell performatives permitted in a guidance regime."
@@ -319,7 +325,7 @@
   (map :offer/id (:memory-offers trace)))
 
 (defn surfaced-memory-ids [trace]
-  (map :offer/memory-id (:memory-offers trace)))
+  (keep :offer/memory-id (:memory-offers trace)))
 
 (defn attempt-values [trace field]
   (map field (:cycle/attempts trace)))

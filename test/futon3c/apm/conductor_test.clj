@@ -126,6 +126,101 @@
         (is (every? true? (map :offer/cascade-truncated? offers)))
         (is (every? #(= 101 (:offer/cascade-expanded-available %)) offers))))))
 
+(deftest domain-general-pattern-family-classification
+  (let [cases
+        {"math-formalization-CA/measure-integration-api" false
+         "math-strategy/missing-dependency-protocol" true
+         "math-strategy/proof-architecture" true
+         "math-formalization-CV/entire-and-singularity-api" false
+         "math-formalization-FA/weak-convergence-hilbert" false
+         "math-formalization-CA/series-evaluation-api" false
+         "math-formalization-FA/inner-product-space-api" false
+         "math-formalization-CA/uniform-continuity-boundedness" false
+         "math-informal/convert-growth-counts-to-summability" true
+         "math-strategy/structural-obstruction-as-theorem" true
+         "math-formalization/separate-proof-transfer-from-artifact-replay" true}]
+    (doseq [[pattern-id expected] cases]
+      (is (= expected (conductor/domain-general-pattern-id? pattern-id))
+          pattern-id))))
+
+(deftest cascade-offers-domain-general-patterns-before-routed-memories
+  (with-redefs [conductor/expand-memory-cascade
+                (fn [_ _]
+                  {:routes
+                   [["memory/leaf" {:route :leaf :hops 0}]
+                    ["memory/general-1"
+                     {:route :co-incidence :hops 2
+                      :pattern "math-strategy/x"}]
+                    ["memory/specific"
+                     {:route :co-incidence :hops 2
+                      :pattern "math-formalization-CA/y"}]
+                    ["memory/general-2"
+                     {:route :co-incidence :hops 2
+                      :pattern "math-strategy/x"}]]
+                   :pattern-surfaces
+                   {"math-strategy/x"
+                    {:entity
+                     {:entity/props
+                      {:pattern/id "math-strategy/x"
+                       :pattern/context "Recognize the transferable context."
+                       :pattern/then "Apply the general move."}}}}
+                   :patterns-per-problem 2
+                   :cap 2
+                   :expanded-available 3
+                   :truncated? true})]
+    (let [offers
+          (vec
+           (conductor/cascade-receipt-offers
+            {:body {:job-id "job-patterns"
+                    :memory-use
+                    {:memory-use/surfaced-ids ["memory/leaf"]}}}
+            {:memory-cascade-enabled? true :memory-cascade-cap 2}))
+          pattern-offers (filterv #(= :pattern (:offer/route %)) offers)
+          positions (into {} (map-indexed (fn [i offer]
+                                            [(or (:offer/pattern-id offer)
+                                                 (:offer/memory-id offer)) i])
+                                          offers))]
+      (is (= [:leaf :pattern :co-incidence :co-incidence :co-incidence]
+             (mapv :offer/route offers)))
+      (is (= ["math-strategy/x"] (mapv :offer/pattern-id pattern-offers)))
+      (is (= 2 (:offer/routed-count (first pattern-offers))))
+      (is (nil? (:offer/memory-id (first pattern-offers))))
+      (is (= "Apply the general move."
+             (get-in (first pattern-offers)
+                     [:offer/pattern-content :pattern/then])))
+      (is (< (get positions "math-strategy/x")
+             (get positions "memory/general-1")))
+      (is (not-any? #(= "math-formalization-CA/y"
+                        (:offer/pattern-id %))
+                    offers))
+      (is (= 2 (:offer/cascade-cap (first pattern-offers)))
+          "pattern offers are added after capped memory expansion"))))
+
+(deftest cascade-pattern-offer-promotes-flat-hook-and-body
+  (with-redefs [conductor/expand-memory-cascade
+                (fn [_ _]
+                  {:routes
+                   [["memory/one"
+                     {:route :co-incidence :hops 2
+                      :pattern "math-strategy/flat"}]]
+                   :pattern-surfaces
+                   {"math-strategy/flat"
+                    {:hook "Notice the reusable move."
+                     :body "Apply it independently of the subject."}}
+                   :patterns-per-problem 1
+                   :cap 100
+                   :expanded-available 1
+                   :truncated? false})]
+    (let [offer (first
+                 (conductor/cascade-receipt-offers
+                  {:body {:job-id "job-flat"
+                          :memory-use {:memory-use/surfaced-ids []}}}
+                  {:memory-cascade-enabled? true}))]
+      (is (= :pattern (:offer/route offer)))
+      (is (= "Notice the reusable move." (:offer/pattern-hook offer)))
+      (is (= "Apply it independently of the subject."
+             (:offer/pattern-body offer))))))
+
 ;; The frozen round-1 EDN predates the seat-key gate (:unstaffed-carded-seat,
 ;; merged with feat/registration-seat-keys) and must not be edited, so the
 ;; fixture stages a staffed copy under a temp path for the machine to read.

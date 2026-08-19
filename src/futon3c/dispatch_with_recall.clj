@@ -18,7 +18,7 @@
            [java.util UUID]))
 
 (def default-limit 5)
-(def default-query-term-limit 4)
+(def default-query-term-limit 12)
 (def default-memory-channel :push)
 (def memory-pull-invitation-version "memory-pull-invitation-v2")
 
@@ -481,11 +481,11 @@
 
 (defn recall-query
   "Build a bounded lexical query from subject ids, preregistered terrain, and
-  problem files, with packet terms retained as fallback. The exact problem id
-  is also queried as a graph endpoint.
+  problem files. Packet terms are receipted but excluded from selection. The
+  exact problem id is also queried as a graph endpoint.
 
-  `:query-term-limit` parameterises the shipped four-term cap for frozen-data
-  analysis while preserving four as the production default. `:query-terms` is
+  `:query-term-limit` parameterises the shipped twelve-term cap for frozen-data
+  analysis while preserving twelve as the production default. `:query-terms` is
   an analysis seam for an explicitly constructed vocabulary; it still passes
   through the same ladder, search, reviewed-attachment projection, and ranking
   path as the shipped query."
@@ -515,7 +515,12 @@
         ;; Keep every source represented before taking the global cap. Without
         ;; this round-robin, problem.md exhausts the budget and a rarer term in
         ;; proof-outline.md (for example `functoriality`) is unreachable.
-        source-terms (round-robin (map :terms term-sources))
+        ;; Keep packet-derived terms in the receipt, but never spend bounded
+        ;; mathematical query slots on dispatch prose.
+        source-terms (round-robin
+                      (map :terms
+                           (remove #(= :stdin-packet (:source %))
+                                   term-sources)))
         ;; MEASURED 2026-07-30, not guessed. The text-search endpoint is
         ;; CONJUNCTIVE: hits fall off a cliff as terms are added — 1 term = 5
         ;; hits, 3 = 3, 7 = 2, 12 = 1, 29 = 0 — so a 36-term query returned
@@ -529,6 +534,11 @@
         ;; including 2 directly relevant memories.
         ;; FOLLOW-UP: several short queries unioned would beat one short query;
         ;; this is the minimal measured fix, not the best possible one.
+        ;; The endpoint now joins these terms with OR, so the old conjunctive
+        ;; cliff no longer determines the cap.  The measured falloff still
+        ;; rules out an unbounded query: broad OR queries impose store and
+        ;; ranking cost, while twelve slots reach three rounds across four
+        ;; interleaved inputs (or six rounds across two file sources).
         ;; INTERLEAVE the two vocabularies instead of concatenating them.
         ;;
         ;; MEASURED 2026-07-30 on a01A07. `subjects` are extracted from the
