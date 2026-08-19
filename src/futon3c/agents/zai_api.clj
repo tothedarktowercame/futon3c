@@ -1023,6 +1023,24 @@ CALLS contains maps of tool name, arguments, and result digest."
 (def ^:private default-auto-continue-max 8)
 (def ^:private final-report-reserve-ms (* 5 60 1000))
 
+(defn- report-reserve-for
+  "Final-report reserve for an envelope of CALL-TIMEOUT-MS.
+
+   The flat 5-minute reserve (e63951e8, 2026-08-17) was sized for the frame
+   student's pinned 60-minute runner budget, where reserving the last 5 minutes
+   for a report costs 8% of the envelope. The interactive REPL lane sends no
+   timeout and inherits the 300000 ms constructor default — where the SAME
+   reserve is the WHOLE envelope, so `(<= remaining-ms reserve)` was true on
+   round one and every such turn did no work and reported itself out of budget.
+
+   Cap the reserve at a quarter of the envelope so it can never consume the
+   work it exists to have something to report on. A 60-minute student still
+   reserves the full 5 minutes (5 < 15); a 5-minute lane reserves 75s."
+  [call-timeout-ms]
+  (if (and (integer? call-timeout-ms) (pos? call-timeout-ms))
+    (max 1 (min final-report-reserve-ms (quot call-timeout-ms 4)))
+    final-report-reserve-ms))
+
 (defn- budget-auto-continue-max
   "Scale the interior tool-round allowance with a cycle runner wall-clock pin.
    The historical 30-minute envelope used eight continuations; keep that
@@ -1144,7 +1162,7 @@ CALLS contains maps of tool name, arguments, and result digest."
   "Run one logical Z.AI turn. Kept as a top-level var so a namespace reload can
    update already-registered invoke closures."
   [{:keys [client opts api-key !messages backend tool-opts agent-id sid
-           !repeats auto-continue-max deadline-ms] :as ctx}]
+           !repeats auto-continue-max deadline-ms report-reserve-ms] :as ctx}]
   (let [auto-continue-max (configured-auto-continue-max auto-continue-max)]
     (loop [remaining tool-round-budget
            final-text ""
@@ -1160,7 +1178,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                  :error "wall-clock-budget")
 
           (and remaining-ms
-               (<= remaining-ms final-report-reserve-ms)
+               (<= remaining-ms (or report-reserve-ms final-report-reserve-ms))
                (not report-reserved?))
           (do
             (swap! !messages conj
@@ -1441,6 +1459,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                            :dispatch-id dispatch-id
                            :turn-id turn-id
                            :deadline-ms deadline-ms
+                           :report-reserve-ms (report-reserve-for call-timeout-ms)
                            :evidence-store evidence-store
                            :!repeats !repeats
                            :profile profile*

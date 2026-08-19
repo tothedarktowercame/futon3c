@@ -58,6 +58,17 @@ For metered non-coding API accounts, set this to:
   :type 'string
   :group 'zai-repl)
 
+(defcustom zai-repl-turn-timeout-ms 3600000
+  "Wall-clock envelope, in ms, requested for one Agency turn.
+
+Sent as `timeout-ms' on /api/alpha/invoke-stream.  Without it the Agency
+passes nil and the Z.AI harness falls back to its 300000 ms constructor
+default — five minutes for an interactive turn, which is meagre, and which
+before `report-reserve-for' was also exactly the final-report reserve.
+Kept below the 3660s curl --max-time on the same request."
+  :type 'integer
+  :group 'zai-repl)
+
 (defcustom zai-repl-max-tokens 4096
   "Maximum output tokens requested from Z.AI."
   :type 'integer
@@ -369,6 +380,7 @@ the id is display-only, so a failed read must never break buffer setup."
                       `(:agent-id ,zai-repl-agent-id
                         :prompt ,text
                         :surface "emacs-repl"
+                        :timeout-ms ,zai-repl-turn-timeout-ms
                         :caller ,(or (getenv "USER") user-login-name "joe"))
                       (when-let ((clock-id (zai-repl--dispatch-clock-id)))
                         `(:mission-id ,clock-id)))))

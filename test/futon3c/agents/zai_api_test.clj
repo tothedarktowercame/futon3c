@@ -168,6 +168,27 @@
         (is (= true (get-in round [:evidence/body :final])))
         (is (= "proved" (get-in round [:evidence/body :text])))))))
 
+(deftest final-report-reserve-never-consumes-the-whole-envelope
+  ;; e63951e8 sized a flat 5-minute reserve for the student's pinned 60-minute
+  ;; runner budget. The REPL lane inherits the 300000 ms default, where that
+  ;; same reserve is 100% of the envelope: (<= remaining-ms reserve) was true
+  ;; on round one, so the turn did no work and reported itself out of budget.
+  (let [reserve-for @#'zai/report-reserve-for]
+    ;; 60-minute student: the full 5 minutes is still reserved
+    (is (= (* 5 60 1000) (reserve-for (* 60 60 1000))))
+    ;; 20-minute envelope: 5 minutes is still under a quarter
+    (is (= (* 5 60 1000) (reserve-for (* 20 60 1000))))
+    ;; 5-minute REPL default: capped at a quarter, so work is possible at all
+    (is (= 75000 (reserve-for 300000)))
+    (is (< (reserve-for 300000) 300000))
+    ;; the reserve is never the whole envelope, at any size
+    (doseq [envelope [1000 60000 300000 (* 30 60 1000) (* 60 60 1000)]]
+      (is (< (reserve-for envelope) envelope)
+          (str "reserve consumed the whole envelope at " envelope)))
+    ;; absent or nonsense envelope falls back to the flat reserve
+    (is (= (* 5 60 1000) (reserve-for nil)))
+    (is (= (* 5 60 1000) (reserve-for 0)))))
+
 (deftest records-normalized-zai-usage-per-round
   (let [full-usage {:prompt_tokens 101
                     :prompt_tokens_details {:cached_tokens 23}
