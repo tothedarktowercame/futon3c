@@ -70,7 +70,7 @@
  :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
 
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "b410cec0b5fc090d3cf7850f1aa8ad076c319e9d"
+ :reg/harness-revision     "3b1eb78d4a26ef8dd1c28b670169aff491eb24d8"
 
  ;; Frame identity, so the operator surface can say WHICH FRAME at a glance
  ;; instead of leaving it to be inferred from the seat-name prefix.
@@ -164,6 +164,8 @@
  :reg/known-departures
  [{:id :analyst-tenure-n2
    :text "The Analyst serves N = 2 frames (f13, f14); analyst-3 is in tenure 1 of 2 and every other seat is minted fresh. Ruled 2026-08-18; N stays pinned at 2. analyst-1's tenure produced four findings unavailable at n=1 and none needing n=3, so the parameter is unchanged on evidence rather than by default."}
+  {:id :append-retry-live
+   :text "RESTART-TIME WRITE BEHAVIOUR CHANGED between f12 and this frame. futon3c evidence appends now RETRY on :store-unreachable with a 300s window (f1322302, c035df5c, 99176882, claude-11) instead of returning a SocialError immediately. Before this, README-fts.md §7 was correct that an evidence write outage is LOSSY - no spool, no retry - and f12 ran under that condition. The 300s default is sized off measured stop-to-healthy times (42s and 61s on Zone, 84-93s on a laptop), so a substrate restart no longer drops writes. Declared because a frame whose write path stopped being lossy must not have that discovered from a diff, and because any comparison of f13 against f9-f12 on write-loss grounds is not like-for-like."}
   {:id :harness-changed-since-f10
    :text "Twelve defects were fixed in source between f10's close and the batch registration (D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D24 D25), and the recall read path was changed again afterwards (d893280a, 10937528). Frame 13 therefore runs on materially different harness code from f9/f10 AND from the code f12's registration named, and is NOT a replication of any of them. Every fix was gated by ground control with re-run clj-kondo, check-parens, tests at an enumerated namespace scope, and an independent mutation; the record is holes/excursions/E-APM-f10-defects.md. Declared because a between-frame difference this large must not be discovered by the Analyst from a diff."}]
 
