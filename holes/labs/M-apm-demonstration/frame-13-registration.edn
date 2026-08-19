@@ -49,13 +49,17 @@
 ;; analyst-1 completed its own succession at f10's close and its handoff is at
 ;; analysis/HANDOFF-analyst-1-to-analyst-2.md; the same is expected here.
 ;;
-;; HARNESS PIN. RE-TAKEN 2026-08-19. The batch was registered pinned at
-;; e6721ca0; the recall read-path fix (d893280a demote the anchor from hard
-;; filter to ranking boost, 10937528 anchor-df basis receipts) landed after
-;; that and moved the pin to 10937528 BEFORE f12 ran. f12 therefore ran on
-;; harness code its own registration did not name. Re-pinned here so f13/f14
-;; declare the code they will actually execute. Computed by
-;; `git -C futon3c log -1 --format=%H -- src scripts deps.edn`.
+;; HARNESS PIN. RE-TAKEN TWICE ON 2026-08-19, now 7b188d8c.
+;; The batch was registered pinned at e6721ca0. Three read-path commits landed
+;; after that: d893280a (demote the recall anchor from hard filter to ranking
+;; boost), 10937528 (anchor-df basis receipts), 7b188d8c (join the lexical
+;; terms with OR instead of a space). The JVM that ran f12 booted 06:12:40,
+;; BEFORE any of the three, so f12 ran the old conjunctive recall path and its
+;; every-dispatch `completed-empty` is explained by that and not by the corpus.
+;; This pin therefore names code that has NEVER executed in a frame. It requires
+;; a JVM restart before f13 opens; `harness-pin-check` will refuse the open
+;; otherwise, which is the intended behaviour and the gate we want.
+;; Computed by `git -C futon3c log -1 --format=%H -- src scripts deps.edn`.
 
 {:kind   :apm-demonstration-round1-registration
  :schema 1
@@ -66,7 +70,7 @@
  :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
 
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
- :reg/harness-revision     "10937528a08701e89975719826b552180fb3fb7b"
+ :reg/harness-revision     "7b188d8c7a215146f98996b62fa06bccaaa4123e"
 
  :reg/solver-seat  "f13-solver"
  :reg/student-seat "f13-student"
