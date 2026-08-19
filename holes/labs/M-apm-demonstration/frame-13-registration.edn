@@ -1,6 +1,12 @@
-;; FRAME-12 registration — claude-2 (ground control), 2026-08-18.
+;; FRAME-13 registration — claude-2 (ground control), 2026-08-18.
 ;;
-;; Queued back-to-back with frame-11 under the N = 2 analyst ruling. This is
+;; Frame 13 of a THREE-FRAME BATCH (f12 m03J01, f13 m99J06, f14 m93J06)
+;; run end-to-end without operator intervention between frames (Joe, 2026-08-18:
+;; "I would like these to run end-to-end and not stop in between frames").
+;; Problems chosen CLEAR of the topology block: none touches covering spaces,
+;; intersection numbers, form integration or homology, so none is gated on the
+;; ConstructionTargets work under separate discussion.
+;; Previous frame in the batch: m03J01. This is
 ;; analyst-2's SECOND and LAST frame; succession is a scheduled duty of THIS
 ;; frame, not the next tenure's problem.
 ;;
@@ -50,14 +56,14 @@
  :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
  :reg/harness-revision     "e6721ca0627e2d393a4c78c0975e710cba307563"
 
- :reg/solver-seat  "f12-solver"
- :reg/student-seat "f12-student"
- :reg/guide-seat   "f12-guide"
- :reg/proctor-seat "f12-proctor"
- :reg/scribe-seat  "f12-scribe"
+ :reg/solver-seat  "f13-solver"
+ :reg/student-seat "f13-student"
+ :reg/guide-seat   "f13-guide"
+ :reg/proctor-seat "f13-proctor"
+ :reg/scribe-seat  "f13-scribe"
 
- :reg/analyst-seat "analyst-2"
- :reg/analyst-tenure {:n 2 :frame-index 2 :frames ["f11" "f12"]}
+ :reg/analyst-seat "analyst-3"
+ :reg/analyst-tenure {:n 2 :frame-index 1 :frames ["f13" "f14"]}
 
  :reg/guidance-regime #{:answer :suggest}
  :reg/solver-config {:model "gpt-5.6-sol" :reasoning-effort "max"}
@@ -70,13 +76,13 @@
  :structural-invariants  [:F1]
  :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
 
- :problem {:problem-id            "m03J01"
+ :problem {:problem-id            "m99J06"
            :difficulty-stratum    "family=m;one-executable-hole"
            :regime                "e7b9ec02599b36845c68ca053416787a23ac29a8"
            :locked-lemma-exposure []}
 
  :variation {:kind     :measured
-             :endpoint "frame-12: fresh seats, analyst-2 tenure 2 of 2 and final; second frame on the repaired write path, testing whether f11's result replicates"}
+             :endpoint "frame-13: fresh seats, analyst-3 tenure 1 of 2; second frame on the repaired write path, testing whether f11's result replicates"}
 
  :claim :descriptive
  :arms  [{:name "fresh seats, same analyst (tenure 2 of 2), cascade on, write path repaired"
@@ -85,7 +91,7 @@
           :role :treatment}]
 
  :replication-stage  :pilot
- :pilot-units        [{:problem-id            "m03J01"
+ :pilot-units        [{:problem-id            "m99J06"
                        :difficulty-stratum    "family=m;one-executable-hole"
                        :regime                "e7b9ec02599b36845c68ca053416787a23ac29a8"
                        :locked-lemma-exposure []}]
