@@ -903,3 +903,34 @@ rode inside `dispatch-solver` openings, which the subtrahend cancels exactly
 dispatch channel, the guidance metric is structurally BLIND to guidance that was
 actually given. This frame gave two substantive guidance packets and the honest
 recorded count is 0. Both statements are true and they must be reported together.
+
+---
+
+## POST-CLOSE — a replayed park resume, and why it was nearly destructive
+
+After the cycle closed I received a park resume for
+`invoke-1787160573399-5090-aa4c6b08` (scribe pass 2) carrying the scribe's full
+report as if it were new. **I had already consumed that result**: I noticed the
+park had been released while the job showed `state: done`, fetched the job
+result directly, and acted on it — promoted `e-56ae9c01…`, recorded the promote
+lanes, closed the cycle, belled ground control.
+
+**The resume payload carries nothing marking it as a replay.** It is
+byte-identical in form to a first delivery. A guide that acted on it naively
+would have re-issued `promote-artifact` for a memory that is already `:reviewed`
+— which is exactly the operation D62 makes dangerous, on a memory that is
+currently good. The failure mode is not a wasted action; it is a poisoned
+memory, and the trigger is simply having been efficient enough to poll the job
+directly instead of waiting.
+
+Mitigation used: verify state before acting on any resume. Final state confirmed
+after the replay, nothing re-run:
+
+    cycle           bound? false, closed at v356
+    e-4f6b5d49…  :reviewed  math-strategy/construction-before-estimates
+    e-00c94a8d…  :reviewed  math-strategy/proof-architecture
+    e-56ae9c01…  :reviewed  math-formalization-CA/ode-gronwall-api
+
+Recommendation: park resumes should carry the park-id and a
+delivered-already/ack marker, so a continuation can tell a first delivery from a
+replay without reconstructing what it did last turn.
