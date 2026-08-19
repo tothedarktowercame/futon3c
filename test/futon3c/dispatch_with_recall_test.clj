@@ -95,6 +95,17 @@
          #"positive integer"
          (dispatch/recall-query (assoc base :query-term-limit 0) "packet" {})))))
 
+(deftest recall-query-joins-selected-terms-as-a-disjunction
+  (let [query (dispatch/recall-query
+               {:problem "a-test"
+                :subjects []
+                :problem-root "/definitely/not/a/problem/root"
+                :query-terms ["hilbert" "weak-convergence" "computes"]}
+               "packet"
+               {})]
+    (is (= "hilbert OR weak-convergence OR computes" (:query query))
+        "a zero-match term must not intersect away the other term matches")))
+
 (deftest substrate-call-deadline-does-not-preempt-total-recall-budget
   (let [timeout-fn
         (ns-resolve 'futon3c.dispatch-with-recall 'per-call-timeout-ms)]

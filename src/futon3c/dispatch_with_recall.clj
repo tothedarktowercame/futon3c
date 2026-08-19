@@ -577,7 +577,7 @@
      :required-term required-term
      :anchor-source anchor-source
      :terms terms
-     :query (str/join " " terms)}))
+     :query (str/join " OR " terms)}))
 
 (defn- request-edn
   [method url opts]
