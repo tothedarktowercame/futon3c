@@ -728,3 +728,43 @@ number now says almost nothing about how much conducting happened — 315 of my
 CASCADE size, not with what was actually offered to anyone: 300 of those 315
 offers were never shown to a single agent (see the offer-inflation finding
 above). **We paid 287 MB to disposition 300 offers that nobody was ever made.**
+
+---
+
+## THE MACHINE'S OWN RETRIEVAL PROBE — the cleanest number this frame produced
+
+`:rprobe` records available-vs-retrieved per dispatch. Ten probes in the cycle:
+
+| dispatch | available | retrieved |
+|---|---|---|
+| solver ×3 | **6** | 5 |
+| student | **495** | **0** |
+| scribe/other ×6 | 6 or 0 | 5 or 0 |
+
+Two facts, both measured by the harness rather than inferred by me:
+
+**1. The solver's eligible pool was SIX memories.** Not 495 — six. Recall
+surfaced 5 of those 6, so dispatch-time retrieval was working nearly perfectly
+*against a shelf that was almost empty*. The frame's solver-phase result is
+therefore NOT "retrieval failed to find the good memory": it is "there were six
+memories to choose from, five were shown, none was about ODEs." Those are very
+different findings and only the probe separates them.
+
+**2. The student had 495 eligible and retrieved ZERO.** The machine's own
+instrument says dispatch-time recall returned nothing at all — not a bad ranking,
+not a truncated list, an empty one. `:rprobe/retrieved-ids []` against
+`:rprobe/available-ids` containing both `e-4f6b5d49…` and `e-00c94a8d…` by name.
+
+So the promoted memories were in the eligible set, named in the probe, and
+surfaced to nobody. The student then tried on its own initiative — its packet
+carries a `memory-pull-invitation-v2` telling it to use `memory_search`,
+`pattern_memory`, `evidence_graph`, `psr_search` mid-session — and its searches
+returned only unattached patterns. **It did everything the invitation asked.**
+
+### Correction to an earlier suspicion of mine
+
+I flagged that the scribe was handed `:student-job-ids []` and started to write
+it up as a defect. It is not one: that empty list is scribe dispatch **1**, at
+`:promote-solver`, before the student had run — correctly empty. Scribe dispatch
+**2** carries `["invoke-1787159146808-5088-10991dba"]`. My first regex match
+took the earlier occurrence. No defect; the machine is right.
