@@ -1352,3 +1352,64 @@ Offer the bridging pattern itself as a hop-1 offer, ranked ahead of its
 expansions, and measure whether solvers attest `USED` on patterns at a higher
 rate than on the leaves they route to. That is a change to the offer builder,
 not to retrieval, and it is independent of D60.
+
+## CORRECTION — "the correctly-termed query reaches the cluster the problem is about" was WRONG
+
+I wrote that. Joe quoted it back and asked for the fix in code. Before writing
+the packet I measured what the candidate rules actually return, and the claim
+does not survive.
+
+### Candidate selection rules, true counts and top-5 contents
+
+    D60 actual      "exponent OR closing OR conjunct OR existence"     count 40
+      top-5: eLpNorm-to-essential-supremum, eLpNorm-translation, ...  -> measure theory
+
+    memory-df desc  "declaration OR cauchy OR uniqueness OR exponent"  count 122
+      top-5: entire-extension-from-cocompact-asymptotics, ...         -> complex analysis
+
+    proof-outline   8 terms incl. picard, holder                       count 106
+      top-5: Holder-convolution-vanishes-at-infinity, diskwise-L1     -> harmonic analysis
+
+    target          "picard OR holder OR globalization OR dependence"  count 11
+      top-5: the SAME Holder-convolution / diskwise-L1 cluster        -> harmonic analysis
+
+**Even the hand-picked query returns nothing about ODEs.** `holder` matches
+*Hölder convolution vanishing at infinity* — a different Hölder. `picard`
+returns one memory.
+
+### The store has essentially no ODE material
+
+    gronwall 0 | flow 0 | "ordinary differential" 0 | ode 2 | picard 1
+    lipschitz 6 | holder 8 | uniqueness 23
+
+and the lipschitz/holder hits are analysis memories using those words otherwise.
+
+### What I did wrong, precisely
+
+I read term names, saw `picard`, `holder`, `lipschitz`, and called it "the
+cluster the problem is actually about" **without opening a single memory.** That
+is inference from resemblance — the exact error I wrote into f15's registration
+as a rule for the guide (*"do not infer use from resemblance, in either
+direction"*) and then committed myself, in the sentence Joe quoted back.
+
+### What this changes
+
+- **D60 remains a real defect.** The issued query IS prose junk, and a
+  `:stdin-packet` source contributing `bell`, `lake`, `named`, `verbatim` to a
+  mathematical query is indefensible on its own terms.
+- **But fixing D60 would NOT have changed f15.** No ordering rule can surface
+  material the store does not hold, and of the three alternatives tested,
+  ranking by memory-df is measurably WORSE (122 hits, complex analysis on top).
+- **A 0/5 `USED` from f15 is not a retrieval verdict.** It is a statement about
+  corpus coverage: fifteen frames of deposits sit in measure theory, complex
+  analysis and functional analysis, and this is the first ODE problem.
+- **D63 gets MORE important.** If the leaf corpus has no domain overlap with a
+  new problem, the only layer that could transfer is the domain-general strategy
+  pattern — precisely the layer the cascade never offers.
+
+### The fix worth shipping anyway, on its own merits and not oversold
+
+1. Drop `:stdin-packet` as a query-term source, or rank it last.
+2. Raise `default-query-term-limit` above 4.
+
+Neither will help f15. Both are correct.
