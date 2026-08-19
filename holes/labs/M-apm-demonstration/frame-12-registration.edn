@@ -123,7 +123,7 @@
  :reg/cascade-measurements ["offers by route" "patterns per problem" "cascade truncation"]
 
  :reg/role-cards
- {:codex-solver "bd8091080cd40a0bbf35f559a93976f454113b2b"
+ {:codex-solver "00552e4108b02e00139772963bc5e9fa8ff5b63e"
   :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
   :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd"
   :scribe       "02441d9df4b8a05355790a51f1e535bf9e9465d4"

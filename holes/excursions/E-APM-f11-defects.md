@@ -1181,3 +1181,51 @@ route**, with the guide as reviewer. The guide declined deliberately, having jus
 been told not to manufacture the headline by patching the harness, and said so at
 the time. The series must not read "f11 gained zero attachments" as "f11 could
 not have gained one." It could have, dishonestly.
+
+
+## D39. Two role-card files share one blob, so blob-based resolution is ambiguous **[verified]**
+
+`role-cards/codex-solver-v3.md` and `role-cards/codex-solver-v3-DRAFT.md` were
+**byte-identical**, both hashing to `bd8091080cd40a0bbf35f559a93976f454113b2b` —
+the blob every registration from f9 to f12 pinned as `:codex-solver`.
+
+D8's fix resolves a pinned card by blob via `git ls-tree -r HEAD` and requires
+**exactly one match**, refusing on ambiguity. So for the scribe card that shape
+is safe; for the solver card, had the same resolution been applied, it would have
+refused outright.
+
+Worse, and this is the part that nearly bit: **editing `v3` makes the DRAFT the
+sole holder of the old blob.** Any registration still pinning
+`bd8091080c` would then resolve — uniquely and silently — to a file whose name
+says it is a draft. The card that ran would not be the card anyone thought was
+pinned.
+
+Handled here by re-pinning f12's `:codex-solver` to the new blob
+`00552e4108b02e00139772963bc5e9fa8ff5b63e` before opening. f9/f10/f11 are closed
+and their pins are historical.
+
+**Not fixed:** the duplicate file still exists, and nothing prevents a future
+duplicate. Candidate fixes, cheapest first — delete the DRAFT once its content is
+confirmed superseded; or have card resolution refuse duplicates loudly at
+registration time rather than at dispatch time, so the failure lands on the
+author rather than mid-frame.
+
+## Standing instruction added to the solver card (operator, 2026-08-18)
+
+> *"agents should know that 'not in mathlib' isn't a good reason to stop working,
+> and identifying new ConstructionTargets should be part of their work."*
+
+Added as a card section rather than repeated per-packet, so it survives ground
+control forgetting to say it. It states the distinction that matters —
+
+- *the statement is wrong* → stop and report, do not build around it;
+- *the statement is right and the library lacks a tool* → name the tool as a
+  construction target and build it if budget allows —
+
+and carries the anti-vacuity gate with the corpus's own history as the reason:
+`intersectionNumber := 0` and `integral ω := ω 0` both compiled, both passed
+review, and one theorem was thereby discharged as `0 = k · 0`.
+
+That gate is now in the pinned card, so every future solver inherits it without
+ground control writing it into each packet by hand — which is where it has lived
+all day.
