@@ -664,10 +664,19 @@ genuinely removes it. The 3 remaining failures are
 `[bb] async emacsclient ... exceeded bounded grace; reaping` — emacsclient
 timing, pre-existing, unrelated to rendering.
 
-**Not delivered: the wall-clock field.** The packet's third item asked for a
-timestamp on the last step if the state already carried one, and said to report
-and change nothing if it did not. Nothing was added and I have not seen the
-report. Treat as open.
+**Item 3 (wall-clock) — CLOSED, correctly.** codex-6's report arrived after my
+review: persisted cycle step records carry `:tool`, `:args`, `:result`,
+`:evidence/id` and optionally `:branch-marker`, and NO timestamp. So nothing was
+added, and `Rendered-at` stays step-only rather than introducing a render-time
+clock read. That is the outcome the packet asked for.
+
+**Correction to my own test run.** I reported "3 pre-existing failures" in
+`futon3c.blackboard-test`. Those were caused by MY invocation: the namespace
+needs `FUTON3C_BLACKBOARD_PROJECT=false`, which codex-6 set and I did not. With
+the guard set: 32 tests, 127 assertions, **0 failures, exit 0**. The two failing
+tests were `project-default-denies-non-serving-jvms` and
+`async-emacsclient-keeps-independent-panel-lanes` — exactly the projection and
+async behaviour that flag controls.
 
 ### MY ERROR — `git commit -am` in a shared checkout swept up another agent's work
 
@@ -688,3 +697,44 @@ This is the same hazard as the branch-stacking incident earlier in the series �
 several agents, one checkout. **Rule: never `git commit -a` in this tree. Stage
 explicit paths.** Recorded because the attribution is now wrong in the history
 and a later reader tracing the HUD fix would not find its tests.
+
+
+## D54 — the stale "working" seat is NOT only a terminal-state defect [verified on real f12 data]
+
+`b410cec0` suppresses `working` and `In-flight: awaiting` when the cycle is
+COMPLETED. That fixes the case Joe reported. It does not fix the defect.
+
+Rendering the REAL persisted f12 state
+(`data/problem-state/m03J01-cee36266…9ee87ba/v44.edn`) through the NEW code:
+
+    Frame: f12  Problem: m03J01  Cycle: 9ee87ba  Save: v43  Rendered-at: step 83
+    Phase: close (9/9): ...
+      solver   f12-solver       working (job invoke-1787123632359-4949-f2b97971)
+      ...
+    In-flight: awaiting f12-solver (job invoke-1787123632359-4949-f2b97971)
+
+The frame id works. The staleness does not, because `:current-phase` here is
+`:close`, not nil, so `completed?` is false and the suppression never fires. The
+job named is the FIRST of three solver dispatches; the student has since recorded
+an attempt 34 steps later. It is unambiguously finished.
+
+So the real rule is broader: **a seat reads `working` at ANY phase whenever
+dispatches outnumber recorded attempts** — at `:adjudicate`, at `:promote`, at
+`:close`. Terminal was merely where Joe happened to look.
+
+Why the obvious fix is not available: there is NO attempt-recording STEP in the
+persisted state. Grepping f12's steps for dispatch/attempt tools yields only
+
+    18 :dispatch-solver   21 :dispatch-solver   23 :dispatch-solver
+    48 :dispatch-student-fresh
+
+Attempts live in `:cycle/outputs` with no step index, so "was an attempt recorded
+after this dispatch?" cannot be answered by index comparison. The usable signal is
+the PHASE: a solver dispatch cannot be in flight once the cycle has advanced past
+the solver phases. That is a design decision about the phase→role mapping, not a
+one-liner, which is why it is a fresh dispatch rather than a review fix.
+
+**DELIBERATELY NOT DISPATCHED YET.** Another commit would move the harness pin
+again, and f13/f14 are pinned at `b410cec0` with a restart pending. Chasing the
+pin would loop. This is display-only — it cannot affect any measurement — so it
+must not gate f13. Dispatch after f13 opens; it lands for f15.
