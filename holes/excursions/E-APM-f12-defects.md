@@ -371,3 +371,34 @@ The batch "runs end-to-end" only in the sense that ground control launches each
 frame; the chain is a person, not a mechanism. At the time f12 closed (guide bell
 ~08:14) all five f13 seats still sat at their 06:12:52 restore stamp, untouched,
 and `/api/alpha/parked` was empty. Nothing was awaiting anything.
+
+### D54. `GET /api/alpha/parked` reports nothing while a park is live **[verified]**
+
+The workspace protocol (`CLAUDE.md`, "Park on every dispatch") tells agents to
+state the park id at dispatch time **"so Joe can poll `GET /api/alpha/parked`
+himself. Operator visibility is part of the contract, not a courtesy."**
+
+That endpoint does not honour the contract. With my P29 park live:
+
+```
+GET /api/alpha/parked                  -> {"parked":[], "more-pending":false}
+GET /api/alpha/parked?agent=analyst-2  -> {"parked":[{"id":"park-4cbe823e-…",
+                                            "awaiting":["invoke-1787127501525-…"],
+                                            "mode":"within-turn"}],
+                                           "more-pending":true}
+```
+
+The unfiltered listing — the one the protocol names — returns an **empty array
+and `more-pending:false`**, which is indistinguishable from "nothing is parked."
+The filtered call returns the same park id my re-park POST returned, so the park
+was live throughout; `within-turn` parks appear to be excluded from the
+unfiltered view.
+
+Consequence: an operator following the documented procedure sees an empty board
+while agents are parked, and an agent that re-parks defensively (as I did, having
+read the empty list as a lost park) cannot tell a swept park from a hidden one.
+The idempotent POST returning the same id is the only signal that distinguishes
+them, and nothing documents that.
+
+Small, and it undermines the one mechanism the protocol provides for noticing
+that a dispatch has gone quiet.
