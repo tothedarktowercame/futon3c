@@ -402,3 +402,79 @@ them, and nothing documents that.
 
 Small, and it undermines the one mechanism the protocol provides for noticing
 that a dispatch has gone quiet.
+
+---
+
+## RULING — `:problem-closed`, f12-guide vs analyst-2 (ground control, 2026-08-19)
+
+Both are right about what they measured, and I am upholding neither verdict over
+the other, because the disagreement is not between two readings of one fact — it
+is two facts wearing one prediction's name.
+
+**The prediction was defective, and it is mine.** `:problem-closed` silently
+conjoins two independent claims:
+
+- an ARTIFACT claim — 0 executable sorries, axiom-clean, frozen statement
+  unchanged, settled by re-running the file;
+- a MATHEMATICS claim — the statement closed is non-vacuous, so something was
+  actually solved.
+
+f12 is the case that separates them: the first is unambiguously true and
+independently re-verified; the second is false. A single-valued verdict on a
+conjunction whose conjuncts disagree cannot be right, and the two adjudicators
+each picked the conjunct their seat is responsible for. That is not a failure by
+either of them. **f12-guide is right that recording `:refuted` would make the
+series wrong about the Lean file. analyst-2 is right that recording `:confirmed`
+would let m03J01 be counted later as a solved Dirichlet problem.**
+
+Note also that analyst-2 did not in fact log a bare refutation: its verdict slug
+is `:refuted-on-the-object` and its `:measured` field reads "0 residual sorries,
+axiom-clean true, frozen statement unchanged — and :defective". The pair was
+already travelling together in the analyst's own entry. The exposure is at the
+citation boundary, not in the entry.
+
+### Ruling
+
+1. **f12's record keeps BOTH, and neither is downgraded.** `:problem-closed`
+   resolves as `{:outcome :confirmed-on-artifact, :verdict :refuted-on-the-object,
+   :disposition :defective}`. No single winner is elected, because electing one
+   would discard a true measurement to protect a reader.
+2. **The disposition is not optional.** A verdict on either axis quoted without
+   `:disposition` is not a permitted citation of the frame. f12-guide's condition
+   — that a later reader must not be able to pick up "problem-closed: confirmed"
+   without "disposition: defective" travelling with it — is adopted as a rule of
+   the series, not a courtesy of this entry.
+3. **The fallback is not needed.** f12-guide offered `:refuted` as the safer of
+   two wrong answers if the schema cannot carry the pair. It can: `series.edn`
+   has no code consumers (grep over `scripts/`, `src/`, `holes/` finds none) — it
+   is read by analysts and by ground control, so the shape is free to change.
+4. **Fixed at the source for f13/f14**, which is the point of raising it before
+   the precedent propagates. The single prediction is SPLIT into
+   `:problem-closed-on-artifact` and `:problem-solved`, with the disposition rule
+   written into the second one's text. Predictions go 10 -> 11. Frames 9 and 10
+   would have confirmed both; f11 and f12 would have confirmed the first and
+   refuted the second — which is precisely the two-frame finding about the corpus
+   that the collapsed prediction was hiding.
+
+`:problem-solved` is now the prediction that carries the objective. If a frame
+confirms the artifact axis and refutes the mathematics axis, **the frame has not
+succeeded**, and the series entry must read that way at a glance.
+
+### Meta
+
+This is the third defect today whose mechanism is a measurement that succeeded
+against a population nobody had stated — here, "closed" against an unstated
+requirement that the statement be inhabited. The basis rule keeps arriving in new
+clothes. The registration is now the place it gets caught, because a prediction
+that cannot be refuted separately from another prediction is not one prediction.
+
+## D51 — restored-seat mint path — REFUTED AND CLOSED [analyst-2]
+
+f12-guide's hypothesis (the D5 `frame_seats.clj` fix does not reach a RESTORED
+seat, so `memory-domain` is absent and the student's memory lands `:zaif-work`)
+is refuted. analyst-2 checked the roster: `memory-domain` is absent for EVERY
+student seat including f11's, and f11's student recorded `:mathematics`. So the
+mint path cannot be what discriminates the two frames. Offered as unconfirmed,
+tested, closed — which is the disposal this file exists to record.
+
+**The write path is where to look.** Open, unassigned.
