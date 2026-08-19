@@ -21,6 +21,11 @@
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute FileTime]))
 
+(defn- test-sha1-hex [s]
+  (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-1")
+                        (.getBytes (str s) "UTF-8"))]
+    (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
+
 (def dispatch-packet
   (apply str (repeat 220 "p")))
 
@@ -571,6 +576,61 @@
     (is (not= (get-in outputs [:solver-attempt :cycle/environment-checkout])
               (get-in outputs [:student-attempts 0
                                :cycle/environment-checkout])))))
+
+(defn- stamp-store-revision-run [snapshot?]
+  (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        memory-ids ["memory/z" "memory/a" "memory/m"]
+        p (problem/make-problem
+           (tools/make-mock-backend)
+           (fn [_ _] {:evidence {}})
+           "/tmp/store-revision-stamp-state"
+           (fn [_] {:checkout "/frames/solver" :base-revision revision})
+           (fn [_] {:harness-revision revision :harness-tree-dirty? false})
+           (constantly memory-ids)
+           (constantly 1))
+        start (start-problem p {:session-id "store-revision-stamp"
+                                :problem-id "p"
+                                :cycle/mode :store-mode
+                                :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        snap-state (if snapshot?
+                     (:state (runner/step p (:state begun)
+                                         {:tool :snapshot-store :args []}))
+                     (:state begun))
+        state (assoc snap-state :current-phase :guided-solve
+                     :cycle/outputs
+                     {:registration :r
+                      :store-snapshot :s
+                      :stratum-frozen-at 1
+                      :environment-revision revision
+                      :harness-revision revision
+                      :environment-checkouts
+                      {:solver {:checkout "/frames/solver"
+                                :base-revision revision}
+                       :student []}
+                      :frame :f :containment-probe :c})
+        attempt {:cycle/regime "solver"
+                 :cycle/runner-freshness true}
+        advanced (runner/step
+                  p state
+                  {:tool :advance-problem-phase
+                   :args ["M" "C" {:solver-attempt attempt
+                                     :ground-control-events []
+                                     :memory-offers []}]})]
+    {:attempt (get-in advanced [:state :cycle/outputs :solver-attempt])
+     :memory-ids memory-ids}))
+
+(deftest attempts-carry-the-recorded-store-snapshot-revision
+  (let [{:keys [attempt memory-ids]} (stamp-store-revision-run true)
+        shuffled [(nth memory-ids 1) (nth memory-ids 2) (nth memory-ids 0)]
+        expected (test-sha1-hex (str/join "\n" (sort shuffled)))]
+    (is (= expected (:cycle/store-revision attempt)))
+    (is (prereg/attempt? attempt))))
+
+(deftest attempts-omit-store-revision-without-a-recorded-snapshot
+  (let [{:keys [attempt]} (stamp-store-revision-run false)]
+    (is (not (contains? attempt :cycle/store-revision)))))
 
 (deftest each-student-dispatch-provisions-and-stamps-its-own-tree
   (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

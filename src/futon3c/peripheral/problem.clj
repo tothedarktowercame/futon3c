@@ -22,6 +22,7 @@
             HttpResponse$BodyHandlers]
            [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
+           [java.security MessageDigest]
            [java.time Instant]
            [java.util UUID]))
 
@@ -173,13 +174,26 @@
      ;; peripheral's required evidence store actually exercises this path.
      :snapshot/tags []}))
 
-(defn- stamp-attempt-environment [attempt assignment harness-revision]
+(defn- sha1-hex [s]
+  (let [digest (.digest (MessageDigest/getInstance "SHA-1")
+                        (.getBytes (str s) "UTF-8"))]
+    (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
+
+(defn- store-revision [snapshot]
+  (when (some? (:snap/memory-ids snapshot))
+    (sha1-hex (str/join "\n" (sort (:snap/memory-ids snapshot))))))
+
+(defn- stamp-attempt-environment
+  [attempt assignment harness-revision store-revision]
   (if (map? attempt)
     (cond-> (assoc attempt
                    :cycle/environment-checkout (:checkout assignment)
                    :cycle/environment-revision (:base-revision assignment))
       (some? harness-revision)
-      (assoc :cycle/harness-revision harness-revision))
+      (assoc :cycle/harness-revision harness-revision)
+
+      (some? store-revision)
+      (assoc :cycle/store-revision store-revision))
     attempt))
 
 (defn- recorded-harness-measurement [state]
@@ -387,6 +401,7 @@
         harness (recorded-harness-measurement state)
         harness-revision (:harness-revision harness)
         store-snapshot (recorded-tool-result state :snapshot-store)
+        store-revision (store-revision store-snapshot)
         frame-output (recorded-frame-output state)
         dispositions (recorded-cycle-tool-results state :write-disposition)
         memory-uses (recorded-cycle-tool-results state :write-use)
@@ -458,13 +473,15 @@
              :solver-dispatches (recorded-solver-dispatches state))
 
       (contains? payload :solver-attempt)
-      (update :solver-attempt stamp-attempt-environment solver harness-revision)
+      (update :solver-attempt stamp-attempt-environment solver harness-revision
+              store-revision)
 
       (sequential? (:student-attempts payload))
       (update :student-attempts
               #(mapv (fn [index attempt]
                        (stamp-attempt-environment attempt (get students index)
-                                                  harness-revision))
+                                                  harness-revision
+                                                  store-revision))
                      (range) %)))))
 
 (defn- harness-tree-clean [outputs]
