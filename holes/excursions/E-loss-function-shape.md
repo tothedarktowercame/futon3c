@@ -488,3 +488,57 @@ That thoroughness found real defects all day; it also *is* the load.
 The honest summary: the protocol balanced the load it was written for, and the
 load moved. Ground control did not notice because ground control was never
 measuring itself.
+
+## Compaction IS working. The cost is the CEILING, not the length.
+
+Joe: *"something about our compacting / kangaroo setup isn't keeping this one
+extremely long session within normal bounds."* Measured against the transcript,
+and the good news is that half of that is wrong.
+
+    assistant messages : 9,801
+    context size       : mean 482,526   max 999,813
+    large drops (>50%) : 18            <- compaction firing, repeatedly
+
+    context by decile of the session
+      1: 486,652   2: 420,450   3: 434,428   4: 490,119   5: 452,209
+      6: 492,893   7: 520,550   8: 595,029   9: 448,590  10: 484,338
+
+**There is no growth trend.** The last decile is the same size as the first.
+Context sawtooths 0 -> ~1,000,000 -> compact -> 0, eighteen times. Compaction is
+holding the session inside a bound and doing it reliably.
+
+    total context-tokens read : 4,729,240,406
+    half of it spent by message 5,165 of 9,801 (52% through)
+
+Cost is evenly distributed. No hot spot, no runaway tail.
+
+### So the cost is a product of two numbers, and both are adjustable
+
+    cost  ~=  message count  x  mean context
+    4.73B ~=      9,801      x     482,526
+
+A sawtooth from 0 to a ceiling C has mean ~C/2. **The ceiling here is ~1,000,000,
+so the mean is ~482k.** Halving the ceiling halves the mean and therefore halves
+the cost, linearly, for identical work:
+
+    ceiling 1,000k  ->  mean ~482k  ->  4.73B   (today)
+    ceiling   400k  ->  mean ~200k  ->  ~1.9B   (same messages, more compactions)
+
+That is a configuration lever, not a behaviour change, and it is multiplicative.
+The trade is more frequent compaction — more re-reading of files whose content
+fell out of context — against a 2.5x cost reduction. Worth measuring rather than
+assuming; the re-read cost is bounded by what a turn actually needs, while the
+ceiling cost is paid on EVERY message whether it needs the context or not.
+
+### And it means long sessions are not the problem
+
+Joe: *"I actually kind of like being able to run long frames."* The measurement
+says he can keep them. Delegating a ground control per frame would cut cost by
+forcing context resets at frame boundaries — but that is the same lever as a
+lower ceiling, achieved by throwing away the continuity he values. **Lowering the
+ceiling gets the saving without the loss.**
+
+The second factor is message count, and that is ground control's to fix by
+batching tool calls: six sequential shell calls cost six context reads, one
+combined call costs one. At 482k a read, each avoided round trip is half a
+million tokens.
