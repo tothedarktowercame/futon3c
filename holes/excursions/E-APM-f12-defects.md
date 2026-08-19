@@ -969,3 +969,68 @@ a green `Inhabitation.lean` beside an untouched `sorry` is not a close, and a
 close routed through the copied `test_H01Model` is not a proof of the frozen
 theorem. A faithful copy makes the ARGUMENT transfer, not the PROOF —
 `IsEmpty (test_H01Model H)` is not `IsEmpty (apm_m99J06_H01Model H)` to Lean.
+
+## D59 — m99J06's model is internally inconsistent, and the file already diagnosed the defect and repaired only half of it [verified in source]
+
+Raised by Joe: *"an uninhabited model stands out as a possible symptom of a
+problem encoding defect."* Correct, and the source makes it sharper.
+
+`problems/m99J06/lean/Main.lean` docstring, written by the formaliser:
+
+> "The former model stored weak derivatives as literal functions even though its
+> inner product observed them only almost everywhere, **making the hypothesized
+> structure inconsistent.** Weak derivatives are now elements of Mathlib's `L²`
+> space, which quotients functions by almost-everywhere equality."
+
+The repair was applied to `weakDeriv` and **not** to `val`:
+
+    val       : H → ℝ → ℝ                              line 49  raw function
+    weakDeriv : H → apm_m99J06_L2                      repaired to an Lp class
+    represents: ∀ u, isH01Pair (val u) (weakDeriv u)   constrains val ONLY on [0,1]
+    realizes  : ∀ u du, isH01Pair u du → ∃ w, val w = u ∧ …   PINS val on ALL of ℝ
+    inner_eq  : … ∫ x in Icc 0 1, val u x * val v x + …       OBSERVES val on [0,1]
+
+Every occurrence of `val` (49, 51, 54, 57, 62, 73, 79) is observed under
+`∫ x in Icc 0 1` or `∀ᵐ x ∂intervalMeasure`, and pinned pointwise on all of ℝ by
+`realizes` alone. Off `[0,1]` it is simultaneously unconstrained and required to
+match exactly. f13-guide's `spike` at `x = 2` is the minimal witness.
+
+The docstring's **"## Encoding questions — None."** is a false clean bill of
+health — the house error again, in the formalisation's own self-assessment.
+
+### Why this is a different disposition from f12
+
+m03J01 was a STATEMENT defect: the frozen encoding said something false about a
+real class, and the mathematics it described was not what the problem asked.
+m99J06 is an ENCODING defect: Galerkin approximation in H¹₀(0,1) is a perfectly
+good prelim problem and the Lean model of it is inconsistent by a mechanical slip
+the file itself already names. **The precedent is t01A05 — repairable and
+requeued — not a dead problem.**
+
+Ruled to f13-guide in advance of its adjudication: if `IsEmpty` lands against the
+real `apm_m99J06_H01Model`, then `:problem-closed-on-artifact` CONFIRMED,
+`:problem-solved` REFUTED, disposition `:defective` and specifically REPAIRABLE,
+with the repair named in the close — either make `val` an `apm_m99J06_L2`
+element (the same move already applied to `weakDeriv`) or weaken `realizes` from
+`val w = u` to a.e. agreement on `[0,1]`.
+
+### Corpus sweep
+
+A structure carrying a raw `→ ℝ → ℝ` field alongside an integral `inner_eq` is
+**unique to m99J06**. Eleven problems use a `realizes`-style pointwise
+surjectivity — `a96A02 a00J04 b98A01 m96A06 m99J06 t00J04 t92J06 t94J09 t94J04
+t96A03 t96J08` — worth a later look, not this defect.
+
+### The pattern that is now bigger than any frame
+
+f11 t01A05: statement provably FALSE. f12 m03J01: statement VACUOUS. f13 m99J06:
+model INCONSISTENT. **Three consecutive frames, three defective formalisations,
+three different mechanisms.** In each the Lean compiled, in each a prior pass
+reported no defect, and in two of the three the file or the corpus already
+contained the diagnosis.
+
+The apparatus is currently a better detector of broken formalisations than a
+solver of good ones. That is a real capability and worth saying plainly — but it
+also means the selectable pool has an unmeasured defect rate, and every frame
+spent on a defective problem is a frame not spent measuring transfer. A
+formalisation audit is now a higher-value target than the next frame.

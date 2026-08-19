@@ -111,3 +111,93 @@ the frozen theorem.
   solver is demonstrably writing files. The live signal is the agent record's
   `invoke-activity-at` (11:34:08, 21s quiet), not the job's execution counters.
   Do not read `executed? false` as wedged.
+
+## RETRIEVAL FINDING — the OR-join fired, the query did not
+
+From the offered receipt `e-4b862952-6668-4db9-9aea-e5b65cab1a7a` (authoritative;
+the job event log truncates the prompt at ~1511 chars, which is why my first
+report said "two memories" — **five were surfaced**, not two, and not merely
+eligible).
+
+The term extractor found the right vocabulary. `:term-sources`:
+
+- problem-md: finding, strong, **sobolev**, uniqueness, **weakly**, dense,
+  sufficient, weak, limit, equivalent, **subspace**, interval, converges,
+  dimensional
+- proof-outline-md: equality, **galerkin**, apm_m99j06_model_ext, combinations,
+  **finite-dimensional**, gives, identities, **inner_eq**,
+  representative-level, **riesz**
+- stdin-packet: clause, lake, report, **vacuous**, verbatim, **apm_m99j06**,
+  **apm_m99j06_h01model**, blocked
+
+The query actually issued was
+
+    finding OR equality OR clause OR strong
+
+i.e. the first term of each of the three sources plus the second term of the
+first. Mechanism, read from source, not inferred:
+
+1. `dispatch_with_recall.clj:552` round-robins the three source term-lists.
+2. `default-query-term-limit` is **4** (line 21), applied at line 557.
+3. Round-robin position 5 is `galerkin`. The cap cuts at 4.
+
+So every distinctive term — galerkin, sobolev, riesz, inner_eq,
+apm_m99j06_h01model — is one slot or more past the cap. `text-keywords`
+(line 320) sorts each source rarest-first *by problem-corpus IDF*, and against a
+corpus of mathematics problems the rare words are the PROSE words. The source
+comment at line 424 already names this: "problem-corpus IDF selects artifact
+vocabulary and INVERTS relevance — e-retrieval-miss-a01A12-slit-wedge".
+
+**Correcting my orientation on the anchor band.** The briefing said
+`anchor-df-band [3 150]` "is not doing selection". True — but not for the reason
+given. The band lives in `query-anchor-term-memory-df`, which runs ONLY when
+`--anchor-source memory-df`. The default is `:problem-idf` (line 562) and the
+receipt confirms `:anchor-source :problem-idf`. The band was never on the path.
+Same for the df-scoping fix `6bfe5808`: it only affects the memory-df path.
+
+**And the wave-2 rung as built would not have repaired this dispatch.**
+`--anchor-source memory-df` changes `required-term` only — the term that gets a
+ranking boost (`rank-with-anchor-boost`, line 689). The query terms are
+unchanged. Flipping it yields the same `finding OR equality OR clause OR strong`.
+The damage is in the query; the built fix targets the anchor.
+
+**What actually delivered the memories.** `:memory-use/surfacing-via`:
+- `e-1b72bb47…` (the one the solver used first) — `:content-match`
+- the other four — `:pattern`
+
+So lexical recall contributed exactly ONE memory, and it ranked **27th of 30**
+in the lexical seed (score -9.88); 27 of the 30 seed hits were
+`:evidence-type :coordination` (chat turns, invoke receipts), not memories. The
+cascade contributed four. The read path returned the right thing largely by
+luck of the four generic words appearing in it.
+
+STORE-MODE: this is an OBSERVATION, not a change. I have not touched retrieval
+and will not this frame.
+
+## SOLVER RESULT — job done 11:36:43, verdict (B) UNINHABITED
+
+Commit `25186f291b25c98a0c5e6e2280a951ab107be277` on
+`exp/frame-13-m99J06-solver`. Solver's own report: close is **VACUOUS**, no
+sorry/admit/added axiom, worktree clean, no residuals.
+
+Per-memory attestation returned unprompted and complete over all five:
+- USED `e-1b72bb47…` — propagated the whole-function/interval-semantics
+  mismatch through `realizes` and `inner_eq` to model emptiness.
+- USED `e-7c6631c9…` — audited the model's inhabitation BEFORE PDE/Galerkin
+  proof search.
+- IGNORED the three `e-codexpilot-…` (typeclass preconditions; ContDiff — not
+  in this statement; pair-refutation-with-repair — contract forbade repair).
+
+### My review (gate, not rubber stamp)
+
+- `git diff a92ffb6..HEAD`: +77/-1, one file. The five frozen definitions and
+  the `apm_m99j06` signature are **byte-identical** to the pin (checked by
+  extracting the block and comparing with the inserted lemma removed:
+  `FROZEN BLOCK IDENTICAL: True`).
+- `grep sorry|admit|^axiom|sorryAx` over Main.lean: **NONE**.
+- The witness is stated against the REAL `apm_m99J06_H01Model`
+  (`theorem apm_m99J06_H01Model_isEmpty`, Main.lean:83-152), not a `test_` copy —
+  the copy file was deleted. The close is
+  `letI : IsEmpty (apm_m99J06_H01Model H) := …; exact isEmptyElim M`.
+  My stated review bar is met.
+- Independent compile + axiom audit: bg job `bg-1787139511615-1`.
