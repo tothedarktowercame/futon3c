@@ -12056,3 +12056,92 @@ path was probed and it answered**: `"analyst-3, claude-opus-5"`, in the one-line
 form asked for. The path carries the right model and returns content, not merely
 a `done` state. This is the first succession in the series where the successor
 replied before the predecessor stood down.
+
+## W.82 FRAMES 15 & 17 CLOSED — the read-path diagnosis changes; analyst-3's tenure ends (2026-08-20)
+
+**Seat:** analyst-3, tenure 3 of the Analyst seat under the N = 2 ruling, frames
+f15 (m93J06, `:closed`) and f17 (m97A06, `:tier-b`). **f16 was void**, so this
+tenure spans three frame numbers to get its two closes — the f17 registration
+records the crossing as `:reg/analyst-tenure {:n 2 :frame-index 2 :frames ["f15"
+"voided" "f17"]}`. Succession complete: handoff at
+`analysis/HANDOFF-analyst-3-to-analyst-4.md`, series entries f15 and f17
+appended, successor **minted and invoke-probed** — analyst-4 answered
+*"analyst-4, running on Claude Opus 5 (1M context)."*
+
+### What was read, and what is now owned
+
+Read on entry: the frozen role card (`ed340941`), analyst-2's handoff, the
+existing series entries, and each frame's registration and guide log. Owned and
+discharged: duties **A** (transfer checks re-run from the command both frames —
+f15 5/6, f17 3/6), **B** (S-6 and S-7 by hand, each validated against the
+predecessor's last reading before publishing), **C** (its **first live run in the
+series** at f15; inapplicable at f17), and **F** (one packet per frame — P30
+dispatched, parked, gated with two mutations it did not ask for, merged; P31 in
+flight at handover and handed to the successor as open, with its job and park
+ids).
+
+### The headline is a diagnosis that changed, not a result that landed
+
+This tenure inherited one sentence: *promotion works, retrieval is the gap.*
+**f17 does not support it.**
+
+f15 did. Its issued query was `exponent OR closing OR conjunct OR existence` —
+four prose words, none naming the problem's mathematics — and against that junk
+the cascade still returned 105 distinct memories, none attested used. f17's query
+names the mathematics (`hessian OR euler-lagrange OR variation OR …`), and recall
+returned empty with `proposal-count 0`. **Because the terrain is absent, and that
+was measured rather than inferred:** of 538 `memory/assert` edges, the number
+containing *euler-lagrange* is 0, *variational* 0, *stationary* 0, *lagrangian* 0,
+*pendulum* 0, *geodesic* 0; *hessian* is 1, and that one is f17's own student
+memory, written after the recall ran.
+
+**So at least part of what two tenures have called a retrieval gap is a
+curriculum gap — a shelf with nothing on it for the problems being asked.**
+f17 returning zero for a good query is better conduct than f15 returning 105 for
+a junk one, and an offer count compared across the two frames says the opposite.
+Never report one without the query and the terrain beside it.
+
+That does not excuse three real defects, all receipted: the student's recall
+channel **never fired** (`:not-invoked`, `:memory-channel-no-push`, against 523
+eligible ids); the lexical seed spends **29 of 30 slots on agent coordination
+evidence** with every score negative and `proposal-count 0`; and D5's **third
+sighting** — the student's memory is `:domain :zaif-work` and unpromotable, which
+is why f17 promoted nothing, now with a vendor correlation (f12 and f17 students
+were zai seats; f11's, which recorded `:mathematics`, was not) that narrows a
+defect ground control owns.
+
+### The instrument caught itself three times, which is the tenure's real product
+
+1. **A prediction I registered was wrong.** The f15 entry said P30 would clear
+   `:malformed-cycle-attempts` (3 → 2). It did not. P30 landed and fired — f17's
+   attempts carry a machine-computed `:cycle/store-revision` — but `attempt?`
+   needs six keys, the machine stamps four, and f17's guide omitted the two f15's
+   guide had supplied by hand while omitting the one P30 fixed. **Two frames, two
+   guides, two different omissions, one failure.** A mutation proves the check
+   responds to the input you gave it; it does not prove the input class is closed.
+2. **A seductive mechanism, caught before shipping.** f17's
+   `:anchor {:term "hessian" :satisfied? false}` reads as the cause of the empty
+   recall. It is not — `dispatch_with_recall.clj:680-705` says the anchor sorts
+   and does not filter, and the ranked set was empty before it was consulted.
+3. **`series.edn` was not append-only.** The **f16 void entry had been appended
+   after the closing `]`** since the day it was written, so it was a second
+   top-level form and every `read-string` consumer saw eight entries and no f16 —
+   present as text, absent as data. Repaired in `69798714`; the file now parses to
+   ten. *An append-only file whose appends are not parse-checked is
+   append-hopeful.*
+
+### Standing, and not the Analyst's to rule
+
+**`:both-channels-varied` has never been able to fire.** At f15 this was shown by
+mutation; **f17 confirmed it by observation** — the field is now populated and
+both attempts carry the *identical* digest, because there is one store snapshot
+per cycle. Populating it was necessary and not sufficient. Whether each attempt
+re-snapshots the store is a design ruling, it has been surfaced twice, and it is
+the one open item that would change what this series can claim about its own
+experimental design.
+
+**And a parameter question that has now bitten twice:** under N = 2, a single
+defective problem can reduce a tenure to one closed frame, while cross-frame
+drift detection — the entire reason this seat is not fresh each time — needs two.
+*Should a void frame count against a tenure?* Not the Analyst's to answer; said
+out loud here because two tenures have now run into it and neither said so.
