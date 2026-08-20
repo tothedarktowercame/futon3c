@@ -96,7 +96,7 @@
   "arc-lane yield"
   "rewrite rule offered and used"],
  :reg/seat-exclusivity :enforced-at-register,
- :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf",
+ :reg/environment-revision "455d4d8c1db24a9244828c5c063d077e9414b986",
  :reg/frame-id "f17",
  :reg/memory-cascade-enabled? true,
  :required-capabilities
