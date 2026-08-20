@@ -2,6 +2,7 @@
   "Concrete operator-stepped controller for the frame-18 qualification run."
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
@@ -17,7 +18,7 @@
 (def plan-path
   "holes/labs/M-apm-demonstration/frame-18-step-plan.edn")
 (def state-directory
-  (Path/of "data/apm-campaigns/frame-18-specification-aware"
+  (Path/of "data/apm-campaigns/frame-18-admission-ready"
            (make-array String 0)))
 (def ledger-path (.resolve state-directory "ledger.edn"))
 (def certificate-directory (.resolve state-directory "certificates"))
@@ -25,6 +26,23 @@
 
 (defn- fetch-json [url]
   (json/parse-string (slurp url) true))
+
+(defn- git [& args]
+  (let [result (apply shell/sh "git" args)]
+    (when (zero? (:exit result)) (str/trim (:out result)))))
+
+(defn- post-json [url payload]
+  (let [connection ^java.net.HttpURLConnection
+        (.openConnection (java.net.URL. url))]
+    (.setRequestMethod connection "POST")
+    (.setRequestProperty connection "Content-Type" "application/json")
+    (.setDoOutput connection true)
+    (with-open [writer (java.io.OutputStreamWriter. (.getOutputStream connection))]
+      (.write writer (json/generate-string payload)))
+    (let [status (.getResponseCode connection)
+          stream (if (< status 400) (.getInputStream connection)
+                     (.getErrorStream connection))]
+      (assoc (json/parse-string (slurp stream) true) :http/status status))))
 
 (defn- frame-runtime-observation [_]
   (let [agents-response (fetch-json "http://localhost:7070/api/alpha/agents")
@@ -48,10 +66,28 @@
                             (get-in loaded [:projection :active/frame :frame-id])
                             "f18")
         registration-digest (get-in action [:completion :event/body
-                                            :registration-hash])]
+                                            :registration-hash])
+        control (edn/read-string (slurp control-path))
+        head (git "rev-parse" "HEAD")
+        branch (git "branch" "--show-current")
+        worktree (System/getProperty "user.dir")
+        clean? (str/blank? (or (git "status" "--porcelain") "not-clean"))
+        harness-hash (get-in action [:completion :event/body :harness-hash])]
     {:specification-check
      (frame-specification/ingest control-path active-frame-id
                                  registration-digest)
+     :problem-check
+     {:topology? (get-in control [:problem/classification :topology?])
+      :classification-source (get-in control [:problem/classification :source])}
+     :registration-check
+     {:frame-timeout-ms (* 60000 (get-in control [:frame/timeout-policy
+                                                   :frame-minutes]))
+      :complete? (every? some? [branch head worktree harness-hash])
+      :coherent? (and (= branch (:frame/control-branch control))
+                      (= head harness-hash))
+      :branch branch :commit head :worktree worktree
+      :worktree-clean? clean? :head-matches? (= head harness-hash)
+      :dedicated-worktree? (not= worktree "/home/joe/code/futon3c")}
      :receipt-check
      {:durable? (and (:ok loaded)
                      (= :valid (get-in loaded [:projection :projection/status])))
@@ -76,7 +112,19 @@
                 {:ok true
                  :certificate {:gate :durable-replay
                                :block-id (:block-id action)
-                               :control (edn/read-string (slurp control-path))}})}
+                               :control (edn/read-string (slurp control-path))}})
+              :open-frame
+              (fn [action]
+                (let [control (edn/read-string (slurp control-path))
+                      cast (-> (:frame/cast control) (dissoc :analyst))
+                      response (post-json
+                                "http://localhost:7070/api/alpha/frames/mint-seats"
+                                {:frame-id (:frame-id action) :cast cast})]
+                  (if (and (= 200 (:http/status response)) (:ok response))
+                    {:ok true :certificate
+                     {:effect :frame-seats-minted :response response}}
+                    {:ok false :error/code :frame-seat-mint-failed
+                     :finding response})))}
    :actor "frame-18-control"})
 
 (defn bootstrap! []
@@ -97,7 +145,7 @@
                              :arm :treatment
                              :registration-hash
                              (machine/ledger-digest [control])
-                             :harness-hash (:frame/control-base control)}]}]
+                             :harness-hash (git "rev-parse" "HEAD")}]}]
                   :obligation-plan
                   {:preflight {:kind :preflight :role :proctor}
                    :solve {:kind :solve :role :solver}

@@ -44,10 +44,12 @@ clojure -M -m futon3c.apm.frame18-control inspect
 
 The next obligation must be `:open-frame` for the same frame, problem, block,
 and arm. Its `:frame-specification` gate must pass with the recorded digest.
-The other open-frame gates remain independent and may still fail until their
-observations exist: effective seat budgets, clean branch/commit/worktree pins,
-cast readiness and provider attribution, durable park/wake behavior, projection
-coherence, experimental separation, and durable replay.
+Only facts that can exist before provisioning gate `open-frame`: specification,
+non-topology admission, clean branch/commit/worktree pins, and durable replay.
+Effective seat budgets, cast readiness/provider attribution, park/wake behavior,
+projection coherence, and experimental separation gate `preflight`, after the
+seats and frame projection exist. Moving those checks later is ordering, not a
+waiver: no solver work begins until they pass.
 
 Do not execute `open-frame` merely because the specification gate passes.
 Execute one step only when inspection reports every applicable gate passing;

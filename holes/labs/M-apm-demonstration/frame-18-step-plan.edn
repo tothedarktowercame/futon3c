@@ -25,7 +25,7 @@
      :fact/path [:specification :registration-matches?]
      :check :equals :expected true}]}
   {:gate/id :seat-budgets
-   :gate/applies-to #{:open-frame}
+   :gate/applies-to #{:preflight}
    :gate/requirements
    [{:requirement/id :timeouts-explicit :fact/path [:timeouts :explicit?]
      :check :equals :expected true}
@@ -59,21 +59,21 @@
     {:requirement/id :pin-worktree-dedicated
      :fact/path [:pins :dedicated-worktree?] :check :equals :expected true}]}
   {:gate/id :cast-ready
-   :gate/applies-to #{:open-frame}
+   :gate/applies-to #{:preflight}
    :gate/requirements
    [{:requirement/id :cast-ready :fact/path [:cast :ready?]
      :check :equals :expected true}
     {:requirement/id :provider-attributed :fact/path [:cast :attributed?]
      :check :equals :expected true}]}
   {:gate/id :continuation-control
-   :gate/applies-to #{:open-frame}
+   :gate/applies-to #{:preflight}
    :gate/requirements
    [{:requirement/id :continuation-durable
      :fact/path [:continuations :durable?] :check :equals :expected true}
     {:requirement/id :park-wake-tested
      :fact/path [:continuations :wake-tested?] :check :equals :expected true}]}
   {:gate/id :projection-coherence
-   :gate/applies-to #{:open-frame :preflight :solve :verify :close-frame}
+   :gate/applies-to #{:preflight :solve :verify :close-frame}
    :gate/requirements
    [{:requirement/id :projection-ledger-derived
      :fact/path [:projection :ledger-derived?] :check :equals :expected true}
@@ -96,7 +96,7 @@
     {:requirement/id :promotion-reviewed
      :fact/path [:memory :promotion-reviewed?] :check :equals :expected true}]}
   {:gate/id :experimental-separation
-   :gate/applies-to #{:open-frame}
+   :gate/applies-to #{:preflight}
    :gate/requirements
    [{:requirement/id :author-reviewer-distinct
      :fact/path [:separation :author-reviewer-distinct?]

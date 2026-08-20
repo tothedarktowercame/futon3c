@@ -14,6 +14,24 @@
     :frame/continuation-policy :frame/separation-policy
     :countdown/block :qualification/plan})
 
+(defn- policy-errors [spec]
+  (let [seats (:frame/seat-policy spec)
+        frame-minutes (get-in spec [:frame/timeout-policy :frame-minutes])]
+    (cond-> []
+      (not (every? #(and (integer? (get-in seats [% :turn-minutes]))
+                          (<= 60 (get-in seats [% :turn-minutes]))) roles))
+      (conj :seat-turn-policy-insufficient)
+      (not (<= 5 (or (get-in seats [:student :request-minutes]) -1)))
+      (conj :student-request-policy-insufficient)
+      (not (and (integer? frame-minutes) (<= 240 frame-minutes)))
+      (conj :frame-timeout-policy-insufficient)
+      (not= {:durable-required? true :wake-test-required? true}
+            (:frame/continuation-policy spec))
+      (conj :continuation-policy-incomplete)
+      (not= {:author-reviewer-distinct? true :arms-isolated? true}
+            (:frame/separation-policy spec))
+      (conj :separation-policy-incomplete))))
+
 (defn validate
   "Validate the authored data shape. This does not claim that runtime evidence
   (cast readiness, wake behavior, checkout cleanliness) has been observed."
@@ -21,7 +39,8 @@
   (let [missing (->> required-keys (remove #(contains? spec %)) set)
         seat-roles (set (keys (:frame/seat-policy spec)))
         cast-roles (set (keys (:frame/cast spec)))
-        errors (cond-> []
+        errors (into (policy-errors spec)
+                     (cond-> []
                  (not (map? spec)) (conj :specification-not-map)
                  (seq missing) (conj :required-keys-missing)
                  (not= 1 (:frame/specification-version spec))
@@ -32,7 +51,7 @@
                  (conj :frame-id-mismatch)
                  (and expected-digest
                       (not= expected-digest (machine/ledger-digest [spec])))
-                 (conj :registration-digest-mismatch))]
+                 (conj :registration-digest-mismatch)))]
     {:valid? (empty? errors)
      :frame-matches? (= expected-frame-id (:frame/id spec))
      :registration-matches? (or (nil? expected-digest)

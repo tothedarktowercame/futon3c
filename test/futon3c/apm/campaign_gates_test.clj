@@ -58,9 +58,7 @@
   (let [obligation {:obligation/action {:kind :open-frame}}
         results (gates/evaluate-obligation specs passing-facts obligation)]
     (is (= #{:non-topology-admission :frame-specification
-             :seat-budgets :pin-coherence :cast-ready
-             :continuation-control :projection-coherence
-             :experimental-separation :durable-replay}
+             :pin-coherence :durable-replay}
            (set (map :gate/id results))))))
 
 (deftest topology-problem-is-refused-at-open-frame
