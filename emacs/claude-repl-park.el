@@ -15,6 +15,7 @@
 (require 'claude-repl)
 (require 'futon-agency-ws)
 (require 'ring)
+(require 'seq)
 
 (defgroup claude-repl-park nil
   "Buffer-side parked-on continuations for the Claude REPL."
@@ -25,8 +26,14 @@
   :type 'boolean :group 'claude-repl-park)
 
 (defcustom claude-repl-park-poll-interval 3
-  "Seconds between polls of the ready-inbox across live Claude REPL buffers."
+  "Seconds between polls of the ready-inbox across participating REPL buffers."
   :type 'number :group 'claude-repl-park)
+
+(defcustom claude-repl-park-participating-modes
+  '(claude-repl-mode zai-repl-mode codex-repl-mode)
+  "Major modes whose buffers participate in parked-on resume delivery.
+Mode symbols do not load their defining libraries; an absent frontend is inert."
+  :type '(repeat symbol) :group 'claude-repl-park)
 
 (defvar claude-repl-park--poll-timer nil)
 (defvar claude-repl-park--last nil "Most recent ready item handled, for debugging.")
@@ -121,7 +128,17 @@ reply slot."
   (or (and (stringp session) (not (string-empty-p session))
            (claude-repl-find-buffer-by-session-id session))
       (and (stringp agent) (not (string-empty-p agent))
-           (claude-repl-find-buffer-by-agent-id agent))))
+           (claude-repl-find-buffer-by-agent-id agent))
+      (seq-find
+       (lambda (buf)
+         (and (buffer-live-p buf)
+              (with-current-buffer buf
+                (and (memq major-mode claude-repl-park-participating-modes)
+                     (or (and (stringp session) (not (string-empty-p session))
+                              (equal agent-chat--session-id session))
+                         (and (stringp agent) (not (string-empty-p agent))
+                              (equal agent-chat--agent-id agent)))))))
+       (buffer-list))))
 
 (defun claude-repl-park--on-ready (frame)
   "Handle a `park-ready' WS FRAME as a wake-up POKE: poll the inbox now.
@@ -145,10 +162,13 @@ Uses `url-retrieve' so a slow/hung server can NEVER freeze the UI (the old
 synchronous GET is what made you reach for C-g)."
   (with-current-buffer buf
     (unless claude-repl-park--poll-inflight
-      (let* ((agent claude-repl-agent-id)
+      (let* ((agent (or (bound-and-true-p agent-chat--agent-id)
+                        (bound-and-true-p claude-repl-agent-id)))
              (session agent-chat--session-id)
+             (api-url (or (bound-and-true-p claude-repl-api-url)
+                          agent-chat-agency-base-url))
              (url (format "%s/api/alpha/parked/ready?agent=%s&session=%s"
-                          (string-remove-suffix "/" claude-repl-api-url)
+                          (string-remove-suffix "/" api-url)
                           (url-hexify-string (or agent ""))
                           (url-hexify-string (or session ""))))
              (url-request-method "GET"))
@@ -177,15 +197,16 @@ synchronous GET is what made you reach for C-g)."
          nil t t)))))
 
 (defun claude-repl-park--poll-once ()
-  "Async-poll the ready-inbox for every live Claude REPL buffer (non-blocking).
-Bug 2: the mid-turn busy gate is now SERVER-SIDE (handle-parked-ready checks the
-registry :invoking status). The old agent-chat--streaming-started gate here was
-unreliable in pouch-driven buffers, so it has been REMOVED — the server withholds
-items from busy agents, so the buffer polls unconditionally and trusts the gate."
+  "Poll every participating REPL buffer's ready-inbox asynchronously.
+Bug 2: the mid-turn busy gate is now server-side.  `handle-parked-ready'
+checks the registry's :invoking status.  The old
+`agent-chat--streaming-started' gate was unreliable in pouch-driven buffers,
+so it has been removed.  The server withholds items from busy agents; the
+buffer polls unconditionally and trusts that gate."
   (dolist (buf (buffer-list))
     (when (buffer-live-p buf)
       (with-current-buffer buf
-        (when (eq major-mode 'claude-repl-mode)
+        (when (memq major-mode claude-repl-park-participating-modes)
           (claude-repl-park--poll-buffer-async buf))))))
 
 ;;;; Enable / disable ---------------------------------------------------------
@@ -193,10 +214,11 @@ items from busy agents, so the buffer polls unconditionally and trusts the gate.
 ;;;; Within-turn unification: DEFER a parked segment's finalization -----------
 
 (defun claude-repl-park--turn-parked-p ()
-  "Non-nil when this buffer's agent/session has more of a unified turn coming — an
-outstanding park OR a ready resume already in the inbox (`more-pending', race-free
-even for a fast dep).  `agent-chat-finish-turn!' uses this to DEFER a parked
-segment's finalization so the unified turn finalizes exactly once."
+  "Return non-nil when this agent/session has more of a unified turn coming.
+This means an outstanding park or a ready resume is already in the inbox
+(`more-pending', race-free even for a fast dependency).
+`agent-chat-finish-turn!' uses this to defer a parked segment's finalization,
+so the unified turn finalizes exactly once."
   (ignore-errors
     (let* ((url (format "%s/api/alpha/parked?agent=%s&session=%s"
                         (string-remove-suffix "/" claude-repl-api-url)
