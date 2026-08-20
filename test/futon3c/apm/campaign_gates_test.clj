@@ -9,7 +9,8 @@
     (slurp "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"))))
 
 (def passing-facts
-  {:timeouts {:request-minutes 5 :turn-minutes 60 :solver-minutes 60
+  {:problem {:topology? false :classification-source :operator-manifest}
+   :timeouts {:request-minutes 5 :turn-minutes 60 :solver-minutes 60
               :student-minutes 60 :frame-minutes 240 :explicit? true}
    :pins {:coherent? true :complete? true}
    :cast {:ready? true :attributed? true}
@@ -25,7 +26,7 @@
 
 (deftest frame-18-qualification-is-fully-data-driven
   (let [results (gates/evaluate specs passing-facts)]
-    (is (= 10 (count results)))
+    (is (= 11 (count results)))
     (is (every? #(= :pass (:gate/status %)) results))))
 
 (deftest frame-17-baseline-fails-before-dispatch
@@ -50,7 +51,18 @@
 (deftest only-gates-applicable-to-the-next-obligation-are-evaluated
   (let [obligation {:obligation/action {:kind :open-frame}}
         results (gates/evaluate-obligation specs passing-facts obligation)]
-    (is (= #{:seat-budgets :pin-coherence :cast-ready
+    (is (= #{:non-topology-admission :seat-budgets :pin-coherence :cast-ready
              :continuation-control :projection-coherence
              :experimental-separation :durable-replay}
            (set (map :gate/id results))))))
+
+(deftest topology-problem-is-refused-at-open-frame
+  (let [obligation {:obligation/action {:kind :open-frame}}
+        results (gates/evaluate-obligation
+                 specs (assoc-in passing-facts [:problem :topology?] true)
+                 obligation)
+        admission (first (filter #(= :non-topology-admission (:gate/id %))
+                                 results))]
+    (is (= :fail (:gate/status admission)))
+    (is (= true
+           (-> admission :gate/evidence :requirements first :actual)))))

@@ -15,6 +15,8 @@
 
 (def observations
   {:seat-configs role-configs
+   :problem-check {:topology? false
+                   :classification-source :operator-manifest}
    :registration-check {:frame-timeout-ms 14400000
                         :complete? true :coherent? true}
    :cast-check {:ready? true :attributed? true}
@@ -29,6 +31,8 @@
 
 (deftest explicit-effective-timeouts-are-derived-not-defaulted
   (let [facts (qualification/derive-facts observations)]
+    (is (= {:topology? false :classification-source :operator-manifest}
+           (:problem facts)))
     (is (= {:explicit? true :request-minutes 5 :turn-minutes 60
             :solver-minutes 60 :student-minutes 60 :frame-minutes 240}
            (:timeouts facts)))))

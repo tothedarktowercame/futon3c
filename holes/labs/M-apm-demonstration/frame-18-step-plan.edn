@@ -5,7 +5,14 @@
   authorization, and execution use the same ledger and obligation path as
   autonomous batches. A missing or failed fact blocks before effect."
  :qualification/gates
- [{:gate/id :seat-budgets
+ [{:gate/id :non-topology-admission
+   :gate/applies-to #{:open-frame}
+   :gate/requirements
+   [{:requirement/id :problem-is-not-topology
+     :fact/path [:problem :topology?] :check :equals :expected false}
+    {:requirement/id :classification-has-source
+     :fact/path [:problem :classification-source] :check :present}]}
+  {:gate/id :seat-budgets
    :gate/applies-to #{:open-frame}
    :gate/requirements
    [{:requirement/id :timeouts-explicit :fact/path [:timeouts :explicit?]

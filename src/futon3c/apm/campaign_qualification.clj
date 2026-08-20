@@ -38,7 +38,7 @@
   durable receipts. Missing routes remain nil and therefore fail closed."
   [{:keys [seat-configs registration-check cast-check continuation-check
            projection-check trace-check separation-check receipt-check
-           apparatus-check]}]
+           apparatus-check problem-check]}]
   (let [roles (set (keys seat-configs))
         applicable-request-values
         (keep (fn [[_ config]]
@@ -67,6 +67,8 @@
       :frame-minutes (ms->minutes (:frame-timeout-ms registration-check))}
      :pins {:complete? (:complete? registration-check)
             :coherent? (:coherent? registration-check)}
+     :problem {:topology? (:topology? problem-check)
+               :classification-source (:classification-source problem-check)}
      :cast {:ready? (and (= required-roles roles) (:ready? cast-check))
             :attributed? (:attributed? cast-check)}
      :continuations {:durable? (:durable? continuation-check)
