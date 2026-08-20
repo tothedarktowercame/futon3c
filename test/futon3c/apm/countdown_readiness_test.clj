@@ -7,9 +7,9 @@
    (slurp "holes/labs/M-apm-demonstration/countdown-10-readiness-v1.edn")))
 
 (deftest countdown-means-ten-operator-stepped-complete-frames
-  (is (= 2 (:estimated-remaining-structural-slices readiness)))
-  (is (= :ten-unit-pinned-manifest (:next-slice readiness)))
-  (is (= [:complete :complete :complete :complete :blocking :blocking]
+  (is (= 1 (:estimated-remaining-structural-slices readiness)))
+  (is (= :repeatable-workspace-provisioning (:next-slice readiness)))
+  (is (= [:complete :complete :complete :complete :complete :blocking]
          (mapv :status (:blocking-slices readiness))))
   (is (contains? (get-in readiness [:launch-rule
                                      :must-not-defer])

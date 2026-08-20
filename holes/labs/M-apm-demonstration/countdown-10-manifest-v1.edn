@@ -1,0 +1,67 @@
+{:manifest/version 1
+ :manifest/id "b74d9091815b3afa0cda9305a5fdc2883d9ad0f72d42f099af551bc523ee9d30"
+ :campaign/id "apm-countdown"
+ :block/id "countdown-10"
+ :apparatus
+ {:pin/id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+  :repository "/home/joe/code/futon3c"
+  :branch "master"
+  :revision "4c08c2e64d6725a54ca85f981a4109a4947dad11"
+  :artifacts
+  {:solver {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-v4.md" :blob "ad63c4dc908a0061ee38d16fb51dacb31110a303"}
+   :student {:path "holes/labs/M-apm-demonstration/role-cards/zai-student.md" :blob "b1ee7de57a9d27993155fc8732a60a609889add4"}
+   :guide {:path "holes/labs/M-apm-demonstration/role-cards/claude-guide.md" :blob "b475f85cb1114184329f7e7b0a5e423085201218"}
+   :scribe {:path "holes/labs/M-apm-demonstration/role-cards/scribe-v2.md" :blob "02441d9df4b8a05355790a51f1e535bf9e9465d4"}
+   :proctor {:path "holes/labs/M-apm-demonstration/role-cards/proctor.md" :blob "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+   :analyst {:path "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md" :blob "1487e00f52bffee9af7847cca824eafd10b73bc8"}}}
+ :units
+ [{:frame/id "f18" :ordinal 1 :arm :treatment :problem/id "a97J07"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: analytic functions, boundary norms, and maximum modulus on the unit disk."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a97J07/lean/Main.lean" :blob "69f1a6c35eab92f234beed1697fc59d1eac12445"}}
+  {:frame/id "f19" :ordinal 2 :arm :treatment :problem/id "a00J01"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Analysis: convergence of Lp norms on a finite measure space."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a00J01/lean/Main.lean" :blob "64a28d333ce055d0fa7e21f848ae5911e3d767f0"}}
+  {:frame/id "f20" :ordinal 3 :arm :treatment :problem/id "a00J02"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Real analysis: absolutely continuous functions and an integral inequality."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a00J02/lean/Main.lean" :blob "584d29b3c2af4cda5693532b72bb0d3796777fb5"}}
+  {:frame/id "f21" :ordinal 4 :arm :treatment :problem/id "a00J03"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Measure theory: composition by a measure-preserving bijection on Lp."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a00J03/lean/Main.lean" :blob "8adb75c4e732ec24aea4af97cee116fd6941e4ad"}}
+  {:frame/id "f22" :ordinal 5 :arm :treatment :problem/id "a00J05"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: Cauchy transform of a compact real set."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a00J05/lean/Main.lean" :blob "a536f801eabb8567ab50ae9e2cb1441b11b9299f"}}
+  {:frame/id "f23" :ordinal 6 :arm :treatment :problem/id "a00J06"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Complex analysis: singularity of a power series with nonnegative coefficients."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a00J06/lean/Main.lean" :blob "51fd12b0d33f827f5d2626d020b768f21a55e3da"}}
+  {:frame/id "f24" :ordinal 7 :arm :treatment :problem/id "a01A01"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Measure theory: a typewriter sequence and pointwise limsup behavior."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a01A01/lean/Main.lean" :blob "9c33edeb4cbb79f2a1a8bed663102f39c0d501ce"}}
+  {:frame/id "f25" :ordinal 8 :arm :treatment :problem/id "a01A02"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Real analysis: weak-L2 distribution bound implies a local L1 estimate."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a01A02/lean/Main.lean" :blob "0fba90bae2c3abff0f3445d0e54cfcb812fb6e16"}}
+  {:frame/id "f26" :ordinal 9 :arm :treatment :problem/id "a01A03"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Fourier analysis: a convolution identity determines an indicator function."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a01A03/lean/Main.lean" :blob "157383881f404053df0f06158161058749ff8f05"}}
+  {:frame/id "f27" :ordinal 10 :arm :treatment :problem/id "a01A04"
+   :classification/value :non-topology :classification/source :operator-reviewed-statement
+   :classification/evidence "Real analysis: asymptotic volumes of Euclidean unit balls."
+   :apparatus/pin-id "933210d1b84aa4eea88ae1e328d292ab7261a4f3250a3796355018d456e54ef0"
+   :problem {:repository "/home/joe/code/apm-lean" :branch "repair/m97A06-energy-regularity" :revision "455d4d8c1db24a9244828c5c063d077e9414b986" :path "problems/a01A04/lean/Main.lean" :blob "1e56088e9d7e29235df31569108fa1aa662a59b1"}}]}

@@ -84,7 +84,7 @@
     content-addressed projection of the ledger after every step."}
 
   {:slice/id :ten-unit-pinned-manifest
-   :order 5 :status :blocking
+   :order 5 :status :complete
    :problem
    "The registered countdown block contains only f18/a97J07; frames 19--27 do
     not yet have problem identities, revisions, arms, registrations, or pins."
@@ -115,5 +115,5 @@
    :reason "The countdown deliberately retains one operator permit per step;
             batch permits are the subsequent qualification target."}]
 
- :estimated-remaining-structural-slices 2
- :next-slice :ten-unit-pinned-manifest}
+ :estimated-remaining-structural-slices 1
+ :next-slice :repeatable-workspace-provisioning}
