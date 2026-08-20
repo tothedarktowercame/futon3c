@@ -184,7 +184,7 @@
     (sha1-hex (str/join "\n" (sort (:snap/memory-ids snapshot))))))
 
 (defn- stamp-attempt-environment
-  [attempt assignment harness-revision store-revision]
+  [attempt assignment harness-revision store-revision regime]
   (if (map? attempt)
     (cond-> (assoc attempt
                    :cycle/environment-checkout (:checkout assignment)
@@ -193,7 +193,13 @@
       (assoc :cycle/harness-revision harness-revision)
 
       (some? store-revision)
-      (assoc :cycle/store-revision store-revision))
+      (assoc :cycle/store-revision store-revision)
+
+      (some? regime)
+      (assoc :cycle/regime regime)
+
+      (some? (:runner-freshness assignment))
+      (assoc :cycle/runner-freshness (:runner-freshness assignment)))
     attempt))
 
 (defn- recorded-harness-measurement [state]
@@ -402,6 +408,8 @@
         harness-revision (:harness-revision harness)
         store-snapshot (recorded-tool-result state :snapshot-store)
         store-revision (snapshot-store-revision store-snapshot)
+        registration (recorded-tool-result state :read-registration)
+        regime (get-in registration [:problem :regime])
         frame-output (recorded-frame-output state)
         dispositions (recorded-cycle-tool-results state :write-disposition)
         memory-uses (recorded-cycle-tool-results state :write-use)
@@ -474,14 +482,15 @@
 
       (contains? payload :solver-attempt)
       (update :solver-attempt stamp-attempt-environment solver harness-revision
-              store-revision)
+              store-revision regime)
 
       (sequential? (:student-attempts payload))
       (update :student-attempts
               #(mapv (fn [index attempt]
                        (stamp-attempt-environment attempt (get students index)
                                                   harness-revision
-                                                  store-revision))
+                                                  store-revision
+                                                  regime))
                      (range) %)))))
 
 (defn- harness-tree-clean [outputs]
@@ -1100,7 +1109,8 @@
     (let [record (edn/read-string
                   (slurp (io/file experiment-frames-root batch
                                   (str frame-id ".edn"))))]
-      (select-keys record [:checkout :base-revision :branch :frame/id :batch]))))
+      (select-keys record [:checkout :base-revision :branch :frame/id :batch
+                           :runner-freshness]))))
 
 (defn- checkout-options [options arm]
   (let [arm-name (name arm)
