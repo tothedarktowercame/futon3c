@@ -4423,29 +4423,31 @@
                                         :caller caller
                                         :surface "whistle"})
             mode (invoke-job-mode prompt)
-            started-ms (System/currentTimeMillis)]
-        #_{:clj-kondo/ignore [:deprecated-var]}
-        (hk/with-channel request channel
-          (let [closed? (atom false)
-                delivery-recorded? (atom false)
-                mark-delivery!
-                (fn [delivered? note]
-                  (when (compare-and-set! delivery-recorded? false true)
-                    (record-invoke-job-delivery-by-job-id!
-                     job-id
-                     {:surface "whistle-stream"
-                      :destination (str "caller " caller " (stream)")
-                      :delivered? (boolean delivered?)
-                      :note (str note)})))
-                close-channel!
+            started-ms (System/currentTimeMillis)
+            closed? (atom false)
+            delivery-recorded? (atom false)
+            mark-delivery!
+            (fn [delivered? note]
+              (when (compare-and-set! delivery-recorded? false true)
+                (record-invoke-job-delivery-by-job-id!
+                 job-id
+                 {:surface "whistle-stream"
+                  :destination (str "caller " caller " (stream)")
+                  :delivered? (boolean delivered?)
+                  :note (str note)})))]
+        (hk/as-channel
+         request
+         {:on-close
+          (fn [_channel _status]
+            (reset! closed? true)
+            (mark-delivery! false "whistle-stream-client-closed"))
+          :on-open
+          (fn [channel]
+            (let [close-channel!
                 (fn []
                   (try
                     (hk/close channel)
                     (catch Throwable _)))]
-            (hk/on-close channel
-              (fn [_]
-                (reset! closed? true)
-                (mark-delivery! false "whistle-stream-client-closed")))
             (when-not (send-ndjson! channel
                                     {:type "started"
                                      :ok true
@@ -4525,8 +4527,8 @@
                                  :else
                                  (do
                                    (Thread/sleep poll-ms)
-                                   (recur next-seq next-heartbeat-ms)))))))))))))
-        ))
+                                   (recur next-seq next-heartbeat-ms)))))))))))})
+        ))))
 
 (defn- handle-whistle-stream
   "POST /api/alpha/whistle-stream — NDJSON streaming whistle endpoint."
@@ -4567,9 +4569,11 @@
                                 :message "prompt is required"})
 
             :else
-            #_{:clj-kondo/ignore [:deprecated-var]}
-            (hk/with-channel request channel
-              (.submit invoke-executor
+            (hk/as-channel
+             request
+             {:on-open
+              (fn [channel]
+                (.submit invoke-executor
                        ^Runnable
                        (fn []
                          (try
@@ -4648,7 +4652,8 @@
                              (hk/send! channel
                                        (json-response 500 {:ok false
                                                            :error "whistle-error"
-                                                           :message (.getMessage t)})))))))))))))
+                                                           :message (.getMessage t)})))))))})
+            ))))))
 
 (defn- handle-irc-send
   "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
