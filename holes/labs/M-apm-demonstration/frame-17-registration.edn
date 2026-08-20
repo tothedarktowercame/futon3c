@@ -1,0 +1,168 @@
+{:reg/problem
+ {:problem/id "m97A06",
+  :problem/regime "e7b9ec02599b36845c68ca053416787a23ac29a8",
+  :problem/blob "d0e98b8799b11b0167d731bbed48b874a59eb9c1",
+  :problem/revision "455d4d8c1db24a9244828c5c063d077e9414b986",
+  :lean-revision "4331becf"},
+ :teardown-deadline 240,
+ :reg/known-departures
+ [{:id :analyst-tenure-n2,
+   :text
+   "The Analyst serves N = 2 frames (f15, plus a voided predecessor); analyst-3 served f15 (tenure 1). Its succession was due at the predecessor close, but that frame HALTED DEFECTIVE before close, so the succession documents (handoff, memory-surface pointer, W-entry) are STILL OWED and fall at THIS frame's close. N stays pinned at 2; tenure bookkeeping crosses a void frame and any analyst duty executed here must record that."}
+  {:id :problem-probed-twice-before-the-frame,
+   :text
+   "STRONGEST PROBE REGIME IN THE SERIES, AND IT EARNED IT. m97A06 was probed THREE times total: pre-frame on the original statement (PASS with a declared endpoint caveat — the caveat was exactly where the defect lived); post-repair-v1 on the first repair (FAIL — codex-8 found the unrestricted-deriv endpoint loophole: ContDiffOn controls within-derivatives but the definitions used unrestricted deriv, so kinked exterior extensions give junk endpoint deriv); post-repair-v2 on 455d4d8 (ALL ITEMS PASS, six axiom-clean witnesses: endpoint spike excluded by ContDiffOn, general exterior-kink energy-invariant under v2 definitions, concrete right-affine kink derivWithin = 1 at endpoint 0, derivWithin = deriv on the open interval, negative compile control). Repair v2 replaces unrestricted deriv with derivWithin (Icc 0 T) in the DEFINITIONS (action I, energy, EL), so the statement's own semantics cannot see exterior behavior; the ContDiffOn hypothesis stays on conjunct 2. TWO REPAIR ROUNDS WERE NEEDED: the defect class (junk-deriv at endpoints) lives in the definition layer, not the hypothesis layer. Honest 'not tested': energy conservation itself, the iff conjunct, the Hessian conjunct — none proved in the probe; the probe supports 'no defect found in the two known endpoint classes plus API availability', not soundness-proved."}
+  {:id :predecessor-frame-voided,
+   :text
+   "THE PREDECESSOR FRAME RAN THIS PROBLEM AS ORIGINALLY STATED AND WAS HALTED DEFECTIVE under PROTOCOL-defective-problem.md: conjunct 2 machine-checkably false (endpoint spike witness, axiom-clean, solver-found; solver branch HEAD 715a70c). That frame is :void in series.edn; NO student ran in it, NO promotions landed; its instrument findings are retained there. THIS FRAME (f17) is the protocol-mandated retry on the repaired statement. Comparisons f15<->f17 are same-problem-family; f15 ran m93J06 (adjacent ODE flows), not this problem."}
+  {:id :vendor-rotation-continues,
+   :text
+   "SECOND VENDOR-ROTATION FRAME. Same cast as the predecessor intended: guide and scribe zai glm-5.3, student zai glm-5.2, solver and proctor Codex (gpt-5.6-sol, reasoning max), per-seat cast (per-seat model beats ZAI_MODEL at invoke construction, zai_api.clj:1366). PREDECESSOR EVIDENCE ON THIS AXIS: the guide leg is CONFIRMED — that guide conducted a full frame role on glm-5.3 with server-observed :cost/model attribution (evidence e-0a015b15, e-b3c2443f) before the halt; scribe and student legs are UNMEASURED (:not-reached), so this frame is their first live test. ATTRIBUTION RULE UNCHANGED: :cost/model is observed in evidence-store turn-round transcript entries ONLY (zai_api.clj:955), never in invoke job envelopes, never from the mint's :casting echo (which proves only that the cast parsed). A seat asked to self-attribute will correctly report 'not self-observable' — that is the rule working, not a defect."}
+  {:id :read-path-state-declared,
+   :text
+   "UNCHANGED FROM f15 AND STILL LIVE. Lexical query is OR-joined; default-query-term-limit 4 truncates before distinctive terms (D60); text-keywords orders by problem-corpus IDF which ranks prose rarest in a mathematics corpus. Expect lexical underperformance; the pattern cascade carries the load. f15's student retrieved 0 of 495 available — retrieval remains the series' sharpest open finding. THIS FRAME IS THE ADJACENCY TEST: f15 promoted route memories (ODE flows) versus this frame's pendulum-action problem."}
+  {:id :append-retry-live,
+   :text
+   "RESTART-TIME WRITE BEHAVIOUR UNCHANGED. Evidence appends RETRY on :store-unreachable with a 300s window. Any write-loss comparison against frames 9-12 is not like-for-like."}
+  {:id :harness-pin,
+   :text
+   "SERVING IMAGE RESTARTED 2026-08-20 (twice: pre-predecessor-frame and after its halt); zai per-seat cast, per-turn :cost/model, seat-identity and drawbridge refresh-guard machinery are in the running image (pin 05460b5a measured in the predecessor frame). THE PIN FOR THIS FRAME is the apm-lean revision the frames open from: repair/m97A06-energy-regularity at 455d4d8 (blob d0e98b8799b11b0167d731bbed48b874a59eb9c1). The frozen statement is the REPAIRED one; the predecessor-era original Main.lean blob is void history and must not appear as an anchor anywhere in this frame."}
+  {:id :promotion-is-non-atomic,
+   :text
+   "KNOWN LIVE DEFECT D62: promote-artifact posts the pattern attach and :proposed status BEFORE the review; a failure after the attach leaves the edge permanently unpromotable, and refusal receipts say only 'Tool execution failed' (D43). PROMOTE ONE AT A TIME, WITH A GAP. And the D31 trap stands: attach-then-review REFUSES an edge already carrying status or patterns — deposit patternless and statusless."}
+  {:id :dead-regime-pin,
+   :text
+   "STANDING SERIES DEFECT: (:problem :regime) is a sha that resolves in no repository; copied verbatim every frame; declared, not fixed, for comparability. :lean-revision resolves only in /home/joe/code/mathlib4; anchor instead against apm-lean blob d0e98b8 or revision 455d4d8."}],
+ :reg/predictions
+ [{:id :problem-closed-on-artifact,
+   :text
+   "ARTIFACT AXIS. m97A06-repaired reaches zero executable sorries, axiom-clean, frozen statement (blob d0e98b8) mechanically unchanged — or residual strictly reduced and localised per conjunct. The statement is a four-conjunct conjunction; v2 definitions are derivWithin-based. Settled by re-run: sorry count, #print axioms, blob diff. The probe's witnesses are not proof material and are not in the solver's checkout."}
+  {:id :problem-solved,
+   :text
+   "MATHEMATICS AXIS, THE ONE THAT COUNTS. The repaired statement is non-vacuous: probe compiled EL inhabitants and non-inhabitants and the endpoint exclusion machinery. Third sound-problem candidate after f15 (and the predecessor's would-have-been); adjudicate artifact and mathematics axes separately; the frame disposition MUST travel with any report of either axis."}
+  {:id :memory-contributes-to-close,
+   :text
+   "THE MEASUREMENT. A memory surfaced by recall is attested USED per-id by solver or student, in its own words, contributing to the close of a SOUND problem. Prior: exactly one attested instance ever (f13, void frame, retained by protocol). ADJUDICATE AGAINST ATTESTATION ONLY; surfaced-and-unused is a real outcome; resemblance is not evidence. The adjacency test is live: f15 promoted ODE-flow memories against pendulum-action."}
+  {:id :reviewed-attachment-gained,
+   :text
+   "The store gains at least ONE reviewed memory attachment via GUIDE-reviewed attach-then-review of a patternless statusless deposit. The scribe is a zai glm-5.3 seat — whether a GLM scribe can thread the D31 needle (patternless deposit, reviewer != depositor) is a first live measurement this frame."}
+  {:id :offer-disposition-populated,
+   :text
+   ":memory-disposition-offer-ids non-empty so runtime invariant F3 passes; necessary not sufficient — count only per-id attested dispositions."}
+  {:id :guidance-count-exact,
+   :text
+   "Recorded guidance count equals the true Agency-log count; guide is a zai glm-5.3 seat — a count anomaly is a vendor finding first, protocol defect second."}
+  {:id :glm-seats-complete-the-frame,
+   :text
+   "THE ROTATION MEASUREMENT, NOW WITH ONE LEG CONFIRMED. Guide leg: confirmed in the predecessor frame (see vendor-rotation-continues). THIS FRAME measures scribe and student legs for the first time: scribe deposits and reaches review; student runs its lane with attested per-id dispositions; every completed role attributed via observed :cost/model matching the cast. Seat failure is the measurement, not a violation; attributing work to glm-5.3/5.2 without :cost/model evidence is the violation."}
+  {:id :analyst-succession-executed,
+   :text
+   "analyst-3's succession documents (handoff, memory-surface pointer, W-entry) land at THIS close, carrying the void-frame bookkeeping. A prediction that cannot be satisfied or refuted by the frame it ships in is a defect in the prediction — report it as such if met."}
+  {:id :cascade-seeds-from-recall,
+   :text
+   "The memory cascade seeds offers from recall results (live since f15). Replication expected here; expect f15's promoted route memories among the seeds if retrieval works at all — if they do NOT appear on an adjacent problem after two frames of retrieval failure, the retrieval gap is structural. That is the finding this prediction exists to force into the open."}],
+ :pilot-units
+ [{:problem-id "m97A06",
+   :difficulty-stratum "family=m;one-executable-hole",
+   :regime "e7b9ec02599b36845c68ca053416787a23ac29a8",
+   :locked-lemma-exposure []}],
+ :schema 1,
+ :stop-rules
+ [:budget-exceeded
+  :attempt-cap-reached
+  :axiom-unclean-close
+  :no-progress
+  :teardown-deadline-passed
+  :no-improvement-escalate],
+ :reg/guide-seat "f17-guide",
+ :reg/cascade-measurements
+ ["offers by route" "patterns per problem" "cascade truncation"],
+ :required-measurement-fields
+ ["statement defects at review"
+  "terminal disposition"
+  "residual executable sorries"
+  "attempts or closer hops"
+  "axiom cleanliness"
+  "memories promoted"
+  "review escape rate"
+  "promoted then surfaced then used"
+  "contract leaks"
+  "duplicate declarations"
+  "locked-lemma exposure"
+  "promotion coverage"
+  "unconsumed promotions"
+  "import-only edges"
+  "scribe lane coverage"
+  "arc-lane yield"
+  "rewrite rule offered and used"],
+ :reg/seat-exclusivity :enforced-at-register,
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf",
+ :reg/frame-id "f17",
+ :reg/memory-cascade-enabled? true,
+ :required-capabilities
+ [:frame-containment-witnessed
+  :created-frame-worked
+  :unique-disposition
+  :offer-use-disposition
+  :need-retrieval
+  :promotion-importable
+  :promotion-need-taggable
+  :measurement-populated],
+ :lean-registration "DarkTower.APMDemonstration.round1Registration",
+ :reg/student-runner-budget {:wall-clock-minutes 60},
+ :modules [:R :F :S :A :M :P :X],
+ :reg/solver-config {:model "gpt-5.6-sol", :reasoning-effort "max"},
+ :confirmation-units [],
+ :reg/harness-revision "05460b5a05789720121630e618821d2c81b45927",
+ :problem
+ {:problem-id "m97A06",
+  :difficulty-stratum "family=m;one-executable-hole",
+  :regime "e7b9ec02599b36845c68ca053416787a23ac29a8",
+  :locked-lemma-exposure []},
+ :reg/guidance-regime #{:suggest :answer},
+ :reg/frame-1-disclaimer false,
+ :reg/analyst-tenure
+ {:n 2,
+  :frame-index 2,
+  :frames ["f15" "voided" "f17"],
+  :note
+  "tenure bookkeeping crosses a void frame; succession owed at f17 close"},
+ :variation
+ {:kind :measured,
+  :endpoint
+  "frame-16: the series' first VENDOR ROTATION. Solver arm unchanged from f15 (gpt-5.6-sol, reasoning max) so the solver axis is like-for-like; guide and scribe move from Claude to zai glm-5.3 and the student to zai glm-5.2. The frame measures whether the GLM seats can hold conducting, scribing and independent-study roles end-to-end on a sound problem, with per-turn model attribution observed via :cost/model (harness at mint 235c6738; pin moved pre-open to 05460b5a) rather than inferred from the cast. It is also the second sound problem in a row, so the f15 finding - promotion works, retrieval is the gap - gets a replication attempt on a problem (m97A06, pendulum Euler-Lagrange) topically adjacent to f15's ODE-flow problem."},
+ :reg/memory-cascade-cap 100,
+ :lean-revision "4331becf6f0c8471537adcc264a8fde7e12c94c9",
+ :runtime-invariants [:F2 :F3 :F4 :F5 :F6 :F8 :F9],
+ :reg/role-cards
+ {:codex-solver "00552e4108b02e00139772963bc5e9fa8ff5b63e",
+  :zai-student "b1ee7de57a9d27993155fc8732a60a609889add4",
+  :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd",
+  :scribe "02441d9df4b8a05355790a51f1e535bf9e9465d4",
+  :proctor "63a64a878ce06ccdc8ec78e5ee19526bc9cef211",
+  :analyst "ed340941f4747b20a540fec9ed56bd332579590c"},
+ :reg/solver-seat "f17-solver",
+ :reg/attempt-caps {:s-frontier 10, :s-student 3},
+ :kind :apm-demonstration-round1-registration,
+ :decision-rule
+ {:id :apm-round1-outcome,
+  :outcomes [:closed :tier-a :tier-b :defective]},
+ :reg/scribe-seat "f17-scribe",
+ :lean-source "DarkTower/APMDemonstrationPreregistration.lean",
+ :structural-invariants [:F1],
+ :reg/analyst-seat "analyst-3",
+ :reg/student-seat "f17-student",
+ :estimated-cost 1.0,
+ :arm-description
+ "fresh seats, analyst-3 (tenure 2 of 2 - LAST frame of its tenure), cascade on, write path repaired, read path OR-joined, PROBLEM PROBED BEFORE THE FRAME WITH TWO-SIDED WITNESSES (no defect found; stationarity-side non-degeneracy unprobed), VENDOR ROTATION: guide and scribe zai glm-5.3, student zai glm-5.2, solver unchanged gpt-5.6-sol/max",
+ :budget-cap 5.0,
+ :reg/predictions-analyst-note
+ "see :reg/predictions :analyst-succession-executed — succession was due at the voided predecessor's close and is OWED at f17 close",
+ :reg/proctor-seat "f17-proctor",
+ :replication-stage :pilot,
+ :arms
+ [{:name "one problem, one-shot measurement",
+   :neutral? false,
+   :axes [],
+   :role :treatment}],
+ :claim :descriptive}
