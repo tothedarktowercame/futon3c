@@ -40,3 +40,8 @@
     (is (false? (valid-verify-receipt?
                  (assoc receipt :receipt/mutations ["changed-file"])
                  action)))))
+
+(deftest live-problem-projector-is-not-an-identity-placeholder
+  (is (not= identity control/project-problem!))
+  (is (= "problem-buffer.md"
+         (str (.getFileName control/problem-buffer-path)))))

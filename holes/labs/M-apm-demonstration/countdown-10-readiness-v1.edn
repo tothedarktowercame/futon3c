@@ -73,7 +73,7 @@
     checkout or Git object identity, independently of the developer worktree."}
 
   {:slice/id :ledger-derived-live-projection
-   :order 4 :status :blocking
+   :order 4 :status :complete
    :problem
    "Certificates and projection files exist, but no tested adapter projects
     the active ledger frame and its receipts into the live problem buffer."
@@ -115,5 +115,5 @@
    :reason "The countdown deliberately retains one operator permit per step;
             batch permits are the subsequent qualification target."}]
 
- :estimated-remaining-structural-slices 3
- :next-slice :ledger-derived-live-projection}
+ :estimated-remaining-structural-slices 2
+ :next-slice :ten-unit-pinned-manifest}

@@ -10,6 +10,7 @@
             [futon3c.apm.campaign-qualification :as qualification]
             [futon3c.apm.campaign-stepper :as stepper]
             [futon3c.apm.apparatus-pin :as apparatus-pin]
+            [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.frame-specification :as frame-specification])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -32,6 +33,7 @@
 (def ledger-path (.resolve state-directory "ledger.edn"))
 (def certificate-directory (.resolve state-directory "certificates"))
 (def projection-directory (.resolve state-directory "projection"))
+(def problem-buffer-path (.resolve state-directory "problem-buffer.md"))
 
 (declare valid-solve-receipt?)
 
@@ -217,6 +219,23 @@
 (defn- plan []
   (edn/read-string (slurp plan-path)))
 
+(defn project-problem!
+  "Project the latest certified checkpoint to the durable file and *problem*.
+  The campaign projection callback payload is deliberately ignored: authority
+  is reloaded from the ledger and latest content-addressed certificate."
+  [_]
+  (let [result
+        (problem-projection/project-latest!
+         {:ledger-path ledger-path
+          :projection-directory projection-directory
+          :output-path problem-buffer-path
+          :expected-frame-id "f18"
+          :expected-problem-id "a97J07"
+          :buffer-sink problem-projection/emacs-buffer-sink})]
+    (if (:ok result)
+      result
+      (throw (ex-info "Live problem projection refused" result)))))
+
 (defn- valid-preflight-receipt? [receipt action]
   (and (= (:receipt/id receipt)
           (machine/ledger-digest [(dissoc receipt :receipt/id)]))
@@ -268,7 +287,7 @@
    :projection-directory projection-directory
    :observation-fn frame-runtime-observation
    :now-fn #(Instant/now)
-   :project-fn identity
+   :project-fn project-problem!
    :gate-provider (qualification/gate-provider
                    (plan) qualification-observation)
    :postcondition-fn postconditions/validate
