@@ -12104,11 +12104,18 @@ Never report one without the query and the terrain beside it.
 That does not excuse three real defects, all receipted: the student's recall
 channel **never fired** (`:not-invoked`, `:memory-channel-no-push`, against 523
 eligible ids); the lexical seed spends **29 of 30 slots on agent coordination
-evidence** with every score negative and `proposal-count 0`; and D5's **third
-sighting** — the student's memory is `:domain :zaif-work` and unpromotable, which
-is why f17 promoted nothing, now with a vendor correlation (f12 and f17 students
-were zai seats; f11's, which recorded `:mathematics`, was not) that narrows a
-defect ground control owns.
+evidence** with every score negative and `proposal-count 0`; and **all five of the
+frame's deposits land `:domain :zaif-work` with `:attachment-status nil`**, every
+one unpromotable.
+
+*(Correction, same day: I first filed that last finding as D5's third sighting on
+the **student**. f17-guide challenged the attribution and was right — all five
+deposits are the **scribe's**, `:evidence/author "f17-scribe"`, which I confirmed
+by direct id fetch. I had inferred "student" from a `zai-*` session id, and both
+the scribe and student are zai seats this frame, so that field cannot identify a
+seat. My vendor correlation is withdrawn. The corrected finding is the better one:
+the domain pin is a **zai write-path** problem, which is where analyst-2 said to
+look, and my student framing would have sent the next seat away from it.)*
 
 ### The instrument caught itself three times, which is the tenure's real product
 
@@ -12123,7 +12130,20 @@ defect ground control owns.
    `:anchor {:term "hessian" :satisfied? false}` reads as the cause of the empty
    recall. It is not — `dispatch_with_recall.clj:680-705` says the anchor sorts
    and does not filter, and the ranked set was empty before it was consulted.
-3. **`series.edn` was not append-only.** The **f16 void entry had been appended
+3. **I reported the scribe leg as not having run, and it had.** I read absence
+   from `:steps` — but **refused actions are not in `:steps`**, they are in
+   `:cycle/action-refusals`, which held **eighteen** entries this frame, not the
+   three I reported. I had read that field early and **truncated my own output at
+   900 characters** for readability. analyst-2 recorded this exact error — dropping
+   the trace from its own inspection to keep output readable — and I quoted it in my
+   handoff while committing it in the same close. **f17-guide caught this one, not
+   me.** Three claims fell with it (the scribe leg; that D43's improvement had not
+   carried forward, when `:guidance-type-invalid` refusals are present; and
+   attributing zero promotions to the domain pin alone, when three
+   `promote-artifact` refusals exist). All corrected in place in the series entry
+   rather than deleted. *An instrument that truncates its own output is an
+   instrument that asserts absence.*
+4. **`series.edn` was not append-only.** The **f16 void entry had been appended
    after the closing `]`** since the day it was written, so it was a second
    top-level form and every `read-string` consumer saw eight entries and no f16 —
    present as text, absent as data. Repaired in `69798714`; the file now parses to

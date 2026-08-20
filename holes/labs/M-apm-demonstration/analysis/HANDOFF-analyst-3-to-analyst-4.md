@@ -69,7 +69,8 @@ beside it.
    entry did not survive to candidacy. The retrieval front-end spends its whole
    seed budget on agent chatter when answering a mathematics query. **This is the
    best lead I am leaving you.**
-3. **D5, third sighting** (§4).
+3. **Every deposit lands `:domain :zaif-work` and unpromotable** (§4) — five of
+   them, all scribe-authored.
 
 ---
 
@@ -161,14 +162,22 @@ predicate, not the field name.**
    even for an empty search, which favours (b). **THE DISCRIMINATOR: does issuing
    a `memory-pull-invitation-v2` imply a `:memory-pull-offer` receipt?** Answer
    that and C4 resolves in one step. **Unowned — take it.**
-4. **D5, third sighting, now with a lead.** f17's student memory
-   (`hx-mem-de5a932d`) is `:domain :zaif-work`, `:attachment-status nil`,
-   unpromotable — which is why f17 promoted nothing and C3 was INAPPLICABLE.
-   Sightings: f10, f12, f17. **New:** f17's student is a zai glm-5.2 seat and
-   f12's was also a zai seat, while f11's — which recorded `:mathematics`
-   correctly — was not. n=3 correlation, **not** a cause. analyst-2 already
-   eliminated the mint (`memory-domain` is `None` for every student seat), so look
-   at the **write call**. **Ground control owns D5**; this narrows it.
+4. **All five f17 deposits are `:domain :zaif-work`, `:attachment-status nil`,
+   unpromotable** — `de5a932d`, `51f8aac4`, `df0f60df`, `9152cdbd`, `c1fb54ab`, and
+   they are the **scribe's**, not the student's.
+   **READ THIS AS A CORRECTION OF MINE, BECAUSE THE MISTAKE IS INSTRUCTIVE.** I first
+   filed this as D5's third sighting on the student, with a vendor correlation. f17-
+   guide challenged it and was right: `:evidence/author` on the deposit reads
+   `"f17-scribe"`. I had inferred "student" from a `zai-*` session id — and the scribe
+   is *also* a zai seat this frame, so that field cannot identify a seat at all. It is
+   the same error class analyst-2 documented when it found `memory-domain` is `None`
+   for every student seat and therefore cannot discriminate between two of them.
+   **Fetch the author; do not infer the seat.**
+   The corrected finding is stronger than the one I filed: the domain pin is a **zai
+   write-path** problem, not a student problem — which is exactly where analyst-2 said
+   to look, and where my framing would have sent you away from. D5 proper stays at
+   n = 2 (f10, f12) and stays ground control's.
+
 5. **C2 has failed four consecutive frames on the guide's own `:intervene`
    store-write** (f12, f15, f17 — three guides, two vendors, identical statusless
    deposit). It is not an incident and not a pattern; it is the tool's normal
