@@ -1554,4 +1554,328 @@
    three commits, per-conjunct lemmas, frozen statement untouched."
   :defects-found 1
   :defects-fixed-or-queued 1}
+
+ ;; ===========================================================================
+ ;; FRAME 17 — m97A06 (repaired) — TIER-B — analyst-3's last frame; succession here
+ ;; ===========================================================================
+ {:frame "f17"
+  :problem "m97A06"
+  :closed "2026-08-20"
+  :disposition :tier-b
+  :analyst "analyst-3 (tenure 3, frame 2 of 2 — LAST frame of this seat; succession below)"
+  :tenure-bookkeeping
+  "My tenure is f15 and f17: f16 was VOID (fourth pool defect), and the f17
+   registration carries the crossing explicitly —
+   :reg/analyst-tenure {:n 2 :frame-index 2 :frames [\"f15\" \"voided\" \"f17\"]}. Two
+   analysts running have now had a void frame inside their tenure. If N stays at 2,
+   a tenure can be reduced to ONE closed frame by a single defective problem, and
+   drift detection across frames is the whole reason this seat is not fresh each
+   time. That is a parameter question for the operator, not a finding, but it has
+   now happened twice and nobody has said it out loud."
+  :vendor-rotation
+  "FIRST FRAME TO EXERCISE THE ROTATION ON MORE THAN THE GUIDE LEG: guide and scribe
+   zai glm-5.3, student zai glm-5.2, solver unchanged gpt-5.6-sol/max so the solver
+   axis is like-for-like. Read every seat-shaped finding below with this in view —
+   several of them are plausibly vendor-behaviour rather than machine regression, and
+   I have marked which are which where I can tell them apart. I cannot always."
+
+  :mathematics
+  {:closed? false :disposition :tier-b :axiom-clean? true :residual-sorries 3
+   :solver-dispatches 5 :student-dispatches 1
+   :student {:conjuncts-proved ["3-zero-solution-EL-sorry-free"]
+             :conjuncts-residual ["1-first-variation" "2-energy-constancy"
+                                  "4-second-variation-junk-value"]
+             :terminal-commit "95b10c9" :statement-frozen true}
+   :headline-result
+   "One conjunct of four, axiom-clean, statement frozen. m97A06 is the SECOND sound
+    problem in a row after f15 — the corpus-defect streak (f11, f12, f13, f16) has
+    not resumed — but it is also the first frame since f10 to close on a partial
+    rather than a full artifact."}
+
+  ;; --- duty A -----------------------------------------------------------
+  :transfer-checks
+  {:score "3/6"
+   :fails [:C2 :C4] :inapplicable [:C3]
+   :receipt "data/problem-state/m97A06-03b31da7.../transfer-checks.edn — re-run by me
+             from the command, not read from a receipt."
+   :series "f7 3/6 · f8 6/6 · f9 5/6 · f10 5/6 · f11 4/6 · f12 5/6 · f13 VOID · f15 5/6 ·
+            f16 VOID · f17 3/6"
+   :C3 "INAPPLICABLE, AND THIS IS P28 WORKING LIVE FOR THE FIRST TIME. analyst-2 built
+        the INAPPLICABLE path (b57b29f0) after f11's C3 failed vacuously on zero
+        promotions; f12 and f15 both had promotions so the path was never taken. f17
+        has zero promotions and C3 correctly reports INAPPLICABLE with a reason instead
+        of FAIL. A predecessor's packet paying off two tenures later is worth recording
+        as such."
+   :C2 "HONEST FAIL, and now the FOURTH consecutive frame failing on the guide's own
+        intervention: e-440a5001, :kind :store-write, projected edge status nil. f12,
+        f15 and f17 are three different guides on two different vendors producing the
+        same statusless deposit. This is no longer an incident or a pattern; it is the
+        :intervene tool's normal output, and nothing downstream is wired to pick it up."
+   :C4 "FAIL, and I could NOT determine from persisted state whether it is real or
+        vacuous — recorded as undetermined rather than guessed, because the guess
+        matters. pull-offers 0 and pull-uses 0. Two candidate causes: (a) no seat
+        invoked the pull channel, in which case C4 failed with no input and has exactly
+        the defect P28 fixed in C3; (b) an invitation WAS issued — the offer bodies
+        carry :memory-pull-invitation-version \"memory-pull-invitation-v2\" — and the
+        :memory-pull-offer receipt was not written, which is a pipeline failure. C4's
+        own comment says the offer receipt is the denominator and should exist even for
+        an empty search, which favours (b); I could not confirm it without reading the
+        pull mechanism, and I stopped rather than assert. I verified my instrument
+        first: transfer_checks.bb points at the substrate on 7073 and that endpoint
+        answers, so the zero is not the endpoint rot I recorded at f15.
+        THE DISCRIMINATOR, for whoever takes this: does issuing a
+        memory-pull-invitation-v2 imply a :memory-pull-offer receipt? If yes, (b) and
+        it is a defect. If no, (a) and C4 needs P28's treatment."}
+
+  :trace-validation
+  {:launchable? false :failure-count 5
+   :failures [:malformed-cycle-attempts :f1-scaffold-identical-frame
+              :f7-missed-available-artifact :f9-capability-not-realized
+              :f9-capability-probe-missing]
+   :across-frames {"f8" 6 "f9" 7 "f10" 7 "f11" 6 "f12" 5 "f15" 3 "f17" 5}
+   :five-failures-are-four-causes
+   "Same warning as f15 and it is now a standing property of this number, not an
+    observation about one frame: the failure count is NOT a count of independent
+    defects.
+      A :malformed-cycle-attempts — :cycle/regime and :cycle/runner-freshness nil
+      B :f1-scaffold-identical-frame + the created-frame-worked capability — ONE cause,
+        scaffold-hash == closing-hash (both f6701a69…)
+      C :f7-missed-available-artifact + the need-retrieval capability — ONE cause,
+        523 available / 0 retrieved, the same double-count I found at f15
+      D :f9-capability-probe-missing — only 5 of 8 probes recorded; the three missing
+        are offer-use-disposition, promotion-importable, promotion-need-taggable
+    :f9-capability-not-realized fires ONCE while covering TWO failing capabilities
+    (B and C). Anyone plotting failure counts across the series is plotting a number
+    whose units change between frames."
+   :3-to-5-is-not-a-regression-in-the-machine
+   "f15 3 -> f17 5, but two of the three new failures are conditions f15 did not have
+    rather than repairs that came undone: f15's frame hashes differed and f15 recorded
+    all 8 probes because it had offers and promotions to probe. f17 had zero of each.
+    :f9-capability-probe-missing returning is the same zero-input mechanism analyst-2
+    documented at f11/f12, one level up."}
+
+  ;; --- P30's verdict, including the part where I was wrong ----------------
+  :prediction-i-registered-and-must-now-correct
+  {:predicted "In the f15 entry I wrote that P30 would take :malformed-cycle-attempts
+               out and the failure count 3 -> 2 at f16."
+   :outcome "IT DID NOT. The failure is still there. I was wrong, and the way I was
+             wrong is the useful part."
+   :what-actually-happened
+   "P30 LANDED AND FIRED — f17's attempts carry
+    :cycle/store-revision \"734fea7db0e69ae88171e2179228fc66ef2c9768\", both of them,
+    computed by the machine. The field I measured is fixed. But attempt? needs SIX keys
+    and the machine stamps FOUR; :cycle/regime and :cycle/runner-freshness are still
+    caller-supplied, and f17's guide omitted both.
+    f15's guide supplied regime and runner-freshness by hand and omitted store-revision.
+    f17's guide, on a different vendor, did the exact opposite. TWO FRAMES, TWO GUIDES,
+    TWO DIFFERENT OMISSIONS, ONE FAILURE. My f15 mutation was sound — I injected a sha
+    into f15's attempts, which already carried the other four — but a mutation on one
+    frame's record cannot tell you which fields the NEXT frame's caller will forget.
+    That is the lesson and it generalises past this field: a mutation test proves the
+    check responds to the input you gave it, not that the input class is closed."
+   :consequence "P31 (below) stamps the remaining two. The general form — every field
+                 that is caller-supplied eventually gets omitted — is what my successor
+                 should carry, not the two field names."}
+
+  ;; --- both-channels-varied: my f15 surfaced prediction, now observed -----
+  :both-channels-varied
+  "CONFIRMED DEAD BY OBSERVATION. At f15 I could only show this by mutation, and I
+   surfaced to ground control that populating :cycle/store-revision would be necessary
+   and not sufficient because one snapshot per cycle makes the digest constant across a
+   cycle's attempts. f17 is the first frame where the field is populated, and BOTH
+   attempts carry the identical digest 734fea7db0e69ae88171e2179228fc66ef2c9768, so
+   (distinct [x x]) = 1 and the guard still cannot fire. The series' two-channel
+   experimental control remains unenforceable, now for the second reason rather than
+   the first. The ruling — whether each attempt re-snapshots the store — is still
+   ground control's and is still open. It is the one outstanding item that would change
+   what this series can claim about its own experimental design."
+
+  ;; --- the tenure's question -----------------------------------------------
+  :read-path
+  {:the-cause-moved-between-f15-and-f17
+   "THIS IS THE MOST IMPORTANT THING IN MY TENURE AND IT IS NOT WHAT I EXPECTED TO
+    WRITE. At f15 the read-path failure was query construction: f15-guide's D60, an
+    issued query of 'exponent OR closing OR conjunct OR existence' — four prose words,
+    not one of which named the problem's mathematics — against which the cascade still
+    returned 105 distinct memories, none used.
+    f17's issued query is
+      'hessian OR apm-m97a06 OR euler-lagrange OR variation OR continuously OR found
+       OR around OR equations OR satisfying OR second OR differentiable OR equation'
+    That query names the mathematics. Query construction improved between the frames.
+    And recall returned :recall-empty with proposal-count 0."
+   :and-the-terrain-is-genuinely-empty
+   "MEASURED, NOT INFERRED. The store holds 538 memory/assert edges. Rows containing
+    euler-lagrange: 0. variational: 0. stationary: 0. lagrangian: 0. pendulum: 0.
+    geodesic: 0. first-variation / second-variation: 0. Rows containing 'hessian': 1,
+    and that one is THIS FRAME'S OWN student memory, written after the recall ran. The
+    only row containing 'variation' at all is
+    order-a-disjoint-interval-family-into-a-variation-partition — bounded variation, a
+    measure-theory memory, unrelated.
+    So f17's :recall-empty is CORRECT BEHAVIOUR ON AN ABSENT TERRAIN, not a retrieval
+    defect. There was nothing topical to retrieve. I want this stated plainly because
+    the seat's own prior was 'retrieval is the gap' and this frame does not support
+    that reading of ITSELF, whatever it supports about f15."
+   :which-means-f17-is-more-honest-than-f15
+   "f15 returned 105 distinct memories for a junk query and none were attested used.
+    f17 returned zero for a good query against terrain that does not exist, and said
+    so. The second behaviour is better. A reader comparing offer counts across the two
+    frames would conclude the opposite, which is exactly why the count needs the query
+    and the terrain beside it."
+   :the-one-thing-that-IS-a-defect
+   "THE STUDENT'S RECALL WAS NEVER INVOKED. Its record reads
+    {:status :not-invoked :reason :memory-channel-no-push} against 523 eligible ids —
+    not 'ran and found nothing', but 'did not run'. f15's student read 495 available /
+    0 retrieved, which I reported as retrieval failure; f17's is a channel that did not
+    fire at all. These are different failures and I do not know whether f15's was
+    silently the same one. Nobody should merge them without checking."
+   :lexical-seed-is-97-percent-coordination-evidence
+   "A NEW, QUANTIFIED FINDING and the best lead I am leaving. The solver's recall
+    carries a 30-entry :lexical-seed: 29 of :evidence-type :coordination and ONE of
+    :evidence-type :memory, every score negative (-25.90 to -17.26), and
+    proposal-count 0 — so even the single memory-typed seed entry did not become a
+    candidate. The retrieval front-end spends essentially its whole seed budget on
+    agent coordination evidence when answering a mathematics query.
+    I ALSO CORRECTED MYSELF HERE, and record it because the first reading was
+    seductive: I initially took :anchor {:term \"hessian\" :satisfied? false} for the
+    cause. It is not. dispatch_with_recall.clj:680-705 is explicit — eligible-memories
+    annotates and rank-with-anchor-boost only sorts, 'the anchor influences surfacing
+    WITHOUT becoming an eligibility filter'. The ranked set was already empty before
+    the anchor was consulted, so the unsatisfied anchor is a symptom. Reading the
+    predicate took two minutes and would have cost the series a wrong mechanism."}
+
+  ;; --- D5, third sighting ------------------------------------------------
+  :D5-third-sighting
+  "The student DID record a memory: hx-mem-de5a932d,
+   'm97a06-shared-kinetic-junk-cancellation', hook 'Shared kinetic term makes
+   action/Hessian junk-0 both sides; falsity dies'. It carries :prop/domain :zaif-work
+   and :prop/attachment-status nil, with a zai-* session id among its endpoints. It is
+   unpromotable on domain grounds, which is why this frame promoted nothing and why C3
+   is INAPPLICABLE.
+   THIRD SIGHTING: f10 (e-3a3aed11), f12, f17. NEW INFORMATION THIS FRAME: f17's
+   student is a zai glm-5.2 seat and f12's student was also a zai seat, while f11's
+   student — which recorded :mathematics correctly — was not. That is a correlation
+   with n=3 and I am NOT calling it a cause; it is a hypothesis my successor can test
+   in one frame by looking at the write call rather than the mint. analyst-2 already
+   eliminated the mint: memory-domain is None for every student seat on the roster, so
+   the mint cannot discriminate between two of them. Ground control owns D5; this is
+   the first evidence that narrows it."
+
+  ;; --- duty B — S-7 --------------------------------------------------------
+  :spectral
+  {:reading "S-7"
+   :universe 106
+   :mission-scope {:memories 22 :patterns 19 :shared-nodes 3}
+   :whole-store {:edges 538 :reviewed 223 :with-review-record 213}
+   :finding
+   "THE REVIEWED SET DID NOT MOVE. Whole-store edges 498 -> 538 (+40) since S-6, and
+    reviewed is 223 both times, with-review-record 213 both times. Every one of the 40
+    new edges is unreviewed. Mission scope is unchanged at 22/19/3 and the universe is
+    unchanged at 106 — no math-* pattern file created since 2026-08-19.
+    So the store is growing and the CURATED store is not. f15 added three reviewed
+    attachments; f16 was void; f17 added none. Same method as S-6, which I validated
+    against analyst-2's S-5 before using it."}
+
+  ;; --- duty D ------------------------------------------------------------
+  :curation
+  "NO READING THIS FRAME, deliberately. Zero attachments means zero bespoke-rate data,
+   and the card is explicit that a curation reading taken every close is noise. My f15
+   entry gave 1-of-3 bespoke with the qualifier that it was n=1 against analyst-2's
+   n=1; f17 adds nothing to that and I am not going to dress a zero as a trend."
+
+  ;; --- duty F ------------------------------------------------------------
+  :packets
+  {:P30-outcome "See :prediction-i-registered-and-must-now-correct. Landed, fired,
+                 did not clear the failure."
+   :P31-dispatched
+   "P31 — stamp :cycle/regime and :cycle/runner-freshness so attempt? is satisfied by
+    construction. codex-3, job invoke-1787240056566-5288-d8bafc6e, park
+    park-b5e2ac6d-6451-455b-8b71-2c4dbbae6322 (payload carries the full review
+    checklist). Deliberately covers BOTH remaining fields rather than the one I could
+    prove machine-owned, because half of this fix moves no number and analyst-2's rule
+    is that a packet must move a number I report.
+    ONE PREMISE I CHECKED AND ONE I COULD NOT: :cycle/regime is machine-knowable —
+    read-registration's result carries :problem {:regime \"e7b9ec02…\"}. But
+    assign-checkouts returns {:checkout :base-revision :branch :frame/id :batch} with
+    NO freshness field, so the machine does not currently measure runner-freshness. I
+    told codex-3 in terms to STOP AND BELL ME rather than invent a definition of
+    'fresh' — a plausible-looking boolean in an experimental-control slot is worse than
+    a nil, and inventing one would be the same error as the tool name a packet of mine
+    could have shipped if it had been large enough to build from end to end."}
+
+  ;; --- record integrity --------------------------------------------------
+  :series-file-repair
+  "THE f16 VOID ENTRY WAS NOT IN THIS FILE'S DATA. e87538d8 appended it AFTER the
+   top-level ']' at line 1503, so it sat as a second top-level form and read-string —
+   which returns the first form only — saw 8 entries and no f16. The text was present;
+   the datum was not. No commit had touched the file since, so nobody had noticed. Any
+   consumer would have read the series as jumping f15 to f17 with the fourth pool
+   defect missing.
+   Repaired in 69798714: the 54 lines moved inside the vector, text unchanged, file now
+   parses to 9 entries. I found this only because I went to establish why f16 was void
+   before writing this entry.
+   THE CLASS, for my successor: an append-only file whose appends are not parse-checked
+   is not append-only, it is append-hopeful. Read it back with read-string after every
+   append. I now do; it cost one line and it is how I found this."
+
+  :predictions-cross-check
+  "f17-guide adjudicates and ground control verifies; I checked what I could measure
+   independently.
+   :offer-disposition-populated — :memory-disposition-offer-ids is [] and there were
+   zero offers, so this is INAPPLICABLE, not refuted, and it is the same zero-input
+   shape analyst-2 documented. Note the asymmetry it creates with f15, where the same
+   prediction was CONFIRMED on 315 contentless rows: this prediction has now been
+   satisfied vacuously in one frame and unsatisfiable-by-absence in the next, and has
+   never once been tested against an attested disposition.
+   :cascade-seeds-from-recall — the registration set this up as the decisive test:
+   'if f15's promoted memories do NOT appear on an adjacent problem after two frames of
+   retrieval failure, the retrieval gap is structural.' They did not appear;
+   proposal-count is 0. But the registration's inference does NOT go through as
+   written, because it assumed the store had something to offer. I measured that it
+   does not for this problem's mathematics. The honest verdict is INAPPLICABLE ON AN
+   ABSENT TERRAIN, and the prediction should be re-registered on a problem whose
+   terrain the store actually covers — otherwise it will keep confirming 'structural'
+   from an empty shelf.
+   :glm-seats-complete-the-frame — the SCRIBE LEG DID NOT RUN. :scribe-lane-reports is
+   nil and there is no :record-scribe-lanes step in the cycle at all, against f15's
+   eight. The student leg ran and produced a real partial result (one conjunct,
+   axiom-clean) plus a memory the domain pin then made unpromotable. Per the
+   registration's own rule, seat failure is the measurement, not a violation.
+   :guidance-count-exact — 0 recorded, 0 guidance events in the trace, consistent.
+   :analyst-succession-executed — see :succession."
+
+  :succession
+  {:successor "analyst-4"
+   :minted "POST /api/alpha/frames/mint-analyst {\"tenure\": 4} -> {:ok true :tenure 4
+            :analyst-seat \"analyst-4\"}; on the roster, invoke-ready? true, route local."
+   :probed "YES, AND IT ANSWERED — job invoke-1787239902600-5285-bb6f67a9, state done,
+            reply 'analyst-4, running on Claude Opus 5 (1M context).' The path carries
+            content, not merely a done state. Every holder of this seat has now probed
+            its successor rather than handing over one it had not seen answer; analyst-1
+            set that rule when the mint route was unrouted and it has held for three
+            handovers."
+   :handoff "analysis/HANDOFF-analyst-3-to-analyst-4.md"
+   :w-entry "appended to holes/missions/M-apm-demonstration.md"}
+
+  :defects-found 4
+  :defects-fixed-or-queued 2
+
+  :headline
+  "THE READ-PATH DIAGNOSIS CHANGED UNDER ME, AND THE CHANGE IS THE RESULT. My tenure
+   inherited 'promotion works, retrieval is the gap.' f15 supported it: a junk query,
+   105 memories surfaced, none used. f17 does not, and not because retrieval improved —
+   the query got GOOD, naming hessian and euler-lagrange and variation, and the store
+   turns out to contain ZERO rows mentioning euler-lagrange, variational, stationary,
+   lagrangian, pendulum or geodesic across 538 edges. Recall returned empty because
+   there was nothing to return. That is a curriculum finding, not a retrieval one, and
+   it means the gap this seat has been chasing for two tenures is at least partly a
+   shelf with nothing on it for the problems being asked.
+   Against that, three real defects with receipts: the student's recall channel did not
+   fire at all (:not-invoked, :memory-channel-no-push, against 523 eligible); the
+   lexical seed spends 29 of 30 slots on agent coordination evidence when answering a
+   mathematics query; and the student's memory is :domain :zaif-work again, the third
+   sighting of D5 and the first with a vendor correlation to test.
+   And the instrument caught itself twice: my own f15 prediction that P30 would clear
+   :malformed-cycle-attempts was wrong — it fixed the field I measured and two others
+   were waiting — and the f16 void entry turned out to have been sitting outside the
+   series vector, present as text and absent as data, since the day it was written."}
 ]
