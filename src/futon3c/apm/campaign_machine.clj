@@ -381,6 +381,7 @@
           :ledger/event-count (:event-count folded)
           :campaign/id (:campaign-id state)
           :campaign/series (:series state)
+          :campaign/manifest-hash (:manifest-hash state)
           :campaign/status (:status state)
           :campaign/version (:version state)
           :campaign/phase-order (:phase-order state)

@@ -1,5 +1,6 @@
 (ns futon3c.apm.campaign-runner-test
   (:require [clojure.test :refer [deftest is]]
+            [futon3c.apm.campaign-batch :as batch]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-runner :as runner])
@@ -27,7 +28,7 @@
                :event/type :campaign/registered :event/campaign-id "apm-200"
                :event/actor "seed" :event/at at :event/expected-version 0
                :event/body
-               {:phase-order [:probe :close]
+               {:manifest-hash "manifest-200" :phase-order [:probe :close]
                 :block-plan [{:block-id "b1" :ordinal 1 :units []}]
                 :obligation-plan {:probe {:kind :probe}
                                   :close {:kind :close}}
@@ -36,10 +37,20 @@
     (ledger/compare-and-append! ledger-path 0 (:ledger/digest initial) event)
     {:dir dir :ledger-path ledger-path
      :certificates (.resolve dir "certificates")
-     :projection (.resolve dir "projection")}))
+     :projection (.resolve dir "projection")
+     :registered-projection (:projection (ledger/read-ledger ledger-path))}))
 
 (defn options [fixture handler projected]
-  {:ledger-path (:ledger-path fixture)
+  (let [start (:registered-projection fixture)
+        permit (batch/issue
+                {:campaign-id "apm-200" :manifest-hash "manifest-200"
+                 :start-version (:campaign/version start)
+                 :start-ledger-digest (:ledger/digest start)
+                 :issuer "joe" :actor "runner" :max-actions 10
+                 :allowed-kinds [:open-block :close-block :close-campaign]
+                 :issued-at "2026-08-20T11:00:00Z"
+                 :valid-before "2026-08-20T13:00:00Z"})]
+    {:ledger-path (:ledger-path fixture)
    :certificate-directory (:certificates fixture)
    :projection-directory (:projection fixture)
    :observation-fn (fn [_]
@@ -48,7 +59,8 @@
    :now-fn (fn [] now)
    :project-fn #(swap! projected conj %)
    :handlers {:open-block handler :close-block handler :close-campaign handler}
-   :actor "runner"})
+   :actor "runner" :batch-permit permit :trusted-permit-id (:permit/id permit)
+   :trusted-permit-issuer "joe"}))
 
 (deftest successful-step-projects-the-post-transition-ledger
   (let [f (fixture) projected (atom [])]
@@ -104,6 +116,25 @@
         (is (= 1 (:batch/completed-actions result)))
         (is (= (:campaign/version durable) (:campaign/version checkpoint)))
         (is (= (:ledger/digest durable) (:ledger/digest checkpoint))))
+      (finally (delete-tree! (:dir f))))))
+
+(deftest refused-batch-permit-cannot-reach-an-effect-or-claim
+  (let [f (fixture) projected (atom []) calls (atom 0)
+        opts (options f (fn [_] (swap! calls inc)
+                          {:ok true :certificate {}}) projected)]
+    (try
+      (let [result (runner/run-batch!
+                    (assoc opts :max-actions 1
+                           :batch-permit (assoc (:batch-permit opts)
+                                                :permit/max-actions 200)))
+            durable (:projection (ledger/read-ledger (:ledger-path f)))]
+        (is (= :stopped (:batch/status result)))
+        (is (= :campaign-runner-batch-permit-refused (:error/code result)))
+        (is (= :campaign-batch-permit-content-invalid
+               (get-in result [:authorization :error/code])))
+        (is (zero? @calls))
+        (is (= 1 (:campaign/version durable)))
+        (is (nil? (:active/claim durable))))
       (finally (delete-tree! (:dir f))))))
 
 (deftest batch-refuses-an-unbounded-run

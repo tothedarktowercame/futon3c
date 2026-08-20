@@ -61,6 +61,7 @@
                  :snapshot/status (:reconciliation/status reconciliation)
                  :campaign/id (:campaign/id projection)
                  :campaign/series (:campaign/series projection)
+                 :campaign/manifest-hash (:campaign/manifest-hash projection)
                  :campaign/status (:campaign/status projection)
                  :campaign/version (:campaign/version projection)
                  :campaign/phase-order (:campaign/phase-order projection)

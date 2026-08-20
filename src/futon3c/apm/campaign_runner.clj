@@ -1,6 +1,7 @@
 (ns futon3c.apm.campaign-runner
   "Bounded, checkpointed execution of validated campaign obligations."
-  (:require [futon3c.apm.campaign-executor :as executor]
+  (:require [futon3c.apm.campaign-batch :as batch]
+            [futon3c.apm.campaign-executor :as executor]
             [futon3c.apm.campaign-projection :as projection]
             [futon3c.apm.campaign-regulator :as regulator]
             [futon3c.apm.campaign-snapshot :as snapshot])
@@ -72,7 +73,8 @@
 
   A failed effect is still followed by a checkpoint, making its durable claim
   visible to the projection and recovery policy."
-  [{:keys [handlers actor] :as options}]
+  [{:keys [handlers actor require-batch-permit? batch-permit
+           trusted-permit-id trusted-permit-issuer batch-action-index] :as options}]
   (let [before (checkpoint! options {:checkpoint/stage :before})]
     (if-not (:ok before)
       before
@@ -83,7 +85,19 @@
            :runner/status (:decision decision)
            :decision decision :checkpoint before}
           (let [obligation (:obligation decision)
-                executed (executor/execute!
+                permit-authorization
+                (when require-batch-permit?
+                  (batch/authorize
+                   {:permit batch-permit :trusted-permit-id trusted-permit-id
+                    :trusted-issuer trusted-permit-issuer
+                    :actor actor :certificate certificate
+                    :obligation obligation :action-index batch-action-index}))]
+            (if (and require-batch-permit? (not (:ok permit-authorization)))
+              {:ok false :runner/status :stop
+               :error/code :campaign-runner-batch-permit-refused
+               :decision decision :authorization permit-authorization
+               :checkpoint before}
+              (let [executed (executor/execute!
                           {:ledger-path (:ledger-path options)
                            :obligation obligation
                            :current-certificate certificate
@@ -106,7 +120,7 @@
 
               :else
               {:ok true :runner/status :advanced :decision decision
-               :execution executed :checkpoint before :post-checkpoint after})))))))
+               :execution executed :checkpoint before :post-checkpoint after})))))))))
 
 (defn run-batch!
   "Run no more than MAX-ACTIONS obligations. Every return includes a checkpoint.
@@ -117,7 +131,9 @@
   (if-not (and (integer? max-actions) (pos? max-actions))
     {:ok false :error/code :campaign-runner-action-bound-required}
     (loop [completed 0]
-      (let [result (step! options)]
+      (let [result (step! (assoc options
+                                 :require-batch-permit? true
+                                 :batch-action-index completed))]
         (cond
           (= :stop (:runner/status result))
           (assoc result :ok false :batch/status :stopped
