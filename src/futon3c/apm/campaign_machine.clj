@@ -70,6 +70,31 @@
   (when-let [frame-id (:active-frame-id state)]
     (get-in state [:frames frame-id])))
 
+(defn- valid-block-plan? [plan]
+  (and (vector? plan)
+       (= (count plan) (count (distinct (map :block-id plan))))
+       (every? (fn [{:keys [block-id units]}]
+                 (and (nonblank? block-id) (vector? units)
+                      (= (count units) (count (distinct (map :frame-id units))))
+                      (every? #(and (nonblank? (:frame-id %))
+                                    (nonblank? (:problem-id %))) units)))
+               plan)))
+
+(defn- valid-obligation-plan? [phase-order plan]
+  (and (map? plan)
+       (= (set phase-order) (set (keys plan)))
+       (every? (fn [[_ {:keys [kind role]}]]
+                 (and (keyword? kind) (or (nil? role) (keyword? role))))
+               plan)))
+
+(defn- next-planned-block [state]
+  (some #(when-not (contains? (:blocks state) (:block-id %)) %)
+        (:block-plan state)))
+
+(defn- next-planned-unit [state block-id]
+  (some #(when-not (contains? (:frames state) (:frame-id %)) %)
+        (get-in state [:blocks block-id :units])))
+
 (defn- apply-event [state event]
   (let [{event-type :event/type body :event/body} event]
     (case event-type
@@ -84,6 +109,15 @@
                      (count (distinct (:phase-order body))))))
         (refusal state event :campaign-phase-order-invalid)
 
+        (and (contains? body :block-plan)
+             (not (valid-block-plan? (:block-plan body))))
+        (refusal state event :campaign-block-plan-invalid)
+
+        (and (contains? body :obligation-plan)
+             (not (valid-obligation-plan? (:phase-order body)
+                                          (:obligation-plan body))))
+        (refusal state event :campaign-obligation-plan-invalid)
+
         :else
         {:ok true
          :state (assoc state
@@ -91,10 +125,14 @@
                        :series (or (:series body) :apm)
                        :manifest-hash (:manifest-hash body)
                        :phase-order (:phase-order body)
+                       :block-plan (:block-plan body)
+                       :obligation-plan (:obligation-plan body)
                        :status :registered)})
 
       :block/opened
-      (let [block-id (:block-id body)]
+      (let [block-id (:block-id body)
+            planned (when (seq (:block-plan state)) (next-planned-block state))
+            units (or (:units body) (:units planned))]
         (cond
           (not= :registered (:status state))
           (refusal state event :campaign-not-available-for-block)
@@ -102,18 +140,25 @@
           (refusal state event :block-id-required)
           (contains? (:blocks state) block-id)
           (refusal state event :block-already-exists)
+          (and planned (not= block-id (:block-id planned)))
+          (refusal state event :block-plan-order-violation
+                   {:expected (:block-id planned) :actual block-id})
+          (and planned (:units body) (not= (:units planned) (:units body)))
+          (refusal state event :block-plan-units-mismatch)
           :else
           {:ok true :state (-> state
                                (assoc :status :running :active-block-id block-id)
                                (assoc-in [:blocks block-id]
                                          {:block-id block-id :status :open
                                           :ordinal (:ordinal body)
+                                          :units units
                                           :frame-ids []}))}))
 
       :frame/opened
       (let [frame-id (:frame-id body)
             block-id (:block-id body)
-            first-phase (first (:phase-order state))]
+            first-phase (first (:phase-order state))
+            planned (next-planned-unit state block-id)]
         (cond
           (not= block-id (:active-block-id state))
           (refusal state event :frame-block-not-active)
@@ -124,6 +169,12 @@
           (refusal state event :frame-identity-required)
           (contains? (:frames state) frame-id)
           (refusal state event :frame-already-exists)
+          (and planned
+               (not= (select-keys planned [:frame-id :problem-id :arm])
+                     (select-keys body [:frame-id :problem-id :arm])))
+          (refusal state event :frame-plan-order-violation
+                   {:expected planned
+                    :actual (select-keys body [:frame-id :problem-id :arm])})
           :else
           {:ok true
            :state (-> state
@@ -264,6 +315,11 @@
           :campaign/series (:series state)
           :campaign/status (:status state)
           :campaign/version (:version state)
+          :campaign/phase-order (:phase-order state)
+          :campaign/block-plan (:block-plan state)
+          :campaign/obligation-plan (:obligation-plan state)
+          :campaign/blocks (:blocks state)
+          :campaign/frames (:frames state)
           :active/block (:active-block-id state)
           :active/frame (active-frame state)
           :counts {:blocks (count (:blocks state))
