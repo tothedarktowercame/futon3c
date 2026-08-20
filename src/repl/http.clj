@@ -202,6 +202,29 @@
                :headers {"content-type" "application/edn"}
                :body (pr-str {:ok false :error (.getMessage t) :type (.getName (class t))})}))))))))
 
+(defn- nrepl-handler-with-refresh-guard
+  "Refuse tools.namespace refresh before a Drawbridge request reaches nREPL.
+
+   Drawbridge carries the code inside a bencoded request body. The existing
+   textual guard therefore sees the dangerous form without decoding bencode.
+   Reading an InputStream consumes it, so safe requests receive a replayable
+   stream containing the same bytes."
+  [nrepl-handler request]
+  (let [body (:body request)
+        [encoded replay-body]
+        (if (instance? java.io.InputStream body)
+          (let [bytes (.readAllBytes ^java.io.InputStream body)]
+            [(String. bytes "UTF-8") (java.io.ByteArrayInputStream. bytes)])
+          [(read-body request) body])]
+    (if (refresh-attempt? encoded)
+      {:status 403
+       :headers {"content-type" "text/plain"}
+       :body refresh-refusal}
+      (nrepl-handler
+       (if (instance? java.io.InputStream body)
+         (assoc request :body replay-body)
+         request)))))
+
 ;; =============================================================================
 ;; Server startup with route dispatch
 ;; =============================================================================
@@ -212,7 +235,7 @@
   (fn [request]
     (if (= "/eval" (:uri request))
       (eval-handler request)
-      (nrepl-handler request))))
+      (nrepl-handler-with-refresh-guard nrepl-handler request))))
 
 (defn start!
   "Start a Drawbridge endpoint with /eval bridge.
