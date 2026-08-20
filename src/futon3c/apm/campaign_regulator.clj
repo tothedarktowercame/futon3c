@@ -10,8 +10,7 @@
   {:campaign/id (:campaign/id certificate)
    :campaign/version (:campaign/version certificate)
    :ledger/digest (:ledger/digest certificate)
-   :facts/digest (:facts/digest certificate)
-   :certificate/id (:certificate/id certificate)})
+   :facts/digest (:facts/digest certificate)})
 
 (defn- obligation [certificate action]
   (let [preconditions (pins certificate)

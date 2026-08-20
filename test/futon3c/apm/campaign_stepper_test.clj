@@ -104,3 +104,22 @@
           (is (= :campaign-stepper-permit-stale (:error/code result)))
           (is (zero? @calls))))
       (finally (delete-tree! (:dir f))))))
+
+(deftest elapsed-clock-time-alone-does-not-stale-a-step-permit
+  (let [f (fixture) calls (atom 0)
+        clock (atom now)
+        opts (assoc (options f passing-gates calls)
+                    :now-fn (fn [] @clock))]
+    (try
+      (let [inspection (stepper/inspect! opts)
+            permit (:permit (stepper/issue-permit
+                             {:report (:report inspection) :issuer "joe"
+                              :issued-at (str now)}))]
+        (swap! clock #(.plusSeconds ^Instant % 30))
+        (let [result (stepper/step!
+                      (assoc opts :permit permit
+                             :trusted-permit-id (:permit/id permit)
+                             :trusted-issuer "joe"))]
+          (is (= :advanced (:stepper/status result)))
+          (is (= 1 @calls))))
+      (finally (delete-tree! (:dir f))))))

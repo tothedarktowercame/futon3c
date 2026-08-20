@@ -60,9 +60,9 @@
                     (let [failed (filterv #(= :fail (:gate/status %)) gates)
                           report-body
                           {:report/type :campaign-step-inspection
-                           :certificate/id (:certificate/id certificate)
                            :campaign/version (:campaign/version certificate)
                            :ledger/digest (:ledger/digest certificate)
+                           :facts/digest (:facts/digest certificate)
                            :obligation/id (:obligation/id obligation)
                            :gates gates}
                           report (assoc report-body :report/id
@@ -87,7 +87,9 @@
     :else
     (let [body {:permit/type :campaign-step :permit/version 1
                 :report/id (:report/id report)
-                :certificate/id (:certificate/id report)
+                :campaign/version (:campaign/version report)
+                :ledger/digest (:ledger/digest report)
+                :facts/digest (:facts/digest report)
                 :obligation/id (:obligation/id report)
                 :permit/issuer issuer :permit/issued-at issued-at}]
       {:ok true :permit (assoc body :permit/id
@@ -114,7 +116,9 @@
       (not (and (= :campaign-step (:permit/type permit))
                 (= 1 (:permit/version permit))
                 (= (:report/id report) (:report/id permit))
-                (= (:certificate/id report) (:certificate/id permit))
+                (= (:campaign/version report) (:campaign/version permit))
+                (= (:ledger/digest report) (:ledger/digest permit))
+                (= (:facts/digest report) (:facts/digest permit))
                 (= (:obligation/id report) (:obligation/id permit))))
       {:ok false :stepper/status :refused
        :error/code :campaign-stepper-permit-stale :inspection inspection}

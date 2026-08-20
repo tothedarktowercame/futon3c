@@ -1,0 +1,132 @@
+(ns futon3c.apm.frame18-control
+  "Concrete operator-stepped controller for the frame-18 qualification run."
+  (:require [cheshire.core :as json]
+            [clojure.edn :as edn]
+            [clojure.string :as str]
+            [futon3c.apm.campaign-ledger :as ledger]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-qualification :as qualification]
+            [futon3c.apm.campaign-stepper :as stepper])
+  (:import [java.nio.file Path]
+           [java.time Instant]))
+
+(def control-path
+  "holes/labs/M-apm-demonstration/frame-18-control.edn")
+(def plan-path
+  "holes/labs/M-apm-demonstration/frame-18-step-plan.edn")
+(def state-directory (Path/of "data/apm-campaigns/frame-18" (make-array String 0)))
+(def ledger-path (.resolve state-directory "ledger.edn"))
+(def certificate-directory (.resolve state-directory "certificates"))
+(def projection-directory (.resolve state-directory "projection"))
+
+(defn- fetch-json [url]
+  (json/parse-string (slurp url) true))
+
+(defn- frame-runtime-observation [_]
+  (let [agents-response (fetch-json "http://localhost:7070/api/alpha/agents")
+        jobs-response (fetch-json
+                       "http://localhost:7070/api/alpha/invoke/jobs?limit=500")
+        agents (:agents agents-response)
+        frame-agents (into {} (filter (fn [[agent-id _]]
+                                        (str/starts-with? agent-id "f18-"))) agents)
+        frame-jobs (filterv #(str/starts-with? (or (:agent-id %) "") "f18-")
+                            (:jobs jobs-response))]
+    {:binding-response {:ok true :bound? (boolean (seq frame-agents))
+                        :agent-id (first (keys frame-agents))}
+     :jobs-response {:ok true :jobs frame-jobs}}))
+
+(defn- qualification-observation [_]
+  (let [loaded (ledger/read-ledger ledger-path)
+        replayed (when (:ok loaded)
+                   (machine/projection (:events loaded)))]
+    {:receipt-check
+     {:durable? (and (:ok loaded)
+                     (= :valid (get-in loaded [:projection :projection/status])))
+      :replayable? (and (:ok loaded)
+                        (= (:projection loaded) replayed))}}))
+
+(defn- plan []
+  (edn/read-string (slurp plan-path)))
+
+(defn- options []
+  {:ledger-path ledger-path
+   :certificate-directory certificate-directory
+   :projection-directory projection-directory
+   :observation-fn frame-runtime-observation
+   :now-fn #(Instant/now)
+   :project-fn identity
+   :gate-provider (qualification/gate-provider
+                   (plan) qualification-observation)
+   :handlers {:open-block
+              (fn [action]
+                {:ok true
+                 :certificate {:gate :durable-replay
+                               :block-id (:block-id action)
+                               :control (edn/read-string (slurp control-path))}})}
+   :actor "frame-18-control"})
+
+(defn bootstrap! []
+  (let [loaded (ledger/read-ledger ledger-path)]
+    (cond
+      (not (:ok loaded)) loaded
+      (seq (:events loaded))
+      {:ok (= "apm-countdown" (get-in loaded [:projection :campaign/id]))
+       :status :already-registered :projection (:projection loaded)}
+      :else
+      (let [control (edn/read-string (slurp control-path))
+            body {:series :apm
+                  :manifest-hash (machine/ledger-digest [control])
+                  :phase-order [:preflight :solve :verify :close-frame]
+                  :block-plan
+                  [{:block-id "countdown-10" :ordinal 1
+                    :units [{:frame-id "f18" :problem-id (:problem/id control)
+                             :arm :treatment
+                             :registration-hash
+                             (machine/ledger-digest [control])
+                             :harness-hash (:frame/control-base control)}]}]
+                  :obligation-plan
+                  {:preflight {:kind :preflight :role :proctor}
+                   :solve {:kind :solve :role :solver}
+                   :verify {:kind :verify :role :proctor}
+                   :close-frame {:kind :close-frame :role :guide}}
+                  :claims-required? true}
+            event-base {:event/seq 0 :event/type :campaign/registered
+                        :event/campaign-id "apm-countdown"
+                        :event/actor "frame-18-control"
+                        :event/at (str (Instant/now))
+                        :event/expected-version 0 :event/body body}
+            event (assoc event-base :event/id
+                         (machine/ledger-digest [event-base]))
+            initial (machine/projection [])]
+        (ledger/compare-and-append! ledger-path 0
+                                    (:ledger/digest initial) event)))))
+
+(defn inspect! []
+  (stepper/inspect! (options)))
+
+(defn open-block! []
+  (let [bootstrapped (bootstrap!)
+        inspection (inspect!)]
+    (if-not (and (:ok bootstrapped) (:ok inspection)
+                 (= :ready (:stepper/status inspection)))
+      {:ok false :status :precondition-failed
+       :bootstrap bootstrapped :inspection inspection}
+      (let [issued (stepper/issue-permit
+                    {:report (:report inspection) :issuer "joe"
+                     :issued-at (str (Instant/now))})
+            permit (:permit issued)]
+        (if-not (:ok issued)
+          issued
+          (stepper/step!
+           (assoc (options) :permit permit
+                  :trusted-permit-id (:permit/id permit)
+                  :trusted-issuer "joe")))))))
+
+(defn -main [& [command]]
+  (let [result (case command
+                 "bootstrap" (bootstrap!)
+                 "inspect" (inspect!)
+                 "open-block" (open-block!)
+                 {:ok false :error/code :frame18-command-unknown})]
+    (prn result)
+    (when-not (:ok result) (System/exit 1))))

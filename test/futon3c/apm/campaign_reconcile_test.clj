@@ -42,6 +42,15 @@
     (is (= "f1" (:active/frame-id result)))
     (is (= 64 (count (:facts/digest result))))))
 
+(deftest observation-time-does-not-change-semantic-facts-digest
+  (let [later (.plusSeconds now 30)
+        earlier-result (reconcile/reconcile active-projection valid-facts now)
+        later-facts (update-vals valid-facts
+                                 #(assoc % :observed-at (str later)))
+        later-result (reconcile/reconcile active-projection later-facts later)]
+    (is (= :valid (:reconciliation/status later-result)))
+    (is (= (:facts/digest earlier-result) (:facts/digest later-result)))))
+
 (deftest missing-or-expired-observations-are-stale
   (testing "missing route"
     (let [result (reconcile/reconcile active-projection

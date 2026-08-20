@@ -21,6 +21,11 @@
   (cond-> {:severity severity :route route :code code}
     details (assoc :details details)))
 
+(defn- semantic-facts [facts]
+  ;; Timestamps prove freshness. They are not a semantic state change: a later
+  ;; observation of identical facts must not invalidate a step permit.
+  (into {} (map (fn [[route fact]] [route (dissoc fact :observed-at)])) facts))
+
 (defn- source-freshness [route source now max-age-ms]
   (cond
     (nil? source) [(finding :stale route :observation-missing)]
@@ -185,7 +190,7 @@
                     :else :valid)]
        {:reconciliation/status status
         :ledger/digest (:ledger/digest projection)
-        :facts/digest (machine/ledger-digest [facts])
+        :facts/digest (machine/ledger-digest [(semantic-facts facts)])
         :campaign/id (:campaign/id projection)
         :campaign/version (:campaign/version projection)
         :active/frame-id (:frame-id active)

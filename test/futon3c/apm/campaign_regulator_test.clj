@@ -117,8 +117,8 @@
 (deftest obligation-is-content-addressed-and-pinned
   (let [cert (certificate registered)
         obligation (:obligation (regulator/decide cert))]
-    (is (= (:certificate/id cert)
-           (get-in obligation [:obligation/preconditions :certificate/id])))
+    (is (= (:facts/digest cert)
+           (get-in obligation [:obligation/preconditions :facts/digest])))
     (is (= (:ledger/digest cert)
            (get-in obligation [:obligation/preconditions :ledger/digest])))
     (is (= (:obligation/id obligation)
