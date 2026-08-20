@@ -77,6 +77,18 @@ if a.park and a.kind != "bell":
 if a.mode and a.kind != "bell":
     sys.exit("agency_send: --mode is only valid with --kind bell")
 
+PARK_HOSTING_NOTE = (
+    "agency_send: NOTE -- --park assumes something can RECEIVE your resume: an\n"
+    "  Emacs REPL buffer polling the ready-inbox, or a server-spawned pouch.\n"
+    "  An interactive CLI session is NEITHER. Agency delivers a headless resume\n"
+    "  by running `claude --print --resume <session-id>` -- a SECOND process\n"
+    "  sharing your session id, which BIFURCATES a live conversation. That is\n"
+    "  the hazard 'agent identity is singular' exists to prevent.\n"
+    "  If you are a CLI seat: DO NOT PARK. You have your own resume capability;\n"
+    "  poll the job yourself at GET /api/alpha/invoke/jobs/<job-id>.\n"
+    "  See futon3c/README-park.md.")
+
+
 if a.park and not a.frm:
     sys.exit("agency_send: --park requires --from <id> so the sender's session can be parked")
 
@@ -84,6 +96,9 @@ if not a.frm:
     print("agency_send: WARNING — no --from <id>. This bell logs as 'http-caller' "
           "with NO mesh edge; auto-bellback cannot route a reply back to you. "
           "Pass --from <your-id>.", file=sys.stderr)
+
+if a.park:
+    print(PARK_HOSTING_NOTE, file=sys.stderr)
 
 body = {"agent-id": a.to, "prompt": prompt}
 if a.frm:
