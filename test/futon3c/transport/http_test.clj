@@ -286,6 +286,38 @@
                                       (.orElse nil))}
      :body (.body resp)}))
 
+(deftest invoke-stream-pushes-live-agent-events-to-client
+  (testing "events reported through the registered Agency sink reach the open stream"
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-stream-push" :id/type :continuity}
+      :type :codex
+      :invoke-fn
+      (fn [_prompt _session-id]
+        (reg/update-invoke-activity! "codex-stream-push" "using bash")
+        {:result "complete" :session-id "stream-session"})
+      :capabilities [:explore :edit]})
+    (let [handler (make-handler)]
+      (with-redefs [http/repl-through-queue? (constantly true)
+                    turn-queue/drainer-v2-enabled? (constantly true)]
+        (with-live-server
+          handler
+          (fn [base-url]
+            (let [response (http-post-json
+                            base-url
+                            "/api/alpha/invoke-stream"
+                            (json/generate-string
+                             {:agent-id "codex-stream-push"
+                              :prompt "show progress"
+                              :caller "http-test"}))
+                  events (mapv #(json/parse-string % true)
+                               (str/split-lines (:body response)))]
+              (is (= 200 (:status response)))
+              (is (= ["started" "invoke.activity" "done"]
+                     (mapv :type events)))
+              (is (= "using bash" (:activity (second events))))
+              (is (apply = (map :turn-id events))
+                  "every pushed event retains the request's stream identity"))))))))
+
 (defn- wait-for-job-state
   "Poll /api/alpha/invoke/jobs/:id until state is no longer queued/running or timeout."
   [handler job-id timeout-ms]
