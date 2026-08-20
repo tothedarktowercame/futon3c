@@ -10,8 +10,9 @@
     :executable-role-handlers
     :branch-addressed-apparatus-validation
     :ledger-derived-live-projection}
-  :may-register-frames-19-through-27-when
-  #{:ten-unit-pinned-manifest :repeatable-workspace-provisioning}
+ :may-register-frames-19-through-27-when
+  #{:ten-unit-pinned-manifest :repeatable-workspace-provisioning
+    :workspace-retirement-enforced}
   :may-defer-until-ten-closes
   #{:analyst-batch-review-execution}
   :must-not-defer
@@ -102,7 +103,9 @@
               "src/futon3c/apm/frame_specification.clj"]
    :done-when
    "A dry run provisions isolated branch-backed workspaces for a second
-    manifest unit and validates their execution substrates without mutation."}]
+    manifest unit, validates their execution substrates, then retires the
+    exact worktrees while retaining resolvable branches and receipts."
+   :policy "holes/labs/M-apm-demonstration/workspace-lifecycle-policy-v1.edn"}]
 
  :not-a-launch-blocker
  [{:item :analyst-architecture-output-per-frame
