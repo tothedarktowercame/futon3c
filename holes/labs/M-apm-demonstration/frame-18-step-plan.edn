@@ -82,7 +82,7 @@
   {:gate/id :required-legs
    :gate/applies-to #{:close-frame}
    :gate/requirements
-   [{:requirement/id :all-required-legs
+   [{:requirement/id :all-map-legs-complete
      :fact/path [:legs :required] :check :all-true}]}
   {:gate/id :memory-path
    :gate/applies-to #{:close-frame}

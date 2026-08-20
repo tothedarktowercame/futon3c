@@ -6,7 +6,10 @@
             [futon3c.apm.campaign-gates :as gates]))
 
 (def required-roles #{:solver :student :guide :scribe :proctor})
-(def required-leg-roles (conj required-roles :analyst))
+(def required-map-roles
+  "Roles whose durable outputs must exist before the guide can reduce a frame.
+  Guide is the reduction effect; Analyst is a post-close series reducer."
+  #{:solver :student :scribe :proctor})
 
 (defn- normalize-policy-value [value]
   (if (string? value) (keyword value) value))
@@ -38,7 +41,7 @@
           role-seat-ids)))
 
 (defn- complete-role-map [roles]
-  (into {} (map (fn [role] [role (contains? roles role)]) required-leg-roles)))
+  (into {} (map (fn [role] [role (contains? roles role)]) required-map-roles)))
 
 (defn derive-facts
   "Normalize already-observed routes into the frame-18 gate vocabulary.

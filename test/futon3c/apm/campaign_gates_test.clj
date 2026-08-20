@@ -22,8 +22,7 @@
    :cast {:ready? true :attributed? true}
    :continuations {:durable? true :wake-tested? true}
    :projection {:ledger-derived? true :frame-matches? true}
-   :legs {:required {:solver true :student true :guide true :scribe true
-                     :proctor true :analyst true}}
+   :legs {:required {:solver true :student true :scribe true :proctor true}}
    :memory {:recall-invoked? true :terrain-measured? true
             :dispositions-complete? true :promotion-reviewed? true}
    :separation {:author-reviewer-distinct? true :arms-isolated? true}

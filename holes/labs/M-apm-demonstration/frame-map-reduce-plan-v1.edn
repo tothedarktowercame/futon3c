@@ -1,0 +1,53 @@
+{:plan/id :apm-frame-map-reduce-v1
+ :plan/principle
+ "A frame maps independent role work into durable receipts, reduces those
+  receipts into a frame result, then exposes the closed result to a
+  tenure-scoped cross-frame analyst. Post-close work is never a prerequisite
+  for the close that wakes it."
+
+ :map/stages
+ [{:stage/id :solve
+   :role :solver
+   :card-role :solver
+   :multiplicity 1
+   :outputs #{:solve-receipt :committed-proof}}
+  {:stage/id :student-attempts
+   :role :student
+   :card-role :student
+   :multiplicity 3
+   :fresh-session-per-attempt? true
+   :information-channel :memory-substrate-only
+   :outputs #{:attempt-receipt :memory-use-receipt :failure-account}}
+  {:stage/id :scribe-reduce
+   :role :scribe
+   :card-role :scribe
+   :inputs #{:solve-receipt :attempt-receipt :memory-use-receipt
+             :failure-account}
+   :outputs #{:scribe-lane-receipt :memory-disposition-receipt
+              :promotion-review-receipt}}
+  {:stage/id :verify
+   :role :proctor
+   :card-role :proctor
+   :inputs #{:solve-receipt :committed-proof}
+   :outputs #{:verify-receipt}}]
+
+ :frame/reduce
+ {:stage/id :close-frame
+  :role :guide
+  :inputs #{:solve-receipt :attempt-receipt :scribe-lane-receipt
+            :memory-disposition-receipt :promotion-review-receipt
+            :verify-receipt}
+  :precondition-map-roles #{:solver :student :scribe :proctor}
+  :outputs #{:frame-close-receipt :frame-trace}
+  :note "The guide receipt is the close effect, not a precondition to itself."}
+
+ :series/reduce
+ {:stage/id :analyst-post-close
+  :role :analyst
+  :wake :terminal-frame-close
+  :tenure-frames 2
+  :inputs #{:frame-close-receipt :frame-trace}
+  :outputs #{:transfer-checks :series-entry :spectral-reading
+             :divergence-packets}
+  :note "Analyst work belongs to the run-level continuation and cannot gate
+         the frame close that wakes the analyst."}}

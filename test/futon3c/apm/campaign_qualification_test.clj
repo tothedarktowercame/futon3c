@@ -43,6 +43,15 @@
             :solver-minutes 60 :student-minutes 60 :frame-minutes 240}
            (:timeouts facts)))))
 
+(deftest frame-close-requires-map-roles-not-its-reducers
+  (let [facts (qualification/derive-facts
+               {:trace-check {:completed-roles
+                              #{:solver :student :scribe :proctor}}})]
+    (is (= {:solver true :student true :scribe true :proctor true}
+           (get-in facts [:legs :required])))
+    (is (not (contains? (get-in facts [:legs :required]) :guide)))
+    (is (not (contains? (get-in facts [:legs :required]) :analyst)))))
+
 (deftest frame-17-five-minute-turn-baseline-is-visible
   (let [facts (qualification/derive-facts
                (assoc-in observations [:seat-configs :guide :turn-timeout-ms]
