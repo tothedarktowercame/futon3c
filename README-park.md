@@ -30,6 +30,50 @@ To the operator it is **one turn**. Under the hood:
 The park/resume is an **implementation detail**: the segments render as a single turn —
 cooking time **totaled**, one divider, unified output.
 
+## Surfaces, and the CLI seat's fork (read this before parking a CLI agent)
+
+`parked-resume!` branches on `buffer-surface?`, which is literally
+`(str/starts-with? surface "emacs")`:
+
+- **buffer lane** (`emacs-repl`, …) — the resume goes to the durable ready-inbox
+  and is delivered ONLY when a polling REPL buffer drains it. Since 2026-08-20
+  the poller (`emacs/agent-repl-park.el`) serves any frontend registered in
+  `agent-repl-registry`, not just claude — but if nothing polls for that agent,
+  the resume is assembled and then **silently lost**. This cost 5 undelivered
+  resumes before it was diagnosed (`holes/ops/claude-6.md:1034`).
+- **headless lane** (anything else) — enqueues a real turn on the agent's own
+  drainer lane, the same machinery bells use. `scripts/agency_send.py --park`
+  now defaults here for exactly that reason.
+
+**The headless lane works, and it answers in a FORK.** Verified 2026-08-20 with
+`claude-12`, an externally-launched interactive terminal session: the park fired,
+`caller=parked-resume` executed with real tool activity, the park was consumed.
+And the human in the terminal saw nothing.
+
+The reason is `spawn-pouch!` (`agency/agent_pouch.clj`): delivery runs
+`claude --print --resume <session-id>`, a SECOND process sharing the session id.
+It appends to the same transcript, so the fork is visible in the JSONL as two
+siblings off one `parentUuid` — the headless branch on one, the human's next
+terminal message on the other. A running interactive TUI has no inbound channel,
+so the turn cannot land in it.
+
+**Consequence for park payloads addressed to a CLI seat.** The fork does the
+work and then exits; nothing it holds in context survives, and the operator never
+sees it. So a park payload for a CLI-hosted agent MUST instruct the resumed turn
+to **persist its findings to a file or a commit**. A payload that says "review X
+and report" produces a report written to a branch of the conversation nobody
+reads. This is the same in-context-only failure that recurs throughout this
+codebase; here it is structural rather than accidental.
+
+**Not yet solved:** delivering a resume into an ALREADY-RUNNING interactive CLI
+session. There is no inbound channel to a live TUI, and no injection path exists
+in-tree (tmux appears only for pane discovery in `blackboard.clj` and
+`scripts/systemd/scope-lib.sh`, never for delivery). Reaching it requires
+changing how CLI seats are LAUNCHED — under tmux with `send-keys` delivery, or
+under a wrapper multiplexing a queue file into stdin — not a change to the park
+machinery. Until then the fork is the contract, and the payload must be written
+for a fork.
+
 ## Components
 
 ### Backend — the durable engine + wiring

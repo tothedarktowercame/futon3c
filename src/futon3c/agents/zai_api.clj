@@ -26,6 +26,14 @@
 
 (def ^:private default-model "glm-5.2")
 
+(def default-request-timeout-ms
+  "Maximum duration of one Z.AI HTTP request. This is not a logical turn bound."
+  (* 5 60 1000))
+
+(def default-turn-timeout-ms
+  "Default wall-clock envelope for one agentic Z.AI turn."
+  (* 60 60 1000))
+
 (defn- getenv [k]
   (some-> (System/getenv k) str/trim not-empty))
 
@@ -757,6 +765,40 @@
       (when-let [sink (get-sink (str agent-id))]
         (try (sink event) (catch Throwable _))))))
 
+(defn- normalized-usage
+  "Translate a successful z.ai completion's usage block into the vendor-neutral
+  per-turn cost schema. Optional detail counters are omitted when absent."
+  [resp]
+  (when-let [usage (:usage resp)]
+    ;; Every field is guarded, including the three the SDK declares required.
+    ;; A proxy or a partial error response does not honour a pydantic
+    ;; annotation, and a cost key present-but-nil is the :ids failure shape:
+    ;; a map of the right form that reads as data and is not. Omit, never nil —
+    ;; and emit no record at all when no counter survived, rather than a bare
+    ;; {:cost/source :zai} that would count as a turn with zero tokens.
+    (let [counters (cond-> {}
+                     (some? (:prompt_tokens usage))
+                     (assoc :cost/input-tokens (:prompt_tokens usage))
+                     (some? (:completion_tokens usage))
+                     (assoc :cost/output-tokens (:completion_tokens usage))
+                     (some? (:total_tokens usage))
+                     (assoc :cost/total-tokens (:total_tokens usage))
+                     (some? (get-in usage [:prompt_tokens_details :cached_tokens]))
+                     (assoc :cost/cached-input-tokens
+                            (get-in usage [:prompt_tokens_details :cached_tokens]))
+                     (some? (get-in usage [:completion_tokens_details :reasoning_tokens]))
+                     (assoc :cost/reasoning-tokens
+                            (get-in usage [:completion_tokens_details :reasoning_tokens])))]
+      (when (seq counters)
+        ;; :cost/model is the model the SERVER says served this turn, read off
+        ;; the response, not the model we asked for. A frame that re-casts a
+        ;; seat onto a different model has no other post-hoc evidence of which
+        ;; one actually ran: the mint's :casting block is derived from the cast
+        ;; and so reports the request, which cannot detect a failure anywhere
+        ;; between minting and the API call.
+        (cond-> (assoc counters :cost/source :zai)
+          (some? (:model resp)) (assoc :cost/model (:model resp)))))))
+
 ;; --- U1: transcript persistence (M-zaif-harness) --------------------------
 ;; sink! above feeds the invoke-jobs ring buffer: display-grade, in-memory,
 ;; gone on JVM restart — which left an agent's claims about its own past
@@ -908,16 +950,17 @@
 (defn- persist-round!
   "Append one durable, turn-addressable round record.
 CALLS contains maps of tool name, arguments, and result digest."
-  [{:keys [evidence-store agent-id sid turn-id profile round text calls final?]}]
+  [{:keys [evidence-store agent-id sid turn-id profile round text calls final? usage]}]
   (persist-transcript-safely!
    agent-id evidence-store
    (transcript-entry
     {:agent-id agent-id :sid sid :turn-id turn-id :profile profile
      :event :turn-round
-     :body {:round round
-            :final (boolean final?)
-            :text (transcript-truncate text transcript-text-cap)
-            :calls (vec calls)}})))
+     :body (merge {:round round
+                   :final (boolean final?)
+                   :text (transcript-truncate text transcript-text-cap)
+                   :calls (vec calls)}
+                  usage)})))
 
 (defn- sha256-8 [s]
   (let [md (java.security.MessageDigest/getInstance "SHA-256")]
@@ -994,6 +1037,24 @@ CALLS contains maps of tool name, arguments, and result digest."
 
 (def ^:private default-auto-continue-max 8)
 (def ^:private final-report-reserve-ms (* 5 60 1000))
+
+(defn- report-reserve-for
+  "Final-report reserve for an envelope of CALL-TIMEOUT-MS.
+
+   The flat 5-minute reserve (e63951e8, 2026-08-17) was sized for the frame
+   student's pinned 60-minute runner budget, where reserving the last 5 minutes
+   for a report costs 8% of the envelope. The interactive REPL lane sends no
+   timeout and inherits the 300000 ms constructor default — where the SAME
+   reserve is the WHOLE envelope, so `(<= remaining-ms reserve)` was true on
+   round one and every such turn did no work and reported itself out of budget.
+
+   Cap the reserve at a quarter of the envelope so it can never consume the
+   work it exists to have something to report on. A 60-minute student still
+   reserves the full 5 minutes (5 < 15); a 5-minute lane reserves 75s."
+  [call-timeout-ms]
+  (if (and (integer? call-timeout-ms) (pos? call-timeout-ms))
+    (max 1 (min final-report-reserve-ms (quot call-timeout-ms 4)))
+    final-report-reserve-ms))
 
 (defn- budget-auto-continue-max
   "Scale the interior tool-round allowance with a cycle runner wall-clock pin.
@@ -1116,7 +1177,7 @@ CALLS contains maps of tool name, arguments, and result digest."
   "Run one logical Z.AI turn. Kept as a top-level var so a namespace reload can
    update already-registered invoke closures."
   [{:keys [client opts api-key !messages backend tool-opts agent-id sid
-           !repeats auto-continue-max deadline-ms] :as ctx}]
+           !repeats auto-continue-max deadline-ms report-reserve-ms] :as ctx}]
   (let [auto-continue-max (configured-auto-continue-max auto-continue-max)]
     (loop [remaining tool-round-budget
            final-text ""
@@ -1132,7 +1193,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                  :error "wall-clock-budget")
 
           (and remaining-ms
-               (<= remaining-ms final-report-reserve-ms)
+               (<= remaining-ms (or report-reserve-ms final-report-reserve-ms))
                (not report-reserved?))
           (do
             (swap! !messages conj
@@ -1174,7 +1235,10 @@ CALLS contains maps of tool name, arguments, and result digest."
             {:result nil
              :session-id sid
              :error (result-string err)}
-            (let [message (get-in resp [:choices 0 :message])
+            (let [usage (normalized-usage resp)
+                  _ (when usage
+                      (sink! agent-id (assoc usage :type "usage")))
+                  message (get-in resp [:choices 0 :message])
                   text (assistant-text message)
                   tool-calls (seq (:tool_calls message))]
               (swap! !messages conj message)
@@ -1240,7 +1304,8 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :turn-id (:turn-id ctx) :profile (:profile ctx)
                                    :round round-n
                                    :text text
-                                   :calls (transcript-calls details executed)})
+                                   :calls (transcript-calls details executed)
+                                   :usage usage})
                   (swap! !messages into (mapv :message executed))
                   (recur (dec remaining) (str final-text text) auto-continues true
                          (inc round-n) report-reserved?))
@@ -1250,16 +1315,17 @@ CALLS contains maps of tool name, arguments, and result digest."
                                    :turn-id (:turn-id ctx) :profile (:profile ctx)
                                    :round round-n
                                    :text (if (str/blank? text) final-text text)
-                                   :calls [] :final? true})
+                                   :calls [] :final? true :usage usage})
                   {:result (if (str/blank? text) final-text text)
                    :session-id sid}))))))))))
 
 (defn make-invoke-fn
   "Return an Agency invoke-fn backed by Z.AI tool calling."
   [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
-           api-key base-url model timeout-ms max-tokens temperature irc-send-fn irc-recent-fn
+           api-key base-url model timeout-ms request-timeout-ms turn-timeout-ms
+           max-tokens temperature irc-send-fn irc-recent-fn
            memory-mode memory-domain auto-continue-max profile zaif-inputs-fn]
-    :or {agent-id "zai" timeout-ms 300000 memory-mode :full}}]
+    :or {agent-id "zai" memory-mode :full}}]
   (when-not evidence-store
     (throw (ex-info "ZAI/ZAIF requires a durable evidence store"
                     {:agent-id agent-id})))
@@ -1312,11 +1378,14 @@ CALLS contains maps of tool name, arguments, and result digest."
                                         "unmarked correction is better than a marked non-correction, and marks "
                                         "emitted to look thorough poison the record.")}])
         !booted (atom false)
+        request-timeout-ms (or request-timeout-ms timeout-ms
+                               default-request-timeout-ms)
+        turn-timeout-ms (or turn-timeout-ms default-turn-timeout-ms)
         opts {:base-url (or base-url (getenv "ZAI_BASE_URL") default-base-url)
               :model (or model (getenv "ZAI_MODEL") default-model)
               :max-tokens max-tokens
               :temperature temperature
-              :timeout-ms timeout-ms
+              :timeout-ms request-timeout-ms
               :memory-mode memory-mode}
         profile* (resolve-profile profile)
         tool-opts {:irc-send-fn irc-send-fn
@@ -1338,14 +1407,21 @@ CALLS contains maps of tool name, arguments, and result digest."
             ;; the dispatch id and the turn-start record binds them explicitly.
             dispatch-id (str (or (:dispatch-id invoke-context) turn-id))
             runner-budget (:student-runner-budget invoke-context)
-            call-timeout-ms (or (:timeout-ms invoke-context) timeout-ms)
+            call-timeout-ms
+            (or (:timeout-ms invoke-context)
+                (when-let [minutes (:wall-clock-minutes runner-budget)]
+                  (when (and (integer? minutes) (pos? minutes))
+                    (* minutes 60 1000)))
+                turn-timeout-ms)
             deadline-ms (when (and (integer? call-timeout-ms)
                                    (pos? call-timeout-ms))
                           (+ (System/currentTimeMillis) call-timeout-ms))
             wall-clock-minutes
             (or (:wall-clock-minutes runner-budget)
-                (when (and (integer? call-timeout-ms) (pos? call-timeout-ms))
-                  (long (Math/ceil (/ call-timeout-ms 60000.0)))))
+                (when-let [invoke-timeout-ms (:timeout-ms invoke-context)]
+                  (when (and (integer? invoke-timeout-ms)
+                             (pos? invoke-timeout-ms))
+                    (long (Math/ceil (/ invoke-timeout-ms 60000.0))))))
             turn-auto-continue-max
             (or (budget-auto-continue-max wall-clock-minutes)
                 auto-continue-max)
@@ -1399,7 +1475,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                               :prompt prompt})
         (swap! !messages conj {:role "user" :content (str prompt)})
         (run-tool-rounds! {:client client
-                           :opts (assoc opts :timeout-ms call-timeout-ms)
+                           :opts opts
                            :api-key key*
                            :!messages !messages
                            :backend backend
@@ -1409,6 +1485,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                            :dispatch-id dispatch-id
                            :turn-id turn-id
                            :deadline-ms deadline-ms
+                           :report-reserve-ms (report-reserve-for call-timeout-ms)
                            :evidence-store evidence-store
                            :!repeats !repeats
                            :profile profile*

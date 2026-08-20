@@ -203,11 +203,45 @@
                       {:query-string "agent=claude-1&session=sid&mode=all"} nil))
           body (json/parse-string (:body response) true)]
       (is (= [{:id "bg"
+               :agent "claude-1"
+               :session "sid"
+               :surface nil
                :awaiting ["job-1"]
                :deadline-ms 123
                :mode "background"}]
              (:parked body)))
       (is (false? (:more-pending body))))))
+
+(deftest parked-bare-operator-view-shows-all-outstanding-parks
+  (testing "GET /parked without an agent is the documented global visibility view"
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)
+                                 parked-on/snapshot
+                                 (fn []
+                                   {:records
+                                    {"within" {:id "within"
+                                               :agent "claude-2"
+                                               :session "s2"
+                                               :surface "emacs-repl"
+                                               :awaiting #{"job-2"}
+                                               :deadline-ms 456
+                                               :mode :within-turn
+                                               :released? false}
+                                     "background" {:id "background"
+                                                   :agent "codex-3"
+                                                   :session "s3"
+                                                   :surface "bell"
+                                                   :awaiting #{"job-3"}
+                                                   :deadline-ms 789
+                                                   :mode :background
+                                                   :released? false}}})]
+                     ((var-get #'http/handle-parked) {} nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 200 (:status response)))
+      (is (= #{["within" "claude-2" "s2" "emacs-repl" "within-turn"]
+               ["background" "codex-3" "s3" "bell" "background"]}
+             (set (map (juxt :id :agent :session :surface :mode)
+                       (:parked body)))))
+      (is (true? (:more-pending body))))))
 
 (deftest invoke-job-public-view-exposes-auto-bellback-decision
   (let [decision {:suppressed? true
@@ -2396,6 +2430,44 @@
 ;; =============================================================================
 ;; start-server! test — real port binding (L7: verify-after-start)
 ;; =============================================================================
+
+(deftest installed-handler-can-be-rebuilt-without-restarting-server
+  (let [free-port (with-open [ss (java.net.ServerSocket. 0)]
+                    (.getLocalPort ss))
+        route-enabled? (atom false)
+        constructions (atom 0)
+        request! (fn []
+                   (let [client (java.net.http.HttpClient/newHttpClient)
+                         request (-> (java.net.http.HttpRequest/newBuilder
+                                      (java.net.URI/create
+                                       (str "http://localhost:" free-port "/new-route")))
+                                     (.GET)
+                                     (.build))]
+                     (.send client request
+                            (java.net.http.HttpResponse$BodyHandlers/ofString))))]
+    (letfn [(build-handler []
+              (swap! constructions inc)
+              (let [route-enabled-at-construction? @route-enabled?]
+                (with-meta
+                  (fn [request]
+                    (if (and route-enabled-at-construction?
+                             (= "/new-route" (:uri request)))
+                      {:status 200 :headers {} :body "new route"}
+                      {:status 404 :headers {} :body "not found"}))
+                  {:futon3c.transport.http/rebuild-fn build-handler})))]
+      (let [server-info (http/start-server! (build-handler) free-port)]
+        (try
+          (is (= 404 (.statusCode (request!))))
+          (is (= 1 @constructions))
+          (reset! route-enabled? true)
+          (http/rebuild-handler!)
+          (is (= 200 (.statusCode (request!))))
+          (is (= "new route" (.body (request!))))
+          ;; One initial construction plus one explicit rebuild. Requests only
+          ;; dereference the installed handler atom.
+          (is (= 2 @constructions))
+          (finally
+            ((:server server-info))))))))
 
 (deftest start-server-binds-and-verifies-port
   (testing "start-server! binds port and verifies it is listening (L7)"

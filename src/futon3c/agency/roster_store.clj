@@ -264,16 +264,34 @@
   (if-not (restore-enabled?)
     {:enabled? false :attempted 0 :restored 0 :results []}
     (let [agents (:agents (load-roster))
+          collisions (->> agents
+                          (keep (fn [{:keys [agent-id session-id]}]
+                                  (when session-id [session-id agent-id])))
+                          (group-by first)
+                          (keep (fn [[session-id entries]]
+                                  (let [agent-ids (mapv second entries)]
+                                    (when (> (count agent-ids) 1)
+                                      {:session-id session-id
+                                       :agent-ids agent-ids}))))
+                          vec)
+          collided-sessions (set (map :session-id collisions))
           results (mapv (fn [payload]
-                          (try
-                            (restore-fn (assoc payload :restored-detached? true))
-                            (catch Throwable t
-                              {:ok false
-                               :agent-id (:agent-id payload)
-                               :err "restore-exception"
-                               :message (.getMessage t)})))
+                          (if (contains? collided-sessions (:session-id payload))
+                            {:ok false
+                             :agent-id (:agent-id payload)
+                             :session-id (:session-id payload)
+                             :err "session-collision"
+                             :message "Refusing to restore a session owned by multiple agent identities"}
+                            (try
+                              (restore-fn (assoc payload :restored-detached? true))
+                              (catch Throwable t
+                                {:ok false
+                                 :agent-id (:agent-id payload)
+                                 :err "restore-exception"
+                                 :message (.getMessage t)}))))
                         agents)]
       {:enabled? true
        :attempted (count agents)
        :restored (count (filter :ok results))
+       :session-collisions collisions
        :results results})))

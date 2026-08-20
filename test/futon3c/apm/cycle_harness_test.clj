@@ -77,6 +77,33 @@
     (is (= [pull-use]
            (:pull-uses (trace-with (conj (base-entities) pull-use)))))))
 
+(deftest cascade-route-and-truncation-survive-trace-derivation
+  (let [offer {:offer/id "offer/cascade/1"
+               :offer/cycle cycle-id
+               :offer/memory-id "memory/known"
+               :offer/route :why-hop
+               :offer/hops 2
+               :offer/via-pattern "math-strategy/missing-dependency-protocol"
+               :offer/patterns-per-problem 3
+               :offer/cascade-cap 100
+               :offer/cascade-truncated? true
+               :offer/cascade-expanded-available 113}]
+    (is (= [(dissoc offer :offer/cycle)]
+           (:memory-offers (trace-with (conj (base-entities) offer)))))))
+
+(deftest pattern-offer-content-survives-trace-derivation
+  (let [offer {:offer/id "offer/pattern/1"
+               :offer/cycle cycle-id
+               :offer/pattern-id "math-strategy/x"
+               :offer/route :pattern
+               :offer/hops 1
+               :offer/routed-count 2
+               :offer/pattern-hook "Recognize the obstruction."
+               :offer/pattern-body "Turn the obstruction into a theorem."
+               :offer/pattern-content {:pattern/context "A proof is blocked."}}]
+    (is (= [(dissoc offer :offer/cycle)]
+           (:memory-offers (trace-with (conj (base-entities) offer)))))))
+
 (deftest scaffold-identical-frame-is-refused-before-persistence
   (let [store (harness/memory-store)
         path (Files/createTempFile "apm-frame" ".lean"

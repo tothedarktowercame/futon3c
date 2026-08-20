@@ -10,7 +10,8 @@
 ;;   e.g. bb transfer_checks.bb \
 ;;     data/problem-state/a98A01-93f5be72…  (f7 baseline)
 ;;
-;; Read-only: reads the saved cycle state and queries the substrate.
+;; Reads the saved cycle state, queries the substrate, and overwrites the
+;; stable machine-readable receipt <problem-state-dir>/transfer-checks.edn.
 
 (require '[clojure.edn :as edn]
          '[clojure.string :as str]
@@ -71,12 +72,35 @@
         ;; interventions may be recorded under the intervene advance payload
         intervention-ids (or (seq interventions)
                              (some-> (get-in outputs [:intervention :memory-id]) vector))
-        promo-ids (->> (:promotion-result outputs)
-                       (keep #(or (:memory-id %) (:promo/artifact-id %))))
+        promotions (->> (:promotion-result outputs)
+                        (keep (fn [promotion]
+                                (when-let [memory-id (or (:memory-id promotion)
+                                                        (:promo/artifact-id promotion))]
+                                  {:memory-id memory-id
+                                   :promo-id (:promo/id promotion)
+                                   :step-index
+                                   (some->> (:promo/id promotion)
+                                            str
+                                            (re-find #"/(\d+)$")
+                                            second
+                                            parse-long)})))
+                        vec)
+        promo-ids (mapv :memory-id promotions)
         student-steps (steps-of state :dispatch-student-fresh)
-        first-student-idx (some (fn [[i s]] (when (= :dispatch-student-fresh (:tool s)) i))
-                                (map-indexed vector (:steps state)))
+        student-dispatch-step
+        (first (keep-indexed (fn [index step]
+                               (when (= :dispatch-student-fresh (:tool step))
+                                 index))
+                             (:steps state)))
         pull-uses (:pull-uses outputs)
+        trace-step (first (steps-of state :validate-trace))
+        trace-failures (vec (or (get-in trace-step [:result :failures]) []))
+        trace-validation
+        {:launchable? (if trace-step
+                        (get-in trace-step [:result :launchable?] :absent)
+                        :absent)
+         :failures trace-failures
+         :failure-count (count trace-failures)}
         checks
         [;; C1 — deposit attribution names the seat (packet queued; expect FAIL until built)
          (let [authors (keep #(some-> % fetch-entry :evidence/author) intervention-ids)]
@@ -98,16 +122,39 @@
                                    (get-in % [:result]))
                               student-steps)
                provenanced (filter :eligible-memory-provenance receipts)
+               in-scope-promotions
+               (filter #(or (nil? student-dispatch-step)
+                            (nil? (:step-index %))
+                            (< (:step-index %) student-dispatch-step))
+                       promotions)
+               late-promotions
+               (filter #(and (some? student-dispatch-step)
+                             (some? (:step-index %))
+                             (>= (:step-index %) student-dispatch-step))
+                       promotions)
+               promo-ids-in-scope (mapv :memory-id in-scope-promotions)
+               inapplicable? (empty? promo-ids-in-scope)
                union-ok (some (fn [r]
                                 (let [elig (set (:eligible-memory-ids r))]
-                                  (and (seq promo-ids)
-                                       (every? elig promo-ids))))
+                                  (and (seq promo-ids-in-scope)
+                                       (every? elig promo-ids-in-scope))))
                               receipts)]
-           {:check :C3-eligibility-includes-promoted
-            :pass? (boolean (and (seq provenanced) union-ok))
-            :evidence {:receipts (count receipts) :with-provenance (count provenanced)
-                       :eligible-counts (mapv #(count (:eligible-memory-ids %)) receipts)
-                       :promo-ids (vec promo-ids)}})
+           (cond->
+            {:check :C3-eligibility-includes-promoted
+             :pass? (boolean (and (seq provenanced) union-ok))
+             :evidence {:receipts (count receipts) :with-provenance (count provenanced)
+                        :eligible-counts (mapv #(count (:eligible-memory-ids %)) receipts)
+                        :promo-ids (vec promo-ids)
+                        :student-dispatch-step student-dispatch-step
+                        :promo-ids-in-scope promo-ids-in-scope
+                        :promo-ids-excluded-late (mapv :memory-id late-promotions)
+                        :promo-ids-unparseable
+                        (->> promotions
+                             (filter #(nil? (:step-index %)))
+                             (mapv :memory-id))}}
+             inapplicable?
+             (assoc :inapplicable? true
+                    :reason "no cycle promotions in scope")))
          ;; C4 — pull activity receipted and joinable (f8 diagnosis: outputs
          ;; carry only USE receipts; OFFER receipts — the denominator, incl.
          ;; empty-result searches — exist only in the store keyed by dispatch
@@ -140,12 +187,48 @@
             :evidence {:subject-types (vec (distinct subs))}})]]
     {:state-file file :problem problem
      :checks checks
-     :score (str (count (filter :pass? checks)) "/" (count checks))}))
+     :score (str (count (filter :pass? checks)) "/" (count checks))
+     :inapplicable (mapv :check (filter :inapplicable? checks))
+     :trace-validation trace-validation}))
+
+(defn write-receipt! [dir result]
+  (let [receipt-path (fs/path dir "transfer-checks.edn")
+        receipt {:problem-id (:problem result)
+                 :state-file (:state-file result)
+                 :taken-at (str (java.time.Instant/now))
+                 :checks (:checks result)
+                 :score (:score result)
+                 :inapplicable (:inapplicable result)
+                 :trace-validation (:trace-validation result)}]
+    ;; One current reading per problem-state directory. Overwrite rather than
+    ;; append: a rerun replaces the complete EDN value, so it cannot duplicate
+    ;; a frame or leave readers to guess which entry is authoritative.
+    (spit (str receipt-path) (str (pr-str receipt) "\n"))
+    (str receipt-path)))
 
 (let [dir (first *command-line-args*)]
   (when-not dir (println "usage: bb transfer_checks.bb <problem-state-dir>") (System/exit 2))
-  (let [{:keys [state-file problem checks score]} (run-checks dir)]
+  (let [{:keys [state-file problem checks score inapplicable trace-validation] :as result}
+        (run-checks dir)]
     (println "== transfer checks ==" problem "(" state-file ")")
-    (doseq [{:keys [check pass? evidence]} checks]
-      (println (format "%-32s %s  %s" (name check) (if pass? "PASS" "FAIL") (pr-str evidence))))
-    (println "score:" score)))
+    (doseq [{:keys [check pass? inapplicable? evidence]} checks]
+      (println (format "%-32s %s  %s" (name check)
+                       (cond inapplicable? "INAPPLICABLE" pass? "PASS" :else "FAIL")
+                       (pr-str evidence))))
+    (if (seq inapplicable)
+      (let [details (->> checks
+                         (filter :inapplicable?)
+                         (map (fn [{:keys [check reason]}]
+                                (str (first (str/split (name check) #"-"))
+                                     " -- " reason)))
+                         (str/join "; "))]
+        (println (str "score: " score "  (inapplicable: " details ")")))
+      (println "score:" score))
+    ;; `failures: 0` would read as "no invariant failures" when the truth is
+    ;; "never measured". The :absent case must not print a count.
+    (if (= :absent (:launchable? trace-validation))
+      (println "trace-validation: NOT MEASURED (no :validate-trace step in this state)")
+      (println "trace-validation: launchable?" (:launchable? trace-validation)
+               " failures:" (:failure-count trace-validation)
+               " " (pr-str (:failures trace-validation))))
+    (write-receipt! dir result)))

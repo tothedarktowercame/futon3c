@@ -12,6 +12,9 @@
 (def fulab-multiarg-path
   "/home/joe/code/futon3/library/fulab/fulab-patterns.multiarg")
 
+(def proof-architecture-path
+  "/home/joe/code/futon3/library/math-strategy/proof-architecture.flexiarg")
+
 (deftest collect-multiarg-projects-every-declared-pattern
   (testing ".multiarg is watched and every @arg block becomes a pattern var"
     (is (contains? sut/src-exts "multiarg"))
@@ -19,6 +22,13 @@
       (is (= 11 (count vars)))
       (is (= "fulab/clock-in" (:pattern/id (first vars))))
       (is (= "fulab/tradeoff-record" (:pattern/id (last vars)))))))
+
+(deftest collect-file-exposes-semantic-pattern-fields
+  (let [v (-> (sut/collect-file proof-architecture-path) :vars first)]
+    (is (= ["math-informal/separate-into-independent-pieces"]
+           (:pattern/why v)))
+    (is (= [] (:pattern/see-also v)))
+    (is (= ["CA" "FA"] (:pattern/cross-list v)))))
 
 (deftest collect-file-projects-canonical-pattern-packet
   (testing "the watcher reuses the canonical parser and keeps structured slots"
@@ -147,6 +157,36 @@
         (is (= 7 (count @relations)))
         (is (not (contains? names (str pid "/counterfactual"))))
         (is (empty? @hyperedges))))))
+
+(deftest flexiarg-ingest-emits-semantic-relations-and-cross-list-property
+  (let [entities (atom [])
+        relations (atom [])]
+    (with-redefs [sut/collect-file
+                  (fn [_]
+                    {:vars [{:pattern/id "demo/source"
+                             :pattern/title "Source"
+                             :pattern/cross-list ["CA" "FA"]
+                             :pattern/why ["demo/general"]
+                             :pattern/see-also ["demo/peer"]
+                             :pattern/slots
+                             [{:slot/name-key "conclusion" :slot/text "Claim"}]}]})
+                  file-ingest/post-entities-batch!
+                  (fn [payload]
+                    (swap! entities into payload)
+                    {:ok? true :count (count payload)
+                     :entities (mapv #(assoc % :id (:id %)) payload)})
+                  file-ingest/post-relations-batch!
+                  (fn [payload]
+                    (swap! relations into payload)
+                    {:ok? true :count (count payload) :relations payload})]
+      (let [result (file-ingest/ingest-flexiarg! {:path "unused"})
+            pattern (first @entities)]
+        (is (= ["CA" "FA"] (get-in pattern [:props "pattern/cross-list"])))
+        (is (= #{[":pattern/has-conclusion" "demo/source/conclusion"]
+                 [":pattern/has-semantic-why" "demo/general"]
+                 [":pattern/has-semantic-see-also" "demo/peer"]}
+               (set (map (juxt :type :dst) @relations))))
+        (is (= 3 (:relations result)))))))
 
 (deftest clojure-dispatch-keeps-code-ingest-path
   (let [calls (atom [])]

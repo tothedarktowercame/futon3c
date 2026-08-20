@@ -158,6 +158,47 @@
            (get-in result [:finding :failure])))
     (is (= seat (get-in result [:finding :depositor])))))
 
+(deftest promotion-consumes-independent-review-of-proposed-attachment
+  (let [graph (graph-fixture proposed-edge)
+        entries (atom {memory-id (assoc memory-entry :evidence/author "frame-guide")
+                       review-id (review-entry review-id :approve)})
+        result
+        (lifecycle/promote-memory-attachment!
+         (assoc ctx :acting-identity "frame-guide"
+                    :agent-id "frame-guide"
+                    :session-id "guide-session")
+         {:memory-id memory-id
+          :pattern-ids [pattern-id]
+          :verdict :approve
+          :reviewer "forged-caller-claim"
+          :review-evidence-id review-id}
+         (promote-opts graph entries))]
+    (is (true? (:ok result)) result)
+    (is (= "claude-4" (:reviewer result)))
+    (is (= :reviewed (:attachment-status result)))
+    (is (= review-id (get-in (first @(:posts graph))
+                             [:hx/props :review :evidence-id])))
+    (is (= "claude-4" (get-in (first @(:posts graph))
+                               [:hx/props :review :reviewer])))))
+
+(deftest promotion-existing-review-refuses-depositor-authorship
+  (let [graph (graph-fixture proposed-edge)
+        self-review (review-entry review-id :approve "codex-4" [pattern-id])
+        entries (atom {memory-id memory-entry review-id self-review})
+        result
+        (lifecycle/promote-memory-attachment!
+         (assoc ctx :acting-identity "frame-guide")
+         {:memory-id memory-id
+          :pattern-ids [pattern-id]
+          :verdict :approve
+          :review-evidence-id review-id}
+         (promote-opts graph entries))]
+    (is (false? (:ok result)))
+    (is (= :promotion-reviewer-is-depositor
+           (get-in result [:finding :failure])))
+    (is (= "codex-4" (get-in result [:finding :reviewer])))
+    (is (empty? @(:posts graph)))))
+
 (deftest approval-requires-independent-exact-review-evidence
   (testing "memory author cannot review their own attachment"
     (let [graph (graph-fixture proposed-edge)]

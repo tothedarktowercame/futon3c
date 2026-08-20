@@ -19,6 +19,208 @@
 (def ^:private environment-revision (:reg/environment-revision registration))
 (def ^:private harness-revision (:reg/harness-revision registration))
 
+(defn- cascade-edge [memory-id pattern-id problem-id]
+  {:hx/type :memory/assert
+   :hx/props {:attachment-status :reviewed
+              :roles {:entry memory-id
+                      :patterns [pattern-id]
+                      :subjects [problem-id pattern-id]}}})
+
+(defn- cascade-readers [attachments why]
+  {:attachments-fn #(get attachments % [])
+   :why-targets-fn #(get why % [])})
+
+(deftest minimum-cascade-leaf-only
+  (let [edge (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [edge] "pattern/seed" [edge]
+                         "a01A01" [edge]}
+                        {})
+                       {:cap 10}))]
+    (is (= [["memory/leaf" {:route :leaf :hops 0}]] (:routes result)))
+    (is (= 1 (:patterns-per-problem result)))
+    (is (false? (:truncated? result)))))
+
+(deftest minimum-cascade-follows-authored-why-hops
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        hop1 (cascade-edge "memory/one" "pattern/one" "a02A02")
+        hop2 (cascade-edge "memory/two" "pattern/two" "a03A03")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf] "pattern/seed" [leaf]
+                         "a01A01" [leaf]
+                         "pattern/one" [hop1] "pattern/two" [hop2]}
+                        {"pattern/seed" ["pattern/one"]
+                         "pattern/one" ["pattern/two"]})
+                       {:cap 10}))]
+    (is (= [["memory/leaf" {:route :leaf :hops 0}]
+            ["memory/one" {:route :why-hop :hops 1
+                           :pattern "pattern/one"}]
+            ["memory/two" {:route :why-hop :hops 2
+                           :pattern "pattern/two"}]]
+           (:routes result)))))
+
+(deftest minimum-cascade-keeps-the-cheapest-route
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        via-why (cascade-edge "memory/shared" "pattern/why" "a02A02")
+        via-coincidence (cascade-edge "memory/shared" "pattern/co" "a01A01")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf] "pattern/seed" [leaf]
+                         "a01A01" [leaf via-coincidence]
+                         "pattern/why" [via-why]
+                         "pattern/co" [via-coincidence]}
+                        {"pattern/seed" ["pattern/why"]})
+                       {:cap 10}))]
+    (is (= {:route :why-hop :hops 1 :pattern "pattern/why"}
+           (second (some #(when (= "memory/shared" (first %)) %) (:routes result)))))))
+
+(deftest minimum-cascade-receipts-its-cap
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        edges (into {} (for [n (range 3)]
+                         [(str "pattern/" n)
+                          [(cascade-edge (str "memory/" n)
+                                         (str "pattern/" n)
+                                         (str "a0" (inc n) "A0" (inc n)))]]))
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        (merge {"memory/leaf" [leaf]
+                                "pattern/seed" [leaf]
+                                "a01A01" [leaf]}
+                               edges)
+                        {"pattern/seed" ["pattern/0" "pattern/1" "pattern/2"]})
+                       {:cap 2}))]
+    (is (= 3 (:expanded-available result)))
+    (is (= 2 (:expanded-count result)))
+    (is (= 3 (count (:routes result))) "leaf plus two expanded memories")
+    (is (true? (:truncated? result)))
+    (is (= 2 (:cap result)))))
+
+(deftest enabled-cascade-offer-exposes-density-and-truncation
+  (let [expansion-opts (atom nil)]
+    (with-redefs [conductor/expand-memory-cascade
+                  (fn [_ opts]
+                    (reset! expansion-opts opts)
+                    {:routes [["memory/leaf" {:route :leaf :hops 0}]
+                              ["memory/extra" {:route :why-hop :hops 1}]]
+                     :patterns-per-problem 3
+                     :cap (:cap opts)
+                     :expanded-available 101
+                     :truncated? true})]
+      (let [offers (conductor/cascade-receipt-offers
+                    {:body {:job-id "job-cascade"
+                            :memory-use {:memory-use/surfaced-ids
+                                         ["memory/leaf"]}}}
+                    {:memory-cascade-enabled? true
+                     :memory-cascade-cap 37})]
+        (is (= 37 (:cap @expansion-opts)))
+        (is (= [:leaf :why-hop] (mapv :offer/route offers)))
+        (is (= [0 1] (mapv :offer/hops offers)))
+        (is (every? #(= 3 (:offer/patterns-per-problem %)) offers))
+        (is (every? #(= 37 (:offer/cascade-cap %)) offers))
+        (is (every? true? (map :offer/cascade-truncated? offers)))
+        (is (every? #(= 101 (:offer/cascade-expanded-available %)) offers))))))
+
+(deftest domain-general-pattern-family-classification
+  (let [cases
+        {"math-formalization-CA/measure-integration-api" false
+         "math-strategy/missing-dependency-protocol" true
+         "math-strategy/proof-architecture" true
+         "math-formalization-CV/entire-and-singularity-api" false
+         "math-formalization-FA/weak-convergence-hilbert" false
+         "math-formalization-CA/series-evaluation-api" false
+         "math-formalization-FA/inner-product-space-api" false
+         "math-formalization-CA/uniform-continuity-boundedness" false
+         "math-informal/convert-growth-counts-to-summability" true
+         "math-strategy/structural-obstruction-as-theorem" true
+         "math-formalization/separate-proof-transfer-from-artifact-replay" true}]
+    (doseq [[pattern-id expected] cases]
+      (is (= expected (conductor/domain-general-pattern-id? pattern-id))
+          pattern-id))))
+
+(deftest cascade-offers-domain-general-patterns-before-routed-memories
+  (with-redefs [conductor/expand-memory-cascade
+                (fn [_ _]
+                  {:routes
+                   [["memory/leaf" {:route :leaf :hops 0}]
+                    ["memory/general-1"
+                     {:route :co-incidence :hops 2
+                      :pattern "math-strategy/x"}]
+                    ["memory/specific"
+                     {:route :co-incidence :hops 2
+                      :pattern "math-formalization-CA/y"}]
+                    ["memory/general-2"
+                     {:route :co-incidence :hops 2
+                      :pattern "math-strategy/x"}]]
+                   :pattern-surfaces
+                   {"math-strategy/x"
+                    {:entity
+                     {:entity/props
+                      {:pattern/id "math-strategy/x"
+                       :pattern/context "Recognize the transferable context."
+                       :pattern/then "Apply the general move."}}}}
+                   :patterns-per-problem 2
+                   :cap 2
+                   :expanded-available 3
+                   :truncated? true})]
+    (let [offers
+          (vec
+           (conductor/cascade-receipt-offers
+            {:body {:job-id "job-patterns"
+                    :memory-use
+                    {:memory-use/surfaced-ids ["memory/leaf"]}}}
+            {:memory-cascade-enabled? true :memory-cascade-cap 2}))
+          pattern-offers (filterv #(= :pattern (:offer/route %)) offers)
+          positions (into {} (map-indexed (fn [i offer]
+                                            [(or (:offer/pattern-id offer)
+                                                 (:offer/memory-id offer)) i])
+                                          offers))]
+      (is (= [:leaf :pattern :co-incidence :co-incidence :co-incidence]
+             (mapv :offer/route offers)))
+      (is (= ["math-strategy/x"] (mapv :offer/pattern-id pattern-offers)))
+      (is (= 2 (:offer/routed-count (first pattern-offers))))
+      (is (nil? (:offer/memory-id (first pattern-offers))))
+      (is (= "Apply the general move."
+             (get-in (first pattern-offers)
+                     [:offer/pattern-content :pattern/then])))
+      (is (< (get positions "math-strategy/x")
+             (get positions "memory/general-1")))
+      (is (not-any? #(= "math-formalization-CA/y"
+                        (:offer/pattern-id %))
+                    offers))
+      (is (= 2 (:offer/cascade-cap (first pattern-offers)))
+          "pattern offers are added after capped memory expansion"))))
+
+(deftest cascade-pattern-offer-promotes-flat-hook-and-body
+  (with-redefs [conductor/expand-memory-cascade
+                (fn [_ _]
+                  {:routes
+                   [["memory/one"
+                     {:route :co-incidence :hops 2
+                      :pattern "math-strategy/flat"}]]
+                   :pattern-surfaces
+                   {"math-strategy/flat"
+                    {:hook "Notice the reusable move."
+                     :body "Apply it independently of the subject."}}
+                   :patterns-per-problem 1
+                   :cap 100
+                   :expanded-available 1
+                   :truncated? false})]
+    (let [offer (first
+                 (conductor/cascade-receipt-offers
+                  {:body {:job-id "job-flat"
+                          :memory-use {:memory-use/surfaced-ids []}}}
+                  {:memory-cascade-enabled? true}))]
+      (is (= :pattern (:offer/route offer)))
+      (is (= "Notice the reusable move." (:offer/pattern-hook offer)))
+      (is (= "Apply it independently of the subject."
+             (:offer/pattern-body offer))))))
+
 ;; The frozen round-1 EDN predates the seat-key gate (:unstaffed-carded-seat,
 ;; merged with feat/registration-seat-keys) and must not be edited, so the
 ;; fixture stages a staffed copy under a temp path for the machine to read.
@@ -97,6 +299,97 @@
    :cycle/regime "round-1" :cycle/store-revision "store-2"
    :cycle/runner-freshness :cold})
 
+(defn- close-ready-handle [config]
+  (let [opened (conductor/open-frame! config)
+        solver (conductor/dispatch-solver! opened {:mission "M-test"} "packet")
+        solver-recorded (conductor/record-solver-attempt!
+                         solver (solver-attempt) {})
+        intervened (conductor/deposit!
+                    solver-recorded
+                    {:name "close-test-deposit" :kind :feedback :hook "test"
+                     :body {:lesson "advance through intervene"}
+                     :subjects [{:ref/type :problem :ref/id "t94J02"}]})
+        student (conductor/dispatch-student!
+                 intervened {:mission "M-test"} "student packet")
+        students-recorded (conductor/record-students!
+                           student [(student-attempt)] [])]
+    (conductor/adjudicate!
+     students-recorded
+     {:outcome :tier-a :residual-sorries 1 :axiom-clean? false})))
+
+(deftest close-emits-one-analyst-wake-even-for-valid-failure-envelope
+  (let [{:keys [config paths]} (fixture)
+        wakes (atom [])
+        config (assoc config
+                      :analyst-seat "analyst-test"
+                      :close-hook (fn [wake]
+                                    (swap! wakes conj wake)
+                                    {:status :sent}))]
+    (try
+      (with-redefs [agency/get-agent (fn [seat]
+                                      (when (= "analyst-test" seat)
+                                        {:agent/id seat}))]
+        (let [closed (conductor/close! (close-ready-handle config))
+              wake (first @wakes)
+              payload (:payload wake)]
+          (is (:ok closed) (pr-str (:error closed)))
+          (is (= 1 (count @wakes)))
+          (is (= :sent (get-in closed [:analyst-wake :status])))
+          (is (= "t94J02" (:problem-id payload)))
+          (is (= (:cycle-id closed) (:cycle-id payload)))
+          (is (false? (:launchable? payload)))
+          (is (= (count (get-in closed [:envelope :failures]))
+                 (:failure-count payload)))
+          (is (pos? (:failure-count payload))
+              "a completed refusal envelope still wakes the Analyst")))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest close-without-analyst-seat-still-completes
+  (let [{:keys [config paths]} (fixture)]
+    (try
+      (let [closed (conductor/close! (close-ready-handle config))]
+        (is (:ok closed) (pr-str (:error closed)))
+        (is (nil? (get-in closed [:state :current-phase])))
+        (is (= {:status :skipped
+                :reason :analyst-seat-not-configured}
+               (select-keys (:analyst-wake closed) [:status :reason]))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest unregistered-analyst-seat-is-loud-and-non-fatal
+  (let [{:keys [config paths]} (fixture)
+        hook-called? (atom false)
+        config (assoc config
+                      :analyst-seat "missing-analyst"
+                      :close-hook (fn [_]
+                                    (reset! hook-called? true)
+                                    {:status :sent}))]
+    (try
+      (with-redefs [agency/get-agent (constantly nil)]
+        (let [closed (conductor/close! (close-ready-handle config))]
+          (is (:ok closed) (pr-str (:error closed)))
+          (is (= {:status :skipped
+                  :reason :analyst-seat-unregistered
+                  :analyst-seat "missing-analyst"}
+                 (select-keys (:analyst-wake closed)
+                              [:status :reason :analyst-seat])))
+          (is (false? @hook-called?))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest incomplete-close-never-wakes-analyst
+  (let [wakes (atom [])
+        closed (with-redefs [agency/get-agent (constantly {:agent/id "analyst-test"})]
+                 (conductor/close!
+                  {:ok true :peripheral nil :state nil :log [] :deposits []
+                   :config {:problem-id "broken"
+                            :analyst-seat "analyst-test"
+                            :close-hook #(swap! wakes conj %)}}))]
+    (is (false? (:ok closed)))
+    (is (= :close-incomplete (get-in closed [:analyst-wake :reason])))
+    (is (empty? @wakes))))
+
 (deftest conductor-runs-a-refused-cycle-and-keeps-its-rider-ledger
   (let [{:keys [config paths]} (fixture)]
     (try
@@ -144,10 +437,11 @@
         (is (seq (get-in closed [:envelope :failures]))
             "round-one closes with an honest refusal envelope")
         (is (= [{:offer/id "offer/job-test/0"
-                 :offer/memory-id "memory/a"}]
-               (mapv #(select-keys % [:offer/id :offer/memory-id])
-                     (get-in closed [:state :cycle/outputs :memory-offers])))
-            "the conductor converts the dispatch receipt into offer entities")
+                 :offer/memory-id "memory/a"
+                 :offer/route :leaf
+                 :offer/hops 0}]
+               (get-in closed [:state :cycle/outputs :memory-offers]))
+            "cascade-off preserves the old offer and labels it as a leaf")
         (is (not-any? #{:malformed-memory-offers}
                       (get-in closed [:envelope :failures]))
             "conductor-collected receipts validate as memory-offer entities"))
@@ -199,6 +493,9 @@
                           opened {:mission "M-test"} "mine this cycle")
             promoted (-> opened
                          (assoc-in [:state :current-phase] :promote)
+                         (assoc-in [:state :cycle/outputs :registration
+                                    :reg/role-cards :scribe]
+                                   "02441d9df4b8a05355790a51f1e535bf9e9465d4")
                          (update-in [:state :steps] conj
                                     {:tool :dispatch-solver
                                      :result {:job-id "solver-job"}}
@@ -222,8 +519,18 @@
           (is (= (:cycle-id promoted) (:cycle-id sent-opts)))
           (is (= ["solver-job"] (:solver-job-ids sent-opts)))
           (is (= ["student-job"] (:student-job-ids sent-opts)))
-          (is (= "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe.md"
+          (is (= "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
                  (:scribe-card-path sent-opts))))
+        (let [unresolved (conductor/dispatch-scribe!
+                          (assoc-in promoted
+                                    [:state :cycle/outputs :registration
+                                     :reg/role-cards :scribe]
+                                    (apply str (repeat 40 "f")))
+                          {:mission "M-test"} "mine this cycle")]
+          (is (false? (:ok unresolved)))
+          (is (= :scribe-card-unresolved (get-in unresolved [:error :error/code])))
+          (is (= (apply str (repeat 40 "f"))
+                 (get-in unresolved [:error :error/context :pinned-blob]))))
         (agency/register-agent!
          {:agent-id agent-id :type :claude
           :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})})
@@ -271,7 +578,7 @@
       :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})
       :session-id session-id})
     (with-redefs [binding/execute!
-                  (fn [_ _ routed _]
+                  (fn [_ _ routed _ _]
                     (reset! captured routed)
                     {:ok true})]
       (is (:ok (conductor-surface/execute-action!
@@ -288,6 +595,43 @@
         (is (= :reviewer-not-actor (:error/code result)))
         (is (= :reviewer-not-actor
                (get-in result [:finding :failure])))))))
+
+(deftest conductor-surface-decodes-and-validates-promotion-verdict
+  (let [agent-id "claude-review-verdict"
+        session-id "review-verdict-session"
+        reached-verdict (atom nil)
+        action {:action-id "review-verdict-action"
+                :cycle-id "cycle-review" :version 1
+                :operation :promote-artifact
+                :args [{:artifact-id "artifact/reviewed"
+                        :reviewer agent-id
+                        :verdict "approve"}]}]
+    (agency/register-agent!
+     {:agent-id agent-id :type :claude
+      :invoke-fn (fn [_ _] {:result "unused" :session-id session-id})
+      :session-id session-id})
+    (try
+      (with-redefs [conductor/promote-artifact!
+                    (fn [handle opts]
+                      (reset! reached-verdict (:verdict opts))
+                      handle)
+                    binding/execute!
+                    (fn [_ _ routed executor _]
+                      (executor {:ok true} (:operation routed) (:args routed))
+                      {:ok true})]
+        (is (:ok (conductor-surface/execute-action!
+                  agent-id session-id action)))
+        (is (= :approve @reached-verdict)
+            "the promotion lifecycle receives the keyword verdict")
+        (let [invalid (conductor-surface/execute-action!
+                       agent-id session-id
+                       (assoc-in action [:args 0 :verdict] "rubber-stamp"))]
+          (is (false? (:ok invalid)))
+          (is (= :promotion-verdict-invalid (:error/code invalid)))
+          (is (= :promotion-verdict-invalid
+                 (get-in invalid [:finding :failure])))))
+      (finally
+        (agency/unregister-agent! agent-id)))))
 
 (deftest promote-phase-tools-are-conductor-and-surface-routable
   (let [{:keys [config paths]} (fixture)
@@ -419,10 +763,12 @@
                            {:agent agent-id :session session-id
                             :surface "problem-conductor"}))
             before (count (get-in opened [:state :steps]))
+            outputs-before (get-in opened [:state :cycle/outputs])
             out-of-phase (action! "a-wrong" :dispatch-student
-                                  [{:mission "M-test"} "student"])
-            after-refusal (count (get-in @(:handle (binding/lookup agent-id session-id))
-                                         [:state :steps]))
+                                  [{:mission "M-test"} "TOP-SECRET-PACKET"])
+            refused-handle @(:handle (binding/lookup agent-id session-id))
+            refusal (-> refused-handle :state :cycle/action-refusals first)
+            after-refusal (count (get-in refused-handle [:state :steps]))
             dispatched (action! "a-solver" :dispatch-solver
                                 [{:mission "M-test"} "solver"])
             after-dispatch @(:handle (binding/lookup agent-id session-id))
@@ -433,7 +779,27 @@
                                 :version (binding/handle-version after-dispatch)}))]
         (is (:ok opened) (pr-str (:error opened)))
         (is (= :phase-tool-not-allowed (:error/code out-of-phase)))
-        (is (= before after-refusal) "a refused phase action records no step")
+        (is (= (inc before) after-refusal)
+            "a refused action durably checkpoints exactly once")
+        (is (= :problem-save (-> refused-handle :state :steps last :tool)))
+        (is (= outputs-before (get-in refused-handle [:state :cycle/outputs]))
+            "a refusal cannot mutate phase outputs")
+        (is (= :guided-solve (get-in refused-handle [:state :current-phase])))
+        (is (empty? (filter #(= :dispatch-student-fresh (:tool %))
+                            (get-in refused-handle [:state :steps])))
+            "the refused action itself is never recorded as successful")
+        (is (= {:refusal/action-id "a-wrong"
+                :refusal/tool :dispatch-student}
+               (select-keys refusal
+                            [:refusal/action-id :refusal/tool])))
+        (is (= :phase-tool-not-allowed
+               (get-in refusal [:refusal/error :error/code])))
+        (is (= before (:refusal/step-index refusal)))
+        (is (not (re-find #"TOP-SECRET-PACKET" (pr-str refusal)))
+            "raw packet data is absent from the durable receipt")
+        (is (empty? (filter #(= :promote-artifact (:tool %))
+                            (get-in refused-handle [:state :steps])))
+            "a refusal cannot contribute to promotion counts")
         (is (:ok dispatched))
         (is (= 1 (count (filter #(= :dispatch-solver (:tool %))
                                 (get-in after-dispatch [:state :steps]))))
@@ -477,13 +843,32 @@
                           [{:mission "M-test"} "student"])))
         (is (:ok (action! "a-students" :record-students
                           [[(student-attempt)] []])))
+        (let [used (action! "a-write-use" :write-use [])
+              state (get-in @(:handle (binding/lookup agent-id session-id))
+                            [:state])]
+          (is (:ok used) (pr-str used))
+          (is (= (mapv :offer/id
+                       (get-in state [:cycle/outputs :memory-offers]))
+                 (->> (:steps state)
+                      (filter #(= :write-use (:tool %)))
+                      (mapv #(get-in % [:result :use/offer]))))
+              "the conductor dispositions every recorded offer through the surface"))
         (let [adjudicated (action! "a-adjudicate" :adjudicate
                                    [{:outcome :tier-a :residual-sorries 1
                                      :axiom-clean? false :promotion-result []}])]
           (is (:ok adjudicated) (pr-str adjudicated))
           (is (= "promote" (:phase adjudicated))))
-        (let [closed (action! "a-close" :close [])]
-          (is (:ok closed) (pr-str closed)))
+        (let [authoritative (:handle (binding/lookup agent-id session-id))
+              closed (action! "a-close" :close [])
+              trace (->> (get-in @authoritative [:state :steps])
+                         (filter #(= :emit-trace (:tool %)))
+                         last :result :trace)]
+          (is (:ok closed) (pr-str closed))
+          (is (pos? (count (:memory-disposition-offer-ids trace)))
+              "the emitted trace records dispositioned offer ids")
+          (is (= "a-wrong" (-> trace :action-refusals first
+                               :refusal/action-id))
+              "the durable refusal reaches the emitted cycle trace"))
         (is (= false (:bound? (status! agent-id session-id))))
         (is (= :conductor-session-unbound
                (:error/code

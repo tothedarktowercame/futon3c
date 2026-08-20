@@ -77,6 +77,19 @@ If nil, reads from .admintoken in the project root at first use."
   :type '(choice (const nil) string)
   :group 'claude-repl)
 
+(defcustom claude-repl-cost-large-context-tokens 200000
+  "Context size above which a cold session merits lifecycle advice.
+The advice remains informational: the REPL never compacts or resets a session
+automatically."
+  :type 'integer
+  :group 'claude-repl)
+
+(defcustom claude-repl-claude-projects-directory
+  (expand-file-name "~/.claude/projects")
+  "Directory containing Claude Code session JSONL files."
+  :type 'directory
+  :group 'claude-repl)
+
 ;;; Face (Claude-specific; shared faces are in agent-chat)
 
 (defface claude-repl-claude-face
@@ -99,6 +112,96 @@ If nil, reads from .admintoken in the project root at first use."
   "Session ID associated with `claude-repl--last-evidence-id'.")
 (defvar-local claude-repl--last-emitted-session-id nil
   "Last session ID for which a session-start evidence entry was emitted.")
+
+;;; Cost awareness
+
+(defun claude-repl--cost-state (context-tokens age-seconds)
+  "Estimate input-side cost state for CONTEXT-TOKENS at AGE-SECONDS.
+Prices use the Opus 5 list input rate recorded in README-costs.md: a warm
+1-hour cache read is $0.50/MTok and a cold 1-hour cache write is $10/MTok.
+Output and new prompt tokens are deliberately excluded."
+  (let* ((cold (>= age-seconds 3600))
+         (rate (if cold 10.0 0.5))
+         (cost (* (/ (float context-tokens) 1000000.0) rate))
+         (large (>= context-tokens claude-repl-cost-large-context-tokens))
+         (advice
+          (cond
+           ((and cold large)
+            "new session if a durable handoff exists; compact if continuing for several turns")
+           (cold "continue; compact only if several turns remain")
+           (t "continue while the cache is warm"))))
+    (list :state (if cold 'cold 'warm)
+          :context-tokens context-tokens
+          :age-seconds age-seconds
+          :next-input-cost cost
+          :advice advice)))
+
+(defun claude-repl--session-jsonl (session-id)
+  "Return the local Claude JSONL path for SESSION-ID, or nil."
+  (when (and session-id
+             (file-directory-p claude-repl-claude-projects-directory))
+    (car (directory-files-recursively
+          claude-repl-claude-projects-directory
+          (concat "\\/" (regexp-quote session-id) "\\.jsonl\\'") nil))))
+
+(defun claude-repl--latest-usage-record (path)
+  "Return the latest timestamped usage record in JSONL PATH.
+Only the final 1 MiB is read, keeping this operation bounded for long-lived
+sessions."
+  (when (and path (file-readable-p path))
+    (with-temp-buffer
+      (let* ((size (file-attribute-size (file-attributes path)))
+             (start (max 0 (- size (* 1024 1024)))))
+        (insert-file-contents path nil start nil)
+        (goto-char (point-max))
+        (catch 'found
+          (while (= (forward-line -1) 0)
+            (let ((line (buffer-substring-no-properties
+                         (line-beginning-position) (line-end-position))))
+              (unless (string-empty-p line)
+                (condition-case nil
+                    (let* ((record (json-parse-string line :object-type 'alist
+                                                       :null-object nil
+                                                       :false-object nil))
+                           (message (alist-get 'message record))
+                           (usage (and (listp message) (alist-get 'usage message)))
+                           (timestamp (alist-get 'timestamp record)))
+                      (when (and usage timestamp)
+                        (throw 'found (cons timestamp usage))))
+                  (error nil)))))
+          nil)))))
+
+(defun claude-repl--usage-context-tokens (usage)
+  "Return active context tokens represented by Claude USAGE."
+  (+ (or (alist-get 'input_tokens usage) 0)
+     (or (alist-get 'cache_read_input_tokens usage) 0)
+     (or (alist-get 'cache_creation_input_tokens usage) 0)))
+
+(defun claude-repl-cost-status ()
+  "Report the marginal input-side cost of the next turn in this REPL."
+  (interactive)
+  (let* ((sid (or agent-chat--session-id (claude-repl--resolve-session-id)))
+         (path (claude-repl--session-jsonl sid))
+         (record (claude-repl--latest-usage-record path)))
+    (unless sid
+      (user-error "No Claude session is attached to this REPL"))
+    (unless path
+      (user-error "No local Claude JSONL found for session %s" sid))
+    (unless record
+      (user-error "No usage record found in %s" path))
+    (let* ((timestamp (car record))
+           (usage (cdr record))
+           (age (max 0 (- (float-time) (float-time (date-to-time timestamp)))))
+           (estimate (claude-repl--cost-state
+                      (claude-repl--usage-context-tokens usage) age))
+           (text (format "Claude cost: %s, %.0fk context, age %.0fm; next cached-input side ~ $%.2f (list rate, output excluded); %s"
+                         (upcase (symbol-name (plist-get estimate :state)))
+                         (/ (plist-get estimate :context-tokens) 1000.0)
+                         (/ age 60.0)
+                         (plist-get estimate :next-input-cost)
+                         (plist-get estimate :advice))))
+      (message "%s" text)
+      text)))
 
 ;;; Frame state
 
@@ -1201,6 +1304,7 @@ CALLBACK is called with the final response text on completion."
 (define-key claude-repl-mode-map (kbd "C-c C-c") #'agent-chat-interrupt)
 (define-key claude-repl-mode-map (kbd "C-c C-k") #'claude-repl-clear)
 (define-key claude-repl-mode-map (kbd "C-c C-n") #'claude-repl-new-session)
+(define-key claude-repl-mode-map (kbd "C-c C-$") #'claude-repl-cost-status)
 (define-key claude-repl-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
 (define-key claude-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key claude-repl-mode-map (kbd "C-c C-o") #'agent-chat-clock-menu)

@@ -604,7 +604,7 @@
   (some #(when (contains? guide-action-tools (:tool %)) %)
         (reverse steps)))
 
-(defn- seat-last-action [role steps outputs]
+(defn- seat-last-action [role steps outputs completed?]
   (let [step-count (count steps)]
     (case role
       (:solver :student)
@@ -613,7 +613,8 @@
                        (:solver-attempt outputs)
                        (:student-attempts outputs))
             completed (min (attempt-count attempts) (count dispatches))
-            pending (drop completed dispatches)
+            pending (when-not completed?
+                      (drop completed dispatches))
             pending-step (last pending)
             completed-step (when (pos? completed)
                              (nth dispatches (dec completed)))]
@@ -642,9 +643,11 @@
 
       :proctor nil)))
 
-(defn- format-seat-activity [seats state outputs]
+(defn- format-seat-activity [seats state outputs completed?]
   (let [steps (indexed-steps state)
-        pending (->> (pending-dispatches steps outputs)
+        pending (->> (if completed?
+                       []
+                       (pending-dispatches steps outputs))
                      (sort-by ::index)
                      vec)
         latest-pending (last pending)]
@@ -656,7 +659,8 @@
                         staffed? (and (some? seat)
                                       (not (str/blank? (str seat))))
                         action (when staffed?
-                                 (seat-last-action role steps outputs))]]
+                                 (seat-last-action role steps outputs
+                                                   completed?))]]
               (format "  %-8s %-16s %s\n"
                       (name role) (staffed seat)
                       (or action (if staffed? "quiet" "unstaffed")))))
@@ -686,6 +690,15 @@
           (when (= :problem-save tool)
             (:version result)))
         (reverse (:steps state))))
+
+(defn- frame-id-from-seats [seats]
+  (let [staffed-seats (->> (vals seats)
+                           (keep #(when-not (str/blank? (str %)) (str %))))
+        frame-ids (map #(second (re-find #"^(f\d+)-" %)) staffed-seats)]
+    (when (and (seq staffed-seats)
+               (every? some? frame-ids)
+               (apply = frame-ids))
+      (first frame-ids))))
 
 (defn- format-problem-state [state]
   (let [problem-id (or (:problem-id state) "unknown")
@@ -730,10 +743,13 @@
                             (:proctor conductor))
                :scribe (or (:reg/scribe-seat registration)
                            (:scribe conductor))}
+        frame-id (or (:reg/frame-id registration)
+                     (frame-id-from-seats seats))
         caps (:reg/attempt-caps registration)
         solver-count (attempt-count (:solver-attempt outputs))
         student-count (attempt-count (:student-attempts outputs))]
-    (str "Problem: " problem-id
+    (str (when frame-id (str "Frame: " frame-id "  "))
+         "Problem: " problem-id
          "  Cycle: " cycle-short
          "  Save: " (if save-version (str "v" save-version) "unsaved")
          "  Rendered-at: step " rendered-step "\n"
@@ -748,7 +764,7 @@
          "Attempts: solver " solver-count "/"
          (or (:s-frontier caps) "?")
          "  student " student-count "/" (or (:s-student caps) "?") "\n"
-         (format-seat-activity seats state outputs)
+         (format-seat-activity seats state outputs completed?)
          (when latest-dispatch
            (str "Latest dispatch: " (name (:tool latest-dispatch))
                 "  job=" (or (:job-id latest-dispatch) "unknown") "\n")))))

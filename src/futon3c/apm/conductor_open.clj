@@ -16,6 +16,14 @@
   [:reg/solver-seat :reg/student-seat :reg/guide-seat
    :reg/proctor-seat :reg/scribe-seat])
 
+(defonce ^:private loaded-harness-revision
+  ;; Capture process image provenance once. A Drawbridge reload must not move
+  ;; the stamp forward to whatever revision happens to be in the git tree.
+  (try
+    (:harness-revision
+     (problem/measure-harness-repository "/home/joe/code/futon3c"))
+    (catch Throwable _ nil)))
+
 (defn- refusal [code & [details]]
   (cond-> {:ok false :error/code code}
     details (merge details)))
@@ -40,10 +48,25 @@
 (defn- harness-pin-check [registration options]
   (let [repo (or (:harness-repo options) "/home/joe/code/futon3c")
         measure (or (:harness-measurer options)
+                    #_{:clj-kondo/ignore [:private-call]}
                     problem/measure-harness-repository)
         measured (:harness-revision (measure repo))
-        pinned (:reg/harness-revision registration)]
-    (when (not= pinned measured)
+        pinned (:reg/harness-revision registration)
+        loaded (cond
+                 (contains? options :loaded-harness-revision)
+                 (:loaded-harness-revision options)
+
+                 :else loaded-harness-revision)]
+    (cond
+      (nil? loaded)
+      (refusal :harness-image-revision-unknown
+               {:pinned pinned :loaded loaded})
+
+      (not= pinned loaded)
+      (refusal :harness-image-pin-mismatch
+               {:pinned pinned :loaded loaded})
+
+      (not= pinned measured)
       (refusal :harness-pin-stale {:pinned pinned :measured measured}))))
 
 (defn- production-config
@@ -81,6 +104,15 @@
      :lean-repo (or (:lean-repo options) "/home/joe/code/mathlib4")
      :agency-endpoint (or (:agency-endpoint options)
                           (str agency-base "/api/alpha/invoke/jobs?limit=200"))
+     :agency-base agency-base
+     ;; These are frozen experimental arms, not caller preferences. The parsed
+     ;; and validated registration is their only authority; omission preserves
+     ;; the pre-f9 defaults for historical registrations.
+     :memory-cascade-enabled?
+     (true? (:reg/memory-cascade-enabled? registration))
+     :memory-cascade-cap (:reg/memory-cascade-cap registration)
+     :analyst-seat (:reg/analyst-seat registration)
+     :close-hook (:close-hook options)
      :conductor {:agent guide-seat
                  :session guide-session
                  :surface :problem

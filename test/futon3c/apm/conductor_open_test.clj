@@ -67,6 +67,9 @@
                :frame {:scaffold (str scaffold) :closing (str closing)
                        :witness (str witness)}}
      :options {:peripheral peripheral
+               ;; Declared explicitly: injecting a git measurer must NOT be a
+               ;; back door around the running-image check (D30).
+               :loaded-harness-revision harness-revision
                :harness-measurer
                (fn [_] {:harness-revision harness-revision
                         :harness-tree-dirty? false})
@@ -143,6 +146,10 @@
       (let [result (conductor-open/open!
                     payload
                     (assoc options
+                           ;; Explicit, per D30: the image check is not skipped
+                           ;; merely because a git measurer was injected.
+                           :loaded-harness-revision
+                           (:reg/harness-revision f7-registration)
                            :harness-measurer
                            (fn [_] {:harness-revision measured
                                     :harness-tree-dirty? false})
@@ -156,5 +163,87 @@
         (is (= measured (:measured result)))
         (is (zero? @opens))
         (is (nil? (binding/lookup "f7-guide" session-id))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest matching-loaded-harness-revision-passes-both-pin-checks
+  (let [pinned (:reg/harness-revision f7-registration)
+        check (var-get #'futon3c.apm.conductor-open/harness-pin-check)]
+    (is (nil? (check f7-registration
+                     {:loaded-harness-revision pinned
+                      :harness-measurer
+                      (fn [_] {:harness-revision pinned})})))))
+
+(deftest mismatched-loaded-harness-revision-is-distinct-from-stale-git
+  (let [pinned (:reg/harness-revision f7-registration)
+        loaded (apply str (repeat 40 "b"))
+        check (var-get #'futon3c.apm.conductor-open/harness-pin-check)
+        result (check f7-registration
+                      {:loaded-harness-revision loaded
+                       :harness-measurer
+                       (fn [_] {:harness-revision pinned})})]
+    (is (= :harness-image-pin-mismatch (:error/code result)))
+    (is (= pinned (:pinned result)))
+    (is (= loaded (:loaded result)))))
+
+(deftest unknown-loaded-harness-revision-is-a-hard-refusal
+  (let [pinned (:reg/harness-revision f7-registration)
+        check (var-get #'futon3c.apm.conductor-open/harness-pin-check)
+        result (check f7-registration
+                      {:loaded-harness-revision nil
+                       :harness-measurer
+                       (fn [_] {:harness-revision pinned})})]
+    (is (= :harness-image-revision-unknown (:error/code result)))
+    (is (= pinned (:pinned result)))
+    (is (contains? result :loaded))
+    (is (nil? (:loaded result)))))
+
+(deftest production-open-takes-cascade-and-analyst-pins-from-registration
+  (let [{:keys [payload options registration paths]} (fixture)
+        captured (atom nil)
+        session-id "cascade-pin-guide-session"
+        frozen (assoc f7-registration
+                      :reg/memory-cascade-enabled? true
+                      :reg/memory-cascade-cap 37
+                      :reg/analyst-seat "analyst-frozen")]
+    (spit (.toFile registration) (pr-str frozen))
+    (register-guide! session-id)
+    (try
+      (let [result (conductor-open/open!
+                    ;; Forged runtime values must not override the frozen arm.
+                    (assoc payload :memory-cascade-enabled? false)
+                    (assoc options :analyst-seat "analyst-runtime"
+                           :open-frame-fn
+                           (fn [config]
+                             (reset! captured config)
+                             {:ok true :cycle-id "cycle/test"
+                              :state {:current-phase :guided-solve}})))]
+        (is (:ok result))
+        (is (true? (:memory-cascade-enabled? @captured)))
+        (is (= 37 (:memory-cascade-cap @captured)))
+        (is (= "analyst-frozen" (:analyst-seat @captured))))
+      (finally
+        (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest production-open-preserves-legacy-defaults-when-pins-are-absent
+  (let [{:keys [payload options paths]} (fixture)
+        captured (atom nil)
+        session-id "cascade-default-guide-session"]
+    (register-guide! session-id)
+    (try
+      (let [result (conductor-open/open!
+                    ;; Historical registrations remain authoritative even if a
+                    ;; caller tries to introduce a new arm at runtime.
+                    (assoc payload :memory-cascade-enabled? true)
+                    (assoc options :analyst-seat "analyst-runtime"
+                           :open-frame-fn
+                           (fn [config]
+                             (reset! captured config)
+                             {:ok true :cycle-id "cycle/test"
+                              :state {:current-phase :guided-solve}})))]
+        (is (:ok result))
+        (is (false? (:memory-cascade-enabled? @captured)))
+        (is (nil? (:memory-cascade-cap @captured)))
+        (is (nil? (:analyst-seat @captured))))
       (finally
         (doseq [path paths] (Files/deleteIfExists path))))))

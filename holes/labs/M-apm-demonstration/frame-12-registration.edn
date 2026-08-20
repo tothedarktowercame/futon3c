@@ -1,0 +1,163 @@
+;; FRAME-12 registration — claude-2 (ground control), 2026-08-18.
+;;
+;; Queued back-to-back with frame-11 under the N = 2 analyst ruling. This is
+;; analyst-2's SECOND and LAST frame; succession is a scheduled duty of THIS
+;; frame, not the next tenure's problem.
+;;
+;; THE POINT OF THIS FRAME. Frames 9 and 10 each closed their problem
+;; axiom-clean and the store gained ZERO reviewed attachments. That was not
+;; curation failure; it was three defects in the WRITE PATH, all now repaired at
+;; source and each gated, mutation-tested and recorded in
+;; holes/excursions/E-APM-f10-defects.md:
+;;   D25 — :write-use was unreachable from the conductor surface, so NO guide
+;;         could ever populate :memory-disposition-offer-ids. Fixed 7c93a9ea.
+;;   D3/D4 — the promotion gate demanded reviewer == acting-identity AND
+;;         reviewer != depositor, jointly unsatisfiable for a guide-authored
+;;         deposit; and refused the :proposed edge that good authoring creates.
+;;         Fixed c3be0e9f by consuming independently authored review evidence
+;;         and deriving the reviewer from its immutable :evidence/author.
+;;   D5  — frame students recorded memories under :domain :zaif-work while
+;;         promotion pins :mathematics, so no student memory was promotable.
+;;         Fixed 38d75981 per Joe's ruling that APM frame knowledge is
+;;         :mathematics.
+;; f11 was the first frame that COULD deposit, disposition and promote end to
+;; end. f12 asks whether f11's result replicates on a different problem, which
+;; is the difference between a repair that works and a repair that worked once.
+;;
+;; PROBLEM SELECTION — m03J01. Verified by elaboration, not metadata: exits 0
+;; with exactly one `declaration uses `sorry`` diagnostic and zero errors.
+;; m-family but a different sub-series from f10's m93J02, and structurally
+;; distant from f11's t01A05, satisfying the cross-problem recall-leakage
+;; criterion against the immediately preceding frame.
+;;
+;; ANALYST. analyst-2, tenure 2 of 2 — its LAST frame. Succession (handoff
+;; document, memory-surface pointer, W-entry) is a scheduled duty of this frame.
+;; analyst-1 completed its own succession at f10's close and its handoff is at
+;; analysis/HANDOFF-analyst-1-to-analyst-2.md; the same is expected here.
+;;
+;; HARNESS PIN. Taken AFTER all defect work landed, not before: twelve defects
+;; were fixed today and each moved the pin. Computed by
+;; `git -C futon3c log -1 --format=%H -- src scripts deps.edn`.
+
+{:kind   :apm-demonstration-round1-registration
+ :schema 1
+
+ ;; ROUND CONSTANT — identical in frames 2, 5, 7, 8, 9, 10.
+ :lean-registration "DarkTower.APMDemonstration.round1Registration"
+ :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
+ :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
+
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
+ :reg/harness-revision     "e6721ca0627e2d393a4c78c0975e710cba307563"
+
+ :reg/solver-seat  "f12-solver"
+ :reg/student-seat "f12-student"
+ :reg/guide-seat   "f12-guide"
+ :reg/proctor-seat "f12-proctor"
+ :reg/scribe-seat  "f12-scribe"
+
+ :reg/analyst-seat "analyst-2"
+ :reg/analyst-tenure {:n 2 :frame-index 2 :frames ["f11" "f12"]}
+
+ :reg/guidance-regime #{:answer :suggest}
+ :reg/solver-config {:model "gpt-5.6-sol" :reasoning-effort "max"}
+ :reg/student-runner-budget {:wall-clock-minutes 60}
+
+ :reg/memory-cascade-enabled? true
+ :reg/memory-cascade-cap 100
+
+ :modules                [:R :F :S :A :M :P :X]
+ :structural-invariants  [:F1]
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
+
+ :problem {:problem-id            "m03J01"
+           :difficulty-stratum    "family=m;one-executable-hole"
+           :regime                "e7b9ec02599b36845c68ca053416787a23ac29a8"
+           :locked-lemma-exposure []}
+
+ :variation {:kind     :measured
+             :endpoint "frame-12: fresh seats, analyst-2 tenure 2 of 2 and final; second frame on the repaired write path, testing whether f11's result replicates"}
+
+ :claim :descriptive
+ :arms  [{:name "fresh seats, same analyst (tenure 2 of 2), cascade on, write path repaired"
+          :neutral? false
+          :axes []
+          :role :treatment}]
+
+ :replication-stage  :pilot
+ :pilot-units        [{:problem-id            "m03J01"
+                       :difficulty-stratum    "family=m;one-executable-hole"
+                       :regime                "e7b9ec02599b36845c68ca053416787a23ac29a8"
+                       :locked-lemma-exposure []}]
+ :confirmation-units []
+
+ :estimated-cost    1.0
+ :budget-cap        5.0
+ :teardown-deadline 240
+
+ :stop-rules [:budget-exceeded :attempt-cap-reached :axiom-unclean-close
+              :no-progress :teardown-deadline-passed :no-improvement-escalate]
+
+ :reg/attempt-caps {:s-frontier 10 :s-student 3}
+
+ :decision-rule {:id       :apm-round1-outcome
+                 :outcomes [:closed :tier-a :tier-b :defective]}
+
+ :required-capabilities
+ [:frame-containment-witnessed :created-frame-worked
+  :unique-disposition :offer-use-disposition
+  :need-retrieval :promotion-importable :promotion-need-taggable
+  :measurement-populated]
+
+ :required-measurement-fields
+ ["statement defects at review" "terminal disposition"
+  "residual executable sorries" "attempts or closer hops"
+  "axiom cleanliness" "memories promoted" "review escape rate"
+  "promoted then surfaced then used" "contract leaks"
+  "duplicate declarations" "locked-lemma exposure" "promotion coverage"
+  "unconsumed promotions" "import-only edges" "scribe lane coverage"
+  "arc-lane yield" "rewrite rule offered and used"]
+
+ ;; EXACT-MATCH constant in apm/preregistration.clj; cascade measurements are
+ ;; carried by the receipt and adjudicated through :reg/predictions instead.
+ :reg/cascade-measurements ["offers by route" "patterns per problem" "cascade truncation"]
+
+ :reg/role-cards
+ {:codex-solver "00552e4108b02e00139772963bc5e9fa8ff5b63e"
+  :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
+  :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd"
+  :scribe       "02441d9df4b8a05355790a51f1e535bf9e9465d4"
+  :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"
+  :analyst      "ed340941f4747b20a540fec9ed56bd332579590c"}
+
+ :reg/seat-exclusivity :enforced-at-register
+
+ :reg/known-departures
+ [{:id :analyst-tenure-n2
+   :text "The Analyst serves N = 2 frames (f11, f12) and this is its second; every other seat is minted fresh. Ruled 2026-08-18; N stays pinned at 2. analyst-1's tenure produced four findings unavailable at n=1 and none needing n=3, so the parameter is unchanged on evidence rather than by default."}
+  {:id :harness-changed-since-f10
+   :text "Twelve defects were fixed in source between f10's close and this registration (D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D24 D25). f11 therefore runs on materially different harness code from f9/f10, and is NOT a replication of either. Every fix was gated by ground control with re-run clj-kondo, check-parens, tests at an enumerated namespace scope, and an independent mutation; the record is holes/excursions/E-APM-f10-defects.md. Declared because a between-frame difference this large must not be discovered by the Analyst from a diff."}]
+
+ :reg/predictions
+ [{:id :problem-closed
+   :text "THE PRIMARY OUTCOME: m03J01 is closed, axiom-clean, with the frozen statement unchanged — or its residual is strictly reduced and localised. This is the objective the whole apparatus exists to serve: the corpus has ~207 open problems and the machine is being built to go through them. Frames 9 and 10 each closed on the solver's FIRST dispatch, so this is a real prediction with a track record, not a formality. A frame that repairs its own plumbing and does not solve its problem has failed, however green its other measures read."}
+  {:id :memory-contributes-to-close
+   :text "A memory surfaced by recall or the cascade is attested as USED in the work that closes or advances the problem — not merely offered, surfaced or promoted. This is the link that makes the memory machinery worth having: it is instrumental to solving, not an end in itself. f10 produced the series' first uncontaminated instance (the student derived its own conjunct from a route memory), so the mechanism is known to work at least once; this asks whether it recurs."}
+  {:id :reviewed-attachment-gained
+   :text "SUPPORTING, NOT HEADLINE, AND QUALIFIED. The store gains at least ONE reviewed memory attachment. QUALIFIER, established by f11's guide from f9's actual promote-artifact args: an INDEPENDENTLY reviewed attachment is NOT reachable — that path needs a keyword :verdict the transport cannot express (D31). What IS reachable is attach-then-review with the GUIDE as reviewer of a STATUSLESS, PATTERNLESS deposit, which is exactly what f9 did (depositor f9-scribe, reviewer f9-guide, edge now :reviewed). So this predicts a GUIDE-reviewed attachment and must be adjudicated as such; a frame that gains one has NOT demonstrated independent review. Note the trap: attach-then-review REFUSES an edge already carrying a status or patterns (memory_lifecycle.clj:322,330), so a well-authored :proposed-with-patterns deposit is unpromotable while a patternless one is promotable. Good authoring forecloses the working route."}
+  {:id :offer-disposition-populated
+   :text ":memory-disposition-offer-ids is NON-EMPTY, so runtime invariant F3 passes for the first time in a cascade-enabled frame. It was empty in f8, f9 and f10 because :write-use was unreachable from the conductor surface (D25), while all nine registrations from f2 to f10 declared :offer-use-disposition as a required capability. This is the capability becoming satisfiable rather than merely declared."}
+  {:id :guidance-count-exact
+   :text "The recorded guidance count EQUALS the true number of guidance bells sent, and in particular is 0 if none were sent. D2 (73a6b0c2) is loaded from this frame onward. Before it, the subtrahend counted the flattened per-memory offer list rather than dispatch openings: f9 read -100 and f10 -101 with huge offer counts, and f11 read +1 with ZERO offers because the subtrahend then failed to cancel the solver dispatch. Same defect, both signs. This is the first frame that can test the fix live, so a wrong value here means the repair did not reach the running image."}
+  {:id :scribe-card-pinned-resolves
+   :text "The machine injects the card this registration PINS, resolved by blob, with no guide declaring it authoritative by hand. D8 (ca0f297e) is loaded from this frame onward; f8, f9, f10 and f11 all papered over conductor.clj's hardcoded scribe.md, and f11 saw the pre-fix constant injected twice in one cycle. Like :guidance-count-exact this tests whether a source fix reached the running image, which is the D30 failure this batch is sequenced to avoid."}
+  {:id :student-memory-promotable
+   :text "If the student records a memory, it is NOT refused on domain grounds. f10's e-3a3aed11 was unpromotable because frame students recorded under :domain :zaif-work against a :mathematics pin (D5). This is conditional on the student choosing to record: a frame where it records nothing neither confirms nor refutes, and must be reported as inapplicable rather than as a pass."}
+  {:id :cascade-seeds-from-recall
+   :text "Offers are seeded from patterns attached to RECALL-SURFACED memories, not from the problem's own touch-set. f10 refuted the opposite premise decisively: it was chosen for touching no @why-edged pattern and produced 48 :why-hop offers via math-strategy/missing-dependency-protocol. This frame states the corrected mechanism as the prediction, so it is tested rather than assumed."}
+  {:id :refusals-are-traceable
+   :text "Any conductor action refused during this frame appears in the emitted trace as an :action-refusals receipt. In f10 three promotion refusals existed ONLY in the guide's prose report and the machine trace was consistent with a clean run (D6, fixed 585a980e). If nothing is refused this frame the prediction is inapplicable, not confirmed — say so."}
+  {:id :analyst-survives-two-frames
+   :text "analyst-2 completes duties A, B and F at this close AND executes its succession: handoff document, memory-surface pointer, W-entry. analyst-1 completed the equivalent at f10. Two tenures completing succession is the point at which N=2 is a mechanism rather than an anecdote."}]
+
+ :reg/frame-1-disclaimer false}

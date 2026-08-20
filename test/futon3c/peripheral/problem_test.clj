@@ -10,6 +10,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.cycle :as cycle]
+            [futon3c.peripheral.memory-lifecycle :as memory-lifecycle]
             [futon3c.peripheral.memory-recall :as memory-recall]
             [futon3c.peripheral.memory-write :as memory-write]
             [futon3c.peripheral.pull-receipts :as pull-receipts]
@@ -19,6 +20,11 @@
             [futon3c.substrate.client :as substrate])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute FileTime]))
+
+(defn- test-sha1-hex [s]
+  (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-1")
+                        (.getBytes (str s) "UTF-8"))]
+    (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
 
 (def dispatch-packet
   (apply str (repeat 220 "p")))
@@ -429,6 +435,7 @@
                       (swap! calls conj options)
                       {:checkout (str "/frames/" (:arm options))
                        :base-revision revision
+                       :runner-freshness true
                        :branch (:branch options)
                        :frame/id (str (:batch options) "-"
                                       (:problem options) "-" (:arm options))})
@@ -442,6 +449,7 @@
            (mapv :branch @calls)))
     (is (= ["push"] (mapv :memory-channel @calls)))
     (is (= revision (get-in checkouts [:solver :base-revision])))
+    (is (true? (get-in checkouts [:solver :runner-freshness])))
     (is (= [] (:student checkouts)))))
 
 (deftest assign-checkouts-provisioner-failure-is-a-tool-failure
@@ -451,6 +459,25 @@
         result (tools/execute-tool backend :assign-checkouts [checkout-options])]
     (is (false? (:ok result)))
     (is (re-find #"branch collision" (:error result)))))
+
+(deftest frame-provisioning-preserves-command-stderr-in-tool-failure
+  (let [git-error "fatal: a branch named 'exp/round-1-t94J02-solver' already exists"
+        options (assoc checkout-options
+                       :arm "solver"
+                       :seat "codex-4"
+                       :memory-channel "push"
+                       :branch "exp/round-1-t94J02-solver")
+        backend (problem/make-checkout-provisioning-backend
+                 (tools/make-mock-backend)
+                 (fn [opts]
+                   (with-redefs [clojure.java.shell/sh
+                                 (fn [& _]
+                                   {:exit 128 :out "" :err git-error})]
+                     (#'problem/provision-frame! opts))))
+        result (tools/execute-tool backend :assign-checkouts [options])]
+    (is (false? (:ok result)))
+    (is (str/includes? (:error result) git-error))
+    (is (str/includes? (:error result) "exit 128"))))
 
 (deftest assign-checkouts-is-wired-through-the-register-phase
   (let [root (.toFile (Files/createTempDirectory
@@ -551,6 +578,89 @@
     (is (not= (get-in outputs [:solver-attempt :cycle/environment-checkout])
               (get-in outputs [:student-attempts 0
                                :cycle/environment-checkout])))))
+
+(defn- stamp-machine-attempt-run [snapshot? registration? runner-freshness?]
+  (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        regime "e7b9ec02599b36845c68ca053416787a23ac29a8"
+        memory-ids ["memory/z" "memory/a" "memory/m"]
+        p (problem/make-problem
+           (tools/make-mock-backend)
+           (fn [_ _] {:evidence {}})
+           "/tmp/store-revision-stamp-state"
+           (fn [_] (cond-> {:checkout "/frames/solver" :base-revision revision}
+                     runner-freshness? (assoc :runner-freshness true)))
+           (fn [_] {:harness-revision revision :harness-tree-dirty? false})
+           (constantly memory-ids)
+           (constantly 1))
+        start (start-problem p {:session-id "store-revision-stamp"
+                                :problem-id "p"
+                                :cycle/mode :store-mode
+                                :harness-repo "/measured/harness"})
+        begun (runner/step p (:state start)
+                           {:tool :begin-problem-cycle :args ["M" "C"]})
+        snap-state (if snapshot?
+                     (:state (runner/step p (:state begun)
+                                         {:tool :snapshot-store :args []}))
+                     (:state begun))
+        snap-state (cond-> snap-state
+                     registration?
+                     (update :steps conj
+                             {:tool :read-registration
+                              :result {:problem {:regime regime}}}))
+        assignment (cond-> {:checkout "/frames/solver"
+                            :base-revision revision}
+                     runner-freshness? (assoc :runner-freshness true))
+        state (assoc snap-state :current-phase :guided-solve
+                     :cycle/outputs
+                     {:registration :r
+                      :store-snapshot :s
+                      :stratum-frozen-at 1
+                      :environment-revision revision
+                      :harness-revision revision
+                      :environment-checkouts
+                      {:solver assignment
+                       :student []}
+                      :frame :f :containment-probe :c})
+        advanced (runner/step
+                  p state
+                  {:tool :advance-problem-phase
+                   :args ["M" "C" {:solver-attempt {}
+                                     :ground-control-events []
+                                     :memory-offers []}]})]
+    {:attempt (get-in advanced [:state :cycle/outputs :solver-attempt])
+     :memory-ids memory-ids
+     :regime regime}))
+
+(deftest attempts-carry-the-recorded-store-snapshot-revision
+  (let [{:keys [attempt memory-ids]} (stamp-machine-attempt-run true true true)
+        shuffled [(nth memory-ids 1) (nth memory-ids 2) (nth memory-ids 0)]
+        expected (test-sha1-hex (str/join "\n" (sort shuffled)))]
+    (is (= expected (:cycle/store-revision attempt)))
+    (is (prereg/attempt? attempt))))
+
+(deftest attempts-omit-store-revision-without-a-recorded-snapshot
+  (let [{:keys [attempt]} (stamp-machine-attempt-run false true true)]
+    (is (not (contains? attempt :cycle/store-revision)))))
+
+(deftest attempts-carry-machine-recorded-regime
+  (let [{:keys [attempt regime]} (stamp-machine-attempt-run true true true)]
+    (is (= regime (:cycle/regime attempt)))))
+
+(deftest attempts-omit-regime-without-recorded-registration
+  (let [{:keys [attempt]} (stamp-machine-attempt-run true false true)]
+    (is (not (contains? attempt :cycle/regime)))))
+
+(deftest attempts-carry-provisioner-runner-freshness
+  (let [{:keys [attempt]} (stamp-machine-attempt-run true true true)]
+    (is (true? (:cycle/runner-freshness attempt)))))
+
+(deftest attempts-omit-runner-freshness-without-provisioner-measurement
+  (let [{:keys [attempt]} (stamp-machine-attempt-run true true false)]
+    (is (not (contains? attempt :cycle/runner-freshness)))))
+
+(deftest machine-stamped-attempt-satisfies-preregistration
+  (let [{:keys [attempt]} (stamp-machine-attempt-run true true true)]
+    (is (prereg/attempt? attempt))))
 
 (deftest each-student-dispatch-provisions-and-stamps-its-own-tree
   (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -1486,6 +1596,11 @@
             :guidance-events
             [{:job-id "guide-job" :ground-control/recipient "codex-4"
               :ground-control/cycle "cycle-1" :ground-control/type :challenge}]
+            ;; :action-refusals was added to the emitted trace by D6 (585a980e,
+            ;; durable refusal receipts). This assertion is exact map equality,
+            ;; so the new key must be declared. Empty is correct here: the
+            ;; fixture refuses nothing.
+            :action-refusals []
             :measurement-summary {:measured 1 :unset 0}}
            (get-in result [:result :trace])))
     ;; NOT empty: retrieval-probe has no producer, and this fixture previously
@@ -2674,6 +2789,25 @@
     (is (:ok result))
     (is (= 2 (get-in result [:result :disp/residual-sorries])))
     (is (false? (get-in result [:result :disp/axiom-clean?])))))
+
+(deftest promotion-threads-existing-independent-review
+  (let [captured (atom nil)
+        request {:memory-id "e-guide-memory"
+                 :pattern-ids ["math-strategy/exact-pattern"]
+                 :verdict :approve
+                 :review-evidence-id "e-scribe-review"}]
+    (with-redefs [memory-lifecycle/promote-memory-attachment!
+                  (fn [_ctx promotion]
+                    (reset! captured promotion)
+                    {:ok true
+                     :review-evidence-id (:review-evidence-id promotion)})]
+      (let [result (tools/execute-tool
+                    (begun-problem-cycle-backend) :promote-artifact
+                    [request {:cycle/step-index 13}])]
+        (is (:ok result) result)
+        (is (= request @captured))
+        (is (= "e-scribe-review"
+               (get-in result [:result :promo/review-evidence-id])))))))
 
 (deftest write-disposition-omits-absent-measurement-fields
   (let [result (tools/execute-tool

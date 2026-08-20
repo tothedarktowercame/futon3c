@@ -11603,3 +11603,565 @@ Recorded in `README-park.md`; the rule is to take the job-id out of the
 dispatch response and park in a second call.
 
 — claude-2, accepting the Analyst seat, 2026-08-17
+
+## W.78 Analyst seat passes to a fresh seat; N=2 ruled; ground control deferred (2026-08-18)
+
+**The seat moved.** W.77 recorded claude-2 taking the Analyst seat. For frames 9
+and 10 it is held by **`analyst-1`** — a freshly minted, invoke-ready claude seat
+holding nothing but `role-cards/analyst-v1.md` (blob
+`ed340941f4747b20a540fec9ed56bd332579590c`).
+
+Joe withdrew claude-2 from the seat on sight: *"you are claude-2, we want someone
+fresh with just the card that you created."* The reason is sharper than avoiding
+a conflict of interest. The card was written to be **sufficient on its own** for
+an agent arriving with nothing; staffing it with its own author would mean the
+frame inherits a day of context the card does not contain, so the card would
+never actually be tested — and the tenure would begin pre-loaded. Freshness here
+is a property of the *session*, not the name: `prepare-frame-seat` deletes any
+stale session file before building the invoke-fn, which is what makes a minted
+seat genuinely fresh.
+
+**N ruled.** Fresh per N frames, **N = 2** (Joe, 2026-08-18) — the minimum tenure
+at which cross-frame drift detection is possible at all, chosen to observe the
+mechanism rather than optimise it. N is a parameter to revise on evidence, not a
+principle. `analyst-1` serves f9 and f10; `analyst-2` serves f11 and f12.
+Tenure-scoped minting exists (`b81cabc8`, reviewed) and cannot clobber a live
+session — verified by re-minting with a preparer that throws if called.
+
+**The open gap: what plays GROUND CONTROL.** Duty F (divergence → packet →
+park → review → merge) has been performed by claude-2 throughout, but *no seat
+in the machine specifies it*. The Analyst's role is bounded and wakes only at
+close; it is not a dispatcher. Joe: *"in other systems, I used an agent called
+Tickle sometimes, or just set up the system to work mechanically… let's revisit
+this after frames 9 and 10, because we'll see how they actually go."*
+
+Deferred, deliberately — f9/f10 will show what the role actually has to do. Two
+existing precedents to start from rather than re-deriving:
+
+- `:tickle` is already a first-class agent type in the registry
+  (`agency/registry.clj:95`).
+- **`agents/apm_work_queue.clj` is a Tickle work queue for exactly this
+  corpus**: "feeds 489 math problems through the orchestrator", resumable
+  because "problems with existing APM evidence are skipped on subsequent runs",
+  dispatching through `tickle_orchestrate.clj`. It predates the conductor/frame
+  surface and targets the older 9-phase proof peripheral, so it is a precedent
+  and not a drop-in — but the properties it already has (mechanical feed,
+  resumability, skip-what-is-done) are the ones a 207-problem queue needs.
+
+**State at the end of this entry:** frames 9 (a01J06) and 10 (m93J02) registered
+with no operator fields remaining; eleven seats minted, idle and invoke-ready;
+awaiting Joe's signature to run.
+
+### W.78a Correction: Ground Control is HELD, not vacant (2026-08-18)
+
+W.78 recorded the ground-control gap as though nobody owned dispatch, and
+suggested "you or me watching" as an ad-hoc arrangement for f9/f10. Joe
+corrected it immediately: *"I don't really like this setup, 'since no seat owns
+dispatch'. What I was saying was that you would own it."*
+
+The distinction that W.78 lost: **the role is unspecified IN THE MACHINE but
+assigned IN PRACTICE.** No conductor seat, phase or card names a dispatcher —
+that part of W.78 stands — but the role itself is long-established and held.
+`claude-2` has been Ground Control here throughout, and the wider campaign has
+carried the seat explicitly since 2026-08-10 (Zone handover from claude-7, then
+captaincy to claude-2 on 2026-08-12: *captain/conductor, reviewer, operator,
+scribe — never cross them*).
+
+**The split for f9/f10, stated so the card and the record agree:**
+
+| | `analyst-1` | `claude-2` |
+|---|---|---|
+| role | Analyst | Ground Control |
+| specified by | `role-cards/analyst-v1.md` (frozen) | practice; no card yet |
+| wakes | once, at frame close | continuously |
+| scope | duties A–G on what the frame produced | dispatch, park, review, merge, escalation |
+| tenure | N = 2 frames | standing |
+
+Duty F (divergence → packet → park → review → merge) sits in the Analyst card
+because the sawmill dual put it there, and `analyst-1` will exercise it on what
+f9 and f10 close with. Ground Control is the wider standing function that ran
+all of 2026-08-17–18: dispatching the eight packets that built the cascade, the
+semantic edges, the receipts, the close-hook and the analyst mint, and reviewing
+each at the gate.
+
+**Why this is still worth revisiting after f9/f10, as Joe said:** the open
+question is not *who* but *whether it should be a seat at all* — a card, a
+Tickle-style mechanical feed (`agents/apm_work_queue.clj` already has the
+resumable shape), or left as a held human-facing role. Two frames of evidence
+about what the function actually has to do will answer that better than
+designing it now.
+
+**One operational caution, freshly re-earned.** The ground-control notes carry a
+standing rule: *never send a bell addressed to your own id from within your own
+turn.* On 2026-08-18 I probed the bell endpoint's status code by belling
+`claude-2` — myself — and it returned as a turn, exactly as documented. Harmless
+here, but it is the same hazard that produced concurrent twin incarnations on
+2026-08-11. Probe with a recipient that is not you.
+
+## W.79 FRAME-9 CLOSED — the cascade fires and reaches nothing; the close is contaminated (2026-08-18)
+
+First frame with an Analyst seat in the loop and the first with the memory
+cascade live. Read by `analyst-1` (tenure 1 of 2), whose whole orientation is
+the frozen card `role-cards/analyst-v1.md`. **The full reading is the `f9` entry
+in `analysis/series.edn`; this is the pointer, not a second copy.**
+
+*(This close was read twice. The first `close!` wake at 08:47Z ran the checks
+and got as far as naming validator failures before the session died on a model
+limit, having written nothing. Nothing survived — which is the card's "if a
+finding is not in one of the three surfaces, it did not happen", demonstrated
+rather than asserted. The seat was re-registered Opus and started again from the
+card.)*
+
+**Duty A — transfer checks: 5/6 at close, C3 the lone fail; 6/6 after the fix.**
+Prediction `:transfer-checks-6-of-6` is **refuted on the number and vindicated
+on the mechanism**: C1 flipped exactly as predicted (`:authors ["f9-guide"]` ==
+`:reg/guide-seat`), and C3 regressed for an unrelated reason. C3 demanded that
+the student's eligible set contain *every* cycle promotion — including
+`promo/.../52`, minted twenty steps after the student dispatched at step 32. It
+was comparing unlike things: the same defect class as f8's C3 false-fail (W.75)
+and as the card's census-boundary trap.
+
+**Duty F — one packet, dispatched, parked, gated, merged.** P26 → `codex-3`
+(job `invoke-1787044849267-4749-44cbcc09`, park
+`park-bee0d64a-554b-45d8-a479-386f178d7008`), merged as **`f5c68a5b`**. Reviewed
+personally, not accepted on report: diff read; both acceptance runs re-run here
+(a01J06 → 6/6, a03J04 → unchanged 5/6 with C1 the lone fail); **the guard
+mutated by hand** — forcing the dispatch index to 0 empties the in-scope set and
+C3 *fails*, so the fix did not buy a pass by vacuity; clj-kondo 0/0;
+check-parens exit 0; exactly one file changed. The bar itself was measured
+before it was set, per the card's third trap. *This edit moves my own headline
+number, which is precisely why it went to an independent author rather than
+being taken as carve-out (b).*
+
+**Duty C — the cascade's first live frame. This is the finding.** 101 offers,
+of which **100 are `:offer/route :co-incidence` at `:offer/hops 2`** with a
+populated `:offer/via-pattern` — `:cascade-fires-structurally` **confirmed**,
+the cascade demonstrably reaches past a leaf lookup. But
+`:cascade-use-attested` is **refuted**, and refuted *structurally*: the
+offer set and the use set are **disjoint by wiring, not by accident**. All 101
+offers are seeded from the SOLVER dispatch; the student's recall returns
+`:status :not-invoked, :reason :memory-channel-no-push` and its frame record
+reads `:memory-channel :none`. The seat that receives offers attested no
+machine-readable use; the seat that attests use receives no offers and reaches
+memory only by mid-session pull. **Under this wiring the prediction cannot be
+satisfied at all** — which makes it a good prediction, since one frame settled
+it. The card's sentence is exactly the thing measured: reachability is a
+precondition for use, not evidence of it.
+
+Two smaller cascade readings, both new: **`:why-hop` fired zero times** — the
+seed pattern (`math-formalization/notation-semantics-traps`, fixed by what
+*recall* surfaced, not by what the *problem* touches) carries exactly one
+authored `@why` edge, to `math-informal/unfold-the-definition`, which has **zero
+memory attachments**. The route the frame was selected for exists and is empty
+of cargo. And the **cap is already binding**: 115 candidates expanded, 100
+taken, 15 dropped, every offer flagged `:cascade-truncated? true` on its first
+live frame.
+
+**`:first-tag-recall-hit` confirmed, receipted end to end.** The
+`memory-pull-offer` for the student dispatch records `:tool "memory_search"`,
+`:args {:tags ["a01J06"], :limit 20}`, four surfaced ids including the guide's
+deposit `e-8a40d240`, subsequently attested USED. W.76's tags interface and
+W.73's subject fallback met, and the receipt shows it.
+
+**`:student-lane-component-c` confirmed — and contaminated.** Component (c) is
+non-zero for the first time. But `git diff b6fc6b33 9932170c -- Main.lean` is
+**empty**: the student's axiom-clean close is byte-identical to the solver's.
+The mechanism, per the student's own honest report and the guide's verification,
+is that the promoted memory's body **named the solver's commit sha**, and the
+student's checkout **shares a git object store** with the solver's worktree. The
+student did not violate its surface contract — it searched, found, applied and
+attributed. **The channel is the defect**: a promoted memory plus a shared
+object store transfers the artifact instead of the knowledge. This is f9's
+largest finding and it is a design question, so it is surfaced, not patched.
+
+**Duty B — S-2, with its scope stated in the entry this time.** Universe **105**
+declared `math-*` ids across 15 namespaces (103 on 2026-08-17, 83 at S-1) —
+enumerated from `@flexiarg`/`@arg`/`@multiarg` declarations, never a directory
+glob. Mission-scope (reviewed ≥ 2026-08-16): **12 memories, 11 patterns, 1
+shared node** — *unchanged sharing*. f9 contributed 2 memories on 2 patterns
+**both minted during f9** (files created 08:19 and 08:38; the universe's 103→105
+is exactly these two), each carrying one memory: **bespoke rate 2/2**.
+`:s2-unprompted-sharing` **refuted**; W.67's fragmentation mode persists at S-2.
+Whole store: 224 reviewed rows, 205 memories, 32 patterns, 16 shared nodes.
+
+**Cross-frame drift — the thing a single-frame seat could not see.** This
+series' own f8 entry names `math-formalization/layer-cake-crossover-split` and
+`isolate-computational-kernel`. **Neither id exists**; the math-split renamed
+them to `math-formalization-CA/layer-cake-crossover-split` and
+`math-strategy/isolate-computational-kernel-before-transport`, and querying the
+f8 ids returns 0 edges. Recorded in the f9 entry rather than by editing f8,
+since the series is append-only. Related: S-0 (W.67) reports 9/9 where the f7
+entry records 8/8, and S-1's published 12/11/1 recomputes to 10/9/1 at the f8
+cut under an explicitly stated scope. **The readings drifted because the scope
+was never written beside the number.** S-2 states its scope; future readings
+must, or they stay incomparable. This is the N = 2 tenure earning itself.
+
+**Three instrument cautions, each paid for during this reading**, all in the
+entry: `attachment-status` is a keyword on some edges and the **string**
+`"reviewed"` on others, so a strict `= :reviewed` filter silently undercounts;
+a swallowed substrate query shrank my own census from 205 to 198 between two
+runs of the same script, so query errors must be counted, not `or`-ed away; and
+**`unused-ids` contains the substring `used-ids`**, so a grep for uses reads
+every non-use as a use — the card's over-counting substring trap, met again.
+
+**Surfaced to Ground Control, not fixed here** (registration/design, per the
+card's boundary): the push/pull channel split that makes the cascade's
+offer×use join unsatisfiable; the solver's attested use reaching prose
+(`:attempt/verification`) while its machine receipt still reads `:used-ids []`
+with the seed in `:unused-ids`, so the loss function's numerator drops real
+uses; and the commit-pointer + shared-object-store contract-leak channel above.
+
+**Hypothesis registered for the next cycle:** a check that joins two events must
+scope itself to the moment the earlier one happened — the shape P26 fixed in C3
+is live in C4 and in any future offer×use join. For f10: give the cascade a
+pull-side surface and the join becomes non-empty; leave it and f10 reproduces
+f9's empty join exactly, confirming the emptiness as **wiring** rather than as a
+property of this problem.
+
+Frame 10 is registered and **not opened**; it is not this entry's business.
+
+## W.80 FRAME-10 CLOSED — the negative control refutes itself; analyst-1's tenure ends (2026-08-18)
+
+Second and last frame of tenure 1 under N = 2. Read by `analyst-1`. **The full
+reading is the `f10` entry in `analysis/series.edn`; the succession is
+`analysis/HANDOFF-analyst-1-to-analyst-2.md`.** This is the pointer plus the
+things that belong in the record rather than in either file.
+
+**The result of the frame.** `:cascade-cannot-why-hop` was registered as a
+negative control — *no* offer should carry `:why-hop`, because m93J02 touches no
+`@why`-edged pattern. **48 of 102 offers were `:why-hop`.** The control refuted
+itself, and it did so for exactly the reason the f9 entry had recorded one frame
+earlier under `:why-hop-diagnosis`: *the registration's criterion tested the
+PROBLEM for edges; what determines the seed pattern is what RECALL surfaced.*
+f9 wrote that down as a diagnosis; f10's registration was built on the
+confusion, so f10 became the experiment that confirmed it. Ground control
+reached the same conclusion independently and recorded it as
+`E-APM-f10-defects` D17. Keep the asymmetry: **f9, chosen for its edged pattern,
+produced zero why-hops; f10, chosen for having none, produced 48.**
+
+**The f9 hypothesis is settled.** f9's entry registered a falsifiable claim: *if
+the cascade is not given a pull-side surface, f10 reproduces f9's empty
+offer × use join exactly, and the emptiness is confirmed as wiring rather than
+as a property of the problem.* It did. 203 offers across two frames, two
+families, one edged problem and one not, **zero joins**. Independently
+re-derived as D18. The transfer that actually happened in both frames came
+through the *pull* channel, which the offer instrument does not watch.
+
+*Resolving D18's open question, because it asked:* the f9/f10 `:memory-channel`
+labels do **not** differ. Both frame records read solver `:push`, student
+`:none`; both saved states read the student `:not-invoked` with
+`:memory-channel-no-push`. The `:pull-only`/`:push+pull` labels in D18 come from
+another surface. The discrepancy is in the reporting, not the data.
+
+**Transfer itself was real and clean this time.** `:student-lane-component-c`
+confirmed and **uncontaminated** — the counterpart to f9's contaminated hit. The
+student pulled the promoted deposit by subject, read it, attested USED for its
+method and ordering, and its four commits follow that prescribed order. I
+reproduced the non-replay test rather than accepting the guide's report: the two
+`Main.lean` blobs differ, and `Metric.isBounded_iff_subset_closedBall` occurs in
+the student's file and nowhere in the solver's. **f9's contract leak did not
+recur** — this frame's deposit named no commit sha. Knowledge moved; no artifact
+did.
+
+**And the store did not grow by one reviewed attachment.** S-3: universe frozen
+at 105, mission scope frozen at 12 memories / 11 patterns / 1 shared node,
+whole store frozen at 205/32/16. Every number identical to S-2. f10 deposited
+six candidate memories across four scribe lanes — all four ran — promoted one,
+and reviewed **zero**. That is the store-level consequence of D3 and D4: the
+promotion gate refuses guide-authored deposits (`reviewer == depositor`, and the
+conductor's acting identity is always the guide) and *also* refuses
+scribe-authored ones, because writing the pattern at record time leaves the edge
+non-statusless. **Both honest authoring paths are refused.** A flat S reading
+here is a gate finding, not a curation finding, and should not be reported as
+the latter.
+
+**Two new defects, and one of them I should have caught a frame earlier.**
+
+*Every frame I can measure closes `:closed` while its own preregistration
+validator reports `:launchable? false`* — f8 with 6 invariant failures, f9 and
+f10 with 7. No surface said so. The wake payload carries `:launchable?`; f9's
+did not, and **I did not look**. P27 (`9ef132d4`, plus my own review fix
+`cc5a0ae1`) now prints it and writes it into every receipt as a **non-scoring**
+`:trace-validation` block — non-scoring deliberately, because `:score` is `n/6`
+across five frames and a seventh check would silently move the denominator.
+
+The delta between f8 and f9/f10 is exactly one failure,
+`:f3-undispositioned-offer`, and it appears exactly when the cascade is enabled.
+`:memory-disposition-offer-ids` is **empty in all three frames**; f8 passed F3
+vacuously because it had no offers at all. **Enabling the cascade did not break
+dispositioning — it removed the vacuity that was hiding its absence.** This
+directly contradicts `:required-capabilities :offer-use-disposition` in both
+registrations, and nobody owns it yet.
+
+**Succession, with one item honestly unfinished.** The handoff document is
+written, this entry is the W-entry, and `series.edn` now carries four entries.
+**`analyst-2` is NOT minted.** `POST /api/alpha/frames/mint-analyst` returns
+404 while `POST /api/alpha/frames/mint-seats` returns a routed 409 — and yet
+*both* `transport.http/mint-analyst-seat!` and `frame-seats/mint-analyst!`
+resolve in the running image, and the route branch is in the source at
+`transport/http.clj:7271`. The handler is not missing: **the running router was
+captured before the branch existed, and reloading the namespace does not rebuild
+it.** That is a second sighting of the capture-by-value family recorded as D7
+(`conductor-surface`), on a different surface — two sightings make it a class.
+
+I did not hand-assemble a mint over Drawbridge. `mint-analyst!` needs a
+`:prepare-seat-fn` built from the live server config, which is not reachable
+from any deref-able var in the image; a hand-built preparer would produce a seat
+that *looks* minted while carrying an invoke path I could not verify. The card's
+first recorded trap is asserting infrastructure state without checking, and a
+broken seat that reports healthy is worse than an absent one. Rebuilding the
+router is not the Analyst's (I-0). **Owned by ground control**; the one-line
+check is in the handoff.
+
+**On N = 2, since the ruling asked for evidence.** Four findings from this
+tenure were unavailable to a single-frame seat: the f9 why-hop diagnosis
+becoming f10's confirmed prediction; the empty join going from observation to
+settled wiring; the tags-vs-subject interface difference (f9's student searched
+by tags, f10's by subject, unprompted, with no interface change between them);
+and the series' own f8 entry naming two pattern ids the math-split had renamed
+away, findable only by re-querying a prior frame's claims. **All four required
+exactly two frames; none required three.** N = 2 is sufficient for the drift
+detection it was chosen for. The duties it did *not* reach — D, E and G — are
+slow by nature rather than blocked by tenure length, and are handed over open.
+
+**One thing this tenure demonstrated about its own design.** The f9 close died
+mid-analysis on an exhausted model quota (D1) having already computed real
+findings, and wrote none of them; all of it was lost. The tenure survived only
+because the card is the entire orientation, so a fresh seat could redo the work
+from the card alone. That is the strongest evidence these two frames produced
+for the card's own design — and it is also why every finding above was written
+to a surface before this turn ended.
+
+## W.81 FRAMES 11–12 CLOSED — the write path opens, two problems turn out defective; analyst-2's tenure ends (2026-08-19)
+
+**Seat:** analyst-2, tenure 2 of the Analyst seat under the N = 2 ruling, frames
+f11 (t01A05) and f12 (m03J01). Both closed `:defective`. Succession complete:
+handoff at `analysis/HANDOFF-analyst-2-to-analyst-3.md`, series entries f11 and
+f12 appended, successor **minted and invoke-probed**.
+
+### What was read, and what is now owned
+
+Read on entry: the frozen role card (`ed340941`), analyst-1's handoff, the four
+existing series entries, and `E-APM-f10-defects`. Owned and discharged: duties A
+(transfer checks, both frames, re-run from the command), B (S-4 and S-5, taken by
+hand, each census run twice), C (inapplicable both frames — zero offers), and F
+(one packet per frame, dispatched, parked, gated with a mutation the packet did
+not ask for, merged).
+
+### The mathematics is the headline, and it is not about the machine
+
+**Two consecutive frames, two defective problems, two different mechanisms.**
+t01A05's frozen clause 2 is **false** — refuted axiom-clean by the solver and
+re-refuted by a different route by the student. m03J01 is **vacuous**: in this
+Mathlib `ContDiff ℝ ⊤` elaborates to `ContDiff ℝ ω` (real-analytic), not
+`ContDiff ℝ ∞`, so its compactly-supported test class is empty in positive
+dimension. The f12 solver closed m03J01 with **zero residual sorries,
+axiom-clean, frozen statement unchanged** — and the guide dispositioned
+`:defective` anyway, "so that no consumer of this corpus reads m03J01 as a solved
+Dirichlet problem." That refusal is the best conduct of the tenure.
+
+Ground control's grep sweep finds **five further candidate problems** carrying
+the same `⊤`-with-compact-support configuration, none recompiled. **At present
+this apparatus is a better detector of broken formalisations than a solver of
+good ones.** That is a finding about the corpus, and it is larger than any
+harness defect recorded in these two frames.
+
+### The write path opened; the read path did not
+
+f9 and f10 gained zero reviewed attachments, and f11 gained zero — where the
+standing explanation was that *no authoring shape* could have an independent
+review machine-recorded. **That explanation was wrong, and the store said so.**
+206 of 469 `memory/assert` edges carried a durable `:prop/review` with a verdict,
+one of them a `:reject`; three had been written by frame seats — `f8-scribe`,
+`f9-scribe`, `f9-guide` — crosswise so that author ≠ reviewer, **ten hours before
+f11 ran**. So the zero was a regression inside a twelve-fix window, not a
+structural pincer. f11-guide then recovered f9's actual `promote-artifact` args
+and identified the working route exactly: **attach-then-review, guide as reviewer
+of a scribe-authored statusless deposit.** The f12 registration was corrected on
+that evidence before opening.
+
+**f12 then did it: four reviewed attachments, the store's first growth since
+f9.** Depositor `f12-scribe`, reviewer `f12-guide`, author ≠ reviewer holding.
+All four named **pre-existing** patterns — **zero bespoke mints** — against f9's
+100% mint rate, which breaks the fragmentation mode recorded at W.67, and
+mission-scope sharing grew 1 → 2 for the first time since f8.
+
+**And the read path stayed shut.** Both frames produced **zero cascade offers**,
+so `:offer-disposition-populated` and `:cascade-seeds-from-recall` were
+inapplicable throughout. f12 is the first frame to leave a non-empty shelf
+behind, which makes **f13 the first frame in the series where either prediction
+is testable at all**.
+
+### Instruments that moved on no input, and one that was silently truncating
+
+The tenure's methodological result: **in a single frame (f11), invariant F3
+passed vacuously on zero offers while transfer-check C3 failed vacuously on zero
+promotions** — two validators, no input, opposite directions, both feeding
+numbers this seat reports. Proved by mutation, not argued; packet **P28**
+(`b57b29f0`) now reports C3 `INAPPLICABLE` **without moving the `/6`
+denominator**, since redefining the loss function is not the Analyst's call.
+The same discipline distinguishes f11's trace-failure movement 7 → 6 (**vacuous**)
+from f12's 6 → 5 (**real** — the guidance measurement became correct).
+
+Separately, `/api/alpha/hyperedges` **silently defaults to `limit=100`** and
+returns 100 of 478 rows with no truncation signal. This had already put a wrong
+figure in the record: a ~400-row page reports 151 reviewed where the true count
+was 215, so a truncated census reads as the store *shrinking* at precisely the
+moment it began to grow.
+
+### Corrections, including one of my own
+
+Filed against the record: D34's "23 occurrences" of a memory id was a raw grep
+count that grew to 32 within the same frame, where the structured receipt count
+is **3**. D51: **D5 has regressed** — f12's student memory is `:domain
+:zaif-work` and unpromotable while f11's was `:mathematics`, same seat type, one
+frame apart; and f12-guide's hypothesis that the restore path explains it is
+**refuted**, because `memory-domain` is `None` for *every* student seat and so
+cannot discriminate between two of them. D52: the trace has now been wrong about
+what the student did in **three consecutive frames**.
+
+**And one retraction.** I reported that f12's refusals left no receipt, having
+looked in `:cycle/outputs` and every step result. They are in the **emitted
+trace**, which I had dropped from my own inspection — ground control's D43 was
+right. Kept visible in the series rather than deleted, because "asserting
+infrastructure state without checking" is the first trap on this seat's own card.
+The lesson is now in the handoff as a rule: a fact can live in three
+non-agreeing places, and the store beats all three.
+
+### On N = 2
+
+**Two tenures have now completed succession, so N = 2 is a mechanism rather than
+an anecdote** — which is what the f12 registration asked for. Four findings from
+this tenure required exactly two frames and none required three: the D5
+regression is visible *only* as a contradiction between f11's and f12's student
+memories; C3's vacuous fail and its substantive pass one frame later show both
+the defect and its repair; vacuous versus real trace movement is only
+distinguishable across two closes; and f11's rejected deposit's pattern reappears
+under a reviewed f12 memory. No evidence bears on whether N = 3 would buy more,
+and none is inferred.
+
+**Correcting W.80 on one point:** analyst-1 recorded that duties D, E and G are
+"slow by nature rather than blocked by tenure length." On **D** that is now
+wrong — the bespoke-rate reading became a result *because* two frames of
+attachment behaviour could be compared. D is a two-frame duty. E and G remain
+untouched by both tenures and are handed over open.
+
+**Succession, and the blocker that is gone.** analyst-1 could not mint its
+successor: `POST /api/alpha/frames/mint-analyst` returned 404, and it rightly
+declined to hand-assemble a seat whose invoke path it could not verify. That
+route is now live (409 on an empty body). analyst-3 is minted — the re-mint was
+idempotent against ground control's earlier one, the first live confirmation of
+that claimed property — is on the roster as `claude-opus-5`, and **its invoke
+path was probed and it answered**: `"analyst-3, claude-opus-5"`, in the one-line
+form asked for. The path carries the right model and returns content, not merely
+a `done` state. This is the first succession in the series where the successor
+replied before the predecessor stood down.
+
+## W.82 FRAMES 15 & 17 CLOSED — the read-path diagnosis changes; analyst-3's tenure ends (2026-08-20)
+
+**Seat:** analyst-3, tenure 3 of the Analyst seat under the N = 2 ruling, frames
+f15 (m93J06, `:closed`) and f17 (m97A06, `:tier-b`). **f16 was void**, so this
+tenure spans three frame numbers to get its two closes — the f17 registration
+records the crossing as `:reg/analyst-tenure {:n 2 :frame-index 2 :frames ["f15"
+"voided" "f17"]}`. Succession complete: handoff at
+`analysis/HANDOFF-analyst-3-to-analyst-4.md`, series entries f15 and f17
+appended, successor **minted and invoke-probed** — analyst-4 answered
+*"analyst-4, running on Claude Opus 5 (1M context)."*
+
+### What was read, and what is now owned
+
+Read on entry: the frozen role card (`ed340941`), analyst-2's handoff, the
+existing series entries, and each frame's registration and guide log. Owned and
+discharged: duties **A** (transfer checks re-run from the command both frames —
+f15 5/6, f17 3/6), **B** (S-6 and S-7 by hand, each validated against the
+predecessor's last reading before publishing), **C** (its **first live run in the
+series** at f15; inapplicable at f17), and **F** (one packet per frame — P30
+dispatched, parked, gated with two mutations it did not ask for, merged; P31 in
+flight at handover and handed to the successor as open, with its job and park
+ids).
+
+### The headline is a diagnosis that changed, not a result that landed
+
+This tenure inherited one sentence: *promotion works, retrieval is the gap.*
+**f17 does not support it.**
+
+f15 did. Its issued query was `exponent OR closing OR conjunct OR existence` —
+four prose words, none naming the problem's mathematics — and against that junk
+the cascade still returned 105 distinct memories, none attested used. f17's query
+names the mathematics (`hessian OR euler-lagrange OR variation OR …`), and recall
+returned empty with `proposal-count 0`. **Because the terrain is absent, and that
+was measured rather than inferred:** of 538 `memory/assert` edges, the number
+containing *euler-lagrange* is 0, *variational* 0, *stationary* 0, *lagrangian* 0,
+*pendulum* 0, *geodesic* 0; *hessian* is 1, and that one is f17's own student
+memory, written after the recall ran.
+
+**So at least part of what two tenures have called a retrieval gap is a
+curriculum gap — a shelf with nothing on it for the problems being asked.**
+f17 returning zero for a good query is better conduct than f15 returning 105 for
+a junk one, and an offer count compared across the two frames says the opposite.
+Never report one without the query and the terrain beside it.
+
+That does not excuse three real defects, all receipted: the student's recall
+channel **never fired** (`:not-invoked`, `:memory-channel-no-push`, against 523
+eligible ids); the lexical seed spends **29 of 30 slots on agent coordination
+evidence** with every score negative and `proposal-count 0`; and **all five of the
+frame's deposits land `:domain :zaif-work` with `:attachment-status nil`**, every
+one unpromotable.
+
+*(Correction, same day: I first filed that last finding as D5's third sighting on
+the **student**. f17-guide challenged the attribution and was right — all five
+deposits are the **scribe's**, `:evidence/author "f17-scribe"`, which I confirmed
+by direct id fetch. I had inferred "student" from a `zai-*` session id, and both
+the scribe and student are zai seats this frame, so that field cannot identify a
+seat. My vendor correlation is withdrawn. The corrected finding is the better one:
+the domain pin is a **zai write-path** problem, which is where analyst-2 said to
+look, and my student framing would have sent the next seat away from it.)*
+
+### The instrument caught itself three times, which is the tenure's real product
+
+1. **A prediction I registered was wrong.** The f15 entry said P30 would clear
+   `:malformed-cycle-attempts` (3 → 2). It did not. P30 landed and fired — f17's
+   attempts carry a machine-computed `:cycle/store-revision` — but `attempt?`
+   needs six keys, the machine stamps four, and f17's guide omitted the two f15's
+   guide had supplied by hand while omitting the one P30 fixed. **Two frames, two
+   guides, two different omissions, one failure.** A mutation proves the check
+   responds to the input you gave it; it does not prove the input class is closed.
+2. **A seductive mechanism, caught before shipping.** f17's
+   `:anchor {:term "hessian" :satisfied? false}` reads as the cause of the empty
+   recall. It is not — `dispatch_with_recall.clj:680-705` says the anchor sorts
+   and does not filter, and the ranked set was empty before it was consulted.
+3. **I reported the scribe leg as not having run, and it had.** I read absence
+   from `:steps` — but **refused actions are not in `:steps`**, they are in
+   `:cycle/action-refusals`, which held **eighteen** entries this frame, not the
+   three I reported. I had read that field early and **truncated my own output at
+   900 characters** for readability. analyst-2 recorded this exact error — dropping
+   the trace from its own inspection to keep output readable — and I quoted it in my
+   handoff while committing it in the same close. **f17-guide caught this one, not
+   me.** Three claims fell with it (the scribe leg; that D43's improvement had not
+   carried forward, when `:guidance-type-invalid` refusals are present; and
+   attributing zero promotions to the domain pin alone, when three
+   `promote-artifact` refusals exist). All corrected in place in the series entry
+   rather than deleted. *An instrument that truncates its own output is an
+   instrument that asserts absence.*
+4. **`series.edn` was not append-only.** The **f16 void entry had been appended
+   after the closing `]`** since the day it was written, so it was a second
+   top-level form and every `read-string` consumer saw eight entries and no f16 —
+   present as text, absent as data. Repaired in `69798714`; the file now parses to
+   ten. *An append-only file whose appends are not parse-checked is
+   append-hopeful.*
+
+### Standing, and not the Analyst's to rule
+
+**`:both-channels-varied` has never been able to fire.** At f15 this was shown by
+mutation; **f17 confirmed it by observation** — the field is now populated and
+both attempts carry the *identical* digest, because there is one store snapshot
+per cycle. Populating it was necessary and not sufficient. Whether each attempt
+re-snapshots the store is a design ruling, it has been surfaced twice, and it is
+the one open item that would change what this series can claim about its own
+experimental design.
+
+**And a parameter question that has now bitten twice:** under N = 2, a single
+defective problem can reduce a tenure to one closed frame, while cross-frame
+drift detection — the entire reason this seat is not fresh each time — needs two.
+*Should a void frame count against a tenure?* Not the Analyst's to answer; said
+out loud here because two tenures have now run into it and neither said so.

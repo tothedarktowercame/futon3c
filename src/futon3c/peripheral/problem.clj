@@ -22,6 +22,7 @@
             HttpResponse$BodyHandlers]
            [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
+           [java.security MessageDigest]
            [java.time Instant]
            [java.util UUID]))
 
@@ -173,13 +174,32 @@
      ;; peripheral's required evidence store actually exercises this path.
      :snapshot/tags []}))
 
-(defn- stamp-attempt-environment [attempt assignment harness-revision]
+(defn- sha1-hex [s]
+  (let [digest (.digest (MessageDigest/getInstance "SHA-1")
+                        (.getBytes (str s) "UTF-8"))]
+    (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
+
+(defn- snapshot-store-revision [snapshot]
+  (when (some? (:snap/memory-ids snapshot))
+    (sha1-hex (str/join "\n" (sort (:snap/memory-ids snapshot))))))
+
+(defn- stamp-attempt-environment
+  [attempt assignment harness-revision store-revision regime]
   (if (map? attempt)
     (cond-> (assoc attempt
                    :cycle/environment-checkout (:checkout assignment)
                    :cycle/environment-revision (:base-revision assignment))
       (some? harness-revision)
-      (assoc :cycle/harness-revision harness-revision))
+      (assoc :cycle/harness-revision harness-revision)
+
+      (some? store-revision)
+      (assoc :cycle/store-revision store-revision)
+
+      (some? regime)
+      (assoc :cycle/regime regime)
+
+      (some? (:runner-freshness assignment))
+      (assoc :cycle/runner-freshness (:runner-freshness assignment)))
     attempt))
 
 (defn- recorded-harness-measurement [state]
@@ -387,6 +407,9 @@
         harness (recorded-harness-measurement state)
         harness-revision (:harness-revision harness)
         store-snapshot (recorded-tool-result state :snapshot-store)
+        store-revision (snapshot-store-revision store-snapshot)
+        registration (recorded-tool-result state :read-registration)
+        regime (get-in registration [:problem :regime])
         frame-output (recorded-frame-output state)
         dispositions (recorded-cycle-tool-results state :write-disposition)
         memory-uses (recorded-cycle-tool-results state :write-use)
@@ -458,13 +481,16 @@
              :solver-dispatches (recorded-solver-dispatches state))
 
       (contains? payload :solver-attempt)
-      (update :solver-attempt stamp-attempt-environment solver harness-revision)
+      (update :solver-attempt stamp-attempt-environment solver harness-revision
+              store-revision regime)
 
       (sequential? (:student-attempts payload))
       (update :student-attempts
               #(mapv (fn [index attempt]
                        (stamp-attempt-environment attempt (get students index)
-                                                  harness-revision))
+                                                  harness-revision
+                                                  store-revision
+                                                  regime))
                      (range) %)))))
 
 (defn- harness-tree-clean [outputs]
@@ -816,6 +842,8 @@
                         (assoc :guidance-events
                                (guidance-trace-events
                                 (:ground-control-events outputs))
+                               :action-refusals
+                               (vec (:cycle/action-refusals state))
                                :measurement-summary
                                {:measured (count (get-in outputs
                                                         [:measurement :meas/values]))
@@ -1068,14 +1096,21 @@
                  "--memory-channel" memory-channel
                  "--recall-system" recall-system
                  "--batch" batch "--branch" branch]
-        {:keys [exit err]} (apply shell/sh command)]
+        {:keys [exit out err]} (apply shell/sh command)]
     (when-not (zero? exit)
-      (throw (ex-info "frames.bb open failed"
-                      {:exit exit :error err :frame-id frame-id})))
+      (let [details (->> [err out]
+                         (remove str/blank?)
+                         (str/join "\n"))]
+        (throw (ex-info (str "frames.bb open failed (exit " exit ")"
+                             (when-not (str/blank? details)
+                               (str ":\n" details)))
+                        {:exit exit :stdout out :stderr err
+                         :frame-id frame-id}))))
     (let [record (edn/read-string
                   (slurp (io/file experiment-frames-root batch
                                   (str frame-id ".edn"))))]
-      (select-keys record [:checkout :base-revision :branch :frame/id :batch]))))
+      (select-keys record [:checkout :base-revision :branch :frame/id :batch
+                           :runner-freshness]))))
 
 (defn- checkout-options [options arm]
   (let [arm-name (name arm)
@@ -1705,7 +1740,9 @@
                   :domain :mathematics
                   :evidence-store
                   (f1b/make-futon1b-backend (substrate/configured-url))}
-                 (select-keys options [:memory-id :pattern-id :reviewer]))
+                 (select-keys options [:memory-id :pattern-id :reviewer
+                                       :pattern-ids :verdict
+                                       :review-evidence-id]))
                 (catch Throwable t
                   {:ok false
                    :finding {:failure :promotion-attachment-review-threw

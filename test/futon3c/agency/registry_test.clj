@@ -244,6 +244,32 @@
         (is (= false (:ok r2)) "second registration fails")
         (is (= :duplicate-registration (:error/code (:error r2))))))))
 
+(deftest one-session-has-one-agent-identity
+  (testing "registration and update refuse a session already owned by another id"
+    (let [invoke-fn (fn [_prompt _session-id] {:result "ok"})
+          first-result (reg/register-agent!
+                        {:agent-id (fix/make-agent-id "codex-owner")
+                         :type :codex
+                         :invoke-fn invoke-fn
+                         :capabilities [:edit]
+                         :session-id "session-singular"})
+          second-result (reg/register-agent!
+                         {:agent-id (fix/make-agent-id "codex-alias")
+                          :type :codex
+                          :invoke-fn invoke-fn
+                          :capabilities [:edit]
+                          :session-id "session-singular"})]
+      (is (= "session-singular" (:agent/session-id first-result)))
+      (is (= :session-already-owned (:error/code (:error second-result))))
+      (reg/register-agent! {:agent-id (fix/make-agent-id "codex-empty")
+                            :type :codex
+                            :invoke-fn invoke-fn
+                            :capabilities [:edit]})
+      (let [update-result (reg/update-agent! "codex-empty"
+                                             :agent/session-id "session-singular")]
+        (is (= :session-already-owned (:error/code (:error update-result))))
+        (is (nil? (:agent/session-id (reg/get-agent "codex-empty"))))))))
+
 ;; =============================================================================
 ;; R3: Atomic state transitions
 ;; =============================================================================

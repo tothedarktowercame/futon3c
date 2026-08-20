@@ -3,6 +3,39 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.dispatch-with-recall :as dispatch]))
 
+(deftest evidence-document-frequencies-uses-memory-population-receipt
+  (let [requested-url (atom nil)
+        fetch #'dispatch/evidence-document-frequencies]
+    (testing "the request is scoped and the substrate receipt is preserved"
+      (with-redefs-fn
+        {(ns-resolve 'babashka.http-client 'get)
+         (fn [url _opts]
+           (reset! requested-url url)
+           {:body (pr-str {:df {"computes" 1}
+                           :indexed 781
+                           :population :filtered
+                           :filters {:type ":memory"}})})}
+        #(is (= {:df {"computes" 1}
+                 :indexed 781
+                 :population :filtered
+                 :filters {:type ":memory"}
+                 :source (str "http://substrate/api/alpha/evidence/text-search"
+                              "?df=computes&type=:memory")}
+                (fetch "http://substrate" ["computes"]))))
+      (is (str/includes? @requested-url "type=:memory")))
+    (testing "an omitted population is explicitly unstated"
+      (with-redefs-fn
+        {(ns-resolve 'babashka.http-client 'get)
+         (fn [_url _opts]
+           {:body (pr-str {:df {"computes" 1} :indexed 781})})}
+        #(is (= :unstated
+                (:population (fetch "http://substrate" ["computes"]))))))
+    (testing "HTTP failure remains best-effort"
+      (with-redefs-fn
+        {(ns-resolve 'babashka.http-client 'get)
+         (fn [& _] (throw (ex-info "offline" {})))}
+        #(is (nil? (fetch "http://substrate" ["computes"])))))))
+
 (deftest recall-query-uses-terrain-and-subjects
   (let [query (dispatch/recall-query
                {:problem "bpm-1-5-1"
@@ -70,12 +103,15 @@
       (is (= [:problem-md :proof-outline-md :stdin-packet]
              (mapv :source sources)))
       (is (= (.getPath problem-file) (:path (first sources))))
-      (is (= ["epsilon" "criterion" "boilerplate" "bound"]
+      (is (= ["epsilon" "criterion" "bound" "contradiction" "quotient"
+              "cauchy" "uniformly" "sequence" "continuous"]
              (:terms query))
           "the bounded lexical query round-robins across ranked sources")
+      (is (not-any? #{"boilerplate" "dispatch" "packet"}
+                    (:terms query)))
       (is (not-any? #{"generic"} (:terms query))))))
 
-(deftest recall-query-term-cap-is-parameterised-with-shipped-default-preserved
+(deftest recall-query-term-cap-reaches-beyond-the-old-four-term-bound
   (let [base {:problem "a-test"
               :subjects []
               :problem-root "/definitely/not/a/problem/root"
@@ -84,8 +120,12 @@
         default-query (dispatch/recall-query base "packet" {})
         eight-query (dispatch/recall-query
                      (assoc base :query-term-limit 8) "packet" {})]
-    (is (= dispatch/default-query-term-limit 4))
-    (is (= ["one" "two" "three" "four"] (:terms default-query)))
+    (is (= dispatch/default-query-term-limit 12))
+    (is (= ["one" "two" "three" "four" "five" "six" "seven" "eight"
+            "nine"]
+           (:terms default-query)))
+    (is (some #{"eight"} (:terms default-query))
+        "the shipped cap reaches a distinctive term beyond position four")
     (is (= ["one" "two" "three" "four" "five" "six" "seven" "eight"]
            (:terms eight-query)))
     (is (= :explicit-analysis-terms
@@ -94,6 +134,32 @@
          clojure.lang.ExceptionInfo
          #"positive integer"
          (dispatch/recall-query (assoc base :query-term-limit 0) "packet" {})))))
+
+(deftest recall-query-joins-selected-terms-as-a-disjunction
+  (let [query (dispatch/recall-query
+               {:problem "a-test"
+                :subjects []
+                :problem-root "/definitely/not/a/problem/root"
+                :query-terms ["hilbert" "weak-convergence" "computes"]}
+               "packet"
+               {})]
+    (is (= "hilbert OR weak-convergence OR computes" (:query query))
+        "a zero-match term must not intersect away the other term matches")
+    ;; THE CONNECTIVE MUST BE UPPERCASE, and this is not style.
+    ;; futon1b_text.clj `match-string` double-quotes every token before it
+    ;; reaches MATCH, passing through ONLY bare uppercase `AND`/`OR`. A
+    ;; lowercase `or` is quoted into a literal search term and, since the
+    ;; default operator is AND, the whole query becomes
+    ;; `"hilbert" AND "or" AND "computes"` -- zero hits, HTTP 200, empty
+    ;; result, indistinguishable from "no matches". Measured on the live store
+    ;; 2026-08-19: "hilbert OR computes" -> 17, "hilbert or computes" -> 0,
+    ;; "hilbert Or computes" -> 0. This lane's entire history is :recall-empty
+    ;; readings that were plumbing, so the case is pinned here rather than
+    ;; trusted. (claude-11, futon1b owner.)
+    (is (re-find #" OR " (:query query))
+        "the connective must be the uppercase operator")
+    (is (not (re-find #"(?<![A-Z]) or | Or | oR " (:query query)))
+        "a lowercase or mixed-case `or` is quoted into a literal term and silently zeroes the query")))
 
 (deftest substrate-call-deadline-does-not-preempt-total-recall-budget
   (let [timeout-fn
@@ -225,7 +291,7 @@
            (:score-kind (last audit))))
     (is (= 2 (:cutoff-position (last audit))))))
 
-(deftest eligible-memory-observation-is-post-anchor-and-pre-cutoff
+(deftest eligible-memory-observation-is-pre-cutoff-without-anchor-filtering
   (let [ranked [{:memory/id "e-first" :memory/body {:summary "anchor one"}}
                 {:memory/id "e-second" :memory/body {:summary "anchor two"}}
                 {:memory/id "e-third" :memory/body {:summary "anchor three"}}
@@ -240,13 +306,76 @@
              (filter #(#'dispatch/memory-contains-term? % "anchor"))
              (take limit)
              (mapv :memory/id))]
-    (is (= ["e-first" "e-second" "e-third"] eligible-ids))
+    (is (= ["e-first" "e-second" "e-third" "e-ineligible"] eligible-ids))
     (is (= ["e-first" "e-second"] surfaced-ids))
     (is (> (count eligible-ids) (count surfaced-ids)))
     (is (= surfaced-ids (subvec eligible-ids 0 (count surfaced-ids)))
         "surfaced ids are the rank-order prefix of eligible ids")
     (is (= legacy-surfaced-ids surfaced-ids)
-        "extracting eligibility does not change the previous surfaced ids")))
+        "anchor hits remain first when the input ranking already puts them first")))
+
+(deftest absent-anchor-does-not-empty-relevant-candidates
+  (let [ranked [{:memory/id "e-riesz"
+                 :memory/body {:summary "Riesz representation in Hilbert space"}}
+                {:memory/id "e-weak"
+                 :memory/body {:summary "weak Hessian convergence"}}]
+        eligible (vec (#'dispatch/eligible-memories
+                       ranked "computes" (constantly nil)))]
+    (is (= ["e-riesz" "e-weak"] (mapv :memory/id eligible)))
+    (is (every? (comp false? :dispatch/anchor-satisfied?) eligible))))
+
+(deftest anchor-boost-outranks-common-companion-only-match
+  (let [eligible (#'dispatch/eligible-memories
+                  [{:memory/id "e-common"
+                    :memory/body {:summary "additive estimate"}}
+                   {:memory/id "e-anchor"
+                    :memory/body {:summary "computes spectral index"}}]
+                  "computes" (constantly nil))
+        boosted (#'dispatch/rank-with-anchor-boost eligible)]
+    (is (= ["e-anchor" "e-common"] (mapv :memory/id boosted)))
+    (is (= [true false]
+           (mapv :dispatch/anchor-satisfied? boosted)))))
+
+(deftest frame-12-term-set-surfaces-riesz-memories-with-missing-anchor
+  (let [proposal-query (atom nil)
+        candidates [{:memory/id "e-hilbert-riesz"
+                     :memory/body
+                     {:summary "Riesz representation for a Hilbert functional"}}
+                    {:memory/id "e-weak-hessian"
+                     :memory/body
+                     {:summary "weak Hessian convergence under additive bounds"}}]
+        recall-result
+        (with-redefs-fn
+          {#'dispatch/recall-query
+           (fn [& _] {:required-term "computes"
+                      :terms ["computes" "riesz" "weak-hessian" "additive"]
+                      :query "computes riesz weak-hessian additive"})
+           (ns-resolve 'futon3c.dispatch-with-recall 'substrate-seams)
+           (fn [& _]
+             {:search (constantly {})
+              :projection (constantly {})
+              :entry (constantly nil)})
+           (ns-resolve 'futon3c.peripheral.memory-recall
+                       'propose-patterns-by-query)
+           (fn [_ query _]
+             (reset! proposal-query query)
+             {:candidates [] :content-matches candidates
+              :lexical-seed [] :index-as-of "frame-12-fixture"})
+           (ns-resolve 'futon3c.peripheral.memory-recall
+                       'recall-by-endpoints)
+           (fn [& _] {:recalls []})}
+          #(deref
+            (future
+              (#'dispatch/recall-now
+               {:problem "frame-12-problem" :subjects [] :limit 2
+                :recall-timeout-ms 3000 :receipt-ranking? false}
+               "Hilbert-space variational problem"))))]
+    (is (= "computes riesz weak-hessian additive" @proposal-query))
+    (is (= :ok (:status recall-result)))
+    (is (= ["e-hilbert-riesz" "e-weak-hessian"]
+           (mapv :memory/id (:memories recall-result))))
+    (is (= {:term "computes" :satisfied? false}
+           (:anchor recall-result)))))
 
 (deftest eligible-and-surfaced-ids-agree-without-truncation
   (let [ranked [{:memory/id "e-first" :memory/body {:summary "anchor one"}}
@@ -268,6 +397,16 @@
            (get-in entry [:body :eligible-memory-ids])))
     (is (= ["e-first" "e-second"]
            (get-in entry [:body :memory-use :memory-use/surfaced-ids])))))
+
+(deftest offered-receipt-records-anchor-boost-observation
+  (let [entry (dispatch/offered-evidence
+               {:problem "a-test" :from "ground-control"}
+               {:status :ok
+                :anchor {:term "computes" :satisfied? false}
+                :memories [{:memory/id "e-riesz"}]}
+               "job-anchor" "session-anchor")]
+    (is (= {:term "computes" :satisfied? false}
+           (get-in entry [:body :recall-anchor])))))
 
 (deftest pull-only-receipt-persists-machine-eligibility-provenance
   (let [provenance {:policy :snapshot-union-cycle-promoted
@@ -301,7 +440,8 @@
         recall-result
         (with-redefs-fn
           {#'dispatch/recall-query
-           (fn [& _] {:required-term "anchor" :terms ["anchor"]})
+           (fn [& _] {:required-term "anchor" :terms ["anchor"]
+                      :query "anchor"})
            (ns-resolve 'futon3c.dispatch-with-recall 'substrate-seams)
            (fn [& _]
              {:search (constantly {})
@@ -332,7 +472,7 @@
         eligible-ids (get-in receipt [:body :eligible-memory-ids])
         surfaced-ids (get-in receipt [:body :memory-use
                                       :memory-use/surfaced-ids])]
-    (is (= ["e-first" "e-second" "e-third"] eligible-ids))
+    (is (= ["e-first" "e-second" "e-third" "e-ineligible"] eligible-ids))
     (is (= ["e-first" "e-second"] surfaced-ids))
     (is (> (count eligible-ids) (count surfaced-ids)))
     (is (= surfaced-ids (subvec eligible-ids 0 (count surfaced-ids))))))
@@ -752,8 +892,13 @@
          packet {})]
     (is (= :mathematical-fields
            (get-in query [:term-sources 0 :scope])))
+    (is (some #{"tendsto"} (get-in query [:term-sources 0 :terms]))
+        "the receipt retains available packet terms")
     (is (some #{"cauchytransform"} (:terms query)))
-    (is (some #{"tendsto"} (:terms query)))
+    (is (not-any? #{"tendsto" "integral" "outside" "contour" "disk"
+                    "tendsto_zero"}
+                  (:terms query))
+        "terms available only from stdin do not feed the issued query")
     (is (not-any? #{"route" "search" "report" "concretely"}
                   (:terms query)))))
 

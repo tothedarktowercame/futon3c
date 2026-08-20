@@ -62,6 +62,41 @@ signature mismatch. The guide's contract is to respond to your named
 obstruction rather than restate the overall goal; give it something exact
 to respond to.
 
+## "Not in Mathlib" is not a reason to stop
+
+**Operator instruction, Joe, 2026-08-18.** A notion missing from Mathlib is a
+thing to BUILD, not a wall to report. `ConstructionTargets/` exists for exactly
+this and holds 20 modules; two of them were built the day this was written,
+because four problems needed integration of top forms over oriented manifolds
+and signed intersection numbers and Mathlib had neither.
+
+So **identifying new ConstructionTargets is part of your work.** When you hit a
+missing notion, the report should name it as a construction target — what it is,
+what would have to be defined, roughly what it costs — not merely as an absence.
+"Mathlib has no X" is half a finding; "Mathlib has no X, here is the smallest X
+that would unblock this, and it looks like N days" is a whole one.
+
+This does NOT weaken the rule above. A defective statement is still a defect and
+you still stop and say so. The distinction:
+
+- *the statement is wrong* → stop, report, do not build around it;
+- *the statement is right and the library lacks a tool* → name the tool as a
+  construction target, and build it if it is in reach of your budget.
+
+**And the trap, which has already cost this corpus once.** When the library
+lacks a notion and you still need something that type-checks, the tempting move
+is a definition chosen for provability rather than truth. This corpus contains
+`def intersectionNumber ... : ℤ := 0` and `def integral (ω) : ℝ := ω 0`. Both
+compiled, both passed review, and one theorem was thereby "proved" as
+`0 = k · 0`. That encoding sat in the corpus until a later frame proved a
+rewrite of it FALSE.
+
+So any definition you introduce must come with a proof that it takes a
+**non-trivial value in an exhibited concrete case** — provably nonzero, or equal
+to an independently known value. A signed quantity must additionally exhibit a
+**minus sign**. A definition that compiles but cannot be shown to be about
+anything is worse than no definition, because it passes review.
+
 ## Guidance you receive is typed
 
 Guidance bells declare a performative (Agency typed bells). A bare

@@ -18,7 +18,7 @@
            [java.util UUID]))
 
 (def default-limit 5)
-(def default-query-term-limit 4)
+(def default-query-term-limit 12)
 (def default-memory-channel :push)
 (def memory-pull-invitation-version "memory-pull-invitation-v2")
 
@@ -437,11 +437,22 @@
   (try
     (let [base (trim-base (or substrate-base (substrate/configured-url)))
           url (str base "/api/alpha/evidence/text-search?df="
-                   (encode (str/join "," terms)))
+                   (encode (str/join "," terms))
+                   "&type=:memory")
           response (http/get url {:headers {"Accept" "application/edn"}
                                   :timeout 15000 :throw false})
           parsed (edn/read-string (:body response))]
-      (when (map? (:df parsed)) (:df parsed)))
+      (when (map? (:df parsed))
+        ;; The type filter is honoured as of claude-11's 2026-08-19 deploy.
+        ;; Preserve the substrate's receipt of which population was counted. If
+        ;; a future change silently stops scoping, :population will expose that
+        ;; fact instead of letting the number quietly move populations.
+        ;; :indexed is the denominator the band must be read against.
+        {:df (:df parsed)
+         :indexed (:indexed parsed)
+         :population (get parsed :population :unstated)
+         :filters (:filters parsed)
+         :source url}))
     (catch Throwable _ nil)))
 
 (defn- query-anchor-term-memory-df
@@ -450,7 +461,8 @@
   no term is in band or the df fetch fails."
   [terms substrate-base]
   (let [terms (vec (remove str/blank? terms))
-        dfs (evidence-document-frequencies substrate-base terms)
+        df-result (evidence-document-frequencies substrate-base terms)
+        dfs (:df df-result)
         [lo hi] anchor-df-band
         in-band (when dfs
                   (filterv #(let [d (get dfs % 0)] (<= lo d hi)) terms))]
@@ -469,11 +481,11 @@
 
 (defn recall-query
   "Build a bounded lexical query from subject ids, preregistered terrain, and
-  problem files, with packet terms retained as fallback. The exact problem id
-  is also queried as a graph endpoint.
+  problem files. Packet terms are receipted but excluded from selection. The
+  exact problem id is also queried as a graph endpoint.
 
-  `:query-term-limit` parameterises the shipped four-term cap for frozen-data
-  analysis while preserving four as the production default. `:query-terms` is
+  `:query-term-limit` parameterises the shipped twelve-term cap for frozen-data
+  analysis while preserving twelve as the production default. `:query-terms` is
   an analysis seam for an explicitly constructed vocabulary; it still passes
   through the same ladder, search, reviewed-attachment projection, and ranking
   path as the shipped query."
@@ -503,7 +515,12 @@
         ;; Keep every source represented before taking the global cap. Without
         ;; this round-robin, problem.md exhausts the budget and a rarer term in
         ;; proof-outline.md (for example `functoriality`) is unreachable.
-        source-terms (round-robin (map :terms term-sources))
+        ;; Keep packet-derived terms in the receipt, but never spend bounded
+        ;; mathematical query slots on dispatch prose.
+        source-terms (round-robin
+                      (map :terms
+                           (remove #(= :stdin-packet (:source %))
+                                   term-sources)))
         ;; MEASURED 2026-07-30, not guessed. The text-search endpoint is
         ;; CONJUNCTIVE: hits fall off a cliff as terms are added — 1 term = 5
         ;; hits, 3 = 3, 7 = 2, 12 = 1, 29 = 0 — so a 36-term query returned
@@ -517,6 +534,11 @@
         ;; including 2 directly relevant memories.
         ;; FOLLOW-UP: several short queries unioned would beat one short query;
         ;; this is the minimal measured fix, not the best possible one.
+        ;; The endpoint now joins these terms with OR, so the old conjunctive
+        ;; cliff no longer determines the cap.  The measured falloff still
+        ;; rules out an unbounded query: broad OR queries impose store and
+        ;; ranking cost, while twelve slots reach three rounds across four
+        ;; interleaved inputs (or six rounds across two file sources).
         ;; INTERLEAVE the two vocabularies instead of concatenating them.
         ;;
         ;; MEASURED 2026-07-30 on a01A07. `subjects` are extracted from the
@@ -567,7 +589,7 @@
      :required-term required-term
      :anchor-source anchor-source
      :terms terms
-     :query (str/join " " terms)}))
+     :query (str/join " OR " terms)}))
 
 (defn- request-edn
   [method url opts]
@@ -656,23 +678,31 @@
          (every? present required))))
 
 (defn- eligible-memories
-  "Ranked memories that pass the required-term body check, before cutoff.
+  "Ranked relevant memories, hydrated for anchor observation, before cutoff.
 
   This boundary is observationally important: applying `take` here would make
   eligibility indistinguishable from surfacing and recreate the F7 tautology."
   [ranked required-term entry]
-  (keep
+  (map
    (fn [memory]
-     (let [memory
-           (if (and (map? (:memory/body memory))
-                    (memory-contains-term? memory required-term))
-             memory
-             (when-let [full-entry (entry (:memory/id memory))]
-               (when (map? (:evidence/body full-entry))
-                 (assoc memory :memory/body (:evidence/body full-entry)))))]
-       (when (and memory (memory-contains-term? memory required-term))
-         memory)))
+     (let [memory (if (map? (:memory/body memory))
+                    memory
+                    (if-let [body (some-> (entry (:memory/id memory))
+                                          :evidence/body)]
+                      (assoc memory :memory/body body)
+                      memory))]
+       (assoc memory :dispatch/anchor-satisfied?
+              (boolean (and required-term
+                            (memory-contains-term? memory required-term))))))
    ranked))
+
+(defn- rank-with-anchor-boost
+  "Stable anchor boost over an already-ranked eligible set.
+
+  Anchor matches precede misses; each partition retains the underlying ranking,
+  so the anchor influences surfacing without becoming an eligibility filter."
+  [eligible]
+  (sort-by #(if (:dispatch/anchor-satisfied? %) 0 1) eligible))
 
 (defn- receipt-entries
   [base timeout-ms]
@@ -948,15 +978,15 @@
             :trace-id trace-id
             :search-evidence search
             :recall-batch-fn batch-recall}))
-        ;; The highest-IDF term is a required anchor, not merely one rung in a
-        ;; weakening ladder. Querying it alone also prevents the proposal
-        ;; layer's bounded OR fallback from letting a common companion term
-        ;; carry the match. No anchor support is a typed recall-empty result.
+        ;; Search the selected vocabulary as a bounded OR. The highest-IDF term
+        ;; remains an observable ranking boost below, rather than a hard gate:
+        ;; rarity must improve precision without making an absent word erase
+        ;; relevant companion-term matches.
         proposals
-        (if required-term
-          (assoc (propose-with required-term)
-                 :recall/tier :required-term
-                 :recall/query-used required-term)
+        (if-not (str/blank? (:query query-data))
+          (assoc (propose-with (:query query-data))
+                 :recall/tier :selected-terms
+                 :recall/query-used (:query query-data))
           {:candidates []
            :content-matches []
            :lexical-seed []
@@ -1053,9 +1083,11 @@
                :recall-system active-system
                :receipt-ranking ranking-audit)
         eligible (vec (eligible-memories ranked required-term entry))
-        eligible-memory-ids (->> eligible (map :memory/id) distinct vec)
+        boosted (vec (rank-with-anchor-boost eligible))
+        anchor-satisfied? (boolean (some :dispatch/anchor-satisfied? eligible))
+        eligible-memory-ids (->> boosted (map :memory/id) distinct vec)
         memories
-        (->> eligible
+        (->> boosted
              (take limit)
              (mapv with-use-kind))]
     (cond->
@@ -1067,6 +1099,9 @@
       :index-as-of (:index-as-of proposals)
       :ladder-rung (:recall/tier proposals)
       :ladder-query (:recall/query-used proposals)
+      :anchor (cond-> {:term required-term :satisfied? anchor-satisfied?}
+                (:anchor-df-basis query-data)
+                (assoc :df-basis (:anchor-df-basis query-data)))
       :pattern-ids (vec pattern-ids)
       :endpoints (vec endpoints)
       :eligible-memory-ids eligible-memory-ids
@@ -1370,6 +1405,10 @@
                     :recall-index-as-of (:index-as-of recall-result)
                     :recall-ladder-rung (or (:ladder-rung recall-result) :unavailable)
                     :recall-ladder-query (:ladder-query recall-result)
+                    :recall-anchor (or (:anchor recall-result)
+                                       {:term (get-in recall-result
+                                                      [:query :required-term])
+                                        :satisfied? false})
                     :withheld-memory-ids withheld-ids
                     :withholding-delivered-ids
                     (vec (:withholding-delivered-ids recall-result))

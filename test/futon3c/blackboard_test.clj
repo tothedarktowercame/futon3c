@@ -353,6 +353,51 @@
     (is (not= rendered other-cycle))
     (is (str/includes? other-cycle "Cycle: a12bc34"))))
 
+(deftest problem-header-renders-frame-from-registration-or-seats
+  (let [base {:problem-id "m03J01"
+              :cycle/mode :store-mode
+              :current-phase :register
+              :cycles-completed 0
+              :steps []}
+        registered
+        (bb/render-blackboard
+         :problem
+         (assoc base :cycle/outputs
+                {:registration {:reg/frame-id "f13"
+                                :reg/solver-seat "f12-solver"}}))
+        inferred
+        (bb/render-blackboard
+         :problem
+         (assoc base :cycle/outputs
+                {:registration {:reg/solver-seat "f12-solver"
+                                :reg/guide-seat "f12-guide"
+                                :reg/scribe-seat "f12-scribe"}}))
+        absent (bb/render-blackboard :problem base)]
+    (is (str/starts-with? registered "Frame: f13  Problem: m03J01"))
+    (is (str/starts-with? inferred "Frame: f12  Problem: m03J01"))
+    (is (not (str/includes? absent "Frame:")))))
+
+(deftest completed-problem-never-renders-stale-dispatches-as-working
+  (let [rendered
+        (bb/render-blackboard
+         :problem
+         {:problem-id "m03J01"
+          :cycle/mode :store-mode
+          :current-phase nil
+          :cycles-completed 1
+          :cycle/outputs
+          {:registration {:reg/solver-seat "f12-solver"
+                          :reg/guide-seat "f12-guide"}
+           :solver-attempt {:attempt/id "solver/final"}}
+          :steps [{:tool :dispatch-solver
+                   :result {:job-id "invoke-f12-solver-1"}}
+                  {:tool :dispatch-solver
+                   :result {:job-id "invoke-f12-solver-2"}}
+                  {:tool :dispatch-solver
+                   :result {:job-id "invoke-f12-solver-3"}}]})]
+    (is (not (str/includes? rendered "solver   f12-solver       working")))
+    (is (str/includes? rendered "In-flight: quiet"))))
+
 ;; =============================================================================
 ;; blackboard! primitive — elisp construction
 ;; =============================================================================

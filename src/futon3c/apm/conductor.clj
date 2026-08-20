@@ -4,11 +4,97 @@
    This namespace owns sequence, checkpointing, and a compact operation log.
    The problem peripheral remains the sole owner of cycle state and invariants."
   (:require [clojure.string :as str]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
+            [babashka.http-client :as http-client]
+            [cheshire.core :as json]
+            [futon3c.agency.registry :as agency]
             [futon3c.apm.conductor-binding :as binding]
             [futon3c.apm.preregistration :as prereg]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.peripheral.problem :as problem]
-            [futon3c.peripheral.runner :as runner]))
+            [futon3c.peripheral.runner :as runner]
+            [futon3c.substrate.client :as substrate]))
+
+(def ^:private default-memory-cascade-cap 100)
+
+(defn- default-close-hook
+  [{:keys [agency-base analyst-seat caller prompt]}]
+  (let [response (http-client/post
+                  (str agency-base "/api/alpha/bell")
+                  {:headers {"Content-Type" "application/json"}
+                   :body (json/generate-string
+                          {:agent-id analyst-seat
+                           :caller caller
+                           :surface "bell"
+                           :mode "brief"
+                           :prompt prompt})
+                   :throw false
+                   :timeout 10000})]
+    (if (= 202 (:status response))
+      {:status :sent :http-status 202}
+      {:status :failed :reason :bell-refused
+       :http-status (:status response)})))
+
+(defn- analyst-wake!
+  [closed]
+  (let [config (:config closed)
+        seat (some-> (:analyst-seat config) str str/trim not-empty)
+        problem-id (:problem-id config)
+        cycle-id (:cycle-id closed)
+        envelope (:envelope closed)
+        payload {:event :apm/frame-closed
+                 :problem-id problem-id
+                 :cycle-id cycle-id
+                 :launchable? (:launchable? envelope)
+                 :failure-count (count (:failures envelope))}]
+    (cond
+      (nil? seat)
+      {:status :skipped :reason :analyst-seat-not-configured
+       :payload payload}
+
+      (nil? (agency/get-agent seat))
+      {:status :skipped :reason :analyst-seat-unregistered
+       :analyst-seat seat :payload payload}
+
+      :else
+      (try
+        (let [hook (or (:close-hook config) default-close-hook)
+              result (hook {:agency-base
+                            (or (:agency-base config)
+                                (get-in config [:conductor :park-base])
+                                "http://localhost:7070")
+                            :analyst-seat seat
+                            :caller (or (get-in config [:conductor :agent])
+                                        "apm-conductor")
+                            :payload payload
+                            :prompt (str "APM frame closed; run Analyst close checks and "
+                                         "append the series entry.\n" (pr-str payload))})]
+          (merge {:analyst-seat seat :payload payload} result))
+        (catch Throwable t
+          {:status :failed :reason :close-hook-threw
+           :analyst-seat seat :payload payload
+           :error/message (.getMessage t)})))))
+
+(defn- report-analyst-wake! [wake]
+  (when-not (= :sent (:status wake))
+    (binding [*out* *err*]
+      (println (str "[apm.conductor] Analyst wake "
+                    (name (or (:status wake) :unknown))
+                    (when-let [reason (:reason wake)]
+                      (str ": " (name reason)))
+                    (when-let [seat (:analyst-seat wake)]
+                      (str " seat=" seat))))))
+  wake)
+
+(defn- safe-analyst-wake! [closed]
+  (try
+    (report-analyst-wake! (analyst-wake! closed))
+    (catch Throwable t
+      (report-analyst-wake!
+       {:status :failed :reason :wake-boundary-threw
+        :error/message (.getMessage t)}))))
 
 (defn- failure [handle code message & [details]]
   (cond-> (assoc handle :ok false
@@ -49,6 +135,46 @@
     {:handle handle}
     (raw-step handle :problem-save [])))
 
+(def ^:private refusal-diagnostic-keys
+  #{:artifact-id :lane :memory-id :offer-id :outcome :pattern-id :reviewer})
+
+(defn- bounded-string [x]
+  (let [s (str x)]
+    (if (> (count s) 160) (str (subs s 0 160) "…") s)))
+
+(defn- refusal-diagnostic [arg]
+  (if (map? arg)
+    {:arg/type :map
+     :arg/keys (->> (keys arg) (map str) sort vec)
+     :arg/diagnostic
+     (into {}
+           (keep (fn [[k v]]
+                   (when (and (contains? refusal-diagnostic-keys k)
+                              (or (string? v) (keyword? v)
+                                  (boolean? v) (number? v)))
+                     [k (if (string? v) (bounded-string v) v)])))
+           arg)}
+    {:arg/type (cond
+                 (string? arg) :string
+                 (sequential? arg) :collection
+                 (nil? arg) :nil
+                 :else :scalar)}))
+
+(defn record-action-refusal!
+  "Checkpoint a sanitized refusal on the last authoritative, non-failed handle."
+  [handle {:keys [action-id operation args]} failed-handle]
+  (let [error (:error failed-handle)
+        receipt {:refusal/action-id action-id
+                 :refusal/tool operation
+                 :refusal/args (mapv refusal-diagnostic (or args []))
+                 :refusal/error (select-keys error
+                                             [:error/component :error/code
+                                              :error/message])
+                 :refusal/step-index (count (get-in handle [:state :steps]))}
+        recorded (update-in handle [:state :cycle/action-refusals]
+                            (fnil conj []) receipt)]
+    (:handle (checkpoint recorded))))
+
 (defn- saved-step [handle tool args]
   (let [{h :handle result :result} (raw-step handle tool args)]
     (if (false? (:ok h))
@@ -60,22 +186,274 @@
   (saved-step handle problem/advance
               ["apm-conductor" (:problem-id (:config handle)) payload]))
 
-(defn- receipt-offers [receipt]
+(defn- response-edn [response context]
+  (if (= 200 (:status response))
+    (edn/read-string (:body response))
+    (throw (ex-info "memory cascade substrate read failed"
+                    (assoc context :status (:status response)
+                           :body (:body response))))))
+
+(defn- cascade-get [base path query-params]
+  (response-edn
+   (http-client/get (str (str/replace base #"/+$" "") path)
+                    {:query-params query-params
+                     :throw false :timeout 60000})
+   {:path path :query-params query-params}))
+
+(defn- cascade-pattern [base pattern-id]
+  (let [path (str "/api/alpha/entity/"
+                  (java.net.URLEncoder/encode (str pattern-id) "UTF-8"))]
+    (response-edn
+     (http-client/get (str (str/replace base #"/+$" "") path)
+                      {:headers {"Accept" "application/edn"}
+                       :throw false :timeout 60000})
+     {:path path :pattern-id pattern-id})))
+
+(defn- qualified-name [x]
+  (if (keyword? x)
+    (if-let [ns (namespace x)] (str ns "/" (name x)) (name x))
+    (str x)))
+
+(defn- reviewed-attachment? [edge]
+  (and (= "memory/assert" (qualified-name (:hx/type edge)))
+       (= "reviewed"
+          (qualified-name
+           (or (get-in edge [:hx/props :attachment-status])
+               (:prop/attachment-status edge))))))
+
+(defn- attachment-memory-id [edge]
+  (or (get-in edge [:hx/props :roles :entry])
+      (get-in edge [:prop/roles :entry])))
+
+(defn- attachment-patterns [edge]
+  (vec (or (get-in edge [:hx/props :roles :patterns])
+           (get-in edge [:prop/roles :patterns]) [])))
+
+(defn- attachment-problems [edge]
+  ;; APM problem ids are the only machine-identified problem endpoints in the
+  ;; historical attachment shape; the remaining :subjects are hooks, missions,
+  ;; and pattern ids. Keep this deliberately narrow rather than treating every
+  ;; subject as a co-incidence bridge.
+  (->> (or (get-in edge [:hx/props :roles :subjects])
+           (get-in edge [:prop/roles :subjects]) [])
+       (filter #(and (string? %) (re-matches #"[A-Za-z]\d{2}[A-Z]\d{2}" %)))
+       vec))
+
+(defn- live-cascade-readers [config]
+  (let [base (or (:evidence-store-url config) (substrate/configured-url))]
+    {:attachments-fn
+     (fn [endpoint]
+       (->> (:hyperedges
+             (cascade-get base "/api/alpha/hyperedges"
+                          {:end endpoint :type "memory/assert" :limit 5000}))
+            (filter reviewed-attachment?)
+            vec))
+     :why-targets-fn
+     (fn [pattern-id]
+       (->> (:relations
+             (cascade-get base "/api/alpha/relations"
+                          {:from pattern-id :limit 100}))
+            (keep (fn [relation]
+                    (when (= "pattern/has-semantic-why"
+                             (qualified-name (:relation/type relation)))
+                      (or (:relation/to relation) (:relation/dst relation)))))
+            distinct
+            vec))
+     :pattern-fn
+     (fn [pattern-id]
+       ;; Pattern content is additive. A missing legacy entity must not hide
+       ;; the named pattern offer or break an otherwise valid memory cascade.
+       (try
+         (cascade-pattern base pattern-id)
+         (catch Throwable _ nil)))}))
+
+(defn domain-general-pattern-id?
+  "True when PATTERN-ID's pre-slash family has no uppercase subject suffix."
+  [pattern-id]
+  (let [family (first (str/split (str pattern-id) #"/" 2))]
+    (not (boolean (re-find #"-[A-Z]{2,}$" family)))))
+
+(defn- pattern-surface-content [surface]
+  (let [entity (or (:entity surface) surface)
+        props (or (:entity/props entity) (:props entity) entity)
+        hook (or (:hook props) (:pattern/hook props))
+        body (or (:body props) (:pattern/body props))
+        content (when (and (map? props) (seq props)) props)]
+    (cond-> {}
+      (some? hook) (assoc :offer/pattern-hook hook)
+      (some? body) (assoc :offer/pattern-body body)
+      content (assoc :offer/pattern-content content))))
+
+(defn expand-memory-cascade
+  "Expand surfaced memories through reviewed pattern attachments.
+
+   `attachments-fn` returns memory/assert edges for an endpoint;
+   `why-targets-fn` returns authored @why targets for a pattern. The result is
+   bounded after cheapest-route deduplication. `:expanded-count` excludes the
+   leaf memories already surfaced by retrieval."
+  [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn cap]
+                    :or {cap default-memory-cascade-cap}}]
+  (let [seed-memory-ids (vec (distinct seed-memory-ids))
+        seed-memory-set (set seed-memory-ids)
+        seed-edges (mapcat attachments-fn seed-memory-ids)
+        seed-patterns (vec (distinct (mapcat attachment-patterns seed-edges)))
+        ;; Authored why edges form a directed graph. Record the shortest
+        ;; distance from any seed pattern.
+        why-patterns
+        (loop [queue (into clojure.lang.PersistentQueue/EMPTY
+                           (map #(vector % 0) seed-patterns))
+               seen (zipmap seed-patterns (repeat 0))]
+          (if (empty? queue)
+            (dissoc seen nil)
+            (let [[pattern hops] (peek queue)
+                  queue (pop queue)
+                  next-hop (inc hops)
+                  targets (remove #(contains? seen %) (why-targets-fn pattern))]
+              (recur (into queue (map #(vector % next-hop) targets))
+                     (reduce #(assoc %1 %2 next-hop) seen targets)))))
+        why-patterns (apply dissoc why-patterns seed-patterns)
+        ;; Co-incidence is exactly pattern -> problem -> pattern. Only the
+        ;; original seed patterns initiate it; it does not recursively flood.
+        seed-pattern-edges (mapcat attachments-fn seed-patterns)
+        seed-problems (vec (distinct (mapcat attachment-problems
+                                             seed-pattern-edges)))
+        coincident-patterns
+        (->> seed-problems
+             (mapcat attachments-fn)
+             (mapcat attachment-patterns)
+             (remove (set seed-patterns))
+             distinct
+             (map #(vector % 2))
+             (into {}))
+        pattern-routes
+        ;; On equal cost retain the authored why route (the left map). The
+        ;; receipt then distinguishes authored structure from an incidental
+        ;; co-incidence without claiming a cheaper path.
+        (merge-with (fn [a b] (if (<= (:hops a) (:hops b)) a b))
+                    (into {} (map (fn [[pattern hops]]
+                                    [pattern {:route :why-hop :hops hops
+                                              :pattern pattern}])
+                                  why-patterns))
+                    (into {} (map (fn [[pattern hops]]
+                                    [pattern {:route :co-incidence :hops hops
+                                              :pattern pattern}])
+                                  coincident-patterns)))
+        structural
+        (for [[pattern route] pattern-routes
+              edge (attachments-fn pattern)
+              :let [memory-id (attachment-memory-id edge)]
+              :when (and memory-id (not (seed-memory-set memory-id)))]
+          [memory-id route])
+        cheapest
+        (reduce (fn [by-memory [memory-id route]]
+                  (update by-memory memory-id
+                          #(if (or (nil? %) (< (:hops route) (:hops %)))
+                             route %)))
+                {} structural)
+        ordered (->> cheapest
+                     (sort-by (fn [[memory-id {:keys [route hops]}]]
+                                [hops ({:why-hop 0 :co-incidence 1} route 2)
+                                 memory-id]))
+                     vec)
+        selected (vec (take cap ordered))
+        offered-pattern-ids
+        (->> selected
+             (keep (comp :pattern second))
+             (filter domain-general-pattern-id?)
+             distinct
+             vec)
+        pattern-surfaces
+        (if pattern-fn
+          (into {}
+                (keep (fn [pattern-id]
+                        (when-let [surface (pattern-fn pattern-id)]
+                          [pattern-id surface])))
+                offered-pattern-ids)
+          {})]
+    {:routes (into (mapv #(vector % {:route :leaf :hops 0}) seed-memory-ids)
+                   selected)
+     :pattern-surfaces pattern-surfaces
+     :seed-patterns seed-patterns
+     :patterns-per-problem (count seed-patterns)
+     :expanded-count (count selected)
+     :expanded-available (count ordered)
+     :cap cap
+     :truncated? (> (count ordered) cap)}))
+
+(defn cascade-receipt-offers
+  "Turn one dispatch receipt into route-labelled, optionally expanded offers."
+  [receipt config]
   (let [body (:body receipt)
         job-id (:job-id body)
-        memory-ids (get-in body [:memory-use :memory-use/surfaced-ids])]
-    (map-indexed (fn [index memory-id]
-                   {:offer/id (str "offer/" job-id "/" index)
-                    :offer/memory-id memory-id})
-                 memory-ids)))
+        memory-ids (vec (get-in body [:memory-use :memory-use/surfaced-ids]))
+        enabled? (true? (:memory-cascade-enabled? config))
+        expansion (when enabled?
+                    (expand-memory-cascade
+                     memory-ids
+                     (merge (live-cascade-readers config)
+                            {:cap (or (:memory-cascade-cap config)
+                                      default-memory-cascade-cap)})))
+        routes (or (:routes expansion)
+                   (mapv #(vector % {:route :leaf :hops 0}) memory-ids))
+        routed-counts (frequencies (keep (comp :pattern second) routes))
+        leaves (filterv #(= :leaf (get-in % [1 :route])) routes)
+        expanded (remove #(= :leaf (get-in % [1 :route])) routes)
+        pattern-and-memory-items
+        (:items
+         (reduce
+          (fn [{:keys [seen items]} [_ route :as memory-route]]
+            (let [pattern-id (:pattern route)
+                  emit-pattern? (and pattern-id
+                                     (domain-general-pattern-id? pattern-id)
+                                     (not (contains? seen pattern-id)))
+                  pattern-item
+                  [nil (merge {:route :pattern
+                               :hops 1
+                               :pattern-id pattern-id
+                               :routed-count (get routed-counts pattern-id)}
+                              (pattern-surface-content
+                               (get-in expansion
+                                       [:pattern-surfaces pattern-id])))]]
+              {:seen (cond-> seen emit-pattern? (conj pattern-id))
+               :items (cond-> items
+                        emit-pattern? (conj pattern-item)
+                        true (conj memory-route))}))
+          {:seen #{} :items []}
+          expanded))
+        ordered-items (into leaves pattern-and-memory-items)]
+    (map-indexed
+     (fn [index [memory-id route]]
+       (cond-> {:offer/id (str "offer/" job-id "/" index)
+                :offer/route (:route route)
+                :offer/hops (:hops route)}
+         memory-id
+         (assoc :offer/memory-id memory-id)
+         (:pattern-id route)
+         (assoc :offer/pattern-id (:pattern-id route)
+                :offer/routed-count (:routed-count route))
+         (:offer/pattern-hook route)
+         (assoc :offer/pattern-hook (:offer/pattern-hook route))
+         (:offer/pattern-body route)
+         (assoc :offer/pattern-body (:offer/pattern-body route))
+         (:offer/pattern-content route)
+         (assoc :offer/pattern-content (:offer/pattern-content route))
+         enabled?
+         (assoc :offer/patterns-per-problem (:patterns-per-problem expansion)
+                :offer/cascade-cap (:cap expansion)
+                :offer/cascade-truncated? (:truncated? expansion)
+                :offer/cascade-expanded-available
+                (:expanded-available expansion))
+         (and enabled? (:pattern route))
+         (assoc :offer/via-pattern (:pattern route))))
+     ordered-items)))
 
-(defn- memory-offers [state]
+(defn- memory-offers [state config]
   (->> (:steps state)
        (keep (fn [{:keys [tool result]}]
                (when (#{:dispatch-solver :dispatch-student-fresh} tool)
                  (:memory-offers result))))
        (mapcat identity)
-       (mapcat receipt-offers)
+       (mapcat #(cascade-receipt-offers % config))
        vec))
 
 (defn- require-mission [handle opts]
@@ -221,8 +599,29 @@
     (dispatch! handle :dispatch-student-fresh
                (assoc (or opts {}) :to student-seat) packet)))
 
-(def ^:private scribe-card-path
-  "/home/joe/code/futon3c/holes/labs/M-apm-demonstration/role-cards/scribe.md")
+(defn- resolve-scribe-card-path
+  [pinned-blob]
+  (when (and (string? pinned-blob) (re-matches #"[0-9a-f]{40}" pinned-blob))
+    (let [{root-exit :exit root-out :out}
+          (shell/sh "git" "rev-parse" "--show-toplevel")
+          root (some-> root-out str/trim not-empty)]
+      (when (and (zero? root-exit) root)
+        (let [{tree-exit :exit tree-out :out}
+              (shell/sh "git" "-C" root "ls-tree" "-r" "HEAD")
+              matches (when (zero? tree-exit)
+                        (->> (str/split-lines tree-out)
+                             (keep (fn [line]
+                                     (let [[metadata path] (str/split line #"\t" 2)
+                                           [_ kind blob] (str/split metadata #"\s+")]
+                                       (when (and (= "blob" kind)
+                                                  (= pinned-blob blob)
+                                                  (string? path)
+                                                  (str/includes? path "/role-cards/"))
+                                         path))))
+                             vec))]
+          (when (= 1 (count matches))
+            (let [card (io/file root (first matches))]
+              (when (.isFile card) (.getCanonicalPath card)))))))))
 
 (defn- recorded-job-ids [state tool]
   (->> (:steps state)
@@ -235,13 +634,20 @@
   "Dispatch the registered scribe with machine-owned cycle references."
   [handle opts packet]
   (let [state (:state handle)
-        context {:problem-id (get-in handle [:config :problem-id])
-                 :cycle-id (:cycle-id handle)
-                 :solver-job-ids (recorded-job-ids state :dispatch-solver)
-                 :student-job-ids (recorded-job-ids state
-                                                    :dispatch-student-fresh)
-                 :scribe-card-path scribe-card-path}]
-    (dispatch! handle :dispatch-scribe (merge (or opts {}) context) packet)))
+        pinned-blob (get-in state [:cycle/outputs :registration
+                                   :reg/role-cards :scribe])
+        scribe-card-path (resolve-scribe-card-path pinned-blob)]
+    (if-not scribe-card-path
+      (failure handle :scribe-card-unresolved
+               "registered scribe role card could not be uniquely resolved"
+               {:pinned-blob pinned-blob})
+      (let [context {:problem-id (get-in handle [:config :problem-id])
+                     :cycle-id (:cycle-id handle)
+                     :solver-job-ids (recorded-job-ids state :dispatch-solver)
+                     :student-job-ids (recorded-job-ids state
+                                                        :dispatch-student-fresh)
+                     :scribe-card-path scribe-card-path}]
+        (dispatch! handle :dispatch-scribe (merge (or opts {}) context) packet)))))
 
 (defn promote-artifact!
   "Record one promotion through the phase-gated problem tool."
@@ -258,7 +664,8 @@
     (:handle
      (advance handle
               (merge {:solver-attempt attempt
-                      :memory-offers (memory-offers (:state handle))}
+                      :memory-offers (memory-offers (:state handle)
+                                                    (:config handle))}
                      extra-outputs)))
     (catch Throwable t
       (failure handle :record-solver-threw (.getMessage t)))))
@@ -284,6 +691,22 @@
                               :memory-uses (vec uses)}))
     (catch Throwable t
       (failure handle :record-students-threw (.getMessage t)))))
+
+(defn write-uses!
+  "Disposition every memory offer recorded by this cycle."
+  [handle]
+  (try
+    (reduce (fn [h offer-id]
+              (if (false? (:ok h))
+                (reduced h)
+                (:handle (saved-step h :write-use [{:offer-id offer-id}]))))
+            handle
+            (->> (get-in handle [:state :cycle/outputs :memory-offers])
+                 (keep :offer/id)
+                 distinct
+                 vec))
+    (catch Throwable t
+      (failure handle :write-uses-threw (.getMessage t)))))
 
 (defn adjudicate! [handle disposition]
   (try
@@ -321,13 +744,19 @@
                                 ["apm-conductor"
                                  (:problem-id (:config h6)) {}])
           failures (vec (concat (:producer-failures trace-envelope)
-                                (:failures validation)))]
-      (assoc h7
-             :envelope {:measurement measurement
-                        :failures failures
-                        :launchable? (true? (:launchable? validation))}
-             :cycle-id (or (:cycle-id handle)
-                           (get-in handle [:state :current-cycle-id]))))
+                                (:failures validation)))
+          closed (assoc h7
+                        :envelope {:measurement measurement
+                                   :failures failures
+                                   :launchable? (true? (:launchable? validation))}
+                        :cycle-id (or (:cycle-id handle)
+                                      (get-in handle [:state :current-cycle-id])))]
+      (if (and (not (false? (:ok closed)))
+               (nil? (get-in closed [:state :current-phase])))
+        (assoc closed :analyst-wake
+               (safe-analyst-wake! closed))
+        (assoc closed :analyst-wake
+               {:status :skipped :reason :close-incomplete})))
     (catch Throwable t
       (failure handle :close-threw (.getMessage t)))))
 

@@ -2482,7 +2482,8 @@
 (defn- make-local-agent-invoke-fn
   "Best-effort builder for a local invoke-fn for AGENT-TYPE."
   [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model
-                      evidence-store irc-send-fn memory-domain]}]
+                      evidence-store irc-send-fn memory-domain
+                      request-timeout-ms turn-timeout-ms]}]
   (let [sid-atom (or session-id-atom
                      (make-session-id-atom initial-session-id session-file))]
     (case agent-type
@@ -2495,6 +2496,7 @@
                              :session-id-atom sid-atom}
                       emacs-socket (assoc :emacs-socket emacs-socket)
                       model (assoc :model model)
+                      turn-timeout-ms (assoc :timeout-ms turn-timeout-ms)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
 
@@ -2506,6 +2508,7 @@
                              :session-file session-file
                              :session-id-atom sid-atom}
                       model (assoc :model model)
+                      turn-timeout-ms (assoc :timeout-ms turn-timeout-ms)
                       memory-domain (assoc :memory-domain memory-domain)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
@@ -2518,7 +2521,13 @@
                   :session-id-atom sid-atom
                   :initial-session-id initial-session-id
                   :evidence-store evidence-store
-                  :irc-send-fn irc-send-fn}
+                  :irc-send-fn irc-send-fn
+                  ;; Frame seats pin a logical turn envelope explicitly. The
+                  ;; per-request HTTP timeout is a separate constructor field.
+                  :request-timeout-ms (or request-timeout-ms
+                                          zai-api/default-request-timeout-ms)
+                  :turn-timeout-ms (or turn-timeout-ms
+                                       zai-api/default-turn-timeout-ms)}
            model (assoc :model model)
            memory-domain (assoc :memory-domain memory-domain)
            requested-cwd (assoc :cwd requested-cwd)))
@@ -2529,10 +2538,21 @@
 
       nil)))
 
+(defn- frame-seat-timeout-policy [agent-type]
+  {:request-timeout-ms (if (= :zai agent-type)
+                         zai-api/default-request-timeout-ms
+                         :not-applicable)
+   :turn-timeout-ms zai-api/default-turn-timeout-ms
+   :request/source (if (= :zai agent-type)
+                     :zai-api/default-request-timeout-ms
+                     :not-applicable)
+   :turn/source :frame-seat/code-default})
+
 (defn- prepare-frame-seat
-  [config {:keys [agent-id agent-type]}]
+  [config {:keys [agent-id agent-type model memory-domain]}]
   (let [session-file (default-session-file-for-agent agent-type agent-id)
-        stale-file (some-> session-file java.io.File.)]
+        stale-file (some-> session-file java.io.File.)
+        timeout-policy (frame-seat-timeout-policy agent-type)]
     ;; A newly minted identity must not inherit an orphaned session left by an
     ;; earlier process incarnation with the same deterministic frame seat id.
     (if (and stale-file
@@ -2544,21 +2564,34 @@
       (let [session-id-atom (make-session-id-atom nil session-file)]
         {:invoke-fn (make-local-agent-invoke-fn
                      agent-type
-                     {:agent-id agent-id
-                      :session-file session-file
-                      :session-id-atom session-id-atom
-                      :evidence-store (evidence-store-for-config config)
-                      :irc-send-fn (:irc-send-fn config)})
+                     (cond-> {:agent-id agent-id
+                              :session-file session-file
+                              :session-id-atom session-id-atom
+                              :evidence-store (evidence-store-for-config config)
+                              :irc-send-fn (:irc-send-fn config)
+                              :request-timeout-ms
+                              (:request-timeout-ms timeout-policy)
+                              :turn-timeout-ms
+                              (:turn-timeout-ms timeout-policy)}
+                       model (assoc :model model)
+                       memory-domain (assoc :memory-domain memory-domain)))
          :session-reset-fn (make-session-reset-fn session-file session-id-atom)
-         :metadata {:session-file session-file}}))))
+         :metadata {:session-file session-file
+                    :effective-timeouts timeout-policy}}))))
 
 (defn mint-frame-seats!
   "Mint the five fresh, invoke-ready Agency seats for FRAME-ID."
-  [config frame-id]
-  (frame-seats/mint-seats!
-   {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
-                         (partial prepare-frame-seat config))}
-   frame-id))
+  ([config frame-id]
+   (mint-frame-seats! config frame-id nil nil))
+  ([config frame-id model]
+   (mint-frame-seats! config frame-id model nil))
+  ([config frame-id model cast]
+   (frame-seats/mint-seats!
+    (cond-> {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
+                                  (partial prepare-frame-seat config))}
+      model (assoc :model model)
+      (some? cast) (assoc :cast cast))
+    frame-id)))
 
 (defn- handle-frame-seat-mint
   [request config]
@@ -2567,7 +2600,35 @@
       (json-response 400 {:ok false :error "invalid-json"})
       (let [result (mint-frame-seats!
                     config
-                    (or (:frame-id payload) (get payload "frame-id")))]
+                    (or (:frame-id payload) (get payload "frame-id"))
+                    (or (:model payload) (get payload "model"))
+                    (or (:cast payload) (get payload "cast")))]
+        (json-response (cond
+                         (:ok result) 200
+                         (= :invalid-seat-cast (:error result)) 400
+                         :else 409)
+                       result)))))
+
+(defn mint-analyst-seat!
+  "Mint the fresh, invoke-ready Agency Analyst for TENURE."
+  ([config tenure]
+   (mint-analyst-seat! config tenure nil))
+  ([config tenure model]
+   (frame-seats/mint-analyst!
+    (cond-> {:prepare-seat-fn (or (:frame-seat-prepare-fn config)
+                                  (partial prepare-frame-seat config))}
+      model (assoc :model model))
+    tenure)))
+
+(defn- handle-analyst-seat-mint
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if-not payload
+      (json-response 400 {:ok false :error "invalid-json"})
+      (let [result (mint-analyst-seat!
+                    config
+                    (or (:tenure payload) (get payload "tenure"))
+                    (or (:model payload) (get payload "model")))]
         (json-response (if (:ok result) 200 409) result)))))
 
 (defn- remote-home-refusal-response
@@ -3904,17 +3965,24 @@
   (let [agent (req-query-param request "agent")
         session (req-query-param request "session")
         mode (req-query-param request "mode")
-        all-modes? (= "all" (some-> mode str/trim str/lower-case))
-        recs (when (and (parked-on-enabled?) agent)
+        operator-view? (str/blank? (str agent))
+        all-modes? (or operator-view?
+                       (= "all" (some-> mode str/trim str/lower-case)))
+        recs (when (parked-on-enabled?)
                (->> (vals (:records (parked-on/snapshot)))
-                    (filter (fn [r] (and (= (str (:agent r)) (str agent))
+                    (filter (fn [r] (and (or operator-view?
+                                                (= (str (:agent r)) (str agent)))
                                          (or (str/blank? (str session))
                                              (= (str (:session r)) (str session)))
                                          (not (:released? r))
                                          (or all-modes?
                                              (= (or (:mode r) :within-turn)
                                                 :within-turn)))))
-                    (mapv (fn [r] {:id (:id r) :awaiting (vec (:awaiting r))
+                    (mapv (fn [r] {:id (:id r)
+                                   :agent (:agent r)
+                                   :session (:session r)
+                                   :surface (:surface r)
+                                   :awaiting (vec (:awaiting r))
                                    :deadline-ms (:deadline-ms r)
                                    :mode (or (:mode r) :within-turn)}))))
         ;; A ready resume already in the inbox (dep completed, poller not yet fired)
@@ -3924,7 +3992,9 @@
                                                            :within-turn))
         within-turn-pending (some #(= (:mode %) :within-turn) recs)]
     (json-response 200 {:ok true :parked (vec (or recs []))
-                        :more-pending (boolean (or within-turn-pending inbox-pending))})))
+                        :more-pending (boolean (or (and operator-view? (seq recs))
+                                                   within-turn-pending
+                                                   inbox-pending))})))
 
 (defn- handle-park
   "POST /api/alpha/park — register a continuation (E-repl-continuations Car 2b):
@@ -4395,29 +4465,31 @@
                                         :caller caller
                                         :surface "whistle"})
             mode (invoke-job-mode prompt)
-            started-ms (System/currentTimeMillis)]
-        #_{:clj-kondo/ignore [:deprecated-var]}
-        (hk/with-channel request channel
-          (let [closed? (atom false)
-                delivery-recorded? (atom false)
-                mark-delivery!
-                (fn [delivered? note]
-                  (when (compare-and-set! delivery-recorded? false true)
-                    (record-invoke-job-delivery-by-job-id!
-                     job-id
-                     {:surface "whistle-stream"
-                      :destination (str "caller " caller " (stream)")
-                      :delivered? (boolean delivered?)
-                      :note (str note)})))
-                close-channel!
+            started-ms (System/currentTimeMillis)
+            closed? (atom false)
+            delivery-recorded? (atom false)
+            mark-delivery!
+            (fn [delivered? note]
+              (when (compare-and-set! delivery-recorded? false true)
+                (record-invoke-job-delivery-by-job-id!
+                 job-id
+                 {:surface "whistle-stream"
+                  :destination (str "caller " caller " (stream)")
+                  :delivered? (boolean delivered?)
+                  :note (str note)})))]
+        (hk/as-channel
+         request
+         {:on-close
+          (fn [_channel _status]
+            (reset! closed? true)
+            (mark-delivery! false "whistle-stream-client-closed"))
+          :on-open
+          (fn [channel]
+            (let [close-channel!
                 (fn []
                   (try
                     (hk/close channel)
                     (catch Throwable _)))]
-            (hk/on-close channel
-              (fn [_]
-                (reset! closed? true)
-                (mark-delivery! false "whistle-stream-client-closed")))
             (when-not (send-ndjson! channel
                                     {:type "started"
                                      :ok true
@@ -4497,8 +4569,8 @@
                                  :else
                                  (do
                                    (Thread/sleep poll-ms)
-                                   (recur next-seq next-heartbeat-ms)))))))))))))
-        ))
+                                   (recur next-seq next-heartbeat-ms)))))))))))})
+        ))))
 
 (defn- handle-whistle-stream
   "POST /api/alpha/whistle-stream — NDJSON streaming whistle endpoint."
@@ -4539,9 +4611,11 @@
                                 :message "prompt is required"})
 
             :else
-            #_{:clj-kondo/ignore [:deprecated-var]}
-            (hk/with-channel request channel
-              (.submit invoke-executor
+            (hk/as-channel
+             request
+             {:on-open
+              (fn [channel]
+                (.submit invoke-executor
                        ^Runnable
                        (fn []
                          (try
@@ -4620,7 +4694,8 @@
                              (hk/send! channel
                                        (json-response 500 {:ok false
                                                            :error "whistle-error"
-                                                           :message (.getMessage t)})))))))))))))
+                                                           :message (.getMessage t)})))))))})
+            ))))))
 
 (defn- handle-irc-send
   "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
@@ -7049,6 +7124,37 @@
 
       :else nil)))
 
+(defonce ^:private !installed-handler
+  ;; The server retains `installed-handler` across Drawbridge namespace reloads;
+  ;; defonce keeps the live target reachable instead of orphaning its atom.
+  (atom nil))
+
+(defonce ^:private !handler-builder
+  (atom nil))
+
+(defn- installed-handler
+  [request]
+  (if-let [handler @!installed-handler]
+    (handler request)
+    (json-response 503 {:ok false :error "handler-not-installed"})))
+
+(defn rebuild-handler!
+  "Atomically replace the handler served by `start-server!`.
+
+   With no argument, rebuild from the original `make-handler` config captured
+   at server installation. With an explicit handler, install that value and
+   retain its rebuild function when it was produced by `make-handler`."
+  ([]
+   (if-let [build @!handler-builder]
+     (rebuild-handler! (build))
+     (throw (ex-info "installed handler has no rebuild function" {}))))
+  ([handler]
+   (when-not (fn? handler)
+     (throw (ex-info "handler must be invocable" {:handler handler})))
+   (reset! !installed-handler handler)
+   (reset! !handler-builder (::rebuild-fn (meta handler)))
+   handler))
+
 (defn make-handler
   "Create an HTTP request handler wired to the social pipeline.
 
@@ -7059,7 +7165,8 @@
    Returns a Ring handler fn that routes to the social pipeline."
   [config]
   (let [started-at (Instant/now)]
-    (fn [request]
+    (with-meta
+      (fn [request]
       (try
         (let [method (:request-method request)
               uri (:uri request)]
@@ -7251,6 +7358,9 @@
           (and (= :post method) (= "/api/alpha/frames/mint-seats" uri))
           (handle-frame-seat-mint request config)
 
+          (and (= :post method) (= "/api/alpha/frames/mint-analyst" uri))
+          (handle-analyst-seat-mint request config)
+
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")
                (str/ends-with? uri "/rebind"))
@@ -7386,7 +7496,8 @@
           ;; interrupted). Convert to a clean 503 instead of letting an
           ;; ERROR log + stacktrace surface during graceful shutdown.
           (Thread/interrupted)  ; clear the interrupt flag
-          (json-response 503 {:ok false :error "shutting-down"}))))))
+          (json-response 503 {:ok false :error "shutting-down"}))))
+      {::rebuild-fn #(make-handler config)})))
 
 (defn start-server!
   "Start HTTP server on port. Returns {:server stop-fn :port p :started-at t}.
@@ -7399,7 +7510,8 @@
   [handler port]
   (let [!server (atom nil)
         !stopped? (atom false)
-        server (hk/run-server handler {:port port
+        _ (rebuild-handler! handler)
+        server (hk/run-server installed-handler {:port port
                                        :legacy-return-value? false
                                        :error-logger (make-http-kit-error-logger !server)})
         _ (reset! !server server)

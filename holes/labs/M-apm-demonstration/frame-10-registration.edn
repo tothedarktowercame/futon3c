@@ -1,0 +1,196 @@
+;; FRAME-10 registration — claude-2 (Analyst), 2026-08-18. Awaiting signature.
+;; Frame registrations are the operator's per research-plan-v1 §11.
+;;
+;; Queued back-to-back with frame-9 (Joe, 2026-08-18: "let's queue up frame-10
+;; as well and run them back to back (same analyst, different everyone else)").
+;; Every field is derived by the same rules as f9; none required the operator.
+;;
+;; TENURE. This is frame 2 of 2 for this Analyst under the N = 2 ruling, and
+;; therefore ITS LAST. Succession follows f10: handoff document, memory-surface
+;; pointer, W-entry. That is a scheduled duty of this frame, not an interruption
+;; of the next one.
+;;
+;; PROBLEM SELECTION — m93J02. Verified by elaboration, not metadata: exits 0
+;; with one `declaration uses `sorry`` diagnostic. Richest write-up in the
+;; non-a-family open pool (13,157 B).
+;;
+;; THE DELIBERATE CONTRAST WITH f9, AND ITS CONFOUND, STATED PLAINLY.
+;; f9's a01J06 touches an @why-edged pattern, so the cascade's :why-hop route
+;; can fire. m93J02 touches none, so on this problem the cascade can only
+;; produce :leaf and :co-incidence offers. That is the contrast worth having:
+;; it makes f9's cascade prediction falsifiable against a case where the
+;; mechanism is structurally unable to contribute.
+;;
+;; It is NOT a controlled comparison, and must not be reported as one. f9 and
+;; f10 differ in BOTH family (a vs m) and edgedness, because only 5 of the 207
+;; open problems touch an edged pattern and ALL FIVE are a-family — family
+;; distance and cascade reach cannot both be had. Any f9/f10 difference is
+;; therefore not attributable to either factor alone. The honest reading is
+;; per-frame predictions, not a between-frame effect.
+;;
+;; Family distance from f9 satisfies frame-2's cross-problem recall-leakage
+;; criterion, which f9 itself departs from.
+;;
+;; ANALYST HANDOFF: unchanged from f9 — apm/conductor.clj `close!` bells the
+;; :analyst-seat exactly once after a terminal close, never mid-frame
+;; (futon3c b27bccf7).
+
+{:kind   :apm-demonstration-round1-registration
+ :schema 1
+
+ ;; ROUND CONSTANT, not a per-frame decision: identical in frames 2, 5, 7 and 8.
+ ;; It changes only when the round changes, which is an operator event.
+ :lean-registration "DarkTower.APMDemonstration.round1Registration"
+ :lean-source       "DarkTower/APMDemonstrationPreregistration.lean"
+ :lean-revision     "4331becf6f0c8471537adcc264a8fde7e12c94c9"
+
+ ;; BOTH COMPUTED, not decided.
+ ;; environment-revision: the round's environment pin (a92ffb6c in frames 2, 7
+ ;; and 8; frame-5 differed because the environment differed). It changes when
+ ;; the environment is reprovisioned, not per frame.
+ ;; harness-revision: `git -C futon3c log -1 --format=%H -- src scripts deps.edn`.
+ ;; Verified 2026-08-18: that command evaluated at frame-8's freeze reproduces
+ ;; frame-8's declared 77f884065f459b090c78ade2c970933912cf6154 exactly.
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf"
+ :reg/harness-revision     "05ab95caf84255244a0d355c90e36412a9427ca8"
+
+ ;; Five FRESH seats, to be minted by POST /api/alpha/frames/mint-seats "f9".
+ :reg/solver-seat  "f10-solver"
+ :reg/student-seat "f10-student"
+ :reg/guide-seat   "f10-guide"
+ :reg/proctor-seat "f10-proctor"
+ :reg/scribe-seat  "f10-scribe"
+
+ ;; A FRESH SEAT, minted like the others and holding NOTHING but the card.
+ ;; It is tenure-scoped, not frame-scoped: one analyst serves N = 2 frames, so
+ ;; the id is analyst-1 (f9, f10), analyst-2 (f11, f12), and so on.
+ ;;
+ ;; It is deliberately NOT claude-2. An earlier draft named claude-2 -- the
+ ;; agent that wrote the card and did the surrounding work -- and Joe withdrew
+ ;; it (2026-08-18): "you are claude-2, we want someone fresh with just the card
+ ;; that you created". Staffing the seat with its own author would have made the
+ ;; card untestable, since the frame would inherit a day of context the card
+ ;; does not contain, and would have started the N = 2 tenure pre-loaded. The
+ ;; card was written to be sufficient alone; this is the test of that.
+ :reg/analyst-seat "analyst-1"
+ :reg/analyst-tenure {:n 2 :frame-index 2 :frames ["f9" "f10"]}
+
+ :reg/guidance-regime #{:answer :suggest}
+ :reg/solver-config {:model "gpt-5.6-sol" :reasoning-effort "max"}
+ :reg/student-runner-budget {:wall-clock-minutes 60}
+
+ ;; NEW IN f9: the minimum working cascade (futon3c 47f421b9), default false,
+ ;; enabled here. Offers carry :offer/route (:leaf | :why-hop | :co-incidence),
+ ;; :offer/hops, :offer/via-pattern, patterns-per-problem, and explicit
+ ;; truncation at the cap. Without the route field the cascade is unfalsifiable:
+ ;; leaf hits would sit in the same bucket as structural ones.
+ :reg/memory-cascade-enabled? true
+ :reg/memory-cascade-cap 100
+
+ :modules                [:R :F :S :A :M :P :X]
+ :structural-invariants  [:F1]
+ :runtime-invariants     [:F2 :F3 :F4 :F5 :F6 :F8 :F9]
+
+ :problem {:problem-id            "m93J02"
+           :difficulty-stratum    "family=m;one-executable-hole;NO-edged-pattern"
+           :regime                "e7b9ec02599b36845c68ca053416787a23ac29a8"
+           :locked-lemma-exposure []}
+
+ :variation {:kind     :measured
+             :endpoint "frame-10: same Analyst (tenure 2 of 2), all other seats fresh; a problem with NO edged pattern, so :why-hop cannot fire"}
+
+ :claim :descriptive
+ :arms  [{:name "fresh seats, same analyst (tenure 2 of 2), cascade on, no edged pattern"
+          :neutral? false
+          :axes []
+          :role :treatment}]
+
+ :replication-stage  :pilot
+ :pilot-units        [{:problem-id            "m93J02"
+                       :difficulty-stratum    "family=m;one-executable-hole;NO-edged-pattern"
+                       :regime                "e7b9ec02599b36845c68ca053416787a23ac29a8"
+                       :locked-lemma-exposure []}]
+ :confirmation-units []
+
+ :estimated-cost    1.0
+ :budget-cap        5.0
+ :teardown-deadline 240
+
+ :stop-rules [:budget-exceeded :attempt-cap-reached :axiom-unclean-close
+              :no-progress :teardown-deadline-passed :no-improvement-escalate]
+
+ :reg/attempt-caps {:s-frontier 10 :s-student 3}
+
+ :decision-rule {:id       :apm-round1-outcome
+                 :outcomes [:closed :tier-a :tier-b :defective]}
+
+ :required-capabilities
+ [:frame-containment-witnessed :created-frame-worked
+  :unique-disposition :offer-use-disposition
+  :need-retrieval :promotion-importable :promotion-need-taggable
+  :measurement-populated]
+
+ :required-measurement-fields
+ ["statement defects at review" "terminal disposition"
+  "residual executable sorries" "attempts or closer hops"
+  "axiom cleanliness" "memories promoted" "review escape rate"
+  "promoted then surfaced then used" "contract leaks"
+  "duplicate declarations" "locked-lemma exposure" "promotion coverage"
+  "unconsumed promotions" "import-only edges" "scribe lane coverage"
+  "arc-lane yield" "rewrite rule offered and used"]
+
+ ;; The three cascade measurements f9 introduces -- offers by route,
+ ;; patterns-per-problem, cascade truncation -- are deliberately NOT added to
+ ;; :required-measurement-fields above. That vector is an EXACT-MATCH constant in
+ ;; apm/preregistration.clj (required-measurement-fields, 17 entries); adding to
+ ;; it fails registration-content-failures with :wrong-required-measurement-fields
+ ;; and would make f9/f10 the only frames that diverge from it. The measurements
+ ;; are carried by the cascade receipt itself (futon3c 47f421b9: :offer/route,
+ ;; :offer/hops, :offer/via-pattern, patterns-per-problem, truncation) and are
+ ;; adjudicated through :reg/predictions, so nothing is lost by keeping the
+ ;; frozen vector frozen.
+ :reg/cascade-measurements ["offers by route" "patterns per problem" "cascade truncation"]
+
+ :reg/role-cards
+ {:codex-solver "bd8091080cd40a0bbf35f559a93976f454113b2b"
+  :zai-student  "b1ee7de57a9d27993155fc8732a60a609889add4"
+  :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd"
+  :scribe       "02441d9df4b8a05355790a51f1e535bf9e9465d4"
+  :proctor      "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"
+  ;; FROZEN. Ratified 2026-08-18: fresh per N frames with N = 2, the minimum
+  ;; tenure at which drift detection across frames is possible at all. N is a
+  ;; parameter to be revised on evidence, not a principle.
+  :analyst      "ed340941f4747b20a540fec9ed56bd332579590c"}
+
+ :reg/seat-exclusivity :enforced-at-register
+
+ :reg/known-departures
+ [
+ ;; NOTE (claude-2, ground control, 2026-08-18, pre-open): f9's
+ ;; :family-distance departure was carried here by copy-paste and has been
+ ;; REMOVED. It does not apply to f10: m93J02 is m-family, so this frame
+ ;; SATISFIES frame-2's cross-problem recall-leakage criterion rather than
+ ;; departing from it (see the header comment). Declaring a departure that
+ ;; does not hold would have had the Analyst adjudicate a fiction.
+   {:id :claude-seat-model-opus
+   :text "f10's guide seat runs claude-opus-5; f9's guide ran Fable 5. NOT a designed contrast -- POST /api/alpha/frames/mint-seats builds claude seats with no :model (transport/http.clj:2497 assocs :model only when requested), so minted claude seats default to Fable, and the Fable quota was exhausted between f9 and f10. It killed f9's Analyst mid-analysis at 08:47Z and then killed f10's guide orientation bell at 09:34Z (job invoke-1787045640498). The seat was re-registered on Opus, changing the MODEL AND NOTHING ELSE -- no :cwd was introduced, since f9-guide had none. Declared because it is a real between-frame difference in a frame pair that is already not a controlled comparison; the Analyst should read any f9/f10 guidance difference with this in view. Related: f9's Analyst also completed its close on Opus after failing on Fable, so the Analyst seat is Opus across both frames and is NOT a source of f9/f10 difference. Ground control (claude-2), pre-open."}
+  {:id :analyst-tenure-n2
+   :text "The Analyst serves N = 2 frames (f9, f10) while every other seat is minted fresh per frame. Ruled 2026-08-18; plan §6 stands with N pinned at 2."}]
+
+ :reg/predictions
+ [{:id :transfer-checks-6-of-6
+   :text "C1 flips when P21 seat attribution goes live, taking the transfer checks to 6/6. f8 measured 5/6 with C1 the lone honest fail, re-verified by the Analyst on 2026-08-17 (a03J04, score 5/6). CONTEXT ADDED PRE-OPEN (claude-2, not a change to the prediction): P26 (futon3c f5c68a5b) landed after f9 and corrected C3's temporal scope, so C1 is now the only structural obstacle to 6/6; f9 re-read 6/6 post-fix. The prediction and its threshold are unchanged."}
+  {:id :first-tag-recall-hit
+   :text "A deposit tagged with the problem id is found by the student's memory_search tags [m93J02] — the tags interface (W.76) and P25's subject fallback (W.73) meet."}
+  {:id :student-lane-component-c
+   :text "With the 60-minute budget and a stocked shelf, at least one student memory use co-occurs with a commit; component (c) of the loss function is non-zero for the first time."}
+  {:id :s2-unprompted-sharing
+   :text "Sharing grows without review pressure: the scribe attaches to an EXISTING pattern rather than minting a new one. S readings must state the universe size (103 math ids as of 2026-08-18, up from 83 at S-1) or they are not comparable."}
+  {:id :cascade-cannot-why-hop
+   :text "NO offer in the f10 trace carries :offer/route :why-hop, because m93J02 touches no @why-edged pattern. This is a NEGATIVE prediction and it is the control on f9's positive one: if :why-hop fires here, the seeding is reaching patterns it should not."}
+  {:id :cascade-co-incidence-only
+   :text "Any non-:leaf offer here is :co-incidence — the route that needs no authored edge. If f10 yields useful offers by co-incidence alone, that is evidence the free structure carries weight the authored edges do not yet add to."}
+  {:id :analyst-survives-two-frames
+   :text "The Analyst completes duties A, B and F at both closes and hands over cleanly at f10. This is the N = 2 mechanism test: the tenure is exercised end to end, including its succession."}]
+
+ :reg/frame-1-disclaimer false}

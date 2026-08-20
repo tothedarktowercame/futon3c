@@ -1,0 +1,160 @@
+{:teardown-deadline 240,
+ :reg/known-departures
+ [{:id :analyst-tenure-n2,
+   :text
+   "The Analyst serves N = 2 frames (f15, f16); analyst-3 is in tenure 1 of 2 and every other seat is minted fresh. Ruled 2026-08-18; N stays pinned at 2. analyst-3 was seated for frames 13 and 14 and served NEITHER: frame 13 halted at :promote-solver before adjudication and is void, frame 14 never opened. Its tenure therefore begins here."}
+  {:id :problem-probed-sound-before-the-frame,
+   :text
+   "NEW THIS FRAME, AND IT IS THE POINT. m93J06 was probed for soundness BEFORE registration, by codex-8 on branch probe/m93J06-soundness (commit 9ba574a6), in one dispatch. Ten witnesses compiled axiom-clean in problems/m93J06/lean/Soundness.lean: apm_m93j06_Solves and apm_m93j06_IsFlow each have an exhibited inhabitant AND an exhibited non-inhabitant (a predicate satisfied by everything is as defective as one satisfied by nothing - m99J06 would not have been caught by inhabitation alone); the all-of-R solution formulation is shown to permit genuine uniqueness, which is the m99J06 defect shape checked directly; and ContDiff occurs only as `ContDiff R 1`, never the analytic top. The frozen file was NOT modified (git diff --exit-code against the pin, exit 0) and no proof strategy was published - ground control checked both before this registration was written. This is the first frame whose problem was not a coin flip."}
+  {:id :conjunct-4-pre-discharged,
+   :text
+   "DECLARED SO THE ANALYST DOES NOT OVER-CREDIT THE CLOSE. The fourth conjunct of apm_m93j06 - the negated Holder-uniqueness universal - is ALREADY PROVED in the frozen file at the pin: `apm_m93j06_not_holder_unique` sits at Main.lean:132, supported by apm_m93j06_zero_solves_sqrt and apm_m93j06_signedSquare_solves_sqrt. A solver discharges that conjunct by citing an existing lemma. m93J06 is therefore FOUR conjuncts of work, not five, and any comparison of its close against a five-conjunct problem is not like-for-like."}
+  {:id :read-path-state-declared,
+   :text
+   "THE READ PATH IS PARTLY REPAIRED AND THE REMAINING DEFECT IS KNOWN AND UNFIXED. Fixed and live: the lexical query is now OR-joined (7b188d8c) rather than a conjunction, which is what let f13 return anything at all - measured, `hilbert weak-convergence computes` scoped returns 0 and the OR form returns 25. NOT on the path despite being merged: 6bfe5808 (document frequencies scoped to the memory population) runs only inside query-anchor-term-memory-df, which executes only under --anchor-source memory-df; the default is :problem-idf and this frame does not flip it. Also not on the path: anchor-df-band [3 150]. UNFIXED (D60): default-query-term-limit is 4 and the three-source round-robin truncates one slot before the distinctive terms, while text-keywords orders each source by PROBLEM-CORPUS IDF, which against a corpus of mathematics ranks prose words rarest. f13's issued query was `finding OR equality OR clause OR strong` while the extractor had found sobolev, galerkin, riesz and inner_eq. Expect the lexical route to underperform and the pattern cascade to carry most of the load; f13 surfaced five memories of which exactly one arrived by :content-match, ranked 27th of 30 in a seed where 27 hits were coordination chatter."}
+  {:id :append-retry-live,
+   :text
+   "RESTART-TIME WRITE BEHAVIOUR CHANGED between frame 12 and this frame. futon3c evidence appends now RETRY on :store-unreachable with a 300s window (f1322302, c035df5c, 99176882, claude-11) instead of returning a SocialError immediately. Before this, README-fts.md section 7 was correct that an evidence write outage is LOSSY - no spool, no retry - and frames 9 through 12 ran under that condition. The 300s default is sized off measured stop-to-healthy times (42s and 61s on Zone). Any comparison of this frame against frames 9-12 on write-loss grounds is not like-for-like."}
+  {:id :harness-moved-under-the-batch,
+   :text
+   "The harness has moved repeatedly and by other hands. Twelve defects were fixed between frame 10's close and the original batch registration (D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D24 D25); the recall read path changed after that (d893280a, 10937528, 7b188d8c, 6bfe5808); then three commits from another agent landed in src/ - f2cccbb0, 7b2d7cdd and 62bfc210 (local Codex identity in zone defaults, zone nick match, and enforce singular ownership of Codex sessions) - touching agency/registry.clj, agency/roster_store.clj, scripts/dev-zone-env and scripts/codex-picker, which is seat identity and session ownership, the machinery this frame's seats are dispatched through. The pin has since moved again to e1925203. Ground control authored and reviewed the read-path commits and NEITHER authored nor reviewed the session-ownership ones. Declared because a between-frame difference this large must not be discovered by the Analyst from a diff, and because a seat-identity or duplicate-session anomaly in this frame should look there first."}
+  {:id :promotion-is-non-atomic,
+   :text
+   "KNOWN LIVE DEFECT, D62, declared so the frame does not lose work rediscovering it. promote-artifact posts the pattern attach and :proposed status BEFORE writing the review (memory_lifecycle.clj:333-340). A failure after the attach leaves the edge in exactly the state lines 321 and 328 refuse, permanently unpromotable by that path - three of frame 13's scribe memories are poisoned this way and readable in the store stuck at :proposed. Compounding it, the refusal receipt says only 'Tool execution failed' (D43), so a harmless pre-flight refusal and a destructive half-applied one read identically. f13-guide's evidence, offered as hypothesis and not proof: promotions 1-3 ran back to back in one shell loop and all failed after the attach; promotion 4 ran alone minutes later and went end to end. PROMOTE ONE AT A TIME, WITH A GAP."}
+  {:id :dead-regime-pin,
+   :text
+   "STANDING SERIES DEFECT, FOUND BY f15-guide AT ITS ORIENTATION ACK. (:problem :regime) is the string e7b9ec02599b36845c68ca053416787a23ac29a8 and it resolves in NO repository - not apm-lean, not mathlib4, not futon3c. It is copied verbatim into all fourteen registrations in this series, so it has never anchored anything. Declared rather than silently corrected because every prior frame ran with it and a silent fix would make this frame incomparable to them. SEPARATELY, and this one is a vocabulary defect that has bitten: :lean-revision 4331becf IS valid but resolves only in /home/joe/code/mathlib4, while the apm-lean anchor is :reg/environment-revision a92ffb6c. The series has been calling both 'the pin'. Diff the frozen statement against a92ffb6c, or against the Main.lean blob 793cfe3b51305ee997c7ba60a17553633999063e."}],
+ :reg/predictions
+ [{:id :problem-closed-on-artifact,
+   :text
+   "ARTIFACT AXIS. m93J06 reaches zero executable sorries, axiom-clean, with the frozen statement mechanically unchanged — or its residual is strictly reduced and localised into named per-clause pieces. This is a claim about the Lean file and is settled by re-running the file: sorry count, `#print axioms`, and a diff of the frozen statement. Frames 9 and 10 each closed on the solver's FIRST dispatch, so this is a real prediction with a track record, not a formality."}
+  {:id :problem-solved,
+   :text
+   "MATHEMATICS AXIS, AND IT IS THE ONE THAT COUNTS. The statement m93J06 closes is NON-VACUOUS: the objects it quantifies over are exhibited non-empty in at least one concrete case, so the close is a mathematical result and not a proof about an empty class. This is the objective the whole apparatus exists to serve — the corpus has ~207 open problems and the machine is being built to go through them. A frame that repairs its own plumbing and does not solve its problem has failed, however green its other measures read. SPLIT FROM :problem-closed AFTER f12 (ruling, 2026-08-19): f12 met every literal condition of the old single prediction — 0 sorries, axiom-clean, statement unchanged — while proving a vacuous statement, and the guide and the Analyst then adjudicated the SAME prediction to opposite verdicts because it silently conjoined two independent claims. Neither was wrong; the prediction was. Adjudicate the two axes separately and never collapse them: a frame may confirm the artifact axis and refute this one, and that PAIR is the finding, not a contradiction to be resolved. The frame disposition (:closed / :defective / :partial) MUST travel with any report of either axis — a verdict quoted without its disposition is not a permitted citation of this frame."}
+  {:id :memory-contributes-to-close,
+   :text
+   "THE MEASUREMENT THIS FRAME EXISTS TO MAKE. A memory surfaced by recall is attested USED by the solver or the student, per-id, in its own words, and contributes to the close of a SOUND problem.\n\nTHE PRIOR IS ZERO, AND THIS IS A FIRST MEASUREMENT RATHER THAN A REPLICATION. Ruled 2026-08-19 by ground control after f15-guide found the contradiction at its orientation ack. Earlier registrations claimed \"f10 produced the series' first uncontaminated instance (the student derived its own conjunct from a route memory)\". That claim cannot stand against the persisted cycle state: a01J06 and m93J02 both record memory-use steps = 0 - not zero uses, NO memory-use instrumentation ran at all. Whatever was observed at f10 was a PROSE ATTRIBUTION by a reader, not an attested step, and the honest prior is therefore zero attested instances on a sound problem.\n\nThe only attested instance in the series is frame 13's, where the solver returned USED for two memories and IGNORED with reasons for three more - on a problem whose model was provably UNINHABITED. So what has been demonstrated is transfer of DEFECT-DETECTION, on a broken problem. Whether the same pipeline moves MATHEMATICS on a sound one is untested, and is what this frame asks.\n\nADJUDICATE AGAINST THE ATTESTATION AND NOTHING ELSE. Surfaced-and-unused is a real outcome and must be reported as one. A plausible coincidence between a memory's content and the solver's method is NOT evidence - frame 13 produced the most temptingly attributable coincidence in the series and was settled only by the solver's own per-id disposition. Do not infer use from resemblance.\n"}
+  {:id :reviewed-attachment-gained,
+   :text
+   "SUPPORTING, NOT HEADLINE, AND QUALIFIED. The store gains at least ONE reviewed memory attachment. QUALIFIER, established by f11's guide from f9's actual promote-artifact args: an INDEPENDENTLY reviewed attachment is NOT reachable — that path needs a keyword :verdict the transport cannot express (D31). What IS reachable is attach-then-review with the GUIDE as reviewer of a STATUSLESS, PATTERNLESS deposit, which is exactly what f9 did (depositor f9-scribe, reviewer f9-guide, edge now :reviewed). So this predicts a GUIDE-reviewed attachment and must be adjudicated as such; a frame that gains one has NOT demonstrated independent review. Note the trap: attach-then-review REFUSES an edge already carrying a status or patterns (memory_lifecycle.clj:322,330), so a well-authored :proposed-with-patterns deposit is unpromotable while a patternless one is promotable. Good authoring forecloses the working route."}
+  {:id :offer-disposition-populated,
+   :text
+   ":memory-disposition-offer-ids is NON-EMPTY, so runtime invariant F3 passes for the first time in a cascade-enabled frame. It was empty in f8, f9 and f10 because :write-use was unreachable from the conductor surface (D25), while all nine registrations from f2 to f10 declared :offer-use-disposition as a required capability. This is the capability becoming satisfiable rather than merely declared."}
+  {:id :guidance-count-exact,
+   :text
+   "The recorded guidance count EQUALS the true number of guidance bells sent, and in particular is 0 if none were sent. D2 (73a6b0c2) is loaded from this frame onward. Before it, the subtrahend counted the flattened per-memory offer list rather than dispatch openings: f9 read -100 and f10 -101 with huge offer counts, and f11 read +1 with ZERO offers because the subtrahend then failed to cancel the solver dispatch. Same defect, both signs. This is the first frame that can test the fix live, so a wrong value here means the repair did not reach the running image."}
+  {:id :scribe-card-pinned-resolves,
+   :text
+   "The machine injects the card this registration PINS, resolved by blob, with no guide declaring it authoritative by hand. D8 (ca0f297e) is loaded from this frame onward; f8, f9, f10 and f11 all papered over conductor.clj's hardcoded scribe.md, and f11 saw the pre-fix constant injected twice in one cycle. Like :guidance-count-exact this tests whether a source fix reached the running image, which is the D30 failure this batch is sequenced to avoid."}
+  {:id :student-memory-promotable,
+   :text
+   "If the student records a memory, it is NOT refused on domain grounds. f10's e-3a3aed11 was unpromotable because frame students recorded under :domain :zaif-work against a :mathematics pin (D5). This is conditional on the student choosing to record: a frame where it records nothing neither confirms nor refutes, and must be reported as inapplicable rather than as a pass."}
+  {:id :cascade-seeds-from-recall,
+   :text
+   "Offers are seeded from patterns attached to RECALL-SURFACED memories, not from the problem's own touch-set. f10 refuted the opposite premise decisively: it was chosen for touching no @why-edged pattern and produced 48 :why-hop offers via math-strategy/missing-dependency-protocol. This frame states the corrected mechanism as the prediction, so it is tested rather than assumed."}
+  {:id :refusals-are-traceable,
+   :text
+   "Any conductor action refused during this frame appears in the emitted trace as an :action-refusals receipt. In f10 three promotion refusals existed ONLY in the guide's prose report and the machine trace was consistent with a clean run (D6, fixed 585a980e). If nothing is refused this frame the prediction is inapplicable, not confirmed — say so."}
+  {:id :analyst-survives-two-frames,
+   :text
+   "analyst-3 completes duties A, B and F at this close. It is at TENURE 1 OF 2 and therefore does NOT owe succession here — the handoff document, memory-surface pointer and W-entry fall due at frame 16, its second and last. SCOPE THIS CAREFULLY WHEN ADJUDICATING: the preceding registration's copy of this text said the analyst executes its succession AT THIS CLOSE, which was true of the previous analyst at frame 12 and is false here. That text shipped UNADJUDICABLE in frame 13 (D56) and was caught a THIRD time by gen-registration.bb before this frame opened. A prediction that cannot be satisfied or refuted by the frame it ships in is a defect in the prediction, not a result — report it as such if you meet one.\n"}],
+ :pilot-units
+ [{:problem-id "m93J06",
+   :difficulty-stratum "family=m;one-executable-hole",
+   :regime "e7b9ec02599b36845c68ca053416787a23ac29a8",
+   :locked-lemma-exposure []}],
+ :schema 1,
+ :stop-rules
+ [:budget-exceeded
+  :attempt-cap-reached
+  :axiom-unclean-close
+  :no-progress
+  :teardown-deadline-passed
+  :no-improvement-escalate],
+ :reg/guide-seat "f15-guide",
+ :reg/cascade-measurements
+ ["offers by route" "patterns per problem" "cascade truncation"],
+ :required-measurement-fields
+ ["statement defects at review"
+  "terminal disposition"
+  "residual executable sorries"
+  "attempts or closer hops"
+  "axiom cleanliness"
+  "memories promoted"
+  "review escape rate"
+  "promoted then surfaced then used"
+  "contract leaks"
+  "duplicate declarations"
+  "locked-lemma exposure"
+  "promotion coverage"
+  "unconsumed promotions"
+  "import-only edges"
+  "scribe lane coverage"
+  "arc-lane yield"
+  "rewrite rule offered and used"],
+ :reg/seat-exclusivity :enforced-at-register,
+ :reg/environment-revision "a92ffb6c9cda32a33df0d259df552b1dbc611daf",
+ :reg/frame-id "f15",
+ :reg/memory-cascade-enabled? true,
+ :required-capabilities
+ [:frame-containment-witnessed
+  :created-frame-worked
+  :unique-disposition
+  :offer-use-disposition
+  :need-retrieval
+  :promotion-importable
+  :promotion-need-taggable
+  :measurement-populated],
+ :lean-registration "DarkTower.APMDemonstration.round1Registration",
+ :reg/student-runner-budget {:wall-clock-minutes 60},
+ :modules [:R :F :S :A :M :P :X],
+ :reg/solver-config {:model "gpt-5.6-sol", :reasoning-effort "max"},
+ :confirmation-units [],
+ :reg/harness-revision "e1925203b4ae8b2e2619919d3a66ca85eea4fe49",
+ :problem
+ {:problem-id "m93J06",
+  :difficulty-stratum "family=m;one-executable-hole",
+  :regime "e7b9ec02599b36845c68ca053416787a23ac29a8",
+  :locked-lemma-exposure []},
+ :reg/guidance-regime #{:suggest :answer},
+ :reg/frame-1-disclaimer false,
+ :reg/analyst-tenure {:n 2, :frame-index 1, :frames ["f15" "f16"]},
+ :variation
+ {:kind :measured,
+  :endpoint
+  "frame-15: the first frame in the series where a problem VERIFIED SOUND, a WORKING READ PATH, and memory-use instrumentation coincide. Frames 9 and 10 closed sound problems and recorded memory-use steps = 0 - no instrumentation ran at all. Frames 11, 12 and 13 had a working read path by f13 and drew problems that were respectively FALSE, VACUOUS and UNINHABITED. The two arms have never met. This frame is the first test of the series' own hypothesis."},
+ :reg/memory-cascade-cap 100,
+ :lean-revision "4331becf6f0c8471537adcc264a8fde7e12c94c9",
+ :runtime-invariants [:F2 :F3 :F4 :F5 :F6 :F8 :F9],
+ :reg/role-cards
+ {:codex-solver "00552e4108b02e00139772963bc5e9fa8ff5b63e",
+  :zai-student "b1ee7de57a9d27993155fc8732a60a609889add4",
+  :claude-guide "75fda67f122a4f6e0346ca507caf62df19abc0cd",
+  :scribe "02441d9df4b8a05355790a51f1e535bf9e9465d4",
+  :proctor "63a64a878ce06ccdc8ec78e5ee19526bc9cef211",
+  :analyst "ed340941f4747b20a540fec9ed56bd332579590c"},
+ :reg/solver-seat "f15-solver",
+ :reg/attempt-caps {:s-frontier 10, :s-student 3},
+ :kind :apm-demonstration-round1-registration,
+ :decision-rule
+ {:id :apm-round1-outcome,
+  :outcomes [:closed :tier-a :tier-b :defective]},
+ :reg/scribe-seat "f15-scribe",
+ :lean-source "DarkTower/APMDemonstrationPreregistration.lean",
+ :structural-invariants [:F1],
+ :reg/analyst-seat "analyst-3",
+ :reg/student-seat "f15-student",
+ :estimated-cost 1.0,
+ :arm-description
+ "fresh seats, analyst-3 (tenure 1 of 2), cascade on, write path repaired, read path OR-joined, PROBLEM VERIFIED SOUND BEFORE THE FRAME",
+ :budget-cap 5.0,
+ :reg/predictions-analyst-note
+ "see :reg/predictions :analyst-survives-two-frames, rewritten for tenure 1",
+ :reg/proctor-seat "f15-proctor",
+ :replication-stage :pilot,
+ :arms
+ [{:name "one problem, one-shot measurement",
+   :neutral? false,
+   :axes [],
+   :role :treatment}],
+ :claim :descriptive}

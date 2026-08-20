@@ -24,6 +24,10 @@
   {:choices [{:message {:role "assistant"
                         :content text}}]})
 
+(defn- text-response-with-usage
+  [text usage]
+  (assoc (text-response text) :usage usage))
+
 (defn- fake-tool-result
   [_backend _tool-opts tc]
   {:detail {:id (:id tc)
@@ -129,7 +133,7 @@
         (is (= "redefined for zai-test" (:result resp)))
         (is (= "sid-hot" (:session-id resp)))))))
 
-(deftest cycle-student-budget-scales-the-interior-runner-envelope
+(deftest cycle-student-budget-does-not-inflate-http-request-timeout
   (let [invoke (make-invoke {})
         captured (atom nil)]
     (with-redefs [zai/run-tool-rounds! (fn [ctx]
@@ -140,7 +144,8 @@
               {:dispatch-id "budget-job"
                :timeout-ms 3600000
                :student-runner-budget {:wall-clock-minutes 60}})
-      (is (= 3600000 (get-in @captured [:opts :timeout-ms])))
+      (is (= zai/default-request-timeout-ms
+             (get-in @captured [:opts :timeout-ms])))
       (is (= 16 (:auto-continue-max @captured))
           "60 minutes doubles the historical 30-minute continuation allowance"))))
 
@@ -163,6 +168,76 @@
         (is (= turn-id (get-in round [:evidence/body :turn-id])))
         (is (= true (get-in round [:evidence/body :final])))
         (is (= "proved" (get-in round [:evidence/body :text])))))))
+
+(deftest final-report-reserve-never-consumes-the-whole-envelope
+  ;; e63951e8 sized a flat 5-minute reserve for the student's pinned 60-minute
+  ;; runner budget. The REPL lane inherits the 300000 ms default, where that
+  ;; same reserve is 100% of the envelope: (<= remaining-ms reserve) was true
+  ;; on round one, so the turn did no work and reported itself out of budget.
+  (let [reserve-for @#'zai/report-reserve-for]
+    ;; 60-minute student: the full 5 minutes is still reserved
+    (is (= (* 5 60 1000) (reserve-for (* 60 60 1000))))
+    ;; 20-minute envelope: 5 minutes is still under a quarter
+    (is (= (* 5 60 1000) (reserve-for (* 20 60 1000))))
+    ;; 5-minute REPL default: capped at a quarter, so work is possible at all
+    (is (= 75000 (reserve-for 300000)))
+    (is (< (reserve-for 300000) 300000))
+    ;; the reserve is never the whole envelope, at any size
+    (doseq [envelope [1000 60000 300000 (* 30 60 1000) (* 60 60 1000)]]
+      (is (< (reserve-for envelope) envelope)
+          (str "reserve consumed the whole envelope at " envelope)))
+    ;; absent or nonsense envelope falls back to the flat reserve
+    (is (= (* 5 60 1000) (reserve-for nil)))
+    (is (= (* 5 60 1000) (reserve-for 0)))))
+
+(deftest records-normalized-zai-usage-per-round
+  (let [full-usage {:prompt_tokens 101
+                    :prompt_tokens_details {:cached_tokens 23}
+                    :completion_tokens 47
+                    :completion_tokens_details {:reasoning_tokens 11}
+                    :total_tokens 148}
+        expected {:cost/input-tokens 101
+                  :cost/cached-input-tokens 23
+                  :cost/output-tokens 47
+                  :cost/reasoning-tokens 11
+                  :cost/total-tokens 148
+                  :cost/source :zai}]
+    (doseq [[usage expected-cost]
+            [[full-usage expected]
+             [(dissoc full-usage :prompt_tokens_details)
+              (dissoc expected :cost/cached-input-tokens)]
+             [(dissoc full-usage :completion_tokens_details)
+              (dissoc expected :cost/reasoning-tokens)]
+             ;; A required field absent must be OMITTED, not written as nil.
+             [(dissoc full-usage :prompt_tokens)
+              (dissoc expected :cost/input-tokens)]
+             [(dissoc full-usage :total_tokens :completion_tokens)
+              (dissoc expected :cost/total-tokens :cost/output-tokens)]
+             [nil nil]]]
+      (let [store (atom {:entries {} :order []})
+            events (atom [])
+            invoke (make-invoke {:evidence-store store})]
+        (with-redefs [zai/chat! (fn [_client _opts _messages]
+                                  (if usage
+                                    (text-response-with-usage "still works" usage)
+                                    (text-response "still works")))
+                      zai/sink! (fn [_agent-id event] (swap! events conj event))]
+          (is (= "still works" (:result (invoke "measure" nil))))
+          (let [round (->> (:order @store)
+                           (map #(get-in @store [:entries %]))
+                           (filter #(= :turn-round
+                                       (get-in % [:evidence/body :event])))
+                           first)
+                body (:evidence/body round)
+                cost (select-keys body (keys expected))
+                usage-events (filter #(= "usage" (:type %)) @events)]
+            (is (= (or expected-cost {}) cost))
+            (is (not-any? (fn [[_ v]] (nil? v))
+                          (filter (fn [[k _]] (= "cost" (namespace k))) body)))
+            (is (= (if expected-cost
+                     [(assoc expected-cost :type "usage")]
+                     [])
+                   (vec usage-events)))))))))
 
 (deftest zaif-profile-records-prompt-decision-and-final-round
   (let [store (atom {:entries {} :order []})
