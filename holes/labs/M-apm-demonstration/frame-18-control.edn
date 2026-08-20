@@ -53,9 +53,9 @@
  :frame/workspaces
  {:solver
   {:repository "/home/joe/code/apm-lean"
-   :branch "exp/frame-18-a97J07-solver"
+   :branch "exp/frame-18-a97J07-solver-r2"
    :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
-   :path "/home/joe/code/apm-frames/frame-18-a97J07-solver"
+   :path "/home/joe/code/apm-frames/frame-18-a97J07-solver-r2"
    :execution-substrate
    {:kind :shared-lake
     :path "/home/joe/code/apm-lean/.lake"
@@ -66,9 +66,9 @@
             :expected-exit 0}}}
   :student
   {:repository "/home/joe/code/apm-lean"
-   :branch "exp/frame-18-a97J07-student"
+   :branch "exp/frame-18-a97J07-student-r2"
    :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
-   :path "/home/joe/code/apm-frames/frame-18-a97J07-student"
+   :path "/home/joe/code/apm-frames/frame-18-a97J07-student-r2"
    :execution-substrate
    {:kind :shared-lake
     :path "/home/joe/code/apm-lean/.lake"
