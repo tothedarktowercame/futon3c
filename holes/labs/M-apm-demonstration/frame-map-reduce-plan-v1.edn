@@ -18,6 +18,19 @@
    :fresh-session-per-attempt? true
    :information-channel :memory-substrate-only
    :outputs #{:attempt-receipt :memory-use-receipt :failure-account}}
+  {:stage/id :guide-interventions
+   :role :guide
+   :card-role :guide
+   :placement :between-student-attempts
+   :mode-policy {:exactly-one-of #{:store-mode :harness-mode}
+                 :store-mode {:may #{:write-memory}
+                              :must-not #{:change-retrieval-harness}}
+                 :harness-mode {:may #{:change-retrieval-harness}
+                                :must-not #{:write-memory}}}
+   :inputs #{:solve-receipt :attempt-receipt :memory-use-receipt
+             :failure-account}
+   :outputs #{:guide-intervention-receipt :scoped-rewrite-rule
+              :retrieval-change-receipt}}
   {:stage/id :scribe-reduce
    :role :scribe
    :card-role :scribe
@@ -34,7 +47,8 @@
  :frame/reduce
  {:stage/id :close-frame
   :role :guide
-  :inputs #{:solve-receipt :attempt-receipt :scribe-lane-receipt
+ :inputs #{:solve-receipt :attempt-receipt :scribe-lane-receipt
+            :guide-intervention-receipt
             :memory-disposition-receipt :promotion-review-receipt
             :verify-receipt}
   :precondition-map-roles #{:solver :student :scribe :proctor}
@@ -48,6 +62,19 @@
   :tenure-frames 2
   :inputs #{:frame-close-receipt :frame-trace}
   :outputs #{:transfer-checks :series-entry :spectral-reading
-             :divergence-packets}
-  :note "Analyst work belongs to the run-level continuation and cannot gate
-         the frame close that wakes the analyst."}}
+             :divergence-packets :memory-store-architecture-change
+             :learning-loop-structure-change}
+  :implementation-policy
+  {:divergence :dispatch-review-merge
+   :operator-gates :decisions
+   :analyst-gates :implementations}
+  :note "Analyst work belongs to the run-level meta-loop: it may change how
+         memory and the learning loop are structured, but cannot gate the
+         frame close that wakes the analyst."}
+
+ :contract/conflicts
+ [{:conflict/id :guide-persistence-scope
+   :guide-card-claim "The Guide is the only role that persists across a round."
+   :analyst-card-claim "The Guide is fresh every frame; the Analyst persists for two frames."
+   :status :operator-ruling-required-before-next-registration
+   :effect "Do not infer whether round equals frame or reuse a Guide session."}]}
