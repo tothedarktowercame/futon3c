@@ -2479,19 +2479,11 @@
         {:ok false
          :error (.getMessage e)}))))
 
-(defn zai-seat-timeout-ms
-  "Per-turn wall-clock for zai seats minted via the local constructors, from
-  FUTON3C_ZAI_SEAT_TIMEOUT_MS. Default 1 hour: frame-seat turns run long
-  agentic tool loops; the constructor's own 5-minute default exists for quick
-  interactive seats and killed f17-guide mid-action (see make-local-agent-invoke-fn
-  :zai note)."
-  []
-  (parse-env-ms "FUTON3C_ZAI_SEAT_TIMEOUT_MS" (* 60 60 1000)))
-
 (defn- make-local-agent-invoke-fn
   "Best-effort builder for a local invoke-fn for AGENT-TYPE."
   [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model
-                      evidence-store irc-send-fn memory-domain]}]
+                      evidence-store irc-send-fn memory-domain
+                      request-timeout-ms turn-timeout-ms]}]
   (let [sid-atom (or session-id-atom
                      (make-session-id-atom initial-session-id session-file))]
     (case agent-type
@@ -2504,6 +2496,7 @@
                              :session-id-atom sid-atom}
                       emacs-socket (assoc :emacs-socket emacs-socket)
                       model (assoc :model model)
+                      turn-timeout-ms (assoc :timeout-ms turn-timeout-ms)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
 
@@ -2515,6 +2508,7 @@
                              :session-file session-file
                              :session-id-atom sid-atom}
                       model (assoc :model model)
+                      turn-timeout-ms (assoc :timeout-ms turn-timeout-ms)
                       memory-domain (assoc :memory-domain memory-domain)
                       requested-cwd (assoc :cwd requested-cwd))))
         (catch Throwable _ nil))
@@ -2528,12 +2522,12 @@
                   :initial-session-id initial-session-id
                   :evidence-store evidence-store
                   :irc-send-fn irc-send-fn
-                  ;; Frame-seat turns are long agentic sessions (tool loops,
-                  ;; compile waits). The constructor default (5 min) killed
-                  ;; f17-guide's parked-resume mid-action at exactly the
-                  ;; 300s mark (invoke-...-5259, wall-clock-budget). Seats
-                  ;; can opt out by setting 0 (constructor default).
-                  :timeout-ms (zai-seat-timeout-ms)}
+                  ;; Frame seats pin a logical turn envelope explicitly. The
+                  ;; per-request HTTP timeout is a separate constructor field.
+                  :request-timeout-ms (or request-timeout-ms
+                                          zai-api/default-request-timeout-ms)
+                  :turn-timeout-ms (or turn-timeout-ms
+                                       zai-api/default-turn-timeout-ms)}
            model (assoc :model model)
            memory-domain (assoc :memory-domain memory-domain)
            requested-cwd (assoc :cwd requested-cwd)))
@@ -2544,10 +2538,21 @@
 
       nil)))
 
+(defn- frame-seat-timeout-policy [agent-type]
+  {:request-timeout-ms (if (= :zai agent-type)
+                         zai-api/default-request-timeout-ms
+                         :not-applicable)
+   :turn-timeout-ms zai-api/default-turn-timeout-ms
+   :request/source (if (= :zai agent-type)
+                     :zai-api/default-request-timeout-ms
+                     :not-applicable)
+   :turn/source :frame-seat/code-default})
+
 (defn- prepare-frame-seat
   [config {:keys [agent-id agent-type model memory-domain]}]
   (let [session-file (default-session-file-for-agent agent-type agent-id)
-        stale-file (some-> session-file java.io.File.)]
+        stale-file (some-> session-file java.io.File.)
+        timeout-policy (frame-seat-timeout-policy agent-type)]
     ;; A newly minted identity must not inherit an orphaned session left by an
     ;; earlier process incarnation with the same deterministic frame seat id.
     (if (and stale-file
@@ -2563,11 +2568,16 @@
                               :session-file session-file
                               :session-id-atom session-id-atom
                               :evidence-store (evidence-store-for-config config)
-                              :irc-send-fn (:irc-send-fn config)}
+                              :irc-send-fn (:irc-send-fn config)
+                              :request-timeout-ms
+                              (:request-timeout-ms timeout-policy)
+                              :turn-timeout-ms
+                              (:turn-timeout-ms timeout-policy)}
                        model (assoc :model model)
                        memory-domain (assoc :memory-domain memory-domain)))
          :session-reset-fn (make-session-reset-fn session-file session-id-atom)
-         :metadata {:session-file session-file}}))))
+         :metadata {:session-file session-file
+                    :effective-timeouts timeout-policy}}))))
 
 (defn mint-frame-seats!
   "Mint the five fresh, invoke-ready Agency seats for FRAME-ID."

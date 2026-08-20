@@ -26,6 +26,14 @@
 
 (def ^:private default-model "glm-5.2")
 
+(def default-request-timeout-ms
+  "Maximum duration of one Z.AI HTTP request. This is not a logical turn bound."
+  (* 5 60 1000))
+
+(def default-turn-timeout-ms
+  "Default wall-clock envelope for one agentic Z.AI turn."
+  (* 60 60 1000))
+
 (defn- getenv [k]
   (some-> (System/getenv k) str/trim not-empty))
 
@@ -1314,9 +1322,10 @@ CALLS contains maps of tool name, arguments, and result digest."
 (defn make-invoke-fn
   "Return an Agency invoke-fn backed by Z.AI tool calling."
   [{:keys [agent-id session-file session-id-atom initial-session-id cwd evidence-store
-           api-key base-url model timeout-ms max-tokens temperature irc-send-fn irc-recent-fn
+           api-key base-url model timeout-ms request-timeout-ms turn-timeout-ms
+           max-tokens temperature irc-send-fn irc-recent-fn
            memory-mode memory-domain auto-continue-max profile zaif-inputs-fn]
-    :or {agent-id "zai" timeout-ms 300000 memory-mode :full}}]
+    :or {agent-id "zai" memory-mode :full}}]
   (when-not evidence-store
     (throw (ex-info "ZAI/ZAIF requires a durable evidence store"
                     {:agent-id agent-id})))
@@ -1369,11 +1378,14 @@ CALLS contains maps of tool name, arguments, and result digest."
                                         "unmarked correction is better than a marked non-correction, and marks "
                                         "emitted to look thorough poison the record.")}])
         !booted (atom false)
+        request-timeout-ms (or request-timeout-ms timeout-ms
+                               default-request-timeout-ms)
+        turn-timeout-ms (or turn-timeout-ms default-turn-timeout-ms)
         opts {:base-url (or base-url (getenv "ZAI_BASE_URL") default-base-url)
               :model (or model (getenv "ZAI_MODEL") default-model)
               :max-tokens max-tokens
               :temperature temperature
-              :timeout-ms timeout-ms
+              :timeout-ms request-timeout-ms
               :memory-mode memory-mode}
         profile* (resolve-profile profile)
         tool-opts {:irc-send-fn irc-send-fn
@@ -1395,14 +1407,21 @@ CALLS contains maps of tool name, arguments, and result digest."
             ;; the dispatch id and the turn-start record binds them explicitly.
             dispatch-id (str (or (:dispatch-id invoke-context) turn-id))
             runner-budget (:student-runner-budget invoke-context)
-            call-timeout-ms (or (:timeout-ms invoke-context) timeout-ms)
+            call-timeout-ms
+            (or (:timeout-ms invoke-context)
+                (when-let [minutes (:wall-clock-minutes runner-budget)]
+                  (when (and (integer? minutes) (pos? minutes))
+                    (* minutes 60 1000)))
+                turn-timeout-ms)
             deadline-ms (when (and (integer? call-timeout-ms)
                                    (pos? call-timeout-ms))
                           (+ (System/currentTimeMillis) call-timeout-ms))
             wall-clock-minutes
             (or (:wall-clock-minutes runner-budget)
-                (when (and (integer? call-timeout-ms) (pos? call-timeout-ms))
-                  (long (Math/ceil (/ call-timeout-ms 60000.0)))))
+                (when-let [invoke-timeout-ms (:timeout-ms invoke-context)]
+                  (when (and (integer? invoke-timeout-ms)
+                             (pos? invoke-timeout-ms))
+                    (long (Math/ceil (/ invoke-timeout-ms 60000.0))))))
             turn-auto-continue-max
             (or (budget-auto-continue-max wall-clock-minutes)
                 auto-continue-max)
@@ -1456,7 +1475,7 @@ CALLS contains maps of tool name, arguments, and result digest."
                               :prompt prompt})
         (swap! !messages conj {:role "user" :content (str prompt)})
         (run-tool-rounds! {:client client
-                           :opts (assoc opts :timeout-ms call-timeout-ms)
+                           :opts opts
                            :api-key key*
                            :!messages !messages
                            :backend backend

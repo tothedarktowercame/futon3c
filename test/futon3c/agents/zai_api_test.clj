@@ -133,7 +133,7 @@
         (is (= "redefined for zai-test" (:result resp)))
         (is (= "sid-hot" (:session-id resp)))))))
 
-(deftest cycle-student-budget-scales-the-interior-runner-envelope
+(deftest cycle-student-budget-does-not-inflate-http-request-timeout
   (let [invoke (make-invoke {})
         captured (atom nil)]
     (with-redefs [zai/run-tool-rounds! (fn [ctx]
@@ -144,7 +144,8 @@
               {:dispatch-id "budget-job"
                :timeout-ms 3600000
                :student-runner-budget {:wall-clock-minutes 60}})
-      (is (= 3600000 (get-in @captured [:opts :timeout-ms])))
+      (is (= zai/default-request-timeout-ms
+             (get-in @captured [:opts :timeout-ms])))
       (is (= 16 (:auto-continue-max @captured))
           "60 minutes doubles the historical 30-minute continuation allowance"))))
 
