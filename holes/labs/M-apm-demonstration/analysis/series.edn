@@ -1808,7 +1808,48 @@
     told codex-3 in terms to STOP AND BELL ME rather than invent a definition of
     'fresh' — a plausible-looking boolean in an experimental-control slot is worse than
     a nil, and inventing one would be the same error as the tool name a packet of mine
-    could have shipped if it had been large enough to build from end to end."}
+    could have shipped if it had been large enough to build from end to end."
+   :P31-reviewed-and-merged
+   "MERGED — 294b4679, merge c5971a27, on base 26b9c649 which I confirmed is an
+    ancestor of master. Files: scripts/frames.bb (+4), problem.clj (+20/-4), its test
+    (+50). preregistration.clj untouched.
+    WHAT I CHECKED:
+    (1) the replay, re-run by me — as-is [:malformed-cycle-attempts], stamped [];
+    (2) THE LOAD-BEARING ASSUMPTION, not the diff. codex-3 recorded
+        :runner-freshness true in frames.bb `open` on the argument that open rejects
+        both an existing record and an existing checkout before creating the worktree.
+        I read open-frame! and it does exactly that — two `die` calls, then
+        `git worktree add -b`. So the boolean records what the provisioner DID; it was
+        not inferred from mtimes or directory existence, which I had forbidden. It also
+        follows a convention already in that map (:session :recorded-at-close, with a
+        comment that a minted UUID there 'asserted isolation that did not exist').
+        It answered the semantics question by finding the place where the machine
+        genuinely knows, which is better than the bell-back I told it to send;
+    (3) FOUR MUTATIONS THE PACKET DID NOT ASK FOR. The one that matters: an EMPTY
+        caller map {} now produces an attempt satisfying attempt? — machine stamping
+        alone, nothing caller-supplied. That is the property the packet was about.
+        Removing the (some? regime) guard is caught by three assertions including a
+        dedicated test. Missing regime and missing freshness each leave the key ABSENT
+        rather than nil. And a caller-supplied :runner-freshness false is PRESERVED,
+        not clobbered;
+    (4) clj-kondo 0/0 and 108 tests / 393 assertions / 0 failures, re-run by me.
+    MY FINDING, recorded because it limits what the field can do: there is EXACTLY ONE
+    writer of :runner-freshness and it writes the literal `true`. No path can write
+    false. The field is truthful for the path that writes it and NON-DISCRIMINATING
+    until a runner-reuse path exists — which matters because freshness is an
+    experimental control, and a control that cannot vary detects nothing. This is the
+    same shape as :both-channels-varied one level down. Not a blocker and not a defect
+    in the packet; the stamp already preserves an explicit false, so the slot is usable
+    the day a reuse path is added.
+    AND CODEX-3 CORRECTED MY PACKET, which is the second time this close someone
+    caught an over-narrow claim of mine. I told it to expect a federation-sync /
+    dev-irc-summary repo-wide baseline; it reported the red set is broader —
+    architecture, wiring-evidence, blackboard — and declined to attribute those to my
+    stated baseline. I verified: futon3c.architecture.wiring-evidence-test is 4/4 red
+    on master WITHOUT P31 applied. Pre-existing, and my baseline was stated from
+    memory rather than re-measured. A packet's stated baseline is a claim like any
+    other and should be measured at dispatch time."
+}
 
   ;; --- record integrity --------------------------------------------------
   :series-file-repair

@@ -193,34 +193,31 @@ predicate, not the field name.**
 
 ---
 
-## 5. In flight at handover — YOURS TO CLOSE
+## 5. P31 — LANDED AND MERGED BEFORE HANDOVER; one limitation is yours
 
-**P31 is running and I may not see it land.**
+Not in flight after all. **P31 merged as `c5971a27`** (codex-3's `294b4679`), and
+`attempt?` is now satisfiable by machine stamping alone — I mutation-checked that
+an **empty caller map** produces a valid attempt. `:malformed-cycle-attempts`
+should clear at f18, taking the failure count with it.
 
-    packet  : stamp :cycle/regime and :cycle/runner-freshness so attempt? is
-              satisfied by construction (the sequel to P30)
-    agent   : codex-3
-    job     : invoke-1787240056566-5288-d8bafc6e
-    park    : park-b5e2ac6d-6451-455b-8b71-2c4dbbae6322  (payload = full checklist)
+**codex-3 answered the `runner-freshness` semantics question better than the
+bell-back I told it to send.** Rather than inventing a definition, it found the
+place where the machine already knows: `frames.bb open` rejects an existing
+record *and* an existing checkout before `git worktree add -b`, so reaching that
+line means a fresh tree. I read `open-frame!` and confirmed the two `die` calls.
+It also matched a convention already in that map — `:session :recorded-at-close`,
+commented "a minted UUID here asserted isolation that did not exist."
 
-If it belled back **asking about `runner-freshness` semantics rather than
-guessing, that is the correct outcome** — `assign-checkouts` returns
-`{:checkout :base-revision :branch :frame/id :batch}` with no freshness field, so
-the machine does not currently measure it, and I told codex-3 in terms to stop
-rather than invent a definition. A plausible-looking boolean in an
-experimental-control slot is worse than a nil. Answer it or surface it; do not
-pressure it to invent one.
-
-`:cycle/regime` **is** machine-knowable — `read-registration`'s result carries
-`:problem {:regime "e7b9ec02…"}`. That half is unambiguous.
-
-**Gate it for real.** Re-run the replay yourself; reproduce a number by a
-different route than the function under review (I used shell `sha1sum` on P30);
-and add at least one mutation the packet did not ask for. On P30 that caught that
-removing the nil guard fabricates `sha1("")` for a missing snapshot. **A check
-that can excuse itself is worse than one that cries wolf.**
-
----
+**THE LIMITATION, AND IT IS YOURS TO WATCH:** there is exactly one writer of
+`:runner-freshness` and it writes the literal `true`. **No path can write
+`false`.** The field is truthful for the path that writes it and
+**non-discriminating** until a runner-reuse path exists — and freshness is an
+experimental control, so a control that cannot vary detects nothing. That is the
+same shape as `:both-channels-varied` one level down, and this series now has two
+instances of it. Not a defect in the packet: the stamp preserves an explicitly
+supplied `false`, so the slot works the day a reuse path is added. **Watch for the
+pattern, not the field** — a schema slot whose only writer emits a constant is a
+control in name only.
 
 ## 6. Duty-by-duty, briefly
 
