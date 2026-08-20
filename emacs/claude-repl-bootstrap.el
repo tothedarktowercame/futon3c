@@ -1,6 +1,6 @@
 ;;; claude-repl-bootstrap.el --- Persistent bootstrap for parked-on + jobs -*- lexical-binding: t; -*-
 
-;; E-park-delivery-losses finding 0: the poller (claude-repl-park.el) and jobs
+;; E-park-delivery-losses finding 0: the poller (agent-repl-park.el) and jobs
 ;; visibility (claude-repl-jobs.el) were never installed at startup — they had
 ;; to be loaded manually each session, so an Emacs restart silently disabled the
 ;; poller and resumes rotted in the ready-inbox. This file loads BOTH after
@@ -21,7 +21,7 @@
 ;;; Code:
 
 (require 'claude-repl)
-(require 'claude-repl-park)
+(require 'agent-repl-park)
 (require 'claude-repl-jobs)
 
 (provide 'claude-repl-bootstrap)
