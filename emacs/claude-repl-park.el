@@ -13,6 +13,7 @@
 ;;; Code:
 
 (require 'claude-repl)
+(require 'agent-repl-registry)
 (require 'futon-agency-ws)
 (require 'ring)
 (require 'seq)
@@ -104,18 +105,11 @@ reply slot."
             (progn (message "[park] resuming %s in place (park %s)"
                             (buffer-name buf) park-id)
                    (agent-chat-send-unsolicited-input
-                    #'claude-repl--call-claude-streaming
-                    "claude"
+                    (agent-repl-capability :sender)
+                    (or (agent-repl-capability :agent-name) "agent")
                     prompt
                     "continuation"
-                    (list :before-send (lambda (text)
-                                         (claude-repl--emit-user-turn-evidence! text)
-                                         (claude-repl--store-upsert-session)
-                                         (claude-repl--open-frame text))
-                          :on-response (lambda (text)
-                                         (claude-repl--emit-assistant-turn-evidence! text)
-                                         (claude-repl--emit-turn-commits-evidence!)
-                                         (claude-repl--close-frame "done"))))
+                    (agent-repl-capability :hooks))
                    ;; Bug 3: ACK delivery after send returns without error. If the
                    ;; ACK is lost, the server redelivers; the dedup ring skips it.
                    (claude-repl-park--ack park-id))
@@ -123,6 +117,17 @@ reply slot."
                    (buffer-name buf))))))))
 
 ;;;; WS path (bonus — instant when the agency WS is connected) -----------------
+
+(defun claude-repl-park--eligible-modes ()
+  "Modes that may be resumed in place.
+
+Registered frontends (`agent-repl-registered-modes') union the legacy
+`claude-repl-park-participating-modes' custom, so an operator override still
+works and an unregistered frontend is simply never polled."
+  (delete-dups
+   (append (agent-repl-registered-modes)
+           (and (boundp 'claude-repl-park-participating-modes)
+                claude-repl-park-participating-modes))))
 
 (defun claude-repl-park--target-buffer (agent session)
   (or (and (stringp session) (not (string-empty-p session))
@@ -133,7 +138,7 @@ reply slot."
        (lambda (buf)
          (and (buffer-live-p buf)
               (with-current-buffer buf
-                (and (memq major-mode claude-repl-park-participating-modes)
+                (and (memq major-mode (claude-repl-park--eligible-modes))
                      (or (and (stringp session) (not (string-empty-p session))
                               (equal agent-chat--session-id session))
                          (and (stringp agent) (not (string-empty-p agent))
@@ -166,7 +171,7 @@ synchronous GET is what made you reach for C-g)."
                         (bound-and-true-p claude-repl-agent-id)))
              (session agent-chat--session-id)
              (api-url (or (bound-and-true-p claude-repl-api-url)
-                          agent-chat-agency-base-url))
+                          (agent-repl-api-base-url)))
              (url (format "%s/api/alpha/parked/ready?agent=%s&session=%s"
                           (string-remove-suffix "/" api-url)
                           (url-hexify-string (or agent ""))
@@ -206,7 +211,10 @@ buffer polls unconditionally and trusts that gate."
   (dolist (buf (buffer-list))
     (when (buffer-live-p buf)
       (with-current-buffer buf
-        (when (memq major-mode claude-repl-park-participating-modes)
+        (when (and (memq major-mode (claude-repl-park--eligible-modes))
+                   ;; The ready-inbox is POLL-AND-CONSUME: never poll a buffer
+                   ;; we could not then drive, or the item is destroyed.
+                   (agent-repl-drivable-p major-mode))
           (claude-repl-park--poll-buffer-async buf))))))
 
 ;;;; Enable / disable ---------------------------------------------------------
