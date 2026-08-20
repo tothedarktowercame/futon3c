@@ -73,21 +73,23 @@
 (defn- binding-findings [active binding ledger-digest]
   (when binding
     (if active
-      (concat
-       (when-not (true? (:bound? binding))
-         [(finding :conflict :binding :active-frame-unbound)])
-       (value-findings :binding {:frame-id (:frame-id active)}
-                       binding [:frame-id])
-       (cond
-         (nil? (:ledger-digest binding))
-         [(finding :stale :binding :binding-ledger-digest-missing)]
+      ;; An opened frame is intentionally unbound until its preflight phase
+      ;; validates and installs runtime bindings. If a binding is asserted it
+      ;; must agree completely; absence is not a contradictory observation.
+      (when (true? (:bound? binding))
+        (concat
+         (value-findings :binding {:frame-id (:frame-id active)}
+                         binding [:frame-id])
+         (cond
+           (nil? (:ledger-digest binding))
+           [(finding :stale :binding :binding-ledger-digest-missing)]
 
-         (not= ledger-digest (:ledger-digest binding))
-         [(finding :conflict :binding :value-mismatch
-                   {:field :ledger-digest :expected ledger-digest
-                    :actual (:ledger-digest binding)})]
+           (not= ledger-digest (:ledger-digest binding))
+           [(finding :conflict :binding :value-mismatch
+                     {:field :ledger-digest :expected ledger-digest
+                      :actual (:ledger-digest binding)})]
 
-         :else []))
+           :else [])))
       (when (true? (:bound? binding))
         [(finding :conflict :binding :inactive-campaign-has-live-binding
                   {:frame-id (:frame-id binding)})]))))
@@ -169,8 +171,10 @@
 
      :else
      (let [active (:active/frame projection)
+           ;; The campaign ledger is the registration and frame-record
+           ;; authority. Legacy duplicate files are checked when supplied but
+           ;; are not required to certify the ledger's own transition.
            required-routes (cond-> [:binding :jobs]
-                             active (into [:registration :frame-record])
                              (and active (seq (:required-receipt-kinds active)))
                              (conj :receipts))
            freshness (mapcat #(source-freshness % (get facts %) now max-age-ms)

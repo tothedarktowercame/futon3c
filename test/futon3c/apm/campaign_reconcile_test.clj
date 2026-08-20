@@ -54,7 +54,7 @@
 (deftest missing-or-expired-observations-are-stale
   (testing "missing route"
     (let [result (reconcile/reconcile active-projection
-                                      (dissoc valid-facts :frame-record) now)]
+                                      (dissoc valid-facts :jobs) now)]
       (is (= :stale (:reconciliation/status result)))
       (is (some #(= :observation-missing (:code %)) (:findings result)))))
   (testing "expired route"
@@ -106,6 +106,16 @@
                    (reconcile/reconcile projection quiet now))))
     (is (= :conflict (:reconciliation/status
                       (reconcile/reconcile projection live now))))))
+
+(deftest newly-opened-frame-may-be-unbound-before-preflight
+  (let [facts {:binding {:observed-at observed-at :bound? false}
+               :jobs {:observed-at observed-at :items []}
+               :receipts {:observed-at observed-at
+                          :items [{:kind :soundness :frame-id "f1"
+                                   :digest "probe-hash"}]}}
+        result (reconcile/reconcile active-projection facts now)]
+    (is (= :valid (:reconciliation/status result)))
+    (is (empty? (:findings result)))))
 
 (deftest invalid-ledger-projection-can-never-reconcile-valid
   (let [invalid (machine/projection [(event 1 :campaign/registered

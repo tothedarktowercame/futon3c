@@ -176,15 +176,19 @@
   "Gather all normalized routes. Returns no partial :facts when any adapter
   fails, preventing a read error from masquerading as an absent observation."
   [{:keys [registration-path frame-record-paths receipt-paths
-           binding-response jobs-response expected-frame-id now]}]
+           binding-response jobs-response expected-frame-id now]
+    :as input}]
   (let [routes (cond->
                 {:binding (normalize-binding binding-response now)
                  :jobs (normalize-jobs jobs-response now)}
-                 expected-frame-id
-                 (assoc :registration (observe-registration registration-path now)
-                        :frame-record (observe-frame-records frame-record-paths
-                                                            expected-frame-id now)
-                        :receipts (observe-receipts (or receipt-paths []) now)))
+                 (and expected-frame-id (contains? input :registration-path))
+                 (assoc :registration (observe-registration registration-path now))
+                 (and expected-frame-id (contains? input :frame-record-paths))
+                 (assoc :frame-record
+                        (observe-frame-records frame-record-paths
+                                               expected-frame-id now))
+                 (and expected-frame-id (contains? input :receipt-paths))
+                 (assoc :receipts (observe-receipts (or receipt-paths []) now)))
         failures (into {} (remove (comp :ok val)) routes)]
     (if (seq failures)
       {:ok false :error/code :campaign-observation-failed :failures failures}

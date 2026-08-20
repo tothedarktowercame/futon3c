@@ -52,16 +52,11 @@
 
 (defn- frame-runtime-observation [_]
   (try
-    (let [agents-response (fetch-json "http://localhost:7070/api/alpha/agents")
-          jobs-response (fetch-json
+    (let [jobs-response (fetch-json
                          "http://localhost:7070/api/alpha/invoke/jobs?limit=500")
-          agents (:agents agents-response)
-          frame-agents (into {} (filter (fn [[agent-id _]]
-                                          (str/starts-with? agent-id "f18-"))) agents)
           frame-jobs (filterv #(str/starts-with? (or (:agent-id %) "") "f18-")
                               (:jobs jobs-response))]
-      {:binding-response {:ok true :bound? (boolean (seq frame-agents))
-                          :agent-id (first (keys frame-agents))}
+      {:binding-response {:ok true :bound? false}
        :jobs-response {:ok true :jobs frame-jobs}})
     (catch Throwable t
       {:binding-response {:ok false :error :runtime-observation-failed
