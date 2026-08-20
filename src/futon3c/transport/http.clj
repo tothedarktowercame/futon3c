@@ -4273,8 +4273,9 @@
      {\"type\":\"text\",\"text\":\"...\"}
      {\"type\":\"tool_use\",\"tools\":[\"Read\"]}
      {\"type\":\"done\",\"ok\":true,\"result\":\"...\",\"session-id\":\"...\"}
-   The event sink is installed on the agent registry so the NDJSON parse loop
-   in make-claude-invoke-fn emits events as they arrive."
+   Authoritative registry progress is emitted as an invoke.activity event.
+   The event sink is installed on the agent registry so agent adapters emit
+   events as they arrive."
   [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
@@ -4292,12 +4293,16 @@
                               :message "prompt is required"})
 
           :else
-          #_{:clj-kondo/ignore [:unresolved-symbol]}
-          (hk/with-channel request channel
-            (let [aid (str agent-id)
-                  turn-id (str (or (:turn-id payload) (get payload "turn-id")
-                                   (:turn_id payload) (get payload "turn_id")
-                                   (str "turn-" (UUID/randomUUID))))
+          (let [aid (str agent-id)]
+            (hk/as-channel
+             request
+             {:on-close (fn [_channel _status]
+                          (reg/clear-invoke-event-sink! aid))
+              :on-open
+              (fn [channel]
+                (let [turn-id (str (or (:turn-id payload) (get payload "turn-id")
+                                       (:turn_id payload) (get payload "turn_id")
+                                       (str "turn-" (UUID/randomUUID))))
                   ;; Create sink-fn that writes NDJSON lines to the channel
                   sink-fn (fn [event]
                             (try
@@ -4348,10 +4353,6 @@
                          :body (str (json/generate-string
                                      (stamp-turn-event turn-id {:type "started"})) "\n")}
                         false)
-              ;; Clean up on client disconnect
-              (hk/on-close channel
-                (fn [_status]
-                  (reg/clear-invoke-event-sink! aid)))
               (if (and (repl-through-queue?) (turn-queue/drainer-v2-enabled?))
                 ;; E2: route the REPL/operator turn through the durable turn-queue so it gets
                 ;; the SAME guarantees as a bell — single-writer (the agent's drainer, no
@@ -4399,7 +4400,7 @@
                                   :message (.getMessage t)}))
                       (finally
                         (reg/clear-invoke-event-sink! aid)
-                        (hk/close channel)))))))))))))
+                        (hk/close channel))))))))})))))))
 
 (defn- invoke-job-terminal-state?
   [state]
