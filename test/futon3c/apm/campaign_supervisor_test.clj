@@ -54,6 +54,7 @@
             :handlers {:open-block handler} :actor "executor"
             :batch-permit permit :trusted-permit-id (:permit/id permit)
             :trusted-permit-issuer "joe"
+            :trigger-id "tick-001"
             :recovery-assessor "independent-assessor"})))
 
 (defn create-failed-claim! [opts]
@@ -131,5 +132,50 @@
         (is (= :campaign-runner-batch-permit-refused (:error/code result)))
         (is (zero? @calls))
         (is (= 1 (:campaign/version
+                  (:projection (ledger/read-ledger (:ledger-path f)))))))
+      (finally (delete-tree! (:dir f))))))
+
+(deftest duplicate-scheduled-trigger-is-single-fire-across-invocations
+  (let [f (fixture) projected (atom []) calls (atom 0)
+        opts (options f projected (fn [_] (swap! calls inc)
+                                    {:ok true :certificate {}}))]
+    (try
+      (is (= :advanced (:runner/status (supervisor/tick! opts))))
+      (let [version (:campaign/version
+                     (:projection (ledger/read-ledger (:ledger-path f))))
+            duplicate (supervisor/tick! opts)
+            durable (:projection (ledger/read-ledger (:ledger-path f)))]
+        (is (= :duplicate-trigger (:runner/status duplicate)))
+        (is (= 1 @calls))
+        (is (= version (:campaign/version durable)))
+        (is (contains? (:campaign/consumed-triggers durable) "tick-001")))
+      (finally (delete-tree! (:dir f))))))
+
+(deftest missing-trigger-cannot-start-a-supervised-effect
+  (let [f (fixture) projected (atom []) calls (atom 0)
+        opts (dissoc (options f projected (fn [_] (swap! calls inc)) )
+                     :trigger-id)]
+    (try
+      (let [result (supervisor/tick! opts)]
+        (is (= :campaign-runner-trigger-required (:error/code result)))
+        (is (zero? @calls))
+        (is (= 1 (:campaign/version
+                  (:projection (ledger/read-ledger (:ledger-path f)))))))
+      (finally (delete-tree! (:dir f))))))
+
+(deftest concurrent-delivery-of-one-trigger-runs-one-effect
+  (let [f (fixture) projected (atom []) calls (atom 0)
+        opts (options f projected (fn [_] (swap! calls inc)
+                                    {:ok true :certificate {}}))]
+    (try
+      (let [start (promise)
+            invoke #(future @start (supervisor/tick! opts))
+            a (invoke) b (invoke)
+            _ (deliver start true)
+            results [@a @b]]
+        (is (= #{:advanced :duplicate-trigger}
+               (set (map :runner/status results))) (pr-str results))
+        (is (= 1 @calls))
+        (is (= 3 (:campaign/version
                   (:projection (ledger/read-ledger (:ledger-path f)))))))
       (finally (delete-tree! (:dir f))))))

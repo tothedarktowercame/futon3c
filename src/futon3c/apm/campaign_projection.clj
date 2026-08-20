@@ -13,6 +13,15 @@
            [java.nio.file.attribute FileAttribute]
            [java.time Instant]))
 
+(defonce ^:private publication-locks (atom {}))
+
+(defn- publication-lock [^Path directory]
+  (let [key (str (.normalize (.toAbsolutePath directory)))]
+    (or (get @publication-locks key)
+        (get (swap! publication-locks
+                    #(if (contains? % key) % (assoc % key (Object.))))
+             key))))
+
 (defn- display [x]
   (cond
     (nil? x) "—"
@@ -141,20 +150,22 @@
         (if-not (:ok loaded)
           {:ok false :error/code :campaign-projection-certificate-invalid
            :certificate loaded}
-          (try
-            (Files/createDirectories directory (make-array FileAttribute 0))
-            (let [lock-path (.resolve directory ".latest.lock")]
-              (with-open [channel (FileChannel/open
-                                   lock-path
-                                   (into-array OpenOption
-                                               [StandardOpenOption/CREATE
-                                                StandardOpenOption/WRITE]))
-                          _lock (.lock channel)]
-                (let [current-result (read-latest directory)
-                      candidate (pointer (:certificate loaded) certificate-path)]
-                  (if-not (:ok current-result)
-                    current-result
-                    (case (candidate-order (:pointer current-result) candidate)
+          (let [jvm-lock (publication-lock directory)]
+            (locking jvm-lock
+              (try
+                (Files/createDirectories directory (make-array FileAttribute 0))
+                (let [lock-path (.resolve directory ".latest.lock")]
+                  (with-open [channel (FileChannel/open
+                                       lock-path
+                                       (into-array OpenOption
+                                                   [StandardOpenOption/CREATE
+                                                    StandardOpenOption/WRITE]))
+                              _lock (.lock channel)]
+                    (let [current-result (read-latest directory)
+                          candidate (pointer (:certificate loaded) certificate-path)]
+                      (if-not (:ok current-result)
+                        current-result
+                        (case (candidate-order (:pointer current-result) candidate)
                       :newer
                       (do (atomic-write! (.resolve directory "latest.edn") candidate)
                           {:ok true :published? true :pointer candidate})
@@ -178,12 +189,12 @@
                       {:ok false :error/code :campaign-projection-time-invalid
                        :current (:pointer current-result) :candidate candidate}
 
-                      :observation-conflict
-                      {:ok false :error/code :campaign-projection-observation-conflict
-                       :current (:pointer current-result) :candidate candidate})))))
-            (catch Throwable t
-              {:ok false :error/code :campaign-projection-publish-failed
-               :finding {:message (.getMessage t)}})))))))
+                          :observation-conflict
+                          {:ok false :error/code :campaign-projection-observation-conflict
+                           :current (:pointer current-result) :candidate candidate})))))
+              (catch Throwable t
+                {:ok false :error/code :campaign-projection-publish-failed
+                 :finding {:message (.getMessage t)}})))))))))
 
 (defn project!
   "Publish CERTIFICATE-PATH monotonically, then send its stable rendering to

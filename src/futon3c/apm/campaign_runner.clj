@@ -74,16 +74,31 @@
   A failed effect is still followed by a checkpoint, making its durable claim
   visible to the projection and recovery policy."
   [{:keys [handlers actor require-batch-permit? batch-permit
-           trusted-permit-id trusted-permit-issuer] :as options}]
+           trusted-permit-id trusted-permit-issuer require-trigger? trigger-id]
+    :as options}]
   (let [before (checkpoint! options {:checkpoint/stage :before})]
     (if-not (:ok before)
       before
       (let [certificate (:certificate before)
             decision (regulator/decide certificate)]
-        (if-not (= :dispatch (:decision decision))
+        (cond
+          (and require-trigger?
+               (not (and (string? trigger-id) (not-empty trigger-id))))
+          {:ok false :runner/status :stop
+           :error/code :campaign-runner-trigger-required
+           :checkpoint before}
+
+          (and require-trigger?
+               (contains? (:campaign/consumed-triggers certificate) trigger-id))
+          {:ok true :runner/status :duplicate-trigger
+           :trigger/id trigger-id :checkpoint before}
+
+          (not= :dispatch (:decision decision))
           {:ok (= :complete (:decision decision))
            :runner/status (:decision decision)
            :decision decision :checkpoint before}
+
+          :else
           (let [obligation (:obligation decision)
                 batch-action-index (get (:campaign/permit-usage certificate)
                                         (:permit/id batch-permit) 0)
@@ -106,9 +121,12 @@
                            :handlers handlers :actor actor
                            :at (:generated-at certificate)
                            :claim-context
-                           (when require-batch-permit?
-                             {:batch/permit-id (:permit/id batch-permit)
-                              :batch/action-index batch-action-index})})
+                           (cond-> {}
+                             require-batch-permit?
+                             (assoc :batch/permit-id (:permit/id batch-permit)
+                                    :batch/action-index batch-action-index)
+                             require-trigger?
+                             (assoc :trigger/id trigger-id))})
                 after (checkpoint!
                        options {:checkpoint/stage :after
                                 :obligation/id (:obligation/id obligation)
@@ -118,6 +136,15 @@
               {:ok false :error/code :campaign-runner-post-checkpoint-failed
                :decision decision :execution executed :checkpoint before
                :post-checkpoint after}
+
+              (and require-trigger?
+                   (= :campaign-obligation-claim-refused (:error/code executed))
+                   (contains? (get-in after [:certificate
+                                             :campaign/consumed-triggers])
+                              trigger-id))
+              {:ok true :runner/status :duplicate-trigger
+               :trigger/id trigger-id :decision decision :execution executed
+               :checkpoint before :post-checkpoint after}
 
               (not (:ok executed))
               {:ok false :error/code :campaign-runner-execution-failed

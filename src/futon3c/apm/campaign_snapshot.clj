@@ -69,6 +69,7 @@
                  :campaign/obligation-plan (:campaign/obligation-plan projection)
                  :campaign/claims-required? (:campaign/claims-required? projection)
                  :campaign/permit-usage (:campaign/permit-usage projection)
+                 :campaign/consumed-triggers (:campaign/consumed-triggers projection)
                  :campaign/blocks (:campaign/blocks projection)
                  :campaign/frames (:campaign/frames projection)
                  :ledger/digest (:ledger/digest projection)
@@ -86,8 +87,18 @@
     (string? x) (Path/of x (make-array String 0))
     :else nil))
 
+(defn- install-create-only! [^Path temporary ^Path target]
+  (try
+    ;; The fully synced temporary inode is linked into place atomically. Unlike
+    ;; rename, createLink has create-only semantics and cannot replace an
+    ;; existing certificate identity.
+    (Files/createLink target temporary)
+    true
+    (catch FileAlreadyExistsException _ false)))
+
 (defn persist!
-  "Persist CERTIFICATE under DIRECTORY/<certificate-id>.edn using CREATE_NEW.
+  "Persist CERTIFICATE under DIRECTORY/<certificate-id>.edn with atomic,
+  create-only publication of fully synced content.
   An existing byte-equivalent certificate is an idempotent success; any
   content disagreement at that identity is a coherence conflict."
   [directory certificate-value]
@@ -110,16 +121,18 @@
       (try
         (Files/createDirectories directory (make-array FileAttribute 0))
         (let [target (.resolve directory (str certificate-id ".edn"))
-              text (str (pr-str certificate-value) "\n")]
+              text (str (pr-str certificate-value) "\n")
+              temporary (Files/createTempFile directory ".certificate-" ".edn"
+                                              (make-array FileAttribute 0))]
           (try
-            (Files/writeString target text StandardCharsets/UTF_8
+            (Files/writeString temporary text StandardCharsets/UTF_8
                                (into-array OpenOption
-                                           [StandardOpenOption/CREATE_NEW
+                                           [StandardOpenOption/TRUNCATE_EXISTING
                                             StandardOpenOption/WRITE
                                             StandardOpenOption/SYNC]))
-            {:ok true :created? true :path (str target)
-             :certificate/id certificate-id}
-            (catch FileAlreadyExistsException _
+            (if (install-create-only! temporary target)
+              {:ok true :created? true :path (str target)
+               :certificate/id certificate-id}
               (try
                 (let [existing (edn/read-string
                                 (Files/readString target StandardCharsets/UTF_8))]
@@ -131,7 +144,9 @@
                      :path (str target) :certificate/id certificate-id}))
                 (catch Throwable t
                   {:ok false :error/code :campaign-certificate-existing-unreadable
-                   :path (str target) :finding {:message (.getMessage t)}})))))
+                   :path (str target) :finding {:message (.getMessage t)}})))
+            (finally
+              (Files/deleteIfExists temporary))))
         (catch Throwable t
           {:ok false :error/code :campaign-certificate-write-failed
            :finding {:message (.getMessage t)}})))))

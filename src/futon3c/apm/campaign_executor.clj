@@ -45,7 +45,7 @@
 
       (not (or (nil? claim-context)
                (and (map? claim-context)
-                    (every? #{:batch/permit-id :batch/action-index}
+                    (every? #{:batch/permit-id :batch/action-index :trigger/id}
                             (keys claim-context)))))
       {:ok false :error/code :campaign-executor-claim-context-invalid}
 

@@ -81,6 +81,14 @@
                     (get-in event [:event/body :batch/permit-id]) 0)
                (get-in event [:event/body :batch/action-index])))
     :campaign-obligation-batch-index-nonmonotonic
+    (and (= :obligation/claimed (:event/type event))
+         (contains? (:event/body event) :trigger/id)
+         (not (nonblank? (get-in event [:event/body :trigger/id]))))
+    :campaign-obligation-trigger-invalid
+    (and (= :obligation/claimed (:event/type event))
+         (contains? (:consumed-triggers state)
+                    (get-in event [:event/body :trigger/id])))
+    :campaign-obligation-trigger-consumed
     (and (= :obligation/released (:event/type event))
          (nil? (:active-claim state)))
     :campaign-obligation-release-without-claim
@@ -186,16 +194,19 @@
           (refusal state event :campaign-obligation-version-stale)
           :else
           (let [permit-id (:batch/permit-id body)
+                trigger-id (:trigger/id body)
                 claim (cond-> {:obligation/id (:obligation/id obligation)
                                :obligation obligation
                                :claimed-at (:event/at event)
                                :actor (:event/actor event)}
                         permit-id
                         (assoc :batch/permit-id permit-id
-                               :batch/action-index (:batch/action-index body)))]
+                               :batch/action-index (:batch/action-index body))
+                        trigger-id (assoc :trigger/id trigger-id))]
             {:ok true
              :state (cond-> (assoc state :active-claim claim)
-                      permit-id (update-in [:permit-usage permit-id] (fnil inc 0)))})))
+                      permit-id (update-in [:permit-usage permit-id] (fnil inc 0))
+                      trigger-id (update :consumed-triggers conj trigger-id))})))
 
       :obligation/released
       (let [evidence (:evidence body)]
@@ -352,7 +363,8 @@
 (def initial-state
   {:campaign-id nil :status :empty :version 0 :next-seq 0
    :event-ids #{} :blocks {} :frames {}
-   :permit-usage {} :active-block-id nil :active-frame-id nil})
+   :permit-usage {} :consumed-triggers #{}
+   :active-block-id nil :active-frame-id nil})
 
 (defn fold-ledger
   "Validate and fold EVENTS. Refuses at the first invalid event and retains the
@@ -410,6 +422,7 @@
           :campaign/obligation-plan (:obligation-plan state)
           :campaign/claims-required? (:claims-required? state)
           :campaign/permit-usage (:permit-usage state)
+          :campaign/consumed-triggers (:consumed-triggers state)
           :campaign/blocks (:blocks state)
           :campaign/frames (:frames state)
           :active/claim (:active-claim state)

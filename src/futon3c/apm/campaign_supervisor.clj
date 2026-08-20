@@ -16,14 +16,15 @@
   With no active claim, delegate one normal runner step. With a claim, obtain
   one independent assessment, invoke evidence-gated recovery, then checkpoint
   and project the result. This function never sleeps, polls, or retries."
-  [{:keys [assessment-fn recovery-assessor] :as options}]
+  [{:keys [assessment-fn recovery-assessor trigger-id] :as options}]
   (let [before (runner/checkpoint! options {:checkpoint/stage :supervisor})]
     (if-not (:ok before)
       before
       (let [certificate (:certificate before)
             claim (:active/claim certificate)]
         (if-not claim
-          (runner/step! (assoc options :require-batch-permit? true))
+          (runner/step! (assoc options :require-batch-permit? true
+                               :require-trigger? true :trigger-id trigger-id))
           (cond
             (not (fn? assessment-fn))
             {:ok false :runner/status :stop
