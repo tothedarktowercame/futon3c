@@ -37,7 +37,7 @@
 
  :blocking-slices
  [{:slice/id :complete-phase-and-receipt-graph
-   :order 1
+   :order 1 :status :complete
    :problem
    "The executable campaign has only preflight, solve, verify, and close-frame,
     while the frame contract requires three Student attempts, intervening Guide
@@ -49,7 +49,7 @@
     every completion receipt before its transition."}
 
   {:slice/id :executable-role-handlers
-   :order 2
+   :order 2 :status :complete
    :problem
    "The frame-18 adapter has handlers only for open-block, open-frame,
     preflight, solve, and verify; qualification derives close evidence from a
@@ -61,7 +61,7 @@
     produce durable receipts and the close inspection passes from those facts."}
 
   {:slice/id :branch-addressed-apparatus-validation
-   :order 3
+   :order 3 :status :blocking
    :problem
    "The apparatus gate compares the running control worktree HEAD with the
     frame's historical harness hash. Legitimate machine development therefore
@@ -73,7 +73,7 @@
     checkout or Git object identity, independently of the developer worktree."}
 
   {:slice/id :ledger-derived-live-projection
-   :order 4
+   :order 4 :status :blocking
    :problem
    "Certificates and projection files exist, but no tested adapter projects
     the active ledger frame and its receipts into the live problem buffer."
@@ -84,7 +84,7 @@
     content-addressed projection of the ledger after every step."}
 
   {:slice/id :ten-unit-pinned-manifest
-   :order 5
+   :order 5 :status :blocking
    :problem
    "The registered countdown block contains only f18/a97J07; frames 19--27 do
     not yet have problem identities, revisions, arms, registrations, or pins."
@@ -95,7 +95,7 @@
     non-topology classification and immutable problem/apparatus identities."}
 
   {:slice/id :repeatable-workspace-provisioning
-   :order 6
+   :order 6 :status :blocking
    :problem
    "Solver and Student workspaces are hand-pinned f18 paths; there is no
     tested per-manifest-unit provision/validate/retire operation."
@@ -115,5 +115,5 @@
    :reason "The countdown deliberately retains one operator permit per step;
             batch permits are the subsequent qualification target."}]
 
- :estimated-remaining-structural-slices 6
- :next-slice :complete-phase-and-receipt-graph}
+ :estimated-remaining-structural-slices 4
+ :next-slice :branch-addressed-apparatus-validation}
