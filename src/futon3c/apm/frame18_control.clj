@@ -19,6 +19,8 @@
   "holes/labs/M-apm-demonstration/frame-18-step-plan.edn")
 (def continuation-receipt-path
   "holes/labs/M-apm-demonstration/frame-18-continuation-receipt.edn")
+(def preflight-receipt-path
+  "holes/labs/M-apm-demonstration/frame-18-preflight-receipt.edn")
 (def state-directory
   (Path/of "data/apm-campaigns/frame-18-bounded-admission"
            (make-array String 0)))
@@ -147,6 +149,19 @@
 (defn- plan []
   (edn/read-string (slurp plan-path)))
 
+(defn- valid-preflight-receipt? [receipt action]
+  (and (= (:receipt/id receipt)
+          (machine/ledger-digest [(dissoc receipt :receipt/id)]))
+       (= :frame-preflight (:receipt/type receipt))
+       (= (:frame-id action) (:receipt/frame-id receipt))
+       (= (:problem-id action) (:receipt/problem-id receipt))
+       (= :preflight-passed (:receipt/result receipt))
+       (= {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+          (:receipt/lean receipt))
+       (= :non-topology (:receipt/classification receipt))
+       (true? (:receipt/clean-before? receipt))
+       (true? (:receipt/clean-after? receipt))))
+
 (defn- options []
   {:ledger-path ledger-path
    :certificate-directory certificate-directory
@@ -174,7 +189,14 @@
                     {:ok true :certificate
                      {:effect :frame-seats-minted :response response}}
                     {:ok false :error/code :frame-seat-mint-failed
-                     :finding response})))}
+                     :finding response})))
+              :preflight
+              (fn [action]
+                (let [receipt (edn/read-string (slurp preflight-receipt-path))]
+                  (if (valid-preflight-receipt? receipt action)
+                    {:ok true :certificate receipt}
+                    {:ok false :error/code :frame-preflight-receipt-invalid
+                     :finding {:receipt/id (:receipt/id receipt)}})))}
    :actor "frame-18-control"})
 
 (defn bootstrap! []
@@ -216,12 +238,15 @@
 (defn inspect! []
   (stepper/inspect! (options)))
 
-(defn open-block! []
+(defn advance! [expected-kind]
   (let [bootstrapped (bootstrap!)
         inspection (inspect!)]
     (if-not (and (:ok bootstrapped) (:ok inspection)
-                 (= :ready (:stepper/status inspection)))
+                 (= :ready (:stepper/status inspection))
+                 (= expected-kind
+                    (get-in inspection [:obligation :obligation/action :kind])))
       {:ok false :status :precondition-failed
+       :expected-kind expected-kind
        :bootstrap bootstrapped :inspection inspection}
       (let [issued (stepper/issue-permit
                     {:report (:report inspection) :issuer "joe"
@@ -234,11 +259,14 @@
                   :trusted-permit-id (:permit/id permit)
                   :trusted-issuer "joe")))))))
 
+(defn open-block! [] (advance! :open-block))
+
 (defn -main [& [command]]
   (let [result (case command
                  "bootstrap" (bootstrap!)
                  "inspect" (inspect!)
                  "open-block" (open-block!)
+                 "preflight" (advance! :preflight)
                  {:ok false :error/code :frame18-command-unknown})]
     (prn result)
     (when-not (:ok result) (System/exit 1))))
