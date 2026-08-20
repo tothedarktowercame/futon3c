@@ -116,7 +116,14 @@
    :gate/requirements
    [{:requirement/id :apparatus-unchanged
      :fact/path [:apparatus :unchanged-since-open?]
-     :check :equals :expected true}]}]
+     :check :equals :expected true}]}
+  {:gate/id :workspaces-ready
+   :gate/applies-to #{:solve}
+   :gate/requirements
+   [{:requirement/id :writable-workspaces-ready
+     :fact/path [:workspaces :ready?] :check :equals :expected true}
+    {:requirement/id :writable-workspaces-isolated
+     :fact/path [:workspaces :isolated?] :check :equals :expected true}]}]
  :qualification/operation
  {:inspect "Produce checkpoint, next obligation, and all gate evidence; no effect."
   :authorize "Bind Joe's approval to exactly that report/certificate/obligation."

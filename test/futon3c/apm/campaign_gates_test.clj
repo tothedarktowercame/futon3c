@@ -28,11 +28,12 @@
             :dispositions-complete? true :promotion-reviewed? true}
    :separation {:author-reviewer-distinct? true :arms-isolated? true}
    :receipts {:durable? true :replayable? true}
-   :apparatus {:unchanged-since-open? true}})
+   :apparatus {:unchanged-since-open? true}
+   :workspaces {:ready? true :isolated? true}})
 
 (deftest frame-18-qualification-is-fully-data-driven
   (let [results (gates/evaluate specs passing-facts)]
-    (is (= 12 (count results)))
+    (is (= 13 (count results)))
     (is (every? #(= :pass (:gate/status %)) results))))
 
 (deftest frame-17-baseline-fails-before-dispatch

@@ -48,7 +48,7 @@
   durable receipts. Missing routes remain nil and therefore fail closed."
   [{:keys [seat-configs registration-check cast-check continuation-check
            projection-check trace-check separation-check receipt-check
-           apparatus-check problem-check specification-check]}]
+           apparatus-check workspace-check problem-check specification-check]}]
   (let [roles (set (keys seat-configs))
         applicable-request-values
         (keep (fn [[_ config]]
@@ -107,7 +107,9 @@
      :receipts {:durable? (:durable? receipt-check)
                 :replayable? (:replayable? receipt-check)}
      :apparatus {:unchanged-since-open?
-                 (:unchanged-since-open? apparatus-check)}}))
+                 (:unchanged-since-open? apparatus-check)}
+     :workspaces {:ready? (:ready? workspace-check)
+                  :isolated? (:isolated? workspace-check)}}))
 
 (defn read-plan [path]
   (try

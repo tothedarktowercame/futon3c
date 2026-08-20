@@ -104,6 +104,18 @@
         problem-revision (:problem/revision control)
         problem-blob (git "-C" problem-repository "rev-parse"
                           (str problem-revision ":" (:problem/path control)))
+        workspaces (:frame/workspaces control)
+        workspace-observations
+        (into {}
+              (map (fn [[role {:keys [path branch base-revision]}]]
+                     [role {:branch (git "-C" path "branch" "--show-current")
+                            :head (git "-C" path "rev-parse" "HEAD")
+                            :clean? (str/blank?
+                                     (or (git "-C" path "status" "--porcelain")
+                                         "not-clean"))
+                            :expected-branch branch
+                            :expected-head base-revision}]))
+              workspaces)
         specification-check
         (frame-specification/ingest control-path active-frame-id
                                     registration-digest)
@@ -143,6 +155,16 @@
      {:unchanged-since-open? (and manifest-matches?
                                   (:valid? specification-check)
                                   (= problem-blob (:problem/blob control)))}
+     :workspace-check
+     {:ready? (every? (fn [[_ observation]]
+                        (and (:clean? observation)
+                             (= (:branch observation)
+                                (:expected-branch observation))
+                             (= (:head observation)
+                                (:expected-head observation))))
+                      workspace-observations)
+      :isolated? (= (count workspaces)
+                    (count (set (map :path (vals workspaces)))))}
      :receipt-check
      {:durable? (and (:ok loaded)
                      (= :valid (get-in loaded [:projection :projection/status])))

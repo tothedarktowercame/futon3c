@@ -15,6 +15,8 @@ The frame specification is an EDN document. For frame 18 it is
 - every seat's requested provider and explicit timeout policy;
 - an apparatus repository and revision, plus every role card's repository path
   and Git blob SHA, keyed by the frame role that receives it;
+- dedicated solver and student repository, branch, base revision, and worktree
+  pins; the two writable worktrees must be distinct;
 - frame timeout, continuation, and author/reviewer separation policies;
 - countdown block and qualification-plan identity.
 
@@ -46,6 +48,13 @@ boundary, `:apparatus-frozen` re-ingests the registered specification and also
 checks its digest and problem blob. Never read a newer working-tree card merely
 because it has the expected filename; inject the content identified by the
 registered blob.
+
+Before the first solver dispatch, `:workspaces-ready` requires both writable
+worktrees to be clean, on their registered branches, and still at their pinned
+base revisions. Solver and student must never share a branch or worktree. After
+authorized work begins, subsequent dispatches name the current committed head
+and validate it against the preceding receipt; the immutable base pin remains
+the ancestry root rather than an assertion that the branch can never advance.
 
 Then inspect the machine:
 

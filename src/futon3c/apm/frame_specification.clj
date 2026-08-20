@@ -13,7 +13,7 @@
     :problem/classification :problem/repository :problem/branch
     :problem/revision :problem/path :problem/blob :problem/preflight
     :frame/seat-policy :frame/timeout-policy :frame/cast
-    :frame/apparatus
+    :frame/apparatus :frame/workspaces
     :frame/continuation-policy :frame/separation-policy
     :countdown/block :qualification/plan})
 
@@ -46,6 +46,28 @@
                     role-cards)
         (conj :apparatus-revision-mismatch)))))
 
+(def writable-roles #{:solver :student})
+
+(defn- workspace-errors [spec]
+  (let [workspaces (:frame/workspaces spec)]
+    (cond
+      (not (and (map? workspaces)
+                (= writable-roles (set (keys workspaces)))))
+      [:workspace-shape-invalid]
+
+      (not (every? (fn [[_ {:keys [repository branch base-revision path]}]]
+                     (and (every? #(and (string? %) (not (str/blank? %)))
+                                  [repository branch path])
+                          (sha40? base-revision)))
+                   workspaces))
+      [:workspace-pin-invalid]
+
+      (= (get-in workspaces [:solver :path])
+         (get-in workspaces [:student :path]))
+      [:workspaces-not-isolated]
+
+      :else [])))
+
 (defn- policy-errors [spec]
   (let [seats (:frame/seat-policy spec)
         frame-minutes (get-in spec [:frame/timeout-policy :frame-minutes])]
@@ -71,7 +93,9 @@
   (let [missing (->> required-keys (remove #(contains? spec %)) set)
         seat-roles (set (keys (:frame/seat-policy spec)))
         cast-roles (set (keys (:frame/cast spec)))
-        errors (into (concat (policy-errors spec) (apparatus-errors spec))
+        errors (into (concat (policy-errors spec)
+                             (apparatus-errors spec)
+                             (workspace-errors spec))
                      (cond-> []
                  (not (map? spec)) (conj :specification-not-map)
                  (seq missing) (conj :required-keys-missing)

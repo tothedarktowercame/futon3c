@@ -28,6 +28,30 @@
         (is (false? (:valid? result)))
         (is (some #{:apparatus-revision-mismatch} (:errors result)))))))
 
+(deftest writable-workspaces-are-pinned-and-isolated
+  (let [spec (edn/read-string (slurp control-path))
+        shared-path (get-in spec [:frame/workspaces :solver :path])
+        changed (assoc-in spec [:frame/workspaces :student :path] shared-path)
+        result (specification/validate changed "f18" nil)]
+    (is (false? (:valid? result)))
+    (is (some #{:workspaces-not-isolated} (:errors result)))))
+
+(deftest solve-gate-requires-ready-isolated-workspaces
+  (let [plan (:plan (qualification/read-plan
+                     "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"))
+        evaluate (fn [workspace-check]
+                   (let [facts (qualification/derive-facts
+                                {:workspace-check workspace-check})]
+                     (->> (gates/evaluate-obligation
+                           (:qualification/gates plan) facts
+                           {:obligation/action {:kind :solve}})
+                          (filter #(= :workspaces-ready (:gate/id %)))
+                          first)))]
+    (is (= :pass (:gate/status
+                  (evaluate {:ready? true :isolated? true}))))
+    (is (= :fail (:gate/status
+                  (evaluate {:ready? false :isolated? true}))))))
+
 (deftest specification-gate-passes-and-mismatch-fails-closed
   (let [plan (:plan (qualification/read-plan
                      "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"))
