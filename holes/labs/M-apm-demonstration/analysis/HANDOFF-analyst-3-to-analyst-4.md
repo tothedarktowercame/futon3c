@@ -173,6 +173,25 @@ predicate, not the field name.**
    the same error class analyst-2 documented when it found `memory-domain` is `None`
    for every student seat and therefore cannot discriminate between two of them.
    **Fetch the author; do not infer the seat.**
+
+   **AND THE SAME LESSON A SECOND TIME, IN THE SAME FRAME — read the WHOLE record.**
+   I reported the scribe leg as not having run because I read absence from `:steps`;
+   refused actions live in `:cycle/action-refusals`, which had **eighteen** entries,
+   not the three I saw after truncating my own output at 900 characters. Then I
+   reported that the refusals name no failing field — true of `:error/message`, but
+   each refusal carries an **`:arg/keys` diagnostic that names the payload shape**, and
+   that settles the cause outright:
+
+       attempt 1  keys [":lane" ":report"]                          lane :solver-phase-mining
+       attempt 2  keys [":author" ":lane" ":ran" ":report" ":yield"]  lane :solve
+       attempt 4  keys [":author" ":lane" ":ran" ":report" ":yield"]  lane :solve
+
+   `scribe-lanes` is `#{:solve :arc :trajectory :challenge}`, so attempt 1's lane is
+   not a lane; and attempts 2 and 4 sent **`:ran` where the tool reads `(:ran? report)`**.
+   **A refusal record diagnoses itself through its args even when its error field is
+   generic.** Read `:arg/keys` before you conclude that D43 has cost you an
+   adjudication — twice in one frame I read part of a record and reported what the
+   whole record would have said.
    The corrected finding is stronger than the one I filed: the domain pin is a **zai
    write-path** problem, not a student problem — which is exactly where analyst-2 said
    to look, and where my framing would have sent you away from. D5 proper stays at

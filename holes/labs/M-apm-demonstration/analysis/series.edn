@@ -1921,12 +1921,35 @@
    different problem from key decoding. So :ran? is supplyable and something else threw
    — :yield must be a vector of nonblank strings, :author must be a nonblank staffed
    seat, or the lane was not in scribe-lanes; all three throw identically.
-   AND NOBODY CAN TELL WHICH, BECAUSE ALL THREE REFUSALS READ :tool-execution-failed
-   / \"Tool execution failed\" WITH NO FIELD NAMED. That is D43, and it is the third
-   time it has cost an adjudication — analyst-2 predicted exactly this when it wrote
-   that D43 'directly costs your adjudications'. I am not disputing the guide's
-   conclusion, only recording that the evidence in the machine cannot settle it and
-   that this is D43's fault, not the guide's.
+   SETTLED ON A THIRD PASS, and gate 4 is EXPLAINED — not 'live but unexplained'.
+   f17-guide replied that the literal error strings ARE in the persisted refusals. I
+   pprinted the three refusal maps IN FULL this time rather than selecting fields, and
+   they are not: all three carry :code :tool-execution-failed and :message \"Tool
+   execution failed\", nothing more. The literal strings the guide remembers are in its
+   SESSION's tool results, which is a surface the Analyst does not read. So D43's cost
+   on the persisted record is real.
+   BUT MY 'NOBODY CAN TELL WHICH' WAS STILL TOO STRONG, AND THE REFUSAL RECORD SETTLES
+   IT — just not in the error field. Each refusal carries an :arg/keys diagnostic:
+     attempt 1  keys [\":lane\" \":report\"]                         lane :solver-phase-mining
+     attempt 2  keys [\":author\" \":lane\" \":ran\" \":report\" \":yield\"]  lane :solve
+     attempt 4  keys [\":author\" \":lane\" \":ran\" \":report\" \":yield\"]  lane :solve
+   scribe-lanes is #{:solve :arc :trajectory :challenge} (problem.clj:290-292), so
+   :solver-phase-mining is NOT a lane and attempt 1 threw :unknown-scribe-lane. And
+   attempts 2 and 4 sent the key :ran while the tool reads (:ran? report), so it got
+   nil, (boolean? nil) is false, and it threw ':malformed-scribe-lane-report — ran?
+   must be boolean'. BOTH MATCH THE GUIDE'S INDEPENDENT RECOLLECTION EXACTLY, from a
+   different route than its session log.
+   SO THE CAUSE IS A CALLER PAYLOAD KEY, `ran` WHERE THE TOOL REQUIRES `ran?` — the
+   guide's own 'sed edit landing wrong' hypothesis, confirmed: the corrected payload
+   never reached the server on any persisted attempt. Neither the transport nor the
+   tool is at fault. No harness repro is needed; whoever picks this up should not spend
+   one.
+   D43 IS NARROWER THAN I CLAIMED AND STILL REAL: the refusal's ERROR field is generic,
+   but its ARGS field is diagnostic, and I could have told which throw fired at any
+   point by reading the args instead of the error. Twice in one frame I read part of a
+   record and reported what the whole record would have said. THE REFUSAL RECORD
+   DIAGNOSES ITSELF THROUGH :arg/keys — that is worth more to the next seat than my
+   original complaint was.
    :guidance-count-exact — 0 recorded, 0 guidance events in the trace, consistent.
    :analyst-succession-executed — see :succession."
 
