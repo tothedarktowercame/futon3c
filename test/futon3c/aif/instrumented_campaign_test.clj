@@ -160,3 +160,71 @@
        #"record was not confirmed"
        (campaign/run-two-tick!
         (campaign-input (constantly {:ok false :error :store-unreachable}))))))
+
+(deftest failed-tick-a-gate-stops-before-r17-and-tick-b
+  (let [runner-calls (atom 0)
+        r17-calls (atom 0)
+        written (atom nil)
+        input (assoc (campaign-input
+                      (fn [record]
+                        (reset! written record)
+                        {:ok true :evidence-id "failed-gate-receipt"}))
+                     :runner-fn
+                     (fn [opts]
+                       (swap! runner-calls inc)
+                       (let [transformed ((:judgement-transform-fn opts)
+                                          base-judgement)
+                             action (get-in transformed [:decision :action])]
+                         {:attempt-id "attempt-failed-gate"
+                          :outcome :incomplete
+                          :checkpoints
+                          {:selection {:judgment {:selected-action action}}}
+                          :data {:review-job {:job-id "independent-review"}
+                                 :witness {:resolved? false
+                                           :dial-moved? false}}}))
+                     :r17/run
+                     (fn [_]
+                       (swap! r17-calls inc)
+                       (throw (ex-info "R17 must not run" {}))))
+        result (campaign/run-two-tick! input)]
+    (is (= 1 @runner-calls) "Tick B must not run after Tick A fails R12")
+    (is (zero? @r17-calls) "R17 must not run after Tick A fails R12")
+    (is (= :evidence-gate-failed (:campaign/status result)))
+    (is (false? (:campaign/compliant? result)))
+    (is (= 1 (count (:campaign/ticks result))))
+    (is (nil? (:campaign/r17 result)))
+    (is (= @written (dissoc result :campaign/storage-receipt)))))
+
+(deftest stop-line-preemption-is-recorded-without-campaign-selection-evidence
+  (let [runner-calls (atom 0)
+        written (atom nil)
+        input (assoc (campaign-input
+                      (fn [record]
+                        (reset! written record)
+                        {:ok true :evidence-id "preemption-receipt"}))
+                     :runner-fn
+                     (fn [_opts]
+                       (swap! runner-calls inc)
+                       {:attempt-id "attempt-stop-line"
+                        :outcome :grounded-change
+                        :checkpoints
+                        {:selection
+                         {:judgment
+                          {:selected-action
+                           {:type :repair-machine-failure
+                            :target "repair-previous-attempt"}
+                           :selection-reasons
+                           {:source :stop-the-line
+                            :repair-id "repair-previous-attempt"}}}}}))
+        result (campaign/run-two-tick! input)
+        recorded-tick (first (:campaign/ticks result))]
+    (is (= 1 @runner-calls))
+    (is (= :campaign-preempted-by-stop-line (:campaign/status result)))
+    (is (= :campaign-preempted-by-stop-line (:tick/status recorded-tick)))
+    (is (= "repair-previous-attempt"
+           (get-in recorded-tick [:campaign/preemption :repair-id])))
+    (is (nil? (:r11 recorded-tick)))
+    (is (nil? (:r15 recorded-tick)))
+    (is (nil? (:r12/report recorded-tick)))
+    (is (true? (get-in result [:campaign/replay :all-identical?])))
+    (is (= @written (dissoc result :campaign/storage-receipt)))))

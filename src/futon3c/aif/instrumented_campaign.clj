@@ -13,7 +13,7 @@
             [futon3c.aif.two-layer-calibration :as r12])
   (:import (java.time Instant)))
 
-(def campaign-schema :futon3c.aif/instrumented-campaign-v1)
+(def campaign-schema :futon3c.aif/instrumented-campaign-v2)
 
 (defn- fail! [message data]
   (throw (ex-info message
@@ -156,23 +156,41 @@
                            :campaign/tick-id tick-id)
         result (runner-fn runner-opts)
         ended-ms (clock-fn)
-        prepared @instrumentation]
-    (when-not prepared
-      (fail! "The runner returned before the campaign selection hook ran"
-             {:tick/id tick-id :runner/result result}))
-    (let [evidence (calibration-input campaign-id tick-id runner-opts
-                                      prepared result)
-          report (r12/two-layer-report evidence)]
+        prepared @instrumentation
+        timing {:started-at (str (Instant/ofEpochMilli started-ms))
+                :ended-at (str (Instant/ofEpochMilli ended-ms))
+                :elapsed-ms (- ended-ms started-ms)}
+        stop-line? (= :stop-the-line
+                      (get-in result [:checkpoints :selection :judgment
+                                      :selection-reasons :source]))]
+    (cond
+      prepared
+      (let [evidence (calibration-input campaign-id tick-id runner-opts
+                                        prepared result)
+            report (r12/two-layer-report evidence)]
+        {:tick/id tick-id
+         :tick/status :campaign-selection-ran
+         :tick/timing timing
+         :runner/result result
+         :transformed-judgement (:judgement prepared)
+         :r11 (:r11 prepared)
+         :r15 (:r15 prepared)
+         :r12/input evidence
+         :r12/report report})
+
+      stop-line?
       {:tick/id tick-id
-       :tick/timing {:started-at (str (Instant/ofEpochMilli started-ms))
-                     :ended-at (str (Instant/ofEpochMilli ended-ms))
-                     :elapsed-ms (- ended-ms started-ms)}
+       :tick/status :campaign-preempted-by-stop-line
+       :tick/timing timing
        :runner/result result
-       :transformed-judgement (:judgement prepared)
-       :r11 (:r11 prepared)
-       :r15 (:r15 prepared)
-       :r12/input evidence
-       :r12/report report})))
+       :campaign/preemption
+       {:source :stop-the-line
+        :repair-id (get-in result [:checkpoints :selection :judgment
+                                   :selection-reasons :repair-id])}}
+
+      :else
+      (fail! "The runner returned before the campaign selection hook ran"
+             {:tick/id tick-id :runner/result result}))))
 
 (defn- next-slow-state [slow-state tick]
   (if (true? (get-in tick [:r12/report :gate/clear?]))
@@ -200,16 +218,24 @@
   (let [tick-results
         (mapv
          (fn [tick]
-           (let [r11-replay (r11/replay (get-in tick [:r11 :replay/receipt]))
-                 r15-replay (run-hierarchy (get-in tick [:r15 :input]))
-                 r12-replay (r12/two-layer-report (:r12/input tick))]
+           (if (= :campaign-preempted-by-stop-line (:tick/status tick))
              {:tick/id (:tick/id tick)
-              :r11/identical? (:replay/identical? r11-replay)
-              :r15/identical? (= r15-replay (get-in tick [:r15 :result]))
-              :r12/identical? (= r12-replay (:r12/report tick))}))
+              :replay/status :not-applicable
+              :r11/identical? true
+              :r15/identical? true
+              :r12/identical? true}
+             (let [r11-replay (r11/replay (get-in tick [:r11 :replay/receipt]))
+                   r15-replay (run-hierarchy (get-in tick [:r15 :input]))
+                   r12-replay (r12/two-layer-report (:r12/input tick))]
+               {:tick/id (:tick/id tick)
+                :r11/identical? (:replay/identical? r11-replay)
+                :r15/identical? (= r15-replay (get-in tick [:r15 :result]))
+                :r12/identical? (= r12-replay (:r12/report tick))})))
          (:campaign/ticks campaign))
-        r17-identical? (= (:campaign/r17 campaign)
-                           (r17/replay (:campaign/r17 campaign)))]
+        r17-envelope (:campaign/r17 campaign)
+        r17-identical? (if r17-envelope
+                         (= r17-envelope (r17/replay r17-envelope))
+                         true)]
     {:ticks tick-results
      :r17/identical? r17-identical?
      :all-identical?
@@ -218,6 +244,37 @@
                         (:r15/identical? %)
                         (:r12/identical? %))
                   tick-results))}))
+
+(defn- confirm-record! [record-fn record]
+  (let [record (assoc record :campaign/replay (replay-decisions record))
+        receipt (record-fn record)]
+    (when-not (true? (:ok receipt))
+      (throw (ex-info "Instrumented campaign record was not confirmed"
+                      {:failure-kind :campaign-record-unconfirmed
+                       :campaign/id (:campaign/id record)
+                       :receipt receipt
+                       :record record})))
+    (assoc record :campaign/storage-receipt receipt)))
+
+(defn- campaign-timing [started-ms ended-ms r17-timing]
+  (cond-> {:started-at (str (Instant/ofEpochMilli started-ms))
+           :ended-at (str (Instant/ofEpochMilli ended-ms))
+           :elapsed-ms (- ended-ms started-ms)}
+    r17-timing (assoc :r17 r17-timing)))
+
+(defn- stopped-record
+  [campaign-id campaign-plan initial-slow-state started-ms ended-ms tick]
+  (let [preempted? (= :campaign-preempted-by-stop-line (:tick/status tick))]
+    {:campaign/schema campaign-schema
+     :campaign/id campaign-id
+     :campaign/status (if preempted?
+                        :campaign-preempted-by-stop-line
+                        :evidence-gate-failed)
+     :campaign/compliant? false
+     :campaign/plan campaign-plan
+     :campaign/timing (campaign-timing started-ms ended-ms nil)
+     :campaign/initial-slow-state initial-slow-state
+     :campaign/ticks [tick]}))
 
 (defn run-two-tick!
   "Run and durably receipt an explicit two-tick campaign.
@@ -241,52 +298,55 @@
         campaign-started-ms (clock-fn)
         runner-fn (or runner-fn full-loop/run-opportunity!)
         first-tick (run-tick! campaign-id tick-a initial-slow-state nil
-                              runner-fn clock-fn)
-        slow-after-a (next-slow-state initial-slow-state
-                                      (assoc first-tick
-                                             :tick/as-of (:tick/as-of tick-a)))
-        r17-input (resolve-input r17-spec first-tick)
-        r17-started-ms (clock-fn)
-        structure-envelope (r17/run r17-input)
-        r17-ended-ms (clock-fn)
-        tick-b-context {:campaign/id campaign-id
-                        :tick-a first-tick
-                        :slow-state slow-after-a
-                        :r17/envelope structure-envelope
-                        :r17/structure (:r17/resulting-structure
-                                       structure-envelope)}
-        tick-b (resolve-input tick-b tick-b-context)
-        second-tick (run-tick! campaign-id tick-b slow-after-a
-                               (:r17/resulting-structure structure-envelope)
-                               runner-fn clock-fn)
-        campaign-ended-ms (clock-fn)
-        compliant? (every? #(true? (get-in % [:r12/report :gate/clear?]))
-                            [first-tick second-tick])
-        record {:campaign/schema campaign-schema
-                :campaign/id campaign-id
-                :campaign/status (if compliant?
-                                   :two-tick-evidence-complete
-                                   :evidence-gate-failed)
-                :campaign/compliant? compliant?
-                :campaign/plan campaign-plan
-                :campaign/timing
-                {:started-at (str (Instant/ofEpochMilli campaign-started-ms))
-                 :ended-at (str (Instant/ofEpochMilli campaign-ended-ms))
-                 :elapsed-ms (- campaign-ended-ms campaign-started-ms)
-                 :r17 {:started-at (str (Instant/ofEpochMilli r17-started-ms))
-                       :ended-at (str (Instant/ofEpochMilli r17-ended-ms))
-                       :elapsed-ms (- r17-ended-ms r17-started-ms)}}
-                :campaign/initial-slow-state initial-slow-state
-                :campaign/slow-state-after-tick-a slow-after-a
-                :campaign/r17 structure-envelope
-                :campaign/ticks [first-tick second-tick]}
-        replay (replay-decisions record)
-        record (assoc record :campaign/replay replay)
-        receipt (record-fn record)]
-    (when-not (true? (:ok receipt))
-      (throw (ex-info "Instrumented campaign record was not confirmed"
-                      {:failure-kind :campaign-record-unconfirmed
-                       :campaign/id campaign-id
-                       :receipt receipt
-                       :record record})))
-    (assoc record :campaign/storage-receipt receipt)))
+                              runner-fn clock-fn)]
+    (if (or (= :campaign-preempted-by-stop-line (:tick/status first-tick))
+            (not (true? (get-in first-tick [:r12/report :gate/clear?]))))
+      (confirm-record!
+       record-fn
+       (stopped-record campaign-id campaign-plan initial-slow-state
+                       campaign-started-ms (clock-fn) first-tick))
+      (let [slow-after-a (next-slow-state initial-slow-state
+                                          (assoc first-tick
+                                                 :tick/as-of (:tick/as-of tick-a)))
+            r17-input (resolve-input r17-spec first-tick)
+            r17-started-ms (clock-fn)
+            structure-envelope (r17/run r17-input)
+            r17-ended-ms (clock-fn)
+            r17-timing {:started-at (str (Instant/ofEpochMilli r17-started-ms))
+                        :ended-at (str (Instant/ofEpochMilli r17-ended-ms))
+                        :elapsed-ms (- r17-ended-ms r17-started-ms)}
+            tick-b-context {:campaign/id campaign-id
+                            :tick-a first-tick
+                            :slow-state slow-after-a
+                            :r17/envelope structure-envelope
+                            :r17/structure (:r17/resulting-structure
+                                           structure-envelope)}
+            tick-b (resolve-input tick-b tick-b-context)
+            second-tick (run-tick! campaign-id tick-b slow-after-a
+                                   (:r17/resulting-structure structure-envelope)
+                                   runner-fn clock-fn)
+            campaign-ended-ms (clock-fn)
+            compliant? (and (not= :campaign-preempted-by-stop-line
+                                  (:tick/status second-tick))
+                            (true? (get-in second-tick
+                                          [:r12/report :gate/clear?])))
+            record {:campaign/schema campaign-schema
+                    :campaign/id campaign-id
+                    :campaign/status
+                    (cond
+                      (= :campaign-preempted-by-stop-line
+                         (:tick/status second-tick))
+                      :campaign-preempted-by-stop-line
+
+                      compliant? :two-tick-evidence-complete
+                      :else :evidence-gate-failed)
+                    :campaign/compliant? compliant?
+                    :campaign/plan campaign-plan
+                    :campaign/timing
+                    (campaign-timing campaign-started-ms campaign-ended-ms
+                                     r17-timing)
+                    :campaign/initial-slow-state initial-slow-state
+                    :campaign/slow-state-after-tick-a slow-after-a
+                    :campaign/r17 structure-envelope
+                    :campaign/ticks [first-tick second-tick]}]
+        (confirm-record! record-fn record)))))
