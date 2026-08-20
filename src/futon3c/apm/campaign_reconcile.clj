@@ -71,10 +71,18 @@
       (concat
        (when-not (true? (:bound? binding))
          [(finding :conflict :binding :active-frame-unbound)])
-       (value-findings :binding
-                       {:frame-id (:frame-id active)
-                        :ledger-digest ledger-digest}
-                       binding [:frame-id :ledger-digest]))
+       (value-findings :binding {:frame-id (:frame-id active)}
+                       binding [:frame-id])
+       (cond
+         (nil? (:ledger-digest binding))
+         [(finding :stale :binding :binding-ledger-digest-missing)]
+
+         (not= ledger-digest (:ledger-digest binding))
+         [(finding :conflict :binding :value-mismatch
+                   {:field :ledger-digest :expected ledger-digest
+                    :actual (:ledger-digest binding)})]
+
+         :else []))
       (when (true? (:bound? binding))
         [(finding :conflict :binding :inactive-campaign-has-live-binding
                   {:frame-id (:frame-id binding)})]))))
