@@ -106,10 +106,49 @@
     (binding [*ns* n] (clojure.core/refer-clojure))
     n))
 
+(def ^:private refresh-refusal
+  (str "REFUSED: clojure.tools.namespace refresh/reload is not permitted here.\n\n"
+       "It is not a scoped reload in this JVM and cannot be made into one.\n\n"
+       "1. BLAST RADIUS. deps.edn pulls futon3b, futon1b, futon0, futon2 and\n"
+       "   futon3a as :local/root, so their source AND test directories are on\n"
+       "   the classpath as directories. set-refresh-dirs is never called, so\n"
+       "   refresh scans all of them: it unloads and reloads every namespace\n"
+       "   across the constellation, not the one you edited.\n\n"
+       "2. IT DESTROYS defonce STATE, so scoping it would not help. refresh\n"
+       "   REMOVES a namespace and recreates it; defonce only protects against\n"
+       "   re-evaluation, not removal. !registry, the agent pouch and the\n"
+       "   parked-on store are all defonce, and all come back empty.\n\n"
+       "3. IT SPLITS THE RUNNING IMAGE. Live handlers retain the old Vars and\n"
+       "   keep serving from them, while anything newly resolved reaches the\n"
+       "   recreated ones. The server then disagrees with itself and every\n"
+       "   reading taken through this endpoint describes a phantom.\n\n"
+       "This happened on 2026-08-19 at 19:37:49Z: a refresh intended to load one\n"
+       "commit aborted on futon2.aif.mission-control-graph-test, left\n"
+       "futon3c.agents.zai-api unloaded, emptied the agent registry as seen from\n"
+       "here while :7070 still reported 80 agents, and broke frames/mint-seats.\n"
+       "A frame was opened into that image 107 seconds later.\n\n"
+       "To load new code: commit it and RESTART (systemctl --user restart\n"
+       "futon3c-zone). There is no lighter-weight substitute."))
+
+(defn- refresh-attempt?
+  "True when CODE tries to drive clojure.tools.namespace's refresh/reload.
+
+   Deliberately a blunt textual guard: this runs before any parsing, must catch
+   an aliased require (`[... :as ctnr]` then `(ctnr/refresh)`), and a false
+   positive costs a restart while a false negative costs the running image."
+  [code]
+  (let [c (str code)]
+    (boolean
+     (or (str/includes? c "tools.namespace")
+         (re-find #"\((?:[\w.-]+/)?refresh(?:-all|-dirs)?\s*[\)\s]" c)
+         (re-find #"\((?:[\w.-]+/)?clear\s*\)" c)))))
+
 (defn- eval-handler
   "Ring handler for /eval. Accepts POST with Clojure code as body.
    Returns EDN-encoded result. Timeout after eval-timeout-ms.
-   Every non-blank request is written to eval-log-file before and after eval."
+   Every non-blank request is written to eval-log-file before and after eval.
+
+   Refuses tools.namespace refresh outright — see refresh-refusal."
   [request]
   (if (not= :post (:request-method request))
     {:status 405
@@ -121,6 +160,12 @@
         {:status 400
          :headers {"content-type" "text/plain"}
          :body "empty code"}
+        (if (refresh-attempt? code)
+          (do
+            (eval-log! {:type :refused :remote remote :bytes (count code) :code code})
+            {:status 403
+             :headers {"content-type" "text/plain"}
+             :body refresh-refusal})
         (let [start-ns (System/nanoTime)]
           (eval-log! {:type :request :remote remote :bytes (count code) :code code})
           (try
@@ -155,7 +200,7 @@
                           :error (.getMessage t) :exception-type (.getName (class t))})
               {:status 500
                :headers {"content-type" "application/edn"}
-               :body (pr-str {:ok false :error (.getMessage t) :type (.getName (class t))})})))))))
+               :body (pr-str {:ok false :error (.getMessage t) :type (.getName (class t))})}))))))))
 
 ;; =============================================================================
 ;; Server startup with route dispatch
