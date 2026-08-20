@@ -1,0 +1,16 @@
+{:frame/id "f18"
+ :frame/mode :operator-stepped
+ :frame/control-branch "frame/18-control"
+ :frame/control-base "2adc316979cd85ce059ec5fb6e2a5f4b26e11c33"
+ :problem/id "a97J07"
+ :problem/classification {:topology? false
+                          :source :operator-non-topology-rule}
+ :problem/repository "/home/joe/code/apm-lean"
+ :problem/branch "repair/m97A06-energy-regularity"
+ :problem/revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+ :problem/path "problems/a97J07/lean/Main.lean"
+ :problem/blob "69f1a6c35eab92f234beed1697fc59d1eac12445"
+ :problem/preflight {:lean-exit 0 :sorry-declarations 1 :errors 0
+                     :recorded-infrastructure-blocker? false}
+ :countdown/block "countdown-10"
+ :qualification/plan "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"}

@@ -92,7 +92,8 @@
     {:requirement/id :arms-isolated
      :fact/path [:separation :arms-isolated?] :check :equals :expected true}]}
   {:gate/id :durable-replay
-   :gate/applies-to #{:open-frame :preflight :solve :verify :close-frame}
+   :gate/applies-to #{:open-block :open-frame :preflight :solve :verify
+                      :close-frame :close-block :close-campaign}
    :gate/requirements
    [{:requirement/id :receipts-durable
      :fact/path [:receipts :durable?] :check :equals :expected true}

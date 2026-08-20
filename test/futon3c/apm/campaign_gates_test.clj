@@ -83,3 +83,12 @@
                     (remove :pass?) (map :requirement/id) set)]
     (is (= :fail (:gate/status pin-gate)))
     (is (= #{:pin-worktree-clean :pin-worktree-dedicated} failed))))
+
+(deftest campaign-boundary-steps-have-a-durable-replay-gate
+  (doseq [kind [:open-block :close-block :close-campaign]]
+    (is (= [:durable-replay]
+           (mapv :gate/id
+                 (gates/evaluate-obligation
+                  specs passing-facts
+                  {:obligation/action {:kind kind}})))
+        (name kind))))
