@@ -177,12 +177,14 @@
   fails, preventing a read error from masquerading as an absent observation."
   [{:keys [registration-path frame-record-paths receipt-paths
            binding-response jobs-response expected-frame-id now]}]
-  (let [routes {:registration (observe-registration registration-path now)
-                :frame-record (observe-frame-records frame-record-paths
-                                                     expected-frame-id now)
-                :binding (normalize-binding binding-response now)
-                :jobs (normalize-jobs jobs-response now)
-                :receipts (observe-receipts (or receipt-paths []) now)}
+  (let [routes (cond->
+                {:binding (normalize-binding binding-response now)
+                 :jobs (normalize-jobs jobs-response now)}
+                 expected-frame-id
+                 (assoc :registration (observe-registration registration-path now)
+                        :frame-record (observe-frame-records frame-record-paths
+                                                            expected-frame-id now)
+                        :receipts (observe-receipts (or receipt-paths []) now)))
         failures (into {} (remove (comp :ok val)) routes)]
     (if (seq failures)
       {:ok false :error/code :campaign-observation-failed :failures failures}
