@@ -14,6 +14,19 @@
   (let [values (map #(get-in seat-configs [% key]) required-roles)]
     (when (every? integer? values) (apply min values))))
 
+(defn seat-configs-from-roster
+  "Extract effective timeout metadata for ROLE->AGENT-ID from an agents response."
+  [response role-seat-ids]
+  (let [agents (or (:agents response) (get response "agents"))]
+    (into {}
+          (map (fn [[role agent-id]]
+                 (let [agent (or (get agents agent-id) (get agents (str agent-id)))
+                       metadata (or (:metadata agent) (get agent "metadata"))
+                       policy (or (:effective-timeouts metadata)
+                                  (get metadata "effective-timeouts"))]
+                   [role policy])))
+          role-seat-ids)))
+
 (defn- complete-role-map [roles]
   (into {} (map (fn [role] [role (contains? roles role)]) required-roles)))
 
@@ -27,12 +40,23 @@
            projection-check trace-check separation-check receipt-check
            apparatus-check]}]
   (let [roles (set (keys seat-configs))
-        request-ms (all-role-value seat-configs :request-timeout-ms)
+        applicable-request-values
+        (keep (fn [[_ config]]
+                (let [value (:request-timeout-ms config)]
+                  (when (integer? value) value)))
+              seat-configs)
+        request-ms (when (seq applicable-request-values)
+                     (apply min applicable-request-values))
         turn-ms (all-role-value seat-configs :turn-timeout-ms)]
     {:timeouts
      {:explicit? (and (= required-roles roles)
-                      (every? #(and (integer? (:request-timeout-ms %))
-                                    (integer? (:turn-timeout-ms %)))
+                      (seq applicable-request-values)
+                      (every? #(and (or (integer? (:request-timeout-ms %))
+                                        (= :not-applicable
+                                           (:request-timeout-ms %)))
+                                    (integer? (:turn-timeout-ms %))
+                                    (keyword? (:request/source %))
+                                    (keyword? (:turn/source %)))
                               (vals seat-configs)))
       :request-minutes (ms->minutes request-ms)
       :turn-minutes (ms->minutes turn-ms)

@@ -300,8 +300,28 @@
       (make-local :zai {:agent-id "timeout-frame-guide"
                         :evidence-store (atom {})}))
     (is (= zai-api/default-turn-timeout-ms (:turn-timeout-ms @captured)))
-    (is (not (contains? @captured :request-timeout-ms)))
+    (is (= zai-api/default-request-timeout-ms (:request-timeout-ms @captured)))
     (is (not (contains? @captured :timeout-ms)))))
+
+(deftest production-frame-seat-publishes-the-timeouts-its-closure-captured
+  (let [prepare (var-get #'futon3c.transport.http/prepare-frame-seat)
+        captured (atom {})]
+    (with-redefs [futon3c.transport.http/make-local-agent-invoke-fn
+                  (fn [agent-type opts]
+                    (reset! captured {:agent-type agent-type :opts opts})
+                    (fn [_prompt _session-id] {:result :stub :session-id nil}))]
+      (let [prepared (prepare {} {:agent-id "f18-student"
+                                  :agent-type :zai})]
+        (is (= zai-api/default-request-timeout-ms
+               (get-in prepared [:metadata :effective-timeouts
+                                 :request-timeout-ms])))
+        (is (= zai-api/default-turn-timeout-ms
+               (get-in prepared [:metadata :effective-timeouts
+                                 :turn-timeout-ms])))
+        (is (= (select-keys (:opts @captured)
+                            [:request-timeout-ms :turn-timeout-ms])
+               (select-keys (get-in prepared [:metadata :effective-timeouts])
+                            [:request-timeout-ms :turn-timeout-ms])))))))
 
 (deftest production-frame-mint-gives-only-student-mathematics-memory-domain
   (let [captured (atom [])]
@@ -316,7 +336,18 @@
           [student-type student-opts] (get by-id "domain-frame-student")]
       (is (= :zai student-type))
       (is (= :mathematics (:memory-domain student-opts)))
+      (is (= {:request-timeout-ms zai-api/default-request-timeout-ms
+              :turn-timeout-ms zai-api/default-turn-timeout-ms
+              :request/source :zai-api/default-request-timeout-ms
+              :turn/source :frame-seat/code-default}
+             (get-in (registry/get-agent "domain-frame-student")
+                     [:agent/metadata :effective-timeouts])))
       (doseq [agent-id ["domain-frame-solver" "domain-frame-guide"
                         "domain-frame-proctor" "domain-frame-scribe"]]
         (is (not (contains? (second (get by-id agent-id)) :memory-domain))
+            agent-id)
+        (is (= :not-applicable
+               (get-in (registry/get-agent agent-id)
+                       [:agent/metadata :effective-timeouts
+                        :request-timeout-ms]))
             agent-id)))))

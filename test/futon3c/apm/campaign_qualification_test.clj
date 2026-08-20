@@ -4,8 +4,13 @@
 
 (def role-configs
   (into {} (map (fn [role]
-                  [role {:request-timeout-ms 300000
-                         :turn-timeout-ms 3600000}])
+                  [role {:request-timeout-ms (if (= role :student)
+                                               300000 :not-applicable)
+                         :turn-timeout-ms 3600000
+                         :request/source (if (= role :student)
+                                           :zai-api/default-request-timeout-ms
+                                           :not-applicable)
+                         :turn/source :frame-seat/code-default}])
                 qualification/required-roles)))
 
 (def observations
@@ -43,3 +48,15 @@
     (is (false? (get-in facts [:timeouts :explicit?])))
     (is (false? (get-in facts [:cast :ready?])))
     (is (nil? (get-in facts [:continuations :durable?])))))
+
+(deftest serving-roster-metadata-is-the-timeout-source
+  (let [seat-ids (into {} (map (fn [role] [role (str "f18-" (name role))])
+                                qualification/required-roles))
+        agents (into {} (map (fn [[role agent-id]]
+                               [agent-id {:metadata
+                                          {:effective-timeouts
+                                           (get role-configs role)}}])
+                             seat-ids))]
+    (is (= role-configs
+           (qualification/seat-configs-from-roster
+            {:ok true :agents agents} seat-ids)))))
