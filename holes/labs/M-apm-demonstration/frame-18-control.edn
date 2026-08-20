@@ -28,6 +28,28 @@
   :scribe {:type :zai}
   :proctor {:type :codex}
   :analyst {:type :claude}}
+ :frame/apparatus
+ {:repository "/home/joe/code/futon3c"
+  :revision "4c08c2e64d6725a54ca85f981a4109a4947dad11"
+  :role-cards
+  {:solver
+   {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-v4.md"
+    :blob "ad63c4dc908a0061ee38d16fb51dacb31110a303"}
+   :student
+   {:path "holes/labs/M-apm-demonstration/role-cards/zai-student.md"
+    :blob "b1ee7de57a9d27993155fc8732a60a609889add4"}
+   :guide
+   {:path "holes/labs/M-apm-demonstration/role-cards/claude-guide.md"
+    :blob "b475f85cb1114184329f7e7b0a5e423085201218"}
+   :scribe
+   {:path "holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
+    :blob "02441d9df4b8a05355790a51f1e535bf9e9465d4"}
+   :proctor
+   {:path "holes/labs/M-apm-demonstration/role-cards/proctor.md"
+    :blob "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+   :analyst
+   {:path "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md"
+    :blob "1487e00f52bffee9af7847cca824eafd10b73bc8"}}}
  :frame/continuation-policy {:durable-required? true :wake-test-required? true}
  :frame/separation-policy {:author-reviewer-distinct? true :arms-isolated? true}
  :countdown/block "countdown-10"

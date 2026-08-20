@@ -104,12 +104,14 @@
         problem-revision (:problem/revision control)
         problem-blob (git "-C" problem-repository "rev-parse"
                           (str problem-revision ":" (:problem/path control)))
+        specification-check
+        (frame-specification/ingest control-path active-frame-id
+                                    registration-digest)
         manifest-matches?
         (= (machine/ledger-digest [control])
            (get-in loaded [:projection :campaign/manifest-hash]))]
     {:specification-check
-     (frame-specification/ingest control-path active-frame-id
-                                 registration-digest)
+     specification-check
      :problem-check
      {:topology? (get-in control [:problem/classification :topology?])
       :classification-source (get-in control [:problem/classification :source])}
@@ -139,6 +141,7 @@
                                               :arms-isolated?]))}
      :apparatus-check
      {:unchanged-since-open? (and manifest-matches?
+                                  (:valid? specification-check)
                                   (= problem-blob (:problem/blob control)))}
      :receipt-check
      {:durable? (and (:ok loaded)

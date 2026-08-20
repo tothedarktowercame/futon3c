@@ -1,5 +1,6 @@
 (ns futon3c.apm.frame-specification-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-gates :as gates]
             [futon3c.apm.campaign-qualification :as qualification]
             [futon3c.apm.frame-specification :as specification]))
@@ -16,6 +17,16 @@
     (is (= {:valid? true :digest (:digest ingested) :frame-matches? true
             :registration-matches? true}
            (:specification facts)))))
+
+(deftest role-cards-are-resolved-at-the-pinned-apparatus-revision
+  (let [spec (edn/read-string (slurp control-path))]
+    (is (:valid? (specification/validate spec "f18" nil)))
+    (testing "a plausible but incorrect blob fails closed"
+      (let [changed (assoc-in spec [:frame/apparatus :role-cards :solver :blob]
+                              "0000000000000000000000000000000000000000")
+            result (specification/validate changed "f18" nil)]
+        (is (false? (:valid? result)))
+        (is (some #{:apparatus-revision-mismatch} (:errors result)))))))
 
 (deftest specification-gate-passes-and-mismatch-fails-closed
   (let [plan (:plan (qualification/read-plan

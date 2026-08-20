@@ -13,6 +13,8 @@ The frame specification is an EDN document. For frame 18 it is
 - problem identity, repository, branch, revision, path, blob, classification,
   and preflight result;
 - every seat's requested provider and explicit timeout policy;
+- an apparatus repository and revision, plus every role card's repository path
+  and Git blob SHA, keyed by the frame role that receives it;
 - frame timeout, continuation, and author/reviewer separation policies;
 - countdown block and qualification-plan identity.
 
@@ -35,6 +37,15 @@ ledger's `:registration-hash`; require `:registration-matches? true` there.
 Any missing key, missing seat,
 unsupported schema version, unreadable EDN, or frame-id mismatch stops the
 line. Fix the specification and re-ingest it; never patch derived facts.
+
+Role-card pins are dispatch inputs, not documentation. Ingestion resolves every
+declared `revision:path` with Git and requires the resulting blob to equal the
+declared blob. A missing role, uncommitted card, unreachable revision, changed
+path, or blob mismatch makes the specification invalid. At every dispatch
+boundary, `:apparatus-frozen` re-ingests the registered specification and also
+checks its digest and problem blob. Never read a newer working-tree card merely
+because it has the expected filename; inject the content identified by the
+registered blob.
 
 Then inspect the machine:
 
