@@ -87,6 +87,27 @@
                (:active/block (get-in result [:post-checkpoint :certificate])))))
       (finally (delete-tree! (:dir f))))))
 
+(deftest failed-postcondition-stops-after-visible-durable-effect
+  (let [f (fixture) calls (atom 0)
+        opts (assoc (options f passing-gates calls)
+                    :postcondition-fn
+                    (fn [_] {:ok false :failed #{:active-block-mismatch}}))]
+    (try
+      (let [inspection (stepper/inspect! opts)
+            permit (:permit (stepper/issue-permit
+                             {:report (:report inspection) :issuer "joe"
+                              :issued-at (str now)}))
+            result (stepper/step!
+                    (assoc opts :permit permit
+                           :trusted-permit-id (:permit/id permit)
+                           :trusted-issuer "joe"))]
+        (is (= :campaign-stepper-postcondition-failed (:error/code result)))
+        (is (= :stop (:stepper/status result)))
+        (is (= 1 @calls))
+        (is (= "countdown"
+               (:active/block (get-in result [:post-checkpoint :certificate])))))
+      (finally (delete-tree! (:dir f))))))
+
 (deftest changed-gate-evidence-makes-permit-stale
   (let [f (fixture) calls (atom 0) gate-state (atom passing-gates)
         opts (assoc (options f passing-gates calls)

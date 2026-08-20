@@ -55,6 +55,29 @@ the permit must bind that exact report, obligation, ledger digest, facts digest,
 and campaign version. After execution, re-read the ledger and verify that the
 next obligation has the documented data shape before dispatching any seat.
 
+### `open-frame` boundary contract
+
+Before effect, inspection must show every applicable gate passing and the
+authorized action must match the registered frame id, problem id, block, arm,
+registration hash, and harness hash. The ledger must have the intended block
+active, no active frame or claim, and the permit must bind the current version,
+ledger digest, facts digest, report, and obligation.
+
+After effect, require all of the following from the ledger-derived checkpoint:
+
+- the version advanced by exactly two events (claim, then `:frame/opened`);
+- the claim is cleared and the same block remains active;
+- the active frame exactly matches frame, problem, arm, registration hash, and
+  harness hash from the authorized action;
+- the snapshot is valid;
+- the regulator's next obligation is the first registered phase for that same
+  frame, problem, and block, with its registered role.
+
+`campaign-postconditions/validate-open-frame` produces the check map, failed
+check ids, and the selected next-action shape. Any postcondition failure stops
+the stepper visibly. It does not authorize Ground Control to repair the ledger
+or continue dispatching.
+
 ## Non-negotiable Ground Control rules
 
 - The ledger is authoritative; buffers and live jobs are observations.

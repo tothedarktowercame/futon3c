@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-postconditions :as postconditions]
             [futon3c.apm.campaign-qualification :as qualification]
             [futon3c.apm.campaign-stepper :as stepper]
             [futon3c.apm.frame-specification :as frame-specification])
@@ -69,6 +70,7 @@
    :project-fn identity
    :gate-provider (qualification/gate-provider
                    (plan) qualification-observation)
+   :postcondition-fn postconditions/validate
    :handlers {:open-block
               (fn [action]
                 {:ok true

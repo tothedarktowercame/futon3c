@@ -97,7 +97,8 @@
 
 (defn step!
   "Inspect again and execute exactly one gate-passing, explicitly permitted step."
-  [{:keys [permit trusted-permit-id trusted-issuer handlers actor] :as options}]
+  [{:keys [permit trusted-permit-id trusted-issuer handlers actor
+           postcondition-fn] :as options}]
   (let [inspection (inspect! options)
         report (:report inspection)]
     (cond
@@ -136,7 +137,14 @@
                    options {:checkpoint/stage :after-step
                             :obligation/id (:obligation/id obligation)
                             :execution/status (if (:ok executed)
-                                                :completed :failed)})]
+                                                :completed :failed)})
+            postconditions
+            (if (and (:ok executed) (:ok after) (fn? postcondition-fn))
+              (postcondition-fn {:obligation obligation
+                                 :before certificate
+                                 :execution executed
+                                 :after (:certificate after)})
+              {:ok true :postcondition/type :not-evaluated})]
         (cond
           (not (:ok after))
           {:ok false :error/code :campaign-stepper-post-checkpoint-failed
@@ -145,6 +153,12 @@
           {:ok false :stepper/status :stop
            :error/code :campaign-stepper-execution-failed
            :inspection inspection :execution executed :post-checkpoint after}
+          (not (:ok postconditions))
+          {:ok false :stepper/status :stop
+           :error/code :campaign-stepper-postcondition-failed
+           :inspection inspection :execution executed :post-checkpoint after
+           :postconditions postconditions}
           :else
           {:ok true :stepper/status :advanced :permit/id (:permit/id permit)
-           :inspection inspection :execution executed :post-checkpoint after})))))
+           :inspection inspection :execution executed :post-checkpoint after
+           :postconditions postconditions})))))
