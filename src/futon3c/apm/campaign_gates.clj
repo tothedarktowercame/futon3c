@@ -27,3 +27,17 @@
              :gate/status (if (every? :pass? checks) :pass :fail)
              :gate/evidence {:requirements checks}}))
         specs))
+
+(defn applicable-specs
+  "Select gates declared for an obligation kind. `:all` applies everywhere."
+  [specs obligation]
+  (let [kind (get-in obligation [:obligation/action :kind])]
+    (filterv (fn [spec]
+               (let [applies-to (:gate/applies-to spec)]
+                 (and (set? applies-to)
+                      (or (contains? applies-to :all)
+                          (contains? applies-to kind)))))
+             specs)))
+
+(defn evaluate-obligation [specs facts obligation]
+  (evaluate (applicable-specs specs obligation) facts))

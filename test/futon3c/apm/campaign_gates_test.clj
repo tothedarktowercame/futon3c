@@ -46,3 +46,11 @@
     (is (= :fail (:gate/status result)))
     (is (every? #(nil? (:actual %))
                 (get-in result [:gate/evidence :requirements])))))
+
+(deftest only-gates-applicable-to-the-next-obligation-are-evaluated
+  (let [obligation {:obligation/action {:kind :open-frame}}
+        results (gates/evaluate-obligation specs passing-facts obligation)]
+    (is (= #{:seat-budgets :pin-coherence :cast-ready
+             :continuation-control :projection-coherence
+             :experimental-separation :durable-replay}
+           (set (map :gate/id results))))))

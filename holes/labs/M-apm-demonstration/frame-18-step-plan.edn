@@ -6,6 +6,7 @@
   autonomous batches. A missing or failed fact blocks before effect."
  :qualification/gates
  [{:gate/id :seat-budgets
+   :gate/applies-to #{:open-frame}
    :gate/requirements
    [{:requirement/id :timeouts-explicit :fact/path [:timeouts :explicit?]
      :check :equals :expected true}
@@ -20,34 +21,40 @@
     {:requirement/id :frame-budget :fact/path [:timeouts :frame-minutes]
      :check :at-least :expected 240}]}
   {:gate/id :pin-coherence
+   :gate/applies-to #{:open-frame}
    :gate/requirements
    [{:requirement/id :pins-complete :fact/path [:pins :complete?]
      :check :equals :expected true}
     {:requirement/id :pins-coherent :fact/path [:pins :coherent?]
      :check :equals :expected true}]}
   {:gate/id :cast-ready
+   :gate/applies-to #{:open-frame}
    :gate/requirements
    [{:requirement/id :cast-ready :fact/path [:cast :ready?]
      :check :equals :expected true}
     {:requirement/id :provider-attributed :fact/path [:cast :attributed?]
      :check :equals :expected true}]}
   {:gate/id :continuation-control
+   :gate/applies-to #{:open-frame}
    :gate/requirements
    [{:requirement/id :continuation-durable
      :fact/path [:continuations :durable?] :check :equals :expected true}
     {:requirement/id :park-wake-tested
      :fact/path [:continuations :wake-tested?] :check :equals :expected true}]}
   {:gate/id :projection-coherence
+   :gate/applies-to #{:open-frame :preflight :solve :verify :close-frame}
    :gate/requirements
    [{:requirement/id :projection-ledger-derived
      :fact/path [:projection :ledger-derived?] :check :equals :expected true}
     {:requirement/id :projection-frame-matches
      :fact/path [:projection :frame-matches?] :check :equals :expected true}]}
   {:gate/id :required-legs
+   :gate/applies-to #{:close-frame}
    :gate/requirements
    [{:requirement/id :all-required-legs
      :fact/path [:legs :required] :check :all-true}]}
   {:gate/id :memory-path
+   :gate/applies-to #{:close-frame}
    :gate/requirements
    [{:requirement/id :recall-invoked
      :fact/path [:memory :recall-invoked?] :check :equals :expected true}
@@ -58,6 +65,7 @@
     {:requirement/id :promotion-reviewed
      :fact/path [:memory :promotion-reviewed?] :check :equals :expected true}]}
   {:gate/id :experimental-separation
+   :gate/applies-to #{:open-frame}
    :gate/requirements
    [{:requirement/id :author-reviewer-distinct
      :fact/path [:separation :author-reviewer-distinct?]
@@ -65,12 +73,14 @@
     {:requirement/id :arms-isolated
      :fact/path [:separation :arms-isolated?] :check :equals :expected true}]}
   {:gate/id :durable-replay
+   :gate/applies-to #{:open-frame :preflight :solve :verify :close-frame}
    :gate/requirements
    [{:requirement/id :receipts-durable
      :fact/path [:receipts :durable?] :check :equals :expected true}
     {:requirement/id :receipts-replayable
      :fact/path [:receipts :replayable?] :check :equals :expected true}]}
   {:gate/id :apparatus-frozen
+   :gate/applies-to #{:preflight :solve :verify :close-frame}
    :gate/requirements
    [{:requirement/id :apparatus-unchanged
      :fact/path [:apparatus :unchanged-since-open?]
