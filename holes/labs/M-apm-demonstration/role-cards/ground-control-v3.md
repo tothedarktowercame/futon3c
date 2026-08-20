@@ -51,10 +51,19 @@ registered blob.
 
 Before the first solver dispatch, `:workspaces-ready` requires both writable
 worktrees to be clean, on their registered branches, and still at their pinned
-base revisions. Solver and student must never share a branch or worktree. After
+base revisions. It also executes the registered capability probe inside each
+checkout and verifies the Lean version, Lake-manifest digest, and resolved
+shared-Lake root. Solver and student must never share a branch or worktree. After
 authorized work begins, subsequent dispatches name the current committed head
 and validate it against the preceding receipt; the immutable base pin remains
 the ancestry root rather than an assertion that the branch can never advance.
+
+`:dependency-policy :solver-discovered` is deliberate. Registration proves an
+initial execution substrate, not the proof's eventual dependency closure.
+Imports and infrastructure discovered while proving are authorized solver work
+and travel as committed source state. A new external package, manifest change,
+or toolchain change is a separately receipted workspace-evolution event; cache
+growth alone is not such an event and must not alter source semantics.
 
 Then inspect the machine:
 

@@ -36,6 +36,15 @@
     (is (false? (:valid? result)))
     (is (some #{:workspaces-not-isolated} (:errors result)))))
 
+(deftest workspace-substrate-allows-discovery-but-not-an-implicit-policy
+  (let [spec (edn/read-string (slurp control-path))
+        changed (assoc-in spec [:frame/workspaces :solver
+                                :execution-substrate :dependency-policy]
+                          :predeclared-only)
+        result (specification/validate changed "f18" nil)]
+    (is (false? (:valid? result)))
+    (is (some #{:workspace-pin-invalid} (:errors result)))))
+
 (deftest solve-gate-requires-ready-isolated-workspaces
   (let [plan (:plan (qualification/read-plan
                      "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"))

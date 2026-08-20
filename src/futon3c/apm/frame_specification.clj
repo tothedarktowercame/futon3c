@@ -55,10 +55,26 @@
                 (= writable-roles (set (keys workspaces)))))
       [:workspace-shape-invalid]
 
-      (not (every? (fn [[_ {:keys [repository branch base-revision path]}]]
+      (not (every? (fn [[_ {:keys [repository branch base-revision path
+                                    execution-substrate]}]]
                      (and (every? #(and (string? %) (not (str/blank? %)))
                                   [repository branch path])
-                          (sha40? base-revision)))
+                          (sha40? base-revision)
+                          (= :shared-lake (:kind execution-substrate))
+                          (= :solver-discovered
+                             (:dependency-policy execution-substrate))
+                          (every? #(and (string? %) (not (str/blank? %)))
+                                  [(:path execution-substrate)
+                                   (:lean-version execution-substrate)])
+                          (boolean (re-matches #"[0-9a-f]{64}"
+                                               (or (:lake-manifest-sha256
+                                                    execution-substrate) "")))
+                          (vector? (get-in execution-substrate
+                                           [:probe :command]))
+                          (every? string? (get-in execution-substrate
+                                                  [:probe :command]))
+                          (= 0 (get-in execution-substrate
+                                      [:probe :expected-exit]))))
                    workspaces))
       [:workspace-pin-invalid]
 

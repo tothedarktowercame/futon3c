@@ -55,12 +55,28 @@
   {:repository "/home/joe/code/apm-lean"
    :branch "exp/frame-18-a97J07-solver"
    :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
-   :path "/home/joe/code/apm-frames/frame-18-a97J07-solver"}
+   :path "/home/joe/code/apm-frames/frame-18-a97J07-solver"
+   :execution-substrate
+   {:kind :shared-lake
+    :path "/home/joe/code/apm-lean/.lake"
+    :lean-version "Lean (version 4.29.0-rc8, x86_64-unknown-linux-gnu, commit 513160ea59dfd60defec325636bbc5215a8a6e7e, Release)"
+    :lake-manifest-sha256 "9332ecbdfcce272b3329870dc0849c1685b49850537247fd54a1e32d7c2d85f0"
+    :dependency-policy :solver-discovered
+    :probe {:command ["lake" "env" "lean" "problems/a97J07/lean/Main.lean"]
+            :expected-exit 0}}}
   :student
   {:repository "/home/joe/code/apm-lean"
    :branch "exp/frame-18-a97J07-student"
    :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
-   :path "/home/joe/code/apm-frames/frame-18-a97J07-student"}}
+   :path "/home/joe/code/apm-frames/frame-18-a97J07-student"
+   :execution-substrate
+   {:kind :shared-lake
+    :path "/home/joe/code/apm-lean/.lake"
+    :lean-version "Lean (version 4.29.0-rc8, x86_64-unknown-linux-gnu, commit 513160ea59dfd60defec325636bbc5215a8a6e7e, Release)"
+    :lake-manifest-sha256 "9332ecbdfcce272b3329870dc0849c1685b49850537247fd54a1e32d7c2d85f0"
+    :dependency-policy :solver-discovered
+    :probe {:command ["lake" "env" "lean" "problems/a97J07/lean/Main.lean"]
+            :expected-exit 0}}}}
  :frame/continuation-policy {:durable-required? true :wake-test-required? true}
  :frame/separation-policy {:author-reviewer-distinct? true :arms-isolated? true}
  :countdown/block "countdown-10"

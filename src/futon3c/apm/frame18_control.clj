@@ -39,6 +39,9 @@
   (let [result (apply shell/sh "git" args)]
     (when (zero? (:exit result)) (str/trim (:out result)))))
 
+(defn- workspace-command [path command]
+  (apply shell/sh (concat command [:dir path])))
+
 (defn- post-json [url payload]
   (let [connection ^java.net.HttpURLConnection
         (.openConnection (java.net.URL. url))]
@@ -107,14 +110,34 @@
         workspaces (:frame/workspaces control)
         workspace-observations
         (into {}
-              (map (fn [[role {:keys [path branch base-revision]}]]
-                     [role {:branch (git "-C" path "branch" "--show-current")
+              (map (fn [[role {:keys [path branch base-revision
+                                      execution-substrate]}]]
+                     (let [probe (workspace-command
+                                  path (get-in execution-substrate
+                                               [:probe :command]))
+                           version (workspace-command
+                                    path ["lake" "env" "lean" "--version"])
+                           manifest (workspace-command
+                                     path ["sha256sum" "lake-manifest.json"])
+                           lake-path (.getCanonicalPath
+                                      (java.io.File. path ".lake"))]
+                       [role {:branch (git "-C" path "branch" "--show-current")
                             :head (git "-C" path "rev-parse" "HEAD")
                             :clean? (str/blank?
                                      (or (git "-C" path "status" "--porcelain")
                                          "not-clean"))
                             :expected-branch branch
-                            :expected-head base-revision}]))
+                            :expected-head base-revision
+                            :substrate-ready?
+                            (and (= lake-path (:path execution-substrate))
+                                 (= (:lean-version execution-substrate)
+                                    (str/trim (:out version)))
+                                 (str/starts-with?
+                                  (:out manifest)
+                                  (:lake-manifest-sha256 execution-substrate))
+                                 (= (get-in execution-substrate
+                                            [:probe :expected-exit])
+                                    (:exit probe)))}])))
               workspaces)
         specification-check
         (frame-specification/ingest control-path active-frame-id
@@ -158,6 +181,7 @@
      :workspace-check
      {:ready? (every? (fn [[_ observation]]
                         (and (:clean? observation)
+                             (:substrate-ready? observation)
                              (= (:branch observation)
                                 (:expected-branch observation))
                              (= (:head observation)
