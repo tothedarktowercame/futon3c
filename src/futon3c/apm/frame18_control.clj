@@ -18,14 +18,18 @@
 (def plan-path
   "holes/labs/M-apm-demonstration/frame-18-step-plan.edn")
 (def state-directory
-  (Path/of "data/apm-campaigns/frame-18-admission-ready"
+  (Path/of "data/apm-campaigns/frame-18-bounded-admission"
            (make-array String 0)))
 (def ledger-path (.resolve state-directory "ledger.edn"))
 (def certificate-directory (.resolve state-directory "certificates"))
 (def projection-directory (.resolve state-directory "projection"))
 
 (defn- fetch-json [url]
-  (json/parse-string (slurp url) true))
+  (let [connection ^java.net.HttpURLConnection
+        (.openConnection (java.net.URL. url))]
+    (.setConnectTimeout connection 2000)
+    (.setReadTimeout connection 5000)
+    (json/parse-string (slurp (.getInputStream connection)) true)))
 
 (defn- git [& args]
   (let [result (apply shell/sh "git" args)]
@@ -35,6 +39,8 @@
   (let [connection ^java.net.HttpURLConnection
         (.openConnection (java.net.URL. url))]
     (.setRequestMethod connection "POST")
+    (.setConnectTimeout connection 2000)
+    (.setReadTimeout connection 30000)
     (.setRequestProperty connection "Content-Type" "application/json")
     (.setDoOutput connection true)
     (with-open [writer (java.io.OutputStreamWriter. (.getOutputStream connection))]
@@ -45,17 +51,22 @@
       (assoc (json/parse-string (slurp stream) true) :http/status status))))
 
 (defn- frame-runtime-observation [_]
-  (let [agents-response (fetch-json "http://localhost:7070/api/alpha/agents")
-        jobs-response (fetch-json
-                       "http://localhost:7070/api/alpha/invoke/jobs?limit=500")
-        agents (:agents agents-response)
-        frame-agents (into {} (filter (fn [[agent-id _]]
-                                        (str/starts-with? agent-id "f18-"))) agents)
-        frame-jobs (filterv #(str/starts-with? (or (:agent-id %) "") "f18-")
-                            (:jobs jobs-response))]
-    {:binding-response {:ok true :bound? (boolean (seq frame-agents))
-                        :agent-id (first (keys frame-agents))}
-     :jobs-response {:ok true :jobs frame-jobs}}))
+  (try
+    (let [agents-response (fetch-json "http://localhost:7070/api/alpha/agents")
+          jobs-response (fetch-json
+                         "http://localhost:7070/api/alpha/invoke/jobs?limit=500")
+          agents (:agents agents-response)
+          frame-agents (into {} (filter (fn [[agent-id _]]
+                                          (str/starts-with? agent-id "f18-"))) agents)
+          frame-jobs (filterv #(str/starts-with? (or (:agent-id %) "") "f18-")
+                              (:jobs jobs-response))]
+      {:binding-response {:ok true :bound? (boolean (seq frame-agents))
+                          :agent-id (first (keys frame-agents))}
+       :jobs-response {:ok true :jobs frame-jobs}})
+    (catch Throwable t
+      {:binding-response {:ok false :error :runtime-observation-failed
+                          :message (.getMessage t)}
+       :jobs-response {:ok false :jobs [] :error :runtime-observation-failed}})))
 
 (defn- qualification-observation [{:keys [obligation]}]
   (let [loaded (ledger/read-ledger ledger-path)
