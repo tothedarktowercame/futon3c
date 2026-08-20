@@ -16,6 +16,15 @@
            [java.nio.file Files LinkOption OpenOption Path StandardOpenOption]
            [java.nio.file.attribute FileAttribute]))
 
+(defonce ^:private local-path-locks (atom {}))
+
+(defn- local-path-lock [^Path path]
+  (let [key (str (.normalize (.toAbsolutePath path)))]
+    (or (get @local-path-locks key)
+        (get (swap! local-path-locks
+                    #(if (contains? % key) % (assoc % key (Object.))))
+             key))))
+
 (def ^:private eof (Object.))
 
 (defn- ledger-path [path]
@@ -102,55 +111,57 @@
   campaign-machine."
   [path expected-version expected-digest event]
   (if-let [path (ledger-path path)]
-    (try
-      (ensure-parent! path)
-      (with-open [channel (FileChannel/open
-                           path
-                           (into-array OpenOption
-                                       [StandardOpenOption/CREATE
-                                        StandardOpenOption/READ
-                                        StandardOpenOption/WRITE]))
-                  _lock (.lock channel)]
-        (let [parsed (parse-events (read-locked-channel channel))]
-          (if-not (:ok parsed)
-            parsed
-            (let [events (:events parsed)
-                  before (machine/projection events)
-                  before-version (:campaign/version before)
-                  before-digest (:ledger/digest before)]
-              (cond
-                (not= :valid (:projection/status before))
-                {:ok false :error/code :campaign-ledger-invalid
-                 :projection before}
+    (let [path-lock (local-path-lock path)]
+      (locking path-lock
+        (try
+        (ensure-parent! path)
+        (with-open [channel (FileChannel/open
+                             path
+                             (into-array OpenOption
+                                         [StandardOpenOption/CREATE
+                                          StandardOpenOption/READ
+                                          StandardOpenOption/WRITE]))
+                    _lock (.lock channel)]
+          (let [parsed (parse-events (read-locked-channel channel))]
+            (if-not (:ok parsed)
+              parsed
+              (let [events (:events parsed)
+                    before (machine/projection events)
+                    before-version (:campaign/version before)
+                    before-digest (:ledger/digest before)]
+                (cond
+                  (not= :valid (:projection/status before))
+                  {:ok false :error/code :campaign-ledger-invalid
+                   :projection before}
 
-                (not= expected-version before-version)
-                (mismatch :campaign-ledger-version-mismatch
-                          expected-version before-version)
+                  (not= expected-version before-version)
+                  (mismatch :campaign-ledger-version-mismatch
+                            expected-version before-version)
 
-                (not= expected-digest before-digest)
-                (mismatch :campaign-ledger-digest-mismatch
-                          expected-digest before-digest)
+                  (not= expected-digest before-digest)
+                  (mismatch :campaign-ledger-digest-mismatch
+                            expected-digest before-digest)
 
-                :else
-                (let [successor-events (conj events event)
-                      after (machine/projection successor-events)]
-                  (if-not (= :valid (:projection/status after))
-                    {:ok false :error/code :campaign-event-refused
-                     :projection after}
-                    (let [write (append-bytes! channel event)]
-                      {:ok true :durable? true :path (str path)
-                       :event/id (:event/id event)
-                       :before {:version before-version
-                                :digest before-digest
-                                :event-count (:ledger/event-count before)}
-                       :after {:version (:campaign/version after)
-                               :digest (:ledger/digest after)
-                               :event-count (:ledger/event-count after)}
-                       :write write}))))))))
-      (catch OverlappingFileLockException _
-        {:ok false :error/code :campaign-ledger-lock-busy :path (str path)})
-      (catch Throwable t
-        {:ok false :error/code (or (:error/code (ex-data t))
-                                  :campaign-ledger-append-failed)
-         :path (str path) :finding {:message (.getMessage t)}}))
+                  :else
+                  (let [successor-events (conj events event)
+                        after (machine/projection successor-events)]
+                    (if-not (= :valid (:projection/status after))
+                      {:ok false :error/code :campaign-event-refused
+                       :projection after}
+                      (let [write (append-bytes! channel event)]
+                        {:ok true :durable? true :path (str path)
+                         :event/id (:event/id event)
+                         :before {:version before-version
+                                  :digest before-digest
+                                  :event-count (:ledger/event-count before)}
+                         :after {:version (:campaign/version after)
+                                 :digest (:ledger/digest after)
+                                 :event-count (:ledger/event-count after)}
+                         :write write}))))))))
+        (catch OverlappingFileLockException _
+          {:ok false :error/code :campaign-ledger-lock-busy :path (str path)})
+          (catch Throwable t
+            {:ok false :error/code (or (:error/code (ex-data t))
+                                      :campaign-ledger-append-failed)
+             :path (str path) :finding {:message (.getMessage t)}}))))
     {:ok false :error/code :campaign-ledger-path-invalid}))
