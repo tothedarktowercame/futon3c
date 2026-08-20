@@ -4021,9 +4021,9 @@ RESPOND WITH ONLY:
 
 (defn make-zai-invoke-fn
   "Create an invoke-fn backed by Z.AI chat completions plus local Futon tools."
-  [{:keys [agent-id session-file session-id-atom initial-session-id timeout-ms model cwd evidence-store
-           memory-domain]
-    :or {agent-id "zai" timeout-ms 300000}}]
+  [{:keys [agent-id session-file session-id-atom initial-session-id timeout-ms
+           request-timeout-ms turn-timeout-ms model cwd evidence-store memory-domain]
+    :or {agent-id "zai"}}]
   (let [irc-send-fn (or (some-> @!irc-sys :server :send-to-channel!)
                         (try
                           (make-bridge-irc-send-fn)
@@ -4034,11 +4034,16 @@ RESPOND WITH ONLY:
               :session-file session-file
               :session-id-atom session-id-atom
               :initial-session-id initial-session-id
-              :timeout-ms timeout-ms
+              ;; Legacy callers used :timeout-ms as the invoke/turn bound at
+              ;; this facade. Keep that meaning here while the lower-level
+              ;; Z.AI constructor separates request and turn envelopes.
+              :turn-timeout-ms (or turn-timeout-ms timeout-ms
+                                   zai-api/default-turn-timeout-ms)
               :cwd (or cwd (System/getProperty "user.dir"))
               :evidence-store evidence-store
               :irc-recent-fn irc-recent-fn}
        model (assoc :model model)
+       request-timeout-ms (assoc :request-timeout-ms request-timeout-ms)
        memory-domain (assoc :memory-domain memory-domain)
        irc-send-fn (assoc :irc-send-fn irc-send-fn)))))
 

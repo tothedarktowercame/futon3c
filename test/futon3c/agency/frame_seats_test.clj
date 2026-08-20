@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.frame-seats :as frame-seats]
             [futon3c.agency.registry :as registry]
+            [futon3c.agents.zai-api :as zai-api]
             [futon3c.transport.http :as http]
             [jsonista.core :as json]))
 
@@ -288,6 +289,19 @@
       ;; and is ABSENT — not nil-valued — when unrequested, so the CLI default
       ;; is untouched for every seat minted the way frames 2..10 minted theirs
       (is (not (contains? without-opts :model))))))
+
+(deftest local-zai-seat-pins-turn-timeout-separately-from-request-timeout
+  (let [captured (atom nil)
+        make-local (var-get #'futon3c.transport.http/make-local-agent-invoke-fn)]
+    (with-redefs [zai-api/make-invoke-fn
+                  (fn [opts]
+                    (reset! captured opts)
+                    (fn [_prompt _session-id] {:result :stub :session-id nil}))]
+      (make-local :zai {:agent-id "timeout-frame-guide"
+                        :evidence-store (atom {})}))
+    (is (= zai-api/default-turn-timeout-ms (:turn-timeout-ms @captured)))
+    (is (not (contains? @captured :request-timeout-ms)))
+    (is (not (contains? @captured :timeout-ms)))))
 
 (deftest production-frame-mint-gives-only-student-mathematics-memory-domain
   (let [captured (atom [])]

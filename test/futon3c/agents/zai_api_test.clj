@@ -144,9 +144,27 @@
               {:dispatch-id "budget-job"
                :timeout-ms 3600000
                :student-runner-budget {:wall-clock-minutes 60}})
-      (is (= 3600000 (get-in @captured [:opts :timeout-ms])))
+      (is (= zai/default-request-timeout-ms
+             (get-in @captured [:opts :timeout-ms])))
+      (is (<= (- (:deadline-ms @captured) (System/currentTimeMillis))
+              3600000))
       (is (= 16 (:auto-continue-max @captured))
           "60 minutes doubles the historical 30-minute continuation allowance"))))
+
+(deftest constructor-request-timeout-is-not-the-logical-turn-timeout
+  (let [captured (atom nil)
+        invoke (make-invoke {:request-timeout-ms 120000
+                             :turn-timeout-ms 2700000
+                             :auto-continue-max 8})
+        started (System/currentTimeMillis)]
+    (with-redefs [zai/run-tool-rounds! (fn [ctx]
+                                        (reset! captured ctx)
+                                        {:result "captured" :session-id "sid"})]
+      (invoke "work" "sid")
+      (is (= 120000 (get-in @captured [:opts :timeout-ms])))
+      (is (<= (+ started 2700000) (:deadline-ms @captured)
+              (+ (System/currentTimeMillis) 2700000)))
+      (is (= 8 (:auto-continue-max @captured))))))
 
 (deftest transcript-records-prompt-round-profile-and-stable-turn-id
   (let [store (atom {:entries {} :order []})

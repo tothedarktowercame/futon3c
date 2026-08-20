@@ -2479,15 +2479,6 @@
         {:ok false
          :error (.getMessage e)}))))
 
-(defn zai-seat-timeout-ms
-  "Per-turn wall-clock for zai seats minted via the local constructors, from
-  FUTON3C_ZAI_SEAT_TIMEOUT_MS. Default 1 hour: frame-seat turns run long
-  agentic tool loops; the constructor's own 5-minute default exists for quick
-  interactive seats and killed f17-guide mid-action (see make-local-agent-invoke-fn
-  :zai note)."
-  []
-  (parse-env-ms "FUTON3C_ZAI_SEAT_TIMEOUT_MS" (* 60 60 1000)))
-
 (defn- make-local-agent-invoke-fn
   "Best-effort builder for a local invoke-fn for AGENT-TYPE."
   [agent-type {:keys [agent-id session-file initial-session-id requested-cwd emacs-socket session-id-atom model
@@ -2528,12 +2519,9 @@
                   :initial-session-id initial-session-id
                   :evidence-store evidence-store
                   :irc-send-fn irc-send-fn
-                  ;; Frame-seat turns are long agentic sessions (tool loops,
-                  ;; compile waits). The constructor default (5 min) killed
-                  ;; f17-guide's parked-resume mid-action at exactly the
-                  ;; 300s mark (invoke-...-5259, wall-clock-budget). Seats
-                  ;; can opt out by setting 0 (constructor default).
-                  :timeout-ms (zai-seat-timeout-ms)}
+                  ;; Frame seats pin a logical turn envelope explicitly. The
+                  ;; per-request HTTP timeout is a separate constructor field.
+                  :turn-timeout-ms zai-api/default-turn-timeout-ms}
            model (assoc :model model)
            memory-domain (assoc :memory-domain memory-domain)
            requested-cwd (assoc :cwd requested-cwd)))
