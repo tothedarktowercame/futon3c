@@ -1501,3 +1501,57 @@
    finally solved its problem is also the frame in which the instruments were caught
    flattering themselves."}
 ]
+
+ ;; ===========================================================================
+ ;; FRAME 16 — m97A06 — HALTED AND VOID (fourth pool defect; vendor-rotation guide leg)
+ ;; ===========================================================================
+ {:frame "f16"
+  :problem "m97A06"
+  :closed false
+  :halted true
+  :void true
+  :void-reason
+  "PROTOCOL-defective-problem.md, ruled by Joe 2026-08-19, applied 2026-08-20 with
+   operator approval. Conjunct 2 (apm_m97a06_energy_constant) is provably FALSE as
+   stated: it quantifies over ALL φ with no regularity hypothesis while
+   apm_m97a06_EL constrains only the open interval (0,T), leaving energy at the
+   endpoints unconstrained. MACHINE-CHECKED: private lemma
+   apm_m97a06_energy_clause_false (endpoint spike φ 0 = π/2, φ t = 0 otherwise;
+   energy −1/4 at 0 vs 1/4 at T=1), axiom-clean [propext, Classical.choice,
+   Quot.sound], commit cf5032d on exp/frame-16-m97A06-solver, HEAD 715a70c,
+   independently compiled and #print-axioms'd by ground control. Found by the
+   SOLVER mid-frame (f16-solver report), confirmed by f16-guide structurally and
+   ground control numerically. The soundness probe PASSED this statement because
+   its template does not test endpoint behavior — its declared caveat (no
+   two-sided stationary witness) was exactly the defect zone. The frame stopped
+   BEFORE the student: no student dispatch, no promote-solver, no promotions
+   (promotion record carried explicitly in the halt report per the
+   dispatch-student! harvest-gap rule). Predictions :memory-contributes-to-close,
+   glm-student completion, :offer-disposition-populated, :cascade-seeds-from-recall
+   all :not-reached, never :refuted."
+  :disposition :defective
+  :repairable true
+  :repair
+  "Shipped as 34206dc on repair/m97A06-energy-regularity (blob
+   24ba036786bffc353408b658aa4063cf6149177a): conjunct 2 gains the hypothesis
+   ContDiffOn ℝ 2 φ (Set.Icc 0 T), mirroring conjunct 1's regularity premise;
+   interval stays Icc. For C² paths energy conservation on the closed interval
+   is the standard theorem. Rejected alternative: restating energy constancy
+   over the OPEN interval with no regularity — ground control's analysis found
+   residual soundness risk there (EL's pointwise equation pins deriv (deriv φ)
+   only where sin (2φ) ≠ 0; junk-deriv coincidences at zeros of sin leave the
+   chain rule for φ'² unhypothesized). The requeued statement must pass a probe
+   whose template now INCLUDES endpoint tests."
+  :retained-instrument-findings
+  "Problem outcome VOID, instrument findings RETAINED: (1) VENDOR ROTATION,
+   guide leg CONFIRMED with server-observed attribution — f16-guide (zai glm-5.3)
+   conducted orientation, ignition, adjudication escalation, halt and an
+   attribution self-check entirely on-protocol; :cost/model glm-5.3 observed in
+   evidence turn-round entries e-0a015b15, e-b3c2443f. Scribe/student legs
+   :not-reached. (2) :cost/model lives in evidence-store transcript bodies, not
+   invoke job envelopes (e-b61a9dbb): seats cannot self-attribute; the
+   registration's observed-not-inferred rule worked as designed. (3) Typed
+   guidance: 2 bells, zero refusals. (4) Solver sorry-localization discipline:
+   three commits, per-conjunct lemmas, frozen statement untouched."
+  :defects-found 1
+  :defects-fixed-or-queued 1}
