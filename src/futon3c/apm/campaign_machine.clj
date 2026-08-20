@@ -134,7 +134,9 @@
                                  :arm (:arm body) :status :active
                                  :phase first-phase :version 0
                                  :registration-hash (:registration-hash body)
-                                 :harness-hash (:harness-hash body)})
+                                 :harness-hash (:harness-hash body)
+                                 :required-receipt-kinds
+                                 (set (:required-receipt-kinds body))})
                       (update-in [:blocks block-id :frame-ids] conj frame-id))}))
 
       :frame/advanced
