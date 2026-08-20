@@ -83,6 +83,10 @@
     {:decision :stop :reason :campaign-stop-rule-fired
      :preconditions (pins certificate)}
 
+    (:active/claim certificate)
+    {:decision :stop :reason :campaign-obligation-claim-recovery-required
+     :claim (:active/claim certificate) :preconditions (pins certificate)}
+
     (:active/frame certificate)
     (let [action (frame-phase-action certificate)]
       (if (:error/code action)

@@ -66,6 +66,7 @@
                  :campaign/phase-order (:campaign/phase-order projection)
                  :campaign/block-plan (:campaign/block-plan projection)
                  :campaign/obligation-plan (:campaign/obligation-plan projection)
+                 :campaign/claims-required? (:campaign/claims-required? projection)
                  :campaign/blocks (:campaign/blocks projection)
                  :campaign/frames (:campaign/frames projection)
                  :ledger/digest (:ledger/digest projection)
@@ -73,6 +74,7 @@
                  :facts/digest (:facts/digest reconciliation)
                  :active/block (:active/block projection)
                  :active/frame (:active/frame projection)
+                 :active/claim (:active/claim projection)
                  :counts (:counts projection)
                  :reconciliation reconciliation})})))))))
 

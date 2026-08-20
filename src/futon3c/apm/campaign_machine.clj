@@ -11,7 +11,10 @@
 (def event-types
   #{:campaign/registered :block/opened :frame/opened
     :frame/advanced :frame/stopped :frame/closed
-    :block/closed :campaign/closed})
+    :block/closed :campaign/closed :obligation/claimed})
+
+(def transition-event-types
+  (disj event-types :campaign/registered :obligation/claimed))
 
 (def terminal-frame-statuses #{:closed :stopped})
 
@@ -56,7 +59,20 @@
     (not= (:version state) (:event/expected-version event)) :campaign-version-stale
     (and (:campaign-id state)
          (not= (:campaign-id state) (:event/campaign-id event)))
-    :campaign-id-mismatch))
+    :campaign-id-mismatch
+    (and (:claims-required? state)
+         (= :obligation/claimed (:event/type event))
+         (:active-claim state))
+    :campaign-obligation-claim-exists
+    (and (:claims-required? state)
+         (contains? transition-event-types (:event/type event))
+         (nil? (:active-claim state)))
+    :campaign-obligation-claim-required
+    (and (:claims-required? state)
+         (contains? transition-event-types (:event/type event))
+         (not= (get-in state [:active-claim :obligation/id])
+               (get-in event [:event/body :obligation/id])))
+    :campaign-obligation-claim-mismatch))
 
 (defn- phase-index [state phase]
   (.indexOf ^java.util.List (:phase-order state) phase))
@@ -127,7 +143,26 @@
                        :phase-order (:phase-order body)
                        :block-plan (:block-plan body)
                        :obligation-plan (:obligation-plan body)
+                       :claims-required? (true? (:claims-required? body))
                        :status :registered)})
+
+      :obligation/claimed
+      (let [obligation (:obligation body)]
+        (cond
+          (not (:claims-required? state))
+          (refusal state event :campaign-obligation-claims-not-enabled)
+          (not (and (map? obligation)
+                    (nonblank? (:obligation/id obligation))))
+          (refusal state event :campaign-obligation-invalid)
+          (not= (:version state)
+                (get-in obligation [:obligation/preconditions :campaign/version]))
+          (refusal state event :campaign-obligation-version-stale)
+          :else
+          {:ok true :state (assoc state :active-claim
+                                  {:obligation/id (:obligation/id obligation)
+                                   :obligation obligation
+                                   :claimed-at (:event/at event)
+                                   :actor (:event/actor event)})}))
 
       :block/opened
       (let [block-id (:block-id body)
@@ -281,10 +316,13 @@
         (let [applied (apply-event state event)]
           (if-not (:ok applied)
             applied
-            (recur (-> (:state applied)
-                       (update :version inc)
-                       (update :next-seq inc)
-                       (update :event-ids conj (:event/id event)))
+            (recur (cond-> (-> (:state applied)
+                               (update :version inc)
+                               (update :next-seq inc)
+                               (update :event-ids conj (:event/id event)))
+                     (and (:claims-required? state)
+                          (contains? transition-event-types (:event/type event)))
+                     (assoc :active-claim nil))
                    (next remaining)))))
       {:ok true :state state :event-count (:next-seq state)})))
 
@@ -318,8 +356,10 @@
           :campaign/phase-order (:phase-order state)
           :campaign/block-plan (:block-plan state)
           :campaign/obligation-plan (:obligation-plan state)
+          :campaign/claims-required? (:claims-required? state)
           :campaign/blocks (:blocks state)
           :campaign/frames (:frames state)
+          :active/claim (:active-claim state)
           :active/block (:active-block-id state)
           :active/frame (active-frame state)
           :counts {:blocks (count (:blocks state))
