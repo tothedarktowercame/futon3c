@@ -6,7 +6,8 @@
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-qualification :as qualification]
-            [futon3c.apm.campaign-stepper :as stepper])
+            [futon3c.apm.campaign-stepper :as stepper]
+            [futon3c.apm.frame-specification :as frame-specification])
   (:import [java.nio.file Path]
            [java.time Instant]))
 
@@ -14,7 +15,9 @@
   "holes/labs/M-apm-demonstration/frame-18-control.edn")
 (def plan-path
   "holes/labs/M-apm-demonstration/frame-18-step-plan.edn")
-(def state-directory (Path/of "data/apm-campaigns/frame-18" (make-array String 0)))
+(def state-directory
+  (Path/of "data/apm-campaigns/frame-18-specification-aware"
+           (make-array String 0)))
 (def ledger-path (.resolve state-directory "ledger.edn"))
 (def certificate-directory (.resolve state-directory "certificates"))
 (def projection-directory (.resolve state-directory "projection"))
@@ -35,11 +38,20 @@
                         :agent-id (first (keys frame-agents))}
      :jobs-response {:ok true :jobs frame-jobs}}))
 
-(defn- qualification-observation [_]
+(defn- qualification-observation [{:keys [obligation]}]
   (let [loaded (ledger/read-ledger ledger-path)
         replayed (when (:ok loaded)
-                   (machine/projection (:events loaded)))]
-    {:receipt-check
+                   (machine/projection (:events loaded)))
+        action (:obligation/action obligation)
+        active-frame-id (or (:frame-id action)
+                            (get-in loaded [:projection :active/frame :frame-id])
+                            "f18")
+        registration-digest (get-in action [:completion :event/body
+                                            :registration-hash])]
+    {:specification-check
+     (frame-specification/ingest control-path active-frame-id
+                                 registration-digest)
+     :receipt-check
      {:durable? (and (:ok loaded)
                      (= :valid (get-in loaded [:projection :projection/status])))
       :replayable? (and (:ok loaded)

@@ -12,6 +12,18 @@
      :fact/path [:problem :topology?] :check :equals :expected false}
     {:requirement/id :classification-has-source
      :fact/path [:problem :classification-source] :check :present}]}
+  {:gate/id :frame-specification
+   :gate/applies-to #{:open-frame}
+   :gate/requirements
+   [{:requirement/id :specification-valid
+     :fact/path [:specification :valid?] :check :equals :expected true}
+    {:requirement/id :specification-digest
+     :fact/path [:specification :digest] :check :present}
+    {:requirement/id :specification-frame-matches
+     :fact/path [:specification :frame-matches?] :check :equals :expected true}
+    {:requirement/id :specification-registration-matches
+     :fact/path [:specification :registration-matches?]
+     :check :equals :expected true}]}
   {:gate/id :seat-budgets
    :gate/applies-to #{:open-frame}
    :gate/requirements

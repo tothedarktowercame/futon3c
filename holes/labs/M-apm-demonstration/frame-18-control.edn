@@ -1,4 +1,5 @@
 {:frame/id "f18"
+ :frame/specification-version 1
  :frame/mode :operator-stepped
  :frame/control-branch "frame/18-control"
  :frame/control-base "2adc316979cd85ce059ec5fb6e2a5f4b26e11c33"
@@ -12,5 +13,22 @@
  :problem/blob "69f1a6c35eab92f234beed1697fc59d1eac12445"
  :problem/preflight {:lean-exit 0 :sorry-declarations 1 :errors 0
                      :recorded-infrastructure-blocker? false}
+ :frame/seat-policy
+ {:solver {:turn-minutes 60}
+  :student {:request-minutes 5 :turn-minutes 60}
+  :guide {:turn-minutes 60}
+  :scribe {:turn-minutes 60}
+  :proctor {:turn-minutes 60}
+  :analyst {:turn-minutes 60}}
+ :frame/timeout-policy {:frame-minutes 240}
+ :frame/cast
+ {:solver {:type :codex}
+  :student {:type :zai}
+  :guide {:type :claude}
+  :scribe {:type :zai}
+  :proctor {:type :codex}
+  :analyst {:type :claude}}
+ :frame/continuation-policy {:durable-required? true :wake-test-required? true}
+ :frame/separation-policy {:author-reviewer-distinct? true :arms-isolated? true}
  :countdown/block "countdown-10"
  :qualification/plan "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"}

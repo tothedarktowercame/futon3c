@@ -9,7 +9,9 @@
     (slurp "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"))))
 
 (def passing-facts
-  {:problem {:topology? false :classification-source :operator-manifest}
+  {:specification {:valid? true :digest "frame-spec" :frame-matches? true
+                   :registration-matches? true}
+   :problem {:topology? false :classification-source :operator-manifest}
    :timeouts {:request-minutes 5 :turn-minutes 60 :solver-minutes 60
               :student-minutes 60 :frame-minutes 240 :explicit? true}
    :pins {:coherent? true :complete? true
@@ -30,7 +32,7 @@
 
 (deftest frame-18-qualification-is-fully-data-driven
   (let [results (gates/evaluate specs passing-facts)]
-    (is (= 11 (count results)))
+    (is (= 12 (count results)))
     (is (every? #(= :pass (:gate/status %)) results))))
 
 (deftest frame-17-baseline-fails-before-dispatch
@@ -55,7 +57,8 @@
 (deftest only-gates-applicable-to-the-next-obligation-are-evaluated
   (let [obligation {:obligation/action {:kind :open-frame}}
         results (gates/evaluate-obligation specs passing-facts obligation)]
-    (is (= #{:non-topology-admission :seat-budgets :pin-coherence :cast-ready
+    (is (= #{:non-topology-admission :frame-specification
+             :seat-budgets :pin-coherence :cast-ready
              :continuation-control :projection-coherence
              :experimental-separation :durable-replay}
            (set (map :gate/id results))))))

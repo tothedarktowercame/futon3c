@@ -14,7 +14,9 @@
                 qualification/required-roles)))
 
 (def observations
-  {:seat-configs role-configs
+  {:specification-check {:valid? true :digest "frame-spec"
+                         :frame-matches? true}
+   :seat-configs role-configs
    :problem-check {:topology? false
                    :classification-source :operator-manifest}
    :registration-check {:frame-timeout-ms 14400000
