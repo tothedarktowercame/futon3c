@@ -60,17 +60,36 @@
   :role :analyst
   :wake :terminal-frame-close
   :tenure-frames 2
+  :state-scope :series
+  :observation-cadence :every-terminal-frame-close
+  :review-policy
+  {:initial-window-closed-frames 10
+   :window-kind :rolling
+   :required-output #{:batch-diagnosis :instrument-health-report}
+   :opportunity-driven-output #{:divergence-packets
+                                :memory-store-architecture-change
+                                :learning-loop-structure-change}
+   :early-triggers #{:end-to-end-canary-failure
+                     :artifact-witness-contradiction
+                     :attachment-projection-mismatch
+                     :repeated-route-relative-retrieval-failure
+                     :silent-tool-or-callback-failure}}
   :inputs #{:frame-close-receipt :frame-trace}
-  :outputs #{:transfer-checks :series-entry :spectral-reading
-             :divergence-packets :memory-store-architecture-change
+  :outputs #{:transfer-checks :series-entry :batch-diagnosis
+             :instrument-health-report :divergence-packets
+             :memory-store-architecture-change
              :learning-loop-structure-change}
+  :tool-concept-kit
+  "holes/labs/M-apm-demonstration/analyst-tool-concept-kit-v1.edn"
   :implementation-policy
   {:divergence :dispatch-review-merge
    :operator-gates :decisions
    :analyst-gates :implementations}
-  :note "Analyst work belongs to the run-level meta-loop: it may change how
-         memory and the learning loop are structured, but cannot gate the
-         frame close that wakes the analyst."}
+  :note "Every close contributes evidence, but architectural output is not a
+         per-problem quota. The initial review window is ten closed frames,
+         with earlier review only on an evidenced trigger. Two-frame seat
+         tenure does not truncate series evidence. Analyst work cannot gate
+         the frame close that wakes it."}
 
  :contract/conflicts
  [{:conflict/id :guide-persistence-scope
