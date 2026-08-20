@@ -10,7 +10,8 @@
             [futon2.aif.hierarchical-budget-adapter :as r11]
             [futon2.aif.r17-offline :as r17]
             [futon2.aif.temporal-hierarchy :as r15]
-            [futon3c.aif.two-layer-calibration :as r12]))
+            [futon3c.aif.two-layer-calibration :as r12])
+  (:import (java.time Instant)))
 
 (def campaign-schema :futon3c.aif/instrumented-campaign-v1)
 
@@ -136,8 +137,9 @@
                                              (:implementation-id witness))}}}))
 
 (defn- run-tick!
-  [campaign-id tick slow-state structure runner-fn]
-  (let [tick-id (:tick/id tick)
+  [campaign-id tick slow-state structure runner-fn clock-fn]
+  (let [started-ms (clock-fn)
+        tick-id (:tick/id tick)
         context {:campaign/id campaign-id
                  :tick/id tick-id
                  :slow-state slow-state
@@ -153,6 +155,7 @@
                            :campaign/id campaign-id
                            :campaign/tick-id tick-id)
         result (runner-fn runner-opts)
+        ended-ms (clock-fn)
         prepared @instrumentation]
     (when-not prepared
       (fail! "The runner returned before the campaign selection hook ran"
@@ -161,6 +164,9 @@
                                       prepared result)
           report (r12/two-layer-report evidence)]
       {:tick/id tick-id
+       :tick/timing {:started-at (str (Instant/ofEpochMilli started-ms))
+                     :ended-at (str (Instant/ofEpochMilli ended-ms))
+                     :elapsed-ms (- ended-ms started-ms)}
        :runner/result result
        :transformed-judgement (:judgement prepared)
        :r11 (:r11 prepared)
@@ -225,19 +231,24 @@
   slow state, and the R17 envelope.  `record-fn` must confirm with `{:ok true}`;
   the campaign never calls an unconfirmed write successful."
   [{campaign-id :campaign/id
-    :keys [initial-slow-state tick-a tick-b record-fn runner-fn]
+    campaign-plan :campaign/plan
+    :keys [initial-slow-state tick-a tick-b record-fn runner-fn clock-fn]
     r17-spec :r17/run}]
   (when-not (and campaign-id tick-a tick-b r17-spec (fn? record-fn))
     (fail! "Campaign id, two ticks, R17 input, and record-fn are required"
            {:campaign/id campaign-id}))
-  (let [runner-fn (or runner-fn full-loop/run-opportunity!)
+  (let [clock-fn (or clock-fn #(System/currentTimeMillis))
+        campaign-started-ms (clock-fn)
+        runner-fn (or runner-fn full-loop/run-opportunity!)
         first-tick (run-tick! campaign-id tick-a initial-slow-state nil
-                              runner-fn)
+                              runner-fn clock-fn)
         slow-after-a (next-slow-state initial-slow-state
                                       (assoc first-tick
                                              :tick/as-of (:tick/as-of tick-a)))
         r17-input (resolve-input r17-spec first-tick)
+        r17-started-ms (clock-fn)
         structure-envelope (r17/run r17-input)
+        r17-ended-ms (clock-fn)
         tick-b-context {:campaign/id campaign-id
                         :tick-a first-tick
                         :slow-state slow-after-a
@@ -247,7 +258,8 @@
         tick-b (resolve-input tick-b tick-b-context)
         second-tick (run-tick! campaign-id tick-b slow-after-a
                                (:r17/resulting-structure structure-envelope)
-                               runner-fn)
+                               runner-fn clock-fn)
+        campaign-ended-ms (clock-fn)
         compliant? (every? #(true? (get-in % [:r12/report :gate/clear?]))
                             [first-tick second-tick])
         record {:campaign/schema campaign-schema
@@ -256,6 +268,14 @@
                                    :two-tick-evidence-complete
                                    :evidence-gate-failed)
                 :campaign/compliant? compliant?
+                :campaign/plan campaign-plan
+                :campaign/timing
+                {:started-at (str (Instant/ofEpochMilli campaign-started-ms))
+                 :ended-at (str (Instant/ofEpochMilli campaign-ended-ms))
+                 :elapsed-ms (- campaign-ended-ms campaign-started-ms)
+                 :r17 {:started-at (str (Instant/ofEpochMilli r17-started-ms))
+                       :ended-at (str (Instant/ofEpochMilli r17-ended-ms))
+                       :elapsed-ms (- r17-ended-ms r17-started-ms)}}
                 :campaign/initial-slow-state initial-slow-state
                 :campaign/slow-state-after-tick-a slow-after-a
                 :campaign/r17 structure-envelope

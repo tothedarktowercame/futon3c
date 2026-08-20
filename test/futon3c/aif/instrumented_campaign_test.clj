@@ -87,19 +87,22 @@
                         :implementation-id (str "implementation-" n)
                         :discharge-id (str "discharge-" n)}}})))
 
-(defn campaign-input [record-fn]
-  {:campaign/id "campaign-r11-r12-r15-r17"
-   :initial-slow-state {:slow/mode :exploration :slow/intrinsics {}}
-   :tick-a (tick :tick-a)
-   :tick-b (fn [_context] (tick :tick-b))
-   :r17/run
-   (fn [_tick-a]
-     {:run-id "campaign-r11-r12-r15-r17/intertick"
-      :parent-model {:id "capability-model/v17"
-                     :revision "sha256:parent"}
-      :corpus accepted-corpus})
-   :runner-fn (mock-runner (atom 0))
-   :record-fn record-fn})
+(defn campaign-input
+  ([record-fn] (campaign-input record-fn nil))
+  ([record-fn clock-fn]
+   {:campaign/id "campaign-r11-r12-r15-r17"
+    :initial-slow-state {:slow/mode :exploration :slow/intrinsics {}}
+    :tick-a (tick :tick-a)
+    :tick-b (fn [_context] (tick :tick-b))
+    :r17/run
+    (fn [_tick-a]
+      {:run-id "campaign-r11-r12-r15-r17/intertick"
+       :parent-model {:id "capability-model/v17"
+                      :revision "sha256:parent"}
+       :corpus accepted-corpus})
+    :runner-fn (mock-runner (atom 0))
+    :record-fn record-fn
+    :clock-fn clock-fn}))
 
 (deftest two-tick-campaign-integrates-all-four-patterns
   (let [written (atom nil)
@@ -134,6 +137,22 @@
     (is (= @written (dissoc result :campaign/storage-receipt)))
     (is (= {:ok true :evidence-id "campaign-evidence-1"}
            (:campaign/storage-receipt result)))))
+
+(deftest campaign-records-wall-clock-timings
+  (let [times (atom [1000 1100 1300 1310 1325 1400 1750 2000])
+        clock-fn (fn [] (let [n (first @times)] (swap! times subvec 1) n))
+        result (campaign/run-two-tick!
+                (campaign-input (constantly {:ok true}) clock-fn))]
+    (is (= {:started-at "1970-01-01T00:00:01Z"
+            :ended-at "1970-01-01T00:00:02Z"
+            :elapsed-ms 1000
+            :r17 {:started-at "1970-01-01T00:00:01.310Z"
+                  :ended-at "1970-01-01T00:00:01.325Z"
+                  :elapsed-ms 15}}
+           (:campaign/timing result)))
+    (is (= [200 350]
+           (mapv #(get-in % [:tick/timing :elapsed-ms])
+                 (:campaign/ticks result))))))
 
 (deftest unconfirmed-campaign-record-is-not-success
   (is (thrown-with-msg?
