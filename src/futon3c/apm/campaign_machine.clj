@@ -11,10 +11,12 @@
 (def event-types
   #{:campaign/registered :block/opened :frame/opened
     :frame/advanced :frame/stopped :frame/closed
-    :block/closed :campaign/closed :obligation/claimed})
+    :block/closed :campaign/closed
+    :obligation/claimed :obligation/released})
 
 (def transition-event-types
-  (disj event-types :campaign/registered :obligation/claimed))
+  (disj event-types :campaign/registered
+        :obligation/claimed :obligation/released))
 
 (def terminal-frame-statuses #{:closed :stopped})
 
@@ -64,6 +66,13 @@
          (= :obligation/claimed (:event/type event))
          (:active-claim state))
     :campaign-obligation-claim-exists
+    (and (= :obligation/released (:event/type event))
+         (nil? (:active-claim state)))
+    :campaign-obligation-release-without-claim
+    (and (= :obligation/released (:event/type event))
+         (not= (get-in state [:active-claim :obligation/id])
+               (get-in event [:event/body :obligation/id])))
+    :campaign-obligation-release-mismatch
     (and (:claims-required? state)
          (contains? transition-event-types (:event/type event))
          (nil? (:active-claim state)))
@@ -72,7 +81,10 @@
          (contains? transition-event-types (:event/type event))
          (not= (get-in state [:active-claim :obligation/id])
                (get-in event [:event/body :obligation/id])))
-    :campaign-obligation-claim-mismatch))
+    :campaign-obligation-claim-mismatch
+    (and (true? (get-in event [:event/body :recovery?]))
+         (= (:event/actor event) (get-in state [:active-claim :actor])))
+    :campaign-obligation-recovery-reviewer-not-independent))
 
 (defn- phase-index [state phase]
   (.indexOf ^java.util.List (:phase-order state) phase))
@@ -163,6 +175,24 @@
                                    :obligation obligation
                                    :claimed-at (:event/at event)
                                    :actor (:event/actor event)})}))
+
+      :obligation/released
+      (let [evidence (:evidence body)]
+        (cond
+          (not= :not-started (:outcome body))
+          (refusal state event :campaign-obligation-release-outcome-invalid)
+          (not (map? evidence))
+          (refusal state event :campaign-obligation-release-evidence-required)
+          (= (:event/actor event) (get-in state [:active-claim :actor]))
+          (refusal state event :campaign-obligation-release-reviewer-not-independent)
+          :else
+          {:ok true :state (-> state
+                               (update :released-claims (fnil conj [])
+                                       {:obligation/id (:obligation/id body)
+                                        :released-at (:event/at event)
+                                        :assessor (:event/actor event)
+                                        :evidence evidence})
+                               (assoc :active-claim nil))}))
 
       :block/opened
       (let [block-id (:block-id body)
