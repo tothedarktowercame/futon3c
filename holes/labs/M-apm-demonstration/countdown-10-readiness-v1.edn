@@ -61,7 +61,7 @@
     produce durable receipts and the close inspection passes from those facts."}
 
   {:slice/id :branch-addressed-apparatus-validation
-   :order 3 :status :blocking
+   :order 3 :status :complete
    :problem
    "The apparatus gate compares the running control worktree HEAD with the
     frame's historical harness hash. Legitimate machine development therefore
@@ -115,5 +115,5 @@
    :reason "The countdown deliberately retains one operator permit per step;
             batch permits are the subsequent qualification target."}]
 
- :estimated-remaining-structural-slices 4
- :next-slice :branch-addressed-apparatus-validation}
+ :estimated-remaining-structural-slices 3
+ :next-slice :ledger-derived-live-projection}

@@ -9,6 +9,7 @@
             [futon3c.apm.campaign-postconditions :as postconditions]
             [futon3c.apm.campaign-qualification :as qualification]
             [futon3c.apm.campaign-stepper :as stepper]
+            [futon3c.apm.apparatus-pin :as apparatus-pin]
             [futon3c.apm.frame-specification :as frame-specification])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -154,7 +155,8 @@
                                     registration-digest)
         manifest-matches?
         (= (machine/ledger-digest [control])
-           (get-in loaded [:projection :campaign/manifest-hash]))]
+           (get-in loaded [:projection :campaign/manifest-hash]))
+        apparatus-observation (apparatus-pin/validate (:frame/apparatus control))]
     {:specification-check
      specification-check
      :problem-check
@@ -187,7 +189,9 @@
      :apparatus-check
      {:unchanged-since-open? (and manifest-matches?
                                   (:valid? specification-check)
-                                  (= problem-blob (:problem/blob control)))}
+                                  (= problem-blob (:problem/blob control))
+                                  (:valid? apparatus-observation))
+      :pin-observation apparatus-observation}
      :workspace-check
      {:ready? (every? (fn [[role observation]]
                         (and (:clean? observation)

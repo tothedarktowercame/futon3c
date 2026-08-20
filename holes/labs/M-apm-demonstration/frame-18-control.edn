@@ -30,6 +30,7 @@
   :analyst {:type :claude}}
  :frame/apparatus
  {:repository "/home/joe/code/futon3c"
+  :branch "master"
   :revision "4c08c2e64d6725a54ca85f981a4109a4947dad11"
   :role-cards
   {:solver
