@@ -77,3 +77,10 @@
          (:error/code (authorize {:certificate
                                   (assoc certificate :generated-at
                                          "2026-08-20T10:59:59Z")})))))
+
+(deftest caller-action-index-must-equal-certified-ledger-usage
+  (is (= :campaign-batch-permit-usage-mismatch
+         (:error/code
+          (authorize {:action-index 1
+                      :certificate (assoc certificate :campaign/permit-usage
+                                          {(:permit/id permit) 0})})))))

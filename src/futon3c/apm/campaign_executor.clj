@@ -21,7 +21,8 @@
   action :kind and receives the action plus :idempotency-key. It must return
   {:ok true :certificate map}. Handler failure leaves the visible claim in the
   ledger for a separate recovery policy; this function never retries it."
-  [{:keys [ledger-path obligation current-certificate handlers actor at]}]
+  [{:keys [ledger-path obligation current-certificate handlers actor at
+           claim-context]}]
   (let [authorization (regulator/authorize obligation current-certificate)
         action (:obligation/action obligation)
         handler (get handlers (:kind action))]
@@ -42,12 +43,18 @@
                 (string? at) (not-empty at)))
       {:ok false :error/code :campaign-executor-identity-time-required}
 
+      (not (or (nil? claim-context)
+               (and (map? claim-context)
+                    (every? #{:batch/permit-id :batch/action-index}
+                            (keys claim-context)))))
+      {:ok false :error/code :campaign-executor-claim-context-invalid}
+
       :else
       (let [version (:campaign/version current-certificate)
             seq (:ledger/event-count current-certificate)
             claim-event (make-event current-certificate seq version actor at
                                     :obligation/claimed
-                                    {:obligation obligation})
+                                    (merge claim-context {:obligation obligation}))
             claim (ledger/compare-and-append!
                    ledger-path version (:ledger/digest current-certificate)
                    claim-event)]

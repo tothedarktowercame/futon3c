@@ -136,3 +136,18 @@
         (is (= 1 (:ledger/event-count
                   (:projection (ledger/read-ledger (:path f)))))))
       (finally (delete-tree! (:dir f))))))
+
+(deftest claim-context-cannot-shadow-the-authorized-obligation
+  (let [f (fixture) calls (atom 0)]
+    (try
+      (let [result (executor/execute!
+                    {:ledger-path (:path f) :obligation (:obligation f)
+                     :current-certificate (:certificate f)
+                     :handlers {:open-block (fn [_] (swap! calls inc))}
+                     :actor "regulator" :at at
+                     :claim-context {:obligation {:obligation/id "forged"}}})]
+        (is (= :campaign-executor-claim-context-invalid (:error/code result)))
+        (is (zero? @calls))
+        (is (= 1 (:campaign/version
+                  (:projection (ledger/read-ledger (:path f)))))))
+      (finally (delete-tree! (:dir f))))))

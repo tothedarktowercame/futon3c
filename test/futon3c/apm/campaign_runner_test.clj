@@ -40,16 +40,20 @@
      :projection (.resolve dir "projection")
      :registered-projection (:projection (ledger/read-ledger ledger-path))}))
 
-(defn options [fixture handler projected]
+(defn issue-permit [fixture max-actions]
   (let [start (:registered-projection fixture)
         permit (batch/issue
                 {:campaign-id "apm-200" :manifest-hash "manifest-200"
                  :start-version (:campaign/version start)
                  :start-ledger-digest (:ledger/digest start)
-                 :issuer "joe" :actor "runner" :max-actions 10
+                 :issuer "joe" :actor "runner" :max-actions max-actions
                  :allowed-kinds [:open-block :close-block :close-campaign]
                  :issued-at "2026-08-20T11:00:00Z"
                  :valid-before "2026-08-20T13:00:00Z"})]
+    permit))
+
+(defn options [fixture handler projected]
+  (let [permit (issue-permit fixture 10)]
     {:ledger-path (:ledger-path fixture)
    :certificate-directory (:certificates fixture)
    :projection-directory (:projection fixture)
@@ -75,6 +79,38 @@
         (is (= (:campaign/version durable) (:campaign/version shown)))
         (is (= (:ledger/digest durable) (:ledger/digest shown)))
         (is (= "b1" (:active/block shown))))
+      (finally (delete-tree! (:dir f))))))
+
+(deftest permit-quota-remains-consumed-after-runner-restart
+  (let [f (fixture) projected (atom []) calls (atom 0)
+        base (options f (fn [_] (swap! calls inc)
+                          {:ok true :certificate {}}) projected)
+        permit (issue-permit f 1)
+        opts (assoc base :batch-permit permit :trusted-permit-id (:permit/id permit)
+                    :max-actions 1)]
+    (try
+      (is (= :action-bound (:batch/status (runner/run-batch! opts))))
+      (let [restarted (runner/run-batch! opts)
+            durable (:projection (ledger/read-ledger (:ledger-path f)))]
+        (is (= :stopped (:batch/status restarted)))
+        (is (= :campaign-batch-permit-quota-exhausted
+               (get-in restarted [:authorization :error/code])))
+        (is (= 1 @calls))
+        (is (= 1 (get-in durable [:campaign/permit-usage (:permit/id permit)]))))
+      (finally (delete-tree! (:dir f))))))
+
+(deftest failed-claimed-action-also-consumes-permit-quota
+  (let [f (fixture) projected (atom [])
+        permit (issue-permit f 1)
+        opts (assoc (options f (fn [_] {:ok false :error/code :boom}) projected)
+                    :batch-permit permit :trusted-permit-id (:permit/id permit)
+                    :max-actions 1)]
+    (try
+      (let [result (runner/run-batch! opts)
+            durable (:projection (ledger/read-ledger (:ledger-path f)))]
+        (is (= :campaign-runner-execution-failed (:error/code result)))
+        (is (some? (:active/claim durable)))
+        (is (= 1 (get-in durable [:campaign/permit-usage (:permit/id permit)]))))
       (finally (delete-tree! (:dir f))))))
 
 (deftest failed-effect-projects-its-durable-claim-and-stops

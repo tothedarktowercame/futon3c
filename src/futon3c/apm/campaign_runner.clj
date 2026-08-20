@@ -74,7 +74,7 @@
   A failed effect is still followed by a checkpoint, making its durable claim
   visible to the projection and recovery policy."
   [{:keys [handlers actor require-batch-permit? batch-permit
-           trusted-permit-id trusted-permit-issuer batch-action-index] :as options}]
+           trusted-permit-id trusted-permit-issuer] :as options}]
   (let [before (checkpoint! options {:checkpoint/stage :before})]
     (if-not (:ok before)
       before
@@ -85,6 +85,8 @@
            :runner/status (:decision decision)
            :decision decision :checkpoint before}
           (let [obligation (:obligation decision)
+                batch-action-index (get (:campaign/permit-usage certificate)
+                                        (:permit/id batch-permit) 0)
                 permit-authorization
                 (when require-batch-permit?
                   (batch/authorize
@@ -102,7 +104,11 @@
                            :obligation obligation
                            :current-certificate certificate
                            :handlers handlers :actor actor
-                           :at (:generated-at certificate)})
+                           :at (:generated-at certificate)
+                           :claim-context
+                           (when require-batch-permit?
+                             {:batch/permit-id (:permit/id batch-permit)
+                              :batch/action-index batch-action-index})})
                 after (checkpoint!
                        options {:checkpoint/stage :after
                                 :obligation/id (:obligation/id obligation)
@@ -131,9 +137,7 @@
   (if-not (and (integer? max-actions) (pos? max-actions))
     {:ok false :error/code :campaign-runner-action-bound-required}
     (loop [completed 0]
-      (let [result (step! (assoc options
-                                 :require-batch-permit? true
-                                 :batch-action-index completed))]
+      (let [result (step! (assoc options :require-batch-permit? true))]
         (cond
           (= :stop (:runner/status result))
           (assoc result :ok false :batch/status :stopped

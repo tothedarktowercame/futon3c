@@ -68,6 +68,7 @@
                  :campaign/block-plan (:campaign/block-plan projection)
                  :campaign/obligation-plan (:campaign/obligation-plan projection)
                  :campaign/claims-required? (:campaign/claims-required? projection)
+                 :campaign/permit-usage (:campaign/permit-usage projection)
                  :campaign/blocks (:campaign/blocks projection)
                  :campaign/frames (:campaign/frames projection)
                  :ledger/digest (:ledger/digest projection)

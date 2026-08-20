@@ -66,6 +66,21 @@
          (= :obligation/claimed (:event/type event))
          (:active-claim state))
     :campaign-obligation-claim-exists
+    (and (= :obligation/claimed (:event/type event))
+         (not= (contains? (:event/body event) :batch/permit-id)
+               (contains? (:event/body event) :batch/action-index)))
+    :campaign-obligation-batch-claim-incomplete
+    (and (= :obligation/claimed (:event/type event))
+         (contains? (:event/body event) :batch/permit-id)
+         (not (and (nonblank? (get-in event [:event/body :batch/permit-id]))
+                   (nat-int? (get-in event [:event/body :batch/action-index])))))
+    :campaign-obligation-batch-claim-invalid
+    (and (= :obligation/claimed (:event/type event))
+         (contains? (:event/body event) :batch/permit-id)
+         (not= (get (:permit-usage state)
+                    (get-in event [:event/body :batch/permit-id]) 0)
+               (get-in event [:event/body :batch/action-index])))
+    :campaign-obligation-batch-index-nonmonotonic
     (and (= :obligation/released (:event/type event))
          (nil? (:active-claim state)))
     :campaign-obligation-release-without-claim
@@ -170,11 +185,17 @@
                 (get-in obligation [:obligation/preconditions :campaign/version]))
           (refusal state event :campaign-obligation-version-stale)
           :else
-          {:ok true :state (assoc state :active-claim
-                                  {:obligation/id (:obligation/id obligation)
-                                   :obligation obligation
-                                   :claimed-at (:event/at event)
-                                   :actor (:event/actor event)})}))
+          (let [permit-id (:batch/permit-id body)
+                claim (cond-> {:obligation/id (:obligation/id obligation)
+                               :obligation obligation
+                               :claimed-at (:event/at event)
+                               :actor (:event/actor event)}
+                        permit-id
+                        (assoc :batch/permit-id permit-id
+                               :batch/action-index (:batch/action-index body)))]
+            {:ok true
+             :state (cond-> (assoc state :active-claim claim)
+                      permit-id (update-in [:permit-usage permit-id] (fnil inc 0)))})))
 
       :obligation/released
       (let [evidence (:evidence body)]
@@ -331,7 +352,7 @@
 (def initial-state
   {:campaign-id nil :status :empty :version 0 :next-seq 0
    :event-ids #{} :blocks {} :frames {}
-   :active-block-id nil :active-frame-id nil})
+   :permit-usage {} :active-block-id nil :active-frame-id nil})
 
 (defn fold-ledger
   "Validate and fold EVENTS. Refuses at the first invalid event and retains the
@@ -388,6 +409,7 @@
           :campaign/block-plan (:block-plan state)
           :campaign/obligation-plan (:obligation-plan state)
           :campaign/claims-required? (:claims-required? state)
+          :campaign/permit-usage (:permit-usage state)
           :campaign/blocks (:blocks state)
           :campaign/frames (:frames state)
           :active/claim (:active-claim state)

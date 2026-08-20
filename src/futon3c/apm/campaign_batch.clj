@@ -79,6 +79,12 @@
           (>= action-index (:permit/max-actions permit)))
       {:ok false :error/code :campaign-batch-permit-quota-exhausted}
 
+      (not= action-index
+            (get (:campaign/permit-usage certificate) (:permit/id permit) 0))
+      {:ok false :error/code :campaign-batch-permit-usage-mismatch
+       :expected (get (:campaign/permit-usage certificate) (:permit/id permit) 0)
+       :actual action-index}
+
       (not (contains? (:permit/allowed-kinds permit) kind))
       {:ok false :error/code :campaign-batch-permit-action-forbidden :kind kind}
 
