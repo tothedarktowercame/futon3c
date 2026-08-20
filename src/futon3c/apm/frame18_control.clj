@@ -21,12 +21,16 @@
   "holes/labs/M-apm-demonstration/frame-18-continuation-receipt.edn")
 (def preflight-receipt-path
   "holes/labs/M-apm-demonstration/frame-18-preflight-receipt.edn")
+(def solve-receipt-path
+  "holes/labs/M-apm-demonstration/frame-18-solve-receipt.edn")
 (def state-directory
   (Path/of "data/apm-campaigns/frame-18-bounded-admission"
            (make-array String 0)))
 (def ledger-path (.resolve state-directory "ledger.edn"))
 (def certificate-directory (.resolve state-directory "certificates"))
 (def projection-directory (.resolve state-directory "projection"))
+
+(declare valid-solve-receipt?)
 
 (defn- fetch-json [url]
   (let [connection ^java.net.HttpURLConnection
@@ -108,6 +112,10 @@
         problem-blob (git "-C" problem-repository "rev-parse"
                           (str problem-revision ":" (:problem/path control)))
         workspaces (:frame/workspaces control)
+        solve-receipt (when (.isFile (java.io.File. solve-receipt-path))
+                        (edn/read-string (slurp solve-receipt-path)))
+        completed-solve? (and (= :solve (:kind action))
+                              (valid-solve-receipt? solve-receipt action))
         workspace-observations
         (into {}
               (map (fn [[role {:keys [path branch base-revision
@@ -179,13 +187,18 @@
                                   (:valid? specification-check)
                                   (= problem-blob (:problem/blob control)))}
      :workspace-check
-     {:ready? (every? (fn [[_ observation]]
+     {:ready? (every? (fn [[role observation]]
                         (and (:clean? observation)
                              (:substrate-ready? observation)
                              (= (:branch observation)
                                 (:expected-branch observation))
-                             (= (:head observation)
-                                (:expected-head observation))))
+                             (or (= (:head observation)
+                                    (:expected-head observation))
+                                 (and completed-solve?
+                                      (= role :solver)
+                                      (= (:head observation)
+                                         (:receipt/final-head
+                                          solve-receipt))))))
                       workspace-observations)
       :isolated? (= (count workspaces)
                     (count (set (map :path (vals workspaces)))))}
@@ -209,6 +222,20 @@
           (:receipt/lean receipt))
        (= :non-topology (:receipt/classification receipt))
        (true? (:receipt/clean-before? receipt))
+       (true? (:receipt/clean-after? receipt))))
+
+(defn- valid-solve-receipt? [receipt action]
+  (and (map? receipt)
+       (= (:receipt/id receipt)
+          (machine/ledger-digest [(dissoc receipt :receipt/id)]))
+       (= :frame-solve (:receipt/type receipt))
+       (= (:frame-id action) (:receipt/frame-id receipt))
+       (= (:problem-id action) (:receipt/problem-id receipt))
+       (= :solved (:receipt/result receipt))
+       (= {:exit 0 :warnings 0 :sorry-warnings 0 :errors 0 :output ""}
+          (:receipt/lean receipt))
+       (= '[propext Classical.choice Quot.sound] (:receipt/axioms receipt))
+       (true? (:receipt/statement-unchanged? receipt))
        (true? (:receipt/clean-after? receipt))))
 
 (defn- options []
@@ -245,6 +272,13 @@
                   (if (valid-preflight-receipt? receipt action)
                     {:ok true :certificate receipt}
                     {:ok false :error/code :frame-preflight-receipt-invalid
+                     :finding {:receipt/id (:receipt/id receipt)}})))
+              :solve
+              (fn [action]
+                (let [receipt (edn/read-string (slurp solve-receipt-path))]
+                  (if (valid-solve-receipt? receipt action)
+                    {:ok true :certificate receipt}
+                    {:ok false :error/code :frame-solve-receipt-invalid
                      :finding {:receipt/id (:receipt/id receipt)}})))}
    :actor "frame-18-control"})
 
@@ -316,6 +350,7 @@
                  "inspect" (inspect!)
                  "open-block" (open-block!)
                  "preflight" (advance! :preflight)
+                 "solve" (advance! :solve)
                  {:ok false :error/code :frame18-command-unknown})]
     (prn result)
     (when-not (:ok result) (System/exit 1))))
