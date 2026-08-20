@@ -66,7 +66,13 @@
                         (get-in seat-configs [:student :turn-timeout-ms]))
       :frame-minutes (ms->minutes (:frame-timeout-ms registration-check))}
      :pins {:complete? (:complete? registration-check)
-            :coherent? (:coherent? registration-check)}
+            :coherent? (:coherent? registration-check)
+            :branch (:branch registration-check)
+            :commit (:commit registration-check)
+            :worktree (:worktree registration-check)
+            :worktree-clean? (:worktree-clean? registration-check)
+            :head-matches? (:head-matches? registration-check)
+            :dedicated-worktree? (:dedicated-worktree? registration-check)}
      :problem {:topology? (:topology? problem-check)
                :classification-source (:classification-source problem-check)}
      :cast {:ready? (and (= required-roles roles) (:ready? cast-check))

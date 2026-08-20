@@ -12,7 +12,11 @@
   {:problem {:topology? false :classification-source :operator-manifest}
    :timeouts {:request-minutes 5 :turn-minutes 60 :solver-minutes 60
               :student-minutes 60 :frame-minutes 240 :explicit? true}
-   :pins {:coherent? true :complete? true}
+   :pins {:coherent? true :complete? true
+          :branch "frame/18" :commit "0123456789abcdef"
+          :worktree "/srv/apm-frames/frame-18"
+          :worktree-clean? true :head-matches? true
+          :dedicated-worktree? true}
    :cast {:ready? true :attributed? true}
    :continuations {:durable? true :wake-tested? true}
    :projection {:ledger-derived? true :frame-matches? true}
@@ -66,3 +70,16 @@
     (is (= :fail (:gate/status admission)))
     (is (= true
            (-> admission :gate/evidence :requirements first :actual)))))
+
+(deftest mutable-live-checkout-cannot-satisfy-the-pin-gate
+  (let [obligation {:obligation/action {:kind :open-frame}}
+        facts (-> passing-facts
+                  (assoc-in [:pins :branch] "fix/park-surface-default")
+                  (assoc-in [:pins :worktree-clean?] false)
+                  (assoc-in [:pins :dedicated-worktree?] false))
+        pin-gate (->> (gates/evaluate-obligation specs facts obligation)
+                      (filter #(= :pin-coherence (:gate/id %))) first)
+        failed (->> pin-gate :gate/evidence :requirements
+                    (remove :pass?) (map :requirement/id) set)]
+    (is (= :fail (:gate/status pin-gate)))
+    (is (= #{:pin-worktree-clean :pin-worktree-dedicated} failed))))

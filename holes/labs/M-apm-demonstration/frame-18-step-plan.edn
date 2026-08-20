@@ -33,7 +33,19 @@
    [{:requirement/id :pins-complete :fact/path [:pins :complete?]
      :check :equals :expected true}
     {:requirement/id :pins-coherent :fact/path [:pins :coherent?]
-     :check :equals :expected true}]}
+     :check :equals :expected true}
+    {:requirement/id :pin-branch-recorded :fact/path [:pins :branch]
+     :check :present}
+    {:requirement/id :pin-commit-recorded :fact/path [:pins :commit]
+     :check :present}
+    {:requirement/id :pin-worktree-recorded :fact/path [:pins :worktree]
+     :check :present}
+    {:requirement/id :pin-worktree-clean :fact/path [:pins :worktree-clean?]
+     :check :equals :expected true}
+    {:requirement/id :pin-head-matches-commit :fact/path [:pins :head-matches?]
+     :check :equals :expected true}
+    {:requirement/id :pin-worktree-dedicated
+     :fact/path [:pins :dedicated-worktree?] :check :equals :expected true}]}
   {:gate/id :cast-ready
    :gate/applies-to #{:open-frame}
    :gate/requirements

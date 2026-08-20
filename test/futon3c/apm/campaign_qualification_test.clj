@@ -18,7 +18,11 @@
    :problem-check {:topology? false
                    :classification-source :operator-manifest}
    :registration-check {:frame-timeout-ms 14400000
-                        :complete? true :coherent? true}
+                        :complete? true :coherent? true
+                        :branch "frame/18" :commit "0123456789abcdef"
+                        :worktree "/srv/apm-frames/frame-18"
+                        :worktree-clean? true :head-matches? true
+                        :dedicated-worktree? true}
    :cast-check {:ready? true :attributed? true}
    :continuation-check {:durable? true :wake-tested? true}
    :projection-check {:ledger-derived? true :frame-matches? true}
