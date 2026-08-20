@@ -1132,6 +1132,9 @@
   "Update the current activity string for an invoking agent.
    Called from invoke-fn stream parsers to surface tool use, thinking, etc.
    Does NOT trigger a blackboard refresh — the ticker handles that every 5s.
+   When an invoke stream owns the agent's event sink, the same authoritative
+   update is pushed as an `invoke.activity` event. Stream progress therefore
+   cannot depend on an adapter also remembering to mirror its private raw event.
 
    Stamps :agent/invoke-activity-at as well. An activity string with no time on
    it cannot be told apart from a stale one: on 2026-08-03 three codex lanes
@@ -1148,15 +1151,25 @@
    idle while dispatching packets), restore :agent/status :invoking. Only :idle
    is restored; other states (:restored etc.) are left alone."
   [agent-id-val activity-str]
-  (swap! !registry
-         (fn [m]
-           (if-let [a (get m agent-id-val)]
-             (assoc m agent-id-val
-                    (cond-> (assoc a :agent/invoke-activity activity-str
-                                     :agent/invoke-activity-at (now))
-                      (= :idle (:agent/status a))
-                      (assoc :agent/status :invoking)))
-             m))))
+  (let [activity-at (now)
+        updated
+        (swap! !registry
+               (fn [m]
+                 (if-let [a (get m agent-id-val)]
+                   (assoc m agent-id-val
+                          (cond-> (assoc a :agent/invoke-activity activity-str
+                                           :agent/invoke-activity-at activity-at)
+                            (= :idle (:agent/status a))
+                            (assoc :agent/status :invoking)))
+                   m)))]
+    (when-let [sink (get-in updated [agent-id-val :agent/invoke-event-sink])]
+      (try
+        (sink {:type "invoke.activity"
+               :agent-id agent-id-val
+               :activity activity-str
+               :at (str activity-at)})
+        (catch Throwable _)))
+    updated))
 
 (defn- with-idle-invoke-state
   [agent now*]

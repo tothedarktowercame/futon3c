@@ -2765,6 +2765,11 @@ or when it is a clear suffix of the streamed assistant text."
           "using tool")))
      ((string= type "text")
       "text")
+     ((string= type "invoke.activity")
+      (let ((activity (alist-get 'activity evt)))
+        (if (and (stringp activity) (not (string-empty-p activity)))
+            activity
+          "working")))
      ((string= type "done")
       (if (alist-get 'ok evt)
           "invoke done"
@@ -2957,6 +2962,10 @@ or when it is a clear suffix of the streamed assistant text."
          (cond
          ((string= type "started")
           (codex-repl--set-progress-status "starting"))
+         ((string= type "invoke.activity")
+          (let ((activity (alist-get 'activity evt)))
+            (when (and (stringp activity) (not (string-empty-p activity)))
+              (codex-repl--set-progress-status activity))))
          ((string= type "tool_use")
           (let* ((tools (alist-get 'tools evt))
                  (tool-list (cond

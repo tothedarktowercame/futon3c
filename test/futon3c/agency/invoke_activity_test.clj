@@ -78,3 +78,14 @@
 (deftest activity-on-an-unregistered-agent-is-a-no-op
   (is (some? (reg/update-invoke-activity! "never-registered" "using bash")))
   (is (nil? (roster-entry "never-registered"))))
+
+(deftest authoritative-activity-update-pushes-to-owned-invoke-stream
+  (register! "act-stream")
+  (let [events (atom [])]
+    (reg/set-invoke-event-sink! "act-stream" #(swap! events conj %))
+    (reg/update-invoke-activity! "act-stream" "using bash")
+    (is (= [{:type "invoke.activity"
+             :agent-id "act-stream"
+             :activity "using bash"}]
+           (mapv #(dissoc % :at) @events)))
+    (is (string? (:at (first @events))))))
