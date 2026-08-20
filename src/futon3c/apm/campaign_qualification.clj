@@ -5,7 +5,11 @@
   (:require [clojure.edn :as edn]
             [futon3c.apm.campaign-gates :as gates]))
 
-(def required-roles #{:solver :student :guide :scribe :proctor :analyst})
+(def required-roles #{:solver :student :guide :scribe :proctor})
+(def required-leg-roles (conj required-roles :analyst))
+
+(defn- normalize-policy-value [value]
+  (if (string? value) (keyword value) value))
 
 (defn- ms->minutes [x]
   (when (and (integer? x) (not (neg? x))) (quot x 60000)))
@@ -20,15 +24,21 @@
   (let [agents (or (:agents response) (get response "agents"))]
     (into {}
           (map (fn [[role agent-id]]
-                 (let [agent (or (get agents agent-id) (get agents (str agent-id)))
+                 (let [agent (or (get agents agent-id)
+                                 (get agents (str agent-id))
+                                 (get agents (keyword (str agent-id))))
                        metadata (or (:metadata agent) (get agent "metadata"))
                        policy (or (:effective-timeouts metadata)
                                   (get metadata "effective-timeouts"))]
-                   [role policy])))
+                   [role (some-> policy
+                                 (update :request-timeout-ms
+                                         normalize-policy-value)
+                                 (update :request/source normalize-policy-value)
+                                 (update :turn/source normalize-policy-value))])))
           role-seat-ids)))
 
 (defn- complete-role-map [roles]
-  (into {} (map (fn [role] [role (contains? roles role)]) required-roles)))
+  (into {} (map (fn [role] [role (contains? roles role)]) required-leg-roles)))
 
 (defn derive-facts
   "Normalize already-observed routes into the frame-18 gate vocabulary.

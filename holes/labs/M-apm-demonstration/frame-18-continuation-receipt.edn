@@ -1,0 +1,11 @@
+{:receipt/type :park-autowake-proof
+ :receipt/frame-id "f18"
+ :receipt/agent "codex-10"
+ :receipt/job-id "invoke-1787247614887-5301-ff45dc06"
+ :receipt/park-id "park-8af77d2d-ada4-41ac-98f0-f76324a0b5ae"
+ :receipt/result "WAKE-PROBE-COMPLETE"
+ :receipt/resume-marker "AUTOWAKE-LANDED"
+ :receipt/surface :emacs-repl
+ :receipt/observed-by "joe"
+ :receipt/durable? true
+ :receipt/wake-tested? true}

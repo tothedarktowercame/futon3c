@@ -17,6 +17,8 @@
   "holes/labs/M-apm-demonstration/frame-18-control.edn")
 (def plan-path
   "holes/labs/M-apm-demonstration/frame-18-step-plan.edn")
+(def continuation-receipt-path
+  "holes/labs/M-apm-demonstration/frame-18-continuation-receipt.edn")
 (def state-directory
   (Path/of "data/apm-campaigns/frame-18-bounded-admission"
            (make-array String 0)))
@@ -74,11 +76,35 @@
         registration-digest (get-in action [:completion :event/body
                                             :registration-hash])
         control (edn/read-string (slurp control-path))
+        continuation-receipt (edn/read-string (slurp continuation-receipt-path))
+        agents-response (fetch-json "http://localhost:7070/api/alpha/agents")
+        seat-ids (into {} (map (fn [role]
+                                 [role (str "f18-" (name role))])
+                               qualification/required-roles))
+        seat-configs (qualification/seat-configs-from-roster
+                      agents-response seat-ids)
+        agents (:agents agents-response)
+        requested-cast (dissoc (:frame/cast control) :analyst)
+        cast-matches?
+        (every? (fn [[role {:keys [type]}]]
+                  (let [agent (or (get agents (get seat-ids role))
+                                  (get agents (keyword (get seat-ids role))))]
+                    (and (= (name type) (:type agent))
+                         (true? (:invoke-ready? agent)))))
+                requested-cast)
         head (git "rev-parse" "HEAD")
         branch (git "branch" "--show-current")
         worktree (System/getProperty "user.dir")
         clean? (str/blank? (or (git "status" "--porcelain") "not-clean"))
-        harness-hash (get-in action [:completion :event/body :harness-hash])]
+        harness-hash (get-in action [:completion :event/body :harness-hash])
+        active-frame (get-in loaded [:projection :active/frame])
+        problem-repository (:problem/repository control)
+        problem-revision (:problem/revision control)
+        problem-blob (git "-C" problem-repository "rev-parse"
+                          (str problem-revision ":" (:problem/path control)))
+        manifest-matches?
+        (= (machine/ledger-digest [control])
+           (get-in loaded [:projection :campaign/manifest-hash]))]
     {:specification-check
      (frame-specification/ingest control-path active-frame-id
                                  registration-digest)
@@ -94,6 +120,24 @@
       :branch branch :commit head :worktree worktree
       :worktree-clean? clean? :head-matches? (= head harness-hash)
       :dedicated-worktree? (not= worktree "/home/joe/code/futon3c")}
+     :seat-configs seat-configs
+     :cast-check {:ready? cast-matches? :attributed? cast-matches?}
+     :continuation-check
+     {:durable? (:receipt/durable? continuation-receipt)
+      :wake-tested? (:receipt/wake-tested? continuation-receipt)}
+     :projection-check
+     {:ledger-derived? (and (:ok loaded) (= (:projection loaded) replayed))
+      :frame-matches? (and (= active-frame-id (:frame-id active-frame))
+                           (= (:problem/id control) (:problem-id active-frame)))}
+     :separation-check
+     {:author-reviewer-distinct?
+      (true? (get-in control [:frame/separation-policy
+                              :author-reviewer-distinct?]))
+      :arms-isolated? (true? (get-in control [:frame/separation-policy
+                                              :arms-isolated?]))}
+     :apparatus-check
+     {:unchanged-since-open? (and manifest-matches?
+                                  (= problem-blob (:problem/blob control)))}
      :receipt-check
      {:durable? (and (:ok loaded)
                      (= :valid (get-in loaded [:projection :projection/status])))

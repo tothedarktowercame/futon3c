@@ -70,3 +70,18 @@
     (is (= role-configs
            (qualification/seat-configs-from-roster
             {:ok true :agents agents} seat-ids)))))
+
+(deftest json-roster-values-normalize-to-policy-keywords
+  (is (= {:student {:request-timeout-ms 300000
+                    :turn-timeout-ms 3600000
+                    :request/source :zai-api/default-request-timeout-ms
+                    :turn/source :frame-seat/code-default}}
+         (qualification/seat-configs-from-roster
+          {:agents {"f18-student"
+                    {:metadata
+                     {:effective-timeouts
+                      {:request-timeout-ms 300000
+                       :turn-timeout-ms 3600000
+                       :request/source "zai-api/default-request-timeout-ms"
+                       :turn/source "frame-seat/code-default"}}}}}
+          {:student "f18-student"}))))
