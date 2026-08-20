@@ -1,0 +1,23 @@
+{:receipt/id "ebdac977982ec9f838e7329cb81baa335eb96fa2abec56832511da22df40c7fb"
+ :receipt/type :frame-verify
+ :receipt/frame-id "f18"
+ :receipt/problem-id "a97J07"
+ :receipt/job-id "invoke-1787262456977-5306-1bf0661d"
+ :receipt/proctor "f18-proctor"
+ :receipt/result :verified
+ :receipt/solve-receipt-id "d14b28ac31422185cce2f58c05bfc583cf2f6fd4f5a9690bd1da319d451ba3dc"
+ :receipt/worktree "/home/joe/code/apm-frames/frame-18-a97J07-solver-r2"
+ :receipt/branch "exp/frame-18-a97J07-solver-r2"
+ :receipt/base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+ :receipt/verified-head "843c474ee22710c41172076f05048456a6931f4a"
+ :receipt/source-blob "7caae88d55aa20213d8b384641c32f7fe04431b4"
+ :receipt/statement-unchanged? true
+ :receipt/lean {:exit 0 :warnings 0 :sorry-warnings 0 :errors 0 :output ""}
+ :receipt/axioms [propext Classical.choice Quot.sound]
+ :receipt/mathematical-sound? true
+ :receipt/non-vacuous? true
+ :receipt/clean-before? true
+ :receipt/clean-after? true
+ :receipt/mutations []
+ :receipt/independently-rechecked-by "codex-10"
+ :receipt/job-finished-at "2026-08-20T21:49:00.008924932Z"}

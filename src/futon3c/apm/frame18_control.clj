@@ -23,6 +23,8 @@
   "holes/labs/M-apm-demonstration/frame-18-preflight-receipt.edn")
 (def solve-receipt-path
   "holes/labs/M-apm-demonstration/frame-18-solve-receipt.edn")
+(def verify-receipt-path
+  "holes/labs/M-apm-demonstration/frame-18-verify-receipt.edn")
 (def state-directory
   (Path/of "data/apm-campaigns/frame-18-bounded-admission"
            (make-array String 0)))
@@ -238,6 +240,24 @@
        (true? (:receipt/statement-unchanged? receipt))
        (true? (:receipt/clean-after? receipt))))
 
+(defn- valid-verify-receipt? [receipt action]
+  (and (map? receipt)
+       (= (:receipt/id receipt)
+          (machine/ledger-digest [(dissoc receipt :receipt/id)]))
+       (= :frame-verify (:receipt/type receipt))
+       (= (:frame-id action) (:receipt/frame-id receipt))
+       (= (:problem-id action) (:receipt/problem-id receipt))
+       (= :verified (:receipt/result receipt))
+       (= {:exit 0 :warnings 0 :sorry-warnings 0 :errors 0 :output ""}
+          (:receipt/lean receipt))
+       (= '[propext Classical.choice Quot.sound] (:receipt/axioms receipt))
+       (true? (:receipt/statement-unchanged? receipt))
+       (true? (:receipt/mathematical-sound? receipt))
+       (true? (:receipt/non-vacuous? receipt))
+       (true? (:receipt/clean-before? receipt))
+       (true? (:receipt/clean-after? receipt))
+       (empty? (:receipt/mutations receipt))))
+
 (defn- options []
   {:ledger-path ledger-path
    :certificate-directory certificate-directory
@@ -279,6 +299,13 @@
                   (if (valid-solve-receipt? receipt action)
                     {:ok true :certificate receipt}
                     {:ok false :error/code :frame-solve-receipt-invalid
+                     :finding {:receipt/id (:receipt/id receipt)}})))
+              :verify
+              (fn [action]
+                (let [receipt (edn/read-string (slurp verify-receipt-path))]
+                  (if (valid-verify-receipt? receipt action)
+                    {:ok true :certificate receipt}
+                    {:ok false :error/code :frame-verify-receipt-invalid
                      :finding {:receipt/id (:receipt/id receipt)}})))}
    :actor "frame-18-control"})
 
@@ -351,6 +378,7 @@
                  "open-block" (open-block!)
                  "preflight" (advance! :preflight)
                  "solve" (advance! :solve)
+                 "verify" (advance! :verify)
                  {:ok false :error/code :frame18-command-unknown})]
     (prn result)
     (when-not (:ok result) (System/exit 1))))

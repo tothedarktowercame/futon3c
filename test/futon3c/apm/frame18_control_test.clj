@@ -7,6 +7,8 @@
   (deref #'futon3c.apm.frame18-control/valid-preflight-receipt?))
 (def valid-solve-receipt?
   (deref #'futon3c.apm.frame18-control/valid-solve-receipt?))
+(def valid-verify-receipt?
+  (deref #'futon3c.apm.frame18-control/valid-verify-receipt?))
 
 (deftest preflight-receipt-is-content-addressed-and-frame-bound
   (let [receipt (edn/read-string (slurp control/preflight-receipt-path))
@@ -27,4 +29,14 @@
                  action)))
     (is (false? (valid-solve-receipt?
                  (assoc receipt :receipt/axioms '[propext Classical.choice])
+                 action)))))
+
+(deftest verify-receipt-is-content-addressed-and-soundness-bound
+  (let [receipt (edn/read-string (slurp control/verify-receipt-path))
+        action {:frame-id "f18" :problem-id "a97J07"}]
+    (is (true? (valid-verify-receipt? receipt action)))
+    (is (false? (valid-verify-receipt?
+                 (assoc receipt :receipt/non-vacuous? false) action)))
+    (is (false? (valid-verify-receipt?
+                 (assoc receipt :receipt/mutations ["changed-file"])
                  action)))))
