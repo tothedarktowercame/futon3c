@@ -40,8 +40,16 @@ ap.add_argument("--park-deadline", type=int, default=2700,
                 help="seconds from now before the park deadline fires (default: 2700)")
 ap.add_argument("--park-payload",
                 help="continuation payload for /api/alpha/park")
-ap.add_argument("--surface", default="emacs-repl",
-                help="park surface to resume on (default: emacs-repl)")
+ap.add_argument("--surface", default=None,
+                help="park surface to resume on. DEFAULT IS NOW 'headless' (was "
+                     "'emacs-repl'): the server routes any surface starting with "
+                     "'emacs' to a ready-inbox that ONLY a polling Emacs REPL "
+                     "buffer ever drains, so that lane silently loses the resume "
+                     "for every CLI-hosted agent. 'headless' enqueues a real turn "
+                     "on the agent's own drainer lane -- the same machinery bells "
+                     "use, and empirically the one that works. Pass "
+                     "--surface emacs-repl explicitly if you ARE hosted in a "
+                     "polling REPL buffer and want the resume streamed in place.")
 # Bells carry substantial handoffs under the coding-handoff protocol, and the
 # server's former 1800000 (30 min) cap discarded the result rather than harvesting it:
 # the job goes state=failed with an empty result and the work is left uncommitted
@@ -134,12 +142,37 @@ def job_id_from_response(resp):
     return job_id
 
 
+BUFFER_SURFACE_NOTE = (
+    "agency_send: NOTE -- park surface %r takes the BUFFER lane. The server "
+    "pushes the resume into a ready-inbox that is only drained by a polling "
+    "REPL buffer for this agent. If no such buffer exists (any CLI-hosted "
+    "agent), the resume is assembled and then never delivered, silently. "
+    "Use --surface headless unless you know a buffer is polling for you.")
+
+
+def resolve_surface():
+    """Explicit --surface wins. Otherwise default to the lane that always works.
+
+    There is deliberately NO inference from the registry here: `emacs-socket`
+    is present in the metadata of CLI-hosted agents too, so nothing in the
+    registry distinguishes 'has a polling REPL buffer' from 'does not'. Guessing
+    on an unreliable signal is how the silent loss happened in the first place;
+    defaulting to the deliverable lane and requiring opt-in for the other is
+    honest about what we can actually know.
+    """
+    if a.surface:
+        if a.surface.startswith("emacs"):
+            print(BUFFER_SURFACE_NOTE % a.surface, file=sys.stderr)
+        return a.surface
+    return "headless"
+
+
 def park_body_for(job_id, session_id):
     deadline_ms = int((time.time() + a.park_deadline) * 1000)
     return {
         "agent": a.frm,
         "session": session_id,
-        "surface": a.surface,
+        "surface": resolve_surface(),
         "mode": "background",
         "awaiting": [job_id],
         "deadline-ms": deadline_ms,
