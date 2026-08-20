@@ -1500,7 +1500,6 @@
    The two-channel experimental control has never been able to fire at all. The frame that
    finally solved its problem is also the frame in which the instruments were caught
    flattering themselves."}
-]
 
  ;; ===========================================================================
  ;; FRAME 16 — m97A06 — HALTED AND VOID (fourth pool defect; vendor-rotation guide leg)
@@ -1555,3 +1554,4 @@
    three commits, per-conjunct lemmas, frozen statement untouched."
   :defects-found 1
   :defects-fixed-or-queued 1}
+]
