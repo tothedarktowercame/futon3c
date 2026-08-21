@@ -1,5 +1,6 @@
 (ns futon3c.apm.campaign-stepper-test
   (:require [clojure.test :refer [deftest is]]
+            [futon3c.apm.campaign-batch :as batch]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-stepper :as stepper])
@@ -143,4 +144,39 @@
                              :trusted-issuer "joe"))]
           (is (= :advanced (:stepper/status result)))
           (is (= 1 @calls))))
+      (finally (delete-tree! (:dir f))))))
+
+(deftest batch-authority-is-recorded-when-a-stepped-effect-advances
+  (let [f (fixture) calls (atom 0) opts (options f passing-gates calls)]
+    (try
+      (let [inspection (stepper/inspect! opts)
+            step-permit (:permit (stepper/issue-permit
+                                  {:report (:report inspection) :issuer "joe"
+                                   :issued-at (str now)}))
+            certificate (get-in inspection [:checkpoint :certificate])
+            batch-permit
+            (batch/issue
+             {:campaign-id (:campaign/id certificate)
+              :manifest-hash (:campaign/manifest-hash certificate)
+              :start-version (:campaign/version certificate)
+              :start-ledger-digest (:ledger/digest certificate)
+              :issuer "joe" :actor "frame-18-stepper" :max-actions 2
+              :allowed-kinds [:open-block]
+              :issued-at "2026-08-20T15:00:00Z"
+              :valid-before "2026-08-20T17:00:00Z"})
+            result
+            (stepper/step!
+             (assoc opts :permit step-permit
+                    :trusted-permit-id (:permit/id step-permit)
+                    :trusted-issuer "joe" :require-batch-permit? true
+                    :batch-permit batch-permit
+                    :trusted-batch-permit-id (:permit/id batch-permit)
+                    :trusted-batch-permit-issuer "joe"))]
+        (is (= :advanced (:stepper/status result)))
+        (is (= 1 (get-in result [:post-checkpoint :certificate
+                                 :campaign/permit-usage (:permit/id batch-permit)])))
+        (is (= (:permit/id batch-permit)
+               (->> (:events (ledger/read-ledger (:ledger-path f)))
+                    (filter #(= :obligation/claimed (:event/type %)))
+                    last :event/body :batch/permit-id))))
       (finally (delete-tree! (:dir f))))))

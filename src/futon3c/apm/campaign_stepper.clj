@@ -4,7 +4,8 @@
   Inspection is read/checkpoint-only.  A step permit binds one immutable campaign
   certificate, obligation, and complete gate report; it can authorize exactly one
   executor claim."
-  (:require [futon3c.apm.campaign-executor :as executor]
+  (:require [futon3c.apm.campaign-batch :as batch]
+            [futon3c.apm.campaign-executor :as executor]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-regulator :as regulator]
             [futon3c.apm.campaign-runner :as runner]))
@@ -98,9 +99,21 @@
 (defn step!
   "Inspect again and execute exactly one gate-passing, explicitly permitted step."
   [{:keys [permit trusted-permit-id trusted-issuer handlers actor
-           postcondition-fn] :as options}]
+           postcondition-fn require-batch-permit? batch-permit
+           trusted-batch-permit-id trusted-batch-permit-issuer] :as options}]
   (let [inspection (inspect! options)
-        report (:report inspection)]
+        report (:report inspection)
+        certificate (get-in inspection [:checkpoint :certificate])
+        obligation (:obligation inspection)
+        batch-action-index (get (:campaign/permit-usage certificate)
+                                (:permit/id batch-permit) 0)
+        batch-authorization
+        (when require-batch-permit?
+          (batch/authorize
+           {:permit batch-permit :trusted-permit-id trusted-batch-permit-id
+            :trusted-issuer trusted-batch-permit-issuer :actor actor
+            :certificate certificate :obligation obligation
+            :action-index batch-action-index}))]
     (cond
       (not (:ok inspection)) inspection
       (not= :ready (:stepper/status inspection)) inspection
@@ -123,16 +136,22 @@
                 (= (:obligation/id report) (:obligation/id permit))))
       {:ok false :stepper/status :refused
        :error/code :campaign-stepper-permit-stale :inspection inspection}
+      (and require-batch-permit? (not (:ok batch-authorization)))
+      {:ok false :stepper/status :refused
+       :error/code :campaign-stepper-batch-permit-refused
+       :authorization batch-authorization :inspection inspection}
       :else
-      (let [certificate (get-in inspection [:checkpoint :certificate])
-            obligation (:obligation inspection)
-            executed (executor/execute!
+      (let [executed (executor/execute!
                       {:ledger-path (:ledger-path options)
                        :obligation obligation
                        :current-certificate certificate
                        :handlers handlers :actor actor
                        :at (:generated-at certificate)
-                       :claim-context {}})
+                       :claim-context
+                       (cond-> {}
+                         require-batch-permit?
+                         (assoc :batch/permit-id (:permit/id batch-permit)
+                                :batch/action-index batch-action-index))})
             after (runner/checkpoint!
                    options {:checkpoint/stage :after-step
                             :obligation/id (:obligation/id obligation)

@@ -1,5 +1,6 @@
 (ns futon3c.apm.countdown-control-test
   (:require [clojure.test :refer [deftest is]]
+            [futon3c.apm.campaign-batch :as batch]
             [futon3c.apm.countdown-control :as sut]))
 
 (deftest replacement-registration-starts-at-f19-with-complete-cycle
@@ -50,3 +51,37 @@
                  :park-fn #(do (reset! parked? true) {:ok true})})]
     (is (= :live-supervisor-launch-audit-failed (:error/code result)))
     (is (false? @parked?))))
+
+(deftest set-alight-batch-exposes-bounded-ledger-backed-chain
+  (let [manifest (:manifest (#'sut/inputs))
+        manifest-id (:manifest/id manifest)
+        certificate {:campaign/id "apm-countdown-r4"
+                     :campaign/manifest-hash manifest-id
+                     :campaign/version 5 :ledger/digest "ledger-5"
+                     :campaign/permit-usage {}
+                     :generated-at "2026-08-21T10:00:00Z"}
+        permit (batch/issue
+                {:campaign-id "apm-countdown-r4" :manifest-hash manifest-id
+                 :start-version 5 :start-ledger-digest "ledger-5"
+                 :issuer "joe" :actor "countdown-control" :max-actions 60
+                 :allowed-kinds [:preflight]
+                 :issued-at "2026-08-21T09:00:00Z"
+                 :valid-before "2026-08-22T09:00:00Z"})
+        state (atom nil) calls (atom [])
+        result
+        (sut/set-alight-batch!
+         {:start-frame "f20" :end-frame "f25" :permit permit
+          :trusted-permit-id (:permit/id permit) :trusted-issuer "joe"}
+         {:inspect-fn (fn [] {:ok true :stepper/status :ready
+                              :checkpoint {:certificate certificate}
+                              :obligation {:obligation/action
+                                           {:kind :preflight :frame-id "f20"}}})
+          :frame-tick-fn (fn [request] (swap! calls conj request)
+                           {:ok true :status :parked :job-id "j20"})
+          :cursor-read-fn #(deref state)
+          :cursor-persist-fn #(do (reset! state %) {:ok true})})]
+    (is (= :parked (:status result)))
+    (is (= ["f20" "f21" "f22" "f23" "f24" "f25"]
+           (:batch/frames result)))
+    (is (= "f20" (:frame-id (first @calls))))
+    (is (= (:permit/id permit) (get-in (first @calls) [:permit :permit/id])))))

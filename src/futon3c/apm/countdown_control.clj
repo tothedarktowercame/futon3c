@@ -11,6 +11,7 @@
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
+            [futon3c.apm.live-batch-supervisor :as live-batch-supervisor]
             [futon3c.apm.live-orchestration-contract :as orchestration-contract]
             [futon3c.apm.live-proof-phases :as live-proof-phases]
             [futon3c.apm.live-supervisor :as live-supervisor]
@@ -26,6 +27,7 @@
 (def projection-directory "data/apm-campaigns/countdown-f19-f27-r4/projection")
 (def problem-buffer-path "data/apm-campaigns/countdown-f19-f27-r4/problem-buffer.md")
 (def preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
+(def batch-cursor-path "data/apm-campaigns/countdown-f19-f27-r4/live/batch-cursor.edn")
 (def preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
 (def orchestration-path
@@ -160,7 +162,9 @@
 
 (defn inspect! [] (stepper/inspect! (options)))
 
-(defn advance! [expected-kind]
+(defn advance!
+  ([expected-kind] (advance! expected-kind nil))
+  ([expected-kind batch-authority]
   (let [boot (bootstrap!) inspection (inspect!)]
     (if-not (and (:ok boot) (:ok inspection)
                  (= :ready (:stepper/status inspection))
@@ -174,9 +178,16 @@
         (if-not (:ok issued)
           issued
           (stepper/step!
-           (assoc (options) :permit (:permit issued)
-                  :trusted-permit-id (get-in issued [:permit :permit/id])
-                  :trusted-issuer "joe")))))))
+           (cond-> (assoc (options) :permit (:permit issued)
+                          :trusted-permit-id (get-in issued [:permit :permit/id])
+                          :trusted-issuer "joe")
+             batch-authority
+             (assoc :require-batch-permit? true
+                    :batch-permit (:permit batch-authority)
+                    :trusted-batch-permit-id
+                    (:trusted-permit-id batch-authority)
+                    :trusted-batch-permit-issuer
+                    (:trusted-issuer batch-authority))))))))))
 
 (defn live-preflight-inputs []
   (let [{:keys [manifest contract]} (inputs)
@@ -415,3 +426,31 @@
        :project-fn (or project-fn project-current!)
        :park-fn (or park-fn park-default)
        :continuation-payload payload})))))
+
+(defn set-alight-batch!
+  "Drive one tick of an explicitly bounded, batch-permitted frame chain.
+
+   FRAME-TICK-FN is the pinned per-frame adapter. Keeping it explicit prevents
+   the chaining layer from pretending that an unprovisioned future frame is
+   runnable. The durable campaign ledger remains the action counter."
+  ([authority] (set-alight-batch! authority {}))
+  ([{:keys [start-frame end-frame permit trusted-permit-id trusted-issuer
+            control-root] :as authority}
+    {:keys [frame-tick-fn inspect-fn cursor-read-fn cursor-persist-fn]}]
+   (binding [*control-root* (Path/of (str (or control-root *control-root*))
+                                    (make-array String 0))]
+     (let [manifest (:manifest (inputs))
+           cursor-path (control-path batch-cursor-path)]
+       (live-batch-supervisor/tick!
+        {:units (subvec (:units manifest) 1)
+         :start-frame start-frame :end-frame end-frame :permit permit
+         :trusted-permit-id trusted-permit-id :trusted-issuer trusted-issuer
+         :actor "countdown-control"
+         :inspect-fn (or inspect-fn inspect!)
+         :frame-tick-fn frame-tick-fn
+         :cursor-read-fn (or cursor-read-fn
+                             #(live-preflight-runtime/read-state cursor-path))
+         :cursor-persist-fn
+         (or cursor-persist-fn
+             #(live-preflight-runtime/atomic-persist! cursor-path %))
+         :authority (dissoc authority :permit)})))))
