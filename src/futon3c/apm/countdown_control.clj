@@ -14,6 +14,7 @@
             [futon3c.apm.live-batch-supervisor :as live-batch-supervisor]
             [futon3c.apm.live-orchestration-contract :as orchestration-contract]
             [futon3c.apm.live-proof-phases :as live-proof-phases]
+            [futon3c.apm.live-regulator :as live-regulator]
             [futon3c.apm.live-supervisor :as live-supervisor]
             [futon3c.apm.problem-projection :as problem-projection])
   (:import [java.nio.file Path]
@@ -28,12 +29,19 @@
 (def problem-buffer-path "data/apm-campaigns/countdown-f19-f27-r4/problem-buffer.md")
 (def preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
 (def batch-cursor-path "data/apm-campaigns/countdown-f19-f27-r4/live/batch-cursor.edn")
+(def regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
 (def preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
 (def orchestration-path
   "holes/labs/M-apm-demonstration/countdown-live-orchestration-v1.edn")
 (def control-branch "frame/18-control")
 (def control-revision "d6f9ec2cfe622f518a423941f24819fa1a65fc5d")
+(def machine-regulator-id "countdown-regulator")
+(defonce ^:private machine-regulator-capability (Object.))
+
+(defn- machine-regulator-authorized? [regulator-id capability]
+  (and (= machine-regulator-id regulator-id)
+       (identical? machine-regulator-capability capability)))
 (def ^:dynamic *control-root*
   (Path/of (System/getProperty "user.dir") (make-array String 0)))
 
@@ -431,7 +439,8 @@
 
 (defn launch-audit!
   "Validate complete executable wiring plus the exact continuation identity."
-  [{:keys [agent session surface agency-base target-frame]
+  [{:keys [agent session surface agency-base target-frame regulator-id
+           regulator-capability]
     :or {agency-base "http://localhost:7070"}}]
   (let [{:keys [manifest]} (inputs)
         spec-result (orchestration-contract/read-spec
@@ -450,14 +459,18 @@
             :handlers (:handlers (options))
             :apparatus-artifacts (get-in manifest [:apparatus :artifacts])}))
         preparation-result (frame-context (or target-frame "f19"))
-        identity (when (and (string? agent) (not-empty agent))
+        machine-regulator? (machine-regulator-authorized?
+                            regulator-id regulator-capability)
+        identity (when (and (not machine-regulator?)
+                            (string? agent) (not-empty agent))
                    (live-preflight-runtime/http-json
                     "GET" (str agency-base "/api/alpha/agents/" agent)))
-        exact? (and (= 200 (:http/status identity)) (:ok identity)
-                    (= agent (:agent-id identity))
-                    (= session (get-in identity [:agent :session-id]))
-                    (= surface "emacs-repl")
-                    (true? (get-in identity [:agent :invoke-ready?])))]
+        exact? (or machine-regulator?
+                   (and (= 200 (:http/status identity)) (:ok identity)
+                        (= agent (:agent-id identity))
+                        (= session (get-in identity [:agent :session-id]))
+                        (= surface "emacs-repl")
+                        (true? (get-in identity [:agent :invoke-ready?]))))]
     (cond
       (not (:ok spec-result)) spec-result
       (not control-pinned?)
@@ -475,7 +488,10 @@
                                         [:http/status :ok :agent-id])
                  :observed-session (get-in identity [:agent :session-id])}}
       :else {:ok true :contract-audit contract-result
-             :continuation {:agent agent :session session :surface surface}})))
+             :continuation (if machine-regulator?
+                             {:mode :machine :regulator-id regulator-id}
+                             {:mode :agent :agent agent :session session
+                              :surface surface})})))
 
 (defn- frame-inspect! [target-frame]
   (let [inspection (inspect!)
@@ -531,7 +547,7 @@
    idempotent, while the ledger remains the sole phase authority."
   ([continuation] (set-alight! continuation {}))
   ([{:keys [agent session surface agency-base control-root target-frame
-            batch-authority]}
+            batch-authority regulator-id regulator-capability]}
     {:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn project-fn
             park-fn now-ms-fn continuation-payload]
      :or {now-ms-fn #(System/currentTimeMillis)}}]
@@ -539,6 +555,8 @@
                                     (make-array String 0))]
     (let [target-frame (or target-frame "f19")
           identity {:agent agent :session session :surface surface
+                   :regulator-id regulator-id
+                   :regulator-capability regulator-capability
                    :control-root (str *control-root*)
                    :target-frame target-frame
                    :batch-authority batch-authority
@@ -552,14 +570,17 @@
                                             :target-frame :batch-authority])) ")."))
          park-default
          (fn [{:keys [awaiting] :as request}]
-           (let [body (cond-> {:agent agent :session session :surface surface
-                               :awaiting awaiting :payload (:payload request)}
-                        (empty? awaiting)
-                        (assoc :timer-due-ms (+ (long (now-ms-fn)) 500)))
-                 response (live-preflight-runtime/http-json
-                           "POST" (str (:agency-base identity) "/api/alpha/park") body)]
-             {:ok (and (= 200 (:http/status response)) (:ok response))
-              :response response}))]
+           (if (machine-regulator-authorized? regulator-id
+                                              regulator-capability)
+             {:ok true :mode :machine :awaiting awaiting}
+             (let [body (cond-> {:agent agent :session session :surface surface
+                                 :awaiting awaiting :payload (:payload request)}
+                          (empty? awaiting)
+                          (assoc :timer-due-ms (+ (long (now-ms-fn)) 500)))
+                   response (live-preflight-runtime/http-json
+                             "POST" (str (:agency-base identity) "/api/alpha/park") body)]
+               {:ok (and (= 200 (:http/status response)) (:ok response))
+                :response response})))]
      (live-supervisor/tick!
       {:launch-audit-fn (or launch-audit-fn #(launch-audit! identity))
        :inspect-fn (or inspect-fn #(frame-inspect! target-frame))
@@ -570,6 +591,34 @@
        :project-fn (or project-fn #(project-current! target-frame))
        :park-fn (or park-fn park-default)
        :continuation-payload payload})))))
+
+(defn regulator-status []
+  (live-regulator/status machine-regulator-id))
+
+(defn stop-regulator! []
+  (live-regulator/stop! machine-regulator-id))
+
+(defn start-regulator!
+  "Start the non-agentic single-frame regulator.
+
+   The scheduler polls the durable supervisor. Agency is used only to execute
+   role jobs; no agent receives controller continuation parks."
+  [{:keys [control-root target-frame agency-base period-ms]
+    :or {target-frame "f20" agency-base "http://localhost:7070"}}]
+  (binding [*control-root* (Path/of (str (or control-root *control-root*))
+                                   (make-array String 0))]
+    (let [root (str *control-root*)
+          state-path (control-path regulator-state-path)
+          continuation {:regulator-id machine-regulator-id
+                        :regulator-capability machine-regulator-capability
+                        :control-root root :target-frame target-frame
+                        :agency-base agency-base}]
+      (live-regulator/start!
+       {:regulator-id machine-regulator-id
+        :period-ms (or period-ms live-regulator/default-period-ms)
+        :read-fn #(live-preflight-runtime/read-state state-path)
+        :persist-fn #(live-preflight-runtime/atomic-persist! state-path %)
+        :tick-fn #(set-alight! continuation)}))))
 
 (defn set-alight-batch!
   "Drive one tick of an explicitly bounded, batch-permitted frame chain.

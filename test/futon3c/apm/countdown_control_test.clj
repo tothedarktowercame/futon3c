@@ -53,6 +53,42 @@
     (is (= :live-supervisor-launch-audit-failed (:error/code result)))
     (is (false? @parked?))))
 
+(deftest machine-regulator-continuation-does-not-park-an-agent
+  (let [capability (var-get
+                    (ns-resolve 'futon3c.apm.countdown-control
+                                'machine-regulator-capability))
+        result
+        (sut/set-alight!
+         {:regulator-id sut/machine-regulator-id
+          :regulator-capability capability :target-frame "f20"}
+         {:launch-audit-fn (constantly {:ok true})
+          :inspect-fn (constantly
+                       {:ok true :stepper/status :ready
+                        :obligation {:obligation/action
+                                     {:kind :solve :phase :solve
+                                      :frame-id "f20"}}})
+          :drive-phase-fn (constantly
+                           {:ok true :status :awaiting-terminal
+                            :state {:ticket {:job-id "job-f20-solve"}}})
+          :advance-fn (constantly {:ok true})
+          :project-fn (constantly {:ok true})})]
+    (is (= :parked (:status result)))
+    (is (= "job-f20-solve" (:job-id result)))
+    (is (= :machine (get-in result [:park :mode])))
+    (is (= ["job-f20-solve"] (get-in result [:park :awaiting])))
+    (is (nil? (get-in result [:park :response])))))
+
+(deftest regulator-id-alone-cannot-select-machine-authority
+  (let [authorized? (var-get
+                     (ns-resolve 'futon3c.apm.countdown-control
+                                 'machine-regulator-authorized?))
+        capability (var-get
+                    (ns-resolve 'futon3c.apm.countdown-control
+                                'machine-regulator-capability))]
+    (is (false? (authorized? sut/machine-regulator-id nil)))
+    (is (false? (authorized? "other" capability)))
+    (is (true? (authorized? sut/machine-regulator-id capability)))))
+
 (deftest set-alight-batch-exposes-bounded-ledger-backed-chain
   (let [manifest (:manifest (#'sut/inputs))
         manifest-id (:manifest/id manifest)
