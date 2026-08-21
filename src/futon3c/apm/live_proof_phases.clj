@@ -6,7 +6,8 @@
             [futon3c.apm.frame-cycle-contract :as cycle]
             [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.live-preflight :as preflight]
-            [futon3c.apm.live-preflight-runtime :as runtime]))
+            [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-solver-rounds :as solver-rounds]))
 
 (def permitted-axioms '#{propext Classical.choice Quot.sound})
 
@@ -138,7 +139,17 @@
        (name (:phase request)) " — use only this frozen dispatch authority:\n"
        (pr-str request) "\n"
        (case (:phase request)
-         :solve "Work in the registered solver workspace. Commit the completed proof."
+         :solve
+         (if (= 1 (:solver/round request))
+           (str "Opening siege. Use the full available turn: search, test multiple "
+                "routes, build missing infrastructure when needed, and continue through "
+                "friction. Commit the completed proof if reached. If unfinished, commit "
+                "salvageable artifacts and report :solver/outcome :progress with an exact "
+                ":residual; use :claimed-defect only for a precise statement defect.")
+           (str "Continue the same solver session and branch from the prior verified "
+                "state. Produce the next committed proof-level artifact or complete the "
+                "proof. If unfinished, report :solver/outcome :progress, :residual, and "
+                ":artifact-commits; friction is not a defect."))
          :verify "Independently verify the certified solver head; do not mutate it."
          "Perform the registered read-only preflight.")
        " Return exactly one EDN map with keys "
@@ -151,15 +162,16 @@
 (defn run-live!
   [{:keys [kind contract request state-path agency-base]
     :or {agency-base "http://localhost:7070"}}]
-  (drive!
-   {:kind kind :contract contract :request request
-    :state (runtime/read-state state-path)
+  (let [state (runtime/read-state state-path)
+        effects
+        {:kind kind :contract contract :request request :state state
     :announce-fn
     (fn [req]
       (let [response (runtime/http-json
                       "POST" (str agency-base "/api/alpha/invoke/announce")
                       {:agent-id (:agent-id req) :prompt (prompt req)
-                       :surface "emacs-repl" :caller "countdown-control"})]
+                       :surface "emacs-repl" :caller "countdown-control"
+                       :mode (if (= :solve kind) "work" "brief")})]
         {:ok (and (= 202 (:http/status response)) (:ok response))
          :job-id (:job-id response)}))
     :activate-fn
@@ -168,6 +180,7 @@
                       "POST" (str agency-base "/api/alpha/invoke/activate")
                       {:agent-id (:agent-id req) :prompt (prompt req)
                        :surface "emacs-repl" :caller "countdown-control"
+                       :mode (if (= :solve kind) "work" "brief")
                        :job-id (:job-id ticket)})]
         {:ok (and (= 202 (:http/status response)) (:ok response)
                   (:accepted response))}))
@@ -175,4 +188,11 @@
     (fn [job-id]
       (runtime/job->terminal
        (runtime/http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
-    :persist-fn #(runtime/atomic-persist! state-path %)}))
+    :persist-fn #(runtime/atomic-persist! state-path %)}]
+    (if (= :solve kind)
+      (solver-rounds/drive!
+       (assoc effects
+              :validate-solved (partial validate-terminal :solve)
+              :provide-receipt (partial receipt contract :solve)
+              :max-rounds solver-rounds/default-max-rounds))
+      (drive! effects))))

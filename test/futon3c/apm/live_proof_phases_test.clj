@@ -61,6 +61,13 @@
     (is (= :preflight (get-in result [:request :phase])))
     (is (re-find #":sorry-warnings INT" (sut/prompt (:request result))))))
 
+(deftest solver-round-prompts-distinguish-opening-siege-from-continuation
+  (let [opening (sut/prompt (assoc (request :solve) :solver/round 1))
+        later (sut/prompt (assoc (request :solve) :solver/round 2
+                                 :solver/prior-session-id "same-session"))]
+    (is (re-find #"Opening siege" opening))
+    (is (re-find #"same solver session and branch" later))))
+
 (deftest proof-terminal-refuses-unsound-or-misattributed-output
   (let [req (request :solve)
         ticket {:job-id "job-1"}
