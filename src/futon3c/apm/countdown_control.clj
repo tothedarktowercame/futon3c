@@ -5,15 +5,16 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-postconditions :as postconditions]
             [futon3c.apm.campaign-stepper :as stepper]
+            [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.problem-projection :as problem-projection])
   (:import [java.nio.file Path]
            [java.time Instant]))
 
-(def manifest-path "holes/labs/M-apm-demonstration/countdown-10-manifest-v1.edn")
+(def manifest-path "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")
 (def contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")
-(def state-directory (Path/of "data/apm-campaigns/countdown-f19-f27-r3"
+(def state-directory (Path/of "data/apm-campaigns/countdown-f19-f27-r4"
                               (make-array String 0)))
 (def ledger-path (.resolve state-directory "ledger.edn"))
 (def certificate-directory (.resolve state-directory "certificates"))
@@ -28,11 +29,16 @@
 (defn registration-body []
   (let [{:keys [manifest contract]} (inputs)
         units (subvec (:units manifest) 1)
+        manifest-check (countdown-manifest/validate manifest)
+        _ (when-not (:valid? manifest-check)
+            (throw (ex-info "Countdown manifest failed executable validation"
+                            manifest-check)))
         registered
         (mapv (fn [unit]
                 (let [check (admission/validate
                              {:countdown-manifest manifest
                               :cycle-contract contract
+                              :manifest-check manifest-check
                               :frame-id (:frame/id unit)})]
                   (when-not (:ok check)
                     (throw (ex-info "Countdown unit failed pre-admission" check)))
@@ -54,12 +60,12 @@
     (cond
       (not (:ok loaded)) loaded
       (seq (:events loaded))
-      {:ok (= "apm-countdown-r3" (get-in loaded [:projection :campaign/id]))
+      {:ok (= "apm-countdown-r4" (get-in loaded [:projection :campaign/id]))
        :status :already-registered :projection (:projection loaded)}
       :else
       (let [body (registration-body)
             base {:event/seq 0 :event/type :campaign/registered
-                  :event/campaign-id "apm-countdown-r3"
+                  :event/campaign-id "apm-countdown-r4"
                   :event/actor "countdown-control"
                   :event/at (str (Instant/now)) :event/expected-version 0
                   :event/body body}
@@ -73,7 +79,7 @@
     (problem-projection/project-latest!
      {:ledger-path ledger-path :projection-directory projection-directory
       :output-path problem-buffer-path :expected-frame-id "f19"
-      :expected-problem-id "a00J01"
+      :expected-problem-id "a01J05"
       :buffer-sink problem-projection/emacs-buffer-sink})
     {:ok true :projected? false :reason :no-active-frame}))
 

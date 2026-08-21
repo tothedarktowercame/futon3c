@@ -8,7 +8,7 @@
   "holes/labs/M-apm-demonstration/countdown-live-orchestration-v1.edn")
 (def manifest
   (edn/read-string
-   (slurp "holes/labs/M-apm-demonstration/countdown-10-manifest-v1.edn")))
+   (slurp "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")))
 (def spec (:spec (sut/read-spec spec-path)))
 (def registration (control/registration-body))
 (def required-kinds

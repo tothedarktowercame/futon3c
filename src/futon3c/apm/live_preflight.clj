@@ -16,7 +16,7 @@
                    (not= :preflight (:phase ledger)) (conj :ledger-phase-mismatch)
                    (some? (:claim ledger)) (conj :ledger-claim-present)
                    (not= "f19" (:frame/id unit)) (conj :frame-mismatch)
-                   (not= "a00J01" (:problem/id unit)) (conj :problem-mismatch)
+                   (not (string? (:problem/id unit))) (conj :problem-mismatch)
                    (not= "f19-proctor" (:agent-id seat)) (conj :seat-identity-mismatch)
                    (not= :codex (:type seat)) (conj :seat-type-mismatch)
                    (not= "f19" (:frame-id seat)) (conj :seat-attribution-mismatch)

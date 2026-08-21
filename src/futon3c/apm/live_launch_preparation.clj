@@ -53,7 +53,7 @@
   (let [frame-id (:frame/id unit)
         problem-id (:problem/id unit)
         bad-input? (or (not= "f19" frame-id)
-                       (not= "a00J01" problem-id)
+                       (not (string? problem-id))
                        (not (every? fn? [workspace-exists? provision-fn
                                          validate-workspace-fn mint-fn roster-fn])))
         prepared

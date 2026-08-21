@@ -17,8 +17,8 @@
     :promotion-review-receipt})
 
 (defn validate
-  [{:keys [countdown-manifest cycle-contract frame-id]}]
-  (let [manifest-check (manifest/validate countdown-manifest)
+  [{:keys [countdown-manifest cycle-contract frame-id manifest-check]}]
+  (let [manifest-check (or manifest-check (manifest/validate countdown-manifest))
         contract-check (contract/validate-contract cycle-contract)
         unit (some #(when (= frame-id (:frame/id %)) %)
                    (:units countdown-manifest))

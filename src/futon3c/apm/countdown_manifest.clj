@@ -32,6 +32,27 @@
                   (zero? (or (:exit ancestry) 1)) (= blob observed))
      :observed-blob observed :branch-head (output branch-result)}))
 
+(defn qualify-unit
+  "Execute the pinned unit only when the repository checkout is exactly its
+   revision. This prevents a stale survey or a mutable HEAD from certifying an
+   eligibility baseline for a different Git object."
+  [unit]
+  (let [{:keys [repository revision path blob]} (:problem unit)
+        head (output (git repository "rev-parse" "HEAD"))
+        observed-blob (output (git repository "rev-parse" (str revision ":" path)))]
+    (if-not (and (= revision head) (= blob observed-blob))
+      {:valid? false :finding :countdown-qualification-checkout-mismatch
+       :expected-revision revision :observed-revision head
+       :expected-blob blob :observed-blob observed-blob}
+      (let [result (apply shell/sh ["lake" "env" "lean" path :dir repository])
+            lines (str/split-lines (str (:out result) (:err result)))
+            observation {:exit (:exit result)
+                         :warnings (count (filter #(str/includes? % "warning:") lines))
+                         :sorry-warnings (count (filter #(str/includes? % "declaration uses `sorry`") lines))
+                         :errors (count (filter #(str/includes? % "error:") lines))}]
+        {:valid? (= (:eligibility/baseline unit) observation)
+         :observation observation :expected (:eligibility/baseline unit)}))))
+
 (defn validate
   "Validate shape, ordering, content addresses, classification, and Git pins."
   [manifest]
@@ -44,6 +65,8 @@
                           (merge (select-keys apparatus [:repository :branch :revision]) pin))
         problem-observations (mapv #(validate-git-pin (:problem %)) units)
         apparatus-observations (mapv validate-git-pin apparatus-files)
+        eligibility-observations (when (= 2 (:manifest/version manifest))
+                                   (mapv qualify-unit units))
         findings
         (cond-> []
           (not= 10 (count units)) (conj :countdown-manifest-not-ten-units)
@@ -55,6 +78,16 @@
           (conj :countdown-manifest-frame-duplicate)
           (some #(not= :non-topology (:classification/value %)) units)
           (conj :countdown-manifest-classification-invalid)
+          (and (= 2 (:manifest/version manifest))
+               (some (fn [unit]
+                       (not (and (= 0 (get-in unit [:eligibility/baseline :exit]))
+                                 (pos? (get-in unit [:eligibility/baseline :sorry-warnings] 0))
+                                 (= 0 (get-in unit [:eligibility/baseline :errors])))))
+                     units))
+          (conj :countdown-manifest-eligibility-shape-invalid)
+          (and (= 2 (:manifest/version manifest))
+               (some (complement :valid?) eligibility-observations))
+          (conj :countdown-manifest-eligibility-observation-invalid)
           (some #(or (str/blank? (:classification/evidence %))
                      (not= :operator-reviewed-statement (:classification/source %))) units)
           (conj :countdown-manifest-classification-evidence-missing)
@@ -74,5 +107,6 @@
      :findings findings
      :manifest/id (:manifest/id manifest)
      :problem-observations problem-observations
+     :eligibility-observations eligibility-observations
      :apparatus-observations apparatus-observations
      :worktree-head-consulted? false}))

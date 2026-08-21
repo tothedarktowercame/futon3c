@@ -7,7 +7,7 @@
 (def contract (edn/read-string
                (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")))
 (def unit (second (:units (edn/read-string
-                          (slurp "holes/labs/M-apm-demonstration/countdown-10-manifest-v1.edn")))))
+                          (slurp "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")))))
 (def inputs
   {:ledger {:version 5 :phase :preflight :claim nil}
    :unit unit
