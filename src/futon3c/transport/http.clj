@@ -70,6 +70,7 @@
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.parked-on :as parked-on]
+            [futon3c.agency.followup-queue :as followup-queue]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -3932,6 +3933,61 @@
     (= :invoking (get-in (reg/registry-status) [:agents (str agent) :status]))
     (catch Throwable _ false)))
 
+(defn- exact-agent-session? [agent session]
+  (= (str session) (some-> (reg/get-agent (str agent)) :agent/session-id str)))
+
+(defn- handle-followup-enqueue [request]
+  (let [body (parse-json-map (read-body request))
+        agent (or (:agent body) (get body "agent"))
+        session (or (:session body) (get body "session"))
+        type (parse-keyword (or (:type body) (get body "type")))
+        dedupe-key (or (:dedupe-key body) (get body "dedupe-key"))
+        prompt (or (:prompt body) (get body "prompt"))]
+    (cond
+      (not (exact-agent-session? agent session))
+      (json-response 409 {:ok false :error "agent-session-mismatch"})
+      :else
+      (try
+        (json-response 200 (assoc (followup-queue/enqueue!
+                                   {:agent agent :session session :type type
+                                    :dedupe-key dedupe-key :prompt prompt
+                                    :metadata (or (:metadata body) (get body "metadata"))})
+                                  :ok true))
+        (catch clojure.lang.ExceptionInfo e
+          (json-response 400 {:ok false :error "invalid-followup"
+                              :message (.getMessage e)}))))))
+
+(defn- handle-followup-ready [request]
+  (let [agent (req-query-param request "agent")
+        session (req-query-param request "session")]
+    (cond
+      (agent-in-flight-turn? agent)
+      (json-response 200 {:ok true :ready [] :withheld true})
+      :else
+      (let [item (followup-queue/lease-one!
+                  agent session
+                  (fn [queued]
+                    (exact-agent-session? (:agent queued) (:session queued))))]
+        (json-response 200 {:ok true :ready (if item [item] [])
+                            :leased (some? item)})))))
+
+(defn- handle-followup-ack [request]
+  (let [body (parse-json-map (read-body request))
+        id (or (:followup-id body) (get body "followup-id"))]
+    (if (str/blank? (str id))
+      (json-response 400 {:ok false :error "followup-id-required"})
+      (json-response 200 {:ok true :acked (boolean (followup-queue/ack! id))}))))
+
+(defn- handle-followup-cancel [request]
+  (let [body (parse-json-map (read-body request))
+        id (or (:followup-id body) (get body "followup-id"))]
+    (if (str/blank? (str id))
+      (json-response 400 {:ok false :error "followup-id-required"})
+      (json-response 200 {:ok true
+                          :cancelled (followup-queue/cancel!
+                                      id (or (:reason body) (get body "reason")
+                                             :sender-cancelled))}))))
+
 (defn- handle-parked-ready
   "GET /api/alpha/parked/ready?agent=&session= — poll-and-lease the ready resume
    prompts for a repl buffer (E-park-continuations Car 2b, polling path).
@@ -7118,6 +7174,20 @@
       ;; C-cascade-real D1/O3: durable auto-clock for the repl buffer to poll.
       (and (= :get method) (= "/api/alpha/agent-clock" uri))
       (handle-agent-clock request)
+
+      ;; Typed external followups share busy-safe polling semantics with parks,
+      ;; but retain their own identity, queue, lease, ACK, and cancellation.
+      (and (= :post method) (= "/api/alpha/followups" uri))
+      (handle-followup-enqueue request)
+
+      (and (= :get method) (= "/api/alpha/followups/ready" uri))
+      (handle-followup-ready request)
+
+      (and (= :post method) (= "/api/alpha/followups/ready/ack" uri))
+      (handle-followup-ack request)
+
+      (and (= :post method) (= "/api/alpha/followups/cancel" uri))
+      (handle-followup-cancel request)
 
       ;; M-live-efe-map VERIFY: read-only live join over agents, WM ticks,
       ;; clocks, invoke jobs, and the frozen EFE coordinate set.

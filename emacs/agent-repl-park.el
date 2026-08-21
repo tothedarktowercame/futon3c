@@ -172,6 +172,61 @@ misrouted frame costs one poll interval of latency, never the resume."
 
 (defvar-local agent-repl-park--poll-inflight nil
   "Non-nil while an async ready-inbox poll is outstanding for this buffer.")
+(defvar-local agent-repl-followup--poll-inflight nil)
+
+(defun agent-repl-followup--ack (id api-url)
+  (ignore-errors
+    (let ((url-request-method "POST")
+          (url-request-extra-headers '(("Content-Type" . "application/json")))
+          (url-request-data (format "{\"followup-id\":\"%s\"}" id)))
+      (url-retrieve (format "%s/api/alpha/followups/ready/ack"
+                            (string-remove-suffix "/" api-url))
+                    (lambda (_status) (kill-buffer (current-buffer))) nil t t))))
+
+(defun agent-repl-followup--poll-buffer-async (buf)
+  "Poll and deliver one typed external followup to BUF."
+  (with-current-buffer buf
+    (unless agent-repl-followup--poll-inflight
+      (let* ((agent (or (bound-and-true-p agent-chat--agent-id)
+                        (bound-and-true-p claude-repl-agent-id)))
+             (session agent-chat--session-id)
+             (api-url (or (bound-and-true-p claude-repl-api-url)
+                          (agent-repl-api-base-url)))
+             (url (format "%s/api/alpha/followups/ready?agent=%s&session=%s"
+                          (string-remove-suffix "/" api-url)
+                          (url-hexify-string (or agent ""))
+                          (url-hexify-string (or session "")))))
+        (setq agent-repl-followup--poll-inflight t)
+        (url-retrieve
+         url
+         (lambda (status)
+           (let ((response-buffer (current-buffer)))
+             (when (buffer-live-p buf)
+               (with-current-buffer buf (setq agent-repl-followup--poll-inflight nil)))
+             (unwind-protect
+                 (unless (plist-get status :error)
+                   (goto-char (point-min))
+                   (when (search-forward "\n\n" nil t)
+                     (let* ((json (ignore-errors
+                                    (json-parse-string
+                                     (buffer-substring-no-properties (point) (point-max))
+                                     :object-type 'plist :null-object nil :false-object nil)))
+                            (ready (plist-get json :ready)))
+                       (when (and (vectorp ready) (> (length ready) 0)
+                                  (buffer-live-p buf))
+                         (let* ((item (aref ready 0))
+                                (id (plist-get item :followup-id)))
+                           (unless (agent-repl-park--seen-p id)
+                             (agent-repl-park--remember! id)
+                             (with-current-buffer buf
+                               (agent-chat-send-unsolicited-input
+                                (agent-repl-capability :sender)
+                                (or (agent-repl-capability :agent-name) "agent")
+                                (plist-get item :prompt) "followup"
+                                (agent-repl-capability :hooks))))
+                           (agent-repl-followup--ack id api-url))))))
+               (when (buffer-live-p response-buffer) (kill-buffer response-buffer)))))
+         nil t t)))))
 
 (defun agent-repl-park--poll-buffer-async (buf)
   "Async-poll BUF's ready-inbox and, on a ready item, resume in place.
@@ -227,7 +282,8 @@ buffer polls unconditionally and trusts that gate."
                    ;; The ready-inbox is POLL-AND-CONSUME: never poll a buffer
                    ;; we could not then drive, or the item is destroyed.
                    (agent-repl-drivable-p major-mode))
-          (agent-repl-park--poll-buffer-async buf))))))
+          (agent-repl-park--poll-buffer-async buf)
+          (agent-repl-followup--poll-buffer-async buf))))))
 
 ;;;; Enable / disable ---------------------------------------------------------
 
