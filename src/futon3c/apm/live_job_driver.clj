@@ -1,0 +1,75 @@
+(ns futon3c.apm.live-job-driver
+  "Exactly-once durable boundary shared by every live APM role job.
+
+   The canonical Agency job is announced, ticketed, and persisted before it is
+   activated. A restart therefore polls the recorded job instead of dispatching
+   a duplicate. Terminal evidence is delegated to a phase-specific validator."
+  (:require [futon3c.apm.campaign-machine :as machine]))
+
+(def terminal-states #{:done :failed :error :cancelled})
+
+(defn ticket [request response]
+  (if-not (and (:ok response) (string? (:job-id response))
+               (not-empty (:job-id response)))
+    {:ok false :error/code :live-job-announce-failed}
+    (let [body {:dispatch/id (:dispatch/id request)
+                :job-id (:job-id response) :agent-id (:agent-id request)
+                :frame-id (:frame-id request) :problem-id (:problem-id request)
+                :phase (:phase request)}]
+      {:ok true :ticket (assoc body :ticket/id (machine/ledger-digest [body]))})))
+
+(defn drive!
+  "Advance one job by at most one externally visible state transition."
+  [{:keys [request state announce-fn activate-fn job-fn persist-fn
+           terminal-validator receipt-provider]}]
+  (cond
+    (not (and (map? request) (string? (:dispatch/id request))
+              (every? fn? [announce-fn activate-fn job-fn persist-fn
+                            terminal-validator receipt-provider])))
+    {:ok false :error/code :live-job-driver-input-invalid}
+
+    (nil? state)
+    (let [announced (ticket request (announce-fn request))]
+      (if-not (:ok announced)
+        announced
+        (let [next-state {:state/type :live-job-dispatched
+                          :request request :ticket (:ticket announced)}
+              persisted (persist-fn next-state)]
+          (cond
+            (not (:ok persisted))
+            {:ok false :error/code :live-job-ticket-persistence-failed}
+
+            :else
+            (let [activated (activate-fn request (:ticket announced))]
+              (if (:ok activated)
+                {:ok true :status :awaiting-terminal :state next-state}
+                {:ok false :error/code :live-job-activation-failed
+                 :state next-state :finding activated}))))))
+
+    (not= :live-job-dispatched (:state/type state))
+    {:ok false :error/code :live-job-state-invalid}
+
+    (not= (:dispatch/id request) (get-in state [:request :dispatch/id]))
+    {:ok false :error/code :live-job-request-state-mismatch}
+
+    :else
+    (let [job (job-fn (get-in state [:ticket :job-id]))]
+      (if-not (contains? terminal-states (:state job))
+        {:ok true :status :awaiting-terminal :state state}
+        (if-not (= :done (:state job))
+          {:ok false :error/code :live-job-terminal-failure
+           :finding (select-keys job [:job-id :agent-id :state :terminal-code])}
+          (let [validated (terminal-validator request (:ticket state) job)]
+            (if-not (:ok validated)
+              validated
+              (let [provided (receipt-provider request (:ticket state) job validated)]
+                (if-not (:ok provided)
+                  provided
+                  (let [next-state (assoc state :state/type :live-job-certified
+                                          :receipt (:certificate provided))
+                        persisted (persist-fn next-state)]
+                    (if (:ok persisted)
+                      {:ok true :status :certified :state next-state
+                       :certificate (:certificate provided)}
+                      {:ok false
+                       :error/code :live-job-receipt-persistence-failed})))))))))))
