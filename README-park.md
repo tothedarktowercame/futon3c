@@ -117,6 +117,23 @@ that route is sorted.
 
 ## Usage
 
+### Resolve and verify the seat before parking
+
+The park target is the current REPL seat's exact `(agent-id, session-id)` pair.
+Take that pair from the REPL/session that is issuing the park, then verify it
+against the registry before posting:
+
+```
+curl -fsS http://localhost:7070/api/alpha/agents/<agent-id>
+```
+
+The response's `agent.session-id` must equal the current REPL's session id.
+Fail closed if the agent is absent, the session id is absent, or the ids differ;
+do not select an identity from the agent list or substitute another registered
+session. `GET /agency/connected` is not an endpoint in the current HTTP service.
+Use `GET /api/alpha/agents` only for inspection and
+`GET /api/alpha/agents/<agent-id>` for exact-seat verification.
+
 ```
 # enable (default OFF)
 export FUTON3C_PARKED_ON=1            # or: (System/setProperty "FUTON3C_PARKED_ON" "true")
