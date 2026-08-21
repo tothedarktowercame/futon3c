@@ -10,7 +10,8 @@
   (apply shell/sh (concat ["git" "-C" repository] args)))
 
 (defn- output [result]
-  (when (zero? (:exit result)) (str/trim (:out result))))
+  (when (and (map? result) (zero? (:exit result)))
+    (str/trim (:out result))))
 
 (defn- validate-git-pin [{:keys [repository branch revision path blob]}]
   (let [shape? (and (every? #(and (string? %) (not (str/blank? %)))
