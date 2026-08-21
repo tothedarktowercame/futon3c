@@ -20,17 +20,17 @@
   (:import [java.nio.file Path]
            [java.time Instant]))
 
-(def manifest-path "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")
-(def contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")
-(def state-directory "data/apm-campaigns/countdown-f19-f27-r4")
-(def ledger-path "data/apm-campaigns/countdown-f19-f27-r4/ledger.edn")
-(def certificate-directory "data/apm-campaigns/countdown-f19-f27-r4/certificates")
-(def projection-directory "data/apm-campaigns/countdown-f19-f27-r4/projection")
-(def problem-buffer-path "data/apm-campaigns/countdown-f19-f27-r4/problem-buffer.md")
-(def preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
-(def batch-cursor-path "data/apm-campaigns/countdown-f19-f27-r4/live/batch-cursor.edn")
-(def regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
-(def preparation-path
+(def ^:dynamic manifest-path "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")
+(def ^:dynamic contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")
+(def ^:dynamic state-directory "data/apm-campaigns/countdown-f19-f27-r4")
+(def ^:dynamic ledger-path "data/apm-campaigns/countdown-f19-f27-r4/ledger.edn")
+(def ^:dynamic certificate-directory "data/apm-campaigns/countdown-f19-f27-r4/certificates")
+(def ^:dynamic projection-directory "data/apm-campaigns/countdown-f19-f27-r4/projection")
+(def ^:dynamic problem-buffer-path "data/apm-campaigns/countdown-f19-f27-r4/problem-buffer.md")
+(def ^:dynamic preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
+(def ^:dynamic batch-cursor-path "data/apm-campaigns/countdown-f19-f27-r4/live/batch-cursor.edn")
+(def ^:dynamic regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
+(def ^:dynamic preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
 (def orchestration-path
   "holes/labs/M-apm-demonstration/countdown-live-orchestration-v1.edn")
@@ -38,6 +38,32 @@
 (def control-revision "d6f9ec2cfe622f518a423941f24819fa1a65fc5d")
 (def machine-regulator-id "countdown-regulator")
 (defonce ^:private machine-regulator-capability (Object.))
+
+(def f20-one-off-config
+  {:manifest-path "holes/labs/M-apm-demonstration/f20-one-off-manifest-v1.edn"
+   :state-directory "data/apm-campaigns/f20-one-off-v1"
+   :ledger-path "data/apm-campaigns/f20-one-off-v1/ledger.edn"
+   :certificate-directory "data/apm-campaigns/f20-one-off-v1/certificates"
+   :projection-directory "data/apm-campaigns/f20-one-off-v1/projection"
+   :problem-buffer-path "data/apm-campaigns/f20-one-off-v1/problem-buffer.md"
+   :preflight-state-path "data/apm-campaigns/f20-one-off-v1/live/preflight.edn"
+   :batch-cursor-path "data/apm-campaigns/f20-one-off-v1/live/batch-cursor.edn"
+   :regulator-state-path "data/apm-campaigns/f20-one-off-v1/live/regulator.edn"
+   :preparation-path "holes/labs/M-apm-demonstration/f20-one-off-live-preparation-v1.edn"})
+
+(defmacro ^:private with-campaign [config & body]
+  `(let [config# (or ~config {})]
+     (binding [manifest-path (or (:manifest-path config#) manifest-path)
+               state-directory (or (:state-directory config#) state-directory)
+               ledger-path (or (:ledger-path config#) ledger-path)
+               certificate-directory (or (:certificate-directory config#) certificate-directory)
+               projection-directory (or (:projection-directory config#) projection-directory)
+               problem-buffer-path (or (:problem-buffer-path config#) problem-buffer-path)
+               preflight-state-path (or (:preflight-state-path config#) preflight-state-path)
+               batch-cursor-path (or (:batch-cursor-path config#) batch-cursor-path)
+               regulator-state-path (or (:regulator-state-path config#) regulator-state-path)
+               preparation-path (or (:preparation-path config#) preparation-path)]
+       ~@body)))
 
 (defn- machine-regulator-authorized? [regulator-id capability]
   (and (= machine-regulator-id regulator-id)
@@ -57,16 +83,19 @@
   (some #(when (= frame-id (:frame/id %)) %) (:units manifest)))
 
 (defn- preparation-path-for [frame-id]
-  (if (= "f19" frame-id)
+  (if (or (= :one-off (:manifest/scope (:manifest (inputs))))
+          (= "f19" frame-id))
     preparation-path
     (str "holes/labs/M-apm-demonstration/countdown-" frame-id
          "-live-preparation-v2.edn")))
 
 (defn- state-path-for [frame-id phase]
-  (if (= "f19" frame-id)
+  (if (= :one-off (:manifest/scope (:manifest (inputs))))
+    (.resolve (control-path state-directory) (str "live/" (name phase) ".edn"))
+    (if (= "f19" frame-id)
     (.resolve (control-path state-directory) (str "live/" (name phase) ".edn"))
     (.resolve (control-path state-directory)
-              (str "live/" frame-id "/" (name phase) ".edn"))))
+              (str "live/" frame-id "/" (name phase) ".edn")))))
 
 (defn validate-frame-preparation
   "Bind a frame-scoped preparation to its exact manifest unit.
@@ -175,7 +204,9 @@
 
 (defn registration-body []
   (let [{:keys [manifest contract]} (inputs)
-        units (subvec (:units manifest) 1)
+        units (if (= :one-off (:manifest/scope manifest))
+                (:units manifest)
+                (subvec (:units manifest) 1))
         manifest-check (countdown-manifest/validate manifest)
         _ (when-not (:valid? manifest-check)
             (throw (ex-info "Countdown manifest failed executable validation"
@@ -207,12 +238,13 @@
     (cond
       (not (:ok loaded)) loaded
       (seq (:events loaded))
-      {:ok (= "apm-countdown-r4" (get-in loaded [:projection :campaign/id]))
+      {:ok (= (:campaign/id (:manifest (inputs)))
+              (get-in loaded [:projection :campaign/id]))
        :status :already-registered :projection (:projection loaded)}
       :else
       (let [body (registration-body)
             base {:event/seq 0 :event/type :campaign/registered
-                  :event/campaign-id "apm-countdown-r4"
+                  :event/campaign-id (:campaign/id (:manifest (inputs)))
                   :event/actor "countdown-control"
                   :event/at (str (Instant/now)) :event/expected-version 0
                   :event/body body}
@@ -522,7 +554,14 @@
   (let [{:keys [manifest]} (inputs)
         unit (frame-unit manifest frame-id)
         loaded (ledger/read-ledger (control-path ledger-path))
-        active (get-in loaded [:projection :active/frame])]
+        active (get-in loaded [:projection :active/frame])
+        solve-state (live-preflight-runtime/read-state
+                     (state-path-for frame-id :solve))
+        completed (count (:rounds solve-state))
+        active-round (get-in solve-state [:active :request :solver/round])
+        max-rounds (or (:budget/max-rounds solve-state) 50)
+        checkpoint-next (when (< completed max-rounds)
+                          (* 10 (inc (quot completed 10))))]
     (cond
       (not (:ok loaded)) loaded
       (nil? unit)
@@ -538,6 +577,11 @@
         :projection-directory (control-path projection-directory)
         :output-path (control-path problem-buffer-path) :expected-frame-id frame-id
         :expected-problem-id (:problem/id unit)
+        :solver-progress {:rounds/completed completed
+                          :rounds/max max-rounds
+                          :round/active active-round
+                          :checkpoint/next (when (<= checkpoint-next max-rounds)
+                                             checkpoint-next)}
         :buffer-sink problem-projection/emacs-buffer-sink}))))
 
 (defn set-alight!
@@ -547,12 +591,13 @@
    idempotent, while the ledger remains the sole phase authority."
   ([continuation] (set-alight! continuation {}))
   ([{:keys [agent session surface agency-base control-root target-frame
-            batch-authority regulator-id regulator-capability]}
+            batch-authority regulator-id regulator-capability campaign-config]}
     {:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn project-fn
             park-fn now-ms-fn continuation-payload]
      :or {now-ms-fn #(System/currentTimeMillis)}}]
-   (binding [*control-root* (Path/of (str (or control-root *control-root*))
-                                    (make-array String 0))]
+   (with-campaign campaign-config
+    (binding [*control-root* (Path/of (str (or control-root *control-root*))
+                                     (make-array String 0))]
     (let [target-frame (or target-frame "f19")
           identity {:agent agent :session session :surface surface
                    :regulator-id regulator-id
@@ -560,6 +605,7 @@
                    :control-root (str *control-root*)
                    :target-frame target-frame
                    :batch-authority batch-authority
+                   :campaign-config campaign-config
                    :agency-base (or agency-base "http://localhost:7070")}
          payload (or continuation-payload
                      (str (str/upper-case target-frame)
@@ -567,7 +613,8 @@
                       "(futon3c.apm.countdown-control/set-alight! "
                       (pr-str (select-keys identity
                                            [:agent :session :surface :control-root
-                                            :target-frame :batch-authority])) ")."))
+                                            :target-frame :batch-authority
+                                            :campaign-config])) ")."))
          park-default
          (fn [{:keys [awaiting] :as request}]
            (if (machine-regulator-authorized? regulator-id
@@ -590,7 +637,7 @@
                          (advance! kind batch-authority)))
        :project-fn (or project-fn #(project-current! target-frame))
        :park-fn (or park-fn park-default)
-       :continuation-payload payload})))))
+       :continuation-payload payload}))))))
 
 (defn regulator-status []
   (live-regulator/status machine-regulator-id))
@@ -603,22 +650,24 @@
 
    The scheduler polls the durable supervisor. Agency is used only to execute
    role jobs; no agent receives controller continuation parks."
-  [{:keys [control-root target-frame agency-base period-ms]
+  [{:keys [control-root target-frame agency-base period-ms campaign-config]
     :or {target-frame "f20" agency-base "http://localhost:7070"}}]
-  (binding [*control-root* (Path/of (str (or control-root *control-root*))
-                                   (make-array String 0))]
+  (with-campaign campaign-config
+   (binding [*control-root* (Path/of (str (or control-root *control-root*))
+                                    (make-array String 0))]
     (let [root (str *control-root*)
           state-path (control-path regulator-state-path)
           continuation {:regulator-id machine-regulator-id
                         :regulator-capability machine-regulator-capability
                         :control-root root :target-frame target-frame
+                        :campaign-config campaign-config
                         :agency-base agency-base}]
       (live-regulator/start!
        {:regulator-id machine-regulator-id
         :period-ms (or period-ms live-regulator/default-period-ms)
         :read-fn #(live-preflight-runtime/read-state state-path)
         :persist-fn #(live-preflight-runtime/atomic-persist! state-path %)
-        :tick-fn #(set-alight! continuation)}))))
+        :tick-fn #(set-alight! continuation)})))))
 
 (defn set-alight-batch!
   "Drive one tick of an explicitly bounded, batch-permitted frame chain.

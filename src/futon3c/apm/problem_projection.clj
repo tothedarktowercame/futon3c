@@ -36,7 +36,7 @@
 (defn derive-projection
   "Derive one problem view from a validated ledger and snapshot certificate."
   [{:keys [events projection]} certificate
-   {:keys [expected-frame-id expected-problem-id]}]
+   {:keys [expected-frame-id expected-problem-id solver-progress]}]
   (let [active (:active/frame projection)
         certificate-active (:active/frame certificate)
         identity-keys [:frame-id :problem-id :phase :status
@@ -77,6 +77,7 @@
                   :ledger/event-count (:ledger/event-count projection)
                   :certificate/id (:certificate/id certificate)
                   :frame (select-keys active identity-keys)
+                  :solver/progress solver-progress
                   :receipts (receipt-refs events (:frame-id active))}]
         {:ok true
          :problem-projection
@@ -93,6 +94,13 @@
          "Problem: **" (:problem-id frame) "**  \n"
          "Phase: **" (some-> (:phase frame) name) "**  \n"
          "Status: **" (some-> (:status frame) name) "**\n\n"
+         (when-let [progress (:solver/progress problem-projection)]
+           (str "Solver rounds completed: **" (:rounds/completed progress)
+                " / " (:rounds/max progress) "**  \n"
+                "Active solver round: **"
+                (or (:round/active progress) "none") "**  \n"
+                "Next strategy checkpoint: **"
+                (or (:checkpoint/next progress) "none") "**\n\n"))
          "## Certified receipts\n\n"
          (if (seq (:receipts problem-projection))
            (apply str
@@ -156,7 +164,7 @@
 
 (defn project!
   [{:keys [ledger-path certificate-path output-path buffer-sink
-           expected-frame-id expected-problem-id]}]
+           expected-frame-id expected-problem-id solver-progress]}]
   (let [loaded-ledger (ledger/read-ledger ledger-path)
         loaded-certificate (snapshot/read-certificate certificate-path)]
     (cond
@@ -172,7 +180,8 @@
       (let [derived (derive-projection
                      loaded-ledger (:certificate loaded-certificate)
                      {:expected-frame-id expected-frame-id
-                      :expected-problem-id expected-problem-id})]
+                      :expected-problem-id expected-problem-id
+                      :solver-progress solver-progress})]
         (if-not (:ok derived)
           derived
           (let [problem-projection (:problem-projection derived)

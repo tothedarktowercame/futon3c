@@ -57,6 +57,7 @@
   "Validate shape, ordering, content addresses, classification, and Git pins."
   [manifest]
   (let [units (:units manifest)
+        one-off? (= :one-off (:manifest/scope manifest))
         expected-frames (mapv #(str "f" %) (range 18 28))
         apparatus (:apparatus manifest)
         apparatus-body (dissoc apparatus :pin/id)
@@ -69,12 +70,16 @@
                                    (mapv qualify-unit units))
         findings
         (cond-> []
-          (not= 10 (count units)) (conj :countdown-manifest-not-ten-units)
-          (not= expected-frames (mapv :frame/id units))
+          (not (if one-off? (= 1 (count units)) (= 10 (count units))))
+          (conj (if one-off? :one-off-manifest-not-one-unit
+                    :countdown-manifest-not-ten-units))
+          (not (if one-off?
+                 (= [1] (mapv :ordinal units))
+                 (= expected-frames (mapv :frame/id units))))
           (conj :countdown-manifest-frame-order-invalid)
-          (not= 10 (count (set (map :problem/id units))))
+          (not= (count units) (count (set (map :problem/id units))))
           (conj :countdown-manifest-problem-duplicate)
-          (not= 10 (count (set (map :frame/id units))))
+          (not= (count units) (count (set (map :frame/id units))))
           (conj :countdown-manifest-frame-duplicate)
           (some #(not= :non-topology (:classification/value %)) units)
           (conj :countdown-manifest-classification-invalid)

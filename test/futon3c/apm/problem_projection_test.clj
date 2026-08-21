@@ -66,12 +66,18 @@
                 {:ledger-path ledger-path :certificate-path certificate-path
                  :output-path output :expected-frame-id "f18"
                  :expected-problem-id "p18"
+                 :solver-progress {:rounds/completed 10 :rounds/max 50
+                                   :round/active 11 :checkpoint/next 20}
                  :buffer-sink (fn [payload]
                                 (swap! calls conj payload)
                                 {:ok true :atomic? true})})]
     (is (:ok result) (pr-str result))
     (is (= "f18" (get-in result [:projection :frame :frame-id])))
     (is (= :close-frame (get-in result [:projection :frame :phase])))
+    (is (= 10 (get-in result [:projection :solver/progress
+                              :rounds/completed])))
+    (is (str/includes? (Files/readString output)
+                       "Solver rounds completed: **10 / 50**"))
     (is (= (:receipt/id solve)
            (get-in result [:projection :receipts 0 :receipt/id])))
     (is (= (get-in result [:projection :projection/id])

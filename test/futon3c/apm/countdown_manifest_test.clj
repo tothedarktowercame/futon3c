@@ -66,3 +66,22 @@
               (:findings result)))
     (is (= 0 (get-in result [:eligibility-observations 1
                              :observation :sorry-warnings])))))
+
+(deftest one-off-scope-requires-exactly-one-ordinal-one-unit
+  (let [source (load-manifest)
+        one-off (-> source
+                    (assoc :manifest/scope :one-off
+                           :campaign/id "apm-f20-one-off-v1"
+                           :block/id "f20-one-off-v1"
+                           :units [(assoc (nth (:units source) 2) :ordinal 1)])
+                    (assoc :manifest/id "pending"))
+        one-off (assoc one-off :manifest/id
+                       (machine/ledger-digest [(dissoc one-off :manifest/id)]))]
+    (is (:valid? (sut/validate one-off)))
+    (let [invalid (-> one-off
+                      (assoc-in [:units 0 :ordinal] 2)
+                      (assoc :manifest/id "pending"))
+          invalid (assoc invalid :manifest/id
+                         (machine/ledger-digest [(dissoc invalid :manifest/id)]))]
+      (is (some #{:countdown-manifest-frame-order-invalid}
+                (:findings (sut/validate invalid)))))))
