@@ -10,6 +10,73 @@
 (def required-timeouts
   {:request-timeout-ms 300000 :turn-timeout-ms 3600000})
 
+(declare validate)
+
+(defn- prepare-workspace
+  [result unit role leases workspace-exists? provision-fn validate-workspace-fn]
+  (let [lease (get leases role)
+        exists? (workspace-exists? unit role)]
+    (cond
+      (and exists? (nil? lease))
+      (reduced {:ok false :error/code :existing-workspace-without-lease :role role})
+
+      exists?
+      (let [validation (validate-workspace-fn lease)]
+        (if (:valid? validation)
+          (assoc-in result [:workspaces role] {:lease lease :validation validation})
+          (reduced {:ok false :error/code :existing-workspace-invalid
+                    :role role :validation validation})))
+
+      lease
+      (reduced {:ok false :error/code :leased-workspace-missing :role role})
+
+      :else
+      (let [provisioned (provision-fn unit role)]
+        (if-not (:ok provisioned)
+          (reduced provisioned)
+          (let [new-lease (:lease provisioned)
+                validation (validate-workspace-fn new-lease)]
+            (if (:valid? validation)
+              (assoc-in result [:workspaces role]
+                        {:lease new-lease :validation validation})
+              (reduced {:ok false :error/code :new-workspace-invalid
+                        :role role :validation validation}))))))))
+
+(defn prepare!
+  "Idempotently prepare f19 from pinned inputs and injected effect boundaries.
+
+   A workspace which already exists may only be reused through its persisted
+   content-addressed lease.  MINT-FN must itself implement deterministic seat
+   minting; the returned roster is always revalidated below."
+  [{:keys [unit ledger role-cards leases workspace-exists? provision-fn
+           validate-workspace-fn mint-fn roster-fn]}]
+  (let [frame-id (:frame/id unit)
+        problem-id (:problem/id unit)
+        bad-input? (or (not= "f19" frame-id)
+                       (not= "a00J01" problem-id)
+                       (not (every? fn? [workspace-exists? provision-fn
+                                         validate-workspace-fn mint-fn roster-fn])))
+        prepared
+        (when-not bad-input?
+          (reduce (fn [result role]
+                    (prepare-workspace result unit role leases workspace-exists?
+                                       provision-fn validate-workspace-fn))
+                  {:ok true :workspaces {}}
+                  required-workspace-roles))]
+    (cond
+      bad-input?
+      {:ok false :error/code :live-launch-input-invalid}
+
+      (not (:ok prepared)) prepared
+
+      :else
+      (let [minted (mint-fn frame-id required-seat-types required-timeouts)]
+        (if-not (:ok minted)
+          {:ok false :error/code :seat-mint-failed :finding minted}
+          (validate {:frame-id frame-id :problem-id problem-id :ledger ledger
+                     :workspaces (:workspaces prepared) :seats (roster-fn frame-id)
+                     :role-cards role-cards}))))))
+
 (defn validate
   "Validate a preparation observation without trusting conversational state."
   [{:keys [frame-id problem-id ledger workspaces seats role-cards]}]

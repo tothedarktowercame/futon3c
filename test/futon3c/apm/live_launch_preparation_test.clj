@@ -47,3 +47,41 @@
       (is (= #{:ledger-version-mismatch :workspace-validation-failed
                :seat-turn-timeout-mismatch :role-card-pin-missing}
              findings)))))
+
+(deftest prepare-is-idempotent-and-revalidates-every-effect
+  (let [base (observation)
+        calls (atom [])
+        leases (into {} (map (fn [role]
+                               [role (get-in base [:workspaces role :lease])])
+                             sut/required-workspace-roles))
+        result (sut/prepare!
+                {:unit {:frame/id "f19" :problem/id "a00J01"}
+                 :ledger (:ledger base) :role-cards (:role-cards base)
+                 :leases leases
+                 :workspace-exists? (fn [_ role] (swap! calls conj [:exists role]) true)
+                 :provision-fn (fn [_ role] (swap! calls conj [:provision role]) {:ok false})
+                 :validate-workspace-fn
+                 (fn [lease] (swap! calls conj [:validate (:role lease)])
+                   {:valid? true :findings []})
+                 :mint-fn (fn [frame cast timeouts]
+                            (swap! calls conj [:mint frame cast timeouts]) {:ok true})
+                 :roster-fn (fn [frame]
+                              (swap! calls conj [:roster frame]) (:seats base))})]
+    (is (:ok result))
+    (is (empty? (filter #(= :provision (first %)) @calls)))
+    (is (= 2 (count (filter #(= :validate (first %)) @calls))))
+    (is (= 1 (count (filter #(= :mint (first %)) @calls))))))
+
+(deftest prepare-refuses-unattributed-existing-workspace-before-mint
+  (let [calls (atom [])
+        result (sut/prepare!
+                {:unit {:frame/id "f19" :problem/id "a00J01"}
+                 :ledger (:ledger (observation))
+                 :role-cards (:role-cards (observation)) :leases {}
+                 :workspace-exists? (fn [_ _] true)
+                 :provision-fn (fn [& _] (swap! calls conj :provision))
+                 :validate-workspace-fn (fn [& _] (swap! calls conj :validate))
+                 :mint-fn (fn [& _] (swap! calls conj :mint))
+                 :roster-fn (fn [& _] (swap! calls conj :roster))})]
+    (is (= :existing-workspace-without-lease (:error/code result)))
+    (is (empty? @calls))))
