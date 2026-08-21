@@ -6,6 +6,7 @@
             [futon3c.apm.campaign-postconditions :as postconditions]
             [futon3c.apm.campaign-stepper :as stepper]
             [futon3c.apm.countdown-pre-admission :as admission]
+            [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.problem-projection :as problem-projection])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -18,6 +19,7 @@
 (def certificate-directory (.resolve state-directory "certificates"))
 (def projection-directory (.resolve state-directory "projection"))
 (def problem-buffer-path (.resolve state-directory "problem-buffer.md"))
+(def preflight-state-path (.resolve state-directory "live/preflight.edn"))
 
 (defn- inputs []
   {:manifest (edn/read-string (slurp manifest-path))
@@ -129,3 +131,28 @@
            (assoc (options) :permit (:permit issued)
                   :trusted-permit-id (get-in issued [:permit :permit/id])
                   :trusted-issuer "joe")))))))
+
+(defn live-preflight-inputs []
+  (let [{:keys [manifest contract]} (inputs)
+        unit (second (:units manifest))
+        loaded (ledger/read-ledger ledger-path)
+        projection (:projection loaded)
+        response (live-preflight-runtime/http-json
+                  "GET" "http://localhost:7070/api/alpha/agents/f19-proctor")
+        agent (:agent response)
+        metadata (:metadata agent)]
+    {:contract contract
+     :inputs
+     {:ledger {:version (:campaign/version projection)
+               :phase (get-in projection [:active/frame :phase])
+               :claim (:active/claim projection)}
+      :unit unit :role-card (get-in manifest [:apparatus :artifacts :proctor])
+      :seat {:agent-id (:agent-id response) :type (some-> (:type agent) keyword)
+             :frame-id (:frame-id metadata) :invoke-ready? (:invoke-ready? agent)}
+      :timeouts {:request-timeout-ms 300000
+                 :turn-timeout-ms
+                 (get-in metadata [:effective-timeouts :turn-timeout-ms])}}
+     :state-path preflight-state-path}))
+
+(defn run-live-preflight! []
+  (live-preflight-runtime/run-live! (live-preflight-inputs)))
