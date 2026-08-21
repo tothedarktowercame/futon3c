@@ -106,3 +106,53 @@
                                   :report {}})))]
     (is (= :solver-session-mismatch (:error/code result)))
     (is (nil? @persisted))))
+
+(deftest every-tenth-round-is-an-addressed-strategy-checkpoint
+  (doseq [ordinal [10 20 30 40 50]]
+    (is (true? (:solver/strategy-checkpoint?
+                (sut/round-request base-request ordinal nil)))))
+  (doseq [ordinal [1 9 11 49]]
+    (is (false? (:solver/strategy-checkpoint?
+                 (sut/round-request base-request ordinal nil))))))
+
+(deftest missing-ten-round-strategy-stops-before-another-dispatch
+  (let [persisted (atom nil)
+        prior (mapv (fn [ordinal] {:ordinal ordinal :job-id (str "j" ordinal)})
+                    (range 1 10))
+        checkpoint-active (assoc legacy-state
+                                 :request (sut/round-request base-request 10 nil))
+        state {:state/type :solver-rounds :budget/max-rounds 50
+               :base-request base-request :rounds prior :active checkpoint-active}
+        result (sut/drive! (assoc (effects persisted) :state state))]
+    (is (= :solver-strategy-checkpoint-required (:error/code result)))
+    (is (= :solver-strategy-checkpoint-required (:state/type @persisted)))
+    (is (nil? (:active @persisted)))))
+
+(deftest valid-ten-round-strategy-allows-next-episode
+  (let [persisted (atom nil)
+        prior (mapv (fn [ordinal] {:ordinal ordinal :job-id (str "j" ordinal)})
+                    (range 1 10))
+        checkpoint-active (assoc legacy-state
+                                 :request (sut/round-request base-request 10 nil))
+        state {:state/type :solver-rounds :budget/max-rounds 50
+               :base-request base-request :rounds prior :active checkpoint-active}
+        strategy {:summary "The factorization route remains viable."
+                  :obligations ["Boundary extension" "Derivative count"]
+                  :decomposition [{:obligation "Boundary extension"
+                                   :decision :delegate
+                                   :reason "Independent named lemma."}
+                                  {:obligation "Derivative count"
+                                   :decision :sequential
+                                   :reason "Consumes the extension."}]
+                  :next-plan "Integrate the extension, then close the count."}
+        result (sut/drive!
+                (assoc (effects persisted) :state state
+                       :job-fn (fn [_]
+                                 {:job-id "job-1" :agent-id "f19-solver"
+                                  :session-id "solver-session" :state :done
+                                  :report {:solver/outcome :progress
+                                           :residual "Boundary extension"
+                                           :solver/strategy strategy}})))]
+    (is (:ok result))
+    (is (= 11 (get-in result [:state :active :request :solver/round])))
+    (is (= strategy (get-in result [:state :rounds 9 :report :solver/strategy])))))

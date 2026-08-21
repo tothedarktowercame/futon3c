@@ -8,6 +8,10 @@
             [futon3c.apm.live-job-driver :as job-driver]))
 
 (def default-max-rounds 50)
+(def strategy-checkpoint-every 10)
+
+(defn strategy-checkpoint-round? [ordinal]
+  (zero? (mod ordinal strategy-checkpoint-every)))
 
 (defn round-request [base-request ordinal prior]
   (let [body (cond-> (-> base-request
@@ -15,7 +19,9 @@
                          (assoc :solver/round ordinal
                                 :solver/max-rounds default-max-rounds
                                 :solver/remaining-rounds
-                                (- default-max-rounds ordinal)))
+                                (- default-max-rounds ordinal)
+                                :solver/strategy-checkpoint?
+                                (strategy-checkpoint-round? ordinal)))
                prior
                (assoc :solver/prior-job-id (:job-id prior)
                       :solver/prior-session-id (:session-id prior)
@@ -85,6 +91,21 @@
     :progress
 
     :else :inadequate))
+
+(defn- strategy-checkpoint-valid? [report]
+  (let [{:keys [summary obligations decomposition next-plan]}
+        (:solver/strategy report)]
+    (and (string? summary) (not (str/blank? summary))
+         (vector? obligations)
+         (every? #(and (string? %) (not (str/blank? %))) obligations)
+         (vector? decomposition)
+         (every? (fn [{:keys [obligation decision reason] :as item}]
+                   (and (map? item)
+                        (string? obligation) (not (str/blank? obligation))
+                        (contains? #{:delegate :sequential} decision)
+                        (string? reason) (not (str/blank? reason))))
+                 decomposition)
+         (string? next-plan) (not (str/blank? next-plan)))))
 
 (defn- terminal-round [active job validation ordinal]
   (let [report (normalize-round-report (:report job))]
@@ -168,6 +189,17 @@
                     rounds (conj (:rounds state) completed)
                     next-state (assoc state :rounds rounds :active nil)]
                 (cond
+                  (and (< (count rounds) max-rounds)
+                       (strategy-checkpoint-round? ordinal)
+                       (not (strategy-checkpoint-valid? (:report completed))))
+                  (let [stopped (assoc next-state
+                                       :state/type :solver-strategy-checkpoint-required)
+                        saved (persist-container persist-fn stopped)]
+                    (if (:ok saved)
+                      {:ok false :error/code :solver-strategy-checkpoint-required
+                       :state stopped}
+                      saved))
+
                   (= :claimed-defect (:outcome completed))
                   (let [stopped (assoc next-state
                                        :state/type :solver-defect-review-required)

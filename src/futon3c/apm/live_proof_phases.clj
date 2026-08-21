@@ -140,16 +140,24 @@
        (pr-str request) "\n"
        (case (:phase request)
          :solve
-         (if (= 1 (:solver/round request))
-           (str "Opening siege. Use the full available turn: search, test multiple "
-                "routes, build missing infrastructure when needed, and continue through "
-                "friction. Commit the completed proof if reached. If unfinished, commit "
-                "salvageable artifacts and report :solver/outcome :progress with an exact "
-                ":residual; use :claimed-defect only for a precise statement defect.")
-           (str "Continue the same solver session and branch from the prior verified "
-                "state. Produce the next committed proof-level artifact or complete the "
-                "proof. If unfinished, report :solver/outcome :progress, :residual, and "
-                ":artifact-commits; friction is not a defect."))
+         (str
+          (if (= 1 (:solver/round request))
+            (str "Opening siege. Own a substantial proof episode: search, test multiple "
+                 "routes, build missing infrastructure when needed, and continue through "
+                 "friction. Do not stop merely because one lemma compiled. ")
+            (str "Continue the same solver session and branch from the prior verified "
+                 "state. Own a substantial proof episode, not one micro-lemma. "))
+          (when (:solver/strategy-checkpoint? request)
+            (str "This is a ten-turn strategy checkpoint. Before returning, reassess the "
+                 "whole route and include :solver/strategy {:summary STRING, "
+                 ":obligations [STRING ...], :decomposition [{:obligation STRING, "
+                 ":decision :delegate|:sequential, :reason STRING} ...], "
+                 ":next-plan STRING}. Delegate genuinely independent obligations when "
+                 "useful, using isolated branches/worktrees; review and integrate their "
+                 "results yourself. "))
+          (str "Commit the completed proof if reached. If unfinished, commit salvageable "
+               "artifacts and report :solver/outcome :progress, an exact :residual, and "
+               ":artifact-commits; friction is not a defect."))
          :verify "Independently verify the certified solver head; do not mutate it."
          "Perform the registered read-only preflight.")
        " Return exactly one EDN map with keys "

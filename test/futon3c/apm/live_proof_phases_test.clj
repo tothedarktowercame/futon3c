@@ -68,6 +68,16 @@
     (is (re-find #"Opening siege" opening))
     (is (re-find #"same solver session and branch" later))))
 
+(deftest tenth-round-prompt-requires-strategy-and-decomposition
+  (let [checkpoint (sut/prompt
+                    (assoc (request :solve) :solver/round 10
+                           :solver/strategy-checkpoint? true
+                           :solver/prior-session-id "same-session"))]
+    (is (re-find #"ten-turn strategy checkpoint" checkpoint))
+    (is (re-find #":solver/strategy" checkpoint))
+    (is (re-find #":delegate\|:sequential" checkpoint))
+    (is (re-find #"isolated branches/worktrees" checkpoint))))
+
 (deftest proof-terminal-refuses-unsound-or-misattributed-output
   (let [req (request :solve)
         ticket {:job-id "job-1"}
