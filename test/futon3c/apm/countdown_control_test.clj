@@ -1,6 +1,7 @@
 (ns futon3c.apm.countdown-control-test
   (:require [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-batch :as batch]
+            [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.countdown-control :as sut]))
 
 (deftest replacement-registration-starts-at-f19-with-complete-cycle
@@ -85,3 +86,38 @@
            (:batch/frames result)))
     (is (= "f20" (:frame-id (first @calls))))
     (is (= (:permit/id permit) (get-in (first @calls) [:permit :permit/id])))))
+
+(defn fake-preparation [manifest unit]
+  (let [frame-id (:frame/id unit) problem-id (:problem/id unit)
+        body {:preparation/version 2 :campaign/id "apm-countdown-r4"
+              :frame/id frame-id :problem/id problem-id
+              :manifest/id (:manifest/id manifest)
+              :workspaces
+              (into {} (map (fn [role]
+                              [role {:role role :frame/id frame-id
+                                     :problem/id problem-id
+                                     :workspace/path (str "/tmp/" frame-id "-" (name role))
+                                     :workspace/id (str frame-id "-" (name role) "-workspace")
+                                     :branch (str "exp/" frame-id "-" (name role))
+                                     :base-revision "1111111111111111111111111111111111111111"}])
+                            [:solver :student]))
+              :seats
+              (into {} (map (fn [[role type]]
+                              [role {:agent-id (str frame-id "-" (name role))
+                                     :type type}])
+                            {:solver :codex :student :zai :guide :claude
+                             :proctor :codex :scribe :zai}))}]
+    (assoc body :preparation/id (machine/ledger-digest [body]))))
+
+(deftest future-frame-contexts-select-exact-units-and-fail-closed-unprovisioned
+  (let [manifest (:manifest (#'sut/inputs))]
+    (is (= :countdown-frame-not-provisioned
+           (:error/code (sut/frame-context "f20"))))
+    (doseq [frame-id ["f20" "f21" "f22" "f23" "f24" "f25"]]
+      (let [unit (sut/frame-unit manifest frame-id)
+            context (sut/frame-context
+                     frame-id #(fake-preparation manifest
+                                                 (sut/frame-unit manifest %)))]
+        (is (:ok context))
+        (is (= frame-id (get-in context [:unit :frame/id])))
+        (is (= (:problem/id unit) (get-in context [:preparation :problem/id])))))))

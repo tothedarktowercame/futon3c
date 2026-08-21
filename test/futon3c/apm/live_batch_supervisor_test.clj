@@ -31,7 +31,8 @@
                     {:ok true :status :parked :job-id "job-20"})
    :cursor-read-fn (fn [] @state)
    :cursor-persist-fn (fn [cursor] (reset! state cursor)
-                        (swap! calls conj [:persist cursor]) {:ok true})})
+                        (swap! calls conj [:persist cursor]) {:ok true})
+   :continue-fn (fn [] (swap! calls conj [:continue]) {:ok true})})
 
 (deftest contiguous-range-is-inclusive-and-manifest-ordered
   (is (= ["f20" "f21" "f22" "f23" "f24" "f25"]
@@ -53,6 +54,17 @@
     (is (:ok (sut/tick! opts)))
     (swap! state assoc :frames ["f20" "f21"])
     (is (= :live-batch-cursor-invalid (:error/code (sut/tick! opts))))))
+
+(deftest same-version-ledger-fork-is-refused
+  (let [state (atom nil) calls (atom []) opts (options state calls)]
+    (is (:ok (sut/tick! opts)))
+    (let [forked (assoc certificate :ledger/digest "other-ledger")
+          result (sut/tick!
+                  (assoc opts :inspect-fn
+                         (fn [] {:ok true :stepper/status :ready
+                                 :checkpoint {:certificate forked}
+                                 :obligation obligation})))]
+      (is (= :live-batch-cursor-ledger-regression (:error/code result))))))
 
 (deftest permit-and-range-fail-before-frame-effects
   (testing "tampered permit"
@@ -88,3 +100,13 @@
     (is (= :complete (:cursor/status @state)))
     (is (sut/valid-cursor? @state))
     (is (not-any? #(= :tick (first %)) @calls))))
+
+(deftest completed-frame-schedules-the-next-batch-tick
+  (let [state (atom nil) calls (atom [])
+        result (sut/tick!
+                (assoc (options state calls)
+                       :frame-tick-fn
+                       (fn [_] (swap! calls conj [:tick])
+                         {:ok true :status :frame-complete})))]
+    (is (= :batch-advanced (:status result)))
+    (is (= [:continue] (last @calls)))))

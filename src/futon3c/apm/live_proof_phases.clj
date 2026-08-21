@@ -1,6 +1,7 @@
 (ns futon3c.apm.live-proof-phases
   "Live request and terminal-receipt adapters for preflight, solve, and verify."
   (:require [clojure.set :as set]
+            [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-contract :as cycle]
             [futon3c.apm.live-job-driver :as driver]
@@ -20,7 +21,12 @@
   [{:keys [kind action ledger unit role-card seat workspace solve-receipt]}]
   (if (= :preflight kind)
     (preflight/build-request {:ledger ledger :unit unit :role-card role-card
-                              :seat seat :timeouts (:timeouts action)})
+                              :seat seat
+                              :timeouts
+                              {:request-timeout-ms
+                               (get-in action [:timeouts :request-ms])
+                               :turn-timeout-ms
+                               (get-in action [:timeouts :turn-ms])}})
     (let [problem (:problem unit)
           expected-role (if (= :solve kind) :solver :proctor)
           expected-agent (str (:frame/id unit) "-" (name expected-role))
@@ -128,13 +134,16 @@
             :receipt-provider (partial receipt contract kind)))))
 
 (defn prompt [request]
-  (str "F19 " (name (:phase request)) " — use only this frozen dispatch authority:\n"
+  (str (str/upper-case (:frame-id request)) " "
+       (name (:phase request)) " — use only this frozen dispatch authority:\n"
        (pr-str request) "\n"
        (case (:phase request)
          :solve "Work in the registered solver workspace. Commit the completed proof."
          :verify "Independently verify the certified solver head; do not mutate it."
          "Perform the registered read-only preflight.")
-       " Return exactly one EDN map with keys " (pr-str proof-report-fields) "."))
+       " Return exactly one EDN map with keys "
+       (pr-str (if (= :preflight (:phase request))
+                 preflight/required-report-fields proof-report-fields)) "."))
 
 (defn run-live!
   [{:keys [kind contract request state-path agency-base]

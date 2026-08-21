@@ -47,7 +47,8 @@
    return one of the existing statuses :parked, :phase-advanced, or
    :frame-complete. CURSOR-PERSIST-FN must durably replace the cursor."
   [{:keys [units start-frame end-frame permit trusted-permit-id trusted-issuer
-           actor inspect-fn frame-tick-fn cursor-read-fn cursor-persist-fn]}]
+           actor inspect-fn frame-tick-fn cursor-read-fn cursor-persist-fn
+           continue-fn]}]
   (let [range-result (contiguous-range units start-frame end-frame)]
     (cond
       (not (:ok range-result)) range-result
@@ -90,6 +91,15 @@
                      (select-keys expected-cursor
                                   [:frames :permit/id :campaign/id])))
           {:ok false :error/code :live-batch-cursor-authority-mismatch}
+          (and prior
+               (or (< (:campaign/version expected-cursor)
+                      (:campaign/version prior))
+                   (< (:action-index expected-cursor) (:action-index prior))
+                   (and (= (:campaign/version expected-cursor)
+                           (:campaign/version prior))
+                        (not= (:ledger/digest expected-cursor)
+                              (:ledger/digest prior)))))
+          {:ok false :error/code :live-batch-cursor-ledger-regression}
           (= frame-index (inc end-index))
           (let [complete (addressed (assoc expected-cursor
                                            :cursor/status :complete))
@@ -115,8 +125,19 @@
                 (if (and (:ok result)
                          (contains? #{:parked :phase-advanced :frame-complete}
                                     (:status result)))
-                  (assoc result :batch/frames frames :batch/frame frame-id
-                         :batch/cursor expected-cursor)
+                  (if (= :frame-complete (:status result))
+                    (if-not (fn? continue-fn)
+                      {:ok false :error/code :live-batch-continuation-provider-missing}
+                      (let [continued (continue-fn)]
+                        (if (:ok continued)
+                          {:ok true :status :batch-advanced
+                           :batch/frames frames :batch/frame frame-id
+                           :batch/cursor expected-cursor
+                           :continuation continued}
+                          {:ok false :error/code :live-batch-continuation-failed
+                           :finding continued})))
+                    (assoc result :batch/frames frames :batch/frame frame-id
+                           :batch/cursor expected-cursor))
                   (if (:ok result)
                     {:ok false :error/code :live-batch-frame-status-invalid
                      :finding result}
