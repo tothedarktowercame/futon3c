@@ -82,6 +82,10 @@
                   (merge base
                          {:receipts {:preflight preflight-receipt
                                      :promote-solver promotion}
+                          :snapshot-access
+                          {:ok true
+                           :snapshot {:snapshot/digest "snapshot-digest"}
+                           :accessible-memory-ids #{"m1"}}
                           :action {:kind :student-attempt
                                    :phase :student-attempt-1 :role :student
                                    :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
@@ -94,10 +98,26 @@
                                    :snapshot-id "snapshot-1"
                                    :snapshot-digest "snapshot-digest"}}}]
     (is (= {:receipt-id "promotion-receipt"
-            :snapshot-id "snapshot-1" :snapshot-digest "snapshot-digest"}
+            :snapshot-id "snapshot-1" :snapshot-digest "snapshot-digest"
+            :accessible-memory-ids ["m1"]}
            (:memory-snapshot request)))
     (is (some #{:student-memory-snapshot-mismatch}
               (:findings (sut/validate-terminal request {:job-id "j"} job))))))
+
+(deftest student-dispatch-fails-closed-without-substrate-snapshot-proof
+  (let [promotion {:receipt/id "promotion-receipt"
+                   :receipt/snapshot-id "snapshot-1"
+                   :receipt/snapshot-digest "snapshot-digest"}
+        result (sut/build-request
+                (merge base
+                       {:receipts {:preflight preflight-receipt
+                                   :promote-solver promotion}
+                        :action {:kind :student-attempt
+                                 :phase :student-attempt-1 :role :student
+                                 :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
+                        :seat {:agent-id "f19-student" :invoke-ready? true}}))]
+    (is (= :live-learning-request-invalid (:error/code result)))
+    (is (some #{:student-snapshot-access-unverified} (:findings result)))))
 
 (deftest promote-solver-requires-an-independent-content-addressed-snapshot
   (let [request {:dispatch/type :scribe-reduce :phase :promote-solver

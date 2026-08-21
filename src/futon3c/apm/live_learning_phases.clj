@@ -24,12 +24,14 @@
        set))
 
 (defn build-request
-  [{:keys [contract action ledger unit role-card seat workspace receipts]}]
+  [{:keys [contract action ledger unit role-card seat workspace receipts
+           snapshot-access]}]
   (let [kind (:kind action)
         phase (:phase action)
         role (role-for-kind kind)
         expected-agent (str (:frame/id unit) "-" (name role))
         input-ids (required-input-receipt-ids contract phase receipts)
+        promotion-receipt (get receipts :promote-solver)
         required-artifacts (get-in contract [:phases phase :requires])
         expected-input-count (count (distinct (map #(producer-phase contract %)
                                                    required-artifacts)))
@@ -45,11 +47,16 @@
                    (conj :required-input-receipts-missing)
                    (and (= :student-attempt kind)
                         (not (string? (:workspace/path workspace))))
-                   (conj :student-workspace-missing))]
+                   (conj :student-workspace-missing)
+                   (and (= :student-attempt kind) promotion-receipt
+                        (not (and (:ok snapshot-access)
+                                  (= (:receipt/snapshot-digest promotion-receipt)
+                                     (get-in snapshot-access
+                                             [:snapshot :snapshot/digest])))))
+                   (conj :student-snapshot-access-unverified))]
     (if (seq findings)
       {:ok false :error/code :live-learning-request-invalid :findings findings}
-      (let [promotion-receipt (get receipts :promote-solver)
-            body (cond-> {:dispatch/type kind :phase phase :role role
+      (let [body (cond-> {:dispatch/type kind :phase phase :role role
                           :agent-id (:agent-id seat)
                           :frame-id (:frame/id unit) :problem-id (:problem/id unit)
                           :ledger-digest (:digest ledger)
@@ -64,7 +71,9 @@
                    (assoc :memory-snapshot
                           {:receipt-id (:receipt/id promotion-receipt)
                            :snapshot-id (:receipt/snapshot-id promotion-receipt)
-                           :snapshot-digest (:receipt/snapshot-digest promotion-receipt)})
+                           :snapshot-digest (:receipt/snapshot-digest promotion-receipt)
+                           :accessible-memory-ids
+                           (vec (sort (:accessible-memory-ids snapshot-access)))})
                    (= :guide-intervention kind)
                    (assoc :intervention-ordinal (:ordinal action)
                           :input-attempt-id
