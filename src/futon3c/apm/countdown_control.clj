@@ -8,6 +8,7 @@
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
+            [futon3c.apm.live-learning-phases :as live-learning-phases]
             [futon3c.apm.live-proof-phases :as live-proof-phases]
             [futon3c.apm.problem-projection :as problem-projection])
   (:import [java.nio.file Path]
@@ -103,7 +104,8 @@
                             evidence)}}]))
 
 (defn- certified-handler [kind action]
-  (let [state-path (.resolve state-directory (str "live/" (name kind) ".edn"))
+  (let [phase (or (:phase action) kind)
+        state-path (.resolve state-directory (str "live/" (name phase) ".edn"))
         state (live-preflight-runtime/read-state state-path)
         receipt (:receipt state)]
     (if (and (contains? #{:live-job-certified :preflight-certified}
@@ -133,7 +135,11 @@
                               :registration-hash (:registration-hash action)}})
               :preflight (partial certified-handler :preflight)
               :solve (partial certified-handler :solve)
-              :verify (partial certified-handler :verify)}
+              :verify (partial certified-handler :verify)
+              :student-attempt (partial certified-handler :student-attempt)
+              :guide-intervention (partial certified-handler :guide-intervention)
+              :scribe-reduce (partial certified-handler :scribe-reduce)
+              :close-frame (partial certified-handler :close-frame)}
    :actor "countdown-control"})
 
 (defn inspect! [] (stepper/inspect! (options)))
@@ -223,3 +229,54 @@
       (if (:ok phase-inputs)
         (live-proof-phases/run-live! phase-inputs)
         phase-inputs))))
+
+(defn- certified-receipts [contract]
+  (into {}
+        (keep (fn [phase]
+                (let [state (live-preflight-runtime/read-state
+                             (.resolve state-directory
+                                       (str "live/" (name phase) ".edn")))]
+                  (when-let [receipt (:receipt state)] [phase receipt]))))
+        (:phase-order contract)))
+
+(defn live-learning-phase-inputs [action]
+  (let [{:keys [manifest contract]} (inputs)
+        unit (second (:units manifest))
+        kind (:kind action)
+        phase (:phase action)
+        role (get live-learning-phases/role-for-kind kind)
+        state-path (.resolve state-directory (str "live/" (name phase) ".edn"))
+        existing (live-preflight-runtime/read-state state-path)
+        prep (edn/read-string (slurp preparation-path))
+        response (live-preflight-runtime/http-json
+                  "GET" (str "http://localhost:7070/api/alpha/agents/f19-"
+                             (name role)))
+        agent (:agent response)
+        metadata (:metadata agent)
+        projection (:projection (ledger/read-ledger ledger-path))
+        receipts (certified-receipts contract)
+        built (when-not existing
+                (live-learning-phases/build-request
+                 {:contract contract :action action
+                  :ledger {:digest (:ledger/digest projection)} :unit unit
+                  :role-card (get-in manifest [:apparatus :artifacts role])
+                  :seat {:agent-id (:agent-id response)
+                         :type (some-> (:type agent) keyword)
+                         :frame-id (:frame-id metadata)
+                         :invoke-ready? (:invoke-ready? agent)}
+                  :workspace (get-in prep [:workspaces :student])
+                  :receipts receipts}))]
+    (cond
+      (and existing (map? (:request existing)))
+      {:ok true :contract contract :action action :receipts receipts
+       :request (:request existing) :state-path state-path}
+      (:ok built)
+      {:ok true :contract contract :action action :receipts receipts
+       :request (:request built) :state-path state-path}
+      :else built)))
+
+(defn drive-live-learning-phase! [action]
+  (let [phase-inputs (live-learning-phase-inputs action)]
+    (if (:ok phase-inputs)
+      (live-learning-phases/run-live! phase-inputs)
+      phase-inputs)))

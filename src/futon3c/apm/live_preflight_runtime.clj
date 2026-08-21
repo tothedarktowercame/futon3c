@@ -23,6 +23,7 @@
 (defn job->terminal [response]
   (let [job (:job response)]
     {:job-id (:job-id job) :agent-id (:agent-id job)
+     :session-id (:session-id job)
      :state (some-> (:state job) keyword)
      :report (parse-report (:result job))}))
 
