@@ -7020,6 +7020,11 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      ;; Durable activation is deliberately mounted at the reload-safe boundary:
+      ;; countdown launch must not require restarting the Agency-routed JVM.
+      (and (= :post method) (= "/api/alpha/invoke/activate" uri))
+      (handle-invoke-activate request config)
+
       (and (= :post method) (= "/api/alpha/conductor/action" uri))
       (let [payload (parse-json-map (read-body request))
             agent-id (or (:agent-id payload) (get payload "agent-id"))
@@ -7300,9 +7305,6 @@
 
           (and (= :post method) (= "/api/alpha/invoke/announce" uri))
           (handle-invoke-announce request config)
-
-          (and (= :post method) (= "/api/alpha/invoke/activate" uri))
-          (handle-invoke-activate request config)
 
           (and (= :post method) (= "/api/alpha/bell" uri))
           (handle-bell request config)
