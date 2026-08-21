@@ -7,10 +7,11 @@
   (:import [java.util UUID]))
 
 (def ^:private default-path "/tmp/futon3c-followups.edn")
+(def ^:dynamic *path-override* nil)
 (def ^:private lease-ms 90000)
 (defonce ^:private !state (atom nil))
 
-(defn- path [] (or (config/env "FUTON3C_FOLLOWUP_PATH") default-path))
+(defn- path [] (or *path-override* (config/env "FUTON3C_FOLLOWUP_PATH") default-path))
 (defn- empty-state [] {:queued {} :leased {} :terminal {} :dedupe {}})
 (defn- load-state []
   (let [f (io/file (path))]

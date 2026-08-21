@@ -257,6 +257,40 @@ a fresh `:cold-scan? false` boot. Any watcher *runtime* counters read in that
 window are post-restart artifacts; the decomposition above is source-level and
 independent of the restart.
 
+## Inbox-zero operation (v0)
+
+The opt-in inbox-zero path currently runs through the standalone
+`futon3/scripts/multi_watcher.clj`. Producer and watcher must share one durable
+intake directory:
+
+```sh
+export FUTON3_INBOX_ZERO_WITNESS_DIR=/home/joe/code/storage/inbox-zero/witnesses
+bb /home/joe/code/futon3/scripts/multi_watcher.clj \
+  --root /home/joe/code/futon0=futon0-d \
+  --root /home/joe/code/futon3=futon3-d \
+  --root /home/joe/code/futon3c=futon3c-d \
+  --inbox-zero-state /home/joe/code/storage/inbox-zero/state.edn \
+  --inbox-zero-witnesses "$FUTON3_INBOX_ZERO_WITNESS_DIR" \
+  --inbox-zero-followup-url http://127.0.0.1:7070/api/alpha/followups
+```
+
+Agency's Claude tool stream writes a claim only after a successful `Edit`,
+`Write`, or `MultiEdit` tool result, keyed to the exact agent and session. The
+watcher independently observes Git state and joins the two facts; it never
+derives authorship from filesystem dirt. The count threshold is five distinct
+currently dirty paths and the independent age threshold is 24 hours.
+
+This is not yet an option on the in-JVM `futon3c.watcher.multi` started by
+bootstrap. Do not set the witness variable without running the standalone
+consumer, and do not run two consumers against one state snapshot. Wiring the
+same lifecycle into the in-JVM watcher is the next production-activation
+slice; it must preserve the single-writer contract.
+
+Known honest surface gaps: Codex's tool stream is not currently available at
+this server-side boundary, and a generic Emacs `after-save-hook` cannot prove
+the editing seat. Neither surface emits claims until it has an exact-session,
+successful-edit witness. No last-editor or broadcast fallback is permitted.
+
 ## Pitfalls if you touch this
 
 - **Don't run an unbounded `GET /api/alpha/hyperedges?type=<type>`.** The

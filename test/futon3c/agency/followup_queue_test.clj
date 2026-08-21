@@ -2,7 +2,13 @@
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.followup-queue :as queue]))
 
-(use-fixtures :each (fn [f] (queue/clear!) (f)))
+(use-fixtures :each
+  (fn [f]
+    (let [path (str (System/getProperty "java.io.tmpdir")
+                    "/futon3c-followup-test-" (random-uuid) ".edn")]
+      (binding [queue/*path-override* path]
+        (queue/clear!)
+        (f)))))
 
 (def request {:agent "codex-11" :session "session-1" :type :inbox-zero
               :dedupe-key ["seat" "repo" "hash"] :prompt "Review five files"})
