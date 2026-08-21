@@ -32,10 +32,14 @@
     :else x))
 
 (defn ledger-digest [events]
-  (let [digest (MessageDigest/getInstance "SHA-256")
-        bytes (.digest digest (.getBytes (pr-str (canonical events))
-                                       StandardCharsets/UTF_8))]
-    (apply str (map #(format "%02x" (bit-and (int %) 0xff)) bytes))))
+  ;; `pr-str` observes this dynamic printer setting.  Drawbridge deliberately
+  ;; binds it differently from a fresh CLI process, so leave no ambient JVM
+  ;; state in the durable digest contract.
+  (binding [*print-namespace-maps* true]
+    (let [digest (MessageDigest/getInstance "SHA-256")
+          bytes (.digest digest (.getBytes (pr-str (canonical events))
+                                         StandardCharsets/UTF_8))]
+      (apply str (map #(format "%02x" (bit-and (int %) 0xff)) bytes)))))
 
 (defn- refusal [state event code & [finding]]
   {:ok false

@@ -91,3 +91,10 @@
         changed (update-in prefix [2 :event/body :problem-id] str "-changed")]
     (is (= :campaign-ledger-digest-mismatch
            (:error/code (machine/projection changed digest))))))
+
+(deftest ledger-digest-is-independent-of-ambient-printer-settings
+  (let [with-namespace-maps (binding [*print-namespace-maps* true]
+                              (machine/ledger-digest prefix))
+        without-namespace-maps (binding [*print-namespace-maps* false]
+                                 (machine/ledger-digest prefix))]
+    (is (= with-namespace-maps without-namespace-maps))))
