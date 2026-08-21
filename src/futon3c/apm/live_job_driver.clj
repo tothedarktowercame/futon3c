@@ -42,7 +42,13 @@
             :else
             (let [activated (activate-fn request (:ticket announced))]
               (if (:ok activated)
-                {:ok true :status :awaiting-terminal :state next-state}
+                (let [accepted-state (assoc next-state :activation/accepted? true)
+                      accepted-persisted (persist-fn accepted-state)]
+                  (if (:ok accepted-persisted)
+                    {:ok true :status :awaiting-terminal :state accepted-state}
+                    {:ok false
+                     :error/code :live-job-activation-acceptance-persistence-failed
+                     :state next-state}))
                 {:ok false :error/code :live-job-activation-failed
                  :state next-state :finding activated}))))))
 
@@ -51,6 +57,19 @@
 
     (not= (:dispatch/id request) (get-in state [:request :dispatch/id]))
     {:ok false :error/code :live-job-request-state-mismatch}
+
+    (not (:activation/accepted? state))
+    (let [activated (activate-fn request (:ticket state))]
+      (if-not (:ok activated)
+        {:ok false :error/code :live-job-activation-failed
+         :state state :finding activated}
+        (let [accepted-state (assoc state :activation/accepted? true)
+              persisted (persist-fn accepted-state)]
+          (if (:ok persisted)
+            {:ok true :status :awaiting-terminal :state accepted-state}
+            {:ok false
+             :error/code :live-job-activation-acceptance-persistence-failed
+             :state state}))))
 
     :else
     (let [job (job-fn (get-in state [:ticket :job-id]))]

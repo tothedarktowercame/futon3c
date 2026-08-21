@@ -9,7 +9,9 @@
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
+            [futon3c.apm.live-orchestration-contract :as orchestration-contract]
             [futon3c.apm.live-proof-phases :as live-proof-phases]
+            [futon3c.apm.live-supervisor :as live-supervisor]
             [futon3c.apm.problem-projection :as problem-projection])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -25,6 +27,8 @@
 (def preflight-state-path (.resolve state-directory "live/preflight.edn"))
 (def preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
+(def orchestration-path
+  "holes/labs/M-apm-demonstration/countdown-live-orchestration-v1.edn")
 
 (defn- inputs []
   {:manifest (edn/read-string (slurp manifest-path))
@@ -280,3 +284,101 @@
     (if (:ok phase-inputs)
       (live-learning-phases/run-live! phase-inputs)
       phase-inputs)))
+
+(defn launch-audit!
+  "Validate complete executable wiring plus the exact continuation identity."
+  [{:keys [agent session surface agency-base]
+    :or {agency-base "http://localhost:7070"}}]
+  (let [{:keys [manifest]} (inputs)
+        spec-result (orchestration-contract/read-spec orchestration-path)
+        contract-result
+        (when (:ok spec-result)
+          (orchestration-contract/validate
+           {:spec (:spec spec-result) :registration-body (registration-body)
+            :handlers (:handlers (options))
+            :apparatus-artifacts (get-in manifest [:apparatus :artifacts])}))
+        identity (when (and (string? agent) (not-empty agent))
+                   (live-preflight-runtime/http-json
+                    "GET" (str agency-base "/api/alpha/agents/" agent)))
+        exact? (and (= 200 (:http/status identity)) (:ok identity)
+                    (= agent (:agent-id identity))
+                    (= session (get-in identity [:agent :session-id]))
+                    (= surface "emacs-repl")
+                    (true? (get-in identity [:agent :invoke-ready?])))]
+    (cond
+      (not (:ok spec-result)) spec-result
+      (not (:ok contract-result)) contract-result
+      (not exact?)
+      {:ok false :error/code :set-alight-continuation-identity-mismatch
+       :finding {:expected {:agent agent :session session :surface surface}
+                 :observed (select-keys identity
+                                        [:http/status :ok :agent-id])
+                 :observed-session (get-in identity [:agent :session-id])}}
+      :else {:ok true :contract-audit contract-result
+             :continuation {:agent agent :session session :surface surface}})))
+
+(defn- f19-inspect! []
+  (let [inspection (inspect!)
+        next-frame (get-in inspection [:obligation :obligation/action :frame-id])]
+    (if (and (:ok inspection) next-frame (not= "f19" next-frame))
+      (assoc inspection :stepper/status :complete :completed-frame "f19")
+      inspection)))
+
+(defn- drive-live-action! [action]
+  (cond
+    (contains? #{:open-block :open-frame} (:kind action))
+    (let [handled ((get-in (options) [:handlers (:kind action)]) action)]
+      (if (:ok handled)
+        {:ok true :status :certified :certificate (:certificate handled)}
+        handled))
+
+    (contains? #{:preflight :solve :verify} (:kind action))
+    (drive-live-proof-phase! action)
+
+    (contains? #{:student-attempt :guide-intervention :scribe-reduce :close-frame}
+               (:kind action))
+    (drive-live-learning-phase! action)
+
+    :else
+    {:ok false :error/code :set-alight-action-unsupported :action action}))
+
+(defn- project-current! []
+  (problem-projection/project-latest!
+   {:ledger-path ledger-path :projection-directory projection-directory
+    :output-path problem-buffer-path :expected-frame-id "f19"
+    :expected-problem-id "a01J05"
+    :buffer-sink problem-projection/emacs-buffer-sink}))
+
+(defn set-alight!
+  "Run one durable f19 supervisor tick and arrange its exact continuation.
+
+   Repeated calls are safe: persisted job tickets and Agency activation are
+   idempotent, while the ledger remains the sole phase authority."
+  ([continuation] (set-alight! continuation {}))
+  ([{:keys [agent session surface agency-base]}
+    {:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn project-fn
+            park-fn now-ms-fn]
+     :or {now-ms-fn #(System/currentTimeMillis)}}]
+   (let [identity {:agent agent :session session :surface surface
+                   :agency-base (or agency-base "http://localhost:7070")}
+         payload (str "F19 SET-ALIGHT CONTINUATION: evaluate "
+                      "(futon3c.apm.countdown-control/set-alight! "
+                      (pr-str (select-keys identity [:agent :session :surface])) ").")
+         park-default
+         (fn [{:keys [awaiting] :as request}]
+           (let [body (cond-> {:agent agent :session session :surface surface
+                               :awaiting awaiting :payload (:payload request)}
+                        (empty? awaiting)
+                        (assoc :timer-due-ms (+ (long (now-ms-fn)) 500)))
+                 response (live-preflight-runtime/http-json
+                           "POST" (str (:agency-base identity) "/api/alpha/park") body)]
+             {:ok (and (= 200 (:http/status response)) (:ok response))
+              :response response}))]
+     (live-supervisor/tick!
+      {:launch-audit-fn (or launch-audit-fn #(launch-audit! identity))
+       :inspect-fn (or inspect-fn f19-inspect!)
+       :drive-phase-fn (or drive-phase-fn drive-live-action!)
+       :advance-fn (or advance-fn (fn [kind _certificate] (advance! kind)))
+       :project-fn (or project-fn project-current!)
+       :park-fn (or park-fn park-default)
+       :continuation-payload payload}))))

@@ -1713,6 +1713,63 @@
       (is (= "done" (:state job)))
       (is (= 1 (count (filter #(= "accepted" (:type %)) (:events job))))))))
 
+(deftest invoke-activation-accepts-immediately-and-is-idempotent
+  (testing "a pre-announced canonical job executes once behind a durable 202 boundary"
+    (let [started (promise) release (promise) invocations (atom 0)]
+      (reg/register-agent!
+       {:agent-id {:id/value "codex-activate-1" :id/type :continuity}
+        :type :codex :capabilities [:explore :edit]
+        :invoke-fn (fn [_prompt _session-id]
+                     (swap! invocations inc)
+                     (deliver started true)
+                     @release
+                     {:result "ok" :session-id nil})})
+      (let [handler (make-handler)
+            authority {"agent-id" "codex-activate-1" "prompt" "durable work"
+                       "caller" "countdown-control" "surface" "emacs-repl"}
+            announced (parse-body
+                       (post handler "/api/alpha/invoke/announce"
+                             (json/generate-string authority)))
+            job-id (:job-id announced)
+            activation (assoc authority "job-id" job-id)
+            first-response (post handler "/api/alpha/invoke/activate"
+                                 (json/generate-string activation))
+            first-body (parse-body first-response)]
+        (is (= 202 (:status first-response)))
+        (is (true? (:accepted first-body)))
+        (is (true? (deref started 1000 false)))
+        (let [second-response (post handler "/api/alpha/invoke/activate"
+                                    (json/generate-string activation))
+              second-body (parse-body second-response)]
+          (is (= 202 (:status second-response)))
+          (is (true? (:reused? second-body)))
+          (is (= job-id (:job-id second-body))))
+        (is (= 1 @invocations))
+        (deliver release true)
+        (is (= "done" (get-in (:parsed (wait-for-job-state handler job-id 2000))
+                               [:job :state])))
+        (is (= 1 @invocations))))))
+
+(deftest invoke-activation-rejects-authority-mismatch-without-execution
+  (let [invocations (atom 0)]
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-activate-2" :id/type :continuity}
+      :type :codex :capabilities [:explore]
+      :invoke-fn (fn [_ _] (swap! invocations inc) {:result "unexpected"})})
+    (let [handler (make-handler)
+          authority {"agent-id" "codex-activate-2" "prompt" "exact prompt"
+                     "caller" "countdown-control" "surface" "emacs-repl"}
+          announced (parse-body
+                     (post handler "/api/alpha/invoke/announce"
+                           (json/generate-string authority)))
+          response (post handler "/api/alpha/invoke/activate"
+                         (json/generate-string
+                          (assoc authority "prompt" "different prompt"
+                                 "job-id" (:job-id announced))))]
+      (is (= 409 (:status response)))
+      (is (= "activation-request-mismatch" (:error (parse-body response))))
+      (is (zero? @invocations)))))
+
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"
     (let [handler (make-handler)

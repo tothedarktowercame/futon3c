@@ -57,6 +57,7 @@
             [futon3c.apm.conductor-binding :as conductor-binding]
             [futon3c.apm.conductor-open :as conductor-open]
             [futon3c.apm.conductor-surface :as conductor-surface]
+            [futon3c.apm.campaign-machine :as campaign-machine]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
@@ -907,7 +908,8 @@
              existing (when (seq requested)
                         (get-in ledger [:jobs requested]))
              reuse? (and existing
-                         (#{"queued" "running"} (str (:state existing))))]
+                         (#{"queued" "activating" "running"}
+                          (str (:state existing))))]
          (if reuse?
            (do (reset! created-id requested)
                ledger)  ;; no mutation — return existing job
@@ -922,6 +924,11 @@
                                :agent-id (str agent-id)
                                :caller (str (or caller "http-caller"))
                                :surface (str (or surface "http"))
+                               :request-digest
+                               (campaign-machine/ledger-digest
+                                [{:agent-id (str agent-id) :prompt (str prompt)
+                                  :caller (str (or caller "http-caller"))
+                                  :surface (str (or surface "http"))}])
                                :bellback-of (some-> bellback-of str)   ;; bell-router: this job is a reply to <job-id>
                                :mode mode
                                :state "queued"
@@ -980,10 +987,11 @@
    (fn [acc job]
      (let [aid (canonical-job-agent-id (:agent-id job))
            state (some-> (:state job) str)]
-       (if-not (and aid (#{"queued" "running" "overrun"} state))
+       (if-not (and aid (#{"queued" "activating" "running" "overrun"} state))
          acc
          (-> acc
-             (update-in [aid :queued-jobs] (fnil + 0) (if (= "queued" state) 1 0))
+             (update-in [aid :queued-jobs] (fnil + 0)
+                        (if (#{"queued" "activating"} state) 1 0))
              (update-in [aid :running-jobs] (fnil + 0) (if (#{"running" "overrun"} state) 1 0))
              (update-in [aid :nonterminal-jobs] (fnil inc 0))))))
    {}
@@ -4253,6 +4261,70 @@
                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)
                                 :job job})))))))
 
+(defn- claim-invoke-activation! [job-id]
+  (let [claimed (atom nil)]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (let [state (get-in ledger [:jobs job-id :state])]
+         (reset! claimed state)
+         (if (= "queued" state)
+           (assoc-in ledger [:jobs job-id :state] "activating")
+           ledger))))
+    @claimed))
+
+(defn- handle-invoke-activate
+  "POST /api/alpha/invoke/activate — atomically activate one pre-announced job.
+   Returns 202 after executor submission; completion remains authoritative only
+   at /api/alpha/invoke/jobs/:id. Repeated activation is idempotent."
+  [request config]
+  (let [payload (parse-json-map (read-body request))
+        agent-id (or (:agent-id payload) (get payload "agent-id"))
+        prompt (or (:prompt payload) (get payload "prompt"))
+        job-id (or (:job-id payload) (get payload "job-id"))
+        caller (or (some-> payload :caller str)
+                   (some-> payload (get "caller") str) "http-caller")
+        surface (or (some-> payload :surface str)
+                    (some-> payload (get "surface") str) "http")
+        job (when job-id (get-in (ensure-invoke-jobs-ledger!) [:jobs (str job-id)]))
+        expected-digest (when (and agent-id prompt)
+                          (campaign-machine/ledger-digest
+                           [{:agent-id (str agent-id) :prompt (str prompt)
+                             :caller caller :surface surface}]))]
+    (cond
+      (nil? payload) (json-response 400 {:ok false :error "invalid-json"})
+      (or (str/blank? (str agent-id)) (nil? prompt) (str/blank? (str job-id)))
+      (json-response 400 {:ok false :error "activation-fields-required"})
+      (nil? job) (json-response 404 {:ok false :error "announced-job-not-found"})
+      (not= (str agent-id) (:agent-id job))
+      (json-response 409 {:ok false :error "activation-agent-mismatch"})
+      (not= expected-digest (:request-digest job))
+      (json-response 409 {:ok false :error "activation-request-mismatch"})
+      (#{"done" "failed" "error" "cancelled" "timeout"} (:state job))
+      (json-response 409 {:ok false :error "activation-job-terminal"
+                          :state (:state job)})
+      :else
+      (let [prior-state (claim-invoke-activation! (str job-id))]
+        (if (not= "queued" prior-state)
+          (json-response 202 {:ok true :accepted true :reused? true
+                              :job-id (str job-id) :state prior-state
+                              :status-url (str "/api/alpha/invoke/jobs/" job-id)})
+          (try
+            (.submit invoke-executor
+                     ^Runnable
+                     (fn []
+                       (build-invoke-response
+                        {:payload (assoc payload :job-id (str job-id))
+                         :agent-id (str agent-id) :prompt prompt
+                         :evidence-store (evidence-store-for-config config)})))
+            (json-response 202 {:ok true :accepted true :reused? false
+                                :job-id (str job-id) :state "activating"
+                                :status-url (str "/api/alpha/invoke/jobs/" job-id)})
+            (catch Throwable t
+              (finalize-invoke-job! (str job-id) "failed" "invoke-submit-failed"
+                                    (.getMessage t) {:ok false} nil)
+              (json-response 503 {:ok false :error "invoke-submit-failed"
+                                  :job-id (str job-id)}))))))))
+
 (defn repl-through-queue?
   "E2 (turn-delivery-invariants.md): route /invoke-stream (REPL/operator turns) through the
    durable turn-queue + per-agent drainer — same guarantees as a bell (single-writer, durable,
@@ -7228,6 +7300,9 @@
 
           (and (= :post method) (= "/api/alpha/invoke/announce" uri))
           (handle-invoke-announce request config)
+
+          (and (= :post method) (= "/api/alpha/invoke/activate" uri))
+          (handle-invoke-activate request config)
 
           (and (= :post method) (= "/api/alpha/bell" uri))
           (handle-bell request config)

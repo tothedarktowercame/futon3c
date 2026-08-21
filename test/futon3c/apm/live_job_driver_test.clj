@@ -26,12 +26,28 @@
         state (:state first-pass)
         waiting (sut/drive! (assoc (effects calls job) :state state))]
     (is (= :awaiting-terminal (:status first-pass)))
-    (is (= [:announce [:persist :live-job-dispatched] :activate]
-           (take 3 @calls)))
+    (is (= [:announce [:persist :live-job-dispatched] :activate
+            [:persist :live-job-dispatched]]
+           (take 4 @calls)))
     (is (= :awaiting-terminal (:status waiting)))
     (is (= 1 (count (filter #{:announce} @calls))))
     (is (= (:ticket/id (:ticket state))
            (machine/ledger-digest [(dissoc (:ticket state) :ticket/id)])))))
+
+(deftest persisted-ticket-retries-idempotent-activation-until-accepted
+  (let [calls (atom []) job (atom {:state :running})
+        failed (sut/drive!
+                (assoc (effects calls job)
+                       :activate-fn (fn [_ _]
+                                      (swap! calls conj :activate-failed)
+                                      {:ok false})))
+        retried (sut/drive! (assoc (effects calls job) :state (:state failed)))]
+    (is (= :live-job-activation-failed (:error/code failed)))
+    (is (= :awaiting-terminal (:status retried)))
+    (is (true? (get-in retried [:state :activation/accepted?])))
+    (is (= 1 (count (filter #{:announce} @calls))))
+    (is (= 1 (count (filter #{:activate-failed} @calls))))
+    (is (= 1 (count (filter #{:activate} @calls))))))
 
 (deftest matching-terminal-job-is-validated-receipted-and-persisted
   (let [calls (atom []) job (atom {:job-id "job-1" :agent-id "f19-proctor"

@@ -153,11 +153,12 @@
     :activate-fn
     (fn [req ticket]
       (let [response (runtime/http-json
-                      "POST" (str agency-base "/api/alpha/invoke")
+                      "POST" (str agency-base "/api/alpha/invoke/activate")
                       {:agent-id (:agent-id req) :prompt (prompt req)
                        :surface "emacs-repl" :caller "countdown-control"
                        :job-id (:job-id ticket)})]
-        {:ok (and (= 200 (:http/status response)) (:ok response))}))
+        {:ok (and (= 202 (:http/status response)) (:ok response)
+                  (:accepted response))}))
     :job-fn
     (fn [job-id]
       (runtime/job->terminal
