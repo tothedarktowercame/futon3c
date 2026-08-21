@@ -109,9 +109,9 @@
 
    STATE is nil before dispatch or contains :request and :ticket afterwards.
    This makes retries/restarts reuse the recorded job identity."
-  [{:keys [contract inputs state dispatch-fn job-fn persist-fn]}]
+  [{:keys [contract inputs state dispatch-fn activate-fn job-fn persist-fn]}]
   (cond
-    (not (every? fn? [dispatch-fn job-fn persist-fn]))
+    (not (every? fn? [dispatch-fn activate-fn job-fn persist-fn]))
     {:ok false :error/code :preflight-effect-provider-missing}
 
     (nil? state)
@@ -127,7 +127,12 @@
                   persisted (persist-fn next-state)]
               (if-not (:ok persisted)
                 {:ok false :error/code :preflight-ticket-persistence-failed}
-                {:ok true :status :awaiting-terminal :state next-state}))))))
+                (let [activated (activate-fn request (:ticket dispatched))]
+                  (if-not (:ok activated)
+                    {:ok false :error/code :preflight-activation-failed
+                     :state next-state :finding activated}
+                    {:ok true :status :awaiting-terminal
+                     :state next-state}))))))))
 
     (not= :preflight-dispatched (:state/type state))
     {:ok false :error/code :preflight-state-invalid}

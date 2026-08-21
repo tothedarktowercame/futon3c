@@ -64,6 +64,7 @@
         effects {:contract contract :inputs inputs
                  :dispatch-fn (fn [_] (swap! dispatches inc)
                                 {:ok true :job-id "durable-job"})
+                 :activate-fn (fn [_ _] {:ok true})
                  :job-fn (fn [job-id] (assoc @job :job-id job-id
                                              :agent-id "f19-proctor"))
                  :persist-fn (fn [state] (swap! persisted conj state) {:ok true})}
