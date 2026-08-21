@@ -28,6 +28,10 @@
   ;; futon0 — remaining shared tooling still consumed from futon3c.
   futon0/futon0             {:local/root "../futon0"}
 
+  ;; futon3 owns the inbox-zero observation/projection contracts used by both
+  ;; the standalone and bootstrap-owned multi-watchers. Keep one implementation.
+  futon3/inbox-zero         {:local/root "../futon3/inbox-zero-lib"}
+
   ;; futon2 — canonical War Machine engine + visualiser home.
   futon2/futon2             {:local/root "../futon2"}
 

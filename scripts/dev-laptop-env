@@ -120,6 +120,9 @@ export FUTON3C_AGENCY_BASE="${FUTON3C_AGENCY_BASE:-http://127.0.0.1:${FUTON3C_PO
 # This only selects the immutable intake directory; see README-multi-watcher.md
 # for the matching single-consumer flags. It does not activate a second watcher.
 export FUTON3_INBOX_ZERO_WITNESS_DIR="${FUTON3_INBOX_ZERO_WITNESS_DIR:-${script_dir}/../../storage/inbox-zero/witnesses}"
+export FUTON3C_INBOX_ZERO_ENABLED="${FUTON3C_INBOX_ZERO_ENABLED:-false}"
+export FUTON3C_INBOX_ZERO_STATE_PATH="${FUTON3C_INBOX_ZERO_STATE_PATH:-${script_dir}/../../storage/inbox-zero/state.edn}"
+export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="${FUTON3C_INBOX_ZERO_FOLLOWUP_URL:-http://127.0.0.1:${FUTON3C_PORT}/api/alpha/followups}"
 # Evidence read/emit split (2026-07-18): WM ticks EMIT to the public Linode
 # viewer, but READS must sense the local store — a laptop-wide
 # FUTON3C_EVIDENCE_BASE pointed reads at lucy's (different) store, so the WM

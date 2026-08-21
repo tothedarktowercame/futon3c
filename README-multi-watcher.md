@@ -259,19 +259,14 @@ independent of the restart.
 
 ## Inbox-zero operation (v0)
 
-The opt-in inbox-zero path currently runs through the standalone
-`futon3/scripts/multi_watcher.clj`. Producer and watcher must share one durable
-intake directory:
+The production inbox-zero path is part of the bootstrap-owned in-JVM watcher.
+Producer and watcher share one durable intake directory:
 
 ```sh
 export FUTON3_INBOX_ZERO_WITNESS_DIR=/home/joe/code/storage/inbox-zero/witnesses
-bb /home/joe/code/futon3/scripts/multi_watcher.clj \
-  --root /home/joe/code/futon0=futon0-d \
-  --root /home/joe/code/futon3=futon3-d \
-  --root /home/joe/code/futon3c=futon3c-d \
-  --inbox-zero-state /home/joe/code/storage/inbox-zero/state.edn \
-  --inbox-zero-witnesses "$FUTON3_INBOX_ZERO_WITNESS_DIR" \
-  --inbox-zero-followup-url http://127.0.0.1:7070/api/alpha/followups
+export FUTON3C_INBOX_ZERO_ENABLED=true
+export FUTON3C_INBOX_ZERO_STATE_PATH=/home/joe/code/storage/inbox-zero/state.edn
+export FUTON3C_INBOX_ZERO_FOLLOWUP_URL=http://127.0.0.1:7070/api/alpha/followups
 ```
 
 Agency's Claude tool stream writes a claim only after a successful `Edit`,
@@ -280,11 +275,14 @@ watcher independently observes Git state and joins the two facts; it never
 derives authorship from filesystem dirt. The count threshold is five distinct
 currently dirty paths and the independent age threshold is 24 hours.
 
-This is not yet an option on the in-JVM `futon3c.watcher.multi` started by
-bootstrap. Do not set the witness variable without running the standalone
-consumer, and do not run two consumers against one state snapshot. Wiring the
-same lifecycle into the in-JVM watcher is the next production-activation
-slice; it must preserve the single-writer contract.
+The feature defaults off. At bootstrap, enabling it makes
+`futon3c.watcher.multi` acquire an exclusive `<state>.writer.lock`; startup
+fails closed if another in-JVM owner holds it. Do not also launch the standalone
+Babashka consumer against this state path. `futon3c.watcher.multi/status`
+reports `:inbox-zero {:enabled? :ready? :state-path :writer-lock ...}` and,
+after each successful cycle, observation, dirty-set, ambiguous, unattributed,
+and delivery counts. Stop releases the lease; restart replays the same durable
+snapshot idempotently.
 
 Known honest surface gaps: Codex's tool stream is not currently available at
 this server-side boundary, and a generic Emacs `after-save-hook` cannot prove

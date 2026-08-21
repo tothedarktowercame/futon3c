@@ -550,11 +550,23 @@
                   ;; meant to be a LIVE model, so commit-ingest must run by
                   ;; default. Set FUTON3C_MULTI_WATCHER_COMMIT_INGEST=false to
                   ;; opt out if the commit sidecar reintroduces backpressure.
-                  commit-ingest? (config/env-bool "FUTON3C_MULTI_WATCHER_COMMIT_INGEST" true)]
+                  commit-ingest? (config/env-bool "FUTON3C_MULTI_WATCHER_COMMIT_INGEST" true)
+                  inbox-zero? (config/env-bool "FUTON3C_INBOX_ZERO_ENABLED" false)
+                  inbox-zero-options
+                  (when inbox-zero?
+                    {:state-path (or (config/env "FUTON3C_INBOX_ZERO_STATE_PATH")
+                                     "/home/joe/code/storage/inbox-zero/state.edn")
+                     :witness-path (or (config/env "FUTON3_INBOX_ZERO_WITNESS_DIR")
+                                       "/home/joe/code/storage/inbox-zero/witnesses")
+                     :followup-url (or (config/env "FUTON3C_INBOX_ZERO_FOLLOWUP_URL")
+                                       (str "http://127.0.0.1:"
+                                            (config/env-int "FUTON3C_PORT" 7070)
+                                            "/api/alpha/followups"))})]
               (multi-watcher/start! {:roots roots
                                      :interval-ms interval-ms
                                      :cold-scan? false
-                                     :commit-ingest? commit-ingest?})
+                                     :commit-ingest? commit-ingest?
+                                     :inbox-zero-options inbox-zero-options})
               (cyder/register!
                {:id "multi-watcher"
                 :type :daemon

@@ -3,6 +3,7 @@
             [clojure.walk :as walk]
             [clojure.test :refer [deftest is testing]]
             [babashka.http-client :as http]
+            [futon3.inbox-zero.watcher :as inbox-zero]
             [futon3c.cyder :as cyder]
             [futon3c.watcher.multi :as sut]))
 
@@ -490,3 +491,72 @@
           (is (true? @touched?))
           (finally
             (reset! sut/!state nil)))))))
+
+(deftest inbox-zero-cycle-projects-operational-readiness
+  (let [sent (atom nil)]
+    (with-redefs [sut/build-plan (fn [_ _]
+                                   {:root "/tmp/repo" :label "demo"
+                                    :snapshot [] :cache {}
+                                    :moves {:renamed [] :deleted [] :added []}
+                                    :ingest-paths [] :first-cycle? false})
+                  sut/detect-cross-root-moves (constantly [])
+                  sut/heartbeat! (fn [& _])
+                  inbox-zero/run-cycle!
+                  (fn [options]
+                    (is (= [{:path "/tmp/repo" :label "demo"}] (:roots options)))
+                    {:state {:records {}}
+                     :observations-written 2
+                     :projection {:dirty-sets [{:seat/id "seat:a:s"}]
+                                  :ambiguous [{}] :unattributed [{}, {}]}})
+                  inbox-zero/send-eligible-followups!
+                  (fn [options] (reset! sent options) [{:ok? true}])]
+      (reset! sut/!state {:stopping? false})
+      (try
+        (sut/run-cycle! {:roots [{:path "/tmp/repo" :label "demo"}]
+                         :per-root-cache (atom {}) :run-id 1
+                         :event-n (atom 0) :cycle-n (atom 0)
+                         :cold-scan? false :commit-ingest? false
+                         :inbox-zero-options {:state-path "/tmp/state.edn"
+                                              :witness-path "/tmp/witnesses"
+                                              :followup-url "http://agency/followups"}})
+        (is (= {:enabled? true :ready? true
+                :state-path "/tmp/state.edn" :witness-path "/tmp/witnesses"
+                :followup-url "http://agency/followups"
+                :observations-written 2 :dirty-set-count 1
+                :ambiguous-count 1 :unattributed-count 2 :delivery-count 1}
+               (dissoc (:inbox-zero @sut/!state) :last-cycle-at)))
+        (is (= "http://agency/followups" (:url @sent)))
+        (finally (reset! sut/!state nil))))))
+
+(deftest inbox-zero-writer-is-exclusive-and-released-across-restart
+  (let [dir (doto (java.io.File/createTempFile "inbox-zero-owner-" "")
+              (.delete) (.mkdirs))
+        state-path (.getPath (io/file dir "state.edn"))
+        witness-path (.getPath (io/file dir "witnesses"))
+        options {:roots [] :interval-ms 600000 :commit-ingest? false
+                 :inbox-zero-options {:state-path state-path
+                                      :witness-path witness-path}}]
+    (inbox-zero/write-witness!
+     witness-path
+     {:record/type :inbox-zero/session-seat
+      :seat/id "seat:test:session" :agent/id "test" :session/id "session"
+      :surface :test :host/id "test-host" :workspace/root (.getPath dir)
+      :observed-at (java.util.Date. 1000)
+      :registry-witness {:session/id "session"}})
+    (sut/stop!)
+    (try
+      (sut/start! options)
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"already running"
+                            (sut/start! options)))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"already has a writer"
+                            ((private-var 'acquire-inbox-zero-writer!) state-path)))
+      (is (= true (get-in (sut/status nil) [:inbox-zero :enabled?])))
+      (sut/tick!)
+      (let [snapshot (slurp state-path)]
+      (sut/stop!)
+      ;; A clean restart reacquires the same path and replays its durable state.
+      (sut/start! options)
+      (sut/tick!)
+      (is (= state-path (get-in (sut/status nil) [:inbox-zero :state-path])))
+      (is (= snapshot (slurp state-path))))
+      (finally (sut/stop!)))))
