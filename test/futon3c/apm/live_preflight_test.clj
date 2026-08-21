@@ -1,0 +1,81 @@
+(ns futon3c.apm.live-preflight-test
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.live-preflight :as sut]))
+
+(def contract (edn/read-string
+               (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")))
+(def unit (second (:units (edn/read-string
+                          (slurp "holes/labs/M-apm-demonstration/countdown-10-manifest-v1.edn")))))
+(def inputs
+  {:ledger {:version 5 :phase :preflight :claim nil}
+   :unit unit
+   :role-card {:path "role-cards/proctor.md" :blob "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+   :seat {:agent-id "f19-proctor" :type :codex :frame-id "f19" :invoke-ready? true}
+   :timeouts {:request-timeout-ms 300000 :turn-timeout-ms 3600000}})
+
+(defn- successful-job [request ticket]
+  {:job-id (:job-id ticket) :agent-id (:agent-id request) :state :done
+   :report {:command-own-exit 0
+            :problem-revision (:problem-revision request)
+            :problem-blob (:problem-blob request)
+            :lean {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0
+                   :output "declaration uses `sorry`"}
+            :clean-before? true :clean-after? true :mutations []}})
+
+(deftest request-ticket-and-receipt-are-content-addressed
+  (let [request (:request (sut/build-request inputs))
+        ticket (:ticket (sut/record-dispatch request {:ok true :job-id "job-f19-preflight"}))
+        result (sut/receipt contract request ticket (successful-job request ticket))
+        receipt (:certificate result)]
+    (is (= (:dispatch/id request)
+           (machine/ledger-digest [(dissoc request :dispatch/id)])))
+    (is (= (:ticket/id ticket)
+           (machine/ledger-digest [(dissoc ticket :ticket/id)])))
+    (is (:ok result))
+    (is (= (:receipt/id receipt)
+           (machine/ledger-digest [(dissoc receipt :receipt/id)])))))
+
+(deftest every-boundary-fails-closed
+  (testing "dispatch input"
+    (is (= :preflight-dispatch-input-invalid
+           (:error/code (sut/build-request (assoc-in inputs [:ledger :claim]
+                                                      {:claim/id "foreign"}))))))
+  (testing "dispatch acknowledgement"
+    (is (= :preflight-dispatch-not-acknowledged
+           (:error/code (sut/record-dispatch {} {:ok true})))))
+  (testing "terminal identity and evidence"
+    (let [request (:request (sut/build-request inputs))
+          ticket (:ticket (sut/record-dispatch request {:ok true :job-id "expected"}))
+          bad (-> (successful-job request ticket)
+                  (assoc :job-id "other")
+                  (assoc-in [:report :command-own-exit] 1)
+                  (assoc-in [:report :mutations] ["Main.lean"]))
+          findings (set (:findings (sut/receipt contract request ticket bad)))]
+      (is (= #{:job-id-mismatch :command-own-exit-nonzero
+               :preflight-mutations-observed}
+             findings)))))
+
+(deftest durable-drive-dispatches-exactly-once-across-continuations
+  (let [dispatches (atom 0)
+        persisted (atom [])
+        job (atom {:state :running})
+        effects {:contract contract :inputs inputs
+                 :dispatch-fn (fn [_] (swap! dispatches inc)
+                                {:ok true :job-id "durable-job"})
+                 :job-fn (fn [job-id] (assoc @job :job-id job-id
+                                             :agent-id "f19-proctor"))
+                 :persist-fn (fn [state] (swap! persisted conj state) {:ok true})}
+        first-pass (sut/drive! effects)
+        waiting (sut/drive! (assoc effects :state (:state first-pass)))
+        _ (reset! job (successful-job
+                       (get-in first-pass [:state :request])
+                       (get-in first-pass [:state :ticket])))
+        certified (sut/drive! (assoc effects :state (:state waiting)))]
+    (is (= :awaiting-terminal (:status first-pass)))
+    (is (= :awaiting-terminal (:status waiting)))
+    (is (= :certified (:status certified)))
+    (is (= 1 @dispatches))
+    (is (= [:preflight-dispatched :preflight-certified]
+           (mapv :state/type @persisted)))))
