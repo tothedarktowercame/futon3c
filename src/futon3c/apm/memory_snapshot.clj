@@ -5,7 +5,10 @@
   results already visible in the substrate and supplied by an evidence reader."
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
-            [futon3c.apm.campaign-machine :as machine])
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.evidence.futon1b-backend :as f1b]
+            [futon3c.evidence.store :as estore]
+            [futon3c.substrate.client :as substrate])
   (:import [java.nio.file Files Path StandardCopyOption]
            [java.nio.file.attribute FileAttribute]))
 
@@ -37,6 +40,34 @@
      :snapshot/problem-id problem-id
      :snapshot/review-policy :persisted-independent-review
      :snapshot/memories ordered}))
+
+(defn candidate-visible?
+  "Freshly verify that CANDIDATE describes the current reviewed attachment and
+  its independently authored persisted review evidence."
+  ([candidate]
+   (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
+     (candidate-visible? candidate substrate/hyperedges-by-end
+                         #(estore/get-entry* backend %))))
+  ([{:keys [memory-id depositor reviewer review-evidence-id
+            attachment-status pattern-ids]}
+    fetch-hyperedges fetch-entry]
+   (let [edge (->> (fetch-hyperedges memory-id)
+                   (filter #(= :memory/assert (:hx/type %)))
+                   (filter #(= :current (get-in % [:hx/props :state])))
+                   first)
+         memory (fetch-entry memory-id)
+         review (fetch-entry review-evidence-id)]
+     (and edge memory review
+          (reviewed? attachment-status)
+          (reviewed? (get-in edge [:hx/props :attachment-status]))
+          (= (set pattern-ids)
+             (set (get-in edge [:hx/props :roles :patterns])))
+          (= review-evidence-id
+             (get-in edge [:hx/props :review :evidence-id]))
+          (= depositor (:evidence/author memory))
+          (= reviewer (:evidence/author review))
+          (not= depositor reviewer)
+          (= memory-id (get-in review [:evidence/subject :ref/id]))))))
 
 (defn publish!
   "Validate CANDIDATES, publish one immutable EDN snapshot atomically, and

@@ -112,11 +112,9 @@
                             [:lanes :dispositions :promotion-reviews])))
           (conj :scribe-reduction-evidence-missing)
           (and (= :promote-solver (:phase request))
-               (not (and (string? (get-in report [:memory-snapshot :snapshot-id]))
-                         (string? (get-in report [:memory-snapshot :snapshot-digest]))
-                         (seq (get-in report [:memory-snapshot :reviewed-memory-ids]))
-                         (true? (get-in report [:memory-snapshot :independent-review?])))))
-          (conj :solver-promotion-snapshot-invalid)
+               (not (and (vector? (:memory-candidates report))
+                         (seq (:memory-candidates report)))))
+          (conj :solver-promotion-candidates-invalid)
           (and (= :close-frame kind)
                (not (and (string? (:trace-id report))
                          (= :closed (:result report)))))
@@ -159,6 +157,8 @@
                     :receipt/snapshot-id (get-in report [:memory-snapshot :snapshot-id])
                     :receipt/snapshot-digest
                     (get-in report [:memory-snapshot :snapshot-digest])
+                    :receipt/snapshot-path
+                    (get-in report [:memory-snapshot :snapshot-path])
                     :receipt/reviewed-memory-ids
                     (get-in report [:memory-snapshot :reviewed-memory-ids])
                     :receipt/independent-review? true}
@@ -183,13 +183,14 @@
          :student-attempt "Attempt the problem independently. Record memory retrieval/use and an explicit failure account even on success."
          :guide-intervention "Improve only the memory store or harness channel. Do not contact the Student directly."
          :scribe-reduce (if (= :promote-solver (:phase request))
-                          "Mine the verified Solver trace, independently review deposits, and publish an immutable content-addressed eligible-memory snapshot for the Student."
+                          "Mine the verified Solver trace and return independently reviewed memory candidates with exact persisted review evidence. The controller owns snapshot publication."
                           "Reduce the certified receipts into lanes, dispositions, and promotion reviews.")
          :close-frame "Audit the complete receipt graph and return a content-addressable trace result.")
        " Return exactly one EDN map including :command-own-exit, :frame-id, and :problem-id."))
 
 (defn run-live!
-  [{:keys [contract action receipts request state-path agency-base]
+  [{:keys [contract action receipts request state-path agency-base
+           snapshot-publish-fn]
     :or {agency-base "http://localhost:7070"}}]
   (driver/drive!
    {:request request :state (runtime/read-state state-path)
@@ -225,4 +226,22 @@
        (runtime/http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
     :persist-fn #(runtime/atomic-persist! state-path %)
     :terminal-validator validate-terminal
-    :receipt-provider (partial receipt contract action receipts)}))
+    :receipt-provider
+    (fn [request ticket job validated]
+      (if (= :promote-solver (:phase action))
+        (if-not (fn? snapshot-publish-fn)
+          {:ok false :error/code :solver-snapshot-publisher-missing}
+          (let [published (snapshot-publish-fn (:report validated))]
+            (if-not (:ok published)
+              published
+              (let [snap (:snapshot published)
+                    report (assoc (:report validated) :memory-snapshot
+                                  {:snapshot-id (:snapshot/id snap)
+                                   :snapshot-digest (:snapshot/digest snap)
+                                   :snapshot-path (:path published)
+                                   :reviewed-memory-ids
+                                   (mapv :memory-id (:snapshot/memories snap))
+                                   :independent-review? true})]
+                (receipt contract action receipts request ticket job
+                         (assoc validated :report report))))))
+        (receipt contract action receipts request ticket job validated)))}))

@@ -17,7 +17,9 @@
                  :student-memory-use-evidence))
   (is (contains? (get-in readiness [:launch-rule
                                      :may-defer-until-ten-closes])
-                 :analyst-batch-review-execution)))
+                 :analyst-architecture-synthesis))
+  (is (contains? (get-in readiness [:launch-rule :must-not-defer])
+                 :analyst-post-close-receipt)))
 
 (deftest every-readiness-claim-is-grounded-in-a-present-artifact
   (doseq [{:keys [evidence]} (concat (:ready readiness)

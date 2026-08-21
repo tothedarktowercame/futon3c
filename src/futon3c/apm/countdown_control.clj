@@ -16,6 +16,8 @@
             [futon3c.apm.live-proof-phases :as live-proof-phases]
             [futon3c.apm.live-regulator :as live-regulator]
             [futon3c.apm.live-supervisor :as live-supervisor]
+            [futon3c.apm.memory-snapshot :as memory-snapshot]
+            [futon3c.apm.analyst-campaign :as analyst-campaign]
             [futon3c.apm.problem-projection :as problem-projection])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -30,6 +32,7 @@
 (def ^:dynamic preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
 (def ^:dynamic batch-cursor-path "data/apm-campaigns/countdown-f19-f27-r4/live/batch-cursor.edn")
 (def ^:dynamic regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
+(def ^:dynamic analyst-state-path "data/apm-campaigns/countdown-f19-f27-r4/analyst/state.edn")
 (def ^:dynamic preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
 (def orchestration-path
@@ -63,6 +66,7 @@
                preflight-state-path (or (:preflight-state-path config#) preflight-state-path)
                batch-cursor-path (or (:batch-cursor-path config#) batch-cursor-path)
                regulator-state-path (or (:regulator-state-path config#) regulator-state-path)
+               analyst-state-path (or (:analyst-state-path config#) analyst-state-path)
                preparation-path (or (:preparation-path config#) preparation-path)]
        ~@body)))
 
@@ -444,6 +448,14 @@
         metadata (:metadata agent)
         projection (:projection (ledger/read-ledger (control-path ledger-path)))
         receipts (certified-receipts contract (:frame/id unit))
+        promotion (get receipts :promote-solver)
+        snapshot-access
+        (when (and (= :student-attempt kind) promotion)
+          (memory-snapshot/verify-student-access
+           {:path (:receipt/snapshot-path promotion)
+            :expected (:receipt/snapshot-digest promotion)
+            :frame-id (:frame/id unit) :problem-id (:problem/id unit)
+            :accessible-memory-ids (:receipt/reviewed-memory-ids promotion)}))
         built (when-not existing
                 (live-learning-phases/build-request
                  {:contract contract :action action
@@ -454,7 +466,7 @@
                          :frame-id (:frame-id metadata)
                          :invoke-ready? (:invoke-ready? agent)}
                   :workspace (get-in preparation [:workspaces :student])
-                  :receipts receipts}))]
+                  :receipts receipts :snapshot-access snapshot-access}))]
     (cond
       (and existing (map? (:request existing)))
       {:ok true :contract contract :action action :receipts receipts
@@ -464,11 +476,84 @@
        :request (:request built) :state-path state-path}
       :else built)))))
 
+(defn learning-regime-audit
+  "V1 is a preserved baseline. V2 claims learning and therefore requires the
+  two-promotion graph plus pinned campaign-level Analyst identity."
+  [contract manifest preparation]
+  (if-not (= :apm-complete-frame-cycle-v2 (:contract/id contract))
+    {:ok true :regime :baseline-v1}
+    (let [analyst-card (get-in manifest [:apparatus :artifacts :analyst])
+          analyst-seat (get-in preparation [:seats :analyst])
+          registration
+          (analyst-campaign/register
+           {:campaign-id (:campaign/id manifest)
+            :analyst-seat (:agent-id analyst-seat)
+            :analyst-card-path (:path analyst-card)
+            :analyst-card-blob (:blob analyst-card)})
+          checks
+          {:promote-solver-before-student?
+           (< (.indexOf (:phase-order contract) :promote-solver)
+              (.indexOf (:phase-order contract) :student-attempt-1))
+           :students-require-snapshot?
+           (every? #(contains? (get-in contract [:phases % :requires])
+                               :solver-memory-snapshot)
+                   [:student-attempt-1 :student-attempt-2 :student-attempt-3])
+           :analyst-card-pinned?
+           (and (string? (:path analyst-card)) (string? (:blob analyst-card)))
+           :analyst-seat-pinned? (string? (:agent-id analyst-seat))
+           :analyst-tenure-registered? (:ok registration)}
+          failed (into #{} (keep (fn [[k v]] (when-not v k))) checks)]
+      (if (seq failed)
+        {:ok false :error/code :learning-regime-incomplete
+         :checks checks :failed failed}
+        {:ok true :regime :two-promotion-v2 :checks checks
+         :analyst-state (:state registration)}))))
+
 (defn drive-live-learning-phase! [action]
   (let [phase-inputs (live-learning-phase-inputs action)]
     (if (:ok phase-inputs)
-      (live-learning-phases/run-live! phase-inputs)
+      (live-learning-phases/run-live!
+       (cond-> phase-inputs
+         (= :promote-solver (:phase action))
+         (assoc :snapshot-publish-fn
+                (fn [report]
+                  (memory-snapshot/publish!
+                   {:frame-id (:frame-id action)
+                    :problem-id (:problem-id action)
+                    :candidates (:memory-candidates report)
+                    :path (.resolve (control-path state-directory)
+                                    (str "snapshots/" (:frame-id action)
+                                         "-solver-memory.edn"))
+                    :evidence-visible?
+                    memory-snapshot/candidate-visible?})))))
       phase-inputs)))
+
+(defn record-analyst-wake!
+  "Persist the v2 post-close Analyst obligation. Dispatch is deliberately a
+  separate campaign action; this boundary only makes the wake durable."
+  [frame-id close-receipt]
+  (let [{:keys [manifest contract preparation] :as context}
+        (frame-context frame-id)]
+    (cond
+      (not (:ok context)) context
+      (not= :apm-complete-frame-cycle-v2 (:contract/id contract))
+      {:ok true :status :baseline-v1-no-analyst-transition}
+      :else
+      (let [path (control-path analyst-state-path)
+            existing (live-preflight-runtime/read-state path)
+            audit (learning-regime-audit contract manifest preparation)
+            state (or existing (:analyst-state audit))
+            wake (when (:ok audit)
+                   (analyst-campaign/wake-after-close state close-receipt))]
+        (cond
+          (not (:ok audit)) audit
+          (not (:ok wake)) wake
+          :else
+          (let [persisted (live-preflight-runtime/atomic-persist!
+                           path (:state wake))]
+            (if (:ok persisted)
+              (assoc wake :durable? true :state-path (str path))
+              {:ok false :error/code :analyst-wake-persistence-failed})))))))
 
 (defn launch-audit!
   "Validate complete executable wiring plus the exact continuation identity."
@@ -492,6 +577,10 @@
             :handlers (:handlers (options))
             :apparatus-artifacts (get-in manifest [:apparatus :artifacts])}))
         preparation-result (frame-context (or target-frame "f19"))
+        learning-result (when (:ok preparation-result)
+                          (learning-regime-audit
+                           (:contract preparation-result) manifest
+                           (:preparation preparation-result)))
         machine-regulator? (machine-regulator-authorized?
                             regulator-id regulator-capability)
         identity (when (and (not machine-regulator?)
@@ -514,6 +603,7 @@
                  :observed-revision (str/trim (:out head))}}
       (not (:ok contract-result)) contract-result
       (not (:ok preparation-result)) preparation-result
+      (not (:ok learning-result)) learning-result
       (not exact?)
       {:ok false :error/code :set-alight-continuation-identity-mismatch
        :finding {:expected {:agent agent :session session :surface surface}
@@ -521,6 +611,7 @@
                                         [:http/status :ok :agent-id])
                  :observed-session (get-in identity [:agent :session-id])}}
       :else {:ok true :contract-audit contract-result
+             :learning-regime learning-result
              :continuation (if machine-regulator?
                              {:mode :machine :regulator-id regulator-id}
                              {:mode :agent :agent agent :session session
@@ -634,8 +725,15 @@
        :inspect-fn (or inspect-fn #(frame-inspect! target-frame))
        :drive-phase-fn (or drive-phase-fn drive-live-action!)
        :advance-fn (or advance-fn
-                       (fn [kind _certificate]
-                         (advance! kind batch-authority)))
+                       (fn [kind certificate]
+                         (let [advanced (advance! kind batch-authority)]
+                           (if (and (:ok advanced) (= :close-frame kind))
+                             (let [wake (record-analyst-wake! target-frame
+                                                              certificate)]
+                               (if (:ok wake)
+                                 (assoc advanced :analyst-wake wake)
+                                 wake))
+                             advanced))))
        :project-fn (or project-fn #(project-current! target-frame))
        :park-fn (or park-fn park-default)
        :continuation-payload payload}))))))

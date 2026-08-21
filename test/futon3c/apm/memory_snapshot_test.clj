@@ -47,3 +47,17 @@
                            :candidates [candidate]
                            :path "/tmp/not-written-invisible-review.edn"
                            :evidence-visible? (constantly false)}))))))
+
+(deftest fresh-visibility-check-joins-edge-memory-and-review-evidence
+  (let [edge {:hx/type :memory/assert
+              :hx/props {:state :current :attachment-status :reviewed
+                         :roles {:patterns ["math-formalization/example"]}
+                         :review {:evidence-id "e-review-1"}}}
+        entries {"e-solver-1" {:evidence/author "solver"}
+                 "e-review-1" {:evidence/author "scribe"
+                               :evidence/subject
+                               {:ref/type :memory :ref/id "e-solver-1"}}}]
+    (is (sut/candidate-visible? candidate (constantly [edge]) entries))
+    (is (false? (sut/candidate-visible?
+                 (assoc candidate :reviewer "solver")
+                 (constantly [edge]) entries)))))

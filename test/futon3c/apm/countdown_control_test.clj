@@ -1,5 +1,6 @@
 (ns futon3c.apm.countdown-control-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-batch :as batch]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.countdown-control :as sut]))
@@ -15,6 +16,26 @@
     (is (= :close-frame (last (:phase-order body))))
     (is (not-any? #(contains? % :required-receipt-kinds) units)
         "eventual close receipts must not be required at open-frame runtime")))
+
+(deftest learning-regime-audit-preserves-v1-and-fails-closed-on-v2-pins
+  (let [v1 (:contract (#'sut/inputs))
+        v2 (edn/read-string
+            (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"))
+        manifest (:manifest (#'sut/inputs))]
+    (is (= :baseline-v1 (:regime (sut/learning-regime-audit v1 manifest {}))))
+    (is (= :learning-regime-incomplete
+           (:error/code (sut/learning-regime-audit v2 manifest {:seats {}}))))
+    (is (:ok (sut/learning-regime-audit
+              v2 manifest {:seats {:analyst {:agent-id "analyst-1"}}})))))
+
+(deftest baseline-f20-close-does-not-invent-an-analyst-transition
+  (with-redefs [sut/frame-context
+                (constantly {:ok true :manifest {} :preparation {}
+                             :contract (:contract (#'sut/inputs))})]
+    (is (= :baseline-v1-no-analyst-transition
+           (:status
+            (sut/record-analyst-wake!
+             "f20" {:receipt/type :frame-close :receipt/result :closed}))))))
 
 (deftest set-alight-drives-live-supervisor-with-exact-continuation
   (let [calls (atom [])

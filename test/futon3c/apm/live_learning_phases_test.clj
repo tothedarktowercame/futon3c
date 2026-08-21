@@ -119,15 +119,12 @@
     (is (= :live-learning-request-invalid (:error/code result)))
     (is (some #{:student-snapshot-access-unverified} (:findings result)))))
 
-(deftest promote-solver-requires-an-independent-content-addressed-snapshot
+(deftest promote-solver-requires-reviewed-candidates-for-controller-publication
   (let [request {:dispatch/type :scribe-reduce :phase :promote-solver
                  :agent-id "f19-scribe" :frame-id "f19" :problem-id "a01J05"}
         report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
                 :lanes [] :dispositions [] :promotion-reviews []
-                :memory-snapshot {:snapshot-id "snapshot-1"
-                                  :snapshot-digest "digest"
-                                  :reviewed-memory-ids ["m1"]
-                                  :independent-review? false}}
+                :memory-candidates []}
         job {:job-id "j" :agent-id "f19-scribe" :state :done :report report}]
-    (is (some #{:solver-promotion-snapshot-invalid}
+    (is (some #{:solver-promotion-candidates-invalid}
               (:findings (sut/validate-terminal request {:job-id "j"} job))))))

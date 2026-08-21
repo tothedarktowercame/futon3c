@@ -111,6 +111,26 @@ or continue dispatching.
 
 ## Non-negotiable Ground Control rules
 
+### Select the learning regime explicitly
+
+An existing frame pinned to `frame-cycle-contract-v1.edn` remains a baseline;
+do not rewrite its phase graph. A future frame claiming Solver-to-Student
+learning must pin `frame-cycle-contract-v2.edn`. Before launch, require:
+
+- `:promote-solver` after certified Verify and before every Student attempt;
+- an independently reviewed, content-addressed eligible-memory snapshot,
+  published atomically and freshly re-read;
+- the exact snapshot receipt, id, digest, and accessible memory ids in every
+  Student dispatch and memory-use receipt;
+- a pinned Analyst card and seat in campaign preparation.
+
+After terminal close, invoke the campaign-level Analyst transition exactly
+once. Analyst is not a frame phase and cannot alter an in-flight frame. Its
+content-addressed receipt supplies the append-only series input. Implementation
+packets name a later proposed regime and have no authority to modify the
+current one. On the second close of an Analyst's tenure, absence of a pinned
+successor handoff is a terminal failure, not permission to extend the seat.
+
 - The ledger is authoritative; buffers and live jobs are observations.
 - A declaration and its independent runtime observation are different fields.
 - Missing evidence fails closed. Do not add optimistic defaults or environment

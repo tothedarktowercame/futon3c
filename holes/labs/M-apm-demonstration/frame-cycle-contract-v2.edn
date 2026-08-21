@@ -81,7 +81,8 @@
   {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
                :receipt/input-receipt-ids :receipt/lanes :receipt/dispositions
                :receipt/promotion-reviews :receipt/snapshot-id
-               :receipt/snapshot-digest :receipt/reviewed-memory-ids
+               :receipt/snapshot-digest :receipt/snapshot-path
+               :receipt/reviewed-memory-ids
                :receipt/independent-review?}}
   :student-attempt
   {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id

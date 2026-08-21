@@ -14,10 +14,11 @@
   #{:ten-unit-pinned-manifest :repeatable-workspace-provisioning
     :workspace-retirement-enforced}
   :may-defer-until-ten-closes
-  #{:analyst-batch-review-execution}
+  #{:analyst-architecture-synthesis}
   :must-not-defer
   #{:student-memory-use-evidence :scribe-disposition-evidence
-    :guide-intervention-evidence :close-gate-validation}}
+    :guide-intervention-evidence :close-gate-validation
+    :solver-memory-review-and-snapshot :analyst-post-close-receipt}}
 
  :ready
  [{:capability :append-only-ledger-and-deterministic-obligations
@@ -32,8 +33,12 @@
               "holes/labs/M-apm-demonstration/frame-18-solve-receipt.edn"
               "holes/labs/M-apm-demonstration/frame-18-verify-receipt.edn"]}
   {:capability :batch-level-analyst-contract
-   :evidence ["holes/labs/M-apm-demonstration/frame-map-reduce-plan-v1.edn"
-              "holes/labs/M-apm-demonstration/analyst-tool-concept-kit-v1.edn"]}
+   :evidence ["src/futon3c/apm/analyst_campaign.clj"
+              "test/futon3c/apm/analyst_campaign_test.clj"]}
+  {:capability :two-promotion-learning-contract
+   :evidence ["holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+              "src/futon3c/apm/memory_snapshot.clj"
+              "test/futon3c/apm/learning_loop_dry_run_test.clj"]}
   {:capability :f19-live-launch-preparation
    :evidence ["src/futon3c/apm/live_launch_preparation.clj"
               "test/futon3c/apm/live_launch_preparation_test.clj"
