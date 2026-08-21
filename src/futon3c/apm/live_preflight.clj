@@ -37,6 +37,7 @@
       {:ok false :error/code :preflight-dispatch-input-invalid
        :findings findings}
       (let [body {:dispatch/type :frame-preflight
+                  :phase :preflight
                   :agent-id (:agent-id seat)
                   :ledger-digest (:digest ledger)
                   :frame-id (:frame/id unit) :problem-id (:problem/id unit)

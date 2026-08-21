@@ -46,6 +46,21 @@
       (is (:ok terminal) (name kind))
       (is (:ok result) (name kind)))))
 
+(deftest preflight-request-carries-the-phase-required-by-the-live-prompt
+  (let [preflight-action (assoc action :timeouts {:request-ms 300000
+                                                   :turn-ms 3600000})
+        result (sut/build-request
+                {:kind :preflight :action preflight-action
+                 :ledger {:version 5
+                          :digest (apply str (repeat 64 "a"))
+                          :phase :preflight :claim nil}
+                 :unit unit :role-card role-card
+                 :seat {:agent-id "f19-proctor" :type :codex
+                        :frame-id "f19" :invoke-ready? true}})]
+    (is (:ok result))
+    (is (= :preflight (get-in result [:request :phase])))
+    (is (string? (sut/prompt (:request result))))))
+
 (deftest proof-terminal-refuses-unsound-or-misattributed-output
   (let [req (request :solve)
         ticket {:job-id "job-1"}
