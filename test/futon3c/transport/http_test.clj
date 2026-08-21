@@ -166,6 +166,40 @@
       (is (true? (:withheld body)))
       (is (false? @popped?)))))
 
+(deftest park-coerces-decimal-string-timestamps-before-persisting
+  (let [park-args (atom nil)
+        response (with-redefs [http/parked-on-enabled? (constantly true)
+                               parked-on/park! (fn [args _opts]
+                                                 (reset! park-args args)
+                                                 {:id "park-test" :status :parked})]
+                   ((var-get #'http/handle-park)
+                    {:body (json/generate-string
+                            {:agent "codex-10"
+                             :awaiting []
+                             :timer-due-ms "1787266477778"
+                             :deadline-ms "1787266480000"})}
+                    nil))
+        body (json/parse-string (:body response) true)]
+    (is (= 200 (:status response)))
+    (is (true? (:ok body)))
+    (is (= 1787266477778 (:timer-due-ms @park-args)))
+    (is (= 1787266480000 (:deadline-ms @park-args)))
+    (is (integer? (:timer-due-ms @park-args)))
+    (is (integer? (:deadline-ms @park-args)))))
+
+(deftest park-rejects-unconvertible-timestamps
+  (doseq [[field value error] [[:timer-due-ms "tomorrow" "invalid-timer-due-ms"]
+                               [:deadline-ms 1.5 "invalid-deadline-ms"]]]
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)]
+                     ((var-get #'http/handle-park)
+                      {:body (json/generate-string
+                              (assoc {:agent "codex-10" :awaiting []}
+                                     field value))}
+                      nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 400 (:status response)))
+      (is (= error (:error body))))))
+
 (deftest parked-background-record-does-not-defer-within-turn-finalization
   (testing "background parks are excluded from /parked more-pending"
     (let [response (with-redefs [http/parked-on-enabled? (constantly true)

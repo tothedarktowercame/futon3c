@@ -207,6 +207,23 @@
       (int (Long/parseLong s))
       (catch Exception _ nil))))
 
+(defn- coerce-epoch-ms
+  "Coerce a JSON integer or decimal integer string to a non-negative long.
+   Returns {:ok true :value nil} when absent, or {:ok false} when invalid."
+  [v]
+  (cond
+    (nil? v) {:ok true :value nil}
+    (integer? v) (if (and (<= 0 v) (<= v Long/MAX_VALUE))
+                   {:ok true :value (long v)}
+                   {:ok false})
+    (string? v) (let [s (str/trim v)]
+                  (if (re-matches #"[0-9]+" s)
+                    (try
+                      {:ok true :value (Long/parseLong s)}
+                      (catch NumberFormatException _ {:ok false}))
+                    {:ok false}))
+    :else {:ok false}))
+
 (defn- parse-bool
   "Parse boolean query values.
    Accepts true/false, 1/0, yes/no."
@@ -4002,7 +4019,11 @@
    Body: {\"agent\":\"claude-1\",\"awaiting\":[\"<bell/job-id>\"...],\"payload\":\"...\",
           \"deadline-ms\":N,\"timer-due-ms\":N,\"budget\":{...}}. Flag-gated."
   [request _config]
-  (let [payload (parse-json-map (read-body request))]
+  (let [payload (parse-json-map (read-body request))
+        timer-result (coerce-epoch-ms
+                      (or (:timer-due-ms payload) (get payload "timer-due-ms")))
+        deadline-result (coerce-epoch-ms
+                         (or (:deadline-ms payload) (get payload "deadline-ms")))]
     (cond
       (not (parked-on-enabled?))
       (json-response 503 {:ok false :error "parked-on-disabled"
@@ -4012,6 +4033,12 @@
                           :message "Request body must be a JSON object"})
       (str/blank? (str (or (:agent payload) (get payload "agent"))))
       (json-response 400 {:ok false :error "agent-required"})
+      (not (:ok timer-result))
+      (json-response 400 {:ok false :error "invalid-timer-due-ms"
+                          :message "timer-due-ms must be a non-negative integer or decimal integer string"})
+      (not (:ok deadline-result))
+      (json-response 400 {:ok false :error "invalid-deadline-ms"
+                          :message "deadline-ms must be a non-negative integer or decimal integer string"})
       :else
       (let [result (parked-on/park!
                     {:agent (str (or (:agent payload) (get payload "agent")))
@@ -4021,8 +4048,8 @@
                      :payload (or (:payload payload) (get payload "payload"))
                      :mode (or (parse-keyword (or (:mode payload) (get payload "mode")))
                                :within-turn)
-                     :timer-due-ms (or (:timer-due-ms payload) (get payload "timer-due-ms"))
-                     :deadline-ms (or (:deadline-ms payload) (get payload "deadline-ms"))
+                     :timer-due-ms (:value timer-result)
+                     :deadline-ms (:value deadline-result)
                      :budget (or (:budget payload) (get payload "budget"))}
                     {:ledger-lookup parked-job-lookup :resume! parked-resume!
                      :now-ms (System/currentTimeMillis)})]

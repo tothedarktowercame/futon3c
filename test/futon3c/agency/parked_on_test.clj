@@ -169,6 +169,17 @@ no-dep timer park resumes plainly"
       (is (= :released-immediately (:status r)))
       (is (= [(:id r)] @fired)))))
 
+(deftest park-requires-canonical-internal-timestamps
+  (doseq [[field value] [[:timer-due-ms "400"]
+                         [:deadline-ms 1.5]
+                         [:timer-due-ms -1]]]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"must be a canonical non-negative integer"
+         (p/park! (assoc {:agent "codex-10" :awaiting [] :payload "P"}
+                         field value)
+                  {:ledger-lookup (constantly nil) :now-ms 1000})))))
+
 ;; ---------------------------------------------------------------------------;;
 ;; E-park-delivery-losses bugs 2-3: lease / ack / redelivery + busy-withhold
 ;; ---------------------------------------------------------------------------;;
