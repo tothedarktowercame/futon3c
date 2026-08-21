@@ -64,6 +64,16 @@
                   {:ok true :status :awaiting-terminal :state accepted}
                   saved)))))))))
 
+(defn- normalize-round-report [report]
+  (let [lean (:lean report)]
+    (cond-> report
+      (and (nil? (:solver/outcome report)) (:solver/outcome lean))
+      (assoc :solver/outcome (:solver/outcome lean))
+      (and (nil? (:residual report)) (:residual lean))
+      (assoc :residual (:residual lean))
+      (and (nil? (:artifact-commits report)) (:artifact-commits lean))
+      (assoc :artifact-commits (:artifact-commits lean)))))
+
 (defn- round-outcome [report]
   (cond
     (and (= :claimed-defect (:solver/outcome report))
@@ -77,14 +87,15 @@
     :else :inadequate))
 
 (defn- terminal-round [active job validation ordinal]
-  {:ordinal ordinal
+  (let [report (normalize-round-report (:report job))]
+   {:ordinal ordinal
    :dispatch/id (get-in active [:request :dispatch/id])
    :job-id (get-in active [:ticket :job-id])
    :session-id (:session-id job)
    :terminal-state (:state job)
-   :outcome (round-outcome (:report job))
-   :report (:report job)
-   :validation (select-keys validation [:ok :error/code :findings :missing])})
+   :outcome (round-outcome report)
+   :report report
+   :validation (select-keys validation [:ok :error/code :findings :missing])}))
 
 (defn drive!
   "Advance a solver siege by one durable boundary.

@@ -75,6 +75,22 @@
     (is (= :claimed-defect (get-in result [:state :rounds 0 :outcome])))
     (is (nil? (get-in result [:state :problem/classification])))))
 
+(deftest legacy-agent-nested-progress-fields-are-lifted-into-round-record
+  (let [persisted (atom nil)
+        result (sut/drive!
+                (assoc (effects persisted)
+                       :job-fn (fn [_]
+                                 {:job-id "job-1" :agent-id "f19-solver"
+                                  :session-id "solver-session" :state :done
+                                  :report {:lean {:solver/outcome :progress
+                                                  :residual "exact remaining goal"
+                                                  :artifact-commits ["abc"]}}})))]
+    (is (= :progress (get-in result [:state :rounds 0 :outcome])))
+    (is (= "exact remaining goal"
+           (get-in result [:state :rounds 0 :report :residual])))
+    (is (= ["abc"]
+           (get-in result [:state :rounds 0 :report :artifact-commits])))))
+
 (deftest later-round-session-drift-fails-closed
   (let [persisted (atom nil)
         state {:state/type :solver-rounds :budget/max-rounds 50
