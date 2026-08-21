@@ -1,6 +1,8 @@
 (ns futon3c.apm.countdown-control
   "Operator-stepped controller for the post-baseline f19--f27 countdown."
   (:require [clojure.edn :as edn]
+            [clojure.java.shell :as shell]
+            [clojure.string :as str]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-postconditions :as postconditions]
@@ -18,21 +20,28 @@
 
 (def manifest-path "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")
 (def contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")
-(def state-directory (Path/of "data/apm-campaigns/countdown-f19-f27-r4"
-                              (make-array String 0)))
-(def ledger-path (.resolve state-directory "ledger.edn"))
-(def certificate-directory (.resolve state-directory "certificates"))
-(def projection-directory (.resolve state-directory "projection"))
-(def problem-buffer-path (.resolve state-directory "problem-buffer.md"))
-(def preflight-state-path (.resolve state-directory "live/preflight.edn"))
+(def state-directory "data/apm-campaigns/countdown-f19-f27-r4")
+(def ledger-path "data/apm-campaigns/countdown-f19-f27-r4/ledger.edn")
+(def certificate-directory "data/apm-campaigns/countdown-f19-f27-r4/certificates")
+(def projection-directory "data/apm-campaigns/countdown-f19-f27-r4/projection")
+(def problem-buffer-path "data/apm-campaigns/countdown-f19-f27-r4/problem-buffer.md")
+(def preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
 (def preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
 (def orchestration-path
   "holes/labs/M-apm-demonstration/countdown-live-orchestration-v1.edn")
+(def control-branch "frame/18-control")
+(def control-revision "d6f9ec2cfe622f518a423941f24819fa1a65fc5d")
+(def ^:dynamic *control-root*
+  (Path/of (System/getProperty "user.dir") (make-array String 0)))
+
+(defn- control-path [path]
+  (let [candidate (Path/of (str path) (make-array String 0))]
+    (if (.isAbsolute candidate) candidate (.resolve *control-root* candidate))))
 
 (defn- inputs []
-  {:manifest (edn/read-string (slurp manifest-path))
-   :contract (edn/read-string (slurp contract-path))})
+  {:manifest (edn/read-string (slurp (str (control-path manifest-path))))
+   :contract (edn/read-string (slurp (str (control-path contract-path))))})
 
 (defn registration-body []
   (let [{:keys [manifest contract]} (inputs)
@@ -64,7 +73,7 @@
      :claims-required? true}))
 
 (defn bootstrap! []
-  (let [loaded (ledger/read-ledger ledger-path)]
+  (let [loaded (ledger/read-ledger (control-path ledger-path))]
     (cond
       (not (:ok loaded)) loaded
       (seq (:events loaded))
@@ -79,14 +88,15 @@
                   :event/body body}
             event (assoc base :event/id (machine/ledger-digest [base]))
             empty-projection (machine/projection [])]
-        (ledger/compare-and-append! ledger-path 0
+        (ledger/compare-and-append! (control-path ledger-path) 0
                                     (:ledger/digest empty-projection) event)))))
 
 (defn- projection-sink [payload]
   (if (get-in payload [:certificate :active/frame])
     (problem-projection/project-latest!
-     {:ledger-path ledger-path :projection-directory projection-directory
-      :output-path problem-buffer-path :expected-frame-id "f19"
+     {:ledger-path (control-path ledger-path)
+      :projection-directory (control-path projection-directory)
+      :output-path (control-path problem-buffer-path) :expected-frame-id "f19"
       :expected-problem-id "a01J05"
       :buffer-sink problem-projection/emacs-buffer-sink})
     {:ok true :projected? false :reason :no-active-frame}))
@@ -109,7 +119,8 @@
 
 (defn- certified-handler [kind action]
   (let [phase (or (:phase action) kind)
-        state-path (.resolve state-directory (str "live/" (name phase) ".edn"))
+        state-path (.resolve (control-path state-directory)
+                             (str "live/" (name phase) ".edn"))
         state (live-preflight-runtime/read-state state-path)
         receipt (:receipt state)]
     (if (and (contains? #{:live-job-certified :preflight-certified}
@@ -121,8 +132,9 @@
        :finding {:kind kind :state/type (:state/type state)}})))
 
 (defn- options []
-  {:ledger-path ledger-path :certificate-directory certificate-directory
-   :projection-directory projection-directory :now-fn #(Instant/now)
+  {:ledger-path (control-path ledger-path)
+   :certificate-directory (control-path certificate-directory)
+   :projection-directory (control-path projection-directory) :now-fn #(Instant/now)
    :observation-fn (fn [_] {:binding-response {:ok true :bound? false}
                             :jobs-response {:ok true :jobs []}})
    :gate-provider gate-provider :postcondition-fn postconditions/validate
@@ -169,7 +181,7 @@
 (defn live-preflight-inputs []
   (let [{:keys [manifest contract]} (inputs)
         unit (second (:units manifest))
-        loaded (ledger/read-ledger ledger-path)
+        loaded (ledger/read-ledger (control-path ledger-path))
         projection (:projection loaded)
         response (live-preflight-runtime/http-json
                   "GET" "http://localhost:7070/api/alpha/agents/f19-proctor")
@@ -187,7 +199,7 @@
       :timeouts {:request-timeout-ms 300000
                  :turn-timeout-ms
                  (get-in metadata [:effective-timeouts :turn-timeout-ms])}}
-     :state-path preflight-state-path}))
+     :state-path (control-path preflight-state-path)}))
 
 (defn run-live-preflight! []
   (live-preflight-runtime/run-live! (live-preflight-inputs)))
@@ -197,16 +209,16 @@
         unit (second (:units manifest))
         kind (:kind action)
         role (case kind :solve :solver :verify :proctor :preflight :proctor)
-        prep (edn/read-string (slurp preparation-path))
+        prep (edn/read-string (slurp (str (control-path preparation-path))))
         workspace (get-in prep [:workspaces (if (= :solve kind) :solver :solver)])
         response (live-preflight-runtime/http-json
                   "GET" (str "http://localhost:7070/api/alpha/agents/f19-"
                              (name role)))
         agent (:agent response)
         metadata (:metadata agent)
-        projection (:projection (ledger/read-ledger ledger-path))
+        projection (:projection (ledger/read-ledger (control-path ledger-path)))
         solve-state (live-preflight-runtime/read-state
-                     (.resolve state-directory "live/solve.edn"))
+                     (.resolve (control-path state-directory) "live/solve.edn"))
         built (live-proof-phases/build-request
                {:kind kind
                 :action (assoc action :timeouts {:request-ms 300000
@@ -224,7 +236,8 @@
     (if-not (:ok built)
       built
       {:ok true :kind kind :contract contract :request (:request built)
-       :state-path (.resolve state-directory (str "live/" (name kind) ".edn"))})))
+       :state-path (.resolve (control-path state-directory)
+                            (str "live/" (name kind) ".edn"))})))
 
 (defn drive-live-proof-phase! [action]
   (if (= :preflight (:kind action))
@@ -238,7 +251,7 @@
   (into {}
         (keep (fn [phase]
                 (let [state (live-preflight-runtime/read-state
-                             (.resolve state-directory
+                             (.resolve (control-path state-directory)
                                        (str "live/" (name phase) ".edn")))]
                   (when-let [receipt (:receipt state)] [phase receipt]))))
         (:phase-order contract)))
@@ -249,15 +262,16 @@
         kind (:kind action)
         phase (:phase action)
         role (get live-learning-phases/role-for-kind kind)
-        state-path (.resolve state-directory (str "live/" (name phase) ".edn"))
+        state-path (.resolve (control-path state-directory)
+                             (str "live/" (name phase) ".edn"))
         existing (live-preflight-runtime/read-state state-path)
-        prep (edn/read-string (slurp preparation-path))
+        prep (edn/read-string (slurp (str (control-path preparation-path))))
         response (live-preflight-runtime/http-json
                   "GET" (str "http://localhost:7070/api/alpha/agents/f19-"
                              (name role)))
         agent (:agent response)
         metadata (:metadata agent)
-        projection (:projection (ledger/read-ledger ledger-path))
+        projection (:projection (ledger/read-ledger (control-path ledger-path)))
         receipts (certified-receipts contract)
         built (when-not existing
                 (live-learning-phases/build-request
@@ -290,7 +304,13 @@
   [{:keys [agent session surface agency-base]
     :or {agency-base "http://localhost:7070"}}]
   (let [{:keys [manifest]} (inputs)
-        spec-result (orchestration-contract/read-spec orchestration-path)
+        spec-result (orchestration-contract/read-spec
+                     (str (control-path orchestration-path)))
+        head (shell/sh "git" "-C" (str *control-root*) "rev-parse" "HEAD")
+        branch (shell/sh "git" "-C" (str *control-root*) "branch" "--show-current")
+        control-pinned? (and (zero? (:exit head)) (zero? (:exit branch))
+                             (= control-revision (str/trim (:out head)))
+                             (= control-branch (str/trim (:out branch))))
         contract-result
         (when (:ok spec-result)
           (orchestration-contract/validate
@@ -307,6 +327,12 @@
                     (true? (get-in identity [:agent :invoke-ready?])))]
     (cond
       (not (:ok spec-result)) spec-result
+      (not control-pinned?)
+      {:ok false :error/code :set-alight-control-root-not-pinned
+       :finding {:root (str *control-root*) :expected-branch control-branch
+                 :expected-revision control-revision
+                 :observed-branch (str/trim (:out branch))
+                 :observed-revision (str/trim (:out head))}}
       (not (:ok contract-result)) contract-result
       (not exact?)
       {:ok false :error/code :set-alight-continuation-identity-mismatch
@@ -344,8 +370,9 @@
 
 (defn- project-current! []
   (problem-projection/project-latest!
-   {:ledger-path ledger-path :projection-directory projection-directory
-    :output-path problem-buffer-path :expected-frame-id "f19"
+   {:ledger-path (control-path ledger-path)
+    :projection-directory (control-path projection-directory)
+    :output-path (control-path problem-buffer-path) :expected-frame-id "f19"
     :expected-problem-id "a01J05"
     :buffer-sink problem-projection/emacs-buffer-sink}))
 
@@ -355,15 +382,19 @@
    Repeated calls are safe: persisted job tickets and Agency activation are
    idempotent, while the ledger remains the sole phase authority."
   ([continuation] (set-alight! continuation {}))
-  ([{:keys [agent session surface agency-base]}
+  ([{:keys [agent session surface agency-base control-root]}
     {:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn project-fn
             park-fn now-ms-fn]
      :or {now-ms-fn #(System/currentTimeMillis)}}]
-   (let [identity {:agent agent :session session :surface surface
+   (binding [*control-root* (Path/of (str (or control-root *control-root*))
+                                    (make-array String 0))]
+    (let [identity {:agent agent :session session :surface surface
+                   :control-root (str *control-root*)
                    :agency-base (or agency-base "http://localhost:7070")}
          payload (str "F19 SET-ALIGHT CONTINUATION: evaluate "
                       "(futon3c.apm.countdown-control/set-alight! "
-                      (pr-str (select-keys identity [:agent :session :surface])) ").")
+                      (pr-str (select-keys identity
+                                           [:agent :session :surface :control-root])) ").")
          park-default
          (fn [{:keys [awaiting] :as request}]
            (let [body (cond-> {:agent agent :session session :surface surface
@@ -381,4 +412,4 @@
        :advance-fn (or advance-fn (fn [kind _certificate] (advance! kind)))
        :project-fn (or project-fn project-current!)
        :park-fn (or park-fn park-default)
-       :continuation-payload payload}))))
+       :continuation-payload payload})))))
