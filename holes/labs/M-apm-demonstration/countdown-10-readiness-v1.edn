@@ -33,7 +33,11 @@
               "holes/labs/M-apm-demonstration/frame-18-verify-receipt.edn"]}
   {:capability :batch-level-analyst-contract
    :evidence ["holes/labs/M-apm-demonstration/frame-map-reduce-plan-v1.edn"
-              "holes/labs/M-apm-demonstration/analyst-tool-concept-kit-v1.edn"]}]
+              "holes/labs/M-apm-demonstration/analyst-tool-concept-kit-v1.edn"]}
+  {:capability :f19-live-launch-preparation
+   :evidence ["src/futon3c/apm/live_launch_preparation.clj"
+              "test/futon3c/apm/live_launch_preparation_test.clj"
+              "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v1.edn"]}]
 
  :blocking-slices
  [{:slice/id :complete-phase-and-receipt-graph
