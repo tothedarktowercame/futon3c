@@ -43,7 +43,7 @@
                         :role role :validation validation}))))))))
 
 (defn prepare!
-  "Idempotently prepare f19 from pinned inputs and injected effect boundaries.
+  "Idempotently prepare one frame from pinned inputs and injected effects.
 
    A workspace which already exists may only be reused through its persisted
    content-addressed lease.  MINT-FN must itself implement deterministic seat
@@ -52,7 +52,8 @@
            validate-workspace-fn mint-fn roster-fn]}]
   (let [frame-id (:frame/id unit)
         problem-id (:problem/id unit)
-        bad-input? (or (not= "f19" frame-id)
+        bad-input? (or (not (and (string? frame-id)
+                                 (re-matches #"f[0-9]+" frame-id)))
                        (not (string? problem-id))
                        (not (every? fn? [workspace-exists? provision-fn
                                          validate-workspace-fn mint-fn roster-fn])))

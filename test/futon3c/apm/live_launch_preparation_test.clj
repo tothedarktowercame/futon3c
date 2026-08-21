@@ -85,3 +85,26 @@
                  :roster-fn (fn [& _] (swap! calls conj :roster))})]
     (is (= :existing-workspace-without-lease (:error/code result)))
     (is (empty? @calls))))
+
+(deftest preparation-is-frame-generic-without-weakening-attribution
+  (let [base (-> (observation)
+                 (assoc :frame-id "f20" :problem-id "a01J06")
+                 (update :workspaces
+                         (fn [workspaces]
+                           (into {}
+                                 (map (fn [[role entry]]
+                                        [role (-> entry
+                                                  (assoc-in [:lease :frame/id] "f20")
+                                                  (assoc-in [:lease :problem/id] "a01J06"))]))
+                                 workspaces)))
+                 (update :seats
+                         (fn [seats]
+                           (into {}
+                                 (map (fn [[role seat]]
+                                        [role (assoc seat :agent-id (str "f20-" (name role))
+                                                   :frame-id "f20")]))
+                                 seats))))]
+    (is (:ok (sut/validate base)))
+    (is (= :live-launch-preparation-invalid
+           (:error/code (sut/validate (assoc-in base [:seats :solver :frame-id]
+                                                "f19")))))))
