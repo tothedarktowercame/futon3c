@@ -1,12 +1,35 @@
 (ns futon3c.apm.live-preflight
   "Typed, fail-closed dispatch and ingestion boundary for live preflight."
   (:require [clojure.set :as set]
+            [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-contract :as cycle]))
 
 (def required-report-fields
   #{:command-own-exit :problem-revision :problem-blob :lean :clean-before?
     :clean-after? :mutations})
+
+(defn normalize-report
+  "Canonicalize the countable Lean evidence emitted by older Proctor prompts.
+
+   No evidence is inferred: vector warnings/errors are counted, `sorry-count`
+   is renamed, and the command-owned exit is copied into the nested Lean map.
+   Any other shape is left untouched and therefore fails normal validation."
+  [report]
+  (let [lean (:lean report)]
+    (if (and (map? lean)
+             (sequential? (:warnings lean))
+             (sequential? (:errors lean))
+             (nat-int? (:sorry-count lean))
+             (integer? (:command-own-exit report)))
+      (assoc report :lean
+             {:exit (:command-own-exit report)
+              :warnings (count (:warnings lean))
+              :sorry-warnings (:sorry-count lean)
+              :errors (count (:errors lean))
+              :output (str/join "\n" (concat (:warnings lean)
+                                               (:errors lean)))})
+      report)))
 
 (defn build-request
   [{:keys [ledger unit role-card seat timeouts]}]
@@ -64,7 +87,7 @@
 
 (defn validate-terminal
   [request ticket job]
-  (let [report (:report job)
+  (let [report (normalize-report (:report job))
         missing (set/difference required-report-fields (set (keys report)))
         lean (:lean report)
         findings

@@ -59,7 +59,7 @@
                         :frame-id "f19" :invoke-ready? true}})]
     (is (:ok result))
     (is (= :preflight (get-in result [:request :phase])))
-    (is (string? (sut/prompt (:request result))))))
+    (is (re-find #":sorry-warnings INT" (sut/prompt (:request result))))))
 
 (deftest proof-terminal-refuses-unsound-or-misattributed-output
   (let [req (request :solve)

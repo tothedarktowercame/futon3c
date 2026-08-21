@@ -59,6 +59,23 @@
                :preflight-mutations-observed}
              findings)))))
 
+(deftest legacy-vector-evidence-is-normalized-without-inference
+  (let [request (:request (sut/build-request inputs))
+        ticket (:ticket (sut/record-dispatch request {:ok true :job-id "legacy"}))
+        legacy (assoc (successful-job request ticket)
+                      :report {:command-own-exit 0
+                               :problem-revision (:problem-revision request)
+                               :problem-blob (:problem-blob request)
+                               :lean {:warnings ["declaration uses `sorry`"]
+                                      :errors [] :sorry-count 1}
+                               :clean-before? true :clean-after? true
+                               :mutations []})
+        terminal (sut/validate-terminal request ticket legacy)]
+    (is (:ok terminal))
+    (is (= {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+           (select-keys (get-in terminal [:report :lean])
+                        [:exit :warnings :sorry-warnings :errors])))))
+
 (deftest durable-drive-dispatches-exactly-once-across-continuations
   (let [dispatches (atom 0)
         persisted (atom [])

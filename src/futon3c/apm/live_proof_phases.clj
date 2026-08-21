@@ -143,7 +143,10 @@
          "Perform the registered read-only preflight.")
        " Return exactly one EDN map with keys "
        (pr-str (if (= :preflight (:phase request))
-                 preflight/required-report-fields proof-report-fields)) "."))
+                 preflight/required-report-fields proof-report-fields)) "."
+       (when (= :preflight (:phase request))
+         (str " The nested :lean value must be exactly shaped as "
+              "{:exit INT :warnings INT :sorry-warnings INT :errors INT :output STRING}."))))
 
 (defn run-live!
   [{:keys [kind contract request state-path agency-base]
