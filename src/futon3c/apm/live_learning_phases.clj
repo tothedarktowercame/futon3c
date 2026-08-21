@@ -48,7 +48,8 @@
                    (conj :student-workspace-missing))]
     (if (seq findings)
       {:ok false :error/code :live-learning-request-invalid :findings findings}
-      (let [body (cond-> {:dispatch/type kind :phase phase :role role
+      (let [promotion-receipt (get receipts :promote-solver)
+            body (cond-> {:dispatch/type kind :phase phase :role role
                           :agent-id (:agent-id seat)
                           :frame-id (:frame/id unit) :problem-id (:problem/id unit)
                           :ledger-digest (:digest ledger)
@@ -59,6 +60,11 @@
                           :workspace (:workspace/path workspace)
                           :fresh-session? true
                           :fresh-session-nonce (str (UUID/randomUUID)))
+                   (and (= :student-attempt kind) promotion-receipt)
+                   (assoc :memory-snapshot
+                          {:receipt-id (:receipt/id promotion-receipt)
+                           :snapshot-id (:receipt/snapshot-id promotion-receipt)
+                           :snapshot-digest (:receipt/snapshot-digest promotion-receipt)})
                    (= :guide-intervention kind)
                    (assoc :intervention-ordinal (:ordinal action)
                           :input-attempt-id
@@ -83,6 +89,12 @@
                (not (string? (:session-id job)))) (conj :fresh-session-id-missing)
           (and (= :student-attempt kind)
                (not (map? (:memory-use report)))) (conj :memory-use-evidence-missing)
+          (and (= :student-attempt kind)
+               (:memory-snapshot request)
+               (not= (:memory-snapshot request)
+                     (select-keys (:memory-use report)
+                                  [:receipt-id :snapshot-id :snapshot-digest])))
+          (conj :student-memory-snapshot-mismatch)
           (and (= :guide-intervention kind)
                (not= false (get-in report [:channel-audit :direct-student-contact?])))
           (conj :guide-channel-isolation-unproved)
@@ -90,6 +102,12 @@
                (not (every? #(coll? (get report %))
                             [:lanes :dispositions :promotion-reviews])))
           (conj :scribe-reduction-evidence-missing)
+          (and (= :promote-solver (:phase request))
+               (not (and (string? (get-in report [:memory-snapshot :snapshot-id]))
+                         (string? (get-in report [:memory-snapshot :snapshot-digest]))
+                         (seq (get-in report [:memory-snapshot :reviewed-memory-ids]))
+                         (true? (get-in report [:memory-snapshot :independent-review?])))))
+          (conj :solver-promotion-snapshot-invalid)
           (and (= :close-frame kind)
                (not (and (string? (:trace-id report))
                          (= :closed (:result report)))))
@@ -122,11 +140,23 @@
                   :receipt/effect (:effect report)
                   :receipt/channel-audit (:channel-audit report)}
                  :scribe-reduce
-                 {:receipt/type :scribe-reduce
-                  :receipt/input-receipt-ids (:input-receipt-ids request)
-                  :receipt/lanes (:lanes report)
-                  :receipt/dispositions (:dispositions report)
-                  :receipt/promotion-reviews (:promotion-reviews report)}
+                 (if (= :promote-solver (:phase action))
+                   {:receipt/type :solver-promotion
+                    :receipt/input-receipt-ids (:input-receipt-ids request)
+                    :receipt/lanes (:lanes report)
+                    :receipt/dispositions (:dispositions report)
+                    :receipt/promotion-reviews (:promotion-reviews report)
+                    :receipt/snapshot-id (get-in report [:memory-snapshot :snapshot-id])
+                    :receipt/snapshot-digest
+                    (get-in report [:memory-snapshot :snapshot-digest])
+                    :receipt/reviewed-memory-ids
+                    (get-in report [:memory-snapshot :reviewed-memory-ids])
+                    :receipt/independent-review? true}
+                   {:receipt/type :scribe-reduce
+                    :receipt/input-receipt-ids (:input-receipt-ids request)
+                    :receipt/lanes (:lanes report)
+                    :receipt/dispositions (:dispositions report)
+                    :receipt/promotion-reviews (:promotion-reviews report)})
                  :close-frame
                  {:receipt/type :frame-close
                   :receipt/input-receipt-ids (:input-receipt-ids request)
@@ -142,7 +172,9 @@
        (case (:dispatch/type request)
          :student-attempt "Attempt the problem independently. Record memory retrieval/use and an explicit failure account even on success."
          :guide-intervention "Improve only the memory store or harness channel. Do not contact the Student directly."
-         :scribe-reduce "Reduce the certified receipts into lanes, dispositions, and promotion reviews."
+         :scribe-reduce (if (= :promote-solver (:phase request))
+                          "Mine the verified Solver trace, independently review deposits, and publish an immutable content-addressed eligible-memory snapshot for the Student."
+                          "Reduce the certified receipts into lanes, dispositions, and promotion reviews.")
          :close-frame "Audit the complete receipt graph and return a content-addressable trace result.")
        " Return exactly one EDN map including :command-own-exit, :frame-id, and :problem-id."))
 

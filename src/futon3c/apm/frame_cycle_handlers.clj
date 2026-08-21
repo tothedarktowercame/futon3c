@@ -81,6 +81,15 @@
            (not= ordinal (:receipt/attempt-ordinal receipt)))
       {:error/code :frame-cycle-student-ordinal-mismatch}
 
+      (and (= :student-attempt (:kind spec))
+           (contains? (:requires spec) :solver-memory-snapshot)
+           (let [promotion (get prior-receipts :promote-solver)]
+             (not= {:receipt-id (:receipt/id promotion)
+                    :snapshot-id (:receipt/snapshot-id promotion)
+                    :snapshot-digest (:receipt/snapshot-digest promotion)}
+                   (:receipt/memory-snapshot receipt))))
+      {:error/code :frame-cycle-student-memory-snapshot-mismatch}
+
       (and (= :guide-intervention (:kind spec))
            (not= ordinal (:receipt/intervention-ordinal receipt)))
       {:error/code :frame-cycle-guide-ordinal-mismatch}
