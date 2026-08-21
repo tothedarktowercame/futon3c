@@ -64,6 +64,33 @@
         {:ok true :status :stopped :regulator/id regulator-id})
     {:ok true :status :not-running :regulator/id regulator-id}))
 
+(defn repair-resume!
+  "Durably reopen a failed regulator after an explicit code repair.
+
+   The failed observation is retained in :regulator/failures. Completed runs
+   and running regulators cannot be reopened through this boundary."
+  [{:keys [state reason persist-fn]}]
+  (cond
+    (not= :failed (:regulator/status state))
+    {:ok false :error/code :live-regulator-not-repairable}
+    (not (and (string? reason) (not-empty reason) (fn? persist-fn)))
+    {:ok false :error/code :live-regulator-repair-evidence-invalid}
+    :else
+    (let [failure {:failed-at (:regulator/updated-at state)
+                   :ticks (:regulator/ticks state)
+                   :result (:regulator/last-result state)
+                   :repair/reason reason}
+          resumed (-> state
+                      (update :regulator/failures (fnil conj []) failure)
+                      (assoc :regulator/status :running
+                             :regulator/updated-at (now)
+                             :regulator/last-result nil))
+          persisted (persist-fn resumed)]
+      (if (:ok persisted)
+        {:ok true :status :running :state resumed}
+        {:ok false :error/code :live-regulator-repair-persistence-failed
+         :finding persisted}))))
+
 (defn start!
   "Start an idempotent single-thread regulator, recovering durable state."
   [{:keys [regulator-id read-fn persist-fn tick-fn period-ms]

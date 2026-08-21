@@ -48,6 +48,23 @@
   (is (= :live-regulator-provider-missing
          (:error/code (sut/tick! {:state (sut/initial-state "r1")})))))
 
+(deftest failed-regulator-resume-retains-repair-evidence
+  (let [failed (assoc (sut/initial-state "r")
+                      :regulator/status :failed :regulator/ticks 1
+                      :regulator/last-result {:ok false :error/code :tick-threw})
+        durable (atom failed)
+        result (sut/repair-resume!
+                {:state failed :reason "reloaded the complete proof spine"
+                 :persist-fn #(do (reset! durable %) {:ok true})})]
+    (is (:ok result))
+    (is (= :running (:regulator/status @durable)))
+    (is (= :tick-threw
+           (get-in @durable [:regulator/failures 0 :result :error/code])))
+    (is (= :live-regulator-not-repairable
+           (:error/code (sut/repair-resume!
+                         {:state @durable :reason "again"
+                          :persist-fn (constantly {:ok true})}))))))
+
 (deftest scheduled-runner-executes-without-an-agent-continuation
   (let [ran (promise) saved (atom nil)
         result (sut/start!
