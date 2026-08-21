@@ -8,6 +8,7 @@
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
+            [futon3c.apm.live-proof-phases :as live-proof-phases]
             [futon3c.apm.problem-projection :as problem-projection])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -21,6 +22,8 @@
 (def projection-directory (.resolve state-directory "projection"))
 (def problem-buffer-path (.resolve state-directory "problem-buffer.md"))
 (def preflight-state-path (.resolve state-directory "live/preflight.edn"))
+(def preparation-path
+  "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
 
 (defn- inputs []
   {:manifest (edn/read-string (slurp manifest-path))
@@ -99,6 +102,18 @@
                               {:requirement/id id :actual pass? :pass? pass?})
                             evidence)}}]))
 
+(defn- certified-handler [kind action]
+  (let [state-path (.resolve state-directory (str "live/" (name kind) ".edn"))
+        state (live-preflight-runtime/read-state state-path)
+        receipt (:receipt state)]
+    (if (and (contains? #{:live-job-certified :preflight-certified}
+                        (:state/type state))
+             (= (:frame-id action) (:receipt/frame-id receipt))
+             (= (:problem-id action) (:receipt/problem-id receipt)))
+      {:ok true :certificate receipt}
+      {:ok false :error/code :countdown-certified-phase-unavailable
+       :finding {:kind kind :state/type (:state/type state)}})))
+
 (defn- options []
   {:ledger-path ledger-path :certificate-directory certificate-directory
    :projection-directory projection-directory :now-fn #(Instant/now)
@@ -115,7 +130,10 @@
                              {:effect :frame-admitted
                               :frame-id (:frame-id action)
                               :problem-id (:problem-id action)
-                              :registration-hash (:registration-hash action)}})}
+                              :registration-hash (:registration-hash action)}})
+              :preflight (partial certified-handler :preflight)
+              :solve (partial certified-handler :solve)
+              :verify (partial certified-handler :verify)}
    :actor "countdown-control"})
 
 (defn inspect! [] (stepper/inspect! (options)))
@@ -163,3 +181,45 @@
 
 (defn run-live-preflight! []
   (live-preflight-runtime/run-live! (live-preflight-inputs)))
+
+(defn live-proof-phase-inputs [action]
+  (let [{:keys [manifest contract]} (inputs)
+        unit (second (:units manifest))
+        kind (:kind action)
+        role (case kind :solve :solver :verify :proctor :preflight :proctor)
+        prep (edn/read-string (slurp preparation-path))
+        workspace (get-in prep [:workspaces (if (= :solve kind) :solver :solver)])
+        response (live-preflight-runtime/http-json
+                  "GET" (str "http://localhost:7070/api/alpha/agents/f19-"
+                             (name role)))
+        agent (:agent response)
+        metadata (:metadata agent)
+        projection (:projection (ledger/read-ledger ledger-path))
+        solve-state (live-preflight-runtime/read-state
+                     (.resolve state-directory "live/solve.edn"))
+        built (live-proof-phases/build-request
+               {:kind kind
+                :action (assoc action :timeouts {:request-ms 300000
+                                                 :turn-ms 3600000})
+                :ledger {:version (:campaign/version projection)
+                         :digest (:ledger/digest projection)
+                         :phase (get-in projection [:active/frame :phase])
+                         :claim (:active/claim projection)}
+                :unit unit :role-card (get-in manifest [:apparatus :artifacts role])
+                :seat {:agent-id (:agent-id response)
+                       :type (some-> (:type agent) keyword)
+                       :frame-id (:frame-id metadata)
+                       :invoke-ready? (:invoke-ready? agent)}
+                :workspace workspace :solve-receipt (:receipt solve-state)})]
+    (if-not (:ok built)
+      built
+      {:ok true :kind kind :contract contract :request (:request built)
+       :state-path (.resolve state-directory (str "live/" (name kind) ".edn"))})))
+
+(defn drive-live-proof-phase! [action]
+  (if (= :preflight (:kind action))
+    (run-live-preflight!)
+    (let [phase-inputs (live-proof-phase-inputs action)]
+      (if (:ok phase-inputs)
+        (live-proof-phases/run-live! phase-inputs)
+        phase-inputs))))
