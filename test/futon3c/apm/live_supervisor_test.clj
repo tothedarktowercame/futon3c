@@ -26,6 +26,23 @@
     (is (not-any? #{:advance :project} @calls))
     (is (= ["job-19"] (get-in (last @calls) [1 :awaiting])))))
 
+(deftest nested-solver-round-parks-on-its-active-ticket
+  (let [calls (atom [])
+        result (sut/tick!
+                (base calls {:ok true :status :awaiting-terminal
+                             :state {:state/type :solver-rounds
+                                     :active {:ticket {:job-id "solve-round-2"}}}}))]
+    (is (= :parked (:status result)))
+    (is (= "solve-round-2" (:job-id result)))
+    (is (= ["solve-round-2"] (get-in (last @calls) [1 :awaiting])))))
+
+(deftest awaiting-phase-without-job-id-fails-before-park
+  (let [calls (atom [])
+        result (sut/tick! (base calls {:ok true :status :awaiting-terminal
+                                      :state {:state/type :solver-rounds}}))]
+    (is (= :live-supervisor-job-id-missing (:error/code result)))
+    (is (not-any? #(and (vector? %) (= :park (first %))) @calls))))
+
 (deftest certified-phase-advances-projects-then-parks-for-next-tick
   (let [calls (atom [])
         result (sut/tick! (base calls {:ok true :status :certified

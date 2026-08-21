@@ -1667,6 +1667,7 @@
     (let [handler (make-handler)
           body (json/generate-string {"agent-id" "codex-announce-1"
                                       "prompt" "hello from announce"
+                                      "mode" "work"
                                       "caller" "irc:joe"
                                       "surface" "irc (#math)"})
           response (post handler "/api/alpha/invoke/announce" body)
@@ -1682,6 +1683,7 @@
       (is (string? job-id))
       (is (= 200 (:status job-response)))
       (is (= "queued" (get-in job-parsed [:job :state])))
+      (is (= "work" (get-in job-parsed [:job :mode])))
       (is (= "pending" (get-in job-parsed [:job :delivery :status]))))))
 
 (deftest invoke-announce-job-is-reused-by-direct-invoke
@@ -1723,10 +1725,14 @@
                      (swap! invocations inc)
                      (deliver started true)
                      @release
-                     {:result "ok" :session-id nil})})
+                     {:result "ok" :session-id nil
+                      :invoke-meta {:execution {:executed? true
+                                                :tool-events 1
+                                                :command-events 1}}})})
       (let [handler (make-handler)
             authority {"agent-id" "codex-activate-1" "prompt" "durable work"
-                       "caller" "countdown-control" "surface" "emacs-repl"}
+                       "caller" "countdown-control" "surface" "emacs-repl"
+                       "mode" "brief"}
             announced (parse-body
                        (post handler "/api/alpha/invoke/announce"
                              (json/generate-string authority)))

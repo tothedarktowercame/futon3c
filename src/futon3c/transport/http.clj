@@ -4228,6 +4228,8 @@
             surface (or (some-> payload :surface str)
                         (some-> payload (get "surface") str)
                         "announce")
+            raw-mode (or (:mode payload) (get payload "mode"))
+            mode (normalize-invoke-job-mode raw-mode)
             requested-job-id (or (:job-id payload) (get payload "job-id")
                                  (:job_id payload) (get payload "job_id"))]
         (cond
@@ -4239,6 +4241,10 @@
           (json-response 400 {:ok false :err "missing-prompt"
                               :message "prompt is required"})
 
+          (and (some? raw-mode) (nil? mode))
+          (json-response 400 {:ok false :err "invalid-invoke-mode"
+                              :message "mode must be work or brief"})
+
           (nil? (reg/get-agent (str agent-id)))
           (json-response 404 {:ok false :err "agent-not-found"
                               :message (str "Agent not registered: " agent-id)})
@@ -4248,7 +4254,8 @@
                                             :agent-id agent-id
                                             :prompt prompt
                                             :caller caller
-                                            :surface surface})
+                                            :surface surface
+                                            :mode mode})
                 queued-jobs (get-in (active-invoke-job-counts)
                                     [(canonical-job-agent-id agent-id) :queued-jobs]
                                     0)
@@ -4285,6 +4292,8 @@
                    (some-> payload (get "caller") str) "http-caller")
         surface (or (some-> payload :surface str)
                     (some-> payload (get "surface") str) "http")
+        raw-mode (or (:mode payload) (get payload "mode"))
+        mode (normalize-invoke-job-mode raw-mode)
         job (when job-id (get-in (ensure-invoke-jobs-ledger!) [:jobs (str job-id)]))
         expected-digest (when (and agent-id prompt)
                           (campaign-machine/ledger-digest
@@ -4294,11 +4303,15 @@
       (nil? payload) (json-response 400 {:ok false :error "invalid-json"})
       (or (str/blank? (str agent-id)) (nil? prompt) (str/blank? (str job-id)))
       (json-response 400 {:ok false :error "activation-fields-required"})
+      (and (some? raw-mode) (nil? mode))
+      (json-response 400 {:ok false :error "invalid-invoke-mode"})
       (nil? job) (json-response 404 {:ok false :error "announced-job-not-found"})
       (not= (str agent-id) (:agent-id job))
       (json-response 409 {:ok false :error "activation-agent-mismatch"})
       (not= expected-digest (:request-digest job))
       (json-response 409 {:ok false :error "activation-request-mismatch"})
+      (and mode (not= mode (:mode job)))
+      (json-response 409 {:ok false :error "activation-mode-mismatch"})
       (#{"done" "failed" "error" "cancelled" "timeout"} (:state job))
       (json-response 409 {:ok false :error "activation-job-terminal"
                           :state (:state job)})

@@ -31,12 +31,20 @@
                 (not (:ok driven)) driven
 
                 (= :awaiting-terminal (:status driven))
-                (let [job-id (get-in driven [:state :ticket :job-id])
-                      parked (park-fn {:awaiting [job-id]
-                                       :payload continuation-payload})]
-                  (if (:ok parked)
+                (let [job-id (or (:job-id driven)
+                                 (get-in driven [:state :ticket :job-id])
+                                 (get-in driven [:state :active :ticket :job-id]))
+                      parked (when (and (string? job-id) (not-empty job-id))
+                               (park-fn {:awaiting [job-id]
+                                         :payload continuation-payload}))]
+                  (cond
+                    (nil? parked)
+                    {:ok false :error/code :live-supervisor-job-id-missing
+                     :finding driven}
+                    (:ok parked)
                     {:ok true :status :parked :phase (:phase action)
                      :job-id job-id :park parked}
+                    :else
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))
 
