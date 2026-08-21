@@ -95,7 +95,7 @@
     non-topology classification and immutable problem/apparatus identities."}
 
   {:slice/id :repeatable-workspace-provisioning
-   :order 6 :status :blocking
+   :order 6 :status :complete
    :problem
    "Solver and Student workspaces are hand-pinned f18 paths; there is no
     tested per-manifest-unit provision/validate/retire operation."
@@ -115,5 +115,6 @@
    :reason "The countdown deliberately retains one operator permit per step;
             batch permits are the subsequent qualification target."}]
 
- :estimated-remaining-structural-slices 1
- :next-slice :repeatable-workspace-provisioning}
+ :estimated-remaining-structural-slices 0
+ :next-slice nil
+ :structurally-ready? true}
