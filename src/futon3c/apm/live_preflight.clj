@@ -13,6 +13,9 @@
   (let [problem (:problem unit)
         findings (cond-> []
                    (not= 5 (:version ledger)) (conj :ledger-version-mismatch)
+                   (not (and (string? (:digest ledger))
+                             (re-matches #"[0-9a-f]{64}" (:digest ledger))))
+                   (conj :ledger-digest-invalid)
                    (not= :preflight (:phase ledger)) (conj :ledger-phase-mismatch)
                    (some? (:claim ledger)) (conj :ledger-claim-present)
                    (not= "f19" (:frame/id unit)) (conj :frame-mismatch)
@@ -31,6 +34,7 @@
        :findings findings}
       (let [body {:dispatch/type :frame-preflight
                   :agent-id (:agent-id seat)
+                  :ledger-digest (:digest ledger)
                   :frame-id (:frame/id unit) :problem-id (:problem/id unit)
                   :role-card-path (:path role-card)
                   :role-card-blob (:blob role-card)

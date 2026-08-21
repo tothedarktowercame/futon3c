@@ -150,6 +150,7 @@
     {:contract contract
      :inputs
      {:ledger {:version (:campaign/version projection)
+               :digest (:ledger/digest projection)
                :phase (get-in projection [:active/frame :phase])
                :claim (:active/claim projection)}
       :unit unit :role-card (get-in manifest [:apparatus :artifacts :proctor])

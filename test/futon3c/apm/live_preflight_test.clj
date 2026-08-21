@@ -9,7 +9,9 @@
 (def unit (second (:units (edn/read-string
                           (slurp "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")))))
 (def inputs
-  {:ledger {:version 5 :phase :preflight :claim nil}
+  {:ledger {:version 5
+            :digest "3d4df4ddcd2c0ab85fee7b011ddd50d89dcd73452564c29c4153d2527b6c9d1a"
+            :phase :preflight :claim nil}
    :unit unit
    :role-card {:path "role-cards/proctor.md" :blob "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
    :seat {:agent-id "f19-proctor" :type :codex :frame-id "f19" :invoke-ready? true}

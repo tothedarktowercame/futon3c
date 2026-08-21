@@ -127,8 +127,9 @@
         ledger-findings
         (cond-> []
           (not= 5 (:version ledger)) (conj {:finding :ledger-version-mismatch})
-          (not= "ed49e674ccabb666f32faac12bb2eb0a69daaa091e551692be550267f1ca98b7"
-                (:digest ledger)) (conj {:finding :ledger-digest-mismatch})
+          (not (and (string? (:digest ledger))
+                    (re-matches #"[0-9a-f]{64}" (:digest ledger))))
+          (conj {:finding :ledger-digest-invalid})
           (not= :preflight (:phase ledger)) (conj {:finding :ledger-phase-mismatch})
           (some? (:claim ledger)) (conj {:finding :ledger-claim-present}))
         findings (vec (concat ledger-findings workspace-findings
