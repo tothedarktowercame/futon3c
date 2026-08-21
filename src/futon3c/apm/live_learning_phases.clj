@@ -131,7 +131,8 @@
                   :receipt/job-id (:job-id ticket)
                   :receipt/outcome (:outcome report)
                   :receipt/failure-account (:failure-account report)
-                  :receipt/memory-use (:memory-use report)}
+                  :receipt/memory-use (:memory-use report)
+                  :receipt/memory-snapshot (:memory-snapshot request)}
                  :guide-intervention
                  {:receipt/type :guide-intervention
                   :receipt/intervention-ordinal (:intervention-ordinal request)

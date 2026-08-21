@@ -54,6 +54,7 @@
 (defmacro ^:private with-campaign [config & body]
   `(let [config# (or ~config {})]
      (binding [manifest-path (or (:manifest-path config#) manifest-path)
+               contract-path (or (:contract-path config#) contract-path)
                state-directory (or (:state-directory config#) state-directory)
                ledger-path (or (:ledger-path config#) ledger-path)
                certificate-directory (or (:certificate-directory config#) certificate-directory)
