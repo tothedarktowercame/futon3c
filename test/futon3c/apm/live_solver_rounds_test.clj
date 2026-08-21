@@ -156,3 +156,27 @@
     (is (:ok result))
     (is (= 11 (get-in result [:state :active :request :solver/round])))
     (is (= strategy (get-in result [:state :rounds 9 :report :solver/strategy])))))
+
+(deftest repaired-checkpoint-certifies-without-dispatching-another-round
+  (let [persisted (atom nil)
+        rounds (mapv (fn [ordinal]
+                       {:ordinal ordinal :job-id (str "j" ordinal)
+                        :session-id "same" :terminal-state :done
+                        :report {:head "proved"}})
+                     (range 1 11))
+        state {:state/type :solver-strategy-checkpoint-required
+               :budget/max-rounds 50 :base-request base-request
+               :rounds rounds :active nil}
+        result (sut/repair-checkpoint!
+                {:state state
+                 :persist-fn #(do (reset! persisted %) {:ok true})
+                 :validate-solved (fn [request ticket job]
+                                    {:ok (and (= 10 (:solver/round request))
+                                              (= "j10" (:job-id ticket))
+                                              (= {:head "proved"} (:report job)))})
+                 :provide-receipt (fn [& _]
+                                    {:ok true :certificate {:receipt/id "solve"}})})]
+    (is (:ok result))
+    (is (= :live-job-certified (:state/type @persisted)))
+    (is (= 10 (count (:rounds @persisted))))
+    (is (= :solver-strategy-checkpoint-required (:repair/source-state @persisted)))))

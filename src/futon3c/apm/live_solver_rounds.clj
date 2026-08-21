@@ -223,3 +223,41 @@
                     (if (:ok saved)
                       (dispatch-round! effects next-state)
                       saved))))))))))))
+
+(defn repair-checkpoint!
+  "Revalidate the already-terminal checkpoint artifact after a protocol repair.
+
+   No job is announced or activated. The spent rounds remain part of the
+   certified state and only a genuinely valid terminal artifact can cross it."
+  [{:keys [state persist-fn validate-solved provide-receipt]}]
+  (if-not (and (= :solver-strategy-checkpoint-required (:state/type state))
+               (seq (:rounds state))
+               (every? fn? [persist-fn validate-solved provide-receipt]))
+    {:ok false :error/code :solver-checkpoint-repair-input-invalid}
+    (let [completed (last (:rounds state))
+          ordinal (:ordinal completed)
+          prior (when (> ordinal 1) (nth (:rounds state) (- ordinal 2)))
+          request (round-request (:base-request state) ordinal prior)
+          ticket {:job-id (:job-id completed)}
+          job {:job-id (:job-id completed)
+               :agent-id (:agent-id request)
+               :session-id (:session-id completed)
+               :state (:terminal-state completed)
+               :report (:report completed)}
+          validation (validate-solved request ticket job)]
+      (if-not (:ok validation)
+        {:ok false :error/code :solver-checkpoint-repair-validation-failed
+         :validation validation}
+        (let [receipt (provide-receipt request ticket job validation)]
+          (if-not (:ok receipt)
+            receipt
+            (let [certified {:state/type :live-job-certified
+                             :base-request (:base-request state)
+                             :rounds (:rounds state) :active nil
+                             :repair/source-state :solver-strategy-checkpoint-required
+                             :receipt (:certificate receipt)}
+                  saved (persist-container persist-fn certified)]
+              (if (:ok saved)
+                {:ok true :status :certified :state certified
+                 :certificate (:certificate receipt)}
+                saved))))))))

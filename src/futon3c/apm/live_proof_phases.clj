@@ -15,6 +15,35 @@
   #{:command-own-exit :branch :base-revision :final-head :committed?
     :statement-unchanged? :lean :axioms :clean-before? :clean-after? :mutations})
 
+(defn normalize-proof-report
+  "Normalize equivalent agent renderings before applying the strict gate.
+
+   This accepts only lossless shape variations observed at the live boundary;
+   it does not manufacture a successful exit, cleanliness, or proof result."
+  [report]
+  (let [lean (:lean report)
+        warnings (:warnings lean)
+        errors (:errors lean)
+        axiom-text (when (string? (:axioms report)) (:axioms report))
+        bracketed (when axiom-text (second (re-find #"\[([^]]*)\]" axiom-text)))
+        axioms (when bracketed
+                 (->> (str/split bracketed #",")
+                      (map str/trim) (remove str/blank?) (map symbol) vec))]
+    (cond-> report
+      (vector? warnings)
+      (assoc-in [:lean :warnings] (count warnings))
+      (vector? warnings)
+      (assoc-in [:lean :sorry-warnings]
+                (count (filter #(str/includes? (str %) "sorry") warnings)))
+      (vector? errors)
+      (assoc-in [:lean :errors] (count errors))
+      (and (nil? errors) (vector? warnings))
+      (assoc-in [:lean :errors] 0)
+      axioms (assoc :axioms axioms)
+      (and (nil? (:solver/strategy report))
+           (map? (:solver/strategy lean)))
+      (assoc :solver/strategy (:solver/strategy lean)))))
+
 (defn- address-request [body]
   (assoc body :dispatch/id (machine/ledger-digest [body])))
 
@@ -64,7 +93,7 @@
                                     (:receipt/final-head solve-receipt))))}))))
 
 (defn validate-terminal [kind request ticket job]
-  (let [report (:report job)
+  (let [report (normalize-proof-report (:report job))
         missing (set/difference proof-report-fields (set (keys report)))
         lean (:lean report)
         findings
@@ -92,7 +121,8 @@
           (conj :axioms-not-permitted)
           (not (true? (:clean-before? report))) (conj :workspace-not-clean-before)
           (not (true? (:clean-after? report))) (conj :workspace-not-clean-after)
-          (seq (:mutations report)) (conj :uncommitted-mutations-observed))]
+          (not (set/subset? (set (:mutations report)) #{(:problem-path request)}))
+          (conj :mutation-outside-problem-file))]
     (if (seq findings)
       {:ok false :error/code :live-proof-terminal-invalid
        :findings findings :missing missing}
@@ -163,6 +193,11 @@
        " Return exactly one EDN map with keys "
        (pr-str (if (= :preflight (:phase request))
                  preflight/required-report-fields proof-report-fields)) "."
+       (when (contains? #{:solve :verify} (:phase request))
+         (str " The nested :lean map must contain integer :exit, :warnings, "
+              ":sorry-warnings, and :errors counts. :axioms must be a vector "
+              "of symbols. :mutations lists committed changed paths; never put "
+              ":solver/strategy inside :lean."))
        (when (= :preflight (:phase request))
          (str " The nested :lean value must be exactly shaped as "
               "{:exit INT :warnings INT :sorry-warnings INT :errors INT :output STRING}."))))

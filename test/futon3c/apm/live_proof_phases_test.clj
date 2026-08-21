@@ -97,3 +97,29 @@
                       "3333333333333333333333333333333333333333")]
     (is (some #{:verify-final-head-mismatch}
               (:findings (sut/validate-terminal :verify req {:job-id "job-1"} bad))))))
+
+(deftest f20-equivalent-report-shape-normalizes-without-inventing-evidence
+  (let [req (assoc (request :solve)
+                   :problem-path "problems/a01J06/lean/Main.lean")
+        strategy {:summary "Proof complete" :obligations [] :decomposition []
+                  :next-plan "Certify the committed head."}
+        shaped (-> (job :solve req)
+                   (assoc-in [:report :lean]
+                             {:exit 0 :warnings [] :solver/strategy strategy})
+                   (assoc-in [:report :axioms]
+                             "'apm_a01j06' depends on axioms: [propext, Classical.choice, Quot.sound]")
+                   (assoc-in [:report :mutations]
+                             ["problems/a01J06/lean/Main.lean"]))
+        normalized (sut/normalize-proof-report (:report shaped))]
+    (is (= {:exit 0 :warnings 0 :sorry-warnings 0 :errors 0}
+           (select-keys (:lean normalized)
+                        [:exit :warnings :sorry-warnings :errors])))
+    (is (= '[propext Classical.choice Quot.sound] (:axioms normalized)))
+    (is (= strategy (:solver/strategy normalized)))
+    (is (:ok (sut/validate-terminal :solve req {:job-id "job-1"} shaped)))))
+
+(deftest proof-terminal-rejects-mutation-outside-registered-problem
+  (let [req (request :solve)
+        bad (assoc-in (job :solve req) [:report :mutations] ["lakefile.lean"])]
+    (is (some #{:mutation-outside-problem-file}
+              (:findings (sut/validate-terminal :solve req {:job-id "job-1"} bad))))))
