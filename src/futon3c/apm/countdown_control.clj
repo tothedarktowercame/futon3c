@@ -308,8 +308,10 @@
                      (str (control-path orchestration-path)))
         head (shell/sh "git" "-C" (str *control-root*) "rev-parse" "HEAD")
         branch (shell/sh "git" "-C" (str *control-root*) "branch" "--show-current")
+        ancestry (shell/sh "git" "-C" (str *control-root*)
+                           "merge-base" "--is-ancestor" control-revision "HEAD")
         control-pinned? (and (zero? (:exit head)) (zero? (:exit branch))
-                             (= control-revision (str/trim (:out head)))
+                             (zero? (:exit ancestry))
                              (= control-branch (str/trim (:out branch))))
         contract-result
         (when (:ok spec-result)
