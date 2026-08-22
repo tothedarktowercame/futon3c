@@ -487,7 +487,7 @@ priced last turn (fresh session, Codex, Zai, script failure)."
          (_ nil))
        (when (and agent-chat-compaction-hint-ctx (numberp ctx)
                   (>= ctx agent-chat-compaction-hint-ctx))
-         " →  Compaction recommended")
+         " →  Compaction recommended (C-c C-z)")
        (when (and (plist-get basis :cold)
                   (numberp (plist-get basis :per_turn_cold_usd)))
          (format " · cold — resuming costs ~$%.2f"
