@@ -77,15 +77,30 @@ if a.park and a.kind != "bell":
 if a.mode and a.kind != "bell":
     sys.exit("agency_send: --mode is only valid with --kind bell")
 
-PARK_HOSTING_NOTE = (
-    "agency_send: NOTE -- --park assumes something can RECEIVE your resume: an\n"
-    "  Emacs REPL buffer polling the ready-inbox, or a server-spawned pouch.\n"
-    "  An interactive CLI session is NEITHER. Agency delivers a headless resume\n"
-    "  by running `claude --print --resume <session-id>` -- a SECOND process\n"
-    "  sharing your session id, which BIFURCATES a live conversation. That is\n"
-    "  the hazard 'agent identity is singular' exists to prevent.\n"
-    "  If you are a CLI seat: DO NOT PARK. You have your own resume capability;\n"
-    "  poll the job yourself at GET /api/alpha/invoke/jobs/<job-id>.\n"
+def buffer_surface(surface):
+    """Mirror of `buffer-surface?` in src/futon3c/transport/http.clj: a surface whose
+    resume is delivered to a polling REPL buffer rather than run server-side."""
+    return str(surface or "").startswith("emacs")
+
+
+# Two lanes, two very different stories, so say only the one that applies.
+# Printing the CLI hazard at every --park startled agents on Emacs REPL seats,
+# for whom parking is the ordinary, supported path (Joe, 2026-08-22).
+PARK_BUFFER_NOTE = (
+    "agency_send: --park on the buffer lane (surface=%s). This is the normal path:\n"
+    "  your resume is queued to the ready-inbox and delivered by the poller into your\n"
+    "  REPL buffer, in place, as one turn. Nothing further to do.\n"
+    "  Caveat: if no REPL buffer is polling for you when the join completes, the resume\n"
+    "  is assembled and then dropped -- the job-id below stays your fallback.")
+
+PARK_CLI_NOTE = (
+    "agency_send: WARNING -- --park with surface=%s is NOT a buffer surface, so Agency\n"
+    "  delivers the resume headlessly by running `claude --print --resume <session-id>`\n"
+    "  -- a SECOND process sharing your session id, which BIFURCATES a live conversation.\n"
+    "  That is the hazard 'agent identity is singular' exists to prevent.\n"
+    "  If you are an interactive CLI seat: DO NOT PARK. You have your own resume\n"
+    "  capability; poll the job yourself at GET /api/alpha/invoke/jobs/<job-id>.\n"
+    "  If you are an Emacs REPL seat, pass --surface emacs-repl (the default).\n"
     "  See futon3c/README-park.md.")
 
 
@@ -98,7 +113,8 @@ if not a.frm:
           "Pass --from <your-id>.", file=sys.stderr)
 
 if a.park:
-    print(PARK_HOSTING_NOTE, file=sys.stderr)
+    note = PARK_BUFFER_NOTE if buffer_surface(a.surface) else PARK_CLI_NOTE
+    print(note % a.surface, file=sys.stderr)
 
 body = {"agent-id": a.to, "prompt": prompt}
 if a.frm:

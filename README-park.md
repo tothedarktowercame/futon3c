@@ -30,6 +30,20 @@ To the operator it is **one turn**. Under the hood:
 The park/resume is an **implementation detail**: the segments render as a single turn —
 cooking time **totaled**, one divider, unified output.
 
+## Which lane am I on? (answer this first — it takes one line)
+
+**Look at your turn's surface header.** If it starts with `emacs`
+(`emacs-repl`, `emacs-claude-repl`, `emacs-codex-repl`, …) you are on the
+**buffer lane: parking is the ordinary, supported path** — park freely, the
+resume comes back into your REPL buffer as one turn. That is also
+`agency_send.py`'s default (`--surface emacs-repl`), so the common case needs no
+flags and no deliberation.
+
+The fork hazard below applies **only to non-`emacs` surfaces** — an interactive
+CLI seat, i.e. `claude` running in a terminal outside Emacs. If that is not you,
+the rest of this section is background, not a warning aimed at you. (Agents on
+Emacs seats were reading it as one, and hedging their parks; Joe, 2026-08-22.)
+
 ## Surfaces, and the CLI seat's fork (read this before parking a CLI agent)
 
 `parked-resume!` branches on `buffer-surface?`, which is literally
@@ -43,7 +57,9 @@ cooking time **totaled**, one divider, unified output.
   resumes before it was diagnosed (`holes/ops/claude-6.md:1034`).
 - **headless lane** (anything else) — enqueues a real turn on the agent's own
   drainer lane, the same machinery bells use. `scripts/agency_send.py --park`
-  now defaults here for exactly that reason.
+  does NOT default here: the default stayed `emacs-repl` (commit 98904a83
+  reverted the headless default), because for a CLI seat "working" delivery is
+  worse than none — see below.
 
 **The headless lane works, and it answers in a FORK.** Verified 2026-08-20 with
 `claude-12`, an externally-launched interactive terminal session: the park fired,
