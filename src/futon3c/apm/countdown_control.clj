@@ -11,12 +11,14 @@
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
+            [futon3c.apm.live-promotion :as live-promotion]
             [futon3c.apm.live-batch-supervisor :as live-batch-supervisor]
             [futon3c.apm.live-orchestration-contract :as orchestration-contract]
             [futon3c.apm.live-proof-phases :as live-proof-phases]
             [futon3c.apm.live-regulator :as live-regulator]
             [futon3c.apm.live-supervisor :as live-supervisor]
             [futon3c.apm.memory-snapshot :as memory-snapshot]
+            [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
             [futon3c.apm.problem-projection :as problem-projection])
   (:import [java.nio.file Path]
@@ -484,9 +486,11 @@
     (cond
       (and existing (map? (:request existing)))
       {:ok true :contract contract :action action :receipts receipts
+       :manifest manifest :unit unit :preparation preparation
        :request (:request existing) :state-path state-path}
       (:ok built)
       {:ok true :contract contract :action action :receipts receipts
+       :manifest manifest :unit unit :preparation preparation
        :request (:request built) :state-path state-path}
       :else built)))))
 
@@ -535,23 +539,71 @@
         {:ok true :regime :two-promotion-v2 :checks checks
          :analyst-state (:state registration)}))))
 
+(defn- promotion-review-request
+  [{:keys [manifest unit preparation request]}]
+  (let [card (get-in manifest [:apparatus :artifacts :promotion-proctor])
+        seat (get-in preparation [:seats :proctor])
+        body {:dispatch/type :promotion-review
+              :phase :promote-solver
+              :role :promotion-proctor
+              :agent-id (:agent-id seat)
+              :frame-id (:frame/id unit)
+              :problem-id (:problem/id unit)
+              :ledger-digest (:ledger-digest request)
+              :role-card-path (:path card)
+              :role-card-blob (:blob card)
+              :input-receipt-ids (:input-receipt-ids request)
+              :turn-timeout-ms (get-in preparation
+                                       [:seat-policy :turn-timeout-ms])}]
+    (assoc body :dispatch/id (machine/ledger-digest [body]))))
+
+(defn- publish-promotion!
+  [{:keys [contract action receipts request]}
+   {:keys [candidates deposit reviewer reviews]}]
+  (let [published
+        (memory-snapshot/publish!
+         {:frame-id (:frame-id action)
+          :problem-id (:problem-id action)
+          :candidates candidates
+          :path (.resolve (control-path state-directory)
+                          (str "snapshots/" (:frame-id action)
+                               "-solver-memory.edn"))
+          :evidence-visible? memory-snapshot/candidate-visible?})]
+    (if-not (:ok published)
+      published
+      (let [snapshot (:snapshot published)
+            body {:receipt/type :solver-promotion
+                  :receipt/frame-id (:frame-id action)
+                  :receipt/problem-id (:problem-id action)
+                  :receipt/input-receipt-ids (:input-receipt-ids request)
+                  :receipt/lanes (or (:lanes deposit) (:lanes-run deposit) [])
+                  :receipt/dispositions (or (:dispositions deposit)
+                                            (:rejections deposit) [])
+                  :receipt/promotion-reviews reviews
+                  :receipt/snapshot-id (:snapshot/id snapshot)
+                  :receipt/snapshot-digest (:snapshot/digest snapshot)
+                  :receipt/snapshot-path (:path published)
+                  :receipt/reviewed-memory-ids
+                  (mapv :memory-id (:snapshot/memories snapshot))
+                  :receipt/independent-review? (not= (:depositor deposit)
+                                                     reviewer)}
+            receipt (assoc body :receipt/id (machine/ledger-digest [body]))
+            checked (frame-cycle-handlers/validate-completion
+                     contract action receipt receipts)]
+        (if (:ok checked)
+          {:ok true :receipt receipt}
+          checked)))))
+
 (defn drive-live-learning-phase! [action]
   (let [phase-inputs (live-learning-phase-inputs action)]
     (if (:ok phase-inputs)
-      (live-learning-phases/run-live!
-       (cond-> phase-inputs
-         (= :promote-solver (:phase action))
-         (assoc :snapshot-publish-fn
-                (fn [report]
-                  (memory-snapshot/publish!
-                   {:frame-id (:frame-id action)
-                    :problem-id (:problem-id action)
-                    :candidates (:memory-candidates report)
-                    :path (.resolve (control-path state-directory)
-                                    (str "snapshots/" (:frame-id action)
-                                         "-solver-memory.edn"))
-                    :evidence-visible?
-                    memory-snapshot/candidate-visible?})))))
+      (if (= :promote-solver (:phase action))
+        (live-promotion/run-live!
+         {:state-path (:state-path phase-inputs)
+          :deposit-request (:request phase-inputs)
+          :reviewer-request (promotion-review-request phase-inputs)
+          :publish-fn #(publish-promotion! phase-inputs %)})
+        (live-learning-phases/run-live! phase-inputs))
       phase-inputs)))
 
 (defn record-analyst-wake!

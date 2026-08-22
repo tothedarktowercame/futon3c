@@ -59,12 +59,12 @@
                  request (assoc reviewer-request :candidates candidates
                                 :candidate-set-digest digest)
                  prompt (str "Independently review this exact candidate set. Authority:\n"
-                             (pr-str request))]
-             (let [result ((agency-stage agency-base request prompt) job-id)]
-               (if (:report result)
-                 (merge result (select-keys (:report result)
-                                            [:reviewer :reviews]))
-                 result)))))]
+                             (pr-str request))
+                 result ((agency-stage agency-base request prompt) job-id)]
+             (if (:report result)
+               (merge result (select-keys (:report result)
+                                          [:reviewer :reviews]))
+               result))))]
     (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
              :publish-fn publish-fn
              :persist-fn #(runtime/atomic-persist! state-path %)})))
@@ -76,11 +76,12 @@
     (let [r (deposit-fn)]
       (if-not (:ok r) r
         (let [s {:state/type :promotion :stage :deposit :job (:job r)}]
-          (persist-fn s) {:ok true :status :awaiting-terminal :state s})))
+          (persist-fn s) {:ok true :status :awaiting-terminal
+                          :job-id (:job r) :state s})))
 
     (= :deposit (:stage state))
     (let [r (deposit-fn (:job state))]
-      (if (= :awaiting-terminal (:status r)) r
+      (if (= :awaiting-terminal (:status r)) (assoc r :job-id (:job state))
         (let [checked (pipeline/validate-deposit (:report r))]
           (if-not (:ok checked) checked
             (let [review (review-fn (:candidates checked))]
@@ -89,15 +90,20 @@
                          :deposit (:report r) :candidates (:candidates checked)
                          :job (:job review)}]
                   (persist-fn s)
-                  {:ok true :status :awaiting-terminal :state s})))))))
+                  {:ok true :status :awaiting-terminal
+                   :job-id (:job review) :state s})))))))
 
     (= :independent-review (:stage state))
     (let [r (review-fn (:job state) (:candidates state))]
-      (if (= :awaiting-terminal (:status r)) r
+      (if (= :awaiting-terminal (:status r)) (assoc r :job-id (:job state))
         (let [checked (pipeline/validate-review
                        (:deposit state) (:reviewer r) (:reviews r))]
           (if-not (:ok checked) checked
-            (let [published (publish-fn (:candidates checked))]
+            (let [published (publish-fn
+                             {:candidates (:candidates checked)
+                              :deposit (:deposit state)
+                              :reviewer (:reviewer r)
+                              :reviews (:reviews r)})]
               (if-not (:ok published) published
                 (let [s {:state/type :promotion-certified
                          :receipt (:receipt published)}]

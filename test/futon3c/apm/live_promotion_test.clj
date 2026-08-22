@@ -7,7 +7,11 @@
         candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
                    :source-attempts [1 2 3]}
         base {:persist-fn #(do (reset! saved %) {:ok true})
-              :publish-fn (fn [_] (swap! calls conj :publish)
+              :publish-fn (fn [publication]
+                            (is (= "scribe" (get-in publication
+                                                     [:deposit :depositor])))
+                            (is (= "proctor" (:reviewer publication)))
+                            (swap! calls conj :publish)
                             {:ok true :receipt {:receipt/id "promotion"}})}
         r1 (sut/drive! (merge base {:state nil
                                     :deposit-fn #(do (swap! calls conj :deposit)
@@ -26,6 +30,8 @@
                                                          :reviewer "proctor"
                                                          :reviews [review]})}))]
     (is (= :awaiting-terminal (:status r1)))
+    (is (= "scribe" (:job-id r1)))
     (is (= :independent-review (get-in r2 [:state :stage])))
+    (is (= "proctor" (:job-id r2)))
     (is (= :certified (:status r3)))
     (is (= [:deposit :review :publish] @calls))))

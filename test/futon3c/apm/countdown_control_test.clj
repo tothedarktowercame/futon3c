@@ -3,7 +3,33 @@
             [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-batch :as batch]
             [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.countdown-control :as sut]))
+            [futon3c.apm.countdown-control :as sut]
+            [futon3c.apm.live-promotion :as live-promotion]))
+
+(deftest promote-solver-selects-durable-two-seat-adapter
+  (let [captured (atom nil)
+        action {:kind :scribe-reduce :role :scribe :phase :promote-solver
+                :frame-id "f22" :problem-id "p22"}
+        inputs {:ok true :action action :contract {} :receipts {}
+                :state-path "/tmp/f22-promotion.edn"
+                :request {:ledger-digest "ledger"
+                          :input-receipt-ids #{"solve" "verify"}}
+                :manifest {:apparatus {:artifacts
+                                       {:promotion-proctor
+                                        {:path "proctor.md" :blob "blob"}}}}
+                :unit {:frame/id "f22" :problem/id "p22"}
+                :preparation {:seats {:proctor {:agent-id "f22-proctor"}}
+                              :seat-policy {:turn-timeout-ms 7200000}}}]
+    (with-redefs [sut/live-learning-phase-inputs (constantly inputs)
+                  live-promotion/run-live!
+                  (fn [opts] (reset! captured opts)
+                    {:ok true :status :awaiting-terminal :job-id "scribe-job"})]
+      (is (= "scribe-job" (:job-id (sut/drive-live-learning-phase! action))))
+      (is (= "f22-proctor" (get-in @captured [:reviewer-request :agent-id])))
+      (is (= "blob" (get-in @captured [:reviewer-request :role-card-blob])))
+      (is (= 7200000
+             (get-in @captured [:reviewer-request :turn-timeout-ms])))
+      (is (fn? (:publish-fn @captured))))))
 
 (deftest replacement-registration-starts-at-f19-with-complete-cycle
   (let [body (sut/registration-body)
