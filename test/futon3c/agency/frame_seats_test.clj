@@ -16,7 +16,7 @@
                 {:result (str "fresh " agent-id) :session-id nil})
    :metadata {:fixture-type agent-type}})
 
-(deftest mint-registers-five-fresh-invoke-ready-seats
+(deftest mint-registers-six-fresh-invoke-ready-seats
   (let [calls (atom [])
         result (frame-seats/mint-seats!
                 {:prepare-seat-fn (fn [seat]
@@ -27,10 +27,11 @@
                   :reg/student-seat "frame-17-student"
                   :reg/guide-seat "frame-17-guide"
                   :reg/proctor-seat "frame-17-proctor"
-                  :reg/scribe-seat "frame-17-scribe"}]
+                  :reg/scribe-seat "frame-17-scribe"
+                  :reg/analyst-seat "frame-17-analyst"}]
     (is (:ok result))
     (is (= expected (:seats result)))
-    (is (= 5 (count @calls)))
+    (is (= 6 (count @calls)))
     (doseq [[seat-key agent-id] expected]
       (let [agent (registry/get-agent agent-id)
             roster (get-in (registry/registry-status) [:agents agent-id])]
@@ -47,8 +48,8 @@
         first-result (frame-seats/mint-seats! opts "same-frame")
         second-result (frame-seats/mint-seats! opts "same-frame")]
     (is (= first-result second-result))
-    (is (= 5 @calls))
-    (is (= 5 (count (registry/registered-agents))))))
+    (is (= 6 @calls))
+    (is (= 6 (count (registry/registered-agents))))))
 
 (deftest mint-registers-tenure-scoped-analyst
   (let [calls (atom [])
@@ -113,7 +114,7 @@
     (is (= 200 (:status response)))
     (is (true? (:ok body)))
     (is (= "http-frame-solver" (get-in body [:seats :reg/solver-seat])))
-    (is (= 5 (count (:seats body))))))
+    (is (= 6 (count (:seats body))))))
 
 (defn- post-seat-mint [handler payload]
   (let [response (handler
@@ -132,7 +133,8 @@
                         :student :zai
                         :guide :claude
                         :proctor :codex
-                        :scribe :codex}]
+                        :scribe :codex
+                        :analyst :claude}]
     (is (:ok result))
     (doseq [[suffix agent-type] expected-types]
       (let [agent-id (str "default-cast-" (name suffix))]
@@ -176,7 +178,7 @@
                                  :cast {:guide {:type "unknown-vendor"}}})]
     (is (= 400 seat-status))
     (is (= "guid" (get-in seat-body [:findings 0 :seat])))
-    (is (= #{"guide" "proctor" "scribe" "solver" "student"}
+    (is (= #{"analyst" "guide" "proctor" "scribe" "solver" "student"}
            (set (get-in seat-body [:findings 0 :accepted-seats]))))
     (is (= 400 type-status))
     (is (= "unknown-vendor"
