@@ -444,6 +444,35 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
                   (number-to-string (truncate mult))
                 (format "%.2g" mult))))))
 
+;;;###autoload
+(defun agent-chat-cost-adopt-buffer ()
+  "Enable the cost segment in a REPL buffer created before this code was loaded.
+New buffers get `agent-chat--cost-vendor', `agent-chat--modeline-fn' and the
+modeline markers from `agent-chat-init-buffer'; a buffer that predates a reload
+has none of them, so turn-end refreshes return early and nothing renders.  This
+backfills them from the buffer's mode and the rendered modeline line, then
+kicks one refresh."
+  (interactive)
+  (let ((spec (pcase major-mode
+                ('claude-repl-mode (list "claude" 'claude-repl--build-modeline))
+                ('codex-repl-mode (list "codex" 'codex-repl--build-modeline))
+                ('zai-repl-mode (list nil 'zai-repl--build-modeline))
+                (_ (user-error "Not an agent REPL buffer: %s" major-mode)))))
+    (unless (and (markerp agent-chat--modeline-start)
+                 (marker-position agent-chat--modeline-start))
+      (save-excursion
+        (goto-char (point-min))
+        (unless (re-search-forward "^  \\[.*\\(transports\\|Agency:\\|Codex session\\)" nil t)
+          (user-error "No rendered modeline line found in %s" (buffer-name)))
+        (setq-local agent-chat--modeline-start (copy-marker (line-beginning-position)))
+        (setq-local agent-chat--modeline-end (copy-marker (min (point-max) (1+ (line-end-position)))))))
+    (setq-local agent-chat--modeline-fn (cadr spec))
+    (setq-local agent-chat--cost-vendor (car spec))
+    (if (car spec)
+        (progn (agent-chat-refresh-cost-basis! (car spec) agent-chat--session-id)
+               (message "agent-chat: cost segment adopted (%s); refresh running" (car spec)))
+      (message "agent-chat: %s is unpriced; modeline adopted only" major-mode))))
+
 (defun agent-chat-cost-segment ()
   "Return the current session's compact marginal-cost segment."
   (let* ((basis agent-chat--cost-basis)
