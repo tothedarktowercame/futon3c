@@ -479,7 +479,14 @@ Idempotent: an earlier suffix on the same line is replaced."
       (save-excursion
         (goto-char prompt-pos)
         (let ((limit (max (point-min) (- prompt-pos 4000))))
-          (when (re-search-backward "^Cooked for [0-9][0-9ms ]*[0-9ms]" limit t)
+          (when (and (re-search-backward "^Cooked for [0-9][0-9ms ]*[0-9ms]" limit t)
+                     ;; Only touch a Cooked line that is the flair block's own:
+                     ;; the rule line must follow it and the prompt must follow
+                     ;; that.  Anything else is transcript text; leave it.
+                     (save-excursion
+                       (forward-line 1)
+                       (and (looking-at-p "^─+ \\*.*\\*$")
+                            (progn (forward-line 1) (= (point) prompt-pos)))))
             (let ((inhibit-read-only t)
                   (face (get-text-property (match-beginning 0) 'face)))
               (goto-char (match-end 0))
@@ -684,10 +691,21 @@ the current \"Cooked for\" line."
           (when (looking-at-p "> ")
             (setq prompt-pos (line-beginning-position)))))))
     (unless prompt-pos
+      ;; The prompt is always the LAST line of the buffer (typed input may follow
+      ;; "> " on that line).  A "^> " line anywhere else is a markdown blockquote
+      ;; in transcript text; accepting one hijacks the prompt into the middle of
+      ;; the transcript (claude-13, 2026-08-22).  If no last-line prompt exists,
+      ;; recreate one at the end rather than guess.
       (save-excursion
         (goto-char (point-max))
-        (when (re-search-backward "^> " nil t)
-          (setq prompt-pos (line-beginning-position)))))
+        (forward-line 0)
+        (if (looking-at-p "> ")
+            (setq prompt-pos (point))
+          (let ((inhibit-read-only t))
+            (goto-char (point-max))
+            (unless (bolp) (insert "\n"))
+            (setq prompt-pos (point))
+            (insert "> ")))))
     (when prompt-pos
       (setq agent-chat--prompt-marker (copy-marker prompt-pos t))
       (setq agent-chat--separator-start (copy-marker prompt-pos))

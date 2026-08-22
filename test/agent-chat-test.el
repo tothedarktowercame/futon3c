@@ -47,6 +47,26 @@
     (should (string-match-p "^Cooked for 1m 03s · ~\\$0\\.50 (1 call)$"
                             (buffer-substring (point-min) (point-max))))))
 
+(ert-deftest agent-chat-annotate-turn-flair-ignores-transcript-cooked-lines ()
+  (with-temp-buffer
+    (insert "Cooked for 9s\nsome transcript\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1))
+    (agent-chat--annotate-turn-flair!)
+    (should (equal (buffer-string) "Cooked for 9s\nsome transcript\n> "))))
+
+(ert-deftest agent-chat-ensure-prompt-markers-ignores-blockquote ()
+  (with-temp-buffer
+    (insert "claude: quoting\n> `:name \"x\"`\n\nmore text\nCooked for 6m 15s\n")
+    (setq-local agent-chat--prompt-marker (copy-marker (point-max) t))
+    (setq-local agent-chat--separator-start nil)
+    (setq-local agent-chat--input-start nil)
+    (should (agent-chat--ensure-prompt-markers!))
+    (should (= (marker-position agent-chat--prompt-marker) (- (point-max) 2)))
+    (should (string-suffix-p "Cooked for 6m 15s\n> " (buffer-string)))
+    (should (= (marker-position agent-chat--input-start) (point-max)))))
+
 (ert-deftest agent-chat-cost-segment-renders-empty-without-data ()
   (with-temp-buffer
     (setq agent-chat--cost-basis nil)
