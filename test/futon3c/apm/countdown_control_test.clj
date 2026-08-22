@@ -414,7 +414,10 @@
     (with-redefs [sut/set-alight-problem-queue!
                   (fn [request effects]
                     (reset! captured {:request request :effects effects})
-                    {:ok true :status :frame-prepared})]
+                    {:ok true :status :frame-prepared})
+                  runtime/http-json
+                  (fn [_ _ payload]
+                    {:ok true :http/status 200 :payload payload})]
       (is (= :frame-prepared
              (:status (sut/set-alight-problem-list!
                        {:problems [problem]
@@ -425,4 +428,6 @@
         (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn
                                      :retirement-audit-fn])))
         (is (= 24 (:frame-number-base config)))
+        (is (string? (get-in @captured
+                             [:request :authority :continuation-payload])))
         (is (= [problem] (get-in @captured [:request :problems])))))))

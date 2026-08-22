@@ -1112,7 +1112,11 @@
                                 (set-alight!
                                  (merge authority
                                         {:target-frame (:frame/id frame)
-                                         :campaign-config frame-config}))]
+                                         :campaign-config frame-config})
+                                 (cond-> {}
+                                   (:continuation-payload authority)
+                                   (assoc :continuation-payload
+                                          (:continuation-payload authority))))]
                             (if-not (and (:ok result)
                                          (= :frame-complete (:status result)))
                               result
@@ -1196,6 +1200,12 @@
     :or {queue-name "jit-problem-list-v1" frame-number-base 24
          agency-base "http://localhost:7070"}}]
   (let [control-root (or (:control-root authority) "/home/joe/code/futon3c-apm-control")
+        continuation-payload
+        (or (:continuation-payload authority)
+            (str "JIT M-FIVE CONTINUATION: evaluate "
+                 "(futon3c.apm.countdown-control/launch-m-five! "
+                 (pr-str (dissoc authority :continuation-payload)) ")."))
+        authority (assoc authority :continuation-payload continuation-payload)
         campaign-root (str control-root "/data/apm-campaigns/" queue-name)
         outer-config {:problem-queue-state-path
                       (str "data/apm-campaigns/" queue-name "/queue-state.edn")}
@@ -1245,10 +1255,23 @@
            (jit-retirement-audit agency-base
                                  (queued-frame-adapter/campaign-paths
                                   base-jit-config frame)
-                                 frame terminal-receipt role lease)))]
-    (set-alight-problem-queue!
-     {:problems problems :campaign-config outer-config :authority authority}
-     {:jit/config jit-config})))
+                                 frame terminal-receipt role lease)))
+        result
+        (set-alight-problem-queue!
+         {:problems problems :campaign-config outer-config :authority authority}
+         {:jit/config jit-config})]
+    (if (and (:ok result) (= :frame-prepared (:status result)))
+      (let [park (live-preflight-runtime/http-json
+                  "POST" (str agency-base "/api/alpha/park")
+                  {:agent (:agent authority) :session (:session authority)
+                   :surface (:surface authority) :awaiting []
+                   :timer-due-ms (+ (System/currentTimeMillis) 500)
+                   :payload continuation-payload})]
+        (if (and (= 200 (:http/status park)) (:ok park))
+          (assoc result :continuation/park park)
+          {:ok false :error/code :jit-problem-list-continuation-park-failed
+           :finding park}))
+      result)))
 
 (defn launch-m-five!
   "Start or resume the registered five-problem m-family queue."
