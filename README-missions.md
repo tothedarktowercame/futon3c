@@ -82,7 +82,8 @@ the before-work read) the cached view is fine.
 ## Cross-refs
 
 - `README-pilot.md` — the pilot loop (READ→EVAL→PRINT→LOOP→VERIFY).
-- `README-drawbridge.md` — how to eval in the live JVM (the `--refresh` path and
-  `emit_mission_clean.sh` both go through Drawbridge; `scripts/proof-eval.sh`).
+- `README-drawbridge.md` — how to eval in the live JVM (`emit_mission_clean.sh`
+  goes through Drawbridge; its `--refresh` flag refreshes mission data/cache and
+  is unrelated to the forbidden `clojure.tools.namespace` namespace refresh).
 - `src/futon3c/logic/mission_clean.clj` + `holes/excursions/E-scope-organism-copar.md`
   — the outer-loop tracker itself and its one deferred fidelity gap.

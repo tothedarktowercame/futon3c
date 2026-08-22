@@ -11,11 +11,11 @@
 {"problem-id": "a01A06", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a01A07", "status": "clean", "claims": 17, "extra-axioms": {}}
 {"problem-id": "a01A08", "status": "clean", "claims": 19, "extra-axioms": {}}
-{"problem-id": "a01A09", "status": "clean", "claims": 6, "extra-axioms": {}}
+{"problem-id": "a01A09", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpuei_ehhw.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/A01A09/Apm_v2_a01A09_1774988409275/Scratch.olean' of module ApmCanaries.Frames.A01A09.Apm_v2_a01A09_1774988409275.Scratch does not exist"}
 {"problem-id": "a01A10", "status": "clean", "claims": 20, "extra-axioms": {}}
 {"problem-id": "a01A11", "status": "clean", "claims": 5, "extra-axioms": {}}
-{"problem-id": "a01J01", "status": "clean", "claims": 7, "extra-axioms": {}}
-{"problem-id": "a01J02", "status": "clean", "claims": 4, "extra-axioms": {}}
+{"problem-id": "a01J01", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp3skh4w0e.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/A01J01/Apm_v2_a01J01_1774988573118/Scratch.olean' of module ApmCanaries.Frames.A01J01.Apm_v2_a01J01_1774988573118.Scratch does not exist"}
+{"problem-id": "a01J02", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpy800lrrc.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/A01J02/Apm_v2_a01J02_1774988681233/Scratch.olean' of module ApmCanaries.Frames.A01J02.Apm_v2_a01J02_1774988681233.Scratch does not exist"}
 {"problem-id": "a01J03", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a01J04", "status": "clean", "claims": 5, "extra-axioms": {}}
 {"problem-id": "a02J01", "status": "clean", "claims": 5, "extra-axioms": {}}
@@ -23,11 +23,12 @@
 {"problem-id": "a02J03", "status": "clean", "claims": 12, "extra-axioms": {}}
 {"problem-id": "a02J04", "status": "clean", "claims": 12, "extra-axioms": {}}
 {"problem-id": "a02J05", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "a02J06", "status": "clean", "claims": 5, "extra-axioms": {}}
+{"problem-id": "a02J06", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpcfd7uf7f.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/A02J06/Apm_v2_a02J06_1774988737606/Scratch.olean' of module ApmCanaries.Frames.A02J06.Apm_v2_a02J06_1774988737606.Scratch does not exist"}
 {"problem-id": "a02J07", "status": "clean", "claims": 15, "extra-axioms": {}}
 {"problem-id": "a03J01", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a03J02", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a03J03", "status": "clean", "claims": 3, "extra-axioms": {}}
+{"problem-id": "a03J04", "status": "clean", "claims": 12, "extra-axioms": {}}
 {"problem-id": "a03J06", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a03J07", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a03J08", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -46,27 +47,28 @@
 {"problem-id": "a93J03", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a93J04", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a93J05", "status": "clean", "claims": 2, "extra-axioms": {}}
-{"problem-id": "a93J06", "status": "clean", "claims": 2, "extra-axioms": {}}
+{"problem-id": "a93J06", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpucbcqcd4.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/A93J06/Apm_v2_a93J06_1775002790071/Scratch.olean' of module ApmCanaries.Frames.A93J06.Apm_v2_a93J06_1775002790071.Scratch does not exist"}
 {"problem-id": "a93J07", "status": "clean", "claims": 4, "extra-axioms": {}}
-{"problem-id": "a94A01", "status": "clean", "claims": 3, "extra-axioms": {}}
+{"problem-id": "a94A01", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp9p1bmyss.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/A94A01/Apm_v2_a94A01_1775002871618/Scratch.olean' of module ApmCanaries.Frames.A94A01.Apm_v2_a94A01_1775002871618.Scratch does not exist"}
+{"problem-id": "a94A02", "status": "clean", "claims": 5, "extra-axioms": {}}
 {"problem-id": "a94A03", "status": "clean", "claims": 11, "extra-axioms": {}}
 {"problem-id": "a94A04", "status": "clean", "claims": 2, "extra-axioms": {}}
 {"problem-id": "a94A05", "status": "clean", "claims": 2, "extra-axioms": {}}
 {"problem-id": "a94A06", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "a94A08", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "a94A09", "status": "clean", "claims": 9, "extra-axioms": {}}
+{"problem-id": "a94A09", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpxegm5nty.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ConstructionTargets/SchwarzPick.olean' of module ConstructionTargets.SchwarzPick does not exist"}
 {"problem-id": "a94A10", "status": "clean", "claims": 9, "extra-axioms": {}}
-{"problem-id": "a94J01", "status": "clean", "claims": 4, "extra-axioms": {}}
+{"problem-id": "a94J01", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp_wpwkowk.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/A94J01/Apm_v2_a94J01_1775002964674/Scratch.olean' of module ApmCanaries.Frames.A94J01.Apm_v2_a94J01_1775002964674.Scratch does not exist"}
 {"problem-id": "a94J02", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "a94J03", "status": "clean", "claims": 4, "extra-axioms": {}}
-{"problem-id": "a94J04", "status": "clean", "claims": 16, "extra-axioms": {}}
+{"problem-id": "a94J04", "status": "no-axiom-output", "exit": 1, "tail": "lean\n/home/joe/code/apm-lean/.lake/packages/LeanSearchClient/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/packages/plausible/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/packages/mathlib/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/build/lib/lean\n/home/joe/.elan/toolchains/leanprover--lean4---v4.29.0-rc8/lib/lean\n/home/joe/.elan/toolchains/leanprover--lean4---v4.29.0-rc8/lib/lean"}
 {"problem-id": "a94J05", "status": "clean", "claims": 2, "extra-axioms": {}}
 {"problem-id": "a94J06", "status": "clean", "claims": 18, "extra-axioms": {}}
 {"problem-id": "a94J07", "status": "clean", "claims": 5, "extra-axioms": {}}
 {"problem-id": "a94J08", "status": "clean", "claims": 9, "extra-axioms": {}}
 {"problem-id": "a95A01", "status": "clean", "claims": 6, "extra-axioms": {}}
 {"problem-id": "a95A02", "status": "clean", "claims": 18, "extra-axioms": {}}
-{"problem-id": "a95A03", "status": "clean", "claims": 11, "extra-axioms": {}}
+{"problem-id": "a95A03", "status": "no-axiom-output", "exit": 1, "tail": "lean\n/home/joe/code/apm-lean/.lake/packages/LeanSearchClient/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/packages/plausible/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/packages/mathlib/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/build/lib/lean\n/home/joe/.elan/toolchains/leanprover--lean4---v4.29.0-rc8/lib/lean\n/home/joe/.elan/toolchains/leanprover--lean4---v4.29.0-rc8/lib/lean"}
 {"problem-id": "a95A04", "status": "clean", "claims": 5, "extra-axioms": {}}
 {"problem-id": "a95A05", "status": "clean", "claims": 7, "extra-axioms": {}}
 {"problem-id": "a95A06", "status": "clean", "claims": 18, "extra-axioms": {}}
@@ -81,7 +83,7 @@
 {"problem-id": "a96A01", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "a96A02", "status": "clean", "claims": 18, "extra-axioms": {}}
 {"problem-id": "a96A03", "status": "clean", "claims": 2, "extra-axioms": {}}
-{"problem-id": "a96A04", "status": "clean", "claims": 34, "extra-axioms": {}}
+{"problem-id": "a96A04", "status": "no-axiom-output", "exit": 1, "tail": "lean\n/home/joe/code/apm-lean/.lake/packages/LeanSearchClient/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/packages/plausible/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/packages/mathlib/.lake/build/lib/lean\n/home/joe/code/apm-lean/.lake/build/lib/lean\n/home/joe/.elan/toolchains/leanprover--lean4---v4.29.0-rc8/lib/lean\n/home/joe/.elan/toolchains/leanprover--lean4---v4.29.0-rc8/lib/lean"}
 {"problem-id": "a96A05", "status": "clean", "claims": 5, "extra-axioms": {}}
 {"problem-id": "a96J01", "status": "clean", "claims": 31, "extra-axioms": {}}
 {"problem-id": "a96J02", "status": "clean", "claims": 11, "extra-axioms": {}}
@@ -103,6 +105,7 @@
 {"problem-id": "a97J02", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a97J03", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "a97J04", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "a98A01", "status": "clean", "claims": 10, "extra-axioms": {}}
 {"problem-id": "a98A05", "status": "clean", "claims": 4, "extra-axioms": {}}
 {"problem-id": "a98A06", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "a98J01", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -171,7 +174,7 @@
 {"problem-id": "m96A01", "status": "clean", "claims": 2, "extra-axioms": {}}
 {"problem-id": "m96A03", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "m96A04", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "m96J01", "status": "clean", "claims": 5, "extra-axioms": {}}
+{"problem-id": "m96J01", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpmw34qks_.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/M96J01/Apm_v2_m96J01_1775007086632/Scratch.olean' of module ApmCanaries.Frames.M96J01.Apm_v2_m96J01_1775007086632.Scratch does not exist"}
 {"problem-id": "m98A01", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "m98J03", "status": "clean", "claims": 7, "extra-axioms": {}}
 {"problem-id": "m99A03", "status": "clean", "claims": 5, "extra-axioms": {}}
@@ -179,6 +182,7 @@
 {"problem-id": "m99A05", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "m99J05", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t00A04", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "t00A05", "status": "clean", "claims": 159, "extra-axioms": {}}
 {"problem-id": "t00J03", "status": "clean", "claims": 6, "extra-axioms": {}}
 {"problem-id": "t00J04", "status": "clean", "claims": 3, "extra-axioms": {}}
 {"problem-id": "t00J06", "status": "clean", "claims": 3, "extra-axioms": {}}
@@ -186,29 +190,32 @@
 {"problem-id": "t01A07", "status": "clean", "claims": 13, "extra-axioms": {}}
 {"problem-id": "t02A01", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t02A02", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "t02A06", "status": "clean", "claims": 26, "extra-axioms": {}}
 {"problem-id": "t91A01", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t91A02", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "t91A03", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "t91A03", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp267tm9x0.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/T91A03/Apm_v2_t91A03_1775008066441/Scratch.olean' of module ApmCanaries.Frames.T91A03.Apm_v2_t91A03_1775008066441.Scratch does not exist"}
 {"problem-id": "t91A04", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t91A06", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t91A07", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t91J01", "status": "clean", "claims": 2, "extra-axioms": {}}
-{"problem-id": "t91J04", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "t91J04", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpyhvk7zz4.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/T91J04/Apm_v2_t91J04_1775008373965/Scratch.olean' of module ApmCanaries.Frames.T91J04.Apm_v2_t91J04_1775008373965.Scratch does not exist"}
 {"problem-id": "t92J01", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "t92J02", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "t92J02", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpebhw3xdh.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/T92J02/Apm_v2_t92J02_1775008678104/Scratch.olean' of module ApmCanaries.Frames.T92J02.Apm_v2_t92J02_1775008678104.Scratch does not exist"}
 {"problem-id": "t92J03", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t92J04", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t92J09", "status": "clean", "claims": 5, "extra-axioms": {}}
 {"problem-id": "t93A01", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t93A02", "status": "clean", "claims": 6, "extra-axioms": {}}
 {"problem-id": "t93J02", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "t94A02", "status": "clean", "claims": 10, "extra-axioms": {}}
-{"problem-id": "t94A05", "status": "clean", "claims": 2, "extra-axioms": {}}
-{"problem-id": "t94J01", "status": "clean", "claims": 4, "extra-axioms": {}}
+{"problem-id": "t94A02", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp_2gggvn_.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/T94A02/Apm_v2_t94A02_1775009748581/Scratch.olean' of module ApmCanaries.Frames.T94A02.Apm_v2_t94A02_1775009748581.Scratch does not exist"}
+{"problem-id": "t94A05", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpz0ik9hzj.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/T94A05/Apm_v2_t94A05_1775010453161/Scratch.olean' of module ApmCanaries.Frames.T94A05.Apm_v2_t94A05_1775010453161.Scratch does not exist"}
+{"problem-id": "t94J01", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmpra2bnjeb.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/T94J01/Apm_v2_t94J01_1775010781379/Scratch.olean' of module ApmCanaries.Frames.T94J01.Apm_v2_t94J01_1775010781379.Scratch does not exist"}
+{"problem-id": "t94J02", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t94J03", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t95A02", "status": "clean", "claims": 1, "extra-axioms": {}}
-{"problem-id": "t95A03", "status": "clean", "claims": 1, "extra-axioms": {}}
+{"problem-id": "t95A03", "status": "unbuilt-deps", "exit": 1, "tail": "/tmp/tmp7duwqc96.lean:1:0: error: object file '/home/joe/code/apm-lean/.lake/build/lib/lean/ApmCanaries/Frames/T95A03/Apm_v2_t95A03_1775011813898/Scratch.olean' of module ApmCanaries.Frames.T95A03.Apm_v2_t95A03_1775011813898.Scratch does not exist"}
 {"problem-id": "t95J01", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t95J03", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t96J04", "status": "clean", "claims": 1, "extra-axioms": {}}
 {"problem-id": "t97J01", "status": "clean", "claims": 2, "extra-axioms": {}}
+{"problem-id": "t98J03", "status": "clean", "claims": 5, "extra-axioms": {}}

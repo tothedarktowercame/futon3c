@@ -444,6 +444,13 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
                   (number-to-string (truncate mult))
                 (format "%.2g" mult))))))
 
+(defcustom agent-chat-compaction-hint-ctx 200000
+  "Context size (tokens) at or above which the turn-end flair recommends compaction.
+Every API call re-reads the whole context, so past this point a tool-heavy turn
+costs several dollars of cache reads before it does any work; compacting drops
+the context to a summary and pays for itself within a turn.  nil disables."
+  :type '(choice (const nil) integer) :group 'agent-chat)
+
 (defun agent-chat-cost-flair-suffix (&optional basis)
   "What the turn that just finished cost, for the \"Cooked for\" line.
 BASIS defaults to `agent-chat--cost-basis'.  Returns \"\" when there is no
@@ -467,7 +474,10 @@ priced last turn (fresh session, Codex, Zai, script failure)."
                             (plist-get basis :model) (plist-get basis :mult)))))
            (concat (when label (format " · %s" label)) ")")))
        (when (numberp (plist-get basis :session_usd))
-         (format " · session $%.0f" (plist-get basis :session_usd)))))))
+         (format " · session $%.0f" (plist-get basis :session_usd)))
+       (when (and agent-chat-compaction-hint-ctx (numberp ctx)
+                  (>= ctx agent-chat-compaction-hint-ctx))
+         " →  Compaction recommended")))))
 
 (defun agent-chat--annotate-turn-flair! ()
   "Append the last-turn cost to the \"Cooked for\" line just before the prompt.

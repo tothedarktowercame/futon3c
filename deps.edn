@@ -64,7 +64,10 @@
          :exec-fn cognitect.test-runner.api/test
          :exec-args {:dirs ["test"]}}
 
-  :dev {:extra-paths ["dev"]
+  ;; Long-lived serving image.  This is the Lisp-machine development runtime:
+  ;; Drawbridge remains available, but namespace removal/recreation is refused
+  ;; server-side (repl.http).  Use :dev-admin for transient operator calls.
+  :dev-serve {:extra-paths ["dev"]
         ;; JVM opts for the one serving JVM (I-0). The Arrow --add-opens +
         ;; netty/pgwire flags are required for the embedded futon1b XTDB 2
         ;; node (FUTON1B_EMBED=1); harmless when it isn't embedded. These are
@@ -104,9 +107,22 @@
                      ;; jars must be declared here. Versions match the
                      ;; per-app shadow-cljs.edn :dependencies.
                      reagent/reagent       {:mvn/version "1.2.0"}
-                     cljs-http/cljs-http   {:mvn/version "0.1.46"}
+                     ;; cljs-http's POM leaks tools.namespace 0.2.11 into the
+                     ;; host JVM.  It is build tooling, not a cljs-http runtime
+                     ;; requirement, and namespace removal is incoherent with
+                     ;; this serving image's defonce state model.  Keep the
+                     ;; server-side Drawbridge refusal as defense in depth.
+                     cljs-http/cljs-http   {:mvn/version "0.1.46"
+                                            :exclusions [org.clojure/tools.namespace]}
                      datascript/datascript {:mvn/version "1.7.3"}}
         :main-opts ["-m" "futon3c.dev"]}
+
+  ;; Transient out-of-process administrator for the serving JVM.  Deliberately
+  ;; does not include the dev source tree or tools.namespace lifecycle helpers;
+  ;; it reaches the live image through authenticated Drawbridge instead of
+  ;; creating another application image locally.
+  :dev-admin {:extra-paths ["admin"]
+              :main-opts ["-m" "futon3c.admin"]}
 
   :repl {:main-opts ["-m" "nrepl.cmdline"
                      "--middleware" "[cider.nrepl/cider-middleware]"]

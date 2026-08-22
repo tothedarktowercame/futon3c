@@ -38,6 +38,6 @@ if ! command -v clojure >/dev/null 2>&1; then
   exit 2
 fi
 
-# Run the ratchet entry point. -M:dev brings in the dev classpath so the
+# Run the ratchet entry point. -M:dev-serve brings in the dev classpath so the
 # default !store atom is reachable. The entry point exits 0/1 as appropriate.
-exec clojure -M:dev -m futon3c.logic.ratchet
+exec clojure -M:dev-serve -m futon3c.logic.ratchet

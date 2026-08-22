@@ -4,6 +4,45 @@ Drawbridge provides a lightweight HTTP REPL into the running futon3c
 JVM. Useful for diagnostics, hot-reloading code, and administrative
 operations (e.g. resetting a poisoned agent session).
 
+## Two development profiles, one serving image
+
+Futon3c is deliberately operated as a continuously evolving Lisp machine. The
+boundary is therefore not "development versus production"; it is **live
+serving versus deliberate administration**:
+
+| Profile | Process role | Surface | Intended use |
+|---------|--------------|---------|--------------|
+| `:dev-serve` | The one long-lived Futon3c JVM | `/eval`, `/repl` | Serving, inspection, ordinary evaluation |
+| `:dev-admin` | A transient out-of-process client | `/admin/eval` | Explicitly attributed reload/lifecycle administration |
+
+`make dev` now starts `clojure -M:dev-serve`. It retains Drawbridge, the
+integrated frontend dependencies, and normal live-development facilities. The
+old `:dev` name was misleading: it was the actual serving assembly, not a bag
+of optional reload tools.
+
+Run administrative calls without booting another application image:
+
+```bash
+clojure -M:dev-admin status
+clojure -M:dev-admin eval '(futon3c.agency.registry/reset-session! "claude-1")'
+clojure -M:dev-admin file /tmp/admin-operation.clj
+clojure -M:dev-admin load-file src/futon3c/watcher/multi.clj
+
+# Equivalent Make target:
+make admin ARGS="status"
+```
+
+The admin profile is intentionally **risky but coherence-preserving**. An
+operation may evict a Kangaroo pouch, reset a session, drain work, replace a
+reload-safe function body, or request a lifecycle transition. Such effects
+must be declared and checked. It may not remove/recreate namespaces in the
+serving JVM. Both eval profiles enforce that invariant.
+
+`/admin/eval` is an operational and forensic boundary, not a Clojure language
+sandbox: it uses the same authenticated evaluator and records
+`:profile :dev-admin` in `/tmp/futon3c-eval.log`. The server still owns the
+ultimate safety checks.
+
 ## Connection Details
 
 | Setting | Default | Env var |
@@ -33,8 +72,9 @@ chmod 600 .admintoken
 
 ## Quick Reference
 
-All examples use `proof-eval.sh` which handles token resolution
-automatically.
+Ordinary serving-image evaluation uses `proof-eval.sh`, which handles token
+resolution automatically. Use `clojure -M:dev-admin` when the purpose is
+administrative or mutating; that distinction is retained in the forensic log.
 
 ### Evaluate Clojure
 
@@ -79,7 +119,7 @@ conversation history), clear the session so the next invoke starts
 fresh:
 
 ```bash
-bash scripts/proof-eval.sh '(futon3c.agency.registry/reset-session! "claude-1")'
+clojure -M:dev-admin eval '(futon3c.agency.registry/reset-session! "claude-1")'
 ```
 
 Or from Emacs: `C-c C-n` in the claude-repl buffer (tries the HTTP
@@ -90,8 +130,37 @@ Or from IRC: `!reset claude-1`
 ### Hot-Reload a Source File
 
 ```bash
-bash scripts/proof-eval.sh '(load-file "src/futon3c/transport/http.clj")'
+clojure -M:dev-admin load-file src/futon3c/transport/http.clj
 ```
+
+### The supported live-evolution contract
+
+Live evolution means **in-place Var redefinition**, not namespace replacement.
+`load-file` re-evaluates definitions while retaining existing Var identities;
+`defonce` roots therefore remain the same objects. Code paths that dereference
+Vars at call time see the new function bodies.
+
+`clojure.tools.namespace.repl/refresh`, `refresh-all`, and equivalent namespace
+removal are forbidden through `/eval`, `/admin/eval`, and `/repl`. Refresh
+removes namespaces before loading them again. That creates new Vars and new
+`defonce` roots while existing handlers, callbacks, and threads may retain the
+old ones. The apparent "operational twin" is not a supported refresh result; it
+is a split JVM image produced by using a stop/rebuild tool while the application
+continues serving.
+
+This distinction yields three change classes:
+
+1. **Reload-safe function body:** targeted `load-file` through `:dev-admin`,
+   followed by an independent observation through the real serving route.
+2. **Structural change with an explicit lifecycle operation:** load the
+   definitions, then invoke the reviewed stop/migrate/rebind/start operation and
+   check its postconditions. Bounded declared loss such as pouch eviction is
+   acceptable; competing authoritative state roots are not.
+3. **Route topology, captured callback/thread, protocol, state layout, or
+   namespace topology:** commit and restart externally.
+
+Never restart Futon3c from an Agency-routed session that depends on that JVM.
+Use a separate operator shell and verify `/agency/connected` afterward.
 
 #### Reload-safety: what a reload picks up, and what it doesn't
 
@@ -124,6 +193,18 @@ Reload-safety = reconstructibility from disk: a reload is safe iff it
 equals a restart. Direct-symbol-call dispatch keeps that true for handler
 bodies; a value-captured fn is the exception that needs `#'var`.
 
+Before an admin `load-file`, establish all of the following:
+
+- no namespace is removed or recreated;
+- the edit changes only reload-safe definitions, or has a reviewed component
+  lifecycle operation;
+- authoritative atoms and registries retain object identity;
+- no route table or captured callback is being mistaken for a Var-indirected
+  call;
+- an independent request through the serving port observes the new behavior;
+- failure leaves either the old coherent behavior or an explicit restart
+  requirement, never an uncertain image.
+
 ### Run Diagnostics
 
 ```bash
@@ -147,6 +228,19 @@ CLOJURE
 
 Use `--data-binary @-` with a heredoc to avoid shell escaping issues
 with double quotes in Clojure code.
+
+For a raw explicitly attributed admin call, use the separate route and header:
+
+```bash
+curl -s \
+  -H "x-admin-token: $(cat .admintoken)" \
+  -H "x-drawbridge-profile: dev-admin" \
+  -H "Content-Type: text/plain" \
+  --data-binary @- \
+  "http://127.0.0.1:6768/admin/eval" <<'CLOJURE'
+(futon3c.agency.agent-pouch/evict! "claude-1")
+CLOJURE
+```
 
 ## /eval reports EVERY runtime exception as a syntax error
 
