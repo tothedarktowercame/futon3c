@@ -1,0 +1,62 @@
+(ns futon3c.apm.generated-contract
+  "Validation boundary for the canonical contract emitted by Lean."
+  (:require [cheshire.core :as json]))
+
+(def required-bounds
+  {:solver-max-rounds 50
+   :solver-checkpoint-every 10
+   :student-attempts 3
+   :guide-interventions 2
+   :analyst-tenure-frames 2
+   :seat-turn-timeout-ms 3600000
+   :zai-request-timeout-ms 300000})
+
+(defn read-contract [path]
+  (try
+    {:ok true :contract (json/parse-string (slurp path) true)}
+    (catch Exception e
+      {:ok false :error/code :generated-contract-unreadable
+       :exception/message (.getMessage e)})))
+
+(defn expected-transitions [phase-order]
+  (mapv (fn [from to] {:from from :to to})
+        phase-order (concat (rest phase-order) [nil])))
+
+(defn validate
+  "Refuse an emitted artifact whose transition table is not total over its
+   phase order, whose bounds drift, or whose verify edge bypasses promotion."
+  [contract]
+  (let [phase-order (:phase-order contract)
+        transitions (:transitions contract)
+        findings
+        (cond-> []
+          (not= 1 (:schema-version contract))
+          (conj :generated-contract-schema-version-invalid)
+          (not= "apm-complete-frame-cycle-v2" (:contract-id contract))
+          (conj :generated-contract-id-invalid)
+          (not= (count phase-order) (count (distinct phase-order)))
+          (conj :generated-contract-phase-duplicate)
+          (not= (expected-transitions phase-order) transitions)
+          (conj :generated-contract-transition-table-invalid)
+          (not= "promote-solver"
+                (:to (some #(when (= "verify" (:from %)) %) transitions)))
+          (conj :generated-contract-verify-bypasses-promotion)
+          (not= required-bounds (:bounds contract))
+          (conj :generated-contract-bounds-invalid))]
+    (if (seq findings)
+      {:ok false :error/code :generated-contract-invalid :findings findings}
+      {:ok true :contract contract})))
+
+(defn validate-round-trip [path clojure-contract]
+  (let [loaded (read-contract path)]
+    (if-not (:ok loaded)
+      loaded
+      (let [validated (validate (:contract loaded))
+            emitted-phases (mapv keyword (get-in loaded [:contract :phase-order]))]
+        (if-not (:ok validated)
+          validated
+          (if (= emitted-phases (:phase-order clojure-contract))
+            {:ok true :contract (:contract loaded)}
+            {:ok false :error/code :generated-contract-round-trip-mismatch
+             :finding {:emitted emitted-phases
+                       :clojure (:phase-order clojure-contract)}}))))))
