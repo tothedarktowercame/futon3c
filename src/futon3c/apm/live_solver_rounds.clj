@@ -73,7 +73,9 @@
               (let [accepted (assoc-in staged [:active :activation/accepted?] true)
                     saved (persist-container persist-fn accepted)]
                 (if (:ok saved)
-                  {:ok true :status :awaiting-terminal :state accepted}
+                  {:ok true :status :awaiting-terminal
+                   :job-id (get-in accepted [:active :ticket :job-id])
+                   :state accepted}
                   saved)))))))))
 
 (defn- normalize-round-report [report]
@@ -169,7 +171,9 @@
           (let [accepted (assoc-in state [:active :activation/accepted?] true)
                 saved (persist-container persist-fn accepted)]
             (if (:ok saved)
-              {:ok true :status :awaiting-terminal :state accepted}
+              {:ok true :status :awaiting-terminal
+               :job-id (get-in accepted [:active :ticket :job-id])
+               :state accepted}
               saved))))
 
       :else
@@ -177,7 +181,9 @@
             job (job-fn (get-in active [:ticket :job-id]))
             expected-session (:session-id (first (:rounds state)))]
         (if-not (contains? job-driver/terminal-states (:state job))
-          {:ok true :status :awaiting-terminal :state state}
+          {:ok true :status :awaiting-terminal
+           :job-id (get-in state [:active :ticket :job-id])
+           :state state}
           (if (and expected-session (not= expected-session (:session-id job)))
             {:ok false :error/code :solver-session-mismatch
              :finding {:expected expected-session :actual (:session-id job)}}
