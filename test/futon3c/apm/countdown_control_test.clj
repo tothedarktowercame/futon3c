@@ -8,7 +8,8 @@
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as live-promotion]
-            [futon3c.apm.problem-queue-supervisor :as problem-queue]))
+            [futon3c.apm.problem-queue-supervisor :as problem-queue]
+            [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]))
 
 (deftest promote-solver-selects-durable-two-seat-adapter
   (let [captured (atom nil)
@@ -370,3 +371,26 @@
       (is (nil? (get-in @captured [:plan :frames])))
       (is (fn? (:state-provider @captured)))
       (is (fn? (:persist-state-fn @captured))))))
+
+(deftest jit-queue-wires-concrete-adapter-and-countdown-supervision
+  (let [adapter-config (atom nil)
+        tick-options (atom nil)]
+    (with-redefs [queued-frame-adapter/live-effects
+                  (fn [config]
+                    (reset! adapter-config config)
+                    {:mint-frame-fn identity})
+                  problem-queue/tick!
+                  (fn [options]
+                    (reset! tick-options options)
+                    {:ok true :status :frame-prepared})]
+      (is (= :frame-prepared
+             (:status
+              (sut/set-alight-problem-queue!
+               {:problems [{:problem/id "p1" :repository "/repo" :revision "r"
+                            :path "p.lean" :blob "b"
+                            :classification :non-excluded}]
+                :authority {:agent "codex-10"}}
+               {:jit/config {:campaign-root "/campaigns"}}))))
+      (is (fn? (:frame-tick-fn @adapter-config)))
+      (is (fn? (:mint-frame-fn @tick-options)))
+      (is (nil? (:jit/config @tick-options))))))

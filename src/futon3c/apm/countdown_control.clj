@@ -25,6 +25,7 @@
             [futon3c.apm.analyst-campaign :as analyst-campaign]
             [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
+            [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]
             [futon3c.apm.qualification :as qualification])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -1093,12 +1094,25 @@
   qualification, mint/provision, supervised frame tick, and retirement
   adapters. The successor is minted only after the active frame returns a
   certified terminal result."
-  [{:keys [problems campaign-config]} effects]
+  [{:keys [problems campaign-config authority]} effects]
   (with-campaign campaign-config
     (let [path (control-path problem-queue-state-path)
-          plan (problem-queue/queue-plan problems)]
+          plan (problem-queue/queue-plan problems)
+          jit-config (:jit/config effects)
+          concrete-effects
+          (when jit-config
+            (queued-frame-adapter/live-effects
+             (assoc jit-config
+                    :frame-tick-fn
+                    (or (:frame-tick-fn jit-config)
+                        (fn [frame frame-config]
+                          (set-alight!
+                           (merge authority
+                                  {:target-frame (:frame/id frame)
+                                   :campaign-config frame-config})))))))]
       (problem-queue/tick!
        (merge {:plan plan
                :state-provider #(live-preflight-runtime/read-state path)
                :persist-state-fn #(live-preflight-runtime/atomic-persist! path %)}
-              effects)))))
+              concrete-effects
+              (dissoc effects :jit/config))))))
