@@ -15,7 +15,6 @@
   shared is the running object -- this lane announces, activates, polls and
   persists through its own driver, so a change here reaches nothing else."
   (:require [clojure.java.shell :as shell]
-            [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-proof-phases :as proof]
             [futon3c.apm.live-solver-rounds :as solver-rounds]
@@ -136,6 +135,19 @@
                              (into {} (map (fn [[r s]] [r (:agent-id s)]))
                                    seats)}})))))))))
 
+(defn- certified-replay
+  "The certificate a previous attempt already earned for THIS request, or nil.
+
+  Guarded on dispatch/id equality, not merely on frame and phase: the id is a
+  content digest of the request, so a replay can only satisfy a caller that
+  asked the identical question."
+  [state request]
+  (when (and (= :live-job-certified (:state/type state))
+             (= (:dispatch/id request) (get-in state [:request :dispatch/id]))
+             (:receipt state))
+    {:ok true :status :certified :state state
+     :certificate (:receipt state) :replayed? true}))
+
 (defn run-live!
   "Drive one lane phase to its next durable boundary.
 
@@ -196,10 +208,24 @@
             (runtime/http-json
              "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
          :persist-fn #(runtime/atomic-persist! state-path %)}]
-    (if (= :solve kind)
+    (cond
+      (= :solve kind)
       (solver-rounds/drive!
        (assoc effects
               :validate-solved (partial proof/validate-terminal :solve)
               :provide-receipt (partial proof/receipt contract :solve)
               :max-rounds solver-rounds/default-max-rounds))
-      (driver/drive! effects))))
+
+      ;; A siege RE-ENTERS the same frame: the queue runs the phase list again
+      ;; on every attempt, so preflight and verify are asked to run against
+      ;; state a previous attempt already certified. The shared driver is a
+      ;; single-shot step machine -- it only accepts :live-job-dispatched and
+      ;; answers anything else with :live-job-state-invalid -- so re-entry
+      ;; reads as corruption and the whole problem is ruled :blocked. Nothing
+      ;; is wrong: the phase is DONE. Replay the stored certificate instead,
+      ;; and only when the request is byte-identical, which dispatch/id (a
+      ;; content digest of the request) decides. A changed request gets a
+      ;; changed id and falls through to a real dispatch.
+      :else
+      (or (certified-replay (:state effects) request)
+          (proof/drive! effects)))))
