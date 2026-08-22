@@ -81,6 +81,32 @@
            (get-in result [:state :active :request
                            :solver/remediation :findings])))))
 
+(deftest legacy-checkpoint-resumes-only-for-repeated-identical-failure
+  (let [persisted (atom nil)
+        failure {:validation {:ok false :findings [:bad-path]}
+                 :report {:head "same"}}
+        state {:state/type :solver-strategy-checkpoint-required
+               :budget/max-rounds 50 :base-request base-request
+               :rounds (into (mapv (fn [ordinal]
+                                     {:ordinal ordinal
+                                      :job-id (str "job-" ordinal)})
+                                   (range 1 9))
+                             [(assoc failure :ordinal 9 :job-id "job-9")
+                              (assoc failure :ordinal 10 :job-id "job-10")])
+               :active nil}
+        result (sut/resume-remediation!
+                (assoc (effects persisted) :state state))]
+    (is (:ok result))
+    (is (= 11 (get-in result [:state :active :request :solver/round]))))
+  (let [state {:state/type :solver-strategy-checkpoint-required
+               :budget/max-rounds 50 :base-request base-request
+               :rounds [{:ordinal 9 :report {:head "a"}}
+                        {:ordinal 10 :report {:head "b"}}]
+               :active nil}]
+    (is (= :solver-remediation-resume-input-invalid
+           (:error/code (sut/resume-remediation!
+                         (assoc (effects (atom nil)) :state state)))))))
+
 (deftest round-cap-requires-human-without-classifying-the-problem
   (let [persisted (atom nil)
         prior (mapv (fn [ordinal] {:ordinal ordinal :job-id (str "j" ordinal)})

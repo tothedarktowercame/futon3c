@@ -243,3 +243,34 @@
               :provide-receipt (partial receipt contract :solve)
               :max-rounds solver-rounds/default-max-rounds))
       (drive! effects))))
+
+(defn resume-solver-remediation-live!
+  "Resume exactly one halted corrective Solver round through Agency.
+
+   Legacy strategy checkpoints are accepted only when their last two terminal
+   failures are identical; live-solver-rounds enforces that condition."
+  [{:keys [request state-path agency-base]
+    :or {agency-base "http://localhost:7070"}}]
+  (let [state (runtime/read-state state-path)
+        announce-fn
+        (fn [req]
+          (let [response (runtime/http-json
+                          "POST" (str agency-base "/api/alpha/invoke/announce")
+                          {:agent-id (:agent-id req) :prompt (prompt req)
+                           :surface "emacs-repl" :caller "countdown-control"
+                           :mode "work"})]
+            {:ok (and (= 202 (:http/status response)) (:ok response))
+             :job-id (:job-id response)}))
+        activate-fn
+        (fn [req ticket]
+          (let [response (runtime/http-json
+                          "POST" (str agency-base "/api/alpha/invoke/activate")
+                          {:agent-id (:agent-id req) :prompt (prompt req)
+                           :surface "emacs-repl" :caller "countdown-control"
+                           :mode "work" :job-id (:job-id ticket)})]
+            {:ok (and (= 202 (:http/status response)) (:ok response)
+                      (:accepted response))}))]
+    (solver-rounds/resume-remediation!
+     {:state state :request request :announce-fn announce-fn
+      :activate-fn activate-fn
+      :persist-fn #(runtime/atomic-persist! state-path %)})))

@@ -300,7 +300,13 @@
    certifies the prior artifact. The next seat turn must produce a new terminal
    artifact that passes the unchanged validator."
   [{:keys [state persist-fn] :as effects}]
-  (if-not (and (= :solver-remediation-required (:state/type state))
+  (if-not (and (or (= :solver-remediation-required (:state/type state))
+                   (and (= :solver-strategy-checkpoint-required
+                           (:state/type state))
+                        (< 1 (count (:rounds state)))
+                        (= (terminal-failure-signature (last (:rounds state)))
+                           (terminal-failure-signature
+                            (nth (:rounds state) (- (count (:rounds state)) 2))))))
                (seq (:rounds state))
                (fn? persist-fn))
     {:ok false :error/code :solver-remediation-resume-input-invalid}
