@@ -17,6 +17,56 @@
 
 (declare mint qualify open-and-prepare!)
 
+(def default-artifacts
+  {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+   :solver "holes/labs/M-apm-demonstration/role-cards/codex-solver-v5.md"
+   :student "holes/labs/M-apm-demonstration/role-cards/zai-student.md"
+   :guide "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.1.md"
+   :scribe "holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
+   :proctor "holes/labs/M-apm-demonstration/role-cards/proctor.md"
+   :promotion-proctor
+   "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v1.md"
+   :analyst "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md"})
+
+(defn- git-out [repository & args]
+  (let [result (apply shell/sh (concat ["git" "-C" repository] args))]
+    (when (zero? (:exit result)) (str/trim (:out result)))))
+
+(defn one-off-manifest
+  "Generate a content-addressed one-off manifest from immutable Git objects."
+  [{:keys [frame apparatus-repository apparatus-branch artifacts baseline]}]
+  (let [revision (git-out apparatus-repository "rev-parse"
+                          (str "refs/heads/" apparatus-branch))
+        artifact-pins
+        (into {} (map (fn [[role path]]
+                        [role {:path path
+                               :blob (git-out apparatus-repository "rev-parse"
+                                              (str revision ":" path))}]))
+              (or artifacts default-artifacts))
+        apparatus-body {:repository apparatus-repository :branch apparatus-branch
+                        :revision revision :artifacts artifact-pins}
+        apparatus (assoc apparatus-body :pin/id
+                         (machine/ledger-digest [apparatus-body]))
+        problem (:problem frame)
+        unit {:frame/id (:frame/id frame) :ordinal 1 :arm :treatment
+              :problem/id (:problem/id frame)
+              :classification/value :non-topology
+              :classification/source :operator-reviewed-statement
+              :classification/evidence "Queue admission: operator-selected non-topology m-family problem."
+              :eligibility/baseline baseline
+              :apparatus/pin-id (:pin/id apparatus)
+              :problem {:repository (:repository problem)
+                        :branch (or (:base-branch problem) "master")
+                        :revision (:revision problem) :path (:path problem)
+                        :blob (:blob problem)}}
+        body {:manifest/version 2 :manifest/scope :one-off
+              :campaign/id (:campaign/id frame)
+              :block/id (str (:frame/id frame) "-one-off")
+              :apparatus apparatus :units [unit]}]
+    (if (and revision (every? (comp string? :blob val) artifact-pins))
+      (assoc body :manifest/id (machine/ledger-digest [body]))
+      {:error/code :queued-frame-apparatus-pin-unavailable})))
+
 (defn campaign-paths
   "Derive every mutable campaign path from the minted campaign identity."
   [{:keys [campaign-root problem-buffer-prefix contract-path

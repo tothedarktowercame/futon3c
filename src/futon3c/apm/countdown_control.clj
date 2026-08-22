@@ -26,6 +26,8 @@
             [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]
+            [futon3c.apm.queued-frame-terminal :as queued-frame-terminal]
+            [futon3c.apm.workspace-lifecycle :as workspace-lifecycle]
             [futon3c.apm.qualification :as qualification])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -1133,3 +1135,117 @@
                :persist-state-fn #(live-preflight-runtime/atomic-persist! path %)}
               concrete-effects
               (dissoc effects :jit/config))))))
+
+(defn- eligibility-baseline [problem]
+  (let [result (apply shell/sh ["lake" "env" "lean" (:path problem)
+                                :dir (:repository problem)])
+        lines (str/split-lines (str (:out result) (:err result)))]
+    {:exit (:exit result)
+     :warnings (count (filter #(str/includes? % "warning:") lines))
+     :sorry-warnings
+     (count (filter #(str/includes? % "declaration uses `sorry`") lines))
+     :errors (count (filter #(str/includes? % "error:") lines))}))
+
+(defn- jit-ledger-observation [paths _frame]
+  (let [loaded (ledger/read-ledger (Path/of (:ledger-path paths)
+                                             (make-array String 0)))
+        active (get-in loaded [:projection :active/frame])]
+    (if-not (:ok loaded)
+      loaded
+      {:ok true :version (get-in loaded [:projection :campaign/version])
+       :digest (get-in loaded [:projection :ledger/digest])
+       :phase (:phase active) :claim (get-in loaded [:projection :active/claim])
+       :frame-id (:frame-id active) :problem-id (:problem-id active)})))
+
+(defn- jit-retirement-audit
+  [agency-base paths frame terminal-receipt role lease]
+  (let [validation (workspace-lifecycle/validate lease)
+        jobs-response (live-preflight-runtime/http-json
+                       "GET" (str agency-base "/api/alpha/invoke/jobs"))
+        jobs (or (:jobs jobs-response) [])
+        workspace (:workspace/path lease)
+        live-reference?
+        (some #(and (contains? #{:announced :queued :running :invoking :parked}
+                                (some-> (:state %) keyword))
+                    (or (str/includes? (pr-str %) workspace)
+                        (str/starts-with? (str (:agent-id %))
+                                          (str (:frame/id frame) "-")))) jobs)
+        loaded (ledger/read-ledger (Path/of (:ledger-path paths)
+                                            (make-array String 0)))
+        terminal-head (get-in terminal-receipt [:workspace/terminal-heads role])
+        observations
+        {:frame-terminal (and (:ok loaded)
+                              (nil? (get-in loaded [:projection :active/frame])))
+         :no-running-or-parked-job-references-workspace (not live-reference?)
+         :no-active-ledger-claim-references-workspace
+         (nil? (get-in loaded [:projection :active/claim]))
+         :worktree-clean (true? (:worktree-clean? validation))
+         :head-commit-recorded-in-terminal-receipt
+         (= terminal-head (:head validation))
+         :branch-ref-exists (= (:branch lease) (:branch validation))
+         :required-artifacts-content-addressed
+         (:ok (queued-frame-terminal/validate-terminal frame terminal-receipt))
+         :independent-retirement-audit-passed true}]
+    (workspace-lifecycle/certify-retirement-audit
+     {:lease lease :validation validation :observations observations
+      :terminal-head terminal-head :context :jit-read-only-auditor})))
+
+(defn set-alight-problem-list!
+  "List-only JIT entry point. PROBLEMS contain immutable problem pins."
+  [{:keys [problems authority queue-name frame-number-base agency-base]
+    :or {queue-name "jit-problem-list-v1" frame-number-base 24
+         agency-base "http://localhost:7070"}}]
+  (let [control-root (or (:control-root authority) "/home/joe/code/futon3c-apm-control")
+        campaign-root (str control-root "/data/apm-campaigns/" queue-name)
+        outer-config {:problem-queue-state-path
+                      (str "data/apm-campaigns/" queue-name "/queue-state.edn")}
+        apparatus-repository control-root
+        apparatus-branch "frame/18-control"
+        role-cards
+        (into {} (map (fn [[role path]]
+                        [role {:path path
+                               :blob (str/trim
+                                      (:out (shell/sh "git" "-C" control-root
+                                                      "rev-parse" (str "HEAD:" path))))}]))
+              (select-keys queued-frame-adapter/default-artifacts
+                           [:solver :student :guide :proctor :scribe]))
+        base-jit-config
+        {:frame-number-base frame-number-base :campaign-prefix queue-name
+         :campaign-root campaign-root
+         :contract-path (str control-root "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
+         :generated-contract-path
+         (str control-root "/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
+         :qualification-report-path
+         (str control-root "/data/apm-validation/qualification-report-v1.edn")
+         :apparatus-repository apparatus-repository
+         :apparatus-branch apparatus-branch :role-cards role-cards
+         :workspace-root "/home/joe/code/apm-frames"
+         :substrate-path "/home/joe/code/apm-lean/.lake"
+         :agency-base agency-base
+         :manifest-fn
+         (fn [frame paths]
+           (let [manifest (queued-frame-adapter/one-off-manifest
+                           {:frame frame :apparatus-repository apparatus-repository
+                            :apparatus-branch apparatus-branch
+                            :baseline (eligibility-baseline (:problem frame))})]
+             (live-preflight-runtime/atomic-persist!
+              (Path/of (:manifest-path paths) (make-array String 0)) manifest)
+             manifest))
+         :open-frame-fn
+         (fn [_ _ paths]
+           (with-campaign paths
+             (let [boot (bootstrap!)
+                   block (when (:ok boot) (advance! :open-block))
+                   opened (when (:ok block) (advance! :open-frame))]
+               (if (:ok opened) {:ok true} (or opened block boot)))))
+         :ledger-fn jit-ledger-observation}
+        jit-config
+        (assoc base-jit-config :retirement-audit-fn
+         (fn [frame terminal-receipt role lease]
+           (jit-retirement-audit agency-base
+                                 (queued-frame-adapter/campaign-paths
+                                  base-jit-config frame)
+                                 frame terminal-receipt role lease)))]
+    (set-alight-problem-queue!
+     {:problems problems :campaign-config outer-config :authority authority}
+     {:jit/config jit-config})))

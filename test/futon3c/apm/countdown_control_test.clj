@@ -406,3 +406,23 @@
                 :preparation-path "/tmp/preparation"}))))
       (is (fn? (:mint-frame-fn @tick-options)))
       (is (nil? (:jit/config @tick-options))))))
+
+(deftest list-only-entry-point-supplies-all-concrete-jit-services
+  (let [captured (atom nil)
+        problem {:problem/id "m-test" :repository "/repo" :revision "r"
+                 :path "Main.lean" :blob "b" :classification :non-excluded}]
+    (with-redefs [sut/set-alight-problem-queue!
+                  (fn [request effects]
+                    (reset! captured {:request request :effects effects})
+                    {:ok true :status :frame-prepared})]
+      (is (= :frame-prepared
+             (:status (sut/set-alight-problem-list!
+                       {:problems [problem]
+                        :authority {:agent "codex-10"
+                                    :control-root
+                                    "/home/joe/code/futon3c-apm-control"}}))))
+      (let [config (get-in @captured [:effects :jit/config])]
+        (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn
+                                     :retirement-audit-fn])))
+        (is (= 24 (:frame-number-base config)))
+        (is (= [problem] (get-in @captured [:request :problems])))))))
