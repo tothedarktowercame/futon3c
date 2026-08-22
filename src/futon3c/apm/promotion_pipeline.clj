@@ -1,5 +1,6 @@
 (ns futon3c.apm.promotion-pipeline
-  "Pure gates for Scribe deposit -> independent Proctor review -> snapshot.")
+  "Pure gates for Scribe deposit -> independent Proctor review -> snapshot."
+  (:require [clojure.string :as str]))
 
 (defn candidate-key [candidate]
   [(:content-digest candidate) (vec (sort (:pattern-ids candidate)))])
@@ -15,7 +16,16 @@
        (sort-by candidate-key)
        vec))
 
-(defn validate-deposit [{:keys [depositor candidates]}]
+(def required-lanes #{:solve :arc :trajectory :challenge})
+(def lane-statuses #{:ran :ran-empty :not-run})
+
+(defn- valid-lane? [{:keys [lane status reason]}]
+  (and (contains? required-lanes lane)
+       (contains? lane-statuses status)
+       (or (= :ran status)
+           (and (string? reason) (not (str/blank? reason))))))
+
+(defn validate-deposit [{:keys [depositor candidates lanes]}]
   (let [findings (cond-> []
                    (not (string? depositor)) (conj :depositor-missing)
                    (not (and (vector? candidates) (seq candidates)))
@@ -23,7 +33,11 @@
                    (some #(not (and (string? (:memory-id %))
                                     (string? (:content-digest %))
                                     (vector? (:pattern-ids %)))) candidates)
-                   (conj :candidate-shape-invalid))]
+                   (conj :candidate-shape-invalid)
+                   (not (and (vector? lanes)
+                             (= required-lanes (set (map :lane lanes)))
+                             (every? valid-lane? lanes)))
+                   (conj :lane-report-invalid))]
     (if (seq findings) {:ok false :findings findings}
         {:ok true :candidates (dedupe-candidates candidates)})))
 
@@ -39,6 +53,12 @@
                    (conj :review-set-mismatch)
                    (some #(not= reviewer (:reviewer %)) reviews)
                    (conj :review-attribution-mismatch)
+                   (some #(not (and (string? (:reason %))
+                                    (not (str/blank? (:reason %)))
+                                    (string? (:residual %))
+                                    (not (str/blank? (:residual %)))))
+                         reviews)
+                   (conj :review-reasoning-missing)
                    (some #(and (contains? #{:approve :reassign} (:verdict %))
                                (not (and (string? (:review-evidence-id %))
                                          (= :reviewed (:attachment-status %))

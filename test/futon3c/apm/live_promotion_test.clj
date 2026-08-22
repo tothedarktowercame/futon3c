@@ -6,6 +6,10 @@
   (let [saved (atom nil) calls (atom [])
         candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
                    :source-attempts [1 2 3]}
+        lanes [{:lane :solve :status :ran}
+               {:lane :arc :status :ran-empty :reason "no errors"}
+               {:lane :trajectory :status :ran}
+               {:lane :challenge :status :not-run :reason "no prior claim"}]
         base {:persist-fn #(do (reset! saved %) {:ok true})
               :publish-fn (fn [publication]
                             (is (= "scribe" (get-in publication
@@ -19,12 +23,14 @@
         r2 (sut/drive! (merge base {:state (:state r1)
                                     :deposit-fn (fn [_] {:ok true :report
                                                         {:depositor "scribe"
-                                                         :candidates [candidate]}})
+                                                         :candidates [candidate]
+                                                         :lanes lanes}})
                                     :review-fn (fn [_] (swap! calls conj :review)
                                                  {:ok true :job "proctor"})}))
         review {:memory-id "m" :reviewer "proctor" :verdict :approve
                 :review-evidence-id "e" :attachment-status :reviewed
-                :pattern-ids ["p"]}
+                :pattern-ids ["p"] :reason "actionable fact"
+                :residual "Main.lean:12"}
         r3 (sut/drive! (merge base {:state (:state r2)
                                     :review-fn (fn [& _] {:ok true
                                                          :reviewer "proctor"
@@ -68,27 +74,31 @@
     (is (false? (:ok result)))
     (is (= :promotion-deposit-retries-exhausted (:error/code result)))
     (is (= 3 (:attempts result)))
-    (is (= [:candidates-missing] (:findings result)))))
+    (is (= [:candidates-missing :lane-report-invalid] (:findings result)))))
 
 (deftest pinned-proctor-review-shape-normalizes-only-with-exact-digest
   (let [normalize #'sut/normalize-review-report
         reviews [{:memory-id "m" :reviewer "proctor" :verdict :reject
                   :pattern-ids []}]
         accepted (normalize {:candidate-set-digest "digest"
+                             :base-problem-blob "blob"
+                             :open-residuals []
                              :promotion-reviews reviews}
-                            "digest")]
+                            "digest" "blob")]
     (is (:ok accepted))
     (is (= "proctor" (:reviewer accepted)))
     (is (= reviews (:reviews accepted)))
     (is (= :promotion-review-candidate-digest-mismatch
            (:error/code
             (normalize {:candidate-set-digest "other"
+                        :base-problem-blob "blob" :open-residuals []
                         :promotion-reviews reviews}
-                       "digest"))))
+                       "digest" "blob"))))
     (is (= :promotion-review-attribution-ambiguous
            (:error/code
             (normalize {:candidate-set-digest "digest"
+                        :base-problem-blob "blob" :open-residuals []
                         :promotion-reviews
                         (conj reviews {:memory-id "n" :reviewer "other"
                                        :verdict :reject :pattern-ids []})}
-                       "digest"))))))
+                       "digest" "blob"))))))

@@ -56,7 +56,8 @@
                    (filter #(= :current (get-in % [:hx/props :state])))
                    first)
          memory (fetch-entry memory-id)
-         review (fetch-entry review-evidence-id)]
+         review (fetch-entry review-evidence-id)
+         review-body (:evidence/body review)]
      (and edge memory review
           (reviewed? attachment-status)
           (reviewed? (get-in edge [:hx/props :attachment-status]))
@@ -67,6 +68,8 @@
           (= depositor (:evidence/author memory))
           (= reviewer (:evidence/author review))
           (not= depositor reviewer)
+          (nonblank? (:review/reason review-body))
+          (nonblank? (:review/residual review-body))
           (= memory-id (get-in review [:evidence/subject :ref/id]))))))
 
 (defn publish!

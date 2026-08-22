@@ -62,7 +62,14 @@
                                   (= (:receipt/snapshot-digest promotion-receipt)
                                      (get-in snapshot-access
                                              [:snapshot :snapshot/digest])))))
-                   (conj :student-snapshot-access-unverified))]
+                   (conj :student-snapshot-access-unverified))
+        findings (cond-> findings
+                   (and (= :scribe-reduce kind) (= :promote-solver phase)
+                        (not (and (string? (get-in unit [:problem :blob]))
+                                  (string? (get-in unit [:problem :path]))
+                                  (string? (:receipt/final-head
+                                            (get receipts :solve))))))
+                   (conj :promotion-residual-inputs-missing))]
     (if (seq findings)
       {:ok false :error/code :live-learning-request-invalid :findings findings}
       (let [body (cond-> {:dispatch/type kind :phase phase :role role
@@ -84,6 +91,11 @@
                            :snapshot-digest (:receipt/snapshot-digest promotion-receipt)
                            :accessible-memory-ids
                            (vec (sort (:accessible-memory-ids snapshot-access)))})
+                   (and (= :scribe-reduce kind) (= :promote-solver phase))
+                   (assoc :base-problem-blob (get-in unit [:problem :blob])
+                          :problem-path (get-in unit [:problem :path])
+                          :solver-final-head
+                          (:receipt/final-head (get receipts :solve)))
                    (= :guide-intervention kind)
                    (assoc :intervention-ordinal (:ordinal action)
                           :input-attempt-id
@@ -120,7 +132,9 @@
           (and (= :student-attempt kind)
                (map? memory-use)
                (not (and (vector? (:surfaced-ids memory-use))
-                         (vector? (:used-ids memory-use)))))
+                         (vector? (:used-ids memory-use))
+                         (vector? (:queries memory-use))
+                         (every? string? (:queries memory-use)))))
           (conj :student-memory-use-ids-invalid)
           (and (= :student-attempt kind)
                (:memory-snapshot request)
@@ -221,10 +235,16 @@
               "memory ID absent from :accessible-memory-ids. Return :memory-use "
               "with the exact :receipt-id, :snapshot-id, and :snapshot-digest "
               "from the request, plus vector-valued :surfaced-ids and :used-ids. "
+              "Also return vector-valued :queries containing the exact search "
+              "strings used (an empty vector means no query was run). "
               "Record an explicit failure account even on success.")
          :guide-intervention "Improve only the memory store or harness channel. Do not contact the Student directly."
          :scribe-reduce (if (= :promote-solver (:phase request))
-                          "Mine the verified Solver trace and return independently reviewed memory candidates with exact persisted review evidence. The controller owns snapshot publication."
+                          (str "Mine the verified Solver trace and return memory "
+                               "candidates plus all four typed lane entries. Each "
+                               "lane is {:lane KEYWORD :status :ran|:ran-empty|:not-run}; "
+                               "empty or unrun lanes require a nonblank :reason. "
+                               "The controller owns independent review and snapshot publication.")
                           "Reduce the certified receipts into lanes, dispositions, and promotion reviews.")
          :close-frame "Audit the complete receipt graph and return a content-addressable trace result.")
        " Return exactly one EDN map including :command-own-exit, :frame-id, and :problem-id."))

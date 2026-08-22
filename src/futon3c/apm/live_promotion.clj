@@ -8,7 +8,7 @@
 
 (def ^:private max-deposit-attempts 3)
 
-(defn- normalize-review-report [report expected-digest]
+(defn- normalize-review-report [report expected-digest expected-base-blob]
   (let [reviews (or (:reviews report) (:promotion-reviews report))
         reviewers (set (keep :reviewer reviews))
         reviewer (or (:reviewer report)
@@ -20,6 +20,16 @@
 
       (not (vector? reviews))
       {:ok false :error/code :promotion-review-vector-missing}
+
+      (not= expected-base-blob (:base-problem-blob report))
+      {:ok false :error/code :promotion-review-base-blob-mismatch
+       :expected expected-base-blob :observed (:base-problem-blob report)}
+
+      (not (and (vector? (:open-residuals report))
+                (every? #(and (integer? (:line %))
+                              (string? (:summary %)))
+                        (:open-residuals report))))
+      {:ok false :error/code :promotion-review-open-residuals-missing}
 
       (or (not (string? reviewer))
           (some #(not= reviewer (:reviewer %)) reviews))
@@ -65,7 +75,8 @@
                             (pr-str deposit-request)
                             "\nReturn exactly one parseable EDN map and no prose. "
                             "It must contain string :depositor and non-empty vector "
-                            ":candidates. Every candidate must contain string "
+                            ":candidates and a complete vector :lanes report. "
+                            "Every candidate must contain string "
                             ":memory-id, string :content-digest, vector :pattern-ids, "
                             "and vector :source-attempts. EDN does not concatenate "
                             "adjacent string literals; use one string value per field.")
@@ -78,7 +89,10 @@
                                 :candidate-set-digest digest)
                  prompt (str "Independently review this exact candidate set. Authority:\n"
                              (pr-str request)
-                             "\nFollow the pinned promotion Proctor card and return exactly one EDN map.")]
+                             "\nFollow the pinned promotion Proctor card and return exactly one EDN map. "
+                             "Persist each approval's evidence body with nonblank "
+                             ":review/reason and :review/residual fields; return the "
+                             "same nonblank :reason and :residual on every review.")]
              ((agency-stage agency-base request prompt))))
           ([job-id candidates]
            (let [digest (machine/ledger-digest [candidates])
@@ -88,7 +102,9 @@
                              (pr-str request))
                  result ((agency-stage agency-base request prompt) job-id)]
              (if (:report result)
-               (let [normalized (normalize-review-report (:report result) digest)]
+               (let [normalized (normalize-review-report
+                                 (:report result) digest
+                                 (:base-problem-blob reviewer-request))]
                  (if (:ok normalized)
                    (merge result (select-keys normalized [:reviewer :reviews]))
                    normalized))

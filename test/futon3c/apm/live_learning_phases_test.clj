@@ -50,7 +50,7 @@
              :state :done
              :report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
                       :outcome :stuck :failure-account {:reason :gap}
-                      :memory-use {:surfaced-ids [] :used-ids []}}}
+                      :memory-use {:queries [] :surfaced-ids [] :used-ids []}}}
         ticket {:job-id "j1"}
         validated (sut/validate-terminal request ticket job)
         result (sut/receipt contract action (:receipts base) request ticket job validated)]
@@ -105,7 +105,7 @@
                       :memory-use {:receipt-id "wrong"
                                    :snapshot-id "snapshot-1"
                                    :snapshot-digest "snapshot-digest"
-                                   :surfaced-ids [] :used-ids []}}}]
+                                   :queries [] :surfaced-ids [] :used-ids []}}}]
     (is (= {:receipt-id "promotion-receipt"
             :snapshot-id "snapshot-1" :snapshot-digest "snapshot-digest"
             :accessible-memory-ids ["m1"]}
@@ -129,6 +129,7 @@
                       :memory-use {:receipt-id "promotion"
                                    :snapshot-id "snapshot"
                                    :snapshot-digest "digest"
+                                   :queries ["Banach fixed point"]
                                    :surfaced-ids ["e-global"]
                                    :used-ids ["e-global"]}}}
         result (sut/validate-terminal request {:job-id "j"} job)]
@@ -144,6 +145,35 @@
     (is (.startsWith text "F22 student-attempt-1"))
     (is (re-find #":surfaced-ids and :used-ids" text))
     (is (re-find #"do not query, read, or use" text))))
+
+(deftest student-report-must-record-exact-search-queries
+  (let [request {:dispatch/type :student-attempt :agent-id "f22-student"
+                 :frame-id "f22" :problem-id "p22"}
+        job {:job-id "j" :agent-id "f22-student" :session-id "fresh"
+             :state :done
+             :report {:command-own-exit 0 :frame-id "f22" :problem-id "p22"
+                      :memory-use {:surfaced-ids [] :used-ids []}}}]
+    (is (some #{:student-memory-use-ids-invalid}
+              (:findings (sut/validate-terminal request {:job-id "j"} job))))))
+
+(deftest promotion-deposit-is-bound-to-base-residual-and-solver-head
+  (let [action {:kind :scribe-reduce :phase :promote-solver :role :scribe
+                :frame-id "f19" :problem-id "a01J05"}
+        solve {:receipt/id "solve" :receipt/final-head
+               "1111111111111111111111111111111111111111"}
+        verify {:receipt/id "verify"}
+        v2-contract (edn/read-string
+                     (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"))
+        result (sut/build-request
+                (merge base {:contract v2-contract
+                             :action action
+                             :receipts {:solve solve :verify verify}
+                             :seat {:agent-id "f19-scribe" :invoke-ready? true}}))
+        request (:request result)]
+    (is (:ok result))
+    (is (= (get-in unit [:problem :blob]) (:base-problem-blob request)))
+    (is (= (get-in unit [:problem :path]) (:problem-path request)))
+    (is (= (:receipt/final-head solve) (:solver-final-head request)))))
 
 (deftest student-dispatch-fails-closed-without-substrate-snapshot-proof
   (let [promotion {:receipt/id "promotion-receipt"

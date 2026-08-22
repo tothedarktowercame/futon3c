@@ -644,6 +644,9 @@
               :role-card-path (:path card)
               :role-card-blob (:blob card)
               :input-receipt-ids (:input-receipt-ids request)
+              :base-problem-blob (:base-problem-blob request)
+              :problem-path (:problem-path request)
+              :solver-final-head (:solver-final-head request)
               :turn-timeout-ms (get-in preparation
                                        [:seat-policy :turn-timeout-ms])}]
     (assoc body :dispatch/id (machine/ledger-digest [body]))))
