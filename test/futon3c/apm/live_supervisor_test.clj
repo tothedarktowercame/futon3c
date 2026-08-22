@@ -22,8 +22,8 @@
                                       :state {:ticket {:job-id "job-19"}}}))]
     (is (= :parked (:status result)))
     (is (= "job-19" (:job-id result)))
-    (is (= [:audit :inspect :drive] (take 3 @calls)))
-    (is (not-any? #{:advance :project} @calls))
+    (is (= [:audit :inspect :drive :project] (take 4 @calls)))
+    (is (not-any? #{:advance} @calls))
     (is (= ["job-19"] (get-in (last @calls) [1 :awaiting])))))
 
 (deftest nested-solver-round-parks-on-its-active-ticket

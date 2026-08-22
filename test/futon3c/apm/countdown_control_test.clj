@@ -59,7 +59,8 @@
     (is (= [:audit :inspect] (take 2 @calls)))
     (is (= ["job-f19-solve"] (get-in (last @calls) [1 :awaiting])))
     (is (re-find #"set-alight!" (get-in (last @calls) [1 :payload])))
-    (is (not-any? #{:advance :project} @calls))))
+    (is (some #{:project} @calls))
+    (is (not-any? #{:advance} @calls))))
 
 (deftest set-alight-never-parks-when-launch-audit-fails
   (let [parked? (atom false)

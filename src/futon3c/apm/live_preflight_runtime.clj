@@ -12,10 +12,12 @@
 (defn parse-report [result]
   (try
     (let [text (str/trim (or result ""))
-          text (if (str/starts-with? text "```")
-                 (-> text (str/replace-first #"^```(?:clojure|edn)?\s*" "")
-                     (str/replace-first #"\s*```$" ""))
-                 text)
+          fences (map second
+                      (re-seq #"(?s)```(?:clojure|edn)?\s*(.*?)\s*```" text))
+          text (cond
+                 (= 1 (count fences)) (first fences)
+                 (seq fences) nil
+                 :else text)
           report (edn/read-string text)]
       (when (map? report) report))
     (catch Throwable _ nil)))

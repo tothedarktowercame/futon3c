@@ -2,7 +2,15 @@
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.live-learning-phases :as sut]))
+            [futon3c.apm.live-learning-phases :as sut]
+            [futon3c.apm.live-preflight-runtime :as runtime]))
+
+(deftest terminal-report-parser-accepts-one-prose-wrapped-edn-map-only
+  (is (= {:command-own-exit 0 :frame-id "f21"}
+         (runtime/parse-report
+          "Bell sent. Final receipt:\n```clojure\n{:command-own-exit 0 :frame-id \"f21\"}\n```")))
+  (is (nil? (runtime/parse-report
+             "```edn\n{:a 1}\n``` and ```edn\n{:b 2}\n```"))))
 
 (def contract (edn/read-string
                (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")))

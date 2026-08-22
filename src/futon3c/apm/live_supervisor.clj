@@ -34,16 +34,22 @@
                 (let [job-id (or (:job-id driven)
                                  (get-in driven [:state :ticket :job-id])
                                  (get-in driven [:state :active :ticket :job-id]))
-                      parked (when (and (string? job-id) (not-empty job-id))
+                      projected (when (and (string? job-id) (not-empty job-id))
+                                  (project-fn))
+                      parked (when (and (:ok projected)
+                                        (string? job-id) (not-empty job-id))
                                (park-fn {:awaiting [job-id]
                                          :payload continuation-payload}))]
                   (cond
-                    (nil? parked)
+                    (nil? projected)
                     {:ok false :error/code :live-supervisor-job-id-missing
                      :finding driven}
+                    (not (:ok projected))
+                    {:ok false :error/code :live-supervisor-projection-failed
+                     :finding projected}
                     (:ok parked)
                     {:ok true :status :parked :phase (:phase action)
-                     :job-id job-id :park parked}
+                     :job-id job-id :projection projected :park parked}
                     :else
                     {:ok false :error/code :live-supervisor-park-failed
                      :finding parked}))
