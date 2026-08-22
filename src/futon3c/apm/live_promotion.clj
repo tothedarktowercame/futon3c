@@ -1,6 +1,73 @@
 (ns futon3c.apm.live-promotion
   "Durable two-seat promotion dispatcher."
-  (:require [futon3c.apm.promotion-pipeline :as pipeline]))
+  (:require [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.promotion-pipeline :as pipeline]))
+
+(declare drive!)
+
+(defn- agency-stage [agency-base request prompt]
+  (fn
+    ([]
+     (let [announced (runtime/http-json
+                      "POST" (str agency-base "/api/alpha/invoke/announce")
+                      {:agent-id (:agent-id request) :prompt prompt
+                       :surface "emacs-repl" :caller "countdown-control"
+                       :mode "work"})
+           job-id (:job-id announced)
+           activated (when (and (= 202 (:http/status announced)) job-id)
+                       (runtime/http-json
+                        "POST" (str agency-base "/api/alpha/invoke/activate")
+                        {:agent-id (:agent-id request) :prompt prompt
+                         :surface "emacs-repl" :caller "countdown-control"
+                         :mode "work" :job-id job-id}))]
+       (if (and (= 202 (:http/status announced)) (:ok announced)
+                (= 202 (:http/status activated)) (:accepted activated))
+         {:ok true :job job-id}
+         {:ok false :error/code :promotion-stage-dispatch-failed})))
+    ([job-id]
+     (let [job (runtime/job->terminal
+                (runtime/http-json
+                 "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id)))]
+       (if (contains? #{:done :failed :timeout :cancelled} (:state job))
+         (if (and (= :done (:state job)) (map? (:report job)))
+           {:ok true :job job-id :report (:report job)}
+           {:ok false :error/code :promotion-stage-terminal-invalid :job job})
+         {:ok true :status :awaiting-terminal :job job-id})))))
+
+(defn run-live!
+  [{:keys [state-path agency-base deposit-request reviewer-request
+           publish-fn]
+    :or {agency-base "http://localhost:7070"}}]
+  (let [state (runtime/read-state state-path)
+        deposit-prompt (str "Deposit promotion candidates. Authority:\n"
+                            (pr-str deposit-request)
+                            "\nReturn exactly one EDN map with :depositor and :candidates.")
+        deposit-fn (agency-stage agency-base deposit-request deposit-prompt)
+        review-fn
+        (fn
+          ([candidates]
+           (let [digest (machine/ledger-digest [candidates])
+                 request (assoc reviewer-request :candidates candidates
+                                :candidate-set-digest digest)
+                 prompt (str "Independently review this exact candidate set. Authority:\n"
+                             (pr-str request)
+                             "\nFollow the pinned promotion Proctor card and return exactly one EDN map.")]
+             ((agency-stage agency-base request prompt))))
+          ([job-id candidates]
+           (let [digest (machine/ledger-digest [candidates])
+                 request (assoc reviewer-request :candidates candidates
+                                :candidate-set-digest digest)
+                 prompt (str "Independently review this exact candidate set. Authority:\n"
+                             (pr-str request))]
+             (let [result ((agency-stage agency-base request prompt) job-id)]
+               (if (:report result)
+                 (merge result (select-keys (:report result)
+                                            [:reviewer :reviews]))
+                 result))))]
+    (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
+             :publish-fn publish-fn
+             :persist-fn #(runtime/atomic-persist! state-path %)})))
 
 (defn drive!
   [{:keys [state deposit-fn review-fn publish-fn persist-fn]}]
