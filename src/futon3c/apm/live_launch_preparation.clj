@@ -49,8 +49,10 @@
    content-addressed lease.  MINT-FN must itself implement deterministic seat
    minting; the returned roster is always revalidated below."
   [{:keys [unit ledger role-cards leases workspace-exists? provision-fn
-           validate-workspace-fn mint-fn roster-fn]}]
-  (let [frame-id (:frame/id unit)
+           validate-workspace-fn mint-fn roster-fn workspace-roles seat-types]}]
+  (let [workspace-roles (or workspace-roles required-workspace-roles)
+        seat-types (or seat-types required-seat-types)
+        frame-id (:frame/id unit)
         problem-id (:problem/id unit)
         bad-input? (or (not (and (string? frame-id)
                                  (re-matches #"f[0-9]+" frame-id)))
@@ -63,7 +65,7 @@
                     (prepare-workspace result unit role leases workspace-exists?
                                        provision-fn validate-workspace-fn))
                   {:ok true :workspaces {}}
-                  required-workspace-roles))]
+                  workspace-roles))]
     (cond
       bad-input?
       {:ok false :error/code :live-launch-input-invalid}
@@ -71,17 +73,21 @@
       (not (:ok prepared)) prepared
 
       :else
-      (let [minted (mint-fn frame-id required-seat-types required-timeouts)]
+      (let [minted (mint-fn frame-id seat-types required-timeouts)]
         (if-not (:ok minted)
           {:ok false :error/code :seat-mint-failed :finding minted}
           (validate {:frame-id frame-id :problem-id problem-id :ledger ledger
                      :workspaces (:workspaces prepared) :seats (roster-fn frame-id)
-                     :role-cards role-cards}))))))
+                     :role-cards role-cards :workspace-roles workspace-roles
+                     :seat-types seat-types}))))))
 
 (defn validate
   "Validate a preparation observation without trusting conversational state."
-  [{:keys [frame-id problem-id ledger workspaces seats role-cards]}]
-  (let [workspace-findings
+  [{:keys [frame-id problem-id ledger workspaces seats role-cards
+           workspace-roles seat-types]}]
+  (let [workspace-roles (or workspace-roles required-workspace-roles)
+        seat-types (or seat-types required-seat-types)
+        workspace-findings
         (mapcat (fn [role]
                   (let [{:keys [lease validation]} (get workspaces role)]
                     (cond-> []
@@ -95,7 +101,7 @@
                       (not (true? (:valid? validation)))
                       (conj {:finding :workspace-validation-failed :role role
                              :details (:findings validation)}))))
-                required-workspace-roles)
+                workspace-roles)
         seat-findings
         (mapcat (fn [[role expected-type]]
                   (let [seat (get seats role)
@@ -117,14 +123,14 @@
                            (not= (:request-timeout-ms required-timeouts)
                                  (:request-timeout-ms timeouts)))
                       (conj {:finding :seat-request-timeout-mismatch :role role}))))
-                required-seat-types)
+                seat-types)
         card-findings
         (mapcat (fn [role]
                   (let [card (get role-cards role)]
                     (cond-> []
                       (not (and (string? (:path card)) (string? (:blob card))))
                       (conj {:finding :role-card-pin-missing :role role}))))
-                (keys required-seat-types))
+                (keys seat-types))
         ledger-findings
         (cond-> []
           (not= 5 (:version ledger)) (conj {:finding :ledger-version-mismatch})

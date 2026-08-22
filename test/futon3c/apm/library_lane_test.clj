@@ -134,3 +134,20 @@
               :seam :configuration :finding :phase-inputs-fn-missing}
              (runner/run-one! {:corpus-root root})))
       (finally (delete-tree! root)))))
+
+(deftest real-corpus-lanes-conform-read-only
+  (let [root (io/file "/home/joe/code/apm-lean")]
+    (if-not (.isDirectory root)
+      (is true "real APM corpus absent; read-only conformance skipped")
+      (let [before (.lastModified root)
+            first-lanes (lane/lanes root)
+            second-lanes (lane/lanes root)
+            first-queue (lane/queue root :library)
+            second-queue (lane/queue root :library)]
+        (is (seq first-queue))
+        (is (every? #{:done :repair :formalize :library :standard}
+                    (vals first-lanes)))
+        (is (= first-lanes second-lanes))
+        (is (= first-queue second-queue))
+        (is (= before (.lastModified root))
+            "lane derivation did not mutate the corpus root")))))

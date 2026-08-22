@@ -72,6 +72,45 @@
     (is (= 2 (count (filter #(= :validate (first %)) @calls))))
     (is (= 1 (count (filter #(= :mint (first %)) @calls))))))
 
+(deftest preparation-defaults-remain-the-countdown-cast
+  (let [base (observation)
+        observed (atom nil)
+        result (sut/prepare!
+                {:unit {:frame/id "f19" :problem/id "a00J01"}
+                 :ledger (:ledger base) :role-cards (:role-cards base)
+                 :leases {}
+                 :workspace-exists? (constantly false)
+                 :provision-fn
+                 (fn [_ role]
+                   {:ok true :lease (get-in base [:workspaces role :lease])})
+                 :validate-workspace-fn (constantly {:valid? true :findings []})
+                 :mint-fn (fn [_ seat-types _]
+                            (reset! observed seat-types) {:ok true})
+                 :roster-fn (constantly (:seats base))})]
+    (is (:ok result))
+    (is (= #{:solver :student}
+           (set (keys (get-in result [:receipt :workspace/ids])))))
+    (is (= {:solver :codex :student :zai :guide :claude
+            :proctor :codex :scribe :zai}
+           @observed))))
+
+(deftest preparation-accepts-an-explicit-codex-only-cast
+  (let [base (observation)
+        solver-entry (get-in base [:workspaces :solver])
+        codex-seats (select-keys (:seats base) [:solver :proctor])
+        result (sut/validate
+                (-> base
+                    (assoc :workspace-roles #{:solver}
+                           :seat-types {:solver :codex :proctor :codex}
+                           :workspaces {:solver solver-entry}
+                           :seats codex-seats)
+                    (assoc :role-cards
+                           (select-keys (:role-cards base) [:solver :proctor]))))]
+    (is (:ok result))
+    (is (= #{:solver} (set (keys (get-in result [:receipt :workspace/ids])))))
+    (is (= #{:solver :proctor}
+           (set (keys (get-in result [:receipt :seat/ids])))))))
+
 (deftest prepare-refuses-unattributed-existing-workspace-before-mint
   (let [calls (atom [])
         result (sut/prepare!
