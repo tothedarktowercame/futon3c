@@ -26,7 +26,11 @@
     (is (= :learning-regime-incomplete
            (:error/code (sut/learning-regime-audit v2 manifest {:seats {}}))))
     (is (:ok (sut/learning-regime-audit
-              v2 manifest {:seats {:analyst {:agent-id "analyst-1"}}})))))
+              v2 (assoc-in manifest [:apparatus :artifacts :promotion-proctor]
+                           {:path "promotion-proctor.md" :blob "blob"})
+              {:seats {:analyst {:agent-id "analyst-1"}
+                       :proctor {:agent-id "f22-proctor"}
+                       :scribe {:agent-id "f22-scribe"}}})))))
 
 (deftest baseline-f20-close-does-not-invent-an-analyst-transition
   (with-redefs [sut/frame-context

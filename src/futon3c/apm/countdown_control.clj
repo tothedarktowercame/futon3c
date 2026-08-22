@@ -516,6 +516,18 @@
            (and (string? (:path analyst-card)) (string? (:blob analyst-card)))
            :analyst-seat-pinned? (string? (:agent-id analyst-seat))
            :analyst-tenure-registered? (:ok registration)}
+          reviewer-card (get-in manifest [:apparatus :artifacts
+                                          :promotion-proctor])
+          reviewer-seat (get-in preparation [:seats :proctor])
+          checks (assoc checks
+                        :promotion-proctor-card-pinned?
+                        (and (string? (:path reviewer-card))
+                             (string? (:blob reviewer-card)))
+                        :promotion-reviewer-distinct?
+                        (and (string? (:agent-id reviewer-seat))
+                             (not= (:agent-id reviewer-seat)
+                                   (get-in preparation [:seats :scribe
+                                                        :agent-id]))))
           failed (into #{} (keep (fn [[k v]] (when-not v k))) checks)]
       (if (seq failed)
         {:ok false :error/code :learning-regime-incomplete

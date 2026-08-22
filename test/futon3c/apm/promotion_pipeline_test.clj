@@ -1,0 +1,23 @@
+(ns futon3c.apm.promotion-pipeline-test
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.apm.promotion-pipeline :as sut]))
+
+(def candidate {:memory-id "m1" :content-digest "d1" :pattern-ids ["p1"]
+                :source-attempts [1]})
+
+(deftest three-student-reductions-deduplicate-with-provenance
+  (let [result (sut/dedupe-candidates
+                [candidate (assoc candidate :memory-id "m2" :source-attempts [2 3])])]
+    (is (= 1 (count result)))
+    (is (= [1 2 3] (:source-attempts (first result))))))
+
+(deftest review-must-be-independent-complete-and-persisted
+  (let [deposit {:depositor "f22-scribe" :candidates [candidate]}
+        review {:memory-id "m1" :reviewer "f22-proctor" :verdict :approve
+                :review-evidence-id "e1" :attachment-status :reviewed
+                :pattern-ids ["p1"]}]
+    (is (:ok (sut/validate-review deposit "f22-proctor" [review])))
+    (is (some #{:reviewer-is-depositor}
+              (:findings (sut/validate-review deposit "f22-scribe" [review]))))
+    (is (some #{:review-set-mismatch}
+              (:findings (sut/validate-review deposit "f22-proctor" []))))))

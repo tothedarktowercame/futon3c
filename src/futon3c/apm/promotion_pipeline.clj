@@ -1,0 +1,54 @@
+(ns futon3c.apm.promotion-pipeline
+  "Pure gates for Scribe deposit -> independent Proctor review -> snapshot.")
+
+(defn candidate-key [candidate]
+  [(:content-digest candidate) (vec (sort (:pattern-ids candidate)))])
+
+(defn dedupe-candidates
+  "Deduplicate repeated discoveries while retaining every source attempt."
+  [candidates]
+  (->> candidates
+       (group-by candidate-key)
+       (mapv (fn [[_ xs]]
+               (assoc (first xs) :source-attempts
+                      (vec (sort (distinct (mapcat :source-attempts xs)))))))
+       (sort-by candidate-key)
+       vec))
+
+(defn validate-deposit [{:keys [depositor candidates]}]
+  (let [findings (cond-> []
+                   (not (string? depositor)) (conj :depositor-missing)
+                   (not (and (vector? candidates) (seq candidates)))
+                   (conj :candidates-missing)
+                   (some #(not (and (string? (:memory-id %))
+                                    (string? (:content-digest %))
+                                    (vector? (:pattern-ids %)))) candidates)
+                   (conj :candidate-shape-invalid))]
+    (if (seq findings) {:ok false :findings findings}
+        {:ok true :candidates (dedupe-candidates candidates)})))
+
+(defn validate-review [deposit reviewer reviews]
+  (let [depositor (:depositor deposit)
+        candidates (:candidates (validate-deposit deposit))
+        by-id (into {} (map (juxt :memory-id identity)) candidates)
+        approved (filterv #(contains? #{:approve :reassign} (:verdict %)) reviews)
+        findings (cond-> []
+                   (not (string? reviewer)) (conj :reviewer-missing)
+                   (= depositor reviewer) (conj :reviewer-is-depositor)
+                   (not= (set (keys by-id)) (set (map :memory-id reviews)))
+                   (conj :review-set-mismatch)
+                   (some #(not= reviewer (:reviewer %)) reviews)
+                   (conj :review-attribution-mismatch)
+                   (some #(and (contains? #{:approve :reassign} (:verdict %))
+                               (not (and (string? (:review-evidence-id %))
+                                         (= :reviewed (:attachment-status %))
+                                         (seq (:pattern-ids %))))) reviews)
+                   (conj :approved-review-evidence-invalid))]
+    (if (seq findings) {:ok false :findings findings}
+        {:ok true
+         :candidates
+         (mapv (fn [review]
+                 (merge (by-id (:memory-id review))
+                        (select-keys review [:reviewer :review-evidence-id
+                                             :attachment-status :pattern-ids])))
+               approved)})))
