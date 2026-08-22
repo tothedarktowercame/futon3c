@@ -71,6 +71,33 @@
     (should (string-suffix-p "Cooked for 6m 15s\n> " (buffer-string)))
     (should (= (marker-position agent-chat--input-start) (point-max)))))
 
+(ert-deftest agent-chat-cost-flair-suffix-shows-cold-resume-cost ()
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                    :cold t :per_turn_cold_usd 1.56))
+                 " · ~$0.50 (1 call) · cold — resuming costs ~$1.56")))
+
+(ert-deftest agent-chat-schedule-cold-notice-marks-cold-now-or-later ()
+  (with-temp-buffer
+    (insert "Cooked for 9s\n─── *no mission*\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    ;; already past the TTL: annotate immediately
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                  :warm_s 4000 :ttl_s 3600 :per_turn_cold_usd 1.56))
+    (agent-chat--schedule-cold-notice!)
+    (should (null agent-chat--cost-cold-timer))
+    (should (string-match-p "resuming costs ~\\$1\\.56" (buffer-string)))
+    ;; still warm: a timer is pending, nothing written yet
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                  :warm_s 10 :ttl_s 3600 :per_turn_cold_usd 1.56))
+    (agent-chat--annotate-turn-flair!)
+    (agent-chat--schedule-cold-notice!)
+    (should (timerp agent-chat--cost-cold-timer))
+    (should-not (string-match-p "resuming" (buffer-string)))
+    (cancel-timer agent-chat--cost-cold-timer)))
+
 (ert-deftest agent-chat-cost-segment-renders-empty-without-data ()
   (with-temp-buffer
     (setq agent-chat--cost-basis nil)

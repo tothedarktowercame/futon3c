@@ -19,11 +19,17 @@
                "sid = 'fake-session-1'\n"
                "for line in sys.stdin:\n"
                "    data = json.loads(line)\n"
-               "    text = data.get('message', {}).get('content', [{}])[0].get('text', '')\n"
+               "    content = data.get('message', {}).get('content', '')\n"
+               "    text = content if isinstance(content, str) else content[0].get('text', '')\n"
                "    if text == 'CRASH':\n"
                "        sys.exit(7)\n"
                "    if text == 'SLOW':\n"
                "        import time; time.sleep(1)\n"
+               "    if text == '/compact':\n"
+               "        print(json.dumps({'type':'system','subtype':'status','status':None,'compact_result':'success','compact_error':None}), flush=True)\n"
+               "        print(json.dumps({'type':'system','subtype':'init','session_id':sid}), flush=True)\n"
+               "        print(json.dumps({'type':'result','subtype':'success','session_id':sid,'usage':{'input_tokens':12},'total_cost_usd':0.01}), flush=True)\n"
+               "        continue\n"
                "    print(json.dumps({'type':'system','session_id':sid}), flush=True)\n"
                "    print(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':'reply:' + text}]}}), flush=True)\n"
                "    print(json.dumps({'type':'result','session_id':sid,'is_error':False}), flush=True)\n"))
@@ -90,3 +96,32 @@
       (is (false? (get-in (pouch/snapshot) ["claude-busy" :in-flight?])))
       (Thread/sleep 5)
       (is (= ["claude-busy"] (pouch/evict-idle! 1)) "evictable again once the turn ends"))))
+
+(deftest compact-pouch-sends-raw-control-and-collects-status
+  (let [bin (fake-claude-bin)]
+    (pouch/feed-turn! "claude-compact" "warm" {:claude-bin bin :timeout-ms 2000})
+    (is (= {:ok true
+            :compact-result "success"
+            :compact-error nil
+            :session-id "fake-session-1"
+            :usage {:input_tokens 12}
+            :total-cost-usd 0.01}
+           (pouch/compact-pouch! "claude-compact" {:timeout-ms 2000})))))
+
+(deftest compact-pouch-refuses-cold-or-busy-agent
+  (is (= {:ok false :error "no warm pouch"}
+         (pouch/compact-pouch! "claude-cold" {})))
+  (let [bin (fake-claude-bin)]
+    (pouch/feed-turn! "claude-busy-compact" "warm"
+                      {:claude-bin bin :timeout-ms 2000})
+    (let [slow (future
+                 (pouch/feed-turn! "claude-busy-compact" "SLOW"
+                                   {:claude-bin bin :timeout-ms 5000}))
+          deadline (+ (System/currentTimeMillis) 2000)]
+      (while (and (not (get-in (pouch/snapshot)
+                               ["claude-busy-compact" :in-flight?]))
+                  (< (System/currentTimeMillis) deadline))
+        (Thread/sleep 10))
+      (is (= {:ok false :error "turn in flight"}
+             (pouch/compact-pouch! "claude-busy-compact" {})))
+      @slow)))

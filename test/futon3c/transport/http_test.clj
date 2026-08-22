@@ -21,6 +21,7 @@
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.clock-lineage :as clock-lineage]
@@ -1136,6 +1137,20 @@
         (finally
           (when (.exists session-file)
             (.delete session-file)))))))
+
+(deftest agent-compact-maps-pouch-control-statuses
+  (let [handler (make-handler)]
+    (doseq [[result expected]
+            [[{:ok true :compact-result "success"} 200]
+             [{:ok false :error "turn in flight"} 409]
+             [{:ok false :error "no warm pouch"} 404]]]
+      (with-redefs [agent-pouch/compact-pouch! (fn [agent-id opts]
+                                                (is (= "claude-compact" agent-id))
+                                                (is (= {} opts))
+                                                result)]
+        (let [response (post handler "/api/alpha/agents/claude-compact/compact" "{}")]
+          (is (= expected (:status response)))
+          (is (= result (parse-body response))))))))
 
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests

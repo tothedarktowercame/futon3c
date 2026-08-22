@@ -61,6 +61,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.frame-seats :as frame-seats]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.mesh-qa :as mesh-qa]
@@ -5248,6 +5249,16 @@
                               :error "interrupt-error"
                               :message (.getMessage t)}))))))
 
+(defn- handle-agent-compact
+  "POST /api/alpha/agents/:id/compact — compact an existing warm pouch."
+  [_config agent-id _request]
+  (let [result (agent-pouch/compact-pouch! agent-id {})
+        status (case (:error result)
+                 "no warm pouch" 404
+                 "turn in flight" 409
+                 200)]
+    (json-response status result)))
+
 ;; =============================================================================
 ;; CYDER process endpoints
 ;; =============================================================================
@@ -7496,6 +7507,13 @@
           (let [raw (subs uri (count "/api/alpha/agents/")
                          (- (count uri) (count "/interrupt-invoke")))]
             (handle-agent-interrupt-invoke config (enc/decode-uri-component raw) request))
+
+          (and (= :post method) (string? uri)
+               (str/starts-with? uri "/api/alpha/agents/")
+               (str/ends-with? uri "/compact"))
+          (let [raw (subs uri (count "/api/alpha/agents/")
+                         (- (count uri) (count "/compact")))]
+            (handle-agent-compact config (enc/decode-uri-component raw) request))
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")

@@ -139,6 +139,8 @@ bounded Futon3c compatibility append path without blocking the Emacs UI."
 (defvar-local agent-chat--cost-turns-since-full 0)
 (defvar-local agent-chat--cost-last-full-at nil)
 (defvar-local agent-chat--cost-refresh-generation 0)
+(defvar-local agent-chat--cost-cold-timer nil
+  "Timer that re-annotates the Cooked line when the prompt cache goes cold.")
 (defvar-local agent-chat--cost-error-reported nil)
 (defvar-local agent-chat--cost-full-pending nil)
 (defvar-local agent-chat--cost-session-id nil)
@@ -477,7 +479,37 @@ priced last turn (fresh session, Codex, Zai, script failure)."
          (format " · session $%.0f" (plist-get basis :session_usd)))
        (when (and agent-chat-compaction-hint-ctx (numberp ctx)
                   (>= ctx agent-chat-compaction-hint-ctx))
-         " →  Compaction recommended")))))
+         " →  Compaction recommended")
+       (when (and (plist-get basis :cold)
+                  (numberp (plist-get basis :per_turn_cold_usd)))
+         (format " · cold — resuming costs ~$%.2f"
+                 (plist-get basis :per_turn_cold_usd)))))))
+
+(defun agent-chat--cost-mark-cold! (buffer)
+  "Flip BUFFER's cost basis to cold and re-annotate its Cooked line."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when agent-chat--cost-basis
+        (setq agent-chat--cost-basis (plist-put agent-chat--cost-basis :cold t))
+        (agent-chat--annotate-turn-flair!)))))
+
+(defun agent-chat--schedule-cold-notice! ()
+  "After a refresh, arrange for the Cooked line to say what resuming will cost
+once the prompt cache TTL (`:ttl_s' since `:last_turn_at') has elapsed.
+The cache is warm for TTL after the last API call; a turn after that rewrites
+the whole context at the write rate (README-costs, lever 3), so the number is
+worth seeing before you type."
+  (when (timerp agent-chat--cost-cold-timer)
+    (cancel-timer agent-chat--cost-cold-timer)
+    (setq agent-chat--cost-cold-timer nil))
+  (let ((warm (plist-get agent-chat--cost-basis :warm_s))
+        (ttl (plist-get agent-chat--cost-basis :ttl_s)))
+    (when (and (numberp warm) (numberp ttl))
+      (if (>= warm ttl)
+          (agent-chat--cost-mark-cold! (current-buffer))
+        (setq agent-chat--cost-cold-timer
+              (run-at-time (+ 2 (- ttl warm)) nil
+                           #'agent-chat--cost-mark-cold! (current-buffer)))))))
 
 (defun agent-chat--annotate-turn-flair! ()
   "Append the last-turn cost to the \"Cooked for\" line just before the prompt.
@@ -628,6 +660,7 @@ the current \"Cooked for\" line."
                                (setq agent-chat--cost-basis data
                                      agent-chat--cost-error-reported nil)
                                (agent-chat--annotate-turn-flair!)
+                               (agent-chat--schedule-cold-notice!)
                                (force-mode-line-update t))))
                        (error (agent-chat--cost-fail!
                                buffer (error-message-string parse-err))))
