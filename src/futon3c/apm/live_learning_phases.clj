@@ -26,7 +26,8 @@
 
 (defn build-request
   [{:keys [contract action ledger unit role-card seat workspace receipts
-           snapshot-access]}]
+           snapshot-access turn-timeout-ms]
+    :or {turn-timeout-ms 3600000}}]
   (let [kind (:kind action)
         phase (:phase action)
         role (role-for-kind kind)
@@ -62,7 +63,8 @@
                           :frame-id (:frame/id unit) :problem-id (:problem/id unit)
                           :ledger-digest (:digest ledger)
                           :role-card-path (:path role-card) :role-card-blob (:blob role-card)
-                          :input-receipt-ids input-ids :turn-timeout-ms 3600000}
+                          :input-receipt-ids input-ids
+                          :turn-timeout-ms turn-timeout-ms}
                    (= :student-attempt kind)
                    (assoc :attempt-ordinal (:ordinal action)
                           :workspace (:workspace/path workspace)

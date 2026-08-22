@@ -277,3 +277,45 @@
     (is (= 50 (:rounds/max progress)))
     (is (nil? (:round/active progress)))
     (is (nil? (:checkpoint/next progress)))))
+
+(deftest v2-countdown-policy-is-lean-generated-and-schema-hole-is-explicit
+  (binding [sut/contract-path
+            "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
+    (let [loaded (#'sut/inputs)
+          contract (:contract loaded)
+          emitted (:generated/contract loaded)
+          hole (edn/read-string
+                (slurp "holes/labs/M-apm-demonstration/hole-generated-receipt-schemas-v1.edn"))]
+      (is (= :promote-solver (nth (:phase-order contract) 3)))
+      (is (= 50 (get-in contract [:generated/bounds :solver-max-rounds])))
+      (is (= "apm-complete-frame-cycle-v2" (:contract-id emitted)))
+      (is (map? (:receipt/schemas contract)))
+      (is (nil? (:receipt-schemas contract)))
+      (is (= :open (:hole/status hole)))
+      (is (= 11 (count (:phase-order contract)))))))
+
+(deftest mutated-emitted-contract-fails-before-registration
+  (let [source (slurp sut/generated-contract-path)
+        temp (java.io.File/createTempFile "apm-contract-mutant" ".json")]
+    (spit temp (.replace source "\"solver-max-rounds\":50"
+                         "\"solver-max-rounds\":49"))
+    (try
+      (binding [sut/contract-path
+                "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+                sut/generated-contract-path (.getAbsolutePath temp)]
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                              #"Lean-generated campaign contract rejected"
+                              (#'sut/inputs))))
+      (finally (.delete temp)))))
+
+(deftest bootstrap-rejects-ledger-registered-under-another-contract
+  (binding [sut/contract-path
+            "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
+    (with-redefs [ledger/read-ledger
+                  (constantly {:ok true :events [{:event/seq 0}]
+                               :projection
+                               {:campaign/id :wrong
+                                :campaign/manifest-hash "wrong"
+                                :campaign/phase-order [:preflight]}})]
+      (is (= :countdown-registration-mismatch
+             (:error/code (sut/bootstrap!)))))))

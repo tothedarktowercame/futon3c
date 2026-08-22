@@ -11,6 +11,7 @@
             [futon3c.apm.campaign-stepper :as stepper]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
+            [futon3c.apm.generated-contract :as generated-contract]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
             [futon3c.apm.live-promotion :as live-promotion]
@@ -28,6 +29,8 @@
 
 (def ^:dynamic manifest-path "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")
 (def ^:dynamic contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")
+(def ^:dynamic generated-contract-path
+  "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
 (def ^:dynamic state-directory "data/apm-campaigns/countdown-f19-f27-r4")
 (def ^:dynamic ledger-path "data/apm-campaigns/countdown-f19-f27-r4/ledger.edn")
 (def ^:dynamic certificate-directory "data/apm-campaigns/countdown-f19-f27-r4/certificates")
@@ -92,6 +95,8 @@
   `(let [config# (or ~config {})]
      (binding [manifest-path (or (:manifest-path config#) manifest-path)
                contract-path (or (:contract-path config#) contract-path)
+               generated-contract-path (or (:generated-contract-path config#)
+                                           generated-contract-path)
                state-directory (or (:state-directory config#) state-directory)
                ledger-path (or (:ledger-path config#) ledger-path)
                certificate-directory (or (:certificate-directory config#) certificate-directory)
@@ -120,8 +125,26 @@
     (if (.isAbsolute candidate) candidate (.resolve *control-root* candidate))))
 
 (defn- inputs []
-  {:manifest (edn/read-string (slurp (str (control-path manifest-path))))
-   :contract (edn/read-string (slurp (str (control-path contract-path))))})
+  (let [manifest (edn/read-string (slurp (str (control-path manifest-path))))
+        legacy (edn/read-string (slurp (str (control-path contract-path))))]
+    (if-not (= :apm-complete-frame-cycle-v2 (:contract/id legacy))
+      {:manifest manifest :contract legacy}
+      (let [result (generated-contract/validate-round-trip
+                    (str (control-path generated-contract-path)) legacy)]
+        (when-not (:ok result)
+          (throw (ex-info "Lean-generated campaign contract rejected" result)))
+        (let [generated (:contract result)]
+          {:manifest manifest
+           ;; Receipt schemas and phase requires/produces remain EDN-owned.
+           ;; The executable ordering and numerical policy are Lean-owned.
+           :contract (assoc legacy
+                            :phase-order (mapv keyword (:phase-order generated))
+                            :generated/bounds (:bounds generated)
+                            :generated/source generated-contract-path)
+           :generated/contract generated})))))
+
+(defn- generated-bound [contract bound fallback]
+  (or (get-in contract [:generated/bounds bound]) fallback))
 
 (defn frame-unit [manifest frame-id]
   (some #(when (= frame-id (:frame/id %)) %) (:units manifest)))
@@ -427,9 +450,13 @@
       :unit unit :role-card (get-in manifest [:apparatus :artifacts :proctor])
       :seat {:agent-id (:agent-id response) :type (some-> (:type agent) keyword)
              :frame-id (:frame-id metadata) :invoke-ready? (:invoke-ready? agent)}
-      :timeouts {:request-timeout-ms 300000
+      :timeouts {:request-timeout-ms
+                 (generated-bound contract :zai-request-timeout-ms 300000)
                  :turn-timeout-ms
-                 (get-in metadata [:effective-timeouts :turn-timeout-ms])}}
+                 (generated-bound contract :seat-turn-timeout-ms
+                                  (get-in metadata
+                                          [:effective-timeouts
+                                           :turn-timeout-ms]))}}
      :state-path (control-path preflight-state-path)}))
 
 (defn run-live-preflight! []
@@ -454,8 +481,11 @@
                      (state-path-for (:frame/id unit) :solve))
         built (live-proof-phases/build-request
                {:kind kind
-                :action (assoc action :timeouts {:request-ms 300000
-                                                 :turn-ms 3600000})
+                :action (assoc action :timeouts
+                               {:request-ms (generated-bound
+                                             contract :zai-request-timeout-ms 300000)
+                                :turn-ms (generated-bound
+                                          contract :seat-turn-timeout-ms 3600000)})
                 :ledger {:version (:campaign/version projection)
                          :digest (:ledger/digest projection)
                          :phase (get-in projection [:active/frame :phase])
@@ -469,6 +499,7 @@
     (if-not (:ok built)
       built
       {:ok true :kind kind :contract contract :request (:request built)
+       :max-rounds (generated-bound contract :solver-max-rounds 50)
        :state-path (state-path-for (:frame/id unit) kind)})))))
 
 (defn drive-live-proof-phase! [action]
@@ -520,7 +551,9 @@
                        :frame-id (:frame-id metadata)
                        :invoke-ready? (:invoke-ready? agent)}
                 :workspace (get-in preparation [:workspaces :student])
-                :receipts receipts :snapshot-access snapshot-access})]
+                :receipts receipts :snapshot-access snapshot-access
+                :turn-timeout-ms (generated-bound
+                                  contract :seat-turn-timeout-ms 3600000)})]
     (cond
       (and existing (map? (:request existing)))
       {:ok true :contract contract :action action :receipts receipts
@@ -762,13 +795,16 @@
 (defn- solver-projection-progress [solve-state active-phase]
   (let [certified? (= :live-job-certified (:state/type solve-state))
         completed (+ (count (:rounds solve-state)) (if certified? 1 0))
+        contract (:contract (inputs))
         max-rounds (or (:budget/max-rounds solve-state)
                        (get-in solve-state [:active :request :solver/max-rounds])
-                       50)
+                       (generated-bound contract :solver-max-rounds 50))
         active-round (when (and (= :solve active-phase) (not certified?))
                        (get-in solve-state [:active :request :solver/round]))
         checkpoint-next (when (and (not certified?) (< completed max-rounds))
-                          (* 10 (inc (quot completed 10))))]
+                          (let [every (generated-bound
+                                      contract :solver-checkpoint-every 10)]
+                            (* every (inc (quot completed every)))))]
     {:rounds/completed completed
      :rounds/max max-rounds
      :round/active active-round

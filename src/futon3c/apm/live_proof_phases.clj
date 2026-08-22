@@ -219,8 +219,9 @@
               "{:exit INT :warnings INT :sorry-warnings INT :errors INT :output STRING}."))))
 
 (defn run-live!
-  [{:keys [kind contract request state-path agency-base]
-    :or {agency-base "http://localhost:7070"}}]
+  [{:keys [kind contract request state-path agency-base max-rounds]
+    :or {agency-base "http://localhost:7070"
+         max-rounds solver-rounds/default-max-rounds}}]
   (let [state (runtime/read-state state-path)
         effects
         {:kind kind :contract contract :request request :state state
@@ -253,7 +254,7 @@
        (assoc effects
               :validate-solved (partial validate-terminal :solve)
               :provide-receipt (partial receipt contract :solve)
-              :max-rounds solver-rounds/default-max-rounds))
+              :max-rounds max-rounds))
       (drive! effects))))
 
 (defn resume-solver-remediation-live!
