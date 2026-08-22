@@ -125,9 +125,15 @@ For a frame seat, that is the problem its worktree names."
                               (cond (job (or (alist-get 'state job) "?"))
                                     (busy-status "no-job")
                                     (t "-"))
+                              ;; Age the JOB when there is one -- falling back
+                              ;; to the agent's last-active made a job queued
+                              ;; ten minutes ago read as "3h05m", which is the
+                              ;; seat's staleness, not the work's.
                               (futon-active-agents--age
-                               (or (and job (alist-get 'started-at job))
-                                   (alist-get 'last-active a)))
+                               (if job
+                                   (or (alist-get 'started-at job)
+                                       (alist-get 'created-at job))
+                                 (alist-get 'last-active a)))
                               (futon-active-agents--doing id)
                               (or (and job (alist-get 'caller job)) "-")))
                 rows))))
