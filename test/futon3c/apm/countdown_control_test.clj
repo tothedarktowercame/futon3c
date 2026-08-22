@@ -319,3 +319,32 @@
                                 :campaign/phase-order [:preflight]}})]
       (is (= :countdown-registration-mismatch
              (:error/code (sut/bootstrap!)))))))
+
+(deftest qualified-v2-launch-dry-run-dispatches-nothing
+  (binding [sut/contract-path
+            "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
+    (let [result (sut/dry-run-v2-launch)]
+      (is (:ok result) (pr-str result))
+      (is (= [] (:dispatches result)))
+      (is (= :promote-solver
+             (nth (get-in result [:registration :phase-order]) 3)))
+      (is (= :apm-validated-system-v1
+             (get-in result [:qualification :qualification/id]))))))
+
+(deftest stale-qualification-report-blocks-v2-launch
+  (let [report (edn/read-string
+                (slurp "data/apm-validation/qualification-report-v1.edn"))
+        temp (java.io.File/createTempFile "stale-apm-report" ".edn")]
+    (spit temp (pr-str (assoc-in report
+                                 [:generated-contract :observed-digest]
+                                 "stale")))
+    (try
+      (binding [sut/contract-path
+                "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+                sut/qualification-report-path (.getAbsolutePath temp)]
+        (let [result (sut/dry-run-v2-launch)]
+          (is (false? (:ok result)))
+          (is (some #{:qualification-observed-artifact-stale}
+                    (get-in result [:qualification :findings])))
+          (is (= [] (:dispatches result)))))
+      (finally (.delete temp)))))

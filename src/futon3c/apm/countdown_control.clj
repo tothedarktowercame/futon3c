@@ -23,7 +23,8 @@
             [futon3c.apm.memory-snapshot :as memory-snapshot]
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
-            [futon3c.apm.problem-projection :as problem-projection])
+            [futon3c.apm.problem-projection :as problem-projection]
+            [futon3c.apm.qualification :as qualification])
   (:import [java.nio.file Path]
            [java.time Instant]))
 
@@ -31,6 +32,8 @@
 (def ^:dynamic contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")
 (def ^:dynamic generated-contract-path
   "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
+(def ^:dynamic qualification-report-path
+  "data/apm-validation/qualification-report-v1.edn")
 (def ^:dynamic state-directory "data/apm-campaigns/countdown-f19-f27-r4")
 (def ^:dynamic ledger-path "data/apm-campaigns/countdown-f19-f27-r4/ledger.edn")
 (def ^:dynamic certificate-directory "data/apm-campaigns/countdown-f19-f27-r4/certificates")
@@ -97,6 +100,8 @@
                contract-path (or (:contract-path config#) contract-path)
                generated-contract-path (or (:generated-contract-path config#)
                                            generated-contract-path)
+               qualification-report-path
+               (or (:qualification-report-path config#) qualification-report-path)
                state-directory (or (:state-directory config#) state-directory)
                ledger-path (or (:ledger-path config#) ledger-path)
                certificate-directory (or (:certificate-directory config#) certificate-directory)
@@ -704,12 +709,35 @@
               (assoc wake :durable? true :state-path (str path))
               {:ok false :error/code :analyst-wake-persistence-failed})))))))
 
+(defn qualification-audit []
+  (let [contract (:contract (inputs))]
+    (if-not (= :apm-complete-frame-cycle-v2 (:contract/id contract))
+      {:ok true :status :legacy-contract-not-qualified}
+      (let [path (control-path qualification-report-path)]
+        (if-not (.isFile (.toFile path))
+          {:ok false :error/code :apm-qualification-report-missing
+           :path (str path)}
+          (qualification/validate-report
+           (edn/read-string (slurp (str path)))
+           (str (control-path generated-contract-path))))))))
+
+(defn dry-run-v2-launch []
+  (let [{:keys [contract]} (inputs)
+        qualification (qualification-audit)
+        registration (registration-body)]
+    {:ok (and (= :apm-complete-frame-cycle-v2 (:contract/id contract))
+              (:ok qualification)
+              (= (:phase-order contract) (:phase-order registration)))
+     :dispatches [] :qualification qualification
+     :registration registration}))
+
 (defn launch-audit!
   "Validate complete executable wiring plus the exact continuation identity."
   [{:keys [agent session surface agency-base target-frame regulator-id
            regulator-capability]
     :or {agency-base "http://localhost:7070"}}]
   (let [{:keys [manifest contract]} (inputs)
+        qualification-result (qualification-audit)
         loaded-ledger (ledger/read-ledger (control-path ledger-path))
         ledger-projection (:projection loaded-ledger)
         registration-matches?
@@ -753,6 +781,7 @@
                         (true? (get-in identity [:agent :invoke-ready?]))))]
     (cond
       (not (:ok spec-result)) spec-result
+      (not (:ok qualification-result)) qualification-result
       (not control-pinned?)
       {:ok false :error/code :set-alight-control-root-not-pinned
        :finding {:root (str *control-root*) :expected-branch control-branch
@@ -779,6 +808,7 @@
                                         [:http/status :ok :agent-id])
                  :observed-session (get-in identity [:agent :session-id])}}
       :else {:ok true :contract-audit contract-result
+             :qualification qualification-result
              :learning-regime learning-result
              :continuation (if machine-regulator?
                              {:mode :machine :regulator-id regulator-id}

@@ -21,7 +21,12 @@
     :solver-memory-review-and-snapshot :analyst-post-close-receipt}}
 
  :ready
- [{:capability :append-only-ledger-and-deterministic-obligations
+ [{:capability :lean-generated-qualified-campaign-contract
+   :evidence ["holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"
+              "data/apm-validation/qualification-report-v1.edn"
+              "src/futon3c/apm/qualification.clj"
+              "test/futon3c/apm/qualification_test.clj"]}
+  {:capability :append-only-ledger-and-deterministic-obligations
    :evidence ["src/futon3c/apm/campaign_machine.clj"
               "src/futon3c/apm/campaign_regulator.clj"]}
   {:capability :one-step-inspect-permit-reinspect-execute

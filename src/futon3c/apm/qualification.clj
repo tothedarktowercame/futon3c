@@ -62,3 +62,32 @@
   (let [report (qualify (edn/read-string (slurp plan-path)))]
     (spit report-path (str (pr-str report) "\n"))
     report))
+
+(defn validate-report [report artifact-path]
+  (let [observed (file-digest artifact-path)
+        findings (cond-> []
+                   (not (true? (:ok report))) (conj :qualification-not-passing)
+                   (not= observed (get-in report [:generated-contract
+                                                  :registered-digest]))
+                   (conj :qualification-registered-artifact-stale)
+                   (not= observed (get-in report [:generated-contract
+                                                  :observed-digest]))
+                   (conj :qualification-observed-artifact-stale)
+                   (not (true? (get-in report [:non-vacuity :witnessed?])))
+                   (conj :qualification-vacuous)
+                   (not (every? (fn [[_ n]] (pos? n))
+                                (:mutation-coverage report)))
+                   (conj :qualification-mutation-coverage-empty)
+                   (not= 3 (count (:residual-hole-tests report)))
+                   (conj :qualification-residual-holes-unpinned)
+                   (not (keyword? (:bounds-executable-test report)))
+                   (conj :qualification-bounds-not-executable)
+                   (not (every? #(and (:pass? %)
+                                      (zero? (:command-own-exit %)))
+                                (:gates report)))
+                   (conj :qualification-gate-failed))]
+    (if (seq findings)
+      {:ok false :error/code :apm-qualification-report-invalid
+       :findings findings :observed-digest observed}
+      {:ok true :qualification/id (:qualification/id report)
+       :artifact-digest observed})))
