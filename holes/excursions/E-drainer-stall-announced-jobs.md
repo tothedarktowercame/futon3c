@@ -180,3 +180,54 @@ required, and it should honour `:mode` (it ignores it today, so announced solve 
 `brief` and skip the work-mode no-execution check); (4) yes — a job `queued` with no
 `running` event for longer than any drainer poll interval is not healthy and `reap` should say
 so. (3) and (4) are `master` changes to the live server and are left for a deliberate reload.
+
+## Recommendation: run the APM drivers inside the Agency JVM (2026-08-22, ams-claude-fable, for the lane owner)
+
+This failure needed two JVMs on two branches. The driver (`clojure.main /tmp/dryrun.clj`, run
+from `futon3c-frame18-control` on `feature/lane-effects`) spoke HTTP to a server running
+`master`. That is the only way "POST to a route that exists in my own source tree" can 404,
+and the only way a driver can be "fixed" (67010bc7) by reasoning about server behaviour it
+cannot see. Each process did its job correctly by its own lights, so nothing logged; the
+excursion author spent the afternoon inside the server's drainer because that was the JVM
+that was visible. Joe's framing: *extra JVMs = more problems.*
+
+**Proposal.** Merge `feature/lane-effects` into `master` and run the phase drivers
+(`live_proof_phases`, `live_learning_phases`, `live_preflight_runtime`, `live_promotion`,
+`live_solver_rounds`, `library_lane_*`) in-process in the Agency JVM:
+
+- `announce-fn` / `activate-fn` become direct calls to the job-ledger + invoke path
+  (`create-invoke-job!` and the function behind `build-invoke-response`, or a small
+  public `dispatch-job!` in `transport/http.clj` that does both). The announce/activate
+  two-phase handshake exists for an *external* caller (the IRC bridge) that must reserve a
+  job-id before it can promise anything on its surface; an in-process driver has no such
+  gap, and the whole class of "accepted but never run" disappears because there is no seam
+  for it. `d6f9ec2c`'s `/api/alpha/invoke/activate` then becomes unnecessary rather than
+  unported.
+- `job-fn` reads the ledger directly instead of `GET /invoke/jobs/<id>`; `persist-fn` is
+  unchanged (the EDN state files under `data/apm-lane/<frame>/` are fine and are what lets a
+  frame resume across restarts).
+- The driver loop (today the body of `/tmp/dryrun.clj`) becomes a function the operator
+  starts from the REPL or via one endpoint, not a script that spawns a JVM.
+
+**What it costs / what to check before the restart.**
+- A driver bug can now take down the server. Keep the driver loop on its own thread with
+  the same catch-all the turn-drainers use.
+- `feature/lane-effects` must merge cleanly; `master` has none of `src/futon3c/apm/` today, so
+  expect the merge to be mostly additive, with the real conflict surface in
+  `transport/http.clj` (activate handler + route) and `http_test.clj`. Do a
+  `git merge --no-commit` dry run first.
+- `f981f441` (`runtime/activate-job!`, `/invoke` on a daemon thread + confirm-by-poll) is the
+  HTTP-era fix. It stays correct for any driver that remains out-of-process, and is the
+  thing to delete once the drivers are in-process.
+- While the drivers are still a separate JVM: the running `/tmp/dryrun.clj` has the OLD
+  `activate-fn` loaded and must be restarted on `f981f441` before its next dispatch, or it
+  stalls again.
+
+**Server-side hygiene to fold into the same reload (small, `master`):**
+1. `handle-invoke-announce` honours `:mode` (it ignores it; announced solve jobs land as
+   `brief` and skip the work-mode no-execution check).
+2. The announce 202 says a follow-up `/invoke` with this job-id is required — or, once the
+   drivers are in-process, announce is bridge-only and says so in its docstring.
+3. `reap` treats a job `queued` with no `running` event for longer than any drainer poll
+   interval as unhealthy. Today it is the single worst failure mode available: the caller
+   believes it dispatched.
