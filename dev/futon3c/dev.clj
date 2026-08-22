@@ -3653,6 +3653,8 @@ RESPOND WITH ONLY:
               tools-acc (atom [])
               result-sid (atom nil)
               result-error (atom false)
+              compact-status (atom nil)
+              result-event (atom nil)
               aid-val (str agent-id)
               ;; Register invoke control so interrupt-invoke endpoint works
               control-token (str "claude-invoke-" (UUID/randomUUID))
@@ -3683,6 +3685,10 @@ RESPOND WITH ONLY:
                                             :root-pid (.pid proc)
                                             :event parsed})
                                           (case (:type parsed)
+                                            "system"
+                                            (when (and (= "status" (:subtype parsed))
+                                                       (contains? parsed :compact_result))
+                                              (reset! compact-status parsed))
                                             "assistant"
                                             (let [content (get-in parsed [:message :content])
                                                   tools (when (sequential? content)
@@ -3751,7 +3757,8 @@ RESPOND WITH ONLY:
                                                              :tool_use_result (:tool_use_result parsed)}))
                                                     (catch Throwable _)))))
                                             "result"
-                                            (do (reset! result-sid (:session_id parsed))
+                                            (do (reset! result-event parsed)
+                                                (reset! result-sid (:session_id parsed))
                                                 (when (:is_error parsed)
                                                   (reset! result-error true)))
                                             nil))
@@ -3817,15 +3824,23 @@ RESPOND WITH ONLY:
                      :turn-counter !turn-count
                      :bb-opts bb-opts})))
               (if ok?
-                {:result (if (str/blank? text)
-                           ;; tool-last / no-text turn: surface what was called.
-                           (let [names (->> @tools-acc (remove nil?) distinct vec)]
-                             (if (seq names)
-                               (str "[no text — called: " (str/join ", " names) "]")
-                               "[no text or tool calls in this turn]"))
-                           text)
-                 :session-id final-sid
-                 :invoke-trace-id invoke-trace-id}
+                (cond->
+                 {:result (if (str/blank? text)
+                            ;; tool-last / no-text turn: surface what was called.
+                            (let [names (->> @tools-acc (remove nil?) distinct vec)]
+                              (if (seq names)
+                                (str "[no text — called: " (str/join ", " names) "]")
+                                "[no text or tool calls in this turn]"))
+                            text)
+                  :session-id final-sid
+                  :invoke-trace-id invoke-trace-id}
+                  @compact-status
+                  (assoc :compact-result (:compact_result @compact-status)
+                         :compact-error (:compact_error @compact-status))
+                  (:usage @result-event)
+                  (assoc :usage (:usage @result-event))
+                  (contains? @result-event :total_cost_usd)
+                  (assoc :total-cost-usd (:total_cost_usd @result-event)))
                 {:result nil :session-id final-sid
                  :error (str "Exit " exit ": " (str/trim (or err "")))
                  :invoke-trace-id invoke-trace-id}))

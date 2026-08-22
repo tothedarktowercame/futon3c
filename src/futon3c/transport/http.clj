@@ -5249,15 +5249,69 @@
                               :error "interrupt-error"
                               :message (.getMessage t)}))))))
 
+(def ^:private compact-cold-timeout-ms 120000)
+
+(defn- compact-agent-busy? [agent]
+  (pos? (+ (long (or (:running-jobs agent) (:agent/running-jobs agent) 0))
+           (long (or (:queued-jobs agent) (:agent/queued-jobs agent) 0)))))
+
+(defn- cold-compact-result [result]
+  {:ok (= "success" (:compact-result result))
+   :compact-result (:compact-result result)
+   :compact-error (:compact-error result)
+   :session-id (:session-id result)
+   :usage (:usage result)
+   :total-cost-usd (:total-cost-usd result)
+   :path "cold"})
+
+(defn- run-cold-compact! [agent-id agent]
+  (let [turn-id (str "compact-" (UUID/randomUUID))
+        invoke-fn (:agent/invoke-fn agent)
+        session-id (:agent/session-id agent)
+        {:keys [waiter]}
+        (turn-queue/accept-async!
+         {:id turn-id
+          :msg-id turn-id
+          :to (str agent-id)
+          :from "compact-control"
+          :surface "control"
+          :prompt "/compact"
+          :process-fn (fn [entry]
+                        (binding [turn-queue/*drained-by-outer* true
+                                  turn-queue/*turn-id* (:id entry)]
+                          (invoke-fn "/compact" session-id)))})
+        result (deref waiter compact-cold-timeout-ms ::compact-timeout)]
+    (if (= ::compact-timeout result)
+      {:status 202
+       :body {:ok false :error "compaction pending" :turn-id turn-id :path "cold"}}
+      {:status 200 :body (cold-compact-result result)})))
+
 (defn- handle-agent-compact
-  "POST /api/alpha/agents/:id/compact — compact an existing warm pouch."
+  "POST /api/alpha/agents/:id/compact — compact through a warm or cold seat."
   [_config agent-id _request]
-  (let [result (agent-pouch/compact-pouch! agent-id {})
-        status (case (:error result)
-                 "no warm pouch" 404
-                 "turn in flight" 409
-                 200)]
-    (json-response status result)))
+  (let [warm-result (agent-pouch/compact-pouch! agent-id {})]
+    (cond
+      (= "turn in flight" (:error warm-result))
+      (json-response 409 (assoc warm-result :path "warm"))
+
+      (not= "no warm pouch" (:error warm-result))
+      (json-response 200 (assoc warm-result :path "warm"))
+
+      :else
+      (let [agent (reg/get-agent agent-id)
+            job-counts (get (active-invoke-job-counts)
+                            (canonical-job-agent-id agent-id) {})
+            agent (merge job-counts agent)]
+        (cond
+          (not (fn? (:agent/invoke-fn agent)))
+          (json-response 404 {:ok false :error "no local agent"})
+
+          (compact-agent-busy? agent)
+          (json-response 409 {:ok false :error "turn in flight" :path "cold"})
+
+          :else
+          (let [{:keys [status body]} (run-cold-compact! agent-id agent)]
+            (json-response status body)))))))
 
 ;; =============================================================================
 ;; CYDER process endpoints

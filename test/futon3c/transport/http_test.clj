@@ -1140,17 +1140,68 @@
 
 (deftest agent-compact-maps-pouch-control-statuses
   (let [handler (make-handler)]
-    (doseq [[result expected]
-            [[{:ok true :compact-result "success"} 200]
-             [{:ok false :error "turn in flight"} 409]
-             [{:ok false :error "no warm pouch"} 404]]]
+    (doseq [[result expected expected-path]
+            [[{:ok true :compact-result "success"} 200 "warm"]
+             [{:ok false :error "turn in flight"} 409 "warm"]]]
       (with-redefs [agent-pouch/compact-pouch! (fn [agent-id opts]
                                                 (is (= "claude-compact" agent-id))
                                                 (is (= {} opts))
                                                 result)]
         (let [response (post handler "/api/alpha/agents/claude-compact/compact" "{}")]
           (is (= expected (:status response)))
-          (is (= result (parse-body response))))))))
+          (is (= (assoc result :path expected-path) (parse-body response))))))))
+
+(deftest agent-compact-cold-path-refuses-unknown-or-busy-agent
+  (let [handler (make-handler)]
+    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                  reg/get-agent (constantly nil)]
+      (let [response (post handler "/api/alpha/agents/missing/compact" "{}")]
+        (is (= 404 (:status response)))
+        (is (= {:ok false :error "no local agent"} (parse-body response)))))
+    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                  reg/get-agent (constantly {:agent/invoke-fn identity
+                                             :running-jobs 1 :queued-jobs 0})]
+      (let [response (post handler "/api/alpha/agents/claude-busy/compact" "{}")]
+        (is (= 409 (:status response)))
+        (is (= {:ok false :error "turn in flight" :path "cold"}
+               (parse-body response)))))))
+
+(deftest agent-compact-cold-path-queues-literal-control-and-returns-outcome
+  (let [handler (make-handler)
+        invoked (atom nil)
+        queued (atom nil)
+        invoke-fn (fn [prompt session-id]
+                    (reset! invoked [prompt session-id
+                                     turn-queue/*drained-by-outer*
+                                     turn-queue/*turn-id*])
+                    {:compact-result "failed"
+                     :compact-error "Not enough messages to compact."
+                     :session-id session-id
+                     :usage {:input_tokens 10}
+                     :total-cost-usd 0.0})]
+    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                  reg/get-agent (constantly {:agent/invoke-fn invoke-fn
+                                             :agent/session-id "sid-cold"
+                                             :running-jobs 0 :queued-jobs 0})
+                  turn-queue/accept-async!
+                  (fn [entry]
+                    (reset! queued entry)
+                    (let [waiter (promise)]
+                      (deliver waiter ((:process-fn entry) entry))
+                      {:status :queued :entry entry :waiter waiter}))]
+      (let [response (post handler "/api/alpha/agents/claude-cold/compact" "{}")
+            parsed (parse-body response)]
+        (is (= 200 (:status response)))
+        (is (= ["/compact" "sid-cold" true (:id @queued)] @invoked))
+        (is (= "/compact" (:prompt @queued)))
+        (is (= {:ok false
+                :compact-result "failed"
+                :compact-error "Not enough messages to compact."
+                :session-id "sid-cold"
+                :usage {:input_tokens 10}
+                :total-cost-usd 0.0
+                :path "cold"}
+               parsed))))))
 
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
