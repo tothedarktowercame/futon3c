@@ -7066,6 +7066,16 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      ;; POST /api/alpha/agents/:id/compact — raw /compact control for a warm
+      ;; pouch (handoff 4, 2026-08-22). Lives here, not in make-handler's cond,
+      ;; so a plain Drawbridge reload activates it (reload-safe route contract).
+      (and (= :post method) (string? uri)
+           (str/starts-with? uri "/api/alpha/agents/")
+           (str/ends-with? uri "/compact"))
+      (let [raw (subs uri (count "/api/alpha/agents/")
+                     (- (count uri) (count "/compact")))]
+        (handle-agent-compact config (enc/decode-uri-component raw) request))
+
       (and (= :post method) (= "/api/alpha/conductor/action" uri))
       (let [payload (parse-json-map (read-body request))
             agent-id (or (:agent-id payload) (get payload "agent-id"))
@@ -7507,13 +7517,6 @@
           (let [raw (subs uri (count "/api/alpha/agents/")
                          (- (count uri) (count "/interrupt-invoke")))]
             (handle-agent-interrupt-invoke config (enc/decode-uri-component raw) request))
-
-          (and (= :post method) (string? uri)
-               (str/starts-with? uri "/api/alpha/agents/")
-               (str/ends-with? uri "/compact"))
-          (let [raw (subs uri (count "/api/alpha/agents/")
-                         (- (count uri) (count "/compact")))]
-            (handle-agent-compact config (enc/decode-uri-component raw) request))
 
           (and (= :post method) (string? uri)
                (str/starts-with? uri "/api/alpha/agents/")
