@@ -22,6 +22,10 @@
 (defn- encode [x]
   (URLEncoder/encode (if (keyword? x) (subs (str x) 1) (str x)) "UTF-8"))
 
+(def hyperedge-page-limit
+  "Maximum accepted by the authoritative hyperedges endpoint."
+  5000)
+
 (defn- response-body
   [response]
   (try (edn/read-string (:body response))
@@ -61,7 +65,7 @@
 (defn hyperedges-by-type
   ([type] (hyperedges-by-type type {}))
   ([type {:keys [limit timeout-ms valid-as-of system-as-of]
-          :or {limit 10000 timeout-ms 60000}}]
+          :or {limit hyperedge-page-limit timeout-ms 60000}}]
    (:hyperedges
     (get-edn! (str (configured-url) "/api/alpha/hyperedges?type=" (encode type)
                    "&limit=" (long limit)
@@ -75,7 +79,7 @@
 (defn hyperedges-by-end
   ([end] (hyperedges-by-end end {}))
   ([end {:keys [type limit timeout-ms valid-as-of system-as-of]
-         :or {limit 10000 timeout-ms 60000}}]
+         :or {limit hyperedge-page-limit timeout-ms 60000}}]
    (let [url (str (configured-url) "/api/alpha/hyperedges?end=" (encode end)
                   (when type (str "&type=" (encode type)))
                   "&limit=" (long limit)
