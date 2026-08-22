@@ -5276,7 +5276,11 @@
                               :error "interrupt-error"
                               :message (.getMessage t)}))))))
 
-(def ^:private compact-cold-timeout-ms 120000)
+(def ^:private compact-cold-timeout-ms
+  ;; Compacting ~500k of context took claude-13 >2 min on 2026-08-22 (the 1M
+  ;; auto-compactions in ground control ran 115-184 s), so 120 s answered 202
+  ;; on exactly the sessions this exists for. The Emacs caller is async.
+  300000)
 
 (defn- compact-agent-busy? [agent]
   ;; Job counts cover bell/invoke jobs; an operator turn from the REPL
