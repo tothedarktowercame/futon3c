@@ -489,7 +489,7 @@
         (is (= "*mission-control*" (:buffer-name (first @calls))))
         (is (true? (get-in @calls [0 :opts :async?])))))))
 
-(deftest problem-projection-keeps-latest-and-cycle-specific-buffers
+(deftest problem-projection-keeps-cycle-specific-buffer-without-contending-for-apm-singleton
   (let [calls (atom [])
         state {:problem-id "a98A01"
                :current-cycle-id "a98A01-cycle-93f5be7"
@@ -500,9 +500,8 @@
                                    {:ok true})]
       (binding [bb/*enabled* true]
         (is (nil? (bb/project! :problem state))))
-      (is (= ["*problem: a98A01-93f5be7*" "*problem*"]
-             (mapv first @calls)))
-      (is (= (second (first @calls)) (second (second @calls)))))))
+      (is (= ["*problem: a98A01-93f5be7*"]
+             (mapv first @calls))))))
 
 ;; Note: project! with a real peripheral-id would call emacsclient,
 ;; which we don't want in the test suite. The render tests above

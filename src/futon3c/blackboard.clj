@@ -1526,14 +1526,15 @@
        (when-let [content (render-blackboard peripheral-id state)]
          (let [buf-name (str "*" (name peripheral-id) "*")
                opts (merge {:async? true} opts)]
-           ;; Keep the traditional singleton as the latest-write view, while
-           ;; making concurrent problem cycles independently inspectable.
+           ;; Problem cycles are independently inspectable and must not contend
+           ;; with the APM campaign's authoritative singleton `*problem*`.
            (when (and (= :problem peripheral-id) (problem-cycle-id state))
              (blackboard!
               (str "*problem: " (or (:problem-id state) "unknown") "-"
                    (short-cycle-id (problem-cycle-id state)) "*")
               content opts))
-           (blackboard! buf-name content opts)
+           (when-not (= :problem peripheral-id)
+             (blackboard! buf-name content opts))
            (emit-blackboard-evidence! peripheral-id state content)
            nil))
        (catch Throwable _
