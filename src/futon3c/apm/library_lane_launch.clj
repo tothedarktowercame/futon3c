@@ -2,6 +2,7 @@
   "Compose observed problem, workspace, seat, and receipt authority for one
   Codex-only library-lane frame. This boundary prepares; it never dispatches."
   (:require [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -119,6 +120,35 @@
                       outcome-fn]))
     (conj :launch-effect-provider-missing)))
 
+(defn- config-path [state-root frame-id]
+  (io/file state-root frame-id "launch-config.edn"))
+
+(defn- persist-config! [state-root frame-id config]
+  (try
+    (let [f (config-path state-root frame-id)]
+      (io/make-parents f)
+      (spit f (pr-str (dissoc config :outcome-fn)))
+      true)
+    (catch Throwable _ false)))
+
+(defn resume-config
+  "Return the persisted launch config for PROBLEM-ID, or nil.
+
+  launch! cannot be re-entered while a solve is in flight: the solver has
+  dirtied its worktree by design, so workspace revalidation refuses with
+  :workspace-dirty. Unattended operation needs re-entry after an interruption,
+  so the config observed at launch is persisted and replayed instead of being
+  re-derived. OUTCOME-FN is not serialisable and is re-injected by the caller."
+  [{:keys [state-root problem-id revision outcome-fn]}]
+  (let [frame (adapters/codex-frame-id problem-id revision #{})]
+    (when (:ok frame)
+      (let [f (config-path state-root (:frame-id frame))]
+        (when (.isFile f)
+          (try
+            (cond-> (edn/read-string (slurp f))
+              (fn? outcome-fn) (assoc :outcome-fn outcome-fn))
+            (catch Throwable _ nil)))))))
+
 (defn launch!
   "Prepare and return the exact configuration consumed by both lane adapters.
 
@@ -223,4 +253,5 @@
                                           (select-keys seats [:solver :proctor]))))
                       {:ok false :error/code :library-lane-preparation-drift
                        :findings [{:finding :prepared-authority-not-reobserved}]}
-                      {:ok true :config config})))))))))))
+                      (do (persist-config! state-root frame-id config)
+                          {:ok true :config config}))))))))))))
