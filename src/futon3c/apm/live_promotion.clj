@@ -64,7 +64,7 @@
                (if (:report result)
                  (merge result (select-keys (:report result)
                                             [:reviewer :reviews]))
-                 result))))]
+                 result)))))]
     (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
              :publish-fn publish-fn
              :persist-fn #(runtime/atomic-persist! state-path %)})))
