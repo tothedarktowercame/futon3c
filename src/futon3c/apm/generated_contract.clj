@@ -35,6 +35,16 @@
    :distinct-continuation-session true :distinct-analyst-session true
    :projection-ledger-binding true})
 
+(def required-promotion-policy
+  {:distinct-promotion-proctor true
+   :base-problem-blob-required true
+   :problem-path-required true
+   :solver-final-head-required true
+   :typed-lanes-required 4
+   :persisted-review-reason-required true
+   :persisted-review-residual-required true
+   :student-query-log-required true})
+
 (def required-terminal-policy
   {:certified-phase-receipts 11 :separate-problem-frame-outcomes true})
 
@@ -80,6 +90,8 @@
           (conj :generated-contract-dispatch-policy-invalid)
           (not= required-memory-policy (:memory-policy contract))
           (conj :generated-contract-memory-policy-invalid)
+          (not= required-promotion-policy (:promotion-policy contract))
+          (conj :generated-contract-promotion-policy-invalid)
           (not= required-isolation-policy (:isolation-policy contract))
           (conj :generated-contract-isolation-policy-invalid)
           (not= required-terminal-policy (:terminal-policy contract))

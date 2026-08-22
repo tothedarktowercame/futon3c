@@ -59,6 +59,16 @@
     (is (some #{:generated-contract-isolation-policy-invalid}
               (:findings isolation-result)))))
 
+(deftest residual-fit-promotion-policy-mutation-is-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        result (sut/validate
+                (assoc-in contract
+                          [:promotion-policy :persisted-review-residual-required]
+                          false))]
+    (is (false? (:ok result)))
+    (is (some #{:generated-contract-promotion-policy-invalid}
+              (:findings result)))))
+
 (deftest terminal-and-analyst-policy-mutations-are-killed
   (let [contract (:contract (sut/read-contract generated-path))]
     (is (some #{:generated-contract-terminal-policy-invalid}

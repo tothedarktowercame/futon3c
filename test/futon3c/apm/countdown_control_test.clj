@@ -44,7 +44,8 @@
         contract {:phases {:promote-solver {:kind :scribe-reduce
                                             :role :scribe
                                             :requires #{}}}}
-        unit {:frame/id "f22" :problem/id "p22"}
+        unit {:frame/id "f22" :problem/id "p22"
+              :problem {:blob "problem-blob" :path "Main.lean"}}
         preparation {:workspaces {:student {:workspace/path "/tmp/student"}}
                      :seats {:scribe {:agent-id "f22-scribe"}}}
         action {:kind :scribe-reduce :role :scribe :phase :promote-solver
@@ -62,7 +63,11 @@
                                      :metadata {:frame-id "f22"}}})
                   ledger/read-ledger
                   (fn [_] {:projection {:ledger/digest
-                                        (apply str (repeat 64 "a"))}})]
+                                        (apply str (repeat 64 "a"))}})
+                  sut/certified-receipts
+                  (fn [& _] {:solve {:receipt/id "solve"
+                                     :receipt/final-head
+                                     "1111111111111111111111111111111111111111"}})]
       (let [result (sut/live-learning-phase-inputs action)]
         (is (:ok result))
         (is (= :promote-solver (get-in result [:request :phase])))

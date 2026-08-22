@@ -71,7 +71,8 @@
                                                     300000 :not-applicable)
                               :turn-timeout-ms 3600000}}}]))
          {:solver :codex :student :zai :guide :claude
-          :proctor :codex :scribe :zai :analyst :claude})})
+          :proctor :codex :promotion-proctor :codex
+          :scribe :zai :analyst :claude})})
 
 (deftest concrete-live-preparation-binds-lifecycle-mint-roster-and-paths
   (let [calls (atom [])
@@ -82,8 +83,8 @@
                  :manifest manifest
                  :role-cards (into {} (map (fn [role]
                                              [role {:path (name role) :blob digest}])
-                                           [:solver :student :guide :proctor :scribe
-                                            :analyst]))
+                                           [:solver :student :guide :proctor
+                                            :promotion-proctor :scribe :analyst]))
                  :workspace-root "/work" :substrate-path "/lake"
                  :provision-fn
                  (fn [{:keys [role]}]
