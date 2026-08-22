@@ -461,4 +461,7 @@
                 {:ledger-path "/unused/ledger.edn"})))
         (is (string? (get-in @captured
                              [:request :authority :continuation-payload])))
+        (is (= "/home/joe/code/futon3c-apm-control/data/apm-campaigns/jit-problem-list-v1/queue-state.edn"
+               (get-in @captured
+                       [:request :campaign-config :problem-queue-state-path])))
         (is (= [problem] (get-in @captured [:request :problems])))))))

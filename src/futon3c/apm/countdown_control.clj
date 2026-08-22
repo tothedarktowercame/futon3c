@@ -1208,7 +1208,7 @@
         authority (assoc authority :continuation-payload continuation-payload)
         campaign-root (str control-root "/data/apm-campaigns/" queue-name)
         outer-config {:problem-queue-state-path
-                      (str "data/apm-campaigns/" queue-name "/queue-state.edn")}
+                      (str campaign-root "/queue-state.edn")}
         apparatus-repository control-root
         apparatus-branch "frame/18-control"
         role-cards
