@@ -8,6 +8,25 @@
 
 (def ^:private max-deposit-attempts 3)
 
+(defn- normalize-review-report [report expected-digest]
+  (let [reviews (or (:reviews report) (:promotion-reviews report))
+        reviewers (set (keep :reviewer reviews))
+        reviewer (or (:reviewer report)
+                     (when (= 1 (count reviewers)) (first reviewers)))]
+    (cond
+      (not= expected-digest (:candidate-set-digest report))
+      {:ok false :error/code :promotion-review-candidate-digest-mismatch
+       :expected expected-digest :observed (:candidate-set-digest report)}
+
+      (not (vector? reviews))
+      {:ok false :error/code :promotion-review-vector-missing}
+
+      (or (not (string? reviewer))
+          (some #(not= reviewer (:reviewer %)) reviews))
+      {:ok false :error/code :promotion-review-attribution-ambiguous}
+
+      :else {:ok true :reviewer reviewer :reviews reviews})))
+
 (defn- agency-stage [agency-base request prompt]
   (fn
     ([]
@@ -69,8 +88,10 @@
                              (pr-str request))
                  result ((agency-stage agency-base request prompt) job-id)]
              (if (:report result)
-               (merge result (select-keys (:report result)
-                                          [:reviewer :reviews]))
+               (let [normalized (normalize-review-report (:report result) digest)]
+                 (if (:ok normalized)
+                   (merge result (select-keys normalized [:reviewer :reviews]))
+                   normalized))
                result))))]
     (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
              :publish-fn publish-fn

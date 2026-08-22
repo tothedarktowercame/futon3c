@@ -69,3 +69,26 @@
     (is (= :promotion-deposit-retries-exhausted (:error/code result)))
     (is (= 3 (:attempts result)))
     (is (= [:candidates-missing] (:findings result)))))
+
+(deftest pinned-proctor-review-shape-normalizes-only-with-exact-digest
+  (let [normalize #'sut/normalize-review-report
+        reviews [{:memory-id "m" :reviewer "proctor" :verdict :reject
+                  :pattern-ids []}]
+        accepted (normalize {:candidate-set-digest "digest"
+                             :promotion-reviews reviews}
+                            "digest")]
+    (is (:ok accepted))
+    (is (= "proctor" (:reviewer accepted)))
+    (is (= reviews (:reviews accepted)))
+    (is (= :promotion-review-candidate-digest-mismatch
+           (:error/code
+            (normalize {:candidate-set-digest "other"
+                        :promotion-reviews reviews}
+                       "digest"))))
+    (is (= :promotion-review-attribution-ambiguous
+           (:error/code
+            (normalize {:candidate-set-digest "digest"
+                        :promotion-reviews
+                        (conj reviews {:memory-id "n" :reviewer "other"
+                                       :verdict :reject :pattern-ids []})}
+                       "digest"))))))
