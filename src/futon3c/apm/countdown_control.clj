@@ -278,13 +278,25 @@
      :claims-required? true}))
 
 (defn bootstrap! []
-  (let [loaded (ledger/read-ledger (control-path ledger-path))]
+  (let [{:keys [manifest contract]} (inputs)
+        loaded (ledger/read-ledger (control-path ledger-path))
+        projection (:projection loaded)
+        registration-matches?
+        (and (= (:campaign/id manifest) (:campaign/id projection))
+             (= (:manifest/id manifest) (:campaign/manifest-hash projection))
+             (= (:phase-order contract) (:campaign/phase-order projection)))]
     (cond
       (not (:ok loaded)) loaded
       (seq (:events loaded))
-      {:ok (= (:campaign/id (:manifest (inputs)))
-              (get-in loaded [:projection :campaign/id]))
-       :status :already-registered :projection (:projection loaded)}
+      (if registration-matches?
+        {:ok true :status :already-registered :projection projection}
+        {:ok false :error/code :countdown-registration-mismatch
+         :finding {:expected {:campaign/id (:campaign/id manifest)
+                              :manifest-hash (:manifest/id manifest)
+                              :phase-order (:phase-order contract)}
+                   :observed {:campaign/id (:campaign/id projection)
+                              :manifest-hash (:campaign/manifest-hash projection)
+                              :phase-order (:campaign/phase-order projection)}}})
       :else
       (let [body (registration-body)
             base {:event/seq 0 :event/type :campaign/registered
@@ -664,7 +676,16 @@
   [{:keys [agent session surface agency-base target-frame regulator-id
            regulator-capability]
     :or {agency-base "http://localhost:7070"}}]
-  (let [{:keys [manifest]} (inputs)
+  (let [{:keys [manifest contract]} (inputs)
+        loaded-ledger (ledger/read-ledger (control-path ledger-path))
+        ledger-projection (:projection loaded-ledger)
+        registration-matches?
+        (and (:ok loaded-ledger)
+             (= (:campaign/id manifest) (:campaign/id ledger-projection))
+             (= (:manifest/id manifest)
+                (:campaign/manifest-hash ledger-projection))
+             (= (:phase-order contract)
+                (:campaign/phase-order ledger-projection)))
         spec-result (orchestration-contract/read-spec
                      (str (control-path orchestration-path)))
         head (shell/sh "git" "-C" (str *control-root*) "rev-parse" "HEAD")
@@ -706,6 +727,16 @@
                  :observed-branch (str/trim (:out branch))
                  :observed-revision (str/trim (:out head))}}
       (not (:ok contract-result)) contract-result
+      (not registration-matches?)
+      {:ok false :error/code :set-alight-registration-mismatch
+       :finding {:expected {:campaign/id (:campaign/id manifest)
+                            :manifest-hash (:manifest/id manifest)
+                            :phase-order (:phase-order contract)}
+                 :observed {:campaign/id (:campaign/id ledger-projection)
+                            :manifest-hash
+                            (:campaign/manifest-hash ledger-projection)
+                            :phase-order
+                            (:campaign/phase-order ledger-projection)}}}
       (not (:ok preparation-result)) preparation-result
       (not (:ok learning-result)) learning-result
       (not exact?)
