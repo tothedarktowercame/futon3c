@@ -251,7 +251,11 @@
    failures are identical; live-solver-rounds enforces that condition."
   [{:keys [request state-path agency-base]
     :or {agency-base "http://localhost:7070"}}]
-  (let [state (runtime/read-state state-path)
+  (let [state-path (if (instance? java.nio.file.Path state-path)
+                     state-path
+                     (java.nio.file.Path/of (str state-path)
+                                            (make-array String 0)))
+        state (runtime/read-state state-path)
         announce-fn
         (fn [req]
           (let [response (runtime/http-json
