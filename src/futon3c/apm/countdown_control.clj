@@ -1249,3 +1249,16 @@
     (set-alight-problem-queue!
      {:problems problems :campaign-config outer-config :authority authority}
      {:jit/config jit-config})))
+
+(defn launch-m-five!
+  "Start or resume the registered five-problem m-family queue."
+  [authority]
+  (let [queue (edn/read-string
+               (slurp (str (or (:control-root authority)
+                               "/home/joe/code/futon3c-apm-control")
+                           "/holes/labs/M-apm-demonstration/"
+                           "jit-m-five-problem-queue-v1.edn")))]
+    (set-alight-problem-list!
+     {:problems (:problems queue) :authority authority
+      :queue-name "jit-m-five-v1" :frame-number-base 24
+      :agency-base (or (:agency-base authority) "http://localhost:7070")})))
