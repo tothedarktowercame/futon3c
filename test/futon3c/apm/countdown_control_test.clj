@@ -436,6 +436,11 @@
         (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn
                                      :retirement-audit-fn])))
         (is (= 24 (:frame-number-base config)))
+        (is (= "m-test"
+               (:problem-id
+                ((:ledger-fn config)
+                 {:frame/id "f24" :problem/id "m-test"}
+                 {:ledger-path "/unused/ledger.edn"}))))
         (is (= {:ok true :already-open? true
                 :ledger/version 5 :ledger/digest "open-digest"}
                ((:open-frame-fn config)

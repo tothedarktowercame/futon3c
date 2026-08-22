@@ -1150,7 +1150,7 @@
      (count (filter #(str/includes? % "declaration uses `sorry`") lines))
      :errors (count (filter #(str/includes? % "error:") lines))}))
 
-(defn- jit-ledger-observation [paths _frame]
+(defn- jit-ledger-observation [_frame paths]
   (let [loaded (ledger/read-ledger (Path/of (:ledger-path paths)
                                              (make-array String 0)))
         active (get-in loaded [:projection :active/frame])]
@@ -1244,7 +1244,7 @@
          :open-frame-fn
          (fn [frame _ paths]
            (with-campaign paths
-             (let [observed (jit-ledger-observation paths frame)]
+             (let [observed (jit-ledger-observation frame paths)]
                (if (and (:ok observed)
                         (= (:frame/id frame) (:frame-id observed))
                         (= (:problem/id frame) (:problem-id observed))
