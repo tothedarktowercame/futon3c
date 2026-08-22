@@ -125,7 +125,8 @@
 (deftest content-addressed-frame-ids-refuse-observed-collisions
   (let [first-id (sut/codex-frame-id problem-id sha40 #{})]
     (is (:ok first-id))
-    (is (re-matches #"f9[0-9]{78}" (:frame-id first-id)))
+    (is (re-matches (re-pattern (str "f9[0-9]{" sut/frame-id-digits "}"))
+                     (:frame-id first-id)))
     (is (= :occupied-frame-id-set-required
            (:error/code (sut/codex-frame-id problem-id sha40 nil))))
     (is (= :codex-frame-id-collision

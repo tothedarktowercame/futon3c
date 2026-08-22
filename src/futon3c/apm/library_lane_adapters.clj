@@ -26,12 +26,29 @@
                         (.getBytes (str text) StandardCharsets/UTF_8))]
     (format "%064x" (BigInteger. 1 digest))))
 
+(def frame-id-digits
+  "Decimal digits of digest kept in a content-addressed frame id.
+
+  12 digits is ~10^12 of space against a corpus of ~475 problems, and
+  `codex-frame-id` refuses an occupied id outright, so collision safety comes
+  from the explicit check rather than from digest width. Length is chosen for
+  the operator instead: a frame id appears in receipts, agent ids, workspace
+  paths and branch names, and an 80-character id makes all of them unreadable
+  while buying nothing the collision check does not already give."
+  12)
+
 (defn codex-frame-id
   "Return a deterministic numeric frame id in the content-addressed `f9...`
-  namespace. Existing frame ids are an explicit collision boundary."
+  namespace. Existing frame ids are an explicit collision boundary.
+
+  Deterministic on [problem-id revision]: re-running the same problem at the
+  same revision lands on the same frame, which is what makes the runner
+  idempotent."
   [problem-id revision occupied-frame-ids]
   (let [decimal (.toString (BigInteger. (sha256 [problem-id revision]) 16))
-        candidate (str "f9" (format "%078d" (BigInteger. decimal)))]
+        truncated (.mod (BigInteger. decimal)
+                        (.pow (BigInteger. "10") frame-id-digits))
+        candidate (str "f9" (format (str "%0" frame-id-digits "d") truncated))]
     (cond
       (not (set? occupied-frame-ids))
       {:ok false :error/code :occupied-frame-id-set-required}
