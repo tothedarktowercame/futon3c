@@ -88,3 +88,22 @@
     ;; input validation must accept this distinct terminal evidence shape.
     (is (not= :series-terminal-partial-evidence-invalid
               (:error/code prepared)))))
+
+(deftest post-promotion-student-dispatch-failure-preserves-solved-problem
+  (let [projection {:projection/status :valid :campaign/status :running
+                    :campaign/id "c" :campaign/version 13
+                    :ledger/digest "digest" :ledger/event-count 13
+                    :active/claim nil :active/block "b"
+                    :active/frame {:frame-id "f24" :problem-id "m93A02"
+                                   :phase :student-attempt-1}}
+        prepared (sut/prepare
+                  {:projection projection :events []}
+                  {:frame-id "f24" :problem-id "m93A02"
+                   :final-head "7d26e872f89040284c58c2f4b516f50a6a42fef2"
+                   :residual "Student dispatch omitted its promoted snapshot witness."
+                   :rounds 1
+                   :partial-reason :student-dispatch-apparatus-invalid
+                   :problem-outcome :solved
+                   :proof-receipt-ids ["solve" "verify"]})]
+    (is (not= :series-terminal-partial-evidence-invalid
+              (:error/code prepared)))))

@@ -67,9 +67,12 @@
                      (or (and (= :solve (:phase active-frame))
                               (or (nil? partial-reason)
                                   (= :solver-budget-exhausted partial-reason)))
-                         (and (= :promote-solver (:phase active-frame))
-                              (= :promotion-review-apparatus-invalid
-                                 partial-reason)
+                         (and (contains? #{:promote-solver :student-attempt-1
+                                          :student-attempt-2 :student-attempt-3}
+                                        (:phase active-frame))
+                              (contains? #{:promotion-review-apparatus-invalid
+                                           :student-dispatch-apparatus-invalid}
+                                         partial-reason)
                               (= :solved problem-outcome)
                               (vector? proof-receipt-ids)
                               (<= 2 (count proof-receipt-ids))
