@@ -217,7 +217,7 @@
                     (or (not= (str frame-id "-" (name role)) (:agent-id seat))
                         (not= expected-type (:type seat)))))
                 {:solver :codex :student :zai :guide :claude
-                 :proctor :codex :scribe :zai})
+                 :proctor :codex :promotion-proctor :codex :scribe :zai})
           (conj :preparation-seat-mismatch))]
     (if (seq findings)
       {:ok false :error/code :countdown-frame-preparation-invalid
@@ -610,7 +610,8 @@
            :analyst-tenure-registered? (:ok registration)}
           reviewer-card (get-in manifest [:apparatus :artifacts
                                           :promotion-proctor])
-          reviewer-seat (get-in preparation [:seats :proctor])
+          reviewer-seat (get-in preparation [:seats :promotion-proctor])
+          measurement-proctor-seat (get-in preparation [:seats :proctor])
           checks (assoc checks
                         :promotion-proctor-card-pinned?
                         (and (string? (:path reviewer-card))
@@ -619,7 +620,9 @@
                         (and (string? (:agent-id reviewer-seat))
                              (not= (:agent-id reviewer-seat)
                                    (get-in preparation [:seats :scribe
-                                                        :agent-id]))))
+                                                        :agent-id]))
+                             (not= (:agent-id reviewer-seat)
+                                   (:agent-id measurement-proctor-seat))))
           failed (into #{} (keep (fn [[k v]] (when-not v k))) checks)]
       (if (seq failed)
         {:ok false :error/code :learning-regime-incomplete
@@ -630,7 +633,7 @@
 (defn- promotion-review-request
   [{:keys [manifest unit preparation request]}]
   (let [card (get-in manifest [:apparatus :artifacts :promotion-proctor])
-        seat (get-in preparation [:seats :proctor])
+        seat (get-in preparation [:seats :promotion-proctor])
         body {:dispatch/type :promotion-review
               :phase :promote-solver
               :role :promotion-proctor
@@ -1222,7 +1225,8 @@
                                       (:out (shell/sh "git" "-C" control-root
                                                       "rev-parse" (str "HEAD:" path))))}]))
               (select-keys queued-frame-adapter/default-artifacts
-                           [:solver :student :guide :proctor :scribe]))
+                           [:solver :student :guide :proctor :promotion-proctor
+                            :scribe :analyst]))
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :campaign-root campaign-root

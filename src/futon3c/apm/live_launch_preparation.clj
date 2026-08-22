@@ -6,6 +6,7 @@
 
 (def required-seat-types
   {:solver :codex :student :zai :guide :claude :proctor :codex :scribe :zai
+   :promotion-proctor :codex
    :analyst :claude})
 
 (def required-timeouts

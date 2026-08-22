@@ -23,14 +23,16 @@
                                        {:promotion-proctor
                                         {:path "proctor.md" :blob "blob"}}}}
                 :unit {:frame/id "f22" :problem/id "p22"}
-                :preparation {:seats {:proctor {:agent-id "f22-proctor"}}
+                :preparation {:seats {:promotion-proctor
+                                      {:agent-id "f22-promotion-proctor"}}
                               :seat-policy {:turn-timeout-ms 7200000}}}]
     (with-redefs [sut/live-learning-phase-inputs (constantly inputs)
                   live-promotion/run-live!
                   (fn [opts] (reset! captured opts)
                     {:ok true :status :awaiting-terminal :job-id "scribe-job"})]
       (is (= "scribe-job" (:job-id (sut/drive-live-learning-phase! action))))
-      (is (= "f22-proctor" (get-in @captured [:reviewer-request :agent-id])))
+      (is (= "f22-promotion-proctor"
+             (get-in @captured [:reviewer-request :agent-id])))
       (is (= "blob" (get-in @captured [:reviewer-request :role-card-blob])))
       (is (= 7200000
              (get-in @captured [:reviewer-request :turn-timeout-ms])))
@@ -91,6 +93,8 @@
                            {:path "promotion-proctor.md" :blob "blob"})
               {:seats {:analyst {:agent-id "analyst-1"}
                        :proctor {:agent-id "f22-proctor"}
+                       :promotion-proctor
+                       {:agent-id "f22-promotion-proctor"}
                        :scribe {:agent-id "f22-scribe"}}})))))
 
 (deftest baseline-f20-close-does-not-invent-an-analyst-transition
@@ -231,7 +235,8 @@
                               [role {:agent-id (str frame-id "-" (name role))
                                      :type type}])
                             {:solver :codex :student :zai :guide :claude
-                             :proctor :codex :scribe :zai}))}]
+                             :proctor :codex :promotion-proctor :codex
+                             :scribe :zai}))}]
     (assoc body :preparation/id (machine/ledger-digest [body]))))
 
 (deftest future-frame-contexts-select-exact-units-and-fail-closed-unprovisioned

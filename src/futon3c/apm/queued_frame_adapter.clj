@@ -20,12 +20,12 @@
 (def default-artifacts
   {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
    :solver "holes/labs/M-apm-demonstration/role-cards/codex-solver-v5.md"
-   :student "holes/labs/M-apm-demonstration/role-cards/zai-student.md"
+   :student "holes/labs/M-apm-demonstration/role-cards/zai-student-v2.md"
    :guide "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.1.md"
-   :scribe "holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
+   :scribe "holes/labs/M-apm-demonstration/role-cards/scribe-v3.md"
    :proctor "holes/labs/M-apm-demonstration/role-cards/proctor.md"
    :promotion-proctor
-   "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v1.md"
+   "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v2.md"
    :analyst "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md"})
 
 (defn- git-out [repository & args]
