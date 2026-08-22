@@ -36,8 +36,18 @@
       response
       (refusal :agent-roster-unobservable response))))
 
-(defn- frame-id-from-agent [agent-id]
-  (second (re-matches #"^(f[0-9]+)-.+$" (str agent-id))))
+(defn- frame-id-from-agent
+  "Extract the frame id from a seat id like f21-solver.
+
+  Agent ids arrive as KEYWORD map keys from the parsed roster, and (str
+  :f21-solver) is \":f21-solver\" -- the leading colon defeats the anchor, so
+  a str-based match silently extracted nothing and left the occupied set
+  empty. An empty occupied set makes codex-frame-id's collision check vacuous
+  without failing, which is the worst shape a guard can take. Accept both
+  keywords and strings via name."
+  [agent-id]
+  (when (or (string? agent-id) (instance? clojure.lang.Named agent-id))
+    (second (re-matches #"^(f[0-9]+)-.+$" (name agent-id)))))
 
 (defn- observed-frame-directories [frames-root]
   (try

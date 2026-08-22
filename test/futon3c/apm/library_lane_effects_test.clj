@@ -123,6 +123,19 @@
                                    :http-fn failed-http})))))
       (finally (delete-tree! (:root fixture))))))
 
+(deftest occupied-frame-ids-extracts-from-keyword-roster-keys
+  ;; The live agency parses JSON to KEYWORD map keys, so the roster arrives as
+  ;; {:f21-solver {...}}. A str-based extraction yields ":f21-solver", whose
+  ;; leading colon defeats the ^f[0-9]+ anchor, silently producing an empty
+  ;; occupied set -- a collision guard that never fires and never complains.
+  ;; The other fixtures seed string keys, which is why they did not catch it.
+  (let [fixture (fixture) agency (agency-stub)]
+    (try
+      (swap! (:agents agency) assoc :f21-solver {:type :codex :invoke-ready? true})
+      (swap! (:agents agency) assoc :f13-proctor {:type :codex :invoke-ready? true})
+      (is (= #{"f21" "f13"} (:occupied-frame-ids (effects fixture agency))))
+      (finally (delete-tree! (:root fixture))))))
+
 (deftest provisioned-lease-is-persisted-and-reobserved
   (let [fixture (fixture) agency (agency-stub)]
     (try
