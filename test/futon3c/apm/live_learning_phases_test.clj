@@ -96,7 +96,7 @@
                            :accessible-memory-ids #{"m1"}}
                           :action {:kind :student-attempt
                                    :phase :student-attempt-1 :role :student
-                                   :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
+                                   :frame-id "f19" :problem-id "a01J05"}
                           :seat {:agent-id "f19-student" :invoke-ready? true}})))
         job {:job-id "j" :agent-id "f19-student" :session-id "fresh"
              :state :done
@@ -110,6 +110,7 @@
             :snapshot-id "snapshot-1" :snapshot-digest "snapshot-digest"
             :accessible-memory-ids ["m1"]}
            (:memory-snapshot request)))
+    (is (= 1 (:attempt-ordinal request)))
     (is (some #{:student-memory-snapshot-mismatch}
               (:findings (sut/validate-terminal request {:job-id "j"} job))))))
 

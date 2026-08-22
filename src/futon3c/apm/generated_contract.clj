@@ -24,7 +24,11 @@
 (def required-memory-policy
   {:content-addressed-snapshot true :admit-after-solve-verify true
    :independent-review true :student-attempts 3
-   :fresh-student-sessions true :exact-snapshot-binding true})
+   :fresh-student-sessions true :exact-snapshot-binding true
+   :student-dispatch-witness-required true
+   :student-dispatch-required-fields
+   ["attempt-ordinal" "promotion-receipt-id" "snapshot-id"
+    "snapshot-digest" "accessible-memory-ids"]})
 
 (def required-isolation-policy
   {:campaign-scoped-regulator true :campaign-scoped-problem-buffer true

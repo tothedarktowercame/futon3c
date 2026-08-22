@@ -30,6 +30,10 @@
     :or {turn-timeout-ms 3600000}}]
   (let [kind (:kind action)
         phase (:phase action)
+        attempt-ordinal (or (:ordinal action)
+                            ({:student-attempt-1 1
+                              :student-attempt-2 2
+                              :student-attempt-3 3} phase))
         role (role-for-kind kind)
         expected-agent (str (:frame/id unit) "-" (name role))
         input-ids (required-input-receipt-ids contract phase receipts)
@@ -50,6 +54,9 @@
                    (and (= :student-attempt kind)
                         (not (string? (:workspace/path workspace))))
                    (conj :student-workspace-missing)
+                   (and (= :student-attempt kind)
+                        (not (contains? #{1 2 3} attempt-ordinal)))
+                   (conj :student-attempt-ordinal-missing)
                    (and (= :student-attempt kind) promotion-receipt
                         (not (and (:ok snapshot-access)
                                   (= (:receipt/snapshot-digest promotion-receipt)
@@ -66,7 +73,7 @@
                           :input-receipt-ids input-ids
                           :turn-timeout-ms turn-timeout-ms}
                    (= :student-attempt kind)
-                   (assoc :attempt-ordinal (:ordinal action)
+                   (assoc :attempt-ordinal attempt-ordinal
                           :workspace (:workspace/path workspace)
                           :fresh-session? true
                           :fresh-session-nonce (str (UUID/randomUUID)))

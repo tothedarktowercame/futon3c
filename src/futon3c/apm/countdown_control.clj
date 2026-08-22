@@ -530,7 +530,7 @@
         (keep (fn [phase]
                 (let [state (live-preflight-runtime/read-state
                              (state-path-for frame-id phase))]
-                  (when-let [receipt (:receipt state)] [phase receipt]))))
+                  (when-let [receipt (:receipt state)] [(keyword phase) receipt]))))
         (:phase-order contract)))
 
 (defn live-learning-phase-inputs [action]
