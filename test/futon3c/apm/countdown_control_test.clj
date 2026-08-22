@@ -4,6 +4,7 @@
             [futon3c.apm.campaign-batch :as batch]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-runner :as runner]
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as live-promotion]))
@@ -253,3 +254,13 @@
                                   :phase :promote-solver}))]
     (is (:ok result))
     (is (= receipt (:certificate result)))))
+
+(deftest live-projection-refreshes-the-certificate-cache-first
+  (let [calls (atom [])]
+    (with-redefs [runner/checkpoint!
+                  (fn [_ stage]
+                    (swap! calls conj stage)
+                    {:ok false :error/code :deliberate-stop})]
+      (is (= :countdown-projection-checkpoint-failed
+             (:error/code (#'sut/project-current! "f22"))))
+      (is (= [{:checkpoint/stage :live-projection-refresh}] @calls)))))

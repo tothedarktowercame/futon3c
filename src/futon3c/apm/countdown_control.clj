@@ -7,6 +7,7 @@
             [futon3c.apm.campaign-executor :as executor]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-postconditions :as postconditions]
+            [futon3c.apm.campaign-runner :as runner]
             [futon3c.apm.campaign-stepper :as stepper]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
@@ -736,7 +737,9 @@
     {:ok false :error/code :set-alight-action-unsupported :action action}))
 
 (defn- project-current! [frame-id]
-  (let [{:keys [manifest]} (inputs)
+  (let [checkpoint (runner/checkpoint!
+                    (options) {:checkpoint/stage :live-projection-refresh})
+        {:keys [manifest]} (inputs)
         unit (frame-unit manifest frame-id)
         loaded (ledger/read-ledger (control-path ledger-path))
         active (get-in loaded [:projection :active/frame])
@@ -770,6 +773,9 @@
            :agent-id (:agent-id phase-request)
            :job-id (get-in phase-state [:ticket :job-id])})]
     (cond
+      (not (:ok checkpoint))
+      {:ok false :error/code :countdown-projection-checkpoint-failed
+       :checkpoint checkpoint}
       (not (:ok loaded)) loaded
       (nil? unit)
       {:ok false :error/code :countdown-frame-not-in-manifest :frame-id frame-id}
