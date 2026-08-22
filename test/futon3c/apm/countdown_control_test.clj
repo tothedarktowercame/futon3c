@@ -7,7 +7,8 @@
             [futon3c.apm.campaign-runner :as runner]
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
-            [futon3c.apm.live-promotion :as live-promotion]))
+            [futon3c.apm.live-promotion :as live-promotion]
+            [futon3c.apm.problem-queue-supervisor :as problem-queue]))
 
 (deftest promote-solver-selects-durable-two-seat-adapter
   (let [captured (atom nil)
@@ -348,3 +349,24 @@
                     (get-in result [:qualification :findings])))
           (is (= [] (:dispatches result)))))
       (finally (.delete temp)))))
+
+(deftest problem-list-entry-does-not-preconstruct-frame-resources
+  (let [captured (atom nil)
+        problems [{:problem/id "p1" :repository "/repo" :revision "r1"
+                   :path "p1.lean" :blob "b1"
+                   :classification :non-excluded}
+                  {:problem/id "p2" :repository "/repo" :revision "r2"
+                   :path "p2.lean" :blob "b2"
+                   :classification :non-excluded}]]
+    (with-redefs [problem-queue/tick!
+                  (fn [options] (reset! captured options)
+                    {:ok true :status :frame-prepared})]
+      (is (= :frame-prepared
+             (:status (sut/set-alight-problem-queue!
+                       {:problems problems}
+                       {:mint-frame-fn identity}))))
+      (is (= ["p1" "p2"]
+             (mapv :problem/id (get-in @captured [:plan :problems]))))
+      (is (nil? (get-in @captured [:plan :frames])))
+      (is (fn? (:state-provider @captured)))
+      (is (fn? (:persist-state-fn @captured))))))

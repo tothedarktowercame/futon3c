@@ -24,6 +24,7 @@
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
             [futon3c.apm.problem-projection :as problem-projection]
+            [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.qualification :as qualification])
   (:import [java.nio.file Path]
            [java.time Instant]))
@@ -43,6 +44,8 @@
 (def ^:dynamic preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
 (def ^:dynamic batch-cursor-path "data/apm-campaigns/countdown-f19-f27-r4/live/batch-cursor.edn")
 (def ^:dynamic regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
+(def ^:dynamic problem-queue-state-path
+  "data/apm-campaigns/problem-queue/live/queue.edn")
 (def ^:dynamic analyst-state-path "data/apm-campaigns/countdown-f19-f27-r4/analyst/state.edn")
 (def ^:dynamic preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
@@ -111,6 +114,8 @@
                preflight-state-path (or (:preflight-state-path config#) preflight-state-path)
                batch-cursor-path (or (:batch-cursor-path config#) batch-cursor-path)
                regulator-state-path (or (:regulator-state-path config#) regulator-state-path)
+               problem-queue-state-path
+               (or (:problem-queue-state-path config#) problem-queue-state-path)
                analyst-state-path (or (:analyst-state-path config#) analyst-state-path)
                preparation-path (or (:preparation-path config#) preparation-path)]
        ~@body)))
@@ -1080,3 +1085,20 @@
              #(live-preflight-runtime/atomic-persist! cursor-path %))
          :continue-fn (or continue-fn park-next)
          :authority (dissoc authority :permit)})))))
+
+(defn set-alight-problem-queue!
+  "Drive one just-in-time problem-queue tick.
+
+  PROBLEMS are immutable problem pins, not prepared frames. EFFECTS supplies
+  qualification, mint/provision, supervised frame tick, and retirement
+  adapters. The successor is minted only after the active frame returns a
+  certified terminal result."
+  [{:keys [problems campaign-config]} effects]
+  (with-campaign campaign-config
+    (let [path (control-path problem-queue-state-path)
+          plan (problem-queue/queue-plan problems)]
+      (problem-queue/tick!
+       (merge {:plan plan
+               :state-provider #(live-preflight-runtime/read-state path)
+               :persist-state-fn #(live-preflight-runtime/atomic-persist! path %)}
+              effects)))))

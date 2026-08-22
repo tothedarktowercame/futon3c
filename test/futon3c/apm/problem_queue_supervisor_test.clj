@@ -1,0 +1,72 @@
+(ns futon3c.apm.problem-queue-supervisor-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.problem-queue-supervisor :as sut]))
+
+(def problems
+  (mapv (fn [n] {:problem/id (str "p" n) :repository "/repo"
+                  :revision (str "revision-" n) :path (str "p" n ".lean")
+                  :blob (str "blob-" n) :classification :non-excluded})
+        (range 1 6)))
+
+(defn harness []
+  (let [plan (sut/queue-plan problems) state (atom nil) calls (atom [])]
+    {:plan plan :state state :calls calls
+     :providers
+     {:plan plan :state-provider #(deref state)
+      :persist-state-fn #(do (reset! state %) (swap! calls conj [:persist])
+                             {:ok true})
+      :mint-frame-fn
+      (fn [{:keys [problem ordinal]}]
+        (swap! calls conj [:mint (:problem/id problem)])
+        {:ok true :frame {:frame/id (str "q" (inc ordinal))
+                          :problem/id (:problem/id problem) :problem problem}})
+      :qualify-frame-fn #(do (swap! calls conj [:qualify (:frame/id %)])
+                             {:ok true})
+      :prepare-frame-fn #(do (swap! calls conj [:prepare (:frame/id %)])
+                             {:ok true :preparation/id
+                              (str "prep-" (:frame/id %))})
+      :frame-tick-fn (fn [frame] (swap! calls conj [:tick (:frame/id frame)])
+                       {:ok true :status :frame-complete :frame/result :closed
+                        :terminal-receipt {:receipt/id
+                                           (str "close-" (:frame/id frame))}})
+      :retire-frame-fn #(do (swap! calls conj [:retire
+                                               (get-in % [:frame :frame/id])])
+                            {:ok true})}}))
+
+(deftest five-problem-chain-provisions-only-current-frame
+  (let [{:keys [providers state calls]} (harness)]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (is (= "p1" (get-in @state [:active :frame :problem/id])))
+    (is (= 1 (count (filter #(= :prepare (first %)) @calls))))
+    (dotimes [_ 4]
+      (is (= :frame-prepared (:status (sut/tick! providers))))
+      (is (= 1 (- (count (filter #(= :prepare (first %)) @calls))
+                    (count (filter #(= :retire (first %)) @calls))))))
+    (is (= :batch-complete (:status (sut/tick! providers))))
+    (is (= 5 (count (:completed @state))))
+    (is (nil? (:active @state)))
+    (is (= ["p1" "p2" "p3" "p4" "p5"]
+           (mapv :problem/id (:completed @state))))))
+
+(deftest successor-is-not-minted-before-terminal-result
+  (let [{:keys [providers calls]} (harness)]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (let [result (sut/tick! (assoc providers :frame-tick-fn
+                                   (constantly {:ok true :status :parked})))]
+      (is (= :parked (:status result)))
+      (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
+
+(deftest queue-and-terminal-invariants-fail-closed
+  (testing "duplicate problem"
+    (let [plan (sut/queue-plan [(first problems) (first problems)])]
+      (is (= :problem-queue-invalid
+             (:error/code (sut/tick! (assoc (:providers (harness))
+                                           :plan plan)))))))
+  (testing "nonterminal completion result"
+    (let [{:keys [providers]} (harness)]
+      (sut/tick! providers)
+      (is (= :problem-queue-terminal-result-invalid
+             (:error/code
+              (sut/tick! (assoc providers :frame-tick-fn
+                                (constantly {:ok true :status :frame-complete
+                                             :frame/result :running})))))))))
