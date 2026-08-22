@@ -85,7 +85,7 @@
         target (Path/of (str path) (make-array String 0))]
     (cond
       (or (not (nonblank? frame-id)) (not (nonblank? problem-id))
-          (empty? candidates))
+          (not (vector? candidates)))
       {:ok false :error/code :memory-snapshot-input-invalid}
       (some (complement :ok) validations)
       {:ok false :error/code :memory-snapshot-candidate-invalid

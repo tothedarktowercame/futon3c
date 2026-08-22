@@ -48,6 +48,20 @@
                            :path "/tmp/not-written-invisible-review.edn"
                            :evidence-visible? (constantly false)}))))))
 
+(deftest unanimous-rejection-publishes-an-empty-certified-snapshot
+  (let [dir (Files/createTempDirectory "apm-empty-snapshot-test"
+                                       (make-array FileAttribute 0))
+        path (.resolve dir "eligible.edn")
+        result (sut/publish! {:frame-id "f22" :problem-id "p2"
+                              :candidates [] :path path
+                              :evidence-visible? (constantly true)})
+        digest (get-in result [:snapshot :snapshot/digest])]
+    (is (:ok result))
+    (is (= [] (get-in result [:snapshot :snapshot/memories])))
+    (is (:ok (sut/verify-student-access
+              {:path path :expected digest :frame-id "f22" :problem-id "p2"
+               :accessible-memory-ids []})))))
+
 (deftest fresh-visibility-check-joins-edge-memory-and-review-evidence
   (let [edge {:hx/type :memory/assert
               :hx/props {:state :current :attachment-status :reviewed
