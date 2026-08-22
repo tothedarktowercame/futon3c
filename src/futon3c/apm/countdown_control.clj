@@ -1242,12 +1242,21 @@
               (Path/of (:manifest-path paths) (make-array String 0)) manifest)
              manifest))
          :open-frame-fn
-         (fn [_ _ paths]
+         (fn [frame _ paths]
            (with-campaign paths
-             (let [boot (bootstrap!)
-                   block (when (:ok boot) (advance! :open-block))
-                   opened (when (:ok block) (advance! :open-frame))]
-               (if (:ok opened) {:ok true} (or opened block boot)))))
+             (let [observed (jit-ledger-observation paths frame)]
+               (if (and (:ok observed)
+                        (= (:frame/id frame) (:frame-id observed))
+                        (= (:problem/id frame) (:problem-id observed))
+                        (= :preflight (:phase observed))
+                        (nil? (:claim observed)))
+                 {:ok true :already-open? true
+                  :ledger/version (:version observed)
+                  :ledger/digest (:digest observed)}
+                 (let [boot (bootstrap!)
+                       block (when (:ok boot) (advance! :open-block))
+                       opened (when (:ok block) (advance! :open-frame))]
+                   (if (:ok opened) {:ok true} (or opened block boot)))))))
          :ledger-fn jit-ledger-observation}
         jit-config
         (assoc base-jit-config :retirement-audit-fn

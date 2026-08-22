@@ -417,7 +417,15 @@
                     {:ok true :status :frame-prepared})
                   runtime/http-json
                   (fn [_ _ payload]
-                    {:ok true :http/status 200 :payload payload})]
+                    {:ok true :http/status 200 :payload payload})
+                  ledger/read-ledger
+                  (fn [_]
+                    {:ok true
+                     :projection
+                     {:campaign/version 5 :ledger/digest "open-digest"
+                      :active/frame {:frame-id "f24" :problem-id "m-test"
+                                     :phase :preflight}
+                      :active/claim nil}})]
       (is (= :frame-prepared
              (:status (sut/set-alight-problem-list!
                        {:problems [problem]
@@ -428,6 +436,11 @@
         (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn
                                      :retirement-audit-fn])))
         (is (= 24 (:frame-number-base config)))
+        (is (= {:ok true :already-open? true
+                :ledger/version 5 :ledger/digest "open-digest"}
+               ((:open-frame-fn config)
+                {:frame/id "f24" :problem/id "m-test"} nil
+                {:ledger-path "/unused/ledger.edn"})))
         (is (string? (get-in @captured
                              [:request :authority :continuation-payload])))
         (is (= [problem] (get-in @captured [:request :problems])))))))
