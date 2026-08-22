@@ -152,6 +152,18 @@
         effects
         {:kind kind :contract contract :request request
          :state (runtime/read-state state-path)
+         ;; This lane does not depend on the shared per-agent DRAINER, which
+         ;; is the machinery the two cycle machines would otherwise contend
+         ;; for. announce here is an id reservation only -- create-invoke-job!
+         ;; writes a ledger row and notifies nobody, so nothing is enqueued and
+         ;; nothing waits to be drained (E-apm-drainer.md). Dispatch is then
+         ;; explicit and immediate, carrying that id.
+         ;;
+         ;; What remains shared is the job LEDGER: build-invoke-response always
+         ;; calls create-invoke-job!, so every invoke lands a row there and only
+         ;; futon3c can change that. The lane uses it as a read-only terminal
+         ;; oracle for ids it created, and owns its scheduling and durable state
+         ;; under data/apm-lane/.
          :announce-fn
          (fn [req]
            (let [response (runtime/http-json
@@ -162,14 +174,21 @@
               :job-id (:job-id response)}))
          :activate-fn
          (fn [req ticket]
+           ;; The dispatch the countdown gets from its drainer, this lane does
+           ;; for itself: POST /invoke with the reserved job-id. build-invoke-
+           ;; response reads requested-job-id and create-invoke-job! reuses a
+           ;; non-terminal row, so the reservation is adopted, not duplicated.
+           ;; On a future so this returns at once and drive! stays a durable
+           ;; step machine with the caller polling.
            (let [job-id (:job-id ticket)]
-             (future
-               (try
-                 (runtime/http-json
-                  "POST" (str agency-base "/api/alpha/invoke")
-                  {:agent-id (:agent-id req) :prompt (proof/prompt req)
-                   :surface surface :caller caller :mode mode :job-id job-id})
-                 (catch Throwable _ nil)))
+             (when job-id
+               (future
+                 (try
+                   (runtime/http-json
+                    "POST" (str agency-base "/api/alpha/invoke")
+                    {:agent-id (:agent-id req) :prompt (proof/prompt req)
+                     :surface surface :caller caller :mode mode :job-id job-id})
+                   (catch Throwable _ nil))))
              {:ok (some? job-id)}))
          :job-fn
          (fn [job-id]
