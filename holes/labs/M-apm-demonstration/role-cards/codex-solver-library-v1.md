@@ -201,8 +201,34 @@ exact impossibility — not because a route is expensive.
 5. Final reachability report: every declaration on the keying problem's import
    path is reachable from the keying target or carries a recorded disposition.
    Quarantined work is committed, not deleted.
-6. Commit the final state and leave the worktree clean.
-7. Report the commit SHA, verbatim axiom output, the verbatim
+6. **Recompute the keying problem's `status.json` from the elaborated file.**
+   `classification` and `lean.sorry_count_*` must match what Lean actually
+   reports, and the change must be recorded under `sorry_audit` with the
+   method, the date, the elaborated exit code, and the previous value.
+
+   Count by elaboration, never by grep: the word `sorry` occurs constantly in
+   prose and docstrings, and a textual count gets it wrong in both directions.
+
+   This is not bookkeeping. The dispatch queue reads `status.json`, so a
+   problem you closed without updating it stays in the queue and gets
+   re-attempted. That has already happened: t98J03 was closed axiom-clean on
+   2026-08-22 by a commit that touched only `Main.lean`, and stayed marked
+   `partial` until a later audit caught it.
+
+7. **Land on the trunk.** Work develops on a branch, but the increment is not
+   done until it is merged where dispatches can see it. A branch nobody merges
+   is invisible: t98J03 carried a three-hop note asserting no suspension
+   isomorphism existed anywhere, and that was true only from where its
+   checkout stood -- the material was on a branch it did not contain. Three
+   prior attempts concluded "infrastructure missing" because of it.
+
+   Any module you land that carries a `sorry` must NOT be imported by the
+   `ConstructionTargets` roll-up, and must be indexed in
+   `ConstructionTargets/PARTIAL.md`. Building the roll-up must emit zero
+   `sorry` warnings, so that importing it exposes only sorry-free material.
+
+8. Commit the final state and leave the worktree clean.
+9. Report the commit SHA, verbatim axiom output, the verbatim
    `:closure-command`, and the final orphan list.
 
 ## What this card does not do
