@@ -4,6 +4,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.campaign-ledger :as ledger]
+            [futon3c.apm.campaign-executor :as executor]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-postconditions :as postconditions]
             [futon3c.apm.campaign-stepper :as stepper]
@@ -841,6 +842,15 @@
      (live-supervisor/tick!
       {:launch-audit-fn (or launch-audit-fn #(launch-audit! identity))
        :inspect-fn (or inspect-fn #(frame-inspect! target-frame))
+       :recover-claim-fn
+       (fn [inspection]
+         (let [certificate (get-in inspection [:checkpoint :certificate])]
+           (executor/complete-claimed!
+            {:ledger-path (control-path ledger-path)
+             :current-certificate certificate
+             :handlers (:handlers (options))
+             :actor "countdown-recovery"
+             :at (str (Instant/now))})))
        :drive-phase-fn (or drive-phase-fn drive-live-action!)
        :advance-fn (or advance-fn
                        (fn [kind certificate]

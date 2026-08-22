@@ -100,4 +100,44 @@
                   {:ok false :error/code :campaign-obligation-completion-refused
                    :claim-persisted? true :effect-completed? true
                    :claim-receipt claim :completion completed
-                   :effect-certificate (:certificate handler-result)})))))))))
+                  :effect-certificate (:certificate handler-result)})))))))))
+
+(defn complete-claimed!
+  "Complete the exact durable active claim from an independently certified,
+   idempotent effect. This never creates or releases a claim."
+  [{:keys [ledger-path current-certificate handlers actor at]}]
+  (let [claim (:active/claim current-certificate)
+        obligation (:obligation claim)
+        action (:obligation/action obligation)
+        handler (get handlers (:kind action))]
+    (cond
+      (not (map? claim))
+      {:ok false :error/code :campaign-recovery-active-claim-required}
+      (not= (:obligation/id claim) (:obligation/id obligation))
+      {:ok false :error/code :campaign-recovery-claim-identity-mismatch}
+      (= actor (:actor claim))
+      {:ok false :error/code :campaign-recovery-independent-actor-required}
+      (not (fn? handler))
+      {:ok false :error/code :campaign-obligation-handler-missing}
+      :else
+      (let [handled (handler (assoc action :idempotency-key (:obligation/id claim)))]
+        (if-not (and (:ok handled) (map? (:certificate handled)))
+          {:ok false :error/code :campaign-recovery-effect-not-certified
+           :handler-result handled}
+          (let [completion (:completion action)
+                body (assoc (:event/body completion)
+                            :obligation/id (:obligation/id claim)
+                            :certificate (:certificate handled)
+                            :recovery? true)
+                event (make-event current-certificate
+                                  (:ledger/event-count current-certificate)
+                                  (:campaign/version current-certificate)
+                                  actor at (:event/type completion) body)
+                completed (ledger/compare-and-append!
+                           ledger-path (:campaign/version current-certificate)
+                           (:ledger/digest current-certificate) event)]
+            (if (:ok completed)
+              {:ok true :recovered? true :completion-receipt completed
+               :effect-certificate (:certificate handled)}
+              {:ok false :error/code :campaign-recovery-completion-refused
+               :completion completed})))))))

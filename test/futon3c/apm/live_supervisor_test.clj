@@ -68,3 +68,16 @@
                                                     {:ok false})))]
       (is (= :live-supervisor-projection-failed (:error/code result)))
       (is (not-any? #(and (vector? %) (= :park (first %))) @calls)))))
+
+(deftest exact-active-claim-can-use-typed-recovery
+  (let [calls (atom [])
+        recovering {:ok true :stepper/status :stop
+                    :decision {:reason :campaign-obligation-claim-recovery-required}}
+        result (sut/tick!
+                (assoc (base calls {})
+                       :inspect-fn (constantly recovering)
+                       :recover-claim-fn
+                       (fn [_] (swap! calls conj :recover) {:ok true})))]
+    (is (= :claim-recovered (:status result)))
+    (is (= [:audit :recover :project] (take 3 @calls)))
+    (is (= [] (get-in (last @calls) [1 :awaiting])))))

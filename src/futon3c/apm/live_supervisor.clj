@@ -8,7 +8,7 @@
    advanced and projected before the next tick is parked. An awaiting job parks
    on that exact canonical job id."
   [{:keys [launch-audit-fn inspect-fn drive-phase-fn advance-fn project-fn
-           park-fn continuation-payload]}]
+           recover-claim-fn park-fn continuation-payload]}]
   (if-not (every? fn? [launch-audit-fn inspect-fn drive-phase-fn advance-fn
                         project-fn park-fn])
     {:ok false :error/code :live-supervisor-provider-missing}
@@ -18,6 +18,22 @@
          :audit audit}
         (let [inspection (inspect-fn)]
           (cond
+            (and (= :campaign-obligation-claim-recovery-required
+                    (get-in inspection [:decision :reason]))
+                 (fn? recover-claim-fn))
+            (let [recovered (recover-claim-fn inspection)]
+              (if-not (:ok recovered)
+                recovered
+                (let [projected (project-fn)
+                      parked (when (:ok projected)
+                               (park-fn {:awaiting []
+                                         :payload continuation-payload}))]
+                  (if (and (:ok projected) (:ok parked))
+                    {:ok true :status :claim-recovered :recovery recovered
+                     :projection projected :park parked}
+                    {:ok false :error/code :live-supervisor-recovery-publication-failed
+                     :projection projected :park parked}))))
+
             (not (:ok inspection)) inspection
             (= :complete (:stepper/status inspection))
             {:ok true :status :frame-complete :inspection inspection}
