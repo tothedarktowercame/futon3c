@@ -241,3 +241,15 @@
         (is (:ok context))
         (is (= frame-id (get-in context [:unit :frame/id])))
         (is (= (:problem/id unit) (get-in context [:preparation :problem/id])))))))
+
+(deftest promotion-certified-state-satisfies-generic-phase-handler
+  (let [receipt {:receipt/frame-id "f22" :receipt/problem-id "p22"
+                 :receipt/id "promotion-receipt"}
+        result (with-redefs [runtime/read-state
+                             (constantly {:state/type :promotion-certified
+                                          :receipt receipt})]
+                 (#'sut/certified-handler
+                  :scribe-reduce {:frame-id "f22" :problem-id "p22"
+                                  :phase :promote-solver}))]
+    (is (:ok result))
+    (is (= receipt (:certificate result)))))

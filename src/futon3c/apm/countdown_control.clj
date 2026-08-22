@@ -320,7 +320,8 @@
         state-path (state-path-for (:frame-id action) phase)
         state (live-preflight-runtime/read-state state-path)
         receipt (:receipt state)]
-    (if (and (contains? #{:live-job-certified :preflight-certified}
+    (if (and (contains? #{:live-job-certified :preflight-certified
+                          :promotion-certified}
                         (:state/type state))
              (= (:frame-id action) (:receipt/frame-id receipt))
              (= (:problem-id action) (:receipt/problem-id receipt)))
