@@ -35,3 +35,37 @@
     (is (= "proctor" (:job-id r2)))
     (is (= :certified (:status r3)))
     (is (= [:deposit :review :publish] @calls))))
+
+(deftest malformed-deposit-is-durably-redispatched-without-review
+  (let [saved (atom nil)
+        review-called? (atom false)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "malformed" :attempt 1}
+                 :deposit-fn (fn
+                               ([job]
+                                (is (= "malformed" job))
+                                {:ok false
+                                 :error/code :promotion-stage-terminal-invalid})
+                               ([] {:ok true :job "scribe-retry"}))
+                 :review-fn (fn [& _] (reset! review-called? true))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (:ok result))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "scribe-retry" (:job-id result)))
+    (is (= 2 (:attempt @saved)))
+    (is (= [{:attempt 1 :job "malformed"
+             :failure {:error/code :promotion-stage-terminal-invalid}}]
+           (:failed-attempts @saved)))
+    (is (false? @review-called?))))
+
+(deftest invalid-deposit-shape-is-bounded
+  (let [result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "third-invalid" :attempt 3}
+                 :deposit-fn (fn [_] {:ok true :report {:depositor "scribe"}})
+                 :persist-fn (fn [_] (throw (ex-info "must not persist" {})))})]
+    (is (false? (:ok result)))
+    (is (= :promotion-deposit-retries-exhausted (:error/code result)))
+    (is (= 3 (:attempts result)))
+    (is (= [:candidates-missing] (:findings result)))))

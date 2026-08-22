@@ -6,6 +6,8 @@
 
 (declare drive!)
 
+(def ^:private max-deposit-attempts 3)
+
 (defn- agency-stage [agency-base request prompt]
   (fn
     ([]
@@ -42,7 +44,12 @@
   (let [state (runtime/read-state state-path)
         deposit-prompt (str "Deposit promotion candidates. Authority:\n"
                             (pr-str deposit-request)
-                            "\nReturn exactly one EDN map with :depositor and :candidates.")
+                            "\nReturn exactly one parseable EDN map and no prose. "
+                            "It must contain string :depositor and non-empty vector "
+                            ":candidates. Every candidate must contain string "
+                            ":memory-id, string :content-digest, vector :pattern-ids, "
+                            "and vector :source-attempts. EDN does not concatenate "
+                            "adjacent string literals; use one string value per field.")
         deposit-fn (agency-stage agency-base deposit-request deposit-prompt)
         review-fn
         (fn
@@ -69,21 +76,47 @@
              :publish-fn publish-fn
              :persist-fn #(runtime/atomic-persist! state-path %)})))
 
+(defn- retry-deposit!
+  [state failure deposit-fn persist-fn]
+  (let [attempt (or (:attempt state) 1)]
+    (if (>= attempt max-deposit-attempts)
+      (assoc failure :error/code :promotion-deposit-retries-exhausted
+             :attempts attempt)
+      (let [retry (deposit-fn)]
+        (if-not (:ok retry)
+          retry
+          (let [next-state
+                (-> state
+                    (assoc :job (:job retry) :attempt (inc attempt))
+                    (update :failed-attempts (fnil conj [])
+                            {:attempt attempt :job (:job state)
+                             :failure (select-keys failure
+                                                   [:error/code :findings])}))]
+            (persist-fn next-state)
+            {:ok true :status :awaiting-terminal :job-id (:job retry)
+             :retry/reason (or (:error/code failure) :deposit-invalid)
+             :state next-state}))))))
+
 (defn drive!
   [{:keys [state deposit-fn review-fn publish-fn persist-fn]}]
   (cond
     (nil? state)
     (let [r (deposit-fn)]
       (if-not (:ok r) r
-        (let [s {:state/type :promotion :stage :deposit :job (:job r)}]
+        (let [s {:state/type :promotion :stage :deposit :job (:job r)
+                 :attempt 1}]
           (persist-fn s) {:ok true :status :awaiting-terminal
                           :job-id (:job r) :state s})))
 
     (= :deposit (:stage state))
     (let [r (deposit-fn (:job state))]
-      (if (= :awaiting-terminal (:status r)) (assoc r :job-id (:job state))
+      (cond
+        (= :awaiting-terminal (:status r)) (assoc r :job-id (:job state))
+        (not (:ok r)) (retry-deposit! state r deposit-fn persist-fn)
+        :else
         (let [checked (pipeline/validate-deposit (:report r))]
-          (if-not (:ok checked) checked
+          (if-not (:ok checked)
+            (retry-deposit! state checked deposit-fn persist-fn)
             (let [review (review-fn (:candidates checked))]
               (if-not (:ok review) review
                 (let [s {:state/type :promotion :stage :independent-review
