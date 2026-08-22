@@ -19,7 +19,7 @@
    :receipt/rollup-sorry-warnings 0
    :receipt/status-recomputed
    {:previous-classification "partial"
-    :classification "complete"
+    :classification "solved"
     :previous-sorry-count 1
     :sorry-count 0
     :method :elaboration}
@@ -93,3 +93,12 @@
 (deftest canonical-new-classifications-are-authoritative
   (is (= "statement-defective" bank/statement-defective-classification))
   (is (= "partial-banked" bank/banked-seam-classification)))
+
+(deftest closed-pins-its-classification
+  (testing "a closed ruling may not record a classification other than solved"
+    (let [result (bank/build-receipt
+                  (assoc-in (merge base landed {:receipt/ruling :closed})
+                            [:receipt/status-recomputed :classification]
+                            "complete"))]
+      (is (false? (:ok result)))
+      (is (some #{:closed-classification-invalid} (:findings result))))))

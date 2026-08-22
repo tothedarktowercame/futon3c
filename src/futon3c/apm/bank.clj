@@ -20,9 +20,11 @@
 
 (def statement-defective-classification "statement-defective")
 (def banked-seam-classification "partial-banked")
+(def solved-classification "solved")
 
 (def ruling->classification
-  {:partial-banked banked-seam-classification
+  {:closed solved-classification
+   :partial-banked banked-seam-classification
    :statement-defective statement-defective-classification})
 
 (def required-fields
@@ -35,7 +37,7 @@
     :receipt/branch-deleted})
 
 (def ruling-fields
-  {:closed landed-fields
+  {:closed (conj landed-fields :receipt/classification)
    :partial-banked (conj landed-fields :receipt/boundary
                          :receipt/classification)
    :statement-defective #{:receipt/classification :receipt/defect-witness
@@ -80,6 +82,10 @@
     (and (= :closed ruling) (map? status)
          (not= 0 (:sorry-count status)))
     (conj :closed-sorry-count-nonzero)
+
+    (and (= :closed ruling) (map? status)
+         (not= solved-classification (:classification status)))
+    (conj :closed-classification-invalid)
 
     (and (= :partial-banked ruling) (map? status)
          (not= banked-seam-classification (:classification status)))
