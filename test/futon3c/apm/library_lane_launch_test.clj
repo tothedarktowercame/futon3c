@@ -136,10 +136,22 @@
             (is (= (get-in first-launch [:config :workspace :workspace/id])
                    (get-in second-launch [:config :workspace :workspace/id])))
             (is (= 1 @(:provisions effects)))))
-        (testing "the observed occupied set rejects the deterministic id"
+        (testing "an id occupied by our OWN prior lease is reuse, not collision"
+          ;; The frame id is content-addressed on [problem-id revision], so a
+          ;; retry always finds its own previous seats in the occupied set.
+          ;; Refusing that would make launch! single-shot in reality while
+          ;; passing every fixture.
+          (let [frame-id (get-in first-launch [:config :unit :frame/id])
+                reuse (sut/launch!
+                       (assoc (launch-options fixture effects)
+                              :occupied-frame-ids #{frame-id}))]
+            (is (:ok reuse) (pr-str reuse))
+            (is (= frame-id (get-in reuse [:config :unit :frame/id])))))
+        (testing "an id occupied with NO lease of ours is a foreign collision"
           (let [frame-id (get-in first-launch [:config :unit :frame/id])
                 collision (sut/launch!
                            (assoc (launch-options fixture effects)
+                                  :leases-fn (constantly {})
                                   :occupied-frame-ids #{frame-id}))]
             (is (= :library-lane-frame-id-refused (:error/code collision)))
             (is (= :codex-frame-id-collision

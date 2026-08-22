@@ -112,6 +112,15 @@
    :invoke-ready? (:invoke-ready? agent)
    :effective-timeouts (get-in agent [:metadata :effective-timeouts])})
 
+(defn- agent-entry
+  "Look up a seat in a parsed roster by id.
+
+  The live agency parses JSON to KEYWORD keys, while fixtures seed strings.
+  Accept both: a string-only lookup silently reported every seat missing even
+  though the mint had just registered them."
+  [agents id]
+  (or (get agents (keyword id)) (get agents id)))
+
 (defn- roster [http-fn agency-base frame-id]
   (let [response (agents-response http-fn agency-base)]
     (if-not (:ok response)
@@ -120,8 +129,9 @@
             seats (into {}
                         (map (fn [role]
                                [role (when-let [agent
-                                                (get agents
-                                                     (str frame-id "-" (name role)))]
+                                                (agent-entry
+                                                 agents
+                                                 (str frame-id "-" (name role)))]
                                        (seat-projection frame-id role agent))]))
                         (keys seat-types))
             findings (cond-> []

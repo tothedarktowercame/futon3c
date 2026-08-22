@@ -131,8 +131,30 @@
           {:ok false :error/code :library-lane-problem-observation-failed
            :findings [observed]}
           (let [problem (:problem observed)
-                frame (adapters/codex-frame-id problem-id (:revision problem)
-                                               occupied-frame-ids)]
+                ;; The frame id is content-addressed on [problem-id revision],
+                ;; so a rerun of the SAME problem derives the SAME id. Its own
+                ;; seats and workspace from a previous attempt are therefore in
+                ;; the occupied set, and a naive check refuses the retry --
+                ;; which would make launch! idempotent in fixtures and
+                ;; single-shot in reality. Reuse is the intended behaviour; a
+                ;; genuine cross-problem digest collision is not.
+                ;;
+                ;; Distinguish them by ownership: a persisted solver lease for
+                ;; this exact unit proves the frame is ours. Only an occupied
+                ;; id with NO such lease is a foreign collision.
+                candidate (adapters/codex-frame-id problem-id (:revision problem)
+                                                   #{})
+                self-owned?
+                (boolean
+                 (when (:ok candidate)
+                   (seq (or (leases-fn {:frame/id (:frame-id candidate)
+                                        :problem/id problem-id
+                                        :problem problem})
+                            {}))))
+                frame (if self-owned?
+                        candidate
+                        (adapters/codex-frame-id problem-id (:revision problem)
+                                                 occupied-frame-ids))]
             (cond
               (not= trunk-branch (:branch problem))
               {:ok false :error/code :library-lane-trunk-mismatch
