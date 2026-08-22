@@ -66,6 +66,7 @@
                 {:ledger-path ledger-path :certificate-path certificate-path
                  :output-path output :expected-frame-id "f18"
                  :expected-problem-id "p18"
+                 :buffer-name "*problem: f18-p18*"
                  :solver-progress {:rounds/completed 10 :rounds/max 50
                                    :round/active 11 :checkpoint/next 20}
                  :operation {:status :waiting-for-terminal-result
@@ -90,6 +91,7 @@
            (get-in result [:projection :receipts 0 :receipt/id])))
     (is (= (get-in result [:projection :projection/id])
            (get-in @calls [0 :problem-projection :projection/id])))
+    (is (= "*problem: f18-p18*" (get-in @calls [0 :buffer-name])))
     (is (= (get-in @calls [0 :content]) (Files/readString output)))))
 
 (deftest stale-certificate-and-wrong-identity-fail-before-publication

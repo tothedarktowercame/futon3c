@@ -84,3 +84,46 @@
           (recur (inc attempt))))
       (is (= :complete (:regulator/status @saved)))
       (finally (sut/stop! "scheduled-test")))))
+
+(deftest campaign-scoped-runners-coexist-and-stop-independently
+  (let [ticks-a (atom 0)
+        ticks-b (atom 0)
+        persisted-a (atom nil)
+        persisted-b (atom nil)
+        start (fn [id ticks persisted]
+                (sut/start!
+                 {:regulator-id id
+                  :period-ms 1000
+                  :read-fn (constantly nil)
+                  :persist-fn #(do (reset! persisted %) {:ok true})
+                  :tick-fn #(do (swap! ticks inc)
+                                {:ok true :status :parked})}))]
+    (try
+      (is (= :started (:status (start "countdown-regulator:campaign-a"
+                                      ticks-a persisted-a))))
+      (is (= :started (:status (start "countdown-regulator:campaign-b"
+                                      ticks-b persisted-b))))
+      (loop [attempt 0]
+        (when (and (< attempt 40)
+                   (or (zero? @ticks-a) (zero? @ticks-b)))
+          (Thread/sleep 25)
+          (recur (inc attempt))))
+      (is (pos? @ticks-a))
+      (is (pos? @ticks-b))
+      (is (= "countdown-regulator:campaign-a"
+             (:regulator/id (sut/status "countdown-regulator:campaign-a"))))
+      (is (= "countdown-regulator:campaign-b"
+             (:regulator/id (sut/status "countdown-regulator:campaign-b"))))
+      (is (= :stopped
+             (:status (sut/stop! "countdown-regulator:campaign-a"))))
+      (is (nil? (sut/status "countdown-regulator:campaign-a")))
+      (is (= :running
+             (:regulator/status
+              (sut/status "countdown-regulator:campaign-b"))))
+      (is (= "countdown-regulator:campaign-a"
+             (:regulator/id @persisted-a)))
+      (is (= "countdown-regulator:campaign-b"
+             (:regulator/id @persisted-b)))
+      (finally
+        (sut/stop! "countdown-regulator:campaign-a")
+        (sut/stop! "countdown-regulator:campaign-b")))))

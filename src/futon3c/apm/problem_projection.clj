@@ -171,8 +171,9 @@
           :finding {:exit (:exit result) :stderr (str/trim (:err result))}})))))
 
 (defn project!
-  [{:keys [ledger-path certificate-path output-path buffer-sink
-           expected-frame-id expected-problem-id solver-progress operation]}]
+  [{:keys [ledger-path certificate-path output-path buffer-sink buffer-name
+           expected-frame-id expected-problem-id solver-progress operation]
+    :or {buffer-name "*problem*"}}]
   (let [loaded-ledger (ledger/read-ledger ledger-path)
         loaded-certificate (snapshot/read-certificate certificate-path)]
     (cond
@@ -200,7 +201,7 @@
               written
               (try
                 (let [buffer-result
-                      (buffer-sink {:buffer-name "*problem*" :content content
+                      (buffer-sink {:buffer-name buffer-name :content content
                                     :problem-projection problem-projection})]
                   (if (and (map? buffer-result) (:ok buffer-result))
                     {:ok true :projection problem-projection

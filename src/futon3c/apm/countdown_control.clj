@@ -33,6 +33,7 @@
 (def ^:dynamic certificate-directory "data/apm-campaigns/countdown-f19-f27-r4/certificates")
 (def ^:dynamic projection-directory "data/apm-campaigns/countdown-f19-f27-r4/projection")
 (def ^:dynamic problem-buffer-path "data/apm-campaigns/countdown-f19-f27-r4/problem-buffer.md")
+(def ^:dynamic problem-buffer-name "*problem*")
 (def ^:dynamic preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
 (def ^:dynamic batch-cursor-path "data/apm-campaigns/countdown-f19-f27-r4/live/batch-cursor.edn")
 (def ^:dynamic regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
@@ -45,6 +46,7 @@
 (def control-revision "d6f9ec2cfe622f518a423941f24819fa1a65fc5d")
 (def machine-regulator-id "countdown-regulator")
 (defonce ^:private machine-regulator-capability (Object.))
+(declare inputs)
 
 (def f20-one-off-config
   {:manifest-path "holes/labs/M-apm-demonstration/f20-one-off-manifest-v1.edn"
@@ -95,6 +97,7 @@
                certificate-directory (or (:certificate-directory config#) certificate-directory)
                projection-directory (or (:projection-directory config#) projection-directory)
                problem-buffer-path (or (:problem-buffer-path config#) problem-buffer-path)
+               problem-buffer-name (or (:problem-buffer-name config#) problem-buffer-name)
                preflight-state-path (or (:preflight-state-path config#) preflight-state-path)
                batch-cursor-path (or (:batch-cursor-path config#) batch-cursor-path)
                regulator-state-path (or (:regulator-state-path config#) regulator-state-path)
@@ -103,8 +106,12 @@
        ~@body)))
 
 (defn- machine-regulator-authorized? [regulator-id capability]
-  (and (= machine-regulator-id regulator-id)
+  (and (string? regulator-id)
+       (str/starts-with? regulator-id (str machine-regulator-id ":"))
        (identical? machine-regulator-capability capability)))
+
+(defn- scoped-regulator-id []
+  (str machine-regulator-id ":" (get-in (inputs) [:manifest :campaign/id])))
 (def ^:dynamic *control-root*
   (Path/of (System/getProperty "user.dir") (make-array String 0)))
 
@@ -296,6 +303,7 @@
      {:ledger-path (control-path ledger-path)
       :projection-directory (control-path projection-directory)
       :output-path (control-path problem-buffer-path)
+      :buffer-name problem-buffer-name
       :expected-frame-id (:frame-id frame)
       :expected-problem-id (:problem-id frame)
       :buffer-sink problem-projection/emacs-buffer-sink})
@@ -389,11 +397,13 @@
 
 (defn live-preflight-inputs []
   (let [{:keys [manifest contract]} (inputs)
-        unit (second (:units manifest))
         loaded (ledger/read-ledger (control-path ledger-path))
         projection (:projection loaded)
+        frame-id (get-in projection [:active/frame :frame-id])
+        unit (frame-unit manifest frame-id)
         response (live-preflight-runtime/http-json
-                  "GET" "http://localhost:7070/api/alpha/agents/f19-proctor")
+                  "GET" (str "http://localhost:7070/api/alpha/agents/"
+                             frame-id "-proctor"))
         agent (:agent response)
         metadata (:metadata agent)]
     {:contract contract
@@ -806,6 +816,7 @@
         :projection-directory (control-path projection-directory)
         :output-path (control-path problem-buffer-path) :expected-frame-id frame-id
         :expected-problem-id (:problem/id unit)
+        :buffer-name problem-buffer-name
         :operation operation
         :solver-progress solver-progress
         :buffer-sink problem-projection/emacs-buffer-sink}))))
@@ -881,11 +892,17 @@
        :park-fn (or park-fn park-default)
        :continuation-payload payload}))))))
 
-(defn regulator-status []
-  (live-regulator/status machine-regulator-id))
+(defn regulator-status
+  ([] (live-regulator/status (scoped-regulator-id)))
+  ([campaign-config]
+   (with-campaign campaign-config
+     (live-regulator/status (scoped-regulator-id)))))
 
-(defn stop-regulator! []
-  (live-regulator/stop! machine-regulator-id))
+(defn stop-regulator!
+  ([] (live-regulator/stop! (scoped-regulator-id)))
+  ([campaign-config]
+   (with-campaign campaign-config
+     (live-regulator/stop! (scoped-regulator-id)))))
 
 (defn start-regulator!
   "Start the non-agentic single-frame regulator.
@@ -898,14 +915,15 @@
    (binding [*control-root* (Path/of (str (or control-root *control-root*))
                                     (make-array String 0))]
     (let [root (str *control-root*)
+          regulator-id (scoped-regulator-id)
           state-path (control-path regulator-state-path)
-          continuation {:regulator-id machine-regulator-id
+          continuation {:regulator-id regulator-id
                         :regulator-capability machine-regulator-capability
                         :control-root root :target-frame target-frame
                         :campaign-config campaign-config
                         :agency-base agency-base}]
       (live-regulator/start!
-       {:regulator-id machine-regulator-id
+       {:regulator-id regulator-id
         :period-ms (or period-ms live-regulator/default-period-ms)
         :read-fn #(live-preflight-runtime/read-state state-path)
         :persist-fn #(live-preflight-runtime/atomic-persist! state-path %)

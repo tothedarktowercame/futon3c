@@ -144,7 +144,7 @@
                                 'machine-regulator-capability))
         result
         (sut/set-alight!
-         {:regulator-id sut/machine-regulator-id
+         {:regulator-id (str sut/machine-regulator-id ":apm-test")
           :regulator-capability capability :target-frame "f20"}
          {:launch-audit-fn (constantly {:ok true})
           :inspect-fn (constantly
@@ -172,7 +172,9 @@
                                 'machine-regulator-capability))]
     (is (false? (authorized? sut/machine-regulator-id nil)))
     (is (false? (authorized? "other" capability)))
-    (is (true? (authorized? sut/machine-regulator-id capability)))))
+    (is (false? (authorized? sut/machine-regulator-id capability)))
+    (is (true? (authorized? (str sut/machine-regulator-id ":apm-test")
+                            capability)))))
 
 (deftest set-alight-batch-exposes-bounded-ledger-backed-chain
   (let [manifest (:manifest (#'sut/inputs))
