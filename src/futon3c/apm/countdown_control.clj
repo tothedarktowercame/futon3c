@@ -718,6 +718,23 @@
       (assoc inspection :stepper/status :complete :completed-frame target-frame)
       inspection)))
 
+(defn- solver-projection-progress [solve-state active-phase]
+  (let [certified? (= :live-job-certified (:state/type solve-state))
+        completed (+ (count (:rounds solve-state)) (if certified? 1 0))
+        max-rounds (or (:budget/max-rounds solve-state)
+                       (get-in solve-state [:active :request :solver/max-rounds])
+                       50)
+        active-round (when (and (= :solve active-phase) (not certified?))
+                       (get-in solve-state [:active :request :solver/round]))
+        checkpoint-next (when (and (not certified?) (< completed max-rounds))
+                          (* 10 (inc (quot completed 10))))]
+    {:rounds/completed completed
+     :rounds/max max-rounds
+     :round/active active-round
+     :checkpoint/next (when (and checkpoint-next
+                                 (<= checkpoint-next max-rounds))
+                        checkpoint-next)}))
+
 (defn- drive-live-action! [action]
   (cond
     (contains? #{:open-block :open-frame} (:kind action))
@@ -748,11 +765,7 @@
                        (state-path-for frame-id (:phase active))))
         solve-state (live-preflight-runtime/read-state
                      (state-path-for frame-id :solve))
-        completed (count (:rounds solve-state))
-        active-round (get-in solve-state [:active :request :solver/round])
-        max-rounds (or (:budget/max-rounds solve-state) 50)
-        checkpoint-next (when (< completed max-rounds)
-                          (* 10 (inc (quot completed 10))))
+        solver-progress (solver-projection-progress solve-state (:phase active))
         phase-request (:request phase-state)
         operation-mismatch?
         (and (= :live-job-dispatched (:state/type phase-state))
@@ -794,11 +807,7 @@
         :output-path (control-path problem-buffer-path) :expected-frame-id frame-id
         :expected-problem-id (:problem/id unit)
         :operation operation
-        :solver-progress {:rounds/completed completed
-                          :rounds/max max-rounds
-                          :round/active active-round
-                          :checkpoint/next (when (<= checkpoint-next max-rounds)
-                                             checkpoint-next)}
+        :solver-progress solver-progress
         :buffer-sink problem-projection/emacs-buffer-sink}))))
 
 (defn set-alight!

@@ -264,3 +264,14 @@
       (is (= :countdown-projection-checkpoint-failed
              (:error/code (#'sut/project-current! "f22"))))
       (is (= [{:checkpoint/stage :live-projection-refresh}] @calls)))))
+
+(deftest certified-one-shot-solve-projects-one-completed-and-no-active-round
+  (let [progress (#'sut/solver-projection-progress
+                  {:state/type :live-job-certified
+                   :rounds []
+                   :active {:request {:solver/round 1 :solver/max-rounds 50}}}
+                  :student-attempt-1)]
+    (is (= 1 (:rounds/completed progress)))
+    (is (= 50 (:rounds/max progress)))
+    (is (nil? (:round/active progress)))
+    (is (nil? (:checkpoint/next progress)))))
