@@ -50,7 +50,7 @@
              :state :done
              :report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
                       :outcome :stuck :failure-account {:reason :gap}
-                      :memory-use {:queries 2 :used []}}}
+                      :memory-use {:surfaced-ids [] :used-ids []}}}
         ticket {:job-id "j1"}
         validated (sut/validate-terminal request ticket job)
         result (sut/receipt contract action (:receipts base) request ticket job validated)]
@@ -104,13 +104,45 @@
                       :outcome :stuck :failure-account {}
                       :memory-use {:receipt-id "wrong"
                                    :snapshot-id "snapshot-1"
-                                   :snapshot-digest "snapshot-digest"}}}]
+                                   :snapshot-digest "snapshot-digest"
+                                   :surfaced-ids [] :used-ids []}}}]
     (is (= {:receipt-id "promotion-receipt"
             :snapshot-id "snapshot-1" :snapshot-digest "snapshot-digest"
             :accessible-memory-ids ["m1"]}
            (:memory-snapshot request)))
     (is (some #{:student-memory-snapshot-mismatch}
               (:findings (sut/validate-terminal request {:job-id "j"} job))))))
+
+(deftest student-cannot-report-global-store-memory-outside-frozen-snapshot
+  (let [request {:dispatch/type :student-attempt
+                 :agent-id "f22-student" :frame-id "f22"
+                 :problem-id "a98J02"
+                 :memory-snapshot {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :accessible-memory-ids []}}
+        job {:job-id "j" :agent-id "f22-student" :session-id "fresh"
+             :state :done
+             :report {:command-own-exit 0 :frame-id "f22"
+                      :problem-id "a98J02"
+                      :memory-use {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :surfaced-ids ["e-global"]
+                                   :used-ids ["e-global"]}}}
+        result (sut/validate-terminal request {:job-id "j"} job)]
+    (is (some #{:student-memory-surfaced-outside-snapshot}
+              (:findings result)))))
+
+(deftest student-prompt-names-frame-and-exact-memory-evidence-shape
+  (let [text (sut/prompt {:dispatch/type :student-attempt
+                          :phase :student-attempt-1
+                          :frame-id "f22" :role-card-path "student.md"
+                          :role-card-blob "blob"
+                          :memory-snapshot {:accessible-memory-ids []}})]
+    (is (.startsWith text "F22 student-attempt-1"))
+    (is (re-find #":surfaced-ids and :used-ids" text))
+    (is (re-find #"do not query, read, or use" text))))
 
 (deftest student-dispatch-fails-closed-without-substrate-snapshot-proof
   (let [promotion {:receipt/id "promotion-receipt"
