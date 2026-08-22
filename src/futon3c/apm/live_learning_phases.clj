@@ -203,18 +203,13 @@
         {:ok (and (= 202 (:http/status response)) (:ok response))
          :job-id (:job-id response)}))
     :activate-fn
-      ;; /api/alpha/invoke/activate DOES NOT EXIST (verified 404 against the
-      ;; running server, and absent from futon3c's route table). announce
-      ;; already returns 202 {:accepted true, :state "queued"} and the
-      ;; per-agent drainer dispatches from that queue. Posting to the dead
-      ;; route made this fn report failure while the work proceeded anyway,
-      ;; so a driver could report :live-job-activation-failed for a job that
-      ;; ran to completion. Confirm the queued job is real instead.
-    (fn [_req ticket]
-      (let [job (runtime/http-json
-                 "GET" (str agency-base "/api/alpha/invoke/jobs/"
-                            (:job-id ticket)))]
-        {:ok (boolean (:ok job))}))
+    ;; announce only reserves the ledger row; this bell (same job-id) is what
+    ;; actually runs it. See runtime/activate-job!.
+    (fn [req ticket]
+      (runtime/activate-job! agency-base
+                             {:agent-id (:agent-id req) :prompt (prompt req)
+                              :job-id (:job-id ticket)
+                              :timeout-ms (:turn-timeout-ms req)}))
     :job-fn
     (fn [job-id]
       (runtime/job->terminal

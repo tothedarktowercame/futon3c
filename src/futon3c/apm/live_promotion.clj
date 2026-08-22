@@ -37,13 +37,12 @@
                        :mode "work"})
            job-id (:job-id announced)
            activated (when (and (= 202 (:http/status announced)) job-id)
-                       (runtime/http-json
-                        "POST" (str agency-base "/api/alpha/invoke/activate")
-                        {:agent-id (:agent-id request) :prompt prompt
-                         :surface "emacs-repl" :caller "countdown-control"
-                         :mode "work" :job-id job-id}))]
+                       (runtime/activate-job! agency-base
+                                              {:agent-id (:agent-id request)
+                                               :prompt prompt :mode "work"
+                                               :job-id job-id}))]
        (if (and (= 202 (:http/status announced)) (:ok announced)
-                (= 202 (:http/status activated)) (:accepted activated))
+                (:ok activated))
          {:ok true :job job-id}
          {:ok false :error/code :promotion-stage-dispatch-failed})))
     ([job-id]
