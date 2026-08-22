@@ -37,6 +37,12 @@
                   '(:vendor "claude" :model "claude-opus-5" :mult 1.0 :ctx 411000
                     :last_turn_usd 5.14 :last_turn_calls 22 :session_usd 293))
                  " · ~$5.14 (22 calls · ctx 411k · opus x1) · session $293 →  Compaction recommended"))
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1 :pouch "none"))
+                 " · ~$0.50 (1 call) · no pouch"))
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1 :pouch "warm"))
+                 " · ~$0.50 (1 call) · pouch"))
   (should (equal (agent-chat-cost-flair-suffix '(:vendor "codex" :ctx 1000)) ""))
   (should (equal (agent-chat-cost-flair-suffix nil) "")))
 

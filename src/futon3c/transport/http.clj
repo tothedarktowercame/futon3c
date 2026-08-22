@@ -5143,9 +5143,36 @@
                             :excursion-id (:excursion-id clock)
                             :witness (:last-auto-clock-witness state)})))))
 
+(declare handle-agent-get*)
+
+(defn- handle-agent-pouch
+  "GET /api/alpha/agents/:id/pouch — is this seat running in a warm pouch?
+   For the REPL Cooked line (Joe, 2026-08-22): under the joey gate most seats
+   are cold even with kangaroo on, and the operator could not see which."
+  [agent-id]
+  (let [snap (get (agent-pouch/snapshot) agent-id)]
+    (json-response 200
+                   {:ok true
+                    :agent-id agent-id
+                    :kangaroo-enabled (agent-pouch/enabled?)
+                    :warm (boolean (:alive? snap))
+                    :in-flight (boolean (:in-flight? snap))
+                    :joey (:joey? snap)
+                    :session-bytes (:session-bytes snap)
+                    :turn-count (:turn-count snap)})))
+
 (defn- handle-agent-get
-  "GET /api/alpha/agents/:id — return a single agent's details."
+  "GET /api/alpha/agents/:id — return a single agent's details.
+   Also serves GET /api/alpha/agents/:id/pouch: make-handler's agents/(.+) clause
+   captures that path in the closure built at startup, and this var is the
+   reload-safe point behind it."
   [_config agent-id]
+  (if (str/ends-with? agent-id "/pouch")
+    (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))))
+    (handle-agent-get* agent-id)))
+
+(defn- handle-agent-get*
+  [agent-id]
   (let [record (reg/get-agent agent-id)
         registered-id (some-> record :agent/id :id/value str)
         status (reg/registry-status)

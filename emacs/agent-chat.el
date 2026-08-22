@@ -477,6 +477,14 @@ priced last turn (fresh session, Codex, Zai, script failure)."
            (concat (when label (format " · %s" label)) ")")))
        (when (numberp (plist-get basis :session_usd))
          (format " · session $%.0f" (plist-get basis :session_usd)))
+       ;; Process, not cache: a warm POUCH is a live `claude --print` process
+       ;; between turns; "no pouch" means every turn is a cold `claude -p --resume`.
+       ;; The cache warm/cold shown elsewhere on this line is the 1h prompt-cache
+       ;; TTL, which is what sets the cost; the two are independent.
+       (pcase (plist-get basis :pouch)
+         ("warm" " · pouch")
+         ("none" " · no pouch")
+         (_ nil))
        (when (and agent-chat-compaction-hint-ctx (numberp ctx)
                   (>= ctx agent-chat-compaction-hint-ctx))
          " →  Compaction recommended")
@@ -484,6 +492,38 @@ priced last turn (fresh session, Codex, Zai, script failure)."
                   (numberp (plist-get basis :per_turn_cold_usd)))
          (format " · cold — resuming costs ~$%.2f"
                  (plist-get basis :per_turn_cold_usd)))))))
+
+(defun agent-chat--fetch-pouch-state! (buffer generation)
+  "Ask the Agency whether BUFFER's agent runs in a warm pouch; annotate on reply.
+GENERATION guards against a reply landing after a newer refresh."
+  (let ((agent-id (buffer-local-value 'agent-chat--agent-id buffer))
+        (base (cond ((buffer-local-value 'claude-repl-api-url buffer))
+                    (t agent-chat-agency-base-url))))
+    (when (and (stringp agent-id) (stringp base))
+      (let ((url (format "%s/api/alpha/agents/%s/pouch"
+                         (string-remove-suffix "/" base) (url-hexify-string agent-id))))
+        (condition-case nil
+            (url-retrieve
+             url
+             (lambda (status)
+               (unwind-protect
+                   (unless (plist-get status :error)
+                     (goto-char (point-min))
+                     (when (re-search-forward "^$" nil t)
+                       (let ((data (ignore-errors
+                                     (json-parse-buffer :object-type 'plist
+                                                        :null-object nil :false-object nil))))
+                         (when (and data (buffer-live-p buffer))
+                           (with-current-buffer buffer
+                             (when (and agent-chat--cost-basis
+                                        (= generation agent-chat--cost-refresh-generation))
+                               (setq agent-chat--cost-basis
+                                     (plist-put agent-chat--cost-basis :pouch
+                                                (if (plist-get data :warm) "warm" "none")))
+                               (agent-chat--annotate-turn-flair!)))))))
+                 (kill-buffer (current-buffer))))
+             nil t t)
+          (error nil))))))
 
 (defun agent-chat--cost-mark-cold! (buffer)
   "Flip BUFFER's cost basis to cold and re-annotate its Cooked line."
@@ -661,6 +701,7 @@ the current \"Cooked for\" line."
                                      agent-chat--cost-error-reported nil)
                                (agent-chat--annotate-turn-flair!)
                                (agent-chat--schedule-cold-notice!)
+                               (agent-chat--fetch-pouch-state! buffer generation)
                                (force-mode-line-update t))))
                        (error (agent-chat--cost-fail!
                                buffer (error-message-string parse-err))))
