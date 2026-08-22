@@ -2,8 +2,10 @@
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
             [futon3c.apm.campaign-batch :as batch]
+            [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.countdown-control :as sut]
+            [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as live-promotion]))
 
 (deftest promote-solver-selects-durable-two-seat-adapter
@@ -30,6 +32,36 @@
       (is (= 7200000
              (get-in @captured [:reviewer-request :turn-timeout-ms])))
       (is (fn? (:publish-fn @captured))))))
+
+(deftest promotion-resume-reconstructs-authority-when-stage-state-has-no-request
+  (let [manifest {:apparatus {:artifacts {:scribe {:path "scribe.md"
+                                                   :blob "scribe-blob"}}}}
+        contract {:phases {:promote-solver {:kind :scribe-reduce
+                                            :role :scribe
+                                            :requires #{}}}}
+        unit {:frame/id "f22" :problem/id "p22"}
+        preparation {:workspaces {:student {:workspace/path "/tmp/student"}}
+                     :seats {:scribe {:agent-id "f22-scribe"}}}
+        action {:kind :scribe-reduce :role :scribe :phase :promote-solver
+                :frame-id "f22" :problem-id "p22"}]
+    (with-redefs [sut/frame-context
+                  (constantly {:ok true :manifest manifest :contract contract
+                               :unit unit :preparation preparation})
+                  runtime/read-state
+                  (fn [path]
+                    (when (re-find #"promote-solver" (str path))
+                      {:state/type :promotion :stage :deposit :job "scribe-job"}))
+                  runtime/http-json
+                  (fn [& _] {:agent-id "f22-scribe"
+                             :agent {:type "zai" :invoke-ready? true
+                                     :metadata {:frame-id "f22"}}})
+                  ledger/read-ledger
+                  (fn [_] {:projection {:ledger/digest
+                                        (apply str (repeat 64 "a"))}})]
+      (let [result (sut/live-learning-phase-inputs action)]
+        (is (:ok result))
+        (is (= :promote-solver (get-in result [:request :phase])))
+        (is (= "f22-scribe" (get-in result [:request :agent-id])))))))
 
 (deftest replacement-registration-starts-at-f19-with-complete-cycle
   (let [body (sut/registration-body)

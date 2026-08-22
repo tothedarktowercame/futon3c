@@ -486,17 +486,16 @@
             :expected (:receipt/snapshot-digest promotion)
             :frame-id (:frame/id unit) :problem-id (:problem/id unit)
             :accessible-memory-ids (:receipt/reviewed-memory-ids promotion)}))
-        built (when-not existing
-                (live-learning-phases/build-request
-                 {:contract contract :action action
-                  :ledger {:digest (:ledger/digest projection)} :unit unit
-                  :role-card (get-in manifest [:apparatus :artifacts role])
-                  :seat {:agent-id (:agent-id response)
-                         :type (some-> (:type agent) keyword)
-                         :frame-id (:frame-id metadata)
-                         :invoke-ready? (:invoke-ready? agent)}
-                  :workspace (get-in preparation [:workspaces :student])
-                  :receipts receipts :snapshot-access snapshot-access}))]
+        built (live-learning-phases/build-request
+               {:contract contract :action action
+                :ledger {:digest (:ledger/digest projection)} :unit unit
+                :role-card (get-in manifest [:apparatus :artifacts role])
+                :seat {:agent-id (:agent-id response)
+                       :type (some-> (:type agent) keyword)
+                       :frame-id (:frame-id metadata)
+                       :invoke-ready? (:invoke-ready? agent)}
+                :workspace (get-in preparation [:workspaces :student])
+                :receipts receipts :snapshot-access snapshot-access})]
     (cond
       (and existing (map? (:request existing)))
       {:ok true :contract contract :action action :receipts receipts
