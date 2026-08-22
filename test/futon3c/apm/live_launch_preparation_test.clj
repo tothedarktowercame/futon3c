@@ -34,7 +34,7 @@
     (is (= (:receipt/id receipt)
            (machine/ledger-digest [(dissoc receipt :receipt/id)])))
     (is (= #{:solver :student} (set (keys (:workspace/ids receipt)))))
-    (is (= 5 (count (:seat/ids receipt))))))
+    (is (= 6 (count (:seat/ids receipt))))))
 
 (deftest preparation-fails-closed
   (testing "no ledger drift, unvalidated workspace, bad seat, or unpinned card"

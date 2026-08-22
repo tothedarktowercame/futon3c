@@ -5,7 +5,8 @@
 (def required-workspace-roles #{:solver :student})
 
 (def required-seat-types
-  {:solver :codex :student :zai :guide :claude :proctor :codex :scribe :zai})
+  {:solver :codex :student :zai :guide :claude :proctor :codex :scribe :zai
+   :analyst :claude})
 
 (def required-timeouts
   {:request-timeout-ms 300000 :turn-timeout-ms 3600000})
