@@ -1,6 +1,7 @@
 (ns futon3c.apm.frame-cycle-handlers-test
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
+            [futon3c.apm.bank :as bank]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-handlers :as handlers]))
 
@@ -160,3 +161,27 @@
            (:error/code
             ((get-in built [:handlers :student-attempt])
              {:phase :student-attempt-1}))))))
+
+(deftest bank-handler-rejects-a-different-frames-verify-receipt
+  (let [contract (edn/read-string
+                  (slurp (str "holes/labs/M-apm-demonstration/"
+                              "frame-cycle-contract-codex-only-v1.edn")))
+        verify-id (:receipt/id verify)
+        receipt (:receipt
+                 (bank/build-receipt
+                  {:receipt/type :frame-bank
+                   :receipt/frame-id "f18"
+                   :receipt/problem-id "a97J07"
+                   :receipt/verify-receipt-id (apply str (repeat 64 "f"))
+                   :receipt/ruling :blocked
+                   :receipt/lane-transition {:from :proof :to :library}
+                   :receipt/seam "fixture seam"}))
+        result (handlers/validate-completion
+                contract
+                {:kind :bank :role :proctor :phase :bank
+                 :frame-id "f18" :problem-id "a97J07"}
+                receipt {:verify verify})]
+    (is (not= verify-id (:receipt/verify-receipt-id receipt)))
+    (is (false? (:ok result)))
+    (is (= :frame-cycle-input-receipt-set-mismatch (:error/code result)))
+    (is (= #{verify-id} (get-in result [:finding :expected])))))

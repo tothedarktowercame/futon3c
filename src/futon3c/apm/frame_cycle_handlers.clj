@@ -4,10 +4,11 @@
   Receipt providers are effects supplied at the boundary. Validation here is
   pure: a handler cannot certify a phase unless its typed receipt and every
   required prior receipt agree with the registered frame and problem."
-  (:require [futon3c.apm.frame-cycle-contract :as contract]))
+  (:require [futon3c.apm.bank :as bank]
+            [futon3c.apm.frame-cycle-contract :as contract]))
 
 (def executable-kinds
-  #{:student-attempt :guide-intervention :scribe-reduce :close-frame})
+  #{:student-attempt :guide-intervention :scribe-reduce :bank :close-frame})
 
 (defn- phases-before [cycle-contract phase]
   (take-while #(not= phase %) (:phase-order cycle-contract)))
@@ -53,7 +54,9 @@
   (let [spec (get-in cycle-contract [:phases phase])
         ordinal (:ordinal spec)
         dependency (dependency-evidence cycle-contract phase prior-receipts)
-        declared-inputs (some-> (:receipt/input-receipt-ids receipt) set)
+        declared-inputs (if (= :bank (:kind spec))
+                          (some-> (:receipt/verify-receipt-id receipt) hash-set)
+                          (some-> (:receipt/input-receipt-ids receipt) set))
         student-sessions
         (->> prior-receipts
              (keep (fn [[prior-phase prior-receipt]]
@@ -126,7 +129,13 @@
   (let [phase (:phase action)
         contract-check (contract/validate-contract cycle-contract)
         receipt-check (when (:ok contract-check)
-                        (contract/validate-receipt cycle-contract phase receipt))
+                        (let [shape-check
+                              (contract/validate-receipt cycle-contract phase receipt)]
+                          (if (and (:ok shape-check)
+                                   (= :bank (get-in cycle-contract
+                                                    [:phases phase :kind])))
+                            (bank/validate-receipt receipt)
+                            shape-check)))
         prior-check (when (:ok receipt-check)
                       (validate-prior-receipts cycle-contract phase
                                                prior-receipts))]
