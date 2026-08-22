@@ -203,23 +203,18 @@
         {:ok (and (= 202 (:http/status response)) (:ok response))
          :job-id (:job-id response)}))
     :activate-fn
-    (fn [req ticket]
-      (let [reset-response (when (:fresh-session? req)
-                             (runtime/http-json
-                              "POST" (str agency-base "/api/alpha/agents/"
-                                          (:agent-id req) "/reset-session") {}))
-            reset-ok? (or (nil? reset-response)
-                          (and (= 200 (:http/status reset-response))
-                               (:ok reset-response)))]
-        (if-not reset-ok?
-          {:ok false :error/code :student-session-reset-failed}
-          (let [response (runtime/http-json
-                          "POST" (str agency-base "/api/alpha/invoke/activate")
-                          {:agent-id (:agent-id req) :prompt (prompt req)
-                           :surface "emacs-repl" :caller "countdown-control"
-                           :job-id (:job-id ticket)})]
-            {:ok (and (= 202 (:http/status response)) (:ok response)
-                      (:accepted response))}))))
+      ;; /api/alpha/invoke/activate DOES NOT EXIST (verified 404 against the
+      ;; running server, and absent from futon3c's route table). announce
+      ;; already returns 202 {:accepted true, :state "queued"} and the
+      ;; per-agent drainer dispatches from that queue. Posting to the dead
+      ;; route made this fn report failure while the work proceeded anyway,
+      ;; so a driver could report :live-job-activation-failed for a job that
+      ;; ran to completion. Confirm the queued job is real instead.
+    (fn [_req ticket]
+      (let [job (runtime/http-json
+                 "GET" (str agency-base "/api/alpha/invoke/jobs/"
+                            (:job-id ticket)))]
+        {:ok (boolean (:ok job))}))
     :job-fn
     (fn [job-id]
       (runtime/job->terminal
