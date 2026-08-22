@@ -449,6 +449,10 @@
         projection (:projection loaded)
         frame-id (get-in projection [:active/frame :frame-id])
         unit (frame-unit manifest frame-id)
+        problem (:problem unit)
+        unit (assoc-in unit [:problem :repository]
+                       (countdown-manifest/qualification-checkout-path
+                        (:repository problem) (:revision problem)))
         response (live-preflight-runtime/http-json
                   "GET" (str "http://localhost:7070/api/alpha/agents/"
                              frame-id "-proctor"))
