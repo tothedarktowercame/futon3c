@@ -436,6 +436,19 @@
         (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn
                                      :retirement-audit-fn])))
         (is (= 24 (:frame-number-base config)))
+        (let [directory (java.nio.file.Files/createTempDirectory
+                         "jit-manifest-test"
+                         (make-array java.nio.file.attribute.FileAttribute 0))
+              manifest-path (str (.resolve directory "manifest.edn"))
+              persisted {:manifest/id "frozen"
+                         :units [{:frame/id "f24" :problem/id "m-test"
+                                  :problem {:revision "r" :path "Main.lean"
+                                            :blob "b"}}]}]
+          (spit manifest-path (pr-str persisted))
+          (is (= persisted
+                 ((:manifest-fn config)
+                  {:frame/id "f24" :problem/id "m-test" :problem problem}
+                  {:manifest-path manifest-path}))))
         (is (= "m-test"
                (:problem-id
                 ((:ledger-fn config)

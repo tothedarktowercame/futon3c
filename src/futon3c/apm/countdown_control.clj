@@ -1234,13 +1234,31 @@
          :agency-base agency-base
          :manifest-fn
          (fn [frame paths]
-           (let [manifest (queued-frame-adapter/one-off-manifest
-                           {:frame frame :apparatus-repository apparatus-repository
-                            :apparatus-branch apparatus-branch
-                            :baseline (eligibility-baseline (:problem frame))})]
-             (live-preflight-runtime/atomic-persist!
-              (Path/of (:manifest-path paths) (make-array String 0)) manifest)
-             manifest))
+           (let [path (Path/of (:manifest-path paths) (make-array String 0))
+                 existing (live-preflight-runtime/read-state path)]
+             (if existing
+               (let [unit (first (:units existing))
+                     expected [(:frame/id frame) (:problem/id frame)
+                               (get-in frame [:problem :revision])
+                               (get-in frame [:problem :path])
+                               (get-in frame [:problem :blob])]
+                     observed [(:frame/id unit) (:problem/id unit)
+                               (get-in unit [:problem :revision])
+                               (get-in unit [:problem :path])
+                               (get-in unit [:problem :blob])]]
+                 (if (= expected observed)
+                   existing
+                   (throw (ex-info "Persisted JIT manifest identity mismatch"
+                                   {:error/code :jit-persisted-manifest-mismatch
+                                    :expected expected :observed observed
+                                    :manifest-path (:manifest-path paths)}))))
+               (let [manifest
+                     (queued-frame-adapter/one-off-manifest
+                      {:frame frame :apparatus-repository apparatus-repository
+                       :apparatus-branch apparatus-branch
+                       :baseline (eligibility-baseline (:problem frame))})]
+                 (live-preflight-runtime/atomic-persist! path manifest)
+                 manifest))))
          :open-frame-fn
          (fn [frame _ paths]
            (with-campaign paths
