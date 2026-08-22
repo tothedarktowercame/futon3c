@@ -1290,9 +1290,14 @@ CALLBACK is called with the final response text on completion."
     (when irc-up
       (push "irc (#futon :6667, available)" transports))
     (push "cli (claude code)" transports)
-    (format "%s Available transports: [%s]. Current: emacs-chat."
-            (agent-chat-mission-segment)
-            (string-join (reverse transports) ", "))))
+    (string-join
+     (delq nil
+           (list (format "%s Available transports: [%s]. Current: emacs-chat."
+                         (agent-chat-mission-segment)
+                         (string-join (reverse transports) ", "))
+                 (unless (string-empty-p (agent-chat-cost-segment))
+                   (agent-chat-cost-segment))))
+     " ")))
 
 ;;; Mode
 
@@ -1505,6 +1510,7 @@ Used by `claude-repl-clear' to redraw without losing the agent binding."
          (title (if (claude-repl--workspace)
                     (format "claude repl [%s]" (claude-repl--workspace))
                   "claude repl")))
+    (setq-local agent-chat--cost-vendor "claude")
     (agent-chat-init-buffer
      (list :title title
            :session-id (or existing-sid

@@ -475,14 +475,20 @@ the id is display-only, so a failed read must never break buffer setup."
 
 (defun zai-repl--build-modeline ()
   "Build Z.AI REPL modeline text."
-  (format "%s Agency: %s/api/alpha/invoke-stream | model: %s | local history: %d turns"
-          (agent-chat-mission-segment)
-          (string-remove-suffix "/" zai-repl-agency-url)
-          zai-repl-model
-          (/ (length zai-repl--messages) 2)))
+  (string-join
+   (delq nil
+         (list (format "%s Agency: %s/api/alpha/invoke-stream | model: %s | local history: %d turns"
+                       (agent-chat-mission-segment)
+                       (string-remove-suffix "/" zai-repl-agency-url)
+                       zai-repl-model
+                       (/ (length zai-repl--messages) 2))
+               (unless (string-empty-p (agent-chat-cost-segment))
+                 (agent-chat-cost-segment))))
+   " | "))
 
 (defun zai-repl--init-display ()
   "Draw the Z.AI REPL header and prompt."
+  (setq-local agent-chat--cost-vendor nil)
   (agent-chat-init-buffer
    (list :title "z.ai repl"
          :session-id (zai-repl--session-id)

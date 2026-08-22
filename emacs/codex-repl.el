@@ -4042,9 +4042,14 @@ With REFRESH non-nil, recompute the state even if cached."
                                (format "%s (%s)" label status))))
                          entries))
          (current (plist-get state :current-label)))
-    (format "Transports: [%s]. Current: %s."
-            (string-join labels ", ")
-            current)))
+    (string-join
+     (delq nil
+           (list (format "%s Transports: [%s]. Current: %s."
+                         (agent-chat-mission-segment)
+                         (string-join labels ", ") current)
+                 (unless (string-empty-p (agent-chat-cost-segment))
+                   (agent-chat-cost-segment))))
+     " ")))
 
 (defun codex-repl--world-view-string (state)
   "Return multi-line description of STATE plist."
@@ -4093,8 +4098,13 @@ With REFRESH non-nil, recompute the state even if cached."
                                           (plist-get entry :status)))
                                 (plist-get state :transports)
                                 ", ")))
-    (format "Codex session %s | current=%s | %s | %s | transports[%s]"
-            session current agency irc transports)))
+    (string-join
+     (delq nil
+           (list (format "Codex session %s | current=%s | %s | %s | transports[%s]"
+                         session current agency irc transports)
+                 (unless (string-empty-p (agent-chat-cost-segment))
+                   (agent-chat-cost-segment))))
+     " | ")))
 
 (defun codex-repl-refresh-header-line (&optional refresh buffer)
   "Refresh Codex modeline header.
@@ -4477,6 +4487,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
 (defun codex-repl--init ()
   "Initialize buffer UI."
   (setq codex-repl--cached-irc-send-base nil)
+  (setq-local agent-chat--cost-vendor "codex")
   (codex-repl--ensure-session-id)
   (codex-repl--ensure-store-session)
   ;; Register with Agency only for buffer-local lane overrides; never

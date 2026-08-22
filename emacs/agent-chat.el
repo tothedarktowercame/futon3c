@@ -30,6 +30,13 @@
   :type 'string
   :group 'agent-chat)
 
+(defcustom agent-chat-cost-script
+  (expand-file-name "../scripts/session-cost.py"
+                    (file-name-directory agent-chat--source-file))
+  "Path to the session marginal-cost reporter."
+  :type 'file
+  :group 'agent-chat)
+
 (defcustom agent-chat-irc-host
   (or (getenv "FUTON3C_BIND_HOST") "127.0.0.1")
   "IRC host used for local availability checks."
@@ -122,6 +129,22 @@ bounded Futon3c compatibility append path without blocking the Emacs UI."
 
 (defvar-local agent-chat--session-id nil
   "Current session ID displayed in the buffer header.")
+
+(defvar-local agent-chat--cost-vendor nil
+  "Session-cost vendor for this buffer, or nil when unsupported.")
+(defvar-local agent-chat--cost-basis nil
+  "Most recently parsed session-cost result plist, or nil.")
+(defvar-local agent-chat--cost-full-basis nil
+  "Most recent full session-cost result, used to retain session totals.")
+(defvar-local agent-chat--cost-turns-since-full 0)
+(defvar-local agent-chat--cost-last-full-at nil)
+(defvar-local agent-chat--cost-refresh-generation 0)
+(defvar-local agent-chat--cost-error-reported nil)
+(defvar-local agent-chat--cost-full-pending nil)
+(defvar-local agent-chat--cost-session-id nil)
+(defvar-local agent-chat--modeline-fn nil)
+(defvar-local agent-chat--modeline-start nil)
+(defvar-local agent-chat--modeline-end nil)
 
 (defvar-local agent-chat--mission-id nil
   "Mission ID clocked into the current chat session, or nil for no mission.")
@@ -398,6 +421,172 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
   "Return a compact prompt/header segment for the clock-in path."
   (format "[%s]" (agent-chat-mission-label)))
 
+(defun agent-chat--cost-compact-number (number)
+  "Render NUMBER compactly for a cost segment."
+  (cond ((>= number 1000000) (format "%.1fm" (/ number 1000000.0)))
+        ((>= number 1000) (format "%.0fk" (/ number 1000.0)))
+        (t (format "%d" number))))
+
+(defun agent-chat--cost-age (seconds)
+  "Render SECONDS as a compact age."
+  (let ((seconds (max 0 (floor seconds))))
+    (cond ((>= seconds 3600) (format "%dh" (/ seconds 3600)))
+          ((>= seconds 60) (format "%dm" (/ seconds 60)))
+          (t (format "%ds" seconds)))))
+
+(defun agent-chat--cost-model-label (model mult)
+  "Return compact MODEL and MULT label."
+  (let ((family (seq-find (lambda (name) (string-match-p name (downcase model)))
+                          '("opus" "fable" "sonnet" "haiku"))))
+    (when family
+      (format "%s x%s" family
+              (if (= mult (truncate mult))
+                  (number-to-string (truncate mult))
+                (format "%.2g" mult))))))
+
+(defun agent-chat-cost-segment ()
+  "Return the current session's compact marginal-cost segment."
+  (let* ((basis agent-chat--cost-basis)
+         (vendor (plist-get basis :vendor))
+         (ctx (plist-get basis :ctx))
+         (warm (plist-get basis :warm_s)))
+    (if (not (and basis (member vendor '("claude" "codex"))
+                  (numberp ctx) (numberp warm)))
+        ""
+      (let ((parts (list (format "ctx %s" (agent-chat--cost-compact-number ctx))
+                         (format "%s %s"
+                                 (if (plist-get basis :cold) "cold" "warm")
+                                 (agent-chat--cost-age warm)))))
+        (when (equal vendor "claude")
+          (let ((label (and (stringp (plist-get basis :model))
+                            (numberp (plist-get basis :mult))
+                            (agent-chat--cost-model-label
+                             (plist-get basis :model) (plist-get basis :mult)))))
+            (when label (push label parts)))
+          (let ((price (if (plist-get basis :cold)
+                           (plist-get basis :per_turn_cold_usd)
+                         (plist-get basis :per_turn_usd))))
+            (when (numberp price)
+              (setq parts
+                    (append parts
+                            (list (format "%s~$%.2f%s"
+                                          (if (plist-get basis :cold) "next " "")
+                                          price
+                                          (if (plist-get basis :cold) "" "/turn")))))))
+          (when (and (numberp (plist-get basis :session_usd))
+                     (integerp (plist-get basis :turns)))
+            (setq parts (append parts
+                                (list (format "$%.0f / %dt"
+                                              (plist-get basis :session_usd)
+                                              (plist-get basis :turns)))))))
+        (string-join parts " · ")))))
+
+(defun agent-chat--cost-fail! (buffer detail)
+  "Clear cost state in BUFFER and report DETAIL once."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (setq agent-chat--cost-basis nil)
+      (unless agent-chat--cost-error-reported
+        (setq agent-chat--cost-error-reported t)
+        (message "agent-chat cost basis unavailable: %s" detail))
+      (agent-chat--update-modeline-line!)
+      (force-mode-line-update t))))
+
+(defun agent-chat--update-modeline-line! ()
+  "Refresh the rendered REPL modeline line in the current buffer."
+  (when (and (functionp agent-chat--modeline-fn)
+             (markerp agent-chat--modeline-start)
+             (marker-position agent-chat--modeline-start)
+             (markerp agent-chat--modeline-end)
+             (marker-position agent-chat--modeline-end))
+    (let ((inhibit-read-only t)
+          (start (marker-position agent-chat--modeline-start))
+          (end (marker-position agent-chat--modeline-end)))
+      (save-excursion
+        (delete-region start end)
+        (goto-char start)
+        (insert (propertize (format "  %s\n" (funcall agent-chat--modeline-fn))
+                            'face 'font-lock-comment-face))))))
+
+(defun agent-chat--cost-start-process! (buffer vendor sid full generation)
+  "Start a FULL or fast cost process for BUFFER, VENDOR and SID."
+  (let ((output (generate-new-buffer " *agent-chat-cost*"))
+        (command (append (list "python3" agent-chat-cost-script
+                               "--session" sid "--vendor" vendor)
+                         (unless full (list "--fast")) (list "--json"))))
+    (condition-case err
+        (make-process
+         :name "agent-chat-session-cost" :buffer output :command command
+         :noquery t :connection-type 'pipe
+         :sentinel
+         (lambda (process _event)
+           (when (memq (process-status process) '(exit signal))
+             (unwind-protect
+                 (if (and (= (process-exit-status process) 0)
+                          (buffer-live-p buffer))
+                     (condition-case parse-err
+                         (let ((data (with-current-buffer output
+                                       (json-parse-string
+                                        (buffer-string) :object-type 'plist
+                                        :array-type 'list :null-object nil
+                                        :false-object nil))))
+                           (with-current-buffer buffer
+                             (when (and full (equal sid agent-chat--cost-session-id))
+                               (setq agent-chat--cost-full-basis data
+                                     agent-chat--cost-last-full-at (float-time)
+                                     agent-chat--cost-turns-since-full 0
+                                     agent-chat--cost-full-pending nil))
+                             (when (= generation agent-chat--cost-refresh-generation)
+                               (unless full
+                                 (when agent-chat--cost-full-basis
+                                   (dolist (key '(:session_usd :turns))
+                                     (when (plist-member agent-chat--cost-full-basis key)
+                                       (setq data (plist-put data key
+                                                             (plist-get agent-chat--cost-full-basis key)))))))
+                               (setq agent-chat--cost-basis data
+                                     agent-chat--cost-error-reported nil)
+                               (agent-chat--update-modeline-line!)
+                               (force-mode-line-update t))))
+                       (error (agent-chat--cost-fail!
+                               buffer (error-message-string parse-err))))
+                   (progn
+                     (when (and full (buffer-live-p buffer))
+                       (with-current-buffer buffer
+                         (setq agent-chat--cost-full-pending nil)))
+                     (agent-chat--cost-fail!
+                      buffer (string-trim
+                              (with-current-buffer output (buffer-string))))))
+               (when (buffer-live-p output) (kill-buffer output))))))
+      (error
+       (kill-buffer output)
+       (when (and full (buffer-live-p buffer))
+         (with-current-buffer buffer
+           (setq agent-chat--cost-full-pending nil)))
+       (agent-chat--cost-fail! buffer (error-message-string err))))))
+
+(defun agent-chat-refresh-cost-basis! (vendor sid)
+  "Asynchronously refresh the marginal cost basis for VENDOR and SID."
+  (when (and (member vendor '("claude" "codex"))
+             (stringp sid) (not (string-empty-p sid)))
+    (unless (equal sid agent-chat--cost-session-id)
+      (setq agent-chat--cost-session-id sid
+            agent-chat--cost-basis nil
+            agent-chat--cost-full-basis nil
+            agent-chat--cost-turns-since-full 0
+            agent-chat--cost-last-full-at nil
+            agent-chat--cost-full-pending nil))
+    (let* ((buffer (current-buffer))
+           (generation (cl-incf agent-chat--cost-refresh-generation))
+           (full-due (and (not agent-chat--cost-full-pending)
+                          (or (null agent-chat--cost-last-full-at)
+                              (>= agent-chat--cost-turns-since-full 9)
+                              (>= (- (float-time) agent-chat--cost-last-full-at) 300)))))
+      (cl-incf agent-chat--cost-turns-since-full)
+      (agent-chat--cost-start-process! buffer vendor sid nil generation)
+      (when full-due
+        (setq agent-chat--cost-full-pending t)
+        (agent-chat--cost-start-process! buffer vendor sid t generation)))))
+
 (defun agent-chat--format-duration (seconds)
   "Return a compact duration string for SECONDS."
   (let* ((total (max 0 (floor (or seconds 0))))
@@ -586,7 +775,9 @@ the elapsed, so the whole unified turn finalizes ONCE (E-repl-continuations)."
         (let ((total (+ (or agent-chat--accum-elapsed 0) duration)))
           (agent-chat--insert-turn-end-flair total)
           (setq agent-chat--last-flair-elapsed total)
-          (setq agent-chat--accum-elapsed 0)))
+          (setq agent-chat--accum-elapsed 0))
+        (agent-chat-refresh-cost-basis! agent-chat--cost-vendor
+                                        agent-chat--session-id))
       (setq agent-chat--last-flair-turn-id agent-chat--current-turn-id))))
 
 (defun agent-chat-set-clock! (target &optional inherit-current suppress-callback)
@@ -2199,6 +2390,7 @@ CONFIG keys:
     (setq agent-chat--thinking-text thinking-text)
     (setq agent-chat--thinking-property thinking-prop)
     (setq agent-chat--session-id (or session-id "pending"))
+    (setq agent-chat--modeline-fn modeline-fn)
     (setq agent-chat--evidence-url evidence-url)
     (setq agent-chat--evidence-timeout (or evidence-timeout 1))
     (when (and (agent-chat-evidence-enabled-p evidence-url)
@@ -2210,8 +2402,11 @@ CONFIG keys:
             (propertize (agent-chat--session-header-text)
                         'face 'font-lock-comment-face) "\n")
     (when modeline-fn
+      (setq agent-chat--modeline-start (point-marker))
       (insert (propertize (format "  %s\n" (funcall modeline-fn))
-                          'face 'font-lock-comment-face)))
+                          'face 'font-lock-comment-face))
+      (setq agent-chat--modeline-end (point-marker))
+      (set-marker-insertion-type agent-chat--modeline-end t))
     (insert (propertize "RET send | C-c C-c interrupt | C-c C-k clear | C-c C-n new session | C-c C-m clock in | C-c C-e excurse | C-c C-o 🍒 clock | C-c . ✘✓💡 marks | C-c , 2nd-string\n\n"
                         'face 'font-lock-comment-face))
     ;; Set markers

@@ -4,6 +4,35 @@
 (require 'cl-lib)
 (require 'agent-chat)
 
+(ert-deftest agent-chat-cost-segment-renders-warm-claude ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "claude" :model "claude-fable-5" :mult 2.0
+            :ctx 312000 :warm_s 240 :cold nil :per_turn_usd 0.62
+            :per_turn_cold_usd 6.24 :session_usd 41.2 :turns 130))
+    (should (equal (agent-chat-cost-segment)
+                   "fable x2 · ctx 312k · warm 4m · ~$0.62/turn · $41 / 130t"))))
+
+(ert-deftest agent-chat-cost-segment-renders-cold-claude ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "claude" :model "claude-opus-5" :mult 1.0
+            :ctx 700000 :warm_s 244800 :cold t :per_turn_usd 0.7
+            :per_turn_cold_usd 7.41))
+    (should (equal (agent-chat-cost-segment)
+                   "opus x1 · ctx 700k · cold 68h · next ~$7.41"))))
+
+(ert-deftest agent-chat-cost-segment-renders-codex-without-dollars ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "codex" :model "gpt-5" :ctx 258000 :warm_s 120 :cold nil))
+    (should (equal (agent-chat-cost-segment) "ctx 258k · warm 2m"))))
+
+(ert-deftest agent-chat-cost-segment-renders-empty-without-data ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis nil)
+    (should (equal (agent-chat-cost-segment) ""))))
+
 (defun agent-chat-test--init-buffer ()
   (cl-letf (((symbol-function 'agent-chat--refresh-session-turn-count)
              (lambda (&rest _) nil)))
