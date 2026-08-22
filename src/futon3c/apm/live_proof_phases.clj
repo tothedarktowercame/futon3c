@@ -50,13 +50,25 @@
 (defn build-request
   [{:keys [kind action ledger unit role-card seat workspace solve-receipt]}]
   (if (= :preflight kind)
-    (preflight/build-request {:ledger ledger :unit unit :role-card role-card
-                              :seat seat
-                              :timeouts
-                              {:request-timeout-ms
-                               (get-in action [:timeouts :request-ms])
-                               :turn-timeout-ms
-                               (get-in action [:timeouts :turn-ms])}})
+    (let [problem (:problem unit)
+          findings (cond-> []
+                     (not= (:revision problem) (:base-revision workspace))
+                     (conj :workspace-base-mismatch)
+                     (not= (:blob problem) (:problem/blob workspace))
+                     (conj :workspace-blob-mismatch)
+                     (not (string? (:workspace/path workspace)))
+                     (conj :workspace-path-missing))]
+      (if (seq findings)
+        {:ok false :error/code :preflight-workspace-invalid
+         :findings findings}
+        (preflight/build-request
+         {:ledger ledger
+          :unit (assoc-in unit [:problem :repository]
+                          (:workspace/path workspace))
+          :role-card role-card :seat seat
+          :timeouts
+          {:request-timeout-ms (get-in action [:timeouts :request-ms])
+           :turn-timeout-ms (get-in action [:timeouts :turn-ms])}})))
     (let [problem (:problem unit)
           expected-role (if (= :solve kind) :solver :proctor)
           expected-agent (str (:frame/id unit) "-" (name expected-role))

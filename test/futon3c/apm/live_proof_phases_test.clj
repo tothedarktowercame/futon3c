@@ -56,10 +56,27 @@
                           :phase :preflight :claim nil}
                  :unit unit :role-card role-card
                  :seat {:agent-id "f19-proctor" :type :codex
-                        :frame-id "f19" :invoke-ready? true}})]
+                        :frame-id "f19" :invoke-ready? true}
+                 :workspace workspace})]
     (is (:ok result))
     (is (= :preflight (get-in result [:request :phase])))
+    (is (= "/tmp/f19-solver"
+           (get-in result [:request :problem-repository])))
     (is (re-find #":sorry-warnings INT" (sut/prompt (:request result))))))
+
+(deftest preflight-refuses-a-workspace-not-bound-to-the-problem-pin
+  (let [result (sut/build-request
+                {:kind :preflight
+                 :action (assoc action :timeouts {:request-ms 300000
+                                                   :turn-ms 3600000})
+                 :ledger {:version 5 :digest (apply str (repeat 64 "a"))
+                          :phase :preflight :claim nil}
+                 :unit unit :role-card role-card
+                 :seat {:agent-id "f19-proctor" :type :codex
+                        :frame-id "f19" :invoke-ready? true}
+                 :workspace (assoc workspace :problem/blob "wrong")})]
+    (is (= :preflight-workspace-invalid (:error/code result)))
+    (is (some #{:workspace-blob-mismatch} (:findings result)))))
 
 (deftest solver-round-prompts-distinguish-opening-siege-from-continuation
   (let [opening (sut/prompt (assoc (request :solve) :solver/round 1))
