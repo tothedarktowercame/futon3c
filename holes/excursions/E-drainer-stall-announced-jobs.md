@@ -121,12 +121,47 @@ Contrast with the same announce to a freshly-registered seat, which runs.
    believes it dispatched.
 4. Should `reap` treat a long-`queued`-never-`running` job as stale? It currently does not.
 
+## UPDATE 2026-08-22 ~14:20 — the stall cleared itself, and that refines the diagnosis
+
+Both stalled jobs eventually resolved WITHOUT intervention, and the pattern that emerged
+narrows this considerably:
+
+```
+13:44:47  codex-8                queued  [accepted]                                  <-- STILL stuck
+13:51:24  f9045569047055-solver  done    [accepted running prompt done delivery-recorded]
+14:09:35  codex-8                done    [accepted running prompt done delivery-recorded]
+14:17:39  f9045569047055-solver  queued  [accepted]                                  <-- in flight, normal
+```
+
+Two facts that kill Hypothesis B and weaken Hypothesis A as stated:
+
+1. **A later job on the SAME agent ran fine while the earlier one stayed stuck.** codex-8's
+   13:44:47 job is still queued; its 14:09:35 job completed normally. So this is not the
+   agent being undrainable, and not a per-agent lock held forever — it is one specific job
+   orphaned in the queue while the agent continues to serve.
+
+2. **The solver's 13:51:24 job completed** roughly 25 minutes after being announced, with a
+   full event set including the `prompt`/`text` recording from 43e69be0. So the stream-sink
+   change does not block draining; a stalled job under it still runs. Hypothesis B should be
+   closed unless new evidence appears.
+
+Revised reading: an announced job can be **orphaned** — accepted into the ledger but dropped
+by whatever selects the next job for an agent — while the agent remains healthy and later
+jobs for it drain normally. The long delay (25 min) before the solver's job ran also suggests
+the drain is being triggered by something intermittent rather than promptly on enqueue.
+
+This makes open question 4 the sharp one: `reap` currently does NOT treat a job that has been
+`queued` for 35+ minutes and never `running` as stale, so an orphaned job stays in the ledger
+forever and the caller waits on a job that will never run. The 13:44:47 codex-8 job is a live
+specimen — please inspect it before reaping it.
+
 ## Live state at time of writing
 
-Two jobs still queued (`codex-8` from 13:44:47, `f9045569047055-solver` from 13:51:24). The
-library-lane siege driver `bg-1787406671690-2` is alive and polling; it will pick the solve up
-the moment the job drains, so nothing is lost by leaving them. apm-lean trunk untouched at
-`2f9048c`.
+One job orphaned (`codex-8` from 13:44:47 — left in place deliberately as a specimen). The
+library-lane siege is RUNNING: driver `bg-1787406671690-2` alive, solver round 1 committed
+`b20f2ce` "identify equator homology" and round 2 committed `1f21394` "promote quotient to
+TopCat pushout", with a third round queued at 14:17:39. apm-lean trunk untouched at
+`2f9048c` (still dry-run).
 
 ## Resolution (2026-08-22, ams-claude-fable)
 
