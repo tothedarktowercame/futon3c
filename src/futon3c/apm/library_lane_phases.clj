@@ -15,6 +15,10 @@
   shared is the running object -- this lane announces, activates, polls and
   persists through its own driver, so a change here reaches nothing else."
   (:require [clojure.java.shell :as shell]
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.frame-cycle-contract :as cycle]
+            [futon3c.apm.live-job-driver :as driver]
+            [futon3c.apm.live-preflight :as preflight]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-proof-phases :as proof]
             [futon3c.apm.live-solver-rounds :as solver-rounds]
@@ -135,6 +139,77 @@
                              (into {} (map (fn [[r s]] [r (:agent-id s)]))
                                    seats)}})))))))))
 
+(defn preflight-baseline-ok?
+  "Does this Lean evidence describe a live, well-formed library target?
+
+  The countdown's rule is an exact match on {:exit 0 :warnings 1
+  :sorry-warnings 1 :errors 0} -- one sorry and NO other warning. That holds
+  for a hand-built frame problem and fails on the corpus: t00J02 elaborates
+  cleanly with one sorry and one `try 'simp' instead` linter hint, so warnings
+  is 2 and the whole problem was ruled :blocked over a style lint.
+
+  This lane asks the questions preflight is actually for -- the file
+  elaborates, nothing errored, and the holes are still open -- and lets style
+  lints be style lints. It does NOT relax the count of holes: which
+  declarations must be discharged is decided by library-lane-runner/
+  elaborate-targets against the source, which is a stricter authority than a
+  warning tally because it names them."
+  [lean]
+  (and (map? lean)
+       (= 0 (:exit lean))
+       (= 0 (:errors lean))
+       (pos-int? (:sorry-warnings lean))
+       (integer? (:warnings lean))
+       (>= (:warnings lean) (:sorry-warnings lean))))
+
+(defn preflight-validate-terminal
+  "preflight/validate-terminal under this lane's Lean baseline rule.
+
+  The shared validator stays strict and untouched; it runs first and every
+  finding it makes is honoured except the baseline one, which is re-decided
+  here. A report that trips anything else is still rejected."
+  [request ticket job]
+  (let [strict (preflight/validate-terminal request ticket job)]
+    (if (:ok strict)
+      strict
+      (let [report (preflight/normalize-report (:report job))
+            remaining (remove #{:lean-baseline-mismatch} (:findings strict))]
+        (if (and (empty? remaining)
+                 (preflight-baseline-ok? (:lean report)))
+          {:ok true :report report}
+          strict)))))
+
+(defn preflight-receipt
+  "The preflight certificate, minted on this lane's terminal verdict.
+
+  Shaped exactly like the countdown's and checked against the same contract by
+  cycle/validate-receipt, so the two machines' receipts stay comparable in the
+  shared ledger. It is minted here rather than delegated because
+  preflight/receipt re-runs the strict validator internally, and this lane has
+  already decided that question differently."
+  [contract request ticket job]
+  (let [terminal (preflight-validate-terminal request ticket job)]
+    (if-not (:ok terminal)
+      terminal
+      (let [report (:report terminal)
+            body {:receipt/type :frame-preflight
+                  :receipt/frame-id (:frame-id request)
+                  :receipt/problem-id (:problem-id request)
+                  :receipt/result :preflight-passed
+                  :receipt/job-id (:job-id ticket)
+                  :receipt/dispatch-id (:dispatch/id request)
+                  :receipt/problem-revision (:problem-revision report)
+                  :receipt/problem-blob (:problem-blob report)
+                  :receipt/lean (:lean report)
+                  :receipt/clean-before? (:clean-before? report)
+                  :receipt/clean-after? (:clean-after? report)
+                  :receipt/mutations (:mutations report)}
+            addressed (assoc body :receipt/id (machine/ledger-digest [body]))
+            checked (cycle/validate-receipt contract :preflight addressed)]
+        (if (:ok checked)
+          {:ok true :certificate addressed}
+          checked)))))
+
 (defn- certified-replay
   "The certificate a previous attempt already earned for THIS request, or nil.
 
@@ -228,4 +303,12 @@
       ;; changed id and falls through to a real dispatch.
       :else
       (or (certified-replay (:state effects) request)
-          (proof/drive! effects)))))
+          (if (= :preflight kind)
+            (driver/drive!
+             (assoc (select-keys effects [:state :announce-fn :activate-fn
+                                          :job-fn :persist-fn])
+                    :request request
+                    :terminal-validator preflight-validate-terminal
+                    :receipt-provider (fn [r t j _]
+                                        (preflight-receipt contract r t j))))
+            (proof/drive! effects))))))

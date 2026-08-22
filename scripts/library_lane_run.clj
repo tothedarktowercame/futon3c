@@ -54,7 +54,7 @@
       (if-not (:ok launched)
         (println "LAUNCH REFUSED:" (pr-str launched))
         (let [c (:config launched)]
-          (println "FRAME" (:frame-id c)
+          (println "FRAME" (or (:frame-id c) (get-in c [:unit :frame/id]))
                    "seats" (pr-str (into {} (map (fn [[r s]] [r (:agent-id s)])
                                                  (:seats c)))))
           (let [result (queue/run-queue!
