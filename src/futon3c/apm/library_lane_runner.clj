@@ -26,11 +26,15 @@
   "Run Lean and map its sorry-warning source locations back to declarations.
   Named bridge holes are co-targets; the returned vector is their deterministic
   union with all other elaborated sorry declarations."
-  [{:keys [corpus-root problem-id run-fn]
-    :or {run-fn (fn [dir argv]
-                  (apply shell/sh
-                         (concat argv [:dir (str dir)])))}}]
-  (let [path (str "problems/" problem-id "/lean/Main.lean")
+  [{:keys [corpus-root problem-id run-fn]}]
+  ;; `or`, not a destructuring `:or` default: callers thread :run-fn through
+  ;; unconditionally, so the key is PRESENT and nil rather than absent, and an
+  ;; :or default never fires. That produced a bare NPE inside run-one!'s
+  ;; catch-all -- reported as :blocked/:exception with the cause discarded.
+  (let [run-fn (or run-fn
+                   (fn [dir argv]
+                     (apply shell/sh (concat argv [:dir (str dir)]))))
+        path (str "problems/" problem-id "/lean/Main.lean")
         file (io/file corpus-root path)]
     (if-not (.isFile file)
       {:ok false :finding :lean-source-missing :path path}

@@ -12,6 +12,9 @@
                                (:targets bank-request))
            :ruling (:ruling result)}
     (:seam result) (assoc :seam (:seam result))
+    ;; Carry the finding: a :blocked ruling whose cause is dropped is
+    ;; undiagnosable, which is fatal for a loop meant to run unattended.
+    (:finding result) (assoc :finding (:finding result))
     (get-in result [:receipt :receipt/id])
     (assoc :bank-receipt-id (get-in result [:receipt :receipt/id]))
     (and dry-run? bank-request)
