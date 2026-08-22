@@ -203,13 +203,32 @@
         {:ok (and (= 202 (:http/status response)) (:ok response))
          :job-id (:job-id response)}))
     :activate-fn
-    ;; announce only reserves the ledger row; this bell (same job-id) is what
-    ;; actually runs it. See runtime/activate-job!.
+      ;; announce RESERVES a job id; it writes a ledger record and notifies
+      ;; nobody (create-invoke-job! only calls update-invoke-jobs-ledger!).
+      ;; /api/alpha/invoke/activate, which this used to call, does not exist --
+      ;; 404, absent from the route table -- so nothing dispatched and a job
+      ;; ran only if some unrelated invoke of the same agent happened to adopt
+      ;; it. Hence orphans at 45m and rounds starting 13-25m late.
+      ;;
+      ;; POST /api/alpha/invoke WITH the announced job-id is the real dispatch:
+      ;; build-invoke-response reads requested-job-id and create-invoke-job!
+      ;; reuses a non-terminal record rather than duplicating it, so the
+      ;; announced job is adopted and executed.
+      ;;
+      ;; Fired on a future so this returns immediately: drive! is a durable step
+      ;; machine and the caller polls for the terminal. See
+      ;; futon3c/holes/excursions/E-apm-drainer.md.
     (fn [req ticket]
-      (runtime/activate-job! agency-base
-                             {:agent-id (:agent-id req) :prompt (prompt req)
-                              :job-id (:job-id ticket)
-                              :timeout-ms (:turn-timeout-ms req)}))
+      (let [job-id (:job-id ticket)]
+        (future
+          (try
+            (runtime/http-json
+             "POST" (str agency-base "/api/alpha/invoke")
+             {:agent-id (:agent-id req) :prompt (prompt req)
+              :surface "emacs-repl" :caller "countdown-control"
+              :job-id job-id})
+            (catch Throwable _ nil)))
+        {:ok (some? job-id)}))
     :job-fn
     (fn [job-id]
       (runtime/job->terminal
