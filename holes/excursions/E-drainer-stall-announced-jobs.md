@@ -1,9 +1,9 @@
 # Excursion: E-drainer-stall-announced-jobs — announced jobs sit `queued` and are never drained
 
 **Date:** 2026-08-22
-**Status:** IDENTIFY. Reproduced, evidence captured, cause NOT established. Two hypotheses
-below, one of which I consider more likely but did not prove. Handing off rather than
-guessing further.
+**Status:** RESOLVED (cause established 2026-08-22 14:20, ams-claude-fable). Neither
+hypothesis below was it — see "Resolution" at the end. Driver fix:
+futon3c-frame18-control `Activate announced jobs through /invoke`.
 **Repo:** futon3c — `transport/http.clj` (announce + `build-invoke-response`),
 `agency/turn_queue.clj` (`drain!`, `acquire-drain!`/`release-drain!`),
 `agency/agent_pouch.clj` (warm pouch / M-kangaroo LRU).
@@ -127,3 +127,56 @@ Two jobs still queued (`codex-8` from 13:44:47, `f9045569047055-solver` from 13:
 library-lane siege driver `bg-1787406671690-2` is alive and polling; it will pick the solve up
 the moment the job drains, so nothing is lost by leaving them. apm-lean trunk untouched at
 `2f9048c`.
+
+## Resolution (2026-08-22, ams-claude-fable)
+
+**There is no drainer stall. `announce` never dispatches.** `handle-invoke-announce`
+(`transport/http.clj`) calls `create-invoke-job!` and returns 202 — it writes a ledger row in
+state `queued` and touches neither `turn-queue/accept-async!` nor any executor. The row is run
+by a *second* call carrying the same `job-id`, which `create-invoke-job!` reuses instead of
+duplicating (`http_test.clj: invoke-announce-job-is-reused-by-direct-invoke`). That second call
+is what the IRC bridge does (`ngircd_bridge.py`: `_announce_invoke` then `/api/alpha/invoke`
+with `job_id`), and what the frame drivers' `activate-fn` was.
+
+What broke it: `futon3c-frame18-control 67010bc7` replaced `activate-fn` with a GET, on the
+stated premise that "announce already returns 202 … and the per-agent drainer dispatches from
+that queue". The drainer drains the *turn-queue*; announce never puts anything in it. From that
+commit on, every announced frame job was accepted and never run. That is why the stall starts
+at 13:44 — the first dispatch after the driver change — and why `reap` sees nothing stale and
+both seats look healthy: nothing failed, nothing was ever asked to run.
+
+Why the drivers were posting to `/api/alpha/invoke/activate` at all: that route exists on
+`feature/lane-effects` (`d6f9ec2c Add durable set-alight activation boundary`, 2026-08-21) and
+never reached `master`, which is what the :7070 JVM serves. So activate 404'd, the driver
+reported `:live-job-activation-failed`, and the 13:02 jobs ran only because something else
+posted `/invoke` with their job-ids (their delivery note is `http-direct-response`).
+
+Two dead ends checked so nobody re-walks them:
+- **Hypothesis A (cold pouch):** no. `drain!` never sees these jobs; pouch warmth is irrelevant.
+- **Hypothesis B (stream-sink commit):** no. Correlated only because it landed minutes before
+  the driver change.
+- **`/api/alpha/bell` with the announced `job-id` is NOT an activation** under
+  `FUTON3C_TYPED_BELLS=true` (set in the serving JVM's environment): `handle-bell` finds the
+  existing job and answers `202 {reused? true}` without enqueueing. Verified live on job
+  `invoke-1787407775126-138-f354535f` (codex-8): announce → queued 8 s; bell → `reused? true`,
+  still queued after 120 s; `/invoke` with the job-id → `running` → `done`, result `probe-ok.`
+
+Fix (frame18-control): `runtime/activate-job!` POSTs `/api/alpha/invoke` with the ticket's
+job-id on a daemon thread (the server runs the turn whether or not the client keeps the socket;
+`/invoke` blocks for the whole turn) and confirms activation by polling the job out of
+`queued`. Idempotent on a running/terminal job. All five activate sites use it.
+
+Live state after the fix: job `…-137-ad9b4afc` (f9045569047055-solver) re-dispatched by hand
+through the same `/invoke` path with its prompt rebuilt from the persisted ticket
+(`data/apm-lane/f9045569047055/solve.edn :active :request` → `live-proof-phases/prompt`), so
+the running siege driver picks it up as designed. Job `…-136-5ab069c3` (codex-8, caller
+claude-14) cannot be replayed from the ledger — **the ledger does not persist prompts** —
+claude-14 has to re-send it. The still-running `/tmp/dryrun.clj` JVM has the *old* driver code
+loaded; its next dispatch will stall again until it is restarted on the fixed code.
+
+Answers to the open questions: (1) moot — `drain!` is never involved; (2) no such lock; (3) yes
+— announce should at minimum say in its 202 that a follow-up `/invoke` with this job-id is
+required, and it should honour `:mode` (it ignores it today, so announced solve jobs land as
+`brief` and skip the work-mode no-execution check); (4) yes — a job `queued` with no
+`running` event for longer than any drainer poll interval is not healthy and `reap` should say
+so. (3) and (4) are `master` changes to the live server and are left for a deliberate reload.
