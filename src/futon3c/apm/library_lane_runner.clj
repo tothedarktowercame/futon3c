@@ -66,9 +66,16 @@
          phase-run-fn live-proof-phases/run-live!
          bank-fn bank-driver/execute!}
     :as options}]
-  (let [problem-id (first (lane/queue corpus-root :library))]
+  (let [available (lane/queue corpus-root :library)
+        requested (:problem-id options)
+        problem-id (if requested
+                     (when (some #{requested} available) requested)
+                     (first available))]
     (cond
-      (nil? problem-id) (blocked nil :queue :library-queue-empty)
+      (nil? problem-id) (blocked requested :queue
+                                 (if requested
+                                   :library-problem-not-current
+                                   :library-queue-empty))
       (nil? phase-inputs-fn) (blocked problem-id :configuration
                                       :phase-inputs-fn-missing)
       (nil? bank-request-fn) (blocked problem-id :configuration
@@ -90,7 +97,8 @@
                       result (if (:ok inputs)
                                (phase-run-fn (dissoc inputs :ok)) inputs)]
                   (if-not (:ok result)
-                    (blocked problem-id kind result)
+                    (assoc (blocked problem-id kind result)
+                           :keying-targets (:targets target))
                     (recur (next phases)
                            (assoc receipts kind (:certificate result)))))
                 (let [request (bank-request-fn
@@ -100,8 +108,10 @@
                                     (bank-fn (dissoc request :ok)) request)]
                   (if (:ok bank-result)
                     (assoc bank-result :problem-id problem-id
+                           :keying-targets (:targets target)
                            :ruling (get-in bank-result [:receipt :receipt/ruling]))
-                    (blocked problem-id :bank bank-result)))))))
+                    (assoc (blocked problem-id :bank bank-result)
+                           :keying-targets (:targets target))))))))
         (catch Throwable t
           (blocked problem-id :exception
                    {:class (.getName (class t)) :message (.getMessage t)}))))))
