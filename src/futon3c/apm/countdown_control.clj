@@ -661,13 +661,35 @@
         unit (frame-unit manifest frame-id)
         loaded (ledger/read-ledger (control-path ledger-path))
         active (get-in loaded [:projection :active/frame])
+        phase-state (when active
+                      (live-preflight-runtime/read-state
+                       (state-path-for frame-id (:phase active))))
         solve-state (live-preflight-runtime/read-state
                      (state-path-for frame-id :solve))
         completed (count (:rounds solve-state))
         active-round (get-in solve-state [:active :request :solver/round])
         max-rounds (or (:budget/max-rounds solve-state) 50)
         checkpoint-next (when (< completed max-rounds)
-                          (* 10 (inc (quot completed 10))))]
+                          (* 10 (inc (quot completed 10))))
+        phase-request (:request phase-state)
+        operation-mismatch?
+        (and (= :live-job-dispatched (:state/type phase-state))
+             (or (not= (:ledger/digest loaded)
+                       (:ledger-digest phase-request))
+                 (not= frame-id (:frame-id phase-request))
+                 (not= (:problem/id unit) (:problem-id phase-request))
+                 (not= (:phase active) (:phase phase-request))))
+        operation
+        (when (= :live-job-dispatched (:state/type phase-state))
+          {:status :waiting-for-terminal-result
+           :role (or (:role phase-request)
+                     (case (:phase active)
+                       :preflight :proctor
+                       :solve :solver
+                       :verify :proctor
+                       nil))
+           :agent-id (:agent-id phase-request)
+           :job-id (get-in phase-state [:ticket :job-id])})]
     (cond
       (not (:ok loaded)) loaded
       (nil? unit)
@@ -677,12 +699,16 @@
       (not= frame-id (:frame-id active))
       {:ok false :error/code :countdown-projection-frame-mismatch
        :expected frame-id :actual (:frame-id active)}
+      operation-mismatch?
+      {:ok false :error/code :countdown-projection-operation-mismatch
+       :frame-id frame-id :phase (:phase active)}
       :else
       (problem-projection/project-latest!
        {:ledger-path (control-path ledger-path)
         :projection-directory (control-path projection-directory)
         :output-path (control-path problem-buffer-path) :expected-frame-id frame-id
         :expected-problem-id (:problem/id unit)
+        :operation operation
         :solver-progress {:rounds/completed completed
                           :rounds/max max-rounds
                           :round/active active-round

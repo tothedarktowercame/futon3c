@@ -36,7 +36,7 @@
 (defn derive-projection
   "Derive one problem view from a validated ledger and snapshot certificate."
   [{:keys [events projection]} certificate
-   {:keys [expected-frame-id expected-problem-id solver-progress]}]
+   {:keys [expected-frame-id expected-problem-id solver-progress operation]}]
   (let [active (:active/frame projection)
         certificate-active (:active/frame certificate)
         identity-keys [:frame-id :problem-id :phase :status
@@ -77,6 +77,7 @@
                   :ledger/event-count (:ledger/event-count projection)
                   :certificate/id (:certificate/id certificate)
                   :frame (select-keys active identity-keys)
+                  :operation operation
                   :solver/progress solver-progress
                   :receipts (receipt-refs events (:frame-id active))}]
         {:ok true
@@ -94,6 +95,13 @@
          "Problem: **" (:problem-id frame) "**  \n"
          "Phase: **" (some-> (:phase frame) name) "**  \n"
          "Status: **" (some-> (:status frame) name) "**\n\n"
+         (when-let [operation (:operation problem-projection)]
+           (str "Operational state: **"
+                (some-> (:status operation) name) "**  \n"
+                "Waiting for role: **"
+                (or (some-> (:role operation) name) "none") "**  \n"
+                "Seat: **" (or (:agent-id operation) "none") "**  \n"
+                "Job: `" (or (:job-id operation) "none") "`\n\n"))
          (when-let [progress (:solver/progress problem-projection)]
            (str "Solver rounds completed: **" (:rounds/completed progress)
                 " / " (:rounds/max progress) "**  \n"
@@ -164,7 +172,7 @@
 
 (defn project!
   [{:keys [ledger-path certificate-path output-path buffer-sink
-           expected-frame-id expected-problem-id solver-progress]}]
+           expected-frame-id expected-problem-id solver-progress operation]}]
   (let [loaded-ledger (ledger/read-ledger ledger-path)
         loaded-certificate (snapshot/read-certificate certificate-path)]
     (cond
@@ -181,7 +189,8 @@
                      loaded-ledger (:certificate loaded-certificate)
                      {:expected-frame-id expected-frame-id
                       :expected-problem-id expected-problem-id
-                      :solver-progress solver-progress})]
+                      :solver-progress solver-progress
+                      :operation operation})]
         (if-not (:ok derived)
           derived
           (let [problem-projection (:problem-projection derived)

@@ -68,6 +68,9 @@
                  :expected-problem-id "p18"
                  :solver-progress {:rounds/completed 10 :rounds/max 50
                                    :round/active 11 :checkpoint/next 20}
+                 :operation {:status :waiting-for-terminal-result
+                             :role :scribe :agent-id "f18-scribe"
+                             :job-id "job-scribe"}
                  :buffer-sink (fn [payload]
                                 (swap! calls conj payload)
                                 {:ok true :atomic? true})})]
@@ -78,6 +81,11 @@
                               :rounds/completed])))
     (is (str/includes? (Files/readString output)
                        "Solver rounds completed: **10 / 50**"))
+    (is (str/includes? (Files/readString output)
+                       "Operational state: **waiting-for-terminal-result**"))
+    (is (str/includes? (Files/readString output)
+                       "Waiting for role: **scribe**"))
+    (is (str/includes? (Files/readString output) "`job-scribe`"))
     (is (= (:receipt/id solve)
            (get-in result [:projection :receipts 0 :receipt/id])))
     (is (= (get-in result [:projection :projection/id])
