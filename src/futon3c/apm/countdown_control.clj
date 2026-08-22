@@ -674,7 +674,7 @@
         phase-request (:request phase-state)
         operation-mismatch?
         (and (= :live-job-dispatched (:state/type phase-state))
-             (or (not= (:ledger/digest loaded)
+             (or (not= (get-in loaded [:projection :ledger/digest])
                        (:ledger-digest phase-request))
                  (not= frame-id (:frame-id phase-request))
                  (not= (:problem/id unit) (:problem-id phase-request))
