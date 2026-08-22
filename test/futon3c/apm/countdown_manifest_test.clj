@@ -1,5 +1,6 @@
 (ns futon3c.apm.countdown-manifest-test
   (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.countdown-manifest :as sut]))
@@ -51,6 +52,18 @@
     (is (:valid? result) (pr-str (:findings result)))
     (is (= 10 (count (:eligibility-observations result))))
     (is (every? :valid? (:eligibility-observations result)))))
+
+(deftest eligibility-runs-in-revision-addressed-checkout
+  (let [manifest (load-manifest-v2)
+        result (sut/validate manifest)
+        observations (:eligibility-observations result)]
+    (is (:valid? result) (pr-str (:findings result)))
+    (is (every? #(string? (:qualification-checkout %)) observations))
+    (is (= (mapv #(get-in % [:problem :revision]) (:units manifest))
+           (mapv :qualification-revision observations)))
+    (is (every? #(str/includes? (:qualification-checkout %)
+                                "/apm-frames/qualification/")
+                observations))))
 
 (deftest solved-problem-cannot-be-filed-as-an-eligible-unit
   (let [manifest (load-manifest-v2)

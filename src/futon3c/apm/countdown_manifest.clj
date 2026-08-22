@@ -1,6 +1,7 @@
 (ns futon3c.apm.countdown-manifest
   "Fail-closed validation for the ordered, immutable countdown manifest."
   (:require [clojure.java.shell :as shell]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]))
 
@@ -32,25 +33,64 @@
                   (zero? (or (:exit ancestry) 1)) (= blob observed))
      :observed-blob observed :branch-head (output branch-result)}))
 
+(defn- qualification-checkout [repository revision]
+  (str (io/file (.getParentFile (io/file repository)) "apm-frames"
+                "qualification" revision)))
+
+(defn- ensure-qualification-checkout
+  [repository revision]
+  (let [checkout (qualification-checkout repository revision)
+        directory (io/file checkout)
+        existing-head (when (.isDirectory directory)
+                        (output (git checkout "rev-parse" "HEAD")))
+        provision (when-not (.isDirectory directory)
+                    (git repository "worktree" "add" "--detach" checkout revision))
+        head (if provision
+               (when (zero? (:exit provision))
+                 (output (git checkout "rev-parse" "HEAD")))
+               existing-head)
+        lake-target (io/file repository ".lake")
+        lake-link (io/file checkout ".lake")]
+    (cond
+      (not= revision head)
+      {:ok false :finding :countdown-qualification-checkout-mismatch
+       :checkout checkout :expected-revision revision :observed-revision head
+       :provision-exit (:exit provision)}
+
+      (not (.isDirectory lake-target))
+      {:ok false :finding :countdown-qualification-substrate-missing
+       :checkout checkout :substrate (str lake-target)}
+
+      :else
+      (do
+        (when-not (.exists lake-link)
+          (java.nio.file.Files/createSymbolicLink
+           (.toPath lake-link) (.toPath lake-target)
+           (make-array java.nio.file.attribute.FileAttribute 0)))
+        {:ok true :checkout checkout :revision head}))))
+
 (defn qualify-unit
-  "Execute the pinned unit only when the repository checkout is exactly its
-   revision. This prevents a stale survey or a mutable HEAD from certifying an
-   eligibility baseline for a different Git object."
+  "Execute the pinned unit in a dedicated, revision-addressed checkout. The
+   developer checkout may advance without changing qualification authority."
   [unit]
   (let [{:keys [repository revision path blob]} (:problem unit)
-        head (output (git repository "rev-parse" "HEAD"))
+        checkout-result (ensure-qualification-checkout repository revision)
+        checkout (:checkout checkout-result)
         observed-blob (output (git repository "rev-parse" (str revision ":" path)))]
-    (if-not (and (= revision head) (= blob observed-blob))
+    (if-not (and (:ok checkout-result) (= blob observed-blob))
       {:valid? false :finding :countdown-qualification-checkout-mismatch
-       :expected-revision revision :observed-revision head
+       :checkout checkout :checkout-finding (:finding checkout-result)
+       :expected-revision revision :observed-revision (:revision checkout-result)
        :expected-blob blob :observed-blob observed-blob}
-      (let [result (apply shell/sh ["lake" "env" "lean" path :dir repository])
+      (let [result (apply shell/sh ["lake" "env" "lean" path :dir checkout])
             lines (str/split-lines (str (:out result) (:err result)))
             observation {:exit (:exit result)
                          :warnings (count (filter #(str/includes? % "warning:") lines))
                          :sorry-warnings (count (filter #(str/includes? % "declaration uses `sorry`") lines))
                          :errors (count (filter #(str/includes? % "error:") lines))}]
         {:valid? (= (:eligibility/baseline unit) observation)
+         :qualification-checkout checkout
+         :qualification-revision revision
          :observation observation :expected (:eligibility/baseline unit)}))))
 
 (defn validate
