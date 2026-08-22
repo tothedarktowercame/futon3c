@@ -16,7 +16,10 @@
         review {:memory-id "m1" :reviewer "f22-proctor" :verdict :approve
                 :review-evidence-id "e1" :attachment-status :reviewed
                 :pattern-ids ["p1"]}]
-    (is (:ok (sut/validate-review deposit "f22-proctor" [review])))
+    (let [validated (sut/validate-review deposit "f22-proctor" [review])]
+      (is (:ok validated))
+      (is (= "f22-scribe" (get-in validated [:candidates 0 :depositor]))
+          "approved snapshot candidates retain the deposit attribution"))
     (is (some #{:reviewer-is-depositor}
               (:findings (sut/validate-review deposit "f22-scribe" [review]))))
     (is (some #{:review-set-mismatch}

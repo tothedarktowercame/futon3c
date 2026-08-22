@@ -49,6 +49,7 @@
          :candidates
          (mapv (fn [review]
                  (merge (by-id (:memory-id review))
+                        {:depositor depositor}
                         (select-keys review [:reviewer :review-evidence-id
                                              :attachment-status :pattern-ids])))
                approved)})))
