@@ -90,7 +90,14 @@ def tail_records(path, size=TAIL_BYTES):
 
 
 def claude_usage_records(records):
-    return [r for r in records if (r.get("message") or {}).get("usage")]
+    """Assistant records with real usage; skips the CLI's zero-usage
+    ``<synthetic>`` placeholders (e.g. the compaction boundary)."""
+    out = []
+    for r in records:
+        message = r.get("message") or {}
+        if message.get("usage") and message.get("model") != "<synthetic>":
+            out.append(r)
+    return out
 
 
 def message_key(record):
