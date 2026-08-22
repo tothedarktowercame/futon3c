@@ -65,3 +65,26 @@
                                    :certificate :outcome])))
         (is (= (+ (count prefix) 6) (:ledger/event-count projection))))
       (finally (Files/deleteIfExists path)))))
+
+(deftest post-verify-apparatus-failure-preserves-solved-problem-outcome
+  (let [projection {:projection/status :valid :campaign/status :running
+                    :campaign/id "c" :campaign/version 11
+                    :ledger/digest "digest" :ledger/event-count 11
+                    :active/claim nil :active/block "b"
+                    :active/frame {:frame-id "f21" :problem-id "p"
+                                   :phase :promote-solver}}
+        events []
+        prepared (sut/prepare
+                  {:projection projection :events events}
+                  {:frame-id "f21" :problem-id "p"
+                   :final-head "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   :residual "Pinned Proctor card cannot independently review."
+                   :rounds 11
+                   :partial-reason :promotion-review-apparatus-invalid
+                   :problem-outcome :solved
+                   :proof-receipt-ids ["solve" "verify"]
+                   :now "2026-08-22T08:00:00Z"})]
+    ;; The synthetic prefix is too small for a valid successor projection, but
+    ;; input validation must accept this distinct terminal evidence shape.
+    (is (not= :series-terminal-partial-evidence-invalid
+              (:error/code prepared)))))

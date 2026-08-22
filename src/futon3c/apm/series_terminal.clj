@@ -36,7 +36,8 @@
 
 (defn prepare
   [{:keys [projection events]}
-   {:keys [frame-id problem-id final-head residual rounds actor now]}]
+   {:keys [frame-id problem-id final-head residual rounds actor now
+           partial-reason problem-outcome proof-receipt-ids]}]
   (let [actor (or actor "countdown-control") at (str (or now (Instant/now)))
         active-frame (:active/frame projection)
         active-block (:active/block projection)
@@ -59,25 +60,40 @@
                  [(:frame-id active-frame) (:problem-id active-frame)]))
       {:ok false :error/code :series-terminal-frame-mismatch}
       (and (= :frame stage)
-           (not (and (= :solve (:phase active-frame))
-                     (string? final-head) (re-matches #"[0-9a-f]{40}" final-head)
+           (not (and (string? final-head)
+                     (re-matches #"[0-9a-f]{40}" final-head)
                      (string? residual) (not-empty residual)
-                     (pos-int? rounds))))
+                     (pos-int? rounds)
+                     (or (and (= :solve (:phase active-frame))
+                              (or (nil? partial-reason)
+                                  (= :solver-budget-exhausted partial-reason)))
+                         (and (= :promote-solver (:phase active-frame))
+                              (= :promotion-review-apparatus-invalid
+                                 partial-reason)
+                              (= :solved problem-outcome)
+                              (vector? proof-receipt-ids)
+                              (<= 2 (count proof-receipt-ids))
+                              (every? #(and (string? %) (not-empty %))
+                                      proof-receipt-ids))))))
       {:ok false :error/code :series-terminal-partial-evidence-invalid}
       :else
       (let [[action completion-type completion-body certificate]
             (case stage
               :frame
-              (let [cert (addressed
+              (let [reason (or partial-reason :solver-budget-exhausted)
+                    cert (addressed
                           {:certificate/type :frame-partial
                            :frame/id frame-id :problem/id problem-id
-                           :outcome :partial :reason :solver-budget-exhausted
+                           :outcome :partial :reason reason
+                           :stopped/phase (:phase active-frame)
+                           :problem/outcome (or problem-outcome :partial)
+                           :proof/receipt-ids (vec proof-receipt-ids)
                            :solver/final-head final-head :solver/rounds rounds
                            :solver/residual residual
                            :source/ledger-digest (:ledger/digest projection)})]
                 [{:kind :partial-frame :frame-id frame-id :problem-id problem-id}
                  :frame/stopped
-                 {:frame-id frame-id :reason :solver-budget-exhausted}
+                 {:frame-id frame-id :reason reason}
                  cert])
               :block
               (let [partial-id (get-in stopped-frame [:stop :certificate
