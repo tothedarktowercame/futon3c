@@ -444,28 +444,61 @@ TARGET may be a string, symbol, nil, or plist with :campaign-id/:mission-id/
                   (number-to-string (truncate mult))
                 (format "%.2g" mult))))))
 
+(defun agent-chat-cost-flair-suffix (&optional basis)
+  "What the turn that just finished cost, for the \"Cooked for\" line.
+BASIS defaults to `agent-chat--cost-basis'.  Returns \"\" when there is no
+priced last turn (fresh session, Codex, Zai, script failure)."
+  (let* ((basis (or basis agent-chat--cost-basis))
+         (usd (plist-get basis :last_turn_usd))
+         (calls (plist-get basis :last_turn_calls))
+         (ctx (plist-get basis :ctx)))
+    (if (not (and (equal (plist-get basis :vendor) "claude") (numberp usd)))
+        ""
+      (concat
+       (format " · ~$%.2f" usd)
+       (when (integerp calls)
+         (format " (%d call%s" calls (if (= calls 1) "" "s")))
+       (when (and (integerp calls) (numberp ctx))
+         (format " · ctx %s" (agent-chat--cost-compact-number ctx)))
+       (when (integerp calls)
+         (let ((label (and (stringp (plist-get basis :model))
+                           (numberp (plist-get basis :mult))
+                           (agent-chat--cost-model-label
+                            (plist-get basis :model) (plist-get basis :mult)))))
+           (concat (when label (format " · %s" label)) ")")))
+       (when (numberp (plist-get basis :session_usd))
+         (format " · session $%.0f" (plist-get basis :session_usd)))))))
+
+(defun agent-chat--annotate-turn-flair! ()
+  "Append the last-turn cost to the \"Cooked for\" line just before the prompt.
+Idempotent: an earlier suffix on the same line is replaced."
+  (let ((suffix (agent-chat-cost-flair-suffix))
+        (prompt-pos (and (markerp agent-chat--prompt-marker)
+                         (marker-position agent-chat--prompt-marker))))
+    (when (and prompt-pos (not (string-empty-p suffix)))
+      (save-excursion
+        (goto-char prompt-pos)
+        (let ((limit (max (point-min) (- prompt-pos 4000))))
+          (when (re-search-backward "^Cooked for [0-9][0-9ms ]*[0-9ms]" limit t)
+            (let ((inhibit-read-only t)
+                  (face (get-text-property (match-beginning 0) 'face)))
+              (goto-char (match-end 0))
+              (delete-region (point) (line-end-position))
+              (insert (propertize suffix 'face face)))))))))
+
 ;;;###autoload
 (defun agent-chat-cost-adopt-buffer ()
-  "Enable the cost segment in a REPL buffer created before this code was loaded.
-New buffers get `agent-chat--cost-vendor', `agent-chat--modeline-fn' and the
-modeline markers from `agent-chat-init-buffer'; a buffer that predates a reload
-has none of them, so turn-end refreshes return early and nothing renders.  This
-backfills them from the buffer's mode and the rendered modeline line, then
-kicks one refresh."
+  "Enable turn-cost annotation in a REPL buffer created before this code loaded.
+New buffers get `agent-chat--cost-vendor' from `agent-chat-init-buffer'; a
+buffer that predates a reload lacks it, so turn-end refreshes return early.
+This backfills it from the buffer's mode and kicks one refresh, which annotates
+the current \"Cooked for\" line."
   (interactive)
   (let ((spec (pcase major-mode
                 ('claude-repl-mode (list "claude" 'claude-repl--build-modeline))
                 ('codex-repl-mode (list "codex" 'codex-repl--build-modeline))
                 ('zai-repl-mode (list nil 'zai-repl--build-modeline))
                 (_ (user-error "Not an agent REPL buffer: %s" major-mode)))))
-    (unless (and (markerp agent-chat--modeline-start)
-                 (marker-position agent-chat--modeline-start))
-      (save-excursion
-        (goto-char (point-min))
-        (unless (re-search-forward "^  \\[.*\\(transports\\|Agency:\\|Codex session\\)" nil t)
-          (user-error "No rendered modeline line found in %s" (buffer-name)))
-        (setq-local agent-chat--modeline-start (copy-marker (line-beginning-position)))
-        (setq-local agent-chat--modeline-end (copy-marker (min (point-max) (1+ (line-end-position)))))))
     (setq-local agent-chat--modeline-fn (cadr spec))
     (setq-local agent-chat--cost-vendor (car spec))
     (if (car spec)
@@ -535,7 +568,10 @@ kicks one refresh."
         (delete-region start end)
         (goto-char start)
         (insert (propertize (format "  %s\n" (funcall agent-chat--modeline-fn))
-                            'face 'font-lock-comment-face))))))
+                            'face 'font-lock-comment-face))
+        ;; Both markers sit at START after the delete and neither advances on
+        ;; insert, so without this the next render inserts a second line.
+        (set-marker agent-chat--modeline-end (point))))))
 
 (defun agent-chat--cost-start-process! (buffer vendor sid full generation)
   "Start a FULL or fast cost process for BUFFER, VENDOR and SID."
@@ -574,7 +610,7 @@ kicks one refresh."
                                                              (plist-get agent-chat--cost-full-basis key)))))))
                                (setq agent-chat--cost-basis data
                                      agent-chat--cost-error-reported nil)
-                               (agent-chat--update-modeline-line!)
+                               (agent-chat--annotate-turn-flair!)
                                (force-mode-line-update t))))
                        (error (agent-chat--cost-fail!
                                buffer (error-message-string parse-err))))

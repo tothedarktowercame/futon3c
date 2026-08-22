@@ -73,6 +73,28 @@ def test_ttl_uses_predominant_write_class(tmp_path):
     assert session_cost.claude_report(path, "s", fast=True)["ttl_s"] == 3600
 
 
+def test_last_turn_prices_unique_calls_since_typed_prompt(tmp_path):
+    path = tmp_path / "s.jsonl"
+    prompt = {"type": "user", "timestamp": "2026-08-22T14:00:00Z",
+              "message": {"role": "user", "content": "hi"}}
+    tool_result = {"type": "user", "timestamp": "2026-08-22T14:00:02Z",
+                   "message": {"role": "user", "content": [{"type": "tool_result"}]}}
+    def call(mid, out):
+        r = record("2026-08-22T14:00:01Z", out=out, read=1000)
+        r["type"] = "assistant"; r["message"]["id"] = mid
+        return r
+    # one earlier turn, then the prompt, then one response split into 3 records + a 2nd call
+    records = [call("old", 5000), prompt,
+               call("m1", 100), call("m1", 100), call("m1", 100), tool_result, call("m2", 200)]
+    write_jsonl(path, records)
+    rep = session_cost.claude_report(path, "s", fast=True)
+    assert rep["last_turn_calls"] == 2
+    assert rep["last_turn_out"] == 300
+    expected = ((100 + 1000 * 0.1) * 5.0 * 2 + 300 * 25.0) / 1e6
+    assert abs(rep["last_turn_usd"] - expected) < 1e-9
+    assert rep["last_turn_started_at"] == "2026-08-22T14:00:00Z"
+
+
 if __name__ == "__main__":
     # No pytest on this box: run the tests with a throwaway tmp_path.
     import sys

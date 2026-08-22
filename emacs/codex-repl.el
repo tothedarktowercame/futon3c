@@ -4042,14 +4042,9 @@ With REFRESH non-nil, recompute the state even if cached."
                                (format "%s (%s)" label status))))
                          entries))
          (current (plist-get state :current-label)))
-    (string-join
-     (delq nil
-           (list (format "%s Transports: [%s]. Current: %s."
-                         (agent-chat-mission-segment)
-                         (string-join labels ", ") current)
-                 (unless (string-empty-p (agent-chat-cost-segment))
-                   (agent-chat-cost-segment))))
-     " ")))
+    (format "%s Transports: [%s]. Current: %s."
+            (agent-chat-mission-segment)
+            (string-join labels ", ") current)))
 
 (defun codex-repl--world-view-string (state)
   "Return multi-line description of STATE plist."
@@ -4098,13 +4093,8 @@ With REFRESH non-nil, recompute the state even if cached."
                                           (plist-get entry :status)))
                                 (plist-get state :transports)
                                 ", ")))
-    (string-join
-     (delq nil
-           (list (format "Codex session %s | current=%s | %s | %s | transports[%s]"
-                         session current agency irc transports)
-                 (unless (string-empty-p (agent-chat-cost-segment))
-                   (agent-chat-cost-segment))))
-     " | ")))
+    (format "Codex session %s | current=%s | %s | %s | transports[%s]"
+            session current agency irc transports)))
 
 (defun codex-repl-refresh-header-line (&optional refresh buffer)
   "Refresh Codex modeline header.

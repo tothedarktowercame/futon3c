@@ -1290,14 +1290,9 @@ CALLBACK is called with the final response text on completion."
     (when irc-up
       (push "irc (#futon :6667, available)" transports))
     (push "cli (claude code)" transports)
-    (string-join
-     (delq nil
-           (list (format "%s Available transports: [%s]. Current: emacs-chat."
-                         (agent-chat-mission-segment)
-                         (string-join (reverse transports) ", "))
-                 (unless (string-empty-p (agent-chat-cost-segment))
-                   (agent-chat-cost-segment))))
-     " ")))
+    (format "%s Available transports: [%s]. Current: emacs-chat."
+            (agent-chat-mission-segment)
+            (string-join (reverse transports) ", "))))
 
 ;;; Mode
 

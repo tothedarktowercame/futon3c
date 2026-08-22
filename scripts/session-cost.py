@@ -29,6 +29,7 @@ MODEL_MULTIPLIERS = {
 def scan(path):
     """The usage aggregation from claude-spend.py, plus per-turn outputs."""
     totals, count, contexts, outputs = collections.Counter(), 0, [], []
+    seen = set()
     with open(path, errors="replace") as stream:
         for line in stream:
             try:
@@ -36,7 +37,7 @@ def scan(path):
             except ValueError:
                 continue
             usage = (record.get("message") or {}).get("usage")
-            if not usage:
+            if not usage or not first_record_for_message(record, seen):
                 continue
             count += 1
             creation = usage.get("cache_creation") or {}
@@ -92,6 +93,81 @@ def claude_usage_records(records):
     return [r for r in records if (r.get("message") or {}).get("usage")]
 
 
+def message_key(record):
+    """One API response is written as one record per content block (thinking,
+    text, tool_use), each repeating the same usage. Key on the message id so a
+    response is priced once. claude-spend.py does NOT do this and overcounts."""
+    message = record.get("message") or {}
+    return message.get("id") or record.get("uuid") or id(record)
+
+
+def first_record_for_message(record, seen):
+    key = message_key(record)
+    if key in seen:
+        return False
+    seen.add(key)
+    return True
+
+
+def dedupe_usage_records(records):
+    seen = set()
+    return [r for r in records if first_record_for_message(r, seen)]
+
+
+def is_typed_prompt(record):
+    """A user record whose content is a plain string is something the operator
+    typed; tool results are user records with a list content."""
+    if record.get("type") != "user":
+        return False
+    message = record.get("message") or {}
+    return message.get("role") == "user" and isinstance(message.get("content"), str)
+
+
+def last_turn_records(path, records):
+    """Records from the last typed prompt onward. If the tail window holds no
+    prompt boundary, fall back to the whole file."""
+    idx = next((i for i in range(len(records) - 1, -1, -1)
+                if is_typed_prompt(records[i])), None)
+    if idx is None and os.path.getsize(path) > TAIL_BYTES:
+        records = tail_records(path, os.path.getsize(path))
+        idx = next((i for i in range(len(records) - 1, -1, -1)
+                    if is_typed_prompt(records[i])), None)
+    if idx is None:
+        return None, []
+    return records[idx], records[idx + 1:]
+
+
+def last_turn_report(path, records, multiplier):
+    """Price the turn that just completed: every unique API response since the
+    operator's last typed prompt."""
+    prompt, rest = last_turn_records(path, records)
+    calls = dedupe_usage_records(claude_usage_records(rest))
+    if prompt is None or not calls:
+        return {}
+    totals = collections.Counter()
+    for record in calls:
+        usage = record["message"]["usage"]
+        creation = usage.get("cache_creation") or {}
+        totals["in"] += usage.get("input_tokens", 0) or 0
+        totals["cr"] += usage.get("cache_read_input_tokens", 0) or 0
+        totals["out"] += usage.get("output_tokens", 0) or 0
+        if creation:
+            totals["cc5"] += creation.get("ephemeral_5m_input_tokens", 0) or 0
+            totals["cc1h"] += creation.get("ephemeral_1h_input_tokens", 0) or 0
+        else:
+            totals["cc5"] += usage.get("cache_creation_input_tokens", 0) or 0
+    report = {
+        "last_turn_usd": round(cost(totals) * multiplier, 6),
+        "last_turn_calls": len(calls),
+        "last_turn_out": totals["out"],
+        "last_turn_in": totals["in"] + totals["cr"] + totals["cc5"] + totals["cc1h"],
+        "last_turn_cache_write": totals["cc5"] + totals["cc1h"],
+    }
+    if prompt.get("timestamp"):
+        report["last_turn_started_at"] = iso_z(parse_time(prompt["timestamp"]))
+    return report
+
+
 def model_multiplier(model):
     lowered = (model or "").lower()
     for fragment, multiplier in MODEL_MULTIPLIERS.items():
@@ -115,7 +191,8 @@ def median_output(outputs):
 
 
 def claude_report(path, session_id, fast=False, now=None):
-    recent = claude_usage_records(tail_records(path))
+    tail = tail_records(path)
+    recent = dedupe_usage_records(claude_usage_records(tail))
     if not recent:
         raise ValueError("session has no assistant usage records")
     last = recent[-1]
@@ -178,6 +255,7 @@ def claude_report(path, session_id, fast=False, now=None):
     }
     if not known:
         report["mult_known"] = False
+    report.update(last_turn_report(path, tail, multiplier))
     if not fast:
         report.update(
             {
@@ -275,10 +353,15 @@ def human(report):
         else ""
     )
     label = model_multiplier(report["model"])[2]
+    last = (
+        f" | last turn ${report['last_turn_usd']:.2f} ({report['last_turn_calls']} calls)"
+        if "last_turn_usd" in report
+        else ""
+    )
     return (
         f"{label} x{report['mult']:g} | ctx {report['ctx']/1000:.0f}k"
-        f" | warm {age} | ~${report['per_turn_usd']:.2f}/turn "
-        f"(cold ${report['per_turn_cold_usd']:.2f}){session}"
+        f" | warm {age} | ~${report['per_turn_usd']:.2f}/call "
+        f"(cold ${report['per_turn_cold_usd']:.2f}){last}{session}"
     )
 
 

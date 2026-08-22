@@ -28,6 +28,25 @@
           '(:vendor "codex" :model "gpt-5" :ctx 258000 :warm_s 120 :cold nil))
     (should (equal (agent-chat-cost-segment) "ctx 258k · warm 2m"))))
 
+(ert-deftest agent-chat-cost-flair-suffix-renders-last-turn ()
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :model "claude-fable-5" :mult 2.0 :ctx 105076
+                    :last_turn_usd 1.450742 :last_turn_calls 7 :session_usd 7.68))
+                 " · ~$1.45 (7 calls · ctx 105k · fable x2) · session $8"))
+  (should (equal (agent-chat-cost-flair-suffix '(:vendor "codex" :ctx 1000)) ""))
+  (should (equal (agent-chat-cost-flair-suffix nil) "")))
+
+(ert-deftest agent-chat-annotate-turn-flair-is-idempotent ()
+  (with-temp-buffer
+    (insert "hello\nCooked for 1m 03s\n─── *no mission*\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1))
+    (agent-chat--annotate-turn-flair!)
+    (agent-chat--annotate-turn-flair!)
+    (should (string-match-p "^Cooked for 1m 03s · ~\\$0\\.50 (1 call)$"
+                            (buffer-substring (point-min) (point-max))))))
+
 (ert-deftest agent-chat-cost-segment-renders-empty-without-data ()
   (with-temp-buffer
     (setq agent-chat--cost-basis nil)
