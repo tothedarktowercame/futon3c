@@ -51,6 +51,17 @@ worktree is \"<frame-id>-<problem-id>-<role>\", so the problem can be
 recovered from the directory listing without asking the agency."
   :type 'directory)
 
+(defcustom futon-active-agents-machines
+  '(("countdown-control" . "countdown")
+    ("library-lane"      . "library"))
+  "Map a job's `caller' to the cycle machine that owns it.
+The countdown/learning machine and the Codex-only library lane now share
+nothing that runs -- separate drivers, preparation, seats and scheduling -- but
+they still share the job ledger, which is what makes it the one place both are
+visible at once. Each stamps its own caller, so the ledger already carries the
+distinction; this just renders it."
+  :type '(alist :key-type string :value-type string))
+
 (defcustom futon-active-agents-queued-warn-seconds 300
   "Seconds a job may sit `queued' before the Job column flags it.
 A job accepted into the ledger and never drained is the worst failure mode
@@ -155,6 +166,10 @@ For a frame seat, that is the problem its worktree names."
                                        (alist-get 'created-at job))
                                  (alist-get 'last-active a)))
                               (futon-active-agents--doing id)
+                              (or (and job
+                                       (cdr (assoc (alist-get 'caller job)
+                                                   futon-active-agents-machines)))
+                                  "-")
                               (or (and job (alist-get 'caller job)) "-")))
                 rows))))
     (nreverse rows)))
@@ -221,6 +236,7 @@ For a frame seat, that is the problem its worktree names."
          ("Job" 10 t)
          ("Since" 8 nil)
          ("Doing" 14 t)
+         ("Machine" 10 t)
          ("Caller" 18 nil)])
   (setq tabulated-list-padding 1)
   (setq tabulated-list-sort-key (cons "Agent" nil))
