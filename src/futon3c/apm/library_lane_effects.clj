@@ -257,7 +257,10 @@
                  (catch Throwable t
                    (refusal :workspace-lease-persist-failed
                             {:message (.getMessage t)}))))))
-         :validate-workspace-fn workspace/validate
+         ;; allow-advance?: on resume the solver has committed, so its worktree
+         ;; head and problem blob legitimately differ from the pins. A fresh
+         ;; provision still takes the strict path, because head == base there.
+         :validate-workspace-fn #(workspace/validate % {:allow-advance? true})
          :workspace-exists?
          (fn [unit role]
            (.isDirectory

@@ -15,6 +15,19 @@
   #{:command-own-exit :branch :base-revision :final-head :committed?
     :statement-unchanged? :lean :axioms :clean-before? :clean-after? :mutations})
 
+(def solve-progress-fields
+  "Fields a solve round must ALSO return when it has not closed the problem.
+
+  Kept out of proof-report-fields because that set gates validate-terminal,
+  and a round that DID close the problem has no residual to report. But the
+  prompt's closing line says \"return exactly one EDN map with keys ...\", and a
+  solver obeys that list over the surrounding prose: on 2026-08-22 the first
+  live t96A03 round returned exactly the eleven artifact fields and nothing
+  else, so round-outcome saw no :solver/outcome and no :residual and could not
+  classify the round as progress. Nothing recorded what the solver thought
+  remained, which is the whole of a siege's visibility."
+  #{:solver/outcome :residual :artifact-commits})
+
 (defn normalize-proof-report
   "Normalize equivalent agent renderings before applying the strict gate.
 
@@ -207,8 +220,16 @@
          :verify "Independently verify the certified solver head; do not mutate it."
          "Perform the registered read-only preflight.")
        " Return exactly one EDN map with keys "
-       (pr-str (if (= :preflight (:phase request))
-                 preflight/required-report-fields proof-report-fields)) "."
+       (pr-str (cond
+                 (= :preflight (:phase request)) preflight/required-report-fields
+                 (= :solve (:phase request))
+                 (into proof-report-fields solve-progress-fields)
+                 :else proof-report-fields))
+       (when (= :solve (:phase request))
+         (str " -- " (pr-str solve-progress-fields)
+              " are required when the problem is not closed and may be omitted"
+              " only when it is"))
+       "."
        (when (contains? #{:solve :verify} (:phase request))
          (str " The nested :lean map must contain integer :exit, :warnings, "
               ":sorry-warnings, and :errors counts. :axioms must be a vector "
