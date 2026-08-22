@@ -7,11 +7,19 @@ closure is the oracle that the increment was the right one.
 
 It exists to prevent one measured failure. The previous topology deep dive
 closed its problems and left material behind that nothing consumed: in the
-modules it produced, unreferenced declarations run at 3% and 5% in the general
-machinery but 19% in the concrete layer. Building toward what a problem *might*
-need is the expensive failure mode, and a well-formed strategy checkpoint does
-not catch it, because v5's checkpoint validates the shape of a plan and never
-looks at what was built.
+modules it produced, declarations unreachable from the keying problem's closing
+theorem run at 43% (SingularHomologyConcrete), 23% (SingularExcision) and 15%
+(SingularSubdivision) of hand-written declarations, excluding anti-vacuity
+terminals. Building toward what a problem *might* need is the expensive failure
+mode, and a well-formed strategy checkpoint does not catch it, because v5's
+checkpoint validates the shape of a plan and never looks at what was built.
+
+Those figures are measured, not estimated: apm-singular-homology @ `edaaafe`,
+`Reports/t02A06-declaration-reachability.md`, re-run byte-identical. An earlier
+draft of this card cited 3%/5%/19% from a textual reference-count proxy and
+concluded the slack sat only in the concrete layer. The proxy was wrong by 3x
+and that conclusion was false: it credits use by any sibling declaration,
+whereas reachability credits only the dependency path. Waste is corpus-wide.
 
 A card change is a regime boundary; this draft has no force until its blob and
 apparatus revision are frozen into a registration.
@@ -55,7 +63,18 @@ declaration granularity. Record the exact command you ran in
 `:closure-command` — whatever it is, verbatim, so the number can be reproduced.
 
 A declaration added since the last checkpoint and not in the closure is an
-**orphan**. Every orphan gets a disposition:
+**orphan**.
+
+Declarations produced by attribute expansion — `@[reassoc]` variants and
+similar — are **not** orphans and carry no disposition. They are not written by
+anyone and cannot be moved independently of their parent. Attribute them to the
+declaration they were generated from and count them exactly as that parent
+counts. Detect them as declarations whose name does not occur literally in the
+module source; in the measured baseline this is 14 of 46 raw orphans in
+SingularSubdivision and 10 of 35 in SingularExcision, so the rule is
+load-bearing rather than hypothetical.
+
+Every remaining orphan gets a disposition:
 
 - `:quarantine` — the default. Move it to a module that the keying problem does
   not import, commit it, and record it. **Do not delete it.** Anticipatory work
