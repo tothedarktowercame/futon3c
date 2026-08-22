@@ -36,3 +36,12 @@
     (is (false? (:ok result)))
     (is (some #{:generated-contract-verify-bypasses-promotion}
               (:findings result)))))
+
+(deftest timeout-as-success-policy-mutation-is-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        result (sut/validate
+                (assoc-in contract [:dispatch-policy :client-timeout-is-success]
+                          true))]
+    (is (false? (:ok result)))
+    (is (some #{:generated-contract-dispatch-policy-invalid}
+              (:findings result)))))

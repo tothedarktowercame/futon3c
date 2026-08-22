@@ -17,7 +17,17 @@
             :ledger-after (str "ledger-" (inc ordinal))
             :receipt-id (str "receipt-" ordinal)
             :prior-receipt-id (when (pos? ordinal)
-                                (str "receipt-" (dec ordinal)))})
+                                (str "receipt-" (dec ordinal)))
+            :job-id (str "job-" ordinal)
+            :activated-job-id (str "job-" ordinal)
+            :activation-status 202
+            :reactivated-job-id (str "job-" ordinal)
+            :terminal-job-id (str "job-" ordinal)
+            :command-own-exit 0
+            :claim-persisted true :receipt-persisted true
+            :resumed-job-id (str "job-" ordinal)
+            :client-timeout-observed false
+            :timeout-treated-as-success false})
          (range 11)
          (map vector
               [:registered :preflight :solve :verify :promote-solver
@@ -40,3 +50,29 @@
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/valid.json"))
            (json/parse-string (slurp a))))))
+
+(deftest durable-state-projection-does-not-invent-job-success
+  (let [step (first (:steps valid))
+        projected
+        (sut/from-durable-state
+         {:registration (select-keys valid [:campaign-id :manifest-hash
+                                             :contract-id :phase-order])
+          :observations
+          [{:from (:from step) :to (:to step)
+            :ledger-before (:ledger-before step)
+            :ledger-after (:ledger-after step)
+            :claim {:persisted? true}
+            :receipt {:id (:receipt-id step) :prior-id nil :persisted? true}
+            :job {:announced-id (:job-id step)
+                  :activated-id (:activated-job-id step)
+                  :activation-status (:activation-status step)
+                  :reactivated-id (:reactivated-job-id step)
+                  :terminal-id (:terminal-job-id step)
+                  :command-own-exit (:command-own-exit step)
+                  :resumed-id (:resumed-job-id step)
+                  :client-timeout-observed? true
+                  :timeout-treated-as-success? false}}]
+          :closed false :terminal-ledger-digest (:ledger-after step)})]
+    (is (= true (get-in projected ["steps" 0 "clientTimeoutObserved"])))
+    (is (= false (get-in projected ["steps" 0 "timeoutTreatedAsSuccess"])))
+    (is (= 202 (get-in projected ["steps" 0 "activationStatus"])))))
