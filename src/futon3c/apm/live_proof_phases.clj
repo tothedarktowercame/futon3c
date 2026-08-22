@@ -15,19 +15,6 @@
   #{:command-own-exit :branch :base-revision :final-head :committed?
     :statement-unchanged? :lean :axioms :clean-before? :clean-after? :mutations})
 
-(def solve-progress-fields
-  "Fields a solve round must ALSO return when it has not closed the problem.
-
-  Kept out of proof-report-fields because that set gates validate-terminal,
-  and a round that DID close the problem has no residual to report. But the
-  prompt's closing line says \"return exactly one EDN map with keys ...\", and a
-  solver obeys that list over the surrounding prose: on 2026-08-22 the first
-  live t96A03 round returned exactly the eleven artifact fields and nothing
-  else, so round-outcome saw no :solver/outcome and no :residual and could not
-  classify the round as progress. Nothing recorded what the solver thought
-  remained, which is the whole of a siege's visibility."
-  #{:solver/outcome :residual :artifact-commits})
-
 (defn normalize-proof-report
   "Normalize equivalent agent renderings before applying the strict gate.
 
@@ -220,16 +207,8 @@
          :verify "Independently verify the certified solver head; do not mutate it."
          "Perform the registered read-only preflight.")
        " Return exactly one EDN map with keys "
-       (pr-str (cond
-                 (= :preflight (:phase request)) preflight/required-report-fields
-                 (= :solve (:phase request))
-                 (into proof-report-fields solve-progress-fields)
-                 :else proof-report-fields))
-       (when (= :solve (:phase request))
-         (str " -- " (pr-str solve-progress-fields)
-              " are required when the problem is not closed and may be omitted"
-              " only when it is"))
-       "."
+       (pr-str (if (= :preflight (:phase request))
+                 preflight/required-report-fields proof-report-fields)) "."
        (when (contains? #{:solve :verify} (:phase request))
          (str " The nested :lean map must contain integer :exit, :warnings, "
               ":sorry-warnings, and :errors counts. :axioms must be a vector "
@@ -240,8 +219,9 @@
               "{:exit INT :warnings INT :sorry-warnings INT :errors INT :output STRING}."))))
 
 (defn run-live!
-  [{:keys [kind contract request state-path agency-base]
-    :or {agency-base "http://localhost:7070"}}]
+  [{:keys [kind contract request state-path agency-base max-rounds]
+    :or {agency-base "http://localhost:7070"
+         max-rounds solver-rounds/default-max-rounds}}]
   (let [state (runtime/read-state state-path)
         effects
         {:kind kind :contract contract :request request :state state
@@ -255,14 +235,15 @@
         {:ok (and (= 202 (:http/status response)) (:ok response))
          :job-id (:job-id response)}))
     :activate-fn
-    ;; announce only reserves the ledger row; this bell (same job-id) is what
-    ;; actually runs it. See runtime/activate-job!.
     (fn [req ticket]
-      (runtime/activate-job! agency-base
-                             {:agent-id (:agent-id req) :prompt (prompt req)
-                              :mode (if (= :solve kind) "work" "brief")
-                              :job-id (:job-id ticket)
-                              :timeout-ms (:turn-timeout-ms req)}))
+      (let [response (runtime/http-json
+                      "POST" (str agency-base "/api/alpha/invoke/activate")
+                      {:agent-id (:agent-id req) :prompt (prompt req)
+                       :surface "emacs-repl" :caller "countdown-control"
+                       :mode (if (= :solve kind) "work" "brief")
+                       :job-id (:job-id ticket)})]
+        {:ok (and (= 202 (:http/status response)) (:ok response)
+                  (:accepted response))}))
     :job-fn
     (fn [job-id]
       (runtime/job->terminal
@@ -273,7 +254,7 @@
        (assoc effects
               :validate-solved (partial validate-terminal :solve)
               :provide-receipt (partial receipt contract :solve)
-              :max-rounds solver-rounds/default-max-rounds))
+              :max-rounds max-rounds))
       (drive! effects))))
 
 (defn resume-solver-remediation-live!
@@ -299,10 +280,13 @@
              :job-id (:job-id response)}))
         activate-fn
         (fn [req ticket]
-          (runtime/activate-job! agency-base
-                                 {:agent-id (:agent-id req) :prompt (prompt req)
-                                  :mode "work" :job-id (:job-id ticket)
-                                  :timeout-ms (:turn-timeout-ms req)}))]
+          (let [response (runtime/http-json
+                          "POST" (str agency-base "/api/alpha/invoke/activate")
+                          {:agent-id (:agent-id req) :prompt (prompt req)
+                           :surface "emacs-repl" :caller "countdown-control"
+                           :mode "work" :job-id (:job-id ticket)})]
+            {:ok (and (= 202 (:http/status response)) (:ok response)
+                      (:accepted response))}))]
     (solver-rounds/resume-remediation!
      {:state state :request request :announce-fn announce-fn
       :activate-fn activate-fn

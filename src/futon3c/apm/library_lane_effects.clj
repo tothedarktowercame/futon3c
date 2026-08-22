@@ -2,6 +2,7 @@
   "Concrete Agency, Git-worktree, lease, and elaboration effects for the
   library lane. Constructing effects observes authority but never dispatches."
   (:require [clojure.java.io :as io]
+            [futon3c.apm.library-lane-phases :as lane-phases]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.library-lane-launch :as launch]
@@ -260,7 +261,7 @@
          ;; allow-advance?: on resume the solver has committed, so its worktree
          ;; head and problem blob legitimately differ from the pins. A fresh
          ;; provision still takes the strict path, because head == base there.
-         :validate-workspace-fn #(workspace/validate % {:allow-advance? true})
+         :validate-workspace-fn lane-phases/validate-workspace
          :workspace-exists?
          (fn [unit role]
            (.isDirectory

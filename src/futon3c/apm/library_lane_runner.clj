@@ -5,7 +5,7 @@
             [clojure.string :as str]
             [futon3c.apm.bank-driver :as bank-driver]
             [futon3c.apm.library-lane :as lane]
-            [futon3c.apm.live-proof-phases :as live-proof-phases]))
+            [futon3c.apm.library-lane-phases :as lane-phases]))
 
 (def library-card
   {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-library-v1.md"
@@ -96,7 +96,7 @@
   [{:keys [corpus-root contract seat phase-inputs-fn bank-request-fn
            target-fn phase-run-fn bank-fn]
     :or {target-fn elaborate-targets
-         phase-run-fn live-proof-phases/run-live!
+         phase-run-fn lane-phases/run-live!
          bank-fn bank-driver/execute!}
     :as options}]
   (let [available (lane/queue corpus-root :library)

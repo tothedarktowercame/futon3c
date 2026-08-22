@@ -5,7 +5,7 @@
   problem unit, provisioned workspace, registered seats, ledger, and terminal
   evidence. Missing authority is returned as a typed refusal."
   (:require [clojure.string :as str]
-            [futon3c.apm.live-launch-preparation :as launch]
+            [futon3c.apm.library-lane-phases :as lane-phases]
             [futon3c.apm.live-proof-phases :as proof])
   (:import [java.math BigInteger]
            [java.nio.charset StandardCharsets]
@@ -16,10 +16,9 @@
 
 (defn prepare-codex-only!
   "Prepare the solver workspace and the solver/proctor Codex seats while
-  retaining live-launch-preparation's injected authority boundaries."
+  through this lane OWN preparation, not the countdown's."
   [options]
-  (launch/prepare! (assoc options :workspace-roles codex-workspace-roles
-                          :seat-types codex-seat-types)))
+  (lane-phases/prepare! options))
 
 (defn- sha256 [text]
   (let [digest (.digest (MessageDigest/getInstance "SHA-256")

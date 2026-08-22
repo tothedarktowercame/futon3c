@@ -88,7 +88,7 @@
 (defn validate
   "Validate a lease against Git registration, clean state, source blob, and substrate."
   ([lease] (validate lease {}))
-  ([lease {:keys [probe-fn allow-advance?]}]
+  ([lease {:keys [probe-fn]}]
    (let [repository (canonical (:repository/path lease))
          workspace (canonical (:workspace/path lease))
          root-id (address (dissoc lease :workspace/id))
@@ -112,32 +112,17 @@
                  (probe-fn lease)
                  (apply shell/sh (concat ["lake" "env" "lean" (:problem/path lease)
                                           :dir (str workspace)])))
-         ;; A solver advances its own worktree by committing, so on RESUME the
-         ;; head and the problem blob legitimately differ from the pins. Opt-in
-         ;; only: without :allow-advance? this is the original strict check, so
-         ;; the countdown machinery is unaffected. The pinned base stays the
-         ;; provenance record and must remain an ANCESTOR -- a head that forked
-         ;; off the pin is still a mismatch. The frozen statement is protected
-         ;; separately, by :statement-unchanged? on the solve report.
-         advanced? (and allow-advance?
-                        (not= (:base-revision lease) head)
-                        (zero? (:exit (run workspace "merge-base"
-                                           "--is-ancestor"
-                                           (:base-revision lease) head))))
          findings (cond-> []
                     (not= (:workspace/id lease) root-id) (conj :workspace-lease-address-invalid)
                     (not registered?) (conj :workspace-not-registered)
                     (not= (:branch lease) branch) (conj :workspace-branch-mismatch)
-                    (and (not= (:base-revision lease) head) (not advanced?))
-                    (conj :workspace-head-mismatch)
+                    (not= (:base-revision lease) head) (conj :workspace-head-mismatch)
                     (not clean?) (conj :workspace-dirty)
-                    (and (not= (:problem/blob lease) blob) (not advanced?))
-                    (conj :workspace-problem-blob-mismatch)
+                    (not= (:problem/blob lease) blob) (conj :workspace-problem-blob-mismatch)
                     (not= substrate link-target) (conj :workspace-substrate-link-mismatch)
                     (not manifest-readable?) (conj :workspace-substrate-manifest-missing)
                     (not (zero? (:exit probe))) (conj :workspace-probe-failed))]
      {:valid? (empty? findings) :findings findings :head head :branch branch
-      :advanced? (boolean advanced?)
       :worktree-clean? clean? :problem/blob blob :probe/exit (:exit probe)
       :substrate/path (some-> link-target str)})))
 

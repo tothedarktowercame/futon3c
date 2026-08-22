@@ -1,6 +1,7 @@
 (ns futon3c.apm.live-learning-phases
   "Live Student/Guide/Scribe/close adapters for the APM map/reduce cycle."
-  (:require [futon3c.apm.campaign-machine :as machine]
+  (:require [clojure.string :as str]
+            [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-handlers :as handlers]
             [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.live-preflight-runtime :as runtime])
@@ -25,7 +26,8 @@
 
 (defn build-request
   [{:keys [contract action ledger unit role-card seat workspace receipts
-           snapshot-access]}]
+           snapshot-access turn-timeout-ms]
+    :or {turn-timeout-ms 3600000}}]
   (let [kind (:kind action)
         phase (:phase action)
         role (role-for-kind kind)
@@ -61,7 +63,8 @@
                           :frame-id (:frame/id unit) :problem-id (:problem/id unit)
                           :ledger-digest (:digest ledger)
                           :role-card-path (:path role-card) :role-card-blob (:blob role-card)
-                          :input-receipt-ids input-ids :turn-timeout-ms 3600000}
+                          :input-receipt-ids input-ids
+                          :turn-timeout-ms turn-timeout-ms}
                    (= :student-attempt kind)
                    (assoc :attempt-ordinal (:ordinal action)
                           :workspace (:workspace/path workspace)
@@ -86,6 +89,15 @@
 (defn validate-terminal [request ticket job]
   (let [kind (:dispatch/type request)
         report (:report job)
+        memory-use (:memory-use report)
+        snapshot-binding (select-keys memory-use
+                                      [:receipt-id :snapshot-id
+                                       :snapshot-digest])
+        allowed-memory-ids (set (get-in request
+                                        [:memory-snapshot
+                                         :accessible-memory-ids]))
+        surfaced-memory-ids (set (:surfaced-ids memory-use))
+        used-memory-ids (set (:used-ids memory-use))
         findings
         (cond-> []
           (not= (:job-id ticket) (:job-id job)) (conj :job-id-mismatch)
@@ -99,11 +111,26 @@
           (and (= :student-attempt kind)
                (not (map? (:memory-use report)))) (conj :memory-use-evidence-missing)
           (and (= :student-attempt kind)
+               (map? memory-use)
+               (not (and (vector? (:surfaced-ids memory-use))
+                         (vector? (:used-ids memory-use)))))
+          (conj :student-memory-use-ids-invalid)
+          (and (= :student-attempt kind)
                (:memory-snapshot request)
                (not= (:memory-snapshot request)
-                     (select-keys (:memory-use report)
-                                  [:receipt-id :snapshot-id :snapshot-digest])))
+                     (assoc snapshot-binding
+                            :accessible-memory-ids
+                            (get-in request [:memory-snapshot
+                                             :accessible-memory-ids]))))
           (conj :student-memory-snapshot-mismatch)
+          (and (= :student-attempt kind)
+               (map? memory-use)
+               (not (every? allowed-memory-ids surfaced-memory-ids)))
+          (conj :student-memory-surfaced-outside-snapshot)
+          (and (= :student-attempt kind)
+               (map? memory-use)
+               (not (every? surfaced-memory-ids used-memory-ids)))
+          (conj :student-memory-used-without-surfacing)
           (and (= :guide-intervention kind)
                (not= false (get-in report [:channel-audit :direct-student-contact?])))
           (conj :guide-channel-isolation-unproved)
@@ -176,11 +203,18 @@
     (handlers/validate-completion contract action addressed receipts)))
 
 (defn prompt [request]
-  (str "F19 " (name (:phase request)) " — follow frozen role card "
+  (str (str/upper-case (:frame-id request)) " " (name (:phase request))
+       " — follow frozen role card "
        (:role-card-path request) " at blob " (:role-card-blob request) ".\n"
        "Authority and exact receipt inputs:\n" (pr-str request) "\n"
        (case (:dispatch/type request)
-         :student-attempt "Attempt the problem independently. Record memory retrieval/use and an explicit failure account even on success."
+         :student-attempt
+         (str "Attempt the problem independently. The :memory-snapshot map is "
+              "the complete memory authority: do not query, read, or use any "
+              "memory ID absent from :accessible-memory-ids. Return :memory-use "
+              "with the exact :receipt-id, :snapshot-id, and :snapshot-digest "
+              "from the request, plus vector-valued :surfaced-ids and :used-ids. "
+              "Record an explicit failure account even on success.")
          :guide-intervention "Improve only the memory store or harness channel. Do not contact the Student directly."
          :scribe-reduce (if (= :promote-solver (:phase request))
                           "Mine the verified Solver trace and return independently reviewed memory candidates with exact persisted review evidence. The controller owns snapshot publication."
@@ -203,13 +237,23 @@
         {:ok (and (= 202 (:http/status response)) (:ok response))
          :job-id (:job-id response)}))
     :activate-fn
-    ;; announce only reserves the ledger row; this bell (same job-id) is what
-    ;; actually runs it. See runtime/activate-job!.
     (fn [req ticket]
-      (runtime/activate-job! agency-base
-                             {:agent-id (:agent-id req) :prompt (prompt req)
-                              :job-id (:job-id ticket)
-                              :timeout-ms (:turn-timeout-ms req)}))
+      (let [reset-response (when (:fresh-session? req)
+                             (runtime/http-json
+                              "POST" (str agency-base "/api/alpha/agents/"
+                                          (:agent-id req) "/reset-session") {}))
+            reset-ok? (or (nil? reset-response)
+                          (and (= 200 (:http/status reset-response))
+                               (:ok reset-response)))]
+        (if-not reset-ok?
+          {:ok false :error/code :student-session-reset-failed}
+          (let [response (runtime/http-json
+                          "POST" (str agency-base "/api/alpha/invoke/activate")
+                          {:agent-id (:agent-id req) :prompt (prompt req)
+                           :surface "emacs-repl" :caller "countdown-control"
+                           :job-id (:job-id ticket)})]
+            {:ok (and (= 202 (:http/status response)) (:ok response)
+                      (:accepted response))}))))
     :job-fn
     (fn [job-id]
       (runtime/job->terminal
