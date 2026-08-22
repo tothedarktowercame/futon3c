@@ -36,7 +36,28 @@
               [:preflight :solve :verify :promote-solver :student-attempt-1
                :guide-intervention-1 :student-attempt-2 :guide-intervention-2
                :student-attempt-3 :scribe-reduce :close-frame]))
-   :closed true :terminal-ledger-digest "ledger-11"})
+   :closed true :terminal-ledger-digest "ledger-11"
+   :solver-snapshot-digest "snapshot-verified"
+   :snapshot-admitted-after-solve-verify true
+   :snapshot-depositor "scribe-1" :snapshot-reviewer "proctor-1"
+   :student-bindings
+   [{:ordinal 1 :session-id "student-session-1"
+     :snapshot-digest "snapshot-verified"}
+    {:ordinal 2 :session-id "student-session-2"
+     :snapshot-digest "snapshot-verified"}
+    {:ordinal 3 :session-id "student-session-3"
+     :snapshot-digest "snapshot-verified"}]
+   :campaign-lanes
+   [{:campaign-id "qualified-cycle" :regulator-id "regulator:qualified-cycle"
+     :problem-buffer "*problem: qualified-cycle*"
+     :continuation-session "controller-session-1"
+     :analyst-session "analyst-session-1"
+     :ledger-digest "ledger-11" :projection-ledger-digest "ledger-11"}
+    {:campaign-id "parallel-cycle" :regulator-id "regulator:parallel-cycle"
+     :problem-buffer "*problem: parallel-cycle*"
+     :continuation-session "controller-session-2"
+     :analyst-session "analyst-session-2"
+     :ledger-digest "parallel-ledger" :projection-ledger-digest "parallel-ledger"}]})
 
 (deftest canonical-trace-is-deterministic-and-atomically-published
   (let [directory (.toFile (java.nio.file.Files/createTempDirectory
@@ -47,6 +68,10 @@
     (is (:ok (sut/emit! b valid)))
     (is (= (slurp a) (slurp b)))
     (is (.contains (slurp a) "\"promote-solver\""))
+    (is (= 3 (count (get (json/parse-string (slurp a))
+                         "studentBindings"))))
+    (is (= 2 (count (get (json/parse-string (slurp a))
+                         "campaignLanes"))))
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/valid.json"))
            (json/parse-string (slurp a))))))

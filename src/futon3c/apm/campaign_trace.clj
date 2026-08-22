@@ -13,7 +13,9 @@
 
 (defn trace
   [{:keys [campaign-id manifest-hash contract-id phase-order steps closed
-           terminal-ledger-digest]}]
+           terminal-ledger-digest solver-snapshot-digest
+           snapshot-admitted-after-solve-verify snapshot-depositor
+           snapshot-reviewer student-bindings campaign-lanes]}]
   (canonical
    {"schemaVersion" 1
     "campaignId" campaign-id
@@ -44,14 +46,39 @@
                       "timeoutTreatedAsSuccess" timeout-treated-as-success})
                    steps)
     "closed" closed
-    "terminalLedgerDigest" terminal-ledger-digest}))
+    "terminalLedgerDigest" terminal-ledger-digest
+    "solverSnapshotDigest" solver-snapshot-digest
+    "snapshotAdmittedAfterSolveVerify" snapshot-admitted-after-solve-verify
+    "snapshotDepositor" snapshot-depositor
+    "snapshotReviewer" snapshot-reviewer
+    "studentBindings" (mapv (fn [{:keys [ordinal session-id snapshot-digest]}]
+                               {"ordinal" ordinal "sessionId" session-id
+                                "snapshotDigest" snapshot-digest})
+                             student-bindings)
+    "campaignLanes"
+    (mapv (fn [{:keys [campaign-id regulator-id problem-buffer
+                       continuation-session analyst-session ledger-digest
+                       projection-ledger-digest]}]
+            {"campaignId" campaign-id "regulatorId" regulator-id
+             "problemBuffer" problem-buffer
+             "continuationSession" continuation-session
+             "analystSession" analyst-session "ledgerDigest" ledger-digest
+             "projectionLedgerDigest" projection-ledger-digest})
+          campaign-lanes)}))
 
 (defn from-durable-state
   "Project only witnessed durable ledger/job facts into a checker trace."
-  [{:keys [registration observations closed terminal-ledger-digest]}]
+  [{:keys [registration observations closed terminal-ledger-digest
+           memory campaign-lanes]}]
   (trace
    (merge registration
           {:closed closed :terminal-ledger-digest terminal-ledger-digest
+           :solver-snapshot-digest (:snapshot-digest memory)
+           :snapshot-admitted-after-solve-verify (:admitted? memory)
+           :snapshot-depositor (:depositor memory)
+           :snapshot-reviewer (:reviewer memory)
+           :student-bindings (:student-bindings memory)
+           :campaign-lanes campaign-lanes
            :steps
            (mapv
             (fn [{:keys [from to ledger-before ledger-after claim job receipt]}]

@@ -21,6 +21,16 @@
    :restart-same-job true
    :client-timeout-is-success false})
 
+(def required-memory-policy
+  {:content-addressed-snapshot true :admit-after-solve-verify true
+   :independent-review true :student-attempts 3
+   :fresh-student-sessions true :exact-snapshot-binding true})
+
+(def required-isolation-policy
+  {:campaign-scoped-regulator true :campaign-scoped-problem-buffer true
+   :distinct-continuation-session true :distinct-analyst-session true
+   :projection-ledger-binding true})
+
 (defn read-contract [path]
   (try
     {:ok true :contract (json/parse-string (slurp path) true)}
@@ -54,7 +64,11 @@
           (not= required-bounds (:bounds contract))
           (conj :generated-contract-bounds-invalid)
           (not= required-dispatch-policy (:dispatch-policy contract))
-          (conj :generated-contract-dispatch-policy-invalid))]
+          (conj :generated-contract-dispatch-policy-invalid)
+          (not= required-memory-policy (:memory-policy contract))
+          (conj :generated-contract-memory-policy-invalid)
+          (not= required-isolation-policy (:isolation-policy contract))
+          (conj :generated-contract-isolation-policy-invalid))]
     (if (seq findings)
       {:ok false :error/code :generated-contract-invalid :findings findings}
       {:ok true :contract contract})))

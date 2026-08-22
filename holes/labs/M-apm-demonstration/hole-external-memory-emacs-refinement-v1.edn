@@ -1,0 +1,8 @@
+{:hole/id :apm-external-memory-emacs-refinement
+ :hole/status :open
+ :adapters [:memory-store :emacs-buffer-publication]
+ :modelled-observations [:snapshot-digest :independent-review
+                         :student-session-snapshot-binding
+                         :campaign-buffer-name :projection-ledger-digest]
+ :residual "Lean certifies emitted durable identities and bindings, not the implementations of the external memory store or Emacs buffer replacement."
+ :closure-test "Adapter-level refinement witnesses show the admitted store bytes hash to the emitted digest and the named Emacs buffer contains the projection carrying the emitted ledger digest."}

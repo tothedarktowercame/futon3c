@@ -45,3 +45,16 @@
     (is (false? (:ok result)))
     (is (some #{:generated-contract-dispatch-policy-invalid}
               (:findings result)))))
+
+(deftest memory-and-isolation-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        memory-result (sut/validate
+                       (assoc-in contract [:memory-policy :student-attempts] 2))
+        isolation-result
+        (sut/validate
+         (assoc-in contract [:isolation-policy :campaign-scoped-regulator]
+                   false))]
+    (is (some #{:generated-contract-memory-policy-invalid}
+              (:findings memory-result)))
+    (is (some #{:generated-contract-isolation-policy-invalid}
+              (:findings isolation-result)))))
