@@ -1,5 +1,6 @@
 (ns futon3c.agency.agent-pouch-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
+            [cheshire.core :as json]
             [futon3c.agency.agent-pouch :as pouch]))
 
 (use-fixtures
@@ -107,6 +108,13 @@
             :usage {:input_tokens 12}
             :total-cost-usd 0.01}
            (pouch/compact-pouch! "claude-compact" {:timeout-ms 2000})))))
+
+(deftest compact-control-is-literal-without-changing-normal-user-lines
+  (let [control (json/parse-string (#'pouch/control-line) true)
+        normal (json/parse-string (#'pouch/user-line "/compact") true)]
+    (is (= "/compact" (get-in control [:message :content])))
+    (is (= [{:type "text" :text "/compact"}]
+           (get-in normal [:message :content])))))
 
 (deftest compact-pouch-refuses-cold-or-busy-agent
   (is (= {:ok false :error "no warm pouch"}
