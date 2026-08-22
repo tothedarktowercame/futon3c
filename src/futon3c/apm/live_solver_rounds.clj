@@ -25,7 +25,13 @@
                prior
                (assoc :solver/prior-job-id (:job-id prior)
                       :solver/prior-session-id (:session-id prior)
-                      :solver/prior-report (:report prior)))]
+                      :solver/prior-report (:report prior)
+                      :solver/prior-validation (:validation prior)
+                      :solver/remediation
+                      {:required? (false? (get-in prior [:validation :ok]))
+                       :findings (get-in prior [:validation :findings])
+                       :instruction
+                       "Correct the prior validator findings in committed state, then rerun every terminal check. For an out-of-scope committed mutation, add a corrective commit restoring that path to the registered base; do not rewrite history."}))]
     (assoc body :dispatch/id (machine/ledger-digest [body]))))
 
 (defn- container [state base-request]
@@ -118,6 +124,12 @@
    :report report
    :validation (select-keys validation [:ok :error/code :findings :missing])}))
 
+(defn- terminal-failure-signature [round]
+  {:report (:report round)
+   :error/code (get-in round [:validation :error/code])
+   :findings (get-in round [:validation :findings])
+   :missing (or (get-in round [:validation :missing]) #{})})
+
 (defn drive!
   "Advance a solver siege by one durable boundary.
 
@@ -138,6 +150,9 @@
 
       (= :solver-defect-review-required (:state/type state))
       {:ok false :error/code :solver-defect-review-required :state state}
+
+      (= :solver-remediation-required (:state/type state))
+      {:ok false :error/code :solver-remediation-required :state state}
 
       (not= :solver-rounds (:state/type state))
       {:ok false :error/code :solver-round-state-invalid}
@@ -189,6 +204,22 @@
                     rounds (conj (:rounds state) completed)
                     next-state (assoc state :rounds rounds :active nil)]
                 (cond
+                  (and (seq (:rounds state))
+                       (= (terminal-failure-signature completed)
+                          (terminal-failure-signature
+                           (last (:rounds state)))))
+                  (let [stopped (assoc next-state
+                                       :state/type :solver-remediation-required
+                                       :remediation
+                                       {:finding (:validation completed)
+                                        :instruction
+                                        "Correct the repeated validator finding in committed state before resuming; identical terminal artifacts must not consume the proof-search budget."})
+                        saved (persist-container persist-fn stopped)]
+                    (if (:ok saved)
+                      {:ok false :error/code :solver-remediation-required
+                       :state stopped}
+                      saved))
+
                   (and (< (count rounds) max-rounds)
                        (strategy-checkpoint-round? ordinal)
                        (not (strategy-checkpoint-valid? (:report completed))))
@@ -261,3 +292,20 @@
                 {:ok true :status :certified :state certified
                  :certificate (:certificate receipt)}
                 saved))))))))
+
+(defn resume-remediation!
+  "Resume a halted siege with one corrective round carrying typed findings.
+
+   This is an explicit state transition: it never edits the solver workspace or
+   certifies the prior artifact. The next seat turn must produce a new terminal
+   artifact that passes the unchanged validator."
+  [{:keys [state persist-fn] :as effects}]
+  (if-not (and (= :solver-remediation-required (:state/type state))
+               (seq (:rounds state))
+               (fn? persist-fn))
+    {:ok false :error/code :solver-remediation-resume-input-invalid}
+    (let [resumed (assoc state :state/type :solver-rounds :active nil)
+          saved (persist-container persist-fn resumed)]
+      (if (:ok saved)
+        (dispatch-round! effects resumed)
+        saved))))

@@ -39,6 +39,48 @@
     (is (= 48 (get-in result [:state :active :request
                               :solver/remaining-rounds])))))
 
+(deftest retry-carries-terminal-validation-remediation
+  (let [persisted (atom nil)
+        result (sut/drive! (effects persisted))
+        request (get-in result [:state :active :request])]
+    (is (= [:final-head-not-committed]
+           (get-in request [:solver/prior-validation :findings])))
+    (is (true? (get-in request [:solver/remediation :required?])))
+    (is (re-find #"corrective commit"
+                 (get-in request [:solver/remediation :instruction])))))
+
+(deftest repeated-identical-invalid-artifact-halts-before-third-dispatch
+  (let [persisted (atom nil)
+        prior {:ordinal 1 :job-id "job-0" :session-id "solver-session"
+               :terminal-state :done :outcome :inadequate
+               :report {:committed? false :residual "unfinished"}
+               :validation {:ok false :error/code :live-proof-terminal-invalid
+                            :findings [:final-head-not-committed] :missing nil}}
+        state {:state/type :solver-rounds :budget/max-rounds 50
+               :base-request base-request :rounds [prior]
+               :active legacy-state}
+        result (sut/drive! (assoc (effects persisted) :state state))]
+    (is (= :solver-remediation-required (:error/code result)))
+    (is (= :solver-remediation-required (:state/type @persisted)))
+    (is (= 2 (count (:rounds @persisted))))
+    (is (nil? (:active @persisted)))))
+
+(deftest explicit-remediation-resume-dispatches-corrective-round
+  (let [persisted (atom nil)
+        state {:state/type :solver-remediation-required
+               :budget/max-rounds 50 :base-request base-request
+               :rounds [{:ordinal 1 :job-id "job-1"
+                         :validation {:ok false :findings [:bad-path]}}]
+               :active nil}
+        result (sut/resume-remediation!
+                (assoc (effects persisted) :state state))]
+    (is (:ok result))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= 2 (get-in result [:state :active :request :solver/round])))
+    (is (= [:bad-path]
+           (get-in result [:state :active :request
+                           :solver/remediation :findings])))))
+
 (deftest round-cap-requires-human-without-classifying-the-problem
   (let [persisted (atom nil)
         prior (mapv (fn [ordinal] {:ordinal ordinal :job-id (str "j" ordinal)})

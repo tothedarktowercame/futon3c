@@ -177,6 +177,10 @@
                  "friction. Do not stop merely because one lemma compiled. ")
             (str "Continue the same solver session and branch from the prior verified "
                  "state. Own a substantial proof episode, not one micro-lemma. "))
+          (when (get-in request [:solver/remediation :required?])
+            (str "The prior artifact failed terminal validation. Findings: "
+                 (pr-str (get-in request [:solver/remediation :findings])) ". "
+                 (get-in request [:solver/remediation :instruction]) " "))
           (when (:solver/strategy-checkpoint? request)
             (str "This is a ten-turn strategy checkpoint. Before returning, reassess the "
                  "whole route and include :solver/strategy {:summary STRING, "
