@@ -76,15 +76,35 @@
 (defn- ref-head [repo branch]
   (str/trim (:out (git repo "rev-parse" branch))))
 
+(defn- hermetic-run [dir argv]
+  (let [[command & _] argv
+        rendered (str/join " " argv)]
+    (cond
+      (= "git" command) (apply sh dir argv)
+      (and (= "bash" command) (str/includes? rendered "unsafeAxiom"))
+      {:exit 0 :out "fixture depends on axioms: [propext, unsafeAxiom]\n" :err ""}
+      (= "bash" command)
+      {:exit 0
+       :out "fixture depends on axioms: [propext, Classical.choice, Quot.sound]\n"
+       :err (if (str/includes? rendered "declaration uses")
+              "warning: declaration uses `sorry`\n" "")}
+      (= "lean" command)
+      {:exit 0 :out ""
+       :err (if (and (str/includes? rendered "Library.lean")
+                     (str/includes? (slurp (io/file dir "Library.lean")) "sorry"))
+              "warning: declaration uses `sorry`\n" "")}
+      :else {:exit 127 :out "" :err (str "unexpected command: " rendered)})))
+
 (deftest closed-happy-path-recomputes-status-and-is-rerunnable
   (let [{:keys [repo base source] :as fixture} (fixture-repo)]
     (try
-      (let [first-result (driver/execute! (request fixture))
+      (let [request (assoc (request fixture) :run-fn hermetic-run)
+            first-result (driver/execute! request)
             receipt (:receipt first-result)
             status (:receipt/status-recomputed receipt)]
         (is (:ok first-result) (pr-str first-result))
         (is (= :closed (:receipt/ruling receipt)))
-        (is (= source (:source-head (request fixture))))
+        (is (= source (:source-head request)))
         (is (not= base (ref-head repo "trunk")))
         (is (= {:previous-classification "partial"
                 :classification "solved"
@@ -95,7 +115,7 @@
         (is (not (zero? (:exit (git repo "show-ref" "--verify" "--quiet"
                                     "refs/heads/solver")))))
         (testing "a completed merge with a deleted source branch is safe"
-          (let [rerun (driver/execute! (request fixture))]
+          (let [rerun (driver/execute! request)]
             (is (:ok rerun))
             (is (= (ref-head repo "trunk")
                    (get-in rerun [:receipt :receipt/merge-sha]))))))
@@ -107,7 +127,8 @@
       (git repo "checkout" "-q" "solver")
       (write! repo "Library.lean" "theorem libraryFixture : True := by\n  sorry\n")
       (let [source (commit! repo "introduce partial library")
-            result (driver/execute! (request (assoc fixture :source source)))]
+            result (driver/execute! (assoc (request (assoc fixture :source source))
+                                           :run-fn hermetic-run))]
         (is (false? (:ok result)))
         (is (= :post-merge-rollup-carries-sorry
                (get-in result [:finding :finding])))
@@ -123,7 +144,7 @@
                             (str "lean -R . Main.lean >/dev/null && "
                              "printf 'fixture depends on axioms: "
                              "[propext, unsafeAxiom]\\n'")])
-            result (driver/execute! bad)]
+            result (driver/execute! (assoc bad :run-fn hermetic-run))]
         (is (false? (:ok result)))
         (is (= :post-merge-axiom-mismatch
                (get-in result [:finding :finding])))
@@ -144,7 +165,7 @@
                             (str "lean -R . Main.lean >/dev/null && "
                                  "printf 'warning: declaration uses "
                                  "`sorry`\\n' >&2")])
-            result (driver/execute! request)]
+            result (driver/execute! (assoc request :run-fn hermetic-run))]
         (is (:ok result) (pr-str result))
         (is (= 1 (get-in result
                          [:receipt :receipt/status-recomputed :sorry-count])))
