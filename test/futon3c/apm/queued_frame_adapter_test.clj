@@ -130,3 +130,26 @@
            @calls))
     (is (= 1 (:next-index @state)))
     (is (= 5 (count (:problems plan))))))
+
+(deftest terminal-evidence-is-derived-from-ledger-not-supervisor-status
+  (let [solve {:receipt/type :frame-solve :receipt/id digest
+               :receipt/final-head (apply str (repeat 40 "b"))
+               :receipt/lean {:sorry-warnings 0}}
+        verify {:receipt/type :frame-verify :receipt/id digest
+                :receipt/mathematical-sound? true}
+        close {:receipt/type :frame-close :receipt/id digest
+               :receipt/result :closed}
+        result
+        (sut/terminal-from-ledger
+         {:frame frame
+          :ledger {:events (mapv #(hash-map :event/body {:certificate %})
+                                 [solve verify close])}
+          :preparation {:workspaces
+                        {:solver {:branch "exp/f30" :terminal-head
+                                  (apply str (repeat 40 "b"))}
+                         :student {:terminal-head
+                                   (apply str (repeat 40 "c"))}}}})]
+    (is (:ok result) (pr-str result))
+    (is (= :closed (:frame/result result)))
+    (is (= :solved (get-in result [:terminal-receipt :problem/outcome])))
+    (is (= "exp/f30" (get-in result [:terminal-receipt :solver :branch])))))

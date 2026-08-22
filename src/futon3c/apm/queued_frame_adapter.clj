@@ -4,11 +4,14 @@
   Registration/open establishes the authoritative :preflight ledger state;
   only then may workspaces and seats be provisioned and certified."
   (:require [clojure.edn :as edn]
+            [clojure.java.shell :as shell]
+            [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-qualification :as campaign-qualification]
             [futon3c.apm.live-launch-preparation :as live-preparation]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.qualification :as qualification]
+            [futon3c.apm.queued-frame-terminal :as terminal]
             [futon3c.apm.workspace-lifecycle :as workspace])
   (:import [java.nio.file Files LinkOption Path]))
 
@@ -33,6 +36,8 @@
      :projection-directory (str (.resolve root "projection"))
      :problem-buffer-path (str (.resolve root "problem-buffer.md"))
      :preparation-path (str (.resolve root "preparation.edn"))
+     :problem-bank-path (str (.resolve root "terminal/problem-bank.edn"))
+     :retirement-receipt-directory (str (.resolve root "terminal/workspaces"))
      :contract-path contract-path
      :generated-contract-path generated-contract-path
      :qualification-report-path qualification-report-path
@@ -59,6 +64,49 @@
     (catch Throwable t
       {:ok false :error/code :queued-frame-qualification-unreadable
        :finding {:message (.getMessage t)}})))
+
+(defn terminal-from-ledger
+  "Derive queue terminal evidence from the validated ledger and preparation."
+  [{:keys [frame ledger preparation]}]
+  (let [certificates (keep #(get-in % [:event/body :certificate]) (:events ledger))
+        solve (some #(when (= :frame-solve (:receipt/type %)) %) certificates)
+        verify (some #(when (= :frame-verify (:receipt/type %)) %) certificates)
+        close (some #(when (= :frame-close (:receipt/type %)) %) certificates)
+        raw-result (:receipt/result close)
+        frame-result (cond
+                       (contains? #{:closed "closed"} raw-result) :closed
+                       (contains? #{:partial "partial"} raw-result) :partial
+                       (contains? #{:void "void"} raw-result) :void
+                       :else nil)
+        workspace-head
+        (fn [role]
+          (let [workspace (get-in preparation [:workspaces role])]
+            (or (:terminal-head workspace)
+                (when-let [path (:workspace/path workspace)]
+                  (let [result (shell/sh "git" "-C" path "rev-parse" "HEAD")]
+                    (when (zero? (:exit result)) (str/trim (:out result))))))))
+        solver-workspace (get-in preparation [:workspaces :solver])
+        heads {:solver (workspace-head :solver) :student (workspace-head :student)}
+        body {:receipt/type :frame-terminal
+              :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+              :frame/result frame-result
+              :problem/outcome (if (and (= 0 (get-in solve [:receipt/lean
+                                                             :sorry-warnings]))
+                                        (true? (:receipt/mathematical-sound? verify)))
+                                 :solved :partial)
+              :verify-receipt/id (:receipt/id verify)
+              :solver {:branch (:branch solver-workspace)
+                       :head (:receipt/final-head solve)}
+              :workspace/terminal-heads heads}
+        receipt (assoc body :receipt/id (machine/ledger-digest [body]))
+        checked (terminal/validate-terminal frame receipt)]
+    (if (:ok checked)
+      {:ok true :frame/result frame-result :terminal-receipt receipt}
+      {:ok false :error/code :queued-frame-terminal-derivation-failed
+       :terminal-check checked
+       :missing (cond-> [] (nil? solve) (conj :solve-receipt)
+                        (nil? verify) (conj :verify-receipt)
+                        (nil? close) (conj :close-receipt))})))
 
 (defn- roster-seats [response frame-id]
   (let [ids (into {} (map (fn [role] [role (str frame-id "-" (name role))])
@@ -165,7 +213,8 @@
   [{:keys [frame-number-base campaign-prefix generated-contract-path
            qualification-report-path manifest-fn ledger-fn
            role-cards workspace-root substrate-path agency-base http-fn
-           open-frame-fn frame-tick-fn retire-frame-fn persist-fn]
+           open-frame-fn frame-tick-fn retire-frame-fn retirement-audit-fn
+           persist-fn]
     :as config}]
   {:mint-frame-fn
    #(mint (assoc % :frame-number-base frame-number-base
@@ -209,7 +258,37 @@
    :frame-tick-fn
    (fn [frame]
      (frame-tick-fn frame (campaign-paths config frame)))
-   :retire-frame-fn retire-frame-fn})
+   :retire-frame-fn
+   (or retire-frame-fn
+       (fn [{:keys [frame terminal-receipt]}]
+         (let [paths (campaign-paths config frame)
+               leases (runtime/read-state
+                       (Path/of (:workspace-leases-path paths)
+                                (make-array String 0)))]
+           (terminal/retire!
+            {:frame frame :terminal-receipt terminal-receipt :leases leases
+             :audit-fn retirement-audit-fn
+             :persist-bank-fn
+             (fn [_ bank]
+               ((or persist-fn runtime/atomic-persist!)
+                (Path/of (:problem-bank-path paths) (make-array String 0)) bank))
+             :retire-workspace-fn
+             (fn [lease audit]
+               (workspace/retire!
+                {:lease lease :audit audit
+                 :receipt-directory (:retirement-receipt-directory paths)}))
+             :retire-seats-fn
+             (fn [retired-frame _]
+               (let [responses
+                     (mapv (fn [role]
+                             ((or http-fn runtime/http-json)
+                              "DELETE" (str (or agency-base "http://localhost:7070")
+                                            "/api/alpha/agents/"
+                                            (:frame/id retired-frame) "-"
+                                            (name role))))
+                           (keys live-preparation/required-seat-types))]
+                 {:ok (every? #(and (:ok %) (= 200 (:http/status %))) responses)
+                  :responses responses}))}))))})
 
 (defn mint
   [{:keys [problem ordinal queue/id frame-number-base campaign-prefix]}]

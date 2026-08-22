@@ -382,7 +382,13 @@
                   problem-queue/tick!
                   (fn [options]
                     (reset! tick-options options)
-                    {:ok true :status :frame-prepared})]
+                    {:ok true :status :frame-prepared})
+                  sut/set-alight! (constantly {:ok true :status :frame-complete})
+                  ledger/read-ledger (constantly {:ok true :events []})
+                  runtime/read-state (constantly {:preparation/version 2})
+                  queued-frame-adapter/terminal-from-ledger
+                  (constantly {:ok true :frame/result :closed
+                               :terminal-receipt {:receipt/id "terminal"}})]
       (is (= :frame-prepared
              (:status
               (sut/set-alight-problem-queue!
@@ -392,5 +398,11 @@
                 :authority {:agent "codex-10"}}
                {:jit/config {:campaign-root "/campaigns"}}))))
       (is (fn? (:frame-tick-fn @adapter-config)))
+      (is (= :closed
+             (:frame/result
+              ((:frame-tick-fn @adapter-config)
+               {:frame/id "f40" :problem/id "p1"}
+               {:ledger-path "/tmp/ledger"
+                :preparation-path "/tmp/preparation"}))))
       (is (fn? (:mint-frame-fn @tick-options)))
       (is (nil? (:jit/config @tick-options))))))
