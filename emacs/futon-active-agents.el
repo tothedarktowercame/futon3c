@@ -51,6 +51,13 @@ worktree is \"<frame-id>-<problem-id>-<role>\", so the problem can be
 recovered from the directory listing without asking the agency."
   :type 'directory)
 
+(defcustom futon-active-agents-queued-warn-seconds 300
+  "Seconds a job may sit `queued' before the Job column flags it.
+A job accepted into the ledger and never drained is the worst failure mode
+available -- the caller believes it dispatched. See
+futon3c/holes/excursions/E-drainer-stall-announced-jobs.md."
+  :type 'integer)
+
 (defcustom futon-active-agents-refresh-seconds 5
   "Seconds between automatic refreshes, or nil for manual `g' only."
   :type '(choice (const :tag "Manual only" nil) integer))
@@ -79,6 +86,17 @@ recovered from the directory listing without asking the agency."
     (dolist (job jobs out)
       (when (member (alist-get 'state job) futon-active-agents-live-job-states)
         (push (cons (alist-get 'agent-id job) job) out)))))
+
+(defun futon-active-agents--stale-queue-p (job)
+  "Non-nil when JOB has been queued longer than the warn threshold."
+  (and job
+       (equal "queued" (alist-get 'state job))
+       (let ((c (alist-get 'created-at job)))
+         (and (stringp c)
+              (condition-case nil
+                  (> (float-time (time-since (date-to-time c)))
+                     futon-active-agents-queued-warn-seconds)
+                (error nil))))))
 
 (defun futon-active-agents--doing (id)
   "Return what agent ID is working on, or \"-\".
@@ -122,7 +140,9 @@ For a frame seat, that is the problem its worktree names."
                       (vector id
                               (or (alist-get 'type a) "?")
                               status
-                              (cond (job (or (alist-get 'state job) "?"))
+                              (cond ((futon-active-agents--stale-queue-p job)
+                                     "queued!")
+                                    (job (or (alist-get 'state job) "?"))
                                     (busy-status "no-job")
                                     (t "-"))
                               ;; Age the JOB when there is one -- falling back
