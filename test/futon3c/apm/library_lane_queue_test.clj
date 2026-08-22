@@ -4,6 +4,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
+            [futon3c.apm.library-lane-runner :as runner]
             [futon3c.apm.library-lane-queue :as queue])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
@@ -132,3 +133,27 @@
       (is (= :queue-empty-after-exclusions
              (:stop-condition (queue/run-queue! {:corpus-root root}))))
       (finally (delete-tree! root)))))
+
+(deftest phases-drive-to-certified-not-merely-dispatched
+  ;; live-job-driver/drive! returns {:ok true :status :awaiting-terminal} once a
+  ;; job is dispatched and only later {:status :certified :certificate ...}.
+  ;; Advancing on the first :ok marches past a running solver.
+  (let [calls (atom 0)
+        phase-run (fn [_]
+                    (swap! calls inc)
+                    (if (< @calls 3)
+                      {:ok true :status :awaiting-terminal}
+                      {:ok true :status :certified :certificate {:receipt/id "r"}}))
+        result (runner/drive-to-certified phase-run {} {:poll-ms 0 :sleep-fn (fn [_] nil)})]
+    (is (= :certified (:status result)))
+    (is (= 3 @calls) "polled until certified rather than returning on dispatch")))
+
+(deftest awaiting-terminal-past-the-budget-fails-closed
+  (let [now (atom 0)
+        phase-run (fn [_] {:ok true :status :awaiting-terminal})
+        result (runner/drive-to-certified
+                phase-run {} {:poll-ms 0 :timeout-ms 10
+                              :sleep-fn (fn [_] (swap! now + 100))
+                              :now-fn (fn [] @now)})]
+    (is (false? (:ok result)))
+    (is (= :phase-awaiting-terminal-timeout (:error/code result)))))

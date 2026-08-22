@@ -81,11 +81,18 @@
                [phase (assoc action :frame-id frame-id :problem-id problem-id)]))
         phase-actions))
 
-(defn- state-paths [state-root frame-id]
+(defn- state-paths
+  "Per-phase durable state paths, as java.nio.file.Path.
+
+  NOT strings: live-preflight-runtime/read-state and atomic-persist! are
+  ^Path-hinted and call Files/isRegularFile, so a String argument throws
+  ClassCastException at the first phase dispatch. countdown-control builds
+  Paths for the same reason."
+  [state-root frame-id]
   (into {}
         (map (fn [phase]
-               [phase (str (io/file state-root frame-id
-                                    (str (name phase) ".edn")))]))
+               [phase (.toPath (io/file state-root frame-id
+                                        (str (name phase) ".edn")))]))
         [:preflight :solve :verify]))
 
 (defn- launch-findings

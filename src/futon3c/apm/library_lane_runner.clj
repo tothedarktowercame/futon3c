@@ -58,6 +58,35 @@
           {:ok false :finding :no-remaining-sorries :path path}
           :else {:ok true :targets targets :warning-count (count warning-lines)})))))
 
+(def default-phase-timeouts
+  "Wall-clock budget per phase, in ms. Solve is a multi-round siege and needs
+  hours; the read-only phases do not."
+  {:preflight 900000 :solve 14400000 :verify 1800000})
+
+(defn drive-to-certified
+  "Call PHASE-RUN-FN until the phase is CERTIFIED, not merely dispatched.
+
+  live-job-driver/drive! is a durable STEP machine: it returns
+  {:ok true :status :awaiting-terminal} once a job is announced and activated,
+  and only yields {:status :certified :certificate ...} after the job reaches a
+  terminal state. Treating the first :ok as phase completion marches straight
+  past a running solver and then fails at the next phase with a missing
+  receipt, which is exactly what happened on the first live run."
+  [phase-run-fn inputs {:keys [poll-ms timeout-ms sleep-fn now-fn]
+                        :or {poll-ms 15000
+                             sleep-fn #(Thread/sleep ^long %)
+                             now-fn #(System/currentTimeMillis)}}]
+  (let [deadline (+ (now-fn) (or timeout-ms 1800000))]
+    (loop []
+      (let [result (phase-run-fn inputs)]
+        (cond
+          (not (:ok result)) result
+          (or (= :certified (:status result)) (:certificate result)) result
+          (>= (now-fn) deadline)
+          {:ok false :error/code :phase-awaiting-terminal-timeout
+           :status (:status result) :timeout-ms timeout-ms}
+          :else (do (sleep-fn poll-ms) (recur)))))))
+
 (defn run-one!
   "Run one current :library problem. Effects are injectable for fixture tests.
 
@@ -99,7 +128,13 @@
                                :seat seat :role-card library-card
                                :receipts receipts})
                       result (if (:ok inputs)
-                               (phase-run-fn (dissoc inputs :ok)) inputs)]
+                               (drive-to-certified
+                                phase-run-fn (dissoc inputs :ok)
+                                (assoc (select-keys options [:poll-ms :sleep-fn :now-fn])
+                                       :timeout-ms
+                                       (or (get (:phase-timeouts options) kind)
+                                           (get default-phase-timeouts kind))))
+                               inputs)]
                   (if-not (:ok result)
                     (assoc (blocked problem-id kind result)
                            :keying-targets (:targets target))
