@@ -58,3 +58,16 @@
               (:findings memory-result)))
     (is (some #{:generated-contract-isolation-policy-invalid}
               (:findings isolation-result)))))
+
+(deftest terminal-and-analyst-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))]
+    (is (some #{:generated-contract-terminal-policy-invalid}
+              (:findings
+               (sut/validate
+                (assoc-in contract [:terminal-policy :certified-phase-receipts]
+                          10)))))
+    (is (some #{:generated-contract-analyst-policy-invalid}
+              (:findings
+               (sut/validate
+                (assoc-in contract [:analyst-policy :in-flight-mutation]
+                          true)))))))

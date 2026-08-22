@@ -31,6 +31,15 @@
    :distinct-continuation-session true :distinct-analyst-session true
    :projection-ledger-binding true})
 
+(def required-terminal-policy
+  {:certified-phase-receipts 11 :separate-problem-frame-outcomes true})
+
+(def required-analyst-policy
+  {:outside-frame-order true :wake-after-terminal-only true
+   :exactly-once-per-frame true :append-only-series-input true
+   :tenure-frames 2 :successor-handoff-required true
+   :in-flight-mutation false})
+
 (defn read-contract [path]
   (try
     {:ok true :contract (json/parse-string (slurp path) true)}
@@ -68,7 +77,11 @@
           (not= required-memory-policy (:memory-policy contract))
           (conj :generated-contract-memory-policy-invalid)
           (not= required-isolation-policy (:isolation-policy contract))
-          (conj :generated-contract-isolation-policy-invalid))]
+          (conj :generated-contract-isolation-policy-invalid)
+          (not= required-terminal-policy (:terminal-policy contract))
+          (conj :generated-contract-terminal-policy-invalid)
+          (not= required-analyst-policy (:analyst-policy contract))
+          (conj :generated-contract-analyst-policy-invalid))]
     (if (seq findings)
       {:ok false :error/code :generated-contract-invalid :findings findings}
       {:ok true :contract contract})))

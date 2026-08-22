@@ -57,7 +57,17 @@
      :problem-buffer "*problem: parallel-cycle*"
      :continuation-session "controller-session-2"
      :analyst-session "analyst-session-2"
-     :ledger-digest "parallel-ledger" :projection-ledger-digest "parallel-ledger"}]})
+     :ledger-digest "parallel-ledger" :projection-ledger-digest "parallel-ledger"}]
+   :phase-receipt-ids (mapv #(str "receipt-" %) (range 11))
+   :problem-outcome :solved :frame-result :closed
+   :analyst-wakes
+   [{:frame-id "f1" :terminal true :ordinal 1 :series-input-version 1
+     :append-only true :proposal-type nil :proposal-digest nil
+     :successor-handoff false :mutates-in-flight false}
+    {:frame-id "f2" :terminal true :ordinal 2 :series-input-version 2
+     :append-only true :proposal-type "regime-proposal"
+     :proposal-digest "proposal-digest-2"
+     :successor-handoff true :mutates-in-flight false}]})
 
 (deftest canonical-trace-is-deterministic-and-atomically-published
   (let [directory (.toFile (java.nio.file.Files/createTempDirectory

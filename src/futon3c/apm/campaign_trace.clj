@@ -15,7 +15,8 @@
   [{:keys [campaign-id manifest-hash contract-id phase-order steps closed
            terminal-ledger-digest solver-snapshot-digest
            snapshot-admitted-after-solve-verify snapshot-depositor
-           snapshot-reviewer student-bindings campaign-lanes]}]
+           snapshot-reviewer student-bindings campaign-lanes
+           phase-receipt-ids problem-outcome frame-result analyst-wakes]}]
   (canonical
    {"schemaVersion" 1
     "campaignId" campaign-id
@@ -64,12 +65,26 @@
              "continuationSession" continuation-session
              "analystSession" analyst-session "ledgerDigest" ledger-digest
              "projectionLedgerDigest" projection-ledger-digest})
-          campaign-lanes)}))
+          campaign-lanes)
+    "phaseReceiptIds" phase-receipt-ids
+    "problemOutcome" problem-outcome
+    "frameResult" frame-result
+    "analystWakes"
+    (mapv (fn [{:keys [frame-id terminal ordinal series-input-version
+                       append-only proposal-type proposal-digest
+                       successor-handoff mutates-in-flight]}]
+            {"frameId" frame-id "terminal" terminal "ordinal" ordinal
+             "seriesInputVersion" series-input-version
+             "appendOnly" append-only "proposalType" proposal-type
+             "proposalDigest" proposal-digest
+             "successorHandoff" successor-handoff
+             "mutatesInFlight" mutates-in-flight})
+          analyst-wakes)}))
 
 (defn from-durable-state
   "Project only witnessed durable ledger/job facts into a checker trace."
   [{:keys [registration observations closed terminal-ledger-digest
-           memory campaign-lanes]}]
+           memory campaign-lanes frame analyst-wakes]}]
   (trace
    (merge registration
           {:closed closed :terminal-ledger-digest terminal-ledger-digest
@@ -79,6 +94,10 @@
            :snapshot-reviewer (:reviewer memory)
            :student-bindings (:student-bindings memory)
            :campaign-lanes campaign-lanes
+           :phase-receipt-ids (mapv #(get-in % [:receipt :id]) observations)
+           :problem-outcome (:problem-outcome frame)
+           :frame-result (:frame-result frame)
+           :analyst-wakes analyst-wakes
            :steps
            (mapv
             (fn [{:keys [from to ledger-before ledger-after claim job receipt]}]
