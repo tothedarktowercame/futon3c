@@ -74,6 +74,16 @@ module source; in the measured baseline this is 14 of 46 raw orphans in
 SingularSubdivision and 10 of 35 in SingularExcision, so the rule is
 load-bearing rather than hypothetical.
 
+**The closure is not evaluable while the keying target still carries
+`sorryAx`.** A `sorry` depends on nothing, so the closure collapses to the
+target's own type and every declaration in every module reports as an orphan.
+That is a degenerate reading, not a measurement. If you stop under the defect
+protocol with the target unproved, report `:reachability {:status
+:not-evaluable :reason ...}` and list what you built with the obligation each
+declaration was serving. Do NOT report a 0-reachable orphan count as evidence,
+and do not let one condemn work: quarantine preserves it precisely for this
+case.
+
 Every remaining orphan gets a disposition:
 
 - `:quarantine` — the default. Move it to a module that the keying problem does
