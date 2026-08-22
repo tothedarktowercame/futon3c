@@ -5279,20 +5279,59 @@
 (def ^:private compact-cold-timeout-ms 120000)
 
 (defn- compact-agent-busy? [agent]
-  (pos? (+ (long (or (:running-jobs agent) (:agent/running-jobs agent) 0))
-           (long (or (:queued-jobs agent) (:agent/queued-jobs agent) 0)))))
+  ;; Job counts cover bell/invoke jobs; an operator turn from the REPL
+  ;; (invoke-stream) only shows as registry status :invoking (claude-13 was
+  ;; mid-turn with both counts nil, 2026-08-22).
+  (or (contains? #{:invoking "invoking"} (:agent/status agent))
+      (pos? (+ (long (or (:running-jobs agent) (:agent/running-jobs agent) 0))
+               (long (or (:queued-jobs agent) (:agent/queued-jobs agent) 0))))))
 
-(defn- cold-compact-result [result]
-  {:ok (= "success" (:compact-result result))
-   :compact-result (:compact-result result)
-   :compact-error (:compact-error result)
-   :session-id (:session-id result)
-   :usage (:usage result)
-   :total-cost-usd (:total-cost-usd result)
-   :path "cold"})
+(defn- compact-witness
+  "Did the CLI write a manual compact_boundary for SESSION-ID at/after START-MS?
+   Fallback for invoke-fn closures built before the stream parser learned to
+   surface compact_result (registered seats keep their old closure across a
+   dev.clj reload). Reads the tail of ~/.claude/projects/*/<sid>.jsonl."
+  [session-id start-ms]
+  (try
+    (let [root (io/file (System/getProperty "user.home") ".claude" "projects")
+          f (->> (.listFiles root)
+                 (filter #(.isDirectory ^java.io.File %))
+                 (map #(io/file % (str session-id ".jsonl")))
+                 (filter #(.exists ^java.io.File %))
+                 first)]
+      (when f
+        (let [len (.length ^java.io.File f)
+              from (max 0 (- len 262144))
+              raf (java.io.RandomAccessFile. ^java.io.File f "r")
+              buf (byte-array (- len from))]
+          (try (.seek raf from) (.readFully raf buf) (finally (.close raf)))
+          (->> (str/split-lines (String. buf "UTF-8"))
+               (filter #(str/includes? % "\"compact_boundary\""))
+               (keep #(try (json/parse-string % true) (catch Throwable _ nil)))
+               (filter #(= "manual" (get-in % [:compactMetadata :trigger])))
+               (filter #(some-> (:timestamp %) java.time.Instant/parse .toEpochMilli
+                                (>= (- start-ms 5000))))
+               last))))
+    (catch Throwable _ nil)))
+
+(defn- cold-compact-result [result start-ms]
+  (let [witness (when (nil? (:compact-result result))
+                  (compact-witness (:session-id result) start-ms))
+        result (cond-> result
+                 witness (assoc :compact-result "success"
+                                :compact-witness (:compactMetadata witness)))]
+    {:ok (= "success" (:compact-result result))
+     :compact-result (:compact-result result)
+     :compact-witness (:compact-witness result)
+     :compact-error (:compact-error result)
+     :session-id (:session-id result)
+     :usage (:usage result)
+     :total-cost-usd (:total-cost-usd result)
+     :path "cold"}))
 
 (defn- run-cold-compact! [agent-id agent]
   (let [turn-id (str "compact-" (UUID/randomUUID))
+        start-ms (System/currentTimeMillis)
         invoke-fn (:agent/invoke-fn agent)
         session-id (:agent/session-id agent)
         {:keys [waiter]}
@@ -5311,7 +5350,7 @@
     (if (= ::compact-timeout result)
       {:status 202
        :body {:ok false :error "compaction pending" :turn-id turn-id :path "cold"}}
-      {:status 200 :body (cold-compact-result result)})))
+      {:status 200 :body (cold-compact-result result start-ms)})))
 
 (defn- handle-agent-compact
   "POST /api/alpha/agents/:id/compact — compact through a warm or cold seat."
