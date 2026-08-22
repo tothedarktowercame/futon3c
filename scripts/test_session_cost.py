@@ -71,3 +71,27 @@ def test_ttl_uses_predominant_write_class(tmp_path):
     one_hour = [record("2026-08-22T14:00:00Z", cc1h=1000) for _ in range(5)]
     write_jsonl(path, one_hour)
     assert session_cost.claude_report(path, "s", fast=True)["ttl_s"] == 3600
+
+
+if __name__ == "__main__":
+    # No pytest on this box: run the tests with a throwaway tmp_path.
+    import sys
+    import tempfile
+    import traceback
+
+    failed = 0
+    for name, fn in sorted(globals().items()):
+        if not (name.startswith("test_") and callable(fn)):
+            continue
+        try:
+            if fn.__code__.co_argcount:
+                with tempfile.TemporaryDirectory() as d:
+                    fn(Path(d))
+            else:
+                fn()
+            print(f"ok   {name}")
+        except Exception:
+            failed += 1
+            print(f"FAIL {name}")
+            traceback.print_exc()
+    sys.exit(1 if failed else 0)
