@@ -1779,6 +1779,47 @@
       (is (= "done" (:state job)))
       (is (= 1 (count (filter #(= "accepted" (:type %)) (:events job))))))))
 
+(deftest invoke-announce-drainer-records-stream-events-and-restores-sink
+  (testing "an announced job records drainer stream events without clobbering an existing sink"
+    (register-mock-agent! "codex-announce-stream" :codex)
+    (let [handler (make-handler)
+          prior-events (atom [])
+          prior-sink #(swap! prior-events conj %)
+          announce-body (json/generate-string
+                         {"agent-id" "codex-announce-stream"
+                          "prompt" "stream this turn"
+                          "caller" "frame-solver"
+                          "surface" "frame"})
+          announce-response (post handler "/api/alpha/invoke/announce" announce-body)
+          job-id (:job-id (parse-body announce-response))
+          invoke-body (json/generate-string
+                       {"agent-id" "codex-announce-stream"
+                        "prompt" "stream this turn"
+                        "caller" "frame-solver"
+                        "surface" "frame"
+                        "job-id" job-id})]
+      (reg/set-invoke-event-sink! "codex-announce-stream" prior-sink)
+      (with-redefs [reg/invoke-agent!
+                    (fn [agent-id _prompt _opts]
+                      (let [sink (reg/get-invoke-event-sink agent-id)]
+                        (sink {:type "text" :text "live chunk"})
+                        (sink {:type "tool_use" :tools ["Read"]}))
+                      {:ok true :result "done" :session-id "sess-announce-stream"})]
+        (let [invoke-response (post handler "/api/alpha/invoke" invoke-body)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job (get-in (parse-body job-response) [:job])
+              event-types (mapv :type (:events job))]
+          (is (= 202 (:status announce-response)))
+          (is (= 200 (:status invoke-response)))
+          (is (some #{"prompt"} event-types))
+          (is (some #{"text"} event-types))
+          (is (some #{"tool_use"} event-types))
+          (is (= ["text" "tool_use"] (mapv :type @prior-events))
+              "the previously installed sink receives both events")
+          (is (identical? prior-sink
+                          (reg/get-invoke-event-sink "codex-announce-stream"))
+              "the exact previous sink is restored after the turn"))))))
+
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"
     (let [handler (make-handler)

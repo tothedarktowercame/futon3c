@@ -3608,9 +3608,27 @@
       (register-job-worker! job-id (Thread/currentThread) nil)
       (preclock-dispatch! agent-id mission-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
-            raw-result (invoke-agent-with-session-recovery!
-                        (str agent-id) effective-prompt
-                        {:timeout-ms timeout-ms} job-id)
+            ;; Announced jobs reach this direct-invoke boundary from the agent's
+            ;; turn drainer. Give them the same ledger observability as bell jobs:
+            ;; compose with a stream consumer already installed by another surface,
+            ;; and restore that exact consumer after this invoke finishes.
+            aid (str agent-id)
+            prev-sink (reg/get-invoke-event-sink aid)
+            _ (reg/set-invoke-event-sink!
+               aid
+               (fn [event]
+                 (try (record-job-stream-event! job-id event) (catch Throwable _))
+                 (when prev-sink (try (prev-sink event) (catch Throwable _)))))
+            _ (try (record-job-stream-event! job-id {:type "prompt" :text prompt})
+                   (catch Throwable _))
+            raw-result (try
+                         (invoke-agent-with-session-recovery!
+                          aid effective-prompt
+                          {:timeout-ms timeout-ms} job-id)
+                         (finally
+                           (if prev-sink
+                             (reg/set-invoke-event-sink! aid prev-sink)
+                             (reg/clear-invoke-event-sink! aid))))
             result (maybe-route-surface-writes agent-id raw-result)
             result (enrich-result-with-stream-execution job-id result)
             sid (:session-id result)
