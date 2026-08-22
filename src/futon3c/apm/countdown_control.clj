@@ -54,6 +54,20 @@
    :regulator-state-path "data/apm-campaigns/f20-one-off-v1/live/regulator.edn"
    :preparation-path "holes/labs/M-apm-demonstration/f20-one-off-live-preparation-v1.edn"})
 
+(def f21-one-off-config
+  {:manifest-path "holes/labs/M-apm-demonstration/f21-one-off-manifest-v1.edn"
+   :contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+   :state-directory "data/apm-campaigns/f21-one-off-v1"
+   :ledger-path "data/apm-campaigns/f21-one-off-v1/ledger.edn"
+   :certificate-directory "data/apm-campaigns/f21-one-off-v1/certificates"
+   :projection-directory "data/apm-campaigns/f21-one-off-v1/projection"
+   :problem-buffer-path "data/apm-campaigns/f21-one-off-v1/problem-buffer.md"
+   :preflight-state-path "data/apm-campaigns/f21-one-off-v1/live/preflight.edn"
+   :batch-cursor-path "data/apm-campaigns/f21-one-off-v1/live/batch-cursor.edn"
+   :regulator-state-path "data/apm-campaigns/f21-one-off-v1/live/regulator.edn"
+   :analyst-state-path "data/apm-campaigns/f21-one-off-v1/analyst/state.edn"
+   :preparation-path "holes/labs/M-apm-demonstration/f21-one-off-live-preparation-v1.edn"})
+
 (defmacro ^:private with-campaign [config & body]
   `(let [config# (or ~config {})]
      (binding [manifest-path (or (:manifest-path config#) manifest-path)

@@ -4,8 +4,14 @@
             [futon3c.apm.frame-cycle-contract :as contract]
             [futon3c.apm.campaign-machine :as machine]))
 
-(def required-phases
+(def required-phases-v1
   [:preflight :solve :verify :student-attempt-1 :guide-intervention-1
+   :student-attempt-2 :guide-intervention-2 :student-attempt-3
+   :scribe-reduce :close-frame])
+
+(def required-phases-v2
+  [:preflight :solve :verify :promote-solver
+   :student-attempt-1 :guide-intervention-1
    :student-attempt-2 :guide-intervention-2 :student-attempt-3
    :scribe-reduce :close-frame])
 
@@ -24,15 +30,30 @@
                    (:units countdown-manifest))
         apparatus-observations (:apparatus-observations manifest-check)
         order (:phase-order cycle-contract)
+        contract-id (:contract/id cycle-contract)
+        expected-order (case contract-id
+                         :apm-complete-frame-cycle-v1 required-phases-v1
+                         :apm-complete-frame-cycle-v2 required-phases-v2
+                         nil)
         close-requires (get-in cycle-contract [:phases :close-frame :requires])
         registration-body {:manifest/id (:manifest/id countdown-manifest)
                            :apparatus/pin-id (get-in countdown-manifest
                                                      [:apparatus :pin/id])
                            :unit unit :phase-order order}
         checks
-        {:full-cycle-registered? (= required-phases order)
+        {:known-contract-version? (some? expected-order)
+         :full-cycle-registered? (= expected-order order)
          :close-requires-memory-path?
-         (every? #(contains? close-requires %) required-close-artifacts)
+         (every? #(contains? close-requires %)
+                 (cond-> required-close-artifacts
+                   (= :apm-complete-frame-cycle-v2 contract-id)
+                   (conj :solver-promotion-receipt)))
+         :v2-students-require-promoted-snapshot?
+         (or (not= :apm-complete-frame-cycle-v2 contract-id)
+             (every? #(contains? (get-in cycle-contract [:phases % :requires])
+                                 :solver-memory-snapshot)
+                     [:student-attempt-1 :student-attempt-2
+                      :student-attempt-3]))
          :manifest-valid? (:valid? manifest-check)
          :unit-present? (map? unit)
          :unit-non-topology? (= :non-topology (:classification/value unit))
