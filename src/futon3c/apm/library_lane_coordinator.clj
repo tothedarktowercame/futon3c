@@ -1,6 +1,8 @@
 (ns futon3c.apm.library-lane-coordinator
   "Durable coordinator adapter for nonblocking library-lane steps."
   (:require [clojure.edn :as edn]
+            [clojure.java.shell :as shell]
+            [clojure.string :as str]
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.durable-coordinator :as coordinator]
@@ -237,6 +239,69 @@
         (persistence/atomic-persist!
          (Path/of registry-path (make-array String 0))
          (assoc-in registry [:entries coordinator-id] updated))))))
+
+(defn retire-superseded-preflight-intent!
+  "Retire a failed preflight intent only after its certified revision is
+   proven to be an ancestor of the coordinator's current trunk head.
+
+   This is a durable reconciliation migration, not a receipt rewrite: the
+   certified preflight remains intact and the next tick mints a fresh intent
+   against the already-banked trunk while retaining the solver assignment."
+  [{:keys [registry-path coordinator-id preflight-state-path reason run-fn]
+    :or {run-fn shell/sh}}]
+  (let [{:keys [registration durable-state]}
+        (coordinator/status registry-path coordinator-id)
+        intent (:coordinator/pending-intent durable-state)
+        config (:coordinator/config registration)
+        certified (when preflight-state-path
+                    (edn/read-string (slurp preflight-state-path)))
+        old-revision (get-in certified [:request :problem-revision])
+        corpus-root (:corpus-root config)
+        trunk-branch (:trunk-branch config)
+        head-result (when (and corpus-root trunk-branch)
+                      (run-fn "git" "-C" corpus-root "rev-parse" trunk-branch))
+        current-revision (some-> (:out head-result) str/trim)
+        ancestor-result (when (and old-revision current-revision corpus-root)
+                          (run-fn "git" "-C" corpus-root "merge-base"
+                                  "--is-ancestor" old-revision current-revision))]
+    (cond
+      (nil? registration) {:ok false :error/code :durable-coordinator-not-registered}
+      (not= :failed (:regulator/status durable-state))
+      {:ok false :error/code :library-superseded-intent-not-failed}
+      (not= :preflight (:library/phase durable-state))
+      {:ok false :error/code :library-superseded-intent-phase-invalid}
+      (not= :preflight (get-in intent [:dispatch/parameters :phase]))
+      {:ok false :error/code :library-superseded-intent-parameter-invalid}
+      (not (true? (:library/strategy-required? durable-state)))
+      {:ok false :error/code :library-superseded-intent-strategy-boundary-missing}
+      (not= :live-job-certified (:state/type certified))
+      {:ok false :error/code :library-superseded-preflight-not-certified}
+      (not (and (string? reason) (not (str/blank? reason))))
+      {:ok false :error/code :library-superseded-intent-reason-required}
+      (not (zero? (:exit head-result)))
+      {:ok false :error/code :library-trunk-head-unreadable}
+      (= old-revision current-revision)
+      {:ok false :error/code :library-preflight-not-superseded}
+      (not (zero? (:exit ancestor-result)))
+      {:ok false :error/code :library-preflight-not-ancestor
+       :finding {:preflight/revision old-revision
+                 :trunk/revision current-revision}}
+      :else
+      (let [updated (-> durable-state
+                        (dissoc :coordinator/pending-intent
+                                :coordinator/pending-pre-state-digest)
+                        (update :coordinator/intent-migrations (fnil conj [])
+                                {:migration/type :superseded-preflight-retirement
+                                 :retired-intent/digest (:intent/digest intent)
+                                 :preflight/revision old-revision
+                                 :trunk/revision current-revision
+                                 :solver-assignment-id
+                                 (:solver-assignment-id config)
+                                 :reason reason}))]
+        (persistence/atomic-persist!
+         (Path/of (:coordinator/state-path registration)
+                  (make-array String 0))
+         updated)))))
 
 (defn migrate-pending-phase-intent!
   "Bind one legacy library intent to its already-persisted phase.
