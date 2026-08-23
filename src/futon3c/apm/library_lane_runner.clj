@@ -95,7 +95,7 @@
    call, and banks only after all three phase receipts are certified. This is
    the tick boundary used by a JVM-owned durable coordinator."
   [{:keys [corpus-root contract seat phase-inputs-fn bank-request-fn
-           target-fn phase-run-fn bank-fn]
+           target-fn phase-run-fn bank-fn phase-limit]
     :or {target-fn elaborate-targets
          phase-run-fn lane-phases/run-live!
          bank-fn bank-driver/execute!}
@@ -137,8 +137,12 @@
 
                     (or (= :certified (:status result))
                         (:certificate result))
-                    (recur (next phases)
-                           (assoc receipts kind (:certificate result)))
+                    (if (= phase-limit kind)
+                      {:ok true :ruling :phase-certified :phase kind
+                       :problem-id problem-id :keying-targets (:targets target)
+                       :receipt (:certificate result)}
+                      (recur (next phases)
+                             (assoc receipts kind (:certificate result))))
 
                     :else
                     {:ok true :ruling :awaiting :phase kind

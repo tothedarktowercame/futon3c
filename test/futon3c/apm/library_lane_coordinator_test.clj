@@ -64,3 +64,27 @@
         (is (not= (get-in @calls [0 :dispatch/id])
                   (get-in @calls [1 :dispatch/id])))
         (finally (durable/stop! "library:partial"))))))
+
+(deftest each-phase-has-a-distinct-durable-intent
+  (let [{:keys [registry state]} (fixture)
+        observations (atom [])
+        options {:registry-path registry :state-path state
+                 :coordinator-id "library:phases" :problem-id "t00J02"
+                 :period-ms 10}]
+    (with-redefs [sut/run-step!
+                  (fn [{:keys [phase]}]
+                    (swap! observations conj
+                           [phase (get-in (sut/status registry "library:phases")
+                                          [:durable-state
+                                           :coordinator/pending-intent
+                                           :job-id])])
+                    (if (= :bank phase)
+                      {:ok true :ruling :closed}
+                      {:ok true :ruling :phase-certified :phase phase}))]
+      (try
+        (is (:ok (sut/start! options)))
+        (is (await-until #(= 4 (count @observations))))
+        (is (= [:preflight :solve :verify :bank]
+               (mapv first @observations)))
+        (is (= 4 (count (distinct (map second @observations)))))
+        (finally (durable/stop! "library:phases"))))))

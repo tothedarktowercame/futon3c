@@ -13,7 +13,7 @@
 
 (defn run-step!
   [{:keys [agency-base corpus-root frames-root state-root problem-id
-           trunk-branch keying-target contract-path]}]
+           trunk-branch keying-target contract-path phase]}]
   (let [eff (effects/live-effects {:agency-base agency-base
                                    :corpus-root corpus-root
                                    :frames-root frames-root})
@@ -29,12 +29,14 @@
          {:corpus-root corpus-root :problem-id problem-id
           :contract (edn/read-string (slurp contract-path))
           :seat (:seats config)
+          :phase-limit phase
           :phase-inputs-fn (adapters/make-phase-inputs-fn config)
           :bank-request-fn (adapters/make-bank-request-fn config)})))))
 
 (defn- next-intent [config state]
   (let [body {:coordinator/id (:coordinator-id config)
               :problem-id (:problem-id config)
+              :phase (or (:library/phase state) :preflight)
               :prior-intent/digest
               (get-in state [:coordinator/last-settled-intent :intent/digest])
               :regulator/ticks (:regulator/ticks state)}]
@@ -51,12 +53,19 @@
      {:ok true :coordinator/action :activate
       :coordinator/intent (next-intent config state)})
    :reconcile-fn
-   (fn [_ _]
-     (let [result (run-step! config)]
+   (fn [_ state]
+     (let [phase (or (:library/phase state) :preflight)
+           result (run-step! (assoc config :phase phase))
+           successor {:preflight :solve :solve :verify :verify :bank}]
        (case (:ruling result)
          :awaiting {:ok true :status :awaiting-job :lane/result result}
+         :phase-certified
+         {:ok true :status :library-phase-certified
+          :coordinator/clear-intent? true :lane/result result
+          :regulator/state-updates {:library/phase (successor phase)}}
          :partial-banked {:ok true :status :library-increment-banked
-                          :coordinator/clear-intent? true :lane/result result}
+                          :coordinator/clear-intent? true :lane/result result
+                          :regulator/state-updates {:library/phase :preflight}}
          :closed {:ok true :status :frame-complete
                   :coordinator/clear-intent? true :lane/result result}
          (if (:ok result)

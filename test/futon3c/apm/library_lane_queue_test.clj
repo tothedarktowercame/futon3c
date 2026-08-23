@@ -217,3 +217,21 @@
       (is (= [:preflight :solve :verify] @calls))
       (is (= :partial-banked (:ruling result)))
       (finally (delete-tree! root)))))
+
+(deftest step-one-phase-limit-stops-after-named-certification
+  (let [root (corpus "a") calls (atom [])
+        result (runner/step-one!
+                {:corpus-root root :problem-id "a" :contract {} :seat {}
+                 :phase-limit :preflight
+                 :target-fn (fn [_] {:ok true :targets ["a_bridge"]})
+                 :phase-inputs-fn (fn [{:keys [kind]}] {:ok true :kind kind})
+                 :phase-run-fn (fn [{:keys [kind]}]
+                                 (swap! calls conj kind)
+                                 {:ok true :status :certified
+                                  :certificate {:receipt/id "pre"}})
+                 :bank-request-fn (fn [_] (throw (ex-info "too early" {})))})]
+    (try
+      (is (= [:preflight] @calls))
+      (is (= :phase-certified (:ruling result)))
+      (is (= :preflight (:phase result)))
+      (finally (delete-tree! root)))))

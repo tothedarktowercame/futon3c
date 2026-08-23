@@ -162,10 +162,11 @@
         (if (:ok result)
           (cond-> (dissoc result :coordinator/clear-intent?)
             (:coordinator/clear-intent? result)
-            (assoc :regulator/state-updates
-                   {:coordinator/pending-intent nil
-                    :coordinator/pending-pre-state-digest nil
-                    :coordinator/last-settled-intent intent}))
+            (update :regulator/state-updates
+                    merge
+                    {:coordinator/pending-intent nil
+                     :coordinator/pending-pre-state-digest nil
+                     :coordinator/last-settled-intent intent}))
           result)))
     (let [decision ((:decide-fn adapter) state)]
       (cond
