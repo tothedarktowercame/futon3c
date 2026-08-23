@@ -94,6 +94,17 @@
   (when (Files/isRegularFile ^Path path (make-array java.nio.file.LinkOption 0))
     (edn/read-string (slurp (str path)))))
 
+(defn normalize-preflight-state
+  "Rehydrate the canonical preflight machine from the short-lived generic job
+   driver representation. The immutable request and ticket are preserved; the
+   terminal result is re-observed and certified by the preflight contract."
+  [state]
+  (if (= :live-job-dispatched (:state/type state))
+    {:state/type :preflight-dispatched
+     :request (:request state)
+     :ticket (:ticket state)}
+    state))
+
 (defn http-json
   ([method url] (http-json method url nil))
   ([method url payload]
@@ -116,7 +127,8 @@
   [{:keys [contract inputs state-path agency-base]
     :or {agency-base "http://localhost:7070"}}]
   (preflight/drive!
-   {:contract contract :inputs inputs :state (read-state state-path)
+   {:contract contract :inputs inputs
+    :state (normalize-preflight-state (read-state state-path))
     :dispatch-fn
     (fn [request]
       ((requiring-resolve 'futon3c.apm.job-port/announce!)

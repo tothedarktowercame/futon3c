@@ -29,3 +29,16 @@
     (let [result (sut/parse-report-diagnostic "{:ok true}")]
       (is (false? (:ok result)))
       (is (= :report-edn-linter-unavailable (:error/code result))))))
+
+(deftest generic-dispatch-state-rehydrates-without-rewriting-authority
+  (let [request {:dispatch/id "dispatch" :problem-id "m94A03"}
+        ticket {:job-id "job" :dispatch/id "dispatch"}
+        state {:state/type :live-job-dispatched
+               :request request :ticket ticket
+               :activation/accepted? true
+               :terminal-collection {:submission/id "observed"}}
+        normalized (sut/normalize-preflight-state state)]
+    (is (= :preflight-dispatched (:state/type normalized)))
+    (is (= request (:request normalized)))
+    (is (= ticket (:ticket normalized)))
+    (is (= normalized (sut/normalize-preflight-state normalized)))))
