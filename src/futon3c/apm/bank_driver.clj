@@ -51,6 +51,28 @@
 (defn- success? [result]
   (zero? (:exit result)))
 
+(defn- detach-worktrees-on!
+  "Detach every worktree of REPOSITORY that has BRANCH checked out, so the
+  branch can be deleted. The solver's workspace is such a worktree: git
+  refuses `branch -d` while it is checked out there (library lane,
+  bg-1787485260849-9: trunk had already advanced, so the refusal left a
+  landed merge with no receipt). Detaching keeps the workspace at its head;
+  the next launch at the new trunk revision provisions a fresh frame anyway.
+  Returns the first failing command result, or nil."
+  [run-fn repository branch]
+  (let [listing (git run-fn repository "worktree" "list" "--porcelain")
+        blocks (str/split (str (:out listing)) #"\n\n")
+        wanted (str "branch refs/heads/" branch)]
+    (some (fn [block]
+            (let [lines (str/split-lines block)]
+              (when (some #(= wanted %) lines)
+                (when-let [path (some #(when (str/starts-with? % "worktree ")
+                                         (subs % 9))
+                                      lines)]
+                  (let [r (git run-fn path "checkout" "--detach")]
+                    (when-not (success? r) r))))))
+          blocks)))
+
 (defn- command-finding [code result]
   {:finding code :exit (:exit result)
    :stdout (or (:out result) "") :stderr (or (:err result) "")})
@@ -254,8 +276,10 @@
                                              :bank-trunk-advance-failed publish))
                                     (let [delete (if (= source-branch trunk-branch)
                                                    {:exit 0 :out "" :err ""}
-                                                   (git run-fn repository "branch" "-d"
-                                                        source-branch))]
+                                                   (or (detach-worktrees-on!
+                                                        run-fn repository source-branch)
+                                                       (git run-fn repository "branch" "-d"
+                                                            source-branch)))]
                                       (if-not (success? delete)
                                         (refuse request :bank-source-delete-failed
                                                 (command-finding
