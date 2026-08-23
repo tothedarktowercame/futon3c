@@ -458,6 +458,8 @@
                         :authority {:agent "codex-10"
                                     :control-root
                                     "/home/joe/code/futon3c-apm-control"
+                                    :apparatus-root
+                                    "/home/joe/code/futon3c-apm-control"
                                     :campaign-root "/durable/f25"}}))))
       (let [config (get-in @captured [:effects :jit/config])]
         (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn

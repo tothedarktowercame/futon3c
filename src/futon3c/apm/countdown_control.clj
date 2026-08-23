@@ -1211,6 +1211,7 @@
     :or {queue-name "jit-problem-list-v1" frame-number-base 24
          agency-base "http://localhost:7070"}}]
   (let [control-root (or (:control-root authority) "/home/joe/code/futon3c-apm-control")
+        apparatus-root (or (:apparatus-root authority) control-root)
         continuation-payload
         (or (:continuation-payload authority)
             (str "JIT M-FIVE CONTINUATION: evaluate "
@@ -1225,13 +1226,15 @@
                           (str control-root "/data/apm-campaigns/" queue-name))
         outer-config {:problem-queue-state-path
                       (str campaign-root "/queue-state.edn")}
-        apparatus-repository control-root
-        apparatus-branch "frame/18-control"
+        apparatus-repository apparatus-root
+        apparatus-branch (str/trim
+                          (:out (shell/sh "git" "-C" apparatus-root
+                                          "branch" "--show-current")))
         role-cards
         (into {} (map (fn [[role path]]
                         [role {:path path
                                :blob (str/trim
-                                      (:out (shell/sh "git" "-C" control-root
+                                      (:out (shell/sh "git" "-C" apparatus-root
                                                       "rev-parse" (str "HEAD:" path))))}]))
               (select-keys queued-frame-adapter/default-artifacts
                            [:solver :student :guide :proctor :promotion-proctor
@@ -1302,7 +1305,10 @@
                                  frame terminal-receipt role lease)))
         result
         (set-alight-problem-queue!
-         {:problems problems :campaign-config outer-config :authority authority}
+         {:problems problems :campaign-config outer-config
+          ;; launch-audit checks the immutable apparatus pin, while this
+          ;; namespace itself remains loaded only from canonical master.
+          :authority (assoc authority :control-root apparatus-root)}
          {:jit/config jit-config})]
     (if (and (:ok result) (= :frame-prepared (:status result)))
       (let [park (live-preflight-runtime/http-json
