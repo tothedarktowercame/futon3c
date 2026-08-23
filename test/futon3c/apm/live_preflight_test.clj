@@ -88,6 +88,25 @@
       (is (= [:lean-baseline-mismatch]
              (:findings (sut/validate-terminal request ticket bad)))))))
 
+(deftest typed-observation-is-unwrapped-while-artifact-identity-stays-authoritative
+  (let [request (:request (sut/build-request inputs))
+        ticket (:ticket (sut/record-dispatch request {:ok true :job-id "typed"}))
+        flat (:report (successful-job request ticket))
+        typed {:job-id (:job-id ticket) :agent-id (:agent-id request) :state :done
+               :report {:command-own-exit 0 :outcome "complete"
+                        :failure-account []
+                        :evidence (-> flat
+                                      (dissoc :command-own-exit
+                                              :problem-revision
+                                              :problem-blob)
+                                      (assoc :statement-unchanged? true))}}
+        result (sut/receipt contract request ticket typed)]
+    (is (:ok result) (pr-str result))
+    (is (= (:problem-revision request)
+           (get-in result [:certificate :receipt/problem-revision])))
+    (is (= (:problem-blob request)
+           (get-in result [:certificate :receipt/problem-blob])))))
+
 (deftest durable-drive-dispatches-exactly-once-across-continuations
   (let [dispatches (atom 0)
         persisted (atom [])

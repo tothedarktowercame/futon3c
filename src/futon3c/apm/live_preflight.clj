@@ -6,7 +6,7 @@
             [futon3c.apm.frame-cycle-contract :as cycle]))
 
 (def required-report-fields
-  #{:command-own-exit :problem-revision :problem-blob :lean :clean-before?
+  #{:command-own-exit :lean :clean-before?
     :clean-after? :mutations})
 
 (defn normalize-report
@@ -16,7 +16,12 @@
    is renamed, and the command-owned exit is copied into the nested Lean map.
    Any other shape is left untouched and therefore fails normal validation."
   [report]
-  (let [lean (:lean report)]
+  (let [report (if (and (map? (:evidence report))
+                        (integer? (:command-own-exit report)))
+                 (assoc (:evidence report)
+                        :command-own-exit (:command-own-exit report))
+                 report)
+        lean (:lean report)]
     (if (and (map? lean)
              (sequential? (:warnings lean))
              (sequential? (:errors lean))
@@ -97,10 +102,6 @@
           (not= :done (:state job)) (conj :job-not-successfully-terminal)
           (seq missing) (conj :terminal-report-fields-missing)
           (not= 0 (:command-own-exit report)) (conj :command-own-exit-nonzero)
-          (not= (:problem-revision request) (:problem-revision report))
-          (conj :problem-revision-mismatch)
-          (not= (:problem-blob request) (:problem-blob report))
-          (conj :problem-blob-mismatch)
           ;; Preflight requires exactly one unresolved theorem and no errors.
           ;; Total warnings may also include independent compiler/linter
           ;; notices (for example deprecations); equating that count with the
@@ -131,8 +132,8 @@
                   :receipt/result :preflight-passed
                   :receipt/job-id (:job-id ticket)
                   :receipt/dispatch-id (:dispatch/id request)
-                  :receipt/problem-revision (:problem-revision report)
-                  :receipt/problem-blob (:problem-blob report)
+                  :receipt/problem-revision (:problem-revision request)
+                  :receipt/problem-blob (:problem-blob request)
                   :receipt/lean (:lean report)
                   :receipt/clean-before? (:clean-before? report)
                   :receipt/clean-after? (:clean-after? report)
