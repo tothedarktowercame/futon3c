@@ -99,11 +99,26 @@
     (when (<= 200 (:status resp) 299)
       (get-in resp [:body :entity]))))
 
+(def ^:dynamic *dry-run?*
+  "True suppresses every substrate WRITE. Checked inside the three write
+   PRIMITIVES rather than threaded through call sites, so no code path can route
+   around it.
+
+   That is not a style preference. `--dry-run` was parsed by `-main` and passed
+   to every branch EXCEPT the default ingest one, and `ingest-scope-tree!` never
+   accepted a :dry-run? key -- so the flag was silently inert on the main path.
+   On 2026-08-23 a run believed to be a dry run wrote 63 mission-scope/pattern
+   hyperedges. A safety flag that silently does nothing is worse than no flag,
+   because it manufactures the confidence that spends someone else's gate."
+  false)
+
 (defn- post-entity! [client base-url penholder payload]
-  (-> (http-edn client :post (str base-url "/api/alpha/entity")
-                (assoc payload :penholder penholder))
-      (ok! {:op :entity :payload payload})
-      (get-in [:body :entity])))
+  (if *dry-run?*
+    payload                             ; shape-compatible: callers read :id
+    (-> (http-edn client :post (str base-url "/api/alpha/entity")
+                  (assoc payload :penholder penholder))
+        (ok! {:op :entity :payload payload})
+        (get-in [:body :entity]))))
 
 (defn- ensure-entity!
   [client base-url penholder {:keys [id name type external-id source props]}]
@@ -116,10 +131,12 @@
                     (seq merged-props) (assoc :props merged-props)))))
 
 (defn- post-hyperedge! [client base-url penholder payload]
-  (-> (http-edn client :post (str base-url "/api/alpha/hyperedge")
-                (assoc payload :penholder penholder))
-      (ok! {:op :hyperedge :payload payload})
-      (get-in [:body :hyperedge])))
+  (if *dry-run?*
+    payload                             ; also covers `retract-hyperedge!`
+    (-> (http-edn client :post (str base-url "/api/alpha/hyperedge")
+                  (assoc payload :penholder penholder))
+        (ok! {:op :hyperedge :payload payload})
+        (get-in [:body :hyperedge]))))
 
 (defn- get-hyperedge [client base-url id]
   (let [resp (http-edn client :get
@@ -148,8 +165,14 @@
                        (filter (fn [{:keys [id]}] (not (str/blank? id))))
                        distinct
                        vec)]
-    (if (empty? documents)
+    (cond
+      *dry-run?*
+      {:deleted-count (count documents) :retraction-mode :dry-run}
+
+      (empty? documents)
       {:deleted-count 0 :retraction-mode :none}
+
+      :else
       (let [resp (http-edn client :post
                            (str base-url "/api/alpha/documents/retract")
                            {:penholder penholder
@@ -2014,15 +2037,19 @@
 
                               (recur (next xs) opts (conj missions x)))
                             [opts (remove str/blank? missions)]))
-        files (scope-tree-files default-scope-dir missions)
-        reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:wire-capabilities? opts) (:mission opts) (:true-up? opts))
-                  (mapv #(ingest-scope-tree! {:client client
-                                              :base-url default-futon1a-url
-                                              :penholder default-penholder
-                                              :binder-filter (:binder-filter opts)
-                                              :path (.getAbsolutePath %)})
-                        files))]
-    (cond
+        files (scope-tree-files default-scope-dir missions)]
+    ;; Bind ONCE, around every branch. The other branches also pass :dry-run?
+    ;; explicitly; this is the belt that catches the next branch someone adds
+    ;; and forgets to thread it through -- the exact failure being repaired.
+    (binding [*dry-run?* (boolean (:dry-run? opts))]
+     (let [reports (when-not (or (:wire-parents? opts) (:wire-pxr? opts) (:wire-capabilities? opts) (:mission opts) (:true-up? opts))
+                     (mapv #(ingest-scope-tree! {:client client
+                                                 :base-url default-futon1a-url
+                                                 :penholder default-penholder
+                                                 :binder-filter (:binder-filter opts)
+                                                 :path (.getAbsolutePath %)})
+                           files))]
+      (cond
       (:true-up? opts)
       (println (pr-str {:true-up
                         (mapv (fn [file]
@@ -2090,4 +2117,4 @@
                           :linked-target-count (reduce + (map :linked-target-count reports))
                           :dangling-target-count (reduce + (map :dangling-target-count reports))
                           :linked-source-count (reduce + (map :linked-source-count reports))
-                          :dangling-source-count (reduce + (map :dangling-source-count reports))}))))))
+                          :dangling-source-count (reduce + (map :dangling-source-count reports))}))))))))
