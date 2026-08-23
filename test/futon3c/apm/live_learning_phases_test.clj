@@ -107,6 +107,21 @@
       (is (some #{finding}
                 (:findings (sut/validate-terminal request {:job-id "j"} job)))))))
 
+(deftest close-result-is-canonicalized-at-the-json-wire-boundary
+  (let [request {:dispatch/type :close-frame :agent-id "f25-guide"
+                 :frame-id "f25" :problem-id "m94A02"}
+        job (fn [result]
+              {:job-id "j" :agent-id "f25-guide" :state :done
+               :report {:command-own-exit 0 :frame-id "f25"
+                        :problem-id "m94A02" :trace-id "trace"
+                        :result result}})]
+    (is (:ok (sut/validate-terminal request {:job-id "j"} (job "closed"))))
+    (is (:ok (sut/validate-terminal request {:job-id "j"} (job :closed))))
+    (is (:ok (sut/validate-terminal request {:job-id "j"} (job "partial"))))
+    (is (some #{:close-evidence-invalid}
+              (:findings (sut/validate-terminal request {:job-id "j"}
+                                                       (job "void")))))))
+
 (deftest promoted-solver-snapshot-is-bound-into-student-request-and-use
   (let [promotion {:receipt/id "promotion-receipt"
                    :receipt/snapshot-id "snapshot-1"

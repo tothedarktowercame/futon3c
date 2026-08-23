@@ -59,6 +59,21 @@
     (is (some #{:generated-contract-isolation-policy-invalid}
               (:findings isolation-result)))))
 
+(deftest wire-result-and-session-rotation-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))]
+    (is (some #{:generated-contract-terminal-policy-invalid}
+              (:findings
+               (sut/validate
+                (assoc-in contract
+                          [:terminal-policy :close-result-wire-canonicalization]
+                          false)))))
+    (is (some #{:generated-contract-memory-policy-invalid}
+              (:findings
+               (sut/validate
+                (assoc-in contract
+                          [:memory-policy :fresh-session-rotation-mints-new-id]
+                          false)))))))
+
 (deftest residual-fit-promotion-policy-mutation-is-killed
   (let [contract (:contract (sut/read-contract generated-path))
         result (sut/validate

@@ -1341,6 +1341,11 @@ CALLS contains maps of tool name, arguments, and result digest."
                    (some-> session-file slurp str/trim not-empty))
                  (str "zai-" (UUID/randomUUID)))
         !session-id (or session-id-atom (atom sid0))
+        ;; This is deliberately distinct from !session-id. The registry reset
+        ;; hook clears !session-id before the next invoke; retaining the last
+        ;; inhabited id lets that invoke prove rotation and discard the old
+        ;; conversation instead of silently falling back to sid0.
+        !last-session-id (atom sid0)
         backend (real-backend/make-real-backend
                  {:cwd cwd*
                   :timeout-ms 30000
@@ -1401,7 +1406,8 @@ CALLS contains maps of tool name, arguments, and result digest."
        (invoke prompt incoming-session-id {}))
       ([prompt incoming-session-id invoke-context]
        (let [key* (or key (resolve-api-key))
-            sid (or incoming-session-id @!session-id sid0)
+            sid (or incoming-session-id @!session-id
+                    (str "zai-" (UUID/randomUUID)))
             turn-id (str "zai-turn-" (UUID/randomUUID))
             ;; Agency supplies its job id through the three-arity invoke seam.
             ;; Direct calls have no Agency job, so their generated turn id is
@@ -1442,10 +1448,11 @@ CALLS contains maps of tool name, arguments, and result digest."
         ;; slice-2, 2026-08-12: 186 consecutive 1261 "Prompt exceeds max
         ;; length" — the registry reset rotated the id but this closure
         ;; kept the whole history). Truncate to the system message.
-        (let [prev-sid @!session-id]
+        (let [prev-sid @!last-session-id]
           (when (and prev-sid sid (not= prev-sid sid))
             (swap! !messages #(vec (take 1 %)))))
         (reset! !session-id sid)
+        (reset! !last-session-id sid)
         (when session-file (spit session-file sid))
         (when (compare-and-set! !booted false true)
           ;; §8.4 condition gating: :none skips the boot packet (condition

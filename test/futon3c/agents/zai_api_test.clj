@@ -53,7 +53,24 @@
   [messages]
   (filter #(and (= "user" (:role %))
                 (str/starts-with? (:content %) "[harness auto-continue "))
-          messages))
+  messages))
+
+(deftest cleared-session-state-mints-a-new-id-and-drops-old-history
+  (let [session-id (atom "zai-old")
+        calls (atom [])
+        invoke (make-invoke {:initial-session-id "zai-old"
+                             :session-id-atom session-id})]
+    (with-redefs [zai/chat! (fn [_ _ messages]
+                              (swap! calls conj messages)
+                              (text-response "done"))]
+      (let [first-result (invoke "first" nil)]
+        (reset! session-id nil)
+        (let [second-result (invoke "second" nil)]
+          (is (= "zai-old" (:session-id first-result)))
+          (is (str/starts-with? (:session-id second-result) "zai-"))
+          (is (not= (:session-id first-result) (:session-id second-result)))
+          (is (= "second" (get-in (last @calls) [1 :content])))
+          (is (= 2 (count (last @calls)))))))))
 
 (deftest auto-continues-after-budget-exhaustion-and-finishes
   (let [calls (atom [])

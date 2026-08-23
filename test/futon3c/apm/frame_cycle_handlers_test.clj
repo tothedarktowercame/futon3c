@@ -149,6 +149,28 @@
               :frame-id "f18" :problem-id "a97J07"}
              close prior))))))
 
+(deftest partial-frame-records-reused-student-session-without-calling-it-closed
+  (let [duplicate-attempt (student-receipt 3 "fresh-2")
+        prior (assoc prior-through-students :student-attempt-3 duplicate-attempt
+                     :scribe-reduce scribe)
+        required (get-in cycle-contract [:phases :close-frame :requires])
+        producers (into #{} (keep (fn [artifact]
+                                    (some (fn [[phase spec]]
+                                            (when (contains? (:produces spec) artifact)
+                                              (get-in prior [phase :receipt/id])))
+                                          (:phases cycle-contract))))
+                        required)
+        close (addressed
+               {:receipt/type :frame-close :receipt/frame-id "f18"
+                :receipt/problem-id "a97J07"
+                :receipt/input-receipt-ids producers :receipt/trace-id "trace"
+                :receipt/result :partial})]
+    (is (:ok (handlers/validate-completion
+              cycle-contract
+              {:kind :close-frame :role :guide :phase :close-frame
+               :frame-id "f18" :problem-id "a97J07"}
+              close prior)))))
+
 (deftest providers-fail-closed
   (is (= :frame-cycle-handler-provider-required
          (:error/code (handlers/make-handlers

@@ -128,6 +128,7 @@
                  :actual declared-inputs}}
 
       (and (= :close-frame (:kind spec))
+           (= :closed (:receipt/result receipt))
            (not= (count student-sessions)
                  (count (distinct student-sessions))))
       {:error/code :frame-cycle-student-sessions-not-distinct}

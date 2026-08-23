@@ -60,6 +60,8 @@
   {:content-addressed-snapshot true :admit-after-solve-verify true
    :independent-review true :student-attempts 3
    :fresh-student-sessions true :exact-snapshot-binding true
+   :fresh-session-rotation-mints-new-id true
+   :student-session-distinctness-required-for-closed-frame true
    :student-dispatch-witness-required true
    :student-dispatch-required-fields
    ["attempt-ordinal" "promotion-receipt-id" "snapshot-id"
@@ -86,6 +88,7 @@
    :learning-outcome-required true
    :solved-partial-bankable true
    :bankable-solved-successor-eligible true
+   :close-result-wire-canonicalization true
    :missing-observation-receipt-type "student-observation-missing"
    :missing-observation-author "controller"
    :missing-observation-may-satisfy-observation-dependency true

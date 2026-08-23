@@ -118,6 +118,12 @@
                             (assoc body :dispatch/id
                                    (machine/ledger-digest [body])))}))))
 
+(defn- canonical-close-result [result]
+  (cond
+    (keyword? result) result
+    (string? result) (keyword result)
+    :else nil))
+
 (defn validate-terminal [request ticket job]
   (let [kind (:dispatch/type request)
         report (:report job)
@@ -178,7 +184,9 @@
           (conj :solver-promotion-candidates-invalid)
           (and (= :close-frame kind)
                (not (and (string? (:trace-id report))
-                         (= :closed (:result report)))))
+                         (contains? #{:closed :partial}
+                                    (canonical-close-result
+                                     (:result report))))))
           (conj :close-evidence-invalid))]
     (if (seq findings)
       {:ok false :error/code :live-learning-terminal-invalid :findings findings}
@@ -244,7 +252,9 @@
                    {:receipt/type :frame-close
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/trace-id (:trace-id report)
-                  :receipt/result (if observation-missing? :partial (:result report))
+                  :receipt/result (if observation-missing?
+                                    :partial
+                                    (canonical-close-result (:result report)))
                   :receipt/learning-outcome (if observation-missing?
                                               :partially-observed
                                               :observed)})))
