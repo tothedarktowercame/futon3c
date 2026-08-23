@@ -20,7 +20,7 @@
 
 (def authority-fields
   #{:job-id :dispatch/id :agent-id :frame-id :problem-id :phase :role
-    :attempt-ordinal :fresh-session-nonce :memory-snapshot})
+    :attempt-ordinal :submission/attempt :fresh-session-nonce :memory-snapshot})
 
 (def common-required #{:command-own-exit :outcome :failure-account :evidence})
 
@@ -49,14 +49,16 @@
 (defn prepare-request [request]
   (let [seed (select-keys request
                           [:dispatch/id :agent-id :frame-id :problem-id :phase
-                           :role :attempt :session-id :memory-snapshot-id])]
+                           :role :attempt :submission/attempt
+                           :session-id :memory-snapshot-id])]
     (assoc request :submission/token
            (machine/ledger-digest ["apm-role-submission" seed]))))
 
 (defn canonical-job-id [request]
   (str "apm-role-" (machine/ledger-digest
                     ["apm-role-job" (:dispatch/id request)
-                     (:agent-id request) (:phase request)])))
+                     (:agent-id request) (:phase request)
+                     (:submission/attempt request)])))
 
 (defn with-job-authority [request]
   (assoc request :submission/job-id (or (:submission/job-id request)

@@ -72,16 +72,19 @@
 (deftest malformed-deposit-is-durably-redispatched-without-review
   (let [saved (atom nil)
         review-called? (atom false)
+        repair-attempt (atom nil)
         result (sut/drive!
                 {:state {:state/type :promotion :stage :deposit
                          :job "malformed" :attempt 1}
                  :deposit-fn (fn
                                ([value]
-                                (if (string? value)
+                               (if (string? value)
                                   (do (is (= "malformed" value))
                                       {:ok false
                                        :error/code :promotion-stage-terminal-invalid})
-                                  {:ok true :job "scribe-retry"}))
+                                  (do (reset! repair-attempt
+                                              (:submission/attempt value))
+                                      {:ok true :job "scribe-retry"})))
                                ([] {:ok true :job "scribe-retry"}))
                  :review-fn (fn [& _] (reset! review-called? true))
                  :persist-fn #(do (reset! saved %) {:ok true})})]
@@ -89,10 +92,24 @@
     (is (= :awaiting-terminal (:status result)))
     (is (= "scribe-retry" (:job-id result)))
     (is (= 2 (:attempt @saved)))
+    (is (= 1 @repair-attempt))
     (is (= [{:attempt 1 :job "malformed"
              :failure {:error/code :promotion-stage-terminal-invalid}}]
            (:failed-attempts @saved)))
     (is (false? @review-called?))))
+
+(deftest repair-attempt-produces-a-distinct-stable-job-identity
+  (let [request {:dispatch/id "dispatch" :agent-id "scribe"
+                 :phase :promote-solver}]
+    (is (= (submission/canonical-job-id request)
+           (submission/canonical-job-id request)))
+    (is (not= (submission/canonical-job-id request)
+              (submission/canonical-job-id
+               (assoc request :submission/attempt 1))))
+    (is (= (submission/canonical-job-id
+            (assoc request :submission/attempt 1))
+           (submission/canonical-job-id
+            (assoc request :submission/attempt 1))))))
 
 (deftest invalid-deposit-shape-is-bounded
   (let [result (sut/drive!

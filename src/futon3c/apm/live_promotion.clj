@@ -124,7 +124,11 @@
                       (if (string? value)
                         (deposit-stage value)
                         ((agency-stage
-                          agency-base deposit-request
+                          agency-base
+                          (cond-> deposit-request
+                            (:submission/attempt value)
+                            (assoc :submission/attempt
+                                   (:submission/attempt value)))
                           (str deposit-prompt
                                "\nThe previous response failed the EDN linter: "
                                (pr-str (select-keys value
@@ -193,7 +197,11 @@
     (if (and (>= attempt max-deposit-attempts) (not boundary-repair?))
       (assoc failure :error/code :promotion-deposit-retries-exhausted
              :attempts attempt)
-      (let [retry (deposit-fn failure)]
+      (let [repair-ordinal
+            (inc (+ (count (:failed-attempts state))
+                    format-repairs schema-repairs))
+            retry (deposit-fn (assoc failure
+                                     :submission/attempt repair-ordinal))]
         (if-not (:ok retry)
           retry
           (let [next-state
