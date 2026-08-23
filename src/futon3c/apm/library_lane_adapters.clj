@@ -7,9 +7,11 @@
   (:require [clojure.string :as str]
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.library-lane-phases :as lane-phases]
+            [futon3c.apm.live-preflight-runtime :as persistence]
             [futon3c.apm.live-proof-phases :as proof])
   (:import [java.math BigInteger]
            [java.nio.charset StandardCharsets]
+           [java.nio.file Path]
            [java.security MessageDigest]))
 
 (def codex-workspace-roles #{:solver})
@@ -101,13 +103,34 @@
     (let [path-authority {:control-root control-root}
           role-card-result (authority-port/require-path
                             path-authority :role-card (:path role-card))
+          state-path (get state-paths kind)
+          prior-state (persistence/read-state
+                       (if (instance? Path state-path)
+                         state-path
+                         (Path/of state-path (make-array String 0))))
+          historical-request (when (= :live-job-certified
+                                      (:state/type prior-state))
+                               (or (:request prior-state)
+                                   (:base-request prior-state)))
+          historical-path (:role-card-path historical-request)
+          historical-path-result
+          (when (string? historical-path)
+            (authority-port/require-path path-authority :role-card
+                                         historical-path))
+          replay-certified-authority?
+          (and (:ok role-card-result)
+               (:ok historical-path-result)
+               (= (:path role-card-result) (:path historical-path-result))
+               (= (:blob role-card) (:role-card-blob historical-request)))
           checkpoint-result (when (= :solve kind)
                               (authority-port/require-path
                                path-authority :role-card
                                (:path checkpoint-role-card)))
           role-card (cond-> role-card
                       (:ok role-card-result)
-                      (assoc :path (:path role-card-result)))
+                      (assoc :path (if replay-certified-authority?
+                                     historical-path
+                                     (:path role-card-result))))
           checkpoint-role-card (cond-> checkpoint-role-card
                                  (:ok checkpoint-result)
                                  (assoc :path (:path checkpoint-result)))
@@ -145,7 +168,7 @@
                     (cond-> (lane-phases/with-keying-targets (:request built) targets)
                       strategy-required? (assoc :solver/strategy-before-solve? true))
                     (:request built))
-         :state-path (get state-paths kind) :agency-base agency-base}))))
+         :state-path state-path :agency-base agency-base}))))
 
 (defn- safe-lean-name? [value]
   (and (string? value)

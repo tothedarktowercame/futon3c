@@ -1,7 +1,9 @@
 (ns futon3c.apm.library-lane-adapters-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.apm.library-lane-adapters :as sut]))
+            [futon3c.apm.library-lane-adapters :as sut]
+            [futon3c.apm.live-preflight-runtime :as persistence]
+            [futon3c.apm.live-proof-phases :as proof]))
 
 (def sha40 (apply str (repeat 40 "a")))
 (def sha64 (apply str (repeat 64 "b")))
@@ -93,6 +95,39 @@
                  :contract {} :receipts {:solve {:receipt/id "solve"}}})]
     (is (= :library-phase-authority-invalid (:error/code result)))
     (is (some #{:registered-seat-missing} (:findings result)))))
+
+(deftest certified-legacy-phase-replays-byte-identical-card-authority
+  (let [historical-path (:path role-card)
+        observed-card (atom nil)]
+    (with-redefs [persistence/read-state
+                  (constantly
+                   {:state/type :live-job-certified
+                    :request {:role-card-path historical-path
+                              :role-card-blob (:blob role-card)}})
+                  proof/build-request
+                  (fn [{:keys [role-card]}]
+                    (reset! observed-card role-card)
+                    {:ok true :request {:role-card-path (:path role-card)}})]
+      (let [result ((phase-adapter)
+                    {:kind :preflight :problem-id problem-id
+                     :role-card role-card :contract {} :receipts {}})]
+        (is (:ok result))
+        (is (= historical-path (:path @observed-card)))
+        (is (= historical-path (get-in result [:request :role-card-path])))))))
+
+(deftest uncertified-phase-uses-canonical-absolute-card-authority
+  (let [observed-card (atom nil)]
+    (with-redefs [persistence/read-state (constantly nil)
+                  proof/build-request
+                  (fn [{:keys [role-card]}]
+                    (reset! observed-card role-card)
+                    {:ok true :request {:role-card-path (:path role-card)}})]
+      (let [result ((phase-adapter)
+                    {:kind :preflight :problem-id problem-id
+                     :role-card role-card :contract {} :receipts {}})]
+        (is (:ok result))
+        (is (.isAbsolute (java.nio.file.Path/of
+                          (:path @observed-card) (make-array String 0))))))))
 
 (defn bank-adapter [outcome]
   (sut/make-bank-request-fn
