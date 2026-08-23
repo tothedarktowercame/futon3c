@@ -50,21 +50,16 @@ to slugs — same event recorded at `futon1b_graph.clj:346-348` for the sigil
 join). What survived are `mission-scope/pattern` hyperedges whose
 `:target-pattern` end was resolved by `mission_scope_ingest`'s
 `resolve-pattern-node` *before* the re-ingest and never rewritten. Each
-carries a `:pattern/ref` so remapping is mechanical:
+carries a `:pattern/ref`, so remapping was mechanical. (An earlier draft of
+this table listed 8 UUIDs by nearest `hx/id` in the dump; 4 of those were
+UUIDs in props text, not ends. The real set, by record:)
 
-| UUID end | hyperedge | `:pattern/ref` |
+| hyperedge | UUID end | remapped to |
 |---|---|---|
-| 0ba32581-… | (in pattern dump) | futon3/library/futon-theory/task-as-arrow.flexiarg |
-| 18fb9e91-… | hx\|mission-scope\|demonstration-foundry/pattern/turn-design-into-checks | system-coherence/turn-design-into-checks |
-| 1ddda1fb-… | — | peripherals/surface-earns-inhabitation |
-| 59c414ec-… | hx\|mission-scope\|learning-loop/pattern/whose-question-is-this | structure/whose-question-is-this |
-| 63e1d83e-… | — | orchestration/pattern-warranted-choice-point |
-| 78def5d0-… | hx\|mission-scope\|futon-problems/pattern/stop-the-line | futon-theory/stop-the-line |
-| 96499d0b-… | hx\|mission-scope\|demonstration-foundry/pattern/typed-kolmogorov-arrows | sidecar/typed-kolmogorov-arrows |
-| 97383400-… | hx\|mission-scope\|zaif-harness/pattern/no-self-certification | aif/no-self-certification |
-
-(`?end=<uuid>` returns 0 because of §3 — the end index holds the
-stringified map, not the uuid.)
+| hx\|mission-scope\|demonstration-foundry/pattern/tri-store-separation | 0ba32581-… | sidecar/tri-store-separation |
+| hx\|mission-scope\|demonstration-foundry/pattern/typed-kolmogorov-arrows | 18fb9e91-… | sidecar/typed-kolmogorov-arrows |
+| hx\|mission-scope\|learning-loop/pattern/all-or-nothing | 78def5d0-… | futon-theory/all-or-nothing |
+| hx\|mission-scope\|zaif-harness/pattern/stop-the-line | 97383400-… | futon-theory/stop-the-line |
 
 ## 3. Separate bug: ends are stored as pr-str'd maps
 
@@ -126,3 +121,26 @@ store-dir, so any stray futon1b JVM blocks a production restart and leaves
 :7073 down. Two follow-ups: (a) the staging server should be stopped (not
 signalable from the agent sandbox); (b) the guard should compare
 `--store-dir`, or the policy "one futon1b JVM" should be enforced at launch.
+
+## 5. Execution log (2026-08-23, claude-19/20)
+
+- **P1** futon1b `ee8f41e`: one narrow alias scan + `hydrate-by-ids`; UUID
+  ids skip the scan. Gates: kondo 0/0, check-parens OK, `test-a3a4a5` 71/71,
+  `test-query-classes` 13 assertions 0 fail. Live after restart: UUID miss
+  **0.08–0.15 s**, non-UUID miss **0.74 s** (was ~27 s); hits 0.10 s.
+- **P2** futon1b `e88536a` (codex-16, reviewed by claude-20): map ends →
+  string `:entity-id` in `:hx/endpoints`, `:role` kept in `:hx/ends`;
+  non-string `:entity-id` → layer-4 400. Verified live with a labelled test
+  hx (POST, `?end=` lookup, retract).
+- **P3 + stringified-ends rewrite** (one pass, `/tmp/p3/rewrite.py`): 197
+  `mission-scope/*` hyperedges re-POSTed with parsed ends — **1012
+  stringified ends** cleared (Joe's "964"), 4 UUID ends remapped per the
+  table above, 0 unresolvable. Post-check: 0 stringified, 0 UUID ends; all
+  four remapped hx found by `?end=<slug>`.
+- **Restart incident:** the first restart failed — `scripts/store-guard`
+  refused because the *staging-store* instance (`:7273`, user apollo)
+  matched "any futon1b-server"; :7073 stayed down ~6 min. Fixed in
+  `e61f60f`: refuse only on same `--store-dir` or same port.
+- Still open: `mission_scope_ingest` itself still posts map ends (fine now
+  that the server accepts them); a name→id side index would take the 0.74 s
+  miss to a point lookup if it ever matters.
