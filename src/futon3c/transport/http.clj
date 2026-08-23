@@ -4527,6 +4527,45 @@
   [turn-id event]
   (assoc event :turn-id turn-id))
 
+
+(defn- queued-turn-activity
+  "Human-readable status for a REPL turn that has just been enqueued behind an
+   in-flight drain on AGENT-ID: what the agent is working on and where TURN-ID
+   sits in the queue. Nil when the turn is at the head with nothing running
+   (it will start immediately). Joe, 2026-08-23: the REPL showed a bare
+   \"starting 881s\" while codex-15 was busy with another caller's bell — the
+   queue position was invisible from the operator seat."
+  [agent-id turn-id]
+  (try
+    (let [queue (get-in (turn-queue/snapshot) [:queues (str agent-id)] [])
+          position (let [i (.indexOf ^java.util.List (vec queue) turn-id)]
+                     (when (>= i 0) (inc i)))
+          job (running-invoke-job-for-agent agent-id)
+          agent (reg/get-agent (str agent-id))
+          activity (some-> agent :agent/invoke-activity str not-empty)
+          running-ms (when-let [s (:started-at job)]
+                       (try (- (System/currentTimeMillis)
+                               (.toEpochMilli (Instant/parse (str s))))
+                            (catch Throwable _ nil)))]
+      (when (or job (and position (> position 1)))
+        {:type "invoke.activity"
+         :activity (str "queued #" (or position "?")
+                       (when job
+                         (str " behind " (:job-id job)
+                              " (from " (or (:caller job) "?")
+                              (when running-ms
+                                (format ", running %dm%02ds"
+                                        (quot running-ms 60000)
+                                        (quot (mod running-ms 60000) 1000)))
+                              (when activity (str ", " activity))
+                              ")")))
+         :queue-position position
+         :behind-job-id (:job-id job)
+         :behind-caller (:caller job)
+         :behind-started-at (:started-at job)
+         :agent-activity activity}))
+    (catch Throwable _ nil)))
+
 (defn- handle-invoke-stream
   "POST /api/alpha/invoke-stream — streaming invoke via NDJSON.
    Same request body as /invoke. Returns application/x-ndjson with chunked events:
@@ -4620,6 +4659,7 @@
                 ;; back to THIS channel. The event sink is installed INSIDE process-fn (drainer
                 ;; thread, exclusive to this turn) so a bell drained just before it cannot
                 ;; cross-talk onto this channel.
+                (do
                 (turn-queue/accept-async!
                  {:id turn-id :msg-id turn-id
                   :to aid :from caller :surface (or surface "repl")
@@ -4644,6 +4684,9 @@
                                   :message (.getMessage t)}))
                       (finally
                         (hk/close channel))))})
+                ;; Tell the operator what the turn is waiting on (if anything).
+                (when-let [ev (queued-turn-activity aid turn-id)]
+                  (sink-fn ev)))
                 ;; Legacy (flag OFF / no drainer-v2): direct invoke on a shared lane.
                 (.submit invoke-executor
                   ^Runnable
