@@ -937,6 +937,11 @@
                                  (<= checkpoint-next max-rounds))
                         checkpoint-next)}))
 
+(defn- projection-phase-job-state [phase-state]
+  (if (= :solver-rounds (:state/type phase-state))
+    (:active phase-state)
+    phase-state))
+
 (defn- drive-live-action! [action]
   (cond
     (contains? #{:open-block :open-frame :close-block :close-campaign}
@@ -969,16 +974,17 @@
         solve-state (live-preflight-runtime/read-state
                      (state-path-for frame-id :solve))
         solver-progress (solver-projection-progress solve-state (:phase active))
-        phase-request (:request phase-state)
+        phase-job-state (projection-phase-job-state phase-state)
+        phase-request (:request phase-job-state)
         operation-mismatch?
-        (and (= :live-job-dispatched (:state/type phase-state))
+        (and (= :live-job-dispatched (:state/type phase-job-state))
              (or (not= (get-in loaded [:projection :ledger/digest])
                        (:ledger-digest phase-request))
                  (not= frame-id (:frame-id phase-request))
                  (not= (:problem/id unit) (:problem-id phase-request))
                  (not= (:phase active) (:phase phase-request))))
         operation
-        (when (= :live-job-dispatched (:state/type phase-state))
+        (when (= :live-job-dispatched (:state/type phase-job-state))
           {:status :waiting-for-terminal-result
            :role (or (:role phase-request)
                      (case (:phase active)
@@ -987,7 +993,7 @@
                        :verify :proctor
                        nil))
            :agent-id (:agent-id phase-request)
-           :job-id (get-in phase-state [:ticket :job-id])})]
+           :job-id (get-in phase-job-state [:ticket :job-id])})]
     (cond
       (not (:ok checkpoint))
       {:ok false :error/code :countdown-projection-checkpoint-failed

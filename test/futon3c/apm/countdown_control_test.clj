@@ -318,6 +318,15 @@
     (is (nil? (:round/active progress)))
     (is (nil? (:checkpoint/next progress)))))
 
+(deftest solve-projection-observes-the-active-job-inside-round-state
+  (let [active {:state/type :live-job-dispatched
+                :request {:solver/round 1}
+                :ticket {:job-id "solve-job"}}]
+    (is (= active
+           (#'sut/projection-phase-job-state
+            {:state/type :solver-rounds :rounds [] :active active})))
+    (is (= active (#'sut/projection-phase-job-state active)))))
+
 (deftest v2-countdown-policy-is-lean-generated-and-schema-hole-is-explicit
   (binding [sut/contract-path
             "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
