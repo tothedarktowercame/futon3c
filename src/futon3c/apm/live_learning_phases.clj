@@ -205,7 +205,7 @@
                  {:receipt/type :guide-intervention
                   :receipt/intervention-ordinal
                   (get-in contract [:phases (:phase action) :ordinal])
-                  :receipt/mode (:mode report)
+                  :receipt/mode (some-> (:mode report) keyword)
                   :receipt/input-attempt-id
                   (:receipt/id
                    (get receipts
