@@ -92,7 +92,7 @@
   (with-redefs [substrate/hyperedges-by-type
                 (fn [type opts]
                   (is (= "clock/clocked-on" type))
-                  (is (pos? (:timeout-ms opts)))
+                  (is (= 5000 (:timeout-ms opts)))
                   sample-clock-edges)]
     (is (= sample-clock-edges (live/fetch-edges "clock/clocked-on")))))
 

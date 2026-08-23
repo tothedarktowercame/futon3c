@@ -17,9 +17,8 @@ TRIES="${CASCADE_TRIES:-6}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-# The cascade endpoints are flaky on cold substrate reads (five sequential
-# hyperedge fetches under a per-request deadline). Retry with backoff rather
-# than publishing a page that says "offline".
+# Cold substrate reads may degrade individual graph sections. HTTP 200 is still
+# a valid honest-hole snapshot; the renderer makes each failed section visible.
 fetch() {
   local name="$1" path="$2" required="$3"
   local dest="$WORK/$name.json"
@@ -52,10 +51,16 @@ import json, pathlib, sys, datetime
 
 src, work, out, base = sys.argv[1], pathlib.Path(sys.argv[2]), sys.argv[3], sys.argv[4]
 html = pathlib.Path(src).read_text()
+graph = json.loads((work / "graph.json").read_text())
+section_status = graph.get("section-status")
+if not isinstance(section_status, dict):
+    sys.exit("FATAL: graph snapshot has no section-status; refusing an ambiguous page.")
+failed = sorted(k for k, v in section_status.items() if v.get("status") != "ok")
+print("graph section status: " + ("all reads OK" if not failed else "FAILED " + ", ".join(failed)))
 
 snapshot = {
     f"{base}/api/alpha/cascade-real":       json.loads((work / "summary.json").read_text()),
-    f"{base}/api/alpha/cascade-real/graph": json.loads((work / "graph.json").read_text()),
+    f"{base}/api/alpha/cascade-real/graph": graph,
     f"{base}/api/alpha/forward-model":      json.loads((work / "forward.json").read_text()),
 }
 stamp = datetime.datetime.now().astimezone().isoformat(timespec="seconds")

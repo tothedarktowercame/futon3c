@@ -27,10 +27,11 @@
   (:import (java.util.concurrent Callable Executors TimeUnit TimeoutException)))
 
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
-;; A live type-window page can exceed 5 s when both substrate read permits are
-;; occupied. The graph deliberately runs two walks at once, so its client
-;; deadline must cover that admitted work rather than misreport it as absence.
-(def ^:private fetch-timeout-ms 15000)
+;; Cold live-store measurement, 2026-08-23, after evicting the 48-entry
+;; hyperedge-window cache with read-only type probes: 5 s completed all seven
+;; walks in 24.364 s; 4 s failed pattern, held and clock walks in 16.834 s.
+;; Five seconds is therefore the lowest observed complete per-page deadline.
+(def ^:private fetch-timeout-ms 5000)
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)

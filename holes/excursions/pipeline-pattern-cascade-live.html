@@ -30,6 +30,9 @@
   td,th{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
   th{color:var(--dim);font-weight:600}
   .gap{border:1px dashed #a33;background:#1c1416;color:#ffb4b4;border-radius:8px;padding:10px 12px}
+  .section-health{display:flex;flex-wrap:wrap;gap:8px}
+  .section-health .healthy{border-color:#28583f;color:#9fdbbb}
+  .section-health .failed{border-color:#a33;background:#28171a;color:#ffb4b4}
   .muted{color:var(--dim)}
   code{background:#1e2430;padding:1px 5px;border-radius:4px;color:#b7c3d6}
   #offline{display:none;color:#ffb4b4;padding:14px;border:1px dashed #a33;border-radius:8px}
@@ -56,6 +59,12 @@
 </header>
 <main>
   <div id="offline">Can't reach the stack at <code>localhost:7070</code> — start the futon3c server (:7070) to regenerate this view from live data.</div>
+
+  <section class="panel" id="section-status-panel" style="display:none">
+    <h2>Dimension read status</h2>
+    <div class="sub" style="margin-bottom:10px">Green zero means the substrate was read successfully and contained no rows. Red <b>READ FAILED</b> means the dimension is unavailable, not empty.</div>
+    <div class="section-health" id="section-status-body"></div>
+  </section>
 
   <section class="panel" id="header-panel" style="display:none">
     <h2>The composing cascade — header metadata</h2>
@@ -148,9 +157,9 @@
     // Null-tolerant: a render that removes/replaces a node must never let the
     // NEXT poll's clear blank the page (the disappearing-contents bug, 2026-07-05).
     var safe=function(id,f){var n=el(id); if(n) f(n);};
-    ["header-panel","basins-panel","cascade-panel","patterns-panel","holes-panel","held-panel",
+    ["section-status-panel","header-panel","basins-panel","cascade-panel","patterns-panel","holes-panel","held-panel",
      "lineage-panel","forward-panel","tickets-panel"].forEach(function(id){safe(id,function(n){n.style.display="none";});});
-    ["dims","spine","composition","standards","basins","legend","patterns-gap","holes-body",
+    ["section-status-body","dims","spine","composition","standards","basins","legend","patterns-gap","holes-body",
      "held-body","lineage-body","forward-body","tickets-body"].forEach(function(id){safe(id,function(n){n.innerHTML="";});});
     ["basins-count","cascade-count","holes-count","held-count","lineage-count","forward-src","tickets-count"].forEach(function(id){safe(id,function(n){n.textContent="";});});
     safe("cascade",function(n){n.innerHTML="";});
@@ -214,6 +223,22 @@
       Object.keys(std).map(function(k){return "<span class='chip'><span class='dot' style='background:"+
         (std[k]?"#3ddc84":"#ff6b6b")+"'></span>"+esc(k)+"</span>";}).join("");
     el("header-panel").style.display="";
+  }
+
+  function renderSectionStatus(g){
+    var status=g["section-status"]||{};
+    var labels={"mission-scope/pattern":"patterns","code/v05/mined-move":"mined moves",
+      "held/on-mission":"held work","cascade/cluster-member":"clusters",
+      "clock/clocked-on":"lineage","cascade/hole-target":"honest holes","mine/meme":"canonical mine"};
+    el("section-status-body").innerHTML=Object.keys(labels).map(function(t){
+      var s=status[t]||{status:"failed",error:{message:"status missing from graph response"}};
+      if(s.status==="ok"){
+        return "<span class='chip healthy'><b>"+esc(labels[t])+"</b> · "+Number(s["row-count"]||0)+" rows · read OK</span>";
+      }
+      var reason=(s.error&&s.error.message)||"unknown read failure";
+      return "<span class='chip failed'><b>"+esc(labels[t])+" · READ FAILED</b><br><code>"+esc(t)+"</code> · "+esc(reason)+"</span>";
+    }).join("");
+    el("section-status-panel").style.display="";
   }
 
   function buildIndex(g){
@@ -459,6 +484,7 @@
     }).then(function(res){
       clearPanels();
       var s=res[0], g=res[1];
+      renderSectionStatus(g);
       renderHeader(s);
       var ix=buildIndex(g);
       renderBasins(g,ix);
