@@ -191,17 +191,48 @@
                          :held/reason "scope unification"}}])))))
 
 (deftest mission-pattern-section-crosslinks
-  (testing "cascade/mission-pattern edges → mission→pattern rows (the reconstructed cited-pattern layer)"
+  ;; Rewritten 2026-08-23 to match `cadd12d1`, which repointed this section from
+  ;; `cascade/mission-pattern` -- a type nothing ever wrote, so the layer rendered
+  ;; 0 -- to the `mission-scope/pattern` binder edges that actually carry the 971
+  ;; rows. The old assertions were written against the empty type and were never
+  ;; updated, so the suite has been red ever since and everyone has been stepping
+  ;; around it. The live binder props are :pattern/ref, :pattern/ident,
+  ;; :pattern/state, :scope/id, :anchor/*. There is NO :cos and NO :relation on
+  ;; them -- verified against the live store -- so a test asserting a cosine score
+  ;; was asserting a field the data does not have.
+  ;;
+  ;; Note `:pattern/ref` must be a full `.../library/<ns>/<name>.flexiarg` path:
+  ;; `library-pattern-id` derives the cascade's `<ns>/<name>` id-space from it and
+  ;; returns nil for a bare slug, which drops the row. That is deliberate (the
+  ;; pattern id-space is the library's), and it is why a fixture with a bare ref
+  ;; silently yields [] rather than failing loudly.
+  (testing "mission-scope/pattern binder edges → mission→pattern rows"
     (is (= [{:mission "futon3-d/mission/agency-rebuild"
              :pattern "agency/single-routing-authority"
-             :relation "applied" :cos nil}]
+             :ident "single-routing-authority"
+             :state :linked
+             :relation "applied"}]
            (live/mission-pattern-section
-            [{:hx/endpoints ["futon3-d/mission/agency-rebuild" "agency/single-routing-authority"]
-              :hx/props {:relation "applied" :source "mission-pattern-scopes"}}])))
-    (testing "candidate edges keep the cosine score"
-      (is (= 0.31 (:cos (first (live/mission-pattern-section
-                                [{:hx/endpoints ["futon2-d/mission/x" "realtime/y"]
-                                  :hx/props {:relation "candidate" :cos 0.31}}]))))))))
+            [{:hx/endpoints [{:entity-id "futon3-d/mission/agency-rebuild" :role :entity}
+                             {:entity-id "agency/single-routing-authority"}]
+              :hx/props {:pattern/ref "futon3/library/agency/single-routing-authority.flexiarg"
+                         :pattern/ident "single-routing-authority"
+                         :pattern/state :linked}}]))))
+  (testing "every binder edge is an applied citation — the relation is not read from props"
+    (is (= ["applied"]
+           (mapv :relation
+                 (live/mission-pattern-section
+                  [{:hx/endpoints [{:entity-id "futon2-d/mission/x" :role :entity}
+                                   {:entity-id "realtime/y"}]
+                    :hx/props {:pattern/ref "futon3/library/realtime/y.flexiarg" :relation "candidate"}}])))))
+  (testing ":detached state rides along rather than being filtered out (honest hole)"
+    (is (= [:detached]
+           (mapv :state
+                 (live/mission-pattern-section
+                  [{:hx/endpoints [{:entity-id "futon2-d/mission/x" :role :entity}
+                                   {:entity-id "realtime/y"}]
+                    :hx/props {:pattern/ref "futon3/library/realtime/y.flexiarg"
+                               :pattern/state :detached}}]))))))
 
 (deftest sections-empty-on-no-rows
   (testing "every section degrades to [] with no live rows (honest non-landing)"
