@@ -134,11 +134,25 @@ def fetch_endpoints(hx_type):
     pages, paging = fetch_pages(hx_type)
     endpoints = set()
     for raw in pages:
-        endpoints.update(re.findall(
-            r'(<?[a-zA-Z0-9][a-zA-Z0-9/_.:-]*-d/mission/[A-Za-z0-9-]+)',
-            raw,
-        ))
+        for ends in re.findall(
+            r":hx/ends\s+\[(.*?)\](?=,\s+:[a-zA-Z])", raw, re.DOTALL
+        ):
+            endpoints.update(end_ids(ends))
     return endpoints, paging
+
+
+def end_ids(ends):
+    """Read entity ids from typed hx/ends, including migrated struct strings."""
+    values = []
+    for encoded in re.findall(r':entity-id\s+"((?:\\.|[^"\\])*)"', ends):
+        value = json.loads(f'"{encoded}"')
+        for _ in range(3):
+            nested = re.search(r':entity-id\s+"((?:\\.|[^"\\])*)"', value)
+            if nested is None:
+                break
+            value = json.loads(f'"{nested.group(1)}"')
+        values.append(value)
+    return values
 
 
 def capability_keys():
@@ -148,9 +162,10 @@ def capability_keys():
     canonical_edges = 0
     bare_edges = 0
     for raw in pages:
-        for endpoints in re.findall(
-            r":hx/endpoints\s+\[(.*?)\](?=,\s+:[a-zA-Z])", raw, re.DOTALL
+        for ends in re.findall(
+            r":hx/ends\s+\[(.*?)\](?=,\s+:[a-zA-Z])", raw, re.DOTALL
         ):
+            endpoints = " ".join(end_ids(ends))
             canonical = set(re.findall(
                 r'([a-zA-Z0-9][a-zA-Z0-9/_.:-]*-d/mission/[A-Za-z0-9-]+)',
                 endpoints,

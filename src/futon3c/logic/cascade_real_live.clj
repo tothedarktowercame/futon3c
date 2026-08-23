@@ -27,7 +27,10 @@
   (:import (java.util.concurrent Callable Executors)))
 
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
-(def ^:private fetch-timeout-ms 5000)
+;; A live type-window page can exceed 5 s when both substrate read permits are
+;; occupied. The graph deliberately runs two walks at once, so its client
+;; deadline must cover that admitted work rather than misreport it as absence.
+(def ^:private fetch-timeout-ms 15000)
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)
