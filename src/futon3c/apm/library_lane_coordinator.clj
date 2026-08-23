@@ -44,7 +44,9 @@
                             :agency-base agency-base})))]
     (if-not (:ok launched)
       launched
-      (let [config (:config launched)]
+      (let [config (assoc (:config launched)
+                          :control-root control-root
+                          :agency-base agency-base)]
         (runner/step-one!
          {:corpus-root corpus-root :problem-id problem-id
           :contract (edn/read-string (slurp contract-path))
