@@ -195,6 +195,13 @@
         (is (= (:problem/blob lease) (:problem/blob reset)))
         (is (= (:base-revision lease) (get-in reset [:discarded :head])))
         (is (= 2 (count (get-in reset [:discarded :status]))))
+        (is (re-matches #"refs/apm/preserved-student-attempts/f19/p1/[0-9a-f]{40}"
+                        (get-in reset [:preserved :ref])))
+        (is (= "-- untracked\n"
+               (:out (sh "git" "-C" workspace "show"
+                         (str (get-in reset [:preserved :ref])
+                              "^3:scratch.lean"))))
+            "the preservation ref retains untracked attempt evidence")
         (is (= "theorem p1 : True := by trivial\n" (slurp problem)))
         (is (not (.exists (java.io.File. (str workspace "/scratch.lean")))))
         (is (Files/isSymbolicLink (Path/of (str workspace "/.lake/packages")

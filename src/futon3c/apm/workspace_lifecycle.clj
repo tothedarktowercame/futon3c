@@ -194,12 +194,10 @@
 (defn reset-to-base!
   "Return a worktree to its registered base revision with a clean tree.
 
-  Tracked changes and untracked files are discarded (the prior HEAD and status
-  are reported so a discarded commit stays recoverable from the reflog);
-  ignored paths such as the `.lake` substrate link are kept. Fails closed
-  unless the result is exactly the base with nothing outstanding. Used before
-  each fresh Student attempt: on f27 attempts 2 and 3 opened attempt 1's
-  finished proof and verified it instead of attempting the problem."
+  Before changing the branch or deleting untracked files, preserve the complete
+  tracked/untracked attempt state behind a durable Git ref. Ignored paths such
+  as the `.lake` substrate link are kept. Fails closed unless preservation
+  succeeds and the result is exactly the base with nothing outstanding."
   [lease]
   (let [workspace (canonical (:workspace/path lease))
         base-revision (:base-revision lease)
@@ -217,13 +215,41 @@
                                         (or (out (run workspace "status"
                                                       "--porcelain=v1"))
                                             ""))))
-            reset (run workspace "reset" "--hard" base-revision)
-            clean (when (zero? (:exit reset)) (run workspace "clean" "-fd"))
+            dirty? (seq status-before)
+            stashed (when dirty?
+                      (run workspace "stash" "push" "--include-untracked"
+                           "--message" "APM fresh Student attempt preservation"))
+            preserved-commit (if dirty?
+                               (when (zero? (:exit stashed))
+                                 (out (run workspace "rev-parse" "refs/stash")))
+                               (when (not= head-before base-revision) head-before))
+            preservation-ref (when preserved-commit
+                               (str "refs/apm/preserved-student-attempts/"
+                                    (or (:frame/id lease) "unknown-frame") "/"
+                                    (or (:problem/id lease) "unknown-problem") "/"
+                                    preserved-commit))
+            preserved (when preservation-ref
+                        (run workspace "update-ref" preservation-ref
+                             preserved-commit))
+            preservation-ok? (and (or (not dirty?)
+                                      (and stashed (zero? (:exit stashed))))
+                                  (or (nil? preservation-ref)
+                                      (and preserved (zero? (:exit preserved)))))
+            reset (when preservation-ok?
+                    (run workspace "reset" "--hard" base-revision))
+            clean (when (and reset (zero? (:exit reset)))
+                    (run workspace "clean" "-fd"))
             head (out (run workspace "rev-parse" "HEAD"))
             status-after (out (run workspace "status" "--porcelain=v1"))
             blob (when (string? problem-path)
                    (out (run workspace "rev-parse" (str "HEAD:" problem-path))))]
         (cond
+          (not preservation-ok?)
+          {:ok false :error/code :workspace-reset-preservation-failed
+           :finding {:stash/exit (:exit stashed)
+                     :stash/stderr (:err stashed)
+                     :ref/exit (:exit preserved)
+                     :ref/stderr (:err preserved)}}
           (not (zero? (:exit reset)))
           {:ok false :error/code :workspace-reset-git-failed
            :finding {:exit (:exit reset) :stderr (:err reset)}}
@@ -235,6 +261,8 @@
            :head head :status status-after}
           :else
           {:ok true :head head :problem/blob blob
+           :preserved (when preservation-ref
+                        {:ref preservation-ref :commit preserved-commit})
            :discarded {:head head-before :status status-before}})))))
 
 (defn- atomic-edn! [target value]

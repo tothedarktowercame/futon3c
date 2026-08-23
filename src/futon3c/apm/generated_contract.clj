@@ -77,6 +77,12 @@
    :fresh-student-sessions true :exact-snapshot-binding true
    :fresh-session-rotation-mints-new-id true
    :student-session-distinctness-required-for-closed-frame true
+   :fresh-attempt-worktree-reset-to-base true
+   :attempt-state-preserved-before-reset true
+   :guide-deposits-independent-review true
+   :guide-union-snapshot-content-addressed true
+   :next-student-binds-latest-reviewed-snapshot true
+   :candidate-pattern-binding-required true
    :student-dispatch-witness-required true
    :student-dispatch-required-fields
    ["attempt-ordinal" "promotion-receipt-id" "snapshot-id"
