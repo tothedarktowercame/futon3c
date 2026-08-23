@@ -9,7 +9,7 @@
             StandardOpenOption]
            [java.nio.file.attribute FileAttribute]))
 
-(defn parse-report [result]
+(defn parse-report-diagnostic [result]
   (try
     (let [text (str/trim (or result ""))
           fences (map second
@@ -19,15 +19,24 @@
                  (seq fences) nil
                  :else text)
           report (edn/read-string text)]
-      (when (map? report) report))
-    (catch Throwable _ nil)))
+      (if (map? report)
+        {:ok true :report report}
+        {:ok false :error/code :report-not-map}))
+    (catch Throwable t
+      {:ok false :error/code :report-edn-invalid
+       :error/message (.getMessage t)})))
+
+(defn parse-report [result]
+  (:report (parse-report-diagnostic result)))
 
 (defn job->terminal [response]
-  (let [job (:job response)]
+  (let [job (:job response)
+        parsed (parse-report-diagnostic (:result job))]
     {:job-id (:job-id job) :agent-id (:agent-id job)
      :session-id (:session-id job)
      :state (some-> (:state job) keyword)
-     :report (parse-report (:result job))}))
+     :report (:report parsed)
+     :report/error (when-not (:ok parsed) (dissoc parsed :ok))}))
 
 (defn prompt [request]
   (str "F19 PREFLIGHT — follow the pinned Proctor role card at "

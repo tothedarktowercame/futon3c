@@ -72,7 +72,8 @@
        (if (contains? #{:done :failed :timeout :cancelled} (:state job))
          (if (and (= :done (:state job)) (map? (:report job)))
            {:ok true :job job-id :report (:report job)}
-           {:ok false :error/code :promotion-stage-terminal-invalid :job job})
+           {:ok false :error/code :promotion-stage-terminal-invalid :job job
+            :report/error (:report/error job)})
          {:ok true :status :awaiting-terminal :job job-id})))))
 
 (defn run-live!
@@ -92,7 +93,19 @@
                             ":memory-id, string :content-digest, vector :pattern-ids, "
                             "and vector :source-attempts. EDN does not concatenate "
                             "adjacent string literals; use one string value per field.")
-        deposit-fn (agency-stage agency-base deposit-request deposit-prompt)
+        deposit-stage (agency-stage agency-base deposit-request deposit-prompt)
+        deposit-fn (fn
+                     ([] (deposit-stage))
+                     ([value]
+                      (if (string? value)
+                        (deposit-stage value)
+                        ((agency-stage
+                          agency-base deposit-request
+                          (str deposit-prompt
+                               "\nThe previous response failed the EDN linter: "
+                               (pr-str (select-keys value
+                                                    [:error/code :report/error]))
+                               "\nRepair only the serialization/shape and return the complete map."))))))
         review-fn
         (fn
           ([candidates]
@@ -133,16 +146,23 @@
 
 (defn- retry-deposit!
   [state failure deposit-fn persist-fn]
-  (let [attempt (or (:attempt state) 1)]
-    (if (>= attempt max-deposit-attempts)
+  (let [attempt (or (:attempt state) 1)
+        format-failure? (= :report-edn-invalid
+                           (get-in failure [:report/error :error/code]))
+        format-repairs (or (:format-repairs state) 0)
+        format-repair? (and format-failure? (zero? format-repairs))]
+    (if (and (>= attempt max-deposit-attempts) (not format-repair?))
       (assoc failure :error/code :promotion-deposit-retries-exhausted
              :attempts attempt)
-      (let [retry (deposit-fn)]
+      (let [retry (deposit-fn failure)]
         (if-not (:ok retry)
           retry
           (let [next-state
                 (-> state
-                    (assoc :job (:job retry) :attempt (inc attempt))
+                    (assoc :job (:job retry)
+                           :attempt (if format-repair? attempt (inc attempt)))
+                    (cond-> format-repair?
+                      (assoc :format-repairs (inc format-repairs)))
                     (update :failed-attempts (fnil conj [])
                             {:attempt attempt :job (:job state)
                              :failure (select-keys failure

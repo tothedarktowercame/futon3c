@@ -57,10 +57,12 @@
                 {:state {:state/type :promotion :stage :deposit
                          :job "malformed" :attempt 1}
                  :deposit-fn (fn
-                               ([job]
-                                (is (= "malformed" job))
-                                {:ok false
-                                 :error/code :promotion-stage-terminal-invalid})
+                               ([value]
+                                (if (string? value)
+                                  (do (is (= "malformed" value))
+                                      {:ok false
+                                       :error/code :promotion-stage-terminal-invalid})
+                                  {:ok true :job "scribe-retry"}))
                                ([] {:ok true :job "scribe-retry"}))
                  :review-fn (fn [& _] (reset! review-called? true))
                  :persist-fn #(do (reset! saved %) {:ok true})})]
@@ -83,6 +85,29 @@
     (is (= :promotion-deposit-retries-exhausted (:error/code result)))
     (is (= 3 (:attempts result)))
     (is (= [:candidates-missing :lane-report-invalid] (:findings result)))))
+
+(deftest final-semantic-attempt-gets-one-linter-feedback-repair
+  (let [saved (atom nil) feedback (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "invalid-edn" :attempt 3}
+                 :deposit-fn (fn
+                               ([value]
+                                (if (string? value)
+                                  {:ok false
+                                   :error/code :promotion-stage-terminal-invalid
+                                   :report/error {:error/code :report-edn-invalid
+                                                  :error/message "even forms"}}
+                                  (do (reset! feedback value)
+                                      {:ok true :job "format-repair"})))
+                               ([] (throw (ex-info "feedback required" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "format-repair" (:job-id result)))
+    (is (= :report-edn-invalid
+           (get-in @feedback [:report/error :error/code])))
+    (is (= 3 (:attempt @saved)))
+    (is (= 1 (:format-repairs @saved)))))
 
 (deftest pinned-proctor-review-shape-normalizes-only-with-exact-digest
   (let [normalize #'sut/normalize-review-report

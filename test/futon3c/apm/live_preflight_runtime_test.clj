@@ -12,3 +12,10 @@
 
 (deftest non-edn-result-is-not-evidence
   (is (nil? (sut/parse-report "I think it passed"))))
+
+(deftest invalid-edn-retains-reader-diagnostic
+  (let [result (sut/parse-report-diagnostic
+                "{:lane \"challenge\" :ran-empty :memory-ids []}")]
+    (is (false? (:ok result)))
+    (is (= :report-edn-invalid (:error/code result)))
+    (is (re-find #"even number of forms" (:error/message result)))))
