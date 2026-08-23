@@ -50,20 +50,28 @@
                             (:solver-assignment-id options)})))]
     (if-not (:ok launched)
       launched
-      (let [config (assoc (:config launched)
-                          :control-root control-root
-                          :agency-base agency-base
-                          :solver-assignment-id
-                          (or (:solver-assignment-id options)
-                              (:solver-assignment-id (:config launched))))]
-        (runner/step-one!
-         {:corpus-root corpus-root :problem-id problem-id
-          :contract (edn/read-string (slurp contract-path))
-          :seat (:seats config)
-          :phase-limit phase
-          :strategy-required? strategy-required?
-          :phase-inputs-fn (adapters/make-phase-inputs-fn config)
-          :bank-request-fn (adapters/make-bank-request-fn config)})))))
+      (let [assignment-id (or (:solver-assignment-id options)
+                              (:solver-assignment-id (:config launched)))
+            frame-id (get-in launched [:config :unit :frame/id])
+            refreshed-seats (when assignment-id
+                              ((:roster-fn eff) frame-id assignment-id))
+            config (cond-> (assoc (:config launched)
+                                  :control-root control-root
+                                  :agency-base agency-base
+                                  :solver-assignment-id assignment-id)
+                     (and refreshed-seats
+                          (nil? (:error/code refreshed-seats)))
+                     (assoc :seats refreshed-seats))]
+        (if (and refreshed-seats (:error/code refreshed-seats))
+          refreshed-seats
+          (runner/step-one!
+           {:corpus-root corpus-root :problem-id problem-id
+            :contract (edn/read-string (slurp contract-path))
+            :seat (:seats config)
+            :phase-limit phase
+            :strategy-required? strategy-required?
+            :phase-inputs-fn (adapters/make-phase-inputs-fn config)
+            :bank-request-fn (adapters/make-bank-request-fn config)}))))))
 
 (defn- next-intent [config state]
   (let [body {:coordinator/id (:coordinator-id config)
