@@ -1,6 +1,7 @@
 (ns futon3c.apm.library-lane-coordinator
   "Durable coordinator adapter for nonblocking library-lane steps."
   (:require [clojure.edn :as edn]
+            [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.durable-coordinator :as coordinator]
             [futon3c.apm.library-lane-adapters :as adapters]
@@ -122,22 +123,73 @@
            retry-max]
     :as options
     :or {registry-path default-registry-path period-ms 500 retry-max 0}}]
-  (let [config (dissoc options :registry-path :state-path :period-ms
+  (let [checked (authority-port/require-dispatch-paths
+                 {:control-root (:control-root options)}
+                 [[:role-card (:path runner/library-card)]
+                  [:role-card (:path runner/solver-restrategize-card)]])
+        config (dissoc options :registry-path :state-path :period-ms
                        :retry-max)
         registered (coordinator/register!
                     {:registry-path registry-path :coordinator-id coordinator-id
                      :problem-id problem-id :retry-max retry-max
                      :adapter adapter-key :config config :state-path state-path
                      :period-ms period-ms})]
-    (if (:ok registered)
+    (cond
+      (not (:ok checked)) checked
+      (:ok registered)
       (coordinator/start-registered! registry-path coordinator-id)
-      registered)))
+      :else registered)))
 
 (defn status [registry-path coordinator-id]
   (coordinator/status registry-path coordinator-id))
 
 (defn stop! [registry-path coordinator-id]
   (coordinator/stop! registry-path coordinator-id))
+
+(defn hydrate-control-authority!
+  "Migrate one legacy library registration to explicit control authority.
+
+   The caller supplies the root; no directory inference is permitted. Both
+   frozen role cards must exist before the content-addressed registry entry is
+   replaced. Coordinator state and any pending intent are never rewritten."
+  [registry-path coordinator-id control-root reason]
+  (let [registry (coordinator/read-registry registry-path)
+        entry (get-in registry [:entries coordinator-id])
+        authority {:control-root control-root}
+        cards [[:role-card (:path runner/library-card)]
+               [:role-card (:path runner/solver-restrategize-card)]]
+        checked (authority-port/require-dispatch-paths authority cards)]
+    (cond
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-not-registered}
+      (not= adapter-key (:coordinator/adapter entry))
+      {:ok false :error/code :library-lane-registration-adapter-invalid}
+      (not (and (string? reason) (not-empty reason)))
+      {:ok false :error/code :library-lane-authority-migration-reason-required}
+      (not (:ok checked)) checked
+      (= control-root (get-in entry [:coordinator/config :control-root]))
+      {:ok true :status :already-hydrated :entry entry}
+      (some? (get-in entry [:coordinator/config :control-root]))
+      {:ok false :error/code :library-lane-control-authority-conflict
+       :finding {:registered (get-in entry [:coordinator/config :control-root])
+                 :requested control-root}}
+      :else
+      (let [updated (-> entry
+                        (assoc-in [:coordinator/config :control-root]
+                                  control-root)
+                        (update-in [:coordinator/config :authority/migrations]
+                                   (fnil conj [])
+                                   {:migration/type :control-root-hydration
+                                    :reason reason})
+                        (assoc :coordinator/entry-digest nil))
+            updated (assoc updated :coordinator/entry-digest
+                           (coordinator/entry-digest updated))
+            saved (persistence/atomic-persist!
+                   (Path/of registry-path (make-array String 0))
+                   (assoc-in registry [:entries coordinator-id] updated))]
+        (if (:ok saved)
+          {:ok true :status :control-authority-hydrated :entry updated}
+          saved)))))
 
 (defn migrate-pending-phase-intent!
   "Bind one legacy library intent to its already-persisted phase.

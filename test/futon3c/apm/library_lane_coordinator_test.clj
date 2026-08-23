@@ -20,11 +20,14 @@
     {:registry (str (.resolve root "registry.edn"))
      :state (str (.resolve root "state.edn"))}))
 
+(def test-control-root "/home/joe/code/futon3c")
+
 (deftest awaiting-step-survives-runner-restart-with-identical-intent
   (let [{:keys [registry state]} (fixture)
         calls (atom [])
         options {:registry-path registry :state-path state
                  :coordinator-id "library:t00J02" :problem-id "t00J02"
+                 :control-root test-control-root
                  :period-ms 100}]
     (with-redefs [sut/run-step!
                   (fn [_]
@@ -51,6 +54,7 @@
         calls (atom [])
         options {:registry-path registry :state-path state
                  :coordinator-id "library:partial" :problem-id "t00J02"
+                 :control-root test-control-root
                  :period-ms 10}]
     (with-redefs [sut/run-step!
                   (fn [_]
@@ -76,6 +80,7 @@
         observations (atom [])
         options {:registry-path registry :state-path state
                  :coordinator-id "library:phases" :problem-id "t00J02"
+                 :control-root test-control-root
                  :period-ms 10}]
     (with-redefs [sut/run-step!
                   (fn [{:keys [phase]}]
@@ -143,6 +148,7 @@
   (let [{:keys [registry state]} (fixture)
         options {:registry-path registry :state-path state
                  :coordinator-id "library:migrate" :problem-id "t00J02"
+                 :control-root test-control-root
                  :period-ms 1000}]
     (with-redefs [sut/run-step! (fn [_] {:ok true :ruling :awaiting})]
       (try
@@ -176,3 +182,44 @@
                  (:durable-state (sut/status registry "library:migrate"))
                  after))))
         (finally (durable/stop! "library:migrate"))))))
+
+(deftest legacy-control-authority-hydration-preserves-pending-intent
+  (let [{:keys [registry state]} (fixture)
+        options {:registry-path registry :state-path state
+                 :coordinator-id "library:authority" :problem-id "t00J02"
+                 :period-ms 1000}]
+    (with-redefs [sut/run-step! (fn [_] {:ok true :ruling :awaiting})]
+      (try
+        (is (:ok (durable/register!
+                  {:registry-path registry
+                   :coordinator-id (:coordinator-id options)
+                   :problem-id (:problem-id options)
+                   :adapter sut/adapter-key
+                   :config {:coordinator-id (:coordinator-id options)
+                            :problem-id (:problem-id options)}
+                   :state-path state :period-ms (:period-ms options)})))
+        (is (:ok (durable/start-registered! registry "library:authority")))
+        (is (await-until #(some? (get-in (sut/status registry
+                                                   "library:authority")
+                                         [:durable-state
+                                          :coordinator/pending-intent]))))
+        (durable/stop! "library:authority")
+        (let [before (get-in (sut/status registry "library:authority")
+                             [:durable-state :coordinator/pending-intent])
+              result (sut/hydrate-control-authority!
+                      registry "library:authority" "/home/joe/code/futon3c"
+                      "fixture legacy registration")
+              after (sut/status registry "library:authority")]
+          (is (:ok result) (pr-str result))
+          (is (= :control-authority-hydrated (:status result)))
+          (is (= "/home/joe/code/futon3c"
+                 (get-in after [:registration :coordinator/config
+                                :control-root])))
+          (is (= before
+                 (get-in after [:durable-state
+                                :coordinator/pending-intent])))
+          (is (= :already-hydrated
+                 (:status (sut/hydrate-control-authority!
+                           registry "library:authority"
+                           "/home/joe/code/futon3c" "repeat")))))
+        (finally (durable/stop! "library:authority"))))))
