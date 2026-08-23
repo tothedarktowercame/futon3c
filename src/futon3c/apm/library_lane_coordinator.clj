@@ -118,11 +118,15 @@
 (coordinator/register-adapter! adapter-key adapter-constructor)
 
 (defn start!
-  [{:keys [registry-path state-path coordinator-id period-ms] :as options
-    :or {registry-path default-registry-path period-ms 500}}]
-  (let [config (dissoc options :registry-path :state-path :period-ms)
+  [{:keys [registry-path state-path coordinator-id problem-id period-ms
+           retry-max]
+    :as options
+    :or {registry-path default-registry-path period-ms 500 retry-max 0}}]
+  (let [config (dissoc options :registry-path :state-path :period-ms
+                       :retry-max)
         registered (coordinator/register!
                     {:registry-path registry-path :coordinator-id coordinator-id
+                     :problem-id problem-id :retry-max retry-max
                      :adapter adapter-key :config config :state-path state-path
                      :period-ms period-ms})]
     (if (:ok registered)

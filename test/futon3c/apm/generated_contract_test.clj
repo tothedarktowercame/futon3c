@@ -56,6 +56,17 @@
     (is (some #{:generated-contract-dispatch-policy-invalid}
               (:findings result)))))
 
+(deftest coordinator-retry-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))]
+    (doseq [field [:coordinator-one-registration-per-problem
+                   :coordinator-retries-increment-same-entry
+                   :coordinator-retry-beyond-maximum-refused]]
+      (let [result (sut/validate
+                    (assoc-in contract [:dispatch-policy field] false))]
+        (is (false? (:ok result)) (str field))
+        (is (some #{:generated-contract-dispatch-policy-invalid}
+                  (:findings result)) (str field))))))
+
 (deftest memory-and-isolation-policy-mutations-are-killed
   (let [contract (:contract (sut/read-contract generated-path))
         memory-result (sut/validate

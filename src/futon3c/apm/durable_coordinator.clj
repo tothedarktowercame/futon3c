@@ -105,6 +105,13 @@
        (string? (:coordinator/state-path entry))
        (pos-int? (:coordinator/period-ms entry))
        (boolean? (:coordinator/enabled? entry))
+       (or (nil? (:coordinator/problem-id entry))
+           (and (string? (:coordinator/problem-id entry))
+                (not-empty (:coordinator/problem-id entry))))
+       (or (nil? (:retry/count entry)) (nat-int? (:retry/count entry)))
+       (or (nil? (:retry/max entry)) (nat-int? (:retry/max entry)))
+       (or (nil? (:retry/max entry))
+           (<= (or (:retry/count entry) 0) (:retry/max entry)))
        (= (:coordinator/entry-digest entry) (entry-digest entry))))
 
 (defn register-adapter!
@@ -138,7 +145,8 @@
 
 (defn register!
   "Persist one typed coordinator registration before it can be started."
-  [{:keys [registry-path coordinator-id adapter config state-path period-ms]
+  [{:keys [registry-path coordinator-id problem-id retry-count retry-max
+           adapter config state-path period-ms]
     :or {period-ms regulator/default-period-ms}}]
   (let [registry (read-registry registry-path)
         entry (cond-> {:state/type entry-type
@@ -148,6 +156,9 @@
                        :coordinator/state-path (str state-path)
                        :coordinator/period-ms period-ms
                        :coordinator/enabled? true}
+                problem-id (assoc :coordinator/problem-id problem-id
+                                  :retry/count (or retry-count 0)
+                                  :retry/max (or retry-max 0))
                 true (assoc :coordinator/entry-digest nil))
         entry (assoc entry :coordinator/entry-digest (entry-digest entry))]
     (cond
@@ -156,10 +167,26 @@
       (not (valid-entry? entry))
       {:ok false :error/code :durable-coordinator-registration-invalid}
       :else
-      (let [existing (get-in registry [:entries coordinator-id])]
-        (if (and existing (not= existing entry))
+      (let [existing (get-in registry [:entries coordinator-id])
+            other-for-problem
+            (when problem-id
+              (some (fn [[id candidate]]
+                      (when (and (not= id coordinator-id)
+                                 (= problem-id
+                                    (:coordinator/problem-id candidate)))
+                        id))
+                    (:entries registry)))]
+        (cond
+          other-for-problem
+          {:ok false :error/code :durable-coordinator-problem-already-registered
+           :finding {:problem-id problem-id
+                     :coordinator/id other-for-problem}}
+
+          (and existing (not= existing entry))
           {:ok false :error/code :durable-coordinator-registration-conflict
            :finding {:coordinator/id coordinator-id}}
+
+          :else
           (let [saved (persistence/atomic-persist!
                        (Path/of (str registry-path) (make-array String 0))
                        (assoc-in registry [:entries coordinator-id] entry))]
@@ -167,6 +194,39 @@
               {:ok true :status (if existing :already-registered :registered)
                :entry entry}
               saved)))))))
+
+(defn retry!
+  "Advance the bounded retry counter on the one registered coordinator.
+
+   A retry mutates only the content-addressed registry entry; callers then
+   resume the same coordinator. It never manufactures a successor identity."
+  [registry-path coordinator-id]
+  (let [registry (read-registry registry-path)
+        entry (get-in registry [:entries coordinator-id])]
+    (cond
+      (not (valid-registry? registry))
+      {:ok false :error/code :durable-coordinator-registry-invalid}
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-not-registered}
+      (nil? (:coordinator/problem-id entry))
+      {:ok false :error/code :durable-coordinator-problem-identity-missing}
+      (>= (:retry/count entry) (:retry/max entry))
+      {:ok false :error/code :durable-coordinator-retry-exhausted
+       :finding {:problem-id (:coordinator/problem-id entry)
+                 :retry/count (:retry/count entry)
+                 :retry/max (:retry/max entry)}}
+      :else
+      (let [updated (-> entry
+                        (update :retry/count inc)
+                        (assoc :coordinator/entry-digest nil))
+            updated (assoc updated :coordinator/entry-digest
+                           (entry-digest updated))
+            saved (persistence/atomic-persist!
+                   (Path/of (str registry-path) (make-array String 0))
+                   (assoc-in registry [:entries coordinator-id] updated))]
+        (if (:ok saved)
+          {:ok true :status :retry-registered :entry updated}
+          saved)))))
 
 (defn- coordinator-tick [coordinator-id adapter state]
   (if-let [intent (:coordinator/pending-intent state)]

@@ -252,6 +252,25 @@
     (is (= :durable-coordinator-registry-invalid
            (:error/code (sut/recover-all! registry))))))
 
+(deftest one-problem-has-one-bounded-retrying-coordinator
+  (let [{:keys [registry state-a state-b]} (temp-paths)
+        base {:registry-path registry :coordinator-id "c:problem"
+              :problem-id "m94A03" :retry-max 2
+              :adapter :test/none :config {} :state-path state-a
+              :period-ms 10}]
+    (is (:ok (sut/register! base)))
+    (is (= :durable-coordinator-problem-already-registered
+           (:error/code
+            (sut/register! (assoc base :coordinator-id "c:problem-retry-v2"
+                                  :state-path state-b)))))
+    (is (= 1 (get-in (sut/retry! registry "c:problem")
+                     [:entry :retry/count])))
+    (is (= 2 (get-in (sut/retry! registry "c:problem")
+                     [:entry :retry/count])))
+    (is (= :durable-coordinator-retry-exhausted
+           (:error/code (sut/retry! registry "c:problem"))))
+    (is (= 1 (count (:entries (sut/read-registry registry)))))))
+
 (deftest durable-stop-prevents-startup-recovery
   (let [{:keys [registry state-a]} (temp-paths)]
     (sut/register-adapter!

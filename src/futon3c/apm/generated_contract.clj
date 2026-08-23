@@ -66,6 +66,9 @@
    :coordinator-intent-persisted-before-activation true
    :coordinator-restart-reconciles-deterministic-job-id true
    :coordinator-startup-uses-typed-registry true
+   :coordinator-one-registration-per-problem true
+   :coordinator-retries-increment-same-entry true
+   :coordinator-retry-beyond-maximum-refused true
    :coordinator-startup-directory-heuristics false})
 
 (def required-memory-policy
