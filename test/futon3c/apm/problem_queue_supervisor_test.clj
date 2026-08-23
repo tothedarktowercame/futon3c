@@ -56,6 +56,20 @@
       (is (= :parked (:status result)))
       (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
 
+(deftest same-problem-retry-clears-active-without-advancing-or-minting
+  (let [{:keys [providers state calls]} (harness)
+        _ (sut/tick! providers)
+        before-index (:next-index @state)
+        receipt {:receipt/id (apply str (repeat 64 "a"))
+                 :frame/result :partial :problem/outcome :partial
+                 :retry/same-problem? true}
+        result (sut/complete-active-without-successor @state receipt)]
+    (is (:ok result))
+    (is (= before-index (get-in result [:state :next-index])))
+    (is (nil? (get-in result [:state :active])))
+    (is (= :retry-superseded (get-in result [:state :status])))
+    (is (= 1 (count (filter #(= :mint (first %)) @calls))))))
+
 (deftest queue-and-terminal-invariants-fail-closed
   (testing "duplicate problem"
     (let [plan (sut/queue-plan [(first problems) (first problems)])]

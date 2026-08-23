@@ -14,6 +14,7 @@
             [futon3c.apm.generated-contract :as generated-contract]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
+            [futon3c.apm.live-launch-preparation :as live-preparation]
             [futon3c.apm.live-promotion :as live-promotion]
             [futon3c.apm.live-batch-supervisor :as live-batch-supervisor]
             [futon3c.apm.live-orchestration-contract :as orchestration-contract]
@@ -28,6 +29,8 @@
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]
             [futon3c.apm.queued-frame-terminal :as queued-frame-terminal]
+            [futon3c.apm.series-terminal :as series-terminal]
+            [futon3c.apm.solver-progress-rollover :as progress-rollover]
             [futon3c.apm.workspace-lifecycle :as workspace-lifecycle]
             [futon3c.apm.qualification :as qualification])
   (:import [java.nio.file Path]
@@ -1254,6 +1257,105 @@
     (workspace-lifecycle/certify-retirement-audit
      {:lease lease :validation validation :observations observations
       :terminal-head terminal-head :context :jit-read-only-auditor})))
+
+(defn finalize-solver-progress-retry!
+  "Append-only terminalization of an unsolved checkpoint for same-problem retry."
+  [{:keys [frame campaign-config queue-state-path agency-base]
+    :or {agency-base "http://localhost:7070"}}]
+  (let [solve-state (live-preflight-runtime/read-state
+        (.resolve (Path/of (:state-directory campaign-config)
+                           (make-array String 0)) "live/solve.edn"))
+        leases (live-preflight-runtime/read-state
+                (Path/of (:workspace-leases-path campaign-config)
+                         (make-array String 0)))
+        heads (into {} (map (fn [[role lease]]
+                              [role (str/trim
+                                     (:out (shell/sh "git" "-C"
+                                                     (:workspace/path lease)
+                                                     "rev-parse" "HEAD")))])
+                            leases))
+        derived (progress-rollover/derive-terminal
+                 {:frame frame :solve-state solve-state :workspace-heads heads})]
+    (if-not (:ok derived)
+      derived
+      (let [report (:report (last (:rounds solve-state)))
+            closed (series-terminal/close!
+                    {:ledger-path (:ledger-path campaign-config)
+                     :frame-id (:frame/id frame) :problem-id (:problem/id frame)
+                     :final-head (:final-head report)
+                     :residual (last (:failure-account report))
+                     :rounds (count (:rounds solve-state))})]
+        (if-not (:ok closed)
+          closed
+          (let [terminal (:terminal-receipt derived)
+                progress-path (.resolve
+                               (Path/of (:state-directory campaign-config)
+                                        (make-array String 0))
+                               "terminal/solver-progress.edn")
+                terminal-path (.resolve
+                               (Path/of (:state-directory campaign-config)
+                                        (make-array String 0))
+                               "terminal/frame-terminal.edn")
+                _ (live-preflight-runtime/atomic-persist!
+                   progress-path (:progress-receipt derived))
+                _ (live-preflight-runtime/atomic-persist! terminal-path terminal)
+                retired
+                (queued-frame-terminal/retire!
+                 {:frame frame :terminal-receipt terminal :leases leases
+                  :audit-fn (fn [f t role lease]
+                              (jit-retirement-audit agency-base campaign-config
+                                                    f t role lease))
+                  :persist-bank-fn
+                  (fn [_ bank]
+                    (live-preflight-runtime/atomic-persist!
+                     (Path/of (:problem-bank-path campaign-config)
+                              (make-array String 0)) bank))
+                  :retire-workspace-fn
+                  (fn [lease audit]
+                    (workspace-lifecycle/retire!
+                     {:lease lease :audit audit
+                      :receipt-directory
+                      (:retirement-receipt-directory campaign-config)}))
+                  :retire-seats-fn
+                  (fn [f _]
+                    (let [responses
+                          (mapv #(live-preflight-runtime/http-json
+                                  "DELETE" (str agency-base "/api/alpha/agents/"
+                                                (:frame/id f) "-" (name %)))
+                                (keys live-preparation/required-seat-types))]
+                      {:ok (every? #(and (:ok %) (= 200 (:http/status %)))
+                                   responses)
+                       :responses responses}))})]
+            (if-not (:ok retired)
+              retired
+              (let [queue-state (live-preflight-runtime/read-state
+                                 (Path/of queue-state-path
+                                          (make-array String 0)))
+                    transitioned
+                    (problem-queue/complete-active-without-successor
+                     queue-state terminal)]
+                (if-not (:ok transitioned)
+                  transitioned
+                  (let [persisted (live-preflight-runtime/atomic-persist!
+                                   (Path/of queue-state-path
+                                            (make-array String 0))
+                                   (:state transitioned))
+                        source-problem (get-in queue-state
+                                               [:active :frame :problem])
+                        retained-blob (str/trim
+                                       (:out (shell/sh
+                                              "git" "-C"
+                                              (:repository source-problem)
+                                              "rev-parse"
+                                              (str (:final-head report) ":"
+                                                   (:path source-problem)))))]
+                    (if (:ok persisted)
+                      {:ok true :status :retry-ready :terminal terminal
+                       :retirement retired
+                       :retry-problem
+                       (progress-rollover/retry-problem
+                        source-problem (:final-head report) retained-blob)}
+                      persisted)))))))))))
 
 (defn set-alight-problem-list!
   "List-only JIT entry point. PROBLEMS contain immutable problem pins."

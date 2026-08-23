@@ -53,6 +53,34 @@
   (assoc (dissoc state :state/id) :state/id
          (machine/ledger-digest [(dissoc state :state/id)])))
 
+(defn complete-active-without-successor
+  "Record a retryable terminal frame without preparing the queue's next item.
+
+  NEXT-INDEX is deliberately unchanged. Callers must disable this queue before
+  starting the distinct same-problem retry queue."
+  [state terminal-receipt]
+  (let [active (:active state)]
+    (cond
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (nil? active)
+      {:ok false :error/code :problem-queue-no-active-frame}
+      (not (and (= :partial (:frame/result terminal-receipt))
+                (= :partial (:problem/outcome terminal-receipt))
+                (true? (:retry/same-problem? terminal-receipt))))
+      {:ok false :error/code :problem-queue-retry-terminal-invalid}
+      :else
+      {:ok true
+       :state (addressed
+               (-> state
+                   (update :completed conj
+                           {:frame/id (get-in active [:frame :frame/id])
+                            :problem/id (get-in active [:frame :problem/id])
+                            :frame/result :partial
+                            :retry/same-problem? true
+                            :terminal-receipt/id (:receipt/id terminal-receipt)})
+                   (assoc :active nil :status :retry-superseded)))})))
+
 (defn- prepare-next
   [plan state {:keys [mint-frame-fn qualify-frame-fn prepare-frame-fn
                       persist-state-fn]}]
