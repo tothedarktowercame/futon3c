@@ -8,6 +8,7 @@
    [:reg/student-seat "student" :zai :mathematics]
    [:reg/guide-seat "guide" :claude nil]
    [:reg/proctor-seat "proctor" :codex nil]
+   [:reg/promotion-proctor-seat "promotion-proctor" :codex nil]
    [:reg/scribe-seat "scribe" :codex nil]
    [:reg/analyst-seat "analyst" :claude nil]])
 
@@ -143,7 +144,7 @@
         specs))
 
 (defn mint-seats!
-  "Register six fresh, locally invocable identities for FRAME-ID.
+  "Register seven fresh, locally invocable identities for FRAME-ID.
 
    PREPARE-SEAT-FN receives {:agent-id :agent-type} and must return an
    :invoke-fn plus optional :session-reset-fn and :metadata.  Keeping the
