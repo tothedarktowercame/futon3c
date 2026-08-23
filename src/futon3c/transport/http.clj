@@ -58,6 +58,7 @@
             [futon3c.apm.conductor-open :as conductor-open]
             [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.apm.campaign-machine :as campaign-machine]
+            [futon3c.apm.typed-role-submission :as role-submission]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
@@ -7082,6 +7083,37 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      (and (= :get method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/submission" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/submission" uri)
+            token (get (parse-query-params request) "token")
+            result (role-submission/schema job-id token)]
+        (cond
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          :else (json-response 409 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/submission" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/submission" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-submission/submit! job-id (:token payload)
+                                              (:payload payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (contains? #{:role-submission-token-mismatch
+                       :role-submission-conflict}
+                     (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
       ;; Durable activation is deliberately mounted at the reload-safe boundary:
       ;; countdown launch must not require restarting the Agency-routed JVM.
       (and (= :post method) (= "/api/alpha/invoke/activate" uri))

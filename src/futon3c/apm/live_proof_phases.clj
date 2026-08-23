@@ -7,7 +7,8 @@
             [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.live-preflight :as preflight]
             [futon3c.apm.live-preflight-runtime :as runtime]
-            [futon3c.apm.live-solver-rounds :as solver-rounds]))
+            [futon3c.apm.live-solver-rounds :as solver-rounds]
+            [futon3c.apm.typed-role-submission :as submission]))
 
 (def permitted-axioms '#{propext Classical.choice Quot.sound})
 
@@ -61,14 +62,15 @@
       (if (seq findings)
         {:ok false :error/code :preflight-workspace-invalid
          :findings findings}
-        (preflight/build-request
-         {:ledger ledger
-          :unit (assoc-in unit [:problem :repository]
-                          (:workspace/path workspace))
-          :role-card role-card :seat seat
-          :timeouts
-          {:request-timeout-ms (get-in action [:timeouts :request-ms])
-           :turn-timeout-ms (get-in action [:timeouts :turn-ms])}})))
+        (update (preflight/build-request
+                 {:ledger ledger
+                  :unit (assoc-in unit [:problem :repository]
+                                  (:workspace/path workspace))
+                  :role-card role-card :seat seat
+                  :timeouts
+                  {:request-timeout-ms (get-in action [:timeouts :request-ms])
+                   :turn-timeout-ms (get-in action [:timeouts :turn-ms])}})
+                :request #(submission/prepare-request (assoc % :role :proctor)))))
     (let [problem (:problem unit)
           expected-role (if (= :solve kind) :solver :proctor)
           expected-agent (str (:frame/id unit) "-" (name expected-role))
@@ -90,9 +92,11 @@
         {:ok false :error/code :live-proof-request-invalid :findings findings}
         {:ok true
          :request
-         (address-request
-          (cond-> {:dispatch/type (keyword (str "frame-" (name kind)))
+         (submission/prepare-request
+          (address-request
+           (cond-> {:dispatch/type (keyword (str "frame-" (name kind)))
                    :phase kind :agent-id (:agent-id seat)
+                   :role expected-role
                    :frame-id (:frame/id unit) :problem-id (:problem/id unit)
                    :ledger-digest (:digest ledger)
                    :role-card-path (:path role-card) :role-card-blob (:blob role-card)
@@ -102,7 +106,7 @@
                    :turn-timeout-ms (get-in action [:timeouts :turn-ms])}
             (= :verify kind) (assoc :solve-receipt-id (:receipt/id solve-receipt)
                                     :certified-final-head
-                                    (:receipt/final-head solve-receipt))))}))))
+                                    (:receipt/final-head solve-receipt)))))}))))
 
 (defn validate-terminal [kind request ticket job]
   (let [report (normalize-proof-report (:report job))
@@ -168,12 +172,14 @@
   [{:keys [kind contract request] :as options}]
   (if (= :preflight kind)
     (driver/drive!
-     (assoc (select-keys options [:state :announce-fn :activate-fn :job-fn :persist-fn])
+     (assoc (select-keys options [:state :announce-fn :activate-fn :job-fn :persist-fn
+                                 :ticket-register-fn :terminal-submission-provider])
             :request request
             :terminal-validator preflight/validate-terminal
             :receipt-provider (fn [r t j _] (preflight/receipt contract r t j))))
     (driver/drive!
-     (assoc (select-keys options [:state :announce-fn :activate-fn :job-fn :persist-fn])
+     (assoc (select-keys options [:state :announce-fn :activate-fn :job-fn :persist-fn
+                                 :ticket-register-fn :terminal-submission-provider])
             :request request
             :terminal-validator (partial validate-terminal kind)
             :receipt-provider (partial receipt contract kind)))))
@@ -218,7 +224,16 @@
               ":solver/strategy inside :lean."))
        (when (= :preflight (:phase request))
          (str " The nested :lean value must be exactly shaped as "
-              "{:exit INT :warnings INT :sorry-warnings INT :errors INT :output STRING}."))))
+              "{:exit INT :warnings INT :sorry-warnings INT :errors INT :output STRING}."))
+       (if-let [job-id (:submission/job-id request)]
+         (str "\nCompletion is accepted only through the typed submission tool; "
+              "follow the shared completion contract "
+              (pr-str submission/completion-contract) ". "
+              "conversational output is never a receipt. Run the template command, "
+              "fill every null in the generated JSON, then run the submit command:\n"
+              (submission/command request {:job-id job-id})
+              "\nFix every field-level error before ending the turn.")
+         " Await activation before submitting completion.")))
 
 (defn run-live!
   [{:keys [kind contract request state-path agency-base max-rounds]
@@ -240,7 +255,9 @@
     (fn [req ticket]
       (let [response (runtime/http-json
                       "POST" (str agency-base "/api/alpha/invoke/activate")
-                      {:agent-id (:agent-id req) :prompt (prompt req)
+                      {:agent-id (:agent-id req)
+                       :prompt (prompt (assoc req :submission/job-id
+                                             (:job-id ticket)))
                        :surface "emacs-repl" :caller "countdown-control"
                        :mode (if (= :solve kind) "work" "brief")
                        :job-id (:job-id ticket)})]
@@ -250,7 +267,10 @@
     (fn [job-id]
       (runtime/job->terminal
        (runtime/http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
-    :persist-fn #(runtime/atomic-persist! state-path %)}]
+    :persist-fn #(runtime/atomic-persist! state-path %)
+    :ticket-register-fn submission/register!
+    :terminal-submission-provider (fn [_ ticket _]
+                                    (submission/submitted (:job-id ticket)))}]
     (if (= :solve kind)
       (solver-rounds/drive!
        (assoc effects

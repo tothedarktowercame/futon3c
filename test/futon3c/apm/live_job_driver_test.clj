@@ -138,3 +138,36 @@
                        :terminal-repair-request-fn (constantly {:ok true})))]
     (is (= :live-job-terminal-repair-exhausted (:error/code result)))
     (is (= 1 (:repair/attempts result)))))
+
+(deftest typed-submission-replaces-conversational-report
+  (let [calls (atom [])
+        seen (atom nil)
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done
+                   :report {:frame-id "forged"}})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        result (sut/drive!
+                (assoc (effects calls job) :state dispatched
+                       :terminal-submission-provider
+                       (fn [_ _ _]
+                         {:authority {:frame-id "f19" :problem-id "a01J05"}
+                          :payload {:command-own-exit 0 :outcome "complete"
+                                    :failure-account []
+                                    :evidence {:verified true}}})
+                       :terminal-validator
+                       (fn [_ _ terminal]
+                         (reset! seen (:report terminal)) {:ok true})))]
+    (is (= :certified (:status result)))
+    (is (= "f19" (:frame-id @seen)))
+    (is (= true (:verified @seen)))
+    (is (not= "forged" (:frame-id @seen)))))
+
+(deftest missing-typed-submission-never-validates-conversation
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done
+                   :report {:looks "valid"}})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        result (sut/drive!
+                (assoc (effects calls job) :state dispatched
+                       :terminal-submission-provider (constantly nil)))]
+    (is (= :live-job-submission-missing (:error/code result)))
+    (is (not-any? #{:validate :receipt} @calls))))

@@ -30,7 +30,12 @@
                                 command-own-exit claim-persisted
                                 receipt-persisted resumed-job-id
                                 client-timeout-observed
-                                timeout-treated-as-success]}]
+                                timeout-treated-as-success
+                                submission-registered submission-persisted
+                                submission-schema-valid
+                                submission-authority-derived
+                                conversation-used-as-receipt
+                                submission-job-id]}]
                      {"fromPhase" from "toPhase" to
                       "ledgerBefore" ledger-before "ledgerAfter" ledger-after
                       "receiptId" receipt-id
@@ -44,7 +49,13 @@
                       "receiptPersisted" receipt-persisted
                       "resumedJobId" resumed-job-id
                       "clientTimeoutObserved" client-timeout-observed
-                      "timeoutTreatedAsSuccess" timeout-treated-as-success})
+                      "timeoutTreatedAsSuccess" timeout-treated-as-success
+                      "submissionRegistered" submission-registered
+                      "submissionPersisted" submission-persisted
+                      "submissionSchemaValid" submission-schema-valid
+                      "submissionAuthorityDerived" submission-authority-derived
+                      "conversationUsedAsReceipt" conversation-used-as-receipt
+                      "submissionJobId" submission-job-id})
                    steps)
     "closed" closed
     "terminalLedgerDigest" terminal-ledger-digest
@@ -115,7 +126,15 @@
                :receipt-persisted (:persisted? receipt)
                :resumed-job-id (:resumed-id job)
                :client-timeout-observed (:client-timeout-observed? job)
-               :timeout-treated-as-success (:timeout-treated-as-success? job)})
+               :timeout-treated-as-success (:timeout-treated-as-success? job)
+               :submission-registered (get-in job [:submission :registered?])
+               :submission-persisted (get-in job [:submission :persisted?])
+               :submission-schema-valid (get-in job [:submission :schema-valid?])
+               :submission-authority-derived
+               (get-in job [:submission :authority-derived?])
+               :conversation-used-as-receipt
+               (get-in job [:submission :conversation-used-as-receipt?])
+               :submission-job-id (get-in job [:submission :job-id])})
             observations)})))
 
 (defn emit!

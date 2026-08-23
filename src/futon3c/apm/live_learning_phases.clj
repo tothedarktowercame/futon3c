@@ -4,7 +4,8 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-handlers :as handlers]
             [futon3c.apm.live-job-driver :as driver]
-            [futon3c.apm.live-preflight-runtime :as runtime])
+            [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.typed-role-submission :as submission])
   (:import [java.util UUID]))
 
 (def role-for-kind
@@ -102,8 +103,9 @@
                           (:receipt/id (get receipts
                                            (keyword (str "student-attempt-"
                                                          (:ordinal action)))))))]
-        {:ok true :request (assoc body :dispatch/id
-                                  (machine/ledger-digest [body]))}))))
+        {:ok true :request (submission/prepare-request
+                            (assoc body :dispatch/id
+                                   (machine/ledger-digest [body])))}))))
 
 (defn validate-terminal [request ticket job]
   (let [kind (:dispatch/type request)
@@ -247,7 +249,15 @@
                                "The controller owns independent review and snapshot publication.")
                           "Reduce the certified receipts into lanes, dispositions, and promotion reviews.")
          :close-frame "Audit the complete receipt graph and return a content-addressable trace result.")
-       " Return exactly one EDN map including :command-own-exit, :frame-id, and :problem-id."))
+       (if-let [job-id (:submission/job-id request)]
+         (str " Completion is accepted only through the typed submission tool; "
+              "follow the shared completion contract "
+              (pr-str submission/completion-contract) ". "
+              "conversational output is never a receipt. Run the template command, "
+              "fill every null in the generated JSON, then run the submit command:\n"
+              (submission/command request {:job-id job-id})
+              "\nFix any field-level errors before ending the turn.")
+         " Await activation before submitting completion.")))
 
 (defn terminal-repair-request
   "Create the sole authority-preserving repair dispatch for an invalid typed
@@ -260,8 +270,9 @@
                         :repair/of-job-id (:job-id job)
                         :repair/of-ticket-id (:ticket/id ticket)
                         :repair/findings (vec (:findings failure))))]
-    {:ok true :request (assoc body :dispatch/id
-                              (machine/ledger-digest [body]))}))
+    {:ok true :request (submission/prepare-request
+                        (assoc body :dispatch/id
+                               (machine/ledger-digest [body])))}))
 
 (defn run-live!
   [{:keys [contract action receipts request state-path agency-base
@@ -290,7 +301,9 @@
           {:ok false :error/code :student-session-reset-failed}
           (let [response (runtime/http-json
                           "POST" (str agency-base "/api/alpha/invoke/activate")
-                          {:agent-id (:agent-id req) :prompt (prompt req)
+                          {:agent-id (:agent-id req)
+                           :prompt (prompt (assoc req :submission/job-id
+                                                 (:job-id ticket)))
                            :surface "emacs-repl" :caller "countdown-control"
                            :job-id (:job-id ticket)})]
             {:ok (and (= 202 (:http/status response)) (:ok response)
@@ -300,6 +313,9 @@
       (runtime/job->terminal
        (runtime/http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
     :persist-fn #(runtime/atomic-persist! state-path %)
+    :ticket-register-fn submission/register!
+    :terminal-submission-provider (fn [_ ticket _]
+                                    (submission/submitted (:job-id ticket)))
     :terminal-validator validate-terminal
     :terminal-repair-request-fn terminal-repair-request
     :receipt-provider

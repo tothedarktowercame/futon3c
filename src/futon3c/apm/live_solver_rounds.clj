@@ -5,7 +5,8 @@
    and the same seat/session/branch is continued up to an explicit round cap."
   (:require [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.live-job-driver :as job-driver]))
+            [futon3c.apm.live-job-driver :as job-driver]
+            [futon3c.apm.typed-role-submission :as submission]))
 
 (def default-max-rounds 50)
 (def strategy-checkpoint-every 10)
@@ -32,7 +33,8 @@
                        :findings (get-in prior [:validation :findings])
                        :instruction
                        "Correct the prior validator findings in committed state, then rerun every terminal check. For an out-of-scope committed mutation, add a corrective commit restoring that path to the registered base; do not rewrite history."}))]
-    (assoc body :dispatch/id (machine/ledger-digest [body]))))
+    (submission/prepare-request
+     (assoc body :dispatch/id (machine/ledger-digest [body])))))
 
 (defn- container [state base-request]
   (cond
@@ -53,7 +55,7 @@
         {:ok false :error/code :solver-round-state-persistence-failed})))
 
 (defn- dispatch-round!
-  [{:keys [announce-fn activate-fn persist-fn]} state]
+  [{:keys [announce-fn activate-fn persist-fn ticket-register-fn]} state]
   (let [ordinal (inc (count (:rounds state)))
         prior (last (:rounds state))
         request (round-request (:base-request state) ordinal prior)
@@ -66,7 +68,15 @@
             persisted (persist-container persist-fn staged)]
         (if-not (:ok persisted)
           persisted
-          (let [activated (activate-fn request (:ticket announced))]
+          (let [registered (if (fn? ticket-register-fn)
+                             (ticket-register-fn request (:ticket announced))
+                             {:ok true})
+                activated (when (:ok registered)
+                            (activate-fn request (:ticket announced)))]
+            (if-not (:ok registered)
+              {:ok false
+               :error/code :solver-round-submission-authority-registration-failed
+               :state staged :finding registered}
             (if-not (:ok activated)
               {:ok false :error/code :solver-round-activation-failed
                :state staged :finding activated}
@@ -76,7 +86,7 @@
                   {:ok true :status :awaiting-terminal
                    :job-id (get-in accepted [:active :ticket :job-id])
                    :state accepted}
-                  saved)))))))))
+                  saved))))))))))
 
 (defn- normalize-round-report [report]
   (let [lean (:lean report)]
@@ -178,18 +188,45 @@
 
       :else
       (let [active (:active state)
-            job (job-fn (get-in active [:ticket :job-id]))
+            raw-job (job-fn (get-in active [:ticket :job-id]))
+            typed (when-let [provider (:terminal-submission-provider effects)]
+                    (provider (:request active) (:ticket active) raw-job))
+            job (if typed
+                  (let [payload (:payload typed)]
+                    (assoc raw-job
+                           :report (merge (:authority typed) (:evidence payload)
+                                          (select-keys payload
+                                                       [:command-own-exit :outcome
+                                                        :failure-account]))
+                           :typed-submission typed))
+                  raw-job)
             expected-session (:session-id (first (:rounds state)))]
-        (if-not (contains? job-driver/terminal-states (:state job))
+        (cond
+          (not (contains? job-driver/terminal-states (:state job)))
           {:ok true :status :awaiting-terminal
            :job-id (get-in state [:active :ticket :job-id])
            :state state}
-          (if (and expected-session (not= expected-session (:session-id job)))
+
+          (and (= :done (:state job))
+               (:terminal-submission-provider effects)
+               (nil? typed))
+          {:ok true :status :awaiting-typed-submission
+           :job-id (get-in state [:active :ticket :job-id])
+           :state state}
+
+          (and expected-session (not= expected-session (:session-id job)))
             {:ok false :error/code :solver-session-mismatch
              :finding {:expected expected-session :actual (:session-id job)}}
-          (let [validation (if (= :done (:state job))
+
+          :else
+          (let [validation (if (and (= :done (:state job))
+                                    (or (nil? (:terminal-submission-provider effects))
+                                        typed))
                              (validate-solved (:request active) (:ticket active) job)
-                             {:ok false :error/code :solver-job-terminal-failure})]
+                             {:ok false
+                              :error/code (if (= :done (:state job))
+                                            :solver-typed-submission-missing
+                                            :solver-job-terminal-failure)})]
             (if (:ok validation)
               (let [receipt (provide-receipt (:request active) (:ticket active)
                                              job validation)]
@@ -259,7 +296,7 @@
                   (let [saved (persist-container persist-fn next-state)]
                     (if (:ok saved)
                       (dispatch-round! effects next-state)
-                      saved))))))))))))
+                      saved)))))))))))
 
 (defn repair-checkpoint!
   "Revalidate the already-terminal checkpoint artifact after a protocol repair.

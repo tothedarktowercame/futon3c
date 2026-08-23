@@ -2,7 +2,8 @@
   "Durable two-seat promotion dispatcher."
   (:require [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.live-preflight-runtime :as runtime]
-            [futon3c.apm.promotion-pipeline :as pipeline]))
+            [futon3c.apm.promotion-pipeline :as pipeline]
+            [futon3c.apm.typed-role-submission :as submission]))
 
 (defn resolved-role-card-path [control-root request]
   (let [path (:role-card-path request)
@@ -47,7 +48,8 @@
       :else {:ok true :reviewer reviewer :reviews reviews})))
 
 (defn- agency-stage [agency-base request prompt]
-  (fn
+  (let [request (submission/prepare-request request)]
+   (fn
     ([]
      (let [announced (runtime/http-json
                       "POST" (str agency-base "/api/alpha/invoke/announce")
@@ -55,10 +57,20 @@
                        :surface "emacs-repl" :caller "countdown-control"
                        :mode "work"})
            job-id (:job-id announced)
-           activated (when (and (= 202 (:http/status announced)) job-id)
+           ticket {:job-id job-id}
+           registered (when (and (= 202 (:http/status announced)) job-id)
+                        (submission/register! request ticket))
+           activated (when (:ok registered)
                        (runtime/http-json
                         "POST" (str agency-base "/api/alpha/invoke/activate")
-                        {:agent-id (:agent-id request) :prompt prompt
+                        {:agent-id (:agent-id request)
+                         :prompt (str prompt
+                                      "\nCompletion is accepted only through the typed "
+                                      "submission tool under shared contract "
+                                      (pr-str submission/completion-contract) ". "
+                                      "Run the template command, fill every null in its "
+                                      "evidence object, then run the submit command:\n"
+                                      (submission/command request ticket))
                          :surface "emacs-repl" :caller "countdown-control"
                          :mode "work" :job-id job-id}))]
        (if (and (= 202 (:http/status announced)) (:ok announced)
@@ -68,13 +80,21 @@
     ([job-id]
      (let [job (runtime/job->terminal
                 (runtime/http-json
-                 "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id)))]
+                 "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id)))
+           typed (submission/submitted job-id)
+           report (when typed
+                    (merge (:authority typed) (:evidence (:payload typed))
+                           (select-keys (:payload typed)
+                                        [:command-own-exit :outcome
+                                         :failure-account])))]
        (if (contains? #{:done :failed :timeout :cancelled} (:state job))
-         (if (and (= :done (:state job)) (map? (:report job)))
-           {:ok true :job job-id :report (:report job)}
+         (if (and (= :done (:state job)) (map? report))
+           {:ok true :job job-id :report report}
            {:ok false :error/code :promotion-stage-terminal-invalid :job job
-            :report/error (:report/error job)})
-         {:ok true :status :awaiting-terminal :job job-id})))))
+            :report/error (if (= :done (:state job))
+                            {:error/code :typed-submission-missing}
+                            (:report/error job))})
+         {:ok true :status :awaiting-terminal :job job-id}))))))
 
 (defn run-live!
   [{:keys [state-path agency-base control-root deposit-request reviewer-request
@@ -121,6 +141,8 @@
           ([candidates]
            (let [digest (machine/ledger-digest [candidates])
                  request (assoc reviewer-request :candidates candidates
+                                :phase :promotion-review
+                                :role :promotion-proctor
                                 :candidate-set-digest digest)
                  prompt (str "Independently review this exact candidate set. Authority:\n"
                              (pr-str request)
@@ -135,6 +157,8 @@
           ([job-id candidates]
            (let [digest (machine/ledger-digest [candidates])
                  request (assoc reviewer-request :candidates candidates
+                                :phase :promotion-review
+                                :role :promotion-proctor
                                 :candidate-set-digest digest)
                  prompt (str "Independently review this exact candidate set. Authority:\n"
                              (pr-str request)

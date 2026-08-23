@@ -21,7 +21,8 @@
 (defn drive!
   "Advance one job by at most one externally visible state transition."
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
-           terminal-validator receipt-provider terminal-repair-request-fn]}]
+           terminal-validator receipt-provider terminal-repair-request-fn
+           ticket-register-fn terminal-submission-provider]}]
   (cond
     (not (and (map? request) (string? (:dispatch/id request))
               (every? fn? [announce-fn activate-fn job-fn persist-fn
@@ -40,7 +41,14 @@
             {:ok false :error/code :live-job-ticket-persistence-failed}
 
             :else
-            (let [activated (activate-fn request (:ticket announced))]
+            (let [registered (if (fn? ticket-register-fn)
+                               (ticket-register-fn request (:ticket announced))
+                               {:ok true})
+                  activated (when (:ok registered)
+                              (activate-fn request (:ticket announced)))]
+              (if-not (:ok registered)
+                {:ok false :error/code :live-job-submission-authority-registration-failed
+                 :finding registered :state next-state}
               (if (:ok activated)
                 (let [accepted-state (assoc next-state :activation/accepted? true)
                       accepted-persisted (persist-fn accepted-state)]
@@ -50,7 +58,7 @@
                      :error/code :live-job-activation-acceptance-persistence-failed
                      :state next-state}))
                 {:ok false :error/code :live-job-activation-failed
-                 :state next-state :finding activated}))))))
+                 :state next-state :finding activated})))))))
 
     (not= :live-job-dispatched (:state/type state))
     {:ok false :error/code :live-job-state-invalid}
@@ -101,7 +109,25 @@
          :finding (select-keys job [:job-id :agent-id :state :terminal-code])}
 
         :else
-        (let [validated (terminal-validator active-request (:ticket state) job)]
+        (let [submission (when (fn? terminal-submission-provider)
+                           (terminal-submission-provider
+                            active-request (:ticket state) job))
+              job (if submission
+                    (let [payload (:payload submission)]
+                      (assoc job
+                             :report (merge (:authority submission)
+                                            (:evidence payload)
+                                            (select-keys payload
+                                                         [:command-own-exit
+                                                          :outcome
+                                                          :failure-account]))
+                             :typed-submission submission))
+                    job)
+              validated (if (and (fn? terminal-submission-provider)
+                                 (nil? submission))
+                          {:ok false :error/code :live-job-submission-missing
+                           :findings [:typed-submission-missing]}
+                          (terminal-validator active-request (:ticket state) job))]
           (if (:ok validated)
             (let [provided (receipt-provider active-request (:ticket state)
                                              job validated)]
@@ -145,8 +171,17 @@
                         (if-not (:ok (persist-fn next-state))
                           {:ok false
                            :error/code :live-job-terminal-repair-persistence-failed}
-                          (let [activated (activate-fn repair-request
-                                                       (:ticket announced))]
+                          (let [registered (if (fn? ticket-register-fn)
+                                             (ticket-register-fn
+                                              repair-request (:ticket announced))
+                                             {:ok true})
+                                activated (when (:ok registered)
+                                            (activate-fn repair-request
+                                                         (:ticket announced)))]
+                            (if-not (:ok registered)
+                              {:ok false
+                               :error/code :live-job-submission-authority-registration-failed
+                               :state next-state :finding registered}
                             (if-not (:ok activated)
                               {:ok false :error/code :live-job-activation-failed
                                :state next-state :finding activated}
@@ -157,4 +192,4 @@
                                    :repair? true :state accepted}
                                   {:ok false
                                    :error/code :live-job-activation-acceptance-persistence-failed
-                                   :state next-state})))))))))))))))))
+                                   :state next-state}))))))))))))))))))

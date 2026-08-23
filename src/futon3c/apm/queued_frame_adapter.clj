@@ -19,6 +19,8 @@
 
 (def default-artifacts
   {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+   :typed-completion
+   "holes/labs/M-apm-demonstration/role-cards/typed-completion-v1.md"
    :solver "holes/labs/M-apm-demonstration/role-cards/codex-solver-v5.md"
    :student "holes/labs/M-apm-demonstration/role-cards/zai-student-v2.md"
    :guide "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.1.md"

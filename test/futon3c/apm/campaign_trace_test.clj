@@ -27,7 +27,11 @@
             :claim-persisted true :receipt-persisted true
             :resumed-job-id (str "job-" ordinal)
             :client-timeout-observed false
-            :timeout-treated-as-success false})
+            :timeout-treated-as-success false
+            :submission-registered true :submission-persisted true
+            :submission-schema-valid true :submission-authority-derived true
+            :conversation-used-as-receipt false
+            :submission-job-id (str "job-" ordinal)})
          (range 11)
          (map vector
               [:registered :preflight :solve :verify :promote-solver
@@ -106,7 +110,11 @@
                   :command-own-exit (:command-own-exit step)
                   :resumed-id (:resumed-job-id step)
                   :client-timeout-observed? true
-                  :timeout-treated-as-success? false}}]
+                  :timeout-treated-as-success? false
+                  :submission {:registered? true :persisted? true
+                               :schema-valid? true :authority-derived? true
+                               :conversation-used-as-receipt? false
+                               :job-id (:job-id step)}}}]
           :closed false :terminal-ledger-digest (:ledger-after step)})]
     (is (= true (get-in projected ["steps" 0 "clientTimeoutObserved"])))
     (is (= false (get-in projected ["steps" 0 "timeoutTreatedAsSuccess"])))

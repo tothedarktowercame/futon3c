@@ -20,6 +20,12 @@
    :persist-receipt true
    :restart-same-job true
    :typed-terminal-output-required true
+   :typed-role-submission-tool-required true
+   :submission-authority-controller-owned true
+   :submission-persisted-before-advance true
+   :conversation-is-receipt-authority false
+   :submission-conflict-policy "reject"
+   :submission-covered-role-count 7
    :terminal-output-repair-attempts 1
    :repair-feedback-findings-required true
    :client-timeout-is-success false})
