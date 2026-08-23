@@ -1,6 +1,7 @@
 (ns futon3c.apm.live-promotion
   "Durable two-seat promotion dispatcher."
-  (:require [futon3c.apm.campaign-machine :as machine]
+  (:require [clojure.edn :as edn]
+            [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.job-port :as job-port]
@@ -16,6 +17,22 @@
 (declare drive!)
 
 (def ^:private max-deposit-attempts 3)
+
+(defn- submitted-report [typed]
+  (let [payload (:payload typed)
+        evidence (:evidence payload)
+        encoded (:receipt evidence)
+        receipt (cond
+                  (map? encoded) encoded
+                  (string? encoded)
+                  (try
+                    (let [parsed (edn/read-string encoded)]
+                      (when (map? parsed) parsed))
+                    (catch Throwable _ nil))
+                  :else nil)]
+    (merge (:authority typed) evidence receipt
+           (select-keys payload
+                        [:command-own-exit :outcome :failure-account]))))
 
 (defn- normalize-review-report [report expected-digest expected-base-blob]
   (let [reviews (or (:reviews report) (:promotion-reviews report))
@@ -82,11 +99,7 @@
     ([job-id]
      (let [job (job-port/observe agency-base job-id)
            typed (submission/submitted job-id)
-           report (when typed
-                    (merge (:authority typed) (:evidence (:payload typed))
-                           (select-keys (:payload typed)
-                                        [:command-own-exit :outcome
-                                         :failure-account])))]
+           report (when typed (submitted-report typed))]
        (if (contains? #{:done :failed :timeout :cancelled} (:state job))
          (if (and (= :done (:state job)) (map? report))
            {:ok true :job job-id :report report}

@@ -21,6 +21,20 @@
       (is (nil? (get-in result [:dispatch :registered])))
       (is (nil? (get-in result [:dispatch :activated]))))))
 
+(deftest typed-evidence-receipt-is-expanded-before-promotion-validation
+  (let [report (#'sut/submitted-report
+                {:authority {:frame-id "f27" :role :scribe}
+                 :payload {:command-own-exit 0 :outcome "deposited"
+                           :failure-account []
+                           :evidence
+                           {:receipt
+                            "{:depositor \"f27-scribe\" :candidates [{:memory-id \"m\"}] :lanes []}"}}})]
+    (is (= "f27-scribe" (:depositor report)))
+    (is (= [{:memory-id "m"}] (:candidates report)))
+    (is (= [] (:lanes report)))
+    (is (= "f27" (:frame-id report)))
+    (is (= 0 (:command-own-exit report)))))
+
 (deftest relative-frozen-card-path-is-resolved-against-control-root
   (is (= "/control/holes/cards/scribe-v3.md"
          (sut/resolved-role-card-path
