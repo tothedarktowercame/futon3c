@@ -66,9 +66,13 @@
           {:ok false :error/code :workspace-provision-git-failed
            :finding {:exit (:exit added) :stderr (:err added)}}
           (try
-            (Files/createSymbolicLink (.resolve workspace ".lake")
-                                      (canonical substrate-path)
-                                      (make-array FileAttribute 0))
+            (let [local-lake (.resolve workspace ".lake")
+                  copied (shell/sh "cp" "-a" "--reflink=auto"
+                                   (str (canonical substrate-path) "/.")
+                                   (str local-lake))]
+              (when-not (zero? (:exit copied))
+                (throw (ex-info "isolated substrate copy failed"
+                                {:exit (:exit copied) :stderr (:err copied)}))))
             (let [body {:workspace/id nil
                         :workspace/path (str workspace)
                         :repository/path (str repository)
@@ -77,7 +81,8 @@
                         :problem/blob (:blob problem) :frame/id frame-id :role role
                         :created-at (str (or now (Instant/now)))
                         :retention/state :provisioned
-                        :substrate/path (str (canonical substrate-path))}
+                        :substrate/path (str (.resolve workspace ".lake"))
+                        :substrate/source (str (canonical substrate-path))}
                   lease (assoc body :workspace/id (address (dissoc body :workspace/id)))]
               {:ok true :lease lease})
             (catch Throwable t
@@ -106,10 +111,7 @@
                          (:problem/blob lease))
          lake-link (.resolve workspace ".lake")
          substrate (canonical (:substrate/path lease))
-         link-target (when (Files/isSymbolicLink lake-link)
-                       (canonical (.resolve (.getParent lake-link)
-                                            (Files/readSymbolicLink lake-link))))
-         manifest-path (.resolve substrate "../lake-manifest.json")
+         manifest-path (.resolve workspace "lake-manifest.json")
          manifest-readable? (Files/isRegularFile (.normalize manifest-path)
                                                  (make-array LinkOption 0))
          probe (if probe-fn
@@ -124,12 +126,14 @@
                     (conj :workspace-head-mismatch)
                     (not clean?) (conj :workspace-dirty)
                     (not= expected-blob blob) (conj :workspace-problem-blob-mismatch)
-                    (not= substrate link-target) (conj :workspace-substrate-link-mismatch)
+                    (Files/isSymbolicLink lake-link) (conj :workspace-substrate-not-isolated)
+                    (not= substrate (canonical lake-link))
+                    (conj :workspace-substrate-path-mismatch)
                     (not manifest-readable?) (conj :workspace-substrate-manifest-missing)
                     (not (zero? (:exit probe))) (conj :workspace-probe-failed))]
      {:valid? (empty? findings) :findings findings :head head :branch branch
       :worktree-clean? clean? :problem/blob blob :probe/exit (:exit probe)
-      :substrate/path (some-> link-target str)})))
+      :substrate/path (some-> substrate str)})))
 
 (defn- atomic-edn! [target value]
   (let [target (canonical target) directory (.getParent target)]

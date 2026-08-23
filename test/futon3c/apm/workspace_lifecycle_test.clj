@@ -4,7 +4,7 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.workspace-lifecycle :as sut])
-  (:import [java.nio.file Files]
+  (:import [java.nio.file Files Path]
            [java.nio.file.attribute FileAttribute]
            [java.time Instant]))
 
@@ -58,6 +58,10 @@
                               :receipt-directory receipt-dir
                               :now (Instant/parse "2026-08-21T00:01:00Z")})]
     (is (:ok provisioned))
+    (is (false? (Files/isSymbolicLink
+                 (.resolve (Path/of (:workspace/path lease)
+                                    (make-array String 0)) ".lake"))))
+    (is (not= (str lake) (:substrate/path lease)))
     (is (:valid? validation) (pr-str (:findings validation)))
     (is (:ok retired))
     (is (:path-absent? retired))
