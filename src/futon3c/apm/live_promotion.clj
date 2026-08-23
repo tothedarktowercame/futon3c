@@ -75,7 +75,10 @@
                          :mode "work" :job-id job-id}))]
        (if (and (:ok announced) (:ok activated))
          {:ok true :job job-id}
-         {:ok false :error/code :promotion-stage-dispatch-failed})))
+         {:ok false :error/code :promotion-stage-dispatch-failed
+          :dispatch {:announced announced
+                     :registered registered
+                     :activated activated}})))
     ([job-id]
      (let [job (job-port/observe agency-base job-id)
            typed (submission/submitted job-id)

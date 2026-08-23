@@ -1,6 +1,25 @@
 (ns futon3c.apm.live-promotion-test
   (:require [clojure.test :refer [deftest is]]
-            [futon3c.apm.live-promotion :as sut]))
+            [futon3c.apm.job-port :as job-port]
+            [futon3c.apm.live-promotion :as sut]
+            [futon3c.apm.typed-role-submission :as submission]))
+
+(deftest dispatch-failure-retains-the-failing-boundary
+  (with-redefs [job-port/announce!
+                (constantly {:ok false :error/code :announcement-refused})
+                submission/register!
+                (fn [& _] (throw (ex-info "must not register" {})))
+                job-port/activate!
+                (fn [& _] (throw (ex-info "must not activate" {})))]
+    (let [stage (#'sut/agency-stage
+                 "http://agency" {:agent-id "scribe" :submission/job-id "job"}
+                 "prompt")
+          result (stage)]
+      (is (= :promotion-stage-dispatch-failed (:error/code result)))
+      (is (= :announcement-refused
+             (get-in result [:dispatch :announced :error/code])))
+      (is (nil? (get-in result [:dispatch :registered])))
+      (is (nil? (get-in result [:dispatch :activated]))))))
 
 (deftest relative-frozen-card-path-is-resolved-against-control-root
   (is (= "/control/holes/cards/scribe-v3.md"
