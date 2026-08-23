@@ -89,6 +89,10 @@
                             "\nReturn exactly one parseable EDN map and no prose. "
                             "It must contain string :depositor and non-empty vector "
                             ":candidates and a complete vector :lanes report. "
+                            "Each required lane (:solve, :arc, :trajectory, :challenge) "
+                            "must occur exactly once as {:lane <keyword> :status one-of "
+                            "#{:ran :ran-empty :not-run} :reason <nonblank string when "
+                            "status is not :ran>}; do not encode status as a map key. "
                             "Every candidate must contain string "
                             ":memory-id, string :content-digest, vector :pattern-ids, "
                             "and vector :source-attempts. EDN does not concatenate "
@@ -105,6 +109,12 @@
                                "\nThe previous response failed the EDN linter: "
                                (pr-str (select-keys value
                                                     [:error/code :report/error]))
+                               (when (seq (:findings value))
+                                 (str "\nThe parsed map failed the typed contract: "
+                                      (pr-str (:findings value))
+                                      ". Required lane shape is {:lane <keyword> "
+                                      ":status one-of #{:ran :ran-empty :not-run} "
+                                      ":reason <nonblank string when status is not :ran>}."))
                                "\nRepair only the serialization/shape and return the complete map."))))))
         review-fn
         (fn
@@ -151,8 +161,12 @@
                                      :report-edn-lint-failed}
                                    (get-in failure [:report/error :error/code]))
         format-repairs (or (:format-repairs state) 0)
-        format-repair? (and format-failure? (zero? format-repairs))]
-    (if (and (>= attempt max-deposit-attempts) (not format-repair?))
+        format-repair? (and format-failure? (zero? format-repairs))
+        schema-failure? (= [:lane-report-invalid] (:findings failure))
+        schema-repairs (or (:schema-repairs state) 0)
+        schema-repair? (and schema-failure? (zero? schema-repairs))
+        boundary-repair? (or format-repair? schema-repair?)]
+    (if (and (>= attempt max-deposit-attempts) (not boundary-repair?))
       (assoc failure :error/code :promotion-deposit-retries-exhausted
              :attempts attempt)
       (let [retry (deposit-fn failure)]
@@ -161,9 +175,11 @@
           (let [next-state
                 (-> state
                     (assoc :job (:job retry)
-                           :attempt (if format-repair? attempt (inc attempt)))
+                           :attempt (if boundary-repair? attempt (inc attempt)))
                     (cond-> format-repair?
-                      (assoc :format-repairs (inc format-repairs)))
+                      (assoc :format-repairs (inc format-repairs))
+                      schema-repair?
+                      (assoc :schema-repairs (inc schema-repairs)))
                     (update :failed-attempts (fnil conj [])
                             {:attempt attempt :job (:job state)
                              :failure (select-keys failure

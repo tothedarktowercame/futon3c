@@ -109,6 +109,30 @@
     (is (= 3 (:attempt @saved)))
     (is (= 1 (:format-repairs @saved)))))
 
+(deftest final-attempt-gets-one-typed-lane-shape-repair
+  (let [saved (atom nil) feedback (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "parseable-wrong-shape" :attempt 3
+                         :format-repairs 1}
+                 :deposit-fn (fn
+                               ([value]
+                                (if (string? value)
+                                  {:ok true :report
+                                   {:depositor "scribe"
+                                    :candidates [{:memory-id "m" :content-digest "d"
+                                                  :pattern-ids []}]
+                                    :lanes [{:lane :solve :ran true}]}}
+                                  (do (reset! feedback value)
+                                      {:ok true :job "schema-repair"})))
+                               ([] (throw (ex-info "feedback required" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "schema-repair" (:job-id result)))
+    (is (= [:lane-report-invalid] (:findings @feedback)))
+    (is (= 3 (:attempt @saved)))
+    (is (= 1 (:schema-repairs @saved)))))
+
 (deftest pinned-proctor-review-shape-normalizes-only-with-exact-digest
   (let [normalize #'sut/normalize-review-report
         reviews [{:memory-id "m" :reviewer "proctor" :verdict :reject
