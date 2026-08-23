@@ -106,6 +106,9 @@
         (is (= :closed (:receipt/ruling receipt)))
         (is (= source (:source-head request)))
         (is (not= base (ref-head repo "trunk")))
+        (is (str/blank? (:out (git repo "status" "--porcelain")))
+            "bank advances history, index, and visible files together")
+        (is (str/includes? (slurp (io/file repo "Main.lean")) "trivial"))
         (is (= {:previous-classification "partial"
                 :classification "solved"
                 :previous-sorry-count 1

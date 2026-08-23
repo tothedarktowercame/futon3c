@@ -267,9 +267,16 @@
                                 :else
                                 (let [candidate-head
                                       (output (git run-fn candidate "rev-parse" "HEAD"))
-                                      publish (git run-fn repository "update-ref"
-                                                   (str "refs/heads/" trunk-branch)
-                                                   candidate-head trunk-head)]
+                                      ;; Advance through the checked-out trunk,
+                                      ;; not by moving its ref behind Git's
+                                      ;; back. update-ref changes history while
+                                      ;; leaving the index and visible files at
+                                      ;; the old tree, which makes the next lane
+                                      ;; cycle observe stale corpus contents.
+                                      ;; merge --ff-only updates all three
+                                      ;; together and refuses dirty/racing state.
+                                      publish (git run-fn repository "merge"
+                                                   "--ff-only" candidate-head)]
                                   (if-not (success? publish)
                                     (refuse request :bank-trunk-advance-failed
                                             (command-finding
