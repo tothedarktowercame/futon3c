@@ -14,7 +14,9 @@
      (machine/ledger-digest [(dissoc receipt id-key)])))
 
 (defn validate-terminal [frame receipt]
-  (let [findings
+  (let [progress-retry? (and (= :partial (:problem/outcome receipt))
+                             (= :partial (:frame/result receipt)))
+        findings
         (cond-> []
           (not= :frame-terminal (:receipt/type receipt))
           (conj :terminal-receipt-type-invalid)
@@ -34,9 +36,16 @@
                (= :partial (:frame/result receipt))
                (not= :partially-observed (:learning/outcome receipt)))
           (conj :terminal-solved-partial-learning-invalid)
-          (not (and (string? (:verify-receipt/id receipt))
-                    (re-matches #"[0-9a-f]{64}" (:verify-receipt/id receipt))))
+          (and (not progress-retry?)
+               (not (and (string? (:verify-receipt/id receipt))
+                         (re-matches #"[0-9a-f]{64}"
+                                     (:verify-receipt/id receipt)))))
           (conj :terminal-verify-receipt-invalid)
+          (and progress-retry?
+               (not (and (string? (:solver-progress-receipt/id receipt))
+                         (re-matches #"[0-9a-f]{64}"
+                                     (:solver-progress-receipt/id receipt)))))
+          (conj :terminal-solver-progress-receipt-invalid)
           (not (and (string? (get-in receipt [:solver :branch]))
                     (string? (get-in receipt [:solver :head]))
                     (re-matches #"[0-9a-f]{40}"
@@ -54,12 +63,19 @@
        :findings (conj findings :terminal-workspace-heads-invalid)})))
 
 (defn build-problem-bank [frame terminal]
-  (let [body {:receipt/type :queued-problem-bank
+  (let [progress-retry? (and (= :partial (:problem/outcome terminal))
+                             (= :partial (:frame/result terminal)))
+        body {:receipt/type (if progress-retry?
+                              :queued-solver-progress-bank
+                              :queued-problem-bank)
               :frame/id (:frame/id frame) :problem/id (:problem/id frame)
               :problem/outcome (:problem/outcome terminal)
               :frame/result (:frame/result terminal)
               :learning/outcome (:learning/outcome terminal)
               :verify-receipt/id (:verify-receipt/id terminal)
+              :solver-progress-receipt/id
+              (:solver-progress-receipt/id terminal)
+              :retry/same-problem? progress-retry?
               :source/terminal-receipt-id (:receipt/id terminal)
               :solver/branch (get-in terminal [:solver :branch])
               :solver/head (get-in terminal [:solver :head])

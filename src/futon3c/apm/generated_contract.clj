@@ -97,6 +97,9 @@
    :learning-outcome-required true
    :solved-partial-bankable true
    :bankable-solved-successor-eligible true
+   :unsolved-partial-retry-same-problem true
+   :retry-requires-retained-solver-head true
+   :retry-does-not-advance-problem-queue true
    :close-result-wire-canonicalization true
    :missing-observation-receipt-type "student-observation-missing"
    :missing-observation-author "controller"

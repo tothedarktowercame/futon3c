@@ -62,6 +62,23 @@
     (is (= :partially-observed (:learning/outcome bank)))
     (is (not= :closed (:frame/result bank)))))
 
+(deftest frozen-f26-shaped-unsolved-partial-is-a-retry-not-a-solved-bank
+  (let [frame {:frame/id "fixture-f26" :problem/id "m94A03"}
+        body {:receipt/type :frame-terminal :frame/id (:frame/id frame)
+              :problem/id (:problem/id frame) :frame/result :partial
+              :problem/outcome :partial :learning/outcome :skipped
+              :solver-progress-receipt/id digest
+              :solver {:branch "exp/countdown-f26-m94A03-solver" :head head}
+              :workspace/terminal-heads {:solver head :student head}}
+        terminal (assoc body :receipt/id (machine/ledger-digest [body]))
+        checked (sut/validate-terminal frame terminal)
+        bank (sut/build-problem-bank frame terminal)]
+    (is (:ok checked))
+    (is (= :queued-solver-progress-bank (:receipt/type bank)))
+    (is (true? (:retry/same-problem? bank)))
+    (is (= :partial (:problem/outcome bank)))
+    (is (nil? (:verify-receipt/id bank)))))
+
 (deftest invalid-terminal-evidence-performs-no-effects
   (let [calls (atom [])
         frame {:frame/id "f40" :problem/id "p0"}
