@@ -29,7 +29,7 @@
 (def corpus-root "/home/joe/code/apm-lean")
 (def frames-root "/home/joe/code/apm-frames")
 (def agency-base "http://localhost:7070")
-(def state-root "/home/joe/code/futon3c-frame18-control/data/apm-lane")
+(def state-root "/home/joe/code/futon3c/data/apm-lane")
 
 (defn- env [k default] (or (System/getenv k) default))
 

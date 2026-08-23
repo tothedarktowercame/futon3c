@@ -376,7 +376,7 @@
   it to read the card `in the workspace` sends it to a path that cannot exist,
   and it proceeds without the contract it was supposed to be reading. The
   prompt must therefore name the card absolutely."
-  "/home/joe/code/futon3c-frame18-control")
+  "/home/joe/code/futon3c")
 
 (def lane-mutation-allowlist-text
   "What the solver is permitted to commit, stated in the prompt.
