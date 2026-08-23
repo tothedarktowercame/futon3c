@@ -113,6 +113,16 @@
             verify-receipt {:receipt/id (apply str (repeat 64 "b"))
                             :receipt/final-head (apply str (repeat 40 "a"))}]
         (is (:ok first-launch) (pr-str first-launch))
+        (testing "the persisted config rehydrates tagged Path authority"
+          (let [resumed (sut/resume-config
+                         {:state-root (:state-root fixture)
+                          :problem-id problem-id
+                          :revision (get-in config [:unit :problem :revision])
+                          :outcome-fn (:outcome-fn config)})]
+            (is (= (dissoc config :outcome-fn)
+                   (dissoc resumed :outcome-fn)))
+            (is (every? #(instance? java.nio.file.Path %)
+                        (vals (:state-paths resumed))))))
         (doseq [kind [:preflight :solve :verify]]
           (let [result (phase-inputs
                         {:kind kind :problem-id problem-id

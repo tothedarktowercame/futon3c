@@ -9,7 +9,8 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.library-lane-adapters :as adapters]
             [futon3c.apm.library-lane-runner :as runner]
-            [futon3c.apm.live-launch-preparation :as preparation]))
+            [futon3c.apm.live-launch-preparation :as preparation])
+  (:import [java.nio.file Path]))
 
 (def phase-actions
   {:preflight {:timeouts
@@ -127,9 +128,29 @@
   (try
     (let [f (config-path state-root frame-id)]
       (io/make-parents f)
-      (spit f (pr-str (dissoc config :outcome-fn)))
+      (spit f (pr-str (-> (dissoc config :outcome-fn)
+                          (update :state-paths
+                                  #(update-vals % str)))))
       true)
     (catch Throwable _ false)))
+
+(defn- read-persisted-config [f]
+  (or (try (edn/read-string (slurp f))
+           (catch Throwable _ nil))
+      ;; Compatibility for configs written before state paths were normalized
+      ;; to strings. Those contain the registered #xt/path tagged literal.
+      (try (binding [*read-eval* false] (read-string (slurp f)))
+           (catch Throwable _ nil))))
+
+(defn- rehydrate-config [config outcome-fn]
+  (when config
+    (cond-> (update config :state-paths
+                    #(update-vals % (fn [path]
+                                      (if (instance? Path path)
+                                        path
+                                        (Path/of (str path)
+                                                 (make-array String 0))))))
+      (fn? outcome-fn) (assoc :outcome-fn outcome-fn))))
 
 (defn resume-config
   "Return the persisted launch config for PROBLEM-ID, or nil.
@@ -145,8 +166,7 @@
       (let [f (config-path state-root (:frame-id frame))]
         (when (.isFile f)
           (try
-            (cond-> (edn/read-string (slurp f))
-              (fn? outcome-fn) (assoc :outcome-fn outcome-fn))
+            (rehydrate-config (read-persisted-config f) outcome-fn)
             (catch Throwable _ nil)))))))
 
 (defn launch!
