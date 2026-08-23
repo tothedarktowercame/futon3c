@@ -126,8 +126,10 @@
                (not= (:certified-final-head request) (:final-head report)))
           (conj :verify-final-head-mismatch)
           (not (true? (:statement-unchanged? report))) (conj :statement-changed)
-          (not= {:exit 0 :warnings 0 :sorry-warnings 0 :errors 0}
-                (select-keys lean [:exit :warnings :sorry-warnings :errors]))
+          (not (and (= 0 (:exit lean))
+                    (= 0 (:sorry-warnings lean))
+                    (= 0 (:errors lean))
+                    (nat-int? (:warnings lean))))
           (conj :lean-proof-invalid)
           (not (set/subset? (set (:axioms report)) permitted-axioms))
           (conj :axioms-not-permitted)
