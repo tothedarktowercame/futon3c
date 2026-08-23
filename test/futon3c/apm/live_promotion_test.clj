@@ -2,6 +2,14 @@
   (:require [clojure.test :refer [deftest is]]
             [futon3c.apm.live-promotion :as sut]))
 
+(deftest relative-frozen-card-path-is-resolved-against-control-root
+  (is (= "/control/holes/cards/scribe-v3.md"
+         (sut/resolved-role-card-path
+          "/control" {:role-card-path "holes/cards/scribe-v3.md"})))
+  (is (= "/frozen/scribe-v3.md"
+         (sut/resolved-role-card-path
+          "/control" {:role-card-path "/frozen/scribe-v3.md"}))))
+
 (deftest deposit-review-publish-is-durable-and-ordered
   (let [saved (atom nil) calls (atom [])
         candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]

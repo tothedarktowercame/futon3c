@@ -694,6 +694,7 @@
       (if (= :promote-solver (:phase action))
         (live-promotion/run-live!
          {:state-path (:state-path phase-inputs)
+          :control-root (str *control-root*)
           :deposit-request (:request phase-inputs)
           :reviewer-request (promotion-review-request phase-inputs)
           :publish-fn #(publish-promotion! phase-inputs %)})

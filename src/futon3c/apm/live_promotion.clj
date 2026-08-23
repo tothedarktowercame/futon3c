@@ -4,6 +4,15 @@
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.promotion-pipeline :as pipeline]))
 
+(defn resolved-role-card-path [control-root request]
+  (let [path (:role-card-path request)
+        file (when (string? path) (java.io.File. path))]
+    (cond
+      (nil? file) nil
+      (.isAbsolute file) (.getCanonicalPath file)
+      (string? control-root) (.getCanonicalPath (java.io.File. control-root path))
+      :else path)))
+
 (declare drive!)
 
 (def ^:private max-deposit-attempts 3)
@@ -67,12 +76,15 @@
          {:ok true :status :awaiting-terminal :job job-id})))))
 
 (defn run-live!
-  [{:keys [state-path agency-base deposit-request reviewer-request
+  [{:keys [state-path agency-base control-root deposit-request reviewer-request
            publish-fn]
     :or {agency-base "http://localhost:7070"}}]
   (let [state (runtime/read-state state-path)
+        deposit-card-path (resolved-role-card-path control-root deposit-request)
         deposit-prompt (str "Deposit promotion candidates. Authority:\n"
                             (pr-str deposit-request)
+                            "\nRead and follow the frozen role card at " deposit-card-path
+                            " (blob " (:role-card-blob deposit-request) ")."
                             "\nReturn exactly one parseable EDN map and no prose. "
                             "It must contain string :depositor and non-empty vector "
                             ":candidates and a complete vector :lanes report. "
@@ -89,6 +101,9 @@
                                 :candidate-set-digest digest)
                  prompt (str "Independently review this exact candidate set. Authority:\n"
                              (pr-str request)
+                             "\nRead and follow the frozen role card at "
+                             (resolved-role-card-path control-root request)
+                             " (blob " (:role-card-blob request) ")."
                              "\nFollow the pinned promotion Proctor card and return exactly one EDN map. "
                              "Persist each approval's evidence body with nonblank "
                              ":review/reason and :review/residual fields; return the "
@@ -99,7 +114,10 @@
                  request (assoc reviewer-request :candidates candidates
                                 :candidate-set-digest digest)
                  prompt (str "Independently review this exact candidate set. Authority:\n"
-                             (pr-str request))
+                             (pr-str request)
+                             "\nRead and follow the frozen role card at "
+                             (resolved-role-card-path control-root request)
+                             " (blob " (:role-card-blob request) ").")
                  result ((agency-stage agency-base request prompt) job-id)]
              (if (:report result)
                (let [normalized (normalize-review-report
