@@ -30,7 +30,12 @@
   [{:keys [now coordinator coordinator-age-seconds transition publication
            phase-state agent max-heartbeat-age-seconds]}]
   (let [operation (:operation transition)
-        waiting? (= :waiting-for-terminal-result (:status operation))
+        complete? (and (= :complete (:regulator/status coordinator))
+                       (true? (get-in coordinator [:regulator/last-result :ok]))
+                       (= :frame-complete
+                          (get-in coordinator [:regulator/last-result :status])))
+        waiting? (and (not complete?)
+                      (= :waiting-for-terminal-result (:status operation)))
         request (:request phase-state)
         ticket (:ticket phase-state)
         timeout-ms (:turn-timeout-ms request)
@@ -39,7 +44,7 @@
         transition-age (age-seconds now (:event/observed-at transition))
         findings
         (cond-> []
-          (not= :running (:regulator/status coordinator))
+          (not (or (= :running (:regulator/status coordinator)) complete?))
           (conj (finding :coordinator-running :coordinator-not-running
                          {:observed (:regulator/status coordinator)}))
           (> coordinator-age-seconds max-heartbeat-age-seconds)

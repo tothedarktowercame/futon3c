@@ -64,3 +64,14 @@
       (let [result (watchdog/evaluate (mutation healthy))]
         (is (= :alert (:watch/status result)))
         (is (contains? (codes result) code))))))
+
+(deftest certified-completion-does-not-require-a-retired-role-job
+  (let [completed (-> healthy
+                      (assoc-in [:coordinator :regulator/status] :complete)
+                      (assoc-in [:coordinator :regulator/last-result]
+                                {:ok true :status :frame-complete})
+                      (assoc :phase-state {:state/type :live-job-certified}
+                             :agent {:ok false}))
+        result (watchdog/evaluate completed)]
+    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))))
