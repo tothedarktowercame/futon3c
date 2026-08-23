@@ -12,6 +12,7 @@
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.generated-contract :as generated-contract]
+            [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
@@ -143,6 +144,14 @@
 (defn- control-path [path]
   (let [candidate (Path/of (str path) (make-array String 0))]
     (if (.isAbsolute candidate) candidate (.resolve *control-root* candidate))))
+
+(defn- dispatch-card [card]
+  (let [checked (authority-port/require-path
+                 {:control-root (str *control-root*)}
+                 :role-card (:path card))]
+    (if (:ok checked)
+      {:ok true :card (assoc card :path (:path checked))}
+      checked)))
 
 (defn- inputs []
   (let [manifest (edn/read-string (slurp (str (control-path manifest-path))))
@@ -476,14 +485,17 @@
                   "GET" (str "http://localhost:7070/api/alpha/agents/"
                              frame-id "-proctor"))
         agent (:agent response)
-        metadata (:metadata agent)]
-    {:contract contract
+        metadata (:metadata agent)
+        card (dispatch-card (get-in manifest [:apparatus :artifacts :proctor]))]
+    (if-not (:ok card)
+      card
+      {:contract contract
      :inputs
      {:ledger {:version (:campaign/version projection)
                :digest (:ledger/digest projection)
                :phase (get-in projection [:active/frame :phase])
                :claim (:active/claim projection)}
-      :unit unit :role-card (get-in manifest [:apparatus :artifacts :proctor])
+      :unit unit :role-card (:card card)
       :seat {:agent-id (:agent-id response) :type (some-> (:type agent) keyword)
              :frame-id (:frame-id metadata) :invoke-ready? (:invoke-ready? agent)}
       :timeouts {:request-timeout-ms
@@ -493,7 +505,7 @@
                                   (get-in metadata
                                           [:effective-timeouts
                                            :turn-timeout-ms]))}}
-     :state-path (control-path preflight-state-path)}))
+     :state-path (control-path preflight-state-path)})))
 
 (defn run-live-preflight! []
   (live-preflight-runtime/run-live! (live-preflight-inputs)))
@@ -515,6 +527,11 @@
         projection (:projection (ledger/read-ledger (control-path ledger-path)))
         solve-state (live-preflight-runtime/read-state
                      (state-path-for (:frame/id unit) :solve))
+        card (dispatch-card (get-in manifest [:apparatus :artifacts role]))
+        checkpoint-card (when (= :solve kind)
+                          (dispatch-card
+                           (get-in manifest [:apparatus :artifacts
+                                             :solver-restrategize])))
         built (live-proof-phases/build-request
                {:kind kind
                 :action (assoc action :timeouts
@@ -526,19 +543,21 @@
                          :digest (:ledger/digest projection)
                          :phase (get-in projection [:active/frame :phase])
                          :claim (:active/claim projection)}
-                :unit unit :role-card (get-in manifest [:apparatus :artifacts role])
+                :unit unit :role-card (:card card)
                 :checkpoint-role-card
-                (when (= :solve kind)
-                  (get-in manifest [:apparatus :artifacts :solver-restrategize]))
+                (:card checkpoint-card)
                 :terminal-budget (get (generated-terminal-budgets contract) role)
                 :seat {:agent-id (:agent-id response)
                        :type (some-> (:type agent) keyword)
                        :frame-id (:frame-id metadata)
                        :invoke-ready? (:invoke-ready? agent)}
                 :workspace workspace :solve-receipt (:receipt solve-state)})]
-    (if-not (:ok built)
+    (cond
+      (not (:ok card)) card
+      (and checkpoint-card (not (:ok checkpoint-card))) checkpoint-card
+      (not (:ok built))
       built
-      {:ok true :kind kind :contract contract :request (:request built)
+      :else {:ok true :kind kind :contract contract :request (:request built)
        :terminal-budget (get (generated-terminal-budgets contract) role)
        :max-rounds (generated-bound contract :solver-max-rounds 50)
        :state-path (state-path-for (:frame/id unit) kind)})))))
@@ -583,10 +602,11 @@
             :expected (:receipt/snapshot-digest promotion)
             :frame-id (:frame/id unit) :problem-id (:problem/id unit)
             :accessible-memory-ids (:receipt/reviewed-memory-ids promotion)}))
+        card (dispatch-card (get-in manifest [:apparatus :artifacts role]))
         built (live-learning-phases/build-request
                {:contract contract :action action
                 :ledger {:digest (:ledger/digest projection)} :unit unit
-                :role-card (get-in manifest [:apparatus :artifacts role])
+                :role-card (:card card)
                 :seat {:agent-id (:agent-id response)
                        :type (some-> (:type agent) keyword)
                        :frame-id (:frame-id metadata)
@@ -597,6 +617,7 @@
                 :turn-timeout-ms (generated-bound
                                   contract :seat-turn-timeout-ms 3600000)})]
     (cond
+      (not (:ok card)) card
       (and existing (map? (:request existing)))
       {:ok true :contract contract :action action :receipts receipts
        :manifest manifest :unit unit :preparation preparation
@@ -657,7 +678,10 @@
 
 (defn- promotion-review-request
   [{:keys [manifest unit preparation request]}]
-  (let [card (get-in manifest [:apparatus :artifacts :promotion-proctor])
+  (let [card-result (dispatch-card
+                     (get-in manifest [:apparatus :artifacts
+                                       :promotion-proctor]))
+        card (:card card-result)
         seat (get-in preparation [:seats :promotion-proctor])
         body {:dispatch/type :promotion-review
               :phase :promote-solver
@@ -674,7 +698,9 @@
               :solver-final-head (:solver-final-head request)
               :turn-timeout-ms (get-in preparation
                                        [:seat-policy :turn-timeout-ms])}]
-    (assoc body :dispatch/id (machine/ledger-digest [body]))))
+    (if (:ok card-result)
+      (assoc body :dispatch/id (machine/ledger-digest [body]))
+      card-result)))
 
 (defn- publish-promotion!
   [{:keys [contract action receipts request]}

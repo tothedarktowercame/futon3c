@@ -1,19 +1,17 @@
 (ns futon3c.apm.live-promotion
   "Durable two-seat promotion dispatcher."
   (:require [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.typed-role-submission :as submission]))
 
 (defn resolved-role-card-path [control-root request]
-  (let [path (:role-card-path request)
-        file (when (string? path) (java.io.File. path))]
-    (cond
-      (nil? file) nil
-      (.isAbsolute file) (.getCanonicalPath file)
-      (string? control-root) (.getCanonicalPath (java.io.File. control-root path))
-      :else path)))
+  (let [resolved (authority-port/resolve-path
+                  {:control-root control-root} :control-root :role-card
+                  (:role-card-path request))]
+    (when (:ok resolved) (:path resolved))))
 
 (declare drive!)
 

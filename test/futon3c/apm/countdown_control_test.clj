@@ -30,7 +30,10 @@
                           :input-receipt-ids #{"solve" "verify"}}
                 :manifest {:apparatus {:artifacts
                                        {:promotion-proctor
-                                        {:path "proctor.md" :blob "blob"}}}}
+                                        {:path "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v2.md"
+                                         :blob "blob"}}}}
+                ;; Dispatch authority now existence-checks the card before the
+                ;; reviewer can be invoked.
                 :unit {:frame/id "f22" :problem/id "p22"}
                 :preparation {:seats {:promotion-proctor
                                       {:agent-id "f22-promotion-proctor"}}
@@ -48,7 +51,7 @@
       (is (fn? (:publish-fn @captured))))))
 
 (deftest promotion-resume-reconstructs-authority-when-stage-state-has-no-request
-  (let [manifest {:apparatus {:artifacts {:scribe {:path "scribe.md"
+  (let [manifest {:apparatus {:artifacts {:scribe {:path "holes/labs/M-apm-demonstration/role-cards/scribe-v3.md"
                                                    :blob "scribe-blob"}}}}
         contract {:phases {:promote-solver {:kind :scribe-reduce
                                             :role :scribe
