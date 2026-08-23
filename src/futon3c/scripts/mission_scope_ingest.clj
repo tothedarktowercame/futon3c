@@ -37,6 +37,10 @@
 (def ^:private pattern-library-limit substrate-page-limit)
 (def ^:private !pattern-library-cache (atom nil))
 (def ^:private !entity-cache (atom {}))
+(def ^:private !run-telemetry (atom {}))
+
+(defn- bump-telemetry! [k]
+  (swap! !run-telemetry update k (fnil inc 0)))
 
 (defn- sha1 [s]
   (let [digest (.digest (MessageDigest/getInstance "SHA-1") (.getBytes (str s) "UTF-8"))]
@@ -101,6 +105,7 @@
                          (str base-url "/api/alpha/entity/" (url-encode id-or-name)))
           entity (when (<= 200 (:status resp) 299)
                    (get-in resp [:body :entity]))]
+      (bump-telemetry! (if entity :get-entity-hit-count :get-entity-miss-count))
       ;; Cache nil deliberately: absent exact ids are the common and expensive
       ;; case before `resolve-pattern-node` falls through to the library index.
       (swap! !entity-cache assoc id-or-name entity)
@@ -211,7 +216,8 @@
   []
   (reset! !hyperedge-type-cache {})
   (reset! !pattern-library-cache nil)
-  (reset! !entity-cache {}))
+  (reset! !entity-cache {})
+  (reset! !run-telemetry {}))
 
 (defn- hyperedges-by-type [client base-url hx-type]
   (if-let [cached (get @!hyperedge-type-cache hx-type)]
@@ -458,18 +464,63 @@
    succeeds only when `?end=<candidate>&limit=1` finds substrate evidence."
   [client base-url pattern-ident pattern-ref]
   (when (seq (str pattern-ident))
-    (let [endpoint (flexiarg-endpoint pattern-ref)]
-      (or (get-entity client base-url pattern-ident)
-          (resolve-pattern-library-entity client base-url pattern-ident pattern-ref)
-          (when (seq (str pattern-ref))
-            (get-entity client base-url pattern-ref))
-          (when endpoint
-            (or (get-entity client base-url endpoint)
-                (when (endpoint-exists? client base-url endpoint)
+    (let [endpoint (flexiarg-endpoint pattern-ref)
+          exact (get-entity client base-url pattern-ident)]
+      (cond
+        exact
+        (do (bump-telemetry! :pattern-resolved-by-get-entity-count) exact)
+
+        :else
+        (if-let [library (resolve-pattern-library-entity client base-url
+                                                         pattern-ident pattern-ref)]
+          (do (bump-telemetry! :pattern-resolved-by-library-count) library)
+          (if-let [by-ref (when (seq (str pattern-ref))
+                           (get-entity client base-url pattern-ref))]
+            (do (bump-telemetry! :pattern-resolved-by-get-entity-count) by-ref)
+            (if-let [by-endpoint (when endpoint
+                                   (get-entity client base-url endpoint))]
+              (do (bump-telemetry! :pattern-resolved-by-get-entity-count) by-endpoint)
+              (if (and endpoint (endpoint-exists? client base-url endpoint))
+                (do
+                  (bump-telemetry! :pattern-resolved-by-endpoint-count)
                   {:id endpoint
                    :name pattern-ident
                    :type "pattern/flexiarg"
-                   :endpoint-only? true})))))))
+                   :endpoint-only? true})
+                (do (bump-telemetry! :pattern-unresolved-count) nil)))))))))
+
+(defn- decoded-endpoint [end]
+  (let [candidate (if (and (map? end) (= #{:entity-id} (set (keys end))))
+                    (:entity-id end)
+                    end)]
+    (cond
+      (map? candidate) candidate
+      (string? candidate) (try
+                            (let [decoded (edn/read-string candidate)]
+                              (when (map? decoded) decoded))
+                            (catch Exception _ nil))
+      :else nil)))
+
+(defn- target-pattern-endpoint [h]
+  (some (fn [end]
+          (let [{:keys [role entity-id]} (decoded-endpoint end)]
+            (when (contains? #{:target-pattern "target-pattern"} role)
+              entity-id)))
+        (concat (:hx/ends h) (:hx/endpoints h))))
+
+(defn- record-pattern-edge-plan! [mission scope desired existing]
+  (let [new-target (target-pattern-endpoint desired)
+        old-target (some-> existing target-pattern-endpoint)]
+    (bump-telemetry! (if existing
+                       :pattern-edge-update-count
+                       :pattern-edge-create-count))
+    (when (and existing (not= old-target new-target))
+      (swap! !run-telemetry update :pattern-target-changes (fnil conj [])
+             {:mission mission
+              :scope-id (:scope-id scope)
+              :pattern-ident (:target-pattern-ident scope)
+              :current-target old-target
+              :proposed-target new-target}))))
 
 (defn- filler-ends [ends]
   (remove #(contains? #{"entity" "environment" "heading"} (:role %)) ends))
@@ -1832,7 +1883,12 @@
         linked-sources (atom #{})
         dangling-sources (atom #{})
         linked-patterns (atom #{})
-        dangling-patterns (atom #{})]
+        dangling-patterns (atom #{})
+        existing-pattern-hxs (when (= "pattern" binder-filter)
+                               (into {}
+                                     (map (juxt :hx/id identity))
+                                     (hyperedges-by-type client base-url
+                                                         "mission-scope/pattern")))]
     (doseq [scope scopes]
       (let [scope-entity (ensure-entity! client base-url penholder
                                          (scope-entity-spec mission mission-path scope))
@@ -1898,8 +1954,11 @@
                                            :entity pattern-entity}]))
                                vec)]
         (swap! entity-ids into (map (comp :id :entity) slot-entities))
-        (let [hx (post-hyperedge! client base-url penholder
-                                  (scope-hyperedge mission-entity scope-entity slot-entities scope))]
+        (let [desired-hx (scope-hyperedge mission-entity scope-entity slot-entities scope)
+              _ (when (= "pattern" (:binder-type scope))
+                  (record-pattern-edge-plan! mission scope desired-hx
+                                             (get existing-pattern-hxs (:hx/id desired-hx))))
+              hx (post-hyperedge! client base-url penholder desired-hx)]
           (swap! hx-ids conj (:hx/id hx)))
         (when-let [parent (:parent scope)]
           (when (contains? selected-ids parent)
@@ -2122,7 +2181,13 @@
                           :legacy-hyperedge-retract-count (reduce + (map :legacy-hyperedge-retract-count reports))
                           :legacy-entity-retract-count (reduce + (map :legacy-entity-retract-count reports))
                           :legacy-doc-retract-count (reduce + (map :legacy-doc-retract-count reports))
+                          :stale-hyperedge-retract-count (reduce + (map :stale-hyperedge-retract-count reports))
+                          :stale-entity-retract-count (reduce + (map :stale-entity-retract-count reports))
+                          :stale-doc-retract-count (reduce + (map :stale-doc-retract-count reports))
                           :linked-target-count (reduce + (map :linked-target-count reports))
                           :dangling-target-count (reduce + (map :dangling-target-count reports))
                           :linked-source-count (reduce + (map :linked-source-count reports))
-                          :dangling-source-count (reduce + (map :dangling-source-count reports))}))))))))
+                          :dangling-source-count (reduce + (map :dangling-source-count reports))
+                          :linked-pattern-count (reduce + (map :linked-pattern-count reports))
+                          :dangling-pattern-count (reduce + (map :dangling-pattern-count reports))
+                          :resolution-telemetry @!run-telemetry}))))))))
