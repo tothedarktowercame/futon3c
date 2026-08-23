@@ -1,5 +1,6 @@
 (ns futon3c.apm.live-preflight-runtime-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.java.shell :as shell]
+            [clojure.test :refer [deftest is]]
             [futon3c.apm.live-preflight-runtime :as sut]))
 
 (deftest terminal-job-and-fenced-edn-are-normalized
@@ -17,5 +18,14 @@
   (let [result (sut/parse-report-diagnostic
                 "{:lane \"challenge\" :ran-empty :memory-ids []}")]
     (is (false? (:ok result)))
-    (is (= :report-edn-invalid (:error/code result)))
-    (is (re-find #"even number of forms" (:error/message result)))))
+    (is (= :report-edn-lint-failed (:error/code result)))
+    (is (= 3 (:linter/exit result)))
+    (is (re-find #"missing value for key" (:error/message result)))
+    (is (re-find #"1:" (:error/message result)))))
+
+(deftest linter-unavailability-fails-closed
+  (with-redefs [shell/sh
+                (fn [& _] (throw (java.io.IOException. "missing clj-kondo")))]
+    (let [result (sut/parse-report-diagnostic "{:ok true}")]
+      (is (false? (:ok result)))
+      (is (= :report-edn-linter-unavailable (:error/code result))))))

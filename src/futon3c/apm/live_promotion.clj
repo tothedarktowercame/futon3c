@@ -147,8 +147,9 @@
 (defn- retry-deposit!
   [state failure deposit-fn persist-fn]
   (let [attempt (or (:attempt state) 1)
-        format-failure? (= :report-edn-invalid
-                           (get-in failure [:report/error :error/code]))
+        format-failure? (contains? #{:report-edn-invalid
+                                     :report-edn-lint-failed}
+                                   (get-in failure [:report/error :error/code]))
         format-repairs (or (:format-repairs state) 0)
         format-repair? (and format-failure? (zero? format-repairs))]
     (if (and (>= attempt max-deposit-attempts) (not format-repair?))

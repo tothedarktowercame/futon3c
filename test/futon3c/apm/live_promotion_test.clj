@@ -96,15 +96,15 @@
                                 (if (string? value)
                                   {:ok false
                                    :error/code :promotion-stage-terminal-invalid
-                                   :report/error {:error/code :report-edn-invalid
-                                                  :error/message "even forms"}}
+                                   :report/error {:error/code :report-edn-lint-failed
+                                                  :error/message "1:9 missing value for key"}}
                                   (do (reset! feedback value)
                                       {:ok true :job "format-repair"})))
                                ([] (throw (ex-info "feedback required" {}))))
                  :persist-fn #(do (reset! saved %) {:ok true})})]
     (is (= :awaiting-terminal (:status result)))
     (is (= "format-repair" (:job-id result)))
-    (is (= :report-edn-invalid
+    (is (= :report-edn-lint-failed
            (get-in @feedback [:report/error :error/code])))
     (is (= 3 (:attempt @saved)))
     (is (= 1 (:format-repairs @saved)))))
