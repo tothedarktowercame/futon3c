@@ -253,6 +253,12 @@
 
 (def ^:private server-page-size 1000)
 (def ^:private admission-retries 7)
+(def evidence-request-budget 20)
+
+(defn partial-result?
+  "True when an evidence cursor walk exhausted its client request budget."
+  [entries]
+  (true? (:partial? (meta entries))))
 
 (defn- fetch-page
   [base-url params]
@@ -280,21 +286,51 @@
   response."
   [base-url params]
   (let [requested (get params :query/limit)
-        target (when (and (int? requested) (pos? requested)) requested)]
+        target (when (and (int? requested) (pos? requested)) requested)
+        budget (long (or (:query/request-budget params)
+                         evidence-request-budget))]
     (loop [cursor nil
+           requests 0
            entries []]
-      (let [remaining (when target (- target (count entries)))
-            page-limit (long (min server-page-size (or remaining server-page-size)))
-            page-params (cond-> (assoc params :query/limit page-limit)
-                          cursor (assoc :query/cursor-at (:at cursor)
-                                        :query/cursor-id (:id cursor)))
-            body (fetch-page base-url page-params)
-            entries' (into entries (:entries body))
-            next-cursor (:next-cursor body)]
-        (if (or (nil? next-cursor)
-                (and target (>= (count entries') target)))
-          (if target (vec (take target entries')) entries')
-          (recur next-cursor entries'))))))
+      (if (>= requests budget)
+        (with-meta (vec entries)
+          {:partial? true
+           :next-cursor cursor
+           :requests requests
+           :request-budget budget})
+        (let [remaining (when target (- target (count entries)))
+              page-limit (long (min server-page-size (or remaining server-page-size)))
+              page-params (cond-> (assoc params :query/limit page-limit)
+                            cursor (assoc :query/cursor-at (:at cursor)
+                                          :query/cursor-id (:id cursor)))
+              body (fetch-page base-url page-params)
+              entries' (into entries (:entries body))
+              next-cursor (:next-cursor body)
+              ;; The cursor is the server's authoritative continuation signal.
+              ;; In particular, :incomplete may accompany a short/empty page
+              ;; when post-filtering consumed the 20k-row scan allowance.
+              continue? (boolean next-cursor)
+              result (if target (vec (take target entries')) (vec entries'))]
+          (cond
+            (and target (>= (count entries') target))
+            (cond-> result
+              next-cursor
+              (with-meta {:partial? true
+                          :next-cursor next-cursor
+                          :requests (inc requests)
+                          :request-budget budget}))
+
+            continue?
+            (recur next-cursor (inc requests) entries')
+
+            (:incomplete body)
+            (with-meta result
+              {:partial? true
+               :reason :incomplete-page-without-cursor
+               :requests (inc requests)
+               :request-budget budget})
+
+            :else result))))))
 
 (defn- fresh-cache-entry
   [cache-state key now-ms]
@@ -452,15 +488,21 @@
           ref-types (if subject-ref
                       (subject/readable-ref-types (:ref/type subject-ref))
                       [nil])
-          entries (mapcat
-                   (fn [ref-type]
-                     (fetch-entries
-                      base-url
-                      (cond-> params
-                        ref-type (assoc-in [:query/subject :ref/type]
-                                           ref-type))))
-                   ref-types)]
-      (backend/filter-and-sort-entries entries params)))
+          pages (mapv
+                 (fn [ref-type]
+                   (fetch-entries
+                    base-url
+                    (cond-> params
+                      ref-type (assoc-in [:query/subject :ref/type]
+                                         ref-type))))
+                 ref-types)
+          entries (mapcat identity pages)
+          result (backend/filter-and-sort-entries entries params)
+          partial-pages (filterv partial-result? pages)]
+      (cond-> result
+        (seq partial-pages)
+        (with-meta {:partial? true
+                    :partial-pages (mapv meta partial-pages)}))))
 
   (-count [_ params]
     ;; Futon1b's projected count path implements every supported filter. Never
