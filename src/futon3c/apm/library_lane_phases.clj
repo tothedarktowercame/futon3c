@@ -15,6 +15,7 @@
   shared is the running object -- this lane announces, activates, polls and
   persists through its own driver, so a change here reaches nothing else."
   (:require [clojure.java.shell :as shell]
+            [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-contract :as cycle]
@@ -305,13 +306,28 @@
       strict
       (let [report (proof/normalize-proof-report (:report job))
             lean (:lean report)
-            remaining (remove #{:lean-proof-invalid} (:findings strict))]
+            open? (pos-int? (:sorry-warnings lean))
+            ;; The proctor prints the PROBLEM target's axioms; on a partial
+            ;; head that target is still sorry-backed by construction. sorryAx
+            ;; is tolerated here exactly when the file reports a sorry; the
+            ;; keying target's own axioms are printed at bank.
+            axioms-ok? (set/subset? (set (:axioms report))
+                                    (cond-> proof/permitted-axioms
+                                      open? (conj 'sorryAx)))
+            mutations-ok? (every? #(lane-mutation-permitted? request %)
+                                  (:mutations report))
+            remaining (cond-> (vec (remove #{:lean-proof-invalid
+                                             :axioms-not-permitted
+                                             :mutation-outside-problem-file}
+                                           (:findings strict)))
+                        (not axioms-ok?) (conj :axioms-not-permitted)
+                        (not mutations-ok?) (conj :mutation-outside-lane-allowlist))]
         (if (and (empty? remaining)
                  (= 0 (:exit lean))
                  (= 0 (:errors lean))
                  (nat-int? (:sorry-warnings lean)))
           {:ok true :report report}
-          strict)))))
+          (assoc strict :findings remaining))))))
 
 (defn verify-receipt
   "The verify certificate, minted on this lane's terminal verdict.

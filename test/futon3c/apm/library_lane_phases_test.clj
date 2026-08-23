@@ -99,3 +99,41 @@
     (is (= "The final application remains."
            (:receipt/residual certificate)))
     (is (:ok (cycle/validate-receipt contract :solve certificate)))))
+
+(def verify-request
+  (assoc request
+         :agent-id "f9002-proctor"
+         :certified-final-head "2222222222222222222222222222222222222222"))
+
+(defn- verify-job [overrides]
+  (assoc (fixture-job overrides) :agent-id (:agent-id verify-request)))
+
+(deftest verify-accepts-the-partial-head-the-solver-certified
+  ;; The exact proctor report that blocked f9957156633803 on 2026-08-23:
+  ;; sorry-backed problem target + library mutations on a clean head.
+  (let [job (verify-job {:lean {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+                         :axioms '[propext sorryAx Classical.choice Quot.sound]
+                         :mutations ["ConstructionTargets.lean"
+                                     "ConstructionTargets/CircleHomology.lean"
+                                     (:problem-path request)]})
+        result (sut/validate-verify-terminal verify-request ticket job)]
+    (is (:ok result) (pr-str result))))
+
+(deftest verify-still-refuses-sorryAx-on-a-sorry-free-file
+  (let [job (verify-job {:axioms '[propext sorryAx Classical.choice Quot.sound]})
+        result (sut/validate-verify-terminal verify-request ticket job)]
+    (is (not (:ok result)))
+    (is (= [:axioms-not-permitted] (:findings result)))))
+
+(deftest verify-still-refuses-mutations-outside-the-lane-allowlist
+  (let [job (verify-job {:lean {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+                         :axioms '[propext sorryAx Classical.choice Quot.sound]
+                         :mutations ["problems/t01A03/lean/Main.lean"]})
+        result (sut/validate-verify-terminal verify-request ticket job)]
+    (is (not (:ok result)))
+    (is (= [:mutation-outside-lane-allowlist] (:findings result)))))
+
+(deftest verify-still-refuses-errors
+  (let [job (verify-job {:lean {:exit 1 :warnings 0 :sorry-warnings 0 :errors 2}})
+        result (sut/validate-verify-terminal verify-request ticket job)]
+    (is (not (:ok result)))))

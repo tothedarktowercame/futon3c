@@ -58,7 +58,12 @@
                           (when problem-id
                             (derive-keying-target corpus-root problem-id)))
         trunk (env "APM_TRUNK" "repair/m97A06-energy-regularity")
-        max-problems (Long/parseLong (env "APM_MAX" "1"))
+        ;; One launch = one frame = one problem. The outer loop iterates;
+        ;; a second problem through this frame fails :problem-unit-mismatch.
+        max-problems (let [n (Long/parseLong (env "APM_MAX" "1"))]
+                       (when (> n 1)
+                         (println "NOTE: APM_MAX" n "clamped to 1 (one frame per launch)"))
+                       1)
         dry-run? (= "1" (env "APM_DRY_RUN" "0"))
         contract (edn/read-string
                   (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-codex-only-v1.edn"))]
