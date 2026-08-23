@@ -1776,6 +1776,39 @@
       (is (= "activation-request-mismatch" (:error (parse-body response))))
       (is (zero? @invocations)))))
 
+(deftest legacy-unbound-invoke-request-requires-explicit-audited-binding
+  (testing "an old queued job can be bound once without weakening activation"
+    (let [authority {:job-id "legacy-unbound-1"
+                     :agent-id "codex-activate-legacy"
+                     :prompt "exact legacy prompt"
+                     :caller "countdown-control"
+                     :surface "emacs-repl"
+                     :mode "brief"}]
+      (#'http/update-invoke-jobs-ledger!
+       (fn [ledger]
+         (-> ledger
+             (update :job-order conj (:job-id authority))
+             (assoc-in [:jobs (:job-id authority)]
+                       {:job-id (:job-id authority)
+                        :agent-id (:agent-id authority)
+                        :caller (:caller authority)
+                        :surface (:surface authority)
+                        :mode "brief"
+                        :state "queued"
+                        :event-seq 1
+                        :events [{:seq 1 :type "accepted"}]}))))
+      (is (= :retained-identity-mismatch
+             (:error (http/bind-unbound-invoke-request!
+                      (assoc authority :surface "http")))))
+      (let [bound (http/bind-unbound-invoke-request! authority)
+            job (get-in @(var-get #'http/!invoke-jobs-ledger)
+                        [:jobs (:job-id authority)])]
+        (is (:ok bound))
+        (is (= (:request-digest bound) (:request-digest job)))
+        (is (= "request-bound" (-> job :events last :type)))
+        (is (= :request-already-bound
+               (:error (http/bind-unbound-invoke-request! authority))))))))
+
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"
     (let [handler (make-handler)

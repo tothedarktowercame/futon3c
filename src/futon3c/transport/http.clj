@@ -963,6 +963,55 @@
     (bb/project-agents! (reg/registry-status))
     @created-id))
 
+(defn bind-unbound-invoke-request!
+  "Bind the exact request digest to a legacy queued invoke job which was
+   durably announced before request digests were stored.
+
+   This is an explicit migration boundary, not an activation fallback.  It
+   refuses jobs that are absent, non-queued, already bound, or whose retained
+   agent/caller/surface/mode identity differs.  A successful bind is persisted
+   and recorded in the job event stream; normal activation must still pass the
+   resulting digest check."
+  [{:keys [job-id agent-id prompt caller surface mode]}]
+  (let [job-id (some-> job-id str)
+        authority {:agent-id (str agent-id)
+                   :prompt (str prompt)
+                   :caller (str (or caller "http-caller"))
+                   :surface (str (or surface "http"))}
+        normalized-mode (normalize-invoke-job-mode mode)
+        digest (campaign-machine/ledger-digest [authority])
+        result (atom nil)]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (let [job (get-in ledger [:jobs job-id])
+             identity-match? (and (= (:agent-id authority) (:agent-id job))
+                                  (= (:caller authority) (:caller job))
+                                  (= (:surface authority) (:surface job))
+                                  (or (nil? normalized-mode)
+                                      (= normalized-mode (:mode job))))]
+         (cond
+           (nil? job)
+           (do (reset! result {:ok false :error :job-not-found}) ledger)
+
+           (not= "queued" (:state job))
+           (do (reset! result {:ok false :error :job-not-queued
+                               :state (:state job)}) ledger)
+
+           (some? (:request-digest job))
+           (do (reset! result {:ok false :error :request-already-bound}) ledger)
+
+           (not identity-match?)
+           (do (reset! result {:ok false :error :retained-identity-mismatch}) ledger)
+
+           :else
+           (let [bound (-> job
+                           (assoc :request-digest digest)
+                           (append-job-event "request-bound"
+                                             {:migration "legacy-unbound-request"}))]
+             (reset! result {:ok true :job-id job-id :request-digest digest})
+             (assoc-in ledger [:jobs job-id] bound))))))
+    @result))
+
 (defn- canonical-job-agent-id
   "Resolve a job's addressed agent id to its single registry identity.
 
