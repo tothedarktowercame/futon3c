@@ -19,6 +19,24 @@
 (defn- run-default [dir argv]
   (apply shell/sh (concat (map str argv) [:dir (str dir)])))
 
+(defn- link-substrate!
+  "Point the candidate worktree's `.lake` at the repository's built substrate.
+
+  `.lake` is gitignored, so a fresh `git worktree add` has no oleans and every
+  lake command inside it would rebuild Mathlib from source (observed
+  2026-08-23: the post-merge axiom command cloned mathlib and then failed on
+  `unknown module prefix 'Mathlib'`). Workspaces get the same symlink from
+  workspace-lifecycle/provision!; the candidate must too. Returns the
+  substrate path linked, or nil when the repository has no `.lake`."
+  [repository candidate]
+  (let [substrate (io/file repository ".lake")
+        link (io/file candidate ".lake")]
+    (when (and (.isDirectory substrate) (not (.exists link)))
+      (Files/createSymbolicLink (.toPath link)
+                                (.toPath (.getCanonicalFile substrate))
+                                (make-array FileAttribute 0))
+      (str substrate))))
+
 (defn- execute-command [run-fn dir argv]
   (let [result (run-fn dir argv)]
     (merge {:exit -1 :out "" :err ""} result)))
@@ -146,6 +164,7 @@
           (refuse request :bank-candidate-worktree-failed
                   (command-finding :bank-candidate-worktree-failed add-result))
           (try
+            (link-substrate! repository candidate)
             (let [merge-result (git run-fn candidate "merge" "--no-ff" "--no-edit"
                                     source-head)]
               (if-not (success? merge-result)
