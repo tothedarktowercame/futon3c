@@ -288,6 +288,143 @@
           {:ok true :certificate addressed}
           checked)))))
 
+(defn validate-verify-terminal
+  "Verify under the library-increment regime.
+
+  Verify re-elaborates the head the solver certified. When that head closed the
+  problem the shared rule is exactly right; when it landed a sorry-free library
+  module and left the problem open, the head STILL carries the problem's sorry,
+  and the shared rule reads that as an invalid proof. Relaxed the same way and
+  only that way: the head must elaborate with no errors. Whether the landed
+  library is itself sorry-free is decided downstream by
+  library-lane-effects/outcome, which builds the ConstructionTargets roll-up and
+  refuses on any sorry in it -- a stronger check than counting this file."
+  [request ticket job]
+  (let [strict (proof/validate-terminal :verify request ticket job)]
+    (if (:ok strict)
+      strict
+      (let [report (proof/normalize-proof-report (:report job))
+            lean (:lean report)
+            remaining (remove #{:lean-proof-invalid} (:findings strict))]
+        (if (and (empty? remaining)
+                 (= 0 (:exit lean))
+                 (= 0 (:errors lean))
+                 (nat-int? (:sorry-warnings lean)))
+          {:ok true :report report}
+          strict)))))
+
+(defn verify-receipt
+  "The verify certificate, minted on this lane's terminal verdict.
+
+  Same shape and same contract check as the countdown's; minted here because
+  live-proof-phases/receipt re-runs the strict validator internally."
+  [contract request ticket job]
+  (let [terminal (validate-verify-terminal request ticket job)]
+    (if-not (:ok terminal)
+      terminal
+      (let [report (:report terminal)
+            body {:receipt/type :frame-verify
+                  :receipt/frame-id (:frame-id request)
+                  :receipt/problem-id (:problem-id request)
+                  :receipt/job-id (:job-id ticket)
+                  :receipt/solve-receipt-id (:solve-receipt-id request)
+                  :receipt/final-head (:final-head report)
+                  :receipt/mathematical-sound? true}
+            addressed (assoc body :receipt/id (machine/ledger-digest [body]))
+            checked (cycle/validate-receipt contract :verify addressed)]
+        (if (:ok checked)
+          {:ok true :certificate addressed}
+          checked)))))
+
+(defn with-keying-targets
+  "Name the episode's keying targets inside the dispatch authority itself.
+
+  The card fixes exactly one keying target per dispatch and forbids changing
+  its statement, but the shared request carries no such field, so the solver
+  had to pick its own target from the file. library-lane-runner already
+  elaborates them; this puts them where the prompt and the frozen authority
+  can both see them. The dispatch/id is recomputed, not patched: it is a
+  content digest of the body, so adding a field must change it."
+  [request targets]
+  (if-not (seq targets)
+    request
+    (let [body (assoc (dissoc request :dispatch/id)
+                      :keying-targets (vec targets))]
+      (assoc body :dispatch/id (machine/ledger-digest [body])))))
+
+(def lane-mutation-allowlist-text
+  "What the solver is permitted to commit, stated in the prompt.
+
+  It must match lane-mutation-permitted? exactly. A solver told it may land a
+  module, by a machine that then rejects the commit, wastes a whole episode --
+  which is precisely what happened to t00J02 on 2026-08-22, in reverse."
+  (str "You may commit ONLY: the keying problem's lean/Main.lean; "
+       "ConstructionTargets/<Module>.lean and ConstructionTargets/<Module>.md; "
+       "ConstructionTargets.lean (the roll-up); and the keying problem's "
+       "status.json. Anything else fails terminal validation."))
+
+(defn prompt
+  "This lane's dispatch prompt.
+
+  live-proof-phases/prompt encodes the countdown's regime -- close one problem
+  inside one file -- in two ways that are fatal here. It ends with \"Return
+  exactly one EDN map with keys\" and the v5 field set, which EXCLUDES every
+  field the library card requires; and it never tells the solver to read the
+  role card at all. A solver obeying it literally cannot produce a library
+  increment, and on 2026-08-22 one did exactly that: ten rounds, 371 verified
+  lines, all inlined into Main.lean, nothing bankable.
+
+  Preflight and verify are unchanged in substance, so they delegate."
+  [request]
+  (if-not (= :solve (:phase request))
+    (proof/prompt request)
+    (str (str/upper-case (:frame-id request)) " solve -- library increment. "
+         "Use only this frozen dispatch authority:\n"
+         (pr-str request) "\n"
+         "FIRST read your role card at " (:role-card-path request)
+         " (blob " (:role-card-blob request) ") in the workspace; it is the "
+         "surface contract for this dispatch and it differs from the problem-"
+         "closing card. The unit of acceptance is a LIBRARY INCREMENT keyed to "
+         "this problem, not the problem's closure: reusable, sorry-free "
+         "material landed under ConstructionTargets/ that the keying target "
+         "consumes. Work inlined into Main.lean is not an increment and cannot "
+         "be banked, however much of it is proved.\n"
+         (when-let [targets (seq (:keying-targets request))]
+           (str "Keying target(s) for this episode, fixed: "
+                (str/join ", " targets)
+                ". You may not change their statements.\n"))
+         (if (= 1 (:solver/round request))
+           (str "Opening siege. Own a substantial proof episode: search Mathlib, "
+                "test multiple routes, build missing infrastructure, and continue "
+                "through friction. Do not stop merely because one lemma compiled. ")
+           (str "Continue the same solver session and branch from the prior "
+                "verified state. Own a substantial proof episode, not one "
+                "micro-lemma. "))
+         (when (get-in request [:solver/remediation :required?])
+           (str "The prior artifact failed terminal validation. Findings: "
+                (pr-str (get-in request [:solver/remediation :findings])) ". "
+                (get-in request [:solver/remediation :instruction]) " "))
+         (when (:solver/strategy-checkpoint? request)
+           (str "This is a ten-turn strategy checkpoint. Before returning, "
+                "reassess the whole route and include :solver/strategy "
+                "{:summary STRING, :obligations [STRING ...], :decomposition "
+                "[{:obligation STRING, :decision :delegate|:sequential, "
+                ":reason STRING} ...], :next-plan STRING}. "))
+         lane-mutation-allowlist-text
+         " Commit your work and leave the worktree clean.\n"
+         "Return exactly one EDN map. It must contain "
+         (pr-str proof/proof-report-fields)
+         ". The nested :lean map must contain integer :exit, :warnings, "
+         ":sorry-warnings and :errors counts; :axioms must be a vector of "
+         "symbols; :mutations lists committed changed paths. "
+         "If you closed the problem, that is all. If the problem remains open "
+         "-- the ordinary outcome -- you must ALSO return :solver/outcome "
+         ":progress, a non-blank :residual naming the remaining Lean-level "
+         "obligations and their dependency relation, and :library/modules, a "
+         "non-empty vector of the ConstructionTargets paths you landed. "
+         "Without :library/modules the episode certifies as nothing and banks "
+         "nothing. Never put :solver/strategy inside :lean.")))
+
 (defn- certified-replay
   "The certificate a previous attempt already earned for THIS request, or nil.
 
@@ -333,7 +470,7 @@
          (fn [req]
            (let [response (runtime/http-json
                            "POST" (str agency-base "/api/alpha/invoke/announce")
-                           {:agent-id (:agent-id req) :prompt (proof/prompt req)
+                           {:agent-id (:agent-id req) :prompt (prompt req)
                             :surface surface :caller caller :mode mode})]
              {:ok (and (= 202 (:http/status response)) (:ok response))
               :job-id (:job-id response)}))
@@ -351,7 +488,7 @@
                  (try
                    (runtime/http-json
                     "POST" (str agency-base "/api/alpha/invoke")
-                    {:agent-id (:agent-id req) :prompt (proof/prompt req)
+                    {:agent-id (:agent-id req) :prompt (prompt req)
                      :surface surface :caller caller :mode mode :job-id job-id})
                    (catch Throwable _ nil))))
              {:ok (some? job-id)}))
@@ -363,10 +500,17 @@
          :persist-fn #(runtime/atomic-persist! state-path %)}]
     (cond
       (= :solve kind)
+      ;; A landed increment ENDS the episode, closed or partial. That is the
+      ;; card's unit of acceptance, and it is what makes the lane a loop: a
+      ;; partial banks, the problem stays in the :library lane (see
+      ;; :lane-transition in library-lane-adapters), and the queue hands it
+      ;; back for the next increment. Holding out for closure across fifty
+      ;; rounds is how 2026-08-22 produced 371 verified lines and banked none
+      ;; of them.
       (solver-rounds/drive!
        (assoc effects
-              :validate-solved (partial proof/validate-terminal :solve)
-              :provide-receipt (partial proof/receipt contract :solve)
+              :validate-solved validate-solve-terminal
+              :provide-receipt (fn [r t j _] (solve-receipt contract r t j))
               :max-rounds solver-rounds/default-max-rounds))
 
       ;; A siege RE-ENTERS the same frame: the queue runs the phase list again
@@ -381,12 +525,15 @@
       ;; changed id and falls through to a real dispatch.
       :else
       (or (certified-replay (:state effects) request)
-          (if (= :preflight kind)
-            (driver/drive!
-             (assoc (select-keys effects [:state :announce-fn :activate-fn
-                                          :job-fn :persist-fn])
-                    :request request
-                    :terminal-validator preflight-validate-terminal
-                    :receipt-provider (fn [r t j _]
-                                        (preflight-receipt contract r t j))))
-            (proof/drive! effects))))))
+          (driver/drive!
+           (assoc (select-keys effects [:state :announce-fn :activate-fn
+                                        :job-fn :persist-fn])
+                  :request request
+                  :terminal-validator
+                  (if (= :preflight kind)
+                    preflight-validate-terminal
+                    validate-verify-terminal)
+                  :receipt-provider
+                  (if (= :preflight kind)
+                    (fn [r t j _] (preflight-receipt contract r t j))
+                    (fn [r t j _] (verify-receipt contract r t j)))))))))

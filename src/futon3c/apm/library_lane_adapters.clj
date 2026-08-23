@@ -90,7 +90,7 @@
   request validation to live-proof-phases/build-request and never repairs a
   rejected request."
   [{:keys [unit ledger workspace seats actions state-paths agency-base] :as config}]
-  (fn [{:keys [kind problem-id role-card contract receipts]}]
+  (fn [{:keys [kind problem-id role-card contract receipts targets]}]
     (let [authority (assoc config :role-card role-card :contract contract)
           findings (authority-findings authority kind problem-id)
           role (if (= :solve kind) :solver :proctor)
@@ -108,7 +108,15 @@
         (not (:ok built)) built
 
         :else
-        {:ok true :kind kind :contract contract :request (:request built)
+        {:ok true :kind kind :contract contract
+         ;; Solve is the only phase the keying targets bind: preflight and
+         ;; verify are read-only observations of a head, not episodes with an
+         ;; obligation. Threading them into those requests would change their
+         ;; dispatch/ids for no gain and break replay of already-certified
+         ;; phases.
+         :request (if (= :solve kind)
+                    (lane-phases/with-keying-targets (:request built) targets)
+                    (:request built))
          :state-path (get state-paths kind) :agency-base agency-base}))))
 
 (defn- safe-lean-name? [value]

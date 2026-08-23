@@ -8,13 +8,19 @@
   environment variables so a dispatch loop can iterate problems without
   editing code.
 
-  APM_PROBLEM     problem id, e.g. t00J02
-  APM_TARGET      keying target: the declaration whose axioms bank prints
+  APM_PROBLEM     problem id, e.g. t00J02. Unset: take the head of the queue,
+                  which is what the outer loop wants.
+  APM_TARGET      keying target: the declaration whose axioms bank prints.
+                  Unset: derive apm_<lowercased problem id> and REFUSE unless
+                  that declaration is actually in the file.
   APM_AREA        obstruction area used to select the queue slice
   APM_TRUNK       branch the increment lands on
   APM_MAX         max problems this invocation may attempt (default 1)
   APM_DRY_RUN     when \"1\", stub the bank boundary only"
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
+            [futon3c.apm.library-lane :as lane]
             [futon3c.apm.library-lane-adapters :as adapters]
             [futon3c.apm.library-lane-effects :as fx]
             [futon3c.apm.library-lane-launch :as launch]
@@ -27,17 +33,41 @@
 
 (defn- env [k default] (or (System/getenv k) default))
 
+(defn derive-keying-target
+  "apm_<lowercased problem id>, confirmed present in the problem file.
+
+  The convention holds across the corpus, but a convention is not evidence:
+  bank runs `#print axioms <target>`, and a target that does not exist fails
+  there, after an entire solve episode has been spent. Check it here, where
+  refusing costs nothing."
+  [corpus-root problem-id]
+  (let [target (str "apm_" (str/lower-case problem-id))
+        file (io/file corpus-root "problems" problem-id "lean" "Main.lean")]
+    (when (.isFile file)
+      (when (re-find (re-pattern (str "(?m)^(?:noncomputable )?(?:theorem|lemma) "
+                                      (java.util.regex.Pattern/quote target)
+                                      "\\b"))
+                     (slurp file))
+        target))))
+
 (defn -main [& _]
-  (let [problem-id (env "APM_PROBLEM" nil)
-        keying-target (env "APM_TARGET" nil)
-        area (env "APM_AREA" nil)
+  (let [area (env "APM_AREA" nil)
+        problem-id (or (env "APM_PROBLEM" nil)
+                       (first (lane/queue corpus-root :library area)))
+        keying-target (or (env "APM_TARGET" nil)
+                          (when problem-id
+                            (derive-keying-target corpus-root problem-id)))
         trunk (env "APM_TRUNK" "repair/m97A06-energy-regularity")
         max-problems (Long/parseLong (env "APM_MAX" "1"))
         dry-run? (= "1" (env "APM_DRY_RUN" "0"))
         contract (edn/read-string
                   (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-codex-only-v1.edn"))]
-    (when-not (and problem-id keying-target)
-      (println "REFUSED: APM_PROBLEM and APM_TARGET are required")
+    (when-not problem-id
+      (println "REFUSED: no problem — queue empty for area" (pr-str area))
+      (System/exit 3))
+    (when-not keying-target
+      (println "REFUSED: no keying target for" problem-id
+               "— set APM_TARGET explicitly")
       (System/exit 2))
     (println "LANE" problem-id "target" keying-target "area" area
              "trunk" trunk (if dry-run? "(dry bank)" "(live bank)"))
