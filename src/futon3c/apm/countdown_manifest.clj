@@ -3,7 +3,8 @@
   (:require [clojure.java.shell :as shell]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [futon3c.apm.campaign-machine :as machine]))
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.toolchain-port :as toolchain-port]))
 
 (def sha1-pattern #"[0-9a-f]{40}")
 
@@ -85,11 +86,10 @@
        :expected-revision revision :observed-revision (:revision checkout-result)
        :expected-blob blob :observed-blob observed-blob}
       (let [result (apply shell/sh ["lake" "env" "lean" path :dir checkout])
-            lines (str/split-lines (str (:out result) (:err result)))
-            observation {:exit (:exit result)
-                         :warnings (count (filter #(str/includes? % "warning:") lines))
-                         :sorry-warnings (count (filter #(str/includes? % "declaration uses `sorry`") lines))
-                         :errors (count (filter #(str/includes? % "error:") lines))}]
+            observation (select-keys
+                         (toolchain-port/classify-output
+                          (:exit result) (str (:out result) (:err result)))
+                         [:exit :warnings :sorry-warnings :errors])]
         {:valid? (= (:eligibility/baseline unit) observation)
          :qualification-checkout checkout
          :qualification-revision revision

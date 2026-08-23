@@ -3,7 +3,8 @@
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
-            [futon3c.apm.frame-cycle-contract :as cycle]))
+            [futon3c.apm.frame-cycle-contract :as cycle]
+            [futon3c.apm.toolchain-port :as toolchain-port]))
 
 (def required-report-fields
   #{:command-own-exit :lean :clean-before?
@@ -109,11 +110,11 @@
           ;; Total warnings may also include independent compiler/linter
           ;; notices (for example deprecations); equating that count with the
           ;; sorry count rejects a sound baseline for unrelated reasons.
-          (not (and (= 0 (:exit lean))
-                    (pos-int? (:sorry-warnings lean))
-                    (= 0 (:errors lean))
-                    (nat-int? (:warnings lean))
-                    (<= (:sorry-warnings lean) (:warnings lean))))
+          (not (and (nat-int? (:warnings lean))
+                    (<= (:sorry-warnings lean) (:warnings lean))
+                    (toolchain-port/acceptable-preflight?
+                     (assoc lean :blocking-warnings
+                            (or (:blocking-warnings lean) 0)))))
           (conj :lean-baseline-mismatch)
           (not (true? (:clean-before? report))) (conj :workspace-not-clean-before)
           (not (true? (:clean-after? report))) (conj :workspace-not-clean-after)
