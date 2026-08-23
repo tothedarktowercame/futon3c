@@ -1217,7 +1217,12 @@
                  "(futon3c.apm.countdown-control/launch-m-five! "
                  (pr-str (dissoc authority :continuation-payload)) ")."))
         authority (assoc authority :continuation-payload continuation-payload)
-        campaign-root (str control-root "/data/apm-campaigns/" queue-name)
+        ;; Code/contract authority and durable campaign state are independent.
+        ;; A campaign may outlive the checkout which originally supervised it;
+        ;; resumption must use current qualified code without copying or
+        ;; silently reinitialising its persisted ledger.
+        campaign-root (or (:campaign-root authority)
+                          (str control-root "/data/apm-campaigns/" queue-name))
         outer-config {:problem-queue-state-path
                       (str campaign-root "/queue-state.edn")}
         apparatus-repository control-root

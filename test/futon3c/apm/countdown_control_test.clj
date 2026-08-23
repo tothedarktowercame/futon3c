@@ -457,11 +457,13 @@
                        {:problems [problem]
                         :authority {:agent "codex-10"
                                     :control-root
-                                    "/home/joe/code/futon3c-apm-control"}}))))
+                                    "/home/joe/code/futon3c-apm-control"
+                                    :campaign-root "/durable/f25"}}))))
       (let [config (get-in @captured [:effects :jit/config])]
         (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn
                                      :retirement-audit-fn])))
         (is (= 24 (:frame-number-base config)))
+        (is (= "/durable/f25" (:campaign-root config)))
         (let [directory (java.nio.file.Files/createTempDirectory
                          "jit-manifest-test"
                          (make-array java.nio.file.attribute.FileAttribute 0))
@@ -487,7 +489,7 @@
                 {:ledger-path "/unused/ledger.edn"})))
         (is (string? (get-in @captured
                              [:request :authority :continuation-payload])))
-        (is (= "/home/joe/code/futon3c-apm-control/data/apm-campaigns/jit-problem-list-v1/queue-state.edn"
+        (is (= "/durable/f25/queue-state.edn"
                (get-in @captured
                        [:request :campaign-config :problem-queue-state-path])))
         (is (= [problem] (get-in @captured [:request :problems])))))))
