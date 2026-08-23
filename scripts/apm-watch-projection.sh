@@ -20,7 +20,7 @@ max_age_seconds=${3:-120}
 
 last_lines=0
 check() {
-  local lines
+  local lines form result
   if [[ ! -f "$transition_log" ]]; then
     printf '{:watch/status :alert :reason :transition-log-missing :path "%s"}\n' \
       "$transition_log"
@@ -38,8 +38,18 @@ check() {
     last_lines=$lines
   fi
 
-  clojure -M -m futon3c.apm.projection-watchdog \
-    "$transition_log" "$coordinator_state" "$max_age_seconds"
+  # Evaluate in the one canonical serving JVM. Starting `clojure` here would
+  # create a second application image on every poll and violate I-0.
+  # The accepted paths are local filenames; quote them directly after refusing
+  # embedded quotes/backslashes.
+  if [[ "$transition_log" == *[\\\"]* || "$coordinator_state" == *[\\\"]* ]]; then
+    printf '{:watch/status :alert :reason :watch-path-invalid}\n'
+    return 2
+  fi
+  form="(do (require 'futon3c.apm.projection-watchdog) (futon3c.apm.projection-watchdog/evaluate (futon3c.apm.projection-watchdog/observe {:transition-log \"$transition_log\" :coordinator-state \"$coordinator_state\" :max-heartbeat-age-seconds $max_age_seconds :agency-base \"http://localhost:7070\"})))"
+  result=$(printf '%s' "$form" | scripts/proof-eval.sh -)
+  printf '%s\n' "$result"
+  [[ "$result" == *":watch/status :healthy"* ]]
 }
 
 if $once; then
