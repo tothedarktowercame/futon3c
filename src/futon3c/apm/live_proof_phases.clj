@@ -49,7 +49,8 @@
   (assoc body :dispatch/id (machine/ledger-digest [body])))
 
 (defn build-request
-  [{:keys [kind action ledger unit role-card seat workspace solve-receipt]}]
+  [{:keys [kind action ledger unit role-card seat workspace solve-receipt
+           terminal-budget]}]
   (if (= :preflight kind)
     (let [problem (:problem unit)
           findings (cond-> []
@@ -103,6 +104,8 @@
                    :workspace (:workspace/path workspace)
                    :branch (:branch workspace) :base-revision (:revision problem)
                    :problem-path (:path problem) :problem-blob (:blob problem)
+                   :terminal-budget (or terminal-budget
+                                        driver/default-terminal-budget)
                    :turn-timeout-ms (get-in action [:timeouts :turn-ms])}
             (= :verify kind) (assoc :solve-receipt-id (:receipt/id solve-receipt)
                                     :certified-final-head

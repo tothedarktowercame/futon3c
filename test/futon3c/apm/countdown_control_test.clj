@@ -354,6 +354,9 @@
     (let [result (sut/dry-run-v2-launch)]
       (is (:ok result) (pr-str result))
       (is (= [] (:dispatches result)))
+      (is (= [] (:historical-state-mutations result)))
+      (is (= :f25-frozen (:reference-fixture result)))
+      (is (every? true? (vals (:policy-audit result))))
       (is (= :promote-solver
              (nth (get-in result [:registration :phase-order]) 3)))
       (is (= :apm-validated-system-v1

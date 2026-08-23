@@ -32,6 +32,14 @@
    :terminal-collection-attempts-per-role 1
    :terminal-repair-attempts-per-role 1
    :terminal-collection-covered-role-count 7
+   :role-terminal-budgets
+   {:solver {:collection-attempts 1 :repair-attempts 1}
+    :student {:collection-attempts 1 :repair-attempts 1}
+    :guide {:collection-attempts 1 :repair-attempts 1}
+    :scribe {:collection-attempts 1 :repair-attempts 1}
+    :proctor {:collection-attempts 1 :repair-attempts 1}
+    :promotion-proctor {:collection-attempts 1 :repair-attempts 1}
+    :analyst {:collection-attempts 1 :repair-attempts 1}}
    :missing-observation-student-only true
    :unbounded-conversational-retries false
    :typed-submission-migration-max 1

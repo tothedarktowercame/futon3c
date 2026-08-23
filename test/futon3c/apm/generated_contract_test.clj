@@ -104,6 +104,7 @@
                    [:terminal-collection-attempts-per-role 0]
                    [:terminal-repair-attempts-per-role 2]
                    [:terminal-collection-covered-role-count 6]
+                   [:role-terminal-budgets :missing]
                    [:missing-observation-student-only false]
                    [:unbounded-conversational-retries true]]]
     (doseq [[field value] mutations]

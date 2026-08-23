@@ -262,13 +262,16 @@
 (deftest typed-submission-replaces-conversational-report
   (let [calls (atom [])
         seen (atom nil)
+        collections (atom 0)
         job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done
                    :report {:frame-id "forged"}})
         dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
         base (assoc (effects calls job) :state dispatched
                        :terminal-submission-provider
                        (fn [_ _ _]
+                         (swap! collections inc)
                          {:authority {:frame-id "f19" :problem-id "a01J05"}
+                          :submission/id "persisted-submission"
                           :payload {:command-own-exit 0 :outcome "complete"
                                     :failure-account []
                                     :evidence {:verified true}}})
@@ -280,6 +283,7 @@
     (is (= :terminal-collected (:status collected)))
     (is (= :certified (:status result)))
     (is (= "f19" (:frame-id @seen)))
+    (is (= 1 @collections))
     (is (= true (:verified @seen)))
     (is (not= "forged" (:frame-id @seen)))))
 

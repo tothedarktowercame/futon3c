@@ -153,11 +153,16 @@
            :contract (assoc legacy
                             :phase-order (mapv keyword (:phase-order generated))
                             :generated/bounds (:bounds generated)
+                            :generated/dispatch-policy (:dispatch-policy generated)
+                            :generated/terminal-policy (:terminal-policy generated)
                             :generated/source generated-contract-path)
            :generated/contract generated})))))
 
 (defn- generated-bound [contract bound fallback]
   (or (get-in contract [:generated/bounds bound]) fallback))
+
+(defn- generated-terminal-budgets [contract]
+  (get-in contract [:generated/dispatch-policy :role-terminal-budgets]))
 
 (defn frame-unit [manifest frame-id]
   (some #(when (= frame-id (:frame/id %)) %) (:units manifest)))
@@ -508,6 +513,7 @@
                          :phase (get-in projection [:active/frame :phase])
                          :claim (:active/claim projection)}
                 :unit unit :role-card (get-in manifest [:apparatus :artifacts role])
+                :terminal-budget (get (generated-terminal-budgets contract) role)
                 :seat {:agent-id (:agent-id response)
                        :type (some-> (:type agent) keyword)
                        :frame-id (:frame-id metadata)
@@ -516,6 +522,7 @@
     (if-not (:ok built)
       built
       {:ok true :kind kind :contract contract :request (:request built)
+       :terminal-budget (get (generated-terminal-budgets contract) role)
        :max-rounds (generated-bound contract :solver-max-rounds 50)
        :state-path (state-path-for (:frame/id unit) kind)})))))
 
@@ -569,6 +576,7 @@
                        :invoke-ready? (:invoke-ready? agent)}
                 :workspace (get-in preparation [:workspaces :student])
                 :receipts receipts :snapshot-access snapshot-access
+                :terminal-budgets (generated-terminal-budgets contract)
                 :turn-timeout-ms (generated-bound
                                   contract :seat-turn-timeout-ms 3600000)})]
     (cond
@@ -743,12 +751,37 @@
 (defn dry-run-v2-launch []
   (let [{:keys [contract]} (inputs)
         qualification (qualification-audit)
-        registration (registration-body)]
+        registration (registration-body)
+        dispatch-policy (:generated/dispatch-policy contract)
+        terminal-policy (:generated/terminal-policy contract)
+        role-budgets (:role-terminal-budgets dispatch-policy)
+        policy-audit
+        {:all-live-roles-bounded?
+         (and (= #{:solver :student :guide :scribe :proctor
+                   :promotion-proctor :analyst}
+                 (set (keys role-budgets)))
+              (every? #(every? pos-int? (vals %)) (vals role-budgets)))
+         :collection-persisted? (:terminal-collection-persisted dispatch-policy)
+         :collection-before-missing?
+         (:terminal-collection-before-missing-observation dispatch-policy)
+         :valid-submission-collected?
+         (:terminal-collection-required dispatch-policy)
+         :student-only-alternate?
+         (and (:missing-observation-student-only dispatch-policy)
+              (= "controller" (:missing-observation-author terminal-policy))
+              (false? (:missing-observation-may-impersonate-student
+                       terminal-policy)))
+         :solved-partial-bankable?
+         (and (:solved-partial-bankable terminal-policy)
+              (:bankable-solved-successor-eligible terminal-policy))}
+        policies-pass? (every? true? (vals policy-audit))]
     {:ok (and (= :apm-complete-frame-cycle-v2 (:contract/id contract))
               (:ok qualification)
-              (= (:phase-order contract) (:phase-order registration)))
+              (= (:phase-order contract) (:phase-order registration))
+              policies-pass?)
      :dispatches [] :qualification qualification
-     :registration registration}))
+     :registration registration :policy-audit policy-audit
+     :historical-state-mutations [] :reference-fixture :f25-frozen}))
 
 (defn launch-audit!
   "Validate complete executable wiring plus the exact continuation identity."
