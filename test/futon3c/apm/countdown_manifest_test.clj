@@ -103,3 +103,13 @@
                          (machine/ledger-digest [(dissoc invalid :manifest/id)]))]
       (is (some #{:countdown-manifest-frame-order-invalid}
                 (:findings (sut/validate invalid)))))))
+
+(deftest eligibility-baseline-is-semantic-not-style-warning-exact
+  (let [baseline {:exit 0 :warnings 20 :sorry-warnings 2 :errors 0}
+        observed {:exit 0 :warnings 38 :sorry-warnings 2 :errors 0
+                  :blocking-warnings 0}]
+    (is (sut/eligibility-observation-valid? baseline observed))
+    (is (not (sut/eligibility-observation-valid?
+              baseline (assoc observed :sorry-warnings 1))))
+    (is (not (sut/eligibility-observation-valid?
+              baseline (assoc observed :blocking-warnings 1))))))

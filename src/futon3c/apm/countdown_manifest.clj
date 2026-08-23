@@ -72,6 +72,14 @@
            (make-array java.nio.file.attribute.FileAttribute 0)))
         {:ok true :checkout checkout :revision head}))))
 
+(defn eligibility-observation-valid?
+  "Accept the pinned proof-state baseline while treating non-blocking style
+   warnings as diagnostics, not revision identity."
+  [baseline classified]
+  (and (toolchain-port/acceptable-preflight? classified)
+       (= (select-keys baseline [:exit :sorry-warnings :errors])
+          (select-keys classified [:exit :sorry-warnings :errors]))))
+
 (defn qualify-unit
   "Execute the pinned unit in a dedicated, revision-addressed checkout. The
    developer checkout may advance without changing qualification authority."
@@ -86,14 +94,15 @@
        :expected-revision revision :observed-revision (:revision checkout-result)
        :expected-blob blob :observed-blob observed-blob}
       (let [result (apply shell/sh ["lake" "env" "lean" path :dir checkout])
-            observation (select-keys
-                         (toolchain-port/classify-output
-                          (:exit result) (str (:out result) (:err result)))
-                         [:exit :warnings :sorry-warnings :errors])]
-        {:valid? (= (:eligibility/baseline unit) observation)
+            classified (toolchain-port/classify-output
+                        (:exit result) (str (:out result) (:err result)))
+            observation (select-keys classified
+                                     [:exit :warnings :sorry-warnings :errors])
+            baseline (:eligibility/baseline unit)]
+        {:valid? (eligibility-observation-valid? baseline classified)
          :qualification-checkout checkout
          :qualification-revision revision
-         :observation observation :expected (:eligibility/baseline unit)}))))
+         :observation observation :expected baseline}))))
 
 (defn validate
   "Validate shape, ordering, content addresses, classification, and Git pins."
