@@ -196,6 +196,12 @@
       (some-> (path output-path) .toAbsolutePath .getParent
               (.resolve "problem-transitions.edn"))))
 
+(defn- transition-key [receipt]
+  (machine/ledger-digest
+   [(select-keys receipt
+                 [:ledger/digest :ledger/event-count :frame-id :problem-id
+                  :phase :operation :solver/progress :buffer/name])]))
+
 (defn- append-transition! [options receipt]
   (let [target (transition-log-path options)
         directory (some-> target .toAbsolutePath .getParent)]
@@ -218,8 +224,10 @@
                   (->> (Files/readAllLines target StandardCharsets/UTF_8)
                        (remove str/blank?)
                        (mapv edn/read-string)))
-                existing (some #(when (= (:receipt/id receipt)
-                                         (:publication/receipt-id %)) %)
+                key (transition-key receipt)
+                existing (some #(when (or (= key (:transition/key %))
+                                          (= (:receipt/id receipt)
+                                             (:publication/receipt-id %))) %)
                                entries)]
             (if existing
               {:ok true :status :already-logged :event existing
@@ -228,6 +236,7 @@
                     {:event/type :problem-projection-transition
                      :event/sequence (count entries)
                      :event/observed-at (str (Instant/now))
+                     :transition/key key
                      :publication/receipt-id (:receipt/id receipt)
                      :projection/id (:projection/id receipt)
                      :ledger/digest (:ledger/digest receipt)

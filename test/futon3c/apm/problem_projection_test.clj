@@ -168,6 +168,7 @@
            (get-in result [:publication-pointer :receipt/id])))
     (is (= :problem-projection-transition
            (get-in result [:transition :event/type])))
+    (is (string? (get-in result [:transition :transition/key])))
     (is (= 0 (get-in result [:transition :event/sequence])))
     (is (Files/exists
          (.resolve (.resolve dir "publications")
@@ -214,6 +215,28 @@
            (:error/code result)))
     (is (false? (Files/exists (.resolve (.resolve dir "publications") "latest.edn")
                               (make-array java.nio.file.LinkOption 0))))))
+
+(deftest transition-log-deduplicates-certificate-refreshes
+  (let [dir (temp-dir)
+        output (.resolve dir "problem.md")
+        base {:ledger/digest "ledger" :ledger/event-count 7
+              :frame-id "f27" :problem-id "p27" :phase :solve
+              :operation {:status :waiting-for-terminal-result
+                          :job-id "job"}
+              :solver/progress {:rounds/completed 1 :round/active 2}
+              :buffer/name "*problem: f27-p27*"}
+        first (#'problem/append-transition!
+               {:output-path output}
+               (assoc base :receipt/id "receipt-a" :certificate/id "cert-a"
+                      :content/digest "content-a"))
+        second (#'problem/append-transition!
+                {:output-path output}
+                (assoc base :receipt/id "receipt-b" :certificate/id "cert-b"
+                       :content/digest "content-b"))
+        lines (Files/readAllLines (.resolve dir "problem-transitions.edn"))]
+    (is (= :logged (:status first)))
+    (is (= :already-logged (:status second)))
+    (is (= 1 (count lines)))))
 
 (deftest fast-lifecycle-publication-qualification
   (let [{:keys [dir ledger-path preflight-ledger-path solve-ledger-path
