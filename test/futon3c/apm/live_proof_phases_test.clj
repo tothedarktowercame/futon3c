@@ -175,3 +175,9 @@
     (is (sut/request-replay-compatible? current persisted))
     (is (not (sut/request-replay-compatible?
               (assoc current :role-card-blob "changed") persisted)))))
+
+(deftest json-vector-axioms-normalize-to-permitted-symbols
+  (is (= '[propext Classical.choice Quot.sound]
+         (:axioms
+          (sut/normalize-proof-report
+           {:axioms ["propext" "Classical.choice" "Quot.sound"]})))))

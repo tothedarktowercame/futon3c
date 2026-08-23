@@ -28,9 +28,14 @@
         errors (:errors lean)
         axiom-text (when (string? (:axioms report)) (:axioms report))
         bracketed (when axiom-text (second (re-find #"\[([^]]*)\]" axiom-text)))
-        axioms (when bracketed
+        axioms (cond
+                 bracketed
                  (->> (str/split bracketed #",")
-                      (map str/trim) (remove str/blank?) (map symbol) vec))]
+                      (map str/trim) (remove str/blank?) (map symbol) vec)
+
+                 (and (sequential? (:axioms report))
+                      (every? string? (:axioms report)))
+                 (mapv symbol (:axioms report)))]
     (cond-> report
       (vector? warnings)
       (assoc-in [:lean :warnings] (count warnings))

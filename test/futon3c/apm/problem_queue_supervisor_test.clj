@@ -56,6 +56,15 @@
       (is (= :parked (:status result)))
       (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
 
+(deftest durable-intermediate-collection-statuses-remain-nonterminal
+  (doseq [status [:terminal-collected :claim-recovered]]
+    (let [{:keys [providers calls]} (harness)]
+      (sut/tick! providers)
+      (let [result (sut/tick! (assoc providers :frame-tick-fn
+                                     (constantly {:ok true :status status})))]
+        (is (= status (:status result)))
+        (is (= 1 (count (filter #(= :mint (first %)) @calls))))))))
+
 (deftest same-problem-retry-clears-active-without-advancing-or-minting
   (let [{:keys [providers state calls]} (harness)
         _ (sut/tick! providers)

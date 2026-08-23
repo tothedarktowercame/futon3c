@@ -145,7 +145,8 @@
             result (frame-tick-fn (:frame active))]
         (cond
           (not (:ok result)) result
-          (not (contains? #{:parked :phase-advanced :frame-complete}
+          (not (contains? #{:parked :phase-advanced :terminal-collected
+                            :claim-recovered :frame-complete}
                           (:status result)))
           {:ok false :error/code :problem-queue-frame-status-invalid}
           (not= :frame-complete (:status result))
