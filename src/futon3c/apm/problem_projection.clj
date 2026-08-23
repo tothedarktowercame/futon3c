@@ -1,6 +1,7 @@
 (ns futon3c.apm.problem-projection
   "Ledger-derived, content-addressed projection for the live *problem* buffer."
-  (:require [clojure.java.shell :as shell]
+  (:require [clojure.edn :as edn]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
@@ -10,6 +11,7 @@
            [java.nio.file AtomicMoveNotSupportedException CopyOption Files
             OpenOption Path StandardCopyOption StandardOpenOption]
            [java.nio.file.attribute FileAttribute]
+           [java.security MessageDigest]
            [java.util Base64]))
 
 (defn- path [value]
@@ -17,6 +19,11 @@
     (instance? Path value) value
     (string? value) (Path/of value (make-array String 0))
     :else nil))
+
+(defn- sha256 [content]
+  (let [digest (.digest (MessageDigest/getInstance "SHA-256")
+                        (.getBytes content StandardCharsets/UTF_8))]
+    (apply str (map #(format "%02x" (bit-and (int %) 0xff)) digest))))
 
 (defn- receipt-refs [events frame-id]
   (->> events
@@ -163,17 +170,49 @@
                      encoded "\") 'utf-8)))"
                      " (with-current-buffer (get-buffer-create " (pr-str buffer-name) ")"
                      " (erase-buffer) (insert text) (goto-char (point-min))"
-                     " (set-buffer-modified-p nil)) t)")
+                     " (set-buffer-modified-p nil)"
+                     " (secure-hash 'sha256 (current-buffer))))")
            result (run "emacsclient" "--eval" form)]
        (if (zero? (:exit result))
-         {:ok true :buffer-name buffer-name}
+         (let [observed (try (edn/read-string (str/trim (:out result)))
+                             (catch Throwable _ nil))]
+           (if (string? observed)
+             {:ok true :buffer-name buffer-name :content/digest observed}
+             {:ok false :error/code :problem-projection-buffer-readback-invalid
+              :finding {:stdout (str/trim (:out result))}}))
          {:ok false :error/code :problem-projection-buffer-replace-failed
           :finding {:exit (:exit result) :stderr (str/trim (:err result))}})))))
+
+(defn- publication-directory [{:keys [publication-directory output-path]}]
+  (or (path publication-directory)
+      (some-> (path output-path) .toAbsolutePath .getParent
+              (.resolve "publications"))))
+
+(defn- persist-publication! [options receipt]
+  (let [directory (publication-directory options)
+        receipt-id (:receipt/id receipt)]
+    (if-not (and directory (string? receipt-id))
+      {:ok false :error/code :problem-projection-publication-path-invalid}
+      (let [receipt-path (.resolve directory (str receipt-id ".edn"))
+            pointer-path (.resolve directory "latest.edn")
+            receipt-write (atomic-write! receipt-path (str (pr-str receipt) "\n"))]
+        (if-not (:ok receipt-write)
+          receipt-write
+          (let [pointer {:receipt/id receipt-id
+                         :receipt/path (str receipt-path)
+                         :projection/id (:projection/id receipt)
+                         :ledger/digest (:ledger/digest receipt)}
+                pointer-write (atomic-write! pointer-path
+                                             (str (pr-str pointer) "\n"))]
+            (if (:ok pointer-write)
+              {:ok true :receipt receipt :pointer pointer}
+              pointer-write)))))))
 
 (defn project!
   [{:keys [ledger-path certificate-path output-path buffer-sink buffer-name
            expected-frame-id expected-problem-id solver-progress operation]
-    :or {buffer-name "*problem*"}}]
+    :or {buffer-name "*problem*"}
+    :as options}]
   (let [loaded-ledger (ledger/read-ledger ledger-path)
         loaded-certificate (snapshot/read-certificate certificate-path)]
     (cond
@@ -196,22 +235,57 @@
           derived
           (let [problem-projection (:problem-projection derived)
                 content (render problem-projection)
+                content-digest (sha256 content)
                 written (atomic-write! output-path content)]
             (if-not (:ok written)
               written
-              (try
-                (let [buffer-result
-                      (buffer-sink {:buffer-name buffer-name :content content
-                                    :problem-projection problem-projection})]
-                  (if (and (map? buffer-result) (:ok buffer-result))
-                    {:ok true :projection problem-projection
-                     :publication written :buffer buffer-result}
-                    {:ok false :error/code :problem-projection-buffer-sink-failed
-                     :publication written :buffer buffer-result}))
-                (catch Throwable t
-                  {:ok false :error/code :problem-projection-buffer-sink-threw
-                   :publication written
-                   :finding {:message (.getMessage t)}})))))))))
+              (let [disk-digest (sha256 (Files/readString (path output-path)))]
+                (if-not (= content-digest disk-digest)
+                  {:ok false :error/code :problem-projection-disk-readback-mismatch
+                   :expected content-digest :observed disk-digest}
+                  (try
+                    (let [buffer-result
+                          (buffer-sink {:buffer-name buffer-name :content content
+                                        :content/digest content-digest
+                                        :problem-projection problem-projection})]
+                      (cond
+                        (not (and (map? buffer-result) (:ok buffer-result)))
+                        {:ok false :error/code :problem-projection-buffer-sink-failed
+                         :publication written :buffer buffer-result}
+
+                        (not= content-digest (:content/digest buffer-result))
+                        {:ok false :error/code :problem-projection-buffer-readback-mismatch
+                         :expected content-digest
+                         :observed (:content/digest buffer-result)}
+
+                        :else
+                        (let [receipt-body
+                              {:receipt/type :problem-projection-publication
+                               :projection/id (:projection/id problem-projection)
+                               :ledger/digest (:ledger/digest problem-projection)
+                               :ledger/event-count (:ledger/event-count problem-projection)
+                               :certificate/id (:certificate/id problem-projection)
+                               :frame-id (get-in problem-projection [:frame :frame-id])
+                               :problem-id (get-in problem-projection [:frame :problem-id])
+                               :phase (get-in problem-projection [:frame :phase])
+                               :operation (:operation problem-projection)
+                               :solver/progress (:solver/progress problem-projection)
+                               :output/path (:path written)
+                               :buffer/name buffer-name
+                               :content/digest content-digest}
+                              receipt (assoc receipt-body :receipt/id
+                                             (machine/ledger-digest [receipt-body]))
+                              persisted (persist-publication! options receipt)]
+                          (if (:ok persisted)
+                            {:ok true :projection problem-projection
+                             :publication written :buffer buffer-result
+                             :publication-receipt (:receipt persisted)
+                             :publication-pointer (:pointer persisted)}
+                            persisted))))
+                    (catch Throwable t
+                      {:ok false :error/code :problem-projection-buffer-sink-threw
+                       :publication written
+                       :finding {:message (.getMessage t)}})))))))))))
 
 (defn project-latest!
   [{:keys [projection-directory] :as options}]
