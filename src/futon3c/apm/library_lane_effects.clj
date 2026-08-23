@@ -194,9 +194,13 @@
                                  (:base-revision lease)
                                  (:receipt/final-head verify) "--"
                                  "ConstructionTargets"])
-                problem (run-fn workspace-path ["lake" "env" "lean" path])
                 rollup (run-fn workspace-path
                                ["lake" "build" "ConstructionTargets"])
+                ;; The workspace and trunk share a substrate. Build the
+                ;; certified library source before elaborating its consumer,
+                ;; otherwise Main can observe the prior trunk's stale olean.
+                problem (when (zero? (:exit rollup))
+                          (run-fn workspace-path ["lake" "env" "lean" path]))
                 library-produced? (and (zero? (:exit changed))
                                        (some #(and (str/starts-with?
                                                     % "ConstructionTargets/")
@@ -205,13 +209,13 @@
         (cond
           (not (zero? (:exit changed)))
           (refusal :outcome-library-diff-failed changed)
-          (not (zero? (:exit problem)))
-          (refusal :outcome-problem-elaboration-failed problem)
           (not (zero? (:exit rollup)))
           (refusal :outcome-library-elaboration-failed rollup)
           (pos? (sorry-count rollup))
           (refusal :outcome-library-carries-sorry
                    {:sorry-warnings (sorry-count rollup)})
+          (not (zero? (:exit problem)))
+          (refusal :outcome-problem-elaboration-failed problem)
           (zero? (sorry-count problem))
           {:verified-proof? true :remaining-sorries 0}
           (not library-produced?)

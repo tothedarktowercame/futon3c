@@ -184,17 +184,17 @@
       (is (= {:verified-proof? true :remaining-sorries 0}
              (outcome {:problem-id "p" :receipts {:solve solve :verify verify}})))
       (reset! responses [{:exit 0 :out "ConstructionTargets/New.lean\n" :err ""}
+                         {:exit 0 :out "" :err ""}
                          {:exit 0 :out ""
-                          :err "warning: declaration uses `sorry`\n"}
-                         {:exit 0 :out "" :err ""}])
+                          :err "warning: declaration uses `sorry`\n"}])
       (is (= {:verified-library? true :library-sorry-warnings 0
               :problem-open? true :remaining-sorries 1
               :boundary "problem remains open after verified sorry-free library work"}
              (outcome {:problem-id "p" :receipts {:solve solve :verify verify}})))
       (reset! responses [{:exit 0 :out "ConstructionTargets/New.lean\n" :err ""}
-                         {:exit 0 :out "" :err ""}
                          {:exit 0 :out ""
-                          :err "warning: declaration uses `sorry`\n"}])
+                          :err "warning: declaration uses `sorry`\n"}
+                         {:exit 0 :out "" :err ""}])
       (is (= :outcome-library-carries-sorry
              (:error/code
               (outcome {:problem-id "p" :receipts {:solve solve
