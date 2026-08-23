@@ -166,6 +166,9 @@
            (get-in result [:publication-receipt :receipt/type])))
     (is (= (get-in result [:publication-receipt :receipt/id])
            (get-in result [:publication-pointer :receipt/id])))
+    (is (= :problem-projection-transition
+           (get-in result [:transition :event/type])))
+    (is (= 0 (get-in result [:transition :event/sequence])))
     (is (Files/exists
          (.resolve (.resolve dir "publications")
                    (str (get-in result [:publication-receipt :receipt/id]) ".edn"))
@@ -257,12 +260,20 @@
               stages)
         latest (edn/read-string
                 (Files/readString (.resolve (.resolve dir "publication-log")
-                                                "latest.edn")))]
+                                                "latest.edn")))
+        transitions (->> (Files/readAllLines
+                          (.resolve dir "problem-transitions.edn"))
+                         (remove str/blank?)
+                         (mapv edn/read-string))]
     (is (= [:preflight :solve :verify]
            (mapv #(get-in % [:projection :frame :phase]) results)))
     (is (= [nil 2 nil]
            (mapv #(get-in % [:projection :solver/progress :round/active]) results)))
     (is (= 3 (count (set (map #(get-in % [:publication-receipt :receipt/id])
                                results)))))
+    (is (= [0 1 2] (mapv :event/sequence transitions)))
+    (is (= [:preflight :solve :verify] (mapv :phase transitions)))
+    (is (= ["preflight-job" "solver-round-2" "verify-job"]
+           (mapv #(get-in % [:operation :job-id]) transitions)))
     (is (= (:receipt/id latest)
            (get-in (last results) [:publication-receipt :receipt/id])))))

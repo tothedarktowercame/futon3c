@@ -7,11 +7,14 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-projection :as campaign-projection]
             [futon3c.apm.campaign-snapshot :as snapshot])
-  (:import [java.nio.charset StandardCharsets]
+  (:import [java.nio ByteBuffer]
+           [java.nio.channels FileChannel]
+           [java.nio.charset StandardCharsets]
            [java.nio.file AtomicMoveNotSupportedException CopyOption Files
             OpenOption Path StandardCopyOption StandardOpenOption]
            [java.nio.file.attribute FileAttribute]
            [java.security MessageDigest]
+           [java.time Instant]
            [java.util Base64]))
 
 (defn- path [value]
@@ -188,6 +191,70 @@
       (some-> (path output-path) .toAbsolutePath .getParent
               (.resolve "publications"))))
 
+(defn transition-log-path [{:keys [transition-log-path output-path]}]
+  (or (path transition-log-path)
+      (some-> (path output-path) .toAbsolutePath .getParent
+              (.resolve "problem-transitions.edn"))))
+
+(defn- append-transition! [options receipt]
+  (let [target (transition-log-path options)
+        directory (some-> target .toAbsolutePath .getParent)]
+    (if-not (and target directory)
+      {:ok false :error/code :problem-projection-transition-log-path-invalid}
+      (try
+        (Files/createDirectories directory (make-array FileAttribute 0))
+        (with-open [channel
+                    (FileChannel/open
+                     target
+                     (into-array OpenOption
+                                 [StandardOpenOption/CREATE
+                                  StandardOpenOption/READ
+                                  StandardOpenOption/WRITE
+                                  StandardOpenOption/SYNC]))
+                    _lock (.lock channel)]
+          (let [entries
+                (if (zero? (.size channel))
+                  []
+                  (->> (Files/readAllLines target StandardCharsets/UTF_8)
+                       (remove str/blank?)
+                       (mapv edn/read-string)))
+                existing (some #(when (= (:receipt/id receipt)
+                                         (:publication/receipt-id %)) %)
+                               entries)]
+            (if existing
+              {:ok true :status :already-logged :event existing
+               :path (str target)}
+              (let [body
+                    {:event/type :problem-projection-transition
+                     :event/sequence (count entries)
+                     :event/observed-at (str (Instant/now))
+                     :publication/receipt-id (:receipt/id receipt)
+                     :projection/id (:projection/id receipt)
+                     :ledger/digest (:ledger/digest receipt)
+                     :ledger/event-count (:ledger/event-count receipt)
+                     :certificate/id (:certificate/id receipt)
+                     :frame-id (:frame-id receipt)
+                     :problem-id (:problem-id receipt)
+                     :phase (:phase receipt)
+                     :operation (:operation receipt)
+                     :solver/progress (:solver/progress receipt)
+                     :content/digest (:content/digest receipt)
+                     :buffer/name (:buffer/name receipt)}
+                    event (assoc body :event/id
+                                 (machine/ledger-digest [body]))
+                    encoded (.getBytes (str (pr-str event) "\n")
+                                       StandardCharsets/UTF_8)]
+                (.position channel (.size channel))
+                (loop [buffer (ByteBuffer/wrap encoded)]
+                  (when (.hasRemaining buffer)
+                    (.write channel buffer)
+                    (recur buffer)))
+                (.force channel true)
+                {:ok true :status :logged :event event :path (str target)}))))
+        (catch Throwable t
+          {:ok false :error/code :problem-projection-transition-log-failed
+           :finding {:message (.getMessage t)}})))))
+
 (defn- persist-publication! [options receipt]
   (let [directory (publication-directory options)
         receipt-id (:receipt/id receipt)]
@@ -198,15 +265,21 @@
             receipt-write (atomic-write! receipt-path (str (pr-str receipt) "\n"))]
         (if-not (:ok receipt-write)
           receipt-write
-          (let [pointer {:receipt/id receipt-id
-                         :receipt/path (str receipt-path)
-                         :projection/id (:projection/id receipt)
-                         :ledger/digest (:ledger/digest receipt)}
-                pointer-write (atomic-write! pointer-path
-                                             (str (pr-str pointer) "\n"))]
-            (if (:ok pointer-write)
-              {:ok true :receipt receipt :pointer pointer}
-              pointer-write)))))))
+          (let [transition (append-transition! options receipt)]
+            (if-not (:ok transition)
+              transition
+              (let [pointer {:receipt/id receipt-id
+                             :receipt/path (str receipt-path)
+                             :projection/id (:projection/id receipt)
+                             :ledger/digest (:ledger/digest receipt)
+                             :transition/event-id
+                             (get-in transition [:event :event/id])}
+                    pointer-write (atomic-write! pointer-path
+                                                 (str (pr-str pointer) "\n"))]
+                (if (:ok pointer-write)
+                  {:ok true :receipt receipt :pointer pointer
+                   :transition transition}
+                  pointer-write)))))))))
 
 (defn project!
   [{:keys [ledger-path certificate-path output-path buffer-sink buffer-name
@@ -280,7 +353,8 @@
                             {:ok true :projection problem-projection
                              :publication written :buffer buffer-result
                              :publication-receipt (:receipt persisted)
-                             :publication-pointer (:pointer persisted)}
+                             :publication-pointer (:pointer persisted)
+                             :transition (get-in persisted [:transition :event])}
                             persisted))))
                     (catch Throwable t
                       {:ok false :error/code :problem-projection-buffer-sink-threw
