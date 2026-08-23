@@ -48,9 +48,12 @@
         (finally (durable/stop! "jit-queue:q"))))))
 
 (deftest autonomous-list-step-does-not-publish-a-controller-park
-  (let [park-calls (atom 0)]
+  (let [park-calls (atom 0)
+        request (atom nil)]
     (with-redefs [countdown/set-alight-problem-queue!
-                  (fn [_ _] {:ok true :status :frame-prepared})
+                  (fn [observed _]
+                    (reset! request observed)
+                    {:ok true :status :frame-prepared})
                   runtime/http-json
                   (fn [& _] (swap! park-calls inc)
                     {:ok true :http/status 200})]
@@ -60,4 +63,7 @@
                {:problems [] :authority {:control-root "/home/joe/code/futon3c"
                                          :apparatus-root "/home/joe/code/futon3c"}
                 :queue-name "test"}))))
-      (is (zero? @park-calls)))))
+      (is (zero? @park-calls))
+      (is (= "countdown-regulator:durable-jit"
+             (get-in @request [:authority :regulator-id])))
+      (is (some? (get-in @request [:authority :regulator-capability]))))))

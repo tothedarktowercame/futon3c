@@ -1481,7 +1481,15 @@
 (defn autonomous-problem-list-step!
   "Run one JIT queue boundary without parking an initiating agent session."
   [launch]
-  (set-alight-problem-list! (assoc launch :autonomous? true)))
+  (set-alight-problem-list!
+   (-> launch
+       (assoc :autonomous? true)
+       (update :authority
+               (fn [authority]
+                 (assoc (or authority {})
+                        :regulator-id
+                        (str machine-regulator-id ":durable-jit")
+                        :regulator-capability machine-regulator-capability))))))
 
 (defn start-autonomous-problem-list!
   "Persist and start a JIT queue coordinator; this call has no REPL park."
