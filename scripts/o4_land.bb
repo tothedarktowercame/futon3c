@@ -1,11 +1,11 @@
 #!/usr/bin/env bb
 ;; O4 lander (C-cascade-real, claude-10): POST the canonical cluster entities +
-;; cluster-member hyperedges to :7071 (the gated run-write! path), idempotent.
+;; cluster-member hyperedges to futon1b (the gated run-write! path), idempotent.
 ;; Reads o4-land-payloads.edn. penholder=claude-10. NEVER restarts the JVM.
 ;; Usage: bb futon3c/scripts/o4_land.bb [--smoke]   (--smoke = POST 1 entity + 1 edge only)
 (require '[babashka.http-client :as http] '[clojure.edn :as edn])
 
-(def base "http://localhost:7071")
+(def base (or (System/getenv "FUTON1B_URL") "http://localhost:7073"))
 (def penholder "api")   ;; L3 allow-listed; attribution lives in :props (:o4/generated, :o4/by)
 (def payloads (edn/read-string (slurp "/home/joe/code/futon3c/holes/excursions/o4-land-payloads.edn")))
 
@@ -36,4 +36,8 @@
           h (land! "/api/alpha/hyperedge" hxs)]
       (println "entities  →" e)
       (println "hyperedges →" h)
-      (println (if (and (zero? (:fail e)) (zero? (:fail h))) "LAND OK ✅" "LAND had failures ❌")))))
+      (if (and (zero? (:fail e)) (zero? (:fail h)))
+        (println "LAND OK ✅")
+        (do
+          (println "LAND had failures ❌")
+          (System/exit 1))))))
