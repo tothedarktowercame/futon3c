@@ -314,7 +314,11 @@
   [ledger]
   (let [failed-at (str (Instant/now))
         recover-one (fn [job]
-                      (if (#{"queued" "running"} (str (:state job)))
+                      ;; A queued job is the durable pre-announcement.  It has no
+                      ;; worker to lose and must remain activatable after restart.
+                      ;; Only jobs which had crossed the activation boundary can
+                      ;; become orphaned when the process dies.
+                      (if (#{"activating" "running"} (str (:state job)))
                         (-> job
                             (assoc :state "failed"
                                    :finished-at failed-at
@@ -923,8 +927,8 @@
     (update-invoke-jobs-ledger!
      (fn [ledger]
        (let [requested (some-> requested-job-id str str/trim)
-             ;; Dedup: if the requested job-id already exists and is non-terminal,
-             ;; reuse it instead of creating a duplicate.
+             ;; Dedup active requested jobs. Callers needing durable replay of a
+             ;; terminal identity must validate the immutable request first.
              existing (when (seq requested)
                         (get-in ledger [:jobs requested]))
              reuse? (and existing
@@ -4383,7 +4387,15 @@
             raw-mode (or (:mode payload) (get payload "mode"))
             mode (normalize-invoke-job-mode raw-mode)
             requested-job-id (or (:job-id payload) (get payload "job-id")
-                                 (:job_id payload) (get payload "job_id"))]
+                                 (:job_id payload) (get payload "job_id"))
+            requested-job-id (some-> requested-job-id str str/trim not-empty)
+            existing (when requested-job-id
+                       (get-in (ensure-invoke-jobs-ledger!)
+                               [:jobs requested-job-id]))
+            expected-digest (when (and agent-id prompt)
+                              (campaign-machine/ledger-digest
+                               [{:agent-id (str agent-id) :prompt (str prompt)
+                                 :caller caller :surface surface}]))]
         (cond
           (or (nil? agent-id) (str/blank? (str agent-id)))
           (json-response 400 {:ok false :err "missing-agent-id"
@@ -4401,21 +4413,32 @@
           (json-response 404 {:ok false :err "agent-not-found"
                               :message (str "Agent not registered: " agent-id)})
 
+          (and existing
+               (or (not= (str agent-id) (:agent-id existing))
+                   (not= expected-digest (:request-digest existing))
+                   (and mode (not= mode (:mode existing)))))
+          (json-response 409 {:ok false :err "announced-job-conflict"
+                              :job-id requested-job-id
+                              :state (:state existing)})
+
           :else
-          (let [job-id (create-invoke-job! {:requested-job-id requested-job-id
-                                            :agent-id agent-id
-                                            :prompt prompt
-                                            :caller caller
-                                            :surface surface
-                                            :mode mode})
+          (let [job-id (if existing
+                         requested-job-id
+                         (create-invoke-job! {:requested-job-id requested-job-id
+                                              :agent-id agent-id
+                                              :prompt prompt
+                                              :caller caller
+                                              :surface surface
+                                              :mode mode}))
                 queued-jobs (get-in (active-invoke-job-counts)
                                     [(canonical-job-agent-id agent-id) :queued-jobs]
                                     0)
                 job (some-> job-id get-invoke-job invoke-job-public-view)]
             (json-response 202 {:ok true
                                 :accepted true
+                                :reused? (boolean existing)
                                 :job-id job-id
-                                :state "queued"
+                                :state (:state job)
                                 :queued-jobs queued-jobs
                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)
                                 :job job})))))))

@@ -8,6 +8,55 @@
 
 (def terminal-states #{:done :failed :error :cancelled})
 
+(declare ticket)
+
+(defn- supersede-unaccepted!
+  [{:keys [active-request state announce-fn activate-fn persist-fn cancel-fn
+           ticket-register-fn]}]
+  (let [old-ticket (:ticket state)
+        cancelled (cancel-fn (:job-id old-ticket))]
+    (if-not (:ok cancelled)
+      {:ok false :error/code :live-job-unaccepted-cancellation-failed
+       :state state :finding cancelled}
+      (let [announced (ticket active-request (announce-fn active-request))]
+        (cond
+          (not (:ok announced)) announced
+          (= (:job-id old-ticket) (get-in announced [:ticket :job-id]))
+          {:ok false :error/code :live-job-supersession-identity-reused}
+          :else
+          (let [next-state (-> state
+                               (assoc :ticket (:ticket announced)
+                                      :activation/accepted? false
+                                      :activation/failure nil
+                                      :activation-supersession-attempts 1)
+                               (update :superseded-tickets (fnil conj [])
+                                       (assoc old-ticket
+                                              :cancellation cancelled)))]
+            (if-not (:ok (persist-fn next-state))
+              {:ok false :error/code :live-job-supersession-persistence-failed}
+              (let [registered (if (fn? ticket-register-fn)
+                                 (ticket-register-fn active-request
+                                                     (:ticket announced))
+                                 {:ok true})
+                    activated (when (:ok registered)
+                                (activate-fn active-request (:ticket announced)))]
+                (cond
+                  (not (:ok registered))
+                  {:ok false
+                   :error/code :live-job-submission-authority-registration-failed
+                   :state next-state :finding registered}
+                  (not (:ok activated))
+                  {:ok false :error/code :live-job-activation-failed
+                   :state next-state :finding activated}
+                  :else
+                  (let [accepted (assoc next-state :activation/accepted? true)]
+                    (if (:ok (persist-fn accepted))
+                      {:ok true :status :awaiting-terminal
+                       :supersession? true :state accepted}
+                      {:ok false
+                       :error/code :live-job-activation-acceptance-persistence-failed
+                       :state next-state})))))))))))
+
 (defn ticket [request response]
   (if-not (and (:ok response) (string? (:job-id response))
                (not-empty (:job-id response)))
@@ -22,7 +71,7 @@
   "Advance one job by at most one externally visible state transition."
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
            terminal-validator receipt-provider terminal-repair-request-fn
-           ticket-register-fn terminal-submission-provider]}]
+           ticket-register-fn terminal-submission-provider cancel-fn]}]
   (cond
     (not (and (map? request) (string? (:dispatch/id request))
               (every? fn? [announce-fn activate-fn job-fn persist-fn
@@ -70,8 +119,22 @@
     (let [job (job-fn (get-in state [:ticket :job-id]))
           observed-accepted? (or (contains? terminal-states (:state job))
                                  (contains? #{:activating :running :overrun}
-                                            (:state job)))]
-      (if observed-accepted?
+                                            (:state job)))
+          supersession-eligible?
+          (and (= :queued (:state job)) (fn? cancel-fn)
+               (fn? terminal-submission-provider)
+               (zero? (or (:activation-supersession-attempts state) 0))
+               (or (:activation/failure state)
+                   (pos? (or (:typed-submission-migration-attempts state) 0))))]
+      (cond
+        supersession-eligible?
+        (supersede-unaccepted!
+         {:active-request (or (:active-request state) request)
+          :state state :announce-fn announce-fn :activate-fn activate-fn
+          :persist-fn persist-fn :cancel-fn cancel-fn
+          :ticket-register-fn ticket-register-fn})
+
+        observed-accepted?
         ;; A running or terminal canonical job is stronger durable evidence
         ;; than the lost local 202 observation.  Persist the reconciliation
         ;; before terminal validation; never reinterpret a client timeout or
@@ -85,10 +148,15 @@
             {:ok false
              :error/code :live-job-activation-acceptance-persistence-failed
              :state state}))
+        :else
         (let [activated (activate-fn request (:ticket state))]
           (if-not (:ok activated)
-            {:ok false :error/code :live-job-activation-failed
-             :state state :finding activated}
+            (let [failed-state (assoc state :activation/failure activated)]
+              (if (:ok (persist-fn failed-state))
+                {:ok false :error/code :live-job-activation-failed
+                 :state failed-state :finding activated}
+                {:ok false :error/code :live-job-activation-failure-persistence-failed
+                 :state state}))
             (let [accepted-state (assoc state :activation/accepted? true)
                   persisted (persist-fn accepted-state)]
               (if (:ok persisted)

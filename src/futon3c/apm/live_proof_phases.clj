@@ -244,11 +244,13 @@
         {:kind kind :contract contract :request request :state state
     :announce-fn
     (fn [req]
-      (let [response (runtime/http-json
+      (let [req (submission/with-job-authority req)
+            response (runtime/http-json
                       "POST" (str agency-base "/api/alpha/invoke/announce")
                       {:agent-id (:agent-id req) :prompt (prompt req)
                        :surface "emacs-repl" :caller "countdown-control"
-                       :mode (if (= :solve kind) "work" "brief")})]
+                       :mode (if (= :solve kind) "work" "brief")
+                       :job-id (:submission/job-id req)})]
         {:ok (and (= 202 (:http/status response)) (:ok response))
          :job-id (:job-id response)}))
     :activate-fn
@@ -256,8 +258,7 @@
       (let [response (runtime/http-json
                       "POST" (str agency-base "/api/alpha/invoke/activate")
                       {:agent-id (:agent-id req)
-                       :prompt (prompt (assoc req :submission/job-id
-                                             (:job-id ticket)))
+                       :prompt (prompt (submission/with-job-authority req))
                        :surface "emacs-repl" :caller "countdown-control"
                        :mode (if (= :solve kind) "work" "brief")
                        :job-id (:job-id ticket)})]
@@ -267,6 +268,14 @@
     (fn [job-id]
       (runtime/job->terminal
        (runtime/http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
+    :cancel-fn
+    (fn [job-id]
+      (let [response (runtime/http-json
+                      "POST" (str agency-base "/api/alpha/invoke/jobs/"
+                                  job-id "/cancel")
+                      {:reason "typed-submission activation supersession"})]
+        {:ok (and (= 200 (:http/status response)) (:ok response))
+         :job-id job-id :response response}))
     :persist-fn #(runtime/atomic-persist! state-path %)
     :ticket-register-fn submission/register!
     :terminal-submission-provider (fn [_ ticket _]

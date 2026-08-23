@@ -29,6 +29,13 @@
    :typed-submission-migration-max 1
    :typed-submission-migration-fresh-session true
    :typed-submission-migration-preserves-snapshot true
+   :activation-supersession-max 1
+   :activation-supersession-requires-cancellation true
+   :activation-supersession-distinct-job true
+   :deterministic-job-id-before-announce true
+   :announce-activate-request-identical true
+   :queued-job-survives-restart true
+   :conflicting-job-replay-policy "reject"
    :terminal-output-repair-attempts 1
    :repair-feedback-findings-required true
    :client-timeout-is-success false})

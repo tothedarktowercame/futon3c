@@ -51,11 +51,20 @@
   (let [request (submission/prepare-request request)]
    (fn
     ([]
-     (let [announced (runtime/http-json
+     (let [request (submission/with-job-authority request)
+           typed-prompt (str prompt
+                             "\nCompletion is accepted only through the typed "
+                             "submission tool under shared contract "
+                             (pr-str submission/completion-contract) ". "
+                             "Run the template command, fill every null in its "
+                             "evidence object, then run the submit command:\n"
+                             (submission/command request
+                                                 {:job-id (:submission/job-id request)}))
+           announced (runtime/http-json
                       "POST" (str agency-base "/api/alpha/invoke/announce")
-                      {:agent-id (:agent-id request) :prompt prompt
+                      {:agent-id (:agent-id request) :prompt typed-prompt
                        :surface "emacs-repl" :caller "countdown-control"
-                       :mode "work"})
+                       :mode "work" :job-id (:submission/job-id request)})
            job-id (:job-id announced)
            ticket {:job-id job-id}
            registered (when (and (= 202 (:http/status announced)) job-id)
@@ -64,13 +73,7 @@
                        (runtime/http-json
                         "POST" (str agency-base "/api/alpha/invoke/activate")
                         {:agent-id (:agent-id request)
-                         :prompt (str prompt
-                                      "\nCompletion is accepted only through the typed "
-                                      "submission tool under shared contract "
-                                      (pr-str submission/completion-contract) ". "
-                                      "Run the template command, fill every null in its "
-                                      "evidence object, then run the submit command:\n"
-                                      (submission/command request ticket))
+                         :prompt typed-prompt
                          :surface "emacs-repl" :caller "countdown-control"
                          :mode "work" :job-id job-id}))]
        (if (and (= 202 (:http/status announced)) (:ok announced)

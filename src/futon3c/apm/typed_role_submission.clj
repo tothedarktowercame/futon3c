@@ -53,6 +53,15 @@
     (assoc request :submission/token
            (machine/ledger-digest ["apm-role-submission" seed]))))
 
+(defn canonical-job-id [request]
+  (str "apm-role-" (machine/ledger-digest
+                    ["apm-role-job" (:dispatch/id request)
+                     (:agent-id request) (:phase request)])))
+
+(defn with-job-authority [request]
+  (assoc request :submission/job-id (or (:submission/job-id request)
+                                        (canonical-job-id request))))
+
 (defn- record-path [job-id]
   (io/file *submission-root* (str job-id ".edn")))
 
@@ -176,7 +185,7 @@
 (defn command
   "Exact client command placed into the activated role prompt."
   [request ticket]
-  (let [base (str "/home/joe/code/futon3c-apm-control/scripts/apm-submit-role.py"
+  (let [base (str "/home/joe/code/futon3c/scripts/apm-submit-role.py"
                   " --job-id " (:job-id ticket)
                   " --token " (:submission/token request))
         payload (str "/tmp/apm-role-" (:job-id ticket) ".json")]

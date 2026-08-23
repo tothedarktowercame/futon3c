@@ -178,6 +178,37 @@
                                   (= :announce (first %)))
                             @calls))))))
 
+(deftest unaccepted-queued-job-is-cancelled-before-one-distinct-supersession
+  (let [calls (atom [])
+        base (assoc (effects calls (atom nil))
+                    :job-fn (constantly {:job-id "old-job" :state :queued})
+                    :cancel-fn (fn [job-id]
+                                 (swap! calls conj [:cancel job-id])
+                                 {:ok true :cancelled-job-id job-id})
+                    :announce-fn (fn [_]
+                                   (swap! calls conj :announce-replacement)
+                                   {:ok true :job-id "replacement-job"})
+                    :terminal-submission-provider (constantly nil)
+                    :ticket-register-fn
+                    (fn [_ ticket]
+                      (swap! calls conj [:register (:job-id ticket)])
+                      {:ok true}))
+        state {:state/type :live-job-dispatched :request request
+               :active-request request
+               :ticket {:job-id "old-job" :ticket/id "old-ticket"}
+               :activation/accepted? false
+               :typed-submission-migration-attempts 1}
+        result (sut/drive! (assoc base :state state))]
+    (is (= :awaiting-terminal (:status result)))
+    (is (true? (:supersession? result)))
+    (is (= "replacement-job" (get-in result [:state :ticket :job-id])))
+    (is (= 1 (get-in result [:state :activation-supersession-attempts])))
+    (is (= "old-job" (get-in result [:state :superseded-tickets 0 :job-id])))
+    (is (< (.indexOf @calls [:cancel "old-job"])
+           (.indexOf @calls :announce-replacement)
+           (.indexOf @calls [:register "replacement-job"])
+           (.indexOf @calls :activate)))))
+
 (deftest typed-submission-replaces-conversational-report
   (let [calls (atom [])
         seen (atom nil)
