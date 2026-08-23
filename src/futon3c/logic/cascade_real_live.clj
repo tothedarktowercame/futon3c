@@ -24,7 +24,7 @@
             [futon3c.agency.registry :as registry]
             [futon3c.logic.cascade-real :as cr]
             [futon3c.substrate.client :as substrate])
-  (:import (java.util.concurrent Callable Executors)))
+  (:import (java.util.concurrent Callable Executors TimeUnit TimeoutException)))
 
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
 ;; A live type-window page can exceed 5 s when both substrate read permits are
@@ -450,6 +450,21 @@
           ;; renderer buckets on this key.
           :relation "applied"})))
 
+(def ^:private graph-fetch-deadline-ms
+  "Wall-clock ceiling for the WHOLE graph, per walk. Without it `.get` blocks
+   forever: the per-page deadline bounds one page, and the longest cursor chain
+   is 10 pages, so a stalled substrate could hold this endpoint open for
+   minutes with no upper bound at all. A walk that blows this becomes an honest
+   :failed section like any other read failure -- the point of per-section
+   degradation is that a slow dimension costs that dimension, not the page."
+  90000)
+
+(def ^:dynamic graph-fetch-workers
+  "Concurrent typed walks. Dynamic so worker count can be A/B-measured against
+   the live store in one window instead of across two edits under different
+   load -- which is the only way to tell a real speedup from drift."
+  2)
+
 (def ^:private graph-hyperedge-types
   ;; Longest cursor chain first: submitting the 971-row pattern walk after
   ;; the short walks adds their latency directly to the critical path.
@@ -467,7 +482,7 @@
    a failed read is `:failed` with its type and cause. Cursor-linked pages
    within one `fetch-edges` call remain sequential."
   []
-  (let [pool (Executors/newFixedThreadPool 2)]
+  (let [pool (Executors/newFixedThreadPool (int graph-fetch-workers))]
     (try
       (let [tasks (into {}
                         (map (fn [hx-type]
@@ -487,7 +502,21 @@
                                                         :class (.getName (class t))
                                                         :data (some-> (ex-data t) pr-str)}}))))]))
                         graph-hyperedge-types)]
-        (into {} (map (fn [[hx-type task]] [hx-type (.get task)]) tasks)))
+        (into {}
+              (map (fn [[hx-type task]]
+                     [hx-type
+                      (try
+                        (.get task graph-fetch-deadline-ms TimeUnit/MILLISECONDS)
+                        (catch TimeoutException t
+                          (.cancel task true)
+                          {:status :failed
+                           :hyperedge-type hx-type
+                           :edges []
+                           :error {:message (str "walk exceeded " graph-fetch-deadline-ms
+                                                 "ms graph deadline")
+                                   :class (.getName (class t))
+                                   :data nil}}))])
+                   tasks)))
       (finally
         (.shutdownNow pool)))))
 
