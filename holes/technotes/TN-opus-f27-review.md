@@ -185,7 +185,7 @@ Worth recording, because it is unusual and it is why this review was cheap:
   it git-logged the final-head and grepped for `sorry` in the solver
   workspace. Correct instinct, right layer.
 
-## Fixes — status as of 2026-08-23T23:10Z
+## Fixes — status as of 2026-08-24T00:05Z
 
 Done directly (Joe: "not by handoff") on branch `fix/f27-review`, worktree
 `/home/joe/code/futon3c-opus-f27`, commit `409569e4`. Tested in that
@@ -198,7 +198,7 @@ worktree's own process; nothing loaded into the :6768 JVM.
 | 3 | promotion deposit gate rejects any candidate with empty `:pattern-ids` (`:candidate-patterns-missing`) with one bounded schema repair, and the deposit prompt states the library rule | **done** `409569e4` |
 | 5 | accept the parsed-vector axioms form | **already on master** `2439b3c6` |
 | 6 | merge `exp/countdown-f27-m94A03-solver` into `apm-lean` master; refresh `status.json` | **open** — `apm-lean` checkout is on someone's `repair/m97A06-energy-regularity` branch; not touched |
-| 1 | guide deposits reach the Student | **open — design decision, below** |
+| 1 | guide deposits reach the Student (option A below, Joe's call 2026-08-23) | **done** `4faf7677` |
 
 Gates on `409569e4`: clj-kondo 0 errors / 0 warnings; `check-parens` OK;
 105 tests / 455 assertions across the affected and adjacent namespaces
@@ -211,7 +211,47 @@ persisted Student request without `:base-revision` now fails closed at
 activation (`:student-workspace-base-unknown`) instead of silently skipping
 the reset. Re-prepare the frame; do not patch the state file.
 
-### Fix 1 — why it is not in the commit
+Second commit `4faf7677` (fix 1): 144 tests / 605 assertions across the
+same namespaces plus `frame-cycle-handlers`, `live-job-driver`,
+`queued-frame-adapter`, `memory-snapshot`, `frame-cycle-contract-v2`,
+`generated-contract`. 3 failures, all in
+`bank-handler-rejects-a-different-frames-verify-receipt`, which **fails
+identically on master** with master's own `frame_cycle_handlers.clj` and
+test file (verified by stashing both and re-running) — pre-existing, not
+introduced here, and not touched.
+
+### Fix 1 — what was built (option A)
+
+- Store-mode Guide report may carry `:candidates`
+  (`memory-id`, `content-digest`, non-empty `pattern-ids`, `source-attempts`),
+  gated at the terminal by `promotion-pipeline/validate-guide-deposit`;
+  candidates in harness-mode are refused (`:guide-candidates-outside-store-mode`).
+- Before the Guide receipt exists, the candidates go to the promotion Proctor
+  (`live-promotion/drive!` gains a `:review-pending` entry; state at
+  `live/guide-intervention-N-review.edn`) and the approvals are published as
+  the **union** of the prior reviewed snapshot at
+  `snapshots/<frame>-guide-<N>-memory.edn` — every prior memory re-validated
+  and re-checked against the substrate. The Guide receipt then carries
+  `:receipt/snapshot-id/-digest/-path/-reviewed-memory-ids/-promotion-reviews`.
+- `live-job-driver` lets a receipt provider defer certification behind a
+  further job (`:status :awaiting-terminal`).
+- `frame-cycle-handlers/latest-snapshot-receipt`: Student attempt k binds to
+  the most recent Guide union, else the Solver promotion; the handler check,
+  `build-request`, and `countdown-control`'s snapshot verification agree.
+  Binding is still exact and content-addressed; review is still independent;
+  the Lean-generated memory policy is untouched.
+- The projection shows the reviewer's job while a deposit is under review.
+- **Guide card v2.2 (DRAFT)** — `role-cards/claude-guide-v2.2.md` — adds the
+  `:candidates` output and says plainly that under the campaign machine the
+  deposit is substrate-write + `:candidates`, not a conductor binding.
+  `queued-frame-adapter` pins v2.2 for JIT campaigns; the per-frame one-off
+  manifests (`f21/f22/f23-one-off-manifest-v1.edn`) still pin v2.1 by blob
+  and are Joe's to re-pin.
+- Not changed: the contract's global-invariant label
+  `:student-snapshot-equals-promoted-snapshot` now reads as "equals the
+  latest *reviewed* snapshot"; the EDN label is documentation, not code.
+
+### Fix 1 — the design question as it was put (kept for the record)
 
 The intended design is in the guide card (`claude-guide-v2.1.md`): *"In
 store-mode you may deposit memories between attempts … approved memories
