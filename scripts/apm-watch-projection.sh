@@ -20,8 +20,7 @@ max_age_seconds=${3:-120}
 
 last_lines=0
 check() {
-  local now modified age lines status
-  now=$(date +%s)
+  local lines
   if [[ ! -f "$transition_log" ]]; then
     printf '{:watch/status :alert :reason :transition-log-missing :path "%s"}\n' \
       "$transition_log"
@@ -39,24 +38,8 @@ check() {
     last_lines=$lines
   fi
 
-  status=$(sed -n 's/.*:regulator\/status \(:[a-z-]*\).*/\1/p' \
-    "$coordinator_state" | head -1)
-  if [[ "$status" != ":running" && "$status" != ":complete" ]]; then
-    printf '{:watch/status :alert :reason :coordinator-not-running :observed %s}\n' \
-      "${status:-:missing}"
-    return 3
-  fi
-
-  modified=$(stat -c %Y "$coordinator_state")
-  age=$((now - modified))
-  if (( age > max_age_seconds )); then
-    printf '{:watch/status :alert :reason :coordinator-heartbeat-stale :age-seconds %s :limit-seconds %s}\n' \
-      "$age" "$max_age_seconds"
-    return 4
-  fi
-
-  printf '{:watch/status :healthy :coordinator/status %s :transition-count %s :age-seconds %s}\n' \
-    "$status" "$lines" "$age"
+  clojure -M -m futon3c.apm.projection-watchdog \
+    "$transition_log" "$coordinator_state" "$max_age_seconds"
 }
 
 if $once; then
