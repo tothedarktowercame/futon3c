@@ -127,9 +127,14 @@
                             "#{:ran :ran-empty :not-run} :reason <nonblank string when "
                             "status is not :ran>}; do not encode status as a map key. "
                             "Every candidate must contain string "
-                            ":memory-id, string :content-digest, vector :pattern-ids, "
-                            "and vector :source-attempts. EDN does not concatenate "
-                            "adjacent string literals; use one string value per field.")
+                            ":memory-id, string :content-digest, NON-EMPTY vector "
+                            ":pattern-ids, and vector :source-attempts. Each pattern id "
+                            "names a pattern in the mathematics libraries (math-informal* / "
+                            "math-formalization); create a library file if none fits. "
+                            "A candidate with no bound pattern cannot be reviewed for "
+                            "coherent fit and is rejected at the gate. EDN does not "
+                            "concatenate adjacent string literals; use one string value "
+                            "per field.")
         deposit-stage (agency-stage agency-base deposit-request deposit-prompt)
         deposit-fn (fn
                      ([] (deposit-stage))
@@ -151,7 +156,9 @@
                                       (pr-str (:findings value))
                                       ". Required lane shape is {:lane <keyword> "
                                       ":status one-of #{:ran :ran-empty :not-run} "
-                                      ":reason <nonblank string when status is not :ran>}."))
+                                      ":reason <nonblank string when status is not :ran>}. "
+                                      "Every candidate needs a non-empty :pattern-ids "
+                                      "vector naming mathematics-library patterns."))
                                "\nRepair only the serialization/shape and return the complete map."))))))
         review-fn
         (fn
@@ -203,7 +210,10 @@
                                    (get-in failure [:report/error :error/code]))
         format-repairs (or (:format-repairs state) 0)
         format-repair? (and format-failure? (zero? format-repairs))
-        schema-failure? (= [:lane-report-invalid] (:findings failure))
+        schema-failure? (and (seq (:findings failure))
+                             (every? #{:lane-report-invalid
+                                       :candidate-patterns-missing}
+                                     (:findings failure)))
         schema-repairs (or (:schema-repairs state) 0)
         schema-repair? (and schema-failure? (zero? schema-repairs))
         boundary-repair? (or format-repair? schema-repair?)]

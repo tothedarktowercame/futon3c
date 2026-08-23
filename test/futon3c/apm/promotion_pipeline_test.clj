@@ -37,3 +37,16 @@
             (:findings (sut/validate-deposit
                         {:depositor "scribe" :candidates [candidate]
                          :lanes []})))))
+
+(deftest deposit-requires-a-bound-pattern-per-candidate
+  ;; f27: three candidates with :pattern-ids [] reached the proctor and were
+  ;; all rejected pattern-attachment-missing; the solver arm deposited nothing.
+  (let [findings (:findings (sut/validate-deposit
+                             {:depositor "scribe"
+                              :candidates [candidate
+                                           (assoc candidate :memory-id "m2"
+                                                  :pattern-ids [])]
+                              :lanes lanes}))]
+    (is (some #{:candidate-patterns-missing} findings))
+    (is (not (some #{:candidate-shape-invalid} findings))
+        "an empty vector is well-shaped; it is the binding that is missing")))

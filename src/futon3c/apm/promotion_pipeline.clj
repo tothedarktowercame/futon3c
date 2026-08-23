@@ -34,6 +34,13 @@
                                     (string? (:content-digest %))
                                     (vector? (:pattern-ids %)))) candidates)
                    (conj :candidate-shape-invalid)
+                   ;; A candidate with no bound pattern cannot be reviewed for
+                   ;; coherent fit and is rejected downstream regardless of
+                   ;; content (f27: 3 of 3 rejected pattern-attachment-missing).
+                   ;; Gate it here, where the depositor can still repair it.
+                   (some #(and (vector? (:pattern-ids %))
+                               (not (seq (:pattern-ids %)))) candidates)
+                   (conj :candidate-patterns-missing)
                    (not (and (vector? lanes)
                              (= required-lanes (set (map :lane lanes)))
                              (every? valid-lane? lanes)))

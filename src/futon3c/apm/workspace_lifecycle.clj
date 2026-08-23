@@ -144,6 +144,99 @@
       :worktree-clean? clean? :problem/blob blob :probe/exit (:exit probe)
       :substrate/path (some-> substrate str)})))
 
+(defn archive-problem-source!
+  "Copy the worktree's problem file into ARCHIVE-DIRECTORY, named by its git
+  blob id, so the source survives the worktree being reset or retired.
+
+  Student worktrees are never committed: on f27 the Student's independent
+  proof existed only as an uncommitted modification and was destroyed by the
+  retirement, leaving a lemma name in a receipt as its only trace."
+  [{:keys [archive-directory] :as lease}]
+  (let [workspace (canonical (:workspace/path lease))
+        problem-path (:problem/path lease)
+        source (when (and workspace (string? problem-path))
+                 (.resolve workspace problem-path))]
+    (cond
+      (not (and source (string? archive-directory)
+                (not (str/blank? archive-directory))))
+      {:ok false :error/code :workspace-source-archive-shape-invalid}
+      (not (Files/isRegularFile source (make-array LinkOption 0)))
+      {:ok false :error/code :workspace-source-missing :path (str source)}
+      :else
+      (let [blob (out (run workspace "hash-object" problem-path))
+            head (out (run workspace "rev-parse" "HEAD"))
+            status (or (out (run workspace "status" "--porcelain=v1" "--"
+                                problem-path))
+                       "")
+            directory (canonical archive-directory)
+            target (.resolve directory
+                             (str blob "-" (.getFileName
+                                            (Path/of problem-path
+                                                     (make-array String 0)))))]
+        (if-not (and blob head)
+          {:ok false :error/code :workspace-source-git-failed}
+          (try
+            (Files/createDirectories directory (make-array FileAttribute 0))
+            (Files/copy source target
+                        (into-array CopyOption [StandardCopyOption/REPLACE_EXISTING]))
+            (if (java.util.Arrays/equals (Files/readAllBytes source)
+                                         (Files/readAllBytes target))
+              {:ok true
+               :source {:path (str target) :blob blob :head head
+                        :problem/path problem-path
+                        :dirty? (not (str/blank? status))}}
+              {:ok false :error/code :workspace-source-archive-postcondition-failed
+               :path (str target)})
+            (catch Throwable t
+              {:ok false :error/code :workspace-source-archive-failed
+               :finding {:message (.getMessage t)}})))))))
+
+(defn reset-to-base!
+  "Return a worktree to its registered base revision with a clean tree.
+
+  Tracked changes and untracked files are discarded (the prior HEAD and status
+  are reported so a discarded commit stays recoverable from the reflog);
+  ignored paths such as the `.lake` substrate link are kept. Fails closed
+  unless the result is exactly the base with nothing outstanding. Used before
+  each fresh Student attempt: on f27 attempts 2 and 3 opened attempt 1's
+  finished proof and verified it instead of attempting the problem."
+  [lease]
+  (let [workspace (canonical (:workspace/path lease))
+        base-revision (:base-revision lease)
+        problem-path (:problem/path lease)]
+    (cond
+      (not (and workspace (string? base-revision)
+                (re-matches #"[0-9a-f]{40}" base-revision)))
+      {:ok false :error/code :workspace-reset-shape-invalid}
+      (not (Files/isDirectory workspace (make-array LinkOption 0)))
+      {:ok false :error/code :workspace-reset-path-missing :path (str workspace)}
+      :else
+      (let [head-before (out (run workspace "rev-parse" "HEAD"))
+            status-before (vec (remove str/blank?
+                                       (str/split-lines
+                                        (or (out (run workspace "status"
+                                                      "--porcelain=v1"))
+                                            ""))))
+            reset (run workspace "reset" "--hard" base-revision)
+            clean (when (zero? (:exit reset)) (run workspace "clean" "-fd"))
+            head (out (run workspace "rev-parse" "HEAD"))
+            status-after (out (run workspace "status" "--porcelain=v1"))
+            blob (when (string? problem-path)
+                   (out (run workspace "rev-parse" (str "HEAD:" problem-path))))]
+        (cond
+          (not (zero? (:exit reset)))
+          {:ok false :error/code :workspace-reset-git-failed
+           :finding {:exit (:exit reset) :stderr (:err reset)}}
+          (not (and clean (zero? (:exit clean))))
+          {:ok false :error/code :workspace-clean-git-failed
+           :finding {:exit (:exit clean) :stderr (:err clean)}}
+          (not (and (= base-revision head) (= "" (or status-after ""))))
+          {:ok false :error/code :workspace-reset-postcondition-failed
+           :head head :status status-after}
+          :else
+          {:ok true :head head :problem/blob blob
+           :discarded {:head head-before :status status-before}})))))
+
 (defn- atomic-edn! [target value]
   (let [target (canonical target) directory (.getParent target)]
     (Files/createDirectories directory (make-array FileAttribute 0))

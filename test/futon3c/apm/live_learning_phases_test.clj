@@ -311,3 +311,83 @@
             :snapshot-digest "frozen-digest"}
            (get-in result [:certificate :receipt/memory-snapshot])))
     (is (nil? (get-in result [:certificate :receipt/fresh-session-id])))))
+
+(deftest student-request-carries-the-workspace-base-for-reset-and-archive
+  (let [base-revision (apply str (repeat 40 "b"))
+        result (sut/build-request
+                (merge base {:action {:kind :student-attempt
+                                      :phase :student-attempt-2 :role :student
+                                      :ordinal 2 :frame-id "f19" :problem-id "a01J05"}
+                             :seat {:agent-id "f19-student" :invoke-ready? true}
+                             :workspace {:workspace/path "/tmp/student"
+                                         :base-revision base-revision
+                                         :problem/path "problems/a01J05/lean/Main.lean"}
+                             :receipts {:preflight preflight-receipt
+                                        :guide-intervention-1
+                                        (let [body {:receipt/type :guide-intervention
+                                                    :receipt/frame-id "f19"
+                                                    :receipt/problem-id "a01J05"}]
+                                          (assoc body :receipt/id
+                                                 (machine/ledger-digest [body])))}}))
+        request (:request result)]
+    (is (:ok result))
+    (is (= base-revision (:base-revision request)))
+    (is (= "problems/a01J05/lean/Main.lean" (:problem-path request)))))
+
+(deftest fresh-student-attempt-resets-the-worktree-but-repairs-do-not
+  ;; f27: attempts 2 and 3 opened attempt 1's finished proof and verified it.
+  (let [calls (atom [])
+        reset-fn (fn [lease] (swap! calls conj lease) {:ok true :head "h"})
+        request {:dispatch/type :student-attempt :fresh-session? true
+                 :workspace "/tmp/student" :base-revision "b"
+                 :problem-path "problems/p/lean/Main.lean"}]
+    (is (= :reset (:status (sut/prepare-student-workspace! request reset-fn))))
+    (is (= [{:workspace/path "/tmp/student" :base-revision "b"
+             :problem/path "problems/p/lean/Main.lean"}]
+           @calls))
+    (is (= :not-applicable
+           (:status (sut/prepare-student-workspace!
+                     (assoc request :repair/attempt 1) reset-fn))))
+    (is (= :not-applicable
+           (:status (sut/prepare-student-workspace!
+                     (assoc request :dispatch/type :guide-intervention) reset-fn))))
+    (is (= :student-workspace-base-unknown
+           (:error/code (sut/prepare-student-workspace!
+                         (dissoc request :base-revision) reset-fn))))
+    (is (= :student-workspace-reset-failed
+           (:error/code (sut/prepare-student-workspace!
+                         request (fn [_] {:ok false :error/code :workspace-reset-git-failed})))))
+    (is (= 1 (count @calls)) "only the original fresh dispatch touches the worktree")))
+
+(deftest student-receipt-names-the-archived-source-blob
+  (let [action {:kind :student-attempt :phase :student-attempt-1 :role :student
+                :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
+        request (assoc (:request (sut/build-request
+                                  (merge base {:action action
+                                               :seat {:agent-id "f19-student"
+                                                      :invoke-ready? true}})))
+                       :memory-snapshot {:receipt-id "promotion" :snapshot-id "snapshot"
+                                         :snapshot-digest "digest"
+                                         :accessible-memory-ids []}
+                       :problem-path "problems/a01J05/lean/Main.lean")
+        job {:job-id "j1" :agent-id "f19-student" :session-id "fresh-s1"
+             :state :done
+             :report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
+                      :outcome :success :failure-account []
+                      :memory-use {:receipt-id "promotion" :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :queries [] :surfaced-ids [] :used-ids []}}}
+        validated (sut/validate-terminal request {:job-id "j1"} job)
+        archived (sut/archive-student-source!
+                  request "/tmp/campaign/live/student-attempt-1.edn"
+                  (fn [lease] {:ok true :source (assoc lease :blob "abc" :head "h")}))
+        result (sut/receipt contract action (:receipts base) request {:job-id "j1"} job
+                            (assoc validated :source (:source archived)))]
+    (is (:ok validated))
+    (is (= "/tmp/campaign/live/student-attempt-1-source"
+           (get-in archived [:source :archive-directory])))
+    (is (:ok result))
+    (is (= "abc" (get-in result [:certificate :receipt/source :blob])))
+    (is (= :student-source-unknown
+           (:error/code (sut/archive-student-source!
+                         (dissoc request :problem-path) "/tmp/x.edn" (fn [_] nil)))))))

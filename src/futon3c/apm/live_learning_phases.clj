@@ -7,8 +7,10 @@
             [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
-            [futon3c.apm.typed-role-submission :as submission])
-  (:import [java.util UUID]))
+            [futon3c.apm.typed-role-submission :as submission]
+            [futon3c.apm.workspace-lifecycle :as workspace-lifecycle])
+  (:import [java.nio.file Path]
+           [java.util UUID]))
 
 (def role-for-kind
   {:student-attempt :student :guide-intervention :guide
@@ -97,6 +99,12 @@
                           :workspace (:workspace/path workspace)
                           :fresh-session? true
                           :fresh-session-nonce (str (UUID/randomUUID)))
+                   ;; The base is what each fresh attempt is reset to and what
+                   ;; the archived source is measured against.
+                   (and (= :student-attempt kind)
+                        (string? (:base-revision workspace)))
+                   (assoc :base-revision (:base-revision workspace)
+                          :problem-path (:problem/path workspace))
                    (and (= :student-attempt kind) promotion-receipt)
                    (assoc :memory-snapshot
                           {:receipt-id (:receipt/id promotion-receipt)
@@ -202,16 +210,18 @@
         (merge common
                (case kind
                  :student-attempt
-                 {:receipt/type :student-attempt
-                  :receipt/attempt-ordinal (:attempt-ordinal request)
-                  :receipt/fresh-session-id (:session-id job)
-                  :receipt/job-id (:job-id ticket)
-                  :receipt/outcome (:outcome report)
-                  :receipt/failure-account (:failure-account report)
-                  :receipt/memory-use (:memory-use report)
-                  :receipt/memory-snapshot
-                  (select-keys (:memory-snapshot request)
-                               [:receipt-id :snapshot-id :snapshot-digest])}
+                 (cond-> {:receipt/type :student-attempt
+                          :receipt/attempt-ordinal (:attempt-ordinal request)
+                          :receipt/fresh-session-id (:session-id job)
+                          :receipt/job-id (:job-id ticket)
+                          :receipt/outcome (:outcome report)
+                          :receipt/failure-account (:failure-account report)
+                          :receipt/memory-use (:memory-use report)
+                          :receipt/memory-snapshot
+                          (select-keys (:memory-snapshot request)
+                                       [:receipt-id :snapshot-id :snapshot-digest])}
+                   (map? (:source validated))
+                   (assoc :receipt/source (:source validated)))
                  :guide-intervention
                  {:receipt/type :guide-intervention
                   :receipt/intervention-ordinal
@@ -265,10 +275,17 @@
 (defn missing-observation-receipt
   "Controller evidence that a Student job ended without a valid typed receipt.
   It is an alternate observation producer, never a Student-authored attempt."
-  [contract action receipts request ticket job repair-attempts collection-evidence]
+  ([contract action receipts request ticket job repair-attempts collection-evidence]
+   (missing-observation-receipt contract action receipts request ticket job
+                                repair-attempts collection-evidence nil))
+  ([contract action receipts request ticket job repair-attempts collection-evidence
+    archive-fn]
   (let [workspace (:workspace request)
         head-result (when (string? workspace)
                       (shell/sh "git" "-C" workspace "rev-parse" "HEAD"))
+        ;; The source is archived even without a typed receipt: an
+        ;; unobserved attempt's worktree is still evidence.
+        archived (when (fn? archive-fn) (archive-fn))
         body {:receipt/type :student-observation-missing
               :receipt/frame-id (:frame-id request)
               :receipt/problem-id (:problem-id request)
@@ -286,10 +303,54 @@
                :collection collection-evidence
                :workspace {:path workspace
                            :head (when (and head-result (zero? (:exit head-result)))
-                                   (str/trim (:out head-result)))}
+                                   (str/trim (:out head-result)))
+                           :source (if (:ok archived)
+                                     (:source archived)
+                                     (some-> archived
+                                             (select-keys [:error/code :path])))}
                :memory {:snapshot (:memory-snapshot request)}}}
         addressed (assoc body :receipt/id (machine/ledger-digest [body]))]
-    (handlers/validate-completion contract action addressed receipts)))
+    (handlers/validate-completion contract action addressed receipts))))
+
+(defn prepare-student-workspace!
+  "Before an original fresh Student attempt, return the Student worktree to
+  its registered base so attempt k+1 cannot read attempt k's work. Repairs
+  re-dispatch the same attempt and keep the worktree."
+  [request reset-fn]
+  (cond
+    (not (and (= :student-attempt (:dispatch/type request))
+              (true? (:fresh-session? request))
+              (nil? (:repair/attempt request))))
+    {:ok true :status :not-applicable}
+
+    (not (and (string? (:workspace request))
+              (string? (:base-revision request))))
+    {:ok false :error/code :student-workspace-base-unknown}
+
+    :else
+    (let [reset (reset-fn {:workspace/path (:workspace request)
+                           :base-revision (:base-revision request)
+                           :problem/path (:problem-path request)})]
+      (if (:ok reset)
+        {:ok true :status :reset :reset reset}
+        {:ok false :error/code :student-workspace-reset-failed
+         :finding reset}))))
+
+(defn source-archive-directory [state-path phase]
+  (str (.resolveSibling (Path/of (str state-path) (make-array String 0))
+                        (str (name phase) "-source"))))
+
+(defn archive-student-source!
+  "Archive the Student's problem file beside the phase state before the
+  worktree is reset for the next attempt or retired with the frame."
+  [request state-path archive-fn]
+  (if-not (and (string? (:workspace request))
+               (string? (:problem-path request)))
+    {:ok false :error/code :student-source-unknown}
+    (archive-fn {:workspace/path (:workspace request)
+                 :problem/path (:problem-path request)
+                 :archive-directory (source-archive-directory
+                                     state-path (:phase request))})))
 
 (defn prompt [request]
   (str (str/upper-case (:frame-id request)) " " (name (:phase request))
@@ -353,8 +414,10 @@
 
 (defn run-live!
   [{:keys [contract action receipts request state-path agency-base
-           snapshot-publish-fn]
-    :or {agency-base "http://localhost:7070"}}]
+           snapshot-publish-fn workspace-reset-fn source-archive-fn]
+    :or {agency-base "http://localhost:7070"
+         workspace-reset-fn workspace-lifecycle/reset-to-base!
+         source-archive-fn workspace-lifecycle/archive-problem-source!}}]
   (driver/drive!
    {:request request :state (runtime/read-state state-path)
     :announce-fn
@@ -367,15 +430,19 @@
         announced))
     :activate-fn
     (fn [req ticket]
-      (let [reset-response (when (:fresh-session? req)
+      (let [prepared (prepare-student-workspace! req workspace-reset-fn)
+            reset-response (when (and (:ok prepared) (:fresh-session? req))
                              (runtime/http-json
                               "POST" (str agency-base "/api/alpha/agents/"
                                           (:agent-id req) "/reset-session") {}))
             reset-ok? (or (nil? reset-response)
                           (and (= 200 (:http/status reset-response))
                                (:ok reset-response)))]
-        (if-not reset-ok?
+        (cond
+          (not (:ok prepared)) prepared
+          (not reset-ok?)
           {:ok false :error/code :student-session-reset-failed}
+          :else
           (job-port/activate!
            agency-base
            {:agent-id (:agent-id req)
@@ -400,10 +467,13 @@
     (when (= :student-attempt (:kind action))
       (fn [request ticket job repair-attempts collection-evidence]
         (missing-observation-receipt contract action receipts request ticket job
-                                     repair-attempts collection-evidence)))
+                                     repair-attempts collection-evidence
+                                     #(archive-student-source!
+                                       request state-path source-archive-fn))))
     :receipt-provider
     (fn [request ticket job validated]
-      (if (= :promote-solver (:phase action))
+      (cond
+        (= :promote-solver (:phase action))
         (if-not (fn? snapshot-publish-fn)
           {:ok false :error/code :solver-snapshot-publisher-missing}
           (let [published (snapshot-publish-fn (:report validated))]
@@ -419,4 +489,16 @@
                                    :independent-review? true})]
                 (receipt contract action receipts request ticket job
                          (assoc validated :report report))))))
+
+        ;; Archive before certifying: the receipt names the source blob, and
+        ;; the next attempt's reset (or retirement) discards the worktree.
+        (= :student-attempt (:kind action))
+        (let [archived (archive-student-source! request state-path
+                                                source-archive-fn)]
+          (if-not (:ok archived)
+            archived
+            (receipt contract action receipts request ticket job
+                     (assoc validated :source (:source archived)))))
+
+        :else
         (receipt contract action receipts request ticket job validated)))}))

@@ -171,7 +171,7 @@
                                   {:ok true :report
                                    {:depositor "scribe"
                                     :candidates [{:memory-id "m" :content-digest "d"
-                                                  :pattern-ids []}]
+                                                  :pattern-ids ["p"]}]
                                     :lanes [{:lane :solve :ran true}]}}
                                   (do (reset! feedback value)
                                       {:ok true :job "schema-repair"})))
@@ -209,3 +209,31 @@
                         (conj reviews {:memory-id "n" :reviewer "other"
                                        :verdict :reject :pattern-ids []})}
                        "digest" "blob"))))))
+
+(deftest final-attempt-gets-one-pattern-binding-repair
+  (let [saved (atom nil) feedback (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "unbound-candidates" :attempt 3
+                         :format-repairs 1}
+                 :deposit-fn (fn
+                               ([value]
+                                (if (string? value)
+                                  {:ok true :report
+                                   {:depositor "scribe"
+                                    :candidates [{:memory-id "m" :content-digest "d"
+                                                  :pattern-ids []
+                                                  :source-attempts [1]}]
+                                    :lanes [{:lane :solve :status :ran}
+                                            {:lane :arc :status :ran}
+                                            {:lane :trajectory :status :ran}
+                                            {:lane :challenge :status :ran}]}}
+                                  (do (reset! feedback value)
+                                      {:ok true :job "pattern-repair"})))
+                               ([] (throw (ex-info "feedback required" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "pattern-repair" (:job-id result)))
+    (is (= [:candidate-patterns-missing] (:findings @feedback)))
+    (is (= 3 (:attempt @saved)))
+    (is (= 1 (:schema-repairs @saved)))))

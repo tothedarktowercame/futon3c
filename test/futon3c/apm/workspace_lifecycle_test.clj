@@ -165,3 +165,42 @@
     (is (= [:workspace-probe-failed] (:validation/findings result)))
     (is (= "expected" (:terminal-head result)))
     (is (= "observed" (:validation/head result)))))
+
+(deftest student-source-is-archived-then-worktree-reset-to-base
+  (let [{:keys [workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake
+                                       :now (Instant/parse "2026-08-23T00:00:00Z")}))
+        workspace (:workspace/path lease)
+        problem (str workspace "/" (:problem/path lease))
+        archive (str workspaces "/archive")]
+    (spit problem "theorem p1 : True := by\n  exact trivial\n")
+    (spit (str workspace "/scratch.lean") "-- untracked\n")
+    (testing "archive names the file by blob and reports the dirty tree"
+      (let [archived (sut/archive-problem-source!
+                      {:workspace/path workspace :problem/path (:problem/path lease)
+                       :archive-directory archive})
+            source (:source archived)]
+        (is (:ok archived))
+        (is (= (slurp problem) (slurp (:path source))))
+        (is (re-matches #"[0-9a-f]{40}" (:blob source)))
+        (is (.endsWith ^String (:path source) (str (:blob source) "-Main.lean")))
+        (is (= (:base-revision lease) (:head source)))
+        (is (true? (:dirty? source)))))
+    (testing "reset discards tracked and untracked work, keeps the substrate link"
+      (let [reset (sut/reset-to-base! lease)]
+        (is (:ok reset))
+        (is (= (:base-revision lease) (:head reset)))
+        (is (= (:problem/blob lease) (:problem/blob reset)))
+        (is (= (:base-revision lease) (get-in reset [:discarded :head])))
+        (is (= 2 (count (get-in reset [:discarded :status]))))
+        (is (= "theorem p1 : True := by trivial\n" (slurp problem)))
+        (is (not (.exists (java.io.File. (str workspace "/scratch.lean")))))
+        (is (Files/isSymbolicLink (Path/of (str workspace "/.lake/packages")
+                                           (make-array String 0)))
+            "ignored substrate link survives git clean")
+        (is (true? (:worktree-clean? (sut/validate lease {:probe-fn (fn [_] {:exit 0})}))))))
+    (testing "reset fails closed on a malformed base"
+      (is (= :workspace-reset-shape-invalid
+             (:error/code (sut/reset-to-base! (assoc lease :base-revision "main"))))))))
