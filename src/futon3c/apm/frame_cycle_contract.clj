@@ -52,16 +52,23 @@
 (defn validate-receipt [contract expected-phase receipt]
   (let [phase (get-in contract [:phases expected-phase])
         expected-type (:receipt/type phase)
-        required (get-in contract [:receipt/schemas expected-type :required])
+        actual-type (:receipt/type receipt)
+        allowed-types (conj (or (:alternate-receipt/types phase) #{}) expected-type)
+        required (get-in contract [:receipt/schemas actual-type :required])
         missing (set/difference (or required #{}) (clojure.core/set (keys receipt)))
         body (dissoc receipt :receipt/id)]
     (cond
       (nil? phase)
       {:ok false :error/code :frame-cycle-phase-unknown}
 
-      (not= expected-type (:receipt/type receipt))
+      (not (contains? allowed-types actual-type))
       {:ok false :error/code :frame-cycle-receipt-type-mismatch
-       :finding {:expected expected-type :actual (:receipt/type receipt)}}
+       :finding {:expected expected-type :alternates (disj allowed-types expected-type)
+                 :actual actual-type}}
+
+      (nil? required)
+      {:ok false :error/code :frame-cycle-receipt-schema-missing
+       :finding {:actual actual-type}}
 
       (seq missing)
       {:ok false :error/code :frame-cycle-receipt-fields-missing

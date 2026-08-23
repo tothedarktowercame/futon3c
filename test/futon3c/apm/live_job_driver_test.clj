@@ -130,7 +130,8 @@
 (deftest second-invalid-terminal-exhausts-repair-bound
   (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
         state (assoc (:state (sut/drive! (effects calls job)))
-                     :terminal-repair-attempts 1)
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
         result (sut/drive!
                 (assoc (effects calls job) :state state
                        :terminal-validator
@@ -138,6 +139,25 @@
                        :terminal-repair-request-fn (constantly {:ok true})))]
     (is (= :live-job-terminal-repair-exhausted (:error/code result)))
     (is (= 1 (:repair/attempts result)))))
+
+(deftest exhausted-missing-submission-can-produce-controller-observation
+  (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
+        state (assoc (:state (sut/drive! (effects calls job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        receipt {:receipt/type :student-observation-missing
+                 :receipt/author :controller}
+        result (sut/drive!
+                (assoc (effects calls job) :state state
+                       :terminal-submission-provider (constantly nil)
+                       :missing-observation-provider
+                       (fn [_ _ _ attempts]
+                         {:ok true :certificate (assoc receipt
+                                                       :repair-attempts attempts)})))]
+    (is (= :certified (:status result)))
+    (is (= :controller (get-in result [:certificate :receipt/author])))
+    (is (= 1 (get-in result [:certificate :repair-attempts])))
+    (is (= :unobserved (get-in result [:state :learning/outcome])))))
 
 (deftest pre-contract-terminal-gets-one-fresh-typed-migration
   (let [calls (atom [])

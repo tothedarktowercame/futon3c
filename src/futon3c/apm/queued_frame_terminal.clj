@@ -7,6 +7,7 @@
   (:require [futon3c.apm.campaign-machine :as machine]))
 
 (def frame-results #{:closed :partial :void})
+(def learning-outcomes #{:observed :partially-observed :unobserved :skipped})
 
 (defn addressed? [receipt id-key]
   (= (get receipt id-key)
@@ -27,6 +28,12 @@
           (conj :terminal-frame-result-invalid)
           (not (contains? #{:solved :partial :invalid} (:problem/outcome receipt)))
           (conj :terminal-problem-outcome-invalid)
+          (not (contains? learning-outcomes (:learning/outcome receipt)))
+          (conj :terminal-learning-outcome-invalid)
+          (and (= :solved (:problem/outcome receipt))
+               (= :partial (:frame/result receipt))
+               (not= :partially-observed (:learning/outcome receipt)))
+          (conj :terminal-solved-partial-learning-invalid)
           (not (and (string? (:verify-receipt/id receipt))
                     (re-matches #"[0-9a-f]{64}" (:verify-receipt/id receipt))))
           (conj :terminal-verify-receipt-invalid)
@@ -51,6 +58,7 @@
               :frame/id (:frame/id frame) :problem/id (:problem/id frame)
               :problem/outcome (:problem/outcome terminal)
               :frame/result (:frame/result terminal)
+              :learning/outcome (:learning/outcome terminal)
               :verify-receipt/id (:verify-receipt/id terminal)
               :source/terminal-receipt-id (:receipt/id terminal)
               :solver/branch (get-in terminal [:solver :branch])

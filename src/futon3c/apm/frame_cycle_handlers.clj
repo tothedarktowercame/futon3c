@@ -54,6 +54,7 @@
         ordinal (:ordinal spec)
         dependency (dependency-evidence cycle-contract phase prior-receipts)
         declared-inputs (some-> (:receipt/input-receipt-ids receipt) set)
+        missing-observation? (= :student-observation-missing (:receipt/type receipt))
         student-sessions
         (->> prior-receipts
              (keep (fn [[prior-phase prior-receipt]]
@@ -80,6 +81,18 @@
       (and (= :student-attempt (:kind spec))
            (not= ordinal (:receipt/attempt-ordinal receipt)))
       {:error/code :frame-cycle-student-ordinal-mismatch}
+
+      (and missing-observation?
+           (not= {:author :controller :reason :typed-submission-missing}
+                 {:author (:receipt/author receipt)
+                  :reason (:receipt/reason receipt)}))
+      {:error/code :frame-cycle-missing-observation-authority-invalid}
+
+      (and missing-observation?
+           (not (and (string? (:receipt/job-id receipt))
+                     (pos-int? (:receipt/repair-attempts receipt))
+                     (map? (:receipt/harness-observed receipt)))))
+      {:error/code :frame-cycle-missing-observation-evidence-invalid}
 
       (and (= :student-attempt (:kind spec))
            (contains? (:requires spec) :solver-memory-snapshot)

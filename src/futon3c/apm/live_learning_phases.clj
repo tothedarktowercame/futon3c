@@ -1,6 +1,7 @@
 (ns futon3c.apm.live-learning-phases
   "Live Student/Guide/Scribe/close adapters for the APM map/reduce cycle."
   (:require [clojure.string :as str]
+            [clojure.java.shell :as shell]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-handlers :as handlers]
             [futon3c.apm.live-job-driver :as driver]
@@ -218,10 +219,42 @@
                     :receipt/dispositions (:dispositions report)
                     :receipt/promotion-reviews (:promotion-reviews report)})
                  :close-frame
-                 {:receipt/type :frame-close
+                 (let [observation-missing?
+                       (some #(= :student-observation-missing (:receipt/type %))
+                             (vals receipts))]
+                   {:receipt/type :frame-close
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/trace-id (:trace-id report)
-                  :receipt/result (:result report)}))
+                  :receipt/result (if observation-missing? :partial (:result report))
+                  :receipt/learning-outcome (if observation-missing?
+                                              :partially-observed
+                                              :observed)})))
+        addressed (assoc body :receipt/id (machine/ledger-digest [body]))]
+    (handlers/validate-completion contract action addressed receipts)))
+
+(defn missing-observation-receipt
+  "Controller evidence that a Student job ended without a valid typed receipt.
+  It is an alternate observation producer, never a Student-authored attempt."
+  [contract action receipts request ticket job repair-attempts]
+  (let [workspace (:workspace request)
+        head-result (when (string? workspace)
+                      (shell/sh "git" "-C" workspace "rev-parse" "HEAD"))
+        body {:receipt/type :student-observation-missing
+              :receipt/frame-id (:frame-id request)
+              :receipt/problem-id (:problem-id request)
+              :receipt/attempt-ordinal (:attempt-ordinal request)
+              :receipt/job-id (:job-id ticket)
+              :receipt/author :controller
+              :receipt/reason :typed-submission-missing
+              :receipt/repair-attempts repair-attempts
+              :receipt/memory-snapshot (:memory-snapshot request)
+              :receipt/harness-observed
+              {:job (select-keys job [:job-id :agent-id :state :terminal-code
+                                      :session-id])
+               :workspace {:path workspace
+                           :head (when (and head-result (zero? (:exit head-result)))
+                                   (str/trim (:out head-result)))}
+               :memory {:snapshot (:memory-snapshot request)}}}
         addressed (assoc body :receipt/id (machine/ledger-digest [body]))]
     (handlers/validate-completion contract action addressed receipts)))
 
@@ -338,6 +371,11 @@
                                     (submission/submitted (:job-id ticket)))
     :terminal-validator validate-terminal
     :terminal-repair-request-fn terminal-repair-request
+    :missing-observation-provider
+    (when (= :student-attempt (:kind action))
+      (fn [request ticket job repair-attempts]
+        (missing-observation-receipt contract action receipts request ticket job
+                                     repair-attempts)))
     :receipt-provider
     (fn [request ticket job validated]
       (if (= :promote-solver (:phase action))

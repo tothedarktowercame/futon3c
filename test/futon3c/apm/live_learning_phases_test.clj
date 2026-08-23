@@ -215,3 +215,34 @@
         job {:job-id "j" :agent-id "f19-scribe" :state :done :report report}]
     (is (some #{:solver-promotion-candidates-invalid}
               (:findings (sut/validate-terminal request {:job-id "j"} job))))))
+
+(deftest controller-missing-observation-is-content-addressed-and-not-student-authored
+  (let [contract {:phase-order [:student-attempt-1]
+                  :phases {:student-attempt-1
+                           {:kind :student-attempt :role :student :ordinal 1
+                            :receipt/type :student-attempt
+                            :alternate-receipt/types #{:student-observation-missing}
+                            :requires #{} :produces #{:attempt :memory-use}}}
+                  :receipt/schemas
+                  {:student-observation-missing
+                   {:required #{:receipt/id :receipt/type :receipt/frame-id
+                                :receipt/problem-id :receipt/attempt-ordinal
+                                :receipt/job-id :receipt/author :receipt/reason
+                                :receipt/repair-attempts :receipt/memory-snapshot
+                                :receipt/harness-observed}}}}
+        action {:kind :student-attempt :role :student :phase :student-attempt-1
+                :frame-id "fixture-f25" :problem-id "m94A02"}
+        result (sut/missing-observation-receipt
+                contract action {}
+                {:frame-id "fixture-f25" :problem-id "m94A02"
+                 :attempt-ordinal 1 :workspace "/does/not/exist"
+                 :memory-snapshot {:snapshot-id "frozen-snapshot"}}
+                {:job-id "f25-shaped-job"}
+                {:job-id "f25-shaped-job" :agent-id "fixture-f25-student"
+                 :state :done :terminal-code 0}
+                1)]
+    (is (:ok result))
+    (is (= :controller (get-in result [:certificate :receipt/author])))
+    (is (= :typed-submission-missing
+           (get-in result [:certificate :receipt/reason])))
+    (is (nil? (get-in result [:certificate :receipt/fresh-session-id])))))

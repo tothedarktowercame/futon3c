@@ -72,7 +72,8 @@
   "Advance one job by at most one externally visible state transition."
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
            terminal-validator receipt-provider terminal-repair-request-fn
-           ticket-register-fn terminal-submission-provider cancel-fn]}]
+           ticket-register-fn terminal-submission-provider cancel-fn
+           missing-observation-provider]}]
   (cond
     (not (and (map? request) (string? (:dispatch/id request))
               (every? fn? [announce-fn activate-fn job-fn persist-fn
@@ -224,8 +225,22 @@
             (cond
               (and (pos? (or (:terminal-repair-attempts state) 0))
                    (not typed-contract-migration?))
-              (assoc validated :error/code :live-job-terminal-repair-exhausted
-                     :repair/attempts (:terminal-repair-attempts state))
+              (if (and (= [:typed-submission-missing] (:findings validated))
+                       (fn? missing-observation-provider))
+                (let [provided (missing-observation-provider
+                                active-request (:ticket state) job
+                                (:terminal-repair-attempts state))]
+                  (if-not (:ok provided)
+                    provided
+                    (let [next-state (assoc state :state/type :live-job-certified
+                                            :receipt (:certificate provided)
+                                            :learning/outcome :unobserved)]
+                      (if (:ok (persist-fn next-state))
+                        {:ok true :status :certified :state next-state
+                         :certificate (:certificate provided)}
+                        {:ok false :error/code :live-job-receipt-persistence-failed}))))
+                (assoc validated :error/code :live-job-terminal-repair-exhausted
+                       :repair/attempts (:terminal-repair-attempts state)))
 
               (not (fn? terminal-repair-request-fn)) validated
 

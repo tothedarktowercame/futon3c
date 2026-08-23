@@ -124,6 +124,8 @@
         solve (some #(when (= :frame-solve (:receipt/type %)) %) certificates)
         verify (some #(when (= :frame-verify (:receipt/type %)) %) certificates)
         close (some #(when (= :frame-close (:receipt/type %)) %) certificates)
+        observation-missing? (some #(= :student-observation-missing
+                                       (:receipt/type %)) certificates)
         raw-result (:receipt/result close)
         frame-result (cond
                        (contains? #{:closed "closed"} raw-result) :closed
@@ -146,6 +148,9 @@
                                                              :sorry-warnings]))
                                         (true? (:receipt/mathematical-sound? verify)))
                                  :solved :partial)
+              :learning/outcome (or (:receipt/learning-outcome close)
+                                    (when observation-missing? :partially-observed)
+                                    :observed)
               :verify-receipt/id (:receipt/id verify)
               :solver {:branch (:branch solver-workspace)
                        :head (:receipt/final-head solve)}

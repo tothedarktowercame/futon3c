@@ -11,7 +11,8 @@
 (defn terminal-receipt [frame]
   (let [body {:receipt/type :frame-terminal :frame/id (:frame/id frame)
               :problem/id (:problem/id frame) :frame/result :closed
-              :problem/outcome :solved :verify-receipt/id digest
+              :problem/outcome :solved :learning/outcome :observed
+              :verify-receipt/id digest
               :solver {:branch (str "exp/" (:frame/id frame)) :head head}
               :workspace/terminal-heads {:solver head :student head}}]
     (assoc body :receipt/id (machine/ledger-digest [body]))))
@@ -45,6 +46,21 @@
     (is (= "exp/f40" (get-in result [:bank-receipt :solver/branch])))
     (is (= [:bank :audit :retire :audit :retire :seats]
            (mapv first @calls)))))
+
+(deftest frozen-f25-shaped-solved-partial-is-bankable-without-being-closed
+  (let [frame {:frame/id "fixture-f25" :problem/id "m94A02"}
+        terminal (-> (terminal-receipt frame)
+                     (dissoc :receipt/id)
+                     (assoc :frame/result :partial
+                            :learning/outcome :partially-observed))
+        terminal (assoc terminal :receipt/id (machine/ledger-digest [terminal]))
+        checked (sut/validate-terminal frame terminal)
+        bank (sut/build-problem-bank frame terminal)]
+    (is (:ok checked))
+    (is (= :solved (:problem/outcome bank)))
+    (is (= :partial (:frame/result bank)))
+    (is (= :partially-observed (:learning/outcome bank)))
+    (is (not= :closed (:frame/result bank)))))
 
 (deftest invalid-terminal-evidence-performs-no-effects
   (let [calls (atom [])
