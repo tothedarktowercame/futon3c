@@ -1,6 +1,7 @@
 (ns futon3c.agency.bg-process-test
   (:require [clojure.test :refer [deftest is]]
-            [futon3c.agency.bg-process :as bg]))
+            [futon3c.agency.bg-process :as bg]
+            [futon3c.agency.job-tree :as job-tree]))
 
 (defn- wait-until [pred ms]
   (let [deadline (+ (System/currentTimeMillis) (long ms))]
@@ -57,3 +58,23 @@
     (is (= our-pid ppid) "spawned process is a direct child of the JVM")
     (bg/kill! id)
     (bg/forget! id)))
+
+(deftest launch-projects-owned-process-into-job-tree
+  (job-tree/clear!)
+  (let [t (bg/launch! {:cmd "sleep 3" :agent-id "t-agent" :label "t"})
+        id (:id t)
+        projected #(some (fn [job]
+                           (when (= id (:job/id job)) job))
+                         (job-tree/tree-snapshot))]
+    (try
+      (let [job (projected)]
+        (is (= "t-agent" (:job/agent-id job)))
+        (is (= "t" (:job/label job)))
+        (is (= :running (:job/status job))))
+      (is (wait-until #(= :completed (:job/status (projected))) 7000)
+          "the projected job becomes terminal after its process exits")
+      (finally
+        (when (= :running (:status (bg/status id)))
+          (bg/kill! id))
+        (bg/forget! id)
+        (job-tree/forget-job! id)))))

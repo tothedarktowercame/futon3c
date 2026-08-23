@@ -441,6 +441,51 @@
                            :job/ended-at (now))
               (retain-terminal! job-id))))))))
 
+(defn adopt-process!
+  "Project an already-launched local process as an agent-owned job.
+
+   This is the explicit counterpart to Bash birth-window discovery. ROOT-PID
+   and its currently visible descendants are captured by process identity so
+   the ordinary watcher can reject PID reuse. Returns JOB-ID when a live
+   process was adopted, otherwise nil."
+  [{:keys [job-id agent-id label root-pid command]}]
+  (when (and (some? job-id) (some? agent-id) (some? root-pid))
+    (let [job-id (str job-id)
+          agent-id (str agent-id)
+          pids (conj (descendant-pids root-pid) (long root-pid))
+          live (->> pids
+                    sort
+                    (keep process-info)
+                    (filter same-live-process?)
+                    vec)]
+      (when (seq live)
+        (let [state (atom {:job/id job-id
+                           :job/agent-id agent-id
+                           :job/turn-id nil
+                           :job/status :running
+                           :job/attribution :explicit-adoption
+                           :job/label (or (some-> label str not-empty)
+                                          (command-preview command))
+                           :job/command (str command)
+                           :job/processes live
+                           :job/pids (mapv :pid live)
+                           :job/started-at (now)
+                           :job/last-active (now)})]
+          (swap! !jobs assoc job-id state)
+          (cyder/deregister! job-id)
+          (cyder/register!
+           {:id job-id
+            :type :background-job
+            :layer :infra
+            :stop-fn #(stop-job! job-id)
+            :state-fn #(dissoc @state :job/processes)
+            :metadata {:parent-agent agent-id
+                       :parent-turn nil
+                       :tool-use-id nil}})
+          (project!)
+          (watch-job! job-id)
+          job-id)))))
+
 (defn- detached-command? [command]
   (boolean
    (or (re-find #"(?:^|[\s'\";&|])nohup(?:\s|$)" command)

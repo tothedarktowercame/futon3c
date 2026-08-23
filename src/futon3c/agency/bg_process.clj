@@ -40,6 +40,21 @@
 (defn- now-ms [] (System/currentTimeMillis))
 (defn- now-iso [] (str (java.time.Instant/ofEpochMilli (now-ms))))
 
+(defn- project-task! [{:keys [id agent-id label cmd pid]}]
+  ;; job-tree depends on agent machinery that may already load bg-process, so
+  ;; resolve this optional observability projection only after launch. A broken
+  ;; projection must never make durable process creation fail.
+  (when agent-id
+    (try
+      (when-let [adopt! (requiring-resolve
+                         'futon3c.agency.job-tree/adopt-process!)]
+        (adopt! {:job-id id
+                 :agent-id agent-id
+                 :label label
+                 :root-pid pid
+                 :command cmd}))
+      (catch Throwable _ nil))))
+
 (defn- task-public
   "Public view of a task — drops the raw Process, computes live status/exit."
   [{:keys [^Process process] :as t}]
@@ -85,6 +100,7 @@
                 :status :running
                 :process proc}]
       (swap! !tasks assoc id task)
+      (project-task! task)
       ;; daemon completion watcher: record terminal status when the process exits,
       ;; so `status` reports :exited/:exit without the caller polling.
       (doto (Thread.
