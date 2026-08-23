@@ -403,7 +403,13 @@
   Preflight and verify are unchanged in substance, so they delegate."
   [request]
   (if-not (= :solve (:phase request))
-    (proof/prompt request)
+    ;; The library lane's announce reserves a job but does not notify the
+    ;; agent; the explicit /invoke immediately afterwards IS activation.
+    ;; Keeping the countdown prompt's "Await activation" tail here can make a
+    ;; literal proctor return those two words without executing preflight.
+    (str/replace (proof/prompt request)
+                 " Await activation before submitting completion."
+                 "")
     (str (str/upper-case (:frame-id request)) " solve -- library increment. "
          "Use only this frozen dispatch authority:\n"
          (pr-str request) "\n"

@@ -1,5 +1,6 @@
 (ns futon3c.apm.library-lane-phases-test
   (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.frame-cycle-contract :as cycle]
             [futon3c.apm.library-lane-phases :as sut]))
@@ -38,6 +39,11 @@
       :clean-after? true
       :mutations [(:problem-path request)]}
      report-overrides)}))
+
+(deftest activated-library-preflight-does-not-tell-the-proctor-to-wait
+  (let [rendered (sut/prompt (assoc request :phase :preflight))]
+    (is (str/includes? rendered "Perform the registered read-only preflight."))
+    (is (not (str/includes? rendered "Await activation")))))
 
 (deftest closed-report-certifies-under-the-library-regime
   (let [result (sut/validate-solve-terminal request ticket (fixture-job))]
