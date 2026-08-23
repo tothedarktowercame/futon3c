@@ -9,6 +9,7 @@
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as live-promotion]
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
+            [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]))
 
@@ -326,6 +327,18 @@
            (#'sut/projection-phase-job-state
             {:state/type :solver-rounds :rounds [] :active active})))
     (is (= active (#'sut/projection-phase-job-state active)))))
+
+(deftest checkpoint-projection-does-not-downgrade-current-live-view
+  (with-redefs [runtime/read-state
+                (constantly {:ledger/digest "ledger-current"})
+                problem-projection/project-latest!
+                (fn [_] (throw (ex-info "must not overwrite" {})))]
+    (is (= :current-ledger-already-published
+           (:reason
+            (#'sut/projection-sink
+             {:certificate {:ledger/digest "ledger-current"
+                            :active/frame {:frame-id "f27"
+                                           :problem-id "m94A03"}}}))))))
 
 (deftest v2-countdown-policy-is-lean-generated-and-schema-hole-is-explicit
   (binding [sut/contract-path

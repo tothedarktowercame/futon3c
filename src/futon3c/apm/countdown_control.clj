@@ -368,14 +368,19 @@
 
 (defn- projection-sink [payload]
   (if-let [frame (get-in payload [:certificate :active/frame])]
-    (problem-projection/project-latest!
-     {:ledger-path (control-path ledger-path)
-      :projection-directory (control-path projection-directory)
-      :output-path (control-path problem-buffer-path)
-      :buffer-name problem-buffer-name
-      :expected-frame-id (:frame-id frame)
-      :expected-problem-id (:problem-id frame)
-      :buffer-sink problem-projection/emacs-buffer-sink})
+    (let [current (live-preflight-runtime/read-state
+                   (.resolve (control-path projection-directory) "latest.edn"))
+          ledger-digest (get-in payload [:certificate :ledger/digest])]
+      (if (= ledger-digest (:ledger/digest current))
+        {:ok true :projected? false :reason :current-ledger-already-published}
+        (problem-projection/project-latest!
+         {:ledger-path (control-path ledger-path)
+          :projection-directory (control-path projection-directory)
+          :output-path (control-path problem-buffer-path)
+          :buffer-name problem-buffer-name
+          :expected-frame-id (:frame-id frame)
+          :expected-problem-id (:problem-id frame)
+          :buffer-sink problem-projection/emacs-buffer-sink})))
     {:ok true :projected? false :reason :no-active-frame}))
 
 (defn- gate-provider [{:keys [obligation]}]
