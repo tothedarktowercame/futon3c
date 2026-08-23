@@ -46,6 +46,16 @@
     (is (some #{:generated-contract-dispatch-policy-invalid}
               (:findings result)))))
 
+(deftest blocking-preflight-warning-mutation-is-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        result (sut/validate
+                (assoc-in contract
+                          [:dispatch-policy :preflight-blocking-warning-count]
+                          1))]
+    (is (false? (:ok result)))
+    (is (some #{:generated-contract-dispatch-policy-invalid}
+              (:findings result)))))
+
 (deftest memory-and-isolation-policy-mutations-are-killed
   (let [contract (:contract (sut/read-contract generated-path))
         memory-result (sut/validate

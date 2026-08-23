@@ -60,6 +60,9 @@
    :terminal-collection-is-supervisor-progress true
    :artifact-identity-from-authority-not-observation true
    :preflight-requires-positive-sorry-baseline true
+   :preflight-blocking-warning-count 0
+   :preflight-nonblocking-warning-kinds
+   ["linter" "deprecation" "compiler-warning"]
    :coordinator-intent-persisted-before-activation true
    :coordinator-restart-reconciles-deterministic-job-id true
    :coordinator-startup-uses-typed-registry true
