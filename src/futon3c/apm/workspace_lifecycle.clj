@@ -66,13 +66,12 @@
           {:ok false :error/code :workspace-provision-git-failed
            :finding {:exit (:exit added) :stderr (:err added)}}
           (try
-            (let [local-lake (.resolve workspace ".lake")
-                  copied (shell/sh "cp" "-a" "--reflink=auto"
-                                   (str (canonical substrate-path) "/.")
-                                   (str local-lake))]
-              (when-not (zero? (:exit copied))
-                (throw (ex-info "isolated substrate copy failed"
-                                {:exit (:exit copied) :stderr (:err copied)}))))
+            (let [local-lake (.resolve workspace ".lake")]
+              (Files/createDirectories local-lake (make-array FileAttribute 0))
+              (Files/createSymbolicLink
+               (.resolve local-lake "packages")
+               (.resolve (canonical substrate-path) "packages")
+               (make-array FileAttribute 0)))
             (let [body {:workspace/id nil
                         :workspace/path (str workspace)
                         :repository/path (str repository)
@@ -111,6 +110,12 @@
                          (:problem/blob lease))
          lake-link (.resolve workspace ".lake")
          substrate (canonical (:substrate/path lease))
+         build-path (.resolve lake-link "build")
+         packages-link (.resolve lake-link "packages")
+         expected-packages (.resolve (canonical (:substrate/source lease))
+                                     "packages")
+         packages-target (when (Files/isSymbolicLink packages-link)
+                           (canonical (Files/readSymbolicLink packages-link)))
          manifest-path (.resolve workspace "lake-manifest.json")
          manifest-readable? (Files/isRegularFile (.normalize manifest-path)
                                                  (make-array LinkOption 0))
@@ -129,6 +134,10 @@
                     (Files/isSymbolicLink lake-link) (conj :workspace-substrate-not-isolated)
                     (not= substrate (canonical lake-link))
                     (conj :workspace-substrate-path-mismatch)
+                    (Files/isSymbolicLink build-path)
+                    (conj :workspace-build-not-isolated)
+                    (not= expected-packages packages-target)
+                    (conj :workspace-packages-authority-mismatch)
                     (not manifest-readable?) (conj :workspace-substrate-manifest-missing)
                     (not (zero? (:exit probe))) (conj :workspace-probe-failed))]
      {:valid? (empty? findings) :findings findings :head head :branch branch
