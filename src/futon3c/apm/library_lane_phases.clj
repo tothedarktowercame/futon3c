@@ -475,56 +475,26 @@
   "Drive one lane phase to its next durable boundary.
 
   Same shape as the countdown's driver -- announce, activate, poll, persist --
-  but a distinct object with this lane's dispatch policy. announce only
-  RESERVES a ledger row (create-invoke-job! notifies nobody), so activation is
-  an explicit invoke carrying the announced job-id: build-invoke-response reads
-  requested-job-id and create-invoke-job! reuses a non-terminal record, so the
-  reserved job is adopted rather than duplicated. See
-  futon3c/holes/excursions/E-apm-drainer.md."
+  but a distinct object with this lane's dispatch policy. Both machines use
+  the same canonical Agency lifecycle adapter; only their durable driver state
+  and scheduling policy remain separate."
   [{:keys [kind contract request state-path agency-base]
     :or {agency-base "http://localhost:7070"}}]
   (let [mode (if (= :solve kind) "work" "brief")
         effects
         {:kind kind :contract contract :request request
          :state (runtime/read-state state-path)
-         ;; This lane does not depend on the shared per-agent DRAINER, which
-         ;; is the machinery the two cycle machines would otherwise contend
-         ;; for. announce here is an id reservation only -- create-invoke-job!
-         ;; writes a ledger row and notifies nobody, so nothing is enqueued and
-         ;; nothing waits to be drained (E-apm-drainer.md). Dispatch is then
-         ;; explicit and immediate, carrying that id.
-         ;;
-         ;; What remains shared is the job LEDGER: build-invoke-response always
-         ;; calls create-invoke-job!, so every invoke lands a row there and only
-         ;; futon3c can change that. The lane uses it as a read-only terminal
-         ;; oracle for ids it created, and owns its scheduling and durable state
-         ;; under data/apm-lane/.
          :announce-fn
          (fn [req]
-           (let [response (runtime/http-json
-                           "POST" (str agency-base "/api/alpha/invoke/announce")
-                           {:agent-id (:agent-id req) :prompt (prompt req)
-                            :surface surface :caller caller :mode mode})]
-             {:ok (and (= 202 (:http/status response)) (:ok response))
-              :job-id (:job-id response)}))
+           (runtime/announce-job!
+            agency-base {:agent-id (:agent-id req) :prompt (prompt req)
+                         :surface surface :caller caller :mode mode}))
          :activate-fn
          (fn [req ticket]
-           ;; The dispatch the countdown gets from its drainer, this lane does
-           ;; for itself: POST /invoke with the reserved job-id. build-invoke-
-           ;; response reads requested-job-id and create-invoke-job! reuses a
-           ;; non-terminal row, so the reservation is adopted, not duplicated.
-           ;; On a future so this returns at once and drive! stays a durable
-           ;; step machine with the caller polling.
-           (let [job-id (:job-id ticket)]
-             (when job-id
-               (future
-                 (try
-                   (runtime/http-json
-                    "POST" (str agency-base "/api/alpha/invoke")
-                    {:agent-id (:agent-id req) :prompt (prompt req)
-                     :surface surface :caller caller :mode mode :job-id job-id})
-                   (catch Throwable _ nil))))
-             {:ok (some? job-id)}))
+           (runtime/activate-job!
+            agency-base {:agent-id (:agent-id req) :prompt (prompt req)
+                         :surface surface :caller caller :mode mode
+                         :job-id (:job-id ticket)}))
          :job-fn
          (fn [job-id]
            (runtime/job->terminal

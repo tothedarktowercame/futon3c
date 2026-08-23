@@ -259,25 +259,20 @@
     :announce-fn
     (fn [req]
       (let [req (submission/with-job-authority req)
-            response (runtime/http-json
-                      "POST" (str agency-base "/api/alpha/invoke/announce")
-                      {:agent-id (:agent-id req) :prompt (prompt req)
-                       :surface "emacs-repl" :caller "countdown-control"
-                       :mode (if (= :solve kind) "work" "brief")
-                       :job-id (:submission/job-id req)})]
-        {:ok (and (= 202 (:http/status response)) (:ok response))
-         :job-id (:job-id response)}))
+            announced (runtime/announce-job!
+                       agency-base
+                       {:agent-id (:agent-id req) :prompt (prompt req)
+                        :mode (if (= :solve kind) "work" "brief")
+                        :job-id (:submission/job-id req)})]
+        announced))
     :activate-fn
     (fn [req ticket]
-      (let [response (runtime/http-json
-                      "POST" (str agency-base "/api/alpha/invoke/activate")
-                      {:agent-id (:agent-id req)
-                       :prompt (prompt (submission/with-job-authority req))
-                       :surface "emacs-repl" :caller "countdown-control"
-                       :mode (if (= :solve kind) "work" "brief")
-                       :job-id (:job-id ticket)})]
-        {:ok (and (= 202 (:http/status response)) (:ok response)
-                  (:accepted response))}))
+      (runtime/activate-job!
+       agency-base
+       {:agent-id (:agent-id req)
+        :prompt (prompt (submission/with-job-authority req))
+        :mode (if (= :solve kind) "work" "brief")
+        :job-id (:job-id ticket)}))
     :job-fn
     (fn [job-id]
       (runtime/job->terminal
@@ -319,22 +314,14 @@
         state (runtime/read-state state-path)
         announce-fn
         (fn [req]
-          (let [response (runtime/http-json
-                          "POST" (str agency-base "/api/alpha/invoke/announce")
-                          {:agent-id (:agent-id req) :prompt (prompt req)
-                           :surface "emacs-repl" :caller "countdown-control"
-                           :mode "work"})]
-            {:ok (and (= 202 (:http/status response)) (:ok response))
-             :job-id (:job-id response)}))
+          (runtime/announce-job!
+           agency-base {:agent-id (:agent-id req) :prompt (prompt req)
+                        :mode "work"}))
         activate-fn
         (fn [req ticket]
-          (let [response (runtime/http-json
-                          "POST" (str agency-base "/api/alpha/invoke/activate")
-                          {:agent-id (:agent-id req) :prompt (prompt req)
-                           :surface "emacs-repl" :caller "countdown-control"
-                           :mode "work" :job-id (:job-id ticket)})]
-            {:ok (and (= 202 (:http/status response)) (:ok response)
-                      (:accepted response))}))]
+          (runtime/activate-job!
+           agency-base {:agent-id (:agent-id req) :prompt (prompt req)
+                        :mode "work" :job-id (:job-id ticket)}))]
     (solver-rounds/resume-remediation!
      {:state state :request request :announce-fn announce-fn
       :activate-fn activate-fn

@@ -60,24 +60,21 @@
                              "evidence object, then run the submit command:\n"
                              (submission/command request
                                                  {:job-id (:submission/job-id request)}))
-           announced (runtime/http-json
-                      "POST" (str agency-base "/api/alpha/invoke/announce")
+           announced (runtime/announce-job!
+                      agency-base
                       {:agent-id (:agent-id request) :prompt typed-prompt
-                       :surface "emacs-repl" :caller "countdown-control"
                        :mode "work" :job-id (:submission/job-id request)})
            job-id (:job-id announced)
            ticket {:job-id job-id}
-           registered (when (and (= 202 (:http/status announced)) job-id)
+           registered (when (and (:ok announced) job-id)
                         (submission/register! request ticket))
            activated (when (:ok registered)
-                       (runtime/http-json
-                        "POST" (str agency-base "/api/alpha/invoke/activate")
+                       (runtime/activate-job!
+                        agency-base
                         {:agent-id (:agent-id request)
                          :prompt typed-prompt
-                         :surface "emacs-repl" :caller "countdown-control"
                          :mode "work" :job-id job-id}))]
-       (if (and (= 202 (:http/status announced)) (:ok announced)
-                (= 202 (:http/status activated)) (:accepted activated))
+       (if (and (:ok announced) (:ok activated))
          {:ok true :job job-id}
          {:ok false :error/code :promotion-stage-dispatch-failed})))
     ([job-id]
