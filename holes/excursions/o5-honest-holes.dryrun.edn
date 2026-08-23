@@ -1,6 +1,7 @@
 ;; O5 honest-holes DRY-RUN (C-cascade-real). Zero :7073 writes.
 ;; hole-target edges; no-capability holes claim EXISTING canonical mission nodes
-;; :mission (compose w/ O1/O3/O4); missing-node holes mark absent nodes (dangling).
+;; :mission (compose w/ O1/O3/O4); missing-node holes mark absent nodes (dangling);
+;; without-edges holes land on REAL nodes and compose.
 
 {
  "o5/meta": {
@@ -8,7 +9,7 @@
   "source": "BGE mission set vs live :7073 canonical nodes + mission-scope/capability-scope",
   "n-hole-kinds": 1,
   "by-kind": {
-   "missing-canonical-node": 1
+   "canonical-node-without-edges": 1
   },
   "core-missions": 0,
   "canonical-capability-edges": 178,
@@ -31,22 +32,22 @@
     "pages": 1
    }
   },
-  "missing-canonical-node-count": 7,
-  "finding": "1 honest hole kinds: {'missing-canonical-node': 1}; 7 BGE missions lack a live canonical node; capability keys are 178 canonical, 0 bare, 0 unclassified",
-  "wall-clock-seconds": 295.567,
+  "missing-canonical-node-count": 0,
+  "canonical-node-without-edges-count": 6,
+  "finding": "1 honest hole kinds: {'canonical-node-without-edges': 1}; 0 BGE missions have no canonical entity, 6 have one with zero hyperedges; capability keys are 178 canonical, 0 bare, 0 unclassified",
+  "wall-clock-seconds": 298.248,
   "dry-run?": true,
   "writes-to-7073?": false
  },
  "o5/holes": [
   {
-   "id": "cascade/hole/missions-missing-canonical-node",
+   "id": "cascade/hole/canonical-node-without-edges",
    "type": ":hole",
-   "kind": "missing-canonical-node",
-   "composes?": false,
-   "gap": "BGE missions with no live canonical node",
+   "kind": "canonical-node-without-edges",
+   "composes?": true,
+   "gap": "the canonical mission node EXISTS but participates in zero hyperedges \u2014 the mission is in the substrate and absent from the graph, so no cascade dimension can reach it",
    "targets": [
     "futon4-d/mission/web-arxana-missions",
-    "futon6-d/mission/E-mission-head",
     "futon6-d/mission/differentiable-substrate",
     "futon6-d/mission/distributed-proofreaders",
     "futon6-d/mission/efe-bge-followon-actions",

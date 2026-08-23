@@ -4,10 +4,12 @@
 A "rendered hole resolves to a REAL, queryable coverage gap" (CHARTER standard 4).
 Computed live, zero hand rows. Two gap kinds, both grounded in substrate-2:
 
-  1. missing-canonical-node — a mission that exists in the BGE embedding set (a real
-     mission doc) but has NO live canonical <repo>-d/mission/<id> node (the populator
-     missed it / it's stale). The gap IS the missing node, so its hole-target points
-     at the would-be canonical id (a deliberately dangling marker).
+  1a. missing-canonical-node — a BGE mission with NO entity at its canonical
+     <repo>-d/mission/<id>. The gap IS the missing node, so its hole-target points
+     at the would-be canonical id (a deliberately dangling marker); does not compose.
+  1b. canonical-node-without-edges — the canonical entity EXISTS but sits in zero
+     hyperedges: present in the substrate, absent from the graph. Its hole-target
+     lands on a REAL node, so it composes with O1/O3/O4.
   2. no-capability — a mission that IS a live canonical node and is in the composing
      CORE (referenced by an O1 mined-move arrow or an O4 cluster) but has NO
      scope/capability edge. These hole-targets land on EXISTING canonical mission
@@ -21,7 +23,7 @@ extractor. DRY-RUN writes an .edn artifact only; ZERO :7071 writes.
 
 Usage: python3 futon3c/scripts/o5_honest_holes.py
 """
-import json, os, re, urllib.request, urllib.parse
+import json, os, re, urllib.error, urllib.request, urllib.parse
 from collections import Counter
 from time import monotonic
 
@@ -99,6 +101,25 @@ def fetch_pages(hx_type):
     return pages, {"rows": len(seen_ids), "limit": PAGE_LIMIT, "pages": len(pages)}
 
 
+def entity_exists(entity_id):
+    """True if a canonical node is present at ENTITY_ID.
+
+    A 404 is a real ANSWER (the node is absent), not a failed read. Anything
+    else is a read failure and must abort — an infrastructure error must never
+    enter the artifact as a finding.
+    """
+    url = f"{F}/api/alpha/entity/" + urllib.parse.quote(entity_id, safe="")
+    try:
+        with urllib.request.urlopen(url, timeout=20) as response:
+            return 200 <= response.status < 300
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return False
+        raise SubstrateReadError(f"GET {url} failed: {exc}") from exc
+    except Exception as exc:
+        raise SubstrateReadError(f"GET {url} failed: {exc}") from exc
+
+
 def edges_on(ep):
     params = {"end": ep, "include-total": "true", "limit": "1"}
     url = f"{F}/api/alpha/hyperedges?{urllib.parse.urlencode(params)}"
@@ -162,15 +183,33 @@ def main():
     started = monotonic()
     with open(BGE) as stream:
         bge = json.load(stream)
-    # --- kind 1: missing-canonical-node (BGE mission with no live canonical node) ---
-    missing = []
+    # --- kind 1: canonical-node gaps, split by CAUSE ---
+    # Two different gaps hide behind one BGE miss, and `edges_on(canon) == 0`
+    # cannot tell them apart:
+    #   absent      — no entity at the canonical id. The gap IS the missing
+    #                 node, so the hole-target is a deliberately dangling
+    #                 marker and does NOT compose with the mission spine.
+    #   unconnected — the canonical entity EXISTS but sits in zero hyperedges.
+    #                 The node is real, so this hole-target lands on an
+    #                 existing node and DOES compose with O1/O3/O4.
+    # Measured 2026-08-23: 6 of the 7 BGE misses were `unconnected`, not
+    # absent. Reporting those as "missing canonical node" publishes a false
+    # claim on the live cascade page, and points a marker documented as
+    # "would-be / dangling" at a node that is actually there.
+    absent = []
+    unconnected = []
     for m in bge:
         repo, bn = m.get("home_repo"), m.get("basename")
         if not (repo and bn):
             continue
-        canon = f"{repo}-d/mission/{stem(bn)}"
-        if edges_on(canon) == 0:
-            missing.append({"mission": stem(bn), "would-be": canon, "repo": repo})
+        mission = stem(bn)
+        if mission.endswith("-head"):
+            continue  # `*-head` are template/index docs, not missions
+        canon = f"{repo}-d/mission/{mission}"
+        if edges_on(canon) != 0:
+            continue
+        row = {"mission": mission, "canonical": canon, "repo": repo}
+        (unconnected if entity_exists(canon) else absent).append(row)
 
     # --- kind 2: no-capability on composing-CORE canonical missions ---
     mined, mined_paging = fetch_endpoints("code/v05/mined-move")
@@ -206,18 +245,29 @@ def main():
             "targets": no_cap,
         })
 
-    if missing:
+    if absent:
         holes.append({
             "id": "cascade/hole/missions-missing-canonical-node",
             "type": ":hole", "kind": "missing-canonical-node", "composes?": False,
-            "gap": "BGE missions with no live canonical node",
-            "targets": [x["would-be"] for x in missing]})
+            "gap": "BGE missions with no entity at their canonical id",
+            "targets": [x["canonical"] for x in absent]})
+
+    if unconnected:
+        holes.append({
+            "id": "cascade/hole/canonical-node-without-edges",
+            "type": ":hole", "kind": "canonical-node-without-edges",
+            "composes?": True,
+            "gap": ("the canonical mission node EXISTS but participates in zero "
+                    "hyperedges — the mission is in the substrate and absent "
+                    "from the graph, so no cascade dimension can reach it"),
+            "targets": [x["canonical"] for x in unconnected]})
 
     by_kind = Counter(h["kind"] for h in holes)
     elapsed = monotonic() - started
     finding = (
         f"{len(holes)} honest hole kinds: {dict(by_kind)}; "
-        f"{len(missing)} BGE missions lack a live canonical node; "
+        f"{len(absent)} BGE missions have no canonical entity, "
+        f"{len(unconnected)} have one with zero hyperedges; "
         f"capability keys are {capability['canonical-edges']} canonical, "
         f"{capability['bare-edges']} bare, {capability['unclassified-edges']} unclassified"
     )
@@ -236,7 +286,8 @@ def main():
                 "cascade/cluster-member": clustered_paging,
                 "mission-scope/capability-scope": capability["paging"],
             },
-            "missing-canonical-node-count": len(missing),
+            "missing-canonical-node-count": len(absent),
+            "canonical-node-without-edges-count": len(unconnected),
             "finding": finding,
             "wall-clock-seconds": round(elapsed, 3),
             "dry-run?": True, "writes-to-7073?": False,
@@ -246,11 +297,13 @@ def main():
     with open(OUT, "w") as f:
         f.write(";; O5 honest-holes DRY-RUN (C-cascade-real). Zero :7073 writes.\n")
         f.write(";; hole-target edges; no-capability holes claim EXISTING canonical mission nodes\n")
-        f.write(";; :mission (compose w/ O1/O3/O4); missing-node holes mark absent nodes (dangling).\n\n")
+        f.write(";; :mission (compose w/ O1/O3/O4); missing-node holes mark absent nodes (dangling);\n"
+        f";; without-edges holes land on REAL nodes and compose.\n\n")
         json.dump(art, f, indent=1)
     print("n-holes:", len(holes), "| by-kind:", dict(by_kind),
           "| core:", len(core), "| capability-edges:", capability["paging"]["rows"],
-          "| missing-canonical:", len(missing), "| seconds:", round(elapsed, 3))
+          "| absent:", len(absent), "| unconnected:", len(unconnected),
+          "| seconds:", round(elapsed, 3))
     print("paging:", art["o5/meta"]["paging"])
     print("wrote", OUT)
     return holes
