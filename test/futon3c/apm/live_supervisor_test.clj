@@ -52,6 +52,16 @@
            (take 5 @calls)))
     (is (= [] (get-in (last @calls) [1 :awaiting])))))
 
+(deftest terminal-collection-is-persisted-progress-not-an-invalid-phase-status
+  (let [calls (atom [])
+        result (sut/tick! (base calls {:ok true :status :terminal-collected
+                                      :collection {:collection/id "collection-1"}}))]
+    (is (= :terminal-collected (:status result)))
+    (is (= "collection-1" (get-in result [:collection :collection/id])))
+    (is (= [:audit :inspect :drive :project] (take 4 @calls)))
+    (is (not-any? #{:advance} @calls))
+    (is (= [] (get-in (last @calls) [1 :awaiting])))))
+
 (deftest audit-and-projection-failures-stop-without-routing-around
   (testing "audit"
     (let [calls (atom [])
