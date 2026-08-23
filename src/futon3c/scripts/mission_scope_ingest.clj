@@ -449,12 +449,48 @@
 (defn- resolve-pattern-library-entity [client base-url pattern-ident pattern-ref]
   (let [key (pattern-library-key pattern-ref)
         candidates (cond-> #{pattern-ident}
-                     key (conj key))]
-    (some (fn [entity]
-            (when (or (contains? candidates (:external-id entity))
-                      (contains? candidates (:name entity)))
-              entity))
-          (pattern-library-entities client base-url))))
+                     key (conj key))
+        entities (pattern-library-entities client base-url)]
+    (or (some (fn [entity]
+                (when (or (contains? candidates (:external-id entity))
+                          (contains? candidates (:name entity)))
+                  entity))
+              entities)
+        ;; Bare-slug fallback. Library entities are keyed namespaced
+        ;; (`writing-coherence/section-bridge-missing`), but a mission may cite
+        ;; the bare slug, which matches neither :name nor :external-id. Before
+        ;; the futon1b point read was repaired this was invisible; afterwards
+        ;; `get-entity` began resolving those bare slugs to whatever else
+        ;; happened to own the id — four `:scope/loose-section` nodes, in the
+        ;; first full run (2026-08-23).
+        ;;
+        ;; Only an UNAMBIGUOUS suffix counts: 18 of 1351 library slugs are
+        ;; shared across namespaces (`invariants`, `right-action`, ...), and a
+        ;; guess between them would fabricate a citation. Those stay
+        ;; unresolved, which is the honest answer and what the detached count
+        ;; is for.
+        (when-not (str/includes? (str pattern-ident) "/")
+          (let [bare (str pattern-ident)
+                matches (into [] (filter #(= bare (peek (str/split (str (:name %)) #"/"))))
+                              entities)]
+            (when (= 1 (count matches))
+              (first matches)))))))
+
+(defn- pattern-entity?
+  "True when ENTITY is actually a pattern node.
+
+   `get-entity` matches on id alone, so a pattern slug that collides with a
+   mission's own scope node resolves to that node and wins before the library
+   fallback. Measured on the first full run (2026-08-23): all 6 exact-id
+   resolutions were such collisions — four `:scope/loose-section` nodes under
+   `E-ukrn-paper-v2.4-comments/`, each shadowing a real
+   `writing-coherence/<slug>` pattern/library entity. The branch contributed
+   zero correct targets and six wrong ones.
+
+   This became reachable only when the futon1b point read was repaired: while
+   `/entity/<id>` 404'd on everything, branch 1 never fired."
+  [entity]
+  (some-> entity :type str (str/replace #"^:" "") (str/starts-with? "pattern/")))
 
 (defn- resolve-pattern-node
   "Resolve a cited flexiarg pattern to an existing substrate-2 node. The
@@ -465,7 +501,8 @@
   [client base-url pattern-ident pattern-ref]
   (when (seq (str pattern-ident))
     (let [endpoint (flexiarg-endpoint pattern-ref)
-          exact (get-entity client base-url pattern-ident)]
+          typed (fn [e] (when (pattern-entity? e) e))
+          exact (typed (get-entity client base-url pattern-ident))]
       (cond
         exact
         (do (bump-telemetry! :pattern-resolved-by-get-entity-count) exact)
@@ -475,10 +512,10 @@
                                                          pattern-ident pattern-ref)]
           (do (bump-telemetry! :pattern-resolved-by-library-count) library)
           (if-let [by-ref (when (seq (str pattern-ref))
-                           (get-entity client base-url pattern-ref))]
+                           (typed (get-entity client base-url pattern-ref)))]
             (do (bump-telemetry! :pattern-resolved-by-get-entity-count) by-ref)
             (if-let [by-endpoint (when endpoint
-                                   (get-entity client base-url endpoint))]
+                                   (typed (get-entity client base-url endpoint)))]
               (do (bump-telemetry! :pattern-resolved-by-get-entity-count) by-endpoint)
               (if (and endpoint (endpoint-exists? client base-url endpoint))
                 (do
