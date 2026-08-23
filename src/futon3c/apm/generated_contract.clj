@@ -26,6 +26,14 @@
    :conversation-is-receipt-authority false
    :submission-conflict-policy "reject"
    :submission-covered-role-count 7
+   :terminal-collection-required true
+   :terminal-collection-persisted true
+   :terminal-collection-before-missing-observation true
+   :terminal-collection-attempts-per-role 1
+   :terminal-repair-attempts-per-role 1
+   :terminal-collection-covered-role-count 7
+   :missing-observation-student-only true
+   :unbounded-conversational-retries false
    :typed-submission-migration-max 1
    :typed-submission-migration-fresh-session true
    :typed-submission-migration-preserves-snapshot true

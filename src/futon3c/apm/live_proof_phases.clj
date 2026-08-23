@@ -173,13 +173,15 @@
   (if (= :preflight kind)
     (driver/drive!
      (assoc (select-keys options [:state :announce-fn :activate-fn :job-fn :persist-fn
-                                 :ticket-register-fn :terminal-submission-provider])
+                                 :ticket-register-fn :terminal-submission-provider
+                                 :terminal-budget-config])
             :request request
             :terminal-validator preflight/validate-terminal
             :receipt-provider (fn [r t j _] (preflight/receipt contract r t j))))
     (driver/drive!
      (assoc (select-keys options [:state :announce-fn :activate-fn :job-fn :persist-fn
-                                 :ticket-register-fn :terminal-submission-provider])
+                                 :ticket-register-fn :terminal-submission-provider
+                                 :terminal-budget-config])
             :request request
             :terminal-validator (partial validate-terminal kind)
             :receipt-provider (partial receipt contract kind)))))
@@ -236,7 +238,7 @@
          " Await activation before submitting completion.")))
 
 (defn run-live!
-  [{:keys [kind contract request state-path agency-base max-rounds]
+  [{:keys [kind contract request state-path agency-base max-rounds terminal-budget]
     :or {agency-base "http://localhost:7070"
          max-rounds solver-rounds/default-max-rounds}}]
   (let [state (runtime/read-state state-path)
@@ -278,6 +280,9 @@
          :job-id job-id :response response}))
     :persist-fn #(runtime/atomic-persist! state-path %)
     :ticket-register-fn submission/register!
+    :terminal-budget-config (or terminal-budget
+                                (:terminal-budget request)
+                                driver/default-terminal-budget)
     :terminal-submission-provider (fn [_ ticket _]
                                     (submission/submitted (:job-id ticket)))}]
     (if (= :solve kind)

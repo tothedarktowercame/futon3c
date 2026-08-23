@@ -147,13 +147,15 @@
                      :typed-submission-migration-attempts 1)
         receipt {:receipt/type :student-observation-missing
                  :receipt/author :controller}
-        result (sut/drive!
-                (assoc (effects calls job) :state state
-                       :terminal-submission-provider (constantly nil)
-                       :missing-observation-provider
-                       (fn [_ _ _ attempts]
-                         {:ok true :certificate (assoc receipt
-                                                       :repair-attempts attempts)})))]
+        base (assoc (effects calls job) :state state
+                    :terminal-submission-provider (constantly nil)
+                    :missing-observation-provider
+                    (fn [_ _ _ attempts _collection]
+                      {:ok true :certificate (assoc receipt
+                                                    :repair-attempts attempts)}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
     (is (= :certified (:status result)))
     (is (= :controller (get-in result [:certificate :receipt/author])))
     (is (= 1 (get-in result [:certificate :repair-attempts])))
@@ -180,12 +182,15 @@
                      :request request :active-request (assoc request :repair/attempt 1)
                      :ticket {:job-id "legacy-repair-job" :ticket/id "old-ticket"}
                      :activation/accepted? true :terminal-repair-attempts 1}
-        migrated (sut/drive! (assoc base :state prior-state))
-        exhausted (sut/drive!
-                   (assoc base :state (assoc (:state migrated)
+        legacy-collected (sut/drive! (assoc base :state prior-state))
+        migrated (sut/drive! (assoc base :state (:state legacy-collected)))
+        typed-base (assoc base :state (assoc (:state migrated)
                                              :activation/accepted? true)
                           :job-fn (constantly {:job-id "typed-migration-job"
-                                              :state :done})))]
+                                              :state :done}))
+        typed-collected (sut/drive! typed-base)
+        exhausted (sut/drive! (assoc typed-base :state (:state typed-collected)))]
+    (is (= :terminal-collected (:status legacy-collected)))
     (is (= :awaiting-terminal (:status migrated)))
     (is (true? (:repair? migrated)))
     (is (= :typed-submission-contract-migration
@@ -260,8 +265,7 @@
         job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done
                    :report {:frame-id "forged"}})
         dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
-        result (sut/drive!
-                (assoc (effects calls job) :state dispatched
+        base (assoc (effects calls job) :state dispatched
                        :terminal-submission-provider
                        (fn [_ _ _]
                          {:authority {:frame-id "f19" :problem-id "a01J05"}
@@ -270,7 +274,10 @@
                                     :evidence {:verified true}}})
                        :terminal-validator
                        (fn [_ _ terminal]
-                         (reset! seen (:report terminal)) {:ok true})))]
+                         (reset! seen (:report terminal)) {:ok true}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
     (is (= :certified (:status result)))
     (is (= "f19" (:frame-id @seen)))
     (is (= true (:verified @seen)))
@@ -281,8 +288,68 @@
         job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done
                    :report {:looks "valid"}})
         dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
-        result (sut/drive!
-                (assoc (effects calls job) :state dispatched
-                       :terminal-submission-provider (constantly nil)))]
+        base (assoc (effects calls job) :state dispatched
+                    :terminal-submission-provider (constantly nil))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
     (is (= :live-job-submission-missing (:error/code result)))
     (is (not-any? #{:validate :receipt} @calls))))
+
+(deftest all-live-role-schemas-collect-before-validation
+  (doseq [role [:solver :student :guide :scribe :proctor
+                :promotion-proctor :analyst]]
+    (let [calls (atom [])
+          job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+          dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+          base (assoc (effects calls job)
+                      :request (assoc request :role role)
+                      :state (assoc-in dispatched [:request :role] role)
+                      :terminal-submission-provider
+                      (fn [_ _ _]
+                        {:submission/id (str "submission-" (name role))
+                         :authority {:frame-id "f19" :problem-id "a01J05"}
+                         :payload {:command-own-exit 0 :evidence {}}}))
+          collected (sut/drive! base)
+          certified (sut/drive! (assoc base :state (:state collected)))]
+      (is (= :terminal-collected (:status collected)) (name role))
+      (is (= :certified (:status certified)) (name role))
+      (is (= (:collection/id (:collection collected))
+             (machine/ledger-digest
+              [(dissoc (:collection collected) :collection/id)]))
+          (name role)))))
+
+(deftest missing-observation-cannot-fire-before-persisted-collection
+  (let [calls (atom []) missing-calls (atom 0)
+        job (atom {:job-id "job-1" :state :done})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        result (sut/drive!
+                (assoc (effects calls job) :state dispatched
+                       :terminal-submission-provider (constantly nil)
+                       :missing-observation-provider
+                       (fn [& _] (swap! missing-calls inc)
+                         {:ok true :certificate {}})))]
+    (is (= :terminal-collected (:status result)))
+    (is (zero? @missing-calls))
+    (is (= false (get-in result [:collection :submission/available?])))))
+
+(deftest non-student-exhaustion-fails-closed-without-substitution
+  (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
+        state (assoc (:state (sut/drive! (effects calls job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        base (assoc (effects calls job) :state state
+                    :terminal-submission-provider (constantly nil))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :live-job-terminal-repair-exhausted (:error/code result)))
+    (is (nil? (:certificate result)))))
+
+(deftest invalid-configured-terminal-budget-is-refused
+  (let [calls (atom []) result
+        (sut/drive! (assoc (effects calls (atom {:state :running}))
+                           :terminal-budget-config {:collection-attempts 0
+                                                    :repair-attempts 1}))]
+    (is (= :live-job-driver-input-invalid (:error/code result)))
+    (is (empty? @calls))))

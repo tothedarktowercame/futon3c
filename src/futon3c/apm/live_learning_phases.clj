@@ -28,7 +28,7 @@
 
 (defn build-request
   [{:keys [contract action ledger unit role-card seat workspace receipts
-           snapshot-access turn-timeout-ms]
+           snapshot-access turn-timeout-ms terminal-budgets]
     :or {turn-timeout-ms 3600000}}]
   (let [kind (:kind action)
         phase (:phase action)
@@ -38,6 +38,8 @@
                               :student-attempt-3 3} phase))
         role (role-for-kind kind)
         expected-agent (str (:frame/id unit) "-" (name role))
+        terminal-budget (merge driver/default-terminal-budget
+                               (get terminal-budgets role))
         input-ids (required-input-receipt-ids contract phase receipts)
         promotion-receipt (get receipts :promote-solver)
         required-artifacts (get-in contract [:phases phase :requires])
@@ -51,6 +53,8 @@
                    (not (true? (:invoke-ready? seat))) (conj :seat-not-ready)
                    (not (and (string? (:path role-card)) (string? (:blob role-card))))
                    (conj :role-card-pin-missing)
+                   (not (every? pos-int? (vals terminal-budget)))
+                   (conj :terminal-budget-invalid)
                    (not= expected-input-count (count input-ids))
                    (conj :required-input-receipts-missing)
                    (and (= :student-attempt kind)
@@ -80,6 +84,7 @@
                           :ledger-digest (:digest ledger)
                           :role-card-path (:path role-card) :role-card-blob (:blob role-card)
                           :input-receipt-ids input-ids
+                          :terminal-budget terminal-budget
                           :turn-timeout-ms turn-timeout-ms}
                    (= :student-attempt kind)
                    (assoc :attempt-ordinal attempt-ordinal
@@ -235,7 +240,7 @@
 (defn missing-observation-receipt
   "Controller evidence that a Student job ended without a valid typed receipt.
   It is an alternate observation producer, never a Student-authored attempt."
-  [contract action receipts request ticket job repair-attempts]
+  [contract action receipts request ticket job repair-attempts collection-evidence]
   (let [workspace (:workspace request)
         head-result (when (string? workspace)
                       (shell/sh "git" "-C" workspace "rev-parse" "HEAD"))
@@ -251,6 +256,7 @@
               :receipt/harness-observed
               {:job (select-keys job [:job-id :agent-id :state :terminal-code
                                       :session-id])
+               :collection collection-evidence
                :workspace {:path workspace
                            :head (when (and head-result (zero? (:exit head-result)))
                                    (str/trim (:out head-result)))}
@@ -307,7 +313,7 @@
                  (assoc :fresh-session? contract-migration?
                         :repair/attempt (if contract-migration?
                                           :typed-contract-migration-1
-                                          1)
+                                          (:repair/next-attempt failure 1))
                         :repair/of-job-id (:job-id job)
                         :repair/of-ticket-id (:ticket/id ticket)
                         :repair/findings (vec (:findings failure)))
@@ -371,11 +377,13 @@
                                     (submission/submitted (:job-id ticket)))
     :terminal-validator validate-terminal
     :terminal-repair-request-fn terminal-repair-request
+    :terminal-budget-config (or (:terminal-budget request)
+                                driver/default-terminal-budget)
     :missing-observation-provider
     (when (= :student-attempt (:kind action))
-      (fn [request ticket job repair-attempts]
+      (fn [request ticket job repair-attempts collection-evidence]
         (missing-observation-receipt contract action receipts request ticket job
-                                     repair-attempts)))
+                                     repair-attempts collection-evidence)))
     :receipt-provider
     (fn [request ticket job validated]
       (if (= :promote-solver (:phase action))

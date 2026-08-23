@@ -206,6 +206,26 @@
     (is (= :live-learning-request-invalid (:error/code result)))
     (is (some #{:student-snapshot-access-unverified} (:findings result)))))
 
+(deftest role-terminal-budgets-are-configurable-and-validated
+  (let [action {:kind :guide-intervention :phase :guide-intervention-1
+                :role :guide :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
+        attempt {:receipt/id "attempt"}
+        good (sut/build-request
+              (merge base {:action action
+                           :receipts {:student-attempt-1 attempt}
+                           :seat {:agent-id "f19-guide" :invoke-ready? true}
+                           :terminal-budgets {:guide {:collection-attempts 1
+                                                      :repair-attempts 2}}}))
+        bad (sut/build-request
+             (merge base {:action action
+                          :receipts {:student-attempt-1 attempt}
+                          :seat {:agent-id "f19-guide" :invoke-ready? true}
+                          :terminal-budgets {:guide {:collection-attempts 0
+                                                     :repair-attempts 1}}}))]
+    (is (= {:collection-attempts 1 :repair-attempts 2}
+           (get-in good [:request :terminal-budget])))
+    (is (some #{:terminal-budget-invalid} (:findings bad)))))
+
 (deftest promote-solver-requires-reviewed-candidates-for-controller-publication
   (let [request {:dispatch/type :scribe-reduce :phase :promote-solver
                  :agent-id "f19-scribe" :frame-id "f19" :problem-id "a01J05"}
@@ -240,7 +260,7 @@
                 {:job-id "f25-shaped-job"}
                 {:job-id "f25-shaped-job" :agent-id "fixture-f25-student"
                  :state :done :terminal-code 0}
-                1)]
+                1 {:collection/id "collection-evidence"})]
     (is (:ok result))
     (is (= :controller (get-in result [:certificate :receipt/author])))
     (is (= :typed-submission-missing

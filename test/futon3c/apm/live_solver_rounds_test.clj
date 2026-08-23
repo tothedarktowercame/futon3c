@@ -40,6 +40,36 @@
     (is (= 48 (get-in result [:state :active :request
                               :solver/remaining-rounds])))))
 
+(deftest solver-typed-output-is-collected-then-repaired-once
+  (let [persisted (atom nil)
+        base (assoc (effects persisted)
+                    :terminal-submission-provider (constantly nil)
+                    :ticket-register-fn (constantly {:ok true})
+                    :announce-fn (fn [request]
+                                   {:ok true
+                                    :job-id (if (:repair/attempt request)
+                                              "solver-repair-job" "job-1")})
+                    :terminal-budget-config {:collection-attempts 1
+                                             :repair-attempts 1})
+        collected (sut/drive! base)
+        repaired (sut/drive! (assoc base :state (:state collected)))
+        repair-base (assoc base :state (:state repaired)
+                           :job-fn (fn [_]
+                                     {:job-id "solver-repair-job"
+                                      :agent-id "f19-solver"
+                                      :session-id "solver-session"
+                                      :state :done}))
+        repair-collected (sut/drive! repair-base)
+        exhausted (sut/drive! (assoc repair-base
+                                     :state (:state repair-collected)))]
+    (is (= :terminal-collected (:status collected)))
+    (is (= :awaiting-terminal (:status repaired)))
+    (is (true? (:repair? repaired)))
+    (is (= :terminal-collected (:status repair-collected)))
+    (is (= :solver-typed-submission-repair-exhausted
+           (:error/code exhausted)))
+    (is (= 1 (:repair/attempts exhausted)))))
+
 (deftest retry-carries-terminal-validation-remediation
   (let [persisted (atom nil)
         result (sut/drive! (effects persisted))

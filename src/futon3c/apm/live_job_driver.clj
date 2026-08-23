@@ -7,6 +7,7 @@
   (:require [futon3c.apm.campaign-machine :as machine]))
 
 (def terminal-states #{:done :failed :error :cancelled})
+(def default-terminal-budget {:collection-attempts 1 :repair-attempts 1})
 
 (declare ticket)
 
@@ -68,16 +69,36 @@
                 :phase (:phase request)}]
       {:ok true :ticket (assoc body :ticket/id (machine/ledger-digest [body]))})))
 
+(defn- terminal-budget [configured]
+  (merge default-terminal-budget configured))
+
+(defn- valid-terminal-budget? [configured]
+  (let [{:keys [collection-attempts repair-attempts]} (terminal-budget configured)]
+    (and (pos-int? collection-attempts) (pos-int? repair-attempts))))
+
+(defn terminal-collection-record [request ticket job submission attempt]
+  (let [body {:collection/type :typed-role-terminal
+              :dispatch/id (:dispatch/id request)
+              :job-id (:job-id ticket)
+              :role (:role request)
+              :terminal-state (:state job)
+              :terminal-code (:terminal-code job)
+              :attempt attempt
+              :submission/available? (some? submission)
+              :submission/id (:submission/id submission)}]
+    (assoc body :collection/id (machine/ledger-digest [body]))))
+
 (defn drive!
   "Advance one job by at most one externally visible state transition."
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
            terminal-validator receipt-provider terminal-repair-request-fn
            ticket-register-fn terminal-submission-provider cancel-fn
-           missing-observation-provider]}]
+           missing-observation-provider terminal-budget-config]}]
   (cond
     (not (and (map? request) (string? (:dispatch/id request))
               (every? fn? [announce-fn activate-fn job-fn persist-fn
-                            terminal-validator receipt-provider])))
+                            terminal-validator receipt-provider])
+              (valid-terminal-budget? terminal-budget-config)))
     {:ok false :error/code :live-job-driver-input-invalid}
 
     (nil? state)
@@ -186,9 +207,26 @@
          :finding (select-keys job [:job-id :agent-id :state :terminal-code])}
 
         :else
-        (let [submission (when (fn? terminal-submission-provider)
-                           (terminal-submission-provider
-                            active-request (:ticket state) job))
+        (if (and (fn? terminal-submission-provider)
+                 (nil? (:terminal-collection state)))
+          (let [submission (terminal-submission-provider
+                            active-request (:ticket state) job)
+                configured (terminal-budget terminal-budget-config)
+                collection (terminal-collection-record
+                            active-request (:ticket state) job submission 1)
+                next-state (assoc state :terminal-collection
+                                  {:evidence collection :submission submission
+                                   :budget configured})]
+            (if (:ok (persist-fn next-state))
+              {:ok true :status :terminal-collected :state next-state
+               :collection collection}
+              {:ok false :error/code :live-job-terminal-collection-persistence-failed
+               :state state}))
+        (let [submission (if (fn? terminal-submission-provider)
+                           (get-in state [:terminal-collection :submission])
+                           nil)
+              configured (terminal-budget terminal-budget-config)
+              max-repairs (:repair-attempts configured)
               job (if submission
                     (let [payload (:payload submission)]
                       (assoc job
@@ -223,13 +261,14 @@
                     {:ok false
                      :error/code :live-job-receipt-persistence-failed}))))
             (cond
-              (and (pos? (or (:terminal-repair-attempts state) 0))
+              (and (>= (or (:terminal-repair-attempts state) 0) max-repairs)
                    (not typed-contract-migration?))
               (if (and (= [:typed-submission-missing] (:findings validated))
                        (fn? missing-observation-provider))
                 (let [provided (missing-observation-provider
                                 active-request (:ticket state) job
-                                (:terminal-repair-attempts state))]
+                                (:terminal-repair-attempts state)
+                                (get-in state [:terminal-collection :evidence]))]
                   (if-not (:ok provided)
                     provided
                     (let [next-state (assoc state :state/type :live-job-certified
@@ -250,7 +289,10 @@
                             (cond-> validated
                               typed-contract-migration?
                               (assoc :repair/kind
-                                     :typed-submission-contract-migration)))
+                                     :typed-submission-contract-migration)
+                              (not typed-contract-migration?)
+                              (assoc :repair/next-attempt
+                                     (inc (or (:terminal-repair-attempts state) 0)))))
                     repair-request (:request repair)]
                 (if-not (and (:ok repair) (map? repair-request)
                              (string? (:dispatch/id repair-request)))
@@ -263,14 +305,14 @@
                       announced
                       (let [next-state
                             (cond->
-                             (assoc state
+                             (assoc (dissoc state :terminal-collection)
                                     :active-request repair-request
                                     :ticket (:ticket announced)
                                     :activation/accepted? false
                                     :terminal-repair-attempts
                                     (if typed-contract-migration?
                                       (:terminal-repair-attempts state)
-                                      1)
+                                      (inc (or (:terminal-repair-attempts state) 0)))
                                     :terminal-repair/original-job-id (:job-id job)
                                     :terminal-repair/findings (:findings validated))
                               typed-contract-migration?
@@ -301,4 +343,4 @@
                                    :repair? true :state accepted}
                                   {:ok false
                                    :error/code :live-job-activation-acceptance-persistence-failed
-                                   :state next-state}))))))))))))))))))
+                                   :state next-state})))))))))))))))))))

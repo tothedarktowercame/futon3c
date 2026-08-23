@@ -95,3 +95,20 @@
         (is (false? (:ok result)) (str field))
         (is (some #{:generated-contract-terminal-policy-invalid}
                   (:findings result)) (str field))))))
+
+(deftest deterministic-collection-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        mutations [[:terminal-collection-required false]
+                   [:terminal-collection-persisted false]
+                   [:terminal-collection-before-missing-observation false]
+                   [:terminal-collection-attempts-per-role 0]
+                   [:terminal-repair-attempts-per-role 2]
+                   [:terminal-collection-covered-role-count 6]
+                   [:missing-observation-student-only false]
+                   [:unbounded-conversational-retries true]]]
+    (doseq [[field value] mutations]
+      (let [result (sut/validate
+                    (assoc-in contract [:dispatch-policy field] value))]
+        (is (false? (:ok result)) (str field))
+        (is (some #{:generated-contract-dispatch-policy-invalid}
+                  (:findings result)) (str field))))))

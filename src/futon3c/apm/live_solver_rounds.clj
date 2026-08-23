@@ -88,6 +88,44 @@
                    :state accepted}
                   saved))))))))))
 
+(defn- dispatch-terminal-repair!
+  [{:keys [announce-fn activate-fn persist-fn ticket-register-fn]} state]
+  (let [active (:active state)
+        attempt (inc (or (:terminal-repair-attempts active) 0))
+        body (-> (:request active)
+                 (dissoc :dispatch/id)
+                 (assoc :repair/attempt attempt
+                        :repair/of-job-id (get-in active [:ticket :job-id])
+                        :repair/findings [:typed-submission-missing]))
+        request (submission/prepare-request
+                 (assoc body :dispatch/id (machine/ledger-digest [body])))
+        announced (job-driver/ticket request (announce-fn request))]
+    (if-not (:ok announced)
+      announced
+      (let [next-active {:state/type :live-job-dispatched :request request
+                         :ticket (:ticket announced)
+                         :terminal-repair-attempts attempt}
+            staged (assoc state :active next-active)]
+        (if-not (:ok (persist-container persist-fn staged))
+          {:ok false :error/code :solver-terminal-repair-persistence-failed}
+          (let [registered (if (fn? ticket-register-fn)
+                             (ticket-register-fn request (:ticket announced))
+                             {:ok true})
+                activated (when (:ok registered)
+                            (activate-fn request (:ticket announced)))]
+            (cond
+              (not (:ok registered))
+              {:ok false :error/code :solver-terminal-repair-registration-failed}
+              (not (:ok activated))
+              {:ok false :error/code :solver-terminal-repair-activation-failed}
+              :else
+              (let [accepted (assoc-in staged [:active :activation/accepted?] true)]
+                (if (:ok (persist-container persist-fn accepted))
+                  {:ok true :status :awaiting-terminal :repair? true
+                   :state accepted}
+                  {:ok false
+                   :error/code :solver-terminal-repair-acceptance-persistence-failed})))))))))
+
 (defn- normalize-round-report [report]
   (let [lean (:lean report)]
     (cond-> report
@@ -189,8 +227,13 @@
       :else
       (let [active (:active state)
             raw-job (job-fn (get-in active [:ticket :job-id]))
-            typed (when-let [provider (:terminal-submission-provider effects)]
-                    (provider (:request active) (:ticket active) raw-job))
+            provider (:terminal-submission-provider effects)
+            terminal? (contains? job-driver/terminal-states (:state raw-job))
+            collection (:terminal-collection active)
+            freshly-collected (when (and terminal? provider (nil? collection))
+                                (provider (:request active) (:ticket active)
+                                          raw-job))
+            typed (if provider (:submission collection) nil)
             job (if typed
                   (let [payload (:payload typed)]
                     (assoc raw-job
@@ -202,17 +245,33 @@
                   raw-job)
             expected-session (:session-id (first (:rounds state)))]
         (cond
+          (and terminal? provider (nil? collection))
+          (let [evidence (job-driver/terminal-collection-record
+                          (:request active) (:ticket active) raw-job
+                          freshly-collected 1)
+                next-state (assoc-in state [:active :terminal-collection]
+                                     {:evidence evidence
+                                      :submission freshly-collected})]
+            (if (:ok (persist-container persist-fn next-state))
+              {:ok true :status :terminal-collected :state next-state
+               :collection evidence}
+              {:ok false :error/code :solver-terminal-collection-persistence-failed}))
+
           (not (contains? job-driver/terminal-states (:state job)))
           {:ok true :status :awaiting-terminal
            :job-id (get-in state [:active :ticket :job-id])
            :state state}
 
           (and (= :done (:state job))
-               (:terminal-submission-provider effects)
+               provider
                (nil? typed))
-          {:ok true :status :awaiting-typed-submission
-           :job-id (get-in state [:active :ticket :job-id])
-           :state state}
+          (let [max-repairs (get-in effects [:terminal-budget-config
+                                             :repair-attempts] 1)]
+            (if (< (or (:terminal-repair-attempts active) 0) max-repairs)
+              (dispatch-terminal-repair! effects state)
+              {:ok false :error/code :solver-typed-submission-repair-exhausted
+               :repair/attempts (:terminal-repair-attempts active)
+               :collection (:evidence collection) :state state}))
 
           (and expected-session (not= expected-session (:session-id job)))
             {:ok false :error/code :solver-session-mismatch
