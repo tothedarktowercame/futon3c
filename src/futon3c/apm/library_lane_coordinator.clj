@@ -20,11 +20,26 @@
   (let [eff (effects/live-effects {:agency-base agency-base
                                    :corpus-root corpus-root
                                    :frames-root frames-root})
-        launched (launch/launch!
-                  (merge eff {:corpus-root corpus-root :problem-id problem-id
-                              :trunk-branch trunk-branch
-                              :keying-target keying-target
-                              :state-root state-root :agency-base agency-base}))]
+        observed (when (:ok eff)
+                   ((:observe-problem-fn eff)
+                    {:corpus-root corpus-root :problem-id problem-id}))
+        resumed (when (:ok observed)
+                  (launch/resume-config
+                   {:state-root state-root :problem-id problem-id
+                    :revision (get-in observed [:problem :revision])
+                    :outcome-fn (:outcome-fn eff)}))
+        launched (cond
+                   (not (:ok eff)) eff
+                   (not (:ok observed)) observed
+                   resumed {:ok true :status :resumed :config resumed}
+                   :else
+                   (launch/launch!
+                    (merge eff
+                           {:corpus-root corpus-root :problem-id problem-id
+                            :trunk-branch trunk-branch
+                            :keying-target keying-target
+                            :state-root state-root
+                            :agency-base agency-base})))]
     (if-not (:ok launched)
       launched
       (let [config (:config launched)]

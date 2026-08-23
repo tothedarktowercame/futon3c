@@ -1,7 +1,11 @@
 (ns futon3c.apm.library-lane-coordinator-test
   (:require [clojure.test :refer [deftest is]]
             [futon3c.apm.durable-coordinator :as durable]
-            [futon3c.apm.library-lane-coordinator :as sut])
+            [futon3c.apm.library-lane-adapters :as adapters]
+            [futon3c.apm.library-lane-coordinator :as sut]
+            [futon3c.apm.library-lane-effects :as effects]
+            [futon3c.apm.library-lane-launch :as launch]
+            [futon3c.apm.library-lane-runner :as runner])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
@@ -99,6 +103,40 @@
         (is (false? (:ok result)))
         (is (= :library-lane-phase-intent-drift (:error/code result)))
         (is (zero? @calls))))))
+
+(deftest run-step-resumes-persisted-config-before-workspace-preparation
+  (let [launches (atom 0)
+        resumed-config {:seats {:solver {:agent-id "solver"}}
+                        :outcome-fn (fn [_] :outcome)}]
+    (with-redefs [effects/live-effects
+                  (fn [_] {:ok true
+                           :observe-problem-fn
+                           (fn [_] {:ok true :problem {:revision "rev"}})
+                           :outcome-fn (:outcome-fn resumed-config)})
+                  launch/resume-config
+                  (fn [request]
+                    (is (= "rev" (:revision request)))
+                    resumed-config)
+                  launch/launch!
+                  (fn [_] (swap! launches inc) {:ok false})
+                  adapters/make-phase-inputs-fn
+                  (constantly :phase-inputs)
+                  adapters/make-bank-request-fn
+                  (constantly :bank-request)
+                  runner/step-one!
+                  (fn [request]
+                    (is (= :solve (:phase-limit request)))
+                    (is (= :phase-inputs (:phase-inputs-fn request)))
+                    {:ok true :ruling :awaiting})]
+      (is (= {:ok true :ruling :awaiting}
+             (sut/run-step! {:agency-base "agency" :corpus-root "corpus"
+                             :frames-root "frames" :state-root "state"
+                             :problem-id "t00J02" :trunk-branch "trunk"
+                             :keying-target "target"
+                             :contract-path
+                             "holes/labs/M-apm-demonstration/frame-cycle-contract-codex-only-v1.edn"
+                             :phase :solve})))
+      (is (zero? @launches)))))
 
 (deftest legacy-pending-intent-migration-preserves-dispatch-identity
   (let [{:keys [registry state]} (fixture)
