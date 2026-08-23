@@ -58,8 +58,10 @@
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
 (def orchestration-path
   "holes/labs/M-apm-demonstration/countdown-live-orchestration-v1.edn")
-(def control-branch "frame/18-control")
-(def control-revision "d6f9ec2cfe622f518a423941f24819fa1a65fc5d")
+(def control-branch "master")
+;; The canonical shared JVM must run master containing the retained-revision
+;; qualification repair. Later master commits remain valid by ancestry.
+(def control-revision "11a2f9401a39e17ac3695b2e70e4d0e3b9d71858")
 (def machine-regulator-id "countdown-regulator")
 (defonce ^:private machine-regulator-capability (Object.))
 (declare inputs)
