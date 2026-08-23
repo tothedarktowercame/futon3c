@@ -112,6 +112,64 @@
                       (.getErrorStream connection))]
        (assoc (json/parse-string (slurp stream) true) :http/status status)))))
 
+(def ^:private activation-terminal-states
+  #{"running" "done" "failed" "timeout" "cancelled"})
+
+(defn- job-state [agency-base job-id]
+  (try (some-> (http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))
+               :job :state str)
+       (catch Throwable _ nil)))
+
+(defn activate-job!
+  "Second half of a frame dispatch. POST /api/alpha/invoke/announce only RESERVES
+   a ledger row (state queued) — nothing drains it; see
+   futon3c/holes/excursions/E-drainer-stall-announced-jobs.md. The row is run by a
+   follow-up POST /api/alpha/invoke carrying the same job-id: create-invoke-job!
+   reuses a non-terminal requested id, and the turn runs on the agent's drainer.
+   That is the only activation the serving master implements:
+   /api/alpha/invoke/activate exists only on feature/lane-effects, and
+   /api/alpha/bell with an existing job-id is a no-op under FUTON3C_TYPED_BELLS
+   (it answers 202 reused? and never enqueues).
+   /invoke blocks for the whole turn, which a driver cannot afford, so the POST is
+   fired on a daemon thread (the server runs the turn whether or not the socket
+   stays open) and activation is CONFIRMED by polling the job until it leaves
+   `queued`. Idempotent: a job already running/terminal is not re-posted, since a
+   second /invoke with a running job-id would start a second turn under it."
+  [agency-base {:keys [agent-id prompt surface caller mode job-id timeout-ms
+                       confirm-attempts confirm-interval-ms]
+                :or {confirm-attempts 30 confirm-interval-ms 500}}]
+  (let [before (job-state agency-base job-id)]
+    (if (contains? activation-terminal-states before)
+      {:ok true :job-id job-id :state before :already-active? true}
+      (let [payload (cond-> {:agent-id agent-id :prompt prompt
+                             :surface (or surface "emacs-repl")
+                             :caller (or caller "countdown-control")
+                             :job-id job-id}
+                      mode (assoc :mode mode)
+                      timeout-ms (assoc :timeout-ms timeout-ms))
+            worker (doto (Thread.
+                          ^Runnable
+                          (fn []
+                            (try (http-json "POST" (str agency-base "/api/alpha/invoke") payload)
+                                 (catch Throwable _ nil)))
+                          (str "activate-" job-id))
+                     (.setDaemon true)
+                     (.start))]
+        (loop [n 0]
+          (let [state (job-state agency-base job-id)]
+            (cond
+              (contains? activation-terminal-states state)
+              {:ok true :job-id job-id :state state}
+
+              (< n confirm-attempts)
+              (do (Thread/sleep (long confirm-interval-ms))
+                  (recur (inc n)))
+
+              :else
+              {:ok false :job-id job-id :state state
+               :error/code :live-job-activation-not-observed
+               :posting? (.isAlive worker)})))))))
+
 (defn run-live!
   [{:keys [contract inputs state-path agency-base]
     :or {agency-base "http://localhost:7070"}}]
@@ -128,14 +186,10 @@
          :job-id (:job-id response)}))
     :activate-fn
     (fn [request ticket]
-      (let [response (http-json "POST" (str agency-base "/api/alpha/invoke/activate")
-                                {:agent-id (:agent-id request)
-                                 :prompt (prompt request)
-                                 :surface "emacs-repl"
-                                 :caller "countdown-control"
-                                 :job-id (:job-id ticket)})]
-        {:ok (and (= 202 (:http/status response)) (:ok response)
-                  (:accepted response))}))
+      (activate-job! agency-base
+                     {:agent-id (:agent-id request) :prompt (prompt request)
+                      :job-id (:job-id ticket)
+                      :timeout-ms (get-in request [:timeouts :turn-timeout-ms])}))
     :job-fn
     (fn [job-id]
       (job->terminal
