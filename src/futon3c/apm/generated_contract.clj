@@ -65,7 +65,15 @@
    :student-query-log-required true})
 
 (def required-terminal-policy
-  {:certified-phase-receipts 11 :separate-problem-frame-outcomes true})
+  {:certified-phase-receipts 11
+   :separate-problem-frame-outcomes true
+   :learning-outcome-required true
+   :solved-partial-bankable true
+   :bankable-solved-successor-eligible true
+   :missing-observation-receipt-type "student-observation-missing"
+   :missing-observation-author "controller"
+   :missing-observation-may-satisfy-observation-dependency true
+   :missing-observation-may-impersonate-student false})
 
 (def required-analyst-policy
   {:outside-frame-order true :wake-after-terminal-only true

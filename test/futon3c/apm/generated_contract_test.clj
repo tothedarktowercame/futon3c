@@ -81,3 +81,17 @@
                (sut/validate
                 (assoc-in contract [:analyst-policy :in-flight-mutation]
                           true)))))))
+
+(deftest f25-derived-terminal-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        mutations [[:solved-partial-bankable false]
+                   [:bankable-solved-successor-eligible false]
+                   [:missing-observation-author "student"]
+                   [:missing-observation-may-impersonate-student true]
+                   [:learning-outcome-required false]]]
+    (doseq [[field value] mutations]
+      (let [result (sut/validate
+                    (assoc-in contract [:terminal-policy field] value))]
+        (is (false? (:ok result)) (str field))
+        (is (some #{:generated-contract-terminal-policy-invalid}
+                  (:findings result)) (str field))))))
