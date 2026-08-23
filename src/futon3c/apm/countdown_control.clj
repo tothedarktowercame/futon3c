@@ -1204,14 +1204,10 @@
               (dissoc effects :jit/config))))))
 
 (defn- eligibility-baseline [problem]
-  (let [result (apply shell/sh ["lake" "env" "lean" (:path problem)
-                                :dir (:repository problem)])
-        lines (str/split-lines (str (:out result) (:err result)))]
-    {:exit (:exit result)
-     :warnings (count (filter #(str/includes? % "warning:") lines))
-     :sorry-warnings
-     (count (filter #(str/includes? % "declaration uses `sorry`") lines))
-     :errors (count (filter #(str/includes? % "error:") lines))}))
+  (:observation
+   (countdown-manifest/qualify-unit
+    {:problem (select-keys problem [:repository :revision :path :blob])
+     :eligibility/baseline {}})))
 
 (defn- jit-ledger-observation [_frame paths]
   (let [loaded (ledger/read-ledger (Path/of (:ledger-path paths)

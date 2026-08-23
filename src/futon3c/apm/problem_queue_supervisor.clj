@@ -9,8 +9,9 @@
 
 (defn queue-plan [problems]
   (let [body {:queue/type :apm-problem-queue :queue/version 1
-              :problems (mapv #(select-keys % [:problem/id :repository :revision
-                                                :path :blob :classification])
+              :problems (mapv #(select-keys % [:problem/id :repository
+                                                :base-branch :revision :path
+                                                :blob :classification])
                               problems)}]
     (assoc body :queue/id (machine/ledger-digest [body]))))
 

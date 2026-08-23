@@ -70,6 +70,11 @@
     (is (= :retry-superseded (get-in result [:state :status])))
     (is (= 1 (count (filter #(= :mint (first %)) @calls))))))
 
+(deftest queue-plan-preserves-explicit-retained-branch
+  (let [problem (assoc (first problems) :base-branch "exp/retained")]
+    (is (= "exp/retained"
+           (get-in (sut/queue-plan [problem]) [:problems 0 :base-branch])))))
+
 (deftest queue-and-terminal-invariants-fail-closed
   (testing "duplicate problem"
     (let [plan (sut/queue-plan [(first problems) (first problems)])]
