@@ -88,7 +88,7 @@
 (defn validate
   "Validate a lease against Git registration, clean state, source blob, and substrate."
   ([lease] (validate lease {}))
-  ([lease {:keys [probe-fn]}]
+  ([lease {:keys [probe-fn expected-head]}]
    (let [repository (canonical (:repository/path lease))
          workspace (canonical (:workspace/path lease))
          root-id (address (dissoc lease :workspace/id))
@@ -100,6 +100,10 @@
          clean? (= "" (or (out (run workspace "status" "--porcelain=v1")) ""))
          blob (out (run workspace "rev-parse"
                         (str "HEAD:" (:problem/path lease))))
+         expected-blob (if expected-head
+                         (out (run repository "rev-parse"
+                                   (str expected-head ":" (:problem/path lease))))
+                         (:problem/blob lease))
          lake-link (.resolve workspace ".lake")
          substrate (canonical (:substrate/path lease))
          link-target (when (Files/isSymbolicLink lake-link)
@@ -116,9 +120,10 @@
                     (not= (:workspace/id lease) root-id) (conj :workspace-lease-address-invalid)
                     (not registered?) (conj :workspace-not-registered)
                     (not= (:branch lease) branch) (conj :workspace-branch-mismatch)
-                    (not= (:base-revision lease) head) (conj :workspace-head-mismatch)
+                    (not= (or expected-head (:base-revision lease)) head)
+                    (conj :workspace-head-mismatch)
                     (not clean?) (conj :workspace-dirty)
-                    (not= (:problem/blob lease) blob) (conj :workspace-problem-blob-mismatch)
+                    (not= expected-blob blob) (conj :workspace-problem-blob-mismatch)
                     (not= substrate link-target) (conj :workspace-substrate-link-mismatch)
                     (not manifest-readable?) (conj :workspace-substrate-manifest-missing)
                     (not (zero? (:exit probe))) (conj :workspace-probe-failed))]
@@ -160,7 +165,8 @@
 (defn retire!
   "Remove only the leased worktree after all policy preconditions are certified."
   [{:keys [lease audit receipt-directory now]}]
-  (let [validation (validate lease {:probe-fn (fn [_] {:exit 0})})
+  (let [validation (validate lease {:probe-fn (fn [_] {:exit 0})
+                                    :expected-head (:terminal-head audit)})
         repository (canonical (:repository/path lease))
         workspace (canonical (:workspace/path lease))
         branch-ref (str "refs/heads/" (:branch lease))

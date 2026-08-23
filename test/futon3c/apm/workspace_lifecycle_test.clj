@@ -91,6 +91,47 @@
                (:error/code (sut/retire! {:lease lease :audit {}
                                           :receipt-directory (.resolve root "receipts")}))))))))
 
+(deftest retirement-binds-the-recorded-terminal-head-not-the-lease-base
+  (let [{:keys [root repo workspaces lake unit]} (fixture)
+        provisioned (sut/provision! {:unit unit :role :solver
+                                     :workspace-root workspaces
+                                     :substrate-path lake})
+        lease (:lease provisioned)
+        workspace (:workspace/path lease)]
+    (spit (str workspace "/problems/p1/lean/Main.lean")
+          "theorem p1 : True := by\n  exact True.intro\n")
+    (is (zero? (:exit (sh "git" "-C" workspace "add"
+                           "problems/p1/lean/Main.lean"))))
+    (is (zero? (:exit (sh "git" "-C" workspace
+                           "-c" "user.name=Test"
+                           "-c" "user.email=test@example.invalid"
+                           "commit" "-m" "solve p1"))))
+    (let [terminal-head (-> (sh "git" "-C" workspace "rev-parse" "HEAD")
+                            :out .trim)
+          base-validation (sut/validate lease {:probe-fn (fn [_] {:exit 0})})
+          terminal-validation (sut/validate lease
+                                            {:probe-fn (fn [_] {:exit 0})
+                                             :expected-head terminal-head})
+          audit (:audit (sut/certify-retirement-audit
+                         {:lease lease
+                          :validation terminal-validation
+                          :observations
+                          (zipmap sut/required-retirement-preconditions
+                                  (repeat true))
+                          :terminal-head terminal-head
+                          :context :terminal-head-regression
+                          :audited-at (Instant/parse "2026-08-23T00:00:00Z")}))
+          retired (sut/retire! {:lease lease :audit audit
+                                :receipt-directory (.resolve root "receipts")})]
+      (is (false? (:valid? base-validation)))
+      (is (some #{:workspace-head-mismatch} (:findings base-validation)))
+      (is (:valid? terminal-validation) (pr-str (:findings terminal-validation)))
+      (is (= terminal-head (:head terminal-validation)))
+      (is (:ok retired) (pr-str retired))
+      (is (= terminal-head (:branch-head retired)))
+      (is (zero? (:exit (sh "git" "-C" (str repo) "show-ref" "--verify"
+                           (str "refs/heads/" (:branch lease)))))))))
+
 (deftest committed-f19-rehearsal-evidence-is-self-contained-and-addressed
   (let [evidence (edn/read-string
                   (slurp "holes/labs/M-apm-demonstration/countdown-f19-workspace-evidence-v1.edn"))

@@ -1215,7 +1215,9 @@
 
 (defn- jit-retirement-audit
   [agency-base paths frame terminal-receipt role lease]
-  (let [validation (workspace-lifecycle/validate lease)
+  (let [terminal-head (get-in terminal-receipt [:workspace/terminal-heads role])
+        validation (workspace-lifecycle/validate lease
+                                                 {:expected-head terminal-head})
         jobs-response (live-preflight-runtime/http-json
                        "GET" (str agency-base "/api/alpha/invoke/jobs"))
         jobs (or (:jobs jobs-response) [])
@@ -1228,7 +1230,6 @@
                                           (str (:frame/id frame) "-")))) jobs)
         loaded (ledger/read-ledger (Path/of (:ledger-path paths)
                                             (make-array String 0)))
-        terminal-head (get-in terminal-receipt [:workspace/terminal-heads role])
         observations
         {:frame-terminal (and (:ok loaded)
                               (nil? (get-in loaded [:projection :active/frame])))
