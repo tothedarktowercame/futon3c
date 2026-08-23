@@ -101,8 +101,15 @@
           (conj :problem-revision-mismatch)
           (not= (:problem-blob request) (:problem-blob report))
           (conj :problem-blob-mismatch)
-          (not= {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
-                (select-keys lean [:exit :warnings :sorry-warnings :errors]))
+          ;; Preflight requires exactly one unresolved theorem and no errors.
+          ;; Total warnings may also include independent compiler/linter
+          ;; notices (for example deprecations); equating that count with the
+          ;; sorry count rejects a sound baseline for unrelated reasons.
+          (not (and (= 0 (:exit lean))
+                    (= 1 (:sorry-warnings lean))
+                    (= 0 (:errors lean))
+                    (nat-int? (:warnings lean))
+                    (<= (:sorry-warnings lean) (:warnings lean))))
           (conj :lean-baseline-mismatch)
           (not (true? (:clean-before? report))) (conj :workspace-not-clean-before)
           (not (true? (:clean-after? report))) (conj :workspace-not-clean-after)
