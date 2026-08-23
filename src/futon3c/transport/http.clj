@@ -5282,13 +5282,23 @@
   ;; on exactly the sessions this exists for. The Emacs caller is async.
   300000)
 
-(defn- compact-agent-busy? [agent]
+(defn- compact-turn-queue-busy? [agent-id]
+  ;; A cold compaction runs as a turn-queue entry and never flips the registry
+  ;; to :invoking, so a second POST while one was draining queued a redundant
+  ;; compaction instead of answering 409 (claude-14, 2026-08-23).
+  (let [state (turn-queue/snapshot)
+        aid (str agent-id)]
+    (or (contains? (set (:draining state)) aid)
+        (pos? (count (get-in state [:queues aid] []))))))
+
+(defn- compact-agent-busy? [agent agent-id]
   ;; Job counts cover bell/invoke jobs; an operator turn from the REPL
   ;; (invoke-stream) only shows as registry status :invoking (claude-13 was
   ;; mid-turn with both counts nil, 2026-08-22).
   (or (contains? #{:invoking "invoking"} (:agent/status agent))
       (pos? (+ (long (or (:running-jobs agent) (:agent/running-jobs agent) 0))
-               (long (or (:queued-jobs agent) (:agent/queued-jobs agent) 0))))))
+               (long (or (:queued-jobs agent) (:agent/queued-jobs agent) 0))))
+      (compact-turn-queue-busy? agent-id)))
 
 (defn- compact-witness
   "Did the CLI write a manual compact_boundary for SESSION-ID at/after START-MS?
@@ -5376,7 +5386,7 @@
           (not (fn? (:agent/invoke-fn agent)))
           (json-response 404 {:ok false :error "no local agent"})
 
-          (compact-agent-busy? agent)
+          (compact-agent-busy? agent agent-id)
           (json-response 409 {:ok false :error "turn in flight" :path "cold"})
 
           :else
