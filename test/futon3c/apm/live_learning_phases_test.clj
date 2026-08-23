@@ -226,6 +226,19 @@
            (get-in good [:request :terminal-budget])))
     (is (some #{:terminal-budget-invalid} (:findings bad)))))
 
+(deftest guide-request-derives-ordinal-from-registered-contract
+  (let [action {:kind :guide-intervention :phase :guide-intervention-1
+                :role :guide :frame-id "f19" :problem-id "a01J05"}
+        attempt {:receipt/id "attempt"}
+        result (sut/build-request
+                (merge base {:action action
+                             :receipts {:student-attempt-1 attempt}
+                             :seat {:agent-id "f19-guide"
+                                    :invoke-ready? true}}))]
+    (is (:ok result))
+    (is (= 1 (get-in result [:request :intervention-ordinal])))
+    (is (= "attempt" (get-in result [:request :input-attempt-id])))))
+
 (deftest promote-solver-requires-reviewed-candidates-for-controller-publication
   (let [request {:dispatch/type :scribe-reduce :phase :promote-solver
                  :agent-id "f19-scribe" :frame-id "f19" :problem-id "a01J05"}

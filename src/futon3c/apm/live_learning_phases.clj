@@ -32,7 +32,9 @@
     :or {turn-timeout-ms 3600000}}]
   (let [kind (:kind action)
         phase (:phase action)
+        phase-ordinal (get-in contract [:phases phase :ordinal])
         attempt-ordinal (or (:ordinal action)
+                            phase-ordinal
                             ({:student-attempt-1 1
                               :student-attempt-2 2
                               :student-attempt-3 3} phase))
@@ -51,6 +53,9 @@
                    (not= (:problem/id unit) (:problem-id action)) (conj :problem-mismatch)
                    (not= expected-agent (:agent-id seat)) (conj :seat-mismatch)
                    (not (true? (:invoke-ready? seat))) (conj :seat-not-ready)
+                   (and (some? (:ordinal action))
+                        (not= (:ordinal action) phase-ordinal))
+                   (conj :action-ordinal-mismatch)
                    (not (and (string? (:path role-card)) (string? (:blob role-card))))
                    (conj :role-card-pin-missing)
                    (not (every? pos-int? (vals terminal-budget)))
@@ -104,11 +109,11 @@
                           :solver-final-head
                           (:receipt/final-head (get receipts :solve)))
                    (= :guide-intervention kind)
-                   (assoc :intervention-ordinal (:ordinal action)
+                   (assoc :intervention-ordinal phase-ordinal
                           :input-attempt-id
                           (:receipt/id (get receipts
                                            (keyword (str "student-attempt-"
-                                                         (:ordinal action)))))))]
+                                                         phase-ordinal))))))]
         {:ok true :request (submission/prepare-request
                             (assoc body :dispatch/id
                                    (machine/ledger-digest [body])))}))))
@@ -198,9 +203,16 @@
                   :receipt/memory-snapshot (:memory-snapshot request)}
                  :guide-intervention
                  {:receipt/type :guide-intervention
-                  :receipt/intervention-ordinal (:intervention-ordinal request)
+                  :receipt/intervention-ordinal
+                  (get-in contract [:phases (:phase action) :ordinal])
                   :receipt/mode (:mode report)
-                  :receipt/input-attempt-id (:input-attempt-id request)
+                  :receipt/input-attempt-id
+                  (:receipt/id
+                   (get receipts
+                        (keyword
+                         (str "student-attempt-"
+                              (get-in contract
+                                      [:phases (:phase action) :ordinal])))))
                   :receipt/effect (:effect report)
                   :receipt/channel-audit (:channel-audit report)}
                  :scribe-reduce
