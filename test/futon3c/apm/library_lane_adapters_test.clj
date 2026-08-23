@@ -1,5 +1,6 @@
 (ns futon3c.apm.library-lane-adapters-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.apm.library-lane-adapters :as sut]))
 
 (def sha40 (apply str (repeat 40 "a")))
@@ -121,6 +122,13 @@
            (:error/code
             ((bank-adapter {:verified-proof? true :remaining-sorries 1})
              {:problem-id problem-id :receipts receipts}))))))
+
+(deftest library-axiom-script-builds-only-lean-modules
+  (let [script (sut/library-axiom-script
+                ["ConstructionTargets/DiskBoundaryHomology.lean"
+                 "ConstructionTargets/DiskBoundaryHomology.md"])]
+    (is (str/includes? script "ConstructionTargets.DiskBoundaryHomology"))
+    (is (not (str/includes? script "ConstructionTargets.DiskBoundaryHomology.md")))))
 
 (deftest content-addressed-frame-ids-refuse-observed-collisions
   (let [first-id (sut/codex-frame-id problem-id sha40 #{})]

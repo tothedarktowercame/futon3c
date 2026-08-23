@@ -33,8 +33,8 @@
   non-landing problems whose status remains unchanged, while landed problems
   naturally disappear after bank rewrites status.json. Dry-run replaces the
   bank function at its boundary; the bank driver never receives the request."
-  [{:keys [corpus-root area max-problems max-consecutive-non-landings dry-run?
-           run-one-fn]
+  [{:keys [corpus-root problem-id area max-problems
+           max-consecutive-non-landings dry-run? run-one-fn]
     :or {max-problems 1 max-consecutive-non-landings 2
          dry-run? false run-one-fn runner/run-one!}
     :as options}]
@@ -49,7 +49,13 @@
 
     :else
     (loop [attempted #{} reports [] consecutive 0]
-      (let [current (lane/queue corpus-root :library area)
+      (let [derived (lane/queue corpus-root :library area)
+            ;; A launch mints one frame for one problem. When that identity is
+            ;; supplied, the queue must not silently substitute its current
+            ;; head: the resulting phase authority belongs to another unit.
+            current (if problem-id
+                      (if (some #{problem-id} derived) [problem-id] [])
+                      derived)
             problem-id (first (remove attempted current))]
         (cond
           (>= (count reports) max-problems)

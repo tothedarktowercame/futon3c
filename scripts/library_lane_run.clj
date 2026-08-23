@@ -94,6 +94,7 @@
                                                  (:seats c)))))
           (let [result (queue/run-queue!
                         {:corpus-root corpus-root
+                         :problem-id problem-id
                          :trunk-branch trunk
                          :area area
                          :max-problems max-problems

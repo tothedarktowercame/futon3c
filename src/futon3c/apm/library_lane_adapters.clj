@@ -158,7 +158,9 @@
   modules are built first because the candidate worktree has no oleans for
   them yet; the roll-up gate then reuses that build."
   [module-paths]
-  (let [mods (mapv module-name module-paths)
+  (let [mods (->> module-paths
+                  (filter #(str/ends-with? % ".lean"))
+                  (mapv module-name))
         lean (str (str/join "\n" (map #(str "import " %) mods)) "\n"
                   "open Lean Elab Command in\n"
                   "run_cmd do\n"
@@ -177,7 +179,7 @@
                   "  logInfo m!\"'library' ({n} constants) depends on axioms: {axs.toList}\"\n")]
     (str "set -e; f=$(mktemp /tmp/futon3c-library-axioms-XXXXXX.lean); "
          "cat > \"$f\" <<'LEAN'\n" lean "LEAN\n"
-         "lake build " (str/join " " mods) " >/dev/null && lake env lean \"$f\"")))
+         "lake build " (str/join " " mods) " && lake env lean \"$f\"")))
 
 (defn make-bank-request-fn
   "Build the adapter injected into library-lane-runner/run-one!.

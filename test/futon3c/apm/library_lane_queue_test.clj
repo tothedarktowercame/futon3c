@@ -74,6 +74,19 @@
         (is (= :max-problems (:stop-condition result))))
       (finally (delete-tree! root)))))
 
+(deftest launched-problem-cannot-be-replaced-by-the-queue-head
+  (let [root (corpus "a" "b") calls (atom [])]
+    (try
+      (let [result (queue/run-queue!
+                    {:corpus-root root :problem-id "b" :max-problems 1
+                     :run-one-fn (fn [{:keys [problem-id]}]
+                                   (swap! calls conj problem-id)
+                                   (closed-result problem-id))})]
+        (is (= ["b"] @calls))
+        (is (= "b" (get-in result [:reports 0 :problem-id])))
+        (is (= :max-problems (:stop-condition result))))
+      (finally (delete-tree! root)))))
+
 (deftest consecutive-failure-stop-is-explicit
   (let [root (corpus "a" "b" "c")]
     (try
