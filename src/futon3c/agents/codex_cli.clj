@@ -73,6 +73,46 @@
                   (contains? activity-placeholder-texts (str/lower-case t)))
       t)))
 
+(defn event->ledger-event
+  "Translate one parsed Codex NDJSON event to the invoke-ledger stream schema.
+
+  Tool completion events are deliberately omitted: their matching start event
+  already announces the tool use. Returns nil for events with no follow-mode
+  representation."
+  [evt]
+  (let [event-type (:type evt)
+        item (:item evt)
+        item-type (:type item)]
+    (cond
+      (and (= "item.started" event-type)
+           (= "command_execution" item-type))
+      {:type "tool_use"
+       :tools ["bash"]
+       :tool_details [{:name "bash"
+                       :input {:command (:command item)}}]}
+
+      (and (= "item.started" event-type)
+           (= "tool_call" item-type))
+      (let [name (:name item)
+            arguments (:arguments item)]
+        {:type "tool_use"
+         :tools [name]
+         :tool_details [(cond-> {:name name}
+                          (map? arguments) (assoc :input arguments))]})
+
+      (and (= "item.completed" event-type)
+           (= "agent_message" item-type))
+      (when-let [text (meaningful-agent-text (extract-agent-text item))]
+        {:type "text" :text text})
+
+      (= "error" event-type)
+      {:type "text" :text (str "[codex error] " (:message evt))}
+
+      (= "turn.failed" event-type)
+      {:type "text" :text (str "[codex error] " (get-in evt [:error :message]))}
+
+      :else nil)))
+
 
 (defn- titleize-token
   [token]

@@ -4395,7 +4395,12 @@ RESPOND WITH ONLY:
                        (when-let [sink (get-event-sink aid-val)]
                          (try
                            (sink evt)
-                           (catch Throwable _))))))
+                           (catch Throwable _))
+                         (when-let [ledger-event
+                                    (codex-cli/event->ledger-event evt)]
+                           (try
+                             (sink ledger-event)
+                             (catch Throwable _)))))))
         on-runtime-event (fn [{:keys [kind] :as evt}]
                            (let [timestamp (or (:at evt) (str (Instant/now)))]
                              (case kind

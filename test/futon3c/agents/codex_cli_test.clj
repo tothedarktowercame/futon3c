@@ -281,6 +281,56 @@
   (is (= "preparing response"
          (codex-cli/event->activity {:type "reasoning"}))))
 
+(deftest event->ledger-event-translates-codex-stream-schema
+  (testing "tool starts become one ledger tool-use event"
+    (is (= {:type "tool_use"
+            :tools ["bash"]
+            :tool_details [{:name "bash"
+                            :input {:command "/bin/bash -lc 'ls'"}}]}
+           (codex-cli/event->ledger-event
+            {:type "item.started"
+             :item {:type "command_execution"
+                    :command "/bin/bash -lc 'ls'"}})))
+    (is (= {:type "tool_use"
+            :tools ["read_file"]
+            :tool_details [{:name "read_file"
+                            :input {:path "README.md"}}]}
+           (codex-cli/event->ledger-event
+            {:type "item.started"
+             :item {:type "tool_call"
+                    :name "read_file"
+                    :arguments {:path "README.md"}}})))
+    (is (= {:type "tool_use"
+            :tools ["read_file"]
+            :tool_details [{:name "read_file"}]}
+           (codex-cli/event->ledger-event
+            {:type "item.started"
+             :item {:type "tool_call"
+                    :name "read_file"
+                    :arguments "not-a-map"}}))))
+  (testing "completed assistant messages become meaningful ledger text"
+    (is (= {:type "text" :text "Finished the change."}
+           (codex-cli/event->ledger-event
+            {:type "item.completed"
+             :item {:type "agent_message"
+                    :text "  Finished the change.  "}}))))
+  (testing "Codex failures become visible text"
+    (is (= {:type "text" :text "[codex error] process failed"}
+           (codex-cli/event->ledger-event
+            {:type "error" :message "process failed"})))
+    (is (= {:type "text" :text "[codex error] turn failed"}
+           (codex-cli/event->ledger-event
+            {:type "turn.failed" :error {:message "turn failed"}}))))
+  (testing "non-ledger and duplicate completion events are omitted"
+    (is (nil? (codex-cli/event->ledger-event {:type "thread.started"})))
+    (is (nil? (codex-cli/event->ledger-event {:type "reasoning"})))
+    (is (nil? (codex-cli/event->ledger-event
+               {:type "item.completed"
+                :item {:type "command_execution" :command "ls"}})))
+    (is (nil? (codex-cli/event->ledger-event
+               {:type "item.completed"
+                :item {:type "agent_message" :text "   "}})))))
+
 (deftest command-execution-item-events-count-as-execution-evidence
   (let [evt-start {:type "item.started"
                    :item {:type "command_execution"
@@ -300,7 +350,7 @@
     (let [events (atom [])
           result (codex-cli/run-codex-stream!
                   ["python" "-c"
-                   (str "import sys; "
+                   (str "import sys; sys.stdin.buffer.read(); "
                         "sys.stdout.write('{\\\"type\\\":\\\"thread.started\\\",\\\"thread_id\\\":\\\"sid-runtime\\\"}\\\\n'); "
                         "sys.stdout.flush(); "
                         "sys.stderr.write('stderr-line\\\\n'); "
