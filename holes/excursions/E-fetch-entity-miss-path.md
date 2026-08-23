@@ -144,3 +144,38 @@ signalable from the agent sandbox); (b) the guard should compare
 - Still open: `mission_scope_ingest` itself still posts map ends (fine now
   that the server accepts them); a name→id side index would take the 0.74 s
   miss to a point lookup if it ever matters.
+
+## 6. Correction to §5: P3's post-check was wrong (claude-13, 2026-08-23 ~17:40)
+
+§5 records P3 as "4 UUID ends remapped ... Post-check: 0 stringified, 0 UUID
+ends." The **stringified-map half is confirmed** — an audit of all 993 ends in
+the live `mission-scope/pattern` layer finds 0 map-shaped `:entity-id`s, and
+`hx$ends` is now typed `[:list [:struct {entity_id :utf8, role :keyword}]]`,
+so P2 and the 1012-end sweep both stuck.
+
+The **UUID half did not stick.** Live right now, 7 of the 111 `:target-pattern`
+ends are malformed:
+
+- 5 stringified UUID literals, 4 distinct (`59c414ec` is cited from two
+  missions): the `:entity-id` is the *string* `#uuid "96499d0b-…"`, not a slug;
+- 2 file-node refs `futon3-d/file/library/structure/…​.flexiarg`.
+
+All 4 UUIDs resolve to **zero** entities (checked against `entities` by
+`_id`/`entity$id` with a positive control returning 8, so the zero is real).
+
+Likely cause of the false post-check: it matched a bare UUID shape
+(`[0-9a-f]{8}-…`) and so missed the pr-str'd form, which begins `#uuid "`.
+That is the same pr-str failure mode §3 documents, recurring inside the
+verification step for the fix.
+
+**Do not re-run P3 as a one-off.** `mission_scope_ingest` is the writer of
+record for these edges; a store-level rewrite is reverted by the next ingest.
+The version history is consistent with exactly that having happened —
+`hx|mission-scope|demonstration-foundry/pattern/value-flow-constellation` has
+only two versions, 2026-07-13 and 2026-08-23 16:08, and the current one still
+carries the UUID. The repair belongs in the ingest run, whose dry run already
+plans all 7 replacements against live `pattern/library` targets.
+
+Method note: none of this is visible through the HTTP API, which does not
+project system-time. It was read over XTDB's pgwire
+(`127.0.0.1:34257`, `_system_from` / `FOR ALL SYSTEM_TIME`).
