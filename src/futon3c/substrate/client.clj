@@ -24,7 +24,7 @@
 
 (def hyperedge-page-limit
   "Maximum accepted by the authoritative hyperedges endpoint."
-  5000)
+  1000)
 
 (defn- response-body
   [response]
@@ -87,8 +87,17 @@
                   (when valid-as-of
                     (str "&valid-as-of=" (encode valid-as-of)))
                   (when system-as-of
-                    (str "&system-as-of=" (encode system-as-of))))]
-     (:hyperedges (get-edn! url timeout-ms)))))
+                    (str "&system-as-of=" (encode system-as-of))))
+         response (get-edn! url timeout-ms)
+         edges (:hyperedges response)]
+     ;; The current authoritative endpoint supports keyset pagination for
+     ;; type scans, but not for endpoint-filtered reads.  Never silently accept
+     ;; a saturated endpoint window as complete evidence.
+     (when (= (long limit) (count edges))
+       (throw (ex-info "authoritative endpoint window saturated"
+                       {:error/code :hyperedge-end-window-saturated
+                        :end end :type type :limit (long limit)})))
+     edges)))
 
 (defn hyperedge-by-id
   ([id] (hyperedge-by-id id {}))
