@@ -2905,14 +2905,22 @@ or when it is a clear suffix of the streamed assistant text."
      ((and (string= type "text")
            (stringp (alist-get 'text evt))
            (not (string-empty-p (string-trim (alist-get 'text evt)))))
-      (unless agent-chat--streaming-started
-        (agent-chat-begin-streaming-message "codex")
-        (setq codex-repl--last-stream-summary nil))
-      (setq codex-repl--streamed-text-seen t
-            codex-repl--final-text-rendered t)
-      (codex-repl--record-invoke-timing! "first-text-event" type t)
-      (codex-repl--record-rendered-assistant-text! (alist-get 'text evt))
-      (agent-chat-stream-text (alist-get 'text evt)))
+      ;; The Codex bridge mirrors each agent_message to the sink twice: raw
+      ;; (rendered by the item.completed branch below) and as a translated
+      ;; ledger-schema "text" event. Skip the translated copy when its
+      ;; (trimmed) content is what we just rendered.
+      (let ((text (alist-get 'text evt)))
+        (unless (string-suffix-p
+                 (string-trim text)
+                 (string-trim (or codex-repl--rendered-assistant-text "")))
+          (unless agent-chat--streaming-started
+            (agent-chat-begin-streaming-message "codex")
+            (setq codex-repl--last-stream-summary nil))
+          (setq codex-repl--streamed-text-seen t
+                codex-repl--final-text-rendered t)
+          (codex-repl--record-invoke-timing! "first-text-event" type t)
+          (codex-repl--record-rendered-assistant-text! text)
+          (agent-chat-stream-text text))))
      ((string= type "item.completed")
       (let* ((item (alist-get 'item evt))
              (item-type (and (listp item) (alist-get 'type item)))
