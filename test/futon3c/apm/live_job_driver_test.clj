@@ -209,6 +209,31 @@
            (.indexOf @calls [:register "replacement-job"])
            (.indexOf @calls :activate)))))
 
+(deftest persisted-cancellation-reconciles-without-a-second-cancel
+  (let [calls (atom [])
+        base (assoc (effects calls (atom nil))
+                    :job-fn (constantly {:job-id "old-job" :state :cancelled})
+                    :cancel-fn (fn [_] (swap! calls conj :unexpected-cancel)
+                                 {:ok false})
+                    :announce-fn (fn [_] (swap! calls conj :announce-replacement)
+                                   {:ok true :job-id "replacement-job"})
+                    :terminal-submission-provider (constantly nil)
+                    :ticket-register-fn
+                    (fn [_ _] (swap! calls conj :register) {:ok true}))
+        state {:state/type :live-job-dispatched :request request
+               :active-request request
+               :ticket {:job-id "old-job" :ticket/id "old-ticket"}
+               :activation/accepted? false
+               :activation/failure {:status 409}
+               :typed-submission-migration-attempts 1}
+        result (sut/drive! (assoc base :state state))]
+    (is (= :awaiting-terminal (:status result)))
+    (is (true? (:supersession? result)))
+    (is (= [:announce-replacement :register :activate]
+           (remove #(and (vector? %) (= :persist (first %))) @calls)))
+    (is (true? (get-in result [:state :superseded-tickets 0
+                               :cancellation :reconciled?])))))
+
 (deftest typed-submission-replaces-conversational-report
   (let [calls (atom [])
         seen (atom nil)

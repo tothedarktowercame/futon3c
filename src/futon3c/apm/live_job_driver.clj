@@ -12,9 +12,10 @@
 
 (defn- supersede-unaccepted!
   [{:keys [active-request state announce-fn activate-fn persist-fn cancel-fn
-           ticket-register-fn]}]
+           ticket-register-fn cancellation-observation]}]
   (let [old-ticket (:ticket state)
-        cancelled (cancel-fn (:job-id old-ticket))]
+        cancelled (or cancellation-observation
+                      (cancel-fn (:job-id old-ticket)))]
     (if-not (:ok cancelled)
       {:ok false :error/code :live-job-unaccepted-cancellation-failed
        :state state :finding cancelled}
@@ -120,8 +121,10 @@
           observed-accepted? (or (contains? terminal-states (:state job))
                                  (contains? #{:activating :running :overrun}
                                             (:state job)))
+          unaccepted-state? (and (not (:activation/accepted? state))
+                                 (contains? #{:queued :cancelled} (:state job)))
           supersession-eligible?
-          (and (= :queued (:state job)) (fn? cancel-fn)
+          (and unaccepted-state? (fn? cancel-fn)
                (fn? terminal-submission-provider)
                (zero? (or (:activation-supersession-attempts state) 0))
                (or (:activation/failure state)
@@ -132,7 +135,12 @@
          {:active-request (or (:active-request state) request)
           :state state :announce-fn announce-fn :activate-fn activate-fn
           :persist-fn persist-fn :cancel-fn cancel-fn
-          :ticket-register-fn ticket-register-fn})
+          :ticket-register-fn ticket-register-fn
+          :cancellation-observation
+          (when (= :cancelled (:state job))
+            {:ok true :state :cancelled
+             :job-id (get-in state [:ticket :job-id])
+             :reconciled? true})})
 
         observed-accepted?
         ;; A running or terminal canonical job is stronger durable evidence
