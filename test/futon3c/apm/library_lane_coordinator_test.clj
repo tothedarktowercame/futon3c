@@ -67,6 +67,8 @@
                   (get-in @calls [1 :job-id])))
         (is (not= (get-in @calls [0 :dispatch/id])
                   (get-in @calls [1 :dispatch/id])))
+        (is (true? (get-in (sut/status registry "library:partial")
+                           [:durable-state :library/strategy-required?])))
         (finally (durable/stop! "library:partial"))))))
 
 (deftest each-phase-has-a-distinct-durable-intent

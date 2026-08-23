@@ -97,7 +97,7 @@
   [{:keys [unit ledger workspace seats actions state-paths agency-base control-root]
     :as config}]
   (fn [{:keys [kind problem-id role-card checkpoint-role-card contract receipts
-               targets]}]
+               targets strategy-required?]}]
     (let [path-authority {:control-root control-root}
           role-card-result (authority-port/require-path
                             path-authority :role-card (:path role-card))
@@ -142,7 +142,8 @@
          ;; dispatch/ids for no gain and break replay of already-certified
          ;; phases.
          :request (if (= :solve kind)
-                    (lane-phases/with-keying-targets (:request built) targets)
+                    (cond-> (lane-phases/with-keying-targets (:request built) targets)
+                      strategy-required? (assoc :solver/strategy-before-solve? true))
                     (:request built))
          :state-path (get state-paths kind) :agency-base agency-base}))))
 

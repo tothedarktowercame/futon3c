@@ -14,8 +14,13 @@
 (defn strategy-checkpoint-round? [ordinal]
   (zero? (mod ordinal strategy-checkpoint-every)))
 
+(defn- checkpoint-round? [request ordinal]
+  (boolean
+   (or (strategy-checkpoint-round? ordinal)
+       (and (= 1 ordinal) (:solver/strategy-before-solve? request)))))
+
 (defn- select-round-role-card [request ordinal]
-  (let [checkpoint? (strategy-checkpoint-round? ordinal)
+  (let [checkpoint? (checkpoint-round? request ordinal)
         [path blob] (if checkpoint?
                       [(or (:solver/restrategize-role-card-path request)
                            (:role-card-path request))
@@ -39,7 +44,7 @@
                                 :solver/remaining-rounds
                                 (- default-max-rounds ordinal)
                                 :solver/strategy-checkpoint?
-                                (strategy-checkpoint-round? ordinal)))
+                                (checkpoint-round? base-request ordinal)))
                prior
                (assoc :solver/prior-job-id (:job-id prior)
                       :solver/prior-session-id (:session-id prior)
@@ -303,7 +308,24 @@
                               :error/code (if (= :done (:state job))
                                             :solver-typed-submission-missing
                                             :solver-job-terminal-failure)})]
-            (if (:ok validation)
+            (if (and (:solver/strategy-before-solve? (:base-request state))
+                     (= 1 (get-in active [:request :solver/round])))
+              (let [completed (terminal-round active job validation 1)
+                    next-state (assoc state :rounds (conj (:rounds state) completed)
+                                      :active nil)]
+                (if (strategy-checkpoint-valid? (:report job))
+                  (let [saved (persist-container persist-fn next-state)]
+                    (if (:ok saved)
+                      (dispatch-round! effects next-state)
+                      saved))
+                  (let [stopped (assoc next-state
+                                       :state/type :solver-strategy-checkpoint-required)
+                        saved (persist-container persist-fn stopped)]
+                    (if (:ok saved)
+                      {:ok false :error/code :solver-strategy-checkpoint-required
+                       :state stopped}
+                      saved))))
+              (if (:ok validation)
               (let [receipt (provide-receipt (:request active) (:ticket active)
                                              job validation)]
                 (if-not (:ok receipt)
@@ -372,7 +394,7 @@
                   (let [saved (persist-container persist-fn next-state)]
                     (if (:ok saved)
                       (dispatch-round! effects next-state)
-                      saved)))))))))))
+                      saved))))))))))))
 
 (defn repair-checkpoint!
   "Revalidate the already-terminal checkpoint artifact after a protocol repair.

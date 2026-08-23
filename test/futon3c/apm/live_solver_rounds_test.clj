@@ -56,6 +56,20 @@
     (is (= "solver-blob" (:role-card-blob resumed)))
     (is (not= (:dispatch/id checkpoint) (:dispatch/id resumed)))))
 
+(deftest partial-bank-strategy-runs-before-ordinary-solving
+  (let [first-request (sut/round-request
+                       (assoc base-request :solver/strategy-before-solve? true)
+                       1 nil)
+        second-request (sut/round-request
+                        (assoc base-request :solver/strategy-before-solve? true)
+                        2 {:job-id "strategy-job" :session-id "session"
+                           :report {:solver/strategy {:summary "route"}}})]
+    (is (= :restrategize (:solver/role-card-mode first-request)))
+    (is (true? (:solver/strategy-checkpoint? first-request)))
+    (is (= :regular (:solver/role-card-mode second-request)))
+    (is (false? (:solver/strategy-checkpoint? second-request)))
+    (is (= "strategy-job" (:solver/prior-job-id second-request)))))
+
 (deftest solver-typed-output-is-collected-then-repaired-once
   (let [persisted (atom nil)
         base (assoc (effects persisted)

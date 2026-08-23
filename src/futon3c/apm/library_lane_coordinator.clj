@@ -16,7 +16,8 @@
 
 (defn run-step!
   [{:keys [agency-base corpus-root frames-root state-root problem-id
-           control-root trunk-branch keying-target contract-path phase]}]
+           control-root trunk-branch keying-target contract-path phase
+           strategy-required?]}]
   (let [eff (effects/live-effects {:agency-base agency-base
                                    :corpus-root corpus-root
                                    :frames-root frames-root})
@@ -49,6 +50,7 @@
           :contract (edn/read-string (slurp contract-path))
           :seat (:seats config)
           :phase-limit phase
+          :strategy-required? strategy-required?
           :phase-inputs-fn (adapters/make-phase-inputs-fn config)
           :bank-request-fn (adapters/make-bank-request-fn config)})))))
 
@@ -56,6 +58,7 @@
   (let [body {:coordinator/id (:coordinator-id config)
               :problem-id (:problem-id config)
               :phase (or (:library/phase state) :preflight)
+              :strategy-required? (boolean (:library/strategy-required? state))
               :prior-intent/digest
               (get-in state [:coordinator/last-settled-intent :intent/digest])
               :regulator/ticks (:regulator/ticks state)}]
@@ -63,7 +66,9 @@
      :dispatch/id (machine/ledger-digest
                    [(assoc body :dispatch/type :library-lane-step)])
      :dispatch/action :library-lane/step
-     :dispatch/parameters {:phase (or (:library/phase state) :preflight)}
+     :dispatch/parameters
+     {:phase (or (:library/phase state) :preflight)
+      :strategy-required? (boolean (:library/strategy-required? state))}
      :expected/postcondition {:ruling/one-of phase-rulings}}))
 
 (defn adapter-constructor [config]
@@ -74,21 +79,33 @@
    :reconcile-fn
    (fn [intent state]
      (let [phase (get-in intent [:dispatch/parameters :phase])
+           intent-strategy? (boolean (get-in intent [:dispatch/parameters
+                                                     :strategy-required?]))
            current-phase (or (:library/phase state) :preflight)
+           current-strategy? (boolean (:library/strategy-required? state))
            successor {:preflight :solve :solve :verify :verify :bank}]
-       (if (not= phase current-phase)
+       (if (or (not= phase current-phase)
+               (not= intent-strategy? current-strategy?))
          {:ok false :error/code :library-lane-phase-intent-drift
-          :finding {:intent-phase phase :state-phase current-phase}}
-         (let [result (run-step! (assoc config :phase phase))]
+          :finding {:intent-phase phase :state-phase current-phase
+                    :intent-strategy-required? intent-strategy?
+                    :state-strategy-required? current-strategy?}}
+         (let [result (run-step! (assoc config :phase phase
+                                        :strategy-required?
+                                        intent-strategy?))]
            (case (:ruling result)
          :awaiting {:ok true :status :awaiting-job :lane/result result}
          :phase-certified
          {:ok true :status :library-phase-certified
           :coordinator/clear-intent? true :lane/result result
-          :regulator/state-updates {:library/phase (successor phase)}}
+          :regulator/state-updates
+          (cond-> {:library/phase (successor phase)}
+            (= :solve phase) (assoc :library/strategy-required? false))}
          :partial-banked {:ok true :status :library-increment-banked
                           :coordinator/clear-intent? true :lane/result result
-                          :regulator/state-updates {:library/phase :preflight}}
+                          :regulator/state-updates
+                          {:library/phase :preflight
+                           :library/strategy-required? true}}
          :closed {:ok true :status :frame-complete
                   :coordinator/clear-intent? true :lane/result result}
          (if (:ok result)
