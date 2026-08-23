@@ -59,7 +59,11 @@
    :retirement-binds-recorded-terminal-head true
    :terminal-collection-is-supervisor-progress true
    :artifact-identity-from-authority-not-observation true
-   :preflight-requires-positive-sorry-baseline true})
+   :preflight-requires-positive-sorry-baseline true
+   :coordinator-intent-persisted-before-activation true
+   :coordinator-restart-reconciles-deterministic-job-id true
+   :coordinator-startup-uses-typed-registry true
+   :coordinator-startup-directory-heuristics false})
 
 (def required-memory-policy
   {:content-addressed-snapshot true :admit-after-solve-verify true
