@@ -170,3 +170,50 @@
                               :now-fn (fn [] @now)})]
     (is (false? (:ok result)))
     (is (= :phase-awaiting-terminal-timeout (:error/code result)))))
+
+(deftest step-one-returns-after-one-nonterminal-phase-observation
+  (let [root (corpus "a")
+        calls (atom [])
+        result (runner/step-one!
+                {:corpus-root root :problem-id "a" :contract {}
+                 :seat {}
+                 :target-fn (fn [_] {:ok true :targets ["a_bridge"]})
+                 :phase-inputs-fn
+                 (fn [{:keys [kind]}] {:ok true :kind kind})
+                 :phase-run-fn
+                 (fn [{:keys [kind]}]
+                   (swap! calls conj kind)
+                   {:ok true :status :awaiting-terminal})
+                 :bank-request-fn (fn [_] (throw (ex-info "too early" {})))})]
+    (try
+      (is (= [:preflight] @calls))
+      (is (= :awaiting (:ruling result)))
+      (is (= :preflight (:phase result)))
+      (finally (delete-tree! root)))))
+
+(deftest step-one-replays-certified-phases-and-banks-without-sleeping
+  (let [root (corpus "a")
+        calls (atom [])
+        expected-receipts {:preflight {:receipt/id "pre"}
+                           :solve {:receipt/id "solve"}
+                           :verify {:receipt/id "verify"}}
+        result (runner/step-one!
+                {:corpus-root root :problem-id "a" :contract {} :seat {}
+                 :target-fn (fn [_] {:ok true :targets ["a_bridge"]})
+                 :phase-inputs-fn
+                 (fn [{:keys [kind]}] {:ok true :kind kind})
+                 :phase-run-fn
+                 (fn [{:keys [kind]}]
+                   (swap! calls conj kind)
+                   {:ok true :status :certified
+                    :certificate (get expected-receipts kind)})
+                 :bank-request-fn (fn [{:keys [receipts]}]
+                                    {:ok (= expected-receipts receipts)
+                                     :request true})
+                 :bank-fn (fn [_] {:ok true
+                                   :receipt {:receipt/ruling
+                                             :partial-banked}})})]
+    (try
+      (is (= [:preflight :solve :verify] @calls))
+      (is (= :partial-banked (:ruling result)))
+      (finally (delete-tree! root)))))

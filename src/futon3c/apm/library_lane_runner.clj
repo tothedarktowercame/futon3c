@@ -87,6 +87,79 @@
            :status (:status result) :timeout-ms timeout-ms}
           :else (do (sleep-fn poll-ms) (recur)))))))
 
+(defn step-one!
+  "Advance one library problem to its next durable boundary and return.
+
+   Unlike `run-one!`, this function never polls or sleeps. It replays already
+   certified phase receipts, performs at most one non-certified phase driver
+   call, and banks only after all three phase receipts are certified. This is
+   the tick boundary used by a JVM-owned durable coordinator."
+  [{:keys [corpus-root contract seat phase-inputs-fn bank-request-fn
+           target-fn phase-run-fn bank-fn]
+    :or {target-fn elaborate-targets
+         phase-run-fn lane-phases/run-live!
+         bank-fn bank-driver/execute!}
+    :as options}]
+  (let [available (lane/queue corpus-root :library)
+        requested (:problem-id options)
+        problem-id (if requested
+                     (when (some #{requested} available) requested)
+                     (first available))]
+    (cond
+      (nil? problem-id) (blocked requested :queue
+                                 (if requested :library-problem-not-current
+                                     :library-queue-empty))
+      (nil? phase-inputs-fn) (blocked problem-id :configuration
+                                      :phase-inputs-fn-missing)
+      (nil? bank-request-fn) (blocked problem-id :configuration
+                                     :bank-request-fn-missing)
+      :else
+      (try
+        (let [target (target-fn {:corpus-root corpus-root
+                                 :problem-id problem-id
+                                 :run-fn (:run-fn options)})]
+          (if-not (:ok target)
+            (blocked problem-id :target-elaboration target)
+            (loop [phases [:preflight :solve :verify] receipts {}]
+              (if-let [kind (first phases)]
+                (let [inputs (phase-inputs-fn
+                              {:kind kind :problem-id problem-id
+                               :targets (:targets target) :contract contract
+                               :seat seat :role-card library-card
+                               :receipts receipts})
+                      result (if (:ok inputs)
+                               (phase-run-fn (dissoc inputs :ok))
+                               inputs)]
+                  (cond
+                    (not (:ok result))
+                    (assoc (blocked problem-id kind result)
+                           :keying-targets (:targets target))
+
+                    (or (= :certified (:status result))
+                        (:certificate result))
+                    (recur (next phases)
+                           (assoc receipts kind (:certificate result)))
+
+                    :else
+                    {:ok true :ruling :awaiting :phase kind
+                     :status (:status result) :problem-id problem-id
+                     :keying-targets (:targets target)}))
+                (let [request (bank-request-fn
+                               {:problem-id problem-id :targets (:targets target)
+                                :contract contract :seat seat :receipts receipts})
+                      bank-result (if (:ok request)
+                                    (bank-fn (dissoc request :ok)) request)]
+                  (if (:ok bank-result)
+                    (assoc bank-result :problem-id problem-id
+                           :keying-targets (:targets target)
+                           :ruling (get-in bank-result
+                                           [:receipt :receipt/ruling]))
+                    (assoc (blocked problem-id :bank bank-result)
+                           :keying-targets (:targets target))))))))
+        (catch Throwable t
+          (blocked problem-id :exception
+                   {:class (.getName (class t)) :message (.getMessage t)}))))))
+
 (defn run-one!
   "Run one current :library problem. Effects are injectable for fixture tests.
 
