@@ -23,7 +23,7 @@ extractor. DRY-RUN writes an .edn artifact only; ZERO :7071 writes.
 
 Usage: python3 futon3c/scripts/o5_honest_holes.py
 """
-import json, os, re, urllib.error, urllib.request, urllib.parse
+import json, os, re, time, urllib.error, urllib.request, urllib.parse
 from collections import Counter
 from time import monotonic
 
@@ -38,10 +38,59 @@ class SubstrateReadError(RuntimeError):
     """A substrate read failed or returned an internally inconsistent page."""
 
 
-def get(url, timeout):
+# Admission retries for 503 :expensive-read-busy.
+#
+# The substrate serves expensive reads behind a 2-permit semaphore that sheds
+# with 503 :expensive-read-busy after a 3s wait (futon1b_server.clj:406-430).
+# That 503 is an ADMISSION signal, not a failure: the contract is "retry me".
+# The Clojure substrate client already reads it that way (admission-retries 3
+# with exponential backoff, futon3c/src/futon3c/substrate/client.clj:93-105);
+# this Python client did not, and treated it as fatal.
+#
+# Why that mattered (2026-08-23): the --land run aborted twice on a single 503,
+# having written nothing. Sampled over 30s the substrate has both permits held
+# about 5% of the time -- rare per-read, but this script makes hundreds of
+# reads, so the job could essentially never complete while any other agent was
+# working. Failing closed was RIGHT; failing closed on a signal that means
+# "wait and ask again" was not.
+#
+# Deliberately narrow: only 503 :expensive-read-busy is retried, only a bounded
+# number of times, and then it still fails closed. Every other error stays fatal
+# on the first occurrence -- an infrastructure error must never enter the
+# artifact as a finding.
+ADMISSION_RETRIES = 3
+ADMISSION_BACKOFF_S = 0.5
+
+
+def _expensive_read_busy(exc):
+    if not isinstance(exc, urllib.error.HTTPError) or exc.code != 503:
+        return False
     try:
+        return "expensive-read-busy" in exc.read().decode()
+    except Exception:
+        # Body unreadable: a 503 from this service is admission shedding either
+        # way, so allow the bounded retry rather than guessing it is terminal.
+        return True
+
+
+def with_admission_retry(attempt):
+    """Run ATTEMPT, retrying only a shed expensive read, then failing closed."""
+    for n in range(ADMISSION_RETRIES + 1):
+        try:
+            return attempt()
+        except urllib.error.HTTPError as exc:
+            if n < ADMISSION_RETRIES and _expensive_read_busy(exc):
+                time.sleep(ADMISSION_BACKOFF_S * (2 ** n))
+                continue
+            raise
+
+
+def get(url, timeout):
+    def attempt():
         with urllib.request.urlopen(url, timeout=timeout) as response:
             return response.read().decode()
+    try:
+        return with_admission_retry(attempt)
     except Exception as exc:
         raise SubstrateReadError(f"GET {url} failed: {exc}") from exc
 
@@ -109,9 +158,12 @@ def entity_exists(entity_id):
     enter the artifact as a finding.
     """
     url = f"{F}/api/alpha/entity/" + urllib.parse.quote(entity_id, safe="")
-    try:
+
+    def attempt():
         with urllib.request.urlopen(url, timeout=20) as response:
             return 200 <= response.status < 300
+    try:
+        return with_admission_retry(attempt)
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return False
@@ -340,11 +392,22 @@ def land(holes):
             req = urllib.request.Request(F + "/api/alpha/hyperedge", data=payload,
                                          headers={"Content-Type": "application/json",
                                                   "X-Penholder": "api"})
+            # Fail CLOSED, and retry only admission shedding. This previously
+            # caught Exception, printed, and CONTINUED -- so a run that lost
+            # edges to transient 503s still printed "landed N" and exited 0,
+            # i.e. reported success for a partial landing. That is the same
+            # silent-zero class this script exists to detect, in the script
+            # itself. A partial landing must be loud; re-running is safe because
+            # the write path is a verified no-op for edges already present.
             try:
-                urllib.request.urlopen(req, timeout=20).read()
+                with_admission_retry(
+                    lambda: urllib.request.urlopen(req, timeout=20).read())
                 posted += 1
             except Exception as e:
-                print("  POST failed:", tgt, e)
+                raise SubstrateReadError(
+                    f"POST cascade/hole-target failed after {posted} edges "
+                    f"landed (target {tgt!r}): {e}. Partial landing -- re-run "
+                    f"to converge; do not treat this as a completed run.") from e
     print("landed", posted, "cascade/hole-target edges")
 
 
