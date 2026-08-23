@@ -1459,7 +1459,12 @@
   (let [s (-> (str stem)
               (str/replace #"\.md$" "")
               (str/replace #"\.json$" ""))]
-    (if (str/starts-with? s "M-") s (str "M-" s))))
+    ;; Missions are prefixed C- (campaign), E- (excursion) or M- (mission).
+    ;; Forcing "M-" onto an already-prefixed stem made `--mission` unable to
+    ;; target any C- or E- mission -- 246 of 647 in the live corpus -- which is
+    ;; how a targeted repair of E-ukrn-paper-v2.4-comments failed with
+    ;; "Mission file not found" (2026-08-23).
+    (if (re-find #"^[CEM]-" s) s (str "M-" s))))
 
 (defn- find-mission-file [stem]
   (let [mission (mission-ident-from-stem stem)
