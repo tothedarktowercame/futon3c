@@ -410,6 +410,13 @@
                               :frame-id (:frame-id action)
                               :problem-id (:problem-id action)
                               :registration-hash (:registration-hash action)}})
+              :close-block (fn [action]
+                             {:ok true :certificate
+                              {:effect :countdown-block-closed
+                               :block-id (:block-id action)}})
+              :close-campaign (fn [_action]
+                                {:ok true :certificate
+                                 {:effect :countdown-campaign-closed}})
               :preflight (partial certified-handler :preflight)
               :solve (partial certified-handler :solve)
               :verify (partial certified-handler :verify)
@@ -896,7 +903,8 @@
 
 (defn- drive-live-action! [action]
   (cond
-    (contains? #{:open-block :open-frame} (:kind action))
+    (contains? #{:open-block :open-frame :close-block :close-campaign}
+               (:kind action))
     (let [handled ((get-in (options) [:handlers (:kind action)]) action)]
       (if (:ok handled)
         {:ok true :status :certified :certificate (:certificate handled)}

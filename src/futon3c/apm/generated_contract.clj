@@ -54,7 +54,8 @@
    :conflicting-job-replay-policy "reject"
    :terminal-output-repair-attempts 1
    :repair-feedback-findings-required true
-   :client-timeout-is-success false})
+   :client-timeout-is-success false
+   :terminal-lifecycle-actions-covered ["close-block" "close-campaign"]})
 
 (def required-memory-policy
   {:content-addressed-snapshot true :admit-after-solve-verify true

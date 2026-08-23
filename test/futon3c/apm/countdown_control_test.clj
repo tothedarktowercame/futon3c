@@ -11,6 +11,14 @@
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]))
 
+(deftest terminal-lifecycle-actions-have-deterministic-handlers
+  (is (= {:ok true :status :certified
+          :certificate {:effect :countdown-block-closed :block-id "b1"}}
+         (#'sut/drive-live-action! {:kind :close-block :block-id "b1"})))
+  (is (= {:ok true :status :certified
+          :certificate {:effect :countdown-campaign-closed}}
+         (#'sut/drive-live-action! {:kind :close-campaign}))))
+
 (deftest promote-solver-selects-durable-two-seat-adapter
   (let [captured (atom nil)
         action {:kind :scribe-reduce :role :scribe :phase :promote-solver
