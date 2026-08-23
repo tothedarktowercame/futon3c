@@ -45,6 +45,19 @@
     (is (str/includes? rendered "Perform the registered read-only preflight."))
     (is (not (str/includes? rendered "Await activation")))))
 
+(deftest solve-prompt-uses-the-authority-resolved-card-path-once
+  (let [card "/qualified/control/role-cards/library-v1.md"
+        rendered (sut/prompt (assoc request :phase :solve
+                                    :role-card-path card
+                                    :role-card-blob "card-blob"
+                                    :solver/round 1))]
+    (is (str/includes? rendered (str "at " card " (blob card-blob)")))
+    ;; Once in frozen authority and once in the explicit instruction; neither
+    ;; occurrence may be prefixed by a second checkout root.
+    (is (= 2 (count (re-seq (re-pattern (java.util.regex.Pattern/quote card))
+                            rendered))))
+    (is (not (str/includes? rendered (str "/home/joe/code/futon3c/" card))))))
+
 (deftest closed-report-certifies-under-the-library-regime
   (let [result (sut/validate-solve-terminal request ticket (fixture-job))]
     (is (:ok result))

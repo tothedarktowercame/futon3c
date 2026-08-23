@@ -369,16 +369,6 @@
                       :keying-targets (vec targets))]
       (assoc body :dispatch/id (machine/ledger-digest [body])))))
 
-(def control-root
-  "Where the role cards live -- which is NOT where the solver stands.
-
-  :role-card-path is repo-relative to this control checkout, but the solver's
-  workspace is an apm-lean worktree with no `holes/` directory at all. Telling
-  it to read the card `in the workspace` sends it to a path that cannot exist,
-  and it proceeds without the contract it was supposed to be reading. The
-  prompt must therefore name the card absolutely."
-  "/home/joe/code/futon3c")
-
 (def lane-mutation-allowlist-text
   "What the solver is permitted to commit, stated in the prompt.
 
@@ -415,7 +405,7 @@
          "Use only this frozen dispatch authority:\n"
          (pr-str request) "\n"
          "FIRST read your role card, which is OUTSIDE your workspace, at "
-         control-root "/" (:role-card-path request)
+         (:role-card-path request)
          " (blob " (:role-card-blob request) "); it is the "
          "surface contract for this dispatch and it differs from the problem-"
          "closing card. The unit of acceptance is a LIBRARY INCREMENT keyed to "
