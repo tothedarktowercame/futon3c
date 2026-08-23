@@ -22,22 +22,23 @@
         uri "/api/alpha/invoke/jobs/typed-job-1/submission"]
     (binding [submission/*submission-root* root]
       (is (:ok (submission/register! authority {:job-id "typed-job-1"})))
-      (let [schema (http/extra-routes
-                    (assoc (request :get uri nil) :query-string "token=token-1") {})
-            bad (http/extra-routes
+      (let [handler (http/make-handler {})
+            schema (handler
+                    (assoc (request :get uri nil) :query-string "token=token-1"))
+            bad (handler
                  (request :post uri
                           (json/generate-string
                            {:token "token-1"
                             :payload {:command-own-exit 0 :outcome "complete"
-                                      :failure-account [] :evidence {}}})) {})
-            good (http/extra-routes
+                                      :failure-account [] :evidence {}}})))
+            good (handler
                   (request :post uri
                            (json/generate-string
                             {:token "token-1"
                              :payload {:command-own-exit 0 :outcome "complete"
                                        :failure-account []
                                        :evidence {:channel-audit
-                                                  {:direct-student-contact? false}}}})) {})]
+                                                  {:direct-student-contact? false}}}})))]
         (is (= 200 (:status schema)))
         (is (= ["channel-audit"] (:evidence-required (parsed schema))))
         (is (= 422 (:status bad)))

@@ -7689,8 +7689,8 @@
           (and (= :get method) (= "/api/alpha/invoke/jobs" uri))
           (handle-invoke-jobs request)
 
-          (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/(.+)" uri))
-          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)" uri)
+          (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/([^/]+)" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/([^/]+)" uri)
                 job-id (enc/decode-uri-component raw-id)]
             (handle-invoke-job job-id))
 
@@ -7700,8 +7700,8 @@
 
           ;; Explicit operator termination — the replacement for the wall-clock
           ;; ceiling (README-agency-cap.md).
-          (and (= :post method) (re-matches #"/api/alpha/invoke/jobs/(.+)/cancel" uri))
-          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)/cancel" uri)
+          (and (= :post method) (re-matches #"/api/alpha/invoke/jobs/([^/]+)/cancel" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/([^/]+)/cancel" uri)
                 job-id (enc/decode-uri-component raw-id)]
             (handle-cancel-invoke-job job-id request))
 
