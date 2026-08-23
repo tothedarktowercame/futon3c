@@ -160,6 +160,63 @@
                      [:regulator/last-result :findings])))
       (finally (sut/stop! "c:reject")))))
 
+(deftest pending-intent-survives-multiple-polls-and-runner-restart
+  (let [{:keys [registry state-a]} (temp-paths)
+        reconciled (atom [])]
+    (sut/register-adapter!
+     :test/multi-poll
+     (fn [_]
+       {:decide-fn
+        (fn [_]
+          {:ok true :coordinator/action :activate
+           :coordinator/intent
+           {:job-id "job-multi" :dispatch/id "dispatch-multi"
+            :dispatch/action :invoke
+            :expected/postcondition {:job/state :terminal}}})
+        :reconcile-fn
+        (fn [intent _]
+          (let [poll (count (swap! reconciled conj
+                                   (select-keys intent [:job-id :dispatch/id])))]
+            (if (< poll 3)
+              {:ok true :status :awaiting-job}
+              {:ok true :status :frame-complete
+               :coordinator/clear-intent? true})))}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:multi"
+                             :adapter :test/multi-poll :config {}
+                             :state-path state-a :period-ms 100})))
+    (try
+      (is (:ok (sut/start-registered! registry "c:multi")))
+      (is (await-until #(= 1 (count @reconciled))))
+      (is (= :stopped (:status (sut/stop! "c:multi"))))
+      (let [stopped (edn/read-string (slurp state-a))]
+        (is (= "job-multi"
+               (get-in stopped [:coordinator/pending-intent :job-id])))
+        (is (>= (:regulator/ticks stopped) 2)))
+      (is (:ok (sut/start-registered! registry "c:multi")))
+      (is (await-until #(= :complete (state-status state-a))))
+      (is (= 3 (count @reconciled)))
+      (is (apply = @reconciled))
+      (is (= {:job-id "job-multi" :dispatch/id "dispatch-multi"}
+             (first @reconciled)))
+      (finally (sut/stop! "c:multi")))))
+
+(deftest pending-intent-rejects-rewound-tick
+  (let [pre-state {:state/type :live-regulator :regulator/id "c:rewind"
+                   :regulator/status :running :regulator/ticks 7}
+        intent (sut/make-intent
+                "c:rewind" pre-state
+                {:job-id "job-7" :dispatch/id "dispatch-7"
+                 :dispatch/action :invoke
+                 :expected/postcondition {:job/state :terminal}})
+        rewound (assoc pre-state
+                       :coordinator/pending-intent intent
+                       :coordinator/pending-pre-state-digest
+                       (:pre-state/digest intent))]
+    (is (false? (sut/valid-intent? "c:rewind" rewound intent)))
+    (is (= [:pre-state-version-relationship]
+           (sut/intent-findings "c:rewind" rewound intent)))))
+
 (deftest typed-registry-recovers-two-coordinators-without-directory-discovery
   (let [{:keys [registry state-a state-b]} (temp-paths)
         ticks (atom {})]

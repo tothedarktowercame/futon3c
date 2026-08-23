@@ -69,7 +69,7 @@
     (not (keyword? (:dispatch/action intent))) (conj :dispatch-action)
     (not (nat-int? (:pre-state/version intent))) (conj :pre-state-version)
     (and (nat-int? (:pre-state/version intent))
-         (not= (:regulator/ticks state) (inc (:pre-state/version intent))))
+         (< (:regulator/ticks state) (inc (:pre-state/version intent))))
     (conj :pre-state-version-relationship)
     (not (string? (:pre-state/digest intent))) (conj :pre-state-digest)
     (not= (:pre-state/digest intent)
