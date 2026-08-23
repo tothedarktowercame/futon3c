@@ -16,6 +16,7 @@
             [futon3c.logic.locus :as locus]
             [futon3c.logic.ratchet :as ratchet]
             [futon3c.logic.snapshot :as snapshot]
+            [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.http :as http]
@@ -192,7 +193,8 @@
                     (http-handler request)))
             result (http/start-server! app port)
             restore-report (roster-store/restore-on-boot!
-                            #(restore-agent-via-handler! http-handler %))]
+                            #(restore-agent-via-handler! http-handler %))
+            coordinator-recovery (jit-coordinator/recover!)]
         ;; Install continuous roster persistence ONLY now — AFTER restore-on-boot!
         ;; has consumed the saved roster. Installing at registry ns-load fired the
         ;; watch's initial persist against the empty boot registry and clobbered
@@ -213,9 +215,13 @@
           (println (str "[dev] agent roster restore: restored="
                         (:restored restore-report)
                         " attempted=" (:attempted restore-report))))
+        (when-not (:ok coordinator-recovery)
+          (println (str "[dev] durable coordinator recovery failed: "
+                        (pr-str coordinator-recovery))))
         (assoc result
                :ws-connections connections
-               :agent-restore restore-report)))))
+               :agent-restore restore-report
+               :coordinator-recovery coordinator-recovery)))))
 
 (defn start-irc!
   "Start IRC server + WS relay bridge. Returns system map or nil when disabled."

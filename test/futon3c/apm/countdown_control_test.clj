@@ -8,6 +8,7 @@
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as live-promotion]
+            [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]))
 
@@ -506,3 +507,40 @@
                (get-in @captured
                        [:request :campaign-config :problem-queue-state-path])))
         (is (= [problem] (get-in @captured [:request :problems])))))))
+
+(deftest autonomous-entry-registers-machine-authority-without-agent-session
+  (let [captured (atom nil)
+        problem {:problem/id "p1" :repository "/repo" :revision "r"
+                 :path "Main.lean" :blob "b" :classification :non-excluded}]
+    (with-redefs [jit-coordinator/start!
+                  (fn [options] (reset! captured options)
+                    {:ok true :status :started})]
+      (is (:ok (sut/start-autonomous-problem-list!
+                {:problems [problem] :queue-name "q" :frame-number-base 26
+                 :coordinator-registry-path "/tmp/registry.edn"
+                 :coordinator-state-path "/tmp/coordinator.edn"
+                 :authority {:agent "codex-10" :session "session-1"
+                             :surface "emacs-repl"
+                             :control-root "/home/joe/code/futon3c"
+                             :campaign-root "/campaign"}})))
+      (is (= "jit-queue:q" (:coordinator-id @captured)))
+      (is (= "/tmp/registry.edn" (:registry-path @captured)))
+      (is (= "/tmp/coordinator.edn" (:state-path @captured)))
+      (is (nil? (get-in @captured [:launch :authority :agent])))
+      (is (nil? (get-in @captured [:launch :authority :session])))
+      (is (= "/campaign" (get-in @captured [:launch :authority
+                                             :campaign-root]))))))
+
+(deftest m-five-v2-autonomous-entry-does-not-run-an-operator-step
+  (let [captured (atom nil)
+        authority {:control-root "/home/joe/code/futon3c"
+                   :campaign-root "/campaign"}]
+    (with-redefs [clojure.core/slurp
+                  (fn [_] (pr-str {:problems [{:problem/id "p1"}]}))
+                  sut/start-autonomous-problem-list!
+                  (fn [request] (reset! captured request)
+                    {:ok true :status :started})]
+      (is (= :started (:status (sut/launch-m-five-v2-autonomous! authority))))
+      (is (= "jit-m-five-v2" (:queue-name @captured)))
+      (is (= 25 (:frame-number-base @captured)))
+      (is (= [{:problem/id "p1"}] (:problems @captured))))))

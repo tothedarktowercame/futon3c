@@ -20,6 +20,7 @@
             [futon3c.apm.live-proof-phases :as live-proof-phases]
             [futon3c.apm.live-regulator :as live-regulator]
             [futon3c.apm.live-supervisor :as live-supervisor]
+            [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
             [futon3c.apm.memory-snapshot :as memory-snapshot]
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
@@ -1171,7 +1172,11 @@
                                  (cond-> {}
                                    (:continuation-payload authority)
                                    (assoc :continuation-payload
-                                          (:continuation-payload authority))))]
+                                          (:continuation-payload authority))
+                                   (:autonomous? authority)
+                                   (assoc :park-fn
+                                          (constantly {:ok true
+                                                       :mode :machine}))))]
                             (if-not (and (:ok result)
                                          (= :frame-complete (:status result)))
                               result
@@ -1252,7 +1257,7 @@
 
 (defn set-alight-problem-list!
   "List-only JIT entry point. PROBLEMS contain immutable problem pins."
-  [{:keys [problems authority queue-name frame-number-base agency-base]
+  [{:keys [problems authority queue-name frame-number-base agency-base autonomous?]
     :or {queue-name "jit-problem-list-v1" frame-number-base 24
          agency-base "http://localhost:7070"}}]
   (let [control-root (or (:control-root authority) "/home/joe/code/futon3c-apm-control")
@@ -1262,7 +1267,9 @@
             (str "JIT M-FIVE CONTINUATION: evaluate "
                  "(futon3c.apm.countdown-control/launch-m-five! "
                  (pr-str (dissoc authority :continuation-payload)) ")."))
-        authority (assoc authority :continuation-payload continuation-payload)
+        authority (cond-> (assoc authority :continuation-payload
+                                 continuation-payload)
+                    autonomous? (assoc :autonomous? true))
         ;; Code/contract authority and durable campaign state are independent.
         ;; A campaign may outlive the checkout which originally supervised it;
         ;; resumption must use current qualified code without copying or
@@ -1356,7 +1363,8 @@
           ;; namespace itself remains loaded only from canonical master.
           :authority (assoc authority :control-root apparatus-root)}
          {:jit/config jit-config})]
-    (if (and (:ok result) (= :frame-prepared (:status result)))
+    (if (and (not autonomous?) (:ok result)
+             (= :frame-prepared (:status result)))
       (let [park (live-preflight-runtime/http-json
                   "POST" (str agency-base "/api/alpha/park")
                   {:agent (:agent authority) :session (:session authority)
@@ -1368,6 +1376,37 @@
           {:ok false :error/code :jit-problem-list-continuation-park-failed
            :finding park}))
       result)))
+
+(defn autonomous-problem-list-step!
+  "Run one JIT queue boundary without parking an initiating agent session."
+  [launch]
+  (set-alight-problem-list! (assoc launch :autonomous? true)))
+
+(defn start-autonomous-problem-list!
+  "Persist and start a JIT queue coordinator; this call has no REPL park."
+  [{:keys [problems authority queue-name frame-number-base agency-base
+           coordinator-registry-path coordinator-state-path period-ms]
+    :or {queue-name "jit-problem-list-v1" frame-number-base 24
+         agency-base "http://localhost:7070"}}]
+  (let [control-root (or (:control-root authority) "/home/joe/code/futon3c")
+        campaign-root (or (:campaign-root authority)
+                          (str control-root "/data/apm-campaigns/" queue-name))
+        coordinator-id (str "jit-queue:" queue-name)
+        plan (problem-queue/queue-plan problems)
+        launch {:problems problems
+                :authority (-> authority
+                               (dissoc :agent :session :surface
+                                       :continuation-payload)
+                               (assoc :campaign-root campaign-root))
+                :queue-name queue-name :frame-number-base frame-number-base
+                :agency-base agency-base :queue-id (:queue/id plan)}]
+    (jit-coordinator/start!
+     {:registry-path (or coordinator-registry-path
+                         (str control-root "/data/apm-coordinators/registry.edn"))
+      :state-path (or coordinator-state-path
+                      (str campaign-root "/coordinator.edn"))
+      :coordinator-id coordinator-id :launch launch
+      :period-ms (or period-ms 500)})))
 
 (defn launch-m-five!
   "Start or resume the registered five-problem m-family queue."
@@ -1397,5 +1436,17 @@
     (set-alight-problem-list!
      {:problems (:problems queue)
       :authority (assoc authority :continuation-payload continuation)
+      :queue-name "jit-m-five-v2" :frame-number-base 25
+      :agency-base (or (:agency-base authority) "http://localhost:7070")})))
+
+(defn launch-m-five-v2-autonomous!
+  "Register/start the v2 queue under the durable machine coordinator."
+  [authority]
+  (let [control-root (or (:control-root authority) "/home/joe/code/futon3c")
+        queue (edn/read-string
+               (slurp (str control-root "/holes/labs/M-apm-demonstration/"
+                           "jit-m-five-problem-queue-v2.edn")))]
+    (start-autonomous-problem-list!
+     {:problems (:problems queue) :authority authority
       :queue-name "jit-m-five-v2" :frame-number-base 25
       :agency-base (or (:agency-base authority) "http://localhost:7070")})))
