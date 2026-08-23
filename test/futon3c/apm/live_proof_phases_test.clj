@@ -20,6 +20,8 @@
   (:request (sut/build-request
              {:kind kind :action action :ledger {:digest (apply str (repeat 64 "a"))}
               :unit unit :role-card role-card
+              :checkpoint-role-card {:path "restrategize.md"
+                                     :blob "restrategize-blob"}
               :seat (if (= :verify kind) (assoc seat :agent-id "f19-proctor") seat)
               :workspace workspace
               :solve-receipt (when (= :verify kind)
@@ -94,6 +96,13 @@
     (is (re-find #":solver/strategy" checkpoint))
     (is (re-find #":delegate\|:sequential" checkpoint))
     (is (re-find #"isolated branches/worktrees" checkpoint))))
+
+(deftest solve-request-pins-both-ordinary-and-restrategize-cards
+  (let [req (request :solve)]
+    (is (= "solver.md" (:solver/regular-role-card-path req)))
+    (is (= "solver-blob" (:solver/regular-role-card-blob req)))
+    (is (= "restrategize.md" (:solver/restrategize-role-card-path req)))
+    (is (= "restrategize-blob" (:solver/restrategize-role-card-blob req)))))
 
 (deftest proof-terminal-refuses-unsound-or-misattributed-output
   (let [req (request :solve)

@@ -4,7 +4,12 @@
 
 (def base-request
   {:dispatch/id "opening" :agent-id "f19-solver" :frame-id "f19"
-   :problem-id "a01J05" :phase :solve :branch "solver-branch"})
+   :problem-id "a01J05" :phase :solve :branch "solver-branch"
+   :role-card-path "solver.md" :role-card-blob "solver-blob"
+   :solver/regular-role-card-path "solver.md"
+   :solver/regular-role-card-blob "solver-blob"
+   :solver/restrategize-role-card-path "solver-restrategize.md"
+   :solver/restrategize-role-card-blob "restrategize-blob"})
 
 (def legacy-state
   {:state/type :live-job-dispatched :request base-request
@@ -39,6 +44,17 @@
            (get-in result [:state :active :request :solver/prior-session-id])))
     (is (= 48 (get-in result [:state :active :request
                               :solver/remaining-rounds])))))
+
+(deftest checkpoint-round-selects-restrategize-card-and-next-round-restores-regular-card
+  (let [checkpoint (sut/round-request base-request 10 nil)
+        resumed (sut/round-request base-request 11 nil)]
+    (is (= :restrategize (:solver/role-card-mode checkpoint)))
+    (is (= "solver-restrategize.md" (:role-card-path checkpoint)))
+    (is (= "restrategize-blob" (:role-card-blob checkpoint)))
+    (is (= :regular (:solver/role-card-mode resumed)))
+    (is (= "solver.md" (:role-card-path resumed)))
+    (is (= "solver-blob" (:role-card-blob resumed)))
+    (is (not= (:dispatch/id checkpoint) (:dispatch/id resumed)))))
 
 (deftest solver-typed-output-is-collected-then-repaired-once
   (let [persisted (atom nil)

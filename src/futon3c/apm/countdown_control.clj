@@ -520,6 +520,9 @@
                          :phase (get-in projection [:active/frame :phase])
                          :claim (:active/claim projection)}
                 :unit unit :role-card (get-in manifest [:apparatus :artifacts role])
+                :checkpoint-role-card
+                (when (= :solve kind)
+                  (get-in manifest [:apparatus :artifacts :solver-restrategize]))
                 :terminal-budget (get (generated-terminal-budgets contract) role)
                 :seat {:agent-id (:agent-id response)
                        :type (some-> (:type agent) keyword)
@@ -1279,7 +1282,8 @@
                                       (:out (shell/sh "git" "-C" apparatus-root
                                                       "rev-parse" (str "HEAD:" path))))}]))
               (select-keys queued-frame-adapter/default-artifacts
-                           [:solver :student :guide :proctor :promotion-proctor
+                           [:solver :solver-restrategize :student :guide :proctor
+                            :promotion-proctor
                             :scribe :analyst]))
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name

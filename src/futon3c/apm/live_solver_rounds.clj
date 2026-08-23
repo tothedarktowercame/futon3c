@@ -14,8 +14,25 @@
 (defn strategy-checkpoint-round? [ordinal]
   (zero? (mod ordinal strategy-checkpoint-every)))
 
+(defn- select-round-role-card [request ordinal]
+  (let [checkpoint? (strategy-checkpoint-round? ordinal)
+        [path blob] (if checkpoint?
+                      [(or (:solver/restrategize-role-card-path request)
+                           (:role-card-path request))
+                       (or (:solver/restrategize-role-card-blob request)
+                           (:role-card-blob request))]
+                      [(or (:solver/regular-role-card-path request)
+                           (:role-card-path request))
+                       (or (:solver/regular-role-card-blob request)
+                           (:role-card-blob request))])]
+    (-> request
+        (assoc :role-card-path path :role-card-blob blob
+               :solver/role-card-mode (if checkpoint? :restrategize :regular))
+        (dissoc :solver/regular-role-card-path :solver/regular-role-card-blob
+                :solver/restrategize-role-card-path :solver/restrategize-role-card-blob))))
+
 (defn round-request [base-request ordinal prior]
-  (let [body (cond-> (-> base-request
+  (let [body (cond-> (-> (select-round-role-card base-request ordinal)
                          (dissoc :dispatch/id)
                          (assoc :solver/round ordinal
                                 :solver/max-rounds default-max-rounds

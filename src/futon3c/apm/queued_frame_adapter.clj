@@ -22,6 +22,8 @@
    :typed-completion
    "holes/labs/M-apm-demonstration/role-cards/typed-completion-v1.md"
    :solver "holes/labs/M-apm-demonstration/role-cards/codex-solver-v5.md"
+   :solver-restrategize
+   "holes/labs/M-apm-demonstration/role-cards/solver-restrategize-v1.md"
    :student "holes/labs/M-apm-demonstration/role-cards/zai-student-v2.md"
    :guide "holes/labs/M-apm-demonstration/role-cards/claude-guide-v2.1.md"
    :scribe "holes/labs/M-apm-demonstration/role-cards/scribe-v3.md"

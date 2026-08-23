@@ -49,7 +49,7 @@
   (assoc body :dispatch/id (machine/ledger-digest [body])))
 
 (defn build-request
-  [{:keys [kind action ledger unit role-card seat workspace solve-receipt
+  [{:keys [kind action ledger unit role-card checkpoint-role-card seat workspace solve-receipt
            terminal-budget]}]
   (if (= :preflight kind)
     (let [problem (:problem unit)
@@ -87,6 +87,10 @@
                      (conj :workspace-blob-mismatch)
                      (not (and (string? (:path role-card)) (string? (:blob role-card))))
                      (conj :role-card-pin-missing)
+                     (and (= :solve kind)
+                          (not (and (string? (:path checkpoint-role-card))
+                                    (string? (:blob checkpoint-role-card)))))
+                     (conj :solver-restrategize-role-card-pin-missing)
                      (and (= :verify kind) (not (string? (:receipt/id solve-receipt))))
                      (conj :solve-receipt-missing))]
       (if (seq findings)
@@ -107,6 +111,11 @@
                    :terminal-budget (or terminal-budget
                                         driver/default-terminal-budget)
                    :turn-timeout-ms (get-in action [:timeouts :turn-ms])}
+            (= :solve kind)
+            (assoc :solver/regular-role-card-path (:path role-card)
+                   :solver/regular-role-card-blob (:blob role-card)
+                   :solver/restrategize-role-card-path (:path checkpoint-role-card)
+                   :solver/restrategize-role-card-blob (:blob checkpoint-role-card))
             (= :verify kind) (assoc :solve-receipt-id (:receipt/id solve-receipt)
                                     :certified-final-head
                                     (:receipt/final-head solve-receipt)))))}))))
