@@ -88,3 +88,52 @@
                (mapv first @observations)))
         (is (= 4 (count (distinct (map second @observations)))))
         (finally (durable/stop! "library:phases"))))))
+
+(deftest phase-state-drift-prevents-external-step
+  (let [calls (atom 0)
+        reconcile (:reconcile-fn (sut/adapter-constructor {}))]
+    (with-redefs [sut/run-step! (fn [_] (swap! calls inc)
+                                 {:ok true :ruling :phase-certified})]
+      (let [result (reconcile {:dispatch/parameters {:phase :solve}}
+                              {:library/phase :preflight})]
+        (is (false? (:ok result)))
+        (is (= :library-lane-phase-intent-drift (:error/code result)))
+        (is (zero? @calls))))))
+
+(deftest legacy-pending-intent-migration-preserves-dispatch-identity
+  (let [{:keys [registry state]} (fixture)
+        options {:registry-path registry :state-path state
+                 :coordinator-id "library:migrate" :problem-id "t00J02"
+                 :period-ms 1000}]
+    (with-redefs [sut/run-step! (fn [_] {:ok true :ruling :awaiting})]
+      (try
+        (is (:ok (sut/start! options)))
+        (is (await-until #(some? (get-in (sut/status registry "library:migrate")
+                                         [:durable-state
+                                          :coordinator/pending-intent]))))
+        (durable/stop! "library:migrate")
+        (let [before (get-in (sut/status registry "library:migrate")
+                             [:durable-state :coordinator/pending-intent])
+              legacy (-> before
+                         (dissoc :dispatch/parameters :intent/digest)
+                         (#(assoc % :intent/digest
+                                  (durable/intent-digest %))))]
+          (spit state (pr-str (assoc (:durable-state
+                                     (sut/status registry "library:migrate"))
+                                    :coordinator/pending-intent legacy)))
+          (is (:ok (sut/migrate-pending-phase-intent!
+                    registry "library:migrate")))
+          (let [after (get-in (sut/status registry "library:migrate")
+                              [:durable-state :coordinator/pending-intent])]
+            (is (= (select-keys before [:job-id :dispatch/id
+                                       :pre-state/version :pre-state/digest])
+                   (select-keys after [:job-id :dispatch/id
+                                      :pre-state/version :pre-state/digest])))
+            (is (= {:phase :preflight} (:dispatch/parameters after)))
+            (is (= {:ruling/one-of sut/phase-rulings}
+                   (:expected/postcondition after)))
+            (is (durable/valid-intent?
+                 "library:migrate"
+                 (:durable-state (sut/status registry "library:migrate"))
+                 after))))
+        (finally (durable/stop! "library:migrate"))))))

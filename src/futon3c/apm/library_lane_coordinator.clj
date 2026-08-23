@@ -6,10 +6,13 @@
             [futon3c.apm.library-lane-adapters :as adapters]
             [futon3c.apm.library-lane-effects :as effects]
             [futon3c.apm.library-lane-launch :as launch]
-            [futon3c.apm.library-lane-runner :as runner]))
+            [futon3c.apm.library-lane-runner :as runner]
+            [futon3c.apm.live-preflight-runtime :as persistence])
+  (:import [java.nio.file Path]))
 
 (def adapter-key :apm/library-lane)
 (def default-registry-path "data/apm-coordinators/registry.edn")
+(def phase-rulings [:awaiting :phase-certified :partial-banked :closed])
 
 (defn run-step!
   [{:keys [agency-base corpus-root frames-root state-root problem-id
@@ -44,8 +47,8 @@
      :dispatch/id (machine/ledger-digest
                    [(assoc body :dispatch/type :library-lane-step)])
      :dispatch/action :library-lane/step
-     :expected/postcondition
-     {:ruling/one-of [:awaiting :partial-banked :closed]}}))
+     :dispatch/parameters {:phase (or (:library/phase state) :preflight)}
+     :expected/postcondition {:ruling/one-of phase-rulings}}))
 
 (defn adapter-constructor [config]
   {:decide-fn
@@ -53,11 +56,15 @@
      {:ok true :coordinator/action :activate
       :coordinator/intent (next-intent config state)})
    :reconcile-fn
-   (fn [_ state]
-     (let [phase (or (:library/phase state) :preflight)
-           result (run-step! (assoc config :phase phase))
+   (fn [intent state]
+     (let [phase (get-in intent [:dispatch/parameters :phase])
+           current-phase (or (:library/phase state) :preflight)
            successor {:preflight :solve :solve :verify :verify :bank}]
-       (case (:ruling result)
+       (if (not= phase current-phase)
+         {:ok false :error/code :library-lane-phase-intent-drift
+          :finding {:intent-phase phase :state-phase current-phase}}
+         (let [result (run-step! (assoc config :phase phase))]
+           (case (:ruling result)
          :awaiting {:ok true :status :awaiting-job :lane/result result}
          :phase-certified
          {:ok true :status :library-phase-certified
@@ -71,7 +78,7 @@
          (if (:ok result)
            {:ok false :error/code :library-lane-ruling-invalid
             :finding result}
-           result))))})
+             result))))))})
 
 (coordinator/register-adapter! adapter-key adapter-constructor)
 
@@ -92,3 +99,55 @@
 
 (defn stop! [registry-path coordinator-id]
   (coordinator/stop! registry-path coordinator-id))
+
+(defn migrate-pending-phase-intent!
+  "Bind one legacy library intent to its already-persisted phase.
+
+   This migration is deliberately narrow: it accepts only an otherwise valid
+   library step intent with no dispatch parameters and preserves its job,
+   dispatch, and pre-state identities."
+  [registry-path coordinator-id]
+  (let [{:keys [registration durable-state]}
+        (coordinator/status registry-path coordinator-id)
+        intent (:coordinator/pending-intent durable-state)
+        phase (or (:library/phase durable-state) :preflight)]
+    (cond
+      (nil? registration)
+      {:ok false :error/code :durable-coordinator-not-registered}
+      (nil? intent)
+      {:ok true :status :no-pending-intent}
+      (not (coordinator/valid-intent? coordinator-id durable-state intent))
+      {:ok false :error/code :durable-coordinator-intent-integrity-invalid
+       :findings (coordinator/intent-findings coordinator-id durable-state intent)}
+      (not= :library-lane/step (:dispatch/action intent))
+      {:ok false :error/code :library-lane-intent-migration-action-invalid}
+      (not (keyword? phase))
+      {:ok false :error/code :library-lane-intent-migration-phase-invalid}
+      (and (some? (:dispatch/parameters intent))
+           (not= {:phase phase} (:dispatch/parameters intent)))
+      {:ok false :error/code :library-lane-intent-migration-parameters-invalid}
+      (and (= {:phase phase} (:dispatch/parameters intent))
+           (= {:ruling/one-of phase-rulings}
+              (:expected/postcondition intent)))
+      {:ok true :status :already-migrated}
+      :else
+      (let [amended (assoc intent
+                           :dispatch/parameters {:phase phase}
+                           :expected/postcondition
+                           {:ruling/one-of phase-rulings})
+            amended (assoc amended :intent/digest
+                           (coordinator/intent-digest amended))
+            updated (-> durable-state
+                        (assoc :coordinator/pending-intent amended)
+                        (update :coordinator/intent-migrations (fnil conj [])
+                                {:migration/type :library-phase-parameter
+                                 :prior-intent/digest (:intent/digest intent)
+                                 :amended-intent/digest (:intent/digest amended)
+                                 :phase phase}))]
+        (persistence/atomic-persist!
+         (Path/of (:coordinator/state-path registration)
+                  (make-array String 0))
+         updated)))))
+
+(defn resume! [registry-path coordinator-id]
+  (coordinator/resume! registry-path coordinator-id))

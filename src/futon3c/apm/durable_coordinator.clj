@@ -52,6 +52,7 @@
                 :job-id (:job-id requested)
                 :dispatch/id (:dispatch/id requested)
                 :dispatch/action (:dispatch/action requested)
+                :dispatch/parameters (:dispatch/parameters requested)
                 :pre-state/version (:regulator/ticks state)
                 :pre-state/digest (state-digest state)
                 :expected/postcondition (:expected/postcondition requested)}]
@@ -67,6 +68,9 @@
               (not-empty (:dispatch/id intent))))
     (conj :dispatch-id)
     (not (keyword? (:dispatch/action intent))) (conj :dispatch-action)
+    (and (some? (:dispatch/parameters intent))
+         (not (map? (:dispatch/parameters intent))))
+    (conj :dispatch-parameters)
     (not (nat-int? (:pre-state/version intent))) (conj :pre-state-version)
     (and (nat-int? (:pre-state/version intent))
          (< (:regulator/ticks state) (inc (:pre-state/version intent))))
@@ -80,6 +84,17 @@
 
 (defn valid-intent? [coordinator-id state intent]
   (empty? (intent-findings coordinator-id state intent)))
+
+(defn postcondition-satisfied? [expected result]
+  (and
+   (if-let [allowed (:status/one-of expected)]
+     (contains? (set allowed) (or (get-in result [:queue/result :status])
+                                  (:status result)))
+     true)
+   (if-let [allowed (:ruling/one-of expected)]
+     (contains? (set allowed) (or (get-in result [:lane/result :ruling])
+                                  (:ruling result)))
+     true)))
 
 (defn valid-entry? [entry]
   (and (= entry-type (:state/type entry))
@@ -159,15 +174,20 @@
       {:ok false :error/code :durable-coordinator-intent-integrity-invalid
        :findings (intent-findings coordinator-id state intent)}
       (let [result ((:reconcile-fn adapter) intent state)]
-        (if (:ok result)
+        (cond
+          (not (:ok result)) result
+          (not (postcondition-satisfied?
+                (:expected/postcondition intent) result))
+          {:ok false :error/code :durable-coordinator-postcondition-violated
+           :finding {:expected (:expected/postcondition intent)
+                     :result (dissoc result :regulator/state-updates)}}
+          :else
           (cond-> (dissoc result :coordinator/clear-intent?)
             (:coordinator/clear-intent? result)
-            (update :regulator/state-updates
-                    merge
+            (update :regulator/state-updates merge
                     {:coordinator/pending-intent nil
                      :coordinator/pending-pre-state-digest nil
-                     :coordinator/last-settled-intent intent}))
-          result)))
+                     :coordinator/last-settled-intent intent})))))
     (let [decision ((:decide-fn adapter) state)]
       (cond
         (not (:ok decision)) decision

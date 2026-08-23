@@ -9,8 +9,8 @@ PROBLEM="${APM_PROBLEM:-}"
 TARGET="${APM_TARGET:-}"
 TRUNK="${APM_TRUNK:-repair/m97A06-energy-regularity}"
 
-if [[ ! "$ACTION" =~ ^(start|status|stop)$ ]]; then
-  echo "REFUSED: APM_ACTION must be start, status, or stop" >&2
+if [[ ! "$ACTION" =~ ^(start|resume|status|stop)$ ]]; then
+  echo "REFUSED: APM_ACTION must be start, resume, status, or stop" >&2
   exit 2
 fi
 if [[ ! "$PROBLEM" =~ ^[A-Za-z0-9_-]+$ ]]; then
@@ -42,6 +42,9 @@ CONTRACT="$LANE_ROOT/holes/labs/M-apm-demonstration/frame-cycle-contract-codex-o
 case "$ACTION" in
   start)
     FORM="(do (require 'futon3c.apm.library-lane-coordinator :reload) (futon3c.apm.library-lane-coordinator/start! {:registry-path \"$REGISTRY\" :state-path \"$STATE\" :coordinator-id \"$COORDINATOR_ID\" :problem-id \"$PROBLEM\" :keying-target \"$TARGET\" :trunk-branch \"$TRUNK\" :corpus-root \"$CORPUS_ROOT\" :frames-root \"$FRAMES_ROOT\" :state-root \"$LANE_ROOT/data/apm-lane\" :contract-path \"$CONTRACT\" :agency-base \"http://localhost:7070\"}))"
+    ;;
+  resume)
+    FORM="(do (require 'futon3c.apm.library-lane-coordinator :reload) (futon3c.apm.library-lane-coordinator/resume! \"$REGISTRY\" \"$COORDINATOR_ID\"))"
     ;;
   status)
     FORM="(do (require 'futon3c.apm.library-lane-coordinator) (futon3c.apm.library-lane-coordinator/status \"$REGISTRY\" \"$COORDINATOR_ID\"))"

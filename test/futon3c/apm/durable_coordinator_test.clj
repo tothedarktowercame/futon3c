@@ -270,3 +270,33 @@
       (is (false? (get-in (sut/status registry "c:stop")
                           [:registration :coordinator/enabled?])))
       (finally (sut/stop! "c:stop")))))
+
+(deftest unexpected-postcondition-fails-before-state-advance
+  (let [{:keys [registry state-a]} (temp-paths)]
+    (sut/register-adapter!
+     :test/postcondition
+     (fn [_]
+       {:decide-fn
+        (fn [_] {:ok true :coordinator/action :activate
+                 :coordinator/intent
+                 {:job-id "job-post" :dispatch/id "dispatch-post"
+                  :dispatch/action :invoke :dispatch/parameters {}
+                  :expected/postcondition {:ruling/one-of [:closed]}}})
+        :reconcile-fn
+        (fn [_ _] {:ok true :status :done
+                   :coordinator/clear-intent? true
+                   :lane/result {:ruling :partial-banked}
+                   :regulator/state-updates {:forbidden/advance true}})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:postcondition"
+                             :adapter :test/postcondition :config {}
+                             :state-path state-a :period-ms 10})))
+    (try
+      (is (:ok (sut/start-registered! registry "c:postcondition")))
+      (is (await-until #(= :failed (state-status state-a))))
+      (let [state (edn/read-string (slurp state-a))]
+        (is (= :durable-coordinator-postcondition-violated
+               (get-in state [:regulator/last-result :error/code])))
+        (is (nil? (:forbidden/advance state)))
+        (is (some? (:coordinator/pending-intent state))))
+      (finally (sut/stop! "c:postcondition")))))
