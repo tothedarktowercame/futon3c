@@ -1372,6 +1372,10 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
    ((= status 404)
     (format "[compact] unavailable: %s"
             (or (plist-get payload :error) "no local agent")))
+   ((string-match-p "http 404" (format "%s" (or (plist-get payload :error) "")))
+    ;; The route itself is gone (a stale http.clj was load-file'd into the
+    ;; shared JVM), not the agent.
+    "[compact] route missing on the server — run futon3c/scripts/restore-http-routes.sh, then retry")
    (t
     (format "[compact] error%s"
             (if-let* ((detail (or (plist-get payload :error)
