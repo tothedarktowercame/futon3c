@@ -23,36 +23,135 @@ Usage: python3 futon3c/scripts/o5_honest_holes.py
 """
 import json, os, re, urllib.request, urllib.parse
 from collections import Counter
+from time import monotonic
 
 ROOT = "/home/joe/code"
 BGE = f"{ROOT}/futon3a/resources/notions/bge_mission_embeddings.json"
 OUT = f"{ROOT}/futon3c/holes/excursions/o5-honest-holes.dryrun.edn"
-F = os.environ.get("FUTON1A_URL", "http://localhost:7071")
+F = os.environ.get("FUTON1B_URL", "http://localhost:7073")
+PAGE_LIMIT = int(os.environ.get("O5_PAGE_LIMIT", "1000"))
+
+
+class SubstrateReadError(RuntimeError):
+    """A substrate read failed or returned an internally inconsistent page."""
+
+
+def get(url, timeout):
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return response.read().decode()
+    except Exception as exc:
+        raise SubstrateReadError(f"GET {url} failed: {exc}") from exc
+
+
+def edn_int(raw, key):
+    match = re.search(rf":{re.escape(key)}\s+(\d+)", raw)
+    return int(match.group(1)) if match else None
+
+
+def edn_string(raw, key):
+    match = re.search(rf':{re.escape(key)}\s+"([^"]*)"', raw)
+    return match.group(1) if match else None
+
+
+def fetch_pages(hx_type):
+    """Fetch a complete type window, failing if paging loses or duplicates rows."""
+    pages = []
+    after = None
+    expected = None
+    seen_ids = set()
+    while True:
+        params = {
+            "type": hx_type,
+            "include-total": "true",
+            "limit": str(PAGE_LIMIT),
+        }
+        if after is not None:
+            params["after"] = after
+        raw = get(f"{F}/api/alpha/hyperedges?{urllib.parse.urlencode(params)}", 30)
+        total = edn_int(raw, "count")
+        if total is None:
+            raise SubstrateReadError(f"missing :count in {hx_type!r} response")
+        if expected is None:
+            expected = total
+        elif total != expected:
+            raise SubstrateReadError(
+                f"{hx_type!r} count changed during paging: {expected} -> {total}"
+            )
+        page_ids = re.findall(r':hx/id\s+"([^"]+)"', raw)
+        duplicates = seen_ids.intersection(page_ids)
+        if duplicates:
+            raise SubstrateReadError(
+                f"{hx_type!r} paging repeated ids: {sorted(duplicates)[:3]}"
+            )
+        seen_ids.update(page_ids)
+        pages.append(raw)
+        cursor = edn_string(raw, "next-cursor")
+        if cursor is None:
+            break
+        if cursor == after:
+            raise SubstrateReadError(f"{hx_type!r} paging cursor did not advance")
+        after = cursor
+    if len(seen_ids) != expected:
+        raise SubstrateReadError(
+            f"{hx_type!r} paging returned {len(seen_ids)} rows, expected {expected}"
+        )
+    return pages, {"rows": len(seen_ids), "limit": PAGE_LIMIT, "pages": len(pages)}
 
 
 def edges_on(ep):
-    url = (
-        f"{F}/api/alpha/hyperedges?end="
-        + urllib.parse.quote(ep, safe="")
-        + "&include-total=false"
-    )
-    try:
-        return urllib.request.urlopen(url, timeout=20).read().decode().count("hx/id")
-    except Exception:
-        return -1
+    params = {"end": ep, "include-total": "true", "limit": "1"}
+    url = f"{F}/api/alpha/hyperedges?{urllib.parse.urlencode(params)}"
+    raw = get(url, 20)
+    count = edn_int(raw, "count")
+    if count is None:
+        raise SubstrateReadError(f"missing :count in endpoint response for {ep!r}")
+    return count
 
 
 def fetch_endpoints(hx_type):
-    url = (
-        f"{F}/api/alpha/hyperedges?type="
-        + urllib.parse.quote(hx_type, safe="")
-        + "&include-total=false"
-    )
-    try:
-        raw = urllib.request.urlopen(url, timeout=30).read().decode()
-    except Exception:
-        return []
-    return re.findall(r'"(<?[a-zA-Z0-9][a-zA-Z0-9/_.:-]*-d/mission/[A-Za-z0-9-]+)"', raw)
+    pages, paging = fetch_pages(hx_type)
+    endpoints = set()
+    for raw in pages:
+        endpoints.update(re.findall(
+            r'(<?[a-zA-Z0-9][a-zA-Z0-9/_.:-]*-d/mission/[A-Za-z0-9-]+)',
+            raw,
+        ))
+    return endpoints, paging
+
+
+def capability_keys():
+    pages, paging = fetch_pages("mission-scope/capability-scope")
+    canonical_missions = set()
+    bare_missions = set()
+    canonical_edges = 0
+    bare_edges = 0
+    for raw in pages:
+        for endpoints in re.findall(
+            r":hx/endpoints\s+\[(.*?)\](?=,\s+:[a-zA-Z])", raw, re.DOTALL
+        ):
+            canonical = set(re.findall(
+                r'([a-zA-Z0-9][a-zA-Z0-9/_.:-]*-d/mission/[A-Za-z0-9-]+)',
+                endpoints,
+            ))
+            bare = set(re.findall(r'(?<![A-Za-z0-9])(M-[A-Za-z0-9.-]+)', endpoints))
+            if canonical:
+                canonical_edges += 1
+                canonical_missions.update(canonical)
+            if bare:
+                bare_edges += 1
+                bare_missions.update(bare)
+    classified = canonical_edges + bare_edges
+    if classified > paging["rows"]:
+        raise SubstrateReadError("capability edge key classifications overlap")
+    return {
+        "canonical-missions": canonical_missions,
+        "bare-missions": bare_missions,
+        "canonical-edges": canonical_edges,
+        "bare-edges": bare_edges,
+        "unclassified-edges": paging["rows"] - classified,
+        "paging": paging,
+    }
 
 
 def stem(basename):
@@ -60,7 +159,9 @@ def stem(basename):
 
 
 def main():
-    bge = json.load(open(BGE))
+    started = monotonic()
+    with open(BGE) as stream:
+        bge = json.load(stream)
     # --- kind 1: missing-canonical-node (BGE mission with no live canonical node) ---
     missing = []
     for m in bge:
@@ -68,49 +169,42 @@ def main():
         if not (repo and bn):
             continue
         canon = f"{repo}-d/mission/{stem(bn)}"
-        if edges_on(canon) <= 0:
+        if edges_on(canon) == 0:
             missing.append({"mission": stem(bn), "would-be": canon, "repo": repo})
 
     # --- kind 2: no-capability on composing-CORE canonical missions ---
-    core = set(fetch_endpoints("code/v05/mined-move")) | set(fetch_endpoints("cascade/cluster-member"))
+    mined, mined_paging = fetch_endpoints("code/v05/mined-move")
+    clustered, clustered_paging = fetch_endpoints("cascade/cluster-member")
+    core = set(mined) | set(clustered)
     core = {c for c in core if "-d/mission/" in c and not c.endswith("-head")}
-    with_cap = set()
-    cap_url = (
-        f"{F}/api/alpha/hyperedges?type="
-        + urllib.parse.quote("capability/produces", safe="")
-        + "&include-total=false"
-    )
-    try:
-        cap_raw = urllib.request.urlopen(cap_url, timeout=30).read().decode()
-        with_cap = set(re.findall(r'"([a-zA-Z0-9][a-zA-Z0-9/_.-]*-d/mission/[A-Za-z0-9-]+)"', cap_raw))
-    except Exception:
-        pass
+    capability = capability_keys()
+    with_cap = capability["canonical-missions"]
     no_cap = sorted(core - with_cap)
 
-    # capability edges keyed the BARE alias scheme (M-*), not canonical — so they
-    # don't compose with the canonical mission spine. The HONEST hole is exactly
-    # that (the capability layer needs the same canonical re-keying missions got),
-    # NOT 202 "this mission lacks a capability" (those would be false — the missions
-    # have capabilities on their bare twins). One hole node, one hole-target edge
-    # per affected composing-core mission (so it COMPOSES on the spine).
-    with_cap_bare = set()
-    try:
-        with_cap_bare = set(re.findall(r'"(M-[A-Za-z0-9.-]+)"', cap_raw))
-    except Exception:
-        pass
+    holes = []
+    if capability["bare-edges"]:
+        holes.append({
+            "id": "cascade/hole/capability-layer-not-canonical",
+            "type": ":hole", "kind": "capability-not-canonical", "composes?": True,
+            "gap": ("mission-scope/capability-scope contains edges keyed by BARE "
+                    "M-* aliases rather than canonical <repo>-d/mission/<id> nodes"),
+            "evidence": {
+                "capability-edges-total": capability["paging"]["rows"],
+                "bare-keyed-capability-edges": capability["bare-edges"],
+                "canonical-keyed-capability-edges": capability["canonical-edges"],
+                "unclassified-capability-edges": capability["unclassified-edges"],
+                "composing-core-missions-affected": len(core),
+            },
+            "targets": sorted(core),
+        })
 
-    holes = [{
-        "id": "cascade/hole/capability-layer-not-canonical",
-        "type": ":hole", "kind": "capability-not-canonical", "composes?": True,
-        "gap": ("capability/produces edges key the BARE M-* alias scheme, not the "
-                "canonical <repo>-d/mission/<id> nodes — so the capability/downward "
-                "layer does NOT compose with the canonical mission spine. It needs the "
-                "same canonical re-keying missions got (the archivist's next target)."),
-        "evidence": {"capability-edges-total": len(with_cap_bare),
-                     "canonical-keyed-capability-edges": len(with_cap),
-                     "composing-core-missions-affected": len(core)},
-        "targets": sorted(core),   # composes: each is an existing canonical mission node
-    }]
+    if no_cap:
+        holes.append({
+            "id": "cascade/hole/core-missions-without-capability",
+            "type": ":hole", "kind": "no-capability", "composes?": True,
+            "gap": "Composing-core canonical missions with no capability-scope edge",
+            "targets": no_cap,
+        })
 
     if missing:
         holes.append({
@@ -120,33 +214,50 @@ def main():
             "targets": [x["would-be"] for x in missing]})
 
     by_kind = Counter(h["kind"] for h in holes)
+    elapsed = monotonic() - started
+    finding = (
+        f"{len(holes)} honest hole kinds: {dict(by_kind)}; "
+        f"{len(missing)} BGE missions lack a live canonical node; "
+        f"capability keys are {capability['canonical-edges']} canonical, "
+        f"{capability['bare-edges']} bare, {capability['unclassified-edges']} unclassified"
+    )
     art = {
         "o5/meta": {
             "generator": "futon3c/scripts/o5_honest_holes.py",
-            "source": "BGE mission set vs live :7071 canonical nodes + capability/produces",
+            "source": ("BGE mission set vs live :7073 canonical nodes + "
+                       "mission-scope/capability-scope"),
             "n-hole-kinds": len(holes), "by-kind": dict(by_kind),
-            "core-missions": len(core), "canonical-capability-edges": len(with_cap),
-            "bare-capability-edges": len(with_cap_bare),
+            "core-missions": len(core),
+            "canonical-capability-edges": capability["canonical-edges"],
+            "bare-capability-edges": capability["bare-edges"],
+            "unclassified-capability-edges": capability["unclassified-edges"],
+            "paging": {
+                "code/v05/mined-move": mined_paging,
+                "cascade/cluster-member": clustered_paging,
+                "mission-scope/capability-scope": capability["paging"],
+            },
             "missing-canonical-node-count": len(missing),
-            "finding": ("cascade is healthy: 0 truly-missing mission nodes; the one real "
-                        "structural hole is the non-canonical capability layer"),
-            "dry-run?": True, "writes-to-7071?": False,
+            "finding": finding,
+            "wall-clock-seconds": round(elapsed, 3),
+            "dry-run?": True, "writes-to-7073?": False,
         },
         "o5/holes": holes,
     }
     with open(OUT, "w") as f:
-        f.write(";; O5 honest-holes DRY-RUN (C-cascade-real, claude-4). Zero :7071 writes.\n")
+        f.write(";; O5 honest-holes DRY-RUN (C-cascade-real). Zero :7073 writes.\n")
         f.write(";; hole-target edges; no-capability holes claim EXISTING canonical mission nodes\n")
         f.write(";; :mission (compose w/ O1/O3/O4); missing-node holes mark absent nodes (dangling).\n\n")
         json.dump(art, f, indent=1)
     print("n-holes:", len(holes), "| by-kind:", dict(by_kind),
-          "| core:", len(core), "| capability-edges:", len(with_cap))
+          "| core:", len(core), "| capability-edges:", capability["paging"]["rows"],
+          "| missing-canonical:", len(missing), "| seconds:", round(elapsed, 3))
+    print("paging:", art["o5/meta"]["paging"])
     print("wrote", OUT)
     return holes
 
 
 def land(holes):
-    """Write the cascade/hole-target edges to :7071 (idempotent; passes the L4 gate
+    """Write the cascade/hole-target edges to :7073 (idempotent; passes the L4 gate
     — cascade/hole* is an uncovered type). The composing holes land their hole-target
     edges onto EXISTING canonical mission nodes, so O5 joins the spine."""
     import urllib.request
@@ -174,7 +285,3 @@ if __name__ == "__main__":
     hs = main()
     if "--land" in sys.argv:
         land(hs)
-
-
-if __name__ == "__main__":
-    main()
