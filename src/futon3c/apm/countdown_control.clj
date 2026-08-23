@@ -1323,3 +1323,21 @@
      {:problems (:problems queue) :authority authority
       :queue-name "jit-m-five-v1" :frame-number-base 24
       :agency-base (or (:agency-base authority) "http://localhost:7070")})))
+
+(defn launch-m-five-v2!
+  "Start or resume the post-F24 qualified five-problem m-family queue at F25."
+  [authority]
+  (let [control-root (or (:control-root authority)
+                         "/home/joe/code/futon3c-apm-control")
+        queue (edn/read-string
+               (slurp (str control-root "/holes/labs/M-apm-demonstration/"
+                           "jit-m-five-problem-queue-v2.edn")))
+        continuation
+        (str "JIT M-FIVE V2 CONTINUATION: evaluate "
+             "(futon3c.apm.countdown-control/launch-m-five-v2! "
+             (pr-str (dissoc authority :continuation-payload)) ").")]
+    (set-alight-problem-list!
+     {:problems (:problems queue)
+      :authority (assoc authority :continuation-payload continuation)
+      :queue-name "jit-m-five-v2" :frame-number-base 25
+      :agency-base (or (:agency-base authority) "http://localhost:7070")})))

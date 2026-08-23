@@ -85,6 +85,22 @@
     (is (not-any? #(contains? % :required-receipt-kinds) units)
         "eventual close receipts must not be required at open-frame runtime")))
 
+(deftest m-five-v2-entrypoint-is-fresh-f25-and-self-continuing
+  (let [captured (atom nil)
+        authority {:agent "codex-10" :session "session-10"
+                   :surface "emacs-repl"
+                   :control-root "/home/joe/code/futon3c-apm-control"}]
+    (with-redefs [sut/set-alight-problem-list!
+                  (fn [request] (reset! captured request)
+                    {:ok true :status :dry-run})]
+      (is (:ok (sut/launch-m-five-v2! authority)))
+      (is (= 5 (count (:problems @captured))))
+      (is (= "m94A02" (get-in @captured [:problems 0 :problem/id])))
+      (is (= "jit-m-five-v2" (:queue-name @captured)))
+      (is (= 25 (:frame-number-base @captured)))
+      (is (re-find #"launch-m-five-v2!"
+                   (get-in @captured [:authority :continuation-payload]))))))
+
 (deftest learning-regime-audit-preserves-v1-and-fails-closed-on-v2-pins
   (let [v1 (:contract (#'sut/inputs))
         v2 (edn/read-string
