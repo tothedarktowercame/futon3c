@@ -207,3 +207,78 @@
     (is (false? (:ok result)))
     (is (= :frame-cycle-input-receipt-set-mismatch (:error/code result)))
     (is (= #{verify-id} (get-in result [:finding :expected])))))
+
+(def v2-contract
+  (edn/read-string
+   (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")))
+
+(defn- v2-student-receipt [ordinal session binding]
+  (addressed
+   {:receipt/type :student-attempt :receipt/frame-id "f18"
+    :receipt/problem-id "a97J07" :receipt/attempt-ordinal ordinal
+    :receipt/fresh-session-id session :receipt/job-id (str "student-" ordinal)
+    :receipt/outcome :stuck :receipt/failure-account []
+    :receipt/memory-use {:surfaced-ids [] :used-ids [] :queries []}
+    :receipt/memory-snapshot binding}))
+
+(def v2-promotion
+  (addressed
+   {:receipt/type :solver-promotion :receipt/frame-id "f18"
+    :receipt/problem-id "a97J07" :receipt/input-receipt-ids #{}
+    :receipt/lanes [] :receipt/dispositions [] :receipt/promotion-reviews []
+    :receipt/snapshot-id "snap-solver" :receipt/snapshot-digest "snap-solver"
+    :receipt/snapshot-path "/tmp/snap-solver.edn"
+    :receipt/reviewed-memory-ids [] :receipt/independent-review? true}))
+
+(def v2-guide-1-with-union
+  (addressed
+   {:receipt/type :guide-intervention :receipt/frame-id "f18"
+    :receipt/problem-id "a97J07" :receipt/intervention-ordinal 1
+    :receipt/mode :store-mode :receipt/input-attempt-id "attempt-1"
+    :receipt/effect {:channel "memory-store"}
+    :receipt/channel-audit {:direct-student-contact? false}
+    :receipt/snapshot-id "snap-guide-1" :receipt/snapshot-digest "snap-guide-1"
+    :receipt/snapshot-path "/tmp/snap-guide-1.edn"
+    :receipt/reviewed-memory-ids ["e-guide"] :receipt/promotion-reviews []
+    :receipt/independent-review? true}))
+
+(deftest student-binds-to-the-latest-reviewed-snapshot
+  ;; f27: all three attempts bound to the Solver promotion; the Guide's
+  ;; deposits never entered the accessible set.
+  (let [receipts {:preflight preflight :solve solve :verify verify
+                  :promote-solver v2-promotion
+                  :student-attempt-1 (v2-student-receipt
+                                      1 "fresh-1" (handlers/snapshot-binding v2-promotion))
+                  :guide-intervention-1 v2-guide-1-with-union}
+        action {:kind :student-attempt :role :student :phase :student-attempt-2
+                :frame-id "f18" :problem-id "a97J07"}]
+    (is (= v2-promotion (handlers/latest-snapshot-receipt receipts 1)))
+    (is (= v2-guide-1-with-union (handlers/latest-snapshot-receipt receipts 2)))
+    (is (= v2-guide-1-with-union (handlers/latest-snapshot-receipt receipts 3))
+        "a Guide that published nothing does not hide an earlier union")
+    (is (:ok (handlers/validate-completion
+              v2-contract action
+              (v2-student-receipt 2 "fresh-2"
+                                  (handlers/snapshot-binding v2-guide-1-with-union))
+              receipts)))
+    (is (= :frame-cycle-student-memory-snapshot-mismatch
+           (:error/code (handlers/validate-completion
+                         v2-contract action
+                         (v2-student-receipt 2 "fresh-2"
+                                             (handlers/snapshot-binding v2-promotion))
+                         receipts))))))
+
+(deftest guide-union-snapshot-needs-complete-review-evidence
+  (let [receipts {:preflight preflight :solve solve :verify verify
+                  :promote-solver v2-promotion
+                  :student-attempt-1 (v2-student-receipt
+                                      1 "fresh-1" (handlers/snapshot-binding v2-promotion))}
+        action {:kind :guide-intervention :role :guide :phase :guide-intervention-1
+                :frame-id "f18" :problem-id "a97J07"}
+        partial (addressed (dissoc v2-guide-1-with-union :receipt/id
+                                   :receipt/promotion-reviews))]
+    (is (:ok (handlers/validate-completion v2-contract action v2-guide-1-with-union
+                                           receipts)))
+    (is (= :frame-cycle-guide-snapshot-evidence-invalid
+           (:error/code (handlers/validate-completion v2-contract action partial
+                                                      receipts))))))

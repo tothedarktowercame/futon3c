@@ -48,10 +48,35 @@
     (if (seq findings) {:ok false :findings findings}
         {:ok true :candidates (dedupe-candidates candidates)})))
 
+(defn validate-guide-deposit
+  "Gate a Guide's store-mode candidates. The Guide is not a mining seat, so
+  there is no lane report; every candidate must still name a bound pattern."
+  [{:keys [depositor candidates]}]
+  (let [findings (cond-> []
+                   (not (string? depositor)) (conj :depositor-missing)
+                   (not (and (vector? candidates) (seq candidates)))
+                   (conj :candidates-missing)
+                   (some #(not (and (string? (:memory-id %))
+                                    (string? (:content-digest %))
+                                    (vector? (:pattern-ids %))
+                                    (vector? (:source-attempts %)))) candidates)
+                   (conj :candidate-shape-invalid)
+                   (some #(and (vector? (:pattern-ids %))
+                               (not (seq (:pattern-ids %)))) candidates)
+                   (conj :candidate-patterns-missing))]
+    (if (seq findings) {:ok false :findings findings}
+        {:ok true :candidates (dedupe-candidates candidates)})))
+
+(declare validate-review*)
+
 (defn validate-review [deposit reviewer reviews]
-  (let [depositor (:depositor deposit)
-        candidates (:candidates (validate-deposit deposit))
-        by-id (into {} (map (juxt :memory-id identity)) candidates)
+  (validate-review* (:candidates (validate-deposit deposit))
+                    (:depositor deposit) reviewer reviews))
+
+(defn validate-review*
+  "Validate an independent review against already-gated CANDIDATES."
+  [candidates depositor reviewer reviews]
+  (let [by-id (into {} (map (juxt :memory-id identity)) candidates)
         approved (filterv #(contains? #{:approve :reassign} (:verdict %)) reviews)
         findings (cond-> []
                    (not (string? reviewer)) (conj :reviewer-missing)

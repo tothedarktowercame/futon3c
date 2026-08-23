@@ -251,8 +251,17 @@
           (if (:ok validated)
             (let [provided (receipt-provider active-request (:ticket state)
                                              job validated)]
-              (if-not (:ok provided)
+              (cond
+                (not (:ok provided))
                 provided
+
+                ;; A provider may defer certification behind a further job
+                ;; (a Guide deposit's independent review); the validated
+                ;; terminal is re-observed on the next tick.
+                (= :awaiting-terminal (:status provided))
+                (assoc provided :state state)
+
+                :else
                 (let [next-state (assoc state :state/type :live-job-certified
                                         :receipt (:certificate provided))]
                   (if (:ok (persist-fn next-state))

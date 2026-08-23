@@ -357,3 +357,23 @@
                                                     :repair-attempts 1}))]
     (is (= :live-job-driver-input-invalid (:error/code result)))
     (is (empty? @calls))))
+
+(deftest receipt-provider-may-defer-certification-behind-a-further-job
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        deferred (assoc (effects calls job)
+                        :receipt-provider
+                        (fn [_ _ _ _]
+                          (swap! calls conj :receipt)
+                          {:ok true :status :awaiting-terminal :job-id "review-1"}))
+        dispatched (sut/drive! (assoc deferred :job-fn (fn [_] {:state :running})))
+        waiting (sut/drive! (assoc deferred :state (:state dispatched)))]
+    (is (= :awaiting-terminal (:status waiting)))
+    (is (= "review-1" (:job-id waiting)))
+    (is (not= :live-job-certified (get-in waiting [:state :state/type])))
+    (is (nil? (get-in waiting [:state :receipt])))
+    (is (= 1 (count (filter #{:receipt} @calls))))
+    (testing "the validated terminal is re-observed on the next tick"
+      (let [again (sut/drive! (assoc deferred :state (:state waiting)))]
+        (is (= :awaiting-terminal (:status again)))
+        (is (= 2 (count (filter #{:receipt} @calls))))))))

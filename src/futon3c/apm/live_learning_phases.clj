@@ -7,6 +7,7 @@
             [futon3c.apm.live-job-driver :as driver]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.apm.workspace-lifecycle :as workspace-lifecycle])
   (:import [java.nio.file Path]
@@ -46,7 +47,11 @@
         terminal-budget (merge driver/default-terminal-budget
                                (get terminal-budgets role))
         input-ids (required-input-receipt-ids contract phase receipts)
-        promotion-receipt (get receipts :promote-solver)
+        ;; The Student binds to the latest reviewed snapshot: a Guide's
+        ;; union snapshot when one was published, else the Solver promotion.
+        promotion-receipt (when (= :student-attempt kind)
+                            (handlers/latest-snapshot-receipt
+                             receipts (or attempt-ordinal 1)))
         required-artifacts (get-in contract [:phases phase :requires])
         expected-input-count (count (distinct (map #(producer-phase contract %)
                                                    required-artifacts)))
@@ -122,7 +127,20 @@
                           :input-attempt-id
                           (:receipt/id (get receipts
                                            (keyword (str "student-attempt-"
-                                                         phase-ordinal))))))]
+                                                         phase-ordinal))))
+                          ;; Reviewer inputs for a store-mode deposit: the
+                          ;; promotion Proctor card refuses to judge without
+                          ;; the base blob and the Solver's final head.
+                          :base-problem-blob (get-in unit [:problem :blob])
+                          :problem-path (get-in unit [:problem :path])
+                          :solver-final-head
+                          (:receipt/final-head (get receipts :solve))
+                          :prior-snapshot
+                          (let [prior (handlers/latest-snapshot-receipt
+                                       receipts (inc phase-ordinal))]
+                            (some-> (handlers/snapshot-binding prior)
+                                    (assoc :snapshot-path
+                                           (:receipt/snapshot-path prior))))))]
         {:ok true :request (submission/prepare-request
                             (assoc body :dispatch/id
                                    (machine/ledger-digest [body])))}))))
@@ -183,6 +201,20 @@
           (and (= :guide-intervention kind)
                (not= false (get-in report [:channel-audit :direct-student-contact?])))
           (conj :guide-channel-isolation-unproved)
+          ;; Store-mode candidates are the Guide's channel to the Student's
+          ;; shelf; they must be gate-shaped here so the reviewer never sees
+          ;; an unbound candidate, and harness-mode may not carry any.
+          (and (= :guide-intervention kind)
+               (some? (:candidates report))
+               (not (and (vector? (:candidates report))
+                         (:ok (pipeline/validate-guide-deposit
+                               {:depositor (:agent-id request)
+                                :candidates (:candidates report)})))))
+          (conj :guide-candidates-invalid)
+          (and (= :guide-intervention kind)
+               (seq (:candidates report))
+               (not= "store-mode" (some-> (:mode report) name)))
+          (conj :guide-candidates-outside-store-mode)
           (and (= :scribe-reduce kind)
                (not (every? #(coll? (get report %))
                             [:lanes :dispositions :promotion-reviews])))
@@ -223,19 +255,32 @@
                    (map? (:source validated))
                    (assoc :receipt/source (:source validated)))
                  :guide-intervention
-                 {:receipt/type :guide-intervention
-                  :receipt/intervention-ordinal
-                  (get-in contract [:phases (:phase action) :ordinal])
-                  :receipt/mode (some-> (:mode report) keyword)
-                  :receipt/input-attempt-id
-                  (:receipt/id
-                   (get receipts
-                        (keyword
-                         (str "student-attempt-"
-                              (get-in contract
-                                      [:phases (:phase action) :ordinal])))))
-                  :receipt/effect (:effect report)
-                  :receipt/channel-audit (:channel-audit report)}
+                 (let [snapshot (:memory-snapshot report)]
+                   (cond-> {:receipt/type :guide-intervention
+                            :receipt/intervention-ordinal
+                            (get-in contract [:phases (:phase action) :ordinal])
+                            :receipt/mode (some-> (:mode report) keyword)
+                            :receipt/input-attempt-id
+                            (:receipt/id
+                             (get receipts
+                                  (keyword
+                                   (str "student-attempt-"
+                                        (get-in contract
+                                                [:phases (:phase action) :ordinal])))))
+                            :receipt/effect (:effect report)
+                            :receipt/channel-audit (:channel-audit report)}
+                     ;; Present only when store-mode candidates were reviewed
+                     ;; and a union snapshot published; the next Student
+                     ;; attempt binds to it.
+                     (string? (:snapshot-digest snapshot))
+                     (assoc :receipt/snapshot-id (:snapshot-id snapshot)
+                            :receipt/snapshot-digest (:snapshot-digest snapshot)
+                            :receipt/snapshot-path (:snapshot-path snapshot)
+                            :receipt/reviewed-memory-ids
+                            (:reviewed-memory-ids snapshot)
+                            :receipt/promotion-reviews
+                            (:promotion-reviews snapshot)
+                            :receipt/independent-review? true)))
                  :scribe-reduce
                  (if (= :promote-solver (:phase action))
                    {:receipt/type :solver-promotion
@@ -412,9 +457,12 @@
                         (assoc body :dispatch/id
                                (machine/ledger-digest [body])))}))
 
+(declare guide-promotion-step!)
+
 (defn run-live!
   [{:keys [contract action receipts request state-path agency-base
-           snapshot-publish-fn workspace-reset-fn source-archive-fn]
+           snapshot-publish-fn workspace-reset-fn source-archive-fn
+           guide-promotion]
     :or {agency-base "http://localhost:7070"
          workspace-reset-fn workspace-lifecycle/reset-to-base!
          source-archive-fn workspace-lifecycle/archive-problem-source!}}]
@@ -500,5 +548,64 @@
             (receipt contract action receipts request ticket job
                      (assoc validated :source (:source archived)))))
 
+        ;; A store-mode Guide deposit is reviewed independently and published
+        ;; as a union snapshot before the Guide receipt exists, so the receipt
+        ;; can carry the snapshot the next Student attempt binds to.
+        (and (= :guide-intervention (:kind action))
+             (seq (get-in validated [:report :candidates])))
+        (if-not (map? guide-promotion)
+          {:ok false :error/code :guide-promotion-driver-missing}
+          (let [stepped (guide-promotion-step! guide-promotion request
+                                               (:report validated))]
+            (if (= :certified (:status stepped))
+              (receipt contract action receipts request ticket job
+                       (assoc-in validated [:report :memory-snapshot]
+                                 (:memory-snapshot stepped)))
+              stepped)))
+
         :else
         (receipt contract action receipts request ticket job validated)))}))
+
+(defn guide-promotion-step!
+  "Drive the independent review of a Guide's store-mode candidates. The
+  review state lives beside the Guide phase state; RUN-FN steps the durable
+  promotion machine from it. Returns :awaiting-terminal until the reviewer's
+  verdicts are published, then :certified with the union snapshot."
+  [{:keys [state-path run-fn]} request report]
+  (let [state-path (Path/of (str state-path) (make-array String 0))
+        state (runtime/read-state state-path)]
+    (cond
+      (nil? state)
+      (let [gated (pipeline/validate-guide-deposit
+                   {:depositor (:agent-id request)
+                    :candidates (:candidates report)})]
+        (if-not (:ok gated)
+          {:ok false :error/code :guide-candidates-invalid
+           :findings (:findings gated)}
+          (let [seeded {:state/type :promotion :stage :review-pending
+                        :deposit {:depositor (:agent-id request)
+                                  :dispatch/id (:dispatch/id request)
+                                  :prior-snapshot (:prior-snapshot request)}
+                        :candidates (:candidates gated)}
+                persisted (runtime/atomic-persist! state-path seeded)]
+            (if-not (:ok persisted)
+              {:ok false :error/code :guide-promotion-persistence-failed}
+              (run-fn)))))
+
+      (= :promotion-certified (:state/type state))
+      (let [published (:receipt state)]
+        {:ok true :status :certified
+         :memory-snapshot
+         {:snapshot-id (:receipt/snapshot-id published)
+          :snapshot-digest (:receipt/snapshot-digest published)
+          :snapshot-path (:receipt/snapshot-path published)
+          :reviewed-memory-ids (:receipt/reviewed-memory-ids published)
+          :promotion-reviews (:receipt/promotion-reviews published)
+          :independent-review? true}})
+
+      :else
+      (let [stepped (run-fn)]
+        (if (= :certified (:status stepped))
+          (guide-promotion-step! {:state-path state-path :run-fn run-fn}
+                                 request report)
+          stepped)))))

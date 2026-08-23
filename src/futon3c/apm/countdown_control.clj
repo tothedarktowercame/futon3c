@@ -599,7 +599,13 @@
         metadata (:metadata agent)
         projection (:projection (ledger/read-ledger (control-path ledger-path)))
         receipts (certified-receipts contract (:frame/id unit))
-        promotion (get receipts :promote-solver)
+        ;; The latest reviewed snapshot: a Guide union when one was
+        ;; published, else the Solver promotion.
+        promotion (when (= :student-attempt kind)
+                    (frame-cycle-handlers/latest-snapshot-receipt
+                     receipts (or (:ordinal action)
+                                  (get-in contract [:phases phase :ordinal])
+                                  1)))
         snapshot-access
         (when (and (= :student-attempt kind) promotion)
           (memory-snapshot/verify-student-access
@@ -744,16 +750,93 @@
           {:ok true :receipt receipt}
           checked)))))
 
+(defn- guide-review-state-path [state-path]
+  (let [path (Path/of (str state-path) (make-array String 0))
+        file (str (.getFileName path))]
+    (.resolveSibling path (str/replace file #"\.edn$" "-review.edn"))))
+
+(defn- publish-guide-promotion!
+  "Publish the union of the prior reviewed snapshot with the Guide candidates
+  the promotion Proctor approved. Every prior memory is re-validated and
+  re-checked against the substrate, so the union is as fresh as a first
+  snapshot; an identical republish is idempotent."
+  [{:keys [action request]} {:keys [candidates deposit reviewer reviews]}]
+  (let [prior (:prior-snapshot request)
+        prior-path (when (string? (:snapshot-path prior)) (:snapshot-path prior))
+        prior-memories (if prior-path
+                         (try
+                           (:snapshot/memories
+                            (edn/read-string (slurp prior-path)))
+                           (catch Throwable _ ::unreadable))
+                         [])
+        ordinal (get-in request [:intervention-ordinal])
+        union (when (vector? prior-memories)
+                (->> (concat prior-memories candidates)
+                     (reduce (fn [acc m] (assoc acc (:memory-id m) m)) {})
+                     vals vec))]
+    (if-not (vector? union)
+      {:ok false :error/code :guide-promotion-prior-snapshot-unreadable
+       :path prior-path}
+      (let [published
+            (memory-snapshot/publish!
+             {:frame-id (:frame-id action)
+              :problem-id (:problem-id action)
+              :candidates union
+              :path (.resolve (control-path state-directory)
+                              (str "snapshots/" (:frame-id action)
+                                   "-guide-" ordinal "-memory.edn"))
+              :evidence-visible? memory-snapshot/candidate-visible?})]
+        (if-not (:ok published)
+          published
+          (let [snapshot (:snapshot published)
+                body {:receipt/type :guide-promotion
+                      :receipt/frame-id (:frame-id action)
+                      :receipt/problem-id (:problem-id action)
+                      :receipt/intervention-ordinal ordinal
+                      :receipt/prior-snapshot prior
+                      :receipt/promotion-reviews reviews
+                      :receipt/snapshot-id (:snapshot/id snapshot)
+                      :receipt/snapshot-digest (:snapshot/digest snapshot)
+                      :receipt/snapshot-path (:path published)
+                      :receipt/reviewed-memory-ids
+                      (mapv :memory-id (:snapshot/memories snapshot))
+                      :receipt/independent-review? (not= (:depositor deposit)
+                                                         reviewer)}]
+            (if-not (:receipt/independent-review? body)
+              {:ok false :error/code :guide-promotion-reviewer-is-depositor}
+              {:ok true
+               :receipt (assoc body :receipt/id
+                               (machine/ledger-digest [body]))})))))))
+
 (defn drive-live-learning-phase! [action]
   (let [phase-inputs (live-learning-phase-inputs action)]
     (if (:ok phase-inputs)
-      (if (= :promote-solver (:phase action))
-        (live-promotion/run-live!
-         {:state-path (:state-path phase-inputs)
-          :control-root (str *control-root*)
-          :deposit-request (:request phase-inputs)
-          :reviewer-request (promotion-review-request phase-inputs)
-          :publish-fn #(publish-promotion! phase-inputs %)})
+      (case (:kind action)
+        :scribe-reduce
+        (if (= :promote-solver (:phase action))
+          (live-promotion/run-live!
+           {:state-path (:state-path phase-inputs)
+            :control-root (str *control-root*)
+            :deposit-request (:request phase-inputs)
+            :reviewer-request (promotion-review-request phase-inputs)
+            :publish-fn #(publish-promotion! phase-inputs %)})
+          (live-learning-phases/run-live! phase-inputs))
+
+        :guide-intervention
+        (let [review-path (guide-review-state-path (:state-path phase-inputs))]
+          (live-learning-phases/run-live!
+           (assoc phase-inputs :guide-promotion
+                  {:state-path review-path
+                   :run-fn
+                   #(live-promotion/run-live!
+                     {:state-path review-path
+                      :control-root (str *control-root*)
+                      :deposit-request (:request phase-inputs)
+                      :reviewer-request (promotion-review-request phase-inputs)
+                      :publish-fn (fn [published]
+                                    (publish-guide-promotion! phase-inputs
+                                                              published))})})))
+
         (live-learning-phases/run-live! phase-inputs))
       phase-inputs)))
 
@@ -996,13 +1079,26 @@
 (defn- project-current! [frame-id]
   (let [checkpoint (runner/checkpoint!
                     (options) {:checkpoint/stage :live-projection-refresh})
-        {:keys [manifest]} (inputs)
+        {:keys [manifest contract]} (inputs)
         unit (frame-unit manifest frame-id)
         loaded (ledger/read-ledger (control-path ledger-path))
         active (get-in loaded [:projection :active/frame])
         phase-state (when active
-                      (live-preflight-runtime/read-state
-                       (state-path-for frame-id (:phase active))))
+                      (let [path (state-path-for frame-id (:phase active))
+                            base (live-preflight-runtime/read-state path)
+                            ;; While a Guide deposit is under independent
+                            ;; review, the operator-visible job is the
+                            ;; reviewer's, not the finished Guide turn.
+                            review (when (= :guide-intervention
+                                            (get-in contract
+                                                    [:phases (:phase active)
+                                                     :kind]))
+                                     (live-preflight-runtime/read-state
+                                      (guide-review-state-path path)))]
+                        (if (and (= :promotion (:state/type review))
+                                 (not= :live-job-certified (:state/type base)))
+                          review
+                          base)))
         solve-state (live-preflight-runtime/read-state
                      (state-path-for frame-id :solve))
         solver-progress (solver-projection-progress solve-state (:phase active))

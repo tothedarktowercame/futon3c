@@ -1,6 +1,6 @@
 (ns futon3c.apm.live-learning-phases-test
   (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.live-learning-phases :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]))
@@ -391,3 +391,143 @@
     (is (= :student-source-unknown
            (:error/code (sut/archive-student-source!
                          (dissoc request :problem-path) "/tmp/x.edn" (fn [_] nil)))))))
+
+(def guide-candidate
+  {:memory-id "e-guide-1" :content-digest "d1" :pattern-ids ["math-informal/x"]
+   :source-attempts [1]})
+
+(deftest guide-candidates-must-be-gate-shaped-and-store-mode
+  (let [request {:dispatch/type :guide-intervention :agent-id "f27-guide"
+                 :frame-id "f27" :problem-id "m94A03"}
+        report {:command-own-exit 0 :frame-id "f27" :problem-id "m94A03"
+                :mode "store-mode" :channel-audit {:direct-student-contact? false}}
+        findings (fn [r] (:findings (sut/validate-terminal
+                                     request {:job-id "j"}
+                                     {:job-id "j" :agent-id "f27-guide" :state :done
+                                      :report r})))]
+    (is (nil? (findings (assoc report :candidates [guide-candidate]))))
+    (is (nil? (findings report)) "no candidates is a valid store-mode turn")
+    (is (some #{:guide-candidates-invalid}
+              (findings (assoc report :candidates
+                               [(assoc guide-candidate :pattern-ids [])]))))
+    (is (some #{:guide-candidates-outside-store-mode}
+              (findings (assoc report :mode "harness-mode"
+                               :candidates [guide-candidate]))))))
+
+(deftest guide-receipt-carries-the-union-snapshot-when-one-was-published
+  (let [action {:kind :guide-intervention :phase :guide-intervention-1 :role :guide
+                :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
+        request {:dispatch/type :guide-intervention :agent-id "f19-guide"
+                 :frame-id "f19" :problem-id "a01J05"}
+        report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
+                :mode "store-mode" :effect {:channel "memory-store"}
+                :channel-audit {:direct-student-contact? false}}
+        job {:job-id "j" :agent-id "f19-guide" :state :done :report report}
+        attempt-1 (let [body {:receipt/type :student-attempt :receipt/frame-id "f19"
+                              :receipt/problem-id "a01J05" :receipt/attempt-ordinal 1
+                              :receipt/fresh-session-id "fresh-1"
+                              :receipt/job-id "student-1" :receipt/outcome :stuck
+                              :receipt/failure-account []
+                              :receipt/memory-use {:surfaced-ids []}}]
+                    (assoc body :receipt/id (machine/ledger-digest [body])))
+        receipts (assoc (:receipts base) :student-attempt-1 attempt-1)
+        bare (sut/receipt contract action receipts request {:job-id "j"} job
+                          {:ok true :report report})
+        union (sut/receipt contract action receipts request {:job-id "j"} job
+                           {:ok true :report
+                            (assoc report :memory-snapshot
+                                   {:snapshot-id "s" :snapshot-digest "s"
+                                    :snapshot-path "/tmp/s.edn"
+                                    :reviewed-memory-ids ["e-guide-1"]
+                                    :promotion-reviews [{:memory-id "e-guide-1"}]
+                                    :independent-review? true})})]
+    (is (:ok bare))
+    (is (not (contains? (:certificate bare) :receipt/snapshot-digest)))
+    (is (:ok union))
+    (is (= "s" (get-in union [:certificate :receipt/snapshot-digest])))
+    (is (= ["e-guide-1"] (get-in union [:certificate :receipt/reviewed-memory-ids])))))
+
+(deftest guide-promotion-seeds-review-then-certifies-from-the-published-union
+  (let [dir (java.nio.file.Files/createTempDirectory
+             "guide-promotion-" (make-array java.nio.file.attribute.FileAttribute 0))
+        state-path (.resolve dir "guide-intervention-1-review.edn")
+        request {:dispatch/type :guide-intervention :agent-id "f27-guide"
+                 :dispatch/id "d" :prior-snapshot {:snapshot-digest "solver"}}
+        report {:candidates [guide-candidate]}
+        runs (atom 0)
+        run-fn (fn []
+                 (swap! runs inc)
+                 (let [state (runtime/read-state state-path)]
+                   (case (:stage state)
+                     :review-pending
+                     (do (runtime/atomic-persist!
+                          state-path (assoc state :stage :independent-review
+                                            :job "review-1"))
+                         {:ok true :status :awaiting-terminal :job-id "review-1"})
+                     :independent-review
+                     (do (runtime/atomic-persist!
+                          state-path {:state/type :promotion-certified
+                                      :receipt {:receipt/snapshot-id "u"
+                                                :receipt/snapshot-digest "u"
+                                                :receipt/snapshot-path "/tmp/u.edn"
+                                                :receipt/reviewed-memory-ids ["e-guide-1"]
+                                                :receipt/promotion-reviews []}})
+                         {:ok true :status :certified}))))
+        driver {:state-path state-path :run-fn run-fn}
+        first-step (sut/guide-promotion-step! driver request report)
+        seeded (runtime/read-state state-path)
+        second-step (sut/guide-promotion-step! driver request report)]
+    (is (= :awaiting-terminal (:status first-step)))
+    (is (= "review-1" (:job-id first-step)))
+    (is (= [guide-candidate] (:candidates seeded)))
+    (is (= "f27-guide" (get-in seeded [:deposit :depositor])))
+    (is (= :certified (:status second-step)))
+    (is (= "u" (get-in second-step [:memory-snapshot :snapshot-digest])))
+    (is (= 2 @runs))
+    (is (= :certified (:status (sut/guide-promotion-step! driver request report)))
+        "certified review is idempotent and runs nothing")
+    (is (= 2 @runs))
+    (is (= :guide-candidates-invalid
+           (:error/code (sut/guide-promotion-step!
+                         (assoc driver :state-path (.resolve dir "other.edn"))
+                         request {:candidates [(assoc guide-candidate :pattern-ids [])]}))))))
+
+(deftest student-attempt-two-binds-to-a-guide-union-snapshot
+  (let [addressed (fn [body] (assoc body :receipt/id (machine/ledger-digest [body])))
+        promotion (addressed {:receipt/type :solver-promotion :receipt/frame-id "f19"
+                              :receipt/problem-id "a01J05"
+                              :receipt/snapshot-id "solver" :receipt/snapshot-digest "solver"})
+        guide-1 (addressed {:receipt/type :guide-intervention :receipt/frame-id "f19"
+                            :receipt/problem-id "a01J05"
+                            :receipt/snapshot-id "union" :receipt/snapshot-digest "union"
+                            :receipt/snapshot-path "/tmp/union.edn"})
+        result (sut/build-request
+                (merge base {:action {:kind :student-attempt
+                                      :phase :student-attempt-2 :role :student
+                                      :ordinal 2 :frame-id "f19" :problem-id "a01J05"}
+                             :seat {:agent-id "f19-student" :invoke-ready? true}
+                             :receipts {:preflight preflight-receipt
+                                        :promote-solver promotion
+                                        :guide-intervention-1 guide-1}
+                             :snapshot-access {:ok true
+                                               :snapshot {:snapshot/digest "union"}
+                                               :accessible-memory-ids ["e-guide-1"]}}))]
+    (is (:ok result))
+    (is (= {:receipt-id (:receipt/id guide-1) :snapshot-id "union"
+            :snapshot-digest "union" :accessible-memory-ids ["e-guide-1"]}
+           (:memory-snapshot (:request result))))
+    (testing "the following Guide carries the union as its prior snapshot"
+      (let [guide-2 (sut/build-request
+                     (merge base {:action {:kind :guide-intervention
+                                           :phase :guide-intervention-2 :role :guide
+                                           :ordinal 2 :frame-id "f19" :problem-id "a01J05"}
+                                  :seat {:agent-id "f19-guide" :invoke-ready? true}
+                                  :receipts {:preflight preflight-receipt
+                                             :promote-solver promotion
+                                             :guide-intervention-1 guide-1
+                                             :student-attempt-2
+                                             (addressed {:receipt/type :student-attempt
+                                                         :receipt/frame-id "f19"
+                                                         :receipt/problem-id "a01J05"})}}))]
+        (is (= "/tmp/union.edn"
+               (get-in guide-2 [:request :prior-snapshot :snapshot-path])))))))

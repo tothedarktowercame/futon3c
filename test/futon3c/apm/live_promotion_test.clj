@@ -237,3 +237,45 @@
     (is (= [:candidate-patterns-missing] (:findings @feedback)))
     (is (= 3 (:attempt @saved)))
     (is (= 1 (:schema-repairs @saved)))))
+
+(deftest review-pending-state-dispatches-the-reviewer-without-a-deposit-job
+  ;; A Guide's store-mode candidates enter here: gated already, no Scribe job.
+  (let [saved (atom nil) reviewed (atom nil)
+        candidates [{:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                     :source-attempts [1]}]
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :review-pending
+                         :deposit {:depositor "f27-guide"}
+                         :candidates candidates}
+                 :deposit-fn (fn [& _] (throw (ex-info "no deposit job" {})))
+                 :review-fn (fn
+                              ([cands] (reset! reviewed cands)
+                               {:ok true :job "review-1"})
+                              ([_ _] (throw (ex-info "not observed yet" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "review-1" (:job-id result)))
+    (is (= candidates @reviewed))
+    (is (= :independent-review (:stage @saved)))
+    (is (= "f27-guide" (get-in @saved [:deposit :depositor])))))
+
+(deftest independent-review-validates-against-the-gated-candidates
+  (let [candidates [{:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                     :source-attempts [1]}]
+        review {:memory-id "m" :reviewer "f27-promotion-proctor" :verdict :approve
+                :review-evidence-id "ev" :attachment-status :reviewed
+                :pattern-ids ["p"] :reason "residual: L1. fact: x"
+                :residual "Main.lean:1"}
+        published (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :independent-review
+                         :deposit {:depositor "f27-guide"}
+                         :candidates candidates :job "review-1"}
+                 :review-fn (fn [_ _] {:ok true :reviewer "f27-promotion-proctor"
+                                       :reviews [review]})
+                 :publish-fn (fn [value] (reset! published value)
+                               {:ok true :receipt {:receipt/id "gp"}})
+                 :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= "f27-guide" (get-in @published [:candidates 0 :depositor])))
+    (is (= "f27-promotion-proctor" (:reviewer @published)))))

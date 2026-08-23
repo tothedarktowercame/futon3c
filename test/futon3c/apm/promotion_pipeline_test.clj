@@ -50,3 +50,28 @@
     (is (some #{:candidate-patterns-missing} findings))
     (is (not (some #{:candidate-shape-invalid} findings))
         "an empty vector is well-shaped; it is the binding that is missing")))
+
+(deftest guide-deposit-is-gated-without-a-lane-report
+  (let [ok (sut/validate-guide-deposit {:depositor "f27-guide"
+                                        :candidates [candidate]})]
+    (is (:ok ok))
+    (is (= [candidate] (:candidates ok))))
+  (is (= [:candidate-patterns-missing]
+         (:findings (sut/validate-guide-deposit
+                     {:depositor "f27-guide"
+                      :candidates [(assoc candidate :pattern-ids [])]}))))
+  (is (some #{:candidate-shape-invalid}
+            (:findings (sut/validate-guide-deposit
+                        {:depositor "f27-guide"
+                         :candidates [(dissoc candidate :source-attempts)]}))))
+  (is (some #{:candidates-missing}
+            (:findings (sut/validate-guide-deposit {:depositor "g" :candidates []})))))
+
+(deftest review-core-matches-the-deposit-entry-point
+  (let [deposit {:depositor "f22-scribe" :candidates [candidate] :lanes lanes}
+        review {:memory-id "m1" :reviewer "f22-proctor" :verdict :approve
+                :review-evidence-id "e1" :attachment-status :reviewed
+                :pattern-ids ["p1"] :reason "actionable fact"
+                :residual "Main.lean:12"}]
+    (is (= (sut/validate-review deposit "f22-proctor" [review])
+           (sut/validate-review* [candidate] "f22-scribe" "f22-proctor" [review])))))

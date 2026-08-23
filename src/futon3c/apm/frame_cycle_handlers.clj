@@ -36,6 +36,24 @@
    {:ok true}
    (phases-before cycle-contract phase)))
 
+(defn latest-snapshot-receipt
+  "The snapshot a Student attempt at ATTEMPT-ORDINAL binds to: the most recent
+  Guide intervention that published a reviewed union snapshot, else the
+  Solver promotion. Binding stays exact and content-addressed; what moves is
+  which reviewed snapshot is current."
+  [receipts attempt-ordinal]
+  (or (->> (range (dec attempt-ordinal) 0 -1)
+           (map #(get receipts (keyword (str "guide-intervention-" %))))
+           (filter #(string? (:receipt/snapshot-digest %)))
+           first)
+      (get receipts :promote-solver)))
+
+(defn snapshot-binding [receipt]
+  (when receipt
+    {:receipt-id (:receipt/id receipt)
+     :snapshot-id (:receipt/snapshot-id receipt)
+     :snapshot-digest (:receipt/snapshot-digest receipt)}))
+
 (defn- dependency-evidence [cycle-contract phase receipts]
   (let [required (get-in cycle-contract [:phases phase :requires])
         producers (into {} (map (fn [artifact]
@@ -96,12 +114,19 @@
 
       (and (= :student-attempt (:kind spec))
            (contains? (:requires spec) :solver-memory-snapshot)
-           (let [promotion (get prior-receipts :promote-solver)]
-             (not= {:receipt-id (:receipt/id promotion)
-                    :snapshot-id (:receipt/snapshot-id promotion)
-                    :snapshot-digest (:receipt/snapshot-digest promotion)}
-                   (:receipt/memory-snapshot receipt))))
+           (not= (snapshot-binding
+                  (latest-snapshot-receipt prior-receipts ordinal))
+                 (:receipt/memory-snapshot receipt)))
       {:error/code :frame-cycle-student-memory-snapshot-mismatch}
+
+      (and (= :guide-intervention (:kind spec))
+           (string? (:receipt/snapshot-digest receipt))
+           (not (and (string? (:receipt/snapshot-id receipt))
+                     (string? (:receipt/snapshot-path receipt))
+                     (vector? (:receipt/reviewed-memory-ids receipt))
+                     (vector? (:receipt/promotion-reviews receipt))
+                     (true? (:receipt/independent-review? receipt)))))
+      {:error/code :frame-cycle-guide-snapshot-evidence-invalid}
 
       (and (= :guide-intervention (:kind spec))
            (not= ordinal (:receipt/intervention-ordinal receipt)))
