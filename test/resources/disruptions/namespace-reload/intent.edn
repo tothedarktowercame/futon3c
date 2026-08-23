@@ -1,0 +1,1 @@
+{:job-id "job-namespace-reload" :dispatch/id "dispatch-namespace-reload" :dispatch/action :invoke :expected/postcondition {:job/state :terminal}}

@@ -1,0 +1,1 @@
+{:job-id "job-state-file-partial" :dispatch/id "dispatch-state-file-partial" :dispatch/action :invoke :expected/postcondition {:job/state :terminal}}
