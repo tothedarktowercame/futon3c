@@ -947,6 +947,33 @@
     (:active phase-state)
     phase-state))
 
+(defn- projection-operation [frame-id active-phase phase-job-state]
+  (cond
+    (= :live-job-dispatched (:state/type phase-job-state))
+    (let [request (:request phase-job-state)]
+      {:status :waiting-for-terminal-result
+       :role (or (:role request)
+                 (case active-phase
+                   :preflight :proctor
+                   :solve :solver
+                   :verify :proctor
+                   nil))
+       :agent-id (:agent-id request)
+       :job-id (get-in phase-job-state [:ticket :job-id])})
+
+    (and (= :promotion (:state/type phase-job-state))
+         (string? (:job phase-job-state)))
+    (let [role (case (:stage phase-job-state)
+                 :deposit :scribe
+                 :independent-review :promotion-proctor
+                 nil)]
+      {:status :waiting-for-terminal-result
+       :role role
+       :agent-id (when role (str frame-id "-" (name role)))
+       :job-id (:job phase-job-state)})
+
+    :else nil))
+
 (defn- drive-live-action! [action]
   (cond
     (contains? #{:open-block :open-frame :close-block :close-campaign}
@@ -988,17 +1015,8 @@
                  (not= frame-id (:frame-id phase-request))
                  (not= (:problem/id unit) (:problem-id phase-request))
                  (not= (:phase active) (:phase phase-request))))
-        operation
-        (when (= :live-job-dispatched (:state/type phase-job-state))
-          {:status :waiting-for-terminal-result
-           :role (or (:role phase-request)
-                     (case (:phase active)
-                       :preflight :proctor
-                       :solve :solver
-                       :verify :proctor
-                       nil))
-           :agent-id (:agent-id phase-request)
-           :job-id (get-in phase-job-state [:ticket :job-id])})]
+        operation (projection-operation frame-id (:phase active)
+                                        phase-job-state)]
     (cond
       (not (:ok checkpoint))
       {:ok false :error/code :countdown-projection-checkpoint-failed

@@ -328,6 +328,18 @@
             {:state/type :solver-rounds :rounds [] :active active})))
     (is (= active (#'sut/projection-phase-job-state active)))))
 
+(deftest promotion-projection-observes-the-active-scribe-job
+  (is (= {:status :waiting-for-terminal-result
+          :role :scribe :agent-id "f27-scribe" :job-id "deposit-job"}
+         (#'sut/projection-operation
+          "f27" :promote-solver
+          {:state/type :promotion :stage :deposit :job "deposit-job"})))
+  (is (= :promotion-proctor
+         (:role (#'sut/projection-operation
+                 "f27" :promote-solver
+                 {:state/type :promotion :stage :independent-review
+                  :job "review-job"})))))
+
 (deftest checkpoint-projection-does-not-downgrade-current-live-view
   (with-redefs [runtime/read-state
                 (constantly {:ledger/digest "ledger-current"})
