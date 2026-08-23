@@ -1,6 +1,6 @@
 {:qualification/id :apm-validated-system-v1
  :generated-contract "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"
- :generated-contract-digest "70659f478c982ed9e28ea3f7d86d30a2c47c3db505cc224541fc2cb15fe26d81"
+ :generated-contract-digest "7dd2a36254a201089c124ecd6b3b17d799a90d2efe2428f4212e686783e3c735"
  :positive-fixtures ["test/resources/apm-traces/valid.json"
                      "test/resources/apm-traces/partial-frame-series.json"]
  :mutation-classes
@@ -32,9 +32,9 @@
  [{:id :lean-zero-sorry
    :argv ["bash" "-lc" "cd /home/joe/code/mathlib4-apm-validation && lake env lean DarkTower/APMCycleMachine.lean && lake env lean DarkTower/APMCycleContractEmitter.lean && lake env lean DarkTower/APMCampaignTraceChecker.lean"]}
   {:id :emitter-equivalence
-   :argv ["bash" "-lc" "cd /home/joe/code/mathlib4-apm-validation && cmp <(lake env lean --run DarkTower/APMCycleContractEmitter.lean) /home/joe/code/futon3c-apm-control/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"]}
+   :argv ["bash" "-lc" "cd /home/joe/code/mathlib4-apm-validation && cmp <(lake env lean --run DarkTower/APMCycleContractEmitter.lean) /home/joe/code/futon3c/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"]}
   {:id :trace-qualification
-   :argv ["bash" "-lc" "cd /home/joe/code/mathlib4-apm-validation && scripts/check_apm_trace_fixtures.sh /home/joe/code/futon3c-apm-control/test/resources/apm-traces"]}
+   :argv ["bash" "-lc" "cd /home/joe/code/mathlib4-apm-validation && scripts/check_apm_trace_fixtures.sh /home/joe/code/futon3c/test/resources/apm-traces"]}
   {:id :clojure-qualification
    :argv ["clojure" "-M:test" "-n" "futon3c.apm.generated-contract-test"
           "-n" "futon3c.apm.campaign-trace-test"

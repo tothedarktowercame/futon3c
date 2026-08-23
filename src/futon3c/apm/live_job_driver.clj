@@ -127,7 +127,12 @@
                                  (nil? submission))
                           {:ok false :error/code :live-job-submission-missing
                            :findings [:typed-submission-missing]}
-                          (terminal-validator active-request (:ticket state) job))]
+                          (terminal-validator active-request (:ticket state) job))
+              typed-contract-migration?
+              (and (fn? terminal-submission-provider)
+                   (= [:typed-submission-missing] (:findings validated))
+                   (pos? (or (:terminal-repair-attempts state) 0))
+                   (zero? (or (:typed-submission-migration-attempts state) 0)))]
           (if (:ok validated)
             (let [provided (receipt-provider active-request (:ticket state)
                                              job validated)]
@@ -141,7 +146,8 @@
                     {:ok false
                      :error/code :live-job-receipt-persistence-failed}))))
             (cond
-              (pos? (or (:terminal-repair-attempts state) 0))
+              (and (pos? (or (:terminal-repair-attempts state) 0))
+                   (not typed-contract-migration?))
               (assoc validated :error/code :live-job-terminal-repair-exhausted
                      :repair/attempts (:terminal-repair-attempts state))
 
@@ -149,7 +155,11 @@
 
               :else
               (let [repair (terminal-repair-request-fn
-                            active-request (:ticket state) job validated)
+                            active-request (:ticket state) job
+                            (cond-> validated
+                              typed-contract-migration?
+                              (assoc :repair/kind
+                                     :typed-submission-contract-migration)))
                     repair-request (:request repair)]
                 (if-not (and (:ok repair) (map? repair-request)
                              (string? (:dispatch/id repair-request)))
@@ -161,13 +171,21 @@
                     (if-not (:ok announced)
                       announced
                       (let [next-state
-                            (assoc state
-                                   :active-request repair-request
-                                   :ticket (:ticket announced)
-                                   :activation/accepted? false
-                                   :terminal-repair-attempts 1
-                                   :terminal-repair/original-job-id (:job-id job)
-                                   :terminal-repair/findings (:findings validated))]
+                            (cond->
+                             (assoc state
+                                    :active-request repair-request
+                                    :ticket (:ticket announced)
+                                    :activation/accepted? false
+                                    :terminal-repair-attempts
+                                    (if typed-contract-migration?
+                                      (:terminal-repair-attempts state)
+                                      1)
+                                    :terminal-repair/original-job-id (:job-id job)
+                                    :terminal-repair/findings (:findings validated))
+                              typed-contract-migration?
+                              (assoc :typed-submission-migration-attempts 1
+                                     :typed-submission-migration/of-job-id
+                                     (:job-id job)))]
                         (if-not (:ok (persist-fn next-state))
                           {:ok false
                            :error/code :live-job-terminal-repair-persistence-failed}

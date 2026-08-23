@@ -139,6 +139,45 @@
     (is (= :live-job-terminal-repair-exhausted (:error/code result)))
     (is (= 1 (:repair/attempts result)))))
 
+(deftest pre-contract-terminal-gets-one-fresh-typed-migration
+  (let [calls (atom [])
+        seen-failure (atom nil)
+        job (atom {:job-id "legacy-repair-job" :state :done
+                   :report {:looks "valid"}})
+        base (assoc (effects calls job)
+                    :announce-fn
+                    (fn [repair-request]
+                      (swap! calls conj [:announce (:dispatch/id repair-request)])
+                      {:ok true :job-id "typed-migration-job"})
+                    :terminal-submission-provider (constantly nil)
+                    :terminal-repair-request-fn
+                    (fn [r _ticket _job failure]
+                      (reset! seen-failure failure)
+                      {:ok true
+                       :request (assoc r :dispatch/id "typed-migration-dispatch"
+                                         :fresh-session? true)}))
+        prior-state {:state/type :live-job-dispatched
+                     :request request :active-request (assoc request :repair/attempt 1)
+                     :ticket {:job-id "legacy-repair-job" :ticket/id "old-ticket"}
+                     :activation/accepted? true :terminal-repair-attempts 1}
+        migrated (sut/drive! (assoc base :state prior-state))
+        exhausted (sut/drive!
+                   (assoc base :state (assoc (:state migrated)
+                                             :activation/accepted? true)
+                          :job-fn (constantly {:job-id "typed-migration-job"
+                                              :state :done})))]
+    (is (= :awaiting-terminal (:status migrated)))
+    (is (true? (:repair? migrated)))
+    (is (= :typed-submission-contract-migration
+           (:repair/kind @seen-failure)))
+    (is (= 1 (get-in migrated [:state
+                               :typed-submission-migration-attempts])))
+    (is (= 1 (get-in migrated [:state :terminal-repair-attempts])))
+    (is (= :live-job-terminal-repair-exhausted (:error/code exhausted)))
+    (is (= 1 (count (filter #(and (vector? %)
+                                  (= :announce (first %)))
+                            @calls))))))
+
 (deftest typed-submission-replaces-conversational-report
   (let [calls (atom [])
         seen (atom nil)

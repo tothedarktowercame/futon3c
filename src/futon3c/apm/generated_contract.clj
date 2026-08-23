@@ -26,6 +26,9 @@
    :conversation-is-receipt-authority false
    :submission-conflict-policy "reject"
    :submission-covered-role-count 7
+   :typed-submission-migration-max 1
+   :typed-submission-migration-fresh-session true
+   :typed-submission-migration-preserves-snapshot true
    :terminal-output-repair-attempts 1
    :repair-feedback-findings-required true
    :client-timeout-is-success false})

@@ -263,13 +263,24 @@
   "Create the sole authority-preserving repair dispatch for an invalid typed
   role terminal. The rejected findings become durable request data."
   [request ticket job failure]
-  (let [body (-> request
+  (let [contract-migration?
+        (= :typed-submission-contract-migration (:repair/kind failure))
+        migration-nonce (when contract-migration?
+                          (machine/ledger-digest
+                           [(:dispatch/id request) (:ticket/id ticket)
+                            (:job-id job) submission/completion-contract]))
+        body (-> request
                  (dissoc :dispatch/id)
-                 (assoc :fresh-session? false
-                        :repair/attempt 1
+                 (assoc :fresh-session? contract-migration?
+                        :repair/attempt (if contract-migration?
+                                          :typed-contract-migration-1
+                                          1)
                         :repair/of-job-id (:job-id job)
                         :repair/of-ticket-id (:ticket/id ticket)
-                        :repair/findings (vec (:findings failure))))]
+                        :repair/findings (vec (:findings failure)))
+                 (cond-> contract-migration?
+                   (assoc :fresh-session-nonce migration-nonce
+                          :repair/kind :typed-submission-contract-migration)))]
     {:ok true :request (submission/prepare-request
                         (assoc body :dispatch/id
                                (machine/ledger-digest [body])))}))
