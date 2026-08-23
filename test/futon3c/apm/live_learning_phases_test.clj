@@ -46,16 +46,26 @@
                            (merge base {:action action
                                         :seat {:agent-id "f19-student"
                                                :invoke-ready? true}})))
+        request (assoc request :memory-snapshot
+                       {:receipt-id "promotion" :snapshot-id "snapshot"
+                        :snapshot-digest "digest"
+                        :accessible-memory-ids []})
         job {:job-id "j1" :agent-id "f19-student" :session-id "fresh-s1"
              :state :done
              :report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
                       :outcome :stuck :failure-account {:reason :gap}
-                      :memory-use {:queries [] :surfaced-ids [] :used-ids []}}}
+                      :memory-use {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :queries [] :surfaced-ids [] :used-ids []}}}
         ticket {:job-id "j1"}
         validated (sut/validate-terminal request ticket job)
         result (sut/receipt contract action (:receipts base) request ticket job validated)]
     (is (:ok validated))
     (is (:ok result))
+    (is (= {:receipt-id "promotion" :snapshot-id "snapshot"
+            :snapshot-digest "digest"}
+           (get-in result [:certificate :receipt/memory-snapshot])))
     (is (= "fresh-s1" (get-in result [:certificate :receipt/fresh-session-id])))))
 
 (deftest typed-terminal-repair-preserves-authority-and-carries-findings

@@ -200,7 +200,9 @@
                   :receipt/outcome (:outcome report)
                   :receipt/failure-account (:failure-account report)
                   :receipt/memory-use (:memory-use report)
-                  :receipt/memory-snapshot (:memory-snapshot request)}
+                  :receipt/memory-snapshot
+                  (select-keys (:memory-snapshot request)
+                               [:receipt-id :snapshot-id :snapshot-digest])}
                  :guide-intervention
                  {:receipt/type :guide-intervention
                   :receipt/intervention-ordinal
