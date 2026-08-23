@@ -64,8 +64,7 @@
 
 ;; Keep one page comfortably inside short live-view deadlines. The substrate
 ;; permits 1,000, but several 1,000-row hydrations measured at 4-5 seconds,
-;; leaving no room inside cascade-real's per-request timeout (raised 5s -> 20s
-;; 2026-08-23: cold reads measured 2.5-2.9s each x5 sequential fetches).
+;; leaving no room inside cascade-real's 5-second per-request timeout.
 (def ^:private substrate-page-size 250)
 (def default-request-budget 50)
 (def ^:private admission-retries 3)
