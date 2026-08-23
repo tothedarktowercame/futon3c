@@ -21,7 +21,7 @@
 (defn drive!
   "Advance one job by at most one externally visible state transition."
   [{:keys [request state announce-fn activate-fn job-fn persist-fn
-           terminal-validator receipt-provider]}]
+           terminal-validator receipt-provider terminal-repair-request-fn]}]
   (cond
     (not (and (map? request) (string? (:dispatch/id request))
               (every? fn? [announce-fn activate-fn job-fn persist-fn
@@ -90,23 +90,71 @@
                  :state state}))))))
 
     :else
-    (let [job (job-fn (get-in state [:ticket :job-id]))]
-      (if-not (contains? terminal-states (:state job))
+    (let [active-request (or (:active-request state) request)
+          job (job-fn (get-in state [:ticket :job-id]))]
+      (cond
+        (not (contains? terminal-states (:state job)))
         {:ok true :status :awaiting-terminal :state state}
-        (if-not (= :done (:state job))
-          {:ok false :error/code :live-job-terminal-failure
-           :finding (select-keys job [:job-id :agent-id :state :terminal-code])}
-          (let [validated (terminal-validator request (:ticket state) job)]
-            (if-not (:ok validated)
-              validated
-              (let [provided (receipt-provider request (:ticket state) job validated)]
-                (if-not (:ok provided)
-                  provided
-                  (let [next-state (assoc state :state/type :live-job-certified
-                                          :receipt (:certificate provided))
-                        persisted (persist-fn next-state)]
-                    (if (:ok persisted)
-                      {:ok true :status :certified :state next-state
-                       :certificate (:certificate provided)}
-                      {:ok false
-                       :error/code :live-job-receipt-persistence-failed})))))))))))
+
+        (not= :done (:state job))
+        {:ok false :error/code :live-job-terminal-failure
+         :finding (select-keys job [:job-id :agent-id :state :terminal-code])}
+
+        :else
+        (let [validated (terminal-validator active-request (:ticket state) job)]
+          (if (:ok validated)
+            (let [provided (receipt-provider active-request (:ticket state)
+                                             job validated)]
+              (if-not (:ok provided)
+                provided
+                (let [next-state (assoc state :state/type :live-job-certified
+                                        :receipt (:certificate provided))]
+                  (if (:ok (persist-fn next-state))
+                    {:ok true :status :certified :state next-state
+                     :certificate (:certificate provided)}
+                    {:ok false
+                     :error/code :live-job-receipt-persistence-failed}))))
+            (cond
+              (pos? (or (:terminal-repair-attempts state) 0))
+              (assoc validated :error/code :live-job-terminal-repair-exhausted
+                     :repair/attempts (:terminal-repair-attempts state))
+
+              (not (fn? terminal-repair-request-fn)) validated
+
+              :else
+              (let [repair (terminal-repair-request-fn
+                            active-request (:ticket state) job validated)
+                    repair-request (:request repair)]
+                (if-not (and (:ok repair) (map? repair-request)
+                             (string? (:dispatch/id repair-request)))
+                  {:ok false
+                   :error/code :live-job-terminal-repair-request-invalid
+                   :finding repair}
+                  (let [announced (ticket repair-request
+                                          (announce-fn repair-request))]
+                    (if-not (:ok announced)
+                      announced
+                      (let [next-state
+                            (assoc state
+                                   :active-request repair-request
+                                   :ticket (:ticket announced)
+                                   :activation/accepted? false
+                                   :terminal-repair-attempts 1
+                                   :terminal-repair/original-job-id (:job-id job)
+                                   :terminal-repair/findings (:findings validated))]
+                        (if-not (:ok (persist-fn next-state))
+                          {:ok false
+                           :error/code :live-job-terminal-repair-persistence-failed}
+                          (let [activated (activate-fn repair-request
+                                                       (:ticket announced))]
+                            (if-not (:ok activated)
+                              {:ok false :error/code :live-job-activation-failed
+                               :state next-state :finding activated}
+                              (let [accepted (assoc next-state
+                                                    :activation/accepted? true)]
+                                (if (:ok (persist-fn accepted))
+                                  {:ok true :status :awaiting-terminal
+                                   :repair? true :state accepted}
+                                  {:ok false
+                                   :error/code :live-job-activation-acceptance-persistence-failed
+                                   :state next-state})))))))))))))))))

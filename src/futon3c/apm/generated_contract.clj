@@ -19,6 +19,9 @@
    :persist-claim true
    :persist-receipt true
    :restart-same-job true
+   :typed-terminal-output-required true
+   :terminal-output-repair-attempts 1
+   :repair-feedback-findings-required true
    :client-timeout-is-success false})
 
 (def required-memory-policy

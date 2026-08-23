@@ -249,6 +249,20 @@
          :close-frame "Audit the complete receipt graph and return a content-addressable trace result.")
        " Return exactly one EDN map including :command-own-exit, :frame-id, and :problem-id."))
 
+(defn terminal-repair-request
+  "Create the sole authority-preserving repair dispatch for an invalid typed
+  role terminal. The rejected findings become durable request data."
+  [request ticket job failure]
+  (let [body (-> request
+                 (dissoc :dispatch/id)
+                 (assoc :fresh-session? false
+                        :repair/attempt 1
+                        :repair/of-job-id (:job-id job)
+                        :repair/of-ticket-id (:ticket/id ticket)
+                        :repair/findings (vec (:findings failure))))]
+    {:ok true :request (assoc body :dispatch/id
+                              (machine/ledger-digest [body]))}))
+
 (defn run-live!
   [{:keys [contract action receipts request state-path agency-base
            snapshot-publish-fn]
@@ -287,6 +301,7 @@
        (runtime/http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
     :persist-fn #(runtime/atomic-persist! state-path %)
     :terminal-validator validate-terminal
+    :terminal-repair-request-fn terminal-repair-request
     :receipt-provider
     (fn [request ticket job validated]
       (if (= :promote-solver (:phase action))

@@ -58,6 +58,22 @@
     (is (:ok result))
     (is (= "fresh-s1" (get-in result [:certificate :receipt/fresh-session-id])))))
 
+(deftest typed-terminal-repair-preserves-authority-and-carries-findings
+  (let [repair (sut/terminal-repair-request
+                {:dispatch/id "original" :frame-id "f25"
+                 :problem-id "m94A02" :fresh-session? true
+                 :memory-snapshot {:snapshot-digest "snapshot"}}
+                {:ticket/id "ticket-1"}
+                {:job-id "job-1"}
+                {:findings [:command-own-exit-nonzero :frame-mismatch]})
+        request (:request repair)]
+    (is (:ok repair))
+    (is (false? (:fresh-session? request)))
+    (is (= "snapshot" (get-in request [:memory-snapshot :snapshot-digest])))
+    (is (= [:command-own-exit-nonzero :frame-mismatch]
+           (:repair/findings request)))
+    (is (not= "original" (:dispatch/id request)))))
+
 (deftest guide-must-prove-channel-isolation
   (let [request {:dispatch/type :guide-intervention :agent-id "f19-guide"
                  :frame-id "f19" :problem-id "a01J05"}

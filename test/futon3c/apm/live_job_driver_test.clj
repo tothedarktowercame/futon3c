@@ -88,3 +88,53 @@
                                     :request (assoc request :dispatch/id "other")
                                     :state dispatched))]
       (is (= :live-job-request-state-mismatch (:error/code result))))))
+
+(deftest invalid-typed-terminal-gets-one-durable-repair-job
+  (let [calls (atom [])
+        jobs (atom {"job-1" {:job-id "job-1" :agent-id "f19-proctor"
+                             :state :done}
+                    "job-2" {:job-id "job-2" :agent-id "f19-proctor"
+                             :state :running}})
+        base (-> (effects calls (atom nil))
+                 (assoc :job-fn (fn [id] (swap! calls conj [:poll id])
+                                  (get @jobs id))
+                        :announce-fn (fn [r]
+                                       (swap! calls conj [:announce (:dispatch/id r)])
+                                       {:ok true :job-id (if (:repair/attempt r)
+                                                           "job-2" "job-1")})
+                        :terminal-validator
+                        (fn [_ _ job]
+                          (if (= "job-1" (:job-id job))
+                            {:ok false :error/code :typed-terminal-invalid
+                             :findings [:frame-mismatch]}
+                            {:ok true}))
+                        :terminal-repair-request-fn
+                        (fn [r ticket job failure]
+                          {:ok true
+                           :request (assoc r :dispatch/id "repair-dispatch"
+                                           :repair/attempt 1
+                                           :repair/of-job-id (:job-id job)
+                                           :repair/of-ticket-id (:ticket/id ticket)
+                                           :repair/findings (:findings failure))})))
+        dispatched (:state (sut/drive! base))
+        repairing (sut/drive! (assoc base :state dispatched))]
+    (is (= :awaiting-terminal (:status repairing)))
+    (is (true? (:repair? repairing)))
+    (is (= "job-2" (get-in repairing [:state :ticket :job-id])))
+    (is (= [:frame-mismatch]
+           (get-in repairing [:state :terminal-repair/findings])))
+    (is (= 1 (get-in repairing [:state :terminal-repair-attempts])))
+    (is (< (.indexOf @calls [:persist :live-job-dispatched])
+           (.lastIndexOf @calls :activate)))))
+
+(deftest second-invalid-terminal-exhausts-repair-bound
+  (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
+        state (assoc (:state (sut/drive! (effects calls job)))
+                     :terminal-repair-attempts 1)
+        result (sut/drive!
+                (assoc (effects calls job) :state state
+                       :terminal-validator
+                       (constantly {:ok false :findings [:bad-shape]})
+                       :terminal-repair-request-fn (constantly {:ok true})))]
+    (is (= :live-job-terminal-repair-exhausted (:error/code result)))
+    (is (= 1 (:repair/attempts result)))))
