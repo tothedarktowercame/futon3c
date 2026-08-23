@@ -209,6 +209,51 @@
            (live/hole-section []) (live/arrow-section []) (live/held-section [])
            (live/mission-pattern-section [])))))
 
+(deftest graph-fetches-are-bounded-at-two
+  (let [active (atom 0)
+        max-active (atom 0)]
+    (with-redefs [live/fetch-edges
+                  (fn [_]
+                    (let [n (swap! active inc)]
+                      (swap! max-active max n)
+                      (Thread/sleep 20)
+                      (swap! active dec)
+                      []))]
+      (let [results (live/fetch-graph-sections)]
+        (is (= 7 (count results)))
+        (is (= 2 @max-active))
+        (is (every? #(= :ok (:status %)) (vals results)))))))
+
+(deftest graph-fetch-failure-is-an-explicit-honest-hole
+  (let [counts {"clock/clocked-on" 67
+                "cascade/cluster-member" 117
+                "cascade/hole-target" 0
+                "code/v05/mined-move" 177
+                "held/on-mission" 124
+                "mission-scope/pattern" 971}]
+    (with-redefs [live/fetch-edges
+                  (fn [hx-type]
+                    (if (= "mine/meme" hx-type)
+                      (throw (ex-info "induced one-section timeout" {:timeout-ms 1}))
+                      (vec (repeat (get counts hx-type) {:hx/endpoints []}))))
+                  live/tickets-section (fn [_] {:count-total 0 :items []})]
+      (let [graph (live/cascade-real-graph)
+            status (:section-status graph)]
+        (is (= :failed (get-in status ["mine/meme" :status])))
+        (is (= "mine/meme" (get-in status ["mine/meme" :hyperedge-type])))
+        (is (= "induced one-section timeout"
+               (get-in status ["mine/meme" :error :message])))
+        (is (= {:status :ok
+                :hyperedge-type "cascade/hole-target"
+                :row-count 0}
+               (get status "cascade/hole-target"))
+            "healthy empty and failed are distinct response shapes")
+        (is (= counts
+               (into {} (map (fn [[hx-type _]]
+                               [hx-type (get-in status [hx-type :row-count])]))
+                     counts))
+            "all six independent sections survive with their full row counts")))))
+
 (deftest tickets-section-sorts-unclocked-docs
   (testing "tickets are recent mission/excursion docs minus durable and live clocks"
     (let [root (.toFile (java.nio.file.Files/createTempDirectory "cascade-tickets" (make-array java.nio.file.attribute.FileAttribute 0)))

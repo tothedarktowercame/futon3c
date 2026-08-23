@@ -23,7 +23,8 @@
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.registry :as registry]
             [futon3c.logic.cascade-real :as cr]
-            [futon3c.substrate.client :as substrate]))
+            [futon3c.substrate.client :as substrate])
+  (:import (java.util.concurrent Callable Executors)))
 
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
 (def ^:private fetch-timeout-ms 5000)
@@ -317,20 +318,21 @@
 (defn tickets-section
   "Recent unclocked mission/excursion docs. Read-only; degrades empty if disk,
    lineage, or live-clock state hiccups."
-  []
-  (try
-    (let [clocked (set/union (durable-clocked-stems (fetch-edges "clock/clocked-on"))
-                             (live-clocked-stems))
-          items (->> (doc-files)
-                     (map doc-row)
-                     (remove #(contains? clocked (clock-stem-key (:stem %))))
-                     (sort-by :mtime-ms >)
-                     vec)]
-      {:count-total (count items)
-       :items (vec (take 40 items))})
-    (catch Throwable _
-      {:count-total 0
-       :items []})))
+  ([] (tickets-section (fetch-edges "clock/clocked-on")))
+  ([clock-edges]
+   (try
+     (let [clocked (set/union (durable-clocked-stems clock-edges)
+                              (live-clocked-stems))
+           items (->> (doc-files)
+                      (map doc-row)
+                      (remove #(contains? clocked (clock-stem-key (:stem %))))
+                      (sort-by :mtime-ms >)
+                      vec)]
+       {:count-total (count items)
+        :items (vec (take 40 items))})
+     (catch Throwable _
+       {:count-total 0
+        :items []}))))
 
 (defn lineage-section
   "O3 — agent→target clock edges (who/which session is on each mission/excursion/
@@ -445,6 +447,57 @@
           ;; renderer buckets on this key.
           :relation "applied"})))
 
+(def ^:private graph-hyperedge-types
+  ["clock/clocked-on"
+   "cascade/cluster-member"
+   "cascade/hole-target"
+   "code/v05/mined-move"
+   "held/on-mission"
+   "mission-scope/pattern"
+   "mine/meme"])
+
+(defn fetch-graph-sections
+  "Fetch the graph's independent typed walks with exactly two workers. Each
+   result is explicit: an authoritative empty read is `:ok` with zero rows;
+   a failed read is `:failed` with its type and cause. Cursor-linked pages
+   within one `fetch-edges` call remain sequential."
+  []
+  (let [pool (Executors/newFixedThreadPool 2)]
+    (try
+      (let [tasks (into {}
+                        (map (fn [hx-type]
+                               [hx-type
+                                (.submit pool
+                                         ^Callable
+                                         (fn []
+                                           (try
+                                             {:status :ok
+                                              :hyperedge-type hx-type
+                                              :edges (vec (fetch-edges hx-type))}
+                                             (catch Throwable t
+                                               {:status :failed
+                                                :hyperedge-type hx-type
+                                                :edges []
+                                                :error {:message (or (ex-message t) (str t))
+                                                        :class (.getName (class t))
+                                                        :data (some-> (ex-data t) pr-str)}}))))]))
+                        graph-hyperedge-types)]
+        (into {} (map (fn [[hx-type task]] [hx-type (.get task)]) tasks)))
+      (finally
+        (.shutdownNow pool)))))
+
+(defn- fetched-edges [fetches hx-type]
+  (:edges (get fetches hx-type)))
+
+(defn- fetch-status [fetches]
+  (into {}
+        (map (fn [[hx-type {:keys [status edges error]}]]
+               [hx-type (cond-> {:status status
+                                 :hyperedge-type hx-type}
+                          (= :ok status) (assoc :row-count (count edges))
+                          error (assoc :error error))]))
+        fetches))
+
 (defn cascade-real-graph
   "The per-section STRUCTURE (nodes/edges) the pipeline-pattern-cascade BODY renders,
    from live substrate-2 rows — the reconstruction of the cascade itself, not just the
@@ -454,14 +507,16 @@
    landed + queryable (`pattern/library`, `pattern/clause`) but not yet cited into the
    cascade body (O4 enrichment, post-campaign)."
   []
-  (let [lineage  (lineage-section (fetch-edges "clock/clocked-on"))
-        clusters (cluster-section (fetch-edges "cascade/cluster-member"))
-        holes    (hole-section    (fetch-edges "cascade/hole-target"))
-        arrows   (arrow-section   (fetch-edges "code/v05/mined-move"))
-        held     (held-section    (fetch-edges "held/on-mission"))
-        patterns (mission-pattern-section (fetch-edges "mission-scope/pattern"))
-        tickets  (tickets-section)]
+  (let [fetches  (fetch-graph-sections)
+        lineage  (lineage-section (fetched-edges fetches "clock/clocked-on"))
+        clusters (cluster-section (fetched-edges fetches "cascade/cluster-member"))
+        holes    (hole-section (fetched-edges fetches "cascade/hole-target"))
+        arrows   (arrow-section (fetched-edges fetches "code/v05/mined-move"))
+        held     (held-section (fetched-edges fetches "held/on-mission"))
+        patterns (mission-pattern-section (fetched-edges fetches "mission-scope/pattern"))
+        tickets  (tickets-section (fetched-edges fetches "clock/clocked-on"))]
     {:as-of-ms (System/currentTimeMillis)
+     :section-status (fetch-status fetches)
      :lineage  lineage
      :clusters clusters
      :holes    holes
