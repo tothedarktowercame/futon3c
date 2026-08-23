@@ -167,7 +167,12 @@
                  (= required-retirement-preconditions passed)
                  (keyword? context))
       {:ok false :error/code :workspace-retirement-audit-invalid
-       :passed passed :required required-retirement-preconditions}
+       :passed passed :required required-retirement-preconditions
+       :validation/valid? (:valid? validation)
+       :validation/findings (:findings validation)
+       :terminal-head terminal-head
+       :validation/head (:head validation)
+       :context context}
       (let [body {:audit/type :workspace-retirement
                   :workspace/id (:workspace/id lease)
                   :terminal-head terminal-head :context context

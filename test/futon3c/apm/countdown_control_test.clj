@@ -581,3 +581,14 @@
       (is (= "jit-m-five-v2" (:queue-name @captured)))
       (is (= 25 (:frame-number-base @captured)))
       (is (= [{:problem/id "p1"}] (:problems @captured))))))
+
+(deftest retirement-job-ownership-ignores-diagnostic-history
+  (let [frame {:frame/id "f27"}
+        diagnostic {:state "running" :agent-id "codex-10"
+                    :events [{:type "tool_use"
+                              :text "inspected /workspaces/f27-p-student"}]}
+        role-job {:state "parked" :agent-id "f27-student"}]
+    (is (false? (#'sut/active-frame-job? frame diagnostic)))
+    (is (#'sut/active-frame-job? frame role-job))
+    (is (false? (#'sut/active-frame-job?
+                 frame (assoc role-job :state "done"))))))

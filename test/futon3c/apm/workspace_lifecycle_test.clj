@@ -150,3 +150,18 @@
       (is (addressed? receipt :receipt/id))
       (is (= (:audit/id audit) (:audit/id receipt)))
       (is (= (:workspace/id lease) (:workspace/id receipt))))))
+
+(deftest invalid-retirement-audit-reports-the-hidden-validation-failure
+  (let [validation {:valid? false :findings [:workspace-probe-failed]
+                    :head "observed"}
+        result (sut/certify-retirement-audit
+                {:lease {:workspace/id "w"}
+                 :validation validation
+                 :observations
+                 (zipmap sut/required-retirement-preconditions (repeat true))
+                 :terminal-head "expected"
+                 :context :test-auditor})]
+    (is (= :workspace-retirement-audit-invalid (:error/code result)))
+    (is (= [:workspace-probe-failed] (:validation/findings result)))
+    (is (= "expected" (:terminal-head result)))
+    (is (= "observed" (:validation/head result)))))

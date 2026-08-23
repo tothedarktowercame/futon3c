@@ -1278,6 +1278,18 @@
        :phase (:phase active) :claim (get-in loaded [:projection :active/claim])
        :frame-id (:frame-id active) :problem-id (:problem-id active)})))
 
+(defn- active-frame-job?
+  "True only when JOB is an active durable dispatch owned by FRAME.
+
+   Do not search the serialized job event history for workspace paths: tool
+   output and diagnostic prompts may quote those paths without owning the
+   workspace, which would make the observer itself prevent retirement."
+  [frame job]
+  (and (contains? #{:announced :queued :running :invoking :parked}
+                  (some-> (:state job) keyword))
+       (str/starts-with? (str (:agent-id job))
+                         (str (:frame/id frame) "-"))))
+
 (defn- jit-retirement-audit
   [agency-base paths frame terminal-receipt role lease]
   (let [terminal-head (get-in terminal-receipt [:workspace/terminal-heads role])
@@ -1285,13 +1297,8 @@
                                                  {:expected-head terminal-head})
         jobs-response (job-port/list-jobs agency-base)
         jobs (or (:jobs jobs-response) [])
-        workspace (:workspace/path lease)
         live-reference?
-        (some #(and (contains? #{:announced :queued :running :invoking :parked}
-                                (some-> (:state %) keyword))
-                    (or (str/includes? (pr-str %) workspace)
-                        (str/starts-with? (str (:agent-id %))
-                                          (str (:frame/id frame) "-")))) jobs)
+        (some #(active-frame-job? frame %) jobs)
         loaded (ledger/read-ledger (Path/of (:ledger-path paths)
                                             (make-array String 0)))
         observations
