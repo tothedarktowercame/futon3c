@@ -58,7 +58,8 @@
    :terminal-lifecycle-actions-covered ["close-block" "close-campaign"]
    :retirement-binds-recorded-terminal-head true
    :terminal-collection-is-supervisor-progress true
-   :artifact-identity-from-authority-not-observation true})
+   :artifact-identity-from-authority-not-observation true
+   :preflight-requires-positive-sorry-baseline true})
 
 (def required-memory-policy
   {:content-addressed-snapshot true :admit-after-solve-verify true

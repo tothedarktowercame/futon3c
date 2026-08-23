@@ -82,11 +82,25 @@
         extra-warnings (assoc-in (successful-job request ticket)
                                  [:report :lean :warnings] 3)]
     (is (:ok (sut/validate-terminal request ticket extra-warnings)))
-    (doseq [bad [(assoc-in extra-warnings [:report :lean :sorry-warnings] 2)
-                 (assoc-in extra-warnings [:report :lean :errors] 1)
+    (is (:ok (sut/validate-terminal
+              request ticket
+              (assoc-in extra-warnings [:report :lean :sorry-warnings] 2))))
+    (doseq [bad [(assoc-in extra-warnings [:report :lean :errors] 1)
                  (assoc-in extra-warnings [:report :lean :warnings] 0)]]
       (is (= [:lean-baseline-mismatch]
              (:findings (sut/validate-terminal request ticket bad)))))))
+
+(deftest preflight-measures-a-positive-multi-sorry-baseline
+  (let [request (:request (sut/build-request inputs))
+        ticket (:ticket (sut/record-dispatch request {:ok true :job-id "multi-sorry"}))
+        job (-> (successful-job request ticket)
+                (assoc-in [:report :lean :warnings] 5)
+                (assoc-in [:report :lean :sorry-warnings] 3))]
+    (is (:ok (sut/validate-terminal request ticket job)))
+    (is (= [:lean-baseline-mismatch]
+           (:findings (sut/validate-terminal
+                       request ticket
+                       (assoc-in job [:report :lean :sorry-warnings] 0)))))))
 
 (deftest typed-observation-is-unwrapped-while-artifact-identity-stays-authoritative
   (let [request (:request (sut/build-request inputs))

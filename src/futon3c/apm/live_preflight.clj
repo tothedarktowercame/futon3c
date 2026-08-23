@@ -102,12 +102,15 @@
           (not= :done (:state job)) (conj :job-not-successfully-terminal)
           (seq missing) (conj :terminal-report-fields-missing)
           (not= 0 (:command-own-exit report)) (conj :command-own-exit-nonzero)
-          ;; Preflight requires exactly one unresolved theorem and no errors.
+          ;; Preflight measures a non-vacuous unresolved baseline and no errors.
+          ;; A problem may legitimately expose several helper declarations as
+          ;; sorries; the later verification boundary, not preflight, requires
+          ;; the terminal count to be zero.
           ;; Total warnings may also include independent compiler/linter
           ;; notices (for example deprecations); equating that count with the
           ;; sorry count rejects a sound baseline for unrelated reasons.
           (not (and (= 0 (:exit lean))
-                    (= 1 (:sorry-warnings lean))
+                    (pos-int? (:sorry-warnings lean))
                     (= 0 (:errors lean))
                     (nat-int? (:warnings lean))
                     (<= (:sorry-warnings lean) (:warnings lean))))
