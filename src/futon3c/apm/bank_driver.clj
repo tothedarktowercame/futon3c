@@ -59,11 +59,16 @@
   (when (success? result)
     (when-let [inside (second (re-find #"depends on axioms: \[([^]]*)\]"
                                       (str (:out result) "\n" (:err result))))]
-      (->> (str/split inside #",")
-           (map str/trim)
-           (remove str/blank?)
-           (map symbol)
-           vec))))
+      (let [found (->> (str/split inside #",")
+                       (map str/trim)
+                       (remove str/blank?)
+                       (map symbol)
+                       set)]
+        ;; Canonical order: the permitted axioms as bank/permitted-axioms lists
+        ;; them, then anything else sorted. Lean prints collection order, which
+        ;; differs between `#print axioms` and a NameSet walk.
+        (vec (concat (filter found bank/permitted-axioms)
+                     (sort (remove (set bank/permitted-axioms) found))))))))
 
 (defn- sorry-warning-count [result]
   (count (re-seq #"declaration uses `sorry`"

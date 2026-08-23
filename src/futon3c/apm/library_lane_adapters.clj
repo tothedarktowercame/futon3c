@@ -142,6 +142,43 @@
     {:ok false :error/code :bank-ruling-evidence-insufficient
      :finding outcome}))
 
+(defn- module-name
+  "ConstructionTargets/CircleHomology.lean -> ConstructionTargets.CircleHomology"
+  [path]
+  (-> path (str/replace #"\.lean$" "") (str/replace "/" ".")))
+
+(defn library-axiom-script
+  "Post-merge axiom witness for a :partial-banked ruling.
+
+  The problem target is still sorry-backed by construction, so `#print axioms
+  <target>` is the wrong question. The increment is the landed library, so
+  collect the axioms of EVERY constant the landed modules define (not just
+  named declarations -- instances, auxiliary lemmas and equation lemmas
+  included) and print them on the line bank-driver/parse-axioms reads. The
+  modules are built first because the candidate worktree has no oleans for
+  them yet; the roll-up gate then reuses that build."
+  [module-paths]
+  (let [mods (mapv module-name module-paths)
+        lean (str (str/join "\n" (map #(str "import " %) mods)) "\n"
+                  "open Lean Elab Command in\n"
+                  "run_cmd do\n"
+                  "  let env ← getEnv\n"
+                  "  let mods : Array Name := #["
+                  (str/join ", " (map #(str "`" %) mods)) "]\n"
+                  "  let mut axs : NameSet := {}\n"
+                  "  let mut n := 0\n"
+                  "  for (c, _) in env.constants.map₁.toList do\n"
+                  "    if let some m := env.getModuleFor? c then\n"
+                  "      if mods.contains m then\n"
+                  "        n := n + 1\n"
+                  "        let (_, s) := ((CollectAxioms.collect c).run env).run {}\n"
+                  "        for a in s.axioms do axs := axs.insert a\n"
+                  "  if n == 0 then throwError \"no constants found in landed modules\"\n"
+                  "  logInfo m!\"'library' ({n} constants) depends on axioms: {axs.toList}\"\n")]
+    (str "set -e; f=$(mktemp /tmp/futon3c-library-axioms-XXXXXX.lean); "
+         "cat > \"$f\" <<'LEAN'\n" lean "LEAN\n"
+         "lake build " (str/join " " mods) " >/dev/null && lake env lean \"$f\"")))
+
 (defn make-bank-request-fn
   "Build the adapter injected into library-lane-runner/run-one!.
 
@@ -185,8 +222,10 @@
         :else
         (let [ruling (:ruling ruled)
               axiom-script
-              (str "{ cat '" path "'; printf '\\n#print axioms "
-                   keying-target "\\n'; } | lake env lean --stdin")]
+              (if (= :partial-banked ruling)
+                (library-axiom-script (:receipt/library-modules solve-receipt))
+                (str "{ cat '" path "'; printf '\\n#print axioms "
+                     keying-target "\\n'; } | lake env lean --stdin"))]
           {:ok true
            :ruling ruling
            :repository (:repository problem)

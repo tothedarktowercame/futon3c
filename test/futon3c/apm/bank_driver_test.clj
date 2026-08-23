@@ -173,3 +173,10 @@
                (get-in result
                        [:receipt :receipt/status-recomputed :classification]))))
       (finally (delete-tree! repo)))))
+
+(deftest parse-axioms-is-order-canonical
+  (let [parse #'driver/parse-axioms]
+    (is (= '[propext Classical.choice Quot.sound]
+           (parse {:exit 0 :out "'library' (26 constants) depends on axioms: [Quot.sound, Classical.choice, propext]" :err ""})))
+    (is (= '[propext Classical.choice Quot.sound sorryAx]
+           (parse {:exit 0 :out "'apm_x' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]" :err ""})))))
