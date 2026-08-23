@@ -1,0 +1,134 @@
+{:readiness/id :apm-countdown-10-v1
+ :readiness/scope
+ "Operator-step frames 18 through 27 one at a time through the complete APM
+  map/reduce cycle. This is a qualification countdown, not yet an autonomous
+  batch permit."
+
+ :launch-rule
+ {:may-start-frame-18-remaining-cycle-when
+  #{:complete-phase-and-receipt-graph
+    :executable-role-handlers
+    :branch-addressed-apparatus-validation
+    :ledger-derived-live-projection}
+ :may-register-frames-19-through-27-when
+  #{:ten-unit-pinned-manifest :repeatable-workspace-provisioning
+    :workspace-retirement-enforced}
+  :may-defer-until-ten-closes
+  #{:analyst-architecture-synthesis}
+  :must-not-defer
+  #{:student-memory-use-evidence :scribe-disposition-evidence
+    :guide-intervention-evidence :close-gate-validation
+    :solver-memory-review-and-snapshot :analyst-post-close-receipt}}
+
+ :ready
+ [{:capability :lean-generated-qualified-campaign-contract
+   :evidence ["holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"
+              "data/apm-validation/qualification-report-v1.edn"
+              "src/futon3c/apm/qualification.clj"
+              "test/futon3c/apm/qualification_test.clj"]}
+  {:capability :append-only-ledger-and-deterministic-obligations
+   :evidence ["src/futon3c/apm/campaign_machine.clj"
+              "src/futon3c/apm/campaign_regulator.clj"]}
+  {:capability :one-step-inspect-permit-reinspect-execute
+   :evidence ["src/futon3c/apm/campaign_stepper.clj"
+              "test/futon3c/apm/campaign_stepper_test.clj"]}
+  {:capability :frame-admission-and-proof-validation
+   :evidence ["src/futon3c/apm/frame_specification.clj"
+              "holes/labs/M-apm-demonstration/frame-18-preflight-receipt.edn"
+              "holes/labs/M-apm-demonstration/frame-18-solve-receipt.edn"
+              "holes/labs/M-apm-demonstration/frame-18-verify-receipt.edn"]}
+  {:capability :batch-level-analyst-contract
+   :evidence ["src/futon3c/apm/analyst_campaign.clj"
+              "test/futon3c/apm/analyst_campaign_test.clj"]}
+  {:capability :two-promotion-learning-contract
+   :evidence ["holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+              "src/futon3c/apm/memory_snapshot.clj"
+              "test/futon3c/apm/learning_loop_dry_run_test.clj"]}
+  {:capability :f19-live-launch-preparation
+   :evidence ["src/futon3c/apm/live_launch_preparation.clj"
+              "test/futon3c/apm/live_launch_preparation_test.clj"
+              "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v1.edn"]}]
+
+ :blocking-slices
+ [{:slice/id :complete-phase-and-receipt-graph
+   :order 1 :status :complete
+   :problem
+   "The executable campaign has only preflight, solve, verify, and close-frame,
+    while the frame contract requires three Student attempts, intervening Guide
+    work, Scribe reduction, and their typed receipts."
+   :evidence ["src/futon3c/apm/frame18_control.clj"
+              "holes/labs/M-apm-demonstration/frame-map-reduce-plan-v1.edn"]
+   :done-when
+   "The registered phase graph names every map/reduce leg and schemas validate
+    every completion receipt before its transition."}
+
+  {:slice/id :executable-role-handlers
+   :order 2 :status :complete
+   :problem
+   "The frame-18 adapter has handlers only for open-block, open-frame,
+    preflight, solve, and verify; qualification derives close evidence from a
+    trace-check that this adapter never supplies."
+   :evidence ["src/futon3c/apm/frame18_control.clj"
+              "src/futon3c/apm/campaign_qualification.clj"]
+   :done-when
+   "Student, Guide, Scribe, close-frame, and post-close observation handlers
+    produce durable receipts and the close inspection passes from those facts."}
+
+  {:slice/id :branch-addressed-apparatus-validation
+   :order 3 :status :complete
+   :problem
+   "The apparatus gate compares the running control worktree HEAD with the
+    frame's historical harness hash. Legitimate machine development therefore
+    invalidates the open frame and recreates the live-worktree/restart coupling."
+   :evidence ["src/futon3c/apm/frame18_control.clj"
+              "holes/labs/M-apm-demonstration/frame-18-control.edn"]
+   :done-when
+   "A frame validates its frozen apparatus from an immutable branch/commit
+    checkout or Git object identity, independently of the developer worktree."}
+
+  {:slice/id :ledger-derived-live-projection
+   :order 4 :status :complete
+   :problem
+   "Certificates and projection files exist, but no tested adapter projects
+    the active ledger frame and its receipts into the live problem buffer."
+   :evidence ["src/futon3c/apm/campaign_projection.clj"
+              "src/futon3c/apm/frame18_control.clj"]
+   :done-when
+   "A replay test and a live canary show the problem buffer is an exact,
+    content-addressed projection of the ledger after every step."}
+
+  {:slice/id :ten-unit-pinned-manifest
+   :order 5 :status :complete
+   :problem
+   "The registered countdown block contains only f18/a97J07; frames 19--27 do
+    not yet have problem identities, revisions, arms, registrations, or pins."
+   :evidence ["src/futon3c/apm/frame18_control.clj"
+              "data/apm-campaigns/frame-18-bounded-admission/ledger.edn"]
+   :done-when
+   "One validated manifest contains exactly f18--f27 in order, each with a
+    non-topology classification and immutable problem/apparatus identities."}
+
+  {:slice/id :repeatable-workspace-provisioning
+   :order 6 :status :complete
+   :problem
+   "Solver and Student workspaces are hand-pinned f18 paths; there is no
+    tested per-manifest-unit provision/validate/retire operation."
+   :evidence ["holes/labs/M-apm-demonstration/frame-18-control.edn"
+              "src/futon3c/apm/frame_specification.clj"]
+   :done-when
+   "A dry run provisions isolated branch-backed workspaces for a second
+    manifest unit, validates their execution substrates, then retires the
+    exact worktrees while retaining resolvable branches and receipts."
+   :policy "holes/labs/M-apm-demonstration/workspace-lifecycle-policy-v1.edn"}]
+
+ :not-a-launch-blocker
+ [{:item :analyst-architecture-output-per-frame
+   :reason "The Analyst observes every close but reviews the initial ten-frame
+            window as a series; architectural proposals remain evidence-driven."}
+  {:item :bounded-batch-autonomy
+   :reason "The countdown deliberately retains one operator permit per step;
+            batch permits are the subsequent qualification target."}]
+
+ :estimated-remaining-structural-slices 0
+ :next-slice nil
+ :structurally-ready? true}

@@ -22,6 +22,10 @@
 (defn- encode [x]
   (URLEncoder/encode (if (keyword? x) (subs (str x) 1) (str x)) "UTF-8"))
 
+(def hyperedge-page-limit
+  "Maximum accepted by the authoritative hyperedges endpoint."
+  1000)
+
 (defn- response-body
   [response]
   (try (edn/read-string (:body response))

@@ -1,0 +1,105 @@
+(ns futon3c.apm.queued-frame-terminal
+  "Atomic terminal boundary for a just-in-time queued frame.
+
+  Solved-problem banking retains the exact certified branch. Workspace removal
+  is separately authorized by independent retirement audits; neither operation
+  is allowed from a conversational or merely terminal-looking status."
+  (:require [futon3c.apm.campaign-machine :as machine]))
+
+(def frame-results #{:closed :partial :void})
+
+(defn addressed? [receipt id-key]
+  (= (get receipt id-key)
+     (machine/ledger-digest [(dissoc receipt id-key)])))
+
+(defn validate-terminal [frame receipt]
+  (let [findings
+        (cond-> []
+          (not= :frame-terminal (:receipt/type receipt))
+          (conj :terminal-receipt-type-invalid)
+          (not (addressed? receipt :receipt/id))
+          (conj :terminal-receipt-content-invalid)
+          (not= (:frame/id frame) (:frame/id receipt))
+          (conj :terminal-frame-mismatch)
+          (not= (:problem/id frame) (:problem/id receipt))
+          (conj :terminal-problem-mismatch)
+          (not (contains? frame-results (:frame/result receipt)))
+          (conj :terminal-frame-result-invalid)
+          (not (contains? #{:solved :partial :invalid} (:problem/outcome receipt)))
+          (conj :terminal-problem-outcome-invalid)
+          (not (and (string? (:verify-receipt/id receipt))
+                    (re-matches #"[0-9a-f]{64}" (:verify-receipt/id receipt))))
+          (conj :terminal-verify-receipt-invalid)
+          (not (and (string? (get-in receipt [:solver :branch]))
+                    (string? (get-in receipt [:solver :head]))
+                    (re-matches #"[0-9a-f]{40}"
+                                (get-in receipt [:solver :head]))))
+          (conj :terminal-solver-identity-invalid))
+        heads (:workspace/terminal-heads receipt)]
+    (if (and (= #{:solver :student} (set (keys heads)))
+             (every? #(and (string? %) (re-matches #"[0-9a-f]{40}" %))
+                     (vals heads))
+             (= (get heads :solver) (get-in receipt [:solver :head])))
+      (if (seq findings)
+        {:ok false :error/code :queued-frame-terminal-invalid :findings findings}
+        {:ok true :receipt receipt})
+      {:ok false :error/code :queued-frame-terminal-invalid
+       :findings (conj findings :terminal-workspace-heads-invalid)})))
+
+(defn build-problem-bank [frame terminal]
+  (let [body {:receipt/type :queued-problem-bank
+              :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+              :problem/outcome (:problem/outcome terminal)
+              :frame/result (:frame/result terminal)
+              :verify-receipt/id (:verify-receipt/id terminal)
+              :source/terminal-receipt-id (:receipt/id terminal)
+              :solver/branch (get-in terminal [:solver :branch])
+              :solver/head (get-in terminal [:solver :head])
+              :workspace/terminal-heads (:workspace/terminal-heads terminal)
+              :branch-retained? true}]
+    (assoc body :receipt/id (machine/ledger-digest [body]))))
+
+(defn retire!
+  "Bank, independently audit, and retire one terminal frame.
+
+  The bank receipt is persisted before workspace retirement. Every audit must
+  be supplied by AUDIT-FN and satisfy workspace-lifecycle's full certificate."
+  [{:keys [frame terminal-receipt leases audit-fn retire-workspace-fn
+           persist-bank-fn retire-seats-fn]}]
+  (let [terminal-check (validate-terminal frame terminal-receipt)]
+    (cond
+      (not (:ok terminal-check)) terminal-check
+      (not (every? fn? [audit-fn retire-workspace-fn persist-bank-fn
+                        retire-seats-fn]))
+      {:ok false :error/code :queued-frame-terminal-provider-missing}
+      (not= #{:solver :student} (set (keys leases)))
+      {:ok false :error/code :queued-frame-terminal-leases-incomplete}
+      :else
+      (let [bank (build-problem-bank frame terminal-receipt)
+            persisted (persist-bank-fn frame bank)]
+        (if-not (:ok persisted)
+          {:ok false :error/code :queued-frame-bank-persistence-failed}
+          (let [retirements
+                (reduce
+                 (fn [result [role lease]]
+                   (if-not (:ok result)
+                     (reduced result)
+                     (let [audit-result (audit-fn frame terminal-receipt role lease)
+                           audit (:audit audit-result)]
+                       (if-not (:ok audit-result)
+                         (reduced audit-result)
+                         (let [retired (retire-workspace-fn lease audit)]
+                           (if (:ok retired)
+                             (assoc-in result [:workspace-receipts role]
+                                       (:receipt retired))
+                             (reduced retired)))))))
+                 {:ok true :workspace-receipts {}}
+                 (sort-by (comp name key) leases))]
+            (if-not (:ok retirements)
+              retirements
+              (let [seats (retire-seats-fn frame terminal-receipt)]
+                (if-not (:ok seats)
+                  seats
+                  {:ok true :bank-receipt bank
+                   :workspace-receipts (:workspace-receipts retirements)
+                   :seat-retirement seats})))))))))

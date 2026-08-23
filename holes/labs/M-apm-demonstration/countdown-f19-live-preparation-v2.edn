@@ -1,0 +1,36 @@
+{:preparation/version 2
+ :campaign/id "apm-countdown-r4"
+ :frame/id "f19" :problem/id "a01J05"
+ :manifest/id "8e1bacf4ef7a6ba789e933670642b5c250dc855ebfe2af91c10255053703e016"
+ :ledger {:version 5
+          :digest "3d4df4ddcd2c0ab85fee7b011ddd50d89dcd73452564c29c4153d2527b6c9d1a"
+          :phase :preflight :claim nil}
+ :workspaces
+ {:solver
+  {:role :solver :repository/path "/home/joe/code/apm-lean" :frame/id "f19"
+   :retention/state :provisioned
+   :workspace/path "/home/joe/code/apm-frames/countdown-f19-live-r4/f19-a01J05-solver"
+   :problem/blob "fb39c679ebd27b73b607e7367f5800fccb369e00"
+   :problem/id "a01J05" :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :branch "exp/countdown-f19-a01J05-solver" :created-at "2026-08-21T09:45:00Z"
+   :substrate/path "/home/joe/code/apm-lean/.lake"
+   :workspace/id "e0986aae16245c807cc5bce0e1ac092197761e662b83720b7e5d33a89549b0a4"
+   :problem/path "problems/a01J05/lean/Main.lean"}
+  :student
+  {:role :student :repository/path "/home/joe/code/apm-lean" :frame/id "f19"
+   :retention/state :provisioned
+   :workspace/path "/home/joe/code/apm-frames/countdown-f19-live-r4/f19-a01J05-student"
+   :problem/blob "fb39c679ebd27b73b607e7367f5800fccb369e00"
+   :problem/id "a01J05" :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :branch "exp/countdown-f19-a01J05-student" :created-at "2026-08-21T09:45:00Z"
+   :substrate/path "/home/joe/code/apm-lean/.lake"
+   :workspace/id "bbb874907819d858ac9356561062dff6b3322075e4248fb1b41a4cc4b910328f"
+   :problem/path "problems/a01J05/lean/Main.lean"}}
+ :seats
+ {:solver {:agent-id "f19-solver" :type :codex}
+  :student {:agent-id "f19-student" :type :zai}
+  :guide {:agent-id "f19-guide" :type :claude}
+  :proctor {:agent-id "f19-proctor" :type :codex}
+  :scribe {:agent-id "f19-scribe" :type :zai}}
+ :seat-policy {:fresh-sessions? true :invoke-ready? true
+               :turn-timeout-ms 3600000 :zai-request-timeout-ms 300000}}

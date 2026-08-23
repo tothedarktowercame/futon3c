@@ -1,0 +1,37 @@
+{:manifest/version 2
+ :manifest/scope :one-off
+ :manifest/id "7d05986658ee194247e8829f8746ca015c215a6cd451a0e75a4414fd5769f7ab"
+ :campaign/id "apm-f20-one-off-v1"
+ :block/id "f20-one-off-v1"
+ :apparatus
+ {:pin/id "aab2853a617d04edd9e214434c3b1cd0b7dcbaf1e8a1695565b45f29d17344d6"
+  :repository "/home/joe/code/futon3c-frame18-control"
+  :branch "frame/18-control"
+  :revision "366747507bedafd5ec69705485724801fe4398b2"
+  :artifacts
+  {:solver {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-v5.md"
+            :blob "1a886998bfc1d77b97a468a2122e0052160cd668"}
+   :student {:path "holes/labs/M-apm-demonstration/role-cards/zai-student.md"
+             :blob "b1ee7de57a9d27993155fc8732a60a609889add4"}
+   :guide {:path "holes/labs/M-apm-demonstration/role-cards/claude-guide.md"
+           :blob "b475f85cb1114184329f7e7b0a5e423085201218"}
+   :scribe {:path "holes/labs/M-apm-demonstration/role-cards/scribe-v2.md"
+            :blob "02441d9df4b8a05355790a51f1e535bf9e9465d4"}
+   :proctor {:path "holes/labs/M-apm-demonstration/role-cards/proctor.md"
+             :blob "63a64a878ce06ccdc8ec78e5ee19526bc9cef211"}
+   :analyst {:path "holes/labs/M-apm-demonstration/role-cards/analyst-v1.md"
+             :blob "1487e00f52bffee9af7847cca824eafd10b73bc8"}}}
+ :units
+ [{:frame/id "f20" :ordinal 1 :arm :treatment :problem/id "a01J06"
+   :classification/value :non-topology
+   :classification/source :operator-reviewed-statement
+   :classification/evidence
+   "Complex analysis: zero distribution of entire functions of exponential type."
+   :eligibility/baseline {:exit 0 :warnings 1 :sorry-warnings 1 :errors 0}
+   :apparatus/pin-id "aab2853a617d04edd9e214434c3b1cd0b7dcbaf1e8a1695565b45f29d17344d6"
+   :problem
+   {:repository "/home/joe/code/apm-lean"
+    :branch "repair/m97A06-energy-regularity"
+    :revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+    :path "problems/a01J06/lean/Main.lean"
+    :blob "eb1ad6e7536eef7e0aa0e769624e644118232092"}}]}

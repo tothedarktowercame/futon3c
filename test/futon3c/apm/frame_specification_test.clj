@@ -1,0 +1,78 @@
+(ns futon3c.apm.frame-specification-test
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.campaign-gates :as gates]
+            [futon3c.apm.campaign-qualification :as qualification]
+            [futon3c.apm.frame-specification :as specification]))
+
+(def control-path
+  "holes/labs/M-apm-demonstration/frame-18-control.edn")
+
+(deftest frame-18-specification-ingests-to-the-gate-shape
+  (let [ingested (specification/ingest control-path "f18" nil)
+        facts (qualification/derive-facts {:specification-check ingested})]
+    (is (:valid? ingested))
+    (is (= #{:valid? :digest :frame-matches? :registration-matches?}
+           (set (keys (:specification facts)))))
+    (is (= {:valid? true :digest (:digest ingested) :frame-matches? true
+            :registration-matches? true}
+           (:specification facts)))))
+
+(deftest role-cards-are-resolved-at-the-pinned-apparatus-revision
+  (let [spec (edn/read-string (slurp control-path))]
+    (is (:valid? (specification/validate spec "f18" nil)))
+    (testing "a plausible but incorrect blob fails closed"
+      (let [changed (assoc-in spec [:frame/apparatus :role-cards :solver :blob]
+                              "0000000000000000000000000000000000000000")
+            result (specification/validate changed "f18" nil)]
+        (is (false? (:valid? result)))
+        (is (some #{:apparatus-revision-mismatch} (:errors result)))))))
+
+(deftest writable-workspaces-are-pinned-and-isolated
+  (let [spec (edn/read-string (slurp control-path))
+        shared-path (get-in spec [:frame/workspaces :solver :path])
+        changed (assoc-in spec [:frame/workspaces :student :path] shared-path)
+        result (specification/validate changed "f18" nil)]
+    (is (false? (:valid? result)))
+    (is (some #{:workspaces-not-isolated} (:errors result)))))
+
+(deftest workspace-substrate-allows-discovery-but-not-an-implicit-policy
+  (let [spec (edn/read-string (slurp control-path))
+        changed (assoc-in spec [:frame/workspaces :solver
+                                :execution-substrate :dependency-policy]
+                          :predeclared-only)
+        result (specification/validate changed "f18" nil)]
+    (is (false? (:valid? result)))
+    (is (some #{:workspace-pin-invalid} (:errors result)))))
+
+(deftest solve-gate-requires-ready-isolated-workspaces
+  (let [plan (:plan (qualification/read-plan
+                     "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"))
+        evaluate (fn [workspace-check]
+                   (let [facts (qualification/derive-facts
+                                {:workspace-check workspace-check})]
+                     (->> (gates/evaluate-obligation
+                           (:qualification/gates plan) facts
+                           {:obligation/action {:kind :solve}})
+                          (filter #(= :workspaces-ready (:gate/id %)))
+                          first)))]
+    (is (= :pass (:gate/status
+                  (evaluate {:ready? true :isolated? true}))))
+    (is (= :fail (:gate/status
+                  (evaluate {:ready? false :isolated? true}))))))
+
+(deftest specification-gate-passes-and-mismatch-fails-closed
+  (let [plan (:plan (qualification/read-plan
+                     "holes/labs/M-apm-demonstration/frame-18-step-plan.edn"))
+        spec-gate (fn [facts]
+                    (->> (gates/evaluate-obligation
+                          (:qualification/gates plan) facts
+                          {:obligation/action {:kind :open-frame}})
+                         (filter #(= :frame-specification (:gate/id %))) first))
+        digest (:digest (specification/ingest control-path "f18" nil))
+        accepted (specification/ingest control-path "f18" digest)
+        rejected (specification/ingest control-path "f19" digest)]
+    (is (= :pass (:gate/status
+                  (spec-gate {:specification accepted}))))
+    (is (= :fail (:gate/status
+                  (spec-gate {:specification rejected}))))))

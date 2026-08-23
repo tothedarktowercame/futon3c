@@ -1,0 +1,64 @@
+{:orchestration/version 1
+ :orchestration/id "ee72a2bf9751fc24a9a606d757842c0d4c14fbe97a6e8a8e97f7f01696c093ea"
+ :administrative-kinds #{:open-block :open-frame}
+ :phase-kinds
+ {:preflight
+  {:role :proctor :role-card :proctor
+   :dispatch {:endpoint :agency-invoke
+              :required #{:agent-id :prompt :frame-id :problem-id :role-card-blob}}
+   :timeouts {:request-ms 300000 :turn-ms 3600000}
+   :terminal {:states #{:done} :require-job-id? true :require-own-exit? true}
+   :receipt {:type :frame-preflight :provider :terminal-job-report}
+   :continuation {:mode :park :durable? true}}
+  :solve
+  {:role :solver :role-card :solver
+   :dispatch {:endpoint :agency-invoke
+              :required #{:agent-id :prompt :frame-id :problem-id :workspace :role-card-blob}}
+   :timeouts {:request-ms 300000 :turn-ms 3600000}
+   :terminal {:states #{:done} :require-job-id? true :require-own-exit? true}
+   :receipt {:type :frame-solve :provider :terminal-job-report}
+   :continuation {:mode :park :durable? true}}
+  :verify
+  {:role :proctor :role-card :proctor
+   :dispatch {:endpoint :agency-invoke
+              :required #{:agent-id :prompt :frame-id :problem-id :workspace :role-card-blob}}
+   :timeouts {:request-ms 300000 :turn-ms 3600000}
+   :terminal {:states #{:done} :require-job-id? true :require-own-exit? true}
+   :receipt {:type :frame-verify :provider :terminal-job-report}
+   :continuation {:mode :park :durable? true}}
+  :student-attempt
+  {:role :student :role-card :student
+   :dispatch {:endpoint :agency-invoke
+              :required #{:agent-id :prompt :frame-id :problem-id :workspace
+                          :attempt-ordinal :fresh-session-id :role-card-blob}}
+   :timeouts {:request-ms 300000 :turn-ms 3600000}
+   :terminal {:states #{:done} :require-job-id? true :require-own-exit? true}
+   :receipt {:type :student-attempt :provider :terminal-job-report}
+   :continuation {:mode :park :durable? true}}
+  :guide-intervention
+  {:role :guide :role-card :guide
+   :dispatch {:endpoint :agency-invoke
+              :required #{:agent-id :prompt :frame-id :problem-id
+                          :intervention-ordinal :input-attempt-id :role-card-blob}}
+   :timeouts {:request-ms 300000 :turn-ms 3600000}
+   :terminal {:states #{:done} :require-job-id? true :require-own-exit? true}
+   :receipt {:type :guide-intervention :provider :terminal-job-report}
+   :continuation {:mode :park :durable? true}}
+  :scribe-reduce
+  {:role :scribe :role-card :scribe
+   :dispatch {:endpoint :agency-invoke
+              :required #{:agent-id :prompt :frame-id :problem-id
+                          :input-receipt-ids :role-card-blob}}
+   :timeouts {:request-ms 300000 :turn-ms 3600000}
+   :terminal {:states #{:done} :require-job-id? true :require-own-exit? true}
+   :receipt {:type :scribe-reduce :provider :terminal-job-report}
+   :continuation {:mode :park :durable? true}}
+  :close-frame
+  {:role :guide :role-card :guide
+   :dispatch {:endpoint :agency-invoke
+              :required #{:agent-id :prompt :frame-id :problem-id
+                          :input-receipt-ids :role-card-blob}}
+   :timeouts {:request-ms 300000 :turn-ms 3600000}
+   :terminal {:states #{:done} :require-job-id? true :require-own-exit? true}
+   :receipt {:type :frame-close :provider :terminal-job-report}
+   :continuation {:mode :park :durable? true}}}}

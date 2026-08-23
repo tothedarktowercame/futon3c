@@ -1,0 +1,109 @@
+{:contract/id :apm-complete-frame-cycle-v2
+ :contract/principle
+ "Solver knowledge reaches Students only through independently reviewed,
+  content-addressed memory snapshots. Post-close Analyst work remains a
+  campaign transition rather than a frame-close prerequisite."
+ :phase-order
+ [:preflight :solve :verify :promote-solver
+  :student-attempt-1 :guide-intervention-1
+  :student-attempt-2 :guide-intervention-2
+  :student-attempt-3 :scribe-reduce :close-frame]
+ :phases
+ {:preflight
+  {:kind :preflight :role :proctor :receipt/type :frame-preflight
+   :requires #{} :produces #{:preflight-receipt}}
+  :solve
+  {:kind :solve :role :solver :receipt/type :frame-solve
+   :requires #{:preflight-receipt} :produces #{:solve-receipt :committed-proof}}
+  :verify
+  {:kind :verify :role :proctor :receipt/type :frame-verify
+   :requires #{:solve-receipt :committed-proof} :produces #{:verify-receipt}}
+  :promote-solver
+  {:kind :scribe-reduce :role :scribe :receipt/type :solver-promotion
+   :requires #{:solve-receipt :verify-receipt}
+   :produces #{:solver-promotion-receipt :solver-memory-snapshot}}
+  :student-attempt-1
+  {:kind :student-attempt :role :student :ordinal 1 :fresh-session? true
+   :receipt/type :student-attempt
+   :requires #{:preflight-receipt :solver-memory-snapshot}
+   :produces #{:student-attempt-1-receipt :memory-use-1-receipt}}
+  :guide-intervention-1
+  {:kind :guide-intervention :role :guide :ordinal 1
+   :receipt/type :guide-intervention
+   :requires #{:student-attempt-1-receipt :memory-use-1-receipt}
+   :produces #{:guide-intervention-1-receipt}}
+  :student-attempt-2
+  {:kind :student-attempt :role :student :ordinal 2 :fresh-session? true
+   :receipt/type :student-attempt
+   :requires #{:guide-intervention-1-receipt :solver-memory-snapshot}
+   :produces #{:student-attempt-2-receipt :memory-use-2-receipt}}
+  :guide-intervention-2
+  {:kind :guide-intervention :role :guide :ordinal 2
+   :receipt/type :guide-intervention
+   :requires #{:student-attempt-2-receipt :memory-use-2-receipt}
+   :produces #{:guide-intervention-2-receipt}}
+  :student-attempt-3
+  {:kind :student-attempt :role :student :ordinal 3 :fresh-session? true
+   :receipt/type :student-attempt
+   :requires #{:guide-intervention-2-receipt :solver-memory-snapshot}
+   :produces #{:student-attempt-3-receipt :memory-use-3-receipt}}
+  :scribe-reduce
+  {:kind :scribe-reduce :role :scribe :receipt/type :scribe-reduce
+   :requires #{:solve-receipt :verify-receipt :solver-promotion-receipt
+               :student-attempt-1-receipt :memory-use-1-receipt
+               :student-attempt-2-receipt :memory-use-2-receipt
+               :student-attempt-3-receipt :memory-use-3-receipt
+               :guide-intervention-1-receipt :guide-intervention-2-receipt}
+   :produces #{:scribe-lane-receipt :memory-disposition-receipt
+               :promotion-review-receipt}}
+  :close-frame
+  {:kind :close-frame :role :guide :receipt/type :frame-close
+   :requires #{:solve-receipt :verify-receipt :solver-promotion-receipt
+               :student-attempt-1-receipt :memory-use-1-receipt
+               :student-attempt-2-receipt :memory-use-2-receipt
+               :student-attempt-3-receipt :memory-use-3-receipt
+               :guide-intervention-1-receipt :guide-intervention-2-receipt
+               :scribe-lane-receipt :memory-disposition-receipt
+               :promotion-review-receipt}
+   :produces #{:frame-close-receipt :frame-trace}}}
+ :receipt/schemas
+ {:frame-preflight
+  {:required #{:receipt/id :receipt/type :receipt/frame-id
+               :receipt/problem-id :receipt/result}}
+  :frame-solve
+  {:required #{:receipt/id :receipt/type :receipt/frame-id
+               :receipt/problem-id :receipt/final-head :receipt/lean}}
+  :frame-verify
+  {:required #{:receipt/id :receipt/type :receipt/frame-id
+               :receipt/problem-id :receipt/solve-receipt-id
+               :receipt/mathematical-sound?}}
+  :solver-promotion
+  {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
+               :receipt/input-receipt-ids :receipt/lanes :receipt/dispositions
+               :receipt/promotion-reviews :receipt/snapshot-id
+               :receipt/snapshot-digest :receipt/snapshot-path
+               :receipt/reviewed-memory-ids
+               :receipt/independent-review?}}
+  :student-attempt
+  {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
+               :receipt/attempt-ordinal :receipt/fresh-session-id :receipt/job-id
+               :receipt/outcome :receipt/failure-account :receipt/memory-use
+               :receipt/memory-snapshot}}
+  :guide-intervention
+  {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
+               :receipt/intervention-ordinal :receipt/mode
+               :receipt/input-attempt-id :receipt/effect :receipt/channel-audit}}
+  :scribe-reduce
+  {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
+               :receipt/input-receipt-ids :receipt/lanes :receipt/dispositions
+               :receipt/promotion-reviews}}
+  :frame-close
+  {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
+               :receipt/input-receipt-ids :receipt/trace-id :receipt/result}}}
+ :global-invariants
+ #{:receipt-content-addressed :receipt-frame-and-problem-match
+   :solver-memory-independently-reviewed :student-snapshot-content-addressed
+   :student-snapshot-equals-promoted-snapshot :three-distinct-student-session-ids
+   :student-has-memory-substrate-only :guide-mode-exactly-one-of-store-or-harness
+   :guide-never-directly-contacts-student :scribe-authorship-distinct-from-guide
+   :proctor-distinct-from-solver :close-inputs-equal-certified-produced-receipts}}

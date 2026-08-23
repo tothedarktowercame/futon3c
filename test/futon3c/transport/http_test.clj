@@ -1799,6 +1799,7 @@
     (let [handler (make-handler)
           body (json/generate-string {"agent-id" "codex-announce-1"
                                       "prompt" "hello from announce"
+                                      "mode" "work"
                                       "caller" "irc:joe"
                                       "surface" "irc (#math)"})
           response (post handler "/api/alpha/invoke/announce" body)
@@ -1814,6 +1815,7 @@
       (is (string? job-id))
       (is (= 200 (:status job-response)))
       (is (= "queued" (get-in job-parsed [:job :state])))
+      (is (= "work" (get-in job-parsed [:job :mode])))
       (is (= "pending" (get-in job-parsed [:job :delivery :status]))))))
 
 (deftest invoke-announce-job-is-reused-by-direct-invoke
@@ -1885,6 +1887,100 @@
           (is (identical? prior-sink
                           (reg/get-invoke-event-sink "codex-announce-stream"))
               "the exact previous sink is restored after the turn"))))))
+
+(deftest invoke-activation-accepts-immediately-and-is-idempotent
+  (testing "a pre-announced canonical job executes once behind a durable 202 boundary"
+    (let [started (promise) release (promise) invocations (atom 0)]
+      (reg/register-agent!
+       {:agent-id {:id/value "codex-activate-1" :id/type :continuity}
+        :type :codex :capabilities [:explore :edit]
+        :invoke-fn (fn [_prompt _session-id]
+                     (swap! invocations inc)
+                     (deliver started true)
+                     @release
+                     {:result "ok" :session-id nil
+                      :invoke-meta {:execution {:executed? true
+                                                :tool-events 1
+                                                :command-events 1}}})})
+      (let [handler (make-handler)
+            authority {"agent-id" "codex-activate-1" "prompt" "durable work"
+                       "caller" "countdown-control" "surface" "emacs-repl"
+                       "mode" "brief"}
+            announced (parse-body
+                       (post handler "/api/alpha/invoke/announce"
+                             (json/generate-string authority)))
+            job-id (:job-id announced)
+            activation (assoc authority "job-id" job-id)
+            first-response (post handler "/api/alpha/invoke/activate"
+                                 (json/generate-string activation))
+            first-body (parse-body first-response)]
+        (is (= 202 (:status first-response)))
+        (is (true? (:accepted first-body)))
+        (is (true? (deref started 1000 false)))
+        (let [second-response (post handler "/api/alpha/invoke/activate"
+                                    (json/generate-string activation))
+              second-body (parse-body second-response)]
+          (is (= 202 (:status second-response)))
+          (is (true? (:reused? second-body)))
+          (is (= job-id (:job-id second-body))))
+        (is (= 1 @invocations))
+        (deliver release true)
+        (is (= "done" (get-in (:parsed (wait-for-job-state handler job-id 2000))
+                               [:job :state])))
+        (is (= 1 @invocations))))))
+
+(deftest invoke-activation-rejects-authority-mismatch-without-execution
+  (let [invocations (atom 0)]
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-activate-2" :id/type :continuity}
+      :type :codex :capabilities [:explore]
+      :invoke-fn (fn [_ _] (swap! invocations inc) {:result "unexpected"})})
+    (let [handler (make-handler)
+          authority {"agent-id" "codex-activate-2" "prompt" "exact prompt"
+                     "caller" "countdown-control" "surface" "emacs-repl"}
+          announced (parse-body
+                     (post handler "/api/alpha/invoke/announce"
+                           (json/generate-string authority)))
+          response (post handler "/api/alpha/invoke/activate"
+                         (json/generate-string
+                          (assoc authority "prompt" "different prompt"
+                                 "job-id" (:job-id announced))))]
+      (is (= 409 (:status response)))
+      (is (= "activation-request-mismatch" (:error (parse-body response))))
+      (is (zero? @invocations)))))
+
+(deftest legacy-unbound-invoke-request-requires-explicit-audited-binding
+  (testing "an old queued job can be bound once without weakening activation"
+    (let [authority {:job-id "legacy-unbound-1"
+                     :agent-id "codex-activate-legacy"
+                     :prompt "exact legacy prompt"
+                     :caller "countdown-control"
+                     :surface "emacs-repl"
+                     :mode "brief"}]
+      (#'http/update-invoke-jobs-ledger!
+       (fn [ledger]
+         (-> ledger
+             (update :job-order conj (:job-id authority))
+             (assoc-in [:jobs (:job-id authority)]
+                       {:job-id (:job-id authority)
+                        :agent-id (:agent-id authority)
+                        :caller (:caller authority)
+                        :surface (:surface authority)
+                        :mode "brief"
+                        :state "queued"
+                        :event-seq 1
+                        :events [{:seq 1 :type "accepted"}]}))))
+      (is (= :retained-identity-mismatch
+             (:error (http/bind-unbound-invoke-request!
+                      (assoc authority :surface "http")))))
+      (let [bound (http/bind-unbound-invoke-request! authority)
+            job (get-in @(var-get #'http/!invoke-jobs-ledger)
+                        [:jobs (:job-id authority)])]
+        (is (:ok bound))
+        (is (= (:request-digest bound) (:request-digest job)))
+        (is (= "request-bound" (-> job :events last :type)))
+        (is (= :request-already-bound
+               (:error (http/bind-unbound-invoke-request! authority))))))))
 
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"

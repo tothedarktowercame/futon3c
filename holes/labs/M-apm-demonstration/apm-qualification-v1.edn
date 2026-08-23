@@ -1,0 +1,46 @@
+{:qualification/id :apm-validated-system-v1
+ :generated-contract "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"
+ :generated-contract-digest "70659f478c982ed9e28ea3f7d86d30a2c47c3db505cc224541fc2cb15fe26d81"
+ :positive-fixtures ["test/resources/apm-traces/valid.json"
+                     "test/resources/apm-traces/partial-frame-series.json"]
+ :mutation-classes
+ {:ordering ["skipped-promotion.json" "reordered-phases.json"]
+  :ledger-receipts ["stale-ledger-reference.json" "missing-receipt-closure.json"]
+  :dispatch ["duplicate-job-identity.json" "unaccepted-activation.json"
+             "nonterminal-advancement.json" "lost-restart-continuity.json"
+             "timeout-as-success.json"]
+  :submission ["missing-typed-submission.json" "conversation-as-receipt.json"]
+  :memory ["wrong-snapshot.json" "depositor-is-reviewer.json"
+           "reused-student-session.json"]
+  :isolation ["campaign-isolation-collision.json"
+              "projection-ledger-mismatch.json"]
+  :terminal ["premature-close.json" "conflated-outcome.json"]
+  :analyst ["pre-close-analyst.json" "duplicate-analyst-wake.json"
+            "mutable-series-input.json" "early-tenure.json" "late-tenure.json"
+            "missing-proposal-handoff.json" "inflight-regime-mutation.json"]}
+ :required-mutation-classes #{:ordering :ledger-receipts :dispatch :submission :memory
+                              :isolation :terminal :analyst}
+ :residual-holes
+ [{:path "holes/labs/M-apm-demonstration/hole-generated-receipt-schemas-v1.edn"
+   :test-id :generated-receipt-schema-hole}
+  {:path "holes/labs/M-apm-demonstration/hole-effectful-http-refinement-v1.edn"
+   :test-id :effectful-http-hole}
+  {:path "holes/labs/M-apm-demonstration/hole-external-memory-emacs-refinement-v1.edn"
+   :test-id :external-memory-emacs-hole}]
+ :bounds-executable-test :generated-contract-bounds-and-policies
+ :commands
+ [{:id :lean-zero-sorry
+   :argv ["bash" "-lc" "cd /home/joe/code/mathlib4-apm-validation && lake env lean DarkTower/APMCycleMachine.lean && lake env lean DarkTower/APMCycleContractEmitter.lean && lake env lean DarkTower/APMCampaignTraceChecker.lean"]}
+  {:id :emitter-equivalence
+   :argv ["bash" "-lc" "cd /home/joe/code/mathlib4-apm-validation && cmp <(lake env lean --run DarkTower/APMCycleContractEmitter.lean) /home/joe/code/futon3c-apm-control/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"]}
+  {:id :trace-qualification
+   :argv ["bash" "-lc" "cd /home/joe/code/mathlib4-apm-validation && scripts/check_apm_trace_fixtures.sh /home/joe/code/futon3c-apm-control/test/resources/apm-traces"]}
+  {:id :clojure-qualification
+   :argv ["clojure" "-M:test" "-n" "futon3c.apm.generated-contract-test"
+          "-n" "futon3c.apm.campaign-trace-test"
+          "-n" "futon3c.apm.typed-role-submission-test"
+          "-n" "futon3c.apm.typed-role-submission-http-test"
+          "-n" "futon3c.apm.live-job-driver-test"
+          "-n" "futon3c.apm.live-proof-phases-test"
+          "-n" "futon3c.apm.live-learning-phases-test"
+          "-n" "futon3c.apm.live-promotion-test"]}]}

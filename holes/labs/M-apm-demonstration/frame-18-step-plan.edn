@@ -1,0 +1,133 @@
+{:qualification/id "frame-18-countdown-qualification"
+ :qualification/mode :operator-stepped
+ :qualification/principle
+ "The operator may authorize one already-inspected obligation. Inspection,
+  authorization, and execution use the same ledger and obligation path as
+  autonomous batches. A missing or failed fact blocks before effect."
+ :qualification/gates
+ [{:gate/id :non-topology-admission
+   :gate/applies-to #{:open-frame}
+   :gate/requirements
+   [{:requirement/id :problem-is-not-topology
+     :fact/path [:problem :topology?] :check :equals :expected false}
+    {:requirement/id :classification-has-source
+     :fact/path [:problem :classification-source] :check :present}]}
+  {:gate/id :frame-specification
+   :gate/applies-to #{:open-frame}
+   :gate/requirements
+   [{:requirement/id :specification-valid
+     :fact/path [:specification :valid?] :check :equals :expected true}
+    {:requirement/id :specification-digest
+     :fact/path [:specification :digest] :check :present}
+    {:requirement/id :specification-frame-matches
+     :fact/path [:specification :frame-matches?] :check :equals :expected true}
+    {:requirement/id :specification-registration-matches
+     :fact/path [:specification :registration-matches?]
+     :check :equals :expected true}]}
+  {:gate/id :seat-budgets
+   :gate/applies-to #{:preflight}
+   :gate/requirements
+   [{:requirement/id :timeouts-explicit :fact/path [:timeouts :explicit?]
+     :check :equals :expected true}
+    {:requirement/id :request-budget :fact/path [:timeouts :request-minutes]
+     :check :at-least :expected 5}
+    {:requirement/id :turn-budget :fact/path [:timeouts :turn-minutes]
+     :check :at-least :expected 60}
+    {:requirement/id :solver-budget :fact/path [:timeouts :solver-minutes]
+     :check :at-least :expected 60}
+    {:requirement/id :student-budget :fact/path [:timeouts :student-minutes]
+     :check :at-least :expected 60}
+    {:requirement/id :frame-budget :fact/path [:timeouts :frame-minutes]
+     :check :at-least :expected 240}]}
+  {:gate/id :pin-coherence
+   :gate/applies-to #{:open-frame}
+   :gate/requirements
+   [{:requirement/id :pins-complete :fact/path [:pins :complete?]
+     :check :equals :expected true}
+    {:requirement/id :pins-coherent :fact/path [:pins :coherent?]
+     :check :equals :expected true}
+    {:requirement/id :pin-branch-recorded :fact/path [:pins :branch]
+     :check :present}
+    {:requirement/id :pin-commit-recorded :fact/path [:pins :commit]
+     :check :present}
+    {:requirement/id :pin-worktree-recorded :fact/path [:pins :worktree]
+     :check :present}
+    {:requirement/id :pin-worktree-clean :fact/path [:pins :worktree-clean?]
+     :check :equals :expected true}
+    {:requirement/id :pin-head-matches-commit :fact/path [:pins :head-matches?]
+     :check :equals :expected true}
+    {:requirement/id :pin-worktree-dedicated
+     :fact/path [:pins :dedicated-worktree?] :check :equals :expected true}]}
+  {:gate/id :cast-ready
+   :gate/applies-to #{:preflight}
+   :gate/requirements
+   [{:requirement/id :cast-ready :fact/path [:cast :ready?]
+     :check :equals :expected true}
+    {:requirement/id :provider-attributed :fact/path [:cast :attributed?]
+     :check :equals :expected true}]}
+  {:gate/id :continuation-control
+   :gate/applies-to #{:preflight}
+   :gate/requirements
+   [{:requirement/id :continuation-durable
+     :fact/path [:continuations :durable?] :check :equals :expected true}
+    {:requirement/id :park-wake-tested
+     :fact/path [:continuations :wake-tested?] :check :equals :expected true}]}
+  {:gate/id :projection-coherence
+   :gate/applies-to #{:preflight :solve :verify :close-frame}
+   :gate/requirements
+   [{:requirement/id :projection-ledger-derived
+     :fact/path [:projection :ledger-derived?] :check :equals :expected true}
+    {:requirement/id :projection-frame-matches
+     :fact/path [:projection :frame-matches?] :check :equals :expected true}]}
+  {:gate/id :required-legs
+   :gate/applies-to #{:close-frame}
+   :gate/requirements
+   [{:requirement/id :all-map-legs-complete
+     :fact/path [:legs :required] :check :all-true}]}
+  {:gate/id :memory-path
+   :gate/applies-to #{:close-frame}
+   :gate/requirements
+   [{:requirement/id :recall-invoked
+     :fact/path [:memory :recall-invoked?] :check :equals :expected true}
+    {:requirement/id :terrain-measured
+     :fact/path [:memory :terrain-measured?] :check :equals :expected true}
+    {:requirement/id :dispositions-complete
+     :fact/path [:memory :dispositions-complete?] :check :equals :expected true}
+    {:requirement/id :promotion-reviewed
+     :fact/path [:memory :promotion-reviewed?] :check :equals :expected true}]}
+  {:gate/id :experimental-separation
+   :gate/applies-to #{:preflight}
+   :gate/requirements
+   [{:requirement/id :author-reviewer-distinct
+     :fact/path [:separation :author-reviewer-distinct?]
+     :check :equals :expected true}
+    {:requirement/id :arms-isolated
+     :fact/path [:separation :arms-isolated?] :check :equals :expected true}]}
+  {:gate/id :durable-replay
+   :gate/applies-to #{:open-block :open-frame :preflight :solve :verify
+                      :close-frame :close-block :close-campaign}
+   :gate/requirements
+   [{:requirement/id :receipts-durable
+     :fact/path [:receipts :durable?] :check :equals :expected true}
+    {:requirement/id :receipts-replayable
+     :fact/path [:receipts :replayable?] :check :equals :expected true}]}
+  {:gate/id :apparatus-frozen
+   :gate/applies-to #{:preflight :solve :verify :close-frame}
+   :gate/requirements
+   [{:requirement/id :apparatus-unchanged
+     :fact/path [:apparatus :unchanged-since-open?]
+     :check :equals :expected true}]}
+  {:gate/id :workspaces-ready
+   :gate/applies-to #{:solve}
+   :gate/requirements
+   [{:requirement/id :writable-workspaces-ready
+     :fact/path [:workspaces :ready?] :check :equals :expected true}
+    {:requirement/id :writable-workspaces-isolated
+     :fact/path [:workspaces :isolated?] :check :equals :expected true}]}]
+ :qualification/operation
+ {:inspect "Produce checkpoint, next obligation, and all gate evidence; no effect."
+  :authorize "Bind Joe's approval to exactly that report/certificate/obligation."
+  :step "Re-inspect, reject stale approval, execute one obligation, checkpoint."
+  :later-autonomy
+  "Replace per-step operator permits with bounded batch permits; retain gates,
+   checkpoints, obligations, handlers, stop rules, and ledger unchanged."}}

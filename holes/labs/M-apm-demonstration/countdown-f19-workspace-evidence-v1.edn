@@ -1,0 +1,81 @@
+{:evidence/version 1
+ :frame/id "f19" :problem/id "a00J01"
+ :seats
+ [{:role :solver
+   :lease {:workspace/id "55239a03ebe355366deab7d753993020116d32e94ad0381e89506f36850568d6"
+           :workspace/path "/home/joe/code/apm-frames/countdown-lifecycle-dry-run/f19-a00J01-solver"
+           :repository/path "/home/joe/code/apm-lean"
+           :branch "exp/countdown-f19-a00J01-solver"
+           :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+           :problem/id "a00J01" :problem/path "problems/a00J01/lean/Main.lean"
+           :problem/blob "64a28d333ce055d0fa7e21f848ae5911e3d767f0"
+           :frame/id "f19" :role :solver :created-at "2026-08-21T09:00:00Z"
+           :retention/state :provisioned :substrate/path "/home/joe/code/apm-lean/.lake"}
+   :validation {:valid? true :findings [] :head "455d4d8c1db24a9244828c5c063d077e9414b986"
+                :branch "exp/countdown-f19-a00J01-solver" :worktree-clean? true
+                :problem/blob "64a28d333ce055d0fa7e21f848ae5911e3d767f0"
+                :probe/exit 0 :substrate/path "/home/joe/code/apm-lean/.lake"}
+   :audit {:audit/type :workspace-retirement
+           :workspace/id "55239a03ebe355366deab7d753993020116d32e94ad0381e89506f36850568d6"
+           :terminal-head "455d4d8c1db24a9244828c5c063d077e9414b986"
+           :context :qualification-rehearsal
+           :passed-preconditions #{:independent-retirement-audit-passed :worktree-clean
+                                   :branch-ref-exists :required-artifacts-content-addressed
+                                   :no-running-or-parked-job-references-workspace
+                                   :no-active-ledger-claim-references-workspace :frame-terminal
+                                   :head-commit-recorded-in-terminal-receipt}
+           :audited-at "2026-08-21T09:01:00Z"
+           :audit/id "653e1b9f947a1c3402aa36daa1cd774f720eaf5a5f6d52784fceb289f5139e55"}
+   :receipt {:receipt/type :workspace-retired :role :solver :frame/id "f19"
+             :workspace/id "55239a03ebe355366deab7d753993020116d32e94ad0381e89506f36850568d6"
+             :workspace/path "/home/joe/code/apm-frames/countdown-lifecycle-dry-run/f19-a00J01-solver"
+             :branch "exp/countdown-f19-a00J01-solver"
+             :retained-head "455d4d8c1db24a9244828c5c063d077e9414b986"
+             :audit/context :qualification-rehearsal
+             :audit/id "653e1b9f947a1c3402aa36daa1cd774f720eaf5a5f6d52784fceb289f5139e55"
+             :preconditions #{:independent-retirement-audit-passed :worktree-clean
+                              :branch-ref-exists :required-artifacts-content-addressed
+                              :no-running-or-parked-job-references-workspace
+                              :no-active-ledger-claim-references-workspace :frame-terminal
+                              :head-commit-recorded-in-terminal-receipt}
+             :retired-at "2026-08-21T09:02:00Z"
+             :receipt/id "1bb74f0d38edd08fe6d12e1465b778967169841305d630808322f4f63d59627e"}}
+  {:role :student
+   :lease {:workspace/id "680b7c97fb5764572396e70b1cdd8c57965a835c463b6d3de0145d9b3738f35e"
+           :workspace/path "/home/joe/code/apm-frames/countdown-lifecycle-dry-run/f19-a00J01-student"
+           :repository/path "/home/joe/code/apm-lean"
+           :branch "exp/countdown-f19-a00J01-student"
+           :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+           :problem/id "a00J01" :problem/path "problems/a00J01/lean/Main.lean"
+           :problem/blob "64a28d333ce055d0fa7e21f848ae5911e3d767f0"
+           :frame/id "f19" :role :student :created-at "2026-08-21T09:03:00Z"
+           :retention/state :provisioned :substrate/path "/home/joe/code/apm-lean/.lake"}
+   :validation {:valid? true :findings [] :head "455d4d8c1db24a9244828c5c063d077e9414b986"
+                :branch "exp/countdown-f19-a00J01-student" :worktree-clean? true
+                :problem/blob "64a28d333ce055d0fa7e21f848ae5911e3d767f0"
+                :probe/exit 0 :substrate/path "/home/joe/code/apm-lean/.lake"}
+   :audit {:audit/type :workspace-retirement
+           :workspace/id "680b7c97fb5764572396e70b1cdd8c57965a835c463b6d3de0145d9b3738f35e"
+           :terminal-head "455d4d8c1db24a9244828c5c063d077e9414b986"
+           :context :qualification-rehearsal
+           :passed-preconditions #{:independent-retirement-audit-passed :worktree-clean
+                                   :branch-ref-exists :required-artifacts-content-addressed
+                                   :no-running-or-parked-job-references-workspace
+                                   :no-active-ledger-claim-references-workspace :frame-terminal
+                                   :head-commit-recorded-in-terminal-receipt}
+           :audited-at "2026-08-21T09:04:00Z"
+           :audit/id "7fa902ec920733c648354e5ea180d500a9e903e256c42db896772cc020ef4777"}
+   :receipt {:receipt/type :workspace-retired :role :student :frame/id "f19"
+             :workspace/id "680b7c97fb5764572396e70b1cdd8c57965a835c463b6d3de0145d9b3738f35e"
+             :workspace/path "/home/joe/code/apm-frames/countdown-lifecycle-dry-run/f19-a00J01-student"
+             :branch "exp/countdown-f19-a00J01-student"
+             :retained-head "455d4d8c1db24a9244828c5c063d077e9414b986"
+             :audit/context :qualification-rehearsal
+             :audit/id "7fa902ec920733c648354e5ea180d500a9e903e256c42db896772cc020ef4777"
+             :preconditions #{:independent-retirement-audit-passed :worktree-clean
+                              :branch-ref-exists :required-artifacts-content-addressed
+                              :no-running-or-parked-job-references-workspace
+                              :no-active-ledger-claim-references-workspace :frame-terminal
+                              :head-commit-recorded-in-terminal-receipt}
+             :retired-at "2026-08-21T09:05:00Z"
+             :receipt/id "4d3506537157054082dcb12c4a066410951bd744512bece1845d93f8dbcb86f9"}}]}

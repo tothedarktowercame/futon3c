@@ -1,0 +1,9 @@
+{:hole/id :apm-effectful-http-refinement
+ :hole/status :open
+ :adapter :agency-http
+ :modelled-observations [:preannounced-job-id :activation-202
+                         :idempotent-reactivation :terminal-command-own-exit
+                         :persisted-claim :persisted-receipt :restart-same-job
+                         :client-timeout-not-success]
+ :residual "Lean certifies the durable observations and their transition consequences; it does not execute or prove the JVM HTTP transport implementation."
+ :closure-test "A verified transport refinement proves that each Agency HTTP response and durable store mutation produces exactly the emitted observation without relying on client timeout."}

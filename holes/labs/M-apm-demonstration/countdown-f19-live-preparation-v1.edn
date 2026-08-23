@@ -1,0 +1,35 @@
+{:preparation/version 1
+ :frame/id "f19"
+ :problem/id "a00J01"
+ :ledger {:version 5
+          :digest "ed49e674ccabb666f32faac12bb2eb0a69daaa091e551692be550267f1ca98b7"
+          :phase :preflight
+          :claim nil}
+ :workspaces
+ {:solver
+  {:workspace/id "b862cb11b57fcf0ba103912ed134e0edabd09dca4c8eca3b14d6507761074ec3"
+   :workspace/path "/home/joe/code/apm-frames/countdown-f19-live/f19-a00J01-solver"
+   :branch "exp/countdown-f19-a00J01-solver"
+   :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :problem/blob "64a28d333ce055d0fa7e21f848ae5911e3d767f0"
+   :validation {:valid? true :findings [] :probe/exit 0}}
+  :student
+  {:workspace/id "a65024033f8a808374af63b422ee371d24dfc85b87f19be8879753459f05ef9f"
+   :workspace/path "/home/joe/code/apm-frames/countdown-f19-live/f19-a00J01-student"
+   :branch "exp/countdown-f19-a00J01-student"
+   :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :problem/blob "64a28d333ce055d0fa7e21f848ae5911e3d767f0"
+   :validation {:valid? true :findings [] :probe/exit 0}}}
+ :seats
+ {:solver {:agent-id "f19-solver" :type :codex}
+  :student {:agent-id "f19-student" :type :zai}
+  :guide {:agent-id "f19-guide" :type :claude}
+  :proctor {:agent-id "f19-proctor" :type :codex}
+  :scribe {:agent-id "f19-scribe" :type :zai}}
+ :seat-policy
+ {:invoke-ready? true
+  :turn-timeout-ms 3600000
+  :zai-request-timeout-ms 300000
+  :frame-attribution "f19"}
+ :effects #{:workspaces-provisioned :seats-minted}
+ :forbidden-effects #{:role-dispatched :ledger-advanced}}

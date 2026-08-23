@@ -742,7 +742,8 @@
                 (getenv "ZAI_REASONING_EFFORT")
                 (assoc :reasoning_effort (getenv "ZAI_REASONING_EFFORT"))))
         req (-> (HttpRequest/newBuilder (URI/create (chat-url base-url)))
-                (.timeout (Duration/ofMillis (long (or timeout-ms 300000))))
+                (.timeout (Duration/ofMillis
+                           (long (or timeout-ms default-request-timeout-ms))))
                 (.header "Content-Type" "application/json")
                 (.header "Authorization" (str "Bearer " api-key))
                 (.POST (HttpRequest$BodyPublishers/ofString body))
@@ -1043,10 +1044,10 @@ CALLS contains maps of tool name, arguments, and result digest."
 
    The flat 5-minute reserve (e63951e8, 2026-08-17) was sized for the frame
    student's pinned 60-minute runner budget, where reserving the last 5 minutes
-   for a report costs 8% of the envelope. The interactive REPL lane sends no
-   timeout and inherits the 300000 ms constructor default — where the SAME
-   reserve is the WHOLE envelope, so `(<= remaining-ms reserve)` was true on
-   round one and every such turn did no work and reported itself out of budget.
+   for a report costs 8% of the envelope. Before request and turn bounds were
+   separated, the interactive lane inherited the 300000 ms HTTP-request
+   default as its complete turn envelope; the SAME reserve was then the WHOLE
+   envelope and every such turn reported itself out of budget on round one.
 
    Cap the reserve at a quarter of the envelope so it can never consume the
    work it exists to have something to report on. A 60-minute student still

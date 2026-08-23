@@ -1,0 +1,43 @@
+{:preparation/version 2
+ :preparation/id "d2d29de60c3e4d5051429dfaed50f7f195fc02d24e748fb5ab98f5ff8cefbd4a"
+ :campaign/id "apm-f23-one-off-v1"
+ :frame/id "f23" :problem/id "a96A08"
+ :manifest/id "0b272803df2088dc4af604ef59265839a475fbe5d82f3cdc09913448be096ef6"
+ :ledger {:version 5
+          :digest "a32f5263dd5b95885842e29043f1a5cb22cfb754be1a9654d3d4733478cfdfa5"
+          :phase :preflight :claim nil}
+ :workspaces
+ {:solver
+  {:role :solver :repository/path "/home/joe/code/apm-lean"
+   :frame/id "f23" :retention/state :provisioned
+   :workspace/path "/home/joe/code/apm-frames/f23-one-off-v1/f23-a96A08-solver"
+   :problem/blob "bc3709e5f72f4861ac181425bae1c156a3226a27"
+   :problem/id "a96A08"
+   :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :branch "exp/countdown-f23-a96A08-solver"
+   :created-at "2026-08-22T11:18:00Z"
+   :substrate/path "/home/joe/code/apm-lean/.lake"
+   :workspace/id "77b3a938b77a0fafbb51eb3d530669431cde13d8b2fc9018353186ce0ed4bc85"
+   :problem/path "problems/a96A08/lean/Main.lean"}
+  :student
+  {:role :student :repository/path "/home/joe/code/apm-lean"
+   :frame/id "f23" :retention/state :provisioned
+   :workspace/path "/home/joe/code/apm-frames/f23-one-off-v1/f23-a96A08-student"
+   :problem/blob "bc3709e5f72f4861ac181425bae1c156a3226a27"
+   :problem/id "a96A08"
+   :base-revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :branch "exp/countdown-f23-a96A08-student"
+   :created-at "2026-08-22T11:18:00Z"
+   :substrate/path "/home/joe/code/apm-lean/.lake"
+   :workspace/id "06be32738d709367a706dc88de27ad14d46038b1228a74d9f60874b7b61c9af5"
+   :problem/path "problems/a96A08/lean/Main.lean"}}
+ :seats
+ {:solver {:agent-id "f23-solver" :type :codex}
+  :student {:agent-id "f23-student" :type :zai}
+  :guide {:agent-id "f23-guide" :type :claude}
+  :proctor {:agent-id "f23-proctor" :type :codex}
+  :scribe {:agent-id "f23-scribe" :type :zai}
+  :analyst {:agent-id "analyst-1" :type :claude}}
+ :seat-policy {:fresh-sessions? true :invoke-ready? true
+               :turn-timeout-ms 3600000 :zai-request-timeout-ms 300000
+               :analyst-tenure-frames 2}}
