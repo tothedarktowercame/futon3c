@@ -105,3 +105,24 @@ found by `?end=<slug>`.
 
 Order: P1 first (removes the 27 s tax regardless), P3 next (tiny), P2 last
 (touches the write path; needs the ingest re-run or the rewrite script).
+
+## 5. P1 landed — measured 2026-08-23 16:03 after restart (futon1b `ee8f41e`)
+
+| request | before | after |
+|---|---|---|
+| absent UUID id (×4) | 26.7–31.1 s | **0.07–0.09 s** (alias scan skipped) |
+| absent slug id | ~27 s | **0.62 s** (one narrow scan, nothing to hydrate) |
+| present slug id | 0.09 s | 0.07 s |
+| `entities?type=pattern/library&limit=1` (reference) | 13.96 s | 1.75 s (cold JVM) |
+
+Gates: clj-kondo 0/0, check-parens clean, `test-a3a4a5` 71/71,
+`test-query-classes` 13 assertions 0 failures.
+
+Restart note: `restart-futon1b-detached.sh` was refused by `store-guard`
+because an orphaned `--store-dir staging-store` server (pid 3898817, :7273,
+started 13:16, parent=init, cwd gone, no traffic) matched
+`pgrep -f '-m futon1b-server'`. The guard keys on process name, not
+store-dir, so any stray futon1b JVM blocks a production restart and leaves
+:7073 down. Two follow-ups: (a) the staging server should be stopped (not
+signalable from the agent sandbox); (b) the guard should compare
+`--store-dir`, or the policy "one futon1b JVM" should be enforced at launch.
