@@ -109,8 +109,7 @@
         resumed-config {:seats {:solver {:agent-id "solver"}}
                         :outcome-fn (fn [_] :outcome)}]
     (with-redefs [effects/live-effects
-                  (fn [_] {:ok true
-                           :observe-problem-fn
+                  (fn [_] {:observe-problem-fn
                            (fn [_] {:ok true :problem {:revision "rev"}})
                            :outcome-fn (:outcome-fn resumed-config)})
                   launch/resume-config

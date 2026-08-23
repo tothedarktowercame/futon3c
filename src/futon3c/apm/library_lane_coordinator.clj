@@ -20,7 +20,7 @@
   (let [eff (effects/live-effects {:agency-base agency-base
                                    :corpus-root corpus-root
                                    :frames-root frames-root})
-        observed (when (:ok eff)
+        observed (when-not (false? (:ok eff))
                    ((:observe-problem-fn eff)
                     {:corpus-root corpus-root :problem-id problem-id}))
         resumed (when (:ok observed)
@@ -29,7 +29,7 @@
                     :revision (get-in observed [:problem :revision])
                     :outcome-fn (:outcome-fn eff)}))
         launched (cond
-                   (not (:ok eff)) eff
+                   (false? (:ok eff)) eff
                    (not (:ok observed)) observed
                    resumed {:ok true :status :resumed :config resumed}
                    :else
