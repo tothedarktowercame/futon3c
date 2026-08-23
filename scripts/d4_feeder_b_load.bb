@@ -1,6 +1,6 @@
 #!/usr/bin/env bb
 ;; d4_feeder_b_load.bb — C-cascade-real D4 feeder-(b): land the 177 :mined-structural
-;; (have→want) arrows from futon6/data/diffsub-moves-mined.edn into substrate-2 (:7071)
+;; (have→want) arrows from futon6/data/diffsub-moves-mined.edn into futon1b (:7073)
 ;; as code/v05/mined-move hyperedges on CANONICAL mission nodes.
 ;;
 ;;   have-side: <repo>-d/mission/<id>  (already canonical; existing nodes only)
@@ -18,17 +18,79 @@
          '[clojure.string :as str])
 
 (def SRC "/home/joe/code/futon6/data/diffsub-moves-mined.edn")
-(def BASE "http://127.0.0.1:7071/api/alpha")
-(def TOKEN (str/trim (slurp "/home/joe/code/futon3c/.admintoken")))
+(def BASE "http://127.0.0.1:7073/api/alpha")
 (def PENHOLDER "api")
-(def DRAWBRIDGE "http://127.0.0.1:6768/eval")
 
-(defn drawbridge [form]
-  (let [r (http/post DRAWBRIDGE {:headers {"x-admin-token" TOKEN "Content-Type" "text/plain"}
-                                 :body form :throw false})]
-    (when (not= 200 (:status r)) (throw (ex-info "drawbridge failed" {:status (:status r) :body (:body r)})))
-    (let [o (edn/read-string (:body r))]
-      (if (:ok o) (:value o) (throw (ex-info "eval error" o))))))
+(defn encode [x]
+  (java.net.URLEncoder/encode (str x) "UTF-8"))
+
+(defn get-edn [path params]
+  (let [query (str/join "&" (map (fn [[k v]] (str (name k) "=" (encode v))) params))
+        r (http/get (str BASE path "?" query)
+                    {:headers {"Accept" "application/edn"} :throw false})]
+    (when-not (= 200 (:status r))
+      (throw (ex-info "futon1b read failed"
+                      {:path path :params params :status (:status r) :body (:body r)})))
+    (edn/read-string (:body r))))
+
+(defn paged-entities [entity-type]
+  (loop [after nil, acc [], expected nil]
+    (let [page (get-edn "/entities" (cond-> [[:type entity-type] [:limit 1000]]
+                                      after (conj [:after after])))
+          rows (:entities page)
+          expected (or expected (:count page))
+          acc (into acc rows)]
+      (if-let [cursor (:next-cursor page)]
+        (recur cursor acc expected)
+        (do
+          (when-not (= expected (count acc))
+            (throw (ex-info "entity paging did not consume advertised count"
+                            {:type entity-type :expected expected :consumed (count acc)})))
+          acc)))))
+
+(defn paged-hyperedges [hx-type]
+  (loop [after nil, acc [], expected nil]
+    (let [page (get-edn "/hyperedges" (cond-> [[:type hx-type] [:limit 1000]]
+                                        after (conj [:after after])))
+          rows (:hyperedges page)
+          expected (or expected (:count page))
+          acc (into acc rows)]
+      (if-let [cursor (:next-cursor page)]
+        (recur cursor acc expected)
+        (do
+          (when-not (= expected (count acc))
+            (throw (ex-info "hyperedge paging did not consume advertised count"
+                            {:type hx-type :expected expected :consumed (count acc)})))
+          acc)))))
+
+(defn mission-node-names []
+  (->> ["mission/doc" "mission/head" "mission/scope-target"]
+       (mapcat paged-entities)
+       (keep :entity/name)
+       set))
+
+(defn verify-layer! [intended-count]
+  (let [edges (paged-hyperedges "code/v05/mined-move")
+        mission-names (mission-node-names)
+        unresolved-ends (->> edges
+                             (mapcat :hx/ends)
+                             (map :entity-id)
+                             (remove mission-names)
+                             distinct
+                             sort
+                             vec)]
+    (println (format "  read-back: hyperedges=%d intended=%s unresolved mission ends=%d"
+                     (count edges) (or intended-count "filtered smoke run") (count unresolved-ends)))
+    (when (seq unresolved-ends)
+      (doseq [endpoint unresolved-ends]
+        (println "  UNRESOLVED END" endpoint)))
+    (when (and intended-count (not= intended-count (count edges)))
+      (throw (ex-info "mined-move read-back count differs from intended count"
+                      {:intended intended-count :actual (count edges)})))
+    (when (seq unresolved-ends)
+      (throw (ex-info "mined-move contains unresolved mission ends"
+                      {:unresolved unresolved-ends})))
+    {:count (count edges), :unresolved-ends unresolved-ends}))
 
 (defn post-json [path m]
   (http/post (str BASE path)
@@ -46,19 +108,22 @@
 (defn want-node [m] (str (canon-have m) "-" (facet m)))
 (defn want-type [m] (if (= "head" (facet m)) "mission/head" "mission/scope-target"))
 
-;; --- resolve which have-nodes exist (canonical 708) ---
+;; --- resolve which have-nodes exist ---
 (def existing-canonical
-  (set (drawbridge "(let [node (:node @futon3c.dev/!f1-sys) db (xtdb.api/db node)]
-                      (->> (xtdb.api/q db '{:find [n] :where [[e :entity/name n] [e :entity/type :mission/doc]]})
-                           (map first) (filter string?) vec))")))
+  (->> (paged-entities "mission/doc") (keep :entity/name) set))
 
 (defn -main [& args]
   (let [write? (some #{"--write"} args)
         only (second (drop-while #(not= "--only" %) args))
         arrows (cond->> moves only (filter #(str/includes? (canon-have %) only)))
-        {res true unres false} (group-by #(contains? existing-canonical (canon-have %)) arrows)]
-    (println (format "mined arrows: %d  | have-resolves: %d  | honest-hole (have not a canonical node): %d"
-                     (count arrows) (count res) (count unres)))
+        {res true unres false} (group-by #(contains? existing-canonical (canon-have %)) arrows)
+        existing-wants (set (concat (map :entity/name (paged-entities "mission/head"))
+                                    (map :entity/name (paged-entities "mission/scope-target"))))
+        missing-wants (remove #(contains? existing-wants (want-node %)) res)]
+    (println (format "mined arrows parsed: %d  | arrows resolved: %d  | arrows would be written: %d"
+                     (count arrows) (count res) (count res)))
+    (println (format "honest holes: have=%d  want-existing=%d (want nodes are created before arrows)"
+                     (count unres) (count missing-wants)))
     (println (format "facets: head=%d  phase=%d"
                      (count (filter #(= "head" (facet %)) res))
                      (count (remove #(= "head" (facet %)) res))))
@@ -86,6 +151,8 @@
                 (do (swap! ent-results update :err inc)
                     (when (< (:err @ent-results) 4) (println "  ENT ERR" (:status r) (subs (str (:body r)) 0 (min 200 (count (str (:body r)))))))))))
         (println "  entities:" @ent-results)
+        (when (pos? (:err @ent-results))
+          (throw (ex-info "entity writes failed" @ent-results)))
         ;; Phase B: mined-move hyperedges (idempotent stable-hyperedge-id)
         (doseq [m res]
           (let [r (post-json "/hyperedge"
@@ -102,6 +169,9 @@
             (if (#{200 201} (:status r)) (swap! hx-results update :ok inc)
                 (do (swap! hx-results update :err inc)
                     (when (< (:err @hx-results) 4) (println "  HX ERR" (:status r) (subs (str (:body r)) 0 (min 200 (count (str (:body r)))))))))))
-        (println "  hyperedges:" @hx-results)))))
+        (println "  hyperedges:" @hx-results)
+        (when (pos? (:err @hx-results))
+          (throw (ex-info "hyperedge writes failed" @hx-results)))
+        (verify-layer! (when-not only (count res)))))))
 
 (apply -main *command-line-args*)
