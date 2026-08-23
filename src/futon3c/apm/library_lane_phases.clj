@@ -15,6 +15,7 @@
   shared is the running object -- this lane announces, activates, polls and
   persists through its own driver, so a change here reaches nothing else."
   (:require [clojure.java.shell :as shell]
+            [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-contract :as cycle]
             [futon3c.apm.live-job-driver :as driver]
@@ -206,6 +207,83 @@
                   :receipt/mutations (:mutations report)}
             addressed (assoc body :receipt/id (machine/ledger-digest [body]))
             checked (cycle/validate-receipt contract :preflight addressed)]
+        (if (:ok checked)
+          {:ok true :certificate addressed}
+          checked)))))
+
+(defn- lane-mutation-permitted?
+  [request path]
+  (or (= path (:problem-path request))
+      (= path "ConstructionTargets.lean")
+      (and (string? path)
+           (boolean
+            (re-matches #"ConstructionTargets/[^/]+\.(?:lean|md)" path)))
+      (= path (str "problems/" (:problem-id request) "/status.json"))))
+
+(defn- partial-library-increment?
+  [report]
+  (let [lean (:lean report)
+        modules (:library/modules report)]
+    (and (= 0 (:exit lean))
+         (= 0 (:errors lean))
+         (pos-int? (:sorry-warnings lean))
+         (vector? modules)
+         (seq modules)
+         (every? string? modules)
+         (= :progress (:solver/outcome report))
+         (string? (:residual report))
+         (not (str/blank? (:residual report))))))
+
+(defn validate-solve-terminal
+  "Validate a solve under the library-increment regime.
+
+  The shared problem-closing validator remains the authority and always runs
+  first. This lane re-decides only its problem-file mutation boundary and its
+  zero-sorry terminal condition: committed, axiom-clean reusable library work
+  may certify as :partial while the keyed problem remains open."
+  [request ticket job]
+  (let [strict (proof/validate-terminal :solve request ticket job)
+        report (proof/normalize-proof-report (:report job))
+        lean (:lean report)
+        closed? (= {:exit 0 :warnings 0 :sorry-warnings 0 :errors 0}
+                   (select-keys lean [:exit :warnings :sorry-warnings :errors]))
+        partial? (partial-library-increment? report)
+        mutations-permitted?
+        (every? #(lane-mutation-permitted? request %) (:mutations report))
+        findings (cond-> (vec (remove #{:mutation-outside-problem-file
+                                        :lean-proof-invalid}
+                                      (:findings strict)))
+                   (not mutations-permitted?)
+                   (conj :mutation-outside-lane-allowlist)
+                   (not (or closed? partial?))
+                   (conj :lean-proof-invalid))]
+    (if (seq findings)
+      (assoc strict :ok false :findings findings)
+      {:ok true :report report
+       :solve/result (if closed? :closed :partial)})))
+
+(defn solve-receipt
+  "Mint the frame-solve certificate on this lane's closed-or-partial verdict."
+  [contract request ticket job]
+  (let [terminal (validate-solve-terminal request ticket job)]
+    (if-not (:ok terminal)
+      terminal
+      (let [report (:report terminal)
+            result (:solve/result terminal)
+            body (cond-> {:receipt/type :frame-solve
+                          :receipt/frame-id (:frame-id request)
+                          :receipt/problem-id (:problem-id request)
+                          :receipt/job-id (:job-id ticket)
+                          :receipt/final-head (:final-head report)
+                          :receipt/lean (:lean report)
+                          :receipt/axioms (:axioms report)
+                          :receipt/statement-unchanged? true
+                          :receipt/result result}
+                   (= :partial result)
+                   (assoc :receipt/library-modules (:library/modules report)
+                          :receipt/residual (:residual report)))
+            addressed (assoc body :receipt/id (machine/ledger-digest [body]))
+            checked (cycle/validate-receipt contract :solve addressed)]
         (if (:ok checked)
           {:ok true :certificate addressed}
           checked)))))
