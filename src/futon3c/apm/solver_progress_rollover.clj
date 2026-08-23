@@ -52,8 +52,9 @@
       {:ok true :progress-receipt progress
        :terminal-receipt (addressed terminal-body)})))
 
-(defn retry-problem [problem retained-head retained-blob]
+(defn retry-problem [problem retained-branch retained-head retained-blob]
   (if (and (string? retained-head) (re-matches #"[0-9a-f]{40}" retained-head)
            (string? retained-blob) (re-matches #"[0-9a-f]{40}" retained-blob))
-    (assoc problem :revision retained-head :blob retained-blob)
+    (assoc problem :base-branch retained-branch
+           :revision retained-head :blob retained-blob)
     {:error/code :solver-progress-retry-pin-invalid}))

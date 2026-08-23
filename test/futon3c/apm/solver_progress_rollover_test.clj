@@ -33,3 +33,10 @@
                  :workspace-heads {:solver head :student head}})]
     (is (= :solver-progress-rollover-invalid (:error/code result)))
     (is (some #{:solver-round-ten-required} (:findings result)))))
+
+(deftest retry-pin-names-the-retained-branch-not-master
+  (let [problem (sut/retry-problem
+                 {:problem/id "m94A03"} "exp/countdown-f26-m94A03-solver"
+                 head (apply str (repeat 40 "b")))]
+    (is (= "exp/countdown-f26-m94A03-solver" (:base-branch problem)))
+    (is (= head (:revision problem)))))

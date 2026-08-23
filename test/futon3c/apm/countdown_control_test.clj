@@ -82,7 +82,7 @@
         (is (= :promote-solver (get-in result [:request :phase])))
         (is (= "f22-scribe" (get-in result [:request :agent-id])))))))
 
-(deftest replacement-registration-starts-at-f19-with-complete-cycle
+(deftest ^:slow replacement-registration-starts-at-f19-with-complete-cycle
   (let [body (sut/registration-body)
         units (get-in body [:block-plan 0 :units])]
     (is (= 9 (count units)))
@@ -357,7 +357,7 @@
       (is (= :countdown-registration-mismatch
              (:error/code (sut/bootstrap!)))))))
 
-(deftest qualified-v2-launch-dry-run-dispatches-nothing
+(deftest ^:slow qualified-v2-launch-dry-run-dispatches-nothing
   (binding [sut/contract-path
             "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
     (let [result (sut/dry-run-v2-launch)]

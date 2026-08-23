@@ -1354,7 +1354,8 @@
                        :retirement retired
                        :retry-problem
                        (progress-rollover/retry-problem
-                        source-problem (:final-head report) retained-blob)}
+                        source-problem (:branch report)
+                        (:final-head report) retained-blob)}
                       persisted)))))))))))
 
 (defn set-alight-problem-list!
