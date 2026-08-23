@@ -1,6 +1,7 @@
 (ns futon3c.apm.live-regulator-test
   (:require [clojure.test :refer [deftest is]]
-            [futon3c.apm.live-regulator :as sut]))
+            [futon3c.apm.live-regulator :as sut])
+  (:import [java.util.concurrent Executors]))
 
 (deftest tick-persists-running-and-terminal-results
   (let [saved (atom nil)
@@ -84,6 +85,27 @@
           (recur (inc attempt))))
       (is (= :complete (:regulator/status @saved)))
       (finally (sut/stop! "scheduled-test")))))
+
+(deftest start-replaces-a-stale-shutdown-runner
+  (let [id "stale-runner-test"
+        executor (Executors/newSingleThreadScheduledExecutor)
+        ran (promise)
+        saved (atom nil)]
+    (.shutdown executor)
+    (swap! (var-get #'sut/runners)
+           assoc id {:executor executor :state (atom (sut/initial-state id))})
+    (try
+      (is (= :started
+             (:status
+              (sut/start!
+               {:regulator-id id :period-ms 1000
+                :read-fn (constantly (sut/initial-state id))
+                :persist-fn #(do (reset! saved %) {:ok true})
+                :tick-fn #(do (deliver ran true)
+                              {:ok true :status :frame-complete})}))))
+      (is (= true (deref ran 2000 :timeout)))
+      (is (= :complete (:regulator/status @saved)))
+      (finally (sut/stop! id)))))
 
 (deftest campaign-scoped-runners-coexist-and-stop-independently
   (let [ticks-a (atom 0)

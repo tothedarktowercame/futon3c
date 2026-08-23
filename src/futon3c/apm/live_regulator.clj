@@ -61,6 +61,12 @@
 (defn status [regulator-id]
   (some-> (get @runners regulator-id) :state deref))
 
+(defn- live-runner? [{:keys [^ScheduledExecutorService executor state]}]
+  (and executor state
+       (not (.isShutdown executor))
+       (not (.isTerminated executor))
+       (not (terminal? @state))))
+
 (defn stop! [regulator-id]
   (if-let [{:keys [^ScheduledExecutorService executor]} (get @runners regulator-id)]
     (do (swap! runners dissoc regulator-id)
@@ -107,8 +113,19 @@
     {:ok false :error/code :live-regulator-provider-missing}
     (not (pos-int? period-ms))
     {:ok false :error/code :live-regulator-period-invalid}
-    (contains? @runners regulator-id)
+    (live-runner? (get @runners regulator-id))
     {:ok true :status :already-running :state (status regulator-id)}
+
+    (contains? @runners regulator-id)
+    (do
+      ;; A failed scheduled tick normally removes its runner. Namespace reloads
+      ;; and repair calls can race that cleanup, leaving a shutdown executor in
+      ;; the defonce table. It is not a running coordinator and must not satisfy
+      ;; idempotent start.
+      (stop! regulator-id)
+      (start! {:regulator-id regulator-id :read-fn read-fn
+               :persist-fn persist-fn :tick-fn tick-fn
+               :tick-state-fn tick-state-fn :period-ms period-ms}))
     :else
     (let [recovered (or (read-fn) (initial-state regulator-id))]
       (cond
