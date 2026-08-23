@@ -101,6 +101,22 @@ if [ -z "${CODE//[[:space:]]/}" ]; then
   exit 2
 fi
 
+# Policy (2026-08-23, workspace CLAUDE.md/AGENTS.md "One JVM per repo"): the
+# shared JVM is live-loaded only from its own checkout. A load-file from another
+# worktree replaced futon3c.transport.http with a 56-commits-stale branch twice
+# in one morning. Use (require 'ns :reload) — it resolves via the classpath.
+ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
+if printf '%s' "$CODE" | grep -q 'load-file'; then
+  for path in $(printf '%s' "$CODE" | grep -o '"[^"]*\.clj"' | tr -d '"'); do
+    case "$(readlink -f "$path" 2>/dev/null || echo "$path")" in
+      "$ROOT"/*) ;;
+      *) echo "proof-eval.sh: refusing to load-file $path into the shared JVM" >&2
+         echo "  it is outside $ROOT. Merge to master and (require 'ns :reload) instead." >&2
+         exit 3 ;;
+    esac
+  done
+fi
+
 printf '%s' "$CODE" | curl -s \
   -H "x-admin-token: $TOKEN" \
   -H "Content-Type: text/plain" \
