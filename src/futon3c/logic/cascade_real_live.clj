@@ -26,7 +26,7 @@
             [futon3c.substrate.client :as substrate]))
 
 (def ^:private code-root (or (System/getenv "FUTON_CODE_ROOT") "/home/joe/code"))
-(def ^:private fetch-timeout-ms 5000)
+(def ^:private fetch-timeout-ms 20000)
 
 #_{:clj-kondo/ignore [:unresolved-var]}
 (def ^:private claims-typeo-rel cr/claims-typeo)
