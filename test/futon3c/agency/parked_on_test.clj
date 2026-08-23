@@ -31,6 +31,17 @@
       (is (= :released (:status r)) "park reconciled the already-finished dep")
       (is (= [(:id r)] @fired)))))
 
+(deftest all-durable-inflight-states-remain-parked
+  (doseq [state ["announced" "accepted" "queued" "activating" "running"
+                 "overrun" "invoking" "parked" :activating :overrun]]
+    (p/clear!)
+    (let [fired (collector)
+          result (p/park! {:agent "codex-10" :awaiting ["job-1"] :payload "P"}
+                          {:ledger-lookup (constantly {:state state})
+                           :resume! (resume-into fired) :now-ms 1000})]
+      (is (= :parked (:status result)) (str state))
+      (is (empty? @fired) (str state)))))
+
 (deftest reconcile-prefers-full-result-and-falls-back-for-legacy-jobs
   (testing "already-terminal jobs deliver :result; absent/blank results use :result-summary"
     (doseq [[job expected] [[{:state "done" :result "the complete reply"

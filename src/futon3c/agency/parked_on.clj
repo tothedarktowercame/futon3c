@@ -52,12 +52,20 @@
 ;; ACK, the sweep returns the item to the front of its queue for redelivery.
 (def ^:private default-lease-ms 90000)
 
-;; Non-terminal ledger states (mirrors recover-inflight-jobs' "in-flight" set); any
-;; other non-nil state counts as terminal (a dep that has finished, success or fail).
-(def ^:private non-terminal-states #{"queued" "running" "accepted"})
+;; Non-terminal invoke-ledger states. Keep this identical to transport/http's
+;; durable job lifecycle: `activating` and `overrun` are still live jobs, not
+;; completion evidence. Accept keywords as well as strings for recovered/test
+;; ledgers.
+(def ^:private non-terminal-states
+  #{"announced" "accepted" "queued" "activating" "running" "overrun"
+    "invoking" "parked"})
+
+(defn- state-name [state]
+  (if (or (keyword? state) (symbol? state)) (name state) (str state)))
 
 (defn- terminal-state? [state]
-  (and (some? state) (not (contains? non-terminal-states (str state)))))
+  (and (some? state)
+       (not (contains? non-terminal-states (state-name state)))))
 
 (defn- completion-result
   "Return a terminal ledger entry's complete result. The summary is a legacy
