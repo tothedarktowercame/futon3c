@@ -1743,22 +1743,30 @@
     the anchor was consulted, so the unsatisfied anchor is a symptom. Reading the
     predicate took two minutes and would have cost the series a wrong mechanism."}
 
-  ;; --- D5, third sighting ------------------------------------------------
-  :D5-third-sighting
-  "The student DID record a memory: hx-mem-de5a932d,
-   'm97a06-shared-kinetic-junk-cancellation', hook 'Shared kinetic term makes
-   action/Hessian junk-0 both sides; falsity dies'. It carries :prop/domain :zaif-work
-   and :prop/attachment-status nil, with a zai-* session id among its endpoints. It is
-   unpromotable on domain grounds, which is why this frame promoted nothing and why C3
-   is INAPPLICABLE.
-   THIRD SIGHTING: f10 (e-3a3aed11), f12, f17. NEW INFORMATION THIS FRAME: f17's
-   student is a zai glm-5.2 seat and f12's student was also a zai seat, while f11's
-   student — which recorded :mathematics correctly — was not. That is a correlation
-   with n=3 and I am NOT calling it a cause; it is a hypothesis my successor can test
-   in one frame by looking at the write call rather than the mint. analyst-2 already
-   eliminated the mint: memory-domain is None for every student seat on the roster, so
-   the mint cannot discriminate between two of them. Ground control owns D5; this is
-   the first evidence that narrows it."
+  ;; --- CORRECTED: not D5, and not the student ----------------------------
+  :zai-deposits-are-all-zaif-work
+  "CORRECTED 2026-08-20 AFTER F17-GUIDE CHALLENGED MY ATTRIBUTION, AND IT WAS RIGHT.
+   I originally filed this as D5's third sighting on the grounds that
+   hx-mem-de5a932d ('m97a06-shared-kinetic-junk-cancellation') was the STUDENT'S
+   memory. IT IS THE SCRIBE'S. Verified by direct id fetch, which I should have done
+   before writing it: :evidence/author \"f17-scribe\".
+   HOW I GOT IT WRONG: I inferred 'student' from a zai-* session id among the
+   endpoints. Both the scribe and the student are zai seats this frame, so that field
+   has NO discriminating power — the same error class analyst-2 recorded when it found
+   memory-domain is None for every student seat and therefore cannot discriminate
+   between two of them. I inferred a seat from a field that cannot identify one.
+   WHAT IS ACTUALLY TRUE, and it is a cleaner finding than the one I filed: the frame
+   produced FIVE deposits, ALL scribe-authored — de5a932d (shared-kinetic-junk-
+   cancellation), 51f8aac4 (symmetric-second-difference-fatou), df0f60df
+   (ftc-odd-part-taylor-substitute), 9152cdbd (measurability-bridges-deriv), c1fb54ab
+   (solver-phase-terminal-d8fa615) — and ALL FIVE carry :prop/domain :zaif-work with
+   :prop/attachment-status nil. Every one is unpromotable on domain grounds.
+   So the domain pin is not a student problem. It is a ZAI WRITE-PATH problem, which
+   is where analyst-2 said to look ('start at the write path, not the mint') and which
+   my student framing would have sent the next seat away from.
+   MY VENDOR CORRELATION IS WITHDRAWN. It rested on f17's leg being a student memory.
+   It is not. n drops to 2 (f10, f12) and I have nothing to add to D5 proper.
+   Ground control still owns D5."
 
   ;; --- duty B — S-7 --------------------------------------------------------
   :spectral
@@ -1800,7 +1808,48 @@
     told codex-3 in terms to STOP AND BELL ME rather than invent a definition of
     'fresh' — a plausible-looking boolean in an experimental-control slot is worse than
     a nil, and inventing one would be the same error as the tool name a packet of mine
-    could have shipped if it had been large enough to build from end to end."}
+    could have shipped if it had been large enough to build from end to end."
+   :P31-reviewed-and-merged
+   "MERGED — 294b4679, merge c5971a27, on base 26b9c649 which I confirmed is an
+    ancestor of master. Files: scripts/frames.bb (+4), problem.clj (+20/-4), its test
+    (+50). preregistration.clj untouched.
+    WHAT I CHECKED:
+    (1) the replay, re-run by me — as-is [:malformed-cycle-attempts], stamped [];
+    (2) THE LOAD-BEARING ASSUMPTION, not the diff. codex-3 recorded
+        :runner-freshness true in frames.bb `open` on the argument that open rejects
+        both an existing record and an existing checkout before creating the worktree.
+        I read open-frame! and it does exactly that — two `die` calls, then
+        `git worktree add -b`. So the boolean records what the provisioner DID; it was
+        not inferred from mtimes or directory existence, which I had forbidden. It also
+        follows a convention already in that map (:session :recorded-at-close, with a
+        comment that a minted UUID there 'asserted isolation that did not exist').
+        It answered the semantics question by finding the place where the machine
+        genuinely knows, which is better than the bell-back I told it to send;
+    (3) FOUR MUTATIONS THE PACKET DID NOT ASK FOR. The one that matters: an EMPTY
+        caller map {} now produces an attempt satisfying attempt? — machine stamping
+        alone, nothing caller-supplied. That is the property the packet was about.
+        Removing the (some? regime) guard is caught by three assertions including a
+        dedicated test. Missing regime and missing freshness each leave the key ABSENT
+        rather than nil. And a caller-supplied :runner-freshness false is PRESERVED,
+        not clobbered;
+    (4) clj-kondo 0/0 and 108 tests / 393 assertions / 0 failures, re-run by me.
+    MY FINDING, recorded because it limits what the field can do: there is EXACTLY ONE
+    writer of :runner-freshness and it writes the literal `true`. No path can write
+    false. The field is truthful for the path that writes it and NON-DISCRIMINATING
+    until a runner-reuse path exists — which matters because freshness is an
+    experimental control, and a control that cannot vary detects nothing. This is the
+    same shape as :both-channels-varied one level down. Not a blocker and not a defect
+    in the packet; the stamp already preserves an explicit false, so the slot is usable
+    the day a reuse path is added.
+    AND CODEX-3 CORRECTED MY PACKET, which is the second time this close someone
+    caught an over-narrow claim of mine. I told it to expect a federation-sync /
+    dev-irc-summary repo-wide baseline; it reported the red set is broader —
+    architecture, wiring-evidence, blackboard — and declined to attribute those to my
+    stated baseline. I verified: futon3c.architecture.wiring-evidence-test is 4/4 red
+    on master WITHOUT P31 applied. Pre-existing, and my baseline was stated from
+    memory rather than re-measured. A packet's stated baseline is a claim like any
+    other and should be measured at dispatch time."
+}
 
   ;; --- record integrity --------------------------------------------------
   :series-file-repair
@@ -1835,11 +1884,72 @@
    ABSENT TERRAIN, and the prediction should be re-registered on a problem whose
    terrain the store actually covers — otherwise it will keep confirming 'structural'
    from an empty shelf.
-   :glm-seats-complete-the-frame — the SCRIBE LEG DID NOT RUN. :scribe-lane-reports is
-   nil and there is no :record-scribe-lanes step in the cycle at all, against f15's
-   eight. The student leg ran and produced a real partial result (one conjunct,
-   axiom-clean) plus a memory the domain pin then made unpromotable. Per the
-   registration's own rule, seat failure is the measurement, not a violation.
+   :glm-seats-complete-the-frame — CORRECTED. I first reported 'the scribe leg did not
+   run', from the absence of a :record-scribe-lanes step in :steps. THAT WAS WRONG AND
+   f17-guide caught it. The scribe RAN: five deposits in the store (above), and
+   coordination entries authored by f17-scribe carrying server-observed
+   :cost/model \"glm-5.3\" (e-13563476, e-6b1015ec) — I verified the attribution from a
+   different route than the guide's cited id. THE SCRIBE LEG'S FIRST LIVE TEST IS A
+   POSITIVE and must be scored as one.
+   What failed is the lane RECORD, not the seat: record-scribe-lanes was attempted
+   three times and refused (f17-record-scribe-lanes-1, -2, -4 at steps 46-48). So
+   scribe work EXECUTED and attributed; scribe lane-coverage MEASUREMENT void by
+   machine defect — the same family as a capability being unreachable rather than
+   unearned, not the same thing as seat silence.
+   HOW I GOT IT WRONG, because the mechanism matters more than the correction:
+   REFUSED ACTIONS ARE NOT IN :steps. They are in :cycle/action-refusals, which has
+   EIGHTEEN entries this frame, not the three I reported. I read that field early and
+   TRUNCATED MY OWN OUTPUT AT 900 CHARACTERS for readability, saw three dispatch-solver
+   refusals, and never went back. analyst-2 recorded this exact error — dropping the
+   trace from its own inspection to keep output readable — and I quoted it in my
+   handoff while committing it in the same close. An instrument that truncates is an
+   instrument that asserts absence.
+   TWO MORE OF MY CLAIMS FALL WITH IT: (a) I wrote that the refusals were all
+   :tool-execution-failed and that D43's f15 improvement had not carried forward.
+   FALSE — f17-guide-solver-1 and -2 are :guidance-type-invalid with a real message,
+   so the improvement DID carry. (b) I attributed zero promotions to the domain pin
+   alone. There were also THREE promote-artifact refusals (f17-promote-1, -2, -3), so
+   promotion was ATTEMPTED and failed at the tool. The domain pin is a reason, not
+   the reason.
+   ON THE ROOT CAUSE, where I could not confirm the guide's diagnosis: it reports
+   record-scribe-lanes as structurally uncallable over HTTP because the transport
+   decodes only the :lane value and JSON cannot supply :ran?. Half of that is exactly
+   right — conductor_surface.clj:74-75 special-cases ONLY [0 :lane] for this
+   operation. But parse-json-map calls (json/parse-string body true), which KEYWORDIZES
+   KEYS, so {\"ran?\": true} does arrive as {:ran? true} and (boolean? ran?) passes.
+   The :lane special case exists because JSON has no keyword VALUE type, which is a
+   different problem from key decoding. So :ran? is supplyable and something else threw
+   — :yield must be a vector of nonblank strings, :author must be a nonblank staffed
+   seat, or the lane was not in scribe-lanes; all three throw identically.
+   SETTLED ON A THIRD PASS, and gate 4 is EXPLAINED — not 'live but unexplained'.
+   f17-guide replied that the literal error strings ARE in the persisted refusals. I
+   pprinted the three refusal maps IN FULL this time rather than selecting fields, and
+   they are not: all three carry :code :tool-execution-failed and :message \"Tool
+   execution failed\", nothing more. The literal strings the guide remembers are in its
+   SESSION's tool results, which is a surface the Analyst does not read. So D43's cost
+   on the persisted record is real.
+   BUT MY 'NOBODY CAN TELL WHICH' WAS STILL TOO STRONG, AND THE REFUSAL RECORD SETTLES
+   IT — just not in the error field. Each refusal carries an :arg/keys diagnostic:
+     attempt 1  keys [\":lane\" \":report\"]                         lane :solver-phase-mining
+     attempt 2  keys [\":author\" \":lane\" \":ran\" \":report\" \":yield\"]  lane :solve
+     attempt 4  keys [\":author\" \":lane\" \":ran\" \":report\" \":yield\"]  lane :solve
+   scribe-lanes is #{:solve :arc :trajectory :challenge} (problem.clj:290-292), so
+   :solver-phase-mining is NOT a lane and attempt 1 threw :unknown-scribe-lane. And
+   attempts 2 and 4 sent the key :ran while the tool reads (:ran? report), so it got
+   nil, (boolean? nil) is false, and it threw ':malformed-scribe-lane-report — ran?
+   must be boolean'. BOTH MATCH THE GUIDE'S INDEPENDENT RECOLLECTION EXACTLY, from a
+   different route than its session log.
+   SO THE CAUSE IS A CALLER PAYLOAD KEY, `ran` WHERE THE TOOL REQUIRES `ran?` — the
+   guide's own 'sed edit landing wrong' hypothesis, confirmed: the corrected payload
+   never reached the server on any persisted attempt. Neither the transport nor the
+   tool is at fault. No harness repro is needed; whoever picks this up should not spend
+   one.
+   D43 IS NARROWER THAN I CLAIMED AND STILL REAL: the refusal's ERROR field is generic,
+   but its ARGS field is diagnostic, and I could have told which throw fired at any
+   point by reading the args instead of the error. Twice in one frame I read part of a
+   record and reported what the whole record would have said. THE REFUSAL RECORD
+   DIAGNOSES ITSELF THROUGH :arg/keys — that is worth more to the next seat than my
+   original complaint was.
    :guidance-count-exact — 0 recorded, 0 guidance events in the trace, consistent.
    :analyst-succession-executed — see :succession."
 
@@ -1872,10 +1982,19 @@
    Against that, three real defects with receipts: the student's recall channel did not
    fire at all (:not-invoked, :memory-channel-no-push, against 523 eligible); the
    lexical seed spends 29 of 30 slots on agent coordination evidence when answering a
-   mathematics query; and the student's memory is :domain :zaif-work again, the third
-   sighting of D5 and the first with a vendor correlation to test.
-   And the instrument caught itself twice: my own f15 prediction that P30 would clear
-   :malformed-cycle-attempts was wrong — it fixed the field I measured and two others
-   were waiting — and the f16 void entry turned out to have been sitting outside the
-   series vector, present as text and absent as data, since the day it was written."}
+   mathematics query; and all FIVE of the frame's deposits land :domain :zaif-work and
+   unpromotable. (I first filed that last one as D5's third sighting on the student.
+   It is not: f17-guide challenged the attribution and the deposits are the SCRIBE's,
+   :evidence/author \"f17-scribe\". Corrected in place above; the corrected version is
+   the better finding, because it points at the zai write path rather than at
+   students.)
+   And the instrument caught itself three times, twice unaided and once not: my own f15
+   prediction that P30 would clear :malformed-cycle-attempts was wrong — it fixed the
+   field I measured and two others were waiting; the f16 void entry turned out to have
+   been sitting outside the series vector, present as text and absent as data, since
+   the day it was written; and I reported the scribe leg as not having run when it had,
+   because I truncated my own view of :cycle/action-refusals and read absence from
+   :steps. THE THIRD ONE THE GUIDE CAUGHT, NOT ME, and it is the one worth keeping: an
+   instrument that truncates its own output is an instrument that asserts absence.
+   Three of my claims fell with it and are corrected in place rather than deleted."}
 ]

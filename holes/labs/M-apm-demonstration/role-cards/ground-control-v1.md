@@ -154,6 +154,39 @@ reading the reply is two. One dispatch that runs the whole gate suite and
 reports back replaces twenty of your turns with two. A per-command proctor makes
 the frame more consistent and more expensive at the same time.
 
+## Casting a frame — you decide which vendor holds which seat
+
+Seat vendors used to be hardcoded. They are now yours to set at mint time:
+
+    POST /api/alpha/frames/mint-seats
+    {"frame-id": "f16",
+     "cast": {"guide":   {"type": "zai", "model": "glm-5.3"},
+              "scribe":  {"type": "zai", "model": "glm-5.3"},
+              "student": {"type": "zai", "model": "glm-5.2"}}}
+
+- Seat keys are `solver`, `student`, `guide`, `proctor`, `scribe`.
+- `type` is `claude`, `codex` or `zai`. `model` is optional and per-seat.
+- **Any seat you omit keeps its default** — solver and proctor stay Codex in
+  the example above. Omitting `cast` entirely is exactly the old behaviour.
+
+**Do not use the top-level `"model"` on a mixed-vendor frame.** It applies to
+*every* seat, including the Codex ones, and a `glm-*` string handed to a Codex
+seat is not something the roster will refuse for you. Per-seat models are the
+safe form; the top-level one is for the single-vendor case only.
+
+**Read the `:casting` block in the response, every time.** It reports the
+*effective* type and model for all five seats, defaults included — not what you
+asked for. It is the only record of what actually held each seat, and after a
+re-cast it is what makes the frame comparable to its predecessors. A frame
+whose casting nobody recorded is a frame whose result cannot be attributed.
+
+The endpoint refuses rather than silently dropping: an unknown seat name, an
+unknown type, a **misspelled override key** (`{"guide": {"tpye": "zai"}}`) and
+a non-string type all return **400** naming the offending value and the
+accepted set. This matters because the failure it prevents is silent — a
+mistyped cast that returned 200 would give you a Claude guide, a green frame,
+and a measurement of the wrong thing.
+
 ## Shared checkouts — two ways they bit, both mine
 
 Several agents share one working tree.

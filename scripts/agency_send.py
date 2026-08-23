@@ -77,6 +77,33 @@ if a.park and a.kind != "bell":
 if a.mode and a.kind != "bell":
     sys.exit("agency_send: --mode is only valid with --kind bell")
 
+def buffer_surface(surface):
+    """Mirror of `buffer-surface?` in src/futon3c/transport/http.clj: a surface whose
+    resume is delivered to a polling REPL buffer rather than run server-side."""
+    return str(surface or "").startswith("emacs")
+
+
+# Two lanes, two very different stories, so say only the one that applies.
+# Printing the CLI hazard at every --park startled agents on Emacs REPL seats,
+# for whom parking is the ordinary, supported path (Joe, 2026-08-22).
+PARK_BUFFER_NOTE = (
+    "agency_send: --park on the buffer lane (surface=%s). This is the normal path:\n"
+    "  your resume is queued to the ready-inbox and delivered by the poller into your\n"
+    "  REPL buffer, in place, as one turn. Nothing further to do.\n"
+    "  Caveat: if no REPL buffer is polling for you when the join completes, the resume\n"
+    "  is assembled and then dropped -- the job-id below stays your fallback.")
+
+PARK_CLI_NOTE = (
+    "agency_send: WARNING -- --park with surface=%s is NOT a buffer surface, so Agency\n"
+    "  delivers the resume headlessly by running `claude --print --resume <session-id>`\n"
+    "  -- a SECOND process sharing your session id, which BIFURCATES a live conversation.\n"
+    "  That is the hazard 'agent identity is singular' exists to prevent.\n"
+    "  If you are an interactive CLI seat: DO NOT PARK. You have your own resume\n"
+    "  capability; poll the job yourself at GET /api/alpha/invoke/jobs/<job-id>.\n"
+    "  If you are an Emacs REPL seat, pass --surface emacs-repl (the default).\n"
+    "  See futon3c/README-park.md.")
+
+
 if a.park and not a.frm:
     sys.exit("agency_send: --park requires --from <id> so the sender's session can be parked")
 
@@ -84,6 +111,10 @@ if not a.frm:
     print("agency_send: WARNING — no --from <id>. This bell logs as 'http-caller' "
           "with NO mesh edge; auto-bellback cannot route a reply back to you. "
           "Pass --from <your-id>.", file=sys.stderr)
+
+if a.park:
+    note = PARK_BUFFER_NOTE if buffer_surface(a.surface) else PARK_CLI_NOTE
+    print(note % a.surface, file=sys.stderr)
 
 body = {"agent-id": a.to, "prompt": prompt}
 if a.frm:

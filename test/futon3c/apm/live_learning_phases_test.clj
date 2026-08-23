@@ -50,13 +50,29 @@
              :state :done
              :report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
                       :outcome :stuck :failure-account {:reason :gap}
-                      :memory-use {:queries 2 :used []}}}
+                      :memory-use {:queries [] :surfaced-ids [] :used-ids []}}}
         ticket {:job-id "j1"}
         validated (sut/validate-terminal request ticket job)
         result (sut/receipt contract action (:receipts base) request ticket job validated)]
     (is (:ok validated))
     (is (:ok result))
     (is (= "fresh-s1" (get-in result [:certificate :receipt/fresh-session-id])))))
+
+(deftest typed-terminal-repair-preserves-authority-and-carries-findings
+  (let [repair (sut/terminal-repair-request
+                {:dispatch/id "original" :frame-id "f25"
+                 :problem-id "m94A02" :fresh-session? true
+                 :memory-snapshot {:snapshot-digest "snapshot"}}
+                {:ticket/id "ticket-1"}
+                {:job-id "job-1"}
+                {:findings [:command-own-exit-nonzero :frame-mismatch]})
+        request (:request repair)]
+    (is (:ok repair))
+    (is (false? (:fresh-session? request)))
+    (is (= "snapshot" (get-in request [:memory-snapshot :snapshot-digest])))
+    (is (= [:command-own-exit-nonzero :frame-mismatch]
+           (:repair/findings request)))
+    (is (not= "original" (:dispatch/id request)))))
 
 (deftest guide-must-prove-channel-isolation
   (let [request {:dispatch/type :guide-intervention :agent-id "f19-guide"
@@ -96,7 +112,7 @@
                            :accessible-memory-ids #{"m1"}}
                           :action {:kind :student-attempt
                                    :phase :student-attempt-1 :role :student
-                                   :ordinal 1 :frame-id "f19" :problem-id "a01J05"}
+                                   :frame-id "f19" :problem-id "a01J05"}
                           :seat {:agent-id "f19-student" :invoke-ready? true}})))
         job {:job-id "j" :agent-id "f19-student" :session-id "fresh"
              :state :done
@@ -104,13 +120,76 @@
                       :outcome :stuck :failure-account {}
                       :memory-use {:receipt-id "wrong"
                                    :snapshot-id "snapshot-1"
-                                   :snapshot-digest "snapshot-digest"}}}]
+                                   :snapshot-digest "snapshot-digest"
+                                   :queries [] :surfaced-ids [] :used-ids []}}}]
     (is (= {:receipt-id "promotion-receipt"
             :snapshot-id "snapshot-1" :snapshot-digest "snapshot-digest"
             :accessible-memory-ids ["m1"]}
            (:memory-snapshot request)))
+    (is (= 1 (:attempt-ordinal request)))
     (is (some #{:student-memory-snapshot-mismatch}
               (:findings (sut/validate-terminal request {:job-id "j"} job))))))
+
+(deftest student-cannot-report-global-store-memory-outside-frozen-snapshot
+  (let [request {:dispatch/type :student-attempt
+                 :agent-id "f22-student" :frame-id "f22"
+                 :problem-id "a98J02"
+                 :memory-snapshot {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :accessible-memory-ids []}}
+        job {:job-id "j" :agent-id "f22-student" :session-id "fresh"
+             :state :done
+             :report {:command-own-exit 0 :frame-id "f22"
+                      :problem-id "a98J02"
+                      :memory-use {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :queries ["Banach fixed point"]
+                                   :surfaced-ids ["e-global"]
+                                   :used-ids ["e-global"]}}}
+        result (sut/validate-terminal request {:job-id "j"} job)]
+    (is (some #{:student-memory-surfaced-outside-snapshot}
+              (:findings result)))))
+
+(deftest student-prompt-names-frame-and-exact-memory-evidence-shape
+  (let [text (sut/prompt {:dispatch/type :student-attempt
+                          :phase :student-attempt-1
+                          :frame-id "f22" :role-card-path "student.md"
+                          :role-card-blob "blob"
+                          :memory-snapshot {:accessible-memory-ids []}})]
+    (is (.startsWith text "F22 student-attempt-1"))
+    (is (re-find #":surfaced-ids and :used-ids" text))
+    (is (re-find #"do not query, read, or use" text))))
+
+(deftest student-report-must-record-exact-search-queries
+  (let [request {:dispatch/type :student-attempt :agent-id "f22-student"
+                 :frame-id "f22" :problem-id "p22"}
+        job {:job-id "j" :agent-id "f22-student" :session-id "fresh"
+             :state :done
+             :report {:command-own-exit 0 :frame-id "f22" :problem-id "p22"
+                      :memory-use {:surfaced-ids [] :used-ids []}}}]
+    (is (some #{:student-memory-use-ids-invalid}
+              (:findings (sut/validate-terminal request {:job-id "j"} job))))))
+
+(deftest promotion-deposit-is-bound-to-base-residual-and-solver-head
+  (let [action {:kind :scribe-reduce :phase :promote-solver :role :scribe
+                :frame-id "f19" :problem-id "a01J05"}
+        solve {:receipt/id "solve" :receipt/final-head
+               "1111111111111111111111111111111111111111"}
+        verify {:receipt/id "verify"}
+        v2-contract (edn/read-string
+                     (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"))
+        result (sut/build-request
+                (merge base {:contract v2-contract
+                             :action action
+                             :receipts {:solve solve :verify verify}
+                             :seat {:agent-id "f19-scribe" :invoke-ready? true}}))
+        request (:request result)]
+    (is (:ok result))
+    (is (= (get-in unit [:problem :blob]) (:base-problem-blob request)))
+    (is (= (get-in unit [:problem :path]) (:problem-path request)))
+    (is (= (:receipt/final-head solve) (:solver-final-head request)))))
 
 (deftest student-dispatch-fails-closed-without-substrate-snapshot-proof
   (let [promotion {:receipt/id "promotion-receipt"

@@ -28,6 +28,7 @@ current reality, not intent.
   - get one: `GET /api/alpha/agents/:id`
   - deregister: `DELETE /api/alpha/agents/:id`
   - invoke: `POST /api/alpha/invoke` (routes to registered agent's invoke-fn)
+  - compact warm Claude pouch: `POST /api/alpha/agents/:id/compact` (raw `/compact`; 404 when cold, 409 when busy)
 - Claude is registered at startup with real invoke-fn (calls `claude -p`, serialized via locking)
 - Social stages are implemented and tested:
   - `S-presence`, `S-authenticate`, `S-mode`, `S-dispatch`, `S-persist`, `S-validate`

@@ -101,6 +101,36 @@ if [ -z "${CODE//[[:space:]]/}" ]; then
   exit 2
 fi
 
+# Policy (2026-08-23, workspace CLAUDE.md/AGENTS.md "One JVM per repo"): the
+# shared JVM is live-loaded only from the checkouts on its own classpath. A
+# load-file from a worktree copy (futon3c-apm-control, 56 commits stale)
+# replaced futon3c.transport.http twice in one morning. Sibling repos that
+# the JVM is built from (futon0/1/1b/2/3a/3b/4/5 ...) are on the classpath and
+# stay allowed; the classpath is read from the running JVM, not hardcoded.
+if printf '%s' "$CODE" | grep -q 'load-file'; then
+  ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
+  CP_ROOTS="$(printf '%s' '(System/getProperty "java.class.path")' | curl -s \
+      -H "x-admin-token: ${TOKEN}" -H 'Content-Type: text/plain' \
+      --data-binary @- "http://localhost:${PORT}/eval" 2>/dev/null \
+    | sed -n 's/.*:value "\(.*\)".*/\1/p' | tr ':' '\n' | grep -v '\.jar$' \
+    | sed "s#^\([^/]\)#$ROOT/\1#")"
+  [ -n "$CP_ROOTS" ] || CP_ROOTS="$ROOT"
+  for path in $(printf '%s' "$CODE" | grep -o '"[^"]*\.clj"' | tr -d '"'); do
+    real="$(readlink -f "$path" 2>/dev/null || echo "$path")"
+    ok=0
+    while IFS= read -r root; do
+      root="$(readlink -f "$root" 2>/dev/null || echo "$root")"
+      case "$real" in "$root"/*) ok=1; break ;; esac
+    done <<< "$CP_ROOTS"
+    if [ "$ok" = 0 ]; then
+      echo "proof-eval.sh: refusing to load-file $path into the shared JVM" >&2
+      echo "  it is not under any directory on the JVM's classpath (worktree copy?)." >&2
+      echo "  Merge to master and (require 'ns :reload) instead." >&2
+      exit 3
+    fi
+  done
+fi
+
 printf '%s' "$CODE" | curl -s \
   -H "x-admin-token: $TOKEN" \
   -H "Content-Type: text/plain" \

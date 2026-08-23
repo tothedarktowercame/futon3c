@@ -21,6 +21,7 @@
             [futon3c.social.test-fixtures :as fix]
             [futon3c.social.persist :as persist]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.clock-lineage :as clock-lineage]
@@ -165,6 +166,40 @@
       (is (= [] (:ready body)))
       (is (true? (:withheld body)))
       (is (false? @popped?)))))
+
+(deftest park-coerces-decimal-string-timestamps-before-persisting
+  (let [park-args (atom nil)
+        response (with-redefs [http/parked-on-enabled? (constantly true)
+                               parked-on/park! (fn [args _opts]
+                                                 (reset! park-args args)
+                                                 {:id "park-test" :status :parked})]
+                   ((var-get #'http/handle-park)
+                    {:body (json/generate-string
+                            {:agent "codex-10"
+                             :awaiting []
+                             :timer-due-ms "1787266477778"
+                             :deadline-ms "1787266480000"})}
+                    nil))
+        body (json/parse-string (:body response) true)]
+    (is (= 200 (:status response)))
+    (is (true? (:ok body)))
+    (is (= 1787266477778 (:timer-due-ms @park-args)))
+    (is (= 1787266480000 (:deadline-ms @park-args)))
+    (is (integer? (:timer-due-ms @park-args)))
+    (is (integer? (:deadline-ms @park-args)))))
+
+(deftest park-rejects-unconvertible-timestamps
+  (doseq [[field value error] [[:timer-due-ms "tomorrow" "invalid-timer-due-ms"]
+                               [:deadline-ms 1.5 "invalid-deadline-ms"]]]
+    (let [response (with-redefs [http/parked-on-enabled? (constantly true)]
+                     ((var-get #'http/handle-park)
+                      {:body (json/generate-string
+                              (assoc {:agent "codex-10" :awaiting []}
+                                     field value))}
+                      nil))
+          body (json/parse-string (:body response) true)]
+      (is (= 400 (:status response)))
+      (is (= error (:error body))))))
 
 (deftest parked-background-record-does-not-defer-within-turn-finalization
   (testing "background parks are excluded from /parked more-pending"
@@ -319,6 +354,38 @@
                                       (.firstValue "content-type")
                                       (.orElse nil))}
      :body (.body resp)}))
+
+(deftest invoke-stream-pushes-live-agent-events-to-client
+  (testing "events reported through the registered Agency sink reach the open stream"
+    (reg/register-agent!
+     {:agent-id {:id/value "codex-stream-push" :id/type :continuity}
+      :type :codex
+      :invoke-fn
+      (fn [_prompt _session-id]
+        (reg/update-invoke-activity! "codex-stream-push" "using bash")
+        {:result "complete" :session-id "stream-session"})
+      :capabilities [:explore :edit]})
+    (let [handler (make-handler)]
+      (with-redefs [http/repl-through-queue? (constantly true)
+                    turn-queue/drainer-v2-enabled? (constantly true)]
+        (with-live-server
+          handler
+          (fn [base-url]
+            (let [response (http-post-json
+                            base-url
+                            "/api/alpha/invoke-stream"
+                            (json/generate-string
+                             {:agent-id "codex-stream-push"
+                              :prompt "show progress"
+                              :caller "http-test"}))
+                  events (mapv #(json/parse-string % true)
+                               (str/split-lines (:body response)))]
+              (is (= 200 (:status response)))
+              (is (= ["started" "invoke.activity" "done"]
+                     (mapv :type events)))
+              (is (= "using bash" (:activity (second events))))
+              (is (apply = (map :turn-id events))
+                  "every pushed event retains the request's stream identity"))))))))
 
 (defn- wait-for-job-state
   "Poll /api/alpha/invoke/jobs/:id until state is no longer queued/running or timeout."
@@ -1071,6 +1138,71 @@
           (when (.exists session-file)
             (.delete session-file)))))))
 
+(deftest agent-compact-maps-pouch-control-statuses
+  (let [handler (make-handler)]
+    (doseq [[result expected expected-path]
+            [[{:ok true :compact-result "success"} 200 "warm"]
+             [{:ok false :error "turn in flight"} 409 "warm"]]]
+      (with-redefs [agent-pouch/compact-pouch! (fn [agent-id opts]
+                                                (is (= "claude-compact" agent-id))
+                                                (is (= {} opts))
+                                                result)]
+        (let [response (post handler "/api/alpha/agents/claude-compact/compact" "{}")]
+          (is (= expected (:status response)))
+          (is (= (assoc result :path expected-path) (parse-body response))))))))
+
+(deftest agent-compact-cold-path-refuses-unknown-or-busy-agent
+  (let [handler (make-handler)]
+    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                  reg/get-agent (constantly nil)]
+      (let [response (post handler "/api/alpha/agents/missing/compact" "{}")]
+        (is (= 404 (:status response)))
+        (is (= {:ok false :error "no local agent"} (parse-body response)))))
+    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                  reg/get-agent (constantly {:agent/invoke-fn identity
+                                             :running-jobs 1 :queued-jobs 0})]
+      (let [response (post handler "/api/alpha/agents/claude-busy/compact" "{}")]
+        (is (= 409 (:status response)))
+        (is (= {:ok false :error "turn in flight" :path "cold"}
+               (parse-body response)))))))
+
+(deftest agent-compact-cold-path-queues-literal-control-and-returns-outcome
+  (let [handler (make-handler)
+        invoked (atom nil)
+        queued (atom nil)
+        invoke-fn (fn [prompt session-id]
+                    (reset! invoked [prompt session-id
+                                     turn-queue/*drained-by-outer*
+                                     turn-queue/*turn-id*])
+                    {:compact-result "failed"
+                     :compact-error "Not enough messages to compact."
+                     :session-id session-id
+                     :usage {:input_tokens 10}
+                     :total-cost-usd 0.0})]
+    (with-redefs [agent-pouch/compact-pouch! (constantly {:ok false :error "no warm pouch"})
+                  reg/get-agent (constantly {:agent/invoke-fn invoke-fn
+                                             :agent/session-id "sid-cold"
+                                             :running-jobs 0 :queued-jobs 0})
+                  turn-queue/accept-async!
+                  (fn [entry]
+                    (reset! queued entry)
+                    (let [waiter (promise)]
+                      (deliver waiter ((:process-fn entry) entry))
+                      {:status :queued :entry entry :waiter waiter}))]
+      (let [response (post handler "/api/alpha/agents/claude-cold/compact" "{}")
+            parsed (parse-body response)]
+        (is (= 200 (:status response)))
+        (is (= ["/compact" "sid-cold" true (:id @queued)] @invoked))
+        (is (= "/compact" (:prompt @queued)))
+        (is (= {:ok false
+                :compact-result "failed"
+                :compact-error "Not enough messages to compact."
+                :session-id "sid-cold"
+                :usage {:input_tokens 10}
+                :total-cost-usd 0.0
+                :path "cold"}
+               parsed))))))
+
 ;; =============================================================================
 ;; POST /api/alpha/invoke tests
 ;; =============================================================================
@@ -1715,6 +1847,47 @@
       (is (= "done" (:state job)))
       (is (= 1 (count (filter #(= "accepted" (:type %)) (:events job))))))))
 
+(deftest invoke-announce-drainer-records-stream-events-and-restores-sink
+  (testing "an announced job records drainer stream events without clobbering an existing sink"
+    (register-mock-agent! "codex-announce-stream" :codex)
+    (let [handler (make-handler)
+          prior-events (atom [])
+          prior-sink #(swap! prior-events conj %)
+          announce-body (json/generate-string
+                         {"agent-id" "codex-announce-stream"
+                          "prompt" "stream this turn"
+                          "caller" "frame-solver"
+                          "surface" "frame"})
+          announce-response (post handler "/api/alpha/invoke/announce" announce-body)
+          job-id (:job-id (parse-body announce-response))
+          invoke-body (json/generate-string
+                       {"agent-id" "codex-announce-stream"
+                        "prompt" "stream this turn"
+                        "caller" "frame-solver"
+                        "surface" "frame"
+                        "job-id" job-id})]
+      (reg/set-invoke-event-sink! "codex-announce-stream" prior-sink)
+      (with-redefs [reg/invoke-agent!
+                    (fn [agent-id _prompt _opts]
+                      (let [sink (reg/get-invoke-event-sink agent-id)]
+                        (sink {:type "text" :text "live chunk"})
+                        (sink {:type "tool_use" :tools ["Read"]}))
+                      {:ok true :result "done" :session-id "sess-announce-stream"})]
+        (let [invoke-response (post handler "/api/alpha/invoke" invoke-body)
+              job-response (get-req handler (str "/api/alpha/invoke/jobs/" job-id))
+              job (get-in (parse-body job-response) [:job])
+              event-types (mapv :type (:events job))]
+          (is (= 202 (:status announce-response)))
+          (is (= 200 (:status invoke-response)))
+          (is (some #{"prompt"} event-types))
+          (is (some #{"text"} event-types))
+          (is (some #{"tool_use"} event-types))
+          (is (= ["text" "tool_use"] (mapv :type @prior-events))
+              "the previously installed sink receives both events")
+          (is (identical? prior-sink
+                          (reg/get-invoke-event-sink "codex-announce-stream"))
+              "the exact previous sink is restored after the turn"))))))
+
 (deftest invoke-activation-accepts-immediately-and-is-idempotent
   (testing "a pre-announced canonical job executes once behind a durable 202 boundary"
     (let [started (promise) release (promise) invocations (atom 0)]
@@ -1775,6 +1948,39 @@
       (is (= 409 (:status response)))
       (is (= "activation-request-mismatch" (:error (parse-body response))))
       (is (zero? @invocations)))))
+
+(deftest legacy-unbound-invoke-request-requires-explicit-audited-binding
+  (testing "an old queued job can be bound once without weakening activation"
+    (let [authority {:job-id "legacy-unbound-1"
+                     :agent-id "codex-activate-legacy"
+                     :prompt "exact legacy prompt"
+                     :caller "countdown-control"
+                     :surface "emacs-repl"
+                     :mode "brief"}]
+      (#'http/update-invoke-jobs-ledger!
+       (fn [ledger]
+         (-> ledger
+             (update :job-order conj (:job-id authority))
+             (assoc-in [:jobs (:job-id authority)]
+                       {:job-id (:job-id authority)
+                        :agent-id (:agent-id authority)
+                        :caller (:caller authority)
+                        :surface (:surface authority)
+                        :mode "brief"
+                        :state "queued"
+                        :event-seq 1
+                        :events [{:seq 1 :type "accepted"}]}))))
+      (is (= :retained-identity-mismatch
+             (:error (http/bind-unbound-invoke-request!
+                      (assoc authority :surface "http")))))
+      (let [bound (http/bind-unbound-invoke-request! authority)
+            job (get-in @(var-get #'http/!invoke-jobs-ledger)
+                        [:jobs (:job-id authority)])]
+        (is (:ok bound))
+        (is (= (:request-digest bound) (:request-digest job)))
+        (is (= "request-bound" (-> job :events last :type)))
+        (is (= :request-already-bound
+               (:error (http/bind-unbound-invoke-request! authority))))))))
 
 (deftest bell-no-evidence-work-turn-fails-terminally
   (testing "bell work-mode invoke with no execution evidence ends as failed no-execution-evidence"

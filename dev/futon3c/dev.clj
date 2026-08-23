@@ -47,6 +47,7 @@
      FUTON3C_REGISTER_CODEX  — whether to register codex-1 on this host
      FUTON3C_TICKLE_AUTOSTART — auto-start Tickle watchdog on boot (default false)
      FUTON3C_PROCESS_WATCHDOG_AUTOSTART — auto-start infra process watchdog on boot (default true)
+     FUTON3_INBOX_ZERO_WITNESS_DIR — immutable exact-seat tool-edit witness intake
      MEME_DB_PATH            — path to meme.db (auto-detected from futon3a if absent)"
   (:require [futon3c.agents.codex-cli :as codex-cli]
             [futon3c.agents.mfuton-invoke-override :as mfuton-invoke-override]
@@ -59,6 +60,7 @@
             [futon3c.agency.job-tree :as job-tree]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.clock-lineage :as clock-lineage]
+            [futon3c.inbox-zero.witness :as inbox-zero-witness]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
@@ -1116,6 +1118,32 @@
   [agent-id session-id tool-details]
   (doseq [tool-detail tool-details]
     (record-agent-tool-use! agent-id session-id tool-detail)))
+
+(defonce ^:private !pending-inbox-zero-tool-edits (atom {}))
+
+(defn- remember-inbox-zero-tool-details!
+  [agent-id session-id tool-details]
+  (doseq [detail tool-details
+          :when (and (:id detail) (inbox-zero-witness/edit-path detail))]
+    (swap! !pending-inbox-zero-tool-edits
+           assoc [agent-id session-id (:id detail)] detail)))
+
+(defn- record-inbox-zero-tool-results!
+  [agent-id session-id tool-results]
+  (doseq [{:keys [tool_use_id is_error]} tool-results
+          :let [key [agent-id session-id tool_use_id]
+                detail (get @!pending-inbox-zero-tool-edits key)]
+          :when detail]
+    (swap! !pending-inbox-zero-tool-edits dissoc key)
+    (when-not is_error
+      (try
+        (inbox-zero-witness/publish-successful-edit!
+         {:witness-dir (System/getenv "FUTON3_INBOX_ZERO_WITNESS_DIR")
+          :agent-id agent-id :session-id session-id :tool-detail detail})
+        (catch Throwable t
+          (println (str "[inbox-zero] tool-edit witness failed for " agent-id
+                        ": " (.getMessage t)))
+          (flush))))))
 
 (defn- invoke-meta-trace-id
   "Extract invoke trace id from invoke-meta maps with keyword or string keys."
@@ -3625,6 +3653,8 @@ RESPOND WITH ONLY:
               tools-acc (atom [])
               result-sid (atom nil)
               result-error (atom false)
+              compact-status (atom nil)
+              result-event (atom nil)
               aid-val (str agent-id)
               ;; Register invoke control so interrupt-invoke endpoint works
               control-token (str "claude-invoke-" (UUID/randomUUID))
@@ -3655,6 +3685,10 @@ RESPOND WITH ONLY:
                                             :root-pid (.pid proc)
                                             :event parsed})
                                           (case (:type parsed)
+                                            "system"
+                                            (when (and (= "status" (:subtype parsed))
+                                                       (contains? parsed :compact_result))
+                                              (reset! compact-status parsed))
                                             "assistant"
                                             (let [content (get-in parsed [:message :content])
                                                   tools (when (sequential? content)
@@ -3682,7 +3716,9 @@ RESPOND WITH ONLY:
                                                 (.append text-acc text))
                                               (when tools (swap! tools-acc into tools))
                                               (when (seq tool-details)
-                                                (record-agent-tool-details! aid-val used-sid tool-details))
+                                                (record-agent-tool-details! aid-val used-sid tool-details)
+                                                (remember-inbox-zero-tool-details!
+                                                 aid-val used-sid tool-details))
                                               (reset! last-had-tools? (boolean tools))
                                               ;; Emit to streaming event sink (if any)
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
@@ -3704,8 +3740,13 @@ RESPOND WITH ONLY:
                                                          (filter #(= "tool_result" (:type %)))
                                                          (mapv (fn [block]
                                                                  (cond-> {:tool_use_id (:tool_use_id block)}
+                                                                   (contains? block :is_error)
+                                                                   (assoc :is_error (:is_error block))
                                                                    (:content block)
                                                                    (assoc :content (:content block)))))))]
+                                              (when (seq tool-results)
+                                                (record-inbox-zero-tool-results!
+                                                 aid-val used-sid tool-results))
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
                                                                               'get-invoke-event-sink)]
                                                 (when-let [sink (get-sink aid-val)]
@@ -3716,7 +3757,8 @@ RESPOND WITH ONLY:
                                                              :tool_use_result (:tool_use_result parsed)}))
                                                     (catch Throwable _)))))
                                             "result"
-                                            (do (reset! result-sid (:session_id parsed))
+                                            (do (reset! result-event parsed)
+                                                (reset! result-sid (:session_id parsed))
                                                 (when (:is_error parsed)
                                                   (reset! result-error true)))
                                             nil))
@@ -3782,15 +3824,23 @@ RESPOND WITH ONLY:
                      :turn-counter !turn-count
                      :bb-opts bb-opts})))
               (if ok?
-                {:result (if (str/blank? text)
-                           ;; tool-last / no-text turn: surface what was called.
-                           (let [names (->> @tools-acc (remove nil?) distinct vec)]
-                             (if (seq names)
-                               (str "[no text — called: " (str/join ", " names) "]")
-                               "[no text or tool calls in this turn]"))
-                           text)
-                 :session-id final-sid
-                 :invoke-trace-id invoke-trace-id}
+                (cond->
+                 {:result (if (str/blank? text)
+                            ;; tool-last / no-text turn: surface what was called.
+                            (let [names (->> @tools-acc (remove nil?) distinct vec)]
+                              (if (seq names)
+                                (str "[no text — called: " (str/join ", " names) "]")
+                                "[no text or tool calls in this turn]"))
+                            text)
+                  :session-id final-sid
+                  :invoke-trace-id invoke-trace-id}
+                  @compact-status
+                  (assoc :compact-result (:compact_result @compact-status)
+                         :compact-error (:compact_error @compact-status))
+                  (:usage @result-event)
+                  (assoc :usage (:usage @result-event))
+                  (contains? @result-event :total_cost_usd)
+                  (assoc :total-cost-usd (:total_cost_usd @result-event)))
                 {:result nil :session-id final-sid
                  :error (str "Exit " exit ": " (str/trim (or err "")))
                  :invoke-trace-id invoke-trace-id}))
@@ -3894,7 +3944,9 @@ RESPOND WITH ONLY:
                                                                          (keep :text)))))
                                                   tool-details (assistant-tool-details event)]
                                               (when (seq tool-details)
-                                                (record-agent-tool-details! aid-val warm-sid tool-details))
+                                                (record-agent-tool-details! aid-val warm-sid tool-details)
+                                                (remember-inbox-zero-tool-details!
+                                                 aid-val warm-sid tool-details))
                                               (when tools
                                                 (when-let [update-activity! (ns-resolve 'futon3c.agency.registry
                                                                                         'update-invoke-activity!)]
@@ -3924,7 +3976,16 @@ RESPOND WITH ONLY:
                                                                   (str "Invoke: " agent-id " — streaming (warm pouch)\n\n"
                                                                        stream-acc)
                                                                   (merge {:width 80 :slot 1 :no-display true :async? true} bb-opts))
-                                                  (catch Throwable _))))))})
+                                                  (catch Throwable _)))))
+                                          (when (= "user" (:type event))
+                                            (let [content (get-in event [:message :content])
+                                                  results (when (sequential? content)
+                                                            (->> content
+                                                                 (filter #(= "tool_result" (:type %)))
+                                                                 (mapv #(select-keys % [:tool_use_id :is_error :content]))))]
+                                              (when (seq results)
+                                                (record-inbox-zero-tool-results!
+                                                 aid-val warm-sid results)))))})
                                       warm-result-sid (some-> (:session-id warm-result) str str/trim not-empty)
                                       result-text (str (or (:result warm-result) ""))]
                                   ;; Persist like invoke-once does (cold path, above): today

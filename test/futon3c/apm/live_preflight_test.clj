@@ -76,6 +76,18 @@
            (select-keys (get-in terminal [:report :lean])
                         [:exit :warnings :sorry-warnings :errors])))))
 
+(deftest unrelated-lean-warnings-do-not-conflate-with-the-sorry-baseline
+  (let [request (:request (sut/build-request inputs))
+        ticket (:ticket (sut/record-dispatch request {:ok true :job-id "warnings"}))
+        extra-warnings (assoc-in (successful-job request ticket)
+                                 [:report :lean :warnings] 3)]
+    (is (:ok (sut/validate-terminal request ticket extra-warnings)))
+    (doseq [bad [(assoc-in extra-warnings [:report :lean :sorry-warnings] 2)
+                 (assoc-in extra-warnings [:report :lean :errors] 1)
+                 (assoc-in extra-warnings [:report :lean :warnings] 0)]]
+      (is (= [:lean-baseline-mismatch]
+             (:findings (sut/validate-terminal request ticket bad)))))))
+
 (deftest durable-drive-dispatches-exactly-once-across-continuations
   (let [dispatches (atom 0)
         persisted (atom [])

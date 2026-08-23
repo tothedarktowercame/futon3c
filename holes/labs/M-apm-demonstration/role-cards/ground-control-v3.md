@@ -140,3 +140,37 @@ successor handoff is a terminal failure, not permission to extend the seat.
 - Author and reviewer are distinct. Escalate decisions that change what the
   experiment measures or spend a frame.
 - Never restart the Agency-serving JVM from a session routed through it.
+
+### Qualify the generated v2 machine before set-alight
+
+For every future v2 campaign, regenerate the canonical contract from Lean and
+require byte equality with the registered Clojure-readable artifact:
+
+```text
+cd /home/joe/code/mathlib4-apm-validation
+lake env lean --run DarkTower/APMCycleContractEmitter.lean > /tmp/apm-cycle-contract-v3.json
+cmp /tmp/apm-cycle-contract-v3.json \
+  /home/joe/code/futon3c-apm-control/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json
+```
+
+Then generate the report from command-owned exits and the observed digest:
+
+```text
+cd /home/joe/code/futon3c-apm-control
+clojure -M -e '(require (quote futon3c.apm.qualification))
+(prn (futon3c.apm.qualification/run-qualification!
+ "holes/labs/M-apm-demonstration/apm-qualification-v1.edn"
+ "data/apm-validation/qualification-report-v1.edn"))
+(shutdown-agents)'
+```
+
+`set-alight!` rejects a missing, failing, or stale report. Historical v1 and
+partial ledgers remain immutable and readable; qualification never rewrites or
+relaunches them. Three adapter holes remain explicit and executable:
+
+- `hole-generated-receipt-schemas-v1.edn`: receipt schemas and phase I/O are
+  still EDN-owned;
+- `hole-effectful-http-refinement-v1.edn`: Lean consumes durable Agency
+  observations but does not prove the JVM HTTP transport;
+- `hole-external-memory-emacs-refinement-v1.edn`: external memory bytes and
+  Emacs buffer publication remain observed adapter boundaries.

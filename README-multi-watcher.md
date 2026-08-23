@@ -257,6 +257,38 @@ a fresh `:cold-scan? false` boot. Any watcher *runtime* counters read in that
 window are post-restart artifacts; the decomposition above is source-level and
 independent of the restart.
 
+## Inbox-zero operation (v0)
+
+The production inbox-zero path is part of the bootstrap-owned in-JVM watcher.
+Producer and watcher share one durable intake directory:
+
+```sh
+export FUTON3_INBOX_ZERO_WITNESS_DIR=/home/joe/code/storage/inbox-zero/witnesses
+export FUTON3C_INBOX_ZERO_ENABLED=true
+export FUTON3C_INBOX_ZERO_STATE_PATH=/home/joe/code/storage/inbox-zero/state.edn
+export FUTON3C_INBOX_ZERO_FOLLOWUP_URL=http://127.0.0.1:7070/api/alpha/followups
+```
+
+Agency's Claude tool stream writes a claim only after a successful `Edit`,
+`Write`, or `MultiEdit` tool result, keyed to the exact agent and session. The
+watcher independently observes Git state and joins the two facts; it never
+derives authorship from filesystem dirt. The count threshold is five distinct
+currently dirty paths and the independent age threshold is 24 hours.
+
+The feature defaults off. At bootstrap, enabling it makes
+`futon3c.watcher.multi` acquire an exclusive `<state>.writer.lock`; startup
+fails closed if another in-JVM owner holds it. Do not also launch the standalone
+Babashka consumer against this state path. `futon3c.watcher.multi/status`
+reports `:inbox-zero {:enabled? :ready? :state-path :writer-lock ...}` and,
+after each successful cycle, observation, dirty-set, ambiguous, unattributed,
+and delivery counts. Stop releases the lease; restart replays the same durable
+snapshot idempotently.
+
+Known honest surface gaps: Codex's tool stream is not currently available at
+this server-side boundary, and a generic Emacs `after-save-hook` cannot prove
+the editing seat. Neither surface emits claims until it has an exact-session,
+successful-edit witness. No last-editor or broadcast fallback is permitted.
+
 ## Pitfalls if you touch this
 
 - **Don't run an unbounded `GET /api/alpha/hyperedges?type=<type>`.** The

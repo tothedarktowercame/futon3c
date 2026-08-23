@@ -11,6 +11,7 @@
             [futon3c.apm.campaign-stepper :as stepper]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
+            [futon3c.apm.generated-contract :as generated-contract]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
             [futon3c.apm.live-promotion :as live-promotion]
@@ -22,20 +23,32 @@
             [futon3c.apm.memory-snapshot :as memory-snapshot]
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
-            [futon3c.apm.problem-projection :as problem-projection])
+            [futon3c.apm.problem-projection :as problem-projection]
+            [futon3c.apm.problem-queue-supervisor :as problem-queue]
+            [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]
+            [futon3c.apm.queued-frame-terminal :as queued-frame-terminal]
+            [futon3c.apm.workspace-lifecycle :as workspace-lifecycle]
+            [futon3c.apm.qualification :as qualification])
   (:import [java.nio.file Path]
            [java.time Instant]))
 
 (def ^:dynamic manifest-path "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")
 (def ^:dynamic contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")
+(def ^:dynamic generated-contract-path
+  "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
+(def ^:dynamic qualification-report-path
+  "data/apm-validation/qualification-report-v1.edn")
 (def ^:dynamic state-directory "data/apm-campaigns/countdown-f19-f27-r4")
 (def ^:dynamic ledger-path "data/apm-campaigns/countdown-f19-f27-r4/ledger.edn")
 (def ^:dynamic certificate-directory "data/apm-campaigns/countdown-f19-f27-r4/certificates")
 (def ^:dynamic projection-directory "data/apm-campaigns/countdown-f19-f27-r4/projection")
 (def ^:dynamic problem-buffer-path "data/apm-campaigns/countdown-f19-f27-r4/problem-buffer.md")
+(def ^:dynamic problem-buffer-name "*problem*")
 (def ^:dynamic preflight-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/preflight.edn")
 (def ^:dynamic batch-cursor-path "data/apm-campaigns/countdown-f19-f27-r4/live/batch-cursor.edn")
 (def ^:dynamic regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
+(def ^:dynamic problem-queue-state-path
+  "data/apm-campaigns/problem-queue/live/queue.edn")
 (def ^:dynamic analyst-state-path "data/apm-campaigns/countdown-f19-f27-r4/analyst/state.edn")
 (def ^:dynamic preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
@@ -45,6 +58,7 @@
 (def control-revision "d6f9ec2cfe622f518a423941f24819fa1a65fc5d")
 (def machine-regulator-id "countdown-regulator")
 (defonce ^:private machine-regulator-capability (Object.))
+(declare inputs)
 
 (def f20-one-off-config
   {:manifest-path "holes/labs/M-apm-demonstration/f20-one-off-manifest-v1.edn"
@@ -90,21 +104,32 @@
   `(let [config# (or ~config {})]
      (binding [manifest-path (or (:manifest-path config#) manifest-path)
                contract-path (or (:contract-path config#) contract-path)
+               generated-contract-path (or (:generated-contract-path config#)
+                                           generated-contract-path)
+               qualification-report-path
+               (or (:qualification-report-path config#) qualification-report-path)
                state-directory (or (:state-directory config#) state-directory)
                ledger-path (or (:ledger-path config#) ledger-path)
                certificate-directory (or (:certificate-directory config#) certificate-directory)
                projection-directory (or (:projection-directory config#) projection-directory)
                problem-buffer-path (or (:problem-buffer-path config#) problem-buffer-path)
+               problem-buffer-name (or (:problem-buffer-name config#) problem-buffer-name)
                preflight-state-path (or (:preflight-state-path config#) preflight-state-path)
                batch-cursor-path (or (:batch-cursor-path config#) batch-cursor-path)
                regulator-state-path (or (:regulator-state-path config#) regulator-state-path)
+               problem-queue-state-path
+               (or (:problem-queue-state-path config#) problem-queue-state-path)
                analyst-state-path (or (:analyst-state-path config#) analyst-state-path)
                preparation-path (or (:preparation-path config#) preparation-path)]
        ~@body)))
 
 (defn- machine-regulator-authorized? [regulator-id capability]
-  (and (= machine-regulator-id regulator-id)
+  (and (string? regulator-id)
+       (str/starts-with? regulator-id (str machine-regulator-id ":"))
        (identical? machine-regulator-capability capability)))
+
+(defn- scoped-regulator-id []
+  (str machine-regulator-id ":" (get-in (inputs) [:manifest :campaign/id])))
 (def ^:dynamic *control-root*
   (Path/of (System/getProperty "user.dir") (make-array String 0)))
 
@@ -113,8 +138,26 @@
     (if (.isAbsolute candidate) candidate (.resolve *control-root* candidate))))
 
 (defn- inputs []
-  {:manifest (edn/read-string (slurp (str (control-path manifest-path))))
-   :contract (edn/read-string (slurp (str (control-path contract-path))))})
+  (let [manifest (edn/read-string (slurp (str (control-path manifest-path))))
+        legacy (edn/read-string (slurp (str (control-path contract-path))))]
+    (if-not (= :apm-complete-frame-cycle-v2 (:contract/id legacy))
+      {:manifest manifest :contract legacy}
+      (let [result (generated-contract/validate-round-trip
+                    (str (control-path generated-contract-path)) legacy)]
+        (when-not (:ok result)
+          (throw (ex-info "Lean-generated campaign contract rejected" result)))
+        (let [generated (:contract result)]
+          {:manifest manifest
+           ;; Receipt schemas and phase requires/produces remain EDN-owned.
+           ;; The executable ordering and numerical policy are Lean-owned.
+           :contract (assoc legacy
+                            :phase-order (mapv keyword (:phase-order generated))
+                            :generated/bounds (:bounds generated)
+                            :generated/source generated-contract-path)
+           :generated/contract generated})))))
+
+(defn- generated-bound [contract bound fallback]
+  (or (get-in contract [:generated/bounds bound]) fallback))
 
 (defn frame-unit [manifest frame-id]
   (some #(when (= frame-id (:frame/id %)) %) (:units manifest)))
@@ -174,7 +217,7 @@
                     (or (not= (str frame-id "-" (name role)) (:agent-id seat))
                         (not= expected-type (:type seat)))))
                 {:solver :codex :student :zai :guide :claude
-                 :proctor :codex :scribe :zai})
+                 :proctor :codex :promotion-proctor :codex :scribe :zai})
           (conj :preparation-seat-mismatch))]
     (if (seq findings)
       {:ok false :error/code :countdown-frame-preparation-invalid
@@ -271,13 +314,25 @@
      :claims-required? true}))
 
 (defn bootstrap! []
-  (let [loaded (ledger/read-ledger (control-path ledger-path))]
+  (let [{:keys [manifest contract]} (inputs)
+        loaded (ledger/read-ledger (control-path ledger-path))
+        projection (:projection loaded)
+        registration-matches?
+        (and (= (:campaign/id manifest) (:campaign/id projection))
+             (= (:manifest/id manifest) (:campaign/manifest-hash projection))
+             (= (:phase-order contract) (:campaign/phase-order projection)))]
     (cond
       (not (:ok loaded)) loaded
       (seq (:events loaded))
-      {:ok (= (:campaign/id (:manifest (inputs)))
-              (get-in loaded [:projection :campaign/id]))
-       :status :already-registered :projection (:projection loaded)}
+      (if registration-matches?
+        {:ok true :status :already-registered :projection projection}
+        {:ok false :error/code :countdown-registration-mismatch
+         :finding {:expected {:campaign/id (:campaign/id manifest)
+                              :manifest-hash (:manifest/id manifest)
+                              :phase-order (:phase-order contract)}
+                   :observed {:campaign/id (:campaign/id projection)
+                              :manifest-hash (:campaign/manifest-hash projection)
+                              :phase-order (:campaign/phase-order projection)}}})
       :else
       (let [body (registration-body)
             base {:event/seq 0 :event/type :campaign/registered
@@ -296,6 +351,7 @@
      {:ledger-path (control-path ledger-path)
       :projection-directory (control-path projection-directory)
       :output-path (control-path problem-buffer-path)
+      :buffer-name problem-buffer-name
       :expected-frame-id (:frame-id frame)
       :expected-problem-id (:problem-id frame)
       :buffer-sink problem-projection/emacs-buffer-sink})
@@ -389,11 +445,17 @@
 
 (defn live-preflight-inputs []
   (let [{:keys [manifest contract]} (inputs)
-        unit (second (:units manifest))
         loaded (ledger/read-ledger (control-path ledger-path))
         projection (:projection loaded)
+        frame-id (get-in projection [:active/frame :frame-id])
+        unit (frame-unit manifest frame-id)
+        problem (:problem unit)
+        unit (assoc-in unit [:problem :repository]
+                       (countdown-manifest/qualification-checkout-path
+                        (:repository problem) (:revision problem)))
         response (live-preflight-runtime/http-json
-                  "GET" "http://localhost:7070/api/alpha/agents/f19-proctor")
+                  "GET" (str "http://localhost:7070/api/alpha/agents/"
+                             frame-id "-proctor"))
         agent (:agent response)
         metadata (:metadata agent)]
     {:contract contract
@@ -405,9 +467,13 @@
       :unit unit :role-card (get-in manifest [:apparatus :artifacts :proctor])
       :seat {:agent-id (:agent-id response) :type (some-> (:type agent) keyword)
              :frame-id (:frame-id metadata) :invoke-ready? (:invoke-ready? agent)}
-      :timeouts {:request-timeout-ms 300000
+      :timeouts {:request-timeout-ms
+                 (generated-bound contract :zai-request-timeout-ms 300000)
                  :turn-timeout-ms
-                 (get-in metadata [:effective-timeouts :turn-timeout-ms])}}
+                 (generated-bound contract :seat-turn-timeout-ms
+                                  (get-in metadata
+                                          [:effective-timeouts
+                                           :turn-timeout-ms]))}}
      :state-path (control-path preflight-state-path)}))
 
 (defn run-live-preflight! []
@@ -432,8 +498,11 @@
                      (state-path-for (:frame/id unit) :solve))
         built (live-proof-phases/build-request
                {:kind kind
-                :action (assoc action :timeouts {:request-ms 300000
-                                                 :turn-ms 3600000})
+                :action (assoc action :timeouts
+                               {:request-ms (generated-bound
+                                             contract :zai-request-timeout-ms 300000)
+                                :turn-ms (generated-bound
+                                          contract :seat-turn-timeout-ms 3600000)})
                 :ledger {:version (:campaign/version projection)
                          :digest (:ledger/digest projection)
                          :phase (get-in projection [:active/frame :phase])
@@ -447,6 +516,7 @@
     (if-not (:ok built)
       built
       {:ok true :kind kind :contract contract :request (:request built)
+       :max-rounds (generated-bound contract :solver-max-rounds 50)
        :state-path (state-path-for (:frame/id unit) kind)})))))
 
 (defn drive-live-proof-phase! [action]
@@ -460,7 +530,7 @@
         (keep (fn [phase]
                 (let [state (live-preflight-runtime/read-state
                              (state-path-for frame-id phase))]
-                  (when-let [receipt (:receipt state)] [phase receipt]))))
+                  (when-let [receipt (:receipt state)] [(keyword phase) receipt]))))
         (:phase-order contract)))
 
 (defn live-learning-phase-inputs [action]
@@ -498,7 +568,9 @@
                        :frame-id (:frame-id metadata)
                        :invoke-ready? (:invoke-ready? agent)}
                 :workspace (get-in preparation [:workspaces :student])
-                :receipts receipts :snapshot-access snapshot-access})]
+                :receipts receipts :snapshot-access snapshot-access
+                :turn-timeout-ms (generated-bound
+                                  contract :seat-turn-timeout-ms 3600000)})]
     (cond
       (and existing (map? (:request existing)))
       {:ok true :contract contract :action action :receipts receipts
@@ -538,7 +610,8 @@
            :analyst-tenure-registered? (:ok registration)}
           reviewer-card (get-in manifest [:apparatus :artifacts
                                           :promotion-proctor])
-          reviewer-seat (get-in preparation [:seats :proctor])
+          reviewer-seat (get-in preparation [:seats :promotion-proctor])
+          measurement-proctor-seat (get-in preparation [:seats :proctor])
           checks (assoc checks
                         :promotion-proctor-card-pinned?
                         (and (string? (:path reviewer-card))
@@ -547,7 +620,9 @@
                         (and (string? (:agent-id reviewer-seat))
                              (not= (:agent-id reviewer-seat)
                                    (get-in preparation [:seats :scribe
-                                                        :agent-id]))))
+                                                        :agent-id]))
+                             (not= (:agent-id reviewer-seat)
+                                   (:agent-id measurement-proctor-seat))))
           failed (into #{} (keep (fn [[k v]] (when-not v k))) checks)]
       (if (seq failed)
         {:ok false :error/code :learning-regime-incomplete
@@ -558,7 +633,7 @@
 (defn- promotion-review-request
   [{:keys [manifest unit preparation request]}]
   (let [card (get-in manifest [:apparatus :artifacts :promotion-proctor])
-        seat (get-in preparation [:seats :proctor])
+        seat (get-in preparation [:seats :promotion-proctor])
         body {:dispatch/type :promotion-review
               :phase :promote-solver
               :role :promotion-proctor
@@ -569,6 +644,9 @@
               :role-card-path (:path card)
               :role-card-blob (:blob card)
               :input-receipt-ids (:input-receipt-ids request)
+              :base-problem-blob (:base-problem-blob request)
+              :problem-path (:problem-path request)
+              :solver-final-head (:solver-final-head request)
               :turn-timeout-ms (get-in preparation
                                        [:seat-policy :turn-timeout-ms])}]
     (assoc body :dispatch/id (machine/ledger-digest [body]))))
@@ -616,6 +694,7 @@
       (if (= :promote-solver (:phase action))
         (live-promotion/run-live!
          {:state-path (:state-path phase-inputs)
+          :control-root (str *control-root*)
           :deposit-request (:request phase-inputs)
           :reviewer-request (promotion-review-request phase-inputs)
           :publish-fn #(publish-promotion! phase-inputs %)})
@@ -649,12 +728,44 @@
               (assoc wake :durable? true :state-path (str path))
               {:ok false :error/code :analyst-wake-persistence-failed})))))))
 
+(defn qualification-audit []
+  (let [contract (:contract (inputs))]
+    (if-not (= :apm-complete-frame-cycle-v2 (:contract/id contract))
+      {:ok true :status :legacy-contract-not-qualified}
+      (let [path (control-path qualification-report-path)]
+        (if-not (.isFile (.toFile path))
+          {:ok false :error/code :apm-qualification-report-missing
+           :path (str path)}
+          (qualification/validate-report
+           (edn/read-string (slurp (str path)))
+           (str (control-path generated-contract-path))))))))
+
+(defn dry-run-v2-launch []
+  (let [{:keys [contract]} (inputs)
+        qualification (qualification-audit)
+        registration (registration-body)]
+    {:ok (and (= :apm-complete-frame-cycle-v2 (:contract/id contract))
+              (:ok qualification)
+              (= (:phase-order contract) (:phase-order registration)))
+     :dispatches [] :qualification qualification
+     :registration registration}))
+
 (defn launch-audit!
   "Validate complete executable wiring plus the exact continuation identity."
   [{:keys [agent session surface agency-base target-frame regulator-id
            regulator-capability]
     :or {agency-base "http://localhost:7070"}}]
-  (let [{:keys [manifest]} (inputs)
+  (let [{:keys [manifest contract]} (inputs)
+        qualification-result (qualification-audit)
+        loaded-ledger (ledger/read-ledger (control-path ledger-path))
+        ledger-projection (:projection loaded-ledger)
+        registration-matches?
+        (and (:ok loaded-ledger)
+             (= (:campaign/id manifest) (:campaign/id ledger-projection))
+             (= (:manifest/id manifest)
+                (:campaign/manifest-hash ledger-projection))
+             (= (:phase-order contract)
+                (:campaign/phase-order ledger-projection)))
         spec-result (orchestration-contract/read-spec
                      (str (control-path orchestration-path)))
         head (shell/sh "git" "-C" (str *control-root*) "rev-parse" "HEAD")
@@ -689,6 +800,7 @@
                         (true? (get-in identity [:agent :invoke-ready?]))))]
     (cond
       (not (:ok spec-result)) spec-result
+      (not (:ok qualification-result)) qualification-result
       (not control-pinned?)
       {:ok false :error/code :set-alight-control-root-not-pinned
        :finding {:root (str *control-root*) :expected-branch control-branch
@@ -696,6 +808,16 @@
                  :observed-branch (str/trim (:out branch))
                  :observed-revision (str/trim (:out head))}}
       (not (:ok contract-result)) contract-result
+      (not registration-matches?)
+      {:ok false :error/code :set-alight-registration-mismatch
+       :finding {:expected {:campaign/id (:campaign/id manifest)
+                            :manifest-hash (:manifest/id manifest)
+                            :phase-order (:phase-order contract)}
+                 :observed {:campaign/id (:campaign/id ledger-projection)
+                            :manifest-hash
+                            (:campaign/manifest-hash ledger-projection)
+                            :phase-order
+                            (:campaign/phase-order ledger-projection)}}}
       (not (:ok preparation-result)) preparation-result
       (not (:ok learning-result)) learning-result
       (not exact?)
@@ -705,6 +827,7 @@
                                         [:http/status :ok :agent-id])
                  :observed-session (get-in identity [:agent :session-id])}}
       :else {:ok true :contract-audit contract-result
+             :qualification qualification-result
              :learning-regime learning-result
              :continuation (if machine-regulator?
                              {:mode :machine :regulator-id regulator-id}
@@ -717,6 +840,26 @@
     (if (and (:ok inspection) next-frame (not= target-frame next-frame))
       (assoc inspection :stepper/status :complete :completed-frame target-frame)
       inspection)))
+
+(defn- solver-projection-progress [solve-state active-phase]
+  (let [certified? (= :live-job-certified (:state/type solve-state))
+        completed (+ (count (:rounds solve-state)) (if certified? 1 0))
+        contract (:contract (inputs))
+        max-rounds (or (:budget/max-rounds solve-state)
+                       (get-in solve-state [:active :request :solver/max-rounds])
+                       (generated-bound contract :solver-max-rounds 50))
+        active-round (when (and (= :solve active-phase) (not certified?))
+                       (get-in solve-state [:active :request :solver/round]))
+        checkpoint-next (when (and (not certified?) (< completed max-rounds))
+                          (let [every (generated-bound
+                                      contract :solver-checkpoint-every 10)]
+                            (* every (inc (quot completed every)))))]
+    {:rounds/completed completed
+     :rounds/max max-rounds
+     :round/active active-round
+     :checkpoint/next (when (and checkpoint-next
+                                 (<= checkpoint-next max-rounds))
+                        checkpoint-next)}))
 
 (defn- drive-live-action! [action]
   (cond
@@ -748,11 +891,7 @@
                        (state-path-for frame-id (:phase active))))
         solve-state (live-preflight-runtime/read-state
                      (state-path-for frame-id :solve))
-        completed (count (:rounds solve-state))
-        active-round (get-in solve-state [:active :request :solver/round])
-        max-rounds (or (:budget/max-rounds solve-state) 50)
-        checkpoint-next (when (< completed max-rounds)
-                          (* 10 (inc (quot completed 10))))
+        solver-progress (solver-projection-progress solve-state (:phase active))
         phase-request (:request phase-state)
         operation-mismatch?
         (and (= :live-job-dispatched (:state/type phase-state))
@@ -793,12 +932,9 @@
         :projection-directory (control-path projection-directory)
         :output-path (control-path problem-buffer-path) :expected-frame-id frame-id
         :expected-problem-id (:problem/id unit)
+        :buffer-name problem-buffer-name
         :operation operation
-        :solver-progress {:rounds/completed completed
-                          :rounds/max max-rounds
-                          :round/active active-round
-                          :checkpoint/next (when (<= checkpoint-next max-rounds)
-                                             checkpoint-next)}
+        :solver-progress solver-progress
         :buffer-sink problem-projection/emacs-buffer-sink}))))
 
 (defn set-alight!
@@ -872,11 +1008,17 @@
        :park-fn (or park-fn park-default)
        :continuation-payload payload}))))))
 
-(defn regulator-status []
-  (live-regulator/status machine-regulator-id))
+(defn regulator-status
+  ([] (live-regulator/status (scoped-regulator-id)))
+  ([campaign-config]
+   (with-campaign campaign-config
+     (live-regulator/status (scoped-regulator-id)))))
 
-(defn stop-regulator! []
-  (live-regulator/stop! machine-regulator-id))
+(defn stop-regulator!
+  ([] (live-regulator/stop! (scoped-regulator-id)))
+  ([campaign-config]
+   (with-campaign campaign-config
+     (live-regulator/stop! (scoped-regulator-id)))))
 
 (defn start-regulator!
   "Start the non-agentic single-frame regulator.
@@ -889,14 +1031,15 @@
    (binding [*control-root* (Path/of (str (or control-root *control-root*))
                                     (make-array String 0))]
     (let [root (str *control-root*)
+          regulator-id (scoped-regulator-id)
           state-path (control-path regulator-state-path)
-          continuation {:regulator-id machine-regulator-id
+          continuation {:regulator-id regulator-id
                         :regulator-capability machine-regulator-capability
                         :control-root root :target-frame target-frame
                         :campaign-config campaign-config
                         :agency-base agency-base}]
       (live-regulator/start!
-       {:regulator-id machine-regulator-id
+       {:regulator-id regulator-id
         :period-ms (or period-ms live-regulator/default-period-ms)
         :read-fn #(live-preflight-runtime/read-state state-path)
         :persist-fn #(live-preflight-runtime/atomic-persist! state-path %)
@@ -956,3 +1099,246 @@
              #(live-preflight-runtime/atomic-persist! cursor-path %))
          :continue-fn (or continue-fn park-next)
          :authority (dissoc authority :permit)})))))
+
+(defn set-alight-problem-queue!
+  "Drive one just-in-time problem-queue tick.
+
+  PROBLEMS are immutable problem pins, not prepared frames. EFFECTS supplies
+  qualification, mint/provision, supervised frame tick, and retirement
+  adapters. The successor is minted only after the active frame returns a
+  certified terminal result."
+  [{:keys [problems campaign-config authority]} effects]
+  (with-campaign campaign-config
+    (let [path (control-path problem-queue-state-path)
+          plan (problem-queue/queue-plan problems)
+          jit-config (:jit/config effects)
+          concrete-effects
+          (when jit-config
+            (queued-frame-adapter/live-effects
+             (assoc jit-config
+                    :frame-tick-fn
+                    (or (:frame-tick-fn jit-config)
+                        (fn [frame frame-config]
+                          (let [result
+                                (set-alight!
+                                 (merge authority
+                                        {:target-frame (:frame/id frame)
+                                         :campaign-config frame-config})
+                                 (cond-> {}
+                                   (:continuation-payload authority)
+                                   (assoc :continuation-payload
+                                          (:continuation-payload authority))))]
+                            (if-not (and (:ok result)
+                                         (= :frame-complete (:status result)))
+                              result
+                              (with-campaign frame-config
+                                (let [loaded (ledger/read-ledger
+                                              (control-path ledger-path))
+                                      preparation
+                                      (live-preflight-runtime/read-state
+                                       (control-path preparation-path))
+                                      terminal
+                                      (queued-frame-adapter/terminal-from-ledger
+                                       {:frame frame :ledger loaded
+                                        :preparation preparation})]
+                                  (if (:ok terminal)
+                                    (merge result terminal)
+                                    terminal))))))))))]
+      (problem-queue/tick!
+       (merge {:plan plan
+               :state-provider #(live-preflight-runtime/read-state path)
+               :persist-state-fn #(live-preflight-runtime/atomic-persist! path %)}
+              concrete-effects
+              (dissoc effects :jit/config))))))
+
+(defn- eligibility-baseline [problem]
+  (let [result (apply shell/sh ["lake" "env" "lean" (:path problem)
+                                :dir (:repository problem)])
+        lines (str/split-lines (str (:out result) (:err result)))]
+    {:exit (:exit result)
+     :warnings (count (filter #(str/includes? % "warning:") lines))
+     :sorry-warnings
+     (count (filter #(str/includes? % "declaration uses `sorry`") lines))
+     :errors (count (filter #(str/includes? % "error:") lines))}))
+
+(defn- jit-ledger-observation [_frame paths]
+  (let [loaded (ledger/read-ledger (Path/of (:ledger-path paths)
+                                             (make-array String 0)))
+        active (get-in loaded [:projection :active/frame])]
+    (if-not (:ok loaded)
+      loaded
+      {:ok true :version (get-in loaded [:projection :campaign/version])
+       :digest (get-in loaded [:projection :ledger/digest])
+       :phase (:phase active) :claim (get-in loaded [:projection :active/claim])
+       :frame-id (:frame-id active) :problem-id (:problem-id active)})))
+
+(defn- jit-retirement-audit
+  [agency-base paths frame terminal-receipt role lease]
+  (let [validation (workspace-lifecycle/validate lease)
+        jobs-response (live-preflight-runtime/http-json
+                       "GET" (str agency-base "/api/alpha/invoke/jobs"))
+        jobs (or (:jobs jobs-response) [])
+        workspace (:workspace/path lease)
+        live-reference?
+        (some #(and (contains? #{:announced :queued :running :invoking :parked}
+                                (some-> (:state %) keyword))
+                    (or (str/includes? (pr-str %) workspace)
+                        (str/starts-with? (str (:agent-id %))
+                                          (str (:frame/id frame) "-")))) jobs)
+        loaded (ledger/read-ledger (Path/of (:ledger-path paths)
+                                            (make-array String 0)))
+        terminal-head (get-in terminal-receipt [:workspace/terminal-heads role])
+        observations
+        {:frame-terminal (and (:ok loaded)
+                              (nil? (get-in loaded [:projection :active/frame])))
+         :no-running-or-parked-job-references-workspace (not live-reference?)
+         :no-active-ledger-claim-references-workspace
+         (nil? (get-in loaded [:projection :active/claim]))
+         :worktree-clean (true? (:worktree-clean? validation))
+         :head-commit-recorded-in-terminal-receipt
+         (= terminal-head (:head validation))
+         :branch-ref-exists (= (:branch lease) (:branch validation))
+         :required-artifacts-content-addressed
+         (:ok (queued-frame-terminal/validate-terminal frame terminal-receipt))
+         :independent-retirement-audit-passed true}]
+    (workspace-lifecycle/certify-retirement-audit
+     {:lease lease :validation validation :observations observations
+      :terminal-head terminal-head :context :jit-read-only-auditor})))
+
+(defn set-alight-problem-list!
+  "List-only JIT entry point. PROBLEMS contain immutable problem pins."
+  [{:keys [problems authority queue-name frame-number-base agency-base]
+    :or {queue-name "jit-problem-list-v1" frame-number-base 24
+         agency-base "http://localhost:7070"}}]
+  (let [control-root (or (:control-root authority) "/home/joe/code/futon3c-apm-control")
+        continuation-payload
+        (or (:continuation-payload authority)
+            (str "JIT M-FIVE CONTINUATION: evaluate "
+                 "(futon3c.apm.countdown-control/launch-m-five! "
+                 (pr-str (dissoc authority :continuation-payload)) ")."))
+        authority (assoc authority :continuation-payload continuation-payload)
+        campaign-root (str control-root "/data/apm-campaigns/" queue-name)
+        outer-config {:problem-queue-state-path
+                      (str campaign-root "/queue-state.edn")}
+        apparatus-repository control-root
+        apparatus-branch "frame/18-control"
+        role-cards
+        (into {} (map (fn [[role path]]
+                        [role {:path path
+                               :blob (str/trim
+                                      (:out (shell/sh "git" "-C" control-root
+                                                      "rev-parse" (str "HEAD:" path))))}]))
+              (select-keys queued-frame-adapter/default-artifacts
+                           [:solver :student :guide :proctor :promotion-proctor
+                            :scribe :analyst]))
+        base-jit-config
+        {:frame-number-base frame-number-base :campaign-prefix queue-name
+         :campaign-root campaign-root
+         :contract-path (str control-root "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
+         :generated-contract-path
+         (str control-root "/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
+         :qualification-report-path
+         (str control-root "/data/apm-validation/qualification-report-v1.edn")
+         :apparatus-repository apparatus-repository
+         :apparatus-branch apparatus-branch :role-cards role-cards
+         :workspace-root "/home/joe/code/apm-frames"
+         :substrate-path "/home/joe/code/apm-lean/.lake"
+         :agency-base agency-base
+         :manifest-fn
+         (fn [frame paths]
+           (let [path (Path/of (:manifest-path paths) (make-array String 0))
+                 existing (live-preflight-runtime/read-state path)]
+             (if existing
+               (let [unit (first (:units existing))
+                     expected [(:frame/id frame) (:problem/id frame)
+                               (get-in frame [:problem :revision])
+                               (get-in frame [:problem :path])
+                               (get-in frame [:problem :blob])]
+                     observed [(:frame/id unit) (:problem/id unit)
+                               (get-in unit [:problem :revision])
+                               (get-in unit [:problem :path])
+                               (get-in unit [:problem :blob])]]
+                 (if (= expected observed)
+                   existing
+                   (throw (ex-info "Persisted JIT manifest identity mismatch"
+                                   {:error/code :jit-persisted-manifest-mismatch
+                                    :expected expected :observed observed
+                                    :manifest-path (:manifest-path paths)}))))
+               (let [manifest
+                     (queued-frame-adapter/one-off-manifest
+                      {:frame frame :apparatus-repository apparatus-repository
+                       :apparatus-branch apparatus-branch
+                       :baseline (eligibility-baseline (:problem frame))})]
+                 (live-preflight-runtime/atomic-persist! path manifest)
+                 manifest))))
+         :open-frame-fn
+         (fn [frame _ paths]
+           (with-campaign paths
+             (let [observed (jit-ledger-observation frame paths)]
+               (if (and (:ok observed)
+                        (= (:frame/id frame) (:frame-id observed))
+                        (= (:problem/id frame) (:problem-id observed))
+                        (= :preflight (:phase observed))
+                        (nil? (:claim observed)))
+                 {:ok true :already-open? true
+                  :ledger/version (:version observed)
+                  :ledger/digest (:digest observed)}
+                 (let [boot (bootstrap!)
+                       block (when (:ok boot) (advance! :open-block))
+                       opened (when (:ok block) (advance! :open-frame))]
+                   (if (:ok opened) {:ok true} (or opened block boot)))))))
+         :ledger-fn jit-ledger-observation}
+        jit-config
+        (assoc base-jit-config :retirement-audit-fn
+         (fn [frame terminal-receipt role lease]
+           (jit-retirement-audit agency-base
+                                 (queued-frame-adapter/campaign-paths
+                                  base-jit-config frame)
+                                 frame terminal-receipt role lease)))
+        result
+        (set-alight-problem-queue!
+         {:problems problems :campaign-config outer-config :authority authority}
+         {:jit/config jit-config})]
+    (if (and (:ok result) (= :frame-prepared (:status result)))
+      (let [park (live-preflight-runtime/http-json
+                  "POST" (str agency-base "/api/alpha/park")
+                  {:agent (:agent authority) :session (:session authority)
+                   :surface (:surface authority) :awaiting []
+                   :timer-due-ms (+ (System/currentTimeMillis) 500)
+                   :payload continuation-payload})]
+        (if (and (= 200 (:http/status park)) (:ok park))
+          (assoc result :continuation/park park)
+          {:ok false :error/code :jit-problem-list-continuation-park-failed
+           :finding park}))
+      result)))
+
+(defn launch-m-five!
+  "Start or resume the registered five-problem m-family queue."
+  [authority]
+  (let [queue (edn/read-string
+               (slurp (str (or (:control-root authority)
+                               "/home/joe/code/futon3c-apm-control")
+                           "/holes/labs/M-apm-demonstration/"
+                           "jit-m-five-problem-queue-v1.edn")))]
+    (set-alight-problem-list!
+     {:problems (:problems queue) :authority authority
+      :queue-name "jit-m-five-v1" :frame-number-base 24
+      :agency-base (or (:agency-base authority) "http://localhost:7070")})))
+
+(defn launch-m-five-v2!
+  "Start or resume the post-F24 qualified five-problem m-family queue at F25."
+  [authority]
+  (let [control-root (or (:control-root authority)
+                         "/home/joe/code/futon3c-apm-control")
+        queue (edn/read-string
+               (slurp (str control-root "/holes/labs/M-apm-demonstration/"
+                           "jit-m-five-problem-queue-v2.edn")))
+        continuation
+        (str "JIT M-FIVE V2 CONTINUATION: evaluate "
+             "(futon3c.apm.countdown-control/launch-m-five-v2! "
+             (pr-str (dissoc authority :continuation-payload)) ").")]
+    (set-alight-problem-list!
+     {:problems (:problems queue)
+      :authority (assoc authority :continuation-payload continuation)
+      :queue-name "jit-m-five-v2" :frame-number-base 25
+      :agency-base (or (:agency-base authority) "http://localhost:7070")})))

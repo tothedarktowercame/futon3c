@@ -33,13 +33,15 @@
                   (zero? (or (:exit ancestry) 1)) (= blob observed))
      :observed-blob observed :branch-head (output branch-result)}))
 
-(defn- qualification-checkout [repository revision]
+(defn qualification-checkout-path
+  "Return the immutable checkout used to execute a pinned problem revision."
+  [repository revision]
   (str (io/file (.getParentFile (io/file repository)) "apm-frames"
                 "qualification" revision)))
 
 (defn- ensure-qualification-checkout
   [repository revision]
-  (let [checkout (qualification-checkout repository revision)
+  (let [checkout (qualification-checkout-path repository revision)
         directory (io/file checkout)
         existing-head (when (.isDirectory directory)
                         (output (git checkout "rev-parse" "HEAD")))

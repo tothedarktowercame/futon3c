@@ -7,7 +7,9 @@
             [futon3c.apm.campaign-runner :as runner]
             [futon3c.apm.countdown-control :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
-            [futon3c.apm.live-promotion :as live-promotion]))
+            [futon3c.apm.live-promotion :as live-promotion]
+            [futon3c.apm.problem-queue-supervisor :as problem-queue]
+            [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]))
 
 (deftest promote-solver-selects-durable-two-seat-adapter
   (let [captured (atom nil)
@@ -21,14 +23,16 @@
                                        {:promotion-proctor
                                         {:path "proctor.md" :blob "blob"}}}}
                 :unit {:frame/id "f22" :problem/id "p22"}
-                :preparation {:seats {:proctor {:agent-id "f22-proctor"}}
+                :preparation {:seats {:promotion-proctor
+                                      {:agent-id "f22-promotion-proctor"}}
                               :seat-policy {:turn-timeout-ms 7200000}}}]
     (with-redefs [sut/live-learning-phase-inputs (constantly inputs)
                   live-promotion/run-live!
                   (fn [opts] (reset! captured opts)
                     {:ok true :status :awaiting-terminal :job-id "scribe-job"})]
       (is (= "scribe-job" (:job-id (sut/drive-live-learning-phase! action))))
-      (is (= "f22-proctor" (get-in @captured [:reviewer-request :agent-id])))
+      (is (= "f22-promotion-proctor"
+             (get-in @captured [:reviewer-request :agent-id])))
       (is (= "blob" (get-in @captured [:reviewer-request :role-card-blob])))
       (is (= 7200000
              (get-in @captured [:reviewer-request :turn-timeout-ms])))
@@ -40,7 +44,8 @@
         contract {:phases {:promote-solver {:kind :scribe-reduce
                                             :role :scribe
                                             :requires #{}}}}
-        unit {:frame/id "f22" :problem/id "p22"}
+        unit {:frame/id "f22" :problem/id "p22"
+              :problem {:blob "problem-blob" :path "Main.lean"}}
         preparation {:workspaces {:student {:workspace/path "/tmp/student"}}
                      :seats {:scribe {:agent-id "f22-scribe"}}}
         action {:kind :scribe-reduce :role :scribe :phase :promote-solver
@@ -58,7 +63,11 @@
                                      :metadata {:frame-id "f22"}}})
                   ledger/read-ledger
                   (fn [_] {:projection {:ledger/digest
-                                        (apply str (repeat 64 "a"))}})]
+                                        (apply str (repeat 64 "a"))}})
+                  sut/certified-receipts
+                  (fn [& _] {:solve {:receipt/id "solve"
+                                     :receipt/final-head
+                                     "1111111111111111111111111111111111111111"}})]
       (let [result (sut/live-learning-phase-inputs action)]
         (is (:ok result))
         (is (= :promote-solver (get-in result [:request :phase])))
@@ -76,6 +85,22 @@
     (is (not-any? #(contains? % :required-receipt-kinds) units)
         "eventual close receipts must not be required at open-frame runtime")))
 
+(deftest m-five-v2-entrypoint-is-fresh-f25-and-self-continuing
+  (let [captured (atom nil)
+        authority {:agent "codex-10" :session "session-10"
+                   :surface "emacs-repl"
+                   :control-root "/home/joe/code/futon3c-apm-control"}]
+    (with-redefs [sut/set-alight-problem-list!
+                  (fn [request] (reset! captured request)
+                    {:ok true :status :dry-run})]
+      (is (:ok (sut/launch-m-five-v2! authority)))
+      (is (= 5 (count (:problems @captured))))
+      (is (= "m94A02" (get-in @captured [:problems 0 :problem/id])))
+      (is (= "jit-m-five-v2" (:queue-name @captured)))
+      (is (= 25 (:frame-number-base @captured)))
+      (is (re-find #"launch-m-five-v2!"
+                   (get-in @captured [:authority :continuation-payload]))))))
+
 (deftest learning-regime-audit-preserves-v1-and-fails-closed-on-v2-pins
   (let [v1 (:contract (#'sut/inputs))
         v2 (edn/read-string
@@ -89,6 +114,8 @@
                            {:path "promotion-proctor.md" :blob "blob"})
               {:seats {:analyst {:agent-id "analyst-1"}
                        :proctor {:agent-id "f22-proctor"}
+                       :promotion-proctor
+                       {:agent-id "f22-promotion-proctor"}
                        :scribe {:agent-id "f22-scribe"}}})))))
 
 (deftest baseline-f20-close-does-not-invent-an-analyst-transition
@@ -144,7 +171,7 @@
                                 'machine-regulator-capability))
         result
         (sut/set-alight!
-         {:regulator-id sut/machine-regulator-id
+         {:regulator-id (str sut/machine-regulator-id ":apm-test")
           :regulator-capability capability :target-frame "f20"}
          {:launch-audit-fn (constantly {:ok true})
           :inspect-fn (constantly
@@ -172,7 +199,9 @@
                                 'machine-regulator-capability))]
     (is (false? (authorized? sut/machine-regulator-id nil)))
     (is (false? (authorized? "other" capability)))
-    (is (true? (authorized? sut/machine-regulator-id capability)))))
+    (is (false? (authorized? sut/machine-regulator-id capability)))
+    (is (true? (authorized? (str sut/machine-regulator-id ":apm-test")
+                            capability)))))
 
 (deftest set-alight-batch-exposes-bounded-ledger-backed-chain
   (let [manifest (:manifest (#'sut/inputs))
@@ -227,7 +256,8 @@
                               [role {:agent-id (str frame-id "-" (name role))
                                      :type type}])
                             {:solver :codex :student :zai :guide :claude
-                             :proctor :codex :scribe :zai}))}]
+                             :proctor :codex :promotion-proctor :codex
+                             :scribe :zai}))}]
     (assoc body :preparation/id (machine/ledger-digest [body]))))
 
 (deftest future-frame-contexts-select-exact-units-and-fail-closed-unprovisioned
@@ -264,3 +294,200 @@
       (is (= :countdown-projection-checkpoint-failed
              (:error/code (#'sut/project-current! "f22"))))
       (is (= [{:checkpoint/stage :live-projection-refresh}] @calls)))))
+
+(deftest certified-one-shot-solve-projects-one-completed-and-no-active-round
+  (let [progress (#'sut/solver-projection-progress
+                  {:state/type :live-job-certified
+                   :rounds []
+                   :active {:request {:solver/round 1 :solver/max-rounds 50}}}
+                  :student-attempt-1)]
+    (is (= 1 (:rounds/completed progress)))
+    (is (= 50 (:rounds/max progress)))
+    (is (nil? (:round/active progress)))
+    (is (nil? (:checkpoint/next progress)))))
+
+(deftest v2-countdown-policy-is-lean-generated-and-schema-hole-is-explicit
+  (binding [sut/contract-path
+            "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
+    (let [loaded (#'sut/inputs)
+          contract (:contract loaded)
+          emitted (:generated/contract loaded)
+          hole (edn/read-string
+                (slurp "holes/labs/M-apm-demonstration/hole-generated-receipt-schemas-v1.edn"))]
+      (is (= :promote-solver (nth (:phase-order contract) 3)))
+      (is (= 50 (get-in contract [:generated/bounds :solver-max-rounds])))
+      (is (= "apm-complete-frame-cycle-v2" (:contract-id emitted)))
+      (is (map? (:receipt/schemas contract)))
+      (is (nil? (:receipt-schemas contract)))
+      (is (= :open (:hole/status hole)))
+      (is (= 11 (count (:phase-order contract)))))))
+
+(deftest mutated-emitted-contract-fails-before-registration
+  (let [source (slurp sut/generated-contract-path)
+        temp (java.io.File/createTempFile "apm-contract-mutant" ".json")]
+    (spit temp (.replace source "\"solver-max-rounds\":50"
+                         "\"solver-max-rounds\":49"))
+    (try
+      (binding [sut/contract-path
+                "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+                sut/generated-contract-path (.getAbsolutePath temp)]
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                              #"Lean-generated campaign contract rejected"
+                              (#'sut/inputs))))
+      (finally (.delete temp)))))
+
+(deftest bootstrap-rejects-ledger-registered-under-another-contract
+  (binding [sut/contract-path
+            "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
+    (with-redefs [ledger/read-ledger
+                  (constantly {:ok true :events [{:event/seq 0}]
+                               :projection
+                               {:campaign/id :wrong
+                                :campaign/manifest-hash "wrong"
+                                :campaign/phase-order [:preflight]}})]
+      (is (= :countdown-registration-mismatch
+             (:error/code (sut/bootstrap!)))))))
+
+(deftest qualified-v2-launch-dry-run-dispatches-nothing
+  (binding [sut/contract-path
+            "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
+    (let [result (sut/dry-run-v2-launch)]
+      (is (:ok result) (pr-str result))
+      (is (= [] (:dispatches result)))
+      (is (= :promote-solver
+             (nth (get-in result [:registration :phase-order]) 3)))
+      (is (= :apm-validated-system-v1
+             (get-in result [:qualification :qualification/id]))))))
+
+(deftest stale-qualification-report-blocks-v2-launch
+  (let [report (edn/read-string
+                (slurp "data/apm-validation/qualification-report-v1.edn"))
+        temp (java.io.File/createTempFile "stale-apm-report" ".edn")]
+    (spit temp (pr-str (assoc-in report
+                                 [:generated-contract :observed-digest]
+                                 "stale")))
+    (try
+      (binding [sut/contract-path
+                "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
+                sut/qualification-report-path (.getAbsolutePath temp)]
+        (let [result (sut/dry-run-v2-launch)]
+          (is (false? (:ok result)))
+          (is (some #{:qualification-observed-artifact-stale}
+                    (get-in result [:qualification :findings])))
+          (is (= [] (:dispatches result)))))
+      (finally (.delete temp)))))
+
+(deftest problem-list-entry-does-not-preconstruct-frame-resources
+  (let [captured (atom nil)
+        problems [{:problem/id "p1" :repository "/repo" :revision "r1"
+                   :path "p1.lean" :blob "b1"
+                   :classification :non-excluded}
+                  {:problem/id "p2" :repository "/repo" :revision "r2"
+                   :path "p2.lean" :blob "b2"
+                   :classification :non-excluded}]]
+    (with-redefs [problem-queue/tick!
+                  (fn [options] (reset! captured options)
+                    {:ok true :status :frame-prepared})]
+      (is (= :frame-prepared
+             (:status (sut/set-alight-problem-queue!
+                       {:problems problems}
+                       {:mint-frame-fn identity}))))
+      (is (= ["p1" "p2"]
+             (mapv :problem/id (get-in @captured [:plan :problems]))))
+      (is (nil? (get-in @captured [:plan :frames])))
+      (is (fn? (:state-provider @captured)))
+      (is (fn? (:persist-state-fn @captured))))))
+
+(deftest jit-queue-wires-concrete-adapter-and-countdown-supervision
+  (let [adapter-config (atom nil)
+        tick-options (atom nil)]
+    (with-redefs [queued-frame-adapter/live-effects
+                  (fn [config]
+                    (reset! adapter-config config)
+                    {:mint-frame-fn identity})
+                  problem-queue/tick!
+                  (fn [options]
+                    (reset! tick-options options)
+                    {:ok true :status :frame-prepared})
+                  sut/set-alight! (constantly {:ok true :status :frame-complete})
+                  ledger/read-ledger (constantly {:ok true :events []})
+                  runtime/read-state (constantly {:preparation/version 2})
+                  queued-frame-adapter/terminal-from-ledger
+                  (constantly {:ok true :frame/result :closed
+                               :terminal-receipt {:receipt/id "terminal"}})]
+      (is (= :frame-prepared
+             (:status
+              (sut/set-alight-problem-queue!
+               {:problems [{:problem/id "p1" :repository "/repo" :revision "r"
+                            :path "p.lean" :blob "b"
+                            :classification :non-excluded}]
+                :authority {:agent "codex-10"}}
+               {:jit/config {:campaign-root "/campaigns"}}))))
+      (is (fn? (:frame-tick-fn @adapter-config)))
+      (is (= :closed
+             (:frame/result
+              ((:frame-tick-fn @adapter-config)
+               {:frame/id "f40" :problem/id "p1"}
+               {:ledger-path "/tmp/ledger"
+                :preparation-path "/tmp/preparation"}))))
+      (is (fn? (:mint-frame-fn @tick-options)))
+      (is (nil? (:jit/config @tick-options))))))
+
+(deftest list-only-entry-point-supplies-all-concrete-jit-services
+  (let [captured (atom nil)
+        problem {:problem/id "m-test" :repository "/repo" :revision "r"
+                 :path "Main.lean" :blob "b" :classification :non-excluded}]
+    (with-redefs [sut/set-alight-problem-queue!
+                  (fn [request effects]
+                    (reset! captured {:request request :effects effects})
+                    {:ok true :status :frame-prepared})
+                  runtime/http-json
+                  (fn [_ _ payload]
+                    {:ok true :http/status 200 :payload payload})
+                  ledger/read-ledger
+                  (fn [_]
+                    {:ok true
+                     :projection
+                     {:campaign/version 5 :ledger/digest "open-digest"
+                      :active/frame {:frame-id "f24" :problem-id "m-test"
+                                     :phase :preflight}
+                      :active/claim nil}})]
+      (is (= :frame-prepared
+             (:status (sut/set-alight-problem-list!
+                       {:problems [problem]
+                        :authority {:agent "codex-10"
+                                    :control-root
+                                    "/home/joe/code/futon3c-apm-control"}}))))
+      (let [config (get-in @captured [:effects :jit/config])]
+        (is (every? fn? (map config [:manifest-fn :open-frame-fn :ledger-fn
+                                     :retirement-audit-fn])))
+        (is (= 24 (:frame-number-base config)))
+        (let [directory (java.nio.file.Files/createTempDirectory
+                         "jit-manifest-test"
+                         (make-array java.nio.file.attribute.FileAttribute 0))
+              manifest-path (str (.resolve directory "manifest.edn"))
+              persisted {:manifest/id "frozen"
+                         :units [{:frame/id "f24" :problem/id "m-test"
+                                  :problem {:revision "r" :path "Main.lean"
+                                            :blob "b"}}]}]
+          (spit manifest-path (pr-str persisted))
+          (is (= persisted
+                 ((:manifest-fn config)
+                  {:frame/id "f24" :problem/id "m-test" :problem problem}
+                  {:manifest-path manifest-path}))))
+        (is (= "m-test"
+               (:problem-id
+                ((:ledger-fn config)
+                 {:frame/id "f24" :problem/id "m-test"}
+                 {:ledger-path "/unused/ledger.edn"}))))
+        (is (= {:ok true :already-open? true
+                :ledger/version 5 :ledger/digest "open-digest"}
+               ((:open-frame-fn config)
+                {:frame/id "f24" :problem/id "m-test"} nil
+                {:ledger-path "/unused/ledger.edn"})))
+        (is (string? (get-in @captured
+                             [:request :authority :continuation-payload])))
+        (is (= "/home/joe/code/futon3c-apm-control/data/apm-campaigns/jit-problem-list-v1/queue-state.edn"
+               (get-in @captured
+                       [:request :campaign-config :problem-queue-state-path])))
+        (is (= [problem] (get-in @captured [:request :problems])))))))

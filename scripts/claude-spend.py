@@ -19,13 +19,27 @@ import json, glob, os, sys, collections
 IN, OUT = 5.0, 25.0            # Opus 5 $/MTok; no long-context premium
 RD, W5, W1H = IN*0.1, IN*1.25, IN*2.0
 
+def message_key(record):
+    """Key the content-block records emitted for one assistant message."""
+    message = record.get('message') or {}
+    return message.get('id') or record.get('uuid') or id(record)
+
+def first_record_for_message(record, seen):
+    """Count repeated message usage only on its first JSONL record."""
+    key = message_key(record)
+    if key in seen:
+        return False
+    seen.add(key)
+    return True
+
 def scan(path):
     a, n, ctxs = collections.Counter(), 0, []
+    seen = set()
     for line in open(path, errors='replace'):
         try: d = json.loads(line)
         except ValueError: continue
         u = (d.get('message') or {}).get('usage')
-        if not u: continue
+        if not u or not first_record_for_message(d, seen): continue
         n += 1
         cd = u.get('cache_creation') or {}
         cc = u.get('cache_creation_input_tokens', 0) or 0
@@ -56,11 +70,12 @@ def burn_report(days=14):
     """
     cl, clt = collections.Counter(), collections.Counter()
     for path in glob.glob(os.path.join(root, '*', '*.jsonl')):
+        seen = set()
         for line in open(path, errors='replace'):
             try: d = json.loads(line)
             except ValueError: continue
             u = (d.get('message') or {}).get('usage'); t = d.get('timestamp')
-            if not u or not t: continue
+            if not u or not t or not first_record_for_message(d, seen): continue
             cd = u.get('cache_creation') or {}
             cc = u.get('cache_creation_input_tokens', 0) or 0
             c5 = cd.get('ephemeral_5m_input_tokens', 0) or 0 if cd else cc
@@ -96,11 +111,13 @@ def ttl_report():
           f"{'5m $':>9} {'cold':>5} {'1h $':>9} {'cold':>5}  winner")
     for path in sorted(glob.glob(os.path.join(root, '*', '*.jsonl'))):
         turns = []
+        seen = set()
         for line in open(path, errors='replace'):
             try: d = json.loads(line)
             except ValueError: continue
             u = (d.get('message') or {}).get('usage')
-            if not u or not d.get('timestamp'): continue
+            if (not u or not d.get('timestamp')
+                    or not first_record_for_message(d, seen)): continue
             turns.append((when(d['timestamp']), u.get('input_tokens', 0) or 0,
                           u.get('cache_read_input_tokens', 0) or 0,
                           u.get('cache_creation_input_tokens', 0) or 0))
@@ -126,31 +143,45 @@ def ttl_report():
     print("per-prefix break-even rule (1h wins iff P(5-60m gap) > 65%) gives the wrong")
     print("answer for big-context sessions. Compare the simulated totals, not the gaps.")
 
-if '--burn' in sys.argv:
-    burn_report(); sys.exit(0)
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if '--burn' in argv:
+        burn_report()
+        return
+    if '--ttl' in argv:
+        ttl_report()
+        return
 
-if '--ttl' in sys.argv:
-    ttl_report(); sys.exit(0)
+    per_session = '-s' in argv
+    rows, grand, gmsgs, gctx = [], collections.Counter(), 0, 0
+    groups = collections.defaultdict(lambda: [collections.Counter(), 0, []])
+    for p in glob.glob(os.path.join(root, '*', '*.jsonl')):
+        a, n, ctxs = scan(p)
+        if not n: continue
+        key = (os.path.basename(p)[:8] if per_session
+               else os.path.basename(os.path.dirname(p)))
+        g = groups[key]
+        for k, v in a.items(): g[0][k] += v
+        g[1] += n; g[2] += ctxs
+        for k, v in a.items(): grand[k] += v
+        gmsgs += n; gctx += sum(ctxs)
 
-per_session = '-s' in sys.argv
-rows, grand, gmsgs, gctx = [], collections.Counter(), 0, 0
-groups = collections.defaultdict(lambda: [collections.Counter(), 0, []])
-for p in glob.glob(os.path.join(root, '*', '*.jsonl')):
-    a, n, ctxs = scan(p)
-    if not n: continue
-    key = os.path.basename(p)[:8] if per_session else os.path.basename(os.path.dirname(p))
-    g = groups[key]
-    for k, v in a.items(): g[0][k] += v
-    g[1] += n; g[2] += ctxs
-    for k, v in a.items(): grand[k] += v
-    gmsgs += n; gctx += sum(ctxs)
+    print(f"{'key':46} {'$est':>9} {'msgs':>7} {'meanctx':>9} "
+          f"{'maxctx':>9} {'$/msg':>6}")
+    for key, (a, n, ctxs) in sorted(groups.items(),
+                                     key=lambda x: -cost(x[1][0])):
+        c = cost(a)
+        if c < 0.01: continue
+        print(f"{key[:46]:46} {c:9.2f} {n:7} {sum(ctxs)/n:9,.0f} "
+              f"{max(ctxs):9,} {c/n:6.3f}")
+    gc = cost(grand)
+    print(f"\nGRAND TOTAL ${gc:,.2f}  msgs {gmsgs:,}  "
+          f"mean ctx {gctx/gmsgs:,.0f}  ${gc/gmsgs:.3f}/msg")
+    print(f"  uncached-in ${grand['in']*IN/1e6:8.2f}  "
+          f"cache-write ${(grand['cc5']*W5+grand['cc1h']*W1H)/1e6:8.2f}"
+          f"  cache-read ${grand['cr']*RD/1e6:8.2f}  "
+          f"output ${grand['out']*OUT/1e6:8.2f}")
 
-print(f"{'key':46} {'$est':>9} {'msgs':>7} {'meanctx':>9} {'maxctx':>9} {'$/msg':>6}")
-for key, (a, n, ctxs) in sorted(groups.items(), key=lambda x: -cost(x[1][0])):
-    c = cost(a)
-    if c < 0.01: continue
-    print(f"{key[:46]:46} {c:9.2f} {n:7} {sum(ctxs)/n:9,.0f} {max(ctxs):9,} {c/n:6.3f}")
-gc = cost(grand)
-print(f"\nGRAND TOTAL ${gc:,.2f}  msgs {gmsgs:,}  mean ctx {gctx/gmsgs:,.0f}  ${gc/gmsgs:.3f}/msg")
-print(f"  uncached-in ${grand['in']*IN/1e6:8.2f}  cache-write ${(grand['cc5']*W5+grand['cc1h']*W1H)/1e6:8.2f}"
-      f"  cache-read ${grand['cr']*RD/1e6:8.2f}  output ${grand['out']*OUT/1e6:8.2f}")
+
+if __name__ == '__main__':
+    main()

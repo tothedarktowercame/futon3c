@@ -435,6 +435,7 @@
                       (swap! calls conj options)
                       {:checkout (str "/frames/" (:arm options))
                        :base-revision revision
+                       :runner-freshness true
                        :branch (:branch options)
                        :frame/id (str (:batch options) "-"
                                       (:problem options) "-" (:arm options))})
@@ -448,6 +449,7 @@
            (mapv :branch @calls)))
     (is (= ["push"] (mapv :memory-channel @calls)))
     (is (= revision (get-in checkouts [:solver :base-revision])))
+    (is (true? (get-in checkouts [:solver :runner-freshness])))
     (is (= [] (:student checkouts)))))
 
 (deftest assign-checkouts-provisioner-failure-is-a-tool-failure
@@ -577,14 +579,16 @@
               (get-in outputs [:student-attempts 0
                                :cycle/environment-checkout])))))
 
-(defn- stamp-store-revision-run [snapshot?]
+(defn- stamp-machine-attempt-run [snapshot? registration? runner-freshness?]
   (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        regime "e7b9ec02599b36845c68ca053416787a23ac29a8"
         memory-ids ["memory/z" "memory/a" "memory/m"]
         p (problem/make-problem
            (tools/make-mock-backend)
            (fn [_ _] {:evidence {}})
            "/tmp/store-revision-stamp-state"
-           (fn [_] {:checkout "/frames/solver" :base-revision revision})
+           (fn [_] (cond-> {:checkout "/frames/solver" :base-revision revision}
+                     runner-freshness? (assoc :runner-freshness true)))
            (fn [_] {:harness-revision revision :harness-tree-dirty? false})
            (constantly memory-ids)
            (constantly 1))
@@ -598,6 +602,14 @@
                      (:state (runner/step p (:state begun)
                                          {:tool :snapshot-store :args []}))
                      (:state begun))
+        snap-state (cond-> snap-state
+                     registration?
+                     (update :steps conj
+                             {:tool :read-registration
+                              :result {:problem {:regime regime}}}))
+        assignment (cond-> {:checkout "/frames/solver"
+                            :base-revision revision}
+                     runner-freshness? (assoc :runner-freshness true))
         state (assoc snap-state :current-phase :guided-solve
                      :cycle/outputs
                      {:registration :r
@@ -606,31 +618,49 @@
                       :environment-revision revision
                       :harness-revision revision
                       :environment-checkouts
-                      {:solver {:checkout "/frames/solver"
-                                :base-revision revision}
+                      {:solver assignment
                        :student []}
                       :frame :f :containment-probe :c})
-        attempt {:cycle/regime "solver"
-                 :cycle/runner-freshness true}
         advanced (runner/step
                   p state
                   {:tool :advance-problem-phase
-                   :args ["M" "C" {:solver-attempt attempt
+                   :args ["M" "C" {:solver-attempt {}
                                      :ground-control-events []
                                      :memory-offers []}]})]
     {:attempt (get-in advanced [:state :cycle/outputs :solver-attempt])
-     :memory-ids memory-ids}))
+     :memory-ids memory-ids
+     :regime regime}))
 
 (deftest attempts-carry-the-recorded-store-snapshot-revision
-  (let [{:keys [attempt memory-ids]} (stamp-store-revision-run true)
+  (let [{:keys [attempt memory-ids]} (stamp-machine-attempt-run true true true)
         shuffled [(nth memory-ids 1) (nth memory-ids 2) (nth memory-ids 0)]
         expected (test-sha1-hex (str/join "\n" (sort shuffled)))]
     (is (= expected (:cycle/store-revision attempt)))
     (is (prereg/attempt? attempt))))
 
 (deftest attempts-omit-store-revision-without-a-recorded-snapshot
-  (let [{:keys [attempt]} (stamp-store-revision-run false)]
+  (let [{:keys [attempt]} (stamp-machine-attempt-run false true true)]
     (is (not (contains? attempt :cycle/store-revision)))))
+
+(deftest attempts-carry-machine-recorded-regime
+  (let [{:keys [attempt regime]} (stamp-machine-attempt-run true true true)]
+    (is (= regime (:cycle/regime attempt)))))
+
+(deftest attempts-omit-regime-without-recorded-registration
+  (let [{:keys [attempt]} (stamp-machine-attempt-run true false true)]
+    (is (not (contains? attempt :cycle/regime)))))
+
+(deftest attempts-carry-provisioner-runner-freshness
+  (let [{:keys [attempt]} (stamp-machine-attempt-run true true true)]
+    (is (true? (:cycle/runner-freshness attempt)))))
+
+(deftest attempts-omit-runner-freshness-without-provisioner-measurement
+  (let [{:keys [attempt]} (stamp-machine-attempt-run true true false)]
+    (is (not (contains? attempt :cycle/runner-freshness)))))
+
+(deftest machine-stamped-attempt-satisfies-preregistration
+  (let [{:keys [attempt]} (stamp-machine-attempt-run true true true)]
+    (is (prereg/attempt? attempt))))
 
 (deftest each-student-dispatch-provisions-and-stamps-its-own-tree
   (let [revision "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

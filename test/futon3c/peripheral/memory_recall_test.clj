@@ -207,6 +207,19 @@
                 "&include-total=false")
            @seen-url))))
 
+(deftest substrate-client-default-hyperedge-limit-is-server-valid
+  (let [seen-urls (atom [])
+        get-edn-var (ns-resolve 'futon3c.substrate.client 'get-edn!)]
+    (with-redefs-fn
+      {#'substrate/configured-url (constantly "http://substrate.test")
+       get-edn-var (fn [url _timeout-ms]
+                     (swap! seen-urls conj url)
+                     {:hyperedges []})}
+      #(do (is (= [] (substrate/hyperedges-by-end "memory/one")))
+           (is (= [] (substrate/hyperedges-by-type :memory/assert)))))
+    (is (= 2 (count @seen-urls)))
+    (is (every? #(re-find #"[?&]limit=5000(?:&|$)" %) @seen-urls))))
+
 (deftest batch-recall-projects-several-endpoints-with-one-substrate-call
   (let [{math :mathematics} (fixtures)
         edge (assoc-in (:edge math) [:hx/props :domain] :mathematics)

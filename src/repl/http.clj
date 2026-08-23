@@ -1,9 +1,10 @@
 (ns repl.http
   "Drawbridge (nREPL over HTTP) helper for mission control and admin access.
 
-   Two endpoints on the same port:
+   Three endpoints on the same port:
    - /repl  — nREPL over HTTP (Drawbridge protocol, for Emacs/CIDER)
-   - /eval  — plain Clojure eval (POST code as body, get EDN back)
+   - /eval  — dev-serve Clojure eval (POST code as body, get EDN back)
+   - /admin/eval — explicitly attributed dev-admin eval
 
    The /eval endpoint is the tool bridge for CLI agents. An agent running
    via `claude -p` can call any Clojure function in the running JVM:
@@ -127,8 +128,14 @@
        "futon3c.agents.zai-api unloaded, emptied the agent registry as seen from\n"
        "here while :7070 still reported 80 agents, and broke frames/mint-seats.\n"
        "A frame was opened into that image 107 seconds later.\n\n"
-       "To load new code: commit it and RESTART (systemctl --user restart\n"
-       "futon3c-zone). There is no lighter-weight substitute."))
+       "Supported live evolution redefines Vars in place: use a reviewed,\n"
+       "targeted load-file through the dev-admin surface when README-drawbridge\n"
+       "classifies the change as reload-safe. Route topology, captured callback,\n"
+       "protocol, state-layout, and lifecycle changes require an external\n"
+       "restart. Namespace removal/recreation is supported by neither profile."))
+
+(defn- request-profile [request]
+  (if (= "/admin/eval" (:uri request)) :dev-admin :dev-serve))
 
 (defn- refresh-attempt?
   "True when CODE tries to drive clojure.tools.namespace's refresh/reload.
@@ -155,19 +162,22 @@
      :headers {"content-type" "text/plain"}
      :body "POST only"}
     (let [code (read-body request)
-          remote (:remote-addr request)]
+          remote (:remote-addr request)
+          profile (request-profile request)]
       (if (str/blank? code)
         {:status 400
          :headers {"content-type" "text/plain"}
          :body "empty code"}
         (if (refresh-attempt? code)
           (do
-            (eval-log! {:type :refused :remote remote :bytes (count code) :code code})
+            (eval-log! {:type :refused :profile profile :remote remote
+                        :bytes (count code) :code code})
             {:status 403
              :headers {"content-type" "text/plain"}
              :body refresh-refusal})
         (let [start-ns (System/nanoTime)]
-          (eval-log! {:type :request :remote remote :bytes (count code) :code code})
+          (eval-log! {:type :request :profile profile :remote remote
+                      :bytes (count code) :code code})
           (try
             (let [f (future
                       (try
@@ -181,12 +191,14 @@
                   elapsed-ms (long (/ (- (System/nanoTime) start-ns) 1000000))]
               (if (= result ::timeout)
                 (do (future-cancel f)
-                    (eval-log! {:type :response :remote remote :elapsed-ms elapsed-ms
+                    (eval-log! {:type :response :profile profile :remote remote
+                                :elapsed-ms elapsed-ms
                                 :ok false :error "eval timeout"})
                     {:status 504
                      :headers {"content-type" "application/edn"}
                      :body (pr-str {:ok false :error "eval timeout" :timeout-ms eval-timeout-ms})})
-                (do (eval-log! {:type :response :remote remote :elapsed-ms elapsed-ms
+                (do (eval-log! {:type :response :profile profile :remote remote
+                                :elapsed-ms elapsed-ms
                                 :ok (boolean (:ok result))
                                 :summary (if (:ok result)
                                            (truncate-str (pr-str (:value result)) eval-log-summary-chars)
@@ -196,7 +208,7 @@
                      :headers {"content-type" "application/edn"}
                      :body (pr-str result)})))
             (catch Throwable t
-              (eval-log! {:type :response :remote remote :ok false
+              (eval-log! {:type :response :profile profile :remote remote :ok false
                           :error (.getMessage t) :exception-type (.getName (class t))})
               {:status 500
                :headers {"content-type" "application/edn"}
@@ -230,11 +242,21 @@
 ;; =============================================================================
 
 (defn- route-handler
-  "Dispatch between /eval (plain eval) and everything else (nREPL/Drawbridge)."
+  "Dispatch dev-serve eval, attributed dev-admin eval, and nREPL/Drawbridge.
+
+   /admin/eval is an operational/audit boundary rather than a language sandbox:
+   it uses the same authenticated evaluator, while marking deliberate risky
+   administration separately.  The coherence guard applies to both profiles."
   [nrepl-handler]
   (fn [request]
-    (if (= "/eval" (:uri request))
-      (eval-handler request)
+    (case (:uri request)
+      "/eval" (eval-handler request)
+      "/admin/eval"
+      (if (= "dev-admin" (get-in request [:headers "x-drawbridge-profile"]))
+        (eval-handler request)
+        {:status 403
+         :headers {"content-type" "text/plain"}
+         :body "dev-admin profile header required"})
       (nrepl-handler-with-refresh-guard nrepl-handler request))))
 
 (defn start!
@@ -261,7 +283,7 @@
                     (wrap-token token allow))
         stop-fn (http/run-server handler {:ip bind :port port})]
     (reset! server stop-fn)
-    (println (format "[dev] drawbridge: http://%s:%s/repl + /eval (allow: %s)"
+    (println (format "[dev] drawbridge: http://%s:%s/repl + /eval + /admin/eval (allow: %s)"
                      bind port (pr-str allow)))
     stop-fn))
 

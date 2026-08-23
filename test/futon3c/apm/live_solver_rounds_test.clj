@@ -30,6 +30,7 @@
         result (sut/drive! (effects persisted))]
     (is (:ok result))
     (is (= :awaiting-terminal (:status result)))
+    (is (= "job-2" (:job-id result)))
     (is (= 1 (count (get-in result [:state :rounds]))))
     (is (= "solver-session"
            (get-in result [:state :rounds 0 :session-id])))
@@ -76,6 +77,7 @@
                 (assoc (effects persisted) :state state))]
     (is (:ok result))
     (is (= :awaiting-terminal (:status result)))
+    (is (= "job-2" (:job-id result)))
     (is (= 2 (get-in result [:state :active :request :solver/round])))
     (is (= [:bad-path]
            (get-in result [:state :active :request

@@ -1,0 +1,34 @@
+{:queue/type :apm-problem-queue
+ :queue/version 1
+ :queue/id "cdeb2ca0ea666c40e5c6e13eff463dbaee00b7fae77de4004061359b5b86fe49"
+ :problems
+ [{:problem/id "m94A02"
+   :repository "/home/joe/code/apm-lean"
+   :revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :path "problems/m94A02/lean/Main.lean"
+   :blob "73a4774a8d62c55b1a14978d8e3bd92d80b46eef"
+   :classification :non-excluded}
+  {:problem/id "m94A03"
+   :repository "/home/joe/code/apm-lean"
+   :revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :path "problems/m94A03/lean/Main.lean"
+   :blob "556534cf57afaef9e036f54319db2e1a9834f43a"
+   :classification :non-excluded}
+  {:problem/id "m95J01"
+   :repository "/home/joe/code/apm-lean"
+   :revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :path "problems/m95J01/lean/Main.lean"
+   :blob "1361258cbbcf4ab5ee17c3acd801d9267ee05eea"
+   :classification :non-excluded}
+  {:problem/id "m99A01"
+   :repository "/home/joe/code/apm-lean"
+   :revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :path "problems/m99A01/lean/Main.lean"
+   :blob "521dcf117d97ed8b89016a888fed847dbdbc2ee1"
+   :classification :non-excluded}
+  {:problem/id "m99A02"
+   :repository "/home/joe/code/apm-lean"
+   :revision "455d4d8c1db24a9244828c5c063d077e9414b986"
+   :path "problems/m99A02/lean/Main.lean"
+   :blob "3a1e0e25fc01193f35be8bc6407bd7ce2b06a2a2"
+   :classification :non-excluded}]}

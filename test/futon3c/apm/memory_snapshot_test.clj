@@ -69,6 +69,9 @@
                          :review {:evidence-id "e-review-1"}}}
         entries {"e-solver-1" {:evidence/author "solver"}
                  "e-review-1" {:evidence/author "scribe"
+                               :evidence/body
+                               {:review/reason "actionable exact API"
+                                :review/residual "Main.lean:12"}
                                :evidence/subject
                                {:ref/type :memory :ref/id "e-solver-1"}}}]
     (is (sut/candidate-visible? candidate (constantly [edge]) entries))

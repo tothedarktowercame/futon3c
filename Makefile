@@ -5,7 +5,7 @@ CODEX_APPROVAL?=never
 CODEX_APPROVAL_POLICY?=$(CODEX_APPROVAL)
 NONSTARTER_DB?=$(HOME)/code/storage/nonstarter.db
 # Host-specific JVM sizing, passed as -J flags rather than baked into the
-# shared :dev alias so two hosts never edit the same committed line. Override
+# shared :dev-serve alias so two hosts never edit the same committed line. Override
 # from your scripts/dev-<host>-env (a separate file per host), not here.
 # Defaults are the 3.8G Linode's values (the 2026-07-14 OOM-ledge fix): -Xmx2g
 # + 768m direct + Arrow native + JVM overhead ran ~3.2G resident on a 3.8G box
@@ -37,7 +37,7 @@ export FUTON3C_SHADOW_AUTOSTART
 export FUTON3C_SHADOW_BUILDS
 export FUTON3C_REPOS
 
-.PHONY: tools dev dev-linode restart test claude claude-repl codex codex-repl zai-repl codex-autowake tickle status gh-hygiene gh-issue-holes repl \
+.PHONY: tools dev admin dev-linode restart test claude claude-repl codex codex-repl zai-repl codex-autowake tickle status gh-hygiene gh-issue-holes repl \
 	alfworld-server alfworld-runner alfworld-test alfworld-demo fresh
 
 tools:
@@ -45,7 +45,10 @@ tools:
 
 dev:
 	@echo "[dev] Codex defaults: sandbox=$(CODEX_SANDBOX) approval=$(CODEX_APPROVAL_POLICY)"
-	$(CLOJURE) $(FUTON3C_JVM_SIZING) -M:dev
+	$(CLOJURE) $(FUTON3C_JVM_SIZING) -M:dev-serve
+
+admin:
+	$(CLOJURE) -M:dev-admin $(ARGS)
 
 dev-linode:
 	FUTON3C_IRC_PORT=0 FUTON3C_ROLE=linode FUTON1A_STATIC_DIR=$(HOME)/code/futon4/dev/web $(MAKE) dev
@@ -119,7 +122,7 @@ gh-issue-holes:
 	fi
 
 repl:
-	$(CLOJURE) $(FUTON3C_JVM_SIZING) -M:dev:repl
+	$(CLOJURE) $(FUTON3C_JVM_SIZING) -M:dev-serve:repl
 
 ALFWORLD_PORT ?= 3456
 ALFWORLD_PY ?= python

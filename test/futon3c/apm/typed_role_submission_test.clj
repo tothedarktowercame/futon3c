@@ -1,0 +1,61 @@
+(ns futon3c.apm.typed-role-submission-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [futon3c.apm.typed-role-submission :as sut]))
+
+(defn authority [phase]
+  {:job-id (str "job-" (name phase))
+   :dispatch/id (str "dispatch-" (name phase))
+   :agent-id "f30-role" :frame-id "f30" :problem-id "m00A00"
+   :phase phase :role :controller :submission/token "secret"})
+
+(defn payload [phase]
+  {:command-own-exit 0 :outcome "complete" :failure-account []
+   :evidence (zipmap (sut/evidence-required-by-phase phase) (repeat true))})
+
+(deftest every-modelled-live-phase-has-an-executable-schema
+  (doseq [phase (keys sut/evidence-required-by-phase)]
+    (is (:ok (sut/validate-payload (authority phase) (payload phase)))
+        (name phase))))
+
+(deftest authority-is-controller-owned-and-submission-is-content-addressed
+  (let [root (.toString (java.nio.file.Files/createTempDirectory
+                         "apm-submissions" (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (binding [sut/*submission-root* root]
+      (let [request (-> (authority :student-attempt-1)
+                        (dissoc :job-id)
+                        (assoc :memory-snapshot {:snapshot-id "snap-1"}))
+            ticket {:job-id "job-student-attempt-1"}
+            registered (sut/register! request ticket)
+            submitted (sut/submit! (:job-id ticket) "secret"
+                                   (payload :student-attempt-1))]
+        (is (:ok registered))
+        (is (= [:memory-use]
+               (:evidence-required
+                (sut/schema (:job-id ticket) "secret"))))
+        (is (:ok submitted))
+        (is (= "f30" (get-in submitted [:submission :authority :frame-id])))
+        (is (= "snap-1" (get-in submitted
+                                [:submission :authority :memory-snapshot
+                                 :snapshot-id])))
+        (is (string? (get-in submitted [:submission :submission/id])))
+        (is (= :already-submitted
+               (:status (sut/submit! (:job-id ticket) "secret"
+                                     (payload :student-attempt-1)))))
+        (is (= :role-submission-conflict
+               (:error/code
+                (sut/submit! (:job-id ticket) "secret"
+                             (assoc-in (payload :student-attempt-1)
+                                       [:evidence :memory-use] false)))))))))
+
+(deftest malformed-and-forged-payloads-fail-before-persistence
+  (testing "field-level feedback names missing evidence"
+    (let [result (sut/validate-payload (authority :solve)
+                                       {:command-own-exit 0 :outcome "partial"
+                                        :failure-account [] :evidence {}})]
+      (is (= :role-submission-payload-invalid (:error/code result)))
+      (is (contains? (:evidence/missing result) :final-head))))
+  (testing "an agent cannot supply authority fields"
+    (let [result (sut/validate-payload
+                  (authority :guide-intervention-1)
+                  (assoc (payload :guide-intervention-1) :frame-id "f99"))]
+      (is (= [:authority-field-supplied-by-agent] (:findings result))))))

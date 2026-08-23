@@ -16,7 +16,8 @@
            [java.time Instant]
            [java.util.concurrent ArrayBlockingQueue LinkedBlockingQueue
             RejectedExecutionException ThreadFactory ThreadPoolExecutor
-            TimeUnit TimeoutException]))
+            TimeUnit TimeoutException]
+           [java.util.concurrent.locks ReentrantLock]))
 
 (defonce ^:private !pouches (atom {}))
 (defonce ^:private !registry-lock (Object.))
@@ -454,7 +455,7 @@
                :process proc
                :writer (BufferedWriter. (OutputStreamWriter. (.getOutputStream proc)))
                :reader (BufferedReader. (InputStreamReader. (.getInputStream proc)))
-               :lock (Object.)
+               :lock (ReentrantLock.)
                :session-id session-id
                :claude-bin (or claude-bin "claude")
                :model model
@@ -520,6 +521,11 @@
    {:type "user"
     :message {:role "user"
               :content [{:type "text" :text (prompt-str prompt)}]}}))
+
+(defn- control-line []
+  (json/generate-string
+   {:type "user"
+    :message {:role "user" :content "/compact"}}))
 
 (defn- read-turn* [pouch on-event]
   (let [text (StringBuilder.)
@@ -819,9 +825,9 @@
         (when (compare-and-set! thread nil t)
           (.start t))))))
 
-(defn- feed-turn-demux!
-  "ON path: enqueue a waiter, write, and await THIS turn's result."
-  [pouch prompt timeout-ms on-event turn-id]
+(defn- feed-line-demux!
+  "ON path: enqueue a waiter, write LINE, and await THIS turn's result."
+  [pouch line timeout-ms on-event turn-id]
   (let [{:keys [waiters closed?] :as demux} (:demux pouch)
         ^LinkedBlockingQueue q waiters]
     (ensure-demux! pouch)
@@ -838,7 +844,7 @@
                           {:agent-id (:agent-id pouch)})))
         (.add q w))
       (try
-        (.write ^BufferedWriter (:writer pouch) (str (user-line prompt) "\n"))
+        (.write ^BufferedWriter (:writer pouch) (str line "\n"))
         (.flush ^BufferedWriter (:writer pouch))
         (catch Throwable t
           (.remove q w)
@@ -854,6 +860,51 @@
           (:error v) (throw (:error v))
           :else (:ok v))))))
 
+(defn- feed-turn-demux! [pouch prompt timeout-ms on-event turn-id]
+  (feed-line-demux! pouch (user-line prompt) timeout-ms on-event turn-id))
+
+(defn- run-pouch-turn!
+  "Run F with the pouch's exclusive turn ownership and bookkeeping.
+   WAIT? false returns ::busy rather than waiting for an active turn."
+  [agent-id pouch wait? f]
+  (let [aid (str agent-id)
+        ^ReentrantLock lock (:lock pouch)
+        acquired? (if wait? (do (.lock lock) true) (.tryLock lock))]
+    (if-not acquired?
+      ::busy
+      (try
+        (when-not (alive? pouch)
+          (throw (ex-info "pouch process is not alive" {:agent-id aid})))
+        (swap! !pouches
+               (fn [m] (cond-> m
+                         (contains? m aid)
+                         (update aid assoc :in-flight? true :last-used-ms (now-ms)))))
+        (when-not (:demux pouch)
+          (let [drained (drain-pending! pouch)]
+            (when (pos? drained)
+              (println (str "[pouch] " aid " drained " drained
+                            " stale line(s) before turn — resynced response alignment"))
+              (flush))))
+        (let [result (f)]
+          (swap! !pouches update aid
+                 #(when %
+                    (assoc %
+                           :session-id (:session-id result)
+                           :last-used-ms (now-ms)
+                           :turn-count (inc (long (:turn-count % 0))))))
+          (when (:pouch/trailer-inferred? result)
+            (evict! aid))
+          result)
+        (catch Throwable t
+          (evict! aid)
+          (throw t))
+        (finally
+          (swap! !pouches
+                 (fn [m] (cond-> m
+                           (contains? m aid)
+                           (update aid dissoc :in-flight?))))
+          (.unlock lock))))))
+
 (defn feed-turn!
   "Feed PROMPT to AGENT-ID's warm pouch and read until the result event.
 
@@ -864,59 +915,66 @@
    Throws on spawn/feed/read failure so callers can cold-fallback."
   [agent-id prompt {:keys [timeout-ms on-event turn-id] :as opts}]
   (let [pouch (ensure-pouch! agent-id opts)
-        timeout (or timeout-ms default-timeout-ms)
-        lock (:lock pouch)]
-    (locking lock
-      (try
-        (when-not (alive? pouch)
-          (throw (ex-info "pouch process is not alive" {:agent-id (str agent-id)})))
-        ;; Mark in-flight + touch last-used BEFORE the (possibly very long) turn,
-        ;; so idle-eviction/cap enforcement never destroys a pouch mid-turn.
-        (swap! !pouches
-               (fn [m] (cond-> m
-                         (contains? m (str agent-id))
-                         (update (str agent-id) assoc
-                                 :in-flight? true :last-used-ms (now-ms)))))
-        ;; Resync guard: drop any stale buffered output before writing, so this
-        ;; turn reads its own result (not a prior turn's). A no-op normally.
-        ;; Demux path owns stdout continuously, so there is nothing to peek at
-        ;; and nothing to blind-discard — the guard is meaningless there.
-        (when-not (:demux pouch)
-          (let [drained (drain-pending! pouch)]
-            (when (pos? drained)
-              (println (str "[pouch] " (str agent-id) " drained " drained
-                            " stale line(s) before turn — resynced response alignment"))
-              (flush))))
+        timeout (or timeout-ms default-timeout-ms)]
+    (run-pouch-turn!
+     agent-id pouch true
+     (fn []
         (when-not (:demux pouch)
           (.write ^BufferedWriter (:writer pouch) (str (user-line prompt) "\n"))
           (.flush ^BufferedWriter (:writer pouch)))
-        (let [result (if (:demux pouch)
-                       (feed-turn-demux! pouch prompt timeout on-event
-                                         (or turn-id turn-queue/*turn-id*))
-                       (read-turn-with-timeout pouch timeout on-event))]
-          (swap! !pouches update (str agent-id)
-                 #(when %
-                    (assoc %
-                           :session-id (:session-id result)
-                           :last-used-ms (now-ms)
-                           :turn-count (inc (long (:turn-count % 0))))))
-          ;; A missing terminal trailer means this persistent subprocess can no
-          ;; longer prove its turn boundaries. Complete the original waiter
-          ;; first, then recycle it; never cold-replay the already-completed
-          ;; prompt.
-          (when (:pouch/trailer-inferred? result)
-            (evict! agent-id))
-          result)
-        (catch Throwable t
-          (evict! agent-id)
-          (throw t))
-        (finally
-          ;; Only clear the flag on a still-registered pouch — after an evict!
-          ;; (error path) there is no entry, and update would reinstate a nil one.
-          (swap! !pouches
-                 (fn [m] (cond-> m
-                           (contains? m (str agent-id))
-                           (update (str agent-id) dissoc :in-flight?)))))))))
+        (if (:demux pouch)
+          (feed-turn-demux! pouch prompt timeout on-event
+                            (or turn-id turn-queue/*turn-id*))
+          (read-turn-with-timeout pouch timeout on-event))))))
+
+(defn compact-pouch!
+  "Send the raw /compact control to an already-warm AGENT-ID pouch."
+  [agent-id {:keys [timeout-ms] :as _opts}]
+  (let [aid (str agent-id)
+        pouch (get @!pouches aid)]
+    (cond
+      (or (nil? pouch) (not (alive? pouch)))
+      {:ok false :error "no warm pouch"}
+
+      (:in-flight? pouch)
+      {:ok false :error "turn in flight"}
+
+      :else
+      (let [status (atom nil)
+            result-event (atom nil)
+            on-event (fn [event]
+                       (when (and (= "system" (:type event))
+                                  (= "status" (:subtype event))
+                                  (contains? event :compact_result))
+                         (reset! status event))
+                       (when (= "result" (:type event))
+                         (reset! result-event event)))
+            timeout (or timeout-ms default-timeout-ms)]
+        (try
+          (let [result
+                (run-pouch-turn!
+                 aid pouch false
+                 (fn []
+                   (if (:demux pouch)
+                     (feed-line-demux! pouch (control-line) timeout on-event
+                                       (str "pouch-compact-" (java.util.UUID/randomUUID)))
+                     (do
+                       (.write ^BufferedWriter (:writer pouch)
+                               (str (control-line) "\n"))
+                       (.flush ^BufferedWriter (:writer pouch))
+                       (read-turn-with-timeout pouch timeout on-event)))))]
+            (if (= ::busy result)
+              {:ok false :error "turn in flight"}
+              (let [compact-result (:compact_result @status)
+                    compact-error (:compact_error @status)]
+                {:ok (= "success" compact-result)
+                 :compact-result compact-result
+                 :compact-error compact-error
+                 :session-id (:session-id result)
+                 :usage (:usage @result-event)
+                 :total-cost-usd (:total_cost_usd @result-event)})))
+          (catch Throwable t
+            {:ok false :error (.getMessage t)}))))))
 
 (defn snapshot []
   (into {}

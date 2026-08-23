@@ -14,6 +14,11 @@
   (edn/read-string
    (slurp "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")))
 
+(deftest qualification-checkout-is-revision-addressed-beside-repository
+  (is (= "/home/joe/code/apm-frames/qualification/rev-123"
+         (sut/qualification-checkout-path "/home/joe/code/apm-lean"
+                                          "rev-123"))))
+
 (deftest committed-countdown-manifest-resolves-from-immutable-git-objects
   (let [result (sut/validate (load-manifest))]
     (is (:valid? result) (pr-str (:findings result)))

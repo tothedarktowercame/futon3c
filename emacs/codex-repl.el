@@ -2765,6 +2765,11 @@ or when it is a clear suffix of the streamed assistant text."
           "using tool")))
      ((string= type "text")
       "text")
+     ((string= type "invoke.activity")
+      (let ((activity (alist-get 'activity evt)))
+        (if (and (stringp activity) (not (string-empty-p activity)))
+            activity
+          "working")))
      ((string= type "done")
       (if (alist-get 'ok evt)
           "invoke done"
@@ -2957,6 +2962,10 @@ or when it is a clear suffix of the streamed assistant text."
          (cond
          ((string= type "started")
           (codex-repl--set-progress-status "starting"))
+         ((string= type "invoke.activity")
+          (let ((activity (alist-get 'activity evt)))
+            (when (and (stringp activity) (not (string-empty-p activity)))
+              (codex-repl--set-progress-status activity))))
          ((string= type "tool_use")
           (let* ((tools (alist-get 'tools evt))
                  (tool-list (cond
@@ -4033,9 +4042,9 @@ With REFRESH non-nil, recompute the state even if cached."
                                (format "%s (%s)" label status))))
                          entries))
          (current (plist-get state :current-label)))
-    (format "Transports: [%s]. Current: %s."
-            (string-join labels ", ")
-            current)))
+    (format "%s Transports: [%s]. Current: %s."
+            (agent-chat-mission-segment)
+            (string-join labels ", ") current)))
 
 (defun codex-repl--world-view-string (state)
   "Return multi-line description of STATE plist."
@@ -4468,6 +4477,7 @@ This mode tails a Codex rollout JSONL and replays turns without sending."
 (defun codex-repl--init ()
   "Initialize buffer UI."
   (setq codex-repl--cached-irc-send-base nil)
+  (setq-local agent-chat--cost-vendor "codex")
   (codex-repl--ensure-session-id)
   (codex-repl--ensure-store-session)
   ;; Register with Agency only for buffer-local lane overrides; never

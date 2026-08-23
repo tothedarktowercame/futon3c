@@ -148,6 +148,10 @@
                    :base-revision revision
                    :checkout checkout
                    :branch branch
+                   ;; `open` rejects both an existing record and an existing
+                   ;; checkout before creating this worktree. A successful
+                   ;; frame is therefore fresh by the provisioner's own rule.
+                   :runner-freshness true
                    :seat (:seat o)
                    ;; The runner's ACTUAL session id is knowable only after
                    ;; dispatch (job record). A minted UUID here asserted isolation

@@ -8,6 +8,7 @@ import pathlib
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -21,6 +22,8 @@ STATE_PATH = STATE_DIR / "vitality-state.json"
 MAX_LOG_BYTES = 10 * 1024 * 1024
 DEFAULT_JOURNAL_LOOKBACK_SECONDS = 300
 DEFAULT_EVIDENCE_WRITE_STALE_SECONDS = 15 * 60
+SUBSTRATE_STALL_SECONDS = 60
+SUBSTRATE_TREND_SECONDS = 5 * 60
 
 
 def systemctl_property(name):
@@ -42,14 +45,86 @@ def read_pairs(path):
     return {key: int(value) for key, value in (line.split() for line in path.read_text().splitlines())}
 
 
-def health_probe(url):
+def health_probe(url, include_payload=False):
+    query = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
+    if "deep" in query:
+        raise ValueError("vitality health probes must never request deep health")
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(url, timeout=2) as response:
-            response.read()
-            return response.status, round((time.monotonic() - started) * 1000, 1), None
+        request = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(request, timeout=2) as response:
+            raw = response.read()
+            payload = json.loads(raw) if include_payload else None
+            result = response.status, round((time.monotonic() - started) * 1000, 1), None
+            return (*result, payload) if include_payload else result
     except (urllib.error.URLError, TimeoutError, OSError) as error:
-        return 0, round((time.monotonic() - started) * 1000, 1), str(error)
+        result = 0, round((time.monotonic() - started) * 1000, 1), str(error)
+        return (*result, None) if include_payload else result
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        result = 0, round((time.monotonic() - started) * 1000, 1), f"invalid health JSON: {error}"
+        return (*result, None) if include_payload else result
+
+
+def evaluate_substrate_health(payload, previous_state, sampled_at_epoch):
+    """Classify cheap /health signals and retain bounded trend state."""
+    payload = payload or {}
+    previous_record = previous_state.get("latest_record", {})
+    previous_health = previous_record.get("substrate_health", {})
+    previous_sample = float(previous_state.get("sampled_at_epoch", sampled_at_epoch))
+    elapsed_ms = max(1.0, (sampled_at_epoch - previous_sample) * 1000)
+    stats = payload.get("stats", {})
+    previous_stats = previous_health.get("stats", {})
+    rejected_rising = stats.get("rejected", 0) > previous_stats.get("rejected", stats.get("rejected", 0))
+    rejected_since = (
+        previous_state.get("substrate_rejected_rising_since_epoch", previous_sample)
+        if rejected_rising
+        else None
+    )
+    gc = payload.get("gc", {}).get("G1 Concurrent GC", {})
+    previous_gc = previous_health.get("gc", {}).get("G1 Concurrent GC", {})
+    gc_delta_ms = max(0, gc.get("time-ms", 0) - previous_gc.get("time-ms", gc.get("time-ms", 0)))
+    g1_busy = gc_delta_ms >= 0.8 * elapsed_ms
+    g1_busy_since = (
+        previous_state.get("substrate_g1_busy_since_epoch", previous_sample)
+        if g1_busy
+        else None
+    )
+    holders = payload.get("holders", [])
+    oldest = payload.get("oldest-holder-ms", 0) or 0
+    total = payload.get("permits/total", 2)
+    available = payload.get("permits/available", total)
+    heap = payload.get("heap", {})
+    heap_ratio = (heap.get("used-mb", 0) / heap.get("max-mb", 1)) if heap.get("max-mb") else 0
+    alerts = []
+    if oldest > SUBSTRATE_STALL_SECONDS * 1000:
+        alerts.append("substrate-oldest-holder-over-60s")
+    if available == 0 and len(holders) >= total and all(
+        (holder.get("age-ms", 0) or 0) > SUBSTRATE_STALL_SECONDS * 1000
+        for holder in holders
+    ):
+        alerts.append("substrate-all-permits-held-over-60s")
+    if rejected_since is not None and sampled_at_epoch - rejected_since >= SUBSTRATE_TREND_SECONDS:
+        alerts.append("substrate-rejections-rising-5m")
+    if heap_ratio > 0.85:
+        alerts.append("substrate-post-gc-heap-over-85pct")
+    if g1_busy_since is not None and sampled_at_epoch - g1_busy_since >= SUBSTRATE_TREND_SECONDS:
+        alerts.append("substrate-g1-concurrent-cpu-busy-5m")
+    diagnosis = None
+    if available < total and not holders:
+        diagnosis = "leaked-permit"
+    elif len(holders) in (1, 2) and oldest > SUBSTRATE_STALL_SECONDS * 1000:
+        diagnosis = "hung-jdbc"
+    elif len(holders) > total and oldest <= SUBSTRATE_STALL_SECONDS * 1000 and rejected_rising:
+        diagnosis = "overload"
+    if alerts and diagnosis:
+        alerts.append(f"substrate-failure-mode:{diagnosis}")
+    return {
+        "alerts": alerts,
+        "diagnosis": diagnosis,
+        "heap_ratio": round(heap_ratio, 4),
+        "rejected_rising_since_epoch": rejected_since,
+        "g1_busy_since_epoch": g1_busy_since,
+    }
 
 
 def summarize_evidence_append_errors(journal_text):
@@ -285,6 +360,11 @@ def persist_record(record, sampled_at_epoch, memory_events_high=None):
     }
     if memory_events_high is not None:
         state["memory_events_high"] = memory_events_high
+    substrate = record.get("substrate_assessment", {})
+    if substrate.get("rejected_rising_since_epoch") is not None:
+        state["substrate_rejected_rising_since_epoch"] = substrate["rejected_rising_since_epoch"]
+    if substrate.get("g1_busy_since_epoch") is not None:
+        state["substrate_g1_busy_since_epoch"] = substrate["g1_busy_since_epoch"]
     write_private(STATE_PATH, json.dumps(state, sort_keys=True) + "\n")
 
 
@@ -328,7 +408,9 @@ def main(check_mode=False):
             )
         )
     )
-    status, latency_ms, health_error = health_probe(MAIN_HEALTH_URL)
+    status, latency_ms, health_error, substrate_health = health_probe(
+        MAIN_HEALTH_URL, include_payload=True
+    )
     liveness_status, liveness_latency_ms, liveness_error = health_probe(LIVENESS_URL)
     evidence_append_errors = recent_evidence_append_errors(previous_sample_epoch)
     stale_seconds = int(
@@ -341,6 +423,8 @@ def main(check_mode=False):
     high_delta = events.get("high", 0) - int(previous.get("memory_events_high", 0))
     ratio = (current / high) if high else None
     alerts = []
+    substrate_assessment = evaluate_substrate_health(substrate_health, previous, sampled_at_epoch)
+    alerts.extend(substrate_assessment["alerts"])
     if ratio is not None and ratio >= 0.80:
         alerts.append("memory-high-ratio")
     if high_delta > 0:
@@ -380,6 +464,8 @@ def main(check_mode=False):
         },
         "pressure": (cgroup / "memory.pressure").read_text().splitlines(),
         "health": {"status": status, "elapsed_ms": latency_ms, "error": health_error},
+        "substrate_health": substrate_health,
+        "substrate_assessment": substrate_assessment,
         "independent_liveness": {
             "status": liveness_status,
             "elapsed_ms": liveness_latency_ms,

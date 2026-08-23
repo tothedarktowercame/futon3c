@@ -43,6 +43,11 @@ export FUTON3C_PARKED_ON="${FUTON3C_PARKED_ON:-1}"
 # profile aligned with dev-laptop-env; without this flag the server deliberately
 # treats :type as inert legacy payload and the guidance contract cannot hold.
 export FUTON3C_TYPED_BELLS="${FUTON3C_TYPED_BELLS:-true}"
+# Warm pouches (M-kangaroo). Was never set on zone, so every turn ran as a cold
+# `claude -p --resume` (found 2026-08-22 while wiring /agents/:id/compact).
+# Joe: enable, effective at the NEXT restart. The joey gate
+# (FUTON3C_KANGAROO_JOEY_MAX_BYTES, 2 MiB default) still keeps big sessions cold.
+export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
 # Only the serving JVM may project peripheral state into the operator's Emacs.
 # Test and CLI JVMs intentionally do not inherit this explicit opt-in.
 export FUTON3C_BLACKBOARD_PROJECT="${FUTON3C_BLACKBOARD_PROJECT:-1}"

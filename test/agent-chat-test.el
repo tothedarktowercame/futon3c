@@ -4,6 +4,111 @@
 (require 'cl-lib)
 (require 'agent-chat)
 
+(ert-deftest agent-chat-cost-segment-renders-warm-claude ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "claude" :model "claude-fable-5" :mult 2.0
+            :ctx 312000 :warm_s 240 :cold nil :per_turn_usd 0.62
+            :per_turn_cold_usd 6.24 :session_usd 41.2 :turns 130))
+    (should (equal (agent-chat-cost-segment)
+                   "fable x2 · ctx 312k · warm 4m · ~$0.62/turn · $41 / 130t"))))
+
+(ert-deftest agent-chat-cost-segment-renders-cold-claude ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "claude" :model "claude-opus-5" :mult 1.0
+            :ctx 700000 :warm_s 244800 :cold t :per_turn_usd 0.7
+            :per_turn_cold_usd 7.41))
+    (should (equal (agent-chat-cost-segment)
+                   "opus x1 · ctx 700k · cold 68h · next ~$7.41"))))
+
+(ert-deftest agent-chat-cost-segment-renders-codex-without-dollars ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis
+          '(:vendor "codex" :model "gpt-5" :ctx 258000 :warm_s 120 :cold nil))
+    (should (equal (agent-chat-cost-segment) "ctx 258k · warm 2m"))))
+
+(ert-deftest agent-chat-cost-flair-suffix-renders-last-turn ()
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :model "claude-fable-5" :mult 2.0 :ctx 105076
+                    :last_turn_usd 1.450742 :last_turn_calls 7 :session_usd 7.68))
+                 " · ~$1.45 (7 calls · ctx 105k · fable x2) · session $8"))
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :model "claude-opus-5" :mult 1.0 :ctx 411000
+                    :last_turn_usd 5.14 :last_turn_calls 22 :session_usd 293))
+                 " · ~$5.14 (22 calls · ctx 411k · opus x1) · session $293 →  Compaction recommended (C-c C-z)"))
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1 :pouch "none"))
+                 " · ~$0.50 (1 call) · no pouch"))
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1 :pouch "warm"))
+                 " · ~$0.50 (1 call) · pouch"))
+  (should (equal (agent-chat-cost-flair-suffix '(:vendor "codex" :ctx 1000)) ""))
+  (should (equal (agent-chat-cost-flair-suffix nil) "")))
+
+(ert-deftest agent-chat-annotate-turn-flair-is-idempotent ()
+  (with-temp-buffer
+    (insert "hello\nCooked for 1m 03s\n─── *no mission*\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1))
+    (agent-chat--annotate-turn-flair!)
+    (agent-chat--annotate-turn-flair!)
+    (should (string-match-p "^Cooked for 1m 03s · ~\\$0\\.50 (1 call)$"
+                            (buffer-substring (point-min) (point-max))))))
+
+(ert-deftest agent-chat-annotate-turn-flair-ignores-transcript-cooked-lines ()
+  (with-temp-buffer
+    (insert "Cooked for 9s\nsome transcript\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1))
+    (agent-chat--annotate-turn-flair!)
+    (should (equal (buffer-string) "Cooked for 9s\nsome transcript\n> "))))
+
+(ert-deftest agent-chat-ensure-prompt-markers-ignores-blockquote ()
+  (with-temp-buffer
+    (insert "claude: quoting\n> `:name \"x\"`\n\nmore text\nCooked for 6m 15s\n")
+    (setq-local agent-chat--prompt-marker (copy-marker (point-max) t))
+    (setq-local agent-chat--separator-start nil)
+    (setq-local agent-chat--input-start nil)
+    (should (agent-chat--ensure-prompt-markers!))
+    (should (= (marker-position agent-chat--prompt-marker) (- (point-max) 2)))
+    (should (string-suffix-p "Cooked for 6m 15s\n> " (buffer-string)))
+    (should (= (marker-position agent-chat--input-start) (point-max)))))
+
+(ert-deftest agent-chat-cost-flair-suffix-shows-cold-resume-cost ()
+  (should (equal (agent-chat-cost-flair-suffix
+                  '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                    :cold t :per_turn_cold_usd 1.56))
+                 " · ~$0.50 (1 call) · cold — resuming costs ~$1.56")))
+
+(ert-deftest agent-chat-schedule-cold-notice-marks-cold-now-or-later ()
+  (with-temp-buffer
+    (insert "Cooked for 9s\n─── *no mission*\n> ")
+    (setq-local agent-chat--prompt-marker (copy-marker (- (point-max) 2)))
+    ;; already past the TTL: annotate immediately
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                  :warm_s 4000 :ttl_s 3600 :per_turn_cold_usd 1.56))
+    (agent-chat--schedule-cold-notice!)
+    (should (null agent-chat--cost-cold-timer))
+    (should (string-match-p "resuming costs ~\\$1\\.56" (buffer-string)))
+    ;; still warm: a timer is pending, nothing written yet
+    (setq-local agent-chat--cost-basis
+                '(:vendor "claude" :last_turn_usd 0.5 :last_turn_calls 1
+                  :warm_s 10 :ttl_s 3600 :per_turn_cold_usd 1.56))
+    (agent-chat--annotate-turn-flair!)
+    (agent-chat--schedule-cold-notice!)
+    (should (timerp agent-chat--cost-cold-timer))
+    (should-not (string-match-p "resuming" (buffer-string)))
+    (cancel-timer agent-chat--cost-cold-timer)))
+
+(ert-deftest agent-chat-cost-segment-renders-empty-without-data ()
+  (with-temp-buffer
+    (setq agent-chat--cost-basis nil)
+    (should (equal (agent-chat-cost-segment) ""))))
+
 (defun agent-chat-test--init-buffer ()
   (cl-letf (((symbol-function 'agent-chat--refresh-session-turn-count)
              (lambda (&rest _) nil)))

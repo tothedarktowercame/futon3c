@@ -133,7 +133,7 @@
         (is (= "redefined for zai-test" (:result resp)))
         (is (= "sid-hot" (:session-id resp)))))))
 
-(deftest cycle-student-budget-scales-the-interior-runner-envelope
+(deftest cycle-student-budget-does-not-inflate-http-request-timeout
   (let [invoke (make-invoke {})
         captured (atom nil)]
     (with-redefs [zai/run-tool-rounds! (fn [ctx]

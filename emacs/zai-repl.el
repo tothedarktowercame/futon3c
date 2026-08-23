@@ -483,6 +483,7 @@ the id is display-only, so a failed read must never break buffer setup."
 
 (defun zai-repl--init-display ()
   "Draw the Z.AI REPL header and prompt."
+  (setq-local agent-chat--cost-vendor nil)
   (agent-chat-init-buffer
    (list :title "z.ai repl"
          :session-id (zai-repl--session-id)

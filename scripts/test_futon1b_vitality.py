@@ -1,6 +1,7 @@
 import importlib.util
 import pathlib
 import unittest
+from unittest import mock
 
 
 SCRIPT_PATH = pathlib.Path(__file__).parent / "systemd" / "futon1b-vitality.py"
@@ -10,6 +11,74 @@ SPEC.loader.exec_module(VITALITY)
 
 
 class Futon1bVitalityTest(unittest.TestCase):
+    def test_four_day_wedge_fires_cheap_health_alert_with_diagnosis(self):
+        now = 1_800_000_000.0
+        previous = {
+            "sampled_at_epoch": now - 301,
+            "substrate_rejected_rising_since_epoch": now - 301,
+            "substrate_g1_busy_since_epoch": now - 301,
+            "latest_record": {
+                "substrate_health": {
+                    "stats": {"rejected": 100},
+                    "gc": {"G1 Concurrent GC": {"time-ms": 1_000}},
+                }
+            },
+        }
+        wedge = {
+            "permits/total": 2,
+            "permits/available": 0,
+            "holders": [{"age-ms": 400_000}, {"age-ms": 399_000}],
+            "oldest-holder-ms": 400_000,
+            "stats": {"rejected": 130, "timed-out": 8},
+            "heap": {"used-mb": 3970, "max-mb": 4096},
+            "gc": {"G1 Concurrent GC": {"time-ms": 302_000}},
+        }
+
+        result = VITALITY.evaluate_substrate_health(wedge, previous, now)
+
+        self.assertEqual("hung-jdbc", result["diagnosis"])
+        self.assertIn("substrate-oldest-holder-over-60s", result["alerts"])
+        self.assertIn("substrate-all-permits-held-over-60s", result["alerts"])
+        self.assertIn("substrate-rejections-rising-5m", result["alerts"])
+        self.assertIn("substrate-post-gc-heap-over-85pct", result["alerts"])
+        self.assertIn("substrate-g1-concurrent-cpu-busy-5m", result["alerts"])
+        self.assertIn("substrate-failure-mode:hung-jdbc", result["alerts"])
+
+    def test_healthy_payload_does_not_alert(self):
+        payload = {
+            "permits/total": 2,
+            "permits/available": 2,
+            "holders": [],
+            "oldest-holder-ms": 0,
+            "stats": {"rejected": 10, "timed-out": 0},
+            "heap": {"used-mb": 1000, "max-mb": 4096},
+            "gc": {"G1 Concurrent GC": {"time-ms": 1000}},
+        }
+        previous = {"sampled_at_epoch": 1000, "latest_record": {"substrate_health": payload}}
+
+        result = VITALITY.evaluate_substrate_health(payload, previous, 1060)
+
+        self.assertEqual([], result["alerts"])
+        self.assertIsNone(result["diagnosis"])
+
+    def test_health_probe_requests_json_and_never_deep_health(self):
+        response = mock.MagicMock()
+        response.status = 200
+        response.read.return_value = b'{"ok": true}'
+        response.__enter__.return_value = response
+        with mock.patch.object(VITALITY.urllib.request, "urlopen", return_value=response) as opened:
+            status, _elapsed, error, payload = VITALITY.health_probe(
+                VITALITY.MAIN_HEALTH_URL, include_payload=True
+            )
+        request = opened.call_args.args[0]
+        self.assertEqual(200, status)
+        self.assertIsNone(error)
+        self.assertEqual({"ok": True}, payload)
+        self.assertNotIn("deep", request.full_url)
+        self.assertEqual("application/json", request.headers["Accept"])
+        with self.assertRaises(ValueError):
+            VITALITY.health_probe(VITALITY.MAIN_HEALTH_URL + "?deep=true")
+
     def test_summarizes_accepted_evidence_and_hyperedge_writes(self):
         records = [
             {

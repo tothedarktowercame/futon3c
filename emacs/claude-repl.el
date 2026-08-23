@@ -1305,6 +1305,7 @@ CALLBACK is called with the final response text on completion."
 (define-key claude-repl-mode-map (kbd "C-c C-k") #'claude-repl-clear)
 (define-key claude-repl-mode-map (kbd "C-c C-n") #'claude-repl-new-session)
 (define-key claude-repl-mode-map (kbd "C-c C-$") #'claude-repl-cost-status)
+(define-key claude-repl-mode-map (kbd "C-c C-z") #'claude-repl-compact)
 (define-key claude-repl-mode-map (kbd "C-c C-m") #'agent-chat-clock-in)
 (define-key claude-repl-mode-map (kbd "C-c C-e") #'agent-chat-excurse)
 (define-key claude-repl-mode-map (kbd "C-c C-o") #'agent-chat-clock-menu)
@@ -1343,6 +1344,95 @@ Type after the prompt, RET to send, C-c C-n for fresh session, C-c C-a for the `
                         (claude-repl--emit-assistant-turn-evidence! text)
                         (claude-repl--emit-turn-commits-evidence!)
                         (claude-repl--close-frame "done")))))
+
+(defun claude-repl--compact-outcome-line (status payload)
+  "Render compact endpoint STATUS and PAYLOAD as one transcript line."
+  (cond
+   ((and (= status 200) (eq t (plist-get payload :ok)))
+    (format "[compact] ok%s%s — ctx will refresh on the next turn"
+            (if-let* ((path (plist-get payload :path)))
+                (format " (%s" path)
+              "")
+            (cond
+             ((and (plist-get payload :path)
+                   (numberp (plist-get payload :total-cost-usd)))
+              (format ", $%.2f)" (plist-get payload :total-cost-usd)))
+             ((plist-get payload :path) ")")
+             (t ""))))
+   ((and (= status 200) (equal "failed" (plist-get payload :compact-result)))
+    (format "[compact] failed: %s"
+            (or (plist-get payload :compact-error) "unknown failure")))
+   ((= status 409)
+    "[compact] busy — seat is mid-turn, try again after it finishes")
+   ((= status 202)
+    (format "[compact] pending%s — check the next Cooked line"
+            (if-let* ((turn-id (plist-get payload :turn-id)))
+                (format " (turn %s)" turn-id)
+              "")))
+   ((= status 404)
+    (format "[compact] unavailable: %s"
+            (or (plist-get payload :error) "no local agent")))
+   ((string-match-p "http 404" (format "%s" (or (plist-get payload :error) "")))
+    ;; The route itself is gone (a stale http.clj was load-file'd into the
+    ;; shared JVM), not the agent.
+    "[compact] route missing on the server — run futon3c/scripts/restore-http-routes.sh, then retry")
+   (t
+    (format "[compact] error%s"
+            (if-let* ((detail (or (plist-get payload :error)
+                                  (plist-get payload :compact-error))))
+                (format ": %s" detail)
+              "")))))
+
+(defun claude-repl--compact-response (transport-status chat-buffer)
+  "Handle TRANSPORT-STATUS from an asynchronous compact call for CHAT-BUFFER."
+  (let ((response-buffer (current-buffer)))
+    (unwind-protect
+        (when (buffer-live-p chat-buffer)
+          (let (http-status payload)
+            (if (plist-get transport-status :error)
+                (setq http-status 0
+                      payload (list :error
+                                    (format "%s" (plist-get transport-status :error))))
+              (goto-char (point-min))
+              (setq http-status (or (and (boundp 'url-http-response-status)
+                                         url-http-response-status)
+                                    0))
+              (when (re-search-forward "\r?\n\r?\n" nil t)
+                (setq payload
+                      (condition-case nil
+                          (json-parse-string
+                           (buffer-substring-no-properties (point) (point-max))
+                           :object-type 'plist :null-object nil :false-object nil)
+                        (error nil)))))
+            (with-current-buffer chat-buffer
+              (agent-chat-insert-message
+               "system" (claude-repl--compact-outcome-line http-status payload))
+              (when (and (= http-status 200) (eq t (plist-get payload :ok)))
+                (agent-chat-refresh-cost-basis! agent-chat--cost-vendor
+                                                agent-chat--session-id)))))
+      (when (buffer-live-p response-buffer)
+        (kill-buffer response-buffer)))))
+
+(defun claude-repl-compact ()
+  "Request context compaction for this Claude seat asynchronously."
+  (interactive)
+  (when (process-live-p agent-chat--pending-process)
+    (user-error "Claude is still responding; compact after the turn finishes"))
+  (let* ((chat-buffer (current-buffer))
+         (url-request-method "POST")
+         (url-request-extra-headers '(("Content-Type" . "application/json")
+                                      ("Accept" . "application/json")))
+         (url-request-data "{}")
+         (url (format "%s/api/alpha/agents/%s/compact"
+                      (string-remove-suffix "/" claude-repl-api-url)
+                      (url-hexify-string claude-repl-agent-id))))
+    (agent-chat-insert-message "system" "[compact] requested…")
+    (condition-case err
+        (url-retrieve url #'claude-repl--compact-response
+                      (list chat-buffer) t t)
+      (error
+       (agent-chat-insert-message
+        "system" (format "[compact] error: %s" (error-message-string err)))))))
 
 (defun claude-repl-clear ()
   "Clear display and re-draw header. Session and agent identity continue."
@@ -1505,6 +1595,7 @@ Used by `claude-repl-clear' to redraw without losing the agent binding."
          (title (if (claude-repl--workspace)
                     (format "claude repl [%s]" (claude-repl--workspace))
                   "claude repl")))
+    (setq-local agent-chat--cost-vendor "claude")
     (agent-chat-init-buffer
      (list :title title
            :session-id (or existing-sid

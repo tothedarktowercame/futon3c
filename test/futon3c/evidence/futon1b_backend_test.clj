@@ -115,6 +115,36 @@
         (is (every? #(str/includes? % "limit=1000") @seen-urls))
         (is (str/includes? (second @seen-urls) "cursor-id=e2"))))))
 
+(deftest incomplete-evidence-page-forces-continuation
+  (let [seen-urls (atom [])
+        store (sut/make-futon1b-backend "http://incomplete-store.test")]
+    (with-redefs [http/get
+                  (fn [url _]
+                    (swap! seen-urls conj url)
+                    (delay
+                      {:status 200
+                       :body (if (str/includes? url "cursor-id=e2")
+                               "{:entries [{:evidence/id \"e1\", :evidence/at \"2026-01-01T00:00:00Z\"}]}"
+                               "{:entries [], :count 0, :scanned 20000, :incomplete true, :next-cursor {:at \"2026-01-02T00:00:00Z\", :id \"e2\"}}") }))]
+      (is (= ["e1"]
+             (mapv :evidence/id (backend/-query store {:query/limit 10}))))
+      (is (= 2 (count @seen-urls)))
+      (is (str/includes? (second @seen-urls) "cursor-id=e2")))))
+
+(deftest evidence-budget-exhaustion-is-marked-partial
+  (let [store (sut/make-futon1b-backend "http://partial-store.test")]
+    (with-redefs [http/get
+                  (fn [_url _]
+                    (delay {:status 200
+                            :body "{:entries [], :incomplete true, :next-cursor {:at \"2026-01-02T00:00:00Z\", :id \"e2\"}}"}))]
+      (let [entries (backend/-query
+                     store {:query/limit 10 :query/request-budget 1})]
+        (is (empty? entries))
+        (is (sut/partial-result? entries))
+        (is (= 1 (-> entries meta :partial-pages first :request-budget)))
+        (is (= {:at "2026-01-02T00:00:00Z" :id "e2"}
+               (-> entries meta :partial-pages first :next-cursor)))))))
+
 (deftest append-classifies-timeout-separately-from-unreachable
   (let [entry {:evidence/id "e-timeout"
                :evidence/type :coordination

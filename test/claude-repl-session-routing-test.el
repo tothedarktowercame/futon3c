@@ -4,6 +4,75 @@
 (require 'agent-chat)
 (require 'claude-repl)
 
+(ert-deftest claude-repl-compact-refuses-during-live-turn ()
+  (with-temp-buffer
+    (setq agent-chat--pending-process 'pretend-process)
+    (cl-letf (((symbol-function 'process-live-p) (lambda (_) t))
+              ((symbol-function 'url-retrieve)
+               (lambda (&rest _) (ert-fail "compact POST must not run"))))
+      (should-error (claude-repl-compact) :type 'user-error))))
+
+(ert-deftest claude-repl-compact-posts-to-the-seat-control-url ()
+  (with-temp-buffer
+    (let (request)
+      (setq claude-repl-api-url "http://agency.test:7070/"
+            claude-repl-agent-id "claude seat/16"
+            agent-chat--pending-process nil)
+      (cl-letf (((symbol-function 'process-live-p) (lambda (_) nil))
+                ((symbol-function 'agent-chat-insert-message) (lambda (&rest _)))
+                ((symbol-function 'url-retrieve)
+                 (lambda (url callback cbargs &rest _)
+                   (setq request (list url url-request-method url-request-data
+                                       callback cbargs))
+                   'request-process)))
+        (should (eq 'request-process (claude-repl-compact)))
+        (should (equal (car request)
+                       "http://agency.test:7070/api/alpha/agents/claude%20seat%2F16/compact"))
+        (should (equal (cadr request) "POST"))
+        (should (equal (caddr request) "{}"))))))
+
+(ert-deftest claude-repl-compact-renders-endpoint-statuses ()
+  (should (equal (claude-repl--compact-outcome-line
+                  200 '(:ok t :path "cold" :total-cost-usd 0.09))
+                 "[compact] ok (cold, $0.09) — ctx will refresh on the next turn"))
+  (should (equal (claude-repl--compact-outcome-line
+                  200 '(:ok nil :compact-result "failed"
+                        :compact-error "Not enough messages to compact."))
+                 "[compact] failed: Not enough messages to compact."))
+  (should (equal (claude-repl--compact-outcome-line
+                  409 '(:ok nil :error "turn in flight"))
+                 "[compact] busy — seat is mid-turn, try again after it finishes"))
+  (should (equal (claude-repl--compact-outcome-line
+                  202 '(:ok nil :turn-id "compact-123"))
+                 "[compact] pending (turn compact-123) — check the next Cooked line"))
+  (should (equal (claude-repl--compact-outcome-line
+                  404 '(:ok nil :error "no local agent"))
+                 "[compact] unavailable: no local agent")))
+
+(ert-deftest claude-repl-compact-success-refreshes-cost-asynchronously ()
+  (let ((chat-buffer (generate-new-buffer " *compact-chat-test*"))
+        (response-buffer (generate-new-buffer " *compact-response-test*"))
+        inserted refreshed)
+    (unwind-protect
+        (progn
+          (with-current-buffer chat-buffer
+            (setq agent-chat--cost-vendor "claude"
+                  agent-chat--session-id "sid-compact"))
+          (with-current-buffer response-buffer
+            (insert "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n"
+                    "{\"ok\":true,\"path\":\"cold\",\"total-cost-usd\":0.09}")
+            (setq-local url-http-response-status 200)
+            (cl-letf (((symbol-function 'agent-chat-insert-message)
+                       (lambda (speaker text) (setq inserted (list speaker text))))
+                      ((symbol-function 'agent-chat-refresh-cost-basis!)
+                       (lambda (vendor sid) (setq refreshed (list vendor sid)))))
+              (claude-repl--compact-response nil chat-buffer)))
+          (should (equal inserted
+                         '("system" "[compact] ok (cold, $0.09) — ctx will refresh on the next turn")))
+          (should (equal refreshed '("claude" "sid-compact"))))
+      (when (buffer-live-p chat-buffer) (kill-buffer chat-buffer))
+      (when (buffer-live-p response-buffer) (kill-buffer response-buffer)))))
+
 (ert-deftest claude-repl-cost-state-distinguishes-warm-and-cold ()
   (let ((claude-repl-cost-large-context-tokens 200000))
     (let ((warm (claude-repl--cost-state 400000 3599))

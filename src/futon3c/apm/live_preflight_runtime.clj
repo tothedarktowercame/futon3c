@@ -2,6 +2,7 @@
   "Live adapters for the durable f19 preflight state machine."
   (:require [cheshire.core :as json]
             [clojure.edn :as edn]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.live-preflight :as preflight])
   (:import [java.nio.charset StandardCharsets]
@@ -9,7 +10,27 @@
             StandardOpenOption]
            [java.nio.file.attribute FileAttribute]))
 
-(defn parse-report [result]
+(defn lint-edn-text [text]
+  (let [temporary (Files/createTempFile "apm-role-report-" ".edn"
+                                        (make-array FileAttribute 0))]
+    (try
+      (Files/writeString temporary text StandardCharsets/UTF_8
+                         (into-array OpenOption [StandardOpenOption/WRITE
+                                                 StandardOpenOption/TRUNCATE_EXISTING]))
+      (let [{:keys [exit out err]}
+            (shell/sh "clj-kondo" "--lint" (str temporary))
+            output (str/trim (str out err))]
+        (if (zero? exit)
+          {:ok true}
+          {:ok false :error/code :report-edn-lint-failed
+           :error/message output :linter/exit exit}))
+      (catch java.io.IOException t
+        {:ok false :error/code :report-edn-linter-unavailable
+         :error/message (.getMessage t)})
+      (finally
+        (Files/deleteIfExists temporary)))))
+
+(defn parse-report-diagnostic [result]
   (try
     (let [text (str/trim (or result ""))
           fences (map second
@@ -18,16 +39,28 @@
                  (= 1 (count fences)) (first fences)
                  (seq fences) nil
                  :else text)
-          report (edn/read-string text)]
-      (when (map? report) report))
-    (catch Throwable _ nil)))
+          lint-result (when text (lint-edn-text text))]
+      (if-not (:ok lint-result)
+        lint-result
+        (let [report (edn/read-string text)]
+          (if (map? report)
+            {:ok true :report report}
+            {:ok false :error/code :report-not-map}))))
+    (catch Throwable t
+      {:ok false :error/code :report-edn-invalid
+       :error/message (.getMessage t)})))
+
+(defn parse-report [result]
+  (:report (parse-report-diagnostic result)))
 
 (defn job->terminal [response]
-  (let [job (:job response)]
+  (let [job (:job response)
+        parsed (parse-report-diagnostic (:result job))]
     {:job-id (:job-id job) :agent-id (:agent-id job)
      :session-id (:session-id job)
      :state (some-> (:state job) keyword)
-     :report (parse-report (:result job))}))
+     :report (:report parsed)
+     :report/error (when-not (:ok parsed) (dissoc parsed :ok))}))
 
 (defn prompt [request]
   (str "F19 PREFLIGHT — follow the pinned Proctor role card at "

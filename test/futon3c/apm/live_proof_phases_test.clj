@@ -115,6 +115,17 @@
     (is (some #{:verify-final-head-mismatch}
               (:findings (sut/validate-terminal :verify req {:job-id "job-1"} bad))))))
 
+(deftest unrelated-lean-warnings-do-not-invalidate-a-closed-proof
+  (let [req (request :solve)
+        ticket {:job-id "job-1"}
+        warned (assoc-in (job :solve req) [:report :lean :warnings] 2)]
+    (is (:ok (sut/validate-terminal :solve req ticket warned)))
+    (doseq [bad [(assoc-in warned [:report :lean :sorry-warnings] 1)
+                 (assoc-in warned [:report :lean :errors] 1)
+                 (assoc-in warned [:report :lean :warnings] -1)]]
+      (is (= [:lean-proof-invalid]
+             (:findings (sut/validate-terminal :solve req ticket bad)))))))
+
 (deftest f20-equivalent-report-shape-normalizes-without-inventing-evidence
   (let [req (assoc (request :solve)
                    :problem-path "problems/a01J06/lean/Main.lean")

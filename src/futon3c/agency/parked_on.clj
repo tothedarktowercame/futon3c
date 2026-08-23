@@ -316,6 +316,11 @@
 ;; park! — register a continuation (§3.2) + reconcile-on-park (case 1)
 ;; ---------------------------------------------------------------------------
 
+(defn- valid-epoch-ms?
+  [v]
+  (or (nil? v)
+      (and (integer? v) (<= 0 v) (<= v Long/MAX_VALUE))))
+
 (defn park!
   "Register a continuation: park AGENT/SESSION's turn until all AWAITING dep-ids are
    terminal, then RESUME! once with the join. Reconciles against already-terminal
@@ -325,6 +330,12 @@
   [{:keys [agent session surface awaiting payload timer-due-ms deadline-ms budget mode]}
    {:keys [ledger-lookup resume! now-ms] :or {now-ms (System/currentTimeMillis)}}]
   (ensure!)
+  (when-not (valid-epoch-ms? timer-due-ms)
+    (throw (ex-info "timer-due-ms must be a canonical non-negative integer"
+                    {:field :timer-due-ms :value timer-due-ms})))
+  (when-not (valid-epoch-ms? deadline-ms)
+    (throw (ex-info "deadline-ms must be a canonical non-negative integer"
+                    {:field :deadline-ms :value deadline-ms})))
   (let [rid (str "park-" (UUID/randomUUID))
         awaiting (set awaiting)
         coalesce-key (when (= 1 (count awaiting))

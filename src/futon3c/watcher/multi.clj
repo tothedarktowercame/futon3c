@@ -30,8 +30,13 @@
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.watcher.commit-ingest :as commit-ingest]
             [futon3c.watcher.file-ingest :as file-ingest]
-            [futon3c.watcher.freshness :as freshness])
+            [futon3c.watcher.freshness :as freshness]
+            [futon3.inbox-zero.watcher :as inbox-zero])
   (:import [java.time Instant]
+           [java.nio.channels FileChannel OverlappingFileLockException]
+           [java.nio.file Files Paths StandardOpenOption]
+           [java.nio.file.attribute FileAttribute]
+           [java.util Date]
            [java.util.concurrent
             Executors ScheduledExecutorService TimeUnit]))
 
@@ -1326,7 +1331,8 @@
 (declare stop-requested? status)
 
 (defn run-cycle!
-  [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?]
+  [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?
+           inbox-zero-options]
     :or {commit-ingest? true}}]
   (let [n (swap! cycle-n inc)
         plans (vec (map #(build-plan % per-root-cache) roots))
@@ -1435,6 +1441,26 @@
         (catch Throwable t
           (binding [*out* *err*]
             (println "[multi.freshness] check threw:" (.getMessage t))))))
+    (when inbox-zero-options
+      (mark-subtask! {:phase :inbox-zero :cycle-n n})
+      (let [{:keys [state projection] :as result}
+            (inbox-zero/run-cycle!
+             (assoc inbox-zero-options :roots roots :now (Date.)))
+            deliveries (when-let [url (:followup-url inbox-zero-options)]
+                         (inbox-zero/send-eligible-followups!
+                          {:url url :store state :projection projection :now (Date.)}))
+            readiness {:enabled? true
+                       :ready? true
+                       :state-path (:state-path inbox-zero-options)
+                       :witness-path (:witness-path inbox-zero-options)
+                       :followup-url (:followup-url inbox-zero-options)
+                       :observations-written (:observations-written result)
+                       :dirty-set-count (count (:dirty-sets projection))
+                       :ambiguous-count (count (:ambiguous projection))
+                       :unattributed-count (count (:unattributed projection))
+                       :delivery-count (count deliveries)
+                       :last-cycle-at (str (Instant/now))}]
+        (swap! !state #(if (map? %) (assoc % :inbox-zero readiness) %))))
     (mark-subtask! {:phase :idle :cycle-n n})))
 
 ;; ---------- service ----------
@@ -1455,6 +1481,29 @@
                   :last-subtask <map|nil>
                   :stopping? <boolean>}"}
   !state (atom nil))
+
+(defn- acquire-inbox-zero-writer!
+  [state-path]
+  (let [lock-path (Paths/get (str state-path ".writer.lock") (make-array String 0))
+        parent (.getParent lock-path)
+        attrs (make-array FileAttribute 0)]
+    (when parent (Files/createDirectories parent attrs))
+    (let [channel (FileChannel/open lock-path
+                                    (into-array StandardOpenOption
+                                                [StandardOpenOption/CREATE
+                                                 StandardOpenOption/WRITE]))
+          lock (try (.tryLock channel)
+                    (catch OverlappingFileLockException _ nil))]
+      (when-not lock
+        (.close channel)
+        (throw (ex-info "Inbox-zero state already has a writer"
+                        {:error/type :inbox-zero/writer-already-active
+                         :state-path state-path})))
+      {:channel channel :lock lock :path (str lock-path)})))
+
+(defn- release-inbox-zero-writer! [{:keys [lock channel]}]
+  (when lock (.release lock))
+  (when channel (.close channel)))
 
 (defn stop-requested?
   "Return non-nil when the watcher should stop before more per-root work."
@@ -1512,15 +1561,24 @@
      :commit-ingest? — run the per-cycle commit-vertex catch-up
                        (default true). Set false when live file-event
                        ingestion is wanted without the slower commit sidecar.
+     :inbox-zero-options — optional {:state-path :witness-path :followup-url}.
+                          Acquires an exclusive writer lease for state-path.
 
    Returns the same shape as `status`."
-  [{:keys [roots interval-ms cold-scan? commit-ingest?]
+  [{:keys [roots interval-ms cold-scan? commit-ingest? inbox-zero-options]
     :or {interval-ms 5000 cold-scan? false commit-ingest? true}}]
   (when-let [s @!state]
     (when (:executor s)
       (throw (ex-info "watcher already running; call stop! first or use status"
                       {:running true}))))
-  (let [run-id (System/currentTimeMillis)
+  (when (and inbox-zero-options
+             (not (and (string? (:state-path inbox-zero-options))
+                       (not (str/blank? (:state-path inbox-zero-options))))))
+    (throw (ex-info "Inbox-zero state path is required when enabled"
+                    {:error/type :inbox-zero/state-path-required})))
+  (let [writer (when inbox-zero-options
+                 (acquire-inbox-zero-writer! (:state-path inbox-zero-options)))
+        run-id (System/currentTimeMillis)
         event-n (atom 0)
         cycle-n (atom 0)
         per-root-cache (atom (zipmap (map :path roots) (repeat {})))
@@ -1538,9 +1596,9 @@
                      :event-n event-n
                      :cycle-n cycle-n
                      :cold-scan? cold-scan?
-                     :commit-ingest? commit-ingest?}
+                     :commit-ingest? commit-ingest?
+                     :inbox-zero-options inbox-zero-options}
         task #(#'safe-cycle! cycle-state)]
-    (.scheduleWithFixedDelay executor task 0 interval-ms TimeUnit/MILLISECONDS)
     (reset! !state {:executor executor
                     :run-id run-id
                     :event-n event-n
@@ -1550,12 +1608,23 @@
                     :interval-ms interval-ms
                     :cold-scan? cold-scan?
                     :commit-ingest? commit-ingest?
+                    :inbox-zero-options inbox-zero-options
+                    :inbox-zero-writer writer
+                    :inbox-zero (if inbox-zero-options
+                                  {:enabled? true :ready? false
+                                   :state-path (:state-path inbox-zero-options)
+                                   :writer-lock (:path writer)}
+                                  {:enabled? false :ready? false})
                     :last-cycle-started-at nil
                     :last-cycle-finished-at nil
                     :last-progress-at nil
                     :last-error nil
                     :last-subtask {:phase :boot}
                     :stopping? false})
+    ;; Publish the complete ownership/status state before the zero-delay task
+    ;; can observe it; otherwise the first cycle can be skipped or its ready
+    ;; projection overwritten by the boot reset.
+    (.scheduleWithFixedDelay executor task 0 interval-ms TimeUnit/MILLISECONDS)
     (println (format "[futon3c.watcher.multi] started run-id=%d roots=%d interval-ms=%d"
                      run-id (count roots) interval-ms))
     (doseq [{:keys [path label]} roots]
@@ -1571,6 +1640,7 @@
     (when-let [^ScheduledExecutorService ex (:executor s)]
       (.shutdownNow ex)
       (.awaitTermination ex 2 TimeUnit/SECONDS))
+    (release-inbox-zero-writer! (:inbox-zero-writer s))
     (stop-mission-maintenance-drainer!)
     (reset! !state nil)
     (println "[futon3c.watcher.multi] stopped"))
@@ -1581,7 +1651,7 @@
   [_]
   (when-let [s @!state]
     (-> s
-        (dissoc :executor :event-n :cycle-n :per-root-cache)
+        (dissoc :executor :event-n :cycle-n :per-root-cache :inbox-zero-writer)
         (assoc :running? (some? (:executor s))
                :event-n @(:event-n s)
                :cycle-n @(:cycle-n s)
@@ -1602,5 +1672,8 @@
                  :per-root-cache (:per-root-cache s)
                  :run-id (:run-id s)
                  :event-n (:event-n s)
-                 :cycle-n (:cycle-n s)})
+                 :cycle-n (:cycle-n s)
+                 :cold-scan? (:cold-scan? s)
+                 :commit-ingest? (:commit-ingest? s)
+                 :inbox-zero-options (:inbox-zero-options s)})
     (status nil)))

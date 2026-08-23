@@ -58,10 +58,12 @@
             [futon3c.apm.conductor-open :as conductor-open]
             [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.apm.campaign-machine :as campaign-machine]
+            [futon3c.apm.typed-role-submission :as role-submission]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.frame-seats :as frame-seats]
             [futon3c.agency.federation :as federation]
             [futon3c.agency.mesh-qa :as mesh-qa]
@@ -71,6 +73,7 @@
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.parked-on :as parked-on]
+            [futon3c.agency.followup-queue :as followup-queue]
             [futon3c.social.mode :as mode]
             [futon3c.social.dispatch :as dispatch]
             [futon3c.social.presence :as presence]
@@ -207,6 +210,23 @@
     (try
       (int (Long/parseLong s))
       (catch Exception _ nil))))
+
+(defn- coerce-epoch-ms
+  "Coerce a JSON integer or decimal integer string to a non-negative long.
+   Returns {:ok true :value nil} when absent, or {:ok false} when invalid."
+  [v]
+  (cond
+    (nil? v) {:ok true :value nil}
+    (integer? v) (if (and (<= 0 v) (<= v Long/MAX_VALUE))
+                   {:ok true :value (long v)}
+                   {:ok false})
+    (string? v) (let [s (str/trim v)]
+                  (if (re-matches #"[0-9]+" s)
+                    (try
+                      {:ok true :value (Long/parseLong s)}
+                      (catch NumberFormatException _ {:ok false}))
+                    {:ok false}))
+    :else {:ok false}))
 
 (defn- parse-bool
   "Parse boolean query values.
@@ -962,6 +982,55 @@
       (catch Throwable _))
     (bb/project-agents! (reg/registry-status))
     @created-id))
+
+(defn bind-unbound-invoke-request!
+  "Bind the exact request digest to a legacy queued invoke job which was
+   durably announced before request digests were stored.
+
+   This is an explicit migration boundary, not an activation fallback.  It
+   refuses jobs that are absent, non-queued, already bound, or whose retained
+   agent/caller/surface/mode identity differs.  A successful bind is persisted
+   and recorded in the job event stream; normal activation must still pass the
+   resulting digest check."
+  [{:keys [job-id agent-id prompt caller surface mode]}]
+  (let [job-id (some-> job-id str)
+        authority {:agent-id (str agent-id)
+                   :prompt (str prompt)
+                   :caller (str (or caller "http-caller"))
+                   :surface (str (or surface "http"))}
+        normalized-mode (normalize-invoke-job-mode mode)
+        digest (campaign-machine/ledger-digest [authority])
+        result (atom nil)]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (let [job (get-in ledger [:jobs job-id])
+             identity-match? (and (= (:agent-id authority) (:agent-id job))
+                                  (= (:caller authority) (:caller job))
+                                  (= (:surface authority) (:surface job))
+                                  (or (nil? normalized-mode)
+                                      (= normalized-mode (:mode job))))]
+         (cond
+           (nil? job)
+           (do (reset! result {:ok false :error :job-not-found}) ledger)
+
+           (not= "queued" (:state job))
+           (do (reset! result {:ok false :error :job-not-queued
+                               :state (:state job)}) ledger)
+
+           (some? (:request-digest job))
+           (do (reset! result {:ok false :error :request-already-bound}) ledger)
+
+           (not identity-match?)
+           (do (reset! result {:ok false :error :retained-identity-mismatch}) ledger)
+
+           :else
+           (let [bound (-> job
+                           (assoc :request-digest digest)
+                           (append-job-event "request-bound"
+                                             {:migration "legacy-unbound-request"}))]
+             (reset! result {:ok true :job-id job-id :request-digest digest})
+             (assoc-in ledger [:jobs job-id] bound))))))
+    @result))
 
 (defn- canonical-job-agent-id
   "Resolve a job's addressed agent id to its single registry identity.
@@ -3598,9 +3667,27 @@
       (register-job-worker! job-id (Thread/currentThread) nil)
       (preclock-dispatch! agent-id mission-id)
       (let [effective-prompt (wrap-agent-facing-surface prompt surface caller agent-id)
-            raw-result (invoke-agent-with-session-recovery!
-                        (str agent-id) effective-prompt
-                        {:timeout-ms timeout-ms} job-id)
+            ;; Announced jobs reach this direct-invoke boundary from the agent's
+            ;; turn drainer. Give them the same ledger observability as bell jobs:
+            ;; compose with a stream consumer already installed by another surface,
+            ;; and restore that exact consumer after this invoke finishes.
+            aid (str agent-id)
+            prev-sink (reg/get-invoke-event-sink aid)
+            _ (reg/set-invoke-event-sink!
+               aid
+               (fn [event]
+                 (try (record-job-stream-event! job-id event) (catch Throwable _))
+                 (when prev-sink (try (prev-sink event) (catch Throwable _)))))
+            _ (try (record-job-stream-event! job-id {:type "prompt" :text prompt})
+                   (catch Throwable _))
+            raw-result (try
+                         (invoke-agent-with-session-recovery!
+                          aid effective-prompt
+                          {:timeout-ms timeout-ms} job-id)
+                         (finally
+                           (if prev-sink
+                             (reg/set-invoke-event-sink! aid prev-sink)
+                             (reg/clear-invoke-event-sink! aid))))
             result (maybe-route-surface-writes agent-id raw-result)
             result (enrich-result-with-stream-execution job-id result)
             sid (:session-id result)
@@ -3923,6 +4010,61 @@
     (= :invoking (get-in (reg/registry-status) [:agents (str agent) :status]))
     (catch Throwable _ false)))
 
+(defn- exact-agent-session? [agent session]
+  (= (str session) (some-> (reg/get-agent (str agent)) :agent/session-id str)))
+
+(defn- handle-followup-enqueue [request]
+  (let [body (parse-json-map (read-body request))
+        agent (or (:agent body) (get body "agent"))
+        session (or (:session body) (get body "session"))
+        type (parse-keyword (or (:type body) (get body "type")))
+        dedupe-key (or (:dedupe-key body) (get body "dedupe-key"))
+        prompt (or (:prompt body) (get body "prompt"))]
+    (cond
+      (not (exact-agent-session? agent session))
+      (json-response 409 {:ok false :error "agent-session-mismatch"})
+      :else
+      (try
+        (json-response 200 (assoc (followup-queue/enqueue!
+                                   {:agent agent :session session :type type
+                                    :dedupe-key dedupe-key :prompt prompt
+                                    :metadata (or (:metadata body) (get body "metadata"))})
+                                  :ok true))
+        (catch clojure.lang.ExceptionInfo e
+          (json-response 400 {:ok false :error "invalid-followup"
+                              :message (.getMessage e)}))))))
+
+(defn- handle-followup-ready [request]
+  (let [agent (req-query-param request "agent")
+        session (req-query-param request "session")]
+    (cond
+      (agent-in-flight-turn? agent)
+      (json-response 200 {:ok true :ready [] :withheld true})
+      :else
+      (let [item (followup-queue/lease-one!
+                  agent session
+                  (fn [queued]
+                    (exact-agent-session? (:agent queued) (:session queued))))]
+        (json-response 200 {:ok true :ready (if item [item] [])
+                            :leased (some? item)})))))
+
+(defn- handle-followup-ack [request]
+  (let [body (parse-json-map (read-body request))
+        id (or (:followup-id body) (get body "followup-id"))]
+    (if (str/blank? (str id))
+      (json-response 400 {:ok false :error "followup-id-required"})
+      (json-response 200 {:ok true :acked (boolean (followup-queue/ack! id))}))))
+
+(defn- handle-followup-cancel [request]
+  (let [body (parse-json-map (read-body request))
+        id (or (:followup-id body) (get body "followup-id"))]
+    (if (str/blank? (str id))
+      (json-response 400 {:ok false :error "followup-id-required"})
+      (json-response 200 {:ok true
+                          :cancelled (followup-queue/cancel!
+                                      id (or (:reason body) (get body "reason")
+                                             :sender-cancelled))}))))
+
 (defn- handle-parked-ready
   "GET /api/alpha/parked/ready?agent=&session= — poll-and-lease the ready resume
    prompts for a repl buffer (E-park-continuations Car 2b, polling path).
@@ -4010,7 +4152,11 @@
    Body: {\"agent\":\"claude-1\",\"awaiting\":[\"<bell/job-id>\"...],\"payload\":\"...\",
           \"deadline-ms\":N,\"timer-due-ms\":N,\"budget\":{...}}. Flag-gated."
   [request _config]
-  (let [payload (parse-json-map (read-body request))]
+  (let [payload (parse-json-map (read-body request))
+        timer-result (coerce-epoch-ms
+                      (or (:timer-due-ms payload) (get payload "timer-due-ms")))
+        deadline-result (coerce-epoch-ms
+                         (or (:deadline-ms payload) (get payload "deadline-ms")))]
     (cond
       (not (parked-on-enabled?))
       (json-response 503 {:ok false :error "parked-on-disabled"
@@ -4020,6 +4166,12 @@
                           :message "Request body must be a JSON object"})
       (str/blank? (str (or (:agent payload) (get payload "agent"))))
       (json-response 400 {:ok false :error "agent-required"})
+      (not (:ok timer-result))
+      (json-response 400 {:ok false :error "invalid-timer-due-ms"
+                          :message "timer-due-ms must be a non-negative integer or decimal integer string"})
+      (not (:ok deadline-result))
+      (json-response 400 {:ok false :error "invalid-deadline-ms"
+                          :message "deadline-ms must be a non-negative integer or decimal integer string"})
       :else
       (let [result (parked-on/park!
                     {:agent (str (or (:agent payload) (get payload "agent")))
@@ -4029,8 +4181,8 @@
                      :payload (or (:payload payload) (get payload "payload"))
                      :mode (or (parse-keyword (or (:mode payload) (get payload "mode")))
                                :within-turn)
-                     :timer-due-ms (or (:timer-due-ms payload) (get payload "timer-due-ms"))
-                     :deadline-ms (or (:deadline-ms payload) (get payload "deadline-ms"))
+                     :timer-due-ms (:value timer-result)
+                     :deadline-ms (:value deadline-result)
                      :budget (or (:budget payload) (get payload "budget"))}
                     {:ledger-lookup parked-job-lookup :resume! parked-resume!
                      :now-ms (System/currentTimeMillis)})]
@@ -4358,8 +4510,9 @@
      {\"type\":\"text\",\"text\":\"...\"}
      {\"type\":\"tool_use\",\"tools\":[\"Read\"]}
      {\"type\":\"done\",\"ok\":true,\"result\":\"...\",\"session-id\":\"...\"}
-   The event sink is installed on the agent registry so the NDJSON parse loop
-   in make-claude-invoke-fn emits events as they arrive."
+   Authoritative registry progress is emitted as an invoke.activity event.
+   The event sink is installed on the agent registry so agent adapters emit
+   events as they arrive."
   [request config]
   (let [payload (parse-json-map (read-body request))]
     (if (nil? payload)
@@ -4377,12 +4530,16 @@
                               :message "prompt is required"})
 
           :else
-          #_{:clj-kondo/ignore [:unresolved-symbol]}
-          (hk/with-channel request channel
-            (let [aid (str agent-id)
-                  turn-id (str (or (:turn-id payload) (get payload "turn-id")
-                                   (:turn_id payload) (get payload "turn_id")
-                                   (str "turn-" (UUID/randomUUID))))
+          (let [aid (str agent-id)]
+            (hk/as-channel
+             request
+             {:on-close (fn [_channel _status]
+                          (reg/clear-invoke-event-sink! aid))
+              :on-open
+              (fn [channel]
+                (let [turn-id (str (or (:turn-id payload) (get payload "turn-id")
+                                       (:turn_id payload) (get payload "turn_id")
+                                       (str "turn-" (UUID/randomUUID))))
                   ;; Create sink-fn that writes NDJSON lines to the channel
                   sink-fn (fn [event]
                             (try
@@ -4433,10 +4590,6 @@
                          :body (str (json/generate-string
                                      (stamp-turn-event turn-id {:type "started"})) "\n")}
                         false)
-              ;; Clean up on client disconnect
-              (hk/on-close channel
-                (fn [_status]
-                  (reg/clear-invoke-event-sink! aid)))
               (if (and (repl-through-queue?) (turn-queue/drainer-v2-enabled?))
                 ;; E2: route the REPL/operator turn through the durable turn-queue so it gets
                 ;; the SAME guarantees as a bell — single-writer (the agent's drainer, no
@@ -4484,7 +4637,7 @@
                                   :message (.getMessage t)}))
                       (finally
                         (reg/clear-invoke-event-sink! aid)
-                        (hk/close channel)))))))))))))
+                        (hk/close channel))))))))})))))))
 
 (defn- invoke-job-terminal-state?
   [state]
@@ -4549,29 +4702,31 @@
                                         :caller caller
                                         :surface "whistle"})
             mode (invoke-job-mode prompt)
-            started-ms (System/currentTimeMillis)]
-        #_{:clj-kondo/ignore [:deprecated-var]}
-        (hk/with-channel request channel
-          (let [closed? (atom false)
-                delivery-recorded? (atom false)
-                mark-delivery!
-                (fn [delivered? note]
-                  (when (compare-and-set! delivery-recorded? false true)
-                    (record-invoke-job-delivery-by-job-id!
-                     job-id
-                     {:surface "whistle-stream"
-                      :destination (str "caller " caller " (stream)")
-                      :delivered? (boolean delivered?)
-                      :note (str note)})))
-                close-channel!
+            started-ms (System/currentTimeMillis)
+            closed? (atom false)
+            delivery-recorded? (atom false)
+            mark-delivery!
+            (fn [delivered? note]
+              (when (compare-and-set! delivery-recorded? false true)
+                (record-invoke-job-delivery-by-job-id!
+                 job-id
+                 {:surface "whistle-stream"
+                  :destination (str "caller " caller " (stream)")
+                  :delivered? (boolean delivered?)
+                  :note (str note)})))]
+        (hk/as-channel
+         request
+         {:on-close
+          (fn [_channel _status]
+            (reset! closed? true)
+            (mark-delivery! false "whistle-stream-client-closed"))
+          :on-open
+          (fn [channel]
+            (let [close-channel!
                 (fn []
                   (try
                     (hk/close channel)
                     (catch Throwable _)))]
-            (hk/on-close channel
-              (fn [_]
-                (reset! closed? true)
-                (mark-delivery! false "whistle-stream-client-closed")))
             (when-not (send-ndjson! channel
                                     {:type "started"
                                      :ok true
@@ -4651,8 +4806,8 @@
                                  :else
                                  (do
                                    (Thread/sleep poll-ms)
-                                   (recur next-seq next-heartbeat-ms)))))))))))))
-        ))
+                                   (recur next-seq next-heartbeat-ms)))))))))))})
+        ))))
 
 (defn- handle-whistle-stream
   "POST /api/alpha/whistle-stream — NDJSON streaming whistle endpoint."
@@ -4693,9 +4848,11 @@
                                 :message "prompt is required"})
 
             :else
-            #_{:clj-kondo/ignore [:deprecated-var]}
-            (hk/with-channel request channel
-              (.submit invoke-executor
+            (hk/as-channel
+             request
+             {:on-open
+              (fn [channel]
+                (.submit invoke-executor
                        ^Runnable
                        (fn []
                          (try
@@ -4774,7 +4931,8 @@
                              (hk/send! channel
                                        (json-response 500 {:ok false
                                                            :error "whistle-error"
-                                                           :message (.getMessage t)})))))))))))))
+                                                           :message (.getMessage t)})))))))})
+            ))))))
 
 (defn- handle-irc-send
   "POST /api/alpha/irc/send — send a one-line IRC message via configured relay.
@@ -5120,9 +5278,36 @@
                             :excursion-id (:excursion-id clock)
                             :witness (:last-auto-clock-witness state)})))))
 
+(declare handle-agent-get*)
+
+(defn- handle-agent-pouch
+  "GET /api/alpha/agents/:id/pouch — is this seat running in a warm pouch?
+   For the REPL Cooked line (Joe, 2026-08-22): under the joey gate most seats
+   are cold even with kangaroo on, and the operator could not see which."
+  [agent-id]
+  (let [snap (get (agent-pouch/snapshot) agent-id)]
+    (json-response 200
+                   {:ok true
+                    :agent-id agent-id
+                    :kangaroo-enabled (agent-pouch/enabled?)
+                    :warm (boolean (:alive? snap))
+                    :in-flight (boolean (:in-flight? snap))
+                    :joey (:joey? snap)
+                    :session-bytes (:session-bytes snap)
+                    :turn-count (:turn-count snap)})))
+
 (defn- handle-agent-get
-  "GET /api/alpha/agents/:id — return a single agent's details."
+  "GET /api/alpha/agents/:id — return a single agent's details.
+   Also serves GET /api/alpha/agents/:id/pouch: make-handler's agents/(.+) clause
+   captures that path in the closure built at startup, and this var is the
+   reload-safe point behind it."
   [_config agent-id]
+  (if (str/ends-with? agent-id "/pouch")
+    (handle-agent-pouch (subs agent-id 0 (- (count agent-id) (count "/pouch"))))
+    (handle-agent-get* agent-id)))
+
+(defn- handle-agent-get*
+  [agent-id]
   (let [record (reg/get-agent agent-id)
         registered-id (some-> record :agent/id :id/value str)
         status (reg/registry-status)
@@ -5225,6 +5410,123 @@
                               :agent-id (str agent-id)
                               :error "interrupt-error"
                               :message (.getMessage t)}))))))
+
+(def ^:private compact-cold-timeout-ms
+  ;; Compacting ~500k of context took claude-13 >2 min on 2026-08-22 (the 1M
+  ;; auto-compactions in ground control ran 115-184 s), so 120 s answered 202
+  ;; on exactly the sessions this exists for. The Emacs caller is async.
+  300000)
+
+(defn- compact-turn-queue-busy? [agent-id]
+  ;; A cold compaction runs as a turn-queue entry and never flips the registry
+  ;; to :invoking, so a second POST while one was draining queued a redundant
+  ;; compaction instead of answering 409 (claude-14, 2026-08-23).
+  (let [state (turn-queue/snapshot)
+        aid (str agent-id)]
+    (or (contains? (set (:draining state)) aid)
+        (pos? (count (get-in state [:queues aid] []))))))
+
+(defn- compact-agent-busy? [agent agent-id]
+  ;; Job counts cover bell/invoke jobs; an operator turn from the REPL
+  ;; (invoke-stream) only shows as registry status :invoking (claude-13 was
+  ;; mid-turn with both counts nil, 2026-08-22).
+  (or (contains? #{:invoking "invoking"} (:agent/status agent))
+      (pos? (+ (long (or (:running-jobs agent) (:agent/running-jobs agent) 0))
+               (long (or (:queued-jobs agent) (:agent/queued-jobs agent) 0))))
+      (compact-turn-queue-busy? agent-id)))
+
+(defn- compact-witness
+  "Did the CLI write a manual compact_boundary for SESSION-ID at/after START-MS?
+   Fallback for invoke-fn closures built before the stream parser learned to
+   surface compact_result (registered seats keep their old closure across a
+   dev.clj reload). Reads the tail of ~/.claude/projects/*/<sid>.jsonl."
+  [session-id start-ms]
+  (try
+    (let [root (io/file (System/getProperty "user.home") ".claude" "projects")
+          f (->> (.listFiles root)
+                 (filter #(.isDirectory ^java.io.File %))
+                 (map #(io/file % (str session-id ".jsonl")))
+                 (filter #(.exists ^java.io.File %))
+                 first)]
+      (when f
+        (let [len (.length ^java.io.File f)
+              from (max 0 (- len 262144))
+              raf (java.io.RandomAccessFile. ^java.io.File f "r")
+              buf (byte-array (- len from))]
+          (try (.seek raf from) (.readFully raf buf) (finally (.close raf)))
+          (->> (str/split-lines (String. buf "UTF-8"))
+               (filter #(str/includes? % "\"compact_boundary\""))
+               (keep #(try (json/parse-string % true) (catch Throwable _ nil)))
+               (filter #(= "manual" (get-in % [:compactMetadata :trigger])))
+               (filter #(some-> (:timestamp %) java.time.Instant/parse .toEpochMilli
+                                (>= (- start-ms 5000))))
+               last))))
+    (catch Throwable _ nil)))
+
+(defn- cold-compact-result [result start-ms]
+  (let [witness (when (nil? (:compact-result result))
+                  (compact-witness (:session-id result) start-ms))
+        result (cond-> result
+                 witness (assoc :compact-result "success"
+                                :compact-witness (:compactMetadata witness)))]
+    {:ok (= "success" (:compact-result result))
+     :compact-result (:compact-result result)
+     :compact-witness (:compact-witness result)
+     :compact-error (:compact-error result)
+     :session-id (:session-id result)
+     :usage (:usage result)
+     :total-cost-usd (:total-cost-usd result)
+     :path "cold"}))
+
+(defn- run-cold-compact! [agent-id agent]
+  (let [turn-id (str "compact-" (UUID/randomUUID))
+        start-ms (System/currentTimeMillis)
+        invoke-fn (:agent/invoke-fn agent)
+        session-id (:agent/session-id agent)
+        {:keys [waiter]}
+        (turn-queue/accept-async!
+         {:id turn-id
+          :msg-id turn-id
+          :to (str agent-id)
+          :from "compact-control"
+          :surface "control"
+          :prompt "/compact"
+          :process-fn (fn [entry]
+                        (binding [turn-queue/*drained-by-outer* true
+                                  turn-queue/*turn-id* (:id entry)]
+                          (invoke-fn "/compact" session-id)))})
+        result (deref waiter compact-cold-timeout-ms ::compact-timeout)]
+    (if (= ::compact-timeout result)
+      {:status 202
+       :body {:ok false :error "compaction pending" :turn-id turn-id :path "cold"}}
+      {:status 200 :body (cold-compact-result result start-ms)})))
+
+(defn- handle-agent-compact
+  "POST /api/alpha/agents/:id/compact — compact through a warm or cold seat."
+  [_config agent-id _request]
+  (let [warm-result (agent-pouch/compact-pouch! agent-id {})]
+    (cond
+      (= "turn in flight" (:error warm-result))
+      (json-response 409 (assoc warm-result :path "warm"))
+
+      (not= "no warm pouch" (:error warm-result))
+      (json-response 200 (assoc warm-result :path "warm"))
+
+      :else
+      (let [agent (reg/get-agent agent-id)
+            job-counts (get (active-invoke-job-counts)
+                            (canonical-job-agent-id agent-id) {})
+            agent (merge job-counts agent)]
+        (cond
+          (not (fn? (:agent/invoke-fn agent)))
+          (json-response 404 {:ok false :error "no local agent"})
+
+          (compact-agent-busy? agent agent-id)
+          (json-response 409 {:ok false :error "turn in flight" :path "cold"})
+
+          :else
+          (let [{:keys [status body]} (run-cold-compact! agent-id agent)]
+            (json-response status body)))))))
 
 ;; =============================================================================
 ;; CYDER process endpoints
@@ -7033,6 +7335,47 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      ;; POST /api/alpha/agents/:id/compact — raw /compact control for a warm
+      ;; pouch (handoff 4, 2026-08-22). Lives here, not in make-handler's cond,
+      ;; so a plain Drawbridge reload activates it (reload-safe route contract).
+      (and (= :post method) (string? uri)
+           (str/starts-with? uri "/api/alpha/agents/")
+           (str/ends-with? uri "/compact"))
+      (let [raw (subs uri (count "/api/alpha/agents/")
+                     (- (count uri) (count "/compact")))]
+        (handle-agent-compact config (enc/decode-uri-component raw) request))
+
+      (and (= :get method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/submission" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/submission" uri)
+            token (get (parse-query-params request) "token")
+            result (role-submission/schema job-id token)]
+        (cond
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          :else (json-response 409 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/submission" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/submission" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-submission/submit! job-id (:token payload)
+                                              (:payload payload)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (contains? #{:role-submission-token-mismatch
+                       :role-submission-conflict}
+                     (:error/code result))
+          (json-response 409 result)
+          :else (json-response 422 result)))
+
       ;; Durable activation is deliberately mounted at the reload-safe boundary:
       ;; countdown launch must not require restarting the Agency-routed JVM.
       (and (= :post method) (= "/api/alpha/invoke/activate" uri))
@@ -7175,6 +7518,20 @@
       ;; C-cascade-real D1/O3: durable auto-clock for the repl buffer to poll.
       (and (= :get method) (= "/api/alpha/agent-clock" uri))
       (handle-agent-clock request)
+
+      ;; Typed external followups share busy-safe polling semantics with parks,
+      ;; but retain their own identity, queue, lease, ACK, and cancellation.
+      (and (= :post method) (= "/api/alpha/followups" uri))
+      (handle-followup-enqueue request)
+
+      (and (= :get method) (= "/api/alpha/followups/ready" uri))
+      (handle-followup-ready request)
+
+      (and (= :post method) (= "/api/alpha/followups/ready/ack" uri))
+      (handle-followup-ack request)
+
+      (and (= :post method) (= "/api/alpha/followups/cancel" uri))
+      (handle-followup-cancel request)
 
       ;; M-live-efe-map VERIFY: read-only live join over agents, WM ticks,
       ;; clocks, invoke jobs, and the frozen EFE coordinate set.
@@ -7332,8 +7689,8 @@
           (and (= :get method) (= "/api/alpha/invoke/jobs" uri))
           (handle-invoke-jobs request)
 
-          (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/(.+)" uri))
-          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)" uri)
+          (and (= :get method) (re-matches #"/api/alpha/invoke/jobs/([^/]+)" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/([^/]+)" uri)
                 job-id (enc/decode-uri-component raw-id)]
             (handle-invoke-job job-id))
 
@@ -7343,8 +7700,8 @@
 
           ;; Explicit operator termination — the replacement for the wall-clock
           ;; ceiling (README-agency-cap.md).
-          (and (= :post method) (re-matches #"/api/alpha/invoke/jobs/(.+)/cancel" uri))
-          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/(.+)/cancel" uri)
+          (and (= :post method) (re-matches #"/api/alpha/invoke/jobs/([^/]+)/cancel" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/([^/]+)/cancel" uri)
                 job-id (enc/decode-uri-component raw-id)]
             (handle-cancel-invoke-job job-id request))
 
