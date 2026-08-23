@@ -41,7 +41,7 @@ CONTRACT="$LANE_ROOT/holes/labs/M-apm-demonstration/frame-cycle-contract-codex-o
 
 case "$ACTION" in
   start)
-    FORM="(do (require 'futon3c.apm.library-lane-coordinator :reload) (futon3c.apm.library-lane-coordinator/start! {:registry-path \"$REGISTRY\" :state-path \"$STATE\" :coordinator-id \"$COORDINATOR_ID\" :problem-id \"$PROBLEM\" :keying-target \"$TARGET\" :trunk-branch \"$TRUNK\" :corpus-root \"$CORPUS_ROOT\" :frames-root \"$FRAMES_ROOT\" :state-root \"$LANE_ROOT/data/apm-lane\" :contract-path \"$CONTRACT\" :agency-base \"http://localhost:7070\"}))"
+    FORM="(do (require 'futon3c.apm.library-lane-coordinator :reload) (futon3c.apm.library-lane-coordinator/start! {:registry-path \"$REGISTRY\" :state-path \"$STATE\" :coordinator-id \"$COORDINATOR_ID\" :problem-id \"$PROBLEM\" :keying-target \"$TARGET\" :trunk-branch \"$TRUNK\" :control-root \"$LANE_ROOT\" :corpus-root \"$CORPUS_ROOT\" :frames-root \"$FRAMES_ROOT\" :state-root \"$LANE_ROOT/data/apm-lane\" :contract-path \"$CONTRACT\" :agency-base \"http://localhost:7070\"}))"
     ;;
   resume)
     FORM="(do (require 'futon3c.apm.library-lane-coordinator :reload) (futon3c.apm.library-lane-coordinator/resume! \"$REGISTRY\" \"$COORDINATOR_ID\"))"

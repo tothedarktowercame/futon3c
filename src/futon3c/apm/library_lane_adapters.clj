@@ -5,6 +5,7 @@
   problem unit, provisioned workspace, registered seats, ledger, and terminal
   evidence. Missing authority is returned as a typed refusal."
   (:require [clojure.string :as str]
+            [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.library-lane-phases :as lane-phases]
             [futon3c.apm.live-proof-phases :as proof])
   (:import [java.math BigInteger]
@@ -93,13 +94,31 @@
   CONFIG contains only observed authority. The returned function delegates
   request validation to live-proof-phases/build-request and never repairs a
   rejected request."
-  [{:keys [unit ledger workspace seats actions state-paths agency-base] :as config}]
+  [{:keys [unit ledger workspace seats actions state-paths agency-base control-root]
+    :as config}]
   (fn [{:keys [kind problem-id role-card checkpoint-role-card contract receipts
                targets]}]
-    (let [authority (assoc config :role-card role-card
+    (let [path-authority {:control-root control-root}
+          role-card-result (authority-port/require-path
+                            path-authority :role-card (:path role-card))
+          checkpoint-result (when (= :solve kind)
+                              (authority-port/require-path
+                               path-authority :role-card
+                               (:path checkpoint-role-card)))
+          role-card (cond-> role-card
+                      (:ok role-card-result)
+                      (assoc :path (:path role-card-result)))
+          checkpoint-role-card (cond-> checkpoint-role-card
+                                 (:ok checkpoint-result)
+                                 (assoc :path (:path checkpoint-result)))
+          authority (assoc config :role-card role-card
                            :checkpoint-role-card checkpoint-role-card
                            :contract contract)
-          findings (authority-findings authority kind problem-id)
+          findings (cond-> (authority-findings authority kind problem-id)
+                     (not (:ok role-card-result))
+                     (conj :library-role-card-path-invalid)
+                     (and (= :solve kind) (not (:ok checkpoint-result)))
+                     (conj :solver-restrategize-role-card-path-invalid))
           role (if (= :solve kind) :solver :proctor)
           built (when (empty? findings)
                   (proof/build-request

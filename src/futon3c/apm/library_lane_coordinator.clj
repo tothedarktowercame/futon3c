@@ -16,7 +16,7 @@
 
 (defn run-step!
   [{:keys [agency-base corpus-root frames-root state-root problem-id
-           trunk-branch keying-target contract-path phase]}]
+           control-root trunk-branch keying-target contract-path phase]}]
   (let [eff (effects/live-effects {:agency-base agency-base
                                    :corpus-root corpus-root
                                    :frames-root frames-root})
@@ -36,6 +36,7 @@
                    (launch/launch!
                     (merge eff
                            {:corpus-root corpus-root :problem-id problem-id
+                            :control-root control-root
                             :trunk-branch trunk-branch
                             :keying-target keying-target
                             :state-root state-root

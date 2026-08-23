@@ -99,7 +99,7 @@
 
 (defn- launch-findings
   [{:keys [corpus-root problem-id trunk-branch keying-target state-root
-           agency-base occupied-frame-ids observe-problem-fn leases-fn
+           agency-base control-root occupied-frame-ids observe-problem-fn leases-fn
            workspace-exists? provision-fn validate-workspace-fn mint-fn
            roster-fn outcome-fn]}]
   (cond-> []
@@ -115,6 +115,8 @@
     (conj :state-root-missing)
     (not (and (string? agency-base) (not (str/blank? agency-base))))
     (conj :agency-base-missing)
+    (not (and (string? control-root) (not (str/blank? control-root))))
+    (conj :control-root-missing)
     (not (set? occupied-frame-ids)) (conj :occupied-frame-id-set-missing)
     (not (every? fn? [observe-problem-fn leases-fn workspace-exists?
                       provision-fn validate-workspace-fn mint-fn roster-fn
@@ -175,7 +177,7 @@
   Provisioning, lease lookup, validation, seat minting/observation, problem
   observation, and outcome classification are all injected effects."
   [{:keys [problem-id trunk-branch keying-target state-root agency-base
-           occupied-frame-ids observe-problem-fn leases-fn provision-fn
+           control-root occupied-frame-ids observe-problem-fn leases-fn provision-fn
            roster-fn outcome-fn]
     :as options}]
   (let [findings (launch-findings options)]
@@ -258,6 +260,7 @@
                                 :actions (actions frame-id problem-id)
                                 :state-paths (state-paths state-root frame-id)
                                 :agency-base agency-base
+                                :control-root control-root
                                 :trunk-branch trunk-branch
                                 :keying-target keying-target
                                 :outcome-fn outcome-fn}]

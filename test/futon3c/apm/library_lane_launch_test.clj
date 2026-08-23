@@ -93,6 +93,7 @@
 (defn- launch-options [fixture effects]
   (merge (:options effects)
          {:corpus-root (:repo fixture) :problem-id problem-id
+          :control-root (System/getProperty "user.dir")
           :trunk-branch "trunk" :keying-target "fixture_target"
           :state-root (:state-root fixture) :agency-base "http://agency.test"
           :occupied-frame-ids #{}}))
@@ -127,6 +128,8 @@
           (let [result (phase-inputs
                         {:kind kind :problem-id problem-id
                          :role-card runner/library-card :contract contract
+                         :checkpoint-role-card (when (= :solve kind)
+                                                 runner/solver-restrategize-card)
                          :receipts (if (= :verify kind)
                                      {:solve solve-receipt} {})})]
             (is (:ok result) (str (name kind) ": " (pr-str result)))
@@ -166,7 +169,7 @@
             (is (= :library-lane-frame-id-refused (:error/code collision)))
             (is (= :codex-frame-id-collision
                    (get-in collision [:findings 0 :error/code])))))
-        (is (= #{:unit :ledger :workspace :seats :actions :state-paths
+        (is (= #{:unit :ledger :workspace :seats :actions :state-paths :control-root
                  :agency-base :trunk-branch :keying-target :outcome-fn}
                (set (keys config)))))
       (finally

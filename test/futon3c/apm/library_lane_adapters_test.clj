@@ -62,7 +62,8 @@
   ([] (phase-adapter {}))
   ([overrides]
    (sut/make-phase-inputs-fn
-    (merge {:unit unit :ledger ledger :workspace workspace :seats seats
+   (merge {:unit unit :ledger ledger :workspace workspace :seats seats
+            :control-root (System/getProperty "user.dir")
             :actions actions
             :state-paths {:preflight "/tmp/preflight.edn"
                           :solve "/tmp/solve.edn" :verify "/tmp/verify.edn"}
