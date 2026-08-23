@@ -107,8 +107,9 @@
             lease))
         (catch Throwable _ nil)))))
 
-(defn- seat-projection [frame-id role agent]
-  {:agent-id (str frame-id "-" (name role))
+(defn- seat-projection [frame-id agent-id agent]
+  {:agent-id agent-id
+   :session-id (:session-id agent)
    :type (some-> (:type agent) name keyword)
    :frame-id frame-id
    :invoke-ready? (:invoke-ready? agent)
@@ -123,18 +124,18 @@
   [agents id]
   (or (get agents (keyword id)) (get agents id)))
 
-(defn- roster [http-fn agency-base frame-id]
+(defn- roster [http-fn agency-base frame-id solver-assignment-id]
   (let [response (agents-response http-fn agency-base)]
     (if-not (:ok response)
       response
       (let [agents (:agents response)
             seats (into {}
                         (map (fn [role]
-                               [role (when-let [agent
-                                                (agent-entry
-                                                 agents
-                                                 (str frame-id "-" (name role)))]
-                                       (seat-projection frame-id role agent))]))
+                               (let [agent-id (if (= :solver role)
+                                                solver-assignment-id
+                                                (str frame-id "-" (name role)))]
+                                 [role (when-let [agent (agent-entry agents agent-id)]
+                                         (seat-projection frame-id agent-id agent))])))
                         (keys seat-types))
             findings (cond-> []
                        (some nil? (vals seats)) (conj :frame-seat-missing)
@@ -147,18 +148,27 @@
                                           :findings findings})
           seats)))))
 
-(defn- mint [http-fn agency-base corpus-root frame-id requested-types timeouts]
+(defn- mint [http-fn agency-base corpus-root frame-id requested-types timeouts
+             solver-assignment-id]
   (if-not (and (string? frame-id) (re-matches #"f[0-9]+" frame-id)
-               (= seat-types requested-types) (map? timeouts))
+               (= seat-types requested-types) (map? timeouts)
+               (string? solver-assignment-id)
+               (re-matches #"(?:library-[A-Za-z0-9]+|f[0-9]+)-solver"
+                           solver-assignment-id))
     (refusal :seat-mint-shape-refused
              {:expected seat-types :requested requested-types
               :frame-id frame-id :timeouts timeouts})
     (let [responses
           (mapv (fn [role]
                   (request http-fn "POST" agency-base "/api/alpha/agents/restore"
-                           {:agent-id (str frame-id "-" (name role))
+                           {:agent-id (if (= :solver role)
+                                        solver-assignment-id
+                                        (str frame-id "-" (name role)))
                             :type "codex" :cwd corpus-root
                             :metadata {:frame-id frame-id
+                                       :solver-assignment-id
+                                       (when (= :solver role)
+                                         solver-assignment-id)
                                        :effective-timeouts timeouts}}))
                 [:solver :proctor])]
       (if (every? :ok responses)

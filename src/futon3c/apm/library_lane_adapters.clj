@@ -147,6 +147,8 @@
                   (proof/build-request
                    {:kind kind :action (get actions kind) :ledger ledger
                     :unit unit :role-card role-card :seat (get seats role)
+                    :expected-agent-id (when (= :solve kind)
+                                         (:solver-assignment-id config))
                     :checkpoint-role-card checkpoint-role-card
                     :workspace workspace
                     :solve-receipt (get receipts :solve)}))]

@@ -24,7 +24,7 @@
    :blob "27c82729df0c575bc42cc13bd5ac93790a8e1524"})
 (def ledger {:version 5 :digest sha64 :phase :preflight :claim nil})
 (def seats
-  {:solver {:agent-id "f9001-solver" :type :codex :frame-id "f9001"
+  {:solver {:agent-id "library-a00J01-solver" :type :codex :frame-id "f9001"
             :invoke-ready? true
             :effective-timeouts {:turn-timeout-ms 3600000}}
    :proctor {:agent-id "f9001-proctor" :type :codex :frame-id "f9001"
@@ -51,9 +51,10 @@
                                  (is (= :solver role))
                                  {:ok true :lease lease})
                  :validate-workspace-fn (constantly {:valid? true :findings []})
-                 :mint-fn (fn [_ seat-types _]
+                 :mint-fn (fn [_ seat-types _ _]
                             (reset! minted seat-types) {:ok true})
-                 :roster-fn (constantly seats)})]
+                 :roster-fn (fn [_ _] seats)
+                 :solver-assignment-id "library-a00J01-solver"})]
     (is (:ok result))
     (is (= {:solver :codex :proctor :codex} @minted))
     (is (= #{:solver} (set (keys (get-in result [:receipt :workspace/ids])))))
@@ -65,6 +66,7 @@
   ([overrides]
    (sut/make-phase-inputs-fn
    (merge {:unit unit :ledger ledger :workspace workspace :seats seats
+            :solver-assignment-id "library-a00J01-solver"
             :control-root (System/getProperty "user.dir")
             :actions actions
             :state-paths {:preflight "/tmp/preflight.edn"
@@ -86,7 +88,7 @@
         (is (= kind (:kind result)))
         (is (= "http://agency.test" (:agency-base result)))
         (is (= (str "/tmp/" (name kind) ".edn") (:state-path result)))
-        (is (= (if (= :solve kind) "f9001-solver" "f9001-proctor")
+        (is (= (if (= :solve kind) "library-a00J01-solver" "f9001-proctor")
                (get-in result [:request :agent-id])))))))
 
 (deftest phase-adapter-does-not-repair-missing-authority

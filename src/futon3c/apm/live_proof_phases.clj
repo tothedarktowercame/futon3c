@@ -51,7 +51,7 @@
 
 (defn build-request
   [{:keys [kind action ledger unit role-card checkpoint-role-card seat workspace solve-receipt
-           terminal-budget]}]
+           terminal-budget expected-agent-id]}]
   (if (= :preflight kind)
     (let [problem (:problem unit)
           findings (cond-> []
@@ -75,7 +75,8 @@
                 :request #(submission/prepare-request (assoc % :role :proctor)))))
     (let [problem (:problem unit)
           expected-role (if (= :solve kind) :solver :proctor)
-          expected-agent (str (:frame/id unit) "-" (name expected-role))
+          expected-agent (or expected-agent-id
+                             (str (:frame/id unit) "-" (name expected-role)))
           findings (cond-> []
                      (not (contains? #{:solve :verify} kind)) (conj :proof-kind-invalid)
                      (not= (:frame/id unit) (:frame-id action)) (conj :frame-mismatch)

@@ -42,9 +42,11 @@
 
             (and (= "POST" method) (str/ends-with? url "/api/alpha/agents/restore"))
             (let [id (:agent-id payload)]
-              (swap! agents assoc id
-                     {:type :codex :invoke-ready? true
-                      :metadata (:metadata payload)})
+              (swap! agents update id
+                     (fn [prior]
+                       {:type :codex :invoke-ready? true
+                        :session-id (or (:session-id prior) (str "session-" id))
+                        :metadata (:metadata payload)}))
               {:ok true :http/status 201 :agent-id id})
 
             :else {:ok false :http/status 404}))]
@@ -63,7 +65,8 @@
       (let [live (effects fixture agency)
             mint (:mint-fn live)
             timeouts {:turn-timeout-ms 3600000}
-            result (mint "f9001" {:solver :codex :proctor :codex} timeouts)
+            result (mint "f9001" {:solver :codex :proctor :codex} timeouts
+                         "library-a00J01-solver")
             restores (filter #(str/ends-with? (second %) "/agents/restore")
                              @(:calls agency))]
         (is (= #{:observe-problem-fn :provision-fn :validate-workspace-fn
@@ -71,11 +74,12 @@
                  :occupied-frame-ids :outcome-fn}
                (set (keys live))))
         (is (:ok result))
-        (is (= #{"f9001-solver" "f9001-proctor"}
+        (is (= #{"library-a00J01-solver" "f9001-proctor"}
                (set (map #(get-in % [2 :agent-id]) restores))))
         (is (every? #(= "codex" (get-in % [2 :type])) restores))
         (is (= :seat-mint-shape-refused
-               (:error/code (mint "f9001" {:solver :codex} timeouts))))
+               (:error/code (mint "f9001" {:solver :codex} timeouts
+                                  "library-a00J01-solver"))))
         (is (= 2 (count restores)) "refused shape issued no restore"))
       (finally (delete-tree! (:root fixture))))))
 
@@ -86,16 +90,42 @@
             mint (:mint-fn live)
             roster (:roster-fn live)
             timeouts {:turn-timeout-ms 3600000}]
-        (mint "f9001" {:solver :codex :proctor :codex} timeouts)
+        (mint "f9001" {:solver :codex :proctor :codex} timeouts
+              "library-a00J01-solver")
         (swap! (:agents agency) assoc "other-solver"
                {:type :codex :invoke-ready? true :metadata {}})
-        (is (= #{:solver :proctor} (set (keys (roster "f9001")))))
+        (is (= #{:solver :proctor}
+               (set (keys (roster "f9001" "library-a00J01-solver")))))
         (swap! (:agents agency) dissoc "f9001-proctor")
-        (is (= :frame-roster-refused (:error/code (roster "f9001"))))
+        (is (= :frame-roster-refused
+               (:error/code (roster "f9001" "library-a00J01-solver"))))
         (swap! (:agents agency) assoc "f9001-proctor"
                {:type :codex :invoke-ready? false
                 :metadata {:effective-timeouts timeouts}})
-        (is (= :frame-roster-refused (:error/code (roster "f9001")))))
+        (is (= :frame-roster-refused
+               (:error/code (roster "f9001" "library-a00J01-solver")))))
+      (finally (delete-tree! (:root fixture))))))
+
+(deftest solver-assignment-survives-library-frame-rotation
+  (let [fixture (fixture) agency (agency-stub)
+        assignment "library-a00J01-solver"
+        timeouts {:turn-timeout-ms 3600000}]
+    (try
+      (let [live (effects fixture agency)
+            mint (:mint-fn live)
+            roster (:roster-fn live)]
+        (is (:ok (mint "f9001" {:solver :codex :proctor :codex}
+                       timeouts assignment)))
+        (let [first-solver (:solver (roster "f9001" assignment))]
+          (is (:ok (mint "f9002" {:solver :codex :proctor :codex}
+                         timeouts assignment)))
+          (let [second-solver (:solver (roster "f9002" assignment))]
+            (is (= assignment (:agent-id first-solver)
+                   (:agent-id second-solver)))
+            (is (= (:session-id first-solver) (:session-id second-solver)))
+            (is (= "f9001" (:frame-id first-solver)))
+            (is (= "f9002" (:frame-id second-solver)))))
+        (is (not (contains? @(:agents agency) "f9002-solver"))))
       (finally (delete-tree! (:root fixture))))))
 
 (deftest occupied-frame-ids-unions-roster-and-disk

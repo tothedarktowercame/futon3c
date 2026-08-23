@@ -76,17 +76,19 @@
       :validate-workspace-fn
       (fn [lease] (workspace/validate lease {:probe-fn (constantly {:exit 0})}))
       :mint-fn
-      (fn [frame-id seat-types timeouts]
+      (fn [frame-id seat-types timeouts solver-assignment-id]
         (reset! seats
                 (into {}
                       (map (fn [[role type]]
-                             [role {:agent-id (str frame-id "-" (name role))
+                             [role {:agent-id (if (= :solver role)
+                                                solver-assignment-id
+                                                (str frame-id "-" (name role)))
                                     :type type :frame-id frame-id
                                     :invoke-ready? true
                                     :effective-timeouts timeouts}]))
                       seat-types))
         {:ok true})
-      :roster-fn (fn [_] @seats)
+      :roster-fn (fn [_ _] @seats)
       :outcome-fn (constantly {:verified-proof? true
                                :remaining-sorries 0})}}))
 
@@ -101,6 +103,12 @@
 (def contract
   (edn/read-string
    (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-codex-only-v1.edn")))
+
+(deftest solver-assignments-are-stable-per-problem-and-isolated-between-problems
+  (is (= (sut/problem-solver-assignment-id "t00J02")
+         (sut/problem-solver-assignment-id "t00J02")))
+  (is (not= (sut/problem-solver-assignment-id "t00J02")
+            (sut/problem-solver-assignment-id "m94A03"))))
 
 (deftest launch-composes-authority-accepted-by-all-live-phases
   (let [fixture (fixture)
@@ -170,8 +178,12 @@
             (is (= :codex-frame-id-collision
                    (get-in collision [:findings 0 :error/code])))))
         (is (= #{:unit :ledger :workspace :seats :actions :state-paths :control-root
-                 :agency-base :trunk-branch :keying-target :outcome-fn}
-               (set (keys config)))))
+                 :agency-base :trunk-branch :keying-target :outcome-fn
+                 :solver-assignment-id}
+               (set (keys config))))
+        (is (= (str "library-" problem-id "-solver")
+               (:solver-assignment-id config)
+               (get-in config [:seats :solver :agent-id]))))
       (finally
         (doseq [[_ lease] @(:leases effects)]
           (when (Files/exists (java.nio.file.Path/of (:workspace/path lease)

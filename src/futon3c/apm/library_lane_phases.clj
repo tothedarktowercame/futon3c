@@ -103,7 +103,7 @@
   discipline -- every effect injected, leases revalidated on reuse -- as its
   own object, so this lane's role set cannot drift onto the countdown."
   [{:keys [unit ledger role-cards leases workspace-exists? provision-fn
-           validate-workspace-fn mint-fn roster-fn]}]
+           validate-workspace-fn mint-fn roster-fn solver-assignment-id]}]
   (let [frame-id (:frame/id unit)
         problem-id (:problem/id unit)]
     (if (or (not (and (string? frame-id) (re-matches #"f[0-9]+" frame-id)))
@@ -119,10 +119,11 @@
                              workspace-roles)]
         (if-not (:ok prepared)
           prepared
-          (let [minted (mint-fn frame-id seat-types timeouts)]
+          (let [minted (mint-fn frame-id seat-types timeouts
+                                solver-assignment-id)]
             (if-not (:ok minted)
               {:ok false :error/code :seat-mint-failed :finding minted}
-              (let [seats (roster-fn frame-id)]
+              (let [seats (roster-fn frame-id solver-assignment-id)]
                 ;; roster-fn returns the seats map itself, keyed by role -- the
                 ;; same contract the countdown's preparation consumes.
                 (if-not (and (map? seats)

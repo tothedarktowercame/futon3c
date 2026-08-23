@@ -19,6 +19,11 @@
    :solve {:timeouts {:turn-ms (:turn-timeout-ms preparation/required-timeouts)}}
    :verify {:timeouts {:turn-ms (:turn-timeout-ms preparation/required-timeouts)}}})
 
+(defn problem-solver-assignment-id
+  "Stable library solver identity for one continuous problem run."
+  [problem-id]
+  (str "library-" problem-id "-solver"))
+
 (defn- run-default [dir argv]
   (apply shell/sh (concat (map str argv) [:dir (str dir)])))
 
@@ -146,12 +151,17 @@
 
 (defn- rehydrate-config [config outcome-fn]
   (when config
-    (cond-> (update config :state-paths
-                    #(update-vals % (fn [path]
-                                      (if (instance? Path path)
-                                        path
-                                        (Path/of (str path)
-                                                 (make-array String 0))))))
+    (cond-> (-> config
+                (update :state-paths
+                        #(update-vals % (fn [path]
+                                          (if (instance? Path path)
+                                            path
+                                            (Path/of (str path)
+                                                     (make-array String 0))))))
+                (update :solver-assignment-id
+                        #(or % (str "library-"
+                                    (get-in config [:unit :problem/id])
+                                    "-solver"))))
       (fn? outcome-fn) (assoc :outcome-fn outcome-fn))))
 
 (defn resume-config
@@ -190,6 +200,8 @@
           {:ok false :error/code :library-lane-problem-observation-failed
            :findings [observed]}
           (let [problem (:problem observed)
+                solver-assignment-id (or (:solver-assignment-id options)
+                                         (problem-solver-assignment-id problem-id))
                 ;; The frame id is content-addressed on [problem-id revision],
                 ;; so a rerun of the SAME problem derives the SAME id. Its own
                 ;; seats and workspace from a previous attempt are therefore in
@@ -246,17 +258,19 @@
                       :workspace-exists? (:workspace-exists? options)
                       :provision-fn recording-provision
                       :validate-workspace-fn (:validate-workspace-fn options)
-                      :mint-fn (:mint-fn options) :roster-fn roster-fn})]
+                      :mint-fn (:mint-fn options) :roster-fn roster-fn
+                      :solver-assignment-id solver-assignment-id})]
                 (if-not (:ok prepared)
                   {:ok false :error/code :library-lane-preparation-failed
                    :findings [prepared]}
                   (let [leases (merge existing-leases @provisioned)
                         workspace (get leases :solver)
-                        seats (roster-fn frame-id)
+                        seats (roster-fn frame-id solver-assignment-id)
                         config {:unit unit
                                 :ledger (ledger frame-id problem-id
                                                 (:revision problem))
                                 :workspace workspace :seats seats
+                                :solver-assignment-id solver-assignment-id
                                 :actions (actions frame-id problem-id)
                                 :state-paths (state-paths state-root frame-id)
                                 :agency-base agency-base
