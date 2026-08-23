@@ -20,6 +20,7 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-contract :as cycle]
             [futon3c.apm.live-job-driver :as driver]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight :as preflight]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-proof-phases :as proof]
@@ -486,20 +487,18 @@
          :state (runtime/read-state state-path)
          :announce-fn
          (fn [req]
-           (runtime/announce-job!
+           (job-port/announce!
             agency-base {:agent-id (:agent-id req) :prompt (prompt req)
                          :surface surface :caller caller :mode mode}))
          :activate-fn
          (fn [req ticket]
-           (runtime/activate-job!
+           (job-port/activate!
             agency-base {:agent-id (:agent-id req) :prompt (prompt req)
                          :surface surface :caller caller :mode mode
                          :job-id (:job-id ticket)}))
          :job-fn
          (fn [job-id]
-           (runtime/job->terminal
-            (runtime/http-json
-             "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
+           (job-port/observe agency-base job-id))
          :persist-fn #(runtime/atomic-persist! state-path %)}]
     (cond
       (= :solve kind)

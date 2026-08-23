@@ -12,6 +12,7 @@
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.generated-contract :as generated-contract]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as live-preflight-runtime]
             [futon3c.apm.live-learning-phases :as live-learning-phases]
             [futon3c.apm.live-launch-preparation :as live-preparation]
@@ -1227,8 +1228,7 @@
   (let [terminal-head (get-in terminal-receipt [:workspace/terminal-heads role])
         validation (workspace-lifecycle/validate lease
                                                  {:expected-head terminal-head})
-        jobs-response (live-preflight-runtime/http-json
-                       "GET" (str agency-base "/api/alpha/invoke/jobs"))
+        jobs-response (job-port/list-jobs agency-base)
         jobs (or (:jobs jobs-response) [])
         workspace (:workspace/path lease)
         live-reference?

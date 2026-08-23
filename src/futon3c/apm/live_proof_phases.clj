@@ -5,6 +5,7 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.frame-cycle-contract :as cycle]
             [futon3c.apm.live-job-driver :as driver]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight :as preflight]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-solver-rounds :as solver-rounds]
@@ -259,7 +260,7 @@
     :announce-fn
     (fn [req]
       (let [req (submission/with-job-authority req)
-            announced (runtime/announce-job!
+            announced (job-port/announce!
                        agency-base
                        {:agent-id (:agent-id req) :prompt (prompt req)
                         :mode (if (= :solve kind) "work" "brief")
@@ -267,7 +268,7 @@
         announced))
     :activate-fn
     (fn [req ticket]
-      (runtime/activate-job!
+      (job-port/activate!
        agency-base
        {:agent-id (:agent-id req)
         :prompt (prompt (submission/with-job-authority req))
@@ -275,16 +276,11 @@
         :job-id (:job-id ticket)}))
     :job-fn
     (fn [job-id]
-      (runtime/job->terminal
-       (runtime/http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
+      (job-port/observe agency-base job-id))
     :cancel-fn
     (fn [job-id]
-      (let [response (runtime/http-json
-                      "POST" (str agency-base "/api/alpha/invoke/jobs/"
-                                  job-id "/cancel")
-                      {:reason "typed-submission activation supersession"})]
-        {:ok (and (= 200 (:http/status response)) (:ok response))
-         :job-id job-id :response response}))
+      (job-port/cancel! agency-base job-id
+                        "typed-submission activation supersession"))
     :persist-fn #(runtime/atomic-persist! state-path %)
     :ticket-register-fn submission/register!
     :terminal-budget-config (or terminal-budget
@@ -314,12 +310,12 @@
         state (runtime/read-state state-path)
         announce-fn
         (fn [req]
-          (runtime/announce-job!
+          (job-port/announce!
            agency-base {:agent-id (:agent-id req) :prompt (prompt req)
                         :mode "work"}))
         activate-fn
         (fn [req ticket]
-          (runtime/activate-job!
+          (job-port/activate!
            agency-base {:agent-id (:agent-id req) :prompt (prompt req)
                         :mode "work" :job-id (:job-id ticket)}))]
     (solver-rounds/resume-remediation!

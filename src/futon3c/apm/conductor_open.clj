@@ -6,6 +6,7 @@
             [futon3c.agency.registry :as registry]
             [futon3c.apm.conductor :as conductor]
             [futon3c.apm.conductor-binding :as binding]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.preregistration :as prereg]
             [futon3c.dispatch-with-recall :as dispatch-with-recall]
             [futon3c.evidence.futon1b-backend :as f1b]
@@ -103,7 +104,7 @@
      ;; measured, not the separately provisioned apm-lean worktree.
      :lean-repo (or (:lean-repo options) "/home/joe/code/mathlib4")
      :agency-endpoint (or (:agency-endpoint options)
-                          (str agency-base "/api/alpha/invoke/jobs?limit=200"))
+                          (job-port/jobs-endpoint agency-base 200))
      :agency-base agency-base
      ;; These are frozen experimental arms, not caller preferences. The parsed
      ;; and validated registration is their only authority; omission preserves

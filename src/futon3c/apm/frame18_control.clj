@@ -10,6 +10,7 @@
             [futon3c.apm.campaign-qualification :as qualification]
             [futon3c.apm.campaign-stepper :as stepper]
             [futon3c.apm.apparatus-pin :as apparatus-pin]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.frame-specification :as frame-specification])
   (:import [java.nio.file Path]
@@ -68,8 +69,7 @@
 
 (defn- frame-runtime-observation [_]
   (try
-    (let [jobs-response (fetch-json
-                         "http://localhost:7070/api/alpha/invoke/jobs?limit=500")
+    (let [jobs-response (job-port/list-jobs "http://localhost:7070" 500)
           frame-jobs (filterv #(str/starts-with? (or (:agent-id %) "") "f18-")
                               (:jobs jobs-response))]
       {:binding-response {:ok true :bound? false}

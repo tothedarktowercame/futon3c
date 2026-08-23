@@ -2,6 +2,7 @@
   "Durable two-seat promotion dispatcher."
   (:require [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.typed-role-submission :as submission]))
 
@@ -60,7 +61,7 @@
                              "evidence object, then run the submit command:\n"
                              (submission/command request
                                                  {:job-id (:submission/job-id request)}))
-           announced (runtime/announce-job!
+           announced (job-port/announce!
                       agency-base
                       {:agent-id (:agent-id request) :prompt typed-prompt
                        :mode "work" :job-id (:submission/job-id request)})
@@ -69,7 +70,7 @@
            registered (when (and (:ok announced) job-id)
                         (submission/register! request ticket))
            activated (when (:ok registered)
-                       (runtime/activate-job!
+                       (job-port/activate!
                         agency-base
                         {:agent-id (:agent-id request)
                          :prompt typed-prompt
@@ -78,9 +79,7 @@
          {:ok true :job job-id}
          {:ok false :error/code :promotion-stage-dispatch-failed})))
     ([job-id]
-     (let [job (runtime/job->terminal
-                (runtime/http-json
-                 "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id)))
+     (let [job (job-port/observe agency-base job-id)
            typed (submission/submitted job-id)
            report (when typed
                     (merge (:authority typed) (:evidence (:payload typed))

@@ -112,38 +112,6 @@
                       (.getErrorStream connection))]
        (assoc (json/parse-string (slurp stream) true) :http/status status)))))
 
-(defn announce-job!
-  "Reserve one canonical invoke job without executing it."
-  [agency-base {:keys [agent-id prompt surface caller mode job-id]}]
-  (let [response
-        (http-json "POST" (str agency-base "/api/alpha/invoke/announce")
-                   (cond-> {:agent-id agent-id :prompt prompt
-                            :surface (or surface "emacs-repl")
-                            :caller (or caller "countdown-control")}
-                     mode (assoc :mode mode)
-                     job-id (assoc :job-id job-id)))]
-    {:ok (and (= 202 (:http/status response)) (:ok response)
-              (:accepted response) (string? (:job-id response)))
-     :job-id (:job-id response) :response response}))
-
-(defn activate-job!
-  "Activate one pre-announced job through the canonical nonblocking endpoint.
-   The handler atomically claims queued work, returns 202 after executor
-   submission, and makes repeat activation idempotent."
-  [agency-base {:keys [agent-id prompt surface caller mode job-id timeout-ms]}]
-  (let [response
-        (http-json "POST" (str agency-base "/api/alpha/invoke/activate")
-                   (cond-> {:agent-id agent-id :prompt prompt
-                            :surface (or surface "emacs-repl")
-                            :caller (or caller "countdown-control")
-                            :job-id job-id}
-                     mode (assoc :mode mode)
-                     timeout-ms (assoc :timeout-ms timeout-ms)))]
-    {:ok (and (= 202 (:http/status response)) (:ok response)
-              (:accepted response))
-     :job-id job-id :state (:state response)
-     :already-active? (true? (:reused? response)) :response response}))
-
 (defn run-live!
   [{:keys [contract inputs state-path agency-base]
     :or {agency-base "http://localhost:7070"}}]
@@ -151,16 +119,15 @@
    {:contract contract :inputs inputs :state (read-state state-path)
     :dispatch-fn
     (fn [request]
-      (announce-job! agency-base
-                     {:agent-id (:agent-id request) :prompt (prompt request)}))
+      ((requiring-resolve 'futon3c.apm.job-port/announce!)
+       agency-base {:agent-id (:agent-id request) :prompt (prompt request)}))
     :activate-fn
     (fn [request ticket]
-      (activate-job! agency-base
-                     {:agent-id (:agent-id request) :prompt (prompt request)
-                      :job-id (:job-id ticket)
-                      :timeout-ms (get-in request [:timeouts :turn-timeout-ms])}))
+      ((requiring-resolve 'futon3c.apm.job-port/activate!)
+       agency-base {:agent-id (:agent-id request) :prompt (prompt request)
+                    :job-id (:job-id ticket)
+                    :timeout-ms (get-in request [:timeouts :turn-timeout-ms])}))
     :job-fn
     (fn [job-id]
-      (job->terminal
-       (http-json "GET" (str agency-base "/api/alpha/invoke/jobs/" job-id))))
+      ((requiring-resolve 'futon3c.apm.job-port/observe) agency-base job-id))
     :persist-fn #(atomic-persist! state-path %)}))
