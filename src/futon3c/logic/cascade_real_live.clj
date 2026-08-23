@@ -396,21 +396,54 @@
           :registry (get p :held/source-registry)
           :reason   (get p :held/reason)})))
 
+(defn- qprop
+  "Like `prop`, but for NAMESPACED prop keys. `prop` falls back to `(name k)`,
+   which turns `:pattern/ref` into \"ref\" and misses; try the keyword first, then
+   the fully-qualified string form."
+  [props k]
+  (or (get props k) (get props (subs (str k) 1))))
+
+(defn- unwrap-endpoint
+  "Mission-scope endpoints are stored as STRINGIFIED role maps
+   (`{:role :entity, :entity-id \"futon3c-d/mission/...\"}`), not bare ids. Pull the
+   id out; pass anything already bare straight through. Positional splitting is
+   NOT safe here -- a `:role :concept` endpoint can precede the pattern one."
+  [ep]
+  (let [s (str ep)]
+    (or (second (re-find #":entity-id\s+\"([^\"]+)\"" s)) s)))
+
+(defn- library-pattern-id
+  "`futon3/library/<ns>/<name>.flexiarg` -> `<ns>/<name>`, the cascade's pattern
+   id-space (the same `<ns>/<name>` the library and the `@why` cascade use)."
+  [ref]
+  (when ref (second (re-find #"/library/(.+)\.flexiarg$" (str ref)))))
+
 (defn mission-pattern-section
-  "O4-backlink — mission→pattern crosslinks (`cascade/mission-pattern` edges, the
-   'cited patterns' layer reconstructed from historical mining, NOT PSR/PUR). Each
-   edge connects a canonical mission node to a canonical `<ns>/<name>` pattern node,
-   `:relation` applied|candidate. Both endpoints already resolve on the live spine
-   (mission composes with O1/O3/O4; pattern is its own id-space). Pure: EDGES → rows."
+  "O4-backlink — mission→pattern crosslinks, read from the LIVE
+   `mission-scope/pattern` binder edges. This used to fetch `cascade/mission-pattern`,
+   a type nothing writes, so the layer rendered 0 while 115 real edges sat under the
+   binder's own name (fixed 2026-08-23).
+
+   Each edge carries the canonical mission node on its `:role :entity` endpoint and
+   the library path in `:pattern/ref`; the pattern is keyed `<ns>/<name>` so it
+   shares the library's id-space and composes with the mission spine.
+
+   `:state` rides along rather than being filtered on: `:detached` means the pattern
+   NODE is absent from substrate-2 (`:pattern-node-not-found`) while the citation
+   itself is real — an honest hole in the node layer, not a bad row. Pure: EDGES → rows."
   [edges]
   (vec (for [e    edges
-             :let [eps     (endpoints-of e)
+             :let [p       (:hx/props e)
+                   eps     (map unwrap-endpoint (:hx/endpoints e))
                    mission (mission-ep eps)
-                   pattern (some #(when-not (re-find #"-d/mission/" %) %) eps)
-                   p       (:hx/props e)]
+                   pattern (library-pattern-id (qprop p :pattern/ref))]
              :when (and mission pattern)]
          {:mission mission :pattern pattern
-          :relation (prop p :relation) :cos (prop p :cos)})))
+          :ident    (qprop p :pattern/ident)
+          :state    (qprop p :pattern/state)
+          ;; every mission-scope pattern binder IS an applied citation; the
+          ;; renderer buckets on this key.
+          :relation "applied"})))
 
 (defn cascade-real-graph
   "The per-section STRUCTURE (nodes/edges) the pipeline-pattern-cascade BODY renders,
@@ -426,7 +459,7 @@
         holes    (hole-section    (fetch-edges "cascade/hole-target"))
         arrows   (arrow-section   (fetch-edges "code/v05/mined-move"))
         held     (held-section    (fetch-edges "held/on-mission"))
-        patterns (mission-pattern-section (fetch-edges "cascade/mission-pattern"))
+        patterns (mission-pattern-section (fetch-edges "mission-scope/pattern"))
         tickets  (tickets-section)]
     {:as-of-ms (System/currentTimeMillis)
      :lineage  lineage
@@ -436,11 +469,19 @@
      :held     held
      :tickets  tickets
      :patterns {:edges patterns
-                :note (str "mission→pattern crosslinks reconstructed from historical mining "
-                           "(mission-pattern-scopes; :applied citations), NOT PSR/PUR. Both endpoints "
-                           "on live canonical (mission spine × pattern/library <ns>/<name>). Honest "
-                           "holes remain: :try-candidates not yet landed, + newer patterns absent from "
-                           "pattern/library; on-demand refresh = cascade_construct.")}
+                ;; NO COUNT TYPED BY HAND (WR-8) — the note is derived from the rows.
+                :note (let [state-of #(some-> (:state %) name)
+                            linked   (count (filter #(= "linked" (state-of %)) patterns))
+                            detached (- (count patterns) linked)]
+                        (str "mission→pattern crosslinks from the live `mission-scope/pattern` "
+                             "binder edges (NOT PSR/PUR, which are rarely used): "
+                             (count patterns) " citations across "
+                             (count (distinct (map :pattern patterns))) " patterns and "
+                             (count (distinct (map :mission patterns))) " missions. "
+                             linked " resolve to a live pattern node; " detached
+                             " cite a library pattern that is absent from substrate-2 "
+                             "(:pattern-node-not-found) — an honest hole in the pattern NODE "
+                             "layer, not in the citations themselves."))}
      :counts   {:lineage (count lineage) :clusters (count clusters)
                 :holes (count holes) :arrows (count arrows) :held (count held)
                 :patterns (count patterns)}}))
