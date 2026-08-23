@@ -256,7 +256,10 @@
                 contract action {}
                 {:frame-id "fixture-f25" :problem-id "m94A02"
                  :attempt-ordinal 1 :workspace "/does/not/exist"
-                 :memory-snapshot {:snapshot-id "frozen-snapshot"}}
+                 :memory-snapshot {:receipt-id "promotion-receipt"
+                                   :snapshot-id "frozen-snapshot"
+                                   :snapshot-digest "frozen-digest"
+                                   :accessible-memory-ids ["memory-1"]}}
                 {:job-id "f25-shaped-job"}
                 {:job-id "f25-shaped-job" :agent-id "fixture-f25-student"
                  :state :done :terminal-code 0}
@@ -265,4 +268,8 @@
     (is (= :controller (get-in result [:certificate :receipt/author])))
     (is (= :typed-submission-missing
            (get-in result [:certificate :receipt/reason])))
+    (is (= {:receipt-id "promotion-receipt"
+            :snapshot-id "frozen-snapshot"
+            :snapshot-digest "frozen-digest"}
+           (get-in result [:certificate :receipt/memory-snapshot])))
     (is (nil? (get-in result [:certificate :receipt/fresh-session-id])))))

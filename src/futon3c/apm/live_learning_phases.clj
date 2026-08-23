@@ -252,7 +252,9 @@
               :receipt/author :controller
               :receipt/reason :typed-submission-missing
               :receipt/repair-attempts repair-attempts
-              :receipt/memory-snapshot (:memory-snapshot request)
+              :receipt/memory-snapshot
+              (select-keys (:memory-snapshot request)
+                           [:receipt-id :snapshot-id :snapshot-digest])
               :receipt/harness-observed
               {:job (select-keys job [:job-id :agent-id :state :terminal-code
                                       :session-id])
