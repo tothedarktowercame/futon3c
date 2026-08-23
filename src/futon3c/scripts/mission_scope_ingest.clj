@@ -36,6 +36,7 @@
 (def ^:private hyperedge-request-budget 50)
 (def ^:private pattern-library-limit substrate-page-limit)
 (def ^:private !pattern-library-cache (atom nil))
+(def ^:private !entity-cache (atom {}))
 
 (defn- sha1 [s]
   (let [digest (.digest (MessageDigest/getInstance "SHA-1") (.getBytes (str s) "UTF-8"))]
@@ -94,10 +95,16 @@
         resp))))
 
 (defn- get-entity [client base-url id-or-name]
-  (let [resp (http-edn client :get
-                       (str base-url "/api/alpha/entity/" (url-encode id-or-name)))]
-    (when (<= 200 (:status resp) 299)
-      (get-in resp [:body :entity]))))
+  (if-let [cached (find @!entity-cache id-or-name)]
+    (val cached)
+    (let [resp (http-edn client :get
+                         (str base-url "/api/alpha/entity/" (url-encode id-or-name)))
+          entity (when (<= 200 (:status resp) 299)
+                   (get-in resp [:body :entity]))]
+      ;; Cache nil deliberately: absent exact ids are the common and expensive
+      ;; case before `resolve-pattern-node` falls through to the library index.
+      (swap! !entity-cache assoc id-or-name entity)
+      entity)))
 
 (def ^:dynamic *dry-run?*
   "True suppresses every substrate WRITE. Checked inside the three write
@@ -203,7 +210,8 @@
    the caches still coalesce repeated reads."
   []
   (reset! !hyperedge-type-cache {})
-  (reset! !pattern-library-cache nil))
+  (reset! !pattern-library-cache nil)
+  (reset! !entity-cache {}))
 
 (defn- hyperedges-by-type [client base-url hx-type]
   (if-let [cached (get @!hyperedge-type-cache hx-type)]
