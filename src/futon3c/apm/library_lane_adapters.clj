@@ -59,7 +59,7 @@
 
 (defn- authority-findings
   [{:keys [unit ledger workspace seats actions state-paths agency-base
-           role-card contract]} kind problem-id]
+           role-card checkpoint-role-card contract]} kind problem-id]
   (let [role (if (= :solve kind) :solver :proctor)]
     (cond-> []
       (not (contains? #{:preflight :solve :verify} kind))
@@ -81,7 +81,11 @@
       (conj :agency-base-missing)
       (not (map? contract)) (conj :frame-contract-missing)
       (not= "a03d58e9fb261fb78b1ee90d9e497d395e4f1dd2" (:blob role-card))
-      (conj :library-role-card-pin-mismatch))))
+      (conj :library-role-card-pin-mismatch)
+      (and (= :solve kind)
+           (not= "27c82729df0c575bc42cc13bd5ac93790a8e1524"
+                 (:blob checkpoint-role-card)))
+      (conj :solver-restrategize-role-card-pin-mismatch))))
 
 (defn make-phase-inputs-fn
   "Build the adapter injected into library-lane-runner/run-one!.
@@ -90,14 +94,18 @@
   request validation to live-proof-phases/build-request and never repairs a
   rejected request."
   [{:keys [unit ledger workspace seats actions state-paths agency-base] :as config}]
-  (fn [{:keys [kind problem-id role-card contract receipts targets]}]
-    (let [authority (assoc config :role-card role-card :contract contract)
+  (fn [{:keys [kind problem-id role-card checkpoint-role-card contract receipts
+               targets]}]
+    (let [authority (assoc config :role-card role-card
+                           :checkpoint-role-card checkpoint-role-card
+                           :contract contract)
           findings (authority-findings authority kind problem-id)
           role (if (= :solve kind) :solver :proctor)
           built (when (empty? findings)
                   (proof/build-request
                    {:kind kind :action (get actions kind) :ledger ledger
                     :unit unit :role-card role-card :seat (get seats role)
+                    :checkpoint-role-card checkpoint-role-card
                     :workspace workspace
                     :solve-receipt (get receipts :solve)}))]
       (cond

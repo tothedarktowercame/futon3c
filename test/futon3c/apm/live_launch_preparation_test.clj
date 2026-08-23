@@ -91,7 +91,8 @@
     (is (= #{:solver :student}
            (set (keys (get-in result [:receipt :workspace/ids])))))
     (is (= {:solver :codex :student :zai :guide :claude
-            :proctor :codex :scribe :zai}
+            :proctor :codex :scribe :zai :promotion-proctor :codex
+            :analyst :claude}
            @observed))))
 
 (deftest preparation-accepts-an-explicit-codex-only-cast

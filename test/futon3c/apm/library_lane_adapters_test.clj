@@ -17,6 +17,9 @@
 (def role-card
   {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-library-v1.md"
    :blob "a03d58e9fb261fb78b1ee90d9e497d395e4f1dd2"})
+(def checkpoint-role-card
+  {:path "holes/labs/M-apm-demonstration/role-cards/solver-restrategize-v1.md"
+   :blob "27c82729df0c575bc42cc13bd5ac93790a8e1524"})
 (def ledger {:version 5 :digest sha64 :phase :preflight :claim nil})
 (def seats
   {:solver {:agent-id "f9001-solver" :type :codex :frame-id "f9001"
@@ -72,6 +75,8 @@
     (doseq [kind [:preflight :solve :verify]]
       (let [result (adapter {:kind kind :problem-id problem-id
                              :role-card role-card :contract {:contract/id :fixture}
+                             :checkpoint-role-card (when (= :solve kind)
+                                                     checkpoint-role-card)
                              :receipts (if (= :verify kind)
                                          {:solve solve-receipt} {})})]
         (is (:ok result) (name kind))
