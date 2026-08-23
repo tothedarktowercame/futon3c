@@ -25,10 +25,28 @@
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-proof-phases :as proof]
             [futon3c.apm.live-solver-rounds :as solver-rounds]
+            [futon3c.apm.typed-role-submission :as submission]
             [futon3c.apm.workspace-lifecycle :as workspace]))
 
 (def surface "emacs-repl")
 (def caller "library-lane")
+
+(defn terminal-repair-request
+  "Create one content-addressed corrective observation for a failed read-only
+   preflight or verify report. The original request remains the authority."
+  [request ticket _job validation]
+  (let [body (-> request
+                 (dissoc :dispatch/id :submission/token)
+                 (assoc :repair/of-job-id (:job-id ticket)
+                        :repair/attempt (:repair/next-attempt validation)
+                        :repair/findings (:findings validation)
+                        :instructions
+                        (str (:instructions request) " Re-run the read-only phase "
+                             "from the current clean workspace and return fresh "
+                             "terminal evidence correcting "
+                             (pr-str (:findings validation)) ".")))
+        request (assoc body :dispatch/id (machine/ledger-digest [body]))]
+    {:ok true :request (submission/prepare-request request)}))
 
 (defn validate-workspace
   "workspace-lifecycle/validate, tolerating a solver's own committed advance.
@@ -526,6 +544,7 @@
                   (if (= :preflight kind)
                     preflight-validate-terminal
                     validate-verify-terminal)
+                  :terminal-repair-request-fn terminal-repair-request
                   :receipt-provider
                   (if (= :preflight kind)
                     (fn [r t j _] (preflight-receipt contract r t j))
