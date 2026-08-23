@@ -59,17 +59,35 @@
     {:ok false :error/code :live-job-request-state-mismatch}
 
     (not (:activation/accepted? state))
-    (let [activated (activate-fn request (:ticket state))]
-      (if-not (:ok activated)
-        {:ok false :error/code :live-job-activation-failed
-         :state state :finding activated}
-        (let [accepted-state (assoc state :activation/accepted? true)
+    (let [job (job-fn (get-in state [:ticket :job-id]))
+          observed-accepted? (or (contains? terminal-states (:state job))
+                                 (contains? #{:activating :running :overrun}
+                                            (:state job)))]
+      (if observed-accepted?
+        ;; A running or terminal canonical job is stronger durable evidence
+        ;; than the lost local 202 observation.  Persist the reconciliation
+        ;; before terminal validation; never reinterpret a client timeout or
+        ;; an unchanged queued job as acceptance.
+        (let [accepted-state (assoc state
+                                    :activation/accepted? true
+                                    :activation/reconciled-from (:state job))
               persisted (persist-fn accepted-state)]
           (if (:ok persisted)
             {:ok true :status :awaiting-terminal :state accepted-state}
             {:ok false
              :error/code :live-job-activation-acceptance-persistence-failed
-             :state state}))))
+             :state state}))
+        (let [activated (activate-fn request (:ticket state))]
+          (if-not (:ok activated)
+            {:ok false :error/code :live-job-activation-failed
+             :state state :finding activated}
+            (let [accepted-state (assoc state :activation/accepted? true)
+                  persisted (persist-fn accepted-state)]
+              (if (:ok persisted)
+                {:ok true :status :awaiting-terminal :state accepted-state}
+                {:ok false
+                 :error/code :live-job-activation-acceptance-persistence-failed
+                 :state state}))))))
 
     :else
     (let [job (job-fn (get-in state [:ticket :job-id]))]

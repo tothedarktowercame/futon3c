@@ -34,20 +34,35 @@
     (is (= (:ticket/id (:ticket state))
            (machine/ledger-digest [(dissoc (:ticket state) :ticket/id)])))))
 
-(deftest persisted-ticket-retries-idempotent-activation-until-accepted
-  (let [calls (atom []) job (atom {:state :running})
+(deftest persisted-ticket-reconciles-observed-running-job-without-reactivation
+  (let [calls (atom []) job (atom {:state :queued})
         failed (sut/drive!
                 (assoc (effects calls job)
                        :activate-fn (fn [_ _]
                                       (swap! calls conj :activate-failed)
                                       {:ok false})))
+        _ (reset! job {:state :running})
         retried (sut/drive! (assoc (effects calls job) :state (:state failed)))]
     (is (= :live-job-activation-failed (:error/code failed)))
     (is (= :awaiting-terminal (:status retried)))
     (is (true? (get-in retried [:state :activation/accepted?])))
     (is (= 1 (count (filter #{:announce} @calls))))
     (is (= 1 (count (filter #{:activate-failed} @calls))))
-    (is (= 1 (count (filter #{:activate} @calls))))))
+    (is (zero? (count (filter #{:activate} @calls))))
+    (is (= :running (get-in retried [:state :activation/reconciled-from])))))
+
+(deftest persisted-ticket-reconciles-terminal-job-before-validation
+  (let [calls (atom []) job (atom {:state :queued})
+        failed (sut/drive!
+                (assoc (effects calls job)
+                       :activate-fn (constantly {:ok false})))
+        _ (reset! job {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        reconciled (sut/drive! (assoc (effects calls job) :state (:state failed)))
+        certified (sut/drive! (assoc (effects calls job) :state (:state reconciled)))]
+    (is (= :awaiting-terminal (:status reconciled)))
+    (is (= :done (get-in reconciled [:state :activation/reconciled-from])))
+    (is (= :certified (:status certified)))
+    (is (= 1 (count (filter #{:validate} @calls))))))
 
 (deftest matching-terminal-job-is-validated-receipted-and-persisted
   (let [calls (atom []) job (atom {:job-id "job-1" :agent-id "f19-proctor"
