@@ -35,7 +35,7 @@
   (let [close-id (:receipt/id close-receipt)]
     (cond
       (not (and (= :frame-close (:receipt/type close-receipt))
-                (= :closed (:receipt/result close-receipt))
+                (contains? #{:closed :partial} (:receipt/result close-receipt))
                 (addressed? close-receipt :receipt/id)))
       {:ok false :error/code :analyst-wake-close-invalid}
       (contains? (:analyst/processed-closes state) close-id)

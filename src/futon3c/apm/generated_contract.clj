@@ -96,6 +96,7 @@
 
 (def required-analyst-policy
   {:outside-frame-order true :wake-after-terminal-only true
+   :partial-terminal-wakes-analyst true
    :exactly-once-per-frame true :append-only-series-input true
    :tenure-frames 2 :successor-handoff-required true
    :in-flight-mutation false})

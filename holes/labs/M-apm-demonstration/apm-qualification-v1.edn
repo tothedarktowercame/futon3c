@@ -1,6 +1,6 @@
 {:qualification/id :apm-validated-system-v1
  :generated-contract "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json"
- :generated-contract-digest "93d14f94a79bc28e9d304c60bc27a782e40292745e449a374e2b959d439a085e"
+ :generated-contract-digest "9511594420a647dba33df125433a289787d5ec534a216f8e729571bdf3ef4b60"
  :positive-fixtures ["test/resources/apm-traces/valid.json"
                      "test/resources/apm-traces/partial-frame-series.json"]
  :mutation-classes

@@ -67,9 +67,12 @@
            (get-in accepted [:state :analyst/tenure])))))
 
 (deftest only-terminal-content-valid-close-can-wake
+  (is (:ok (sut/wake-after-close initial
+                                 (addressed (assoc (dissoc close-1 :receipt/id)
+                                                   :receipt/result :partial)))))
   (is (= :analyst-wake-close-invalid
          (:error/code (sut/wake-after-close initial
-                                             (assoc close-1 :receipt/result :partial)))))
+                                             (assoc close-1 :receipt/result :void)))))
   (is (= :analyst-wake-close-invalid
          (:error/code (sut/wake-after-close initial
                                              (assoc close-1 :receipt/id "forged"))))))
