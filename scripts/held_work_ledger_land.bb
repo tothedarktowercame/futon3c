@@ -1,6 +1,6 @@
 #!/usr/bin/env bb
 ;; held_work_ledger_land.bb — E-held-work-ledger: land the harvested :held/* ledger into
-;; substrate-2 (:7071) as `held/item` entities + `held/on-mission` hyperedges on CANONICAL
+;; futon1b (:7073) as `held/item` entities + `held/on-mission` hyperedges on CANONICAL
 ;; <repo>-d/mission/<id> nodes (C-cascade-real standard 5 — composed). Mirrors claude-2's
 ;; d4_feeder_b_load.bb: additive, penholder "api", idempotent, resolve-before-edge, no JVM restart.
 ;;
@@ -16,17 +16,42 @@
          '[clojure.string :as str])
 
 (def LEDGER "/home/joe/code/futon3c/holes/excursions/held-work-ledger.edn")
-(def BASE "http://127.0.0.1:7071/api/alpha")
-(def TOKEN (str/trim (slurp "/home/joe/code/futon3c/.admintoken")))
+(def BASE "http://127.0.0.1:7073/api/alpha")
 (def PENHOLDER "api")
-(def DRAWBRIDGE "http://127.0.0.1:6768/eval")
 
-(defn drawbridge [form]
-  (let [r (http/post DRAWBRIDGE {:headers {"x-admin-token" TOKEN "Content-Type" "text/plain"}
-                                 :body form :throw false})]
-    (when (not= 200 (:status r)) (throw (ex-info "drawbridge failed" {:status (:status r) :body (:body r)})))
-    (let [o (edn/read-string (:body r))]
-      (if (:ok o) (:value o) (throw (ex-info "eval error" o))))))
+(defn encode [x]
+  (java.net.URLEncoder/encode (str x) "UTF-8"))
+
+(defn get-edn [path params]
+  (let [query (str/join "&" (map (fn [[k v]] (str (name k) "=" (encode v))) params))
+        r (http/get (str BASE path "?" query)
+                    {:headers {"Accept" "application/edn"} :throw false})]
+    (when-not (= 200 (:status r))
+      (throw (ex-info "futon1b read failed"
+                      {:path path :params params :status (:status r) :body (:body r)})))
+    (edn/read-string (:body r))))
+
+(defn paged [path result-key type-key type-name]
+  (loop [after nil, acc [], expected nil]
+    (let [page (get-edn path (cond-> [[type-key type-name] [:limit 1000]]
+                               after (conj [:after after])))
+          rows (result-key page)
+          expected (or expected (:count page))
+          acc (into acc rows)]
+      (if-let [cursor (:next-cursor page)]
+        (recur cursor acc expected)
+        (do
+          (when-not (= expected (count acc))
+            (throw (ex-info "paged read did not consume advertised count"
+                            {:path path :type type-name
+                             :expected expected :consumed (count acc)})))
+          acc)))))
+
+(defn paged-entities [entity-type]
+  (paged "/entities" :entities :type entity-type))
+
+(defn paged-hyperedges [hx-type]
+  (paged "/hyperedges" :hyperedges :type hx-type))
 
 (defn post-json [path m]
   (http/post (str BASE path)
@@ -45,33 +70,103 @@
                  :when (some? v)]
              [k (if (keyword? v) (name v) v)])))
 
-(defn resolvable [existing i] (filter existing (:held/missions i)))
+(defn mission-aliases [mission]
+  (remove nil? [(:entity/name mission)
+                (:entity/external-id mission)
+                (get-in mission [:entity/props :mission/title])]))
 
-(def existing-canonical
-  (set (drawbridge "(let [node (:node @futon3c.dev/!f1-sys) db (xtdb.api/db node)]
-                      (->> (xtdb.api/q db '{:find [n] :where [[e :entity/name n] [e :entity/type :mission/doc]]})
-                           (map first) (filter string?) vec))")))
+(defn mission-index [required-aliases]
+  (let [candidates
+        (reduce (fn [index mission]
+                  (reduce #(update %1 %2 (fnil conj #{}) (:entity/name mission))
+                          index
+                          (mission-aliases mission)))
+                {}
+                (paged-entities "mission/doc"))]
+    (into {}
+          (for [[alias names] candidates
+                :when (contains? required-aliases alias)]
+            (let [canonical (filter #(re-find #"-d/mission/" %) names)
+                  chosen (cond
+                           (= 1 (count canonical)) (first canonical)
+                           (= 1 (count names)) (first names)
+                           :else (throw (ex-info "mission alias has no unique canonical target"
+                                                 {:alias alias :candidates (sort names)})))]
+              [alias chosen])))))
+
+(defn resolved-missions [missions i]
+  (keep missions (:held/missions i)))
+
+(def required-mission-aliases
+  (set (mapcat :held/missions items)))
+
+(defn verify-layer! [intended-items intended-edges]
+  (let [entities (paged-entities "held/item")
+        edges (paged-hyperedges "held/on-mission")
+        mission-entities (paged-entities "mission/doc")
+        missions (mission-index required-mission-aliases)
+        entity-names (set (keep :entity/name entities))
+        mission-names (set (keep :entity/name mission-entities))
+        ledger-ids (set (map held-id items))
+        landed-entities (filter #(contains? ledger-ids (:entity/name %)) entities)
+        expected-edge-ids (set (for [i items, m (resolved-missions missions i)]
+                                 (str "hx|held-on-mission|" (held-id i) "|" m)))
+        landed-edges (filter #(contains? expected-edge-ids (:hx/id %)) edges)
+        unresolved (->> landed-edges
+                        (mapcat :hx/ends)
+                        (map :entity-id)
+                        (remove #(or (contains? entity-names %)
+                                     (contains? mission-names %)))
+                        distinct sort vec)]
+    (println (format "  read-back: held/item ledger entities=%d/%d; held/on-mission=%d/%d; unresolved endpoints=%d"
+                     (count landed-entities) intended-items
+                     (count landed-edges) intended-edges (count unresolved)))
+    (when-not (= intended-items (count landed-entities))
+      (throw (ex-info "held entity read-back count differs from intent"
+                      {:intended intended-items :actual (count landed-entities)})))
+    (when-not (= intended-edges (count landed-edges))
+      (throw (ex-info "held edge read-back count differs from intent"
+                      {:intended intended-edges :actual (count landed-edges)})))
+    (when (seq unresolved)
+      (throw (ex-info "held edges contain unresolved endpoints"
+                      {:unresolved unresolved})))
+    {:items (count landed-entities) :edges (count landed-edges)
+     :unresolved unresolved}))
 
 (defn -main [& args]
   (let [write?     (some #{"--write"} args)
-        with-edges (filter #(seq (resolvable existing-canonical %)) items)
-        edge-count (reduce + (map #(count (resolvable existing-canonical %)) items))
-        detached   (remove #(seq (resolvable existing-canonical %)) items)]
-    (println (format "held items -> entities: %d" (count items)))
+        missions (mission-index required-mission-aliases)
+        item-groups (group-by held-id items)
+        conflicting-items (into {} (filter (fn [[_ rows]] (< 1 (count (distinct rows)))) item-groups))
+        _ (when (seq conflicting-items)
+            (throw (ex-info "held id has conflicting source rows"
+                            {:ids (sort (keys conflicting-items))})))
+        unique-items (mapv (comp first val) item-groups)
+        duplicate-items (- (count items) (count unique-items))
+        edges (distinct (for [i unique-items, m (resolved-missions missions i)] [i m]))
+        with-edges (filter #(seq (resolved-missions missions %)) unique-items)
+        edge-count (count edges)
+        detached   (remove #(seq (resolved-missions missions %)) unique-items)
+        unresolved-aliases (sort (remove #(contains? missions %) required-mission-aliases))]
+    (println (format "held source rows=%d -> unique entities=%d (exact duplicate rows=%d)"
+                     (count items) (count unique-items) duplicate-items))
     (println (format "mission-resolving: %d items -> %d held/on-mission edges | detached (no resolvable mission): %d"
                      (count with-edges) edge-count (count detached)))
     (println "by registry:" (frequencies (map #(get-in % [:held/source :registry]) items)))
+    (println (format "source mission aliases unresolved: %d" (count unresolved-aliases)))
+    (doseq [alias unresolved-aliases]
+      (println "  UNRESOLVED SOURCE MISSION" alias))
     (when-not write?
       (println "\n-- DRY RUN — sample of what WOULD land --")
       (doseq [i (take 4 with-edges)]
         (println (format "  ENTITY %s :held/item" (held-id i)))
-        (doseq [m (resolvable existing-canonical i)]
+        (doseq [m (resolved-missions missions i)]
           (println (format "    HX held/on-mission [%s , %s]" (held-id i) m)))))
     (when write?
       (println "\n-- WRITING (penholder \"api\", idempotent) --")
       (let [er (atom {:ok 0 :err 0}) hr (atom {:ok 0 :err 0})]
         ;; Phase A: held/item entities (id == name, canonical single scheme)
-        (doseq [i items]
+        (doseq [i unique-items]
           (let [r (post-json "/entity" {:penholder PENHOLDER
                                         :id (held-id i) :name (held-id i)
                                         :type "held/item" :external-id (held-id i)
@@ -82,7 +177,7 @@
                     (when (< (:err @er) 4) (println "  ENT ERR" (:status r) (subs (str (:body r)) 0 (min 200 (count (str (:body r)))))))))))
         (println "  entities:" @er)
         ;; Phase B: held/on-mission hyperedges (stable id, idempotent)
-        (doseq [i items, m (resolvable existing-canonical i)]
+        (doseq [[i m] edges]
           (let [r (post-json "/hyperedge"
                              {:penholder PENHOLDER
                               :hx/id (str "hx|held-on-mission|" (held-id i) "|" m)
@@ -94,6 +189,9 @@
             (if (#{200 201} (:status r)) (swap! hr update :ok inc)
                 (do (swap! hr update :err inc)
                     (when (< (:err @hr) 4) (println "  HX ERR" (:status r) (subs (str (:body r)) 0 (min 200 (count (str (:body r)))))))))))
-        (println "  hyperedges:" @hr)))))
+        (println "  hyperedges:" @hr)
+        (when (or (pos? (:err @er)) (pos? (:err @hr)))
+          (throw (ex-info "held ledger write failed" {:entities @er :hyperedges @hr})))
+        (verify-layer! (count unique-items) edge-count)))))
 
 (apply -main *command-line-args*)
