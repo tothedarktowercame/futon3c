@@ -15,6 +15,7 @@
 (def registry-type :durable-coordinator-registry)
 (def registry-version 1)
 (def entry-type :durable-coordinator-registration)
+(def intent-type :durable-coordinator-intent)
 (defonce ^:private adapters (atom {}))
 
 (defn- canonical [value]
@@ -27,12 +28,58 @@
     :else value))
 
 (defn- sha256 [value]
-  (let [bytes (.getBytes (pr-str (canonical value)) StandardCharsets/UTF_8)
-        digest (.digest (MessageDigest/getInstance "SHA-256") bytes)]
-    (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
+  (binding [*print-namespace-maps* false
+            *print-meta* false
+            *print-length* nil
+            *print-level* nil]
+    (let [bytes (.getBytes (pr-str (canonical value)) StandardCharsets/UTF_8)
+          digest (.digest (MessageDigest/getInstance "SHA-256") bytes)]
+      (apply str (map #(format "%02x" (bit-and % 0xff)) digest)))))
 
 (defn entry-digest [entry]
   (sha256 (dissoc entry :coordinator/entry-digest)))
+
+(defn intent-digest [intent]
+  (sha256 (dissoc intent :intent/digest)))
+
+(defn state-digest [state]
+  (sha256 (dissoc state :coordinator/pending-intent
+                  :coordinator/pending-pre-state-digest)))
+
+(defn make-intent [coordinator-id state requested]
+  (let [intent {:state/type intent-type
+                :coordinator/id coordinator-id
+                :job-id (:job-id requested)
+                :dispatch/id (:dispatch/id requested)
+                :dispatch/action (:dispatch/action requested)
+                :pre-state/version (:regulator/ticks state)
+                :pre-state/digest (state-digest state)
+                :expected/postcondition (:expected/postcondition requested)}]
+    (assoc intent :intent/digest (intent-digest intent))))
+
+(defn intent-findings [coordinator-id state intent]
+  (cond-> []
+    (not= intent-type (:state/type intent)) (conj :type)
+    (not= coordinator-id (:coordinator/id intent)) (conj :coordinator-id)
+    (not (and (string? (:job-id intent)) (not-empty (:job-id intent))))
+    (conj :job-id)
+    (not (and (string? (:dispatch/id intent))
+              (not-empty (:dispatch/id intent))))
+    (conj :dispatch-id)
+    (not (keyword? (:dispatch/action intent))) (conj :dispatch-action)
+    (not (nat-int? (:pre-state/version intent))) (conj :pre-state-version)
+    (and (nat-int? (:pre-state/version intent))
+         (not= (:regulator/ticks state) (inc (:pre-state/version intent))))
+    (conj :pre-state-version-relationship)
+    (not (string? (:pre-state/digest intent))) (conj :pre-state-digest)
+    (not= (:pre-state/digest intent)
+          (:coordinator/pending-pre-state-digest state))
+    (conj :pre-state-binding)
+    (not (map? (:expected/postcondition intent))) (conj :expected-postcondition)
+    (not= (:intent/digest intent) (intent-digest intent)) (conj :intent-digest)))
+
+(defn valid-intent? [coordinator-id state intent]
+  (empty? (intent-findings coordinator-id state intent)))
 
 (defn valid-entry? [entry]
   (and (= entry-type (:state/type entry))
@@ -106,27 +153,40 @@
                :entry entry}
               saved)))))))
 
-(defn- coordinator-tick [adapter state]
+(defn- coordinator-tick [coordinator-id adapter state]
   (if-let [intent (:coordinator/pending-intent state)]
-    (let [result ((:reconcile-fn adapter) intent state)]
-      (if (:ok result)
-        (cond-> (dissoc result :coordinator/clear-intent?)
-          (:coordinator/clear-intent? result)
-          (assoc :regulator/state-updates
-                 {:coordinator/pending-intent nil
-                  :coordinator/last-settled-intent intent}))
-        result))
+    (if-not (valid-intent? coordinator-id state intent)
+      {:ok false :error/code :durable-coordinator-intent-integrity-invalid
+       :findings (intent-findings coordinator-id state intent)}
+      (let [result ((:reconcile-fn adapter) intent state)]
+        (if (:ok result)
+          (cond-> (dissoc result :coordinator/clear-intent?)
+            (:coordinator/clear-intent? result)
+            (assoc :regulator/state-updates
+                   {:coordinator/pending-intent nil
+                    :coordinator/pending-pre-state-digest nil
+                    :coordinator/last-settled-intent intent}))
+          result)))
     (let [decision ((:decide-fn adapter) state)]
       (cond
         (not (:ok decision)) decision
         (= :activate (:coordinator/action decision))
-        (let [intent (:coordinator/intent decision)]
-          (if (and (map? intent)
+        (let [intent (make-intent coordinator-id state
+                                  (:coordinator/intent decision))]
+          (if (and (map? (:coordinator/intent decision))
+                   (= (:pre-state/version intent) (:regulator/ticks state))
                    (string? (:job-id intent))
-                   (not-empty (:job-id intent)))
+                   (not-empty (:job-id intent))
+                   (string? (:dispatch/id intent))
+                   (not-empty (:dispatch/id intent))
+                   (keyword? (:dispatch/action intent))
+                   (map? (:expected/postcondition intent)))
             {:ok true :status :intent-persisted
              :job-id (:job-id intent)
-             :regulator/state-updates {:coordinator/pending-intent intent}}
+             :regulator/state-updates
+             {:coordinator/pending-intent intent
+              :coordinator/pending-pre-state-digest
+              (:pre-state/digest intent)}}
             {:ok false :error/code :durable-coordinator-intent-invalid}))
         :else decision))))
 
@@ -152,7 +212,8 @@
             :period-ms (:coordinator/period-ms entry)
             :read-fn #(persistence/read-state state-path)
             :persist-fn #(persistence/atomic-persist! state-path %)
-            :tick-state-fn #(coordinator-tick adapter %)}))))))
+            :tick-state-fn #(coordinator-tick (:coordinator/id entry)
+                                               adapter %)}))))))
 
 (defn start-registered!
   "Start one coordinator solely from its typed registry entry."

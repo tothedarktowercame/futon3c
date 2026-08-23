@@ -34,7 +34,11 @@
                                                         (java.nio.file.Path/of state-a (make-array String 0))
                                                         (make-array java.nio.file.LinkOption 0))])
                      {:ok true :coordinator/action :activate
-                      :coordinator/intent {:job-id "job-fixed"}})
+                      :coordinator/intent
+                      {:job-id "job-fixed"
+                       :dispatch/id "dispatch-fixed"
+                       :dispatch/action :invoke
+                       :expected/postcondition {:job/state :terminal}}})
         :reconcile-fn (fn [intent state]
                         (swap! observations conj
                                [:reconcile intent (:coordinator/pending-intent state)])
@@ -65,17 +69,96 @@
     (is (:ok (sut/register! {:registry-path registry :coordinator-id "c:restart"
                              :adapter :test/restart :config {}
                              :state-path state-a :period-ms 10})))
-    (spit state-a (str (pr-str {:state/type :live-regulator
-                                :regulator/id "c:restart"
-                                :regulator/status :running
-                                :regulator/ticks 1
-                                :coordinator/pending-intent {:job-id "job-stable"}})
-                       "\n"))
+    (let [pre-state {:state/type :live-regulator
+                     :regulator/id "c:restart"
+                     :regulator/status :running
+                     :regulator/ticks 0}
+          intent (sut/make-intent
+                  "c:restart" pre-state
+                  {:job-id "job-stable" :dispatch/id "dispatch-stable"
+                   :dispatch/action :invoke
+                   :expected/postcondition {:job/state :terminal}})]
+      (spit state-a (str (pr-str (assoc pre-state
+                                        :regulator/ticks 1
+                                        :coordinator/pending-intent intent
+                                        :coordinator/pending-pre-state-digest
+                                        (:pre-state/digest intent)))
+                         "\n")))
     (try
       (is (:ok (sut/start-registered! registry "c:restart")))
-      (is (await-until #(= :complete (state-status state-a))))
+      (is (await-until #(contains? #{:complete :failed}
+                                    (state-status state-a))))
+      (is (= :complete (state-status state-a)) (slurp state-a))
       (is (= ["job-stable"] @reconciled))
       (finally (sut/stop! "c:restart")))))
+
+(deftest typed-intent-integrity-kills-field-mutations
+  (let [pre-state {:state/type :live-regulator
+                   :regulator/id "c:bound"
+                   :regulator/status :running
+                   :regulator/ticks 4}
+        intent (sut/make-intent
+                "c:bound" pre-state
+                {:job-id "job-4" :dispatch/id "dispatch-4"
+                 :dispatch/action :invoke
+                 :expected/postcondition {:job/state :terminal}})
+        persisted (assoc pre-state
+                         :regulator/ticks 5
+                         :coordinator/pending-intent intent
+                         :coordinator/pending-pre-state-digest
+                         (:pre-state/digest intent))
+        redigest #(assoc % :intent/digest (sut/intent-digest %))]
+    (is (sut/valid-intent? "c:bound" persisted intent))
+    (is (false? (sut/valid-intent? "c:bound" persisted
+                                  (assoc intent :job-id "job-injected"))))
+    (is (false? (sut/valid-intent? "c:bound" persisted
+                                  (redigest (assoc intent :coordinator/id
+                                                  "c:other")))))
+    (is (false? (sut/valid-intent? "c:bound" persisted
+                                  (redigest (assoc intent :pre-state/digest
+                                                  "wrong-state")))))
+    (is (false? (sut/valid-intent? "c:bound" persisted
+                                  (redigest (dissoc intent :dispatch/id)))))
+    (is (false? (sut/valid-intent?
+                 "c:bound" persisted
+                 (assoc intent :expected/postcondition {:job/state :queued}))))))
+
+(deftest invalid-persisted-intent-never-reaches-reconcile
+  (let [{:keys [registry state-a]} (temp-paths)
+        reconcile-calls (atom 0)
+        pre-state {:state/type :live-regulator :regulator/id "c:reject"
+                   :regulator/status :running :regulator/ticks 0}
+        intent (sut/make-intent
+                "c:reject" pre-state
+                {:job-id "job-original" :dispatch/id "dispatch-original"
+                 :dispatch/action :invoke
+                 :expected/postcondition {:job/state :terminal}})]
+    (sut/register-adapter!
+     :test/reject-tamper
+     (fn [_] {:decide-fn (fn [_] {:ok true :status :awaiting-job})
+              :reconcile-fn (fn [_ _]
+                              (swap! reconcile-calls inc)
+                              {:ok true :status :frame-complete})}))
+    (is (:ok (sut/register! {:registry-path registry
+                             :coordinator-id "c:reject"
+                             :adapter :test/reject-tamper :config {}
+                             :state-path state-a :period-ms 10})))
+    (spit state-a
+          (str (pr-str (assoc pre-state
+                              :regulator/ticks 1
+                              :coordinator/pending-intent
+                              (assoc intent :job-id "job-injected")
+                              :coordinator/pending-pre-state-digest
+                              (:pre-state/digest intent)))
+               "\n"))
+    (try
+      (is (:ok (sut/start-registered! registry "c:reject")))
+      (is (await-until #(= :failed (state-status state-a))))
+      (is (zero? @reconcile-calls))
+      (is (= [:intent-digest]
+             (get-in (edn/read-string (slurp state-a))
+                     [:regulator/last-result :findings])))
+      (finally (sut/stop! "c:reject")))))
 
 (deftest typed-registry-recovers-two-coordinators-without-directory-discovery
   (let [{:keys [registry state-a state-b]} (temp-paths)
