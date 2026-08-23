@@ -223,3 +223,33 @@
                            registry "library:authority"
                            "/home/joe/code/futon3c" "repeat")))))
         (finally (durable/stop! "library:authority"))))))
+
+(deftest legacy-solver-assignment-migration-preserves-pending-intent
+  (let [{:keys [registry state]} (fixture)
+        coordinator-id "library:assignment"]
+    (with-redefs [sut/run-step! (fn [_] {:ok true :ruling :awaiting})]
+      (try
+        (is (:ok (durable/register!
+                  {:registry-path registry :coordinator-id coordinator-id
+                   :problem-id "t00J02" :adapter sut/adapter-key
+                   :config {:coordinator-id coordinator-id
+                            :problem-id "t00J02"}
+                   :state-path state :period-ms 1000})))
+        (is (:ok (durable/start-registered! registry coordinator-id)))
+        (is (await-until #(some? (get-in (sut/status registry coordinator-id)
+                                         [:durable-state
+                                          :coordinator/pending-intent]))))
+        (durable/stop! coordinator-id)
+        (let [before (get-in (sut/status registry coordinator-id)
+                             [:durable-state :coordinator/pending-intent])
+              result (sut/migrate-solver-assignment!
+                      registry coordinator-id "f9415091172297-solver"
+                      "retain current solver across partial bank")
+              after (sut/status registry coordinator-id)]
+          (is (:ok result) (pr-str result))
+          (is (= "f9415091172297-solver"
+                 (get-in after [:registration :coordinator/config
+                                :solver-assignment-id])))
+          (is (= before (get-in after [:durable-state
+                                       :coordinator/pending-intent]))))
+        (finally (durable/stop! coordinator-id))))))

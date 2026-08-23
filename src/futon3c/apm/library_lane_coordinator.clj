@@ -18,7 +18,8 @@
 (defn run-step!
   [{:keys [agency-base corpus-root frames-root state-root problem-id
            control-root trunk-branch keying-target contract-path phase
-           strategy-required?]}]
+           strategy-required?]
+    :as options}]
   (let [eff (effects/live-effects {:agency-base agency-base
                                    :corpus-root corpus-root
                                    :frames-root frames-root})
@@ -42,12 +43,17 @@
                             :trunk-branch trunk-branch
                             :keying-target keying-target
                             :state-root state-root
-                            :agency-base agency-base})))]
+                            :agency-base agency-base
+                            :solver-assignment-id
+                            (:solver-assignment-id options)})))]
     (if-not (:ok launched)
       launched
       (let [config (assoc (:config launched)
                           :control-root control-root
-                          :agency-base agency-base)]
+                          :agency-base agency-base
+                          :solver-assignment-id
+                          (or (:solver-assignment-id options)
+                              (:solver-assignment-id (:config launched))))]
         (runner/step-one!
          {:corpus-root corpus-root :problem-id problem-id
           :contract (edn/read-string (slurp contract-path))
@@ -190,6 +196,47 @@
         (if (:ok saved)
           {:ok true :status :control-authority-hydrated :entry updated}
           saved)))))
+
+(defn migrate-solver-assignment!
+  "Bind a legacy library coordinator to its current solver identity.
+
+   This changes future library-frame seat projection only. Durable phase state,
+   pending intents, workspaces, and receipts are not rewritten."
+  [registry-path coordinator-id solver-assignment-id reason]
+  (let [registry (coordinator/read-registry registry-path)
+        entry (get-in registry [:entries coordinator-id])
+        registered (get-in entry [:coordinator/config :solver-assignment-id])]
+    (cond
+      (nil? entry)
+      {:ok false :error/code :durable-coordinator-not-registered}
+      (not= adapter-key (:coordinator/adapter entry))
+      {:ok false :error/code :library-lane-registration-adapter-invalid}
+      (not (and (string? solver-assignment-id)
+                (re-matches #"(?:library-[A-Za-z0-9]+|f[0-9]+)-solver"
+                            solver-assignment-id)))
+      {:ok false :error/code :library-solver-assignment-invalid}
+      (not (and (string? reason) (not-empty reason)))
+      {:ok false :error/code :library-solver-assignment-reason-required}
+      (= registered solver-assignment-id)
+      {:ok true :status :already-migrated :entry entry}
+      (some? registered)
+      {:ok false :error/code :library-solver-assignment-conflict
+       :finding {:registered registered :requested solver-assignment-id}}
+      :else
+      (let [updated (-> entry
+                        (assoc-in [:coordinator/config :solver-assignment-id]
+                                  solver-assignment-id)
+                        (update-in [:coordinator/config :authority/migrations]
+                                   (fnil conj [])
+                                   {:migration/type :solver-assignment
+                                    :solver-assignment-id solver-assignment-id
+                                    :reason reason})
+                        (assoc :coordinator/entry-digest nil))
+            updated (assoc updated :coordinator/entry-digest
+                           (coordinator/entry-digest updated))]
+        (persistence/atomic-persist!
+         (Path/of registry-path (make-array String 0))
+         (assoc-in registry [:entries coordinator-id] updated))))))
 
 (defn migrate-pending-phase-intent!
   "Bind one legacy library intent to its already-persisted phase.
