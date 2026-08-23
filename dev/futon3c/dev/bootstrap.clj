@@ -17,6 +17,7 @@
             [futon3c.logic.ratchet :as ratchet]
             [futon3c.logic.snapshot :as snapshot]
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
+            [futon3c.apm.library-lane-coordinator]
             [futon3c.mission-control.service :as mcs]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.transport.http :as http]
