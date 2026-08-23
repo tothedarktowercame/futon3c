@@ -33,6 +33,20 @@
                                        other-warnings))
      :output (str output)}))
 
+(defn sorry-warning-lines
+  "Return source line numbers for Lean's canonical sorry diagnostics."
+  [problem-path output]
+  (mapv (comp parse-long second)
+        (re-seq (re-pattern
+                 (str (java.util.regex.Pattern/quote problem-path)
+                      ":([0-9]+):[0-9]+: warning: declaration uses `sorry`"))
+                (str output))))
+
+(defn sorry-warning-count [result]
+  (:sorry-warnings
+   (classify-output (:exit result)
+                    (str (:out result) "\n" (:err result)))))
+
 (defn acceptable-preflight? [observation]
   (and (= 0 (:exit observation)) (= 0 (:errors observation))
        (pos-int? (:sorry-warnings observation))

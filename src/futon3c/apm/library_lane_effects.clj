@@ -7,6 +7,7 @@
             [clojure.string :as str]
             [futon3c.apm.library-lane-launch :as launch]
             [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.toolchain-port :as toolchain-port]
             [futon3c.apm.workspace-lifecycle :as workspace])
   (:import [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]))
@@ -164,10 +165,6 @@
         {:ok true :agent-ids (mapv :agent-id responses)}
         (refusal :seat-restore-failed {:responses responses})))))
 
-(defn- sorry-count [result]
-  (count (re-seq #"declaration uses `sorry`"
-                 (str (:out result) "\n" (:err result)))))
-
 (defn- clean-verify? [problem-id solve verify]
   (and (map? verify)
        (= :frame-verify (:receipt/type verify))
@@ -211,19 +208,20 @@
           (refusal :outcome-library-diff-failed changed)
           (not (zero? (:exit rollup)))
           (refusal :outcome-library-elaboration-failed rollup)
-          (pos? (sorry-count rollup))
+          (pos? (toolchain-port/sorry-warning-count rollup))
           (refusal :outcome-library-carries-sorry
-                   {:sorry-warnings (sorry-count rollup)})
+                   {:sorry-warnings
+                    (toolchain-port/sorry-warning-count rollup)})
           (not (zero? (:exit problem)))
           (refusal :outcome-problem-elaboration-failed problem)
-          (zero? (sorry-count problem))
+          (zero? (toolchain-port/sorry-warning-count problem))
           {:verified-proof? true :remaining-sorries 0}
           (not library-produced?)
           (refusal :outcome-library-production-unverified)
           :else
           {:verified-library? true :library-sorry-warnings 0
            :problem-open? true
-           :remaining-sorries (sorry-count problem)
+           :remaining-sorries (toolchain-port/sorry-warning-count problem)
            :boundary "problem remains open after verified sorry-free library work"})))))))
 
 (defn live-effects

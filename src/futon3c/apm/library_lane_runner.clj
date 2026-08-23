@@ -5,7 +5,8 @@
             [clojure.string :as str]
             [futon3c.apm.bank-driver :as bank-driver]
             [futon3c.apm.library-lane :as lane]
-            [futon3c.apm.library-lane-phases :as lane-phases]))
+            [futon3c.apm.library-lane-phases :as lane-phases]
+            [futon3c.apm.toolchain-port :as toolchain-port]))
 
 (def library-card
   {:path "holes/labs/M-apm-demonstration/role-cards/codex-solver-library-v1.md"
@@ -44,12 +45,7 @@
       {:ok false :finding :lean-source-missing :path path}
       (let [result (run-fn corpus-root ["lake" "env" "lean" path])
             output (str (:out result) "\n" (:err result))
-            warning-lines (map #(Long/parseLong %)
-                               (map second
-                                    (re-seq (re-pattern
-                                             (str (java.util.regex.Pattern/quote path)
-                                                  ":([0-9]+):[0-9]+: warning: declaration uses `sorry`"))
-                                            output)))
+            warning-lines (toolchain-port/sorry-warning-lines path output)
             lines (vec (str/split-lines (slurp file)))
             targets (->> warning-lines
                          (keep #(declaration-before lines %))

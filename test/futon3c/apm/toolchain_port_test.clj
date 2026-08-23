@@ -17,3 +17,10 @@
                (sut/classify-output 1 "Main.lean:1: error: bad"))))
   (is (false? (sut/acceptable-preflight?
                (sut/classify-output 0 "")))))
+
+(deftest sorry-location-and-count-have-one-canonical-parser
+  (let [output (str "problems/p/lean/Main.lean:7:2: warning: declaration uses `sorry`\n"
+                    "problems/p/lean/Main.lean:18:4: warning: declaration uses `sorry`\n")]
+    (is (= [7 18]
+           (sut/sorry-warning-lines "problems/p/lean/Main.lean" output)))
+    (is (= 2 (sut/sorry-warning-count {:exit 0 :out output :err ""})))))

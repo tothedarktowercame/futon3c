@@ -10,7 +10,8 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
-            [futon3c.apm.bank :as bank])
+            [futon3c.apm.bank :as bank]
+            [futon3c.apm.toolchain-port :as toolchain-port])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
@@ -91,10 +92,6 @@
         ;; differs between `#print axioms` and a NameSet walk.
         (vec (concat (filter found bank/permitted-axioms)
                      (sort (remove (set bank/permitted-axioms) found))))))))
-
-(defn- sorry-warning-count [result]
-  (count (re-seq #"declaration uses `sorry`"
-                 (str (:out result) "\n" (:err result)))))
 
 (defn- read-status [candidate status-path]
   (let [file (io/file candidate status-path)]
@@ -213,7 +210,8 @@
                     :else
                     (let [rollup-result (execute-command run-fn candidate
                                                          rollup-command)
-                          rollup-sorries (sorry-warning-count rollup-result)]
+                          rollup-sorries
+                          (toolchain-port/sorry-warning-count rollup-result)]
                       (cond
                         (not (success? rollup-result))
                         (refuse request :post-merge-rollup-failed
@@ -228,7 +226,8 @@
                         :else
                         (let [status-result (execute-command run-fn candidate
                                                              status-command)
-                              status-sorries (sorry-warning-count status-result)]
+                              status-sorries
+                              (toolchain-port/sorry-warning-count status-result)]
                           (if-not (success? status-result)
                             (refuse request :post-merge-status-elaboration-failed
                                     (command-finding
