@@ -22,6 +22,17 @@
                  (assoc (:evidence report)
                         :command-own-exit (:command-own-exit report))
                  report)
+        mutations (:mutations report)
+        report (if (and (map? mutations)
+                        (= #{:made :revision :blob} (set (keys mutations)))
+                        (vector? (:made mutations))
+                        (string? (:revision mutations))
+                        (string? (:blob mutations)))
+                 (-> report
+                     (assoc :mutations (:made mutations)
+                            :problem-revision (:revision mutations)
+                            :problem-blob (:blob mutations)))
+                 report)
         lean (:lean report)]
     (if (and (map? lean)
              (sequential? (:warnings lean))
@@ -118,7 +129,13 @@
           (conj :lean-baseline-mismatch)
           (not (true? (:clean-before? report))) (conj :workspace-not-clean-before)
           (not (true? (:clean-after? report))) (conj :workspace-not-clean-after)
-          (seq (:mutations report)) (conj :preflight-mutations-observed))]
+          (seq (:mutations report)) (conj :preflight-mutations-observed)
+          (and (:problem-revision report)
+               (not= (:problem-revision request) (:problem-revision report)))
+          (conj :problem-revision-mismatch)
+          (and (:problem-blob report)
+               (not= (:problem-blob request) (:problem-blob report)))
+          (conj :problem-blob-mismatch))]
     (if (seq findings)
       {:ok false :error/code :preflight-terminal-invalid
        :findings findings :missing missing}

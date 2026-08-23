@@ -76,6 +76,19 @@
            (select-keys (get-in terminal [:report :lean])
                         [:exit :warnings :sorry-warnings :errors])))))
 
+(deftest structured-mutation-observation-is-bound-to-request-authority
+  (let [request (:request (sut/build-request inputs))
+        ticket (:ticket (sut/record-dispatch request {:ok true :job-id "structured"}))
+        job (assoc-in (successful-job request ticket) [:report :mutations]
+                      {:made [] :revision (:problem-revision request)
+                       :blob (:problem-blob request)})]
+    (is (:ok (sut/validate-terminal request ticket job)))
+    (is (= [:problem-revision-mismatch]
+           (:findings
+            (sut/validate-terminal
+             request ticket
+             (assoc-in job [:report :mutations :revision] "other")))))))
+
 (deftest unrelated-lean-warnings-do-not-conflate-with-the-sorry-baseline
   (let [request (:request (sut/build-request inputs))
         ticket (:ticket (sut/record-dispatch request {:ok true :job-id "warnings"}))
