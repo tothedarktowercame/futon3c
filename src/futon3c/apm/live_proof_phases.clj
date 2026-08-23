@@ -49,6 +49,24 @@
 (defn- address-request [body]
   (assoc body :dispatch/id (machine/ledger-digest [body])))
 
+(defn request-replay-compatible?
+  "Accept a persisted request when fresh authority differs only by migration
+   from a control-root-relative card path to its canonical absolute spelling.
+   Historical dispatch identity and submission token are never rewritten."
+  [current persisted]
+  (let [canonicalize
+        (fn [request]
+          (-> request
+              (update :role-card-path
+                      (fn [path]
+                        (when path
+                          (str (.normalize
+                                (.toAbsolutePath
+                                 (java.nio.file.Path/of
+                                  path (make-array String 0))))))))
+              (dissoc :dispatch/id :submission/token)))]
+    (= (canonicalize current) (canonicalize persisted))))
+
 (defn build-request
   [{:keys [kind action ledger unit role-card checkpoint-role-card seat workspace solve-receipt
            terminal-budget expected-agent-id]}]
@@ -256,6 +274,11 @@
     :or {agency-base "http://localhost:7070"
          max-rounds solver-rounds/default-max-rounds}}]
   (let [state (runtime/read-state state-path)
+        persisted-request (:request state)
+        request (if (and persisted-request
+                         (request-replay-compatible? request persisted-request))
+                  persisted-request
+                  request)
         effects
         {:kind kind :contract contract :request request :state state
     :announce-fn

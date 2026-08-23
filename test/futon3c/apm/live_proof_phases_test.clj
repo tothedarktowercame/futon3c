@@ -160,3 +160,18 @@
         bad (assoc-in (job :solve req) [:report :mutations] ["lakefile.lean"])]
     (is (some #{:mutation-outside-problem-file}
               (:findings (sut/validate-terminal :solve req {:job-id "job-1"} bad))))))
+(deftest persisted-relative-card-authority-replays-without-new-dispatch-identity
+  (let [base {:phase :preflight :role :proctor :problem-id "m94A03"
+              :role-card-blob "blob"}
+        relative "holes/labs/M-apm-demonstration/role-cards/proctor.md"
+        persisted (assoc base :role-card-path relative
+                         :dispatch/id "historical" :submission/token "old")
+        current (assoc base
+                       :role-card-path
+                       (str (.toAbsolutePath
+                             (java.nio.file.Path/of relative
+                                                    (make-array String 0))))
+                       :dispatch/id "new" :submission/token "new")]
+    (is (sut/request-replay-compatible? current persisted))
+    (is (not (sut/request-replay-compatible?
+              (assoc current :role-card-blob "changed") persisted)))))
