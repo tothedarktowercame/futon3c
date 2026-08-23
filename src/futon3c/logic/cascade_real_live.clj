@@ -451,12 +451,14 @@
           :relation "applied"})))
 
 (def ^:private graph-hyperedge-types
-  ["clock/clocked-on"
-   "cascade/cluster-member"
-   "cascade/hole-target"
+  ;; Longest cursor chain first: submitting the 971-row pattern walk after
+  ;; the short walks adds their latency directly to the critical path.
+  ["mission-scope/pattern"
    "code/v05/mined-move"
    "held/on-mission"
-   "mission-scope/pattern"
+   "cascade/cluster-member"
+   "clock/clocked-on"
+   "cascade/hole-target"
    "mine/meme"])
 
 (defn fetch-graph-sections
