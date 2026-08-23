@@ -260,3 +260,70 @@ hung JDBC, and a leaked permit without another thread dump.
 No runtime repair, signal, restart, heap dump, source-code change, or network
 load test was performed. The only repository change from this investigation is
 this report.
+
+## Repair performed (2026-08-23, ams-claude session 012zxpti)
+
+Code: futon1b `4cd17bc` (repair), `8aba53c` (validate hyperedge window
+before the permit; metaspace in /health), `bf875b0` (API-CONTRACT).
+Regression: `clojure -M:node -m test-evidence-deadline` (22 checks);
+test-json, test-a1a2 (42/42), test-candidate-query, test-text-search all pass.
+
+What landed, against the five proposals:
+
+1. Page query is one `(fn [p-type … p-cursor-at p-cursor-id p-limit] …)`
+   XTQL form — XTQL `limit` accepts a param (xtdb.xtql.plan 2.1.0) — so the
+   compiled text is stable across cursors; two variants (first/after-cursor)
+   × the set of present filters. `evidence/subject` is projected only for
+   subject filters. `/count`'s scan and hydration share the same path.
+2. `futon1b-xt/timed-q`: the node's own JDBC connection with
+   `setNetworkTimeout` (timeout+5s) and `setQueryTimeout`. **Measured:
+   XTDB 2.1.0 pgwire does not act on pgjdbc's cancel**, so the effective
+   deadline is 65 s for the 60 s default; once the socket drops the
+   server-side scan stops within ~3 s (probe: process CPU → 0, no operator
+   threads). Expiry → 504 `:query-deadline-exceeded`, permit released.
+3. `bounded-window` scans ≤ 20,000 projected rows per request; past that it
+   returns `:incomplete true` + cursor. The wedged shape
+   (`type=coordination&subject-type=portfolio&subject-id=global`, 157,336
+   coordination rows) now answers in 14.8 s with 0 matches / 20,000 scanned
+   instead of never.
+4. `/hyperedges` `limit>1000` → 400 (outside the permit); cache only ≤ 1000.
+5. `-Xmx` untouched.
+
+Observability: holder registry + start/end/timeout log lines per admitted
+read (`[futon1b-expensive-read]`); cheap `/health` carries permits, waiters,
+holders with age, oldest-holder-ms, admission stats, heap, metaspace, GC.
+
+### Restart — not the controlled one
+
+While taking the before-census for `restart-futon1b-detached.sh`
+(`/health?deep=true`, 240 s timeout) the old JVM (PID 1082659, 3.97 GB /
+4 GB) hit `OutOfMemoryError` at 11:06:02 and `ExitOnOutOfMemoryError` ended
+it. My census request was almost certainly the last straw. systemd restarted
+the unit at 11:06:13 (PID 3639998) against source already on disk
+(`4cd17bc` written 11:00:50), so the live service runs the repair;
+`8aba53c`'s cosmetic change is not live until the next restart. The script's
+before-census was unobtainable from the wedged JVM by construction — that is
+a gap in the script for this failure mode, left as-is.
+
+Post-restart verification (PID 3639998):
+- `/health` up after ~35 s; permits 2/2, holders [].
+- evidence `limit=100`: 1.38 s; hyperedges `limit=1000`: 28.8 s;
+  `limit=10000`: 400; `/count?type=coordination`: 9.5 s → 157,336.
+- `GC.class_histogram` across 18 distinct-cursor/filter pages: Arrow `Field`
+  1,509,994 → 1,509,883 → 1,511,572 (flat; wedge had 9,307,005).
+  `PageIndexKey` constant 361,146. Post-GC heap **993 MB** (README baseline
+  ~976 MB). `DynamicClassLoader` 53,212 → 56,253 (~130/request) with
+  Metaspace 471 MB used — the watch-metric, now in `/health`.
+- `scripts/fts-status.py`: store 159,492 = index 159,492, delta +0.
+  Fresh writes stamped 11:09–11:10 (write path confirmed).
+
+### Follow-ups (not done)
+
+- The futon3c caller issuing the wedged shape must honour `:incomplete` /
+  `:next-cursor`; otherwise it will read 0 entries as "none". Better: push
+  `subject-type`/`subject-id` down into the XTQL where on the nested map so
+  the scan bound is rarely hit.
+- `restart-futon1b-detached.sh` aborts when the before-census cannot be
+  taken, which is exactly the wedged state; decide whether an explicit
+  opt-in (`…ALLOW_NO_CENSUS`) is acceptable.
+- Watch `:metaspace-used-mb` for monotonic growth.
