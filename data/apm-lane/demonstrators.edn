@@ -1,7 +1,7 @@
 {:schema 1
  :demonstrators
- [{:problem-id "t00J02" :success? false :last-ruling nil}
-  {:problem-id "t01A03" :success? false :last-ruling nil}
-  {:problem-id "t02A04" :success? false :last-ruling nil}
-  {:problem-id "t94A07" :success? false :last-ruling nil}
-  {:problem-id "t03J05" :success? false :last-ruling nil}]}
+ [{:problem-id "t01A03" :success? false :last-ruling nil}
+  {:problem-id "t91A05" :success? false :last-ruling nil}
+  {:problem-id "t00A02" :success? false :last-ruling nil}
+  {:problem-id "t00J02" :success? false :last-ruling nil}
+  {:problem-id "t96J06" :success? false :last-ruling nil}]}
