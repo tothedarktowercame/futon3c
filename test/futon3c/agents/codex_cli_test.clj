@@ -308,6 +308,12 @@
              :item {:type "tool_call"
                     :name "read_file"
                     :arguments "not-a-map"}}))))
+  (testing "completed shell calls retain their output"
+    (is (= {:type "tool_result" :results [{:content "compiled\n"}]}
+           (codex-cli/event->ledger-event
+            {:type "item.completed"
+             :item {:type "command_execution"
+                    :aggregated_output "compiled\n"}}))))
   (testing "completed assistant messages become meaningful ledger text"
     (is (= {:type "text" :text "Finished the change."}
            (codex-cli/event->ledger-event

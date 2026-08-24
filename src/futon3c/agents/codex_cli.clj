@@ -101,6 +101,14 @@
                           (map? arguments) (assoc :input arguments))]})
 
       (and (= "item.completed" event-type)
+           (= "command_execution" item-type))
+      (when-let [output (some-> (or (:aggregated_output item)
+                                    (:output item))
+                                str not-empty)]
+        {:type "tool_result"
+         :results [{:content output}]})
+
+      (and (= "item.completed" event-type)
            (= "agent_message" item-type))
       (when-let [text (meaningful-agent-text (extract-agent-text item))]
         {:type "text" :text text})

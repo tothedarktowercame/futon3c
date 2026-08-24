@@ -1949,6 +1949,28 @@
       (is (= "activation-request-mismatch" (:error (parse-body response))))
       (is (zero? @invocations)))))
 
+(deftest invoke-job-tool-use-retains-bounded-tool-output
+  (let [ledger-var (var-get #'http/!invoke-jobs-ledger)
+        before @ledger-var
+        job-id "tool-output-retention-test"]
+    (try
+      (reset! ledger-var
+              {:version 1 :job-order [job-id]
+               :jobs {job-id {:job-id job-id :event-seq 0 :events []}}})
+      (#'http/record-job-stream-event!
+       job-id {:type "tool_use" :tools ["run_shell"]
+               :tool_details [{:name "run_shell"
+                               :input {:command "lake env lean Main.lean"}}]})
+      (#'http/record-job-stream-event!
+       job-id {:type "tool_result"
+               :results [{:content "Main.lean:17: error: type mismatch"}]})
+      (let [event (-> @ledger-var :jobs (get job-id) :events first)]
+        (is (= "tool_use" (:type event)))
+        (is (= ["run_shell lake env lean Main.lean"] (:previews event)))
+        (is (= ["Main.lean:17: error: type mismatch"] (:output event))))
+      (finally
+        (reset! ledger-var before)))))
+
 (deftest legacy-unbound-invoke-request-requires-explicit-audited-binding
   (testing "an old queued job can be bound once without weakening activation"
     (let [authority {:job-id "legacy-unbound-1"

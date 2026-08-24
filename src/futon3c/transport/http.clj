@@ -349,8 +349,8 @@
 
 (defn- trim-stream-event
   "Compact a live invoke event for the durable job ledger. Text is
-   truncated; tool inputs reduce to short previews; tool_result is
-   dropped (the tool_use preview is the observability unit)."
+   truncated; tool inputs reduce to short previews; tool outputs retain a
+   bounded first/last window and are joined to the preceding tool_use."
   [event]
   (let [etype (str (:type event))]
     (case etype
@@ -391,6 +391,17 @@
                                                   hint))]
                                      (str (:name d) (when hint (str " " hint)))))
                                  (or (:tool_details event) []))}}
+      "tool_result"
+      (let [bounded
+            (fn [value]
+              (let [s (str (or value ""))]
+                (if (<= (count s) 4608)
+                  s
+                  (str (subs s 0 512) " …[trimmed]… "
+                       (subs s (- (count s) 4096))))))]
+        {:event-type "tool_result"
+         :payload {:outputs (mapv (comp bounded :content)
+                                  (or (:results event) []))}})
       nil)))
 
 (defn- record-job-stream-event!
@@ -405,7 +416,17 @@
            (fn [ledger]
              (if-let [job (get-in ledger [:jobs job-id])]
                (assoc-in ledger [:jobs job-id]
-                         (append-job-event job event-type payload))
+                         (if (= "tool_result" event-type)
+                           (let [events (:events job)
+                                 idx (last (keep-indexed
+                                            (fn [i e]
+                                              (when (= "tool_use" (:type e)) i))
+                                            events))]
+                             (if (some? idx)
+                               (assoc-in job [:events idx :output]
+                                         (:outputs payload))
+                               job))
+                           (append-job-event job event-type payload)))
                ledger)))
     ;; WS doorbell (2026-07-05): tell connected observers an event landed so
     ;; follow-mode can poll NOW instead of on its fallback interval. Tiny
