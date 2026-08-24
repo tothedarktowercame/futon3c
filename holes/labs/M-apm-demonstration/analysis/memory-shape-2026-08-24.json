@@ -1,0 +1,390 @@
+{
+ "substrate": "http://127.0.0.1:7073",
+ "since": "2026-08-10",
+ "universe": {
+  "declared-math-patterns": 109,
+  "substrate-math-patterns": 108,
+  "declared-but-absent-from-substrate": [
+   "math-formalization-CA/complex-arg-of-cpow-root",
+   "math-formalization-CA/schwarz-disk-automorphism-formula",
+   "math-formalization-CA/surj-via-oriented-root-preimage"
+  ],
+  "in-substrate-but-undeclared": [
+   "math-formalization/replace-enumeration-with-structural-counting",
+   "math-strategy/construct-through-a-finite-correspondence"
+  ],
+  "all-substrate-patterns": 1358,
+  "pattern-count-is-ceiling": false,
+  "memories": 921,
+  "memory-count-is-ceiling": false,
+  "memory/assert-edges": 600
+ },
+ "attachment": {
+  "memories-with-edge": 599,
+  "status": {
+   "reviewed": 250,
+   "None": 326,
+   "proposed": 23
+  },
+  "memories-since-with-edge": 276,
+  "memories-since-total": 339
+ },
+ "graph-all-edges": {
+  "patterns-with-memories": 56,
+  "memories-attached": 273,
+  "patterns-with-exactly-1-memory (bespoke)": 27,
+  "patterns-with->=2 (sharing count)": 29,
+  "memories-on->=2-patterns (multi-attachment)": 16,
+  "top-patterns": [
+   [
+    51,
+    "math-strategy/missing-dependency-protocol"
+   ],
+   [
+    42,
+    "math-formalization-CA/measure-integration-api"
+   ],
+   [
+    25,
+    "math-formalization-CV/holomorphic-disk-api"
+   ],
+   [
+    23,
+    "math-formalization/tactic-algebra-interference"
+   ],
+   [
+    18,
+    "math-strategy/corpus-trust-protocol"
+   ],
+   [
+    10,
+    "math-formalization/notation-semantics-traps"
+   ]
+  ],
+  "components": 44,
+  "largest-component-nodes": 75,
+  "patterns-spanning->=2-problems": 19,
+  "spanning-examples": {
+   "math-formalization/notation-semantics-traps": [
+    "a01A03",
+    "a01J06",
+    "a02J03",
+    "a02J07",
+    "a92J07",
+    "a93A02",
+    "a93A03",
+    "m03J01",
+    "m99J06"
+   ],
+   "math-formalization/tactic-algebra-interference": [
+    "a01J05",
+    "a92J05",
+    "a95A01",
+    "a95J03"
+   ],
+   "math-strategy/proof-architecture": [
+    "a92J02",
+    "a95A04",
+    "a95A06",
+    "a95J05",
+    "m93J06"
+   ],
+   "math-formalization/separate-proof-transfer-from-artifact-replay": [
+    "a01J05",
+    "a01J06"
+   ],
+   "math-formalization-CV/holomorphic-disk-api": [
+    "a01A07",
+    "a01A12",
+    "a01J05",
+    "a01J06",
+    "a92J04",
+    "a93J07",
+    "a94A09",
+    "a95A05",
+    "a95A08",
+    "a95J01"
+   ],
+   "math-formalization/rewrite-orientation": [
+    "a01J06",
+    "a95A04",
+    "m94A02"
+   ]
+  }
+ },
+ "graph-reviewed-only": {
+  "patterns-with-memories": 51,
+  "memories-attached": 250,
+  "patterns-with-exactly-1-memory (bespoke)": 23,
+  "patterns-with->=2 (sharing count)": 28,
+  "memories-on->=2-patterns (multi-attachment)": 14,
+  "top-patterns": [
+   [
+    48,
+    "math-strategy/missing-dependency-protocol"
+   ],
+   [
+    42,
+    "math-formalization-CA/measure-integration-api"
+   ],
+   [
+    24,
+    "math-formalization-CV/holomorphic-disk-api"
+   ],
+   [
+    23,
+    "math-formalization/tactic-algebra-interference"
+   ],
+   [
+    12,
+    "math-strategy/corpus-trust-protocol"
+   ],
+   [
+    9,
+    "math-formalization-CV/entire-and-singularity-api"
+   ]
+  ],
+  "components": 41,
+  "largest-component-nodes": 63,
+  "patterns-spanning->=2-problems": 19,
+  "spanning-examples": {
+   "math-formalization/notation-semantics-traps": [
+    "a01A03",
+    "a01J06",
+    "a02J03",
+    "a02J07",
+    "a92J07",
+    "a93A02",
+    "a93A03",
+    "m03J01",
+    "m99J06"
+   ],
+   "math-formalization/tactic-algebra-interference": [
+    "a01J05",
+    "a92J05",
+    "a95A01",
+    "a95J03"
+   ],
+   "math-strategy/proof-architecture": [
+    "a92J02",
+    "a95A04",
+    "a95A06",
+    "a95J05",
+    "m93J06"
+   ],
+   "math-formalization/separate-proof-transfer-from-artifact-replay": [
+    "a01J05",
+    "a01J06"
+   ],
+   "math-formalization-CV/holomorphic-disk-api": [
+    "a01A07",
+    "a01A12",
+    "a01J05",
+    "a01J06",
+    "a92J04",
+    "a93J07",
+    "a94A09",
+    "a95A05",
+    "a95A08",
+    "a95J01"
+   ],
+   "math-formalization/rewrite-orientation": [
+    "a01J06",
+    "a95A04",
+    "m94A02"
+   ]
+  }
+ },
+ "hygiene-all": {
+  "n": 921,
+  "problem-id-in-name/hook/body": 294,
+  "no-pattern-attachment": 420,
+  "proof-text (>3 ':= by')": 7,
+  "body>4KB": 11,
+  "apm_-identifier": 35,
+  "Main.lean:N": 5,
+  "hook-starts-with-problem-id": 22
+ },
+ "hygiene-since": {
+  "n": 339,
+  "problem-id-in-name/hook/body": 203,
+  "no-pattern-attachment": 63,
+  "proof-text (>3 ':= by')": 7,
+  "body>4KB": 9,
+  "apm_-identifier": 34,
+  "Main.lean:N": 5,
+  "hook-starts-with-problem-id": 22
+ },
+ "hygiene-since-by-author": {
+  "ams-scribe-1": {
+   "n": 3,
+   "problem-id-in-name/hook/body": 3
+  },
+  "claude-2": {
+   "n": 4,
+   "no-pattern-attachment": 4
+  },
+  "claude-7": {
+   "n": 13,
+   "problem-id-in-name/hook/body": 11,
+   "hook-starts-with-problem-id": 2
+  },
+  "claude-7-scribe-pass": {
+   "n": 5,
+   "problem-id-in-name/hook/body": 4
+  },
+  "claude-8": {
+   "n": 3,
+   "no-pattern-attachment": 3
+  },
+  "codex-5": {
+   "n": 9,
+   "no-pattern-attachment": 9
+  },
+  "f10-scribe": {
+   "n": 5,
+   "no-pattern-attachment": 1
+  },
+  "f11-scribe": {
+   "n": 4
+  },
+  "f12-guide": {
+   "n": 5,
+   "no-pattern-attachment": 4,
+   "problem-id-in-name/hook/body": 1,
+   "apm_-identifier": 1,
+   "hook-starts-with-problem-id": 1
+  },
+  "f12-scribe": {
+   "n": 5,
+   "problem-id-in-name/hook/body": 3
+  },
+  "f13-scribe": {
+   "n": 7
+  },
+  "f15-guide": {
+   "n": 4,
+   "no-pattern-attachment": 3,
+   "problem-id-in-name/hook/body": 1
+  },
+  "f15-scribe": {
+   "n": 3
+  },
+  "f17-guide": {
+   "n": 7,
+   "problem-id-in-name/hook/body": 2
+  },
+  "f17-scribe": {
+   "n": 6,
+   "problem-id-in-name/hook/body": 6,
+   "hook-starts-with-problem-id": 1
+  },
+  "f21-scribe": {
+   "n": 3,
+   "problem-id-in-name/hook/body": 2,
+   "hook-starts-with-problem-id": 1
+  },
+  "f22-scribe": {
+   "n": 4,
+   "problem-id-in-name/hook/body": 4,
+   "apm_-identifier": 3,
+   "hook-starts-with-problem-id": 2
+  },
+  "f25-scribe": {
+   "n": 8,
+   "problem-id-in-name/hook/body": 8,
+   "hook-starts-with-problem-id": 1
+  },
+  "f27-scribe": {
+   "n": 4,
+   "apm_-identifier": 2,
+   "problem-id-in-name/hook/body": 2
+  },
+  "f28-guide": {
+   "n": 4,
+   "apm_-identifier": 3,
+   "problem-id-in-name/hook/body": 2
+  },
+  "f28-promotion-proctor": {
+   "n": 11,
+   "no-pattern-attachment": 11
+  },
+  "f28-scribe": {
+   "n": 5,
+   "apm_-identifier": 4,
+   "problem-id-in-name/hook/body": 1
+  },
+  "f29-guide": {
+   "n": 7,
+   "proof-text (>3 ':= by')": 4,
+   "body>4KB": 4,
+   "problem-id-in-name/hook/body": 5,
+   "apm_-identifier": 7,
+   "Main.lean:N": 5
+  },
+  "f29-promotion-proctor": {
+   "n": 10,
+   "no-pattern-attachment": 10
+  },
+  "f29-scribe": {
+   "n": 6,
+   "apm_-identifier": 3,
+   "problem-id-in-name/hook/body": 1
+  },
+  "f30-guide": {
+   "n": 3,
+   "proof-text (>3 ':= by')": 3,
+   "body>4KB": 3,
+   "problem-id-in-name/hook/body": 3,
+   "apm_-identifier": 3
+  },
+  "f30-promotion-proctor": {
+   "n": 5,
+   "no-pattern-attachment": 5
+  },
+  "f30-scribe": {
+   "n": 4,
+   "apm_-identifier": 2,
+   "problem-id-in-name/hook/body": 1
+  },
+  "f8-scribe": {
+   "n": 4,
+   "apm_-identifier": 1,
+   "no-pattern-attachment": 1
+  },
+  "f9-scribe": {
+   "n": 5,
+   "no-pattern-attachment": 4
+  },
+  "problem-peripheral": {
+   "n": 9,
+   "problem-id-in-name/hook/body": 8,
+   "hook-starts-with-problem-id": 5
+  },
+  "zai-1": {
+   "n": 114,
+   "problem-id-in-name/hook/body": 114,
+   "hook-starts-with-problem-id": 4,
+   "apm_-identifier": 2
+  },
+  "zai-3": {
+   "n": 25,
+   "problem-id-in-name/hook/body": 7,
+   "hook-starts-with-problem-id": 2
+  }
+ },
+ "use": {
+  "distinct-surfaced": 29,
+  "distinct-used": 18,
+  "used-in->=2-frames": [],
+  "used-memories-that-are-proof-text": [
+   "e-f0db6e27-c64d-4576-bc23-22bd42a97481",
+   "e-20851bde-ba9a-4883-8b4e-0c2f0f741fe9",
+   "e-83ece32c-9e01-42aa-86d8-0a5a6e6265f5",
+   "e-021bf80a-b18a-4f0b-9dc5-e158108521cf",
+   "e-c86a7d45-02e7-494b-b929-d8eddeef074f",
+   "e-f6b4c56b-67f9-4cef-b094-1de22bad9588"
+  ],
+  "used-but-unattached": []
+ }
+}

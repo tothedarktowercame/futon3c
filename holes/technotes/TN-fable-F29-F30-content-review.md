@@ -140,8 +140,11 @@ of those, 11 are byte-identical — 5 are the base file's own, and **6 solver
 bridge lemmas** (`zeroCount`, `divisor_eq_analyticOrderNatAt`,
 `divisor_nonneg`, `logCounting_top_eq_zero`,
 `logCounting_zero_eq_divisor_logCounting`, `proximity_top_le`) arrived
-verbatim by a channel I did not trace (not the four `:used-ids`; possibly
-the memory-search receipts or the Guide's intervention text). The remaining
+verbatim through `e-20851bde` — a proof-text memory deposited by
+`f30-guide` (one of three such, 6–8 KB, 8+ tactic blocks each) and listed
+in the student's `:used-ids`. *[Corrected in place 2026-08-24T20:40Z: the
+first version of this note said the channel was untraced; the
+`memory_shape.py` reading found it.]* The remaining
 proofs, including the Jensen bound, the `n(R) log 2 ≤ N(2R)` step and all of
 the dyadic argument, are the student's own and compile here sorry-free.
 
