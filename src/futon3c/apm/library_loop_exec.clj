@@ -25,6 +25,8 @@
 (defn- command-evidence [run-command command]
   (let [result (run-command command)]
     {:command command
+     :executed/argv (:argv result)
+     :cwd (:cwd result)
      :exit (:exit result)
      :stdout (or (:stdout result) "")
      :stderr (or (:stderr result) "")}))
@@ -92,6 +94,7 @@
                     :receipt/path (str "receipts/gate/" (:id intent) ".edn")
                     :plan plan
                     :registration registration
+                    :observation/evidence (:observation/commands observation)
                     :commands commands}]
         (runner/append-receipt! run-dir intent result)
         (runner/reconcile! run-dir (constantly nil))))))
@@ -122,6 +125,30 @@
     (runner/append-receipt! run-dir intent decision)
     (runner/reconcile! run-dir (constantly nil))))
 
+(defn- settle-bank! [run-dir state intent slate-path result]
+  (runner/append-receipt! run-dir intent result)
+  (when slate-path
+    (slate/apply-status! slate-path (:problem-id state) result))
+  (runner/reconcile! run-dir (constantly nil)))
+
+(defn- status-and-settle!
+  [run-dir state intent {:keys [observe-bank run-command status-command slate-path]}
+   evidence]
+  (let [status-result (command-evidence run-command (status-command intent))
+        observed (observe-bank intent)]
+    (if (and (zero? (:exit status-result))
+             (:landed? observed)
+             (= (:head-sha intent) (:bank-sha observed)))
+      (settle-bank! run-dir state intent slate-path
+                    (merge {:outcome :banked
+                            :bank-sha (:bank-sha observed)
+                            :ruling (:ruling observed)
+                            :status-sha (:status-sha observed)
+                            :status-command status-result}
+                           evidence))
+      {:status :bank-not-observed :status-command status-result
+       :observed observed})))
+
 (defn run-bank!
   "Reconciles or performs one exact bank. `observe-bank` must report whether
   the intent's exact candidate is already the trunk head. Rebuild commands run
@@ -134,7 +161,8 @@
                 :bank)
         existing-receipt (runner/read-receipt run-dir intent)
         landed (when-not existing-receipt (observe-bank intent))]
-    (if existing-receipt
+    (cond
+      existing-receipt
       (do
         (when (and slate-path
                    (= (:head-sha intent)
@@ -142,15 +170,23 @@
           (slate/apply-status! slate-path (:problem-id state)
                                (:result existing-receipt)))
         (runner/reconcile! run-dir (constantly nil)))
-      (if (and (:landed? landed) (= (:head-sha intent) (:bank-sha landed)))
+
+      (and (:landed? landed) (= (:head-sha intent) (:bank-sha landed)))
       (let [result {:outcome :banked
                     :bank-sha (:bank-sha landed)
                     :ruling (:ruling landed)
                     :status-sha (:status-sha landed)}]
-        (runner/append-receipt! run-dir intent result)
-        (when slate-path
-          (slate/apply-status! slate-path (:problem-id state) result))
-        (runner/reconcile! run-dir (constantly nil)))
+        (settle-bank! run-dir state intent slate-path result))
+
+      (:candidate-landed? landed)
+      (status-and-settle! run-dir state intent
+                          {:observe-bank observe-bank
+                           :run-command run-command
+                           :status-command status-command
+                           :slate-path slate-path}
+                          {:restart/recovered-after-mutation true})
+
+      :else
       (let [observation (observe state)
             plan (rebuild/plan observation)
             builds (execute-commands run-command (:commands plan))]
@@ -159,26 +195,13 @@
           (let [mutation (command-evidence run-command (bank-command intent))]
             (if-not (zero? (:exit mutation))
               {:status :bank-mutation-failed :mutation mutation}
-              (let [status-result (command-evidence run-command
-                                                    (status-command intent))
-                    observed (observe-bank intent)]
-                (if (and (zero? (:exit status-result))
-                         (:landed? observed)
-                         (= (:head-sha intent) (:bank-sha observed)))
-                  (let [result {:outcome :banked
-                                :bank-sha (:bank-sha observed)
-                                :ruling (:ruling observed)
-                                :status-sha (:status-sha observed)
-                                :plan plan
-                                :builds builds
-                                :mutation mutation
-                                :status-command status-result}]
-                    (runner/append-receipt! run-dir intent result)
-                    (when slate-path
-                      (slate/apply-status! slate-path (:problem-id state) result))
-                    (runner/reconcile! run-dir (constantly nil)))
-                  {:status :bank-not-observed
-                   :mutation mutation :status-command status-result}))))))))))
+              (status-and-settle! run-dir state intent
+                                  {:observe-bank observe-bank
+                                   :run-command run-command
+                                   :status-command status-command
+                                   :slate-path slate-path}
+                                  {:plan plan :builds builds
+                                   :mutation mutation}))))))))
 
 (defn read-edn-file [path]
   (with-open [reader (PushbackReader. (io/reader path))]
@@ -236,6 +259,9 @@
       "resume" (resume-one! root problem-id deps)
       "checkpoint" (request-review! (run-dir root problem-id)
                                      (read-edn-file (first rest)))
+      "apply-review" (apply-review! (run-dir root problem-id)
+                                    (read-edn-file (first rest))
+                                    (read-edn-file (second rest)))
       "bank" (run-bank! (run-dir root problem-id) deps)
       (throw (ex-info "unknown-library-loop-command" {:command command})))))
 
@@ -253,9 +279,12 @@
 (defn -main [& args]
   (let [root (or (System/getenv "LIBRARY_LOOP_ROOT")
                  (.getCanonicalPath (io/file ".")))
-        problem-id (second args)]
+        problem-id (second args)
+        external? (contains? #{"resume" "bank"} (first args))]
     (try
-      (println (pr-str (cli! args (adapter-deps root problem-id))))
+      (println (pr-str (cli! args (if external?
+                                    (adapter-deps root problem-id)
+                                    {:root root}))))
       (catch Throwable ex
         (binding [*out* *err*]
           (println (pr-str {:error (.getMessage ex)

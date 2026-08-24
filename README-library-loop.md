@@ -1,0 +1,127 @@
+# Files-only Library Loop
+
+The Library Loop runs one persistent Codex session against one persistent
+`apm-lean` Git worktree. It does not use the futon3c JVM, frames, leases,
+roles, or a coordinator. State and immutable receipts live under
+`data/apm-lane/runs/PROBLEM/`.
+
+## Environment
+
+Run from the canonical futon3c checkout after these commits have landed:
+
+```sh
+export LIBRARY_LOOP_ROOT=/absolute/path/to/futon3c
+export LIBRARY_LOOP_ADAPTER_NS=futon3c.apm.library-loop-adapter
+```
+
+The adapter never invokes a shell command string and never pushes a remote.
+Every process receives an argv vector and explicit cwd.
+
+## Initialize
+
+The solver workspace must be an absolute path to the root of an `apm-lean`
+Git worktree. `BASE` is the configured trunk head and `HEAD` is the initial
+solver-worktree head.
+
+```sh
+scripts/library-loop init t00J02 /absolute/apm-lean-solver BASE HEAD
+```
+
+Create `data/apm-lane/runs/t00J02/standing-goal.md`, then create
+`config.edn`:
+
+```clojure
+{:schema 1
+ :trunk-worktree "/absolute/apm-lean-trunk"
+ :trunk-branch "repair/m97A06-energy-regularity"
+ :codex-command ["/absolute/bin/codex" "exec" "{prompt-text}"]
+ :lake-executable "/absolute/bin/lake"
+ :audit-command ["/absolute/bin/apm-axiom-audit" "{base}" "{head}" "{run-dir}"]
+ :status-command ["/absolute/bin/apm-status-recompute" "{head}" "{run-dir}"]
+ :checkpoint-cadence 20
+ :slate-path "/absolute/futon3c/data/apm-lane/demonstrators.edn"}
+```
+
+The audit command runs in the solver workspace and must atomically create
+`RUN-DIR/audits/HEAD.edn`:
+
+```clojure
+{:schema 1
+ :head-sha "HEAD"
+ :modules
+ {"ConstructionTargets.Module"
+  {:ok? true :head-sha "HEAD" :declarations [declaration.names]}}}
+```
+
+The status command runs in the trunk worktree after the exact fast-forward and
+must atomically create `RUN-DIR/status/HEAD.edn`:
+
+```clojure
+{:schema 1
+ :candidate-sha "HEAD"
+ :ruling :partial-banked             ; or :closed
+ :status-sha "digest-or-commit"}
+```
+
+Problem registration is read from
+`WORKSPACE/problems/PROBLEM/targets.edn`. It is a vector of unique records:
+
+```clojure
+[{:module "ConstructionTargets.Module"
+  :created-turn 20
+  :status :active
+  :obligation :problem/stable-obligation}]
+```
+
+Missing or stale audit evidence, missing ledgers, dirty/racing worktrees, and
+divergent SHAs fail closed.
+
+`{prompt-text}` is replaced with the exact contents of `standing-goal.md` as
+one argv item. `{prompt}` is also available when a vetted Codex wrapper accepts
+a file path. To retain one Codex session, configure the argv with the explicit
+durable session id, for example
+`["codex" "exec" "resume" "SESSION-ID" "{prompt-text}"]`; never use a global
+`--last` selector in an unattended multi-run environment.
+
+## Operate one transition at a time
+
+```sh
+scripts/library-loop status t00J02
+scripts/library-loop resume t00J02
+```
+
+`resume` performs at most one turn or gate. At checkpoint cadence it returns
+`:checkpoint-required`; it never spins or approves its own work.
+
+Write the structured checkpoint EDN and emit the independent-review request:
+
+```sh
+scripts/library-loop checkpoint t00J02 /absolute/strategy-01.edn
+```
+
+The request appears under `RUN-DIR/review-requests/`. A different reviewer
+writes a review EDN containing the exact request digest, obligation id,
+`:ruling`, nonempty `:rationale`, and `:approved?`. Apply both files:
+
+```sh
+scripts/library-loop apply-review t00J02 \
+  /absolute/strategy-01.edn /absolute/review-01.edn
+```
+
+Only an exact state-bound approval opens banking:
+
+```sh
+scripts/library-loop bank t00J02
+```
+
+Banking rebuilds the base-to-candidate ConstructionTargets closure and problem
+`Main.lean`, verifies clean worktrees and ancestry, and executes only
+`git merge --ff-only CANDIDATE` in the configured trunk. It never pushes.
+
+## Interrupted turns
+
+`codex exec` has no reliable external job query in this adapter. If the runner
+dies while `:turn-running` and no durable turn receipt exists, `resume` does
+not launch another turn. It records `:turn-observation-unavailable` and pauses.
+An operator must inspect the Codex output/worktree and record an explicit
+recovery disposition; Git cleanliness is never treated as completion.
