@@ -51,6 +51,81 @@
                      :expected action :intent intent})))
   intent)
 
+(def ^:private gate-diagnostic-keys
+  #{:module :created-turn :creation-commit-sha :turn-receipt-id
+    :turn-head-sha :problem-id :current-turn :expected :observed
+    :expected-base :expected-head :observed-head})
+
+(defn- bounded-scalar [value]
+  (cond
+    (or (nil? value) (keyword? value) (integer? value) (boolean? value)) value
+    (and (string? value) (<= (count value) 256)) value
+    :else ::excluded))
+
+(defn- bounded-diagnostic [data]
+  (into (sorted-map)
+        (keep (fn [key]
+                (when (contains? data key)
+                  (let [value (bounded-scalar (get data key))]
+                    (when-not (= ::excluded value) [key value])))))
+        (sort gate-diagnostic-keys)))
+
+(defn- typed-gate-refusal-result [state intent ex cadence]
+  (let [data (ex-data ex)
+        finding (:finding data)]
+    (when-not (keyword? finding)
+      (throw ex))
+    (let [diagnostic (bounded-diagnostic data)
+          binding {:schema 1
+                   :problem-id (:problem-id state)
+                   :turn (:turn state)
+                   :base-sha (:base-sha state)
+                   :head-sha (:head-sha state)
+                   :intent-id (:id intent)}]
+      {:outcome :red
+       :finding finding
+       :diagnostic diagnostic
+       :gate/binding binding
+       :failure-fingerprint (sha256 [finding diagnostic binding])
+       :checkpoint-due? (zero? (mod (:turn state) cadence))
+       :receipt/path (str "receipts/gate/" (:id intent) ".edn")})))
+
+(defn- compute-gate-result [state intent observe run-command cadence]
+  (let [observation (observe state)
+        plan (rebuild/plan observation)
+        registration-input (assoc (select-keys observation
+                                                [:head-sha :files :targets
+                                                 :axiom-audits
+                                                 :target-provenance])
+                                  :problem-id (:problem-id state)
+                                  :turn (:turn state)
+                                  :changes (:changes plan))
+        registration (try
+                       (targets/check registration-input)
+                       (catch clojure.lang.ExceptionInfo ex
+                         {:outcome :red
+                          :finding (:finding (ex-data ex))
+                          :snapshot (:snapshot (ex-data ex))}))
+        commands (if (= :green (:outcome registration))
+                   (execute-commands run-command (:commands plan))
+                   [])
+        green? (and (= :green (:outcome registration))
+                    (all-green? commands))
+        finding (when-not green?
+                  (or (:finding registration) :command-failed))
+        fingerprint (when finding
+                      (sha256 [finding (:snapshot registration)
+                               (mapv #(select-keys % [:command :exit :stderr]) commands)
+                               (:inputs plan)]))]
+    {:outcome (if green? :green :red)
+     :failure-fingerprint fingerprint
+     :checkpoint-due? (zero? (mod (:turn state) cadence))
+     :receipt/path (str "receipts/gate/" (:id intent) ".edn")
+     :plan plan
+     :registration registration
+     :observation/evidence (:observation/commands observation)
+     :commands commands}))
+
 (defn run-gate!
   "Runs or settles one persisted gate intent. `observe` returns exact Git and
   repository inputs accepted by rebuild/plan and targets/check."
@@ -62,42 +137,10 @@
                 :gate)]
     (if (runner/read-receipt run-dir intent)
       (runner/reconcile! run-dir (constantly nil))
-      (let [observation (observe state)
-            plan (rebuild/plan observation)
-            registration-input (assoc (select-keys observation
-                                                    [:head-sha :files :targets
-                                                     :axiom-audits
-                                                     :target-provenance])
-                                      :problem-id (:problem-id state)
-                                      :turn (:turn state)
-                                      :changes (:changes plan))
-            registration (try
-                           (targets/check
-                            registration-input)
-                           (catch clojure.lang.ExceptionInfo ex
-                             {:outcome :red
-                              :finding (:finding (ex-data ex))
-                              :snapshot (:snapshot (ex-data ex))}))
-            commands (if (= :green (:outcome registration))
-                       (execute-commands run-command (:commands plan))
-                       [])
-            green? (and (= :green (:outcome registration))
-                        (all-green? commands))
-            finding (when-not green?
-                      (or (:finding registration)
-                          :command-failed))
-            fingerprint (when finding
-                          (sha256 [finding (:snapshot registration)
-                                   (mapv #(select-keys % [:command :exit :stderr]) commands)
-                                   (:inputs plan)]))
-            result {:outcome (if green? :green :red)
-                    :failure-fingerprint fingerprint
-                    :checkpoint-due? (zero? (mod (:turn state) cadence))
-                    :receipt/path (str "receipts/gate/" (:id intent) ".edn")
-                    :plan plan
-                    :registration registration
-                    :observation/evidence (:observation/commands observation)
-                    :commands commands}]
+      (let [result (try
+                     (compute-gate-result state intent observe run-command cadence)
+                     (catch clojure.lang.ExceptionInfo ex
+                       (typed-gate-refusal-result state intent ex cadence)))]
         (runner/append-receipt! run-dir intent result)
         (runner/reconcile! run-dir (constantly nil))))))
 

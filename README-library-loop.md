@@ -109,6 +109,15 @@ manufacture closure, and neither executable edits apm-lean.
 Missing or stale audit evidence, missing ledgers, dirty/racing worktrees, and
 divergent SHAs fail closed.
 
+After a gate intent is durable, typed fail-closed refusals from repository
+observation or rebuild planning are themselves settled as append-only red gate
+receipts. Their fingerprint covers only the finding, an allowlisted bounded
+diagnostic, and the exact problem/turn/base/HEAD/intent binding; exception
+text, command output, temporary paths, timestamps, snapshots, and environment
+data are excluded. Restart first reconciles an existing receipt without
+re-observing. Exceptions without the typed `:finding` contract still surface
+as programmer failures and never masquerade as gate results.
+
 `{prompt-text}` begins with the exact contents of `standing-goal.md` as one
 argv item. When the immediately preceding transition was a gate, the adapter
 derives that gate's canonical intent id from durable state and appends a small

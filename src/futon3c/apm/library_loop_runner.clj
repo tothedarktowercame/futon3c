@@ -187,6 +187,24 @@
 
 (declare intent-id)
 
+(def ^:private feedback-diagnostic-keys
+  #{:module :created-turn :creation-commit-sha :turn-receipt-id
+    :turn-head-sha :problem-id :current-turn :expected :observed
+    :expected-base :expected-head :observed-head})
+
+(defn- bounded-feedback-diagnostic [diagnostic]
+  (when diagnostic
+    (when-not (map? diagnostic)
+      (fail! :preceding-gate-diagnostic-invalid {:diagnostic diagnostic}))
+    (let [bounded (select-keys diagnostic feedback-diagnostic-keys)]
+      (when-not (every? (fn [[_ value]]
+                          (or (nil? value) (keyword? value) (integer? value)
+                              (boolean? value)
+                              (and (string? value) (<= (count value) 256))))
+                        bounded)
+        (fail! :preceding-gate-diagnostic-invalid {:diagnostic diagnostic}))
+      bounded)))
+
 (defn read-receipt [run-dir intent]
   (let [path (receipt-path run-dir intent)]
     (when (Files/exists path (make-array java.nio.file.LinkOption 0))
@@ -218,8 +236,11 @@
       (when receipt
         (let [result (:result receipt)
               inputs (get-in result [:plan :inputs])
+              typed-binding (:gate/binding result)
+              observed-head (or (:head-sha inputs) (:head-sha typed-binding))
               registration (:registration result)
               outcome (:outcome result)
+              diagnostic (bounded-feedback-diagnostic (:diagnostic result))
               finding (or (:finding registration)
                           (:finding result)
                           (when (= :red outcome) :command-failed))]
@@ -230,7 +251,15 @@
                          (= expected-id (:intent-id receipt))
                          (map? result)
                          (contains? #{:green :red} outcome)
-                         (= (:head-sha state) (:head-sha inputs)))
+                         (= (:head-sha state) observed-head)
+                         (or (nil? typed-binding)
+                             (= {:schema schema-version
+                                 :problem-id (:problem-id state)
+                                 :turn gate-turn
+                                 :base-sha (:base-sha state)
+                                 :head-sha (:head-sha state)
+                                 :intent-id expected-id}
+                                typed-binding)))
             (fail! :preceding-gate-receipt-mismatch
                    {:expected {:problem-id (:problem-id state)
                                :turn gate-turn
@@ -242,11 +271,12 @@
                    :problem-id (:problem-id receipt)
                    :turn gate-turn
                    :intent-id expected-id
-                   :head-sha (:head-sha inputs)
+                   :head-sha observed-head
                    :outcome outcome}
             finding (assoc :finding finding)
             (:failure-fingerprint result)
             (assoc :failure-fingerprint (:failure-fingerprint result))
+            diagnostic (assoc :diagnostic diagnostic)
             (:outcome registration)
             (assoc :registration/outcome (:outcome registration))))))))
 

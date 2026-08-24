@@ -110,6 +110,84 @@
                      dir {:observe (fn [_] (throw (Exception. "duplicate observe")))
                           :run-command (fn [_] (throw (Exception. "duplicate command")))}))))))
 
+(deftest typed-observation-refusal-settles-bounded-red-receipt
+  (let [dir (temp-dir)
+        _ (init-at! dir :gating 4)
+        intent (runner/begin-action! dir :gate)
+        result (exec/run-gate!
+                dir {:observe (fn [_]
+                                (throw
+                                 (ex-info
+                                  "volatile exception text with SECRET"
+                                  {:finding :target-created-turn-provenance-unproved
+                                   :module "ConstructionTargets.NewTarget"
+                                   :created-turn 2
+                                   :creation-commit-sha (apply str (repeat 40 "a"))
+                                   :turn-receipt-id (apply str (repeat 64 "b"))
+                                   :turn-head-sha (apply str (repeat 40 "c"))
+                                   :stdout "SECRET stdout"
+                                   :stderr "SECRET stderr"
+                                   :path "/tmp/volatile-secret"})))
+                     :run-command (fn [_] (throw (Exception. "must not run")))})
+        receipt (runner/read-receipt dir intent)
+        rendered (pr-str receipt)]
+    (is (= :settled (:status result)))
+    (is (= :turn-ready (:phase (runner/read-state dir))))
+    (is (= 5 (:turn (runner/read-state dir))))
+    (is (= 1 (:consecutive-same-failures (runner/read-state dir))))
+    (is (= :red (get-in receipt [:result :outcome])))
+    (is (= :target-created-turn-provenance-unproved
+           (get-in receipt [:result :finding])))
+    (is (= "ConstructionTargets.NewTarget"
+           (get-in receipt [:result :diagnostic :module])))
+    (is (= {:module "ConstructionTargets.NewTarget"
+            :created-turn 2
+            :creation-commit-sha (apply str (repeat 40 "a"))
+            :turn-receipt-id (apply str (repeat 64 "b"))
+            :turn-head-sha (apply str (repeat 40 "c"))}
+           (:diagnostic
+            (runner/preceding-gate-feedback dir (runner/read-state dir)))))
+    (is (not (re-find #"SECRET|stdout|stderr|volatile-secret|exception text"
+                      rendered)))))
+
+(deftest typed-refusal-fingerprint-is-stable-across-pending-restart
+  (let [run! (fn [secret]
+               (let [dir (temp-dir)
+                     _ (init-at! dir :gating 4)
+                     intent (runner/begin-action! dir :gate)
+                     calls (atom 0)]
+                 ;; This is the restart shape: the exact intent already exists
+                 ;; and has no receipt when run-gate! is entered.
+                 (exec/run-gate!
+                  dir {:observe (fn [_]
+                                  (swap! calls inc)
+                                  (throw (ex-info "different volatile text"
+                                                  {:finding :workspace-head-drift
+                                                   :expected-head "candidate"
+                                                   :observed-head "other"
+                                                   :stderr secret})))
+                       :run-command (constantly {:exit 0})})
+                 {:fingerprint (get-in (runner/read-receipt dir intent)
+                                       [:result :failure-fingerprint])
+                  :calls @calls}))
+        first-run (run! "first secret")
+        restarted (run! "second secret")]
+    (is (= 1 (:calls first-run) (:calls restarted)))
+    (is (= (:fingerprint first-run) (:fingerprint restarted)))
+    (is (re-matches #"[0-9a-f]{64}" (:fingerprint first-run)))))
+
+(deftest untyped-observation-exception-still-propagates
+  (let [dir (temp-dir)]
+    (init-at! dir :gating 1)
+    (is (thrown-with-msg?
+         RuntimeException #"programmer bug"
+         (exec/run-gate! dir {:observe (fn [_]
+                                              (throw (RuntimeException.
+                                                      "programmer bug")))
+                              :run-command (constantly {:exit 0})})))
+    (is (= :gating (:phase (runner/read-state dir))))
+    (is (nil? (runner/read-receipt dir (:intent (runner/read-state dir)))))))
+
 (deftest checkpoint-cadence-waits-for-independent-review
   (let [dir (temp-dir)]
     (init-at! dir :gating 20)
