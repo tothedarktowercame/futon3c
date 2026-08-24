@@ -16,7 +16,7 @@
                 {:result (str "fresh " agent-id) :session-id nil})
    :metadata {:fixture-type agent-type}})
 
-(deftest mint-registers-seven-fresh-invoke-ready-seats
+(deftest mint-registers-eight-fresh-invoke-ready-seats
   (let [calls (atom [])
         result (frame-seats/mint-seats!
                 {:prepare-seat-fn (fn [seat]
@@ -29,10 +29,11 @@
                   :reg/proctor-seat "frame-17-proctor"
                   :reg/promotion-proctor-seat "frame-17-promotion-proctor"
                   :reg/scribe-seat "frame-17-scribe"
+                  :reg/zai-scribe-seat "frame-17-zai-scribe"
                   :reg/analyst-seat "frame-17-analyst"}]
     (is (:ok result))
     (is (= expected (:seats result)))
-    (is (= 7 (count @calls)))
+    (is (= 8 (count @calls)))
     (doseq [[seat-key agent-id] expected]
       (let [agent (registry/get-agent agent-id)
             roster (get-in (registry/registry-status) [:agents agent-id])]
@@ -49,8 +50,8 @@
         first-result (frame-seats/mint-seats! opts "same-frame")
         second-result (frame-seats/mint-seats! opts "same-frame")]
     (is (= first-result second-result))
-    (is (= 7 @calls))
-    (is (= 7 (count (registry/registered-agents))))))
+    (is (= 8 @calls))
+    (is (= 8 (count (registry/registered-agents))))))
 
 (deftest mint-registers-tenure-scoped-analyst
   (let [calls (atom [])
@@ -115,7 +116,7 @@
     (is (= 200 (:status response)))
     (is (true? (:ok body)))
     (is (= "http-frame-solver" (get-in body [:seats :reg/solver-seat])))
-    (is (= 7 (count (:seats body))))))
+    (is (= 8 (count (:seats body))))))
 
 (defn- post-seat-mint [handler payload]
   (let [response (handler
@@ -183,7 +184,7 @@
     (is (= 400 seat-status))
     (is (= "guid" (get-in seat-body [:findings 0 :seat])))
     (is (= #{"analyst" "guide" "proctor" "promotion-proctor" "scribe"
-             "solver" "student"}
+             "solver" "student" "zai-scribe"}
            (set (get-in seat-body [:findings 0 :accepted-seats]))))
     (is (= 400 type-status))
     (is (= "unknown-vendor"

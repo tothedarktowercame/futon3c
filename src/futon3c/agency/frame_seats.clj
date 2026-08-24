@@ -10,6 +10,7 @@
    [:reg/proctor-seat "proctor" :codex nil]
    [:reg/promotion-proctor-seat "promotion-proctor" :codex nil]
    [:reg/scribe-seat "scribe" :codex nil]
+   [:reg/zai-scribe-seat "zai-scribe" :zai nil]
    [:reg/analyst-seat "analyst" :claude nil]])
 
 (def ^:private accepted-seat-suffixes
