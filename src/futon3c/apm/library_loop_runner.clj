@@ -6,7 +6,8 @@
   persist an intent with `begin-action!`, perform (or idempotently activate)
   the external action, append its receipt, and call `reconcile!`."
   (:require [clojure.edn :as edn]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [futon3c.apm.library-loop-checkpoint :as checkpoint])
   (:import (java.io FileOutputStream PushbackReader)
            (java.nio.charset StandardCharsets)
            (java.nio.file Files Path StandardCopyOption StandardOpenOption)
@@ -57,6 +58,8 @@
    :failure-fingerprint nil
    :consecutive-same-failures 0
    :pending-bank nil
+   :obligation/id nil
+   :consecutive-nonreductions 0
    :pause/finding nil
    :intent nil})
 
@@ -74,7 +77,10 @@
                  (nat-int? (:checkpoint state))
                  (string? (:workspace state))
                  (string? (:base-sha state))
-                 (string? (:head-sha state)))
+                 (string? (:head-sha state))
+                 (nat-int? (:consecutive-nonreductions state))
+                 (or (nil? (:obligation/id state))
+                     (keyword? (:obligation/id state))))
     (fail! :invalid-state-fields {:state state}))
   (let [intent (:intent state)]
     (when (and intent
@@ -252,10 +258,16 @@
                            {:turn (inc (:turn state))
                             :last-green-gate (:receipt/path result)}))
                 (pause :gate-failed))
-        :review (if (= :approved (:ruling result))
+        :review (if (and (checkpoint/valid-decision? state result)
+                         (= :approved (:outcome result))
+                         (true? (:bank-authorized? result))
+                         (keyword? (:obligation-id result)))
                   (advance :review-pending
-                           {:checkpoint (inc (:checkpoint state))})
-                  (pause :review-not-approved))
+                           {:checkpoint (inc (:checkpoint state))
+                            :obligation/id (:obligation-id result)
+                            :consecutive-nonreductions
+                            (:consecutive-nonreductions result)})
+                  (pause (or (:finding result) :review-not-approved)))
         :bank (if (= :banked (:outcome result))
                 (advance :turn-ready
                          {:turn (inc (:turn state))

@@ -90,7 +90,14 @@
                             (runner/begin-action! dir :bank)))
       (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
                             (runner/begin-action! dir :review)))
-      (runner/append-receipt! dir review {:ruling :approved})
+      (runner/append-receipt! dir review
+                              {:outcome :approved
+                               :bank-authorized? true
+                               :obligation-id :t00J02/producer
+                               :consecutive-nonreductions 0
+                               :progress-ruling :reduced
+                               :review-rationale "The residual was reduced."
+                               :checkpoint-digest (apply str (repeat 64 "a"))})
       (runner/reconcile! dir (fn [_] (throw (Exception. "duplicate review")))))
     ;; Approval is settled while retaining :review-pending as the explicit
     ;; authority from which the bank intent is created.
@@ -157,3 +164,37 @@
              (get-in (runner/read-state dir) [:pause/finding :type])))
       (is (thrown-with-msg? clojure.lang.ExceptionInfo #"transition-not-allowed"
                             (runner/begin-action! dir :bank))))))
+
+(deftest checkpoint-review-decision-updates-durable-valve-state
+  (let [first-dir (temp-dir)
+        second-dir (temp-dir)]
+    (doseq [dir [first-dir second-dir]]
+      (runner/write-state!
+       dir (assoc (runner/initial-state
+                   {:problem-id "t00J02" :workspace "/tmp/apm-lean-t00J02"
+                    :base-sha "base" :head-sha "candidate"})
+                  :phase :checkpoint-ready
+                  :obligation/id :t00J02/producer
+                  :consecutive-nonreductions (if (= dir first-dir) 0 1))))
+    (let [review (runner/begin-action! first-dir :review)]
+      (runner/append-receipt!
+       first-dir review
+       {:outcome :approved :bank-authorized? true
+        :obligation-id :t00J02/producer :consecutive-nonreductions 1
+        :progress-ruling :equivalent :review-rationale "No semantic change."
+        :checkpoint-digest (apply str (repeat 64 "a"))})
+      (runner/reconcile! first-dir (constantly nil))
+      (is (= :review-pending (:phase (runner/read-state first-dir))))
+      (is (= 1 (:consecutive-nonreductions (runner/read-state first-dir)))))
+    (let [review (runner/begin-action! second-dir :review)]
+      (runner/append-receipt!
+       second-dir review
+       {:outcome :rejected :bank-authorized? false
+        :finding :checkpoint-nonreduction-limit
+        :obligation-id :t00J02/producer :consecutive-nonreductions 2
+        :progress-ruling :equivalent :review-rationale "Still equivalent."
+        :checkpoint-digest (apply str (repeat 64 "b"))})
+      (runner/reconcile! second-dir (constantly nil))
+      (is (= :paused (:phase (runner/read-state second-dir))))
+      (is (= :checkpoint-nonreduction-limit
+             (get-in (runner/read-state second-dir) [:pause/finding :type]))))))
