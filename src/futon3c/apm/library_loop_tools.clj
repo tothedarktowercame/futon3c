@@ -235,12 +235,16 @@
        (when-not (and (.isFile (io/file workspace main-path)) (.isFile status-path))
          (refuse! :canonical-problem-evidence-missing
                   {:main main-path :status (str status-path)}))
-       (let [result (run-process workspace ["lake" "env" "lean" main-path])
+       (let [build-command ["lake" "build" "ConstructionTargets"]
+             build-result (command! run-process workspace build-command
+                                    :status-project-build-failed)
+             main-command ["lake" "env" "lean" main-path]
+             result (run-process workspace main-command)
              classified (toolchain/classify-output
                          (:exit result) (str (:stdout result) "\n" (:stderr result)))]
          (when-not (and (zero? (:exit classified)) (zero? (:errors classified)))
            (refuse! :status-main-elaboration-failed
-                    {:command ["lake" "env" "lean" main-path]
+                    {:command main-command
                      :result classified}))
          (let [status-text (slurp status-path)
                canonical (json/parse-string status-text true)
@@ -268,12 +272,19 @@
                                       :problem-id problem-id
                                       :status-json-sha (sha256 status-text)
                                       :main-sha (sha256 (slurp (io/file workspace main-path)))
+                                      :prebuild-output-sha
+                                      (sha256 (str (:stdout build-result) "\n"
+                                                   (:stderr build-result)))
                                       :elaboration-output-sha
                                       (sha256 (:output classified))
                                       :classification classification
                                       :sorry-count sorries}))
                  evidence {:schema 1 :candidate-sha candidate
-                           :ruling ruling :status-sha status-sha}
+                           :ruling ruling :status-sha status-sha
+                           :prebuild (select-keys build-result
+                                                  [:argv :cwd :exit :stdout :stderr])
+                           :main (select-keys result
+                                              [:argv :cwd :exit :stdout :stderr])}
                  output (io/file run-dir "status" (str candidate ".edn"))]
              (runner/append-edn-once! output evidence)
              evidence)))))))

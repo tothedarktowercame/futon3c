@@ -125,10 +125,18 @@
 
 (deftest status-derives-only-state-bound-partial-or-closed
   (let [{:keys [workspace run-dir head]} (repository!)
+        calls (atom [])
         partial-output
         "problems/t01A03/lean/Main.lean:2:9: warning: declaration uses `sorry`\n"
-        partial (tools/status! head run-dir (injected-runner partial-output)
+        partial (tools/status! head run-dir (injected-runner partial-output calls)
                                workspace)]
+    (is (= [["lake" "build" "ConstructionTargets"]
+            ["lake" "env" "lean" "problems/t01A03/lean/Main.lean"]]
+           @calls))
+    (is (= ["lake" "build" "ConstructionTargets"]
+           (get-in partial [:prebuild :argv])))
+    (is (= ["lake" "env" "lean" "problems/t01A03/lean/Main.lean"]
+           (get-in partial [:main :argv])))
     (is (= :partial-banked (:ruling partial)))
     (is (= head (:candidate-sha partial)))
     (is (= partial
@@ -139,6 +147,25 @@
       (is (thrown-with-msg?
            clojure.lang.ExceptionInfo #"status-sorry-count-mismatch"
            (tools/status! head run-dir (injected-runner "") workspace))))))
+
+(deftest status-refuses-failed-project-prebuild-before-main
+  (let [{:keys [workspace run-dir head]} (repository!)
+        calls (atom [])
+        run-process (fn [cwd argv]
+                      (if (= ["lake" "build" "ConstructionTargets"] argv)
+                        (do (swap! calls conj argv)
+                            {:exit 1 :stdout "" :stderr "cold build failed\n"
+                             :argv argv :cwd (str cwd)})
+                        (do (when (= "lake" (first argv)) (swap! calls conj argv))
+                            (adapter/run-process cwd argv))))]
+    (is (= :status-project-build-failed
+           (:finding
+            (ex-data
+             (try
+               (tools/status! head run-dir run-process workspace)
+               (catch clojure.lang.ExceptionInfo ex ex))))))
+    (is (= [["lake" "build" "ConstructionTargets"]] @calls))
+    (is (not (.exists (io/file run-dir "status" (str head ".edn")))))))
 
 (deftest status-accepts-solved-only-when-main-elaborates-without-sorry
   (let [{:keys [workspace run-dir]} (repository!)]

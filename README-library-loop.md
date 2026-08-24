@@ -99,8 +99,13 @@ flag) is part of the registration snapshot digest. Future turns, missing or
 malformed proofs, and unsupported backdating fail closed.
 
 The production status executable runs only after the exact candidate is the
-configured trunk HEAD. It requires a clean trunk, elaborates the canonical
-problem `Main.lean`, checks the observed sorry count against the committed
+configured trunk HEAD. It requires a clean trunk, runs `lake build
+ConstructionTargets` in that verified trunk to materialise project artifacts
+in a cold linked worktree, and then elaborates the canonical problem
+`Main.lean` last. Complete argv, cwd, exit, stdout, and stderr evidence for
+both commands is included in the immutable status record. A failed prebuild
+refuses before Main and writes no ruling. Status then checks the observed sorry
+count against the committed
 `status.json`, and maps only a consistent `partial` result to
 `:partial-banked` or a consistent `solved` result with zero sorries to
 `:closed`. It writes `status/HEAD.edn` atomically. Zero sorries alone never
