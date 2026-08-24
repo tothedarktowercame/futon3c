@@ -36,8 +36,10 @@ Create `data/apm-lane/runs/t00J02/standing-goal.md`, then create
  :trunk-branch "repair/m97A06-energy-regularity"
  :codex-command ["/absolute/bin/codex" "exec" "{prompt-text}"]
  :lake-executable "/absolute/bin/lake"
- :audit-command ["/absolute/bin/apm-axiom-audit" "{base}" "{head}" "{run-dir}"]
- :status-command ["/absolute/bin/apm-status-recompute" "{head}" "{run-dir}"]
+ :audit-command ["/absolute/futon3c/scripts/library-loop-audit"
+                 "{base}" "{head}" "{run-dir}"]
+ :status-command ["/absolute/futon3c/scripts/library-loop-status"
+                  "{head}" "{run-dir}"]
  :checkpoint-cadence 20
  :slate-path "/absolute/futon3c/data/apm-lane/demonstrators.edn"}
 ```
@@ -70,8 +72,24 @@ Problem registration is read from
 [{:module "ConstructionTargets.Module"
   :created-turn 20
   :status :active
-  :obligation :problem/stable-obligation}]
+  :obligation :problem/stable-obligation
+  :declarations [ConstructionTargets.Module.headlineTheorem]}]
 ```
+
+`:declarations` is the exact, nonempty set of promoted declarations owned by
+the ledger row. The production audit executable imports the changed module and
+runs Lean `#print axioms` for every listed declaration. A missing/duplicate
+list, an unknown declaration, a failed elaboration, or output containing
+`sorryAx` prevents green evidence. The audit is bound to the run state's exact
+workspace, base, and HEAD and writes `audits/HEAD.edn` atomically.
+
+The production status executable runs only after the exact candidate is the
+configured trunk HEAD. It requires a clean trunk, elaborates the canonical
+problem `Main.lean`, checks the observed sorry count against the committed
+`status.json`, and maps only a consistent `partial` result to
+`:partial-banked` or a consistent `solved` result with zero sorries to
+`:closed`. It writes `status/HEAD.edn` atomically. Zero sorries alone never
+manufacture closure, and neither executable edits apm-lean.
 
 Missing or stale audit evidence, missing ledgers, dirty/racing worktrees, and
 divergent SHAs fail closed.
