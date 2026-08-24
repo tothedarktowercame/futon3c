@@ -25,7 +25,8 @@
                                              :repair-attempts 1}}
                  :ticket {:job-id "role-job"}}
    :agent {:ok true :agent {:status "invoking" :running-jobs 1
-                            :invoke-started-at "2026-08-23T21:30:00Z"}}})
+                            :invoke-started-at "2026-08-23T21:30:00Z"}}
+   :job {:ok true :job {:state "running"}}})
 
 (defn codes [x] (set (map :error/code (:watch/findings x))))
 
@@ -53,6 +54,13 @@
            [:agent #(assoc % :agent {:ok false}) :agency-agent-unreachable]
            [:idle #(assoc-in % [:agent :agent :status] "idle")
             :agency-job-not-running]
+           [:terminal-stale #(-> %
+                                (assoc-in [:agent :agent :status] "idle")
+                                (assoc-in [:agent :agent :running-jobs] nil)
+                                (assoc :job {:ok true :job
+                                             {:state "done"
+                                              :finished-at "2026-08-23T21:57:00Z"}}))
+            :terminal-job-collection-stale]
            [:timeout #(assoc-in % [:phase-state :request :turn-timeout-ms] 1)
             :active-job-timeout]
            [:budget #(assoc-in % [:phase-state :request :terminal-budget
@@ -83,5 +91,16 @@
                        :rounds []
                        :active (:phase-state healthy)})
         result (watchdog/evaluate solver)]
+    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))))
+
+(deftest recently-terminal-job-is-a-bounded-collection-state
+  (let [collecting (-> healthy
+                       (assoc-in [:agent :agent :status] "idle")
+                       (assoc-in [:agent :agent :running-jobs] nil)
+                       (assoc :job {:ok true :job
+                                    {:state "done"
+                                     :finished-at "2026-08-23T21:59:58Z"}}))
+        result (watchdog/evaluate collecting)]
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))

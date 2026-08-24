@@ -15,7 +15,8 @@
    :projection-publication-current :unattended-transition-current
    :active-phase-state-readable
    :projected-job-matches-durable-state :agency-agent-reachable
-   :agency-job-running :job-within-declared-timeout
+   :agency-job-running :terminal-job-collection-current
+   :job-within-declared-timeout
    :terminal-budgets-valid :coordinator-last-result-successful])
 
 (defn- age-seconds [^Instant now value]
@@ -28,7 +29,7 @@
 (defn evaluate
   "Pure watchdog evaluation. INPUTS must contain parsed durable observations."
   [{:keys [now coordinator coordinator-age-seconds transition publication
-           phase-state agent max-heartbeat-age-seconds]}]
+           phase-state agent job max-heartbeat-age-seconds]}]
   (let [operation (:operation transition)
         ;; Solver phases wrap the same durable live-job state in the bounded
         ;; round machine. Observe its active member without weakening any job
@@ -47,6 +48,9 @@
         timeout-ms (:turn-timeout-ms request)
         budget (:terminal-budget request)
         job-age (age-seconds now (get-in agent [:agent :invoke-started-at]))
+        terminal-job? (contains? #{"done" "failed" "cancelled" "timed-out"}
+                                 (get-in job [:job :state]))
+        terminal-age (age-seconds now (get-in job [:job :finished-at]))
         transition-age (age-seconds now (:event/observed-at transition))
         findings
         (cond-> []
@@ -86,12 +90,19 @@
           (and waiting? (not (:ok agent)))
           (conj (finding :agency-agent-reachable :agency-agent-unreachable
                          {:agent-id (:agent-id operation)}))
-          (and waiting? (:ok agent)
+          (and waiting? (:ok agent) (not terminal-job?)
                (or (not= "invoking" (get-in agent [:agent :status]))
                    (not= 1 (get-in agent [:agent :running-jobs]))))
           (conj (finding :agency-job-running :agency-job-not-running
                          {:status (get-in agent [:agent :status])
                           :running-jobs (get-in agent [:agent :running-jobs])}))
+          (and waiting? terminal-job? terminal-age
+               (> terminal-age max-heartbeat-age-seconds))
+          (conj (finding :terminal-job-collection-current
+                         :terminal-job-collection-stale
+                         {:state (get-in job [:job :state])
+                          :age-seconds terminal-age
+                          :limit-seconds max-heartbeat-age-seconds}))
           (and waiting? (pos-int? timeout-ms) job-age
                (> (* 1000 job-age) timeout-ms))
           (conj (finding :job-within-declared-timeout :active-job-timeout
@@ -139,7 +150,8 @@
         publication (read-edn (.resolve frame-dir "publications/latest.edn"))
         phase-state (read-edn (.resolve (.resolve frame-dir "live")
                                        (str (name (:phase transition)) ".edn")))
-        agent-id (get-in transition [:operation :agent-id])]
+        agent-id (get-in transition [:operation :agent-id])
+        job-id (get-in transition [:operation :job-id])]
     {:now (Instant/now)
      :coordinator coordinator
      :coordinator-age-seconds
@@ -150,6 +162,9 @@
                 (make-array java.nio.file.LinkOption 0)))) 1000)
      :max-heartbeat-age-seconds max-heartbeat-age-seconds
      :transition transition :publication publication :phase-state phase-state
+     :job (if job-id
+            (http-json (str agency-base "/api/alpha/invoke/jobs/" job-id))
+            {:ok true})
      :agent (if agent-id
               (http-json (str agency-base "/api/alpha/agents/" agent-id))
               {:ok true})}))
