@@ -1330,6 +1330,17 @@
 
 (declare stop-requested? status)
 
+(defn describe-cycle-error
+  "One line naming a cycle fault: message plus the ex-data keys that identify
+  the failing subject (root, command, exit). Stays a string so existing
+  consumers of :last-error keep working."
+  [^Throwable t]
+  (let [data (ex-data t)
+        named (select-keys data [:error/type :repo/root :args :exit])]
+    (if (seq named)
+      (str (.getMessage t) " " (pr-str named))
+      (.getMessage t))))
+
 (defn run-cycle!
   [{:keys [roots per-root-cache run-id event-n cycle-n cold-scan? commit-ingest?
            inbox-zero-options]
@@ -1459,6 +1470,10 @@
                        :ambiguous-count (count (:ambiguous projection))
                        :unattributed-count (count (:unattributed projection))
                        :delivery-count (count deliveries)
+                       ;; Roots skipped this cycle, with reasons — a skipped
+                       ;; root is loud status, never silent absence.
+                       :skipped-root-count (count (:skipped-roots result))
+                       :skipped-roots (vec (:skipped-roots result))
                        :last-cycle-at (str (Instant/now))}]
         (swap! !state #(if (map? %) (assoc % :inbox-zero readiness) %))))
     (mark-subtask! {:phase :idle :cycle-n n})))
@@ -1540,12 +1555,15 @@
                  (if (map? s)
                    (assoc s
                           :last-cycle-finished-at (Instant/now)
-                          :last-error (.getMessage t)
+                          ;; Keep the ex-data keys that name the fault: a bare
+                          ;; message ("Git command failed") cost a by-hand
+                          ;; reproduction to find WHICH root (2026-08-24).
+                          :last-error (describe-cycle-error t)
                           :last-subtask {:phase :cycle-error})
                    s)))
         (cyder/touch! "multi-watcher")
         (binding [*out* *err*]
-          (println "[multi.run-cycle!] uncaught:" (.getMessage t)))))))
+          (println "[multi.run-cycle!] uncaught:" (describe-cycle-error t)))))))
 
 (defn start!
   "Start the watcher loop with the given options. Idempotent — if

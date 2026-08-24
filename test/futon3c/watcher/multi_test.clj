@@ -523,7 +523,8 @@
                 :state-path "/tmp/state.edn" :witness-path "/tmp/witnesses"
                 :followup-url "http://agency/followups"
                 :observations-written 2 :dirty-set-count 1
-                :ambiguous-count 1 :unattributed-count 2 :delivery-count 1}
+                :ambiguous-count 1 :unattributed-count 2 :delivery-count 1
+                :skipped-root-count 0 :skipped-roots []}
                (dissoc (:inbox-zero @sut/!state) :last-cycle-at)))
         (is (= "http://agency/followups" (:url @sent)))
         (finally (reset! sut/!state nil))))))
@@ -560,3 +561,15 @@
       (is (= state-path (get-in (sut/status nil) [:inbox-zero :state-path])))
       (is (= snapshot (slurp state-path))))
       (finally (sut/stop!)))))
+
+(deftest describe-cycle-error-names-the-failing-subject
+  (is (= "Git command failed {:error/type :inbox-zero/git-failed, :repo/root \"/tmp/futon5a\", :args [\"rev-parse\" \"HEAD\"], :exit 128}"
+         (sut/describe-cycle-error
+          (ex-info "Git command failed"
+                   {:error/type :inbox-zero/git-failed
+                    :repo/root "/tmp/futon5a"
+                    :args ["rev-parse" "HEAD"]
+                    :exit 128
+                    :stderr "fatal: not a git repository"}))))
+  (is (= "plain failure"
+         (sut/describe-cycle-error (RuntimeException. "plain failure")))))
