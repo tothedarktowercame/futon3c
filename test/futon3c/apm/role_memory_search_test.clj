@@ -54,11 +54,12 @@
             "read-only effect replay uses identical deterministic trace identity")))))
 
 (deftest receipt-surfaced-ids-includes-explicit-linked-identifiers
-  (is (= #{"primary" "memory" "mission" "subject" "pattern"
+  (is (= #{"primary" "memory" "mission" "subject" "pattern" "e-round"
            "candidate" "support"}
          (sut/receipt-surfaced-ids
           {:result-ids ["primary"]
            :content-matches [{:memory/id "memory"
+                              :memory/hyperedge-id "hx:memory.assert.e-round.pattern"
                               :memory/mission-ids ["mission"]
                               :memory/subject-ids ["subject"]
                               :memory/pattern-ids ["pattern"]}]

@@ -3,6 +3,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set :as set]
+            [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.peripheral.memory-recall :as recall])
@@ -115,12 +116,19 @@
    absent from the content-addressed receipt."
   [receipt]
   (let [matches (:content-matches receipt)
-        candidates (:candidates receipt)]
+        candidates (:candidates receipt)
+        hyperedge-components
+        (->> matches
+             (map :memory/hyperedge-id)
+             (filter string?)
+             (mapcat #(str/split % #"\."))
+             (filter #(str/starts-with? % "e-")))]
     (->> (concat (:result-ids receipt)
                  (map :memory/id matches)
                  (mapcat :memory/mission-ids matches)
                  (mapcat :memory/subject-ids matches)
                  (mapcat :memory/pattern-ids matches)
+                 hyperedge-components
                  (map :pattern-id candidates)
                  (mapcat (fn [candidate]
                            (map :memory-id (:memory-support candidate)))
