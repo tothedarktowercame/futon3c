@@ -32,6 +32,8 @@
           :leases (leases frame)
           :persist-bank-fn #(do (swap! calls conj [:bank (:receipt/id %2)])
                                 {:ok true})
+          :retirement-status-fn
+          (fn [_ _] {:ok true :status :not-retired})
           :audit-fn (fn [_ _ role _]
                       (swap! calls conj [:audit role])
                       {:ok true :audit {:audit/id (str "audit-" (name role))}})
@@ -90,6 +92,7 @@
                 {:frame frame :terminal-receipt {:receipt/type :frame-terminal}
                  :leases (leases frame)
                  :persist-bank-fn #(swap! calls conj :bank)
+                 :retirement-status-fn #(swap! calls conj :status)
                  :audit-fn #(swap! calls conj :audit)
                  :retire-workspace-fn #(swap! calls conj :retire)
                  :retire-seats-fn #(swap! calls conj :seats)})]
@@ -133,6 +136,8 @@
                   {:frame frame :terminal-receipt terminal-receipt
                    :leases (leases frame)
                    :persist-bank-fn #(do (swap! banks conj %2) {:ok true})
+                   :retirement-status-fn
+                   (fn [_ _] {:ok true :status :not-retired})
                    :audit-fn (fn [_ _ role _]
                                {:ok true :audit {:audit/id (str "audit-" role)}})
                    :retire-workspace-fn
@@ -159,3 +164,45 @@
             successor-mint (.indexOf @calls [:mint n])]
         (is (<= 0 previous-retire))
         (is (< previous-retire successor-mint))))))
+
+(deftest f30-shaped-replay-skips-durably-retired-solver-before-student-retry
+  (let [frame {:frame/id "fixture-f30" :problem/id "a01J06"}
+        terminal (terminal-receipt frame)
+        retired (atom {})
+        audits (atom [])
+        removals (atom [])
+        student-attempts (atom 0)
+        invoke
+        (fn []
+          (sut/retire!
+           {:frame frame :terminal-receipt terminal :leases (leases frame)
+            :persist-bank-fn (fn [_ _] {:ok true})
+            :retirement-status-fn
+            (fn [lease _]
+              (if-let [receipt (get @retired (:role lease))]
+                {:ok true :status :already-retired :receipt receipt}
+                {:ok true :status :not-retired}))
+            :audit-fn
+            (fn [_ _ role _]
+              (swap! audits conj role)
+              (if (and (= :student role)
+                       (= 1 (swap! student-attempts inc)))
+                {:ok false :error/code :workspace-retirement-audit-invalid
+                 :validation/findings [:workspace-dirty]}
+                {:ok true :audit {:audit/id (str "audit-" (name role))}}))
+            :retire-workspace-fn
+            (fn [lease _]
+              (swap! removals conj (:role lease))
+              (let [receipt {:receipt/id (str "retired-" (name (:role lease)))}]
+                (swap! retired assoc (:role lease) receipt)
+                {:ok true :receipt receipt}))
+            :retire-seats-fn (fn [_ _] {:ok true})}))]
+    (is (= [:workspace-dirty]
+           (:validation/findings (invoke))))
+    (is (= [:solver] @removals))
+    (let [replayed (invoke)]
+      (is (:ok replayed) (pr-str replayed))
+      (is (= [:solver :student] @removals))
+      (is (= [:solver :student :student] @audits))
+      (is (= "retired-solver"
+             (get-in replayed [:workspace-receipts :solver :receipt/id]))))))

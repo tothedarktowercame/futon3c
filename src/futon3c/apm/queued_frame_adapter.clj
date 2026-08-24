@@ -340,6 +340,11 @@
            (terminal/retire!
             {:frame frame :terminal-receipt terminal-receipt :leases leases
              :audit-fn retirement-audit-fn
+             :retirement-status-fn
+             (fn [lease terminal-head]
+               (workspace/retirement-status
+                {:lease lease :terminal-head terminal-head
+                 :receipt-directory (:retirement-receipt-directory paths)}))
              :persist-bank-fn
              (fn [_ bank]
                ((or persist-fn runtime/atomic-persist!)

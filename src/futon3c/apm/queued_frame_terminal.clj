@@ -85,12 +85,12 @@
   The bank receipt is persisted before workspace retirement. Every audit must
   be supplied by AUDIT-FN and satisfy workspace-lifecycle's full certificate."
   [{:keys [frame terminal-receipt leases audit-fn retire-workspace-fn
-           persist-bank-fn retire-seats-fn]}]
+           retirement-status-fn persist-bank-fn retire-seats-fn]}]
   (let [terminal-check (validate-terminal frame terminal-receipt)]
     (cond
       (not (:ok terminal-check)) terminal-check
-      (not (every? fn? [audit-fn retire-workspace-fn persist-bank-fn
-                        retire-seats-fn]))
+      (not (every? fn? [audit-fn retire-workspace-fn retirement-status-fn
+                        persist-bank-fn retire-seats-fn]))
       {:ok false :error/code :queued-frame-terminal-provider-missing}
       (not= #{:solver :student} (set (keys leases)))
       {:ok false :error/code :queued-frame-terminal-leases-incomplete}
@@ -104,15 +104,31 @@
                  (fn [result [role lease]]
                    (if-not (:ok result)
                      (reduced result)
-                     (let [audit-result (audit-fn frame terminal-receipt role lease)
-                           audit (:audit audit-result)]
-                       (if-not (:ok audit-result)
-                         (reduced audit-result)
-                         (let [retired (retire-workspace-fn lease audit)]
-                           (if (:ok retired)
-                             (assoc-in result [:workspace-receipts role]
-                                       (:receipt retired))
-                             (reduced retired)))))))
+                     (let [status (retirement-status-fn
+                                   lease
+                                   (get-in terminal-receipt
+                                           [:workspace/terminal-heads role]))]
+                       (cond
+                         (not (:ok status)) (reduced status)
+                         (= :already-retired (:status status))
+                         (assoc-in result [:workspace-receipts role]
+                                   (:receipt status))
+                         (not= :not-retired (:status status))
+                         (reduced {:ok false
+                                   :error/code
+                                   :queued-frame-retirement-status-invalid
+                                   :role role :status status})
+                         :else
+                         (let [audit-result
+                               (audit-fn frame terminal-receipt role lease)
+                               audit (:audit audit-result)]
+                           (if-not (:ok audit-result)
+                             (reduced audit-result)
+                             (let [retired (retire-workspace-fn lease audit)]
+                               (if (:ok retired)
+                                 (assoc-in result [:workspace-receipts role]
+                                           (:receipt retired))
+                                 (reduced retired)))))))))
                  {:ok true :workspace-receipts {}}
                  (sort-by (comp name key) leases))]
             (if-not (:ok retirements)

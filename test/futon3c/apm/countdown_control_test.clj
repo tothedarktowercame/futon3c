@@ -286,6 +286,32 @@
         (is (= frame-id (get-in context [:unit :frame/id])))
         (is (= (:problem/id unit) (get-in context [:preparation :problem/id])))))))
 
+(deftest f30-shaped-launch-replay-accepts-certified-retired-solver
+  (let [solver {:workspace/id "f30-solver" :workspace/path "/missing/f30-solver"
+                :frame/id "f30" :problem/id "a01J06" :role :solver
+                :repository/path "/repo" :branch "exp/f30-solver"
+                :base-revision "base"}
+        result (#'sut/validate-live-workspaces
+                {:workspaces {:solver solver}}
+                {:solver "terminal-head"}
+                (fn [workspace terminal-head]
+                  (is (= solver workspace))
+                  (is (= "terminal-head" terminal-head))
+                  {:ok true :status :already-retired
+                   :receipt {:receipt/type :workspace-retired}}))]
+    (is (:ok result) (pr-str result))))
+
+(deftest missing-workspace-without-retirement-receipt-still-fails-closed
+  (let [result (#'sut/validate-live-workspaces
+                {:workspaces
+                 {:solver {:workspace/path "/missing/f30-solver"
+                           :role :solver :base-revision "base"}}}
+                {:solver "terminal-head"}
+                (fn [_ _] {:ok true :status :not-retired}))]
+    (is (= :countdown-frame-workspace-invalid (:error/code result)))
+    (is (some #(= :workspace-path-missing (:finding %))
+              (:findings result)))))
+
 (deftest promotion-certified-state-satisfies-generic-phase-handler
   (let [receipt {:receipt/frame-id "f22" :receipt/problem-id "p22"
                  :receipt/id "promotion-receipt"}

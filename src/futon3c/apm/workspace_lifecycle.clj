@@ -1,6 +1,7 @@
 (ns futon3c.apm.workspace-lifecycle
   "Lease-backed provisioning and fail-closed retirement of APM worktrees."
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine])
@@ -349,3 +350,54 @@
 
 (defn read-receipt [receipt-path]
   (edn/read-string (slurp receipt-path)))
+
+(defn retirement-status
+  "Recover a completed retirement from its durable receipt.
+
+  A replay may observe the worktree already absent because a prior execution
+  removed it and persisted the receipt before a later role failed.  Only an
+  addressed receipt for this exact lease and terminal head, together with the
+  retained branch and absent path postconditions, counts as completed."
+  [{:keys [lease terminal-head receipt-directory]}]
+  (let [repository (canonical (:repository/path lease))
+        workspace (canonical (:workspace/path lease))
+        branch-ref (str "refs/heads/" (:branch lease))
+        branch-head (out (run repository "rev-parse" "--verify" branch-ref))
+        directory (io/file (str receipt-directory))
+        receipts (if (.isDirectory directory)
+                   (keep (fn [file]
+                           (when (and (.isFile file)
+                                      (str/ends-with? (.getName file) ".edn"))
+                             (try (read-receipt file)
+                                  (catch Throwable _ nil))))
+                         (.listFiles directory))
+                   [])
+        receipt (some (fn [candidate]
+                        (when (and (= :workspace-retired
+                                      (:receipt/type candidate))
+                                   (= (:receipt/id candidate)
+                                      (address (dissoc candidate :receipt/id)))
+                                   (= (:workspace/id lease)
+                                      (:workspace/id candidate))
+                                   (= (str workspace)
+                                      (:workspace/path candidate))
+                                   (= (:frame/id lease) (:frame/id candidate))
+                                   (= (:role lease) (:role candidate))
+                                   (= (:branch lease) (:branch candidate))
+                                   (= terminal-head (:retained-head candidate))
+                                   (= required-retirement-preconditions
+                                      (:preconditions candidate))
+                                   (string? (:audit/id candidate))
+                                   (keyword? (:audit/context candidate)))
+                          candidate))
+                      receipts)
+        path-absent? (not (Files/exists workspace (make-array LinkOption 0)))]
+    (cond
+      (nil? receipt) {:ok true :status :not-retired}
+      (and path-absent? (= terminal-head branch-head))
+      {:ok true :status :already-retired :receipt receipt
+       :path-absent? true :branch-head branch-head}
+      :else
+      {:ok false :error/code :workspace-retirement-replay-postcondition-failed
+       :receipt/id (:receipt/id receipt) :path-absent? path-absent?
+       :expected-head terminal-head :branch-head branch-head})))

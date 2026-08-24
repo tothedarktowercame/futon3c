@@ -67,6 +67,13 @@
     (is (:path-absent? retired))
     (is (= (:head validation) (:branch-head retired)))
     (is (= (:receipt retired) (sut/read-receipt (:receipt/path retired))))
+    (let [replayed (sut/retirement-status
+                    {:lease lease :terminal-head (:head validation)
+                     :receipt-directory receipt-dir})]
+      (is (:ok replayed) (pr-str replayed))
+      (is (= :already-retired (:status replayed)))
+      (is (= (:receipt/id (:receipt retired))
+             (get-in replayed [:receipt :receipt/id]))))
     (is (zero? (:exit (sh "git" "-C" (str repo) "show-ref" "--verify"
                            (str "refs/heads/" (:branch lease))))))
     (testing "retained exact branch can be reprovisioned"

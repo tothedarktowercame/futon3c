@@ -248,11 +248,33 @@
       {:ok true :frame-id frame-id :problem-id problem-id
        :preparation preparation})))
 
-(defn- validate-live-workspaces [preparation]
-  (let [findings
+(defn- validate-live-workspaces
+  ([preparation]
+   (let [terminal-path (.resolve (control-path state-directory)
+                                 "terminal/frame-terminal.edn")
+         terminal (when (java.nio.file.Files/isRegularFile
+                         terminal-path (make-array java.nio.file.LinkOption 0))
+                    (edn/read-string (slurp (str terminal-path))))
+         receipt-directory (.resolve (control-path state-directory)
+                                     "terminal/workspaces")]
+     (validate-live-workspaces
+      preparation (:workspace/terminal-heads terminal)
+      (fn [workspace terminal-head]
+        (workspace-lifecycle/retirement-status
+         {:lease workspace :terminal-head terminal-head
+          :receipt-directory receipt-directory})))))
+  ([preparation terminal-heads retirement-status-fn]
+   (let [findings
         (mapcat
          (fn [[role workspace]]
            (let [path (:workspace/path workspace)
+                 path-present? (and (string? path)
+                                    (.isDirectory (java.io.File. path)))
+                 retirement (when-not path-present?
+                              (retirement-status-fn
+                               workspace (get terminal-heads role)))
+                 retired? (and (:ok retirement)
+                               (= :already-retired (:status retirement)))
                  branch (when (string? path)
                           (shell/sh "git" "-C" path "branch" "--show-current"))
                  ancestry (when (string? path)
@@ -260,21 +282,23 @@
                                       "--is-ancestor" (:base-revision workspace)
                                       "HEAD"))]
              (cond-> []
-               (not (and (string? path)
-                         (.isDirectory (java.io.File. path))))
+               (and (not path-present?) (not retired?))
                (conj {:finding :workspace-path-missing :role role :path path})
-               (not (zero? (or (:exit branch) 1)))
+               (and (not retired?) (not (zero? (or (:exit branch) 1))))
                (conj {:finding :workspace-git-unavailable :role role})
-               (and branch (zero? (:exit branch))
+               (and (not retired?) branch (zero? (:exit branch))
                     (not= (:branch workspace) (str/trim (:out branch))))
                (conj {:finding :workspace-branch-mismatch :role role})
-               (not (zero? (or (:exit ancestry) 1)))
-               (conj {:finding :workspace-base-not-ancestor :role role}))))
+               (and (not retired?) (not (zero? (or (:exit ancestry) 1))))
+               (conj {:finding :workspace-base-not-ancestor :role role})
+               (and retirement (not (:ok retirement)))
+               (conj {:finding :workspace-retirement-replay-invalid
+                      :role role :evidence retirement}))))
          (:workspaces preparation))]
     (if (seq findings)
       {:ok false :error/code :countdown-frame-workspace-invalid
        :findings (vec findings)}
-      {:ok true})))
+      {:ok true}))))
 
 (defn frame-context
   ([frame-id] (frame-context frame-id nil))
@@ -1474,6 +1498,12 @@
                   :audit-fn (fn [f t role lease]
                               (jit-retirement-audit agency-base campaign-config
                                                     f t role lease))
+                  :retirement-status-fn
+                  (fn [lease terminal-head]
+                    (workspace-lifecycle/retirement-status
+                     {:lease lease :terminal-head terminal-head
+                      :receipt-directory
+                      (:retirement-receipt-directory campaign-config)}))
                   :persist-bank-fn
                   (fn [_ bank]
                     (live-preflight-runtime/atomic-persist!
