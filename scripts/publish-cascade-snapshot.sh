@@ -12,6 +12,7 @@ set -euo pipefail
 
 BASE="${CASCADE_BASE:-http://localhost:7070}"
 SRC="${CASCADE_SRC:-/home/joe/code/futon3c/holes/excursions/pipeline-pattern-cascade-live.html}"
+WIP="${CASCADE_WIP:-/home/joe/code/futon3c/holes/excursions/wip-cards.json}"
 OUT="${CASCADE_OUT:-/var/www/zone.hyperreal.enterprises/wip/pipeline-pattern-cascade.html}"
 TRIES="${CASCADE_TRIES:-6}"
 WORK="$(mktemp -d)"
@@ -46,10 +47,10 @@ fetch summary "/api/alpha/cascade-real"       required
 fetch graph   "/api/alpha/cascade-real/graph" required
 fetch forward "/api/alpha/forward-model"      optional
 
-python3 - "$SRC" "$WORK" "$OUT" "$BASE" <<'PY'
+python3 - "$SRC" "$WIP" "$WORK" "$OUT" "$BASE" <<'PY'
 import json, pathlib, sys, datetime
 
-src, work, out, base = sys.argv[1], pathlib.Path(sys.argv[2]), sys.argv[3], sys.argv[4]
+src, wip, work, out, base = sys.argv[1], pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3]), sys.argv[4], sys.argv[5]
 html = pathlib.Path(src).read_text()
 graph = json.loads((work / "graph.json").read_text())
 section_status = graph.get("section-status")
@@ -62,6 +63,7 @@ snapshot = {
     f"{base}/api/alpha/cascade-real":       json.loads((work / "summary.json").read_text()),
     f"{base}/api/alpha/cascade-real/graph": graph,
     f"{base}/api/alpha/forward-model":      json.loads((work / "forward.json").read_text()),
+    "wip-cards.json":                       json.loads(wip.read_text()),
 }
 stamp = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
 

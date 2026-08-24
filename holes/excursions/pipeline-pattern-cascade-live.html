@@ -47,6 +47,13 @@
   .basin-hole{color:#e8a07a;font-size:11px;line-height:1.4}
   .cand-head{color:#7b8698;font-size:10px;margin-top:7px;border-top:1px solid #232936;padding-top:5px}
   .cand-line{font-size:10.5px;padding:1px 0;color:#8fa0b6} .cand-line code{background:#141922;font-size:10px;color:#93b0d8}
+  .wip-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px;margin:10px 0 16px}
+  .wip-card{background:#1b2029;border:1px solid var(--line);border-radius:9px;padding:11px 13px}
+  .wip-mark{display:inline-flex;align-items:center;gap:6px;margin-left:7px;padding:2px 7px;border-radius:10px;font-size:10.5px;font-weight:700;color:#101318}
+  .wip-fresh{background:#3ddc84}.wip-ageing{background:#e0c33b}.wip-stale{background:#e08a3b}.wip-expired{background:#ff6b6b}
+  .wip-field{margin-top:7px}.wip-field b{color:#cdd6e4}.wip-none{color:#ff9c9c;font-weight:800}
+  .draw-pile{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .draw-pile a{color:#93bdf8}
 </style>
 </head>
 <body>
@@ -112,6 +119,12 @@
     <div id="forward-body"></div>
   </section>
 
+  <section class="panel" id="wip-panel" style="display:none">
+    <h2>WIP / Uxbridge layer <span class="muted" id="wip-count"></span></h2>
+    <div class="sub" style="margin-bottom:10px">Red-ring control-loop gaps, with the age of each mark and the promotion test required to move it. Missing promotion tests are shown as findings, not hidden.</div>
+    <div id="wip-body"></div>
+  </section>
+
   <section class="panel" id="tickets-panel" style="display:none">
     <h2>Tickets <span class="muted" id="tickets-count"></span></h2>
     <div class="sub" style="margin-bottom:10px">unclocked = no clock lineage, live or durable · claim by clocking (<code>bell --mission &lt;id&gt;</code> or 3 doc-edits &lt;10 min)</div>
@@ -125,6 +138,7 @@
   var EP_SUMMARY=BASE+"/api/alpha/cascade-real";
   var EP_GRAPH=BASE+"/api/alpha/cascade-real/graph";
   var EP_FORWARD=BASE+"/api/alpha/forward-model";
+  var EP_WIP="wip-cards.json";
   var FETCH_TIMEOUT_MS=20000;
 
   var REPO_COLORS={futon0:"#8a6d3b",futon1a:"#3b6d8a",futon2:"#8a5ad0",futon3:"#3a8a6d",
@@ -469,6 +483,49 @@
     el("tickets-panel").style.display="";
   }
 
+  function wipAge(established){
+    var mark=new Date(String(established)+"T00:00:00Z");
+    var today=new Date();
+    var todayUTC=Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate());
+    var days=Math.max(0,Math.floor((todayUTC-mark.getTime())/86400000));
+    var band=days<=2?"fresh":days<=7?"ageing":days<30?"stale":"expired";
+    return {days:days,band:band};
+  }
+
+  function renderWip(w){
+    var cards=w.cards||[], pile=w.draw_pile||[], counts=w.counts||{};
+    el("wip-count").textContent="· "+cards.length+" cards · "+pile.length+" in draw pile";
+    var cardHtml=cards.map(function(c){
+      var age=wipAge(c.established), supplier=c.supplier;
+      var supplierHtml=supplier
+        ? "<code>"+esc(supplier.box)+"</code> "+esc(supplier.label)+"<br><span class='muted'>"+esc(supplier.mission)+"</span>"
+        : "<span class='wip-none'>NONE — no cascade mission claims this</span>";
+      var promotion=c.promotion_test==null
+        ? "<span class='wip-none'>no promotion test defined</span>"
+        : esc(c.promotion_test);
+      return "<div class='wip-card'><div><code>"+esc(c.id)+"</code> · <b>"+esc(c.wr)+"</b>"+
+        "<span class='wip-mark wip-"+age.band+"'>"+esc(age.band)+" · "+age.days+" days</span></div>"+
+        "<div class='wip-field'><b>Gap:</b> "+esc(c.gap)+"</div>"+
+        "<div class='wip-field'><b>Supplier:</b> "+supplierHtml+"</div>"+
+        "<div class='wip-field'><b>Register:</b> <code>"+esc(c.register)+"</code></div>"+
+        "<div class='wip-field'><b>Promotion test:</b> "+promotion+"</div></div>";
+    }).join("");
+    var rows=pile.map(function(t){
+      return "<tr><td><a href='"+esc(t.path)+"'>"+esc(t.title)+"</a></td><td class='muted'>"+esc(t.last_touched||"unknown")+"</td></tr>";
+    }).join("");
+    el("wip-body").innerHTML="<div class='wip-cards'>"+cardHtml+"</div>"+
+      "<h3>Draw pile <span class='muted'>· "+Number(counts.draw_pile||pile.length)+" tickets</span></h3>"+
+      "<div class='draw-pile'><table><tr><th>ticket</th><th>last touched</th></tr>"+rows+"</table></div>";
+    el("wip-panel").style.display="";
+  }
+
+  function loadWip(){
+    requestJSON("WIP / Uxbridge data",EP_WIP).then(renderWip).catch(function(err){
+      el("wip-body").innerHTML="<div class='gap'>WIP data unavailable: "+esc(err&&err.message||err)+"</div>";
+      el("wip-panel").style.display="";
+    });
+  }
+
   function loadAll(){
     if(loading) return;
     loading=true;
@@ -509,6 +566,7 @@
     });
   }
 
+  loadWip();
   loadAll();
   setInterval(loadAll,60000);
 })();
