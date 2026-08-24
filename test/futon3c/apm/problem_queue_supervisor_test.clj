@@ -70,6 +70,24 @@
       (is (= 1 (count (filter #(= :mint (first %)) @calls))))
       (is (= 1 (count (:completed @state)))))))
 
+(deftest resume-paused-preserves-cursor-and-mints-exact-successor
+  (let [{:keys [providers state calls]} (harness)]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    ((:persist-state-fn providers)
+     (:state (sut/pause-after-active @state)))
+    (is (= :batch-paused (:status (sut/tick! providers))))
+    (let [paused @state
+          resumed (sut/resume-paused paused)]
+      (is (:ok resumed))
+      (is (= (:next-index paused) (get-in resumed [:state :next-index])))
+      (is (= (:completed paused) (get-in resumed [:state :completed])))
+      (is (nil? (get-in resumed [:state :active])))
+      ((:persist-state-fn providers) (:state resumed)))
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (is (= "p2" (get-in @state [:active :frame :problem/id])))
+    (is (= ["p1" "p2"]
+           (mapv second (filter #(= :mint (first %)) @calls))))))
+
 (deftest durable-intermediate-collection-statuses-remain-nonterminal
   (doseq [status [:terminal-collected :claim-recovered]]
     (let [{:keys [providers calls]} (harness)]

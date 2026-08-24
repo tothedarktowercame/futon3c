@@ -66,6 +66,22 @@
     :else
     {:ok true :state (addressed (assoc state :status :pause-after-active))}))
 
+(defn resume-paused
+  "Return an intentionally paused queue to its ordinary runnable state.
+
+  The cursor, completed frames, and absence of an active frame are preserved;
+  the next tick remains solely responsible for minting the successor."
+  [state]
+  (cond
+    (not (valid-state? state))
+    {:ok false :error/code :problem-queue-state-invalid}
+    (not= :paused (:status state))
+    {:ok false :error/code :problem-queue-not-paused}
+    (some? (:active state))
+    {:ok false :error/code :problem-queue-paused-active-frame-invalid}
+    :else
+    {:ok true :state (addressed (dissoc state :status))}))
+
 (defn complete-active-without-successor
   "Record a retryable terminal frame without preparing the queue's next item.
 
