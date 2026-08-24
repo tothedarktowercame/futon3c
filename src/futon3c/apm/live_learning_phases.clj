@@ -282,7 +282,9 @@
                           (select-keys (:memory-snapshot request)
                                        [:receipt-id :snapshot-id :snapshot-digest])}
                    (map? (:source validated))
-                   (assoc :receipt/source (:source validated)))
+                   (assoc :receipt/source (:source validated))
+                   (map? (:candidate validated))
+                   (assoc :receipt/candidate (:candidate validated)))
                  :guide-intervention
                  (let [snapshot (:memory-snapshot report)]
                    (cond-> {:receipt/type :guide-intervention
@@ -354,12 +356,17 @@
                                 repair-attempts collection-evidence nil))
   ([contract action receipts request ticket job repair-attempts collection-evidence
     archive-fn]
+   (missing-observation-receipt contract action receipts request ticket job
+                                repair-attempts collection-evidence archive-fn nil))
+  ([contract action receipts request ticket job repair-attempts collection-evidence
+    archive-fn candidate-fn]
   (let [workspace (:workspace request)
         head-result (when (string? workspace)
                       (shell/sh "git" "-C" workspace "rev-parse" "HEAD"))
         ;; The source is archived even without a typed receipt: an
         ;; unobserved attempt's worktree is still evidence.
         archived (when (fn? archive-fn) (archive-fn))
+        candidate (when (fn? candidate-fn) (candidate-fn))
         body {:receipt/type :student-observation-missing
               :receipt/frame-id (:frame-id request)
               :receipt/problem-id (:problem-id request)
@@ -381,10 +388,17 @@
                            :source (if (:ok archived)
                                      (:source archived)
                                      (some-> archived
-                                             (select-keys [:error/code :path])))}
+                                             (select-keys [:error/code :path])))
+                           :candidate (when candidate
+                                        (if (:ok candidate)
+                                          (:candidate candidate)
+                                          (select-keys candidate
+                                                       [:error/code :head :ref])))}
                :memory {:snapshot (:memory-snapshot request)}}}
         addressed (assoc body :receipt/id (machine/ledger-digest [body]))]
-    (handlers/validate-completion contract action addressed receipts))))
+    (if (and candidate (not (:ok candidate)))
+      candidate
+      (handlers/validate-completion contract action addressed receipts)))))
 
 (defn prepare-student-workspace!
   "Before an original fresh Student attempt, return the Student worktree to
@@ -494,10 +508,11 @@
 (defn run-live!
   [{:keys [contract action receipts request state-path agency-base
            snapshot-publish-fn workspace-reset-fn source-archive-fn
-           guide-promotion]
+           student-candidate-fn preparation guide-promotion]
     :or {agency-base "http://localhost:7070"
          workspace-reset-fn workspace-lifecycle/reset-to-base!
-         source-archive-fn workspace-lifecycle/archive-problem-source!}}]
+         source-archive-fn workspace-lifecycle/archive-problem-source!
+         student-candidate-fn workspace-lifecycle/preserve-student-candidate!}}]
   (driver/drive!
    {:request request :state (runtime/read-state state-path)
     :announce-fn
@@ -549,7 +564,12 @@
         (missing-observation-receipt contract action receipts request ticket job
                                      repair-attempts collection-evidence
                                      #(archive-student-source!
-                                       request state-path source-archive-fn))))
+                                       request state-path source-archive-fn)
+                                     #(student-candidate-fn
+                                       {:lease (get-in preparation
+                                                       [:workspaces :student])
+                                        :attempt-ordinal
+                                        (:attempt-ordinal request)}))))
     :receipt-provider
     (fn [request ticket job validated]
       (cond
@@ -570,15 +590,23 @@
                 (receipt contract action receipts request ticket job
                          (assoc validated :report report))))))
 
-        ;; Archive before certifying: the receipt names the source blob, and
-        ;; the next attempt's reset (or retirement) discards the worktree.
+        ;; Preserve and compile before certifying: the receipt names an exact
+        ;; Git candidate, so a dirty but valid Student result cannot vanish at
+        ;; the next reset or retirement boundary.
         (= :student-attempt (:kind action))
-        (let [archived (archive-student-source! request state-path
-                                                source-archive-fn)]
-          (if-not (:ok archived)
-            archived
-            (receipt contract action receipts request ticket job
-                     (assoc validated :source (:source archived)))))
+        (let [candidate (student-candidate-fn
+                         {:lease (get-in preparation [:workspaces :student])
+                          :attempt-ordinal (:attempt-ordinal request)})]
+          (if-not (:ok candidate)
+            candidate
+            (let [archived (archive-student-source! request state-path
+                                                    source-archive-fn)]
+              (if-not (:ok archived)
+                archived
+                (receipt contract action receipts request ticket job
+                         (assoc validated
+                                :source (:source archived)
+                                :candidate (:candidate candidate)))))))
 
         ;; A store-mode Guide deposit is reviewed independently and published
         ;; as a union snapshot before the Guide receipt exists, so the receipt

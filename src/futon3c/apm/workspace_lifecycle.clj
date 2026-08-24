@@ -192,6 +192,85 @@
               {:ok false :error/code :workspace-source-archive-failed
                :finding {:message (.getMessage t)}})))))))
 
+(defn preserve-student-candidate!
+  "Commit and certify the exact Student worktree at a terminal boundary.
+
+  A dirty tree is committed on its leased branch before validation; a clean
+  tree reuses its current head. The resulting head is pinned under a
+  content-addressed, attempt-specific ref and validated against the canonical
+  workspace substrate. Replaying after a crash is idempotent because the
+  already-clean head and exact ref produce the same certificate."
+  [{:keys [lease attempt-ordinal probe-fn]}]
+  (let [workspace (canonical (:workspace/path lease))
+        frame-id (:frame/id lease)
+        problem-id (:problem/id lease)
+        shape? (and (map? lease) workspace
+                    (string? frame-id) (not (str/blank? frame-id))
+                    (string? problem-id) (not (str/blank? problem-id))
+                    (contains? #{1 2 3} attempt-ordinal)
+                    (= :student (:role lease)))]
+    (if-not shape?
+      {:ok false :error/code :student-candidate-shape-invalid}
+      (let [status-result (run workspace "status" "--porcelain=v1")
+            status-before (when (zero? (:exit status-result))
+                            (vec (remove str/blank?
+                                         (str/split-lines (:out status-result)))))
+            dirty? (seq status-before)
+            staged (when dirty? (run workspace "add" "--all"))
+            committed (when (and dirty? (zero? (:exit staged)))
+                        (run workspace
+                             "-c" "user.name=APM Student Candidate Controller"
+                             "-c" "user.email=apm-controller@invalid"
+                             "commit" "-m"
+                             (str "preserve " frame-id " " problem-id
+                                  " student attempt " attempt-ordinal)))
+            head (when (and (zero? (:exit status-result))
+                            (or (not dirty?) (zero? (:exit committed))))
+                   (out (run workspace "rev-parse" "HEAD")))
+            ref (when head
+                  (str "refs/apm/student-candidates/" frame-id "/" problem-id
+                       "/attempt-" attempt-ordinal "/" head))
+            pinned (when ref (run workspace "update-ref" ref head))]
+        (cond
+          (not (zero? (:exit status-result)))
+          {:ok false :error/code :student-candidate-status-failed
+           :finding {:exit (:exit status-result) :stderr (:err status-result)}}
+
+          (and dirty? (not (zero? (:exit staged))))
+          {:ok false :error/code :student-candidate-stage-failed
+           :finding {:exit (:exit staged) :stderr (:err staged)}}
+
+          (and dirty? (not (zero? (:exit committed))))
+          {:ok false :error/code :student-candidate-commit-failed
+           :finding {:exit (:exit committed) :stderr (:err committed)}}
+
+          (not (and head (re-matches #"[0-9a-f]{40}" head)))
+          {:ok false :error/code :student-candidate-head-invalid :head head}
+
+          (not (zero? (:exit pinned)))
+          {:ok false :error/code :student-candidate-ref-failed
+           :finding {:exit (:exit pinned) :stderr (:err pinned)}}
+
+          :else
+          (let [validation (validate lease
+                                     (cond-> {:expected-head head}
+                                       probe-fn (assoc :probe-fn probe-fn)))]
+            (if-not (:valid? validation)
+              {:ok false :error/code :student-candidate-validation-failed
+               :head head :ref ref :validation validation}
+              (let [body {:candidate/type :student-terminal
+                          :workspace/id (:workspace/id lease)
+                          :frame/id frame-id :problem/id problem-id
+                          :attempt/ordinal attempt-ordinal
+                          :candidate/head head :candidate/ref ref
+                          :candidate/problem-blob (:problem/blob validation)
+                          :candidate/lean-exit (:probe/exit validation)
+                          :candidate/worktree-clean? (:worktree-clean? validation)}]
+                {:ok true
+                 :candidate (assoc body :candidate/id (address body))
+                 :created-commit? (boolean dirty?)
+                 :status-before status-before}))))))))
+
 (defn reset-to-base!
   "Return a worktree to its registered base revision with a clean tree.
 

@@ -218,3 +218,32 @@
     (testing "reset fails closed on a malformed base"
       (is (= :workspace-reset-shape-invalid
              (:error/code (sut/reset-to-base! (assoc lease :base-revision "main"))))))))
+
+(deftest f30-shaped-dirty-student-candidate-is-committed-certified-and-idempotent
+  (let [{:keys [repo workspaces lake unit]} (fixture)
+        lease (:lease (sut/provision! {:unit unit :role :student
+                                       :workspace-root workspaces
+                                       :substrate-path lake}))
+        workspace (:workspace/path lease)
+        problem (str workspace "/" (:problem/path lease))]
+    (spit problem "theorem p1 : True := by\n  exact True.intro\n")
+    (spit (str workspace "/student-notes.txt") "preserve the whole attempt\n")
+    (let [first-result (sut/preserve-student-candidate!
+                        {:lease lease :attempt-ordinal 3
+                         :probe-fn (fn [_] {:exit 0})})
+          candidate (:candidate first-result)
+          second-result (sut/preserve-student-candidate!
+                         {:lease lease :attempt-ordinal 3
+                          :probe-fn (fn [_] {:exit 0})})]
+      (is (:ok first-result) (pr-str first-result))
+      (is (true? (:created-commit? first-result)))
+      (is (addressed? candidate :candidate/id))
+      (is (= 0 (:candidate/lean-exit candidate)))
+      (is (true? (:candidate/worktree-clean? candidate)))
+      (is (= "preserve the whole attempt\n"
+             (:out (sh "git" "-C" (str repo) "show"
+                       (str (:candidate/ref candidate) ":student-notes.txt")))))
+      (is (:ok second-result) (pr-str second-result))
+      (is (false? (:created-commit? second-result)))
+      (is (= candidate (:candidate second-result))
+          "a crash before receipt persistence reuses the exact candidate"))))

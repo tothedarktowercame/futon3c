@@ -61,12 +61,17 @@
                                    :queries [] :surfaced-ids [] :used-ids []}}}
         ticket {:job-id "j1"}
         validated (sut/validate-terminal request ticket job)
-        result (sut/receipt contract action (:receipts base) request ticket job validated)]
+        candidate {:candidate/id "candidate-id" :candidate/head "head"
+                   :candidate/ref "refs/apm/student-candidates/f19/a01J05/attempt-1/head"
+                   :candidate/lean-exit 0}
+        result (sut/receipt contract action (:receipts base) request ticket job
+                            (assoc validated :candidate candidate))]
     (is (:ok validated))
     (is (:ok result))
     (is (= {:receipt-id "promotion" :snapshot-id "snapshot"
             :snapshot-digest "digest"}
            (get-in result [:certificate :receipt/memory-snapshot])))
+    (is (= candidate (get-in result [:certificate :receipt/candidate])))
     (is (= "fresh-s1" (get-in result [:certificate :receipt/fresh-session-id])))))
 
 (deftest typed-terminal-repair-preserves-authority-and-carries-findings
@@ -390,6 +395,44 @@
             :snapshot-digest "frozen-digest"}
            (get-in result [:certificate :receipt/memory-snapshot])))
     (is (nil? (get-in result [:certificate :receipt/fresh-session-id])))))
+
+(deftest f30-shaped-missing-observation-certifies-the-preserved-candidate
+  (let [contract {:phase-order [:student-attempt-3]
+                  :phases {:student-attempt-3
+                           {:kind :student-attempt :role :student :ordinal 3
+                            :receipt/type :student-attempt
+                            :alternate-receipt/types #{:student-observation-missing}
+                            :requires #{} :produces #{:attempt :memory-use}}}
+                  :receipt/schemas
+                  {:student-observation-missing
+                   {:required #{:receipt/id :receipt/type :receipt/frame-id
+                                :receipt/problem-id :receipt/attempt-ordinal
+                                :receipt/job-id :receipt/author :receipt/reason
+                                :receipt/repair-attempts :receipt/memory-snapshot
+                                :receipt/harness-observed}}}}
+        action {:kind :student-attempt :role :student :phase :student-attempt-3
+                :frame-id "f30" :problem-id "a01J06"}
+        candidate {:candidate/id "candidate-id"
+                   :candidate/head "5865822658658226586582265865822658658226"
+                   :candidate/ref
+                   "refs/apm/student-candidates/f30/a01J06/attempt-3/5865822658658226586582265865822658658226"
+                   :candidate/lean-exit 0
+                   :candidate/worktree-clean? true}
+        result (sut/missing-observation-receipt
+                contract action {}
+                {:frame-id "f30" :problem-id "a01J06" :attempt-ordinal 3
+                 :workspace "/does/not/exist" :memory-snapshot {}}
+                {:job-id "f30-student-job"}
+                {:job-id "f30-student-job" :agent-id "f30-student"
+                 :state :done :terminal-code 0}
+                1 {:collection/id "collection"}
+                (fn [] {:ok true :source {:blob "source-blob"}})
+                (fn [] {:ok true :candidate candidate}))]
+    (is (:ok result) (pr-str result))
+    (is (= candidate
+           (get-in result [:certificate :receipt/harness-observed
+                           :workspace :candidate])))
+    (is (= :controller (get-in result [:certificate :receipt/author])))))
 
 (deftest student-request-carries-the-workspace-base-for-reset-and-archive
   (let [base-revision (apply str (repeat 40 "b"))
