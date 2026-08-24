@@ -89,6 +89,8 @@ turn and is lost at the end of it.
 
 ## Related
 
+- `T-watu-replay-layer.md` — the click-through half: why the draw pile is the
+  queue and not the replay instrument.
 - `T-devmap-forward-model-calibration.md` — same series: grading the stack's
   previous forward model (the 2026-04 devmaps) against what actually happened.
 - `T-exogenous-evidence-update-rule.md` — same series: why an emission-driven
