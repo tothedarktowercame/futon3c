@@ -240,7 +240,8 @@
                     (or (not= (str frame-id "-" (name role)) (:agent-id seat))
                         (not= expected-type (:type seat)))))
                 {:solver :codex :student :zai :guide :claude
-                 :proctor :codex :promotion-proctor :codex :scribe :zai})
+                 :proctor :codex :promotion-proctor :codex :scribe :zai
+                 :zai-scribe :zai})
           (conj :preparation-seat-mismatch))]
     (if (seq findings)
       {:ok false :error/code :countdown-frame-preparation-invalid
@@ -1593,7 +1594,7 @@
               (select-keys queued-frame-adapter/default-artifacts
                            [:solver :solver-restrategize :student :guide :proctor
                             :promotion-proctor
-                            :scribe :analyst]))
+                            :scribe :zai-scribe :analyst]))
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :campaign-root campaign-root

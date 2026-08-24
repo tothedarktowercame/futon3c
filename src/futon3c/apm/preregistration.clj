@@ -53,6 +53,7 @@
    :guide :reg/guide-seat
    :proctor :reg/proctor-seat
    :scribe :reg/scribe-seat
+   :zai-scribe :reg/zai-scribe-seat
    :student :reg/student-seat})
 
 (def required-trace-keys

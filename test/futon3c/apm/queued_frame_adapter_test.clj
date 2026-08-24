@@ -23,6 +23,17 @@
   (is (:ok (sut/qualify {:frame frame :generated-contract-digest digest
                          :qualification-digest digest}))))
 
+(deftest fresh-one-off-manifest-pins-both-scribe-cards
+  (let [manifest (sut/one-off-manifest
+                  {:frame frame :apparatus-repository "."
+                   :apparatus-branch "master" :baseline {}})]
+    (is (string? (get-in manifest [:apparatus :artifacts :scribe :blob])))
+    (is (string? (get-in manifest [:apparatus :artifacts :zai-scribe :blob])))
+    (is (.endsWith (get-in manifest [:apparatus :artifacts :scribe :path])
+                   "codex-scribe-v1.md"))
+    (is (.endsWith (get-in manifest [:apparatus :artifacts :zai-scribe :path])
+                   "zai-scribe-v1.md"))))
+
 (deftest open-precedes-all-resource-effects
   (let [calls (atom [])
         body {:preparation/version 2 :frame/id "f30" :problem/id "p1"}
@@ -79,7 +90,7 @@
                               :turn-timeout-ms 3600000}}}]))
          {:solver :codex :student :zai :guide :claude
           :proctor :codex :promotion-proctor :codex
-          :scribe :zai :analyst :claude})})
+          :scribe :zai :zai-scribe :zai :analyst :claude})})
 
 (deftest concrete-live-preparation-binds-lifecycle-mint-roster-and-paths
   (let [calls (atom [])
@@ -91,7 +102,8 @@
                  :role-cards (into {} (map (fn [role]
                                              [role {:path (name role) :blob digest}])
                                            [:solver :student :guide :proctor
-                                            :promotion-proctor :scribe :analyst]))
+                                            :promotion-proctor :scribe
+                                            :zai-scribe :analyst]))
                  :workspace-root "/work" :substrate-path "/lake"
                  :provision-fn
                  (fn [{:keys [role]}]
@@ -113,6 +125,7 @@
     (is (= "f30-student"
            (get-in result [:preparation :seats :student :agent-id])))
     (is (= :zai (get-in result [:preparation :seats :scribe :type])))
+    (is (= :zai (get-in result [:preparation :seats :zai-scribe :type])))
     (is (= (:preparation/id (:preparation result))
            (machine/ledger-digest
             [(dissoc (:preparation result) :preparation/id)])))

@@ -164,13 +164,14 @@
     (is (some #{:malformed-problem} failures))))
 
 (deftest carded-roles-require-staffed-and-separated-seats
-  (let [role-cards (zipmap [:solver :guide :proctor :scribe :student]
+  (let [role-cards (zipmap [:solver :guide :proctor :scribe :zai-scribe :student]
                            (repeat prereg/required-lean-revision))
         staffed (assoc registration
                        :reg/role-cards role-cards
                        :reg/guide-seat "claude-7"
                        :reg/proctor-seat "ams-codex-2"
                        :reg/scribe-seat "claude-8"
+                       :reg/zai-scribe-seat "zai-scribe-1"
                        :reg/student-seat "zai-1")]
     (testing "one role-bearing finding identifies a missing proctor seat"
       (is (some #(= {:finding :unstaffed-carded-seat
@@ -179,6 +180,13 @@
                     %)
                 (prereg/registration-shape-failures
                  (dissoc staffed :reg/proctor-seat)))))
+    (testing "the Zai scribe card requires its own staffed seat"
+      (is (some #(= {:finding :unstaffed-carded-seat
+                     :role :zai-scribe
+                     :seat-key :reg/zai-scribe-seat}
+                    %)
+                (prereg/registration-shape-failures
+                 (dissoc staffed :reg/zai-scribe-seat)))))
     (testing "guide and proctor seats must be distinct"
       (is (some #{:guide-proctor-not-separated}
                 (prereg/registration-shape-failures
