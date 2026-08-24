@@ -1,5 +1,6 @@
 (ns futon3c.apm.role-memory-search-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.apm.role-memory-search :as sut]
             [futon3c.apm.typed-role-submission :as submission]))
 
@@ -41,6 +42,9 @@
         (is (= ["math/canonical-pattern" "outside-snapshot-memory"]
                (:result-ids receipt)))
         (is (= receipt (sut/receipt (:receipt/id receipt))))
+        (is (:ok (sut/validate-claims
+                  {:job-id "student-job" :dispatch/id "dispatch" :role :student}
+                  [(:receipt/id receipt)])))
         (is (= (first @calls) (second @calls))
             "read-only effect replay uses identical deterministic trace identity")))))
 
@@ -69,3 +73,22 @@
                                   {:ok true :content-matches [] :candidates []})]
         (is (:ok (sut/search! job-id "token" "canonical namespace" 1))
             (name role))))))
+
+(deftest f29-fragmented-namespace-is-killed-by-canonical-search-accounting
+  (let [{:keys [search-result-pattern-id f29-proposed-pattern-id expected-error]}
+        (edn/read-string
+         (slurp "test/fixtures/apm/f29-fragmented-pattern-namespace.edn"))
+        receipt {:candidates [{:pattern-id search-result-pattern-id}]}
+        evidence {:lanes [{:pattern-ids [f29-proposed-pattern-id]}]}
+        refused (sut/validate-pattern-accounting [receipt] evidence)
+        reused (sut/validate-pattern-accounting
+                [receipt] {:lanes [{:pattern-ids [search-result-pattern-id]}]})
+        justified (sut/validate-pattern-accounting
+                   [receipt]
+                   (assoc evidence :new-pattern-rationales
+                          {f29-proposed-pattern-id
+                           "Distinct hypotheses and conclusion; not an alias."}))]
+    (is (= expected-error (:error/code refused)))
+    (is (= #{f29-proposed-pattern-id} (:unaccounted-pattern-ids refused)))
+    (is (:ok reused))
+    (is (:ok justified))))

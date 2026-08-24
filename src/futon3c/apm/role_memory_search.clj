@@ -2,6 +2,7 @@
   "Authenticated, recorded FTS over the reviewed mathematics memory corpus."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.peripheral.memory-recall :as recall])
@@ -81,3 +82,63 @@
 (defn receipt [receipt-id]
   (let [file (receipt-path receipt-id)]
     (when (.isFile file) (edn/read-string (slurp file)))))
+
+(defn- valid-receipt? [auth value]
+  (and (= :apm-role-memory-search (:receipt/type value))
+       (= (:job-id auth) (:job-id value))
+       (= (:dispatch/id auth) (:dispatch/id value))
+       (= (:role auth) (:role value))
+       (= :reviewed-mathematics (:corpus/scope value))
+       (= (:receipt/id value)
+          (machine/ledger-digest [(dissoc value :receipt/id)]))))
+
+(defn validate-claims
+  "Validate terminal receipt references against persisted controller records.
+   An empty vector honestly records that the role did not search."
+  [auth receipt-ids]
+  (let [values (when (vector? receipt-ids) (mapv receipt receipt-ids))
+        findings (cond-> []
+                   (not (vector? receipt-ids))
+                   (conj :memory-search-receipt-ids-not-vector)
+                   (and (vector? receipt-ids)
+                        (not= (count receipt-ids) (count (distinct receipt-ids))))
+                   (conj :memory-search-receipt-id-duplicate)
+                   (and (contains? #{:scribe :promotion-proctor} (:role auth))
+                        (vector? receipt-ids) (empty? receipt-ids))
+                   (conj :canonical-pattern-search-required)
+                   (and (vector? receipt-ids)
+                        (some #(not (string? %)) receipt-ids))
+                   (conj :memory-search-receipt-id-invalid)
+                   (and values (some nil? values))
+                   (conj :memory-search-receipt-missing)
+                   (and values (some #(and % (not (valid-receipt? auth %))) values))
+                   (conj :memory-search-receipt-authority-invalid))]
+    (if (seq findings)
+      {:ok false :error/code :role-memory-search-claims-invalid
+       :findings findings}
+      {:ok true :receipts values})))
+
+(defn- pattern-ids-in [value]
+  (->> (tree-seq coll? seq value)
+       (filter map?)
+       (mapcat #(when (vector? (:pattern-ids %)) (:pattern-ids %)))
+       (filter string?) set))
+
+(defn validate-pattern-accounting
+  "When FTS discovers canonical pattern ids, require their reuse or an explicit
+   rationale for each newly coined id."
+  [receipt-values evidence]
+  (let [discovered (->> receipt-values (mapcat :candidates)
+                        (keep :pattern-id) (filter string?) set)
+        proposed (pattern-ids-in evidence)
+        rationales (or (:new-pattern-rationales evidence) {})
+        unaccounted (->> (set/difference proposed discovered)
+                         (remove #(let [reason (get rationales %)]
+                                    (and (string? reason) (not-empty reason))))
+                         set)]
+    (if (and (seq discovered) (seq unaccounted))
+      {:ok false :error/code :canonical-pattern-reuse-unaccounted
+       :discovered-pattern-ids discovered
+       :unaccounted-pattern-ids unaccounted}
+      {:ok true :discovered-pattern-ids discovered
+       :proposed-pattern-ids proposed})))

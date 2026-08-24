@@ -1,0 +1,19 @@
+{:authority
+ {:job-id "apm-role-f29-scribe"
+  :dispatch/id "f29-scribe-dispatch"
+  :agent-id "f29-scribe"
+  :frame-id "f29"
+  :problem-id "a01J05"
+  :phase :promote-solver
+  :role :scribe
+  :submission/token "f29-token"}
+ :payload
+ {:command-own-exit 0
+  :outcome "complete"
+  :failure-account []
+  :evidence
+  {:queries ["existing canonical polynomial root localization pattern"]
+   :lanes []
+   :dispositions []
+   :promotion-reviews []}}
+ :expected-finding :evidence-fields-missing}

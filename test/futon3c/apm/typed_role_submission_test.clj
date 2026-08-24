@@ -1,5 +1,6 @@
 (ns futon3c.apm.typed-role-submission-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.apm.typed-role-submission :as sut]))
 
 (defn authority [phase]
@@ -69,3 +70,28 @@
                   (authority :guide-intervention-1)
                   (assoc (payload :guide-intervention-1) :frame-id "f99"))]
       (is (= [:authority-field-supplied-by-agent] (:findings result))))))
+
+(deftest f29-narrated-search-is-not-execution-evidence
+  (let [{:keys [authority payload expected-finding]}
+        (edn/read-string
+         (slurp "test/fixtures/apm/f29-narrated-search-without-receipt.edn"))
+        result (sut/validate-payload authority payload)]
+    (is (= :role-submission-payload-invalid (:error/code result)))
+    (is (some #{expected-finding} (:findings result)))
+    (is (= #{:memory-search-receipt-ids} (:evidence/missing result)))))
+
+(deftest capable-role-may-honestly-report-no-search
+  (let [auth (assoc (authority :student-attempt-1) :role :student)
+        value (assoc-in (payload :student-attempt-1)
+                        [:evidence :memory-search-receipt-ids] [])]
+    (is (:ok (sut/validate-payload auth value)))))
+
+(deftest canonical-pattern-search-is-mandatory-for-scribe-and-promotion-proctor
+  (doseq [role [:scribe :promotion-proctor]]
+    (let [auth (assoc (authority :promote-solver) :role role)
+          value (assoc-in (payload :promote-solver)
+                          [:evidence :memory-search-receipt-ids] [])
+          result (sut/validate-payload auth value)]
+      (is (= :role-submission-payload-invalid (:error/code result)) (name role))
+      (is (some #{:canonical-pattern-search-required}
+                (get-in result [:memory-search/check :findings])) (name role)))))

@@ -56,6 +56,8 @@
    ordinary solve turns retain the ordinary proof-report schema."
   [auth]
   (cond-> (get evidence-required-by-phase (:phase auth))
+    (contains? memory-search-capable-roles (:role auth))
+    (conj :memory-search-receipt-ids)
     (and (= :solve (:phase auth))
          (true? (:solver/strategy-checkpoint? auth)))
     (conj :solver/strategy)))
@@ -138,6 +140,20 @@
                            (set/difference evidence-required
                                            (set (keys (:evidence payload))))
                            #{})
+        search-check (when (and (contains? memory-search-capable-roles (:role auth))
+                                (map? (:evidence payload))
+                                (contains? (:evidence payload)
+                                           :memory-search-receipt-ids))
+                       ((requiring-resolve
+                         'futon3c.apm.role-memory-search/validate-claims)
+                        auth (get-in payload
+                                     [:evidence :memory-search-receipt-ids])))
+        pattern-check (when (and (:ok search-check)
+                                 (contains? #{:scribe :promotion-proctor}
+                                            (:role auth)))
+                        ((requiring-resolve
+                          'futon3c.apm.role-memory-search/validate-pattern-accounting)
+                         (:receipts search-check) (:evidence payload)))
         findings (cond-> []
                    (nil? evidence-required) (conj :phase-schema-unknown)
                    (seq (set/intersection authority-fields (set (keys payload))))
@@ -150,10 +166,15 @@
                    (conj :command-own-exit-not-integer)
                    (and (contains? payload :failure-account)
                         (not (vector? (:failure-account payload))))
-                   (conj :failure-account-not-vector))]
+                   (conj :failure-account-not-vector)
+                   (and search-check (not (:ok search-check)))
+                   (conj :memory-search-receipts-invalid)
+                   (and pattern-check (not (:ok pattern-check)))
+                   (conj :memory-search-pattern-accounting-invalid))]
     (if (seq findings)
       {:ok false :error/code :role-submission-payload-invalid
-       :findings findings :missing missing :evidence/missing evidence-missing}
+       :findings findings :missing missing :evidence/missing evidence-missing
+       :memory-search/check search-check :memory-search/pattern-check pattern-check}
       {:ok true}))))
 
 (defn schema [job-id token]
