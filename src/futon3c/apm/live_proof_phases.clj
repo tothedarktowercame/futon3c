@@ -326,7 +326,7 @@
                    :provide-receipt (partial receipt contract :solve)
                    :max-rounds max-rounds)]
         (if (= :solver-strategy-checkpoint-required (:state/type state))
-          (solver-rounds/resume-strategy-collection! solver-effects)
+          (solver-rounds/resume-strategy-checkpoint! solver-effects)
           (solver-rounds/drive! solver-effects)))
       (drive! effects))))
 

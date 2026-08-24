@@ -152,6 +152,17 @@
 
 (defn- normalize-round-report [report]
   (let [lean (:lean report)
+        strategy (:solver/strategy report)
+        normalized-strategy
+        (when (map? strategy)
+          (update strategy :decomposition
+                  (fn [items]
+                    (when (vector? items)
+                      (mapv (fn [item]
+                              (cond-> item
+                                (string? (:decision item))
+                                (update :decision keyword)))
+                            items)))))
         account (:failure-account report)
         prefixed (fn [prefix]
                    (some (fn [entry]
@@ -160,6 +171,8 @@
                              (subs entry (count prefix))))
                          account))]
     (cond-> report
+      normalized-strategy
+      (assoc :solver/strategy normalized-strategy)
       (and (nil? (:solver/outcome report)) (:solver/outcome lean))
       (assoc :solver/outcome (:solver/outcome lean))
       (and (nil? (:solver/outcome report)) (string? (:outcome report)))
@@ -490,6 +503,31 @@
                               (fnil conj []) completed))]
       (dispatch-terminal-repair!
        effects resumed [:solver-strategy-missing-or-invalid]))))
+
+(defn resume-strategy-checkpoint!
+  "Resume a stopped strategy checkpoint from its persisted typed evidence.
+
+   JSON string spellings of keyword-valued strategy decisions are normalized
+   losslessly.  A valid checkpoint advances to the ordinary next round;
+   otherwise one bounded same-round collection repair is dispatched."
+  [{:keys [state persist-fn] :as effects}]
+  (if-not (and (= :solver-strategy-checkpoint-required (:state/type state))
+               (seq (:rounds state))
+               (nil? (:active state))
+               (fn? persist-fn))
+    {:ok false :error/code :solver-strategy-checkpoint-resume-input-invalid}
+    (let [last-index (dec (count (:rounds state)))
+          normalized (normalize-round-report
+                      (get-in state [:rounds last-index :report]))]
+      (if (strategy-checkpoint-valid? normalized)
+        (let [resumed (-> state
+                          (assoc :state/type :solver-rounds :active nil)
+                          (assoc-in [:rounds last-index :report] normalized))
+              saved (persist-container persist-fn resumed)]
+          (if (:ok saved)
+            (dispatch-round! effects resumed)
+            saved))
+        (resume-strategy-collection! effects)))))
 
 (defn resume-remediation!
   "Resume a halted siege with one corrective round carrying typed findings.

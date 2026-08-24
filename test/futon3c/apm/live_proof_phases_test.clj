@@ -165,7 +165,7 @@
         state {:state/type :solver-strategy-checkpoint-required
                :rounds [{:ordinal 10 :job-id "job-10"}] :active nil}]
     (with-redefs [runtime/read-state (constantly state)
-                  solver-rounds/resume-strategy-collection!
+                  solver-rounds/resume-strategy-checkpoint!
                   (fn [effects]
                     (reset! called effects)
                     {:ok true :status :awaiting-terminal})]

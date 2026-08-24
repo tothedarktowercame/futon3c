@@ -255,6 +255,18 @@
     (is (= "close the final equality" (:residual report)))
     (is (= "abc123" (:artifact-commits report)))))
 
+(deftest json-strategy-decision-values-normalize-losslessly
+  (let [normalize (deref #'sut/normalize-round-report)
+        report (normalize
+                {:solver/strategy
+                 {:summary "route" :obligations ["one"]
+                  :decomposition [{:obligation "one"
+                                   :decision "sequential"
+                                   :reason "dependent"}]
+                  :next-plan "continue"}})]
+    (is (= :sequential
+           (get-in report [:solver/strategy :decomposition 0 :decision])))))
+
 (deftest missing-ten-round-strategy-stops-before-another-dispatch
   (let [persisted (atom nil)
         prior (mapv (fn [ordinal] {:ordinal ordinal :job-id (str "j" ordinal)})
@@ -291,6 +303,33 @@
     (is (= 9 (count (:rounds @persisted))))
     (is (= (last rounds)
            (last (:checkpoint/invalid-observations @persisted))))))
+
+(deftest persisted-valid-json-checkpoint-advances-to-ordinary-next-round
+  (let [persisted (atom nil)
+        strategy {:summary "Viable route" :obligations ["Close target"]
+                  :decomposition [{:obligation "Close target"
+                                   :decision "sequential"
+                                   :reason "Single dependency chain"}]
+                  :next-plan "Close it"}
+        rounds (mapv (fn [ordinal]
+                       {:ordinal ordinal :job-id (str "j" ordinal)
+                        :report (cond-> {:outcome "progress"}
+                                  (= ordinal 10)
+                                  (assoc :solver/strategy strategy))})
+                     (range 1 11))
+        state {:state/type :solver-strategy-checkpoint-required
+               :budget/max-rounds 50 :base-request base-request
+               :rounds rounds :active nil}
+        result (sut/resume-strategy-checkpoint!
+                (assoc (effects persisted) :state state))]
+    (is (:ok result))
+    (is (= 11 (get-in @persisted [:active :request :solver/round])))
+    (is (= :regular (get-in @persisted
+                            [:active :request :solver/role-card-mode])))
+    (is (= :sequential
+           (get-in @persisted
+                   [:rounds 9 :report :solver/strategy
+                    :decomposition 0 :decision])))))
 
 (deftest valid-ten-round-strategy-allows-next-episode
   (let [persisted (atom nil)
