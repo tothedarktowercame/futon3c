@@ -358,12 +358,16 @@
   ([registry-path coordinator-id repair-reason]
    (let [entry (get-in (read-registry registry-path) [:entries coordinator-id])
          state (when entry (read-edn (:coordinator/state-path entry)))
-         repaired (if (= :failed (:regulator/status state))
-                    (regulator/repair-resume!
-                     {:state state :reason repair-reason
-                      :persist-fn #(persistence/atomic-persist!
-                                    (Path/of (:coordinator/state-path entry)
-                                             (make-array String 0)) %)})
+         persist-state! #(persistence/atomic-persist!
+                          (Path/of (:coordinator/state-path entry)
+                                   (make-array String 0)) %)
+         repaired (case (:regulator/status state)
+                    :failed (regulator/repair-resume!
+                             {:state state :reason repair-reason
+                              :persist-fn persist-state!})
+                    :complete (regulator/continue-complete!
+                               {:state state :reason repair-reason
+                                :persist-fn persist-state!})
                     {:ok true})]
      (if-not (:ok repaired)
        repaired

@@ -66,6 +66,25 @@
                          {:state @durable :reason "again"
                           :persist-fn (constantly {:ok true})}))))))
 
+(deftest completed-regulator-continuation-retains-completion-evidence
+  (let [completed (assoc (sut/initial-state "r")
+                         :regulator/status :complete :regulator/ticks 9
+                         :regulator/last-result {:ok true :status :frame-complete})
+        durable (atom completed)
+        result (sut/continue-complete!
+                {:state completed :reason "operator resumed paused queue"
+                 :persist-fn #(do (reset! durable %) {:ok true})})]
+    (is (:ok result))
+    (is (= :running (:regulator/status @durable)))
+    (is (= 9 (get-in @durable [:regulator/completions 0 :ticks])))
+    (is (= "operator resumed paused queue"
+           (get-in @durable
+                   [:regulator/completions 0 :continuation/reason])))
+    (is (= :live-regulator-not-complete
+           (:error/code (sut/continue-complete!
+                         {:state @durable :reason "again"
+                          :persist-fn (constantly {:ok true})}))))))
+
 (deftest scheduled-runner-executes-without-an-agent-continuation
   (let [ran (promise) saved (atom nil)
         result (sut/start!

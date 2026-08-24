@@ -101,6 +101,33 @@
         {:ok false :error/code :live-regulator-repair-persistence-failed
          :finding persisted}))))
 
+(defn continue-complete!
+  "Durably reopen a completed regulator for an explicitly continued workflow.
+
+  This is not failure repair: the completed observation is retained separately
+  and the caller must supply operator-visible continuation evidence."
+  [{:keys [state reason persist-fn]}]
+  (cond
+    (not= :complete (:regulator/status state))
+    {:ok false :error/code :live-regulator-not-complete}
+    (not (and (string? reason) (not-empty reason) (fn? persist-fn)))
+    {:ok false :error/code :live-regulator-continuation-evidence-invalid}
+    :else
+    (let [completion {:completed-at (:regulator/updated-at state)
+                      :ticks (:regulator/ticks state)
+                      :result (:regulator/last-result state)
+                      :continuation/reason reason}
+          resumed (-> state
+                      (update :regulator/completions (fnil conj []) completion)
+                      (assoc :regulator/status :running
+                             :regulator/updated-at (now)
+                             :regulator/last-result nil))
+          persisted (persist-fn resumed)]
+      (if (:ok persisted)
+        {:ok true :status :running :state resumed}
+        {:ok false :error/code :live-regulator-continuation-persistence-failed
+         :finding persisted}))))
+
 (defn start!
   "Start an idempotent single-thread regulator, recovering durable state."
   [{:keys [regulator-id read-fn persist-fn tick-fn tick-state-fn period-ms]
