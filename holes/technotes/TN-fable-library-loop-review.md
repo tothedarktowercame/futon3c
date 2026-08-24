@@ -101,35 +101,131 @@ why "are we making adequate progress?" cannot currently be answered from
 inside the system: the measured thing (bank rulings) is not the real thing
 (the remaining obligation).
 
-## Recommendations
+## Diagnosis — a misappropriation of the standard loop's ceremony
 
-1. **Do not relaunch until the three killers are contracted** (they are the
-   f27-review ports, applied to this lane):
-   (a) bank must rebuild the certified `ConstructionTargets` modules it just
-   advanced before any consumer elaboration is ruled on;
-   (b) role-card/path authority through one resolver with an existence check
-   before dispatch;
-   (c) one workspace-probe contract for prepare/collect (first and last
-   failures of the day are both probe failures).
-2. **Measure the obligation, not the ruling.** For library-lane problems the
-   sorry count is pinned at 1 by design. Record, per bank, a digest of the
-   *statement of the remaining Producer obligation*; progress = that
-   statement getting strictly weaker (reduction), not merely restated
-   (reformulation). Cap frames-per-problem-per-day; after N banks with an
-   unchanged obligation digest, the queue should rule the problem parked for
-   strategy, not keep landing.
-3. **Treat the manual track as the critical path, the loop as its consumer.**
-   The Producer needs surface Poincaré duality / intersection pairing; the
-   only active attack is codex-3/codex-7 on `Intersection` +
-   `SingularHomologyConcrete` under claude-10's PM seat. The loop's proper
-   job is downstream: once the pairing exists, discharge Producers across the
-   58-problem lane. Consider scoping the Producer to what t00J02 actually
-   needs (the genus-2 case with concrete handles, reachable from the concrete
-   singular-homology machinery) rather than full duality.
-4. **Verdict on Joe's question.** The effort has produced something real: a
-   verified, well-ledgered construction-target library and a hard problem
-   reduced to one precisely-stated classical gap. What it has *not* produced
-   is evidence the loop can run unattended or close anything: 17 frames, one
-   problem, core untouched, machine down. Adequate progress on the
-   mathematics (via the manual track); not yet an adequate *machine* — and
-   the pause is the right call until 1–2 land.
+(Sharpened with Joe, 2026-08-24.)
+
+The frame/lease/receipt/coordinator apparatus was designed for the
+**standard loop's** problem: multiple mutually-untrusting roles
+(solver/student/guide/proctor) exchanging claims, where receipts,
+independent review, and exact-snapshot binding are the *point* of the
+experiment. The library lane has none of that structure — no student, no
+memory snapshots, no adversarial exchange. Its verification is cheap,
+objective, and local: `lake build`, sorry count, axiom audit. Wrapping
+100-turn library construction in per-increment frame ceremony imported the
+standard loop's costs without importing any of its benefits — and every
+ceremony boundary (workspace prep, path authority, olean state after bank,
+seat identity) is one of the uncontracted boundaries of
+`TN-fable-F27-review.md`, so each frame paid roughly one repair.
+
+The existence proof for the right grain is already in this repo's history:
+`SingularHomologyConcrete` + `Intersection` (2,000+ sorry-free lines, the
+deepest mathematics in the bank) were built by `start-codex-autorunner` —
+one workspace, one Codex, ~130 turns, gates at turn boundaries, effectively
+zero machine failures. The 08-22 burst in the t00J02 log (11 commits in 21
+minutes, banked next morning) has the same signature and is the best work
+the lane ever banked.
+
+**Verdict on the original question:** the effort has produced something
+real — a verified, well-ledgered construction-target library and a hard
+problem reduced to one precisely-stated classical gap. What it has not
+produced is evidence the frame-grained loop can run unattended or close
+anything: 17 frames, one problem, core untouched, machine down. Progress on
+the mathematics is adequate (via the autorunner-grain track); the machine is
+not, and the pause is right until the rebuild below lands.
+`partial-banked` may count as *progress*; it can never count as *success*.
+**The success criterion is: close the demonstrator problems that required
+deep extensions to mathlib. Nothing else is on the scoreboard.**
+
+## Build plan — the simpler-but-better loop
+
+Autorunner grain, with exactly the ceremony that earns its keep: register
+construction targets as they are created, and make the agent restate its
+strategy on a fixed cadence. Nothing else.
+
+### Shape
+
+One demonstrator problem = one long-lived workspace (an apm-lean worktree
+off the trunk branch) = one Codex agent = one runner process. The runner is
+a small script in the `codex-autowake` family (shell or babashka; **not** a
+JVM coordinator — state lives in files, survives anything):
+
+```
+loop (turn budget, default 130):
+  1. codex exec  — one turn against the standing goal prompt
+  2. turn gates  (cheap, local, every turn):
+     - targeted `lake build` of touched ConstructionTargets modules
+     - `lake env lean` of the problem Main.lean; record sorry count
+     - axiom audit (#print axioms) on new/changed CT declarations
+     - a failed gate feeds back into the next turn's prompt; two
+       consecutive gate failures on the same finding → pause for review
+  3. every 20 turns: STRATEGY CHECKPOINT (see below)
+  4. cooldown; stall pager as in codex-autowake
+```
+
+### The two ceremonies that stay
+
+1. **Construction-target registration.** When a turn creates
+   `ConstructionTargets/X.lean`, the runner requires before the next turn:
+   the paired `X.md` seam doc; roll-up import (or a `PARTIAL.md` row if
+   deliberately partial); axiom audit; and a row in the problem's
+   `targets.edn` ledger `{:module :created-turn :status :obligation}`. This
+   is what keeps the bank navigable — it is the discipline the current
+   library already follows by convention; the runner makes it a gate.
+
+2. **Strategy checkpoint, every 20 turns.** The agent must write
+   `strategy-NN.md`: (a) the current statement of the remaining obligation
+   (for t00J02: the `Producer` statement), (b) what was *reduced* — not
+   restated — since the last checkpoint, (c) the plan for the next 20 turns.
+   The runner digests (a). **If the obligation digest is unchanged across
+   two consecutive checkpoints, the loop pauses for review instead of
+   continuing** — this is the anti-reformulation valve the frame machine
+   lacked, and it replaces `max-consecutive-non-landings`.
+
+### Bank and review
+
+- **Bank at checkpoints, not per commit.** A bank happens only at a strategy
+  checkpoint with green gates. The bank step **rebuilds every CT module it
+  advances before any consumer elaboration is ruled on** (contracts away the
+  three missing-olean failures of 08-23), then fast-forwards the trunk and
+  runs the existing status-recompute.
+- **Review at bank time.** Author ≠ reviewer survives, at 20-turn grain: a
+  Claude review of the diff + gate outputs + obligation delta before the
+  bank lands. One review per checkpoint replaces per-frame
+  proctor/verify/receipt ceremony.
+
+### Success ledger
+
+A small slate file the runner consumes, e.g.
+`data/apm-lane/demonstrators.edn` — the handful of problems whose closure is
+the criterion. Candidate slate (Joe to confirm): `t00J02` (one Producer
+sorry away), one or two pure singular-homology problems (`t01A03`,
+`t02A04`, `t94A07`), one intersection-theory (`t03J05`). Only `closed`
+moves the scoreboard; the 52 obstruction-classified problems remain the
+backlog the lane derivation (`library_lane.clj`) already computes.
+
+### Salvage / drop from the existing lane machine
+
+- **Keep:** `library_lane.clj` (lane derivation from status.json —
+  independently good and already burned-in), the bank gates, the
+  status-recompute, the axiom-audit convention, the obligation-digest idea
+  above.
+- **Drop for this lane:** frames, leases, per-increment worktrees,
+  coordinator/regulator, role-card authority resolution, per-increment
+  receipts (`library_lane_phases/coordinator/effects/launch/runner/queue`
+  in their current form). They stay in place for the standard loop, where
+  their receipts earn their cost.
+
+### Acceptance for the rebuild
+
+1. A dry run on t00J02 executes ≥20 turns end-to-end (gates + one strategy
+   checkpoint) with **zero** futon3c repair commits during the run.
+2. Runner state is files-only: kill it at any turn, restart, and it resumes
+   at the next turn with no JVM involvement.
+3. Regression for the olean killer: a bank that advances a CT module
+   followed immediately by consumer elaboration passes without manual
+   rebuild.
+4. The checkpoint valve fires in anger: an unchanged obligation digest
+   across two checkpoints demonstrably pauses the loop.
+5. `demonstrators.edn` exists and a closure updates it through the ordinary
+   status-recompute path.
