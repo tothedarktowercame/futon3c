@@ -28,6 +28,7 @@
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
             [futon3c.apm.problem-projection :as problem-projection]
+            [futon3c.apm.open-problem-queue :as open-problem-queue]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]
             [futon3c.apm.queued-frame-terminal :as queued-frame-terminal]
@@ -1717,3 +1718,19 @@
      {:problems (:problems queue) :authority authority
       :queue-name "jit-m-five-v2" :frame-number-base 25
       :agency-base (or (:agency-base authority) "http://localhost:7070")})))
+
+(defn launch-all-open-nontopology-autonomous!
+  "Start or resume the durable queue of every currently open, admissible,
+  non-topology APM Lean bundle. Corpus identities are pinned at registration."
+  [authority]
+  (let [repository (or (:problem-repository authority)
+                       "/home/joe/code/apm-lean")
+        derived (open-problem-queue/derive-queue repository)]
+    (if-not (:ok derived)
+      derived
+      (start-autonomous-problem-list!
+       {:problems (:problems derived) :authority authority
+        :queue-name (or (:queue-name authority)
+                        "jit-all-open-nontopology-v1")
+        :frame-number-base (or (:frame-number-base authority) 28)
+        :agency-base (or (:agency-base authority) "http://localhost:7070")}))))
