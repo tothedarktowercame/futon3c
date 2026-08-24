@@ -266,10 +266,14 @@
                                    (get-in failure [:report/error :error/code]))
         format-repairs (or (:format-repairs state) 0)
         format-repair? (and format-failure? (zero? format-repairs))
-        schema-failure? (and (seq (:findings failure))
-                             (every? #{:lane-report-invalid
-                                       :candidate-patterns-missing}
-                                     (:findings failure)))
+        finding-set (set (:findings failure))
+        schema-failure? (or (and (seq finding-set)
+                                 (every? #{:lane-report-invalid
+                                           :candidate-patterns-missing}
+                                         finding-set))
+                            (= #{:depositor-missing :candidates-missing
+                                 :lane-report-invalid}
+                               finding-set))
         schema-repairs (or (:schema-repairs state) 0)
         schema-repair? (and schema-failure? (zero? schema-repairs))
         boundary-repair? (or format-repair? schema-repair?)]

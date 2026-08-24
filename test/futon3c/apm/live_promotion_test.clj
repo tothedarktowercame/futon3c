@@ -237,6 +237,26 @@
     (is (= 3 (:attempt @saved)))
     (is (= 1 (:schema-repairs @saved)))))
 
+(deftest final-attempt-without-authoritative-receipt-gets-one-schema-repair
+  (let [saved (atom nil) feedback (atom nil)
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :deposit
+                         :job "typed-receipt-missing" :attempt 3}
+                 :deposit-fn (fn
+                               ([value]
+                                (if (string? value)
+                                  {:ok true :report {}}
+                                  (do (reset! feedback value)
+                                      {:ok true :job "typed-receipt-repair"})))
+                               ([] (throw (ex-info "feedback required" {}))))
+                 :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "typed-receipt-repair" (:job-id result)))
+    (is (= [:depositor-missing :candidates-missing :lane-report-invalid]
+           (:findings @feedback)))
+    (is (= 3 (:attempt @saved)))
+    (is (= 1 (:schema-repairs @saved)))))
+
 (deftest pinned-proctor-review-shape-normalizes-only-with-exact-digest
   (let [normalize #'sut/normalize-review-report
         reviews [{:memory-id "m" :reviewer "proctor" :verdict :reject
