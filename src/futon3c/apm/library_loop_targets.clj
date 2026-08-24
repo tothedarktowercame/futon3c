@@ -17,12 +17,15 @@
     (sequential? value) (mapv canonical value)
     :else value))
 
-(defn- snapshot-binding [head-sha changes files targets axiom-audits]
+(defn- snapshot-binding [head-sha changes files targets axiom-audits
+                         target-provenance]
   {:head-sha head-sha
    :changes-digest (sha256 (pr-str (canonical changes)))
    :files-digest (sha256 (pr-str (canonical files)))
    :targets-digest (sha256 (pr-str (canonical targets)))
-   :axiom-audits-digest (sha256 (pr-str (canonical axiom-audits)))})
+   :axiom-audits-digest (sha256 (pr-str (canonical axiom-audits)))
+   :target-provenance-digest
+   (sha256 (pr-str (canonical target-provenance)))})
 
 (defn- refuse! [snapshot finding data]
   (throw (ex-info (name finding)
@@ -65,14 +68,30 @@
       (refuse! snapshot :ambiguous-target-record {:module module :records rows}))
     (into {} (map (fn [[module rows]] [module (first rows)])) groups)))
 
+(defn- valid-delayed-provenance?
+  [problem-id module created-turn provenance]
+  (and (= 1 (:schema provenance))
+       (= problem-id (:problem-id provenance))
+       (= module (:module provenance))
+       (= created-turn (:created-turn provenance))
+       (string? (:turn-receipt-id provenance))
+       (re-matches #"[0-9a-f]{64}" (:turn-receipt-id provenance))
+       (string? (:turn-head-sha provenance))
+       (re-matches #"[0-9a-f]{40}" (:turn-head-sha provenance))
+       (string? (:creation-commit-sha provenance))
+       (re-matches #"[0-9a-f]{40}" (:creation-commit-sha provenance))
+       (true? (:first-observed-at-turn? provenance))))
+
 (defn check
   "Checks registration evidence against an exact repository snapshot.
 
   `changes` are the typed records emitted by the rebuild planner. `files` maps
   relative paths to exact content; `targets` is parsed targets.edn data; and
   `axiom-audits` maps module names to typed evidence bound to `head-sha`."
-  [{:keys [head-sha turn changes files targets axiom-audits]}]
-  (let [snapshot (snapshot-binding head-sha changes files targets axiom-audits)
+  [{:keys [problem-id head-sha turn changes files targets axiom-audits
+           target-provenance]}]
+  (let [snapshot (snapshot-binding head-sha changes files targets axiom-audits
+                                   target-provenance)
         changed (->> changes
                      (filter #(and (str/starts-with? (:path %) "ConstructionTargets/")
                                    (str/ends-with? (:path %) ".lean")
@@ -109,9 +128,19 @@
                      {:module module :rollup? imported? :partial? partial?}))
           (when-not record
             (refuse! snapshot :missing-target-ledger-record {:module module}))
-          (when-not (= turn (:created-turn record))
-            (refuse! snapshot :target-created-turn-mismatch
-                     {:module module :expected turn :record record})))))
+          (let [created-turn (:created-turn record)]
+            (cond
+              (> created-turn turn)
+              (refuse! snapshot :target-created-turn-in-future
+                       {:module module :current-turn turn :record record})
+
+              (= created-turn turn) nil
+
+              (not (valid-delayed-provenance?
+                    problem-id module created-turn (get target-provenance module)))
+              (refuse! snapshot :target-created-turn-provenance-invalid
+                       {:module module :current-turn turn :record record
+                        :provenance (get target-provenance module)}))))))
     {:outcome :green
      :snapshot snapshot
      :checked-modules (set (map (comp path->module :path) changed))}))

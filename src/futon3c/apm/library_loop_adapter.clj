@@ -121,6 +121,94 @@
   (let [path (io/file workspace "problems" problem-id "targets.edn")]
     (if (.isFile path) (read-edn path) [])))
 
+(defn- ancestor? [workspace ancestor descendant]
+  (let [result (run-process workspace
+                            ["git" "merge-base" "--is-ancestor"
+                             ancestor descendant])]
+    (case (:exit result)
+      0 true
+      1 false
+      (refuse! :git-command-failed
+               {:command (:argv result) :cwd (:cwd result)
+                :stderr (:stderr result)}))))
+
+(defn- successful-turn-receipts [run-dir problem-id]
+  (let [directory (io/file run-dir "receipts" "turn")
+        receipts (if (.isDirectory directory)
+                   (->> (.listFiles directory)
+                        (filter #(.isFile ^File %))
+                        (sort-by #(.getName ^File %))
+                        (mapv (fn [^File path]
+                                (let [receipt (read-edn path)
+                                      id (str/replace (.getName path) #"\.edn$" "")]
+                                  (when-not (and (= 1 (:schema receipt))
+                                                 (= problem-id (:problem-id receipt))
+                                                 (= :turn (:action receipt))
+                                                 (= id (:intent-id receipt))
+                                                 (pos-int? (:turn receipt))
+                                                 (= :ok (get-in receipt [:result :outcome]))
+                                                 (re-matches #"[0-9a-f]{40}"
+                                                             (get-in receipt [:result :head-sha])))
+                                    (refuse! :turn-provenance-receipt-invalid
+                                             {:path (str path)}))
+                                  receipt))))
+                   [])
+        by-turn (group-by :turn receipts)]
+    (when-let [[turn duplicates]
+               (first (filter (fn [[_ values]] (not= 1 (count values))) by-turn))]
+      (refuse! :turn-provenance-receipt-ambiguous
+               {:turn turn :receipt-ids (mapv :intent-id duplicates)}))
+    (into {} (map (fn [[turn values]] [turn (first values)])) by-turn)))
+
+(defn- module-path [module]
+  (str (str/replace module "." "/") ".lean"))
+
+(defn- delayed-target-provenance
+  [run-dir workspace state targets]
+  (let [delayed (filter #(and (pos-int? (:created-turn %))
+                              (< (:created-turn %) (:turn state)))
+                        targets)]
+    (if-not (seq delayed)
+      {}
+      (let [receipts (successful-turn-receipts run-dir (:problem-id state))]
+        (into {}
+              (keep
+               (fn [{:keys [module created-turn]}]
+                 (let [path (module-path module)
+                       additions (->> (str/split-lines
+                                       (git! workspace "log" "--format=%H"
+                                             "--diff-filter=A" "--reverse"
+                                             (str (:base-sha state) ".."
+                                                  (:head-sha state)) "--" path))
+                                      (remove str/blank?) vec)
+                       creation (first additions)
+                       receipt (get receipts created-turn)
+                       turn-head (get-in receipt [:result :head-sha])
+                       earlier-heads (->> receipts
+                                          (filter (fn [[turn _]] (< turn created-turn)))
+                                          (map #(get-in (second %) [:result :head-sha])))]
+                   ;; Rows already present at the bank base are outside this
+                   ;; candidate's new-target registration set.
+                   (when creation
+                     (when-not (and receipt
+                                    (ancestor? workspace creation turn-head)
+                                    (not-any? #(ancestor? workspace creation %)
+                                              earlier-heads))
+                       (refuse! :target-created-turn-provenance-unproved
+                                {:module module :created-turn created-turn
+                                 :creation-commit-sha creation
+                                 :turn-receipt-id (:intent-id receipt)
+                                 :turn-head-sha turn-head}))
+                     [module {:schema 1
+                              :problem-id (:problem-id state)
+                              :module module
+                              :created-turn created-turn
+                              :turn-receipt-id (:intent-id receipt)
+                              :turn-head-sha turn-head
+                              :creation-commit-sha creation
+                              :first-observed-at-turn? true}])))
+               delayed))))))
+
 (defn observe
   "Collects the exact Git and repository snapshot used by gate/bank planning.
   The configured audit command runs first and must emit audits/<HEAD>.edn."
@@ -137,7 +225,8 @@
                          (run-process workspace (substitute audit-command values))
                          {:exit 127 :stdout "" :stderr "audit command not configured"
                           :argv [] :cwd (str workspace)})
-          files (lean-files workspace)]
+          files (lean-files workspace)
+          targets (targets-ledger workspace (:problem-id state))]
       {:base-sha (:base-sha state)
        :head-sha head
        :name-status (git! workspace "-c" "core.quotePath=false" "diff"
@@ -146,7 +235,9 @@
                         "--porcelain=v1" "--untracked-files=all")
        :files files
        :problem-main (str "problems/" (:problem-id state) "/lean/Main.lean")
-       :targets (targets-ledger workspace (:problem-id state))
+       :targets targets
+       :target-provenance
+       (delayed-target-provenance run-dir workspace state targets)
        :axiom-audits (if (zero? (:exit audit-result))
                        (audit-evidence run-dir head)
                        {})

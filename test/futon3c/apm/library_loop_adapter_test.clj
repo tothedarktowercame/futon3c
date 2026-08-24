@@ -187,6 +187,49 @@
       (is (str/includes? log ":turn 1")))
     (is (= :gating (:phase (runner/read-state run-dir))))))
 
+(deftest delayed-target-provenance-is-git-and-turn-receipt-bound
+  (let [repo (repository!) tools (tools! (:root repo))
+        {:keys [root workspace run-dir base]} (configure! repo tools)
+        settle-turn! (fn [head]
+                       (let [intent (runner/begin-action! run-dir :turn)]
+                         (runner/append-receipt! run-dir intent
+                                                 {:outcome :ok :head-sha head})
+                         (runner/reconcile! run-dir (constantly nil))))
+        settle-red-gate! (fn [fingerprint]
+                           (let [intent (runner/begin-action! run-dir :gate)]
+                             (runner/append-receipt!
+                              run-dir intent {:outcome :red
+                                              :failure-fingerprint fingerprint})
+                             (runner/reconcile! run-dir (constantly nil))))]
+    (settle-turn! base)
+    (settle-red-gate! "turn-one-red")
+    (write! (io/file workspace "ConstructionTargets/NewTarget.lean")
+            "import Mathlib\ndef newTarget : True := trivial\n")
+    (write! (io/file workspace "ConstructionTargets/NewTarget.md") "# Seam\n")
+    (write! (io/file workspace "problems/t00J02/targets.edn")
+            (pr-str [{:module "ConstructionTargets.NewTarget"
+                      :created-turn 2 :status :active
+                      :obligation :t00J02/producer}]))
+    (sh! workspace "git" "add" ".")
+    (sh! workspace "git" "commit" "-q" "-m" "create-target-on-turn-two")
+    (let [creation-head (sh! workspace "git" "rev-parse" "HEAD")]
+      (settle-turn! creation-head)
+      (settle-red-gate! "turn-two-red")
+      ;; Turn three observes but does not rewrite the creation provenance.
+      (settle-turn! creation-head)
+      (let [deps (adapter/deps {:root root :problem-id "t00J02"})
+            state (runner/read-state run-dir)
+            first-observation ((:observe deps) state)
+            second-observation ((:observe deps) state)
+            provenance (get-in first-observation
+                               [:target-provenance
+                                "ConstructionTargets.NewTarget"])]
+        (is (= first-observation second-observation))
+        (is (= 2 (:created-turn provenance)))
+        (is (= creation-head (:creation-commit-sha provenance)))
+        (is (= creation-head (:turn-head-sha provenance)))
+        (is (true? (:first-observed-at-turn? provenance)))))))
+
 (deftest observation-sees-committed-ct-and-missing-audit-never-green
   (let [repo (repository!) tools (tools! (:root repo))
         {:keys [root workspace run-dir]} (configure! repo tools)]

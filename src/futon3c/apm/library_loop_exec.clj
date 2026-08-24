@@ -66,7 +66,9 @@
             plan (rebuild/plan observation)
             registration-input (assoc (select-keys observation
                                                     [:head-sha :files :targets
-                                                     :axiom-audits])
+                                                     :axiom-audits
+                                                     :target-provenance])
+                                      :problem-id (:problem-id state)
                                       :turn (:turn state)
                                       :changes (:changes plan))
             registration (try

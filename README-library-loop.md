@@ -88,6 +88,16 @@ is bound to the run state's exact workspace, base, and HEAD, records complete
 argv/cwd/exit/stdout/stderr evidence for both build and audit per module, and
 writes `audits/HEAD.edn` atomically.
 
+For a newly added target, `:created-turn` records the mathematical creation
+turn and is never rewritten merely because a later gate retries registration.
+Same-turn registration is direct. A delayed correction is accepted only when
+the adapter proves from the module's first-add Git commit and the canonical
+successful turn receipts that the commit was present at the claimed turn and
+absent from every earlier observed turn HEAD. The bounded proof (problem,
+module, claimed turn, receipt id, turn HEAD, creation commit, and first-seen
+flag) is part of the registration snapshot digest. Future turns, missing or
+malformed proofs, and unsupported backdating fail closed.
+
 The production status executable runs only after the exact candidate is the
 configured trunk HEAD. It requires a clean trunk, elaborates the canonical
 problem `Main.lean`, checks the observed sorry count against the committed

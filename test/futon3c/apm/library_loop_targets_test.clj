@@ -7,6 +7,7 @@
 
 (defn- input [overrides]
   (merge {:head-sha "candidate"
+          :problem-id "t00J02"
           :turn 20
           :changes [{:kind "A" :path lean-path}]
           :files {lean-path "def newTarget : True := trivial\n"
@@ -71,3 +72,48 @@
     (is (= :green (:outcome (targets/check modified))))
     (is (thrown-with-msg? clojure.lang.ExceptionInfo #"missing-axiom-audit"
                           (targets/check (assoc modified :axiom-audits {}))))))
+
+(defn- delayed-provenance [overrides]
+  (merge {:schema 1
+          :problem-id "t00J02"
+          :module module
+          :created-turn 19
+          :turn-receipt-id (apply str (repeat 64 "a"))
+          :turn-head-sha (apply str (repeat 40 "b"))
+          :creation-commit-sha (apply str (repeat 40 "c"))
+          :first-observed-at-turn? true}
+         overrides))
+
+(deftest delayed-correction-retains-proven-creation-turn
+  (let [provenance {module (delayed-provenance {})}
+        result (targets/check
+                (input {:targets [{:module module :created-turn 19
+                                   :status :active
+                                   :obligation :t00J02/producer}]
+                        :target-provenance provenance}))]
+    (is (= :green (:outcome result)))
+    (is (string? (get-in result [:snapshot :target-provenance-digest])))
+    (is (not= (get-in result [:snapshot :target-provenance-digest])
+              (get-in (targets/check (input {}))
+                      [:snapshot :target-provenance-digest])))))
+
+(deftest future-and-fabricated-created-turns-fail-closed
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo #"target-created-turn-in-future"
+       (targets/check
+        (input {:targets [{:module module :created-turn 21 :status :active
+                           :obligation :t00J02/producer}]}))))
+  (doseq [[label provenance]
+          [[:missing nil]
+           [:wrong-problem (delayed-provenance {:problem-id "other"})]
+           [:wrong-module (delayed-provenance {:module "ConstructionTargets.Other"})]
+           [:wrong-turn (delayed-provenance {:created-turn 18})]
+           [:malformed (delayed-provenance {:turn-receipt-id "hand-written"})]
+           [:not-first (delayed-provenance {:first-observed-at-turn? false})]]]
+    (testing (name label)
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo #"target-created-turn-provenance-invalid"
+           (targets/check
+            (input {:targets [{:module module :created-turn 19 :status :active
+                               :obligation :t00J02/producer}]
+                    :target-provenance (if provenance {module provenance} {})})))))))
