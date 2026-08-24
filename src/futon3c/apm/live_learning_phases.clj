@@ -8,6 +8,7 @@
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.promotion-pipeline :as pipeline]
+            [futon3c.apm.role-memory-search :as role-memory]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.apm.workspace-lifecycle :as workspace-lifecycle])
   (:import [java.nio.file Path]
@@ -158,9 +159,24 @@
         snapshot-binding (select-keys memory-use
                                       [:receipt-id :snapshot-id
                                        :snapshot-digest])
-        allowed-memory-ids (set (get-in request
-                                        [:memory-snapshot
-                                         :accessible-memory-ids]))
+        search-authority (get-in job [:typed-submission :authority])
+        search-receipt-ids (:memory-search-receipt-ids report)
+        search-check (when (= :student-attempt kind)
+                       (if (map? search-authority)
+                         (role-memory/validate-claims search-authority
+                                                     search-receipt-ids)
+                         {:ok true :receipts []}))
+        searched-memory-ids
+        (if (:ok search-check)
+          (set (mapcat :result-ids (:receipts search-check)))
+          #{})
+        predecessor-search-ids
+        (role-memory/recorded-result-ids-for-job
+         (:repair/of-job-id request))
+        allowed-memory-ids
+        (into (set (get-in request [:memory-snapshot
+                                    :accessible-memory-ids]))
+              (concat searched-memory-ids predecessor-search-ids))
         surfaced-memory-ids (set (:surfaced-ids memory-use))
         used-memory-ids (set (:used-ids memory-use))
         findings
@@ -190,6 +206,10 @@
                             (get-in request [:memory-snapshot
                                              :accessible-memory-ids]))))
           (conj :student-memory-snapshot-mismatch)
+          (and (= :student-attempt kind)
+               (map? memory-use)
+               (not (:ok search-check)))
+          (conj :student-memory-search-receipts-invalid)
           (and (= :student-attempt kind)
                (map? memory-use)
                (not (every? allowed-memory-ids surfaced-memory-ids)))
@@ -405,8 +425,11 @@
        (case (:dispatch/type request)
          :student-attempt
          (str "Attempt the problem independently. The :memory-snapshot map is "
-              "the complete memory authority: do not query, read, or use any "
-              "memory ID absent from :accessible-memory-ids. Return :memory-use "
+              "the reviewed starting shelf. You may also use the controller-owned "
+              "open mathematics search command; any additionally surfaced memory "
+              "must be covered by typed :memory-search-receipt-ids (including "
+              "receipts recorded by an explicit terminal-repair predecessor). "
+              "Return :memory-use "
               "with the exact :receipt-id, :snapshot-id, and :snapshot-digest "
               "from the request, plus vector-valued :surfaced-ids and :used-ids. "
               "Also return vector-valued :queries containing the exact search "

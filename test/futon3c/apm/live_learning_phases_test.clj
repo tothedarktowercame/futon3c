@@ -3,7 +3,8 @@
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.live-learning-phases :as sut]
-            [futon3c.apm.live-preflight-runtime :as runtime]))
+            [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.role-memory-search :as role-memory]))
 
 (deftest terminal-report-parser-accepts-one-prose-wrapped-edn-map-only
   (is (= {:command-own-exit 0 :frame-id "f21"}
@@ -177,6 +178,62 @@
     (is (some #{:student-memory-surfaced-outside-snapshot}
               (:findings result)))))
 
+(deftest student-may-use-memory-covered-by-validated-open-search-receipt
+  (let [request {:dispatch/type :student-attempt
+                 :agent-id "f30-student" :frame-id "f30"
+                 :problem-id "a01J06"
+                 :memory-snapshot {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :accessible-memory-ids []}}
+        job {:job-id "repair" :agent-id "f30-student" :session-id "fresh"
+             :state :done
+             :typed-submission {:authority {:job-id "repair"}}
+             :report {:command-own-exit 0 :frame-id "f30"
+                      :problem-id "a01J06"
+                      :memory-search-receipt-ids ["receipt"]
+                      :memory-use {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :queries ["Jensen formula"]
+                                   :surfaced-ids ["e-open"]
+                                   :used-ids ["e-open"]}}}]
+    (with-redefs [role-memory/validate-claims
+                  (fn [_ receipt-ids]
+                    (is (= ["receipt"] receipt-ids))
+                    {:ok true :receipts [{:result-ids ["e-open"]}]})
+                  role-memory/recorded-result-ids-for-job (constantly #{})]
+      (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
+
+(deftest terminal-repair-inherits-recorded-search-results-from-explicit-predecessor
+  (let [request {:dispatch/type :student-attempt
+                 :repair/of-job-id "original"
+                 :agent-id "f30-student" :frame-id "f30"
+                 :problem-id "a01J06"
+                 :memory-snapshot {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :accessible-memory-ids []}}
+        job {:job-id "repair" :agent-id "f30-student" :session-id "fresh"
+             :state :done
+             :typed-submission {:authority {:job-id "repair"}}
+             :report {:command-own-exit 0 :frame-id "f30"
+                      :problem-id "a01J06"
+                      :memory-search-receipt-ids []
+                      :memory-use {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :queries ["Jensen formula"]
+                                   :surfaced-ids ["e-prior"]
+                                   :used-ids ["e-prior"]}}}]
+    (with-redefs [role-memory/validate-claims
+                  (fn [_ _] {:ok true :receipts []})
+                  role-memory/recorded-result-ids-for-job
+                  (fn [job-id]
+                    (is (= "original" job-id))
+                    #{"e-prior"})]
+      (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
+
 (deftest student-prompt-names-frame-and-exact-memory-evidence-shape
   (let [text (sut/prompt {:dispatch/type :student-attempt
                           :phase :student-attempt-1
@@ -185,7 +242,8 @@
                           :memory-snapshot {:accessible-memory-ids []}})]
     (is (.startsWith text "F22 student-attempt-1"))
     (is (re-find #":surfaced-ids and :used-ids" text))
-    (is (re-find #"do not query, read, or use" text))))
+    (is (re-find #"controller-owned open mathematics search" text))
+    (is (re-find #":memory-search-receipt-ids" text))))
 
 (deftest student-report-must-record-exact-search-queries
   (let [request {:dispatch/type :student-attempt :agent-id "f22-student"

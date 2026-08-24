@@ -83,6 +83,29 @@
   (let [file (receipt-path receipt-id)]
     (when (.isFile file) (edn/read-string (slurp file)))))
 
+(defn recorded-result-ids-for-job
+  "Return result ids from content-address-valid receipts recorded for JOB-ID.
+   This supports a terminal-repair job whose preserved session may still
+   surface results recorded under its explicit :repair/of-job-id predecessor."
+  [job-id]
+  (let [directory (io/file *receipt-root* "receipts")]
+    (if-not (and (string? job-id) (.isDirectory directory))
+      #{}
+      (->> (.listFiles directory)
+           (filter #(.isFile ^java.io.File %))
+           (keep (fn [file]
+                   (try
+                     (let [value (edn/read-string (slurp file))]
+                       (when (and (= job-id (:job-id value))
+                                  (= (:receipt/id value)
+                                     (machine/ledger-digest
+                                      [(dissoc value :receipt/id)])))
+                         value))
+                     (catch Throwable _ nil))))
+           (mapcat :result-ids)
+           (filter string?)
+           set))))
+
 (defn- valid-receipt? [auth value]
   (and (= :apm-role-memory-search (:receipt/type value))
        (= (:job-id auth) (:job-id value))

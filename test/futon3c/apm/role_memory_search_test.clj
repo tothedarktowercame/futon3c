@@ -42,6 +42,9 @@
         (is (= ["math/canonical-pattern" "outside-snapshot-memory"]
                (:result-ids receipt)))
         (is (= receipt (sut/receipt (:receipt/id receipt))))
+        (is (= #{"math/canonical-pattern" "outside-snapshot-memory"}
+               (sut/recorded-result-ids-for-job "student-job")))
+        (is (= #{} (sut/recorded-result-ids-for-job "another-job")))
         (is (:ok (sut/validate-claims
                   {:job-id "student-job" :dispatch/id "dispatch" :role :student}
                   [(:receipt/id receipt)])))
