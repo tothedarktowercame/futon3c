@@ -32,7 +32,8 @@ checkpoint. Its ten historical receipts and turn-6/checkpoint-0 run state stay
 unchanged; no turns or checkpoints were fabricated.
 
 The prepared endurance run is now `t00J02`, using dedicated solver/trunk
-branches at election commit `ac2983e9` and a fresh persistent Codex session.
+branches realigned before turn 1 to canonical bank head `e9c5b7f` and a fresh
+persistent Codex session.
 
 The remainder records the original preparation evidence. Its former
 “prepared, not started” status has been superseded by the disposition above.
