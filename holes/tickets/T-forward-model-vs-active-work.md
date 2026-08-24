@@ -91,6 +91,16 @@ turn and is lost at the end of it.
 
 - Paper: `p4ng/sec-operator.tex` (cascade fig), `p4ng/sec-turn-chain.tex` (Fig 2,
   routes A/B/C), `p4ng/app-argument-outline.tex` step ⟨1.2.6⟩.
-- Open elsewhere: whether the `0.009`-across-108-emissions action class stayed
-  at that value or recovered. Bears on whether the harness's own collapse is an
-  absorbing state. Run record not located — see below.
+- **RESOLVED 2026-08-24 (joe).** The `0.009` is the last live run, 2026-07-13:
+  `:address-sorry` 108 emissions / 1 follow-through → Beta(2, 108), intrinsic
+  value 0.009 (the *mode*, 1/108 = 0.00926; the mean would be 2/110 = 0.018).
+  `:open-mission` Beta(1,1), no emissions in window. `:fire-pattern` 168
+  emissions, 0 applied, no substrate → held at 0.500. Two of three classes are
+  on the uniform prior.
+- **The class did not "absorb" in any dynamical sense, and an earlier reading of
+  this as an RRCA-style freeze is withdrawn.** The loop has been dead since
+  2026-07-14 — daily from 05-22, then one `ERROR nil` and stop
+  (`futon2/data/wm-full-loop/archives/stop-line-2026-07-15/`). An absorbing
+  state is dynamics that continue and cannot leave; this is a process that
+  halted. Whether the class would have recovered is unanswerable, not answered:
+  there are no further samples. Do not put the freeze mapping in writing.
