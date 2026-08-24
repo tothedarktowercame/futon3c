@@ -189,6 +189,23 @@ Only an exact state-bound approval opens banking:
 scripts/library-loop bank t00J02
 ```
 
+If an independent review was not approved, the run remains durably paused and
+`resume` will not bypass that ruling. A second independent reviewer may judge
+the same installed checkpoint by adding a nonempty `:reviewer-id` to a new
+review EDN and running:
+
+```sh
+scripts/library-loop reconsider-review t00J02 \
+  /absolute/strategy-01.edn /absolute/review-02.edn
+```
+
+The checkpoint must record its constructor at
+`:provenance {:constructed-by "seat-id"}` and the new reviewer id must differ.
+Reconsideration is chained to the exact latest append-only
+`:review-not-approved` receipt. It is unavailable for other pause reasons;
+each further rejection remains immutable and a later reconsideration, if any,
+must chain from that newest rejection.
+
 Banking rebuilds the base-to-candidate ConstructionTargets closure and problem
 `Main.lean`, verifies clean worktrees and ancestry, and executes only
 `git merge --ff-only CANDIDATE` in the configured trunk. It never pushes.

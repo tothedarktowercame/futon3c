@@ -44,7 +44,22 @@
      :dependencies #{:surface/duality}
      :strength :equivalent
      :reduction-witness "Discharged one concrete premise."
-     :next-plan "Build the remaining producer."}))
+     :next-plan "Build the remaining producer."
+     :provenance {:constructed-by "checkpoint-seat"}}))
+
+(defn- rejected-review-state! [dir]
+  (init-at! dir :checkpoint-ready 20)
+  (runner/install-checkpoint! dir (claim))
+  (let [intent (runner/begin-action! dir :review)
+        identity (:pending-checkpoint (runner/read-state dir))]
+    (runner/append-receipt!
+     dir intent (merge identity
+                       {:outcome :rejected :bank-authorized? false
+                        :progress-ruling :reduced
+                        :review-rationale "Approval withheld."
+                        :consecutive-nonreductions 0
+                        :finding :review-not-approved}))
+    (runner/reconcile! dir (constantly nil))))
 
 (deftest gate-orders-rebuild-consumers-and-main-and-captures-evidence
   (let [dir (temp-dir)
@@ -205,6 +220,61 @@
                     :approved? true}]
         (exec/apply-review! dir (claim) review)
         (is (= :review-pending (:phase (runner/read-state dir))))))))
+
+(deftest reconsider-review-requires-independent-seat-and-can-authorize-bank
+  (let [dir (temp-dir)
+        digest (checkpoint/checkpoint-digest (claim))]
+    (rejected-review-state! dir)
+    (let [original-state (runner/read-state dir)
+          result (exec/reconsider-review!
+                  dir (claim)
+                  {:checkpoint-digest digest
+                   :obligation-id :t00J02/producer
+                   :ruling :reduced
+                   :rationale "Independent evidence confirms reduction."
+                   :approved? true
+                   :reviewer-id "second-seat"})]
+      (is (= :settled (:status result)))
+      (is (= :review-pending (:phase (runner/read-state dir))))
+      (is (nil? (:intent (runner/read-state dir))))
+      (is (= {:action :review
+              :intent-id (get-in original-state [:pause/finding :intent-id])}
+             (get-in (:receipt result) [:result :prior-review])))
+      (is (= "second-seat"
+             (get-in (:receipt result) [:result :reviewer-id]))))))
+
+(deftest reconsider-review-refuses-checkpoint-constructor-as-reviewer
+  (let [dir (temp-dir)]
+    (rejected-review-state! dir)
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo #"review-independence-unproved"
+         (exec/reconsider-review!
+          dir (claim)
+          {:checkpoint-digest (checkpoint/checkpoint-digest (claim))
+           :obligation-id :t00J02/producer :ruling :reduced
+           :rationale "Not independent." :approved? true
+           :reviewer-id "checkpoint-seat"})))
+    (is (= :paused (:phase (runner/read-state dir))))))
+
+(deftest reconsider-review-is-an-explicit-cli-operation
+  (let [root (temp-dir)
+        dir (exec/run-dir root "t00J02")
+        checkpoint-file (java.io.File. root "checkpoint.edn")
+        review-file (java.io.File. root "review.edn")]
+    (rejected-review-state! dir)
+    (runner/atomic-write-edn! checkpoint-file (claim))
+    (runner/atomic-write-edn!
+     review-file {:checkpoint-digest (checkpoint/checkpoint-digest (claim))
+                  :obligation-id :t00J02/producer
+                  :ruling :reduced
+                  :rationale "A distinct reviewer confirms reduction."
+                  :approved? true
+                  :reviewer-id "second-seat"})
+    (is (= :settled
+           (:status (exec/cli! ["reconsider-review" "t00J02"
+                                (str checkpoint-file) (str review-file)]
+                               {:root root}))))
+    (is (= :review-pending (:phase (runner/read-state dir))))))
 
 (defn- bank-ready! [dir]
   (let [base (assoc (runner/initial-state

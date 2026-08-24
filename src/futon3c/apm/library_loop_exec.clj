@@ -6,6 +6,7 @@
   exact bank observation, and slate updates; it owns no scheduler."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [futon3c.apm.library-loop-checkpoint :as checkpoint]
             [futon3c.apm.library-loop-rebuild :as rebuild]
             [futon3c.apm.library-loop-runner :as runner]
@@ -170,6 +171,30 @@
     (runner/append-receipt! run-dir intent decision)
     (runner/reconcile! run-dir (constantly nil))))
 
+(defn reconsider-review!
+  "Applies a newly independent review to the exact checkpoint rejected by the
+  latest canonical review receipt. Generic resume cannot enter this path."
+  [run-dir checkpoint-record review-record]
+  (let [constructor (get-in checkpoint-record [:provenance :constructed-by])
+        reviewer (:reviewer-id review-record)]
+    (when-not (and (string? constructor) (not (str/blank? constructor))
+                   (string? reviewer) (not (str/blank? reviewer))
+                   (not= constructor reviewer))
+      (throw (ex-info "review-independence-unproved"
+                      {:finding :review-independence-unproved
+                       :constructor constructor :reviewer reviewer})))
+    (let [state (runner/read-state run-dir)
+          intent (require-intent-action!
+                  (or (:intent state)
+                      (runner/begin-review-reconsideration! run-dir))
+                  :review-reconsideration)
+          decision (checkpoint/review-decision
+                    (runner/read-state run-dir) checkpoint-record review-record)]
+      (runner/append-receipt! run-dir intent
+                              (assoc decision :prior-review
+                                     (:prior-review intent)))
+      (runner/reconcile! run-dir (constantly nil)))))
+
 (defn- settle-bank! [run-dir state intent slate-path result]
   (runner/append-receipt! run-dir intent result)
   (when slate-path
@@ -307,6 +332,9 @@
       "apply-review" (apply-review! (run-dir root problem-id)
                                     (read-edn-file (first rest))
                                     (read-edn-file (second rest)))
+      "reconsider-review" (reconsider-review! (run-dir root problem-id)
+                                               (read-edn-file (first rest))
+                                               (read-edn-file (second rest)))
       "bank" (run-bank! (run-dir root problem-id) deps)
       (throw (ex-info "unknown-library-loop-command" {:command command})))))
 

@@ -38,6 +38,21 @@
           :consecutive-nonreductions 0}
          overrides))
 
+(defn- pause-at-rejected-review! [dir]
+  (runner/write-state!
+   dir (assoc (runner/initial-state
+               {:problem-id "t00J02" :workspace "/tmp/apm-lean-t00J02"
+                :base-sha "base" :head-sha "candidate"})
+              :phase :checkpoint-ready))
+  (runner/install-checkpoint! dir (checkpoint-claim))
+  (let [intent (runner/begin-action! dir :review)]
+    (runner/append-receipt!
+     dir intent (review-result dir {:outcome :rejected
+                                    :bank-authorized? false
+                                    :finding :review-not-approved}))
+    (runner/reconcile! dir (constantly nil))
+    intent))
+
 (deftest atomic-state-round-trip-and-validation
   (let [dir (temp-dir)
         state (init! dir)]
@@ -329,3 +344,68 @@
             (name label))
         (is (thrown-with-msg? clojure.lang.ExceptionInfo #"transition-not-allowed"
                               (runner/begin-action! dir :bank)))))))
+
+(deftest rejected-review-can-be-reconsidered-with-a-distinct-durable-intent
+  (let [dir (temp-dir)
+        original (pause-at-rejected-review! dir)
+        original-receipt (runner/read-receipt dir original)
+        reconsideration (runner/begin-review-reconsideration! dir)]
+    (is (= :review-reconsideration (:action reconsideration)))
+    (is (= {:action :review :intent-id (:id original)}
+           (:prior-review reconsideration)))
+    (is (not= (:id original) (:id reconsideration)))
+    ;; Process restart preserves the exact same pending intent.
+    (is (= reconsideration (:intent (runner/read-state dir))))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
+                          (runner/begin-review-reconsideration! dir)))
+    (runner/append-receipt! dir reconsideration
+                            (assoc (review-result dir {}) :prior-review
+                                   (:prior-review reconsideration)))
+    (runner/reconcile! dir (constantly nil))
+    (is (= :review-pending (:phase (runner/read-state dir))))
+    (is (nil? (:intent (runner/read-state dir))))
+    (is (= original-receipt (runner/read-receipt dir original)))))
+
+(deftest second-review-rejection-remains-paused-and-chains-forward
+  (let [dir (temp-dir)
+        original (pause-at-rejected-review! dir)
+        second (runner/begin-review-reconsideration! dir)]
+    (runner/append-receipt!
+     dir second (assoc (review-result dir {:outcome :rejected
+                                           :bank-authorized? false
+                                           :finding :review-not-approved})
+                       :prior-review (:prior-review second)))
+    (runner/reconcile! dir (constantly nil))
+    (is (= :paused (:phase (runner/read-state dir))))
+    (is (= (:id second) (get-in (runner/read-state dir)
+                                [:pause/finding :intent-id])))
+    (let [third (runner/begin-review-reconsideration! dir)]
+      (is (= {:action :review-reconsideration :intent-id (:id second)}
+             (:prior-review third)))
+      (is (not= (:id original) (:id third))))))
+
+(deftest reconsideration-refuses-nonreview-pauses-and-corrupt-prior-authority
+  (let [wrong-pause (temp-dir)]
+    (init! wrong-pause)
+    (runner/write-state! wrong-pause
+                         (assoc (runner/read-state wrong-pause)
+                                :phase :paused
+                                :pause/finding {:type :turn-failed}))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                          #"prior-review-receipt-invalid"
+                          (runner/begin-review-reconsideration! wrong-pause))))
+  (doseq [[label mutate]
+          [[:digest #(assoc-in % [:result :checkpoint-digest]
+                              (apply str (repeat 64 "f")))]
+           [:head #(assoc-in % [:result :head-sha] "stale")]
+           [:obligation #(assoc-in % [:result :obligation-id] :other/id)]
+           [:fabricated-id #(assoc % :intent-id (apply str (repeat 64 "a")))]]]
+    (let [dir (temp-dir)
+          prior (pause-at-rejected-review! dir)
+          path (.toFile (runner/receipt-path dir prior))
+          altered (mutate (runner/read-receipt dir prior))]
+      (spit path (str (pr-str altered) "\n"))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"prior-review-receipt-invalid"
+                            (runner/begin-review-reconsideration! dir))
+          (name label)))))

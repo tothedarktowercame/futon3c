@@ -106,6 +106,7 @@
        :bank-authorized? authorized?
        :progress-ruling ruling
        :review-rationale (:rationale review)
+       :reviewer-id (:reviewer-id review)
        :obligation-id current-id
        :consecutive-nonreductions count
        :checkpoint-digest (:checkpoint-digest review)

@@ -24,17 +24,20 @@
   {:turn :turn-running
    :gate :gating
    :review :review-pending
+   :review-reconsideration :review-pending
    :bank :bank-pending})
 
 (def allowed-transitions
-  "The runner's complete phase graph. `:paused` is intentionally absent as a
-  source: leaving it requires a later packet's explicit review disposition."
+  "The runner's complete phase graph. The sole exit from `:paused` is guarded
+  by `begin-review-reconsideration!`; generic action/resume paths cannot use
+  that edge."
   {:turn-ready #{:turn-running :paused}
    :turn-running #{:gating :paused}
    :gating #{:turn-ready :checkpoint-ready :paused}
    :checkpoint-ready #{:review-pending :paused}
    :review-pending #{:bank-pending :paused}
-   :bank-pending #{:turn-ready :paused}})
+   :bank-pending #{:turn-ready :paused}
+   :paused #{:review-pending}})
 
 (defn- fail! [finding data]
   (throw (ex-info (name finding) (assoc data :finding finding))))
@@ -319,6 +322,68 @@
                    (when (#{:review :bank} action)
                      (:pending-checkpoint state))])))
 
+(defn- checkpoint-identity [result]
+  (select-keys result
+               [:schema :problem-id :turn :checkpoint :head-sha
+                :obligation-id :checkpoint-digest]))
+
+(defn- canonical-rejected-review!
+  [run-dir state]
+  (let [pause (:pause/finding state)
+        prior-action (:action pause)
+        prior-id (:intent-id pause)
+        prior-intent {:action prior-action :id prior-id}
+        receipt (when (and (keyword? prior-action) (string? prior-id))
+                  (read-receipt run-dir prior-intent))
+        result (:result receipt)]
+    (when-not (and (= :paused (:phase state))
+                   (= :review-not-approved (:type pause))
+                   (contains? #{:review :review-reconsideration} prior-action)
+                   (map? (:pending-checkpoint state))
+                   (= schema-version (:schema receipt))
+                   (= (:problem-id state) (:problem-id receipt))
+                   (= (:turn state) (:turn receipt))
+                   (= prior-action (:action receipt))
+                   (= prior-id (:intent-id receipt))
+                   (= result (:result pause))
+                   (= (:pending-checkpoint state)
+                      (checkpoint-identity result))
+                   (= :rejected (:outcome result))
+                   (false? (:bank-authorized? result))
+                   (= :review-not-approved (:finding result)))
+      (fail! :prior-review-receipt-invalid
+             {:problem-id (:problem-id state)
+              :turn (:turn state)
+              :prior-action prior-action
+              :prior-intent-id prior-id}))
+    {:action prior-action :intent-id prior-id}))
+
+(defn begin-review-reconsideration!
+  "Persists a distinct review intent chained to the latest canonical
+  :review-not-approved receipt. No other paused state is recoverable here."
+  [run-dir]
+  (let [state (read-state run-dir)]
+    (when (:intent state)
+      (fail! :action-already-pending
+             {:intent (:intent state) :action :review-reconsideration}))
+    (let [prior (canonical-rejected-review! run-dir state)
+          identity (:pending-checkpoint state)
+          id (sha256 (pr-str [schema-version (:problem-id state) (:turn state)
+                              (:checkpoint state) :review-reconsideration
+                              (:base-sha state) (:head-sha state) identity prior]))
+          intent {:schema schema-version
+                  :problem-id (:problem-id state)
+                  :turn (:turn state)
+                  :checkpoint (:checkpoint state)
+                  :action :review-reconsideration
+                  :id id
+                  :base-sha (:base-sha state)
+                  :head-sha (:head-sha state)
+                  :checkpoint/identity identity
+                  :prior-review prior}]
+      (write-state! run-dir (assoc state :phase :review-pending :intent intent))
+      intent)))
+
 (defn install-checkpoint!
   "Validates and durably binds the exact checkpoint that an independent
   review may judge. Installation is permitted once, in :checkpoint-ready,
@@ -449,11 +514,14 @@
 
                     :else
                     (advance :turn-ready (assoc updates :turn (inc (:turn state)))))))
-        :review (let [observed-identity
-                      (select-keys result
-                                   [:schema :problem-id :turn :checkpoint
-                                    :head-sha :obligation-id :checkpoint-digest])]
+        (:review :review-reconsideration)
+        (let [observed-identity (checkpoint-identity result)]
                   (cond
+                    (and (= :review-reconsideration action)
+                         (not= (get-in state [:intent :prior-review])
+                               (:prior-review result)))
+                    (pause :review-reconsideration-chain-mismatch)
+
                     (not= (:pending-checkpoint state) observed-identity)
                     (pause :review-checkpoint-identity-mismatch)
 
