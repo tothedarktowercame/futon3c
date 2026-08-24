@@ -18,10 +18,16 @@
 
 (def ^:private max-deposit-attempts 3)
 
+(defn- wire-keyword [value]
+  (when (string? value)
+    (keyword (if (.startsWith ^String value ":")
+               (subs value 1)
+               value))))
+
 (defn- normalize-deposit-lane [lane]
   (cond-> lane
-    (string? (:lane lane)) (update :lane keyword)
-    (string? (:status lane)) (update :status keyword)))
+    (string? (:lane lane)) (update :lane wire-keyword)
+    (string? (:status lane)) (update :status wire-keyword)))
 
 (defn- normalize-deposit-report
   "Normalize only the typed JSON enum fields at the live boundary. The pure

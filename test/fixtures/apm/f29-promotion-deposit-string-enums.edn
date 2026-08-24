@@ -3,7 +3,7 @@
                :content-digest "f29-content"
                :pattern-ids ["f29-pattern"]
                :source-attempts [1]}]
- :lanes [{:lane "solve" :status "ran"}
-         {:lane "arc" :status "ran-empty" :reason "no new arc"}
-         {:lane "trajectory" :status "ran"}
-         {:lane "challenge" :status "not-run" :reason "no challenge"}]}
+ :lanes [{:lane ":solve" :status ":ran"}
+         {:lane ":arc" :status ":ran-empty" :reason "no new arc"}
+         {:lane ":trajectory" :status ":ran"}
+         {:lane ":challenge" :status ":not-run" :reason "no challenge"}]}

@@ -53,6 +53,10 @@
     (is (= #{:ran :ran-empty :not-run}
            (set (map :status (:lanes report)))))))
 
+(deftest promotion-wire-keyword-also-accepts-json-without-edn-colon
+  (is (= :solve (#'sut/wire-keyword "solve")))
+  (is (= :solve (#'sut/wire-keyword ":solve"))))
+
 (deftest relative-frozen-card-path-is-resolved-against-control-root
   (is (= "/control/holes/cards/scribe-v3.md"
          (sut/resolved-role-card-path
