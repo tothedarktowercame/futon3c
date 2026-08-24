@@ -515,6 +515,47 @@
                               (= :bank action) (assoc :pending-bank intent)))
       intent)))
 
+(defn begin-cancelled-turn-retry!
+  "Supersedes one receipt-less, provably operator-cancelled turn intent.
+  The cancellation authority is append-only and the replacement intent has a
+  distinct identity chained to the original.  This is the only lawful way to
+  relaunch an action already in :turn-running."
+  [run-dir authority]
+  (let [state (read-state run-dir)
+        prior (:intent state)]
+    (when-not (and (= :turn-running (:phase state))
+                   (= :turn (:action prior)))
+      (fail! :cancelled-turn-retry-not-applicable {:state state}))
+    (when (read-receipt run-dir prior)
+      (fail! :cancelled-turn-retry-receipt-exists {:intent prior}))
+    (when-not (and (= (:id prior) (:prior-intent-id authority))
+                   (= (:head-sha prior) (:observed-head-sha authority))
+                   (true? (:process-dead? authority))
+                   (true? (:workspace-clean? authority))
+                   (string? (:operator authority))
+                   (not-empty (:operator authority))
+                   (string? (:cancelled-at authority))
+                   (not-empty (:cancelled-at authority))
+                   (string? (:reason authority))
+                   (not-empty (:reason authority)))
+      (fail! :cancelled-turn-retry-authority-invalid
+             {:intent prior :authority authority}))
+    (let [id (sha256 (pr-str [schema-version :cancelled-turn-retry prior authority]))
+          replacement (assoc prior :id id
+                             :retry/of (:id prior)
+                             :retry/authority-id id)
+          record {:schema schema-version
+                  :type :library-loop/operator-cancelled-turn-retry
+                  :problem-id (:problem-id state)
+                  :turn (:turn state)
+                  :prior-intent prior
+                  :replacement-intent replacement
+                  :authority authority}]
+      (append-edn-once! (io/file run-dir "cancelled-turn-retries"
+                                 (str id ".edn")) record)
+      (write-state! run-dir (assoc state :intent replacement))
+      replacement)))
+
 (defn- validate-receipt! [state receipt]
   (let [intent (:intent state)]
     (when-not (and (= schema-version (:schema receipt))

@@ -349,6 +349,7 @@
     {:run-command runner-command
      :turn-command (fn [turn-state] (codex-command run-dir config turn-state))
      :observe-head #(git! workspace "rev-parse" "HEAD")
+     :observe-clean #(str/blank? (git! workspace "status" "--porcelain=v1"))
      :reconcile-turn (fn [intent]
                        {:outcome :failed
                         :finding :turn-observation-unavailable

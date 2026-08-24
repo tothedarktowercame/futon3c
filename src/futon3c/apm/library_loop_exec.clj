@@ -342,6 +342,47 @@
 (defn status [root problem-id]
   (runner/read-state (run-dir root problem-id)))
 
+(defn retry-cancelled-turn!
+  [root problem-id authority {:keys [observe-head observe-clean turn-command
+                                     run-command]}]
+  (let [dir (run-dir root problem-id)
+        state (runner/read-state dir)
+        observed-head (observe-head)
+        clean? (observe-clean)
+        existing-retry? (string? (get-in state [:intent :retry/of]))
+        evidence (assoc authority
+                        :prior-intent-id (if existing-retry?
+                                           (get-in state [:intent :retry/of])
+                                           (get-in state [:intent :id]))
+                        :observed-head-sha observed-head
+                        :workspace-clean? clean?)]
+    (when-not (= (:head-sha state) observed-head)
+      (throw (ex-info "cancelled-turn-retry-head-mismatch"
+                      {:finding :cancelled-turn-retry-head-mismatch
+                       :expected (:head-sha state) :observed observed-head})))
+    (when-not clean?
+      (throw (ex-info "cancelled-turn-retry-workspace-dirty"
+                      {:finding :cancelled-turn-retry-workspace-dirty})))
+    (let [intent (if existing-retry?
+                   (:intent state)
+                   (runner/begin-cancelled-turn-retry! dir evidence))
+          launch-state (runner/read-state dir)
+          launch-record {:schema 1
+                         :type :library-loop/cancelled-turn-retry-launch
+                         :problem-id problem-id
+                         :turn (:turn launch-state)
+                         :intent-id (:id intent)
+                         :authority evidence}
+          launch-path (io/file dir "cancelled-turn-retry-launches"
+                               (str (:id intent) ".edn"))]
+      (runner/append-edn-once! launch-path launch-record)
+      (let [command (turn-command launch-state)
+            result (command-evidence run-command command)
+            head-sha (observe-head)]
+        (runner/append-receipt! dir intent
+                                (turn-result command result head-sha))
+        (runner/reconcile! dir (constantly nil))))))
+
 (defn resume-one!
   "Executes at most one action. A review/bank boundary is returned to the
   caller and never self-approved."
@@ -374,6 +415,8 @@
                (init! root {:problem-id problem-id :workspace workspace
                             :base-sha base-sha :head-sha head-sha}))
       "status" (status root problem-id)
+      "retry-cancelled-turn" (retry-cancelled-turn!
+                               root problem-id (read-edn-file (first rest)) deps)
       "resume" (resume-one! root problem-id deps)
       "checkpoint" (request-review! (run-dir root problem-id)
                                      (read-edn-file (first rest)))
@@ -403,7 +446,8 @@
   (let [root (or (System/getenv "LIBRARY_LOOP_ROOT")
                  (.getCanonicalPath (io/file ".")))
         problem-id (second args)
-        external? (contains? #{"resume" "bank"} (first args))]
+        external? (contains? #{"resume" "bank" "retry-cancelled-turn"}
+                             (first args))]
     (try
       (println (pr-str (cli! args (if external?
                                     (adapter-deps root problem-id)

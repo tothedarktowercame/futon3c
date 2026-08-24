@@ -105,6 +105,26 @@
     (is (= :idle (:status (runner/reconcile! dir (fn [_]
                                                    (throw (Exception. "duplicate")))))))))
 
+(deftest provably-cancelled-clean-turn-can-be-retried-once-with-new-identity
+  (let [dir (temp-dir)
+        _ (init! dir)
+        prior (runner/begin-action! dir :turn)
+        authority {:prior-intent-id (:id prior)
+                   :observed-head-sha "head"
+                   :process-dead? true
+                   :workspace-clean? true
+                   :operator "joe"
+                   :cancelled-at "2026-08-24T15:16:00Z"
+                   :reason "operator explicitly cancelled the process"}
+        retry (runner/begin-cancelled-turn-retry! dir authority)]
+    (is (not= (:id prior) (:id retry)))
+    (is (= (:id prior) (:retry/of retry)))
+    (is (= retry (:intent (runner/read-state dir))))
+    (is (= 1 (count (filter #(.isFile %)
+                            (file-seq (java.io.File. dir "cancelled-turn-retries"))))))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"authority-invalid"
+                          (runner/begin-cancelled-turn-retry! dir authority)))))
+
 (deftest restart-at-gating-uses-one-receipt
   (let [dir (temp-dir)
         _ (init! dir)
