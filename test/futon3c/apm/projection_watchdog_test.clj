@@ -97,6 +97,17 @@
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))
 
+(deftest promotion-envelope-exposes-its-bounded-live-job
+  (let [promotion (assoc healthy :phase-state
+                         {:state/type :promotion
+                          :stage :deposit
+                          :job "role-job"
+                          :request (get-in healthy [:phase-state :request])
+                          :ticket {:job-id "role-job"}})
+        result (watchdog/evaluate promotion)]
+    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))))
+
 (deftest recently-terminal-job-is-a-bounded-collection-state
   (let [collecting (-> healthy
                        (assoc-in [:agent :agent :status] "idle")

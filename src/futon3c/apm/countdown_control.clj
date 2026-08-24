@@ -689,7 +689,7 @@
          :analyst-state (:state registration)}))))
 
 (defn- promotion-review-request
-  [{:keys [manifest unit preparation request]}]
+  [{:keys [manifest contract unit preparation request]}]
   (let [card-result (dispatch-card
                      (get-in manifest [:apparatus :artifacts
                                        :promotion-proctor]))
@@ -708,6 +708,8 @@
               :base-problem-blob (:base-problem-blob request)
               :problem-path (:problem-path request)
               :solver-final-head (:solver-final-head request)
+              :terminal-budget (get (generated-terminal-budgets contract)
+                                    :promotion-proctor)
               :turn-timeout-ms (get-in preparation
                                        [:seat-policy :turn-timeout-ms])}]
     (if (:ok card-result)

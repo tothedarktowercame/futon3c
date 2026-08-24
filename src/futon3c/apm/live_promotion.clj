@@ -113,7 +113,18 @@
   [{:keys [state-path agency-base control-root deposit-request reviewer-request
            publish-fn]
     :or {agency-base "http://localhost:7070"}}]
-  (let [state (runtime/read-state state-path)
+  (let [persist-fn #(runtime/atomic-persist! state-path %)
+        stored-state (runtime/read-state state-path)
+        state-request (when (= :promotion (:state/type stored-state))
+                        (if (= :independent-review (:stage stored-state))
+                          reviewer-request
+                          deposit-request))
+        state (if (and state-request (:job stored-state)
+                       (or (nil? (:request stored-state))
+                           (nil? (:ticket stored-state))))
+                (assoc stored-state :request state-request
+                                    :ticket {:job-id (:job stored-state)})
+                stored-state)
         deposit-card-path (resolved-role-card-path control-root deposit-request)
         deposit-prompt (str "Deposit promotion candidates. Authority:\n"
                             (pr-str deposit-request)
@@ -198,9 +209,14 @@
                    (merge result (select-keys normalized [:reviewer :reviews]))
                    normalized))
                result))))]
+    ;; Upgrade legacy promotion envelopes before observing their terminal job.
+    ;; This is a lossless durability migration: the job identity is unchanged.
+    (when (not= stored-state state) (persist-fn state))
     (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
+             :deposit-request deposit-request
+             :reviewer-request reviewer-request
              :publish-fn publish-fn
-             :persist-fn #(runtime/atomic-persist! state-path %)})))
+             :persist-fn persist-fn})))
 
 (defn- retry-deposit!
   [state failure deposit-fn persist-fn]
@@ -245,12 +261,14 @@
              :state next-state}))))))
 
 (defn drive!
-  [{:keys [state deposit-fn review-fn publish-fn persist-fn]}]
+  [{:keys [state deposit-fn review-fn publish-fn persist-fn
+           deposit-request reviewer-request]}]
   (cond
     (nil? state)
     (let [r (deposit-fn)]
       (if-not (:ok r) r
         (let [s {:state/type :promotion :stage :deposit :job (:job r)
+                 :request deposit-request :ticket {:job-id (:job r)}
                  :attempt 1}]
           (persist-fn s) {:ok true :status :awaiting-terminal
                           :job-id (:job r) :state s})))
@@ -268,7 +286,8 @@
               (if-not (:ok review) review
                 (let [s {:state/type :promotion :stage :independent-review
                          :deposit (:report r) :candidates (:candidates checked)
-                         :job (:job review)}]
+                         :job (:job review) :request reviewer-request
+                         :ticket {:job-id (:job review)}}]
                   (persist-fn s)
                   {:ok true :status :awaiting-terminal
                    :job-id (:job review) :state s})))))))
@@ -280,7 +299,8 @@
       (if-not (:ok review) review
         (let [s {:state/type :promotion :stage :independent-review
                  :deposit (:deposit state) :candidates (:candidates state)
-                 :job (:job review)}]
+                 :job (:job review) :request reviewer-request
+                 :ticket {:job-id (:job review)}}]
           (persist-fn s)
           {:ok true :status :awaiting-terminal
            :job-id (:job review) :state s})))
