@@ -17,6 +17,16 @@
     (is (:ok (sut/validate-payload (authority phase) (payload phase)))
         (name phase))))
 
+(deftest solver-checkpoint-schema-requires-structured-strategy-evidence
+  (let [ordinary (authority :solve)
+        checkpoint (assoc ordinary :solver/round 10
+                           :solver/strategy-checkpoint? true)]
+    (is (not (contains? (sut/evidence-required ordinary) :solver/strategy)))
+    (is (contains? (sut/evidence-required checkpoint) :solver/strategy))
+    (is (= #{:solver/strategy}
+           (:evidence/missing
+            (sut/validate-payload checkpoint (payload :solve)))))))
+
 (deftest authority-is-controller-owned-and-submission-is-content-addressed
   (let [root (.toString (java.nio.file.Files/createTempDirectory
                          "apm-submissions" (make-array java.nio.file.attribute.FileAttribute 0)))]

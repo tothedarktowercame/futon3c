@@ -149,14 +149,27 @@
                    :error/code :solver-terminal-repair-acceptance-persistence-failed})))))))))
 
 (defn- normalize-round-report [report]
-  (let [lean (:lean report)]
+  (let [lean (:lean report)
+        account (:failure-account report)
+        prefixed (fn [prefix]
+                   (some (fn [entry]
+                           (when (and (string? entry)
+                                      (str/starts-with? entry prefix))
+                             (subs entry (count prefix))))
+                         account))]
     (cond-> report
       (and (nil? (:solver/outcome report)) (:solver/outcome lean))
       (assoc :solver/outcome (:solver/outcome lean))
+      (and (nil? (:solver/outcome report)) (string? (:outcome report)))
+      (assoc :solver/outcome (keyword (:outcome report)))
       (and (nil? (:residual report)) (:residual lean))
       (assoc :residual (:residual lean))
+      (and (nil? (:residual report)) (prefixed "residual: "))
+      (assoc :residual (prefixed "residual: "))
       (and (nil? (:artifact-commits report)) (:artifact-commits lean))
-      (assoc :artifact-commits (:artifact-commits lean)))))
+      (assoc :artifact-commits (:artifact-commits lean))
+      (and (nil? (:artifact-commits report)) (prefixed "artifact-commits: "))
+      (assoc :artifact-commits (prefixed "artifact-commits: ")))))
 
 (defn- round-outcome [report]
   (cond

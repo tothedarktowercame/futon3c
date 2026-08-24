@@ -245,6 +245,16 @@
     (is (false? (:solver/strategy-checkpoint?
                  (sut/round-request base-request ordinal nil))))))
 
+(deftest typed-progress-fields-normalize-into-round-semantics
+  (let [normalize (deref #'sut/normalize-round-report)
+        report (normalize {:outcome "progress"
+                           :failure-account
+                           ["residual: close the final equality"
+                            "artifact-commits: abc123"]})]
+    (is (= :progress (:solver/outcome report)))
+    (is (= "close the final equality" (:residual report)))
+    (is (= "abc123" (:artifact-commits report)))))
+
 (deftest missing-ten-round-strategy-stops-before-another-dispatch
   (let [persisted (atom nil)
         prior (mapv (fn [ordinal] {:ordinal ordinal :job-id (str "j" ordinal)})

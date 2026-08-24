@@ -22,6 +22,9 @@
   #{:job-id :dispatch/id :agent-id :frame-id :problem-id :phase :role
     :attempt-ordinal :submission/attempt :fresh-session-nonce :memory-snapshot})
 
+(def checkpoint-authority-fields
+  #{:solver/round :solver/strategy-checkpoint?})
+
 (def common-required #{:command-own-exit :outcome :failure-account :evidence})
 
 (def evidence-required-by-phase
@@ -43,6 +46,17 @@
    :scribe-reduce #{:lanes :dispositions :promotion-reviews}
    :close-frame #{:trace-id :result}
    :analyst #{:analysis}})
+
+(defn evidence-required
+  "Return the evidence schema owned by immutable dispatch authority.
+
+   Strategy evidence is required only for an addressed Solver checkpoint;
+   ordinary solve turns retain the ordinary proof-report schema."
+  [auth]
+  (cond-> (get evidence-required-by-phase (:phase auth))
+    (and (= :solve (:phase auth))
+         (true? (:solver/strategy-checkpoint? auth)))
+    (conj :solver/strategy)))
 
 (defn new-token [] (str (UUID/randomUUID)))
 
@@ -87,7 +101,8 @@
   [request ticket]
   (select-keys
    (merge request {:job-id (:job-id ticket)})
-   (conj authority-fields :submission/token)))
+   (into (conj authority-fields :submission/token)
+         checkpoint-authority-fields)))
 
 (defn register!
   "Persist immutable job authority. Identical replay is idempotent; conflicting
@@ -116,7 +131,7 @@
     {:ok false :error/code :role-submission-payload-invalid
      :findings [:payload-not-map]}
    (let [missing (set/difference common-required (set (keys payload)))
-        evidence-required (get evidence-required-by-phase (:phase auth))
+        evidence-required (evidence-required auth)
         evidence-missing (if evidence-required
                            (set/difference evidence-required
                                            (set (keys (:evidence payload))))
@@ -149,7 +164,7 @@
       :else {:ok true :phase (:phase auth)
              :required (vec (sort common-required))
              :evidence-required
-             (vec (sort (get evidence-required-by-phase (:phase auth))))})))
+             (vec (sort (evidence-required auth)))})))
 
 (defn submit!
   "Validate and persist an agent's observational payload. The canonical result
