@@ -367,6 +367,46 @@ already recorded the park-id, so refusing here would destroy the resume."
           (should (= 1 (length (agent-chat-evidence--failed-files)))))
       (delete-directory agent-chat-evidence-outbox-directory t))))
 
+(ert-deftest agent-chat-evidence-outbox-retries-reply-not-found ()
+  "A 409 reply-not-found is transient (parent in flight / server restarting)."
+  (let ((agent-chat-evidence-outbox-directory
+         (make-temp-file "agent-chat-evidence-outbox-" t))
+        (agent-chat--evidence-outbox-timer nil))
+    (unwind-protect
+        (cl-letf (((symbol-function 'agent-chat-evidence-request-json)
+                   (lambda (&rest _)
+                     '(:status 409
+                       :json (:ok :false :err "reply-not-found"
+                              :error (:error/code "reply-not-found"
+                                      :error/message "in-reply-to references missing entry")))))
+                  ((symbol-function 'agent-chat-evidence-start-outbox!) #'ignore))
+          (should (equal "child-evidence-id"
+                         (agent-chat-evidence-post-entry-id
+                          "http://store.test/api/alpha/evidence" 1
+                          '((id . "child-evidence-id")
+                            (in-reply-to . "parent-evidence-id")
+                            (type . "coordination")
+                            (claim-type . "observation")
+                            (author . "joe")))))
+          (should (eq 'retry agent-chat--last-evidence-delivery-outcome))
+          (should (= 1 (length (agent-chat-evidence--queue-files))))
+          (should-not (agent-chat-evidence--failed-files)))
+      (delete-directory agent-chat-evidence-outbox-directory t))))
+
+(ert-deftest agent-chat-evidence-reply-not-found-fails-after-bounded-attempts ()
+  (let ((response '(:status 409 :json (:err "reply-not-found")))
+        (agent-chat-evidence-outbox-reply-not-found-max-attempts 3))
+    (should (eq 'retry (agent-chat-evidence--classify-response response)))
+    (should (eq 'retry (agent-chat-evidence--classify-response
+                        response '((attempts . 2)))))
+    (should (eq 'failed (agent-chat-evidence--classify-response
+                         response '((attempts . 3)))))
+    ;; Other 409s and 4xxs stay terminal.
+    (should (eq 'failed (agent-chat-evidence--classify-response
+                         '(:status 409 :json (:err "conflict")))))
+    (should (eq 'acked (agent-chat-evidence--classify-response
+                        '(:status 409 :json (:err "duplicate-id")))))))
+
 (ert-deftest agent-chat-evidence-replay-parses-status-before-process-notice ()
   (should (= 409 (agent-chat-evidence--curl-status
                   "409\n\nProcess agent-chat-evidence-replay finished\n")))

@@ -73,6 +73,16 @@ bounded Futon3c compatibility append path without blocking the Emacs UI."
   :type 'number
   :group 'agent-chat)
 
+(defcustom agent-chat-evidence-outbox-reply-not-found-max-attempts 8
+  "Replay attempts allowed while the server reports the parent entry missing.
+A 409 `reply-not-found' is usually transient: the parent turn is still in
+flight, or the server was restarting when the child arrived.  Treating it as
+permanent on the first attempt strands every later turn in the same reply
+chain (2026-08-24: 186 codex turns in one session).  Retry with backoff up
+to this many attempts, then retain the record as a terminal failure."
+  :type 'integer
+  :group 'agent-chat)
+
 (defcustom agent-chat-evidence-outbox-lease-seconds 180
   "Age after which a crashed outbox drainer's filesystem lease may be reclaimed."
   :type 'number
@@ -2756,20 +2766,31 @@ failed. Vectors round-trip unambiguously."
               path (error-message-string err))
      nil)))
 
-(defun agent-chat-evidence--classify-response (response)
-  "Classify RESPONSE as acked, retry, or failed."
+(defun agent-chat-evidence--classify-response (response &optional record)
+  "Classify RESPONSE as acked, retry, or failed.
+RECORD, when given, is the outbox record whose `attempts' count bounds how
+long a `reply-not-found' 409 keeps being retried."
   (let* ((status (or (plist-get response :status) 0))
          (json (plist-get response :json))
-         (error-text (let ((value (plist-get json :error)))
-                       (and (stringp value) value)))
+         (error-value (plist-get json :error))
+         (error-text (and (stringp error-value) error-value))
+         (error-code (and (listp error-value)
+                          (plist-get error-value :error/code)))
          (duplicate? (and (= status 409)
                           (or (equal "duplicate-id" (plist-get json :err))
                               (and error-text
-                                   (string-match-p "duplicate" error-text))))))
+                                   (string-match-p "duplicate" error-text)))))
+         (reply-not-found? (and (= status 409)
+                                (or (equal "reply-not-found" (plist-get json :err))
+                                    (equal "reply-not-found" error-code))))
+         (attempts (or (alist-get 'attempts record) 0)))
     (cond
      ((or (and (<= 200 status) (< status 300)) duplicate?) 'acked)
      ((or (= status 0) (= status 408) (= status 429) (= status 503)
           (>= status 500))
+      'retry)
+     ((and reply-not-found?
+           (< attempts agent-chat-evidence-outbox-reply-not-found-max-attempts))
       'retry)
      (t 'failed))))
 
@@ -2781,7 +2802,7 @@ failed. Vectors round-trip unambiguously."
          (url (format "%s/api/alpha/evidence"
                       (agent-chat-evidence-base-url evidence-url)))
          (response (agent-chat-evidence-request-json "POST" url timeout payload)))
-    (agent-chat-evidence--classify-response response)))
+    (agent-chat-evidence--classify-response response record)))
 
 (defun agent-chat-evidence--failed-path (path)
   "Return the durable failed-delivery destination for PATH."
@@ -2868,7 +2889,7 @@ sentinel runs, so the status is not necessarily the final text."
 (defun agent-chat-evidence--finish-replay
     (path record response-file process-buffer response)
   "Apply RESPONSE to PATH, clean replay resources, and expose queue state."
-  (pcase (agent-chat-evidence--classify-response response)
+  (pcase (agent-chat-evidence--classify-response response record)
     ('acked (when (file-exists-p path) (delete-file path)))
     ('retry
      (when (file-exists-p path)
