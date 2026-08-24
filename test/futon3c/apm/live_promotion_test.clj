@@ -37,6 +37,22 @@
     (is (= "f27" (:frame-id report)))
     (is (= 0 (:command-own-exit report)))))
 
+(deftest f29-string-enum-deposit-is-normalized-at-typed-boundary
+  (let [fixture (edn/read-string
+                 (slurp "test/fixtures/apm/f29-promotion-deposit-string-enums.edn"))
+        raw (pipeline/validate-deposit fixture)
+        report (#'sut/submitted-report
+                {:authority {:frame-id "f29" :role :scribe}
+                 :payload {:evidence fixture}})
+        validated (pipeline/validate-deposit report)]
+    (is (= [:lane-report-invalid] (:findings raw))
+        "the pure promotion gate remains keyword-typed")
+    (is (:ok validated))
+    (is (= #{:solve :arc :trajectory :challenge}
+           (set (map :lane (:lanes report)))))
+    (is (= #{:ran :ran-empty :not-run}
+           (set (map :status (:lanes report)))))))
+
 (deftest relative-frozen-card-path-is-resolved-against-control-root
   (is (= "/control/holes/cards/scribe-v3.md"
          (sut/resolved-role-card-path

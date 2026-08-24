@@ -18,6 +18,20 @@
 
 (def ^:private max-deposit-attempts 3)
 
+(defn- normalize-deposit-lane [lane]
+  (cond-> lane
+    (string? (:lane lane)) (update :lane keyword)
+    (string? (:status lane)) (update :status keyword)))
+
+(defn- normalize-deposit-report
+  "Normalize only the typed JSON enum fields at the live boundary. The pure
+  promotion gate continues to require keywords, so unknown strings still fail
+  closed instead of being accepted by a widened contract."
+  [report]
+  (if (vector? (:lanes report))
+    (update report :lanes #(mapv normalize-deposit-lane %))
+    report))
+
 (defn- submitted-report [typed]
   (let [payload (:payload typed)
         evidence (:evidence payload)
@@ -30,9 +44,10 @@
                       (when (map? parsed) parsed))
                     (catch Throwable _ nil))
                   :else nil)]
-    (merge (:authority typed) evidence receipt
-           (select-keys payload
-                        [:command-own-exit :outcome :failure-account]))))
+    (normalize-deposit-report
+     (merge (:authority typed) evidence receipt
+            (select-keys payload
+                         [:command-own-exit :outcome :failure-account])))))
 
 (defn- normalize-review-entry
   "Reviewer verdicts arrive through the typed JSON submission, which strings
