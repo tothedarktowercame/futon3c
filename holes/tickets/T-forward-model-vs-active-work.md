@@ -89,6 +89,8 @@ turn and is lost at the end of it.
 
 ## Related
 
+- `T-exogenous-evidence-update-rule.md` — same series: why an emission-driven
+  estimator cannot carry an exogenous class, and what presence buys the update.
 - Paper: `p4ng/sec-operator.tex` (cascade fig), `p4ng/sec-turn-chain.tex` (Fig 2,
   routes A/B/C), `p4ng/app-argument-outline.tex` step ⟨1.2.6⟩.
 - **RESOLVED 2026-08-24 (joe).** The `0.009` is the last live run, 2026-07-13:
