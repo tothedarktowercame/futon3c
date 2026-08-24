@@ -82,6 +82,45 @@
        (re-matches #"[0-9a-f]{40}" (:creation-commit-sha provenance))
        (true? (:first-observed-at-turn? provenance))))
 
+(def ^:private problem-id-pattern
+  #"(?i)\b([a-z][a-z0-9-]*[0-9][a-z0-9-]*)\b")
+
+(defn- rollup-consumer-claims [rollup]
+  (->> (str/split-lines (or rollup ""))
+       (keep (fn [line]
+               (when-let [[_ short-name consumers]
+                          (re-matches
+                           #"\s*\|\s*`([A-Za-z0-9_.]+)`\s*\|\s*(.*?)\s*\|\s*"
+                           line)]
+                 (when-not (= "*(none)*" (str/trim consumers))
+                   (for [[_ problem-id] (re-seq problem-id-pattern consumers)]
+                     {:module (str "ConstructionTargets." short-name)
+                      :problem-id problem-id})))))
+       (apply concat)
+       distinct
+       (sort-by (juxt :module :problem-id))
+       vec))
+
+(defn- validate-rollup-evidence! [files snapshot]
+  (let [rollup (get files "ConstructionTargets.lean" "")]
+    (doseq [{:keys [module problem-id]} (rollup-consumer-claims rollup)]
+      (let [main-path (str "problems/" problem-id "/lean/Main.lean")
+            main (get files main-path)
+            referenced? (and (string? main)
+                             (str/includes? main module))]
+        (when-not referenced?
+          (refuse! snapshot :construction-target-consumer-evidence-mismatch
+                   {:diagnostic {:module module
+                                 :problem-id problem-id
+                                 :main-path main-path}}))))
+    (when-let [[_ status]
+               (re-find #"(?s)## Status[^\n]*\n(.*?)(?=\n## |\z)" rollup)]
+      (when (and (re-find #"(?i)\bintend(?:ed)?\b" status)
+                 (not (re-find #"(?i)\bverified at committed HEAD\b" status)))
+        (refuse! snapshot :construction-target-production-status-non-evidentiary
+                 {:diagnostic {:section :construction-targets/status
+                               :required-evidence :verified-at-committed-head}})))))
+
 (defn check
   "Checks registration evidence against an exact repository snapshot.
 
@@ -101,6 +140,7 @@
         partials (partial-modules (get files "ConstructionTargets/PARTIAL.md")
                                   snapshot)
         ledger (ledger-index targets snapshot)]
+    (validate-rollup-evidence! files snapshot)
     (doseq [{:keys [kind path]} changed
             :let [module (path->module path)
                   audit (get axiom-audits module)]]

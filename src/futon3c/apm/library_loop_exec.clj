@@ -104,9 +104,11 @@
         registration (try
                        (targets/check registration-input)
                        (catch clojure.lang.ExceptionInfo ex
-                         {:outcome :red
-                          :finding (:finding (ex-data ex))
-                          :snapshot (:snapshot (ex-data ex))}))
+                         (let [data (ex-data ex)]
+                           {:outcome :red
+                            :finding (:finding data)
+                            :diagnostic (:diagnostic data)
+                            :snapshot (:snapshot data)})))
         commands (if (= :green (:outcome registration))
                    (execute-commands run-command (:commands plan))
                    [])
@@ -115,7 +117,8 @@
         finding (when-not green?
                   (or (:finding registration) :command-failed))
         fingerprint (when finding
-                      (sha256 [finding (:snapshot registration)
+                      (sha256 [finding (:diagnostic registration)
+                               (:snapshot registration)
                                (mapv #(select-keys % [:command :exit :stderr]) commands)
                                (:inputs plan)]))]
     {:outcome (if green? :green :red)

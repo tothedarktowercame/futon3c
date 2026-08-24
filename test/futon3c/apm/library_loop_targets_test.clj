@@ -1,5 +1,6 @@
 (ns futon3c.apm.library-loop-targets-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.apm.library-loop-targets :as targets]))
 
 (def module "ConstructionTargets.NewTarget")
@@ -117,3 +118,80 @@
             (input {:targets [{:module module :created-turn 19 :status :active
                                :obligation :t00J02/producer}]
                     :target-provenance (if provenance {module provenance} {})})))))))
+
+(defn- rollup-with-consumers [rows status]
+  (str "import ConstructionTargets.NewTarget\n"
+       "## Status\n\n" status "\n\n"
+       "The consumer column is DERIVED from problem Main files.\n\n"
+       "| Module | Consumers (measured) |\n|---|---|\n"
+       (str/join "\n" rows) "\n"))
+
+(deftest rollup-derived-consumers-require-exact-main-evidence
+  (let [rollup (rollup-with-consumers
+                ["| `NewTarget` | t00J02 |"]
+                "All modules verified at committed HEAD.")
+        valid-files (assoc (:files (input {}))
+                           "ConstructionTargets.lean" rollup
+                           "problems/t00J02/lean/Main.lean"
+                           "import ConstructionTargets.NewTarget\n")]
+    (is (= :green (:outcome (targets/check (input {:files valid-files})))))
+    (doseq [[label files]
+            [[:false-reference
+              (assoc valid-files "problems/t00J02/lean/Main.lean" "import Mathlib\n")]
+             [:missing-main (dissoc valid-files
+                                    "problems/t00J02/lean/Main.lean")]]]
+      (testing (name label)
+        (try
+          (targets/check (input {:files files}))
+          (is false "expected consumer evidence refusal")
+          (catch clojure.lang.ExceptionInfo ex
+            (is (= :construction-target-consumer-evidence-mismatch
+                   (:finding (ex-data ex))))
+            (is (= {:module "ConstructionTargets.NewTarget"
+                    :problem-id "t00J02"
+                    :main-path "problems/t00J02/lean/Main.lean"}
+                   (:diagnostic (ex-data ex))))))))))
+
+(deftest rollup-consumer-refusal-order-is-deterministic
+  (let [rollup (rollup-with-consumers
+                ["| `ZTarget` | t02A02, t01A01 |"
+                 "| `ATarget` | t03J03 |"]
+                "All modules verified at committed HEAD.")
+        files (assoc (:files (input {})) "ConstructionTargets.lean" rollup)]
+    (dotimes [_ 2]
+      (try
+        (targets/check (input {:files files}))
+        (is false "expected consumer evidence refusal")
+        (catch clojure.lang.ExceptionInfo ex
+          (is (= {:module "ConstructionTargets.ATarget"
+                  :problem-id "t03J03"
+                  :main-path "problems/t03J03/lean/Main.lean"}
+                 (:diagnostic (ex-data ex)))))))))
+
+(deftest intention-only-production-header-fails-closed
+  (let [rollup (rollup-with-consumers
+                [] "Every imported module is intended to remain production.")]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"construction-target-production-status-non-evidentiary"
+         (targets/check
+          (input {:files (assoc (:files (input {}))
+                                "ConstructionTargets.lean" rollup)}))))))
+
+(deftest live-rollup-shape-refuses-false-derived-consumer
+  (let [rollup (rollup-with-consumers
+                ["| `OrientedSurfacePreimageDuality` | t00J02 (elected closure in progress) |"
+                 "| `TransversePreimageDuality` | t00J02 (elected closure in progress) |"
+                 "| `DiskBoundedPreimageDuality` | t00J02 (elected closure in progress) |"]
+                "Every imported module is intended to remain production.")]
+    (try
+      (targets/check
+       (input {:files (assoc (:files (input {}))
+                             "ConstructionTargets.lean" rollup
+                             "problems/t00J02/lean/Main.lean" "import Mathlib\n")}))
+      (is false "expected live consumer mismatch")
+      (catch clojure.lang.ExceptionInfo ex
+        (is (= :construction-target-consumer-evidence-mismatch
+               (:finding (ex-data ex))))
+        (is (= "ConstructionTargets.DiskBoundedPreimageDuality"
+               (get-in (ex-data ex) [:diagnostic :module])))))))
