@@ -384,3 +384,51 @@
                 :turn-command (constantly ["fake-codex" "one-turn"])
                 :observe-head (constantly "head-2")})
     (is (= :gating (:phase (exec/cli! ["status" "t00J02"] {:root root}))))))
+
+(defn- run-turn-result! [process-result]
+  (let [root (temp-dir)]
+    (exec/cli! ["init" "t00J02" "/tmp/work" "base" "head"] {:root root})
+    (let [result (exec/cli!
+                  ["resume" "t00J02"]
+                  {:root root
+                   :run-command (constantly process-result)
+                   :turn-command (constantly
+                                  ["codex" "exec" "resume"
+                                   "01234567-89ab-cdef-0123-456789abcdef"
+                                   "secret prompt"])
+                   :observe-head (constantly "committed-head")})]
+      {:root root :result result
+       :state (runner/read-state (exec/run-dir root "t00J02"))})))
+
+(deftest canonical-exit-zero-session-loss-is-a-bounded-turn-failure
+  (let [{:keys [root result state]}
+        (run-turn-result!
+         {:exit 0 :cwd "/tmp/work" :stdout "arbitrary secret stdout"
+          :stderr (str "2026-08-24T15:06:54Z ERROR codex_core::session: "
+                       "failed to record rollout items: thread "
+                       "01234567-89ab-cdef-0123-456789abcdef not found")})
+        receipt (:receipt result)]
+    (is (= :paused (:phase state)))
+    (is (= "committed-head" (:head-sha state)))
+    (is (= :turn-failed (get-in state [:pause/finding :type])))
+    (is (= :codex-session-not-found (get-in receipt [:result :finding])))
+    (is (= {:session-id "01234567-89ab-cdef-0123-456789abcdef"}
+           (get-in receipt [:result :diagnostic])))
+    (is (= {:exit 0 :cwd "/tmp/work"}
+           (get-in receipt [:result :command])))
+    (is (not (re-find #"secret|not found" (pr-str receipt))))
+    ;; Restart observes settled state and never invokes the command again.
+    (is (= :paused
+           (:status (exec/cli! ["resume" "t00J02"]
+                               {:root root
+                                :run-command (fn [_]
+                                               (throw (Exception. "duplicate")))}))))))
+
+(deftest ordinary-output-cannot-fabricate-session-loss
+  (doseq [result [{:exit 0 :stdout "proof says thread uuid not found" :stderr ""}
+                  {:exit 0 :stdout "" :stderr (str "quoted: thread "
+                                                   "01234567-89ab-cdef-0123-456789abcdef not found")}
+                  {:exit 0 :stdout "ok" :stderr ""}]]
+    (is (= :gating (:phase (:state (run-turn-result! result))))))
+  (is (= :paused
+         (:phase (:state (run-turn-result! {:exit 7 :stdout "" :stderr "failed"}))))))

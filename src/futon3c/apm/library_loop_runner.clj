@@ -545,7 +545,8 @@
         :turn (if (= :ok (:outcome result))
                 (advance :gating
                          {:head-sha (or (:head-sha result) (:head-sha state))})
-                (pause :turn-failed))
+                (assoc (pause :turn-failed)
+                       :head-sha (or (:head-sha result) (:head-sha state))))
         :gate (if (= :green (:outcome result))
                 (if (:checkpoint-due? result)
                   (advance :checkpoint-ready

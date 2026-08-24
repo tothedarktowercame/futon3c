@@ -32,6 +32,34 @@
      :stdout (or (:stdout result) "")
      :stderr (or (:stderr result) "")}))
 
+(def ^:private canonical-session-loss-pattern
+  #"(?m)^\d{4}-\d{2}-\d{2}T\S+\s+ERROR\s+codex_core::session:\s+.*\bthread\s+([0-9a-f-]{36})\s+not found\s*$")
+
+(defn- configured-session-id [command]
+  (when-let [resume-index (first (keep-indexed #(when (= "resume" %2) %1)
+                                                command))]
+    (nth command (inc resume-index) nil)))
+
+(defn- session-loss-diagnostic [command result]
+  (let [configured (configured-session-id command)
+        observed (second (re-find canonical-session-loss-pattern
+                                  (:stderr result)))]
+    (when (and (string? configured) (= configured observed))
+      {:finding :codex-session-not-found
+       :diagnostic {:session-id configured}})))
+
+(defn- turn-result [command result head-sha]
+  (if-let [{:keys [finding diagnostic]}
+           (session-loss-diagnostic command result)]
+    {:outcome :failed
+     :finding finding
+     :diagnostic diagnostic
+     :head-sha head-sha
+     :command (select-keys result [:exit :cwd])}
+    {:outcome (if (zero? (:exit result)) :ok :failed)
+     :head-sha head-sha
+     :command result}))
+
 (defn- execute-commands [run-command commands]
   (loop [remaining commands evidence []]
     (if-let [command (first remaining)]
@@ -322,12 +350,11 @@
         state (runner/read-state dir)]
     (case (:phase state)
       :turn-ready (let [intent (runner/begin-action! dir :turn)
-                        result (command-evidence (:run-command deps)
-                                                 ((:turn-command deps) state))]
+                        command ((:turn-command deps) state)
+                        result (command-evidence (:run-command deps) command)
+                        head-sha ((:observe-head deps))]
                     (runner/append-receipt!
-                     dir intent {:outcome (if (zero? (:exit result)) :ok :failed)
-                                 :head-sha ((:observe-head deps))
-                                 :command result})
+                     dir intent (turn-result command result head-sha))
                     (runner/reconcile! dir (constantly nil)))
       :turn-running (runner/reconcile! dir (:reconcile-turn deps))
       :gating (run-gate! dir deps)

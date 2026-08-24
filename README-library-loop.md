@@ -147,6 +147,15 @@ session id, for example
 `["codex" "exec" "resume" "SESSION-ID" "{prompt-text}"]`; never use a global
 `--last` selector in an unattended multi-run environment.
 
+If that configured session disappears, canonical Codex stderr reports
+`codex_core::session ... thread SESSION-ID not found`. The runner treats this
+as `:codex-session-not-found` even when Codex exits zero, records only the
+configured session id and bounded process metadata, preserves an already
+committed observed HEAD, and pauses. Raw stderr, stdout, prompt argv, and
+environment data are excluded from that failure receipt. Recovery requires an
+operator to bootstrap a fresh explicit session read-only and update the
+deployment config; the missing UUID must never be retried via `--last`.
+
 Before a qualification begins in a fresh apm-lean worktree, install the pinned
 Mathlib binary cache with the repository toolchain and manifest unchanged:
 
