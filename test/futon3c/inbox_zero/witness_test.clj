@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.inbox-zero.witness :as witness])
+            [futon3c.inbox-zero.witness :as witness]
+            [futon3c.watcher.roots :as roots])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]
            [java.util Date]))
@@ -55,3 +56,26 @@
                   :tool-detail {:id "2" :name "Write"
                                 :input {:file_path (.getPath plain)}}}))))
     (is (empty? (.listFiles intake)))))
+
+(deftest claim-repo-id-uses-watcher-label-with-basename-fallback
+  (let [repo (temp-dir)
+        intake (temp-dir)
+        file (io/file repo "src/b.clj")
+        publish! (fn []
+                   (witness/publish-successful-edit!
+                    {:witness-dir (.getPath intake)
+                     :agent-id "claude-3" :session-id "session-label"
+                     :tool-detail {:id (str "tool-" (rand-int 100000))
+                                   :name "Edit"
+                                   :input {:file_path (.getPath file)}}
+                     :observed-at (Date. 5678) :host-id "test-host"}))]
+    (.mkdirs (.getParentFile file))
+    (spit file "(+ 3 4)\n")
+    (shell/sh "git" "-C" (.getPath repo) "init" "-q")
+    (testing "a watched root mints the watcher's label"
+      (with-redefs [roots/label-for (fn [root]
+                                      (when (= root (.getCanonicalPath repo))
+                                        "repo-under-test-d"))]
+        (is (= "repo-under-test-d" (get-in (publish!) [:claim :repo/id])))))
+    (testing "an unwatched root falls back to the directory basename"
+      (is (= (.getName repo) (get-in (publish!) [:claim :repo/id]))))))

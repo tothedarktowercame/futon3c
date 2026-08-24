@@ -23,6 +23,7 @@
             [futon3c.transport.http :as http]
             [futon3c.transport.irc :as irc]
             [futon3c.watcher.multi :as multi-watcher]
+            [futon3c.watcher.roots :as watch-roots]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
@@ -536,20 +537,10 @@
         ;; (cold-scan? false). Wrapped defensively — boot continues
         ;; if watcher start throws.
         _ (try
-            (let [roots [{:path "/home/joe/code/futon0"  :label "futon0-d"}
-                         {:path "/home/joe/code/futon1"  :label "futon1-d"}
-                         {:path "/home/joe/code/futon1a" :label "futon1a-d"}
-                         {:path "/home/joe/code/futon2"  :label "futon2-d"}
-                         {:path "/home/joe/code/futon3"  :label "futon3-d"}
-                         {:path "/home/joe/code/futon3a" :label "futon3a-d"}
-                         {:path "/home/joe/code/futon3b" :label "futon3b-d"}
-                         {:path "/home/joe/code/futon3c" :label "futon3c-d"}
-                         {:path "/home/joe/code/futon4"  :label "futon4-elisp-d"}
-                         {:path "/home/joe/code/futon5"  :label "futon5-d2"}
-                         {:path "/home/joe/code/futon5a" :label "futon5a-d"}
-                         {:path "/home/joe/code/futon6"  :label "futon6-py-d"}
-                         {:path "/home/joe/code/futon7"  :label "futon7-d"}
-                         {:path "/home/joe/code/futon7a" :label "futon7a-d"}]
+            ;; The root table lives in futon3c.watcher.roots so the witness
+            ;; producer mints claim :repo/id from the same labels the watcher
+            ;; stamps on observations.
+            (let [roots watch-roots/watch-roots
                   interval-ms (config/env-int "FUTON3C_MULTI_WATCHER_INTERVAL_MS" 5000)
                   ;; Default ON as of 2026-06-25 (M-populate-substrate-2 D0):
                   ;; the prior default-false silently froze substrate-2's

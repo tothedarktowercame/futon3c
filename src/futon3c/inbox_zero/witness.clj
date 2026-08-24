@@ -7,7 +7,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon3c.watcher.roots :as roots])
   (:import [java.net InetAddress]
            [java.nio.charset StandardCharsets]
            [java.nio.file Files StandardCopyOption]
@@ -83,7 +84,7 @@
         (let [relative (str (.relativize (.toPath (io/file root)) (.toPath file)))
               seat-id (str "seat:" agent-id ":" session-id)
               tool-id (str (:id tool-detail))
-              repo-id (.getName (io/file root))
+              repo-id (or (roots/label-for root) (.getName (io/file root)))
               worktree (worktree-id root)
               seat {:record/type :inbox-zero/session-seat
                     :seat/id seat-id :agent/id agent-id :session/id session-id
