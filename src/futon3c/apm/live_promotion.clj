@@ -327,18 +327,39 @@
         (= :awaiting-terminal (:status r)) (assoc r :job-id (:job state))
         (not (:ok r)) (retry-deposit! state r deposit-fn persist-fn)
         :else
-        (let [checked (pipeline/validate-deposit (:report r))]
+        (let [checked (pipeline/validate-deposit
+                       (:report r)
+                       {:problem-id (:problem-id deposit-request)
+                        :solver-certified-source
+                        (:solver-certified-source deposit-request)})]
           (if-not (:ok checked)
             (retry-deposit! state checked deposit-fn persist-fn)
-            (let [review (review-fn (:candidates checked))]
+            (let [candidates (:candidates checked)
+                  mechanical (:mechanical-reviews checked)
+                  review (if (seq candidates)
+                           (review-fn candidates)
+                           {:ok true :job nil})]
               (if-not (:ok review) review
                 (let [s {:state/type :promotion :stage :independent-review
-                         :deposit (:report r) :candidates (:candidates checked)
+                         :deposit (:report r) :candidates candidates
+                         :mechanical-reviews mechanical
                          :job (:job review) :request reviewer-request
                          :ticket {:job-id (:job review)}}]
                   (persist-fn s)
-                  {:ok true :status :awaiting-terminal
-                   :job-id (:job review) :state s})))))))
+                  (if (seq candidates)
+                    {:ok true :status :awaiting-terminal
+                     :job-id (:job review) :state s}
+                    (let [published (publish-fn
+                                     {:candidates []
+                                      :deposit (:report r)
+                                      :reviewer pipeline/mechanical-reviewer
+                                      :reviews mechanical})]
+                      (if-not (:ok published) published
+                        (let [done {:state/type :promotion-certified
+                                    :receipt (:receipt published)}]
+                          (persist-fn done)
+                          {:ok true :status :certified :state done
+                           :certificate (:receipt published)})))))))))))
 
     ;; Entry for candidates gated elsewhere (a Guide's store-mode deposit):
     ;; no Scribe deposit job, straight to the independent reviewer.
@@ -364,7 +385,8 @@
                              {:candidates (:candidates checked)
                               :deposit (:deposit state)
                               :reviewer (:reviewer r)
-                              :reviews (:reviews r)})]
+                              :reviews (into (vec (:mechanical-reviews state))
+                                             (:reviews r))})]
               (if-not (:ok published) published
                 (let [s {:state/type :promotion-certified
                          :receipt (:receipt published)}]

@@ -1,5 +1,6 @@
 (ns futon3c.apm.promotion-pipeline-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is]]
             [futon3c.apm.promotion-pipeline :as sut]))
 
 (def candidate {:memory-id "m1" :content-digest "d1" :pattern-ids ["p1"]
@@ -38,18 +39,42 @@
                         {:depositor "scribe" :candidates [candidate]
                          :lanes []})))))
 
-(deftest deposit-requires-a-bound-pattern-per-candidate
+(deftest deposit-mechanically-rejects-an-unbound-candidate
   ;; f27: three candidates with :pattern-ids [] reached the proctor and were
   ;; all rejected pattern-attachment-missing; the solver arm deposited nothing.
-  (let [findings (:findings (sut/validate-deposit
-                             {:depositor "scribe"
-                              :candidates [candidate
-                                           (assoc candidate :memory-id "m2"
-                                                  :pattern-ids [])]
-                              :lanes lanes}))]
-    (is (some #{:candidate-patterns-missing} findings))
-    (is (not (some #{:candidate-shape-invalid} findings))
-        "an empty vector is well-shaped; it is the binding that is missing")))
+  (let [result (sut/validate-deposit
+                {:depositor "scribe"
+                 :candidates [candidate
+                              (assoc candidate :memory-id "m2"
+                                     :pattern-ids [])]
+                 :lanes lanes})]
+    (is (:ok result))
+    (is (= [candidate] (:candidates result)))
+    (is (= [:no-parent-pattern]
+           (:finding-codes (first (:mechanical-reviews result)))))))
+
+(deftest mechanical-review-guards-reject-f29-proof-block-and-identifiers
+  (let [proof-body (get-in (edn/read-string
+                            (slurp "test/fixtures/apm/f29-proof-text-memory.edn"))
+                           [:evidence/body :body])
+        proof (assoc candidate :hook "verbatim certified proof"
+                     :body proof-body)
+        prose (assoc candidate :hook "signature mismatch"
+                     :body (apply str (repeat 80 "explain the reusable move ")))
+        named (assoc candidate :hook "a01j05-local route" :body "short")]
+    (is (some #{:proof-text-not-memory}
+              (get-in (sut/validate-deposit
+                       {:depositor "scribe" :candidates [proof] :lanes lanes}
+                       {:problem-id "a01J05"})
+                      [:mechanical-reviews 0 :finding-codes])))
+    (is (:ok (sut/validate-deposit
+              {:depositor "scribe" :candidates [prose] :lanes lanes}
+              {:problem-id "a01J05"})))
+    (is (some #{:problem-identifier-in-body}
+              (get-in (sut/validate-deposit
+                       {:depositor "scribe" :candidates [named] :lanes lanes}
+                       {:problem-id "a01J05"})
+                      [:mechanical-reviews 0 :finding-codes])))))
 
 (deftest guide-deposit-is-gated-without-a-lane-report
   (let [ok (sut/validate-guide-deposit {:depositor "f27-guide"

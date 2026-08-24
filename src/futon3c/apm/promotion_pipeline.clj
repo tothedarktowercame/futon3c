@@ -20,6 +20,45 @@
 (def required-lanes #{:solve :arc :trajectory :challenge})
 (def lane-statuses #{:ran :ran-empty :not-run})
 (def review-verdicts #{:approve :reassign :reject})
+(def mechanical-reviewer "promotion-mechanical-guard")
+
+(defn- occurrence-count [s needle]
+  (loop [from 0 n 0]
+    (let [at (.indexOf ^String s ^String needle from)]
+      (if (neg? at) n (recur (+ at (count needle)) (inc n))))))
+
+(defn mechanical-candidate-findings
+  "Cheap deterministic guards before independent LLM review. Provenance may
+  name the problem; reusable hook/body text may not."
+  [candidate {:keys [problem-id solver-certified-source]}]
+  (let [hook (str (or (:hook candidate) ""))
+        body (str (or (:body candidate) ""))
+        text (str hook "\n" body)
+        pid (some-> problem-id str/lower-case)
+        lower (str/lower-case text)
+        declaration-names
+        (when (string? solver-certified-source)
+          (set (map second
+                    (re-seq #"(?m)^\s*(?:lemma|theorem|def)\s+([A-Za-z0-9_'.]+)"
+                            solver-certified-source))))
+        copies-declaration?
+        (some #(re-find (re-pattern
+                         (str "(?m)^\\s*(?:lemma|theorem|def)\\s+"
+                              (java.util.regex.Pattern/quote %) "\\b"))
+                        body)
+              declaration-names)]
+    (cond-> []
+      (or (> (occurrence-count body ":= by") 3)
+          (> (alength (.getBytes body java.nio.charset.StandardCharsets/UTF_8))
+             4096)
+          copies-declaration?)
+      (conj :proof-text-not-memory)
+      (or (and pid (not (str/blank? pid)) (str/includes? lower pid))
+          (and pid (str/includes? lower (str "apm_" pid "_")))
+          (re-find #"(?i)Main\.lean:\d+" text))
+      (conj :problem-identifier-in-body)
+      (not (seq (:pattern-ids candidate)))
+      (conj :no-parent-pattern))))
 
 (defn- valid-lane? [{:keys [lane status reason]}]
   (and (contains? required-lanes lane)
@@ -27,7 +66,9 @@
        (or (= :ran status)
            (and (string? reason) (not (str/blank? reason))))))
 
-(defn validate-deposit [{:keys [depositor candidates lanes]}]
+(defn validate-deposit
+  ([deposit] (validate-deposit deposit {}))
+  ([{:keys [depositor candidates lanes]} context]
   (let [findings (cond-> []
                    (not (string? depositor)) (conj :depositor-missing)
                    (not (and (vector? candidates) (seq candidates)))
@@ -36,19 +77,29 @@
                                     (string? (:content-digest %))
                                     (vector? (:pattern-ids %)))) candidates)
                    (conj :candidate-shape-invalid)
-                   ;; A candidate with no bound pattern cannot be reviewed for
-                   ;; coherent fit and is rejected downstream regardless of
-                   ;; content (f27: 3 of 3 rejected pattern-attachment-missing).
-                   ;; Gate it here, where the depositor can still repair it.
-                   (some #(and (vector? (:pattern-ids %))
-                               (not (seq (:pattern-ids %)))) candidates)
-                   (conj :candidate-patterns-missing)
                    (not (and (vector? lanes)
                              (= required-lanes (set (map :lane lanes)))
                              (every? valid-lane? lanes)))
                    (conj :lane-report-invalid))]
     (if (seq findings) {:ok false :findings findings}
-        {:ok true :candidates (dedupe-candidates candidates)})))
+        (let [deduped (dedupe-candidates candidates)
+              rejected (keep (fn [candidate]
+                               (when-let [codes (seq
+                                                 (mechanical-candidate-findings
+                                                  candidate context))]
+                                 {:memory-id (:memory-id candidate)
+                                  :reviewer mechanical-reviewer
+                                  :verdict :reject
+                                  :reason (str "mechanical rejection: "
+                                               (str/join ", " (map name codes)))
+                                  :residual "revise into a reusable, witnessed pattern memory"
+                                  :finding-codes (vec codes)}))
+                             deduped)
+              rejected-ids (set (map :memory-id rejected))]
+          {:ok true
+           :candidates (vec (remove #(contains? rejected-ids (:memory-id %))
+                                    deduped))
+           :mechanical-reviews (vec rejected)})))))
 
 (defn validate-guide-deposit
   "Gate a Guide's store-mode candidates. The Guide is not a mining seat, so

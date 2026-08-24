@@ -284,8 +284,8 @@
                                        :verdict :reject :pattern-ids []})}
                        "digest" "blob"))))))
 
-(deftest final-attempt-gets-one-pattern-binding-repair
-  (let [saved (atom nil) feedback (atom nil)
+(deftest mechanical-rejection-is-recorded-without-llm-self-review
+  (let [saved (atom nil) published (atom nil)
         result (sut/drive!
                 {:state {:state/type :promotion :stage :deposit
                          :job "unbound-candidates" :attempt 3
@@ -302,15 +302,17 @@
                                             {:lane :arc :status :ran}
                                             {:lane :trajectory :status :ran}
                                             {:lane :challenge :status :ran}]}}
-                                  (do (reset! feedback value)
-                                      {:ok true :job "pattern-repair"})))
+                                  (throw (ex-info "no repair expected" {:value value}))))
                                ([] (throw (ex-info "feedback required" {}))))
+                 :review-fn (fn [& _]
+                              (throw (ex-info "no LLM review expected" {})))
+                 :publish-fn #(do (reset! published %) {:ok true :receipt :done})
                  :persist-fn #(do (reset! saved %) {:ok true})})]
-    (is (= :awaiting-terminal (:status result)))
-    (is (= "pattern-repair" (:job-id result)))
-    (is (= [:candidate-patterns-missing] (:findings @feedback)))
-    (is (= 3 (:attempt @saved)))
-    (is (= 1 (:schema-repairs @saved)))))
+    (is (= :certified (:status result)))
+    (is (= [] (:candidates @published)))
+    (is (= [:no-parent-pattern]
+           (get-in @published [:reviews 0 :finding-codes])))
+    (is (= :promotion-certified (:state/type @saved)))))
 
 (deftest review-pending-state-dispatches-the-reviewer-without-a-deposit-job
   ;; A Guide's store-mode candidates enter here: gated already, no Scribe job.
