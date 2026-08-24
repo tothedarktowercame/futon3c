@@ -89,6 +89,8 @@ turn and is lost at the end of it.
 
 ## Related
 
+- `T-devmap-forward-model-calibration.md` — same series: grading the stack's
+  previous forward model (the 2026-04 devmaps) against what actually happened.
 - `T-exogenous-evidence-update-rule.md` — same series: why an emission-driven
   estimator cannot carry an exogenous class, and what presence buys the update.
 - Paper: `p4ng/sec-operator.tex` (cascade fig), `p4ng/sec-turn-chain.tex` (Fig 2,

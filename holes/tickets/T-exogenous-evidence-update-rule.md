@@ -94,6 +94,7 @@ unanswerable, not answered.
 
 ## Related
 
+- `T-devmap-forward-model-calibration.md` — same series.
 - `T-forward-model-vs-active-work.md` — the cascade/clock mismatch, same series.
 - Paper: `p4ng/sec-operator.tex` (`fig:wr-overlay` caption carries the death
   date; the sessions query and its broken `author` filter are in the body),
