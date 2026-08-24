@@ -161,6 +161,26 @@
     (when-not (str/blank? porcelain)
       (refuse! :status-worktree-dirty {:status porcelain}))))
 
+(defn- git-common-dir!
+  "Resolve Git's common directory without assuming whether `rev-parse`
+  returns a worktree-relative or absolute path. The resolved path must remain
+  an observed directory; a plausible fallback would weaken repository identity."
+  [run-process workspace]
+  (let [observed (git! run-process workspace "rev-parse" "--git-common-dir")]
+    (when (str/blank? observed)
+      (refuse! :status-git-common-dir-invalid
+               {:workspace (str workspace) :observed observed}))
+    (let [observed-file (io/file observed)
+          resolved (.getCanonicalFile
+                    (if (.isAbsolute observed-file)
+                      observed-file
+                      (io/file workspace observed)))]
+      (when-not (.isDirectory resolved)
+        (refuse! :status-git-common-dir-invalid
+                 {:workspace (str workspace) :observed observed
+                  :resolved (str resolved)}))
+      (.getPath resolved))))
+
 (defn- status-workspace! [run-process run-dir state workspace]
   (let [config-path (io/file run-dir "config.edn")]
     (when-not (.isFile config-path)
@@ -181,14 +201,8 @@
           (refuse! :status-trunk-branch-mismatch
                    {:configured (:trunk-branch config) :observed branch})))
       (let [solver (adapter/validate-workspace (:workspace state))
-            trunk-common (.getCanonicalPath
-                          (io/file workspace
-                                   (git! run-process workspace "rev-parse"
-                                         "--git-common-dir")))
-            solver-common (.getCanonicalPath
-                           (io/file solver
-                                    (git! run-process solver "rev-parse"
-                                          "--git-common-dir")))]
+            trunk-common (git-common-dir! run-process workspace)
+            solver-common (git-common-dir! run-process solver)]
         (when-not (= trunk-common solver-common)
           (refuse! :status-worktrees-not-same-repository
                    {:trunk-common trunk-common :solver-common solver-common})))

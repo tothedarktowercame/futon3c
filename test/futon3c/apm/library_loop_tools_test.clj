@@ -154,3 +154,31 @@
       (is (= :closed (:ruling
                       (tools/status! head run-dir (injected-runner "")
                                      workspace)))))))
+
+(deftest status-resolves-absolute-common-dir-from-real-linked-worktree
+  (let [{:keys [root workspace run-dir head]} (repository!)
+        solver (io/file root "solver")]
+    (sh! workspace "git" "worktree" "add" "--detach" (str solver) head)
+    (let [state (runner/read-state run-dir)]
+      (runner/write-state! run-dir (assoc state :workspace (str solver)))
+      (is (.isAbsolute
+           (io/file (sh! solver "git" "rev-parse" "--git-common-dir"))))
+      (is (= :partial-banked
+             (:ruling (tools/status! head run-dir
+                                     (injected-runner
+                                      "problems/t01A03/lean/Main.lean:2:9: warning: declaration uses `sorry`\n")
+                                     workspace)))))))
+
+(deftest status-refuses-malformed-common-dir-observation
+  (let [{:keys [workspace run-dir head]} (repository!)
+        run-process (fn [cwd argv]
+                      (if (= ["git" "rev-parse" "--git-common-dir"] argv)
+                        {:exit 0 :stdout "missing-common-dir\n" :stderr ""
+                         :argv argv :cwd (str cwd)}
+                        ((injected-runner "") cwd argv)))]
+    (is (= :status-git-common-dir-invalid
+           (:finding
+            (ex-data
+             (try
+               (tools/status! head run-dir run-process workspace)
+               (catch clojure.lang.ExceptionInfo ex ex))))))))
