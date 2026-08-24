@@ -95,8 +95,9 @@
      :contract-path contract-path
      :generated-contract-path generated-contract-path
      :qualification-report-path qualification-report-path
-     :problem-buffer-name (str (or problem-buffer-prefix "*problem: ")
-                               (:frame/id frame) "-" (:problem/id frame) "*")}))
+     ;; Durable files remain frame-scoped. The operator-facing Emacs buffer is
+     ;; a singleton which follows the queue across frame transitions.
+     :problem-buffer-name (or problem-buffer-prefix "*problem*")}))
 
 (defn qualify-current
   "Qualify a mint against the exact generated artifact and passing report."

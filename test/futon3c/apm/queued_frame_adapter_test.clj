@@ -10,6 +10,13 @@
                               :frame-number-base 30})))
 (def digest (apply str (repeat 64 "a")))
 
+(deftest campaign-paths-use-a-stable-operator-buffer
+  (let [paths (sut/campaign-paths {:campaign-root "/tmp/apm-campaigns"}
+                                  frame)]
+    (is (= "*problem*" (:problem-buffer-name paths)))
+    (is (.endsWith ^String (:problem-buffer-path paths)
+                   "problem-buffer.md"))))
+
 (deftest deterministic-mint-and-qualification
   (is (= "f30" (:frame/id frame)))
   (is (sut/valid-mint? frame))
