@@ -12,6 +12,7 @@
             [futon3c.cyder :as cyder]
             [futon3c.dev.config :as config]
             [futon3c.evidence.invariant :as evidence-invariant]
+            [futon3c.inbox-zero.sweeper :as inbox-zero-sweeper]
             [futon3c.logic.archaeology :as archaeology]
             [futon3c.logic.locus :as locus]
             [futon3c.logic.ratchet :as ratchet]
@@ -579,6 +580,16 @@
               (println (str "[dev] multi-watcher start threw: "
                             (.getName (class t)) ": " (.getMessage t)
                             " — boot continues."))))
+        _ (when (config/env-bool "FUTON3C_INBOX_ZERO_SWEEPER" false)
+            (try
+              (inbox-zero-sweeper/start-loop!
+               {:interval-ms (config/env-int "FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS"
+                                             1800000)})
+              (println "[dev] inbox-zero attribution sweeper scheduled")
+              (catch Throwable t
+                (println (str "[dev] inbox-zero attribution sweeper start threw: "
+                              (.getName (class t)) ": " (.getMessage t)
+                              " — boot continues.")))))
         f5-sys (start-futon5!)
         _ (when f5-sys
             (cyder/register!
