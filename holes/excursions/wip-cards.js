@@ -1,4 +1,4 @@
-{
+window.WIP_CARDS = {
   "generated_from": {
     "overlay": "/home/joe/code/p4ng/empirics-futon/wr-overlay.edn",
     "cascade": "/home/joe/code/p4ng/empirics-futon/cascade-map.edn",
@@ -214,4 +214,4 @@
     "without_promotion_test": 4,
     "draw_pile": 19
   }
-}
+};

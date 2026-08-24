@@ -132,6 +132,8 @@
   </section>
 </main>
 
+<script src="wip-cards.js"></script>
+
 <script>
 (function(){
   var BASE="http://localhost:7070";
@@ -488,7 +490,7 @@
     var today=new Date();
     var todayUTC=Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate());
     var days=Math.max(0,Math.floor((todayUTC-mark.getTime())/86400000));
-    var band=days<=2?"fresh":days<=7?"ageing":days<30?"stale":"expired";
+    var band=days<=2?"fresh":days<=7?"ageing":days<=30?"stale":"expired";
     return {days:days,band:band};
   }
 
@@ -520,6 +522,11 @@
   }
 
   function loadWip(){
+    // Prefer the script-loaded global: fetch() of a sibling file is blocked
+    // under file://, which is how this page is actually opened locally. The
+    // published snapshot has no .js beside it and falls through to the fetch,
+    // which the publisher has inlined.
+    if(typeof window.WIP_CARDS!=="undefined" && window.WIP_CARDS){ renderWip(window.WIP_CARDS); return; }
     requestJSON("WIP / Uxbridge data",EP_WIP).then(renderWip).catch(function(err){
       el("wip-body").innerHTML="<div class='gap'>WIP data unavailable: "+esc(err&&err.message||err)+"</div>";
       el("wip-panel").style.display="";
