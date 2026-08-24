@@ -80,6 +80,21 @@
     (is (some #{:generated-contract-isolation-policy-invalid}
               (:findings isolation-result)))))
 
+(deftest f29-open-search-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        mutations [[:open-reviewed-corpus-search false]
+                   [:search-query-trace-persisted false]
+                   [:search-results-content-addressed false]
+                   [:student-open-search-distinct-from-proactive-snapshot false]
+                   [:self-reported-query-is-search-evidence true]
+                   [:search-capable-roles ["student" "scribe"]]]]
+    (doseq [[field value] mutations]
+      (let [result (sut/validate
+                    (assoc-in contract [:memory-policy field] value))]
+        (is (false? (:ok result)) (str field))
+        (is (some #{:generated-contract-memory-policy-invalid}
+                  (:findings result)) (str field))))))
+
 (deftest wire-result-and-session-rotation-policy-mutations-are-killed
   (let [contract (:contract (sut/read-contract generated-path))]
     (is (some #{:generated-contract-terminal-policy-invalid}

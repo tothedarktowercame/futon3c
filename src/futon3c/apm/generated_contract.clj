@@ -87,6 +87,12 @@
    :guide-union-snapshot-content-addressed true
    :next-student-binds-latest-reviewed-snapshot true
    :candidate-pattern-binding-required true
+   :open-reviewed-corpus-search true
+   :search-capable-roles ["student" "scribe" "promotion-proctor"]
+   :search-query-trace-persisted true
+   :search-results-content-addressed true
+   :student-open-search-distinct-from-proactive-snapshot true
+   :self-reported-query-is-search-evidence false
    :student-dispatch-witness-required true
    :student-dispatch-required-fields
    ["attempt-ordinal" "promotion-receipt-id" "snapshot-id"
