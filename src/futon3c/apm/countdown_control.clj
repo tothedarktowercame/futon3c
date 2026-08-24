@@ -1725,12 +1725,36 @@
   [authority]
   (let [repository (or (:problem-repository authority)
                        "/home/joe/code/apm-lean")
-        derived (open-problem-queue/derive-queue repository)]
+        derived (open-problem-queue/derive-queue repository)
+        queue-name (or (:queue-name authority) "jit-all-open-nontopology-v1")
+        control-root (or (:control-root authority) "/home/joe/code/futon3c")
+        campaign-root (or (:campaign-root authority)
+                          (str control-root "/data/apm-campaigns/" queue-name))
+        selection-body {:selection/type :apm-open-problem-selection
+                        :selection/version 1
+                        :repository repository :branch (:branch derived)
+                        :revision (:revision derived)
+                        :selection/rule (:selection/rule derived)
+                        :selected-problem-ids (mapv :problem/id (:problems derived))
+                        :excluded (:excluded derived)}
+        selection (assoc selection-body :selection/id
+                         (machine/ledger-digest [selection-body]))
+        selection-path (Path/of (str campaign-root "/corpus-selection.edn")
+                                (make-array String 0))]
     (if-not (:ok derived)
       derived
-      (start-autonomous-problem-list!
-       {:problems (:problems derived) :authority authority
-        :queue-name (or (:queue-name authority)
-                        "jit-all-open-nontopology-v1")
-        :frame-number-base (or (:frame-number-base authority) 28)
-        :agency-base (or (:agency-base authority) "http://localhost:7070")}))))
+      (let [existing (live-preflight-runtime/read-state selection-path)
+            persisted (cond
+                        (= existing selection) {:ok true :already-present? true}
+                        (some? existing) {:ok false
+                                          :error/code :open-problem-selection-conflict}
+                        :else (live-preflight-runtime/atomic-persist!
+                               selection-path selection))]
+        (if-not (:ok persisted)
+          persisted
+          (start-autonomous-problem-list!
+           {:problems (:problems derived) :authority authority
+            :queue-name queue-name
+            :frame-number-base (or (:frame-number-base authority) 28)
+            :agency-base (or (:agency-base authority)
+                             "http://localhost:7070")}))))))
