@@ -12,6 +12,9 @@
 (def ^:private ct-path-pattern
   #"^ConstructionTargets/[A-Za-z0-9_./-]+\.lean$")
 
+(def ^:private problem-main-pattern
+  #"^problems/[A-Za-z0-9_-]+/lean/Main\.lean$")
+
 (defn- refuse! [finding data]
   (throw (ex-info (name finding) (assoc data :finding finding))))
 
@@ -118,6 +121,41 @@
                   seen)]
         (recur (set/union seen next) next)))))
 
+(defn- dependency-first-order [consumers nodes]
+  (let [node-set (set nodes)
+        indegrees
+        (reduce-kv
+         (fn [result dependency dependents]
+           (if (contains? node-set dependency)
+             (reduce (fn [m dependent]
+                       (if (contains? node-set dependent)
+                         (update m dependent inc)
+                         m))
+                     result dependents)
+             result))
+         (zipmap node-set (repeat 0))
+         consumers)]
+    (loop [ordered []
+           remaining indegrees
+           ready (into (sorted-set)
+                       (keep (fn [[node degree]] (when (zero? degree) node)))
+                       indegrees)]
+      (if-let [node (first ready)]
+        (let [[next-degrees next-ready]
+              (reduce
+               (fn [[degrees available] dependent]
+                 (if (contains? degrees dependent)
+                   (let [degree (dec (get degrees dependent))]
+                     [(assoc degrees dependent degree)
+                      (cond-> available (zero? degree) (conj dependent))])
+                   [degrees available]))
+               [(dissoc remaining node) (disj ready node)]
+               (sort (set/intersection node-set (get consumers node #{}))))]
+          (recur (conj ordered node) next-degrees next-ready))
+        (if (empty? remaining)
+          ordered
+          (refuse! :cyclic-rebuild-imports {:modules (set (keys remaining))}))))))
+
 (defn plan
   "Builds a deterministic rebuild plan.
 
@@ -125,6 +163,12 @@
   `:problem-main` is the problem Main.lean path. The returned commands are
   data; this function never executes them."
   [{:keys [base-sha head-sha name-status porcelain files problem-main]}]
+  (when-not (and (string? problem-main)
+                 (re-matches problem-main-pattern problem-main))
+    (refuse! :malformed-problem-main {:problem-main problem-main}))
+  (when-not (and (contains? files problem-main)
+                 (string? (get files problem-main)))
+    (refuse! :missing-problem-main {:problem-main problem-main}))
   (let [changes (concat (parse-name-status name-status)
                         (parse-porcelain porcelain))
         ct-changes (->> changes
@@ -150,19 +194,18 @@
       (when missing
         (refuse! :unresolved-rebuild-module {:modules (set missing)}))
       (let [main-module (path->module problem-main)
-            build-modules (->> closure
-                               (filter modules)
-                               (remove #{main-module})
-                               sort
-                               vec)
+            build-modules (dependency-first-order
+                           consumers
+                           (->> closure
+                                (filter modules)
+                                (remove #{main-module})))
             file-digests (into (sorted-map)
                                (map (fn [[path content]] [path (sha256 content)]))
                                (filter (fn [[path _]] (str/ends-with? path ".lean"))
                                        files))
-            commands (vec (concat (map (fn [module] ["lake" "build" module])
-                                       build-modules)
-                                  (when (contains? closure main-module)
-                                    [["lake" "env" "lean" problem-main]])))]
+            commands (conj (mapv (fn [module] ["lake" "build" module])
+                                 build-modules)
+                           ["lake" "env" "lean" problem-main])]
         {:schema 1
          :inputs {:base-sha base-sha
                   :head-sha head-sha

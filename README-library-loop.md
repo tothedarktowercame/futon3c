@@ -114,6 +114,13 @@ manufacture closure, and neither executable edits apm-lean.
 Missing or stale audit evidence, missing ledgers, dirty/racing worktrees, and
 divergent SHAs fail closed.
 
+The rebuild planner orders every changed ConstructionTargets module before
+all of its transitive in-repository consumers, with deterministic lexical
+tie-breaking between independent modules. The configured problem
+`Main.lean` is validated against the exact repository snapshot and appended
+exactly once, unconditionally last; a missing or malformed Main path refuses
+the plan. These rules apply to both ordinary gates and bank preflight.
+
 After a gate intent is durable, typed fail-closed refusals from repository
 observation or rebuild planning are themselves settled as append-only red gate
 receipts. Their fingerprint covers only the finding, an allowlisted bounded
