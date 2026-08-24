@@ -129,3 +129,29 @@
        :missing-approved-memory-ids (set/difference approved-ids attached-ids)
        :unapproved-attached-memory-ids
        (set/difference attached-ids approved-ids)})))
+
+(defn validate-extension-publication-accounting
+  "Account for a Guide publication that preserves a prior reviewed snapshot
+  and adds only candidates approved by the current independent review."
+  [reviews prior-candidates snapshot-candidates]
+  (let [approved-ids (->> reviews
+                          (filter #(contains? #{:approve :reassign}
+                                              (:verdict %)))
+                          (map :memory-id)
+                          set)
+        prior-ids (set (map :memory-id prior-candidates))
+        attached-ids (set (map :memory-id snapshot-candidates))
+        expected-ids (set/union prior-ids approved-ids)]
+    (if (= expected-ids attached-ids)
+      {:ok true
+       :prior-memory-ids prior-ids
+       :approved-memory-ids approved-ids
+       :attached-memory-ids attached-ids}
+      {:ok false
+       :error/code :promotion-extension-publication-accounting-invalid
+       :prior-memory-ids prior-ids
+       :approved-memory-ids approved-ids
+       :attached-memory-ids attached-ids
+       :missing-prior-memory-ids (set/difference prior-ids attached-ids)
+       :missing-approved-memory-ids (set/difference approved-ids attached-ids)
+       :unapproved-new-memory-ids (set/difference attached-ids expected-ids)})))

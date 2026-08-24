@@ -75,3 +75,29 @@
                 :residual "Main.lean:12"}]
     (is (= (sut/validate-review deposit "f22-proctor" [review])
            (sut/validate-review* [candidate] "f22-scribe" "f22-proctor" [review])))))
+
+(deftest f29-guide-publication-accounts-for-preserved-prior-snapshot
+  (let [prior-ids #{"e-81a44d2c-5f32-4587-8cc9-f7f62a1eb8dd"
+                    "e-1866fc8e-aa5a-426c-aa30-d8d57c224238"
+                    "e-aa4210cf-5ba3-49ed-8e40-96ace9aa6d8a"}
+        approved-ids #{"e-93b083ba-2a5c-4492-8120-9d48ab25a2de"
+                       "e-f72e5ece-2a26-48aa-a47c-2b6b310caf69"
+                       "e-d2563094-59b1-45c1-902a-c28b5ad3ada3"}
+        memories (fn [ids] (mapv (fn [id] {:memory-id id}) ids))
+        reviews (mapv (fn [id] {:memory-id id :verdict :approve}) approved-ids)
+        prior (memories prior-ids)
+        union (memories (into prior-ids approved-ids))]
+    (is (= :promotion-publication-accounting-invalid
+           (:error/code (sut/validate-publication-accounting reviews union)))
+        "first-publication accounting must reject the F29 extension shape")
+    (is (:ok (sut/validate-extension-publication-accounting
+              reviews prior union)))
+    (is (= #{"e-81a44d2c-5f32-4587-8cc9-f7f62a1eb8dd"}
+           (:missing-prior-memory-ids
+            (sut/validate-extension-publication-accounting
+             reviews prior (memories (disj (into prior-ids approved-ids)
+                                           "e-81a44d2c-5f32-4587-8cc9-f7f62a1eb8dd"))))))
+    (is (= #{"unreviewed"}
+           (:unapproved-new-memory-ids
+            (sut/validate-extension-publication-accounting
+             reviews prior (conj union {:memory-id "unreviewed"})))))))

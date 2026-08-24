@@ -796,8 +796,9 @@
         (if-not (:ok published)
           published
           (let [snapshot (:snapshot published)
-                accounting (promotion-pipeline/validate-publication-accounting
-                            reviews (:snapshot/memories snapshot))
+                accounting
+                (promotion-pipeline/validate-extension-publication-accounting
+                 reviews prior-memories (:snapshot/memories snapshot))
                 body {:receipt/type :guide-promotion
                       :receipt/frame-id (:frame-id action)
                       :receipt/problem-id (:problem-id action)
