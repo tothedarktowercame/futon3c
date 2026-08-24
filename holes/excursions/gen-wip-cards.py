@@ -78,11 +78,13 @@ def draw_pile(d):
                                   timeout=10).stdout.strip() or None
         except Exception:
             last = None
-        # Path is relative TO THE PAGE (holes/excursions/), not to the repo
-        # root: a repo-relative path here resolved to
-        # holes/excursions/holes/tickets/... and every draw-pile link 404'd.
-        pile.append({"id": fn[:-3], "title": first, "path": f"../tickets/{fn}",
-                     "repo_path": f"holes/tickets/{fn}", "last_touched": last})
+        # A repo path, rendered as TEXT rather than a link. This board is read
+        # over the web and holes/tickets/ is not published, so any href here --
+        # page-relative or repo-relative -- is a dead link. Nineteen dead links
+        # are worse than nineteen pointers, because they promise a click that
+        # does not work.
+        pile.append({"id": fn[:-3], "title": first, "repo_path": f"holes/tickets/{fn}",
+                     "last_touched": last})
     return pile
 
 
@@ -138,14 +140,6 @@ def main():
     doc["counts"]["draw_pile"] = len(doc["draw_pile"])
     with open(out, "w") as f:
         json.dump(doc, f, indent=2)
-    # Twin as a loadable script. Browsers treat file:// as an opaque origin and
-    # block fetch() of a sibling file, so the JSON alone leaves the panel empty
-    # exactly where the operator reads it -- a local file:// open. A <script>
-    # tag has no such restriction. The published page has no .js beside it and
-    # falls back to fetching the JSON the publisher inlines, so both surfaces
-    # work by different routes.
-    with open(out[:-5] + ".js" if out.endswith(".json") else out + ".js", "w") as f:
-        f.write("window.WIP_CARDS = " + json.dumps(doc, indent=2) + ";\n")
     c = doc["counts"]
     print(f"  {out}: {c['cards']} cards ({c['with_supplier']} with a supplier, "
           f"{c['without_promotion_test']} with no promotion test), "
