@@ -192,9 +192,17 @@
   HTTP-FN remains injectable so qualification never dispatches a live role."
   [{:keys [frame ledger manifest role-cards workspace-root substrate-path
            leases agency-base http-fn provision-fn validate-workspace-fn
-           persist-lease-fn]
+           bootstrap-workspace-fn persist-lease-fn]
     :or {agency-base "http://localhost:7070" http-fn runtime/http-json
-         provision-fn workspace/provision! validate-workspace-fn workspace/validate}}]
+         provision-fn workspace/provision! validate-workspace-fn workspace/validate
+         bootstrap-workspace-fn
+         (fn [lease]
+           (let [result (shell/sh "lake" "build" "ConstructionTargets"
+                                  :dir (:workspace/path lease))]
+             (if (zero? (:exit result))
+               {:ok true}
+               {:ok false :error/code :workspace-bootstrap-failed
+                :role (:role lease) :finding result})))}}]
   (let [unit (assoc (:problem frame) :frame/id (:frame/id frame)
                     :problem/id (:problem/id frame)
                     :problem (:problem frame))
@@ -218,8 +226,12 @@
                                              :substrate-path substrate-path})]
               (when (:ok provisioned)
                 (let [lease (:lease provisioned)
-                      persisted (when persist-lease-fn
+                      bootstrapped (bootstrap-workspace-fn lease)
+                      persisted (when (and (:ok bootstrapped) persist-lease-fn)
                                   (persist-lease-fn role lease))]
+                  (when-not (:ok bootstrapped)
+                    (throw (ex-info "Workspace bootstrap failed"
+                                    {:role role :bootstrap bootstrapped})))
                   (if (and persist-lease-fn (not (:ok persisted)))
                     (throw (ex-info "Workspace lease persistence failed"
                                     {:role role :persistence persisted}))

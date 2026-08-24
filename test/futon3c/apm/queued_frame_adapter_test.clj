@@ -97,6 +97,10 @@
                  (fn [{:keys [role]}]
                    (swap! calls conj [:provision role])
                    {:ok true :lease (lease frame role)})
+                 :bootstrap-workspace-fn
+                 (fn [new-lease]
+                   (swap! calls conj [:bootstrap (:role new-lease)])
+                   {:ok true})
                  :validate-workspace-fn (constantly {:valid? true})
                  :http-fn
                  (fn [method url & [payload]]
@@ -113,7 +117,9 @@
            (machine/ledger-digest
             [(dissoc (:preparation result) :preparation/id)])))
     (is (= [[:provision :student] [:provision :solver]]
-           (filter #(= :provision (first %)) @calls)))))
+           (filter #(= :provision (first %)) @calls)))
+    (is (= [[:bootstrap :student] [:bootstrap :solver]]
+           (filter #(= :bootstrap (first %)) @calls)))))
 
 (deftest five-problem-live-effects-never-prepare-a-successor-early
   (let [problems (mapv (fn [n] {:problem/id (str "p" n) :repository "/repo"
