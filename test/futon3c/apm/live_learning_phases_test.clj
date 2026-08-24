@@ -234,6 +234,27 @@
                     #{"e-prior"})]
       (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
 
+(deftest f30-json-query-ledger-beside-memory-use-is-consumed-losslessly
+  (let [request {:dispatch/type :student-attempt
+                 :agent-id "f30-student" :frame-id "f30"
+                 :problem-id "a01J06"
+                 :memory-snapshot {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :accessible-memory-ids ["e-reviewed"]}}
+        job {:job-id "repair" :agent-id "f30-student" :session-id "fresh"
+             :state :done
+             :report {:command-own-exit 0 :frame-id "f30"
+                      :problem-id "a01J06"
+                      :queries ["dyadic shell summability"]
+                      :memory-use {:receipt-id "promotion"
+                                   :snapshot-id "snapshot"
+                                   :snapshot-digest "digest"
+                                   :surfaced-ids ["e-reviewed"]
+                                   :used-ids ["e-reviewed"]}}}]
+    (with-redefs [role-memory/recorded-result-ids-for-job (constantly #{})]
+      (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
+
 (deftest student-prompt-names-frame-and-exact-memory-evidence-shape
   (let [text (sut/prompt {:dispatch/type :student-attempt
                           :phase :student-attempt-1

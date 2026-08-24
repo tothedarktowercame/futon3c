@@ -155,7 +155,15 @@
 (defn validate-terminal [request ticket job]
   (let [kind (:dispatch/type request)
         report (:report job)
-        memory-use (:memory-use report)
+        ;; JSON role submissions have historically emitted the query ledger
+        ;; beside :memory-use even though the canonical EDN shape nests it.
+        ;; Preserve that observation losslessly at the consumer boundary; a
+        ;; missing query ledger in both locations still fails closed below.
+        memory-use (cond-> (:memory-use report)
+                     (and (map? (:memory-use report))
+                          (not (contains? (:memory-use report) :queries))
+                          (vector? (:queries report)))
+                     (assoc :queries (:queries report)))
         snapshot-binding (select-keys memory-use
                                       [:receipt-id :snapshot-id
                                        :snapshot-digest])
