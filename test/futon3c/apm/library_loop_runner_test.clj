@@ -1,5 +1,6 @@
 (ns futon3c.apm.library-loop-runner-test
   (:require [clojure.test :refer [deftest is]]
+            [futon3c.apm.library-loop-checkpoint :as checkpoint]
             [futon3c.apm.library-loop-runner :as runner])
   (:import (java.nio.file Files)
            (java.nio.file.attribute FileAttribute)))
@@ -15,6 +16,27 @@
                           :workspace "/tmp/apm-lean-t00J02"
                           :base-sha "base"
                           :head-sha "head"})))
+
+(defn- checkpoint-claim
+  ([] (checkpoint-claim :t00J02/producer "def Producer : Prop := True"))
+  ([id statement]
+   {:id id
+    :declaration 'OrientedSurfacePreimageDuality.Producer
+    :statement statement
+    :statement-digest (checkpoint/statement-digest statement)
+    :dependencies #{:surface/duality}
+    :strength :equivalent
+    :reduction-witness "A concrete premise was discharged."
+    :next-plan "Construct the remaining producer."}))
+
+(defn- review-result [dir overrides]
+  (merge (:pending-checkpoint (runner/read-state dir))
+         {:outcome :approved
+          :bank-authorized? true
+          :progress-ruling :reduced
+          :review-rationale "The residual obligation was reduced."
+          :consecutive-nonreductions 0}
+         overrides))
 
 (deftest atomic-state-round-trip-and-validation
   (let [dir (temp-dir)
@@ -83,6 +105,7 @@
                                         :receipt/path "gates/turn-001.edn"
                                         :checkpoint-due? true})
       (runner/reconcile! dir (constantly nil)))
+    (runner/install-checkpoint! dir (checkpoint-claim))
     (let [review (runner/begin-action! dir :review)]
       (is (= :review-pending (:phase (runner/read-state dir))))
       (is (= :pending (:status (runner/reconcile! dir (constantly :pending)))))
@@ -90,14 +113,7 @@
                             (runner/begin-action! dir :bank)))
       (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
                             (runner/begin-action! dir :review)))
-      (runner/append-receipt! dir review
-                              {:outcome :approved
-                               :bank-authorized? true
-                               :obligation-id :t00J02/producer
-                               :consecutive-nonreductions 0
-                               :progress-ruling :reduced
-                               :review-rationale "The residual was reduced."
-                               :checkpoint-digest (apply str (repeat 64 "a"))})
+      (runner/append-receipt! dir review (review-result dir {}))
       (runner/reconcile! dir (fn [_] (throw (Exception. "duplicate review")))))
     ;; Approval is settled while retaining :review-pending as the explicit
     ;; authority from which the bank intent is created.
@@ -156,8 +172,16 @@
         (runner/append-receipt! dir gate {:outcome :green
                                           :checkpoint-due? true})
         (runner/reconcile! dir (constantly nil)))
+      (runner/install-checkpoint! dir (checkpoint-claim))
       (let [review (runner/begin-action! dir :review)]
-        (runner/append-receipt! dir review {:ruling ruling})
+        (runner/append-receipt!
+         dir review
+         (review-result dir {:outcome :rejected
+                             :bank-authorized? false
+                             :finding :review-not-approved
+                             :progress-ruling :equivalent
+                             :consecutive-nonreductions 1
+                             :review-rationale (str "Reviewer did not approve " ruling)}))
         (runner/reconcile! dir (constantly nil)))
       (is (= :paused (:phase (runner/read-state dir))))
       (is (= :review-not-approved
@@ -176,25 +200,70 @@
                   :phase :checkpoint-ready
                   :obligation/id :t00J02/producer
                   :consecutive-nonreductions (if (= dir first-dir) 0 1))))
+    (runner/install-checkpoint! first-dir (checkpoint-claim))
+    (runner/install-checkpoint! second-dir (checkpoint-claim))
     (let [review (runner/begin-action! first-dir :review)]
       (runner/append-receipt!
        first-dir review
-       {:outcome :approved :bank-authorized? true
-        :obligation-id :t00J02/producer :consecutive-nonreductions 1
-        :progress-ruling :equivalent :review-rationale "No semantic change."
-        :checkpoint-digest (apply str (repeat 64 "a"))})
+       (review-result first-dir
+                      {:consecutive-nonreductions 1
+                       :progress-ruling :equivalent
+                       :review-rationale "No semantic change."}))
       (runner/reconcile! first-dir (constantly nil))
       (is (= :review-pending (:phase (runner/read-state first-dir))))
       (is (= 1 (:consecutive-nonreductions (runner/read-state first-dir)))))
     (let [review (runner/begin-action! second-dir :review)]
       (runner/append-receipt!
        second-dir review
-       {:outcome :rejected :bank-authorized? false
-        :finding :checkpoint-nonreduction-limit
-        :obligation-id :t00J02/producer :consecutive-nonreductions 2
-        :progress-ruling :equivalent :review-rationale "Still equivalent."
-        :checkpoint-digest (apply str (repeat 64 "b"))})
+       (review-result second-dir
+                      {:outcome :rejected :bank-authorized? false
+                       :finding :checkpoint-nonreduction-limit
+                       :consecutive-nonreductions 2
+                       :progress-ruling :equivalent
+                       :review-rationale "Still equivalent."}))
       (runner/reconcile! second-dir (constantly nil))
       (is (= :paused (:phase (runner/read-state second-dir))))
       (is (= :checkpoint-nonreduction-limit
              (get-in (runner/read-state second-dir) [:pause/finding :type]))))))
+
+(deftest review-is-bound-to-installed-checkpoint-across-restart
+  (let [dir (temp-dir)]
+    (runner/write-state!
+     dir (assoc (runner/initial-state
+                 {:problem-id "t00J02" :workspace "/tmp/apm-lean-t00J02"
+                  :base-sha "base" :head-sha "candidate"})
+                :phase :checkpoint-ready))
+    (let [identity (runner/install-checkpoint! dir (checkpoint-claim))
+          review (runner/begin-action! dir :review)
+          restarted (runner/read-state dir)]
+      (is (= identity (:pending-checkpoint restarted)))
+      (is (= identity (:checkpoint/identity (:intent restarted))))
+      (runner/append-receipt! dir review (review-result dir {}))
+      (runner/reconcile! dir (constantly nil))
+      (is (= :review-pending (:phase (runner/read-state dir)))))))
+
+(deftest arbitrary-or-stale-checkpoint-review-fails-closed
+  (doseq [[label override]
+          [[:arbitrary-digest {:checkpoint-digest (apply str (repeat 64 "f"))}]
+           [:other-obligation {:obligation-id :t00J02/other}]
+           [:prior-turn {:turn 0}]
+           [:prior-head {:head-sha "prior-head"}]]]
+    (let [dir (temp-dir)]
+      (runner/write-state!
+       dir (assoc (runner/initial-state
+                   {:problem-id "t00J02" :workspace "/tmp/apm-lean-t00J02"
+                    :base-sha "base" :head-sha "candidate"})
+                  :phase :checkpoint-ready))
+      (runner/install-checkpoint! dir (checkpoint-claim))
+      (let [review (runner/begin-action! dir :review)]
+        ;; Reading state here models process death/restart before terminal
+        ;; collection; the installed identity and intent survive unchanged.
+        (runner/read-state dir)
+        (runner/append-receipt! dir review (review-result dir override))
+        (runner/reconcile! dir (constantly nil))
+        (is (= :paused (:phase (runner/read-state dir))) (name label))
+        (is (= :review-checkpoint-identity-mismatch
+               (get-in (runner/read-state dir) [:pause/finding :type]))
+            (name label))
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"transition-not-allowed"
+                              (runner/begin-action! dir :bank)))))))

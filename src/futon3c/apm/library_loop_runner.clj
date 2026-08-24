@@ -58,6 +58,7 @@
    :failure-fingerprint nil
    :consecutive-same-failures 0
    :pending-bank nil
+   :pending-checkpoint nil
    :obligation/id nil
    :consecutive-nonreductions 0
    :pause/finding nil
@@ -97,6 +98,16 @@
              (not (and (map? (:pause/finding state))
                        (keyword? (get-in state [:pause/finding :type])))))
     (fail! :invalid-pause-finding {:state state}))
+  (when-let [pending (:pending-checkpoint state)]
+    (when-not (and (= schema-version (:schema pending))
+                   (= (:problem-id state) (:problem-id pending))
+                   (= (:turn state) (:turn pending))
+                   (= (:checkpoint state) (:checkpoint pending))
+                   (= (:head-sha state) (:head-sha pending))
+                   (keyword? (:obligation-id pending))
+                   (string? (:checkpoint-digest pending))
+                   (re-matches #"[0-9a-f]{64}" (:checkpoint-digest pending)))
+      (fail! :invalid-pending-checkpoint {:state state})))
   state)
 
 (defn state-path [run-dir]
@@ -182,7 +193,36 @@
 (defn- intent-id [state action]
   (sha256 (pr-str [schema-version (:problem-id state) (:turn state)
                    (:checkpoint state) action (:base-sha state)
-                   (:head-sha state)])))
+                   (:head-sha state)
+                   (when (#{:review :bank} action)
+                     (:pending-checkpoint state))])))
+
+(defn install-checkpoint!
+  "Validates and durably binds the exact checkpoint that an independent
+  review may judge. Installation is permitted once, in :checkpoint-ready,
+  before the review intent is persisted."
+  [run-dir checkpoint-record]
+  (let [state (read-state run-dir)]
+    (when (:intent state)
+      (fail! :action-already-pending {:intent (:intent state)
+                                      :action :install-checkpoint}))
+    (when-not (= :checkpoint-ready (:phase state))
+      (fail! :transition-not-allowed {:phase (:phase state)
+                                      :action :install-checkpoint}))
+    (let [record (checkpoint/validate-checkpoint checkpoint-record)
+          identity {:schema schema-version
+                    :problem-id (:problem-id state)
+                    :turn (:turn state)
+                    :checkpoint (:checkpoint state)
+                    :head-sha (:head-sha state)
+                    :obligation-id (:id record)
+                    :checkpoint-digest (checkpoint/checkpoint-digest record)}]
+      (when (and (:pending-checkpoint state)
+                 (not= identity (:pending-checkpoint state)))
+        (fail! :checkpoint-already-installed
+               {:existing (:pending-checkpoint state) :attempted identity}))
+      (write-state! run-dir (assoc state :pending-checkpoint identity))
+      identity)))
 
 (defn begin-action!
   "Persists an action intent before the caller may perform an external effect.
@@ -199,6 +239,8 @@
                                       :action action}))
     (when-not (= required-phase (:phase state))
       (fail! :transition-not-allowed {:phase (:phase state) :action action}))
+    (when (and (#{:review :bank} action) (nil? (:pending-checkpoint state)))
+      (fail! :missing-pending-checkpoint {:action action :state state}))
     (let [next-phase (intent-phase action)]
       (when-not (or (= (:phase state) next-phase)
                     (contains? (get allowed-transitions (:phase state)) next-phase))
@@ -212,7 +254,9 @@
                   :action action
                   :id (intent-id state action)
                   :base-sha (:base-sha state)
-                  :head-sha (:head-sha state)}]
+                  :head-sha (:head-sha state)
+                  :checkpoint/identity (when (#{:review :bank} action)
+                                         (:pending-checkpoint state))}]
       (write-state! run-dir (cond-> (assoc state
                                            :phase (intent-phase action)
                                            :intent intent)
@@ -258,22 +302,32 @@
                            {:turn (inc (:turn state))
                             :last-green-gate (:receipt/path result)}))
                 (pause :gate-failed))
-        :review (if (and (checkpoint/valid-decision? state result)
+        :review (let [observed-identity
+                      (select-keys result
+                                   [:schema :problem-id :turn :checkpoint
+                                    :head-sha :obligation-id :checkpoint-digest])]
+                  (cond
+                    (not= (:pending-checkpoint state) observed-identity)
+                    (pause :review-checkpoint-identity-mismatch)
+
+                    (and (checkpoint/valid-decision? state result)
                          (= :approved (:outcome result))
-                         (true? (:bank-authorized? result))
-                         (keyword? (:obligation-id result)))
-                  (advance :review-pending
-                           {:checkpoint (inc (:checkpoint state))
-                            :obligation/id (:obligation-id result)
-                            :consecutive-nonreductions
-                            (:consecutive-nonreductions result)})
-                  (pause (or (:finding result) :review-not-approved)))
+                         (true? (:bank-authorized? result)))
+                    (advance :review-pending
+                             {:obligation/id (:obligation-id result)
+                              :consecutive-nonreductions
+                              (:consecutive-nonreductions result)})
+
+                    :else
+                    (pause (or (:finding result) :review-not-approved))))
         :bank (if (= :banked (:outcome result))
                 (advance :turn-ready
                          {:turn (inc (:turn state))
+                          :checkpoint (inc (:checkpoint state))
                           :base-sha (or (:bank-sha result) (:base-sha state))
                           :head-sha (or (:bank-sha result) (:head-sha state))
-                          :pending-bank nil})
+                          :pending-bank nil
+                          :pending-checkpoint nil})
                 (pause :bank-failed))))))
 
 (defn reconcile!

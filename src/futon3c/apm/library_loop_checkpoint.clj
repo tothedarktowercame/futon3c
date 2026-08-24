@@ -84,7 +84,8 @@
   Non-reduction history follows an explicitly superseded obligation id, so an
   agent cannot rename an obligation to reset the valve."
   [{previous-id :obligation/id
-    previous-count :consecutive-nonreductions}
+    previous-count :consecutive-nonreductions
+    :as state}
    checkpoint review]
   (validate-review checkpoint review)
   (let [current-id (:id checkpoint)
@@ -100,13 +101,18 @@
           count (if (= :reduced ruling) 0 (inc (or previous-count 0)))
           valve-open? (< count 2)
           authorized? (and (:approved? review) valve-open?)]
-      {:outcome (if authorized? :approved :rejected)
+      {:schema 1
+       :outcome (if authorized? :approved :rejected)
        :bank-authorized? authorized?
        :progress-ruling ruling
        :review-rationale (:rationale review)
        :obligation-id current-id
        :consecutive-nonreductions count
        :checkpoint-digest (:checkpoint-digest review)
+       :problem-id (:problem-id state)
+       :turn (:turn state)
+       :checkpoint (:checkpoint state)
+       :head-sha (:head-sha state)
        :supersedes supersession
        :finding (cond
                   (not (:approved? review)) :review-not-approved
@@ -129,7 +135,8 @@
                       (and (= previous-id (:id supersession))
                            (string? (:rationale supersession))
                            (not (str/blank? (:rationale supersession)))))]
-    (and (contains? #{:approved :rejected} (:outcome decision))
+    (and (= 1 (:schema decision))
+         (contains? #{:approved :rejected} (:outcome decision))
          (boolean? (:bank-authorized? decision))
          (keyword? current-id)
          (contains? review-rulings ruling)
@@ -138,6 +145,10 @@
          (string? (:checkpoint-digest decision))
          (re-matches #"[0-9a-f]{64}" (:checkpoint-digest decision))
          (= expected-count (:consecutive-nonreductions decision))
+         (= (:problem-id state) (:problem-id decision))
+         (= (:turn state) (:turn decision))
+         (= (:checkpoint state) (:checkpoint decision))
+         (= (:head-sha state) (:head-sha decision))
          id-bound?
          (or (not (:bank-authorized? decision))
              (and (= :approved (:outcome decision))
