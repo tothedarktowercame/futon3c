@@ -32,10 +32,6 @@
           (conj :terminal-problem-outcome-invalid)
           (not (contains? learning-outcomes (:learning/outcome receipt)))
           (conj :terminal-learning-outcome-invalid)
-          (and (= :solved (:problem/outcome receipt))
-               (= :partial (:frame/result receipt))
-               (not= :partially-observed (:learning/outcome receipt)))
-          (conj :terminal-solved-partial-learning-invalid)
           (and (not progress-retry?)
                (not (and (string? (:verify-receipt/id receipt))
                          (re-matches #"[0-9a-f]{64}"

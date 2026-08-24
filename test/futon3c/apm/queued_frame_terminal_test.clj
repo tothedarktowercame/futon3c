@@ -47,20 +47,24 @@
     (is (= [:bank :audit :retire :audit :retire :seats]
            (mapv first @calls)))))
 
-(deftest frozen-f25-shaped-solved-partial-is-bankable-without-being-closed
-  (let [frame {:frame/id "fixture-f25" :problem/id "m94A02"}
-        terminal (-> (terminal-receipt frame)
-                     (dissoc :receipt/id)
-                     (assoc :frame/result :partial
-                            :learning/outcome :partially-observed))
-        terminal (assoc terminal :receipt/id (machine/ledger-digest [terminal]))
-        checked (sut/validate-terminal frame terminal)
-        bank (sut/build-problem-bank frame terminal)]
-    (is (:ok checked))
-    (is (= :solved (:problem/outcome bank)))
-    (is (= :partial (:frame/result bank)))
-    (is (= :partially-observed (:learning/outcome bank)))
-    (is (not= :closed (:frame/result bank)))))
+(deftest solved-partial-banking-preserves-independent-learning-outcomes
+  (doseq [[frame-id problem-id learning-outcome]
+          [["fixture-f25" "m94A02" :partially-observed]
+           ["fixture-f28" "a01A12" :observed]]]
+    (let [frame {:frame/id frame-id :problem/id problem-id}
+          terminal (-> (terminal-receipt frame)
+                       (dissoc :receipt/id)
+                       (assoc :frame/result :partial
+                              :learning/outcome learning-outcome))
+          terminal (assoc terminal :receipt/id
+                          (machine/ledger-digest [terminal]))
+          checked (sut/validate-terminal frame terminal)
+          bank (sut/build-problem-bank frame terminal)]
+      (is (:ok checked))
+      (is (= :solved (:problem/outcome bank)))
+      (is (= :partial (:frame/result bank)))
+      (is (= learning-outcome (:learning/outcome bank)))
+      (is (not= :closed (:frame/result bank))))))
 
 (deftest frozen-f26-shaped-unsolved-partial-is-a-retry-not-a-solved-bank
   (let [frame {:frame/id "fixture-f26" :problem/id "m94A03"}
