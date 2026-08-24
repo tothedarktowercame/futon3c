@@ -1,0 +1,241 @@
+;; Pre-registration — memory transfer as capability, not functioning.
+;;
+;; WRITTEN 2026-08-24T12:17:12Z by claude-13 at Joe's instruction, futon3c
+;; 5ac4531b / apm-lean 25bd2737. Written BEFORE the F29+ confirmation units
+;; exist. That ordering is the whole point: the exclusion boundary below is a
+;; statement about the instrument, and it is worthless if written after the
+;; data it excludes.
+;;
+;; Fields marked :TBD/operator are NOT guesses. They need a value from Joe or
+;; from the campaign record; inventing them here would defeat the artifact.
+
+{:kind :apm/preregistration
+ :schema :apm.prereg/v1
+ :registration/id "prereg-capability-transfer-v1"
+ :registration/written-at "2026-08-24T12:17:12Z"
+ :registration/written-by "claude-13"
+ :registration/futon3c-revision "5ac4531b"
+
+ :lean-registration :TBD/operator
+ :lean-source "/home/joe/code/apm-lean"
+ :lean-revision "25bd2737"
+ :modules :TBD/operator
+ :reg/role-cards :TBD/operator
+ :reg/solver-seat :TBD/operator
+
+ ;; ---------------------------------------------------------------------
+ :claim
+ {:level-1 {:statement "Codex closes APM problems."
+            :status :established-and-uninteresting
+            :note "A functioning of the machine. Not what this registers."}
+
+  :level-2a {:statement "Memories extracted from solver closes, carried through
+                         the memory medium, are USED by a weaker student on a
+                         sound problem."
+             :status :first-observed-at-F29
+             :measures :functioning
+             :note "F29 has attested student memory usage (Joe, 2026-08-24).
+                    Usage is not yet improvement -- see level-2b."}
+
+  :level-2b {:statement "The memories are LOAD-BEARING: the same student on the
+                         same problem without them fails to solve."
+             :status :not-yet-run
+             :measures :functioning
+             :design :tail-ablation
+             :note "This is what turns 'used' into 'helped'. Requires student
+                    rounds WITHOUT memory to demonstrate failure-to-solve."}
+
+  :level-3 {:statement "A fully-stocked memory store lets the student close
+                        HELD-OUT problems presumed beyond its independent
+                        reach."
+            :status :not-yet-attempted
+            :measures :capability
+            :note "Sen's distinction is load-bearing and is why this is a
+                   SEPARATE claim, not a stronger version of level-2b.
+                   Level-2b shows the student got better at what it could
+                   already do -- a functioning. Level-3 shows the option set
+                   itself expanded -- a capability. Only level-3 licenses the
+                   downstream claim that the same medium could scaffold a
+                   human (Joe's level #3)."}
+
+  :level-3b
+  {:statement "The SAME memory medium that lifts the machine student also lifts
+               a HUMAN student -- i.e. the medium is substrate-neutral rather
+               than machine-specific."
+   :chain "Codex -> Zai/FUTON -> Joe. Level-3b is the FUTON -> Joe leg."
+   :phase :separate
+   :status :not-in-this-registration
+   :measures :capability
+
+   :phase-boundary
+   "REGISTERED AS A SEPARATE PHASE (Joe, 2026-08-24). Level-3b is recorded here
+    so that its prediction and its known confound are on the record BEFORE the
+    phase-2 data lands, not because it is part of phase 2. Specifically:
+    - it is NOT among the F29+ confirmation units;
+    - it does NOT share the phase-2 ablation trigger or power band;
+    - phase 2 is complete on its own terms whether or not 3b ever runs, and
+      the absence of 3b is not a gap in this registration.
+    Nothing in phase 2 is to be held open waiting for it."
+
+   :why-not-just-a-repeat
+   "3b is not level-2b performed on a human. It tests a property of the MEDIUM,
+    not of a student. What transfers to the machine student is a mixture of
+    conceptual moves and machine-specific API/tactic knowledge. If the same
+    memories lift both, that is a strong claim about the medium and the
+    delivery layer can be thin. If they lift the machine and not the human,
+    the medium is machine-specific -- which is itself a real finding, and is
+    the condition under which a genuine tutoring system (a TRANSLATION layer,
+    not a delivery mechanism) becomes necessary."
+
+   :sequencing
+   "Do not build the tutoring system before phase 2 reports. The expensive
+    question -- how much translation is needed -- is partly answered by the
+    cheap experiment already running. Building first would spend the heavy
+    lifting before knowing which kind of medium exists."
+
+   :first-subject
+   {:subject "Joe"
+    :suitability
+    "Methodologically apt as a rusty expert: prerequisites present, current
+     fluency absent, which places him INSIDE the power band. A true novice
+     would sit above it and reproduce the dead-with-deader comparison."
+    :confound :not-blind
+    :confound-detail
+    "The first human subject designed the architecture, knows the hypothesis,
+     and has read the memories. Any learning claim about him specifically is
+     confounded past repair. Recorded NOW rather than discovered later."
+    :consequence
+    "Joe is the right subject for building and debugging the tutoring loop and
+     the WRONG subject for any efficacy claim. An efficacy claim requires a
+     different, blind learner."}
+
+   :claim-scoping
+   {:existence-proof
+    "Senior knowledge mined, carried, and demonstrably used by a junior who
+     could not do the task before. n may be 1. This is what the institutional-
+     memory business case requires and is dramatically cheaper."
+    :efficacy-trial
+    "Learning gains across learners against a control. Required to make a
+     PEDAGOGICAL claim. Not required for the business thesis, and not
+     attempted in 3b."
+    :rule "3b claims the existence proof ONLY. Any efficacy language in a 3b
+           report is out of scope and should be refused."}}}
+
+ ;; ---------------------------------------------------------------------
+ :arms
+ {:solver     {:role :solver  :memory :n/a      :status :running}
+  :student    {:role :student :memory :offered  :status :running-from-F29}
+  :ablation   {:role :student :memory :withheld :status :not-yet-run
+               :note "The control. Does not currently exist. Everything in
+                      level-2b waits on it."}}
+
+ ;; ---------------------------------------------------------------------
+ :replication-stage :confirmation
+ :pilot-units {:frames "F1..F28"
+               :excluded? true
+               :exclusion-reason
+               "The causal path from solver memory to student did not exist.
+                Documented independently BEFORE this registration:
+                TN-opus-f27-review.md (2026-08-24T00:05Z) -- 'the math is a
+                replication, the experiment is a null'; n = 1 real student
+                attempt, 0 interventions with a causal path; three severed
+                circuits (solver->memory at promotion, guide->student by a
+                frozen snapshot, attempts 2-3 never reset the worktree);
+                Finding 5, stale metadata caused the degeneracy. Repaired at
+                F28. TN-fable-F27-review.md documents the surrounding repair
+                clusters.
+                NOTE the form of this exclusion: pre-F29 units are excluded
+                because the INSTRUMENT lacked a causal path, not because their
+                RESULTS were unfavourable."}
+ :confirmation-units {:frames "F29 onward" :n :open-ended :see :stop-rules}
+
+ ;; ---------------------------------------------------------------------
+ :stop-rules
+ {:improvement-programme :none
+  :rationale
+  "Deliberate. A commit freeze to collect N comparable runs was proposed by
+   the Fable F27 review and withdrawn: repairs are needed to complete a run at
+   all (Joe). Continuous repair is a standing condition of this experiment, not
+   a defect in it. A stopping rule over a drifting instrument would protect
+   nothing.
+   In a continuously repaired system the live threat is NOT optional stopping.
+   It is SELECTIVE EXCLUSION -- 'that frame does not count, the harness was
+   broken'. Both F27 reviews establish that such frames will occur (e.g.
+   b95dff66: the solver proceeded silently without its role card -- 'this does
+   not stall the run, it degrades the evidence'). The total-reporting rule
+   below is what stands in place of a stop rule."
+  :ablation-trigger
+  {:precondition
+   "The ablation is only worth running once the memory arm has actually closed
+    something. Ablating against a memory arm that also fails compares dead with
+    deader (Joe, 2026-08-24) -- two nulls, no signal about transfer."
+   :on-set "ALL F29+ frames in which the student solved with memory offered."
+   :note-on-set
+   "Not a guard against anyone's judgement -- the set follows from the
+    precondition. Stating it now simply means the ablation set is fixed by a
+    rule rather than settled after the frames are read."
+   :report-with
+   "The instrument-version distribution of the ablated set. Because transfer is
+    being actively improved, the solved-with-memory frames will skew late, so
+    the ablation speaks about the CURRENT transfer implementation and not about
+    an F29-onward average. Reporting the distribution is what keeps that from
+    being read as more general than it is."
+
+   :power-band
+   {:observation
+    "The ablation has power only on problems in a band: hard enough that the
+     student fails alone, tractable enough that memories lift it. Outside the
+     band there is no signal in either direction -- too easy and both arms
+     solve, too hard and both arms fail."
+    :consequence-for-corpus
+    "Problem difficulty therefore has to be SELECTED for the band, not
+     inherited from whatever the pool supplies. This is a live constraint: the
+     held-out problems are currently set aside as 'too hard' (Joe), which is
+     the correct call for level-2b and is exactly what makes them the right
+     instrument for level-3."
+    :consequence-for-nulls
+    "A both-arms-fail frame is not wasted. It is uninformative about TRANSFER
+     but informative about PROBLEM SELECTION -- evidence the problem sits above
+     the band. Under total reporting it is reported as such rather than
+     discarded, and it is how the band gets located empirically."
+    :relation-to-levels
+    "Level-2b requires problems INSIDE the band; level-3 deliberately uses
+     problems ABOVE it. That difficulty gap is precisely the functioning /
+     capability distinction made operational."}}}
+
+ ;; ---------------------------------------------------------------------
+ :decision-rule
+ {:total-reporting
+  "Every F29+ frame is reported, including nulls, aborts, and frames later
+   found degraded. A degraded frame is reported AND MARKED with the named
+   defect. No frame is dropped."
+  :per-frame-instrument-version
+  "Each reported frame carries the futon3c revision and any repair shas landed
+   since the previous frame, so that an effect which appears only after some
+   repair is VISIBLE as such rather than pooled away."
+  :unit-of-evidence
+  "The frame. NOT the series -- pooling across a drifting instrument is what
+   the continuous-repair condition forbids."
+  :level-2b-read "Memories are load-bearing iff the ablation arm fails to solve
+                  problems the memory arm closed, over the rule-fixed set."
+  :level-3-read  "Capability iff a held-out problem presumed beyond independent
+                  reach is closed with the store and not without it."}
+
+ :required-capabilities :TBD/operator
+ :required-measurement-fields
+ ["promoted then surfaced then used"
+  "rewrite rule offered and used"
+  "memories promoted"
+  "terminal disposition"
+  "residual executable sorries"
+  "axiom cleanliness"
+  "attempts or closer hops"]
+
+ :estimated-cost :TBD/operator
+ :budget-cap :TBD/operator
+ :teardown-deadline :TBD/operator
+
+ :structural-invariants :TBD/operator
+ :runtime-invariants :TBD/operator
+ :problem {:F29 "a01J05"}
+ :variation :TBD/operator}
