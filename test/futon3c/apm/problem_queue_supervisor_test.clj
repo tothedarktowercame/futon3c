@@ -56,6 +56,20 @@
       (is (= :parked (:status result)))
       (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
 
+(deftest pause-after-active-retires-current-frame-without-minting-successor
+  (let [{:keys [providers state calls]} (harness)]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (let [requested (sut/pause-after-active @state)]
+      (is (:ok requested))
+      ((:persist-state-fn providers) (:state requested)))
+    (let [result (sut/tick! providers)]
+      (is (= :batch-paused (:status result)))
+      (is (= :paused (:status @state)))
+      (is (nil? (:active @state)))
+      (is (= 1 (:next-index @state)))
+      (is (= 1 (count (filter #(= :mint (first %)) @calls))))
+      (is (= 1 (count (:completed @state)))))))
+
 (deftest durable-intermediate-collection-statuses-remain-nonterminal
   (doseq [status [:terminal-collected :claim-recovered]]
     (let [{:keys [providers calls]} (harness)]

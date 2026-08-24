@@ -19,7 +19,8 @@
      :dispatch/action :jit-problem-queue/tick
      :expected/postcondition
      {:status/one-of [:frame-prepared :parked :phase-advanced
-                      :terminal-collected :claim-recovered :batch-complete]}}))
+                      :terminal-collected :claim-recovered :batch-paused
+                      :batch-complete]}}))
 
 (defn adapter-constructor [config]
   {:decide-fn
@@ -33,7 +34,7 @@
            result (step (:launch config))]
        (cond
          (not (:ok result)) result
-         (= :batch-complete (:status result))
+         (contains? #{:batch-complete :batch-paused} (:status result))
          {:ok true :status :frame-complete
           :coordinator/clear-intent? true :queue/result result}
          :else

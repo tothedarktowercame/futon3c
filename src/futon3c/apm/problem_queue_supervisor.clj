@@ -54,6 +54,18 @@
   (assoc (dissoc state :state/id) :state/id
          (machine/ledger-digest [(dissoc state :state/id)])))
 
+(defn pause-after-active
+  "Durably request that the active frame finish and retire without minting a
+  successor. The active frame and queue cursor are otherwise unchanged."
+  [state]
+  (cond
+    (not (valid-state? state))
+    {:ok false :error/code :problem-queue-state-invalid}
+    (nil? (:active state))
+    {:ok false :error/code :problem-queue-no-active-frame}
+    :else
+    {:ok true :state (addressed (assoc state :status :pause-after-active))}))
+
 (defn complete-active-without-successor
   "Record a retryable terminal frame without preparing the queue's next item.
 
@@ -138,6 +150,8 @@
       {:ok false :error/code :problem-queue-state-plan-mismatch}
       (= :complete (:status state))
       {:ok true :status :batch-complete :state state}
+      (= :paused (:status state))
+      {:ok true :status :batch-paused :state state}
       (nil? (:active state))
       (prepare-next plan state providers)
       :else
@@ -160,7 +174,8 @@
                           (:terminal-receipt result)})]
             (if-not (:ok retired)
               retired
-              (let [cleared (addressed
+              (let [pause? (= :pause-after-active (:status state))
+                    cleared (addressed
                              (-> state
                                  (update :completed conj
                                          {:frame/id (get-in active [:frame :frame/id])
@@ -170,9 +185,12 @@
                                           :terminal-receipt/id
                                           (get-in result
                                                   [:terminal-receipt :receipt/id])})
-                                 (assoc :active nil)))
+                                 (assoc :active nil)
+                                 (cond-> pause? (assoc :status :paused))))
                     persisted (persist-state-fn cleared)]
                 (if-not (:ok persisted)
                   {:ok false :error/code
                    :problem-queue-state-persistence-failed}
-                  (prepare-next plan cleared providers))))))))))
+                  (if pause?
+                    {:ok true :status :batch-paused :state cleared}
+                    (prepare-next plan cleared providers)))))))))))
