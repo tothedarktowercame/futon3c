@@ -57,6 +57,7 @@
    :failure-fingerprint nil
    :consecutive-same-failures 0
    :pending-bank nil
+   :pause/finding nil
    :intent nil})
 
 (defn validate-state
@@ -86,6 +87,10 @@
     (when (and intent
                (not= (:phase state) (intent-phase (:action intent))))
       (fail! :intent-phase-mismatch {:state state})))
+  (when (and (= :paused (:phase state))
+             (not (and (map? (:pause/finding state))
+                       (keyword? (get-in state [:pause/finding :type])))))
+    (fail! :invalid-pause-finding {:state state}))
   state)
 
 (defn state-path [run-dir]
@@ -183,8 +188,17 @@
                          :gate :gating
                          :review :checkpoint-ready
                          :bank :review-pending)]
+    (when (:intent state)
+      (fail! :action-already-pending {:intent (:intent state)
+                                      :action action}))
     (when-not (= required-phase (:phase state))
       (fail! :transition-not-allowed {:phase (:phase state) :action action}))
+    (let [next-phase (intent-phase action)]
+      (when-not (or (= (:phase state) next-phase)
+                    (contains? (get allowed-transitions (:phase state)) next-phase))
+        (fail! :transition-not-allowed {:from (:phase state)
+                                        :to next-phase
+                                        :action action})))
     (let [intent {:schema schema-version
                   :problem-id (:problem-id state)
                   :turn (:turn state)
@@ -212,22 +226,43 @@
 (defn- settled-state [state receipt]
   (let [action (get-in state [:intent :action])
         result (:result receipt)]
-    (case action
-      :turn (assoc state :phase :gating :intent nil
-                         :head-sha (or (:head-sha result) (:head-sha state)))
-      :gate (if (:checkpoint-due? result)
-              (assoc state :phase :checkpoint-ready :intent nil
-                           :last-green-gate (:receipt/path result))
-              (assoc state :phase :turn-ready :intent nil
-                           :turn (inc (:turn state))
-                           :last-green-gate (:receipt/path result)))
-      :review (assoc state :phase :review-pending :intent nil
-                           :checkpoint (inc (:checkpoint state)))
-      :bank (assoc state :phase :turn-ready :intent nil
-                         :turn (inc (:turn state))
-                         :base-sha (or (:bank-sha result) (:base-sha state))
-                         :head-sha (or (:bank-sha result) (:head-sha state))
-                         :pending-bank nil))))
+    (letfn [(advance [next-phase updates]
+              (when-not (or (= (:phase state) next-phase)
+                            (contains? (get allowed-transitions (:phase state))
+                                       next-phase))
+                (fail! :transition-not-allowed
+                       {:from (:phase state) :to next-phase :action action}))
+              (merge state {:phase next-phase :intent nil} updates))
+            (pause [finding]
+              (advance :paused
+                       {:pause/finding {:type finding
+                                        :action action
+                                        :intent-id (get-in state [:intent :id])
+                                        :result result}}))]
+      (case action
+        :turn (if (= :ok (:outcome result))
+                (advance :gating
+                         {:head-sha (or (:head-sha result) (:head-sha state))})
+                (pause :turn-failed))
+        :gate (if (= :green (:outcome result))
+                (if (:checkpoint-due? result)
+                  (advance :checkpoint-ready
+                           {:last-green-gate (:receipt/path result)})
+                  (advance :turn-ready
+                           {:turn (inc (:turn state))
+                            :last-green-gate (:receipt/path result)}))
+                (pause :gate-failed))
+        :review (if (= :approved (:ruling result))
+                  (advance :review-pending
+                           {:checkpoint (inc (:checkpoint state))})
+                  (pause :review-not-approved))
+        :bank (if (= :banked (:outcome result))
+                (advance :turn-ready
+                         {:turn (inc (:turn state))
+                          :base-sha (or (:bank-sha result) (:base-sha state))
+                          :head-sha (or (:bank-sha result) (:head-sha state))
+                          :pending-bank nil})
+                (pause :bank-failed))))))
 
 (defn reconcile!
   "Reconciles only the persisted intent. If its receipt exists, validates and

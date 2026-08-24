@@ -27,11 +27,11 @@
   (let [dir (temp-dir)
         _ (init! dir)
         intent (runner/begin-action! dir :turn)
-        receipt (runner/append-receipt! dir intent {:head-sha "turn-head"})]
-    (is (= receipt (runner/append-receipt! dir intent {:head-sha "turn-head"})))
+        receipt (runner/append-receipt! dir intent {:outcome :ok :head-sha "turn-head"})]
+    (is (= receipt (runner/append-receipt! dir intent {:outcome :ok :head-sha "turn-head"})))
     (is (thrown-with-msg? clojure.lang.ExceptionInfo #"receipt-conflict"
                           (runner/append-receipt! dir intent
-                                                  {:head-sha "other-head"})))))
+                                                  {:outcome :ok :head-sha "other-head"})))))
 
 (deftest restart-at-turn-running-never-launches-a-second-turn
   (let [dir (temp-dir)
@@ -39,7 +39,7 @@
         intent (runner/begin-action! dir :turn)
         observations (atom 0)]
     (is (= :turn-running (:phase (runner/read-state dir))))
-    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"transition-not-allowed"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
                           (runner/begin-action! dir :turn)))
     (is (= :pending
            (:status (runner/reconcile! dir (fn [observed]
@@ -50,7 +50,7 @@
     (is (= :settled
            (:status (runner/reconcile! dir (fn [_]
                                              (swap! observations inc)
-                                             {:head-sha "turn-head"})))))
+                                             {:outcome :ok :head-sha "turn-head"})))))
     (is (= :gating (:phase (runner/read-state dir))))
     (is (= 2 @observations))
     (is (= :idle (:status (runner/reconcile! dir (fn [_]
@@ -60,10 +60,11 @@
   (let [dir (temp-dir)
         _ (init! dir)
         turn (runner/begin-action! dir :turn)]
-    (runner/append-receipt! dir turn {:head-sha "h1"})
+    (runner/append-receipt! dir turn {:outcome :ok :head-sha "h1"})
     (runner/reconcile! dir (constantly nil))
     (let [gate (runner/begin-action! dir :gate)]
-      (runner/append-receipt! dir gate {:receipt/path "gates/turn-001.edn"
+      (runner/append-receipt! dir gate {:outcome :green
+                                        :receipt/path "gates/turn-001.edn"
                                         :checkpoint-due? false})
       (is (= :settled (:status (runner/reconcile! dir (constantly nil)))))
       (is (= :turn-ready (:phase (runner/read-state dir))))
@@ -75,16 +76,19 @@
   (let [dir (temp-dir)
         _ (init! dir)
         turn (runner/begin-action! dir :turn)]
-    (runner/append-receipt! dir turn {:head-sha "candidate"})
+    (runner/append-receipt! dir turn {:outcome :ok :head-sha "candidate"})
     (runner/reconcile! dir (constantly nil))
     (let [gate (runner/begin-action! dir :gate)]
-      (runner/append-receipt! dir gate {:receipt/path "gates/turn-001.edn"
+      (runner/append-receipt! dir gate {:outcome :green
+                                        :receipt/path "gates/turn-001.edn"
                                         :checkpoint-due? true})
       (runner/reconcile! dir (constantly nil)))
     (let [review (runner/begin-action! dir :review)]
       (is (= :review-pending (:phase (runner/read-state dir))))
       (is (= :pending (:status (runner/reconcile! dir (constantly :pending)))))
-      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"transition-not-allowed"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
+                            (runner/begin-action! dir :bank)))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
                             (runner/begin-action! dir :review)))
       (runner/append-receipt! dir review {:ruling :approved})
       (runner/reconcile! dir (fn [_] (throw (Exception. "duplicate review")))))
@@ -95,12 +99,12 @@
           bank-observations (atom 0)]
       (is (= :bank-pending (:phase (runner/read-state dir))))
       (is (= bank (:pending-bank (runner/read-state dir))))
-      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"transition-not-allowed"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
                             (runner/begin-action! dir :bank)))
       (is (= :pending (:status (runner/reconcile! dir (fn [_]
                                                        (swap! bank-observations inc)
                                                        :pending)))))
-      (runner/append-receipt! dir bank {:bank-sha "banked"})
+      (runner/append-receipt! dir bank {:outcome :banked :bank-sha "banked"})
       (is (= :settled (:status (runner/reconcile! dir (fn [_]
                                                        (throw (Exception. "duplicate bank")))))))
       (is (= 1 @bank-observations))
@@ -112,3 +116,44 @@
     (init! dir)
     (is (thrown-with-msg? clojure.lang.ExceptionInfo #"transition-not-allowed"
                           (runner/begin-action! dir :bank)))))
+
+(deftest failed-turn-and-gate-outcomes-pause-with-typed-findings
+  (let [turn-dir (temp-dir)
+        gate-dir (temp-dir)]
+    (init! turn-dir)
+    (let [intent (runner/begin-action! turn-dir :turn)]
+      (runner/append-receipt! turn-dir intent {:outcome :failed :exit 1})
+      (runner/reconcile! turn-dir (constantly nil))
+      (is (= :paused (:phase (runner/read-state turn-dir))))
+      (is (= :turn-failed (get-in (runner/read-state turn-dir)
+                                  [:pause/finding :type]))))
+    (init! gate-dir)
+    (let [turn (runner/begin-action! gate-dir :turn)]
+      (runner/append-receipt! gate-dir turn {:outcome :ok :head-sha "h1"})
+      (runner/reconcile! gate-dir (constantly nil)))
+    (let [gate (runner/begin-action! gate-dir :gate)]
+      (runner/append-receipt! gate-dir gate {:outcome :red :finding :lean-failed})
+      (runner/reconcile! gate-dir (constantly nil))
+      (is (= :paused (:phase (runner/read-state gate-dir))))
+      (is (= :gate-failed (get-in (runner/read-state gate-dir)
+                                  [:pause/finding :type]))))))
+
+(deftest only-an-approved-review-authorizes-bank
+  (doseq [ruling [:rejected :unclear :equivalent]]
+    (let [dir (temp-dir)]
+      (init! dir)
+      (let [turn (runner/begin-action! dir :turn)]
+        (runner/append-receipt! dir turn {:outcome :ok :head-sha "candidate"})
+        (runner/reconcile! dir (constantly nil)))
+      (let [gate (runner/begin-action! dir :gate)]
+        (runner/append-receipt! dir gate {:outcome :green
+                                          :checkpoint-due? true})
+        (runner/reconcile! dir (constantly nil)))
+      (let [review (runner/begin-action! dir :review)]
+        (runner/append-receipt! dir review {:ruling ruling})
+        (runner/reconcile! dir (constantly nil)))
+      (is (= :paused (:phase (runner/read-state dir))))
+      (is (= :review-not-approved
+             (get-in (runner/read-state dir) [:pause/finding :type])))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"transition-not-allowed"
+                            (runner/begin-action! dir :bank))))))
