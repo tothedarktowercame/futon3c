@@ -49,7 +49,10 @@
             :unattended-transition-stale]
            [:state #(assoc-in % [:phase-state :state/type] :live-job-announced)
             :active-phase-state-invalid]
-           [:job #(assoc-in % [:phase-state :ticket :job-id] "other")
+           [:job #(-> %
+                     (assoc-in [:phase-state :ticket :job-id] "other")
+                     (assoc-in [:transition :event/observed-at]
+                               "2026-08-23T21:59:40Z"))
             :projected-job-mismatch]
            [:agent #(assoc % :agent {:ok false}) :agency-agent-unreachable]
            [:idle #(assoc-in % [:agent :agent :status] "idle")
@@ -102,5 +105,11 @@
                                     {:state "done"
                                      :finished-at "2026-08-23T21:59:58Z"}}))
         result (watchdog/evaluate collecting)]
+    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))))
+
+(deftest fresh-solver-round-handoff-allows-projection-catchup
+  (let [handoff (assoc-in healthy [:phase-state :ticket :job-id] "next-job")
+        result (watchdog/evaluate handoff)]
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))

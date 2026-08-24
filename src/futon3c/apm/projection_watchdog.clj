@@ -19,6 +19,8 @@
    :job-within-declared-timeout
    :terminal-budgets-valid :coordinator-last-result-successful])
 
+(def projection-catchup-grace-seconds 10)
+
 (defn- age-seconds [^Instant now value]
   (when value
     (.getSeconds (Duration/between (Instant/parse value) now))))
@@ -83,10 +85,15 @@
           (and waiting? (not= :live-job-dispatched (:state/type phase-state)))
           (conj (finding :active-phase-state-readable :active-phase-state-invalid
                          {:observed (:state/type phase-state)}))
-          (and waiting? (not= (:job-id operation) (:job-id ticket)))
+          (and waiting? (not= (:job-id operation) (:job-id ticket))
+               (or (nil? transition-age)
+                   (> transition-age projection-catchup-grace-seconds)))
           (conj (finding :projected-job-matches-durable-state
                          :projected-job-mismatch
-                         {:projected (:job-id operation) :durable (:job-id ticket)}))
+                         {:projected (:job-id operation) :durable (:job-id ticket)
+                          :projection-age-seconds transition-age
+                          :catchup-grace-seconds
+                          projection-catchup-grace-seconds}))
           (and waiting? (not (:ok agent)))
           (conj (finding :agency-agent-reachable :agency-agent-unreachable
                          {:agent-id (:agent-id operation)}))
