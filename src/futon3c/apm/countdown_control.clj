@@ -811,6 +811,67 @@
           (:ok checked) {:ok true :receipt receipt}
           :else checked)))))
 
+(defn- publish-zai-scribe-promotion!
+  "Independently review the Student-mined candidates, publish their exact
+  snapshot, and certify the ordinary end-of-frame scribe receipt."
+  [{:keys [contract action receipts request]}
+   {:keys [candidates deposit reviewer reviews]}]
+  (let [prior (frame-cycle-handlers/latest-snapshot-receipt receipts 4)
+        prior-path (:receipt/snapshot-path prior)
+        prior-memories (if (string? prior-path)
+                         (try
+                           (:snapshot/memories
+                            (edn/read-string (slurp prior-path)))
+                           (catch Throwable _ ::unreadable))
+                         [])
+        union (when (vector? prior-memories)
+                (->> (concat prior-memories candidates)
+                     (reduce (fn [acc m] (assoc acc (:memory-id m) m)) {})
+                     vals vec))
+        published
+        (when (vector? union)
+        (memory-snapshot/publish!
+         {:frame-id (:frame-id action) :problem-id (:problem-id action)
+          :candidates union
+          :path (.resolve (control-path state-directory)
+                          (str "snapshots/" (:frame-id action)
+                               "-student-mined-memory.edn"))
+          :evidence-visible? memory-snapshot/candidate-visible?}))]
+    (cond
+      (not (vector? union))
+      {:ok false :error/code :zai-scribe-prior-snapshot-unreadable
+       :path prior-path}
+      (not (:ok published))
+      published
+      :else
+      (let [snapshot (:snapshot published)
+            accounting
+            (promotion-pipeline/validate-extension-publication-accounting
+             reviews prior-memories (:snapshot/memories snapshot))
+            body {:receipt/type :scribe-reduce
+                  :receipt/frame-id (:frame-id action)
+                  :receipt/problem-id (:problem-id action)
+                  :receipt/input-receipt-ids (:input-receipt-ids request)
+                  :receipt/lanes (or (:lanes deposit) [])
+                  :receipt/dispositions (or (:dispositions deposit) [])
+                  :receipt/promotion-reviews reviews
+                  :receipt/snapshot-id (:snapshot/id snapshot)
+                  :receipt/snapshot-digest (:snapshot/digest snapshot)
+                  :receipt/snapshot-path (:path published)
+                  :receipt/reviewed-memory-ids
+                  (mapv :memory-id (:snapshot/memories snapshot))
+                  :receipt/independent-review? (not= (:depositor deposit)
+                                                     reviewer)}
+            receipt (assoc body :receipt/id (machine/ledger-digest [body]))
+            checked (frame-cycle-handlers/validate-completion
+                     contract action receipt receipts)]
+        (cond
+          (not (:ok accounting)) accounting
+          (not (:receipt/independent-review? body))
+          {:ok false :error/code :zai-scribe-reviewer-is-depositor}
+          (:ok checked) {:ok true :receipt receipt}
+          :else checked)))))
+
 (defn- guide-review-state-path [state-path]
   (let [path (Path/of (str state-path) (make-array String 0))
         file (str (.getFileName path))]
@@ -887,7 +948,12 @@
             :deposit-request (:request phase-inputs)
             :reviewer-request (promotion-review-request phase-inputs)
             :publish-fn #(publish-promotion! phase-inputs %)})
-          (live-learning-phases/run-live! phase-inputs))
+          (live-promotion/run-live!
+           {:state-path (:state-path phase-inputs)
+            :control-root (str *control-root*)
+            :deposit-request (:request phase-inputs)
+            :reviewer-request (promotion-review-request phase-inputs)
+            :publish-fn #(publish-zai-scribe-promotion! phase-inputs %)}))
 
         :guide-intervention
         (let [review-path (guide-review-state-path (:state-path phase-inputs))]

@@ -51,9 +51,12 @@
                     (catch Throwable _ nil))
                   :else nil)]
     (normalize-deposit-report
-     (merge (:authority typed) evidence receipt
-            (select-keys payload
-                         [:command-own-exit :outcome :failure-account])))))
+     (cond-> (merge (:authority typed) evidence receipt
+                    (select-keys payload
+                                 [:command-own-exit :outcome :failure-account]))
+       (and (= :zai-scribe (get-in typed [:authority :role]))
+            (vector? (:memory-candidates evidence)))
+       (assoc :candidates (:memory-candidates evidence))))))
 
 (defn- normalize-review-entry
   "Reviewer verdicts arrive through the typed JSON submission, which strings

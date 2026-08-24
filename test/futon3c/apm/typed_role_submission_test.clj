@@ -96,3 +96,10 @@
       (is (= :role-submission-payload-invalid (:error/code result)) (name role))
       (is (some #{:canonical-pattern-search-required}
                 (get-in result [:memory-search/check :findings])) (name role)))))
+
+(deftest only-zai-scribe-end-reduction-has-candidate-authority
+  (let [codex-auth (assoc (authority :scribe-reduce) :role :scribe)
+        zai-auth (assoc (authority :scribe-reduce) :role :zai-scribe)]
+    (is (not (contains? (sut/evidence-required codex-auth)
+                        :memory-candidates)))
+    (is (contains? (sut/evidence-required zai-auth) :memory-candidates))))

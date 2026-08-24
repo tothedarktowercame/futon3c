@@ -25,7 +25,8 @@
 (def checkpoint-authority-fields
   #{:solver/round :solver/strategy-checkpoint?})
 
-(def memory-search-capable-roles #{:student :scribe :promotion-proctor})
+(def memory-search-capable-roles
+  #{:student :scribe :zai-scribe :promotion-proctor})
 
 (def common-required #{:command-own-exit :outcome :failure-account :evidence})
 
@@ -56,6 +57,9 @@
    ordinary solve turns retain the ordinary proof-report schema."
   [auth]
   (cond-> (get evidence-required-by-phase (:phase auth))
+    (and (= :scribe-reduce (:phase auth))
+         (= :zai-scribe (:role auth)))
+    (conj :memory-candidates)
     (and (= :promote-solver (:phase auth))
          (= :scribe (:role auth)))
     (conj :receipt)
@@ -152,7 +156,8 @@
                         auth (get-in payload
                                      [:evidence :memory-search-receipt-ids])))
         pattern-check (when (and (:ok search-check)
-                                 (contains? #{:scribe :promotion-proctor}
+                                 (contains? #{:scribe :zai-scribe
+                                              :promotion-proctor}
                                             (:role auth)))
                         ((requiring-resolve
                           'futon3c.apm.role-memory-search/validate-pattern-accounting)
