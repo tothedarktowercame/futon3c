@@ -15,8 +15,9 @@ The Uxbridge part is the two fields a status board usually omits: every mark
 carries the DATE it was established, so a card can be shown as visibly stale
 rather than merely shown; and `promotion-test` records what call would move the
 card to the next register. A card with promotion-test null is not "not done" --
-it is unmeasurable, which is a different and more actionable defect. That is the
-number this layer exists to surface.
+it is unmeasurable, which is a different and more actionable defect. `watu` is
+the matching null on the other side: nobody has reconstructed what happened.
+Those two numbers are what this layer exists to surface.
 
 Registers: plan -> built -> ran -> live. Promotion to `live` requires the
 artefact to produce its effect AND a matched null control to fail (the m3 rule).
@@ -122,6 +123,13 @@ def main():
             # "how old is this mark" has no answer, because nothing says what
             # re-establishing it would involve.
             "promotion_test": None,
+            # Second honest null, and a different absence from the first.
+            # promotion_test says nobody has stated what SHIPPED would look
+            # like; watu says nobody has reconstructed what HAPPENED. A card can
+            # lack either independently, and a board that reports only open work
+            # gives good news less discipline than bad -- which is the very
+            # ruling (WR-25) that put C-R5 on this list.
+            "watu": None,
             "wip": False,
         })
 
@@ -135,6 +143,7 @@ def main():
         "counts": {"cards": len(cards),
                    "with_supplier": sum(1 for c in cards if c["supplier"]),
                    "without_promotion_test": sum(1 for c in cards if not c["promotion_test"]),
+                   "without_watu": sum(1 for c in cards if not c["watu"]),
                    "draw_pile": None},
     }
     doc["counts"]["draw_pile"] = len(doc["draw_pile"])
@@ -142,7 +151,8 @@ def main():
         json.dump(doc, f, indent=2)
     c = doc["counts"]
     print(f"  {out}: {c['cards']} cards ({c['with_supplier']} with a supplier, "
-          f"{c['without_promotion_test']} with no promotion test), "
+          f"{c['without_promotion_test']} with no promotion test, "
+          f"{c['without_watu']} with no replay), "
           f"{c['draw_pile']} in the draw pile; overlay as-of {established}")
 
 

@@ -494,7 +494,10 @@
 
   function renderWip(w){
     var cards=w.cards||[], pile=w.draw_pile||[], counts=w.counts||{};
-    el("wip-count").textContent="· "+cards.length+" cards · "+pile.length+" in draw pile";
+    var noTest=cards.filter(function(c){return c.promotion_test==null;}).length;
+    var noWatu=cards.filter(function(c){return c.watu==null;}).length;
+    el("wip-count").textContent="· "+cards.length+" cards · "+noTest+" with no promotion test · "+
+      noWatu+" with no replay · "+pile.length+" in draw pile";
     var cardHtml=cards.map(function(c){
       var age=wipAge(c.established), supplier=c.supplier;
       var supplierHtml=supplier
@@ -503,12 +506,16 @@
       var promotion=c.promotion_test==null
         ? "<span class='wip-none'>no promotion test defined</span>"
         : esc(c.promotion_test);
+      var watu=c.watu==null
+        ? "<span class='wip-none'>no replay reconstructed</span>"
+        : esc(c.watu);
       return "<div class='wip-card'><div><code>"+esc(c.id)+"</code> · <b>"+esc(c.wr)+"</b>"+
         "<span class='wip-mark wip-"+age.band+"'>"+esc(age.band)+" · "+age.days+" days</span></div>"+
         "<div class='wip-field'><b>Gap:</b> "+esc(c.gap)+"</div>"+
         "<div class='wip-field'><b>Supplier:</b> "+supplierHtml+"</div>"+
         "<div class='wip-field'><b>Register:</b> <code>"+esc(c.register)+"</code></div>"+
-        "<div class='wip-field'><b>Promotion test:</b> "+promotion+"</div></div>";
+        "<div class='wip-field'><b>Promotion test:</b> "+promotion+"</div>"+
+        "<div class='wip-field'><b>WATU replay:</b> "+watu+"</div></div>";
     }).join("");
     var rows=pile.map(function(t){
       return "<tr><td>"+esc(t.title)+"<br><code class='muted'>"+esc(t.repo_path)+"</code></td><td class='muted'>"+esc(t.last_touched||"unknown")+"</td></tr>";

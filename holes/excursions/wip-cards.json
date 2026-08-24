@@ -27,6 +27,7 @@
       "register": "plan",
       "established": "2026-08-22",
       "promotion_test": null,
+      "watu": null,
       "wip": false
     },
     {
@@ -38,6 +39,7 @@
       "register": "plan",
       "established": "2026-08-22",
       "promotion_test": null,
+      "watu": null,
       "wip": false
     },
     {
@@ -54,6 +56,7 @@
       "register": "plan",
       "established": "2026-08-22",
       "promotion_test": null,
+      "watu": null,
       "wip": false
     },
     {
@@ -70,6 +73,7 @@
       "register": "plan",
       "established": "2026-08-22",
       "promotion_test": null,
+      "watu": null,
       "wip": false
     }
   ],
@@ -183,6 +187,12 @@
       "last_touched": "2026-06-11"
     },
     {
+      "id": "T-watu-replay-layer",
+      "title": "T-watu-replay-layer \u2014 the click-through half needs a review, not a link",
+      "repo_path": "holes/tickets/T-watu-replay-layer.md",
+      "last_touched": "2026-08-24"
+    },
+    {
       "id": "T-zai-chat-transient-timeout",
       "title": "T-zai-chat-transient-timeout \u2014 a transient model-call failure must not kill a turn that can continue",
       "repo_path": "holes/tickets/T-zai-chat-transient-timeout.md",
@@ -193,6 +203,7 @@
     "cards": 4,
     "with_supplier": 3,
     "without_promotion_test": 4,
-    "draw_pile": 19
+    "without_watu": 4,
+    "draw_pile": 20
   }
 }
