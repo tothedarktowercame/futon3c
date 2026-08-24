@@ -771,14 +771,69 @@
       (assoc body :dispatch/id (machine/ledger-digest [body]))
       card-result)))
 
+(defn- nested-snapshot-receipts [value]
+  (cond
+    (map? value)
+    (concat (when (string? (:receipt/snapshot-path value)) [value])
+            (mapcat nested-snapshot-receipts (vals value)))
+    (sequential? value) (mapcat nested-snapshot-receipts value)
+    :else []))
+
+(defn campaign-prior-memories
+  "Read prior frames from the durable queue order and each frame ledger's last
+  snapshot receipt. This deliberately does not discover frames or snapshots by
+  directory globbing or filename order."
+  ([] (campaign-prior-memories (control-path problem-queue-state-path)))
+  ([queue-path]
+   (let [queue-path (Path/of (str queue-path) (make-array String 0))
+         queue-state (live-preflight-runtime/read-state queue-path)
+         campaign-root (.getParent queue-path)
+         campaign-name (some-> campaign-root .getFileName str)]
+     (reduce
+      (fn [{:keys [candidates dropped] :as acc} completed-frame]
+        (let [frame-id (:frame/id completed-frame)
+              problem-id (:problem/id completed-frame)
+              ledger-path (.resolve campaign-root
+                                    (str campaign-name "-" frame-id "/ledger.edn"))
+              history (ledger/read-ledger ledger-path)
+              receipt (when (:ok history)
+                        (->> (:events history)
+                             reverse
+                             (mapcat nested-snapshot-receipts)
+                             first))
+              snapshot-path (:receipt/snapshot-path receipt)
+              snapshot (when (string? snapshot-path)
+                         (try (edn/read-string (slurp snapshot-path))
+                              (catch Throwable _ nil)))
+              memories (:snapshot/memories snapshot)]
+          (if (vector? memories)
+            (assoc acc :candidates
+                   (into candidates
+                         (map #(assoc % :provenance
+                                      {:frame-id frame-id :problem-id problem-id}))
+                         memories))
+            (assoc acc :dropped
+                   (conj dropped {:frame-id frame-id :problem-id problem-id
+                                  :finding (if (:ok history)
+                                             :prior-snapshot-unreadable
+                                             :prior-frame-ledger-unreadable)})))))
+      {:candidates [] :dropped []}
+      (or (:completed queue-state) [])))))
+
 (defn- publish-promotion!
   [{:keys [contract action receipts request]}
    {:keys [candidates deposit reviewer reviews]}]
-  (let [published
-        (memory-snapshot/publish!
+  (let [prior (campaign-prior-memories)
+        own (mapv #(assoc % :provenance
+                          {:frame-id (:frame-id action)
+                           :problem-id (:problem-id action)})
+                  candidates)
+        published
+        (memory-snapshot/publish-cumulative!
          {:frame-id (:frame-id action)
           :problem-id (:problem-id action)
-          :candidates candidates
+          :prior-candidates (:candidates prior)
+          :own-candidates own
           :path (.resolve (control-path state-directory)
                           (str "snapshots/" (:frame-id action)
                                "-solver-memory.edn"))
@@ -786,8 +841,14 @@
     (if-not (:ok published)
       published
       (let [snapshot (:snapshot published)
-            accounting (promotion-pipeline/validate-publication-accounting
-                        reviews (:snapshot/memories snapshot))
+            snapshot-memories (:snapshot/memories snapshot)
+            own-ids (set (map :memory-id own))
+            retained-prior (remove #(contains? own-ids (:memory-id %))
+                                   snapshot-memories)
+            accounting
+            (promotion-pipeline/validate-extension-publication-accounting
+             reviews retained-prior snapshot-memories)
+            prior-dropped (into (vec (:dropped prior)) (:prior-dropped published))
             body {:receipt/type :solver-promotion
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
@@ -796,6 +857,7 @@
                   :receipt/dispositions (or (:dispositions deposit)
                                             (:rejections deposit) [])
                   :receipt/promotion-reviews reviews
+                  :receipt/prior-dropped prior-dropped
                   :receipt/snapshot-id (:snapshot/id snapshot)
                   :receipt/snapshot-digest (:snapshot/digest snapshot)
                   :receipt/snapshot-path (:path published)
@@ -824,8 +886,12 @@
                             (edn/read-string (slurp prior-path)))
                            (catch Throwable _ ::unreadable))
                          [])
+        current (map #(assoc % :provenance
+                             {:frame-id (:frame-id action)
+                              :problem-id (:problem-id action)})
+                     candidates)
         union (when (vector? prior-memories)
-                (->> (concat prior-memories candidates)
+                (->> (concat prior-memories current)
                      (reduce (fn [acc m] (assoc acc (:memory-id m) m)) {})
                      vals vec))
         published
@@ -892,8 +958,12 @@
                            (catch Throwable _ ::unreadable))
                          [])
         ordinal (get-in request [:intervention-ordinal])
+        current (map #(assoc % :provenance
+                             {:frame-id (:frame-id action)
+                              :problem-id (:problem-id action)})
+                     candidates)
         union (when (vector? prior-memories)
-                (->> (concat prior-memories candidates)
+                (->> (concat prior-memories current)
                      (reduce (fn [acc m] (assoc acc (:memory-id m) m)) {})
                      vals vec))]
     (if-not (vector? union)

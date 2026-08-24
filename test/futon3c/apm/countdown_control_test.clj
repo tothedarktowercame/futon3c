@@ -618,3 +618,30 @@
     (is (#'sut/active-frame-job? frame role-job))
     (is (false? (#'sut/active-frame-job?
                  frame (assoc role-job :state "done"))))))
+
+(deftest campaign-priors-follow-queue-order-and-final-receipt-snapshots
+  (let [root "data/apm-campaigns/jit-all-open-nontopology-v1"
+        queue-path (str root "/queue-state.edn")
+        fixtures [["f28" "a01A12" "f28-guide-2-memory.edn"]
+                  ["f29" "a01J05" "f29-guide-2-memory.edn"]
+                  ["f30" "a01J06" "f30-guide-2-memory.edn"]]
+        expected
+        (->> fixtures
+             (mapcat (fn [[frame-id problem-id filename]]
+                       (let [path (str root "/jit-all-open-nontopology-v1-"
+                                       frame-id "/snapshots/" filename)]
+                         (map #(assoc % :provenance
+                                      {:frame-id frame-id :problem-id problem-id})
+                              (:snapshot/memories
+                               (edn/read-string (slurp path)))))))
+             (reduce (fn [acc memory] (assoc acc (:memory-id memory) memory)) {})
+             vals
+             (sort-by :memory-id)
+             vec)
+        actual (->> (:candidates (sut/campaign-prior-memories queue-path))
+                    (reduce (fn [acc memory]
+                              (assoc acc (:memory-id memory) memory)) {})
+                    vals (sort-by :memory-id) vec)]
+    (is (= expected actual))
+    (is (= #{"f28" "f29" "f30"}
+           (set (map #(get-in % [:provenance :frame-id]) actual))))))

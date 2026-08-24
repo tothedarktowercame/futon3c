@@ -34,12 +34,20 @@
     :else {:ok true}))
 
 (defn snapshot-body [frame-id problem-id candidates]
-  (let [ordered (vec (sort-by :memory-id candidates))]
-    {:snapshot/version 1
-     :snapshot/frame-id frame-id
-     :snapshot/problem-id problem-id
-     :snapshot/review-policy :persisted-independent-review
-     :snapshot/memories ordered}))
+  (let [ordered (vec (sort-by :memory-id candidates))
+        provenance-summary
+        (when (some :provenance ordered)
+          (->> ordered
+               (keep #(get-in % [:provenance :frame-id]))
+               frequencies
+               (into (sorted-map))))]
+    (cond-> {:snapshot/version 1
+             :snapshot/frame-id frame-id
+             :snapshot/problem-id problem-id
+             :snapshot/review-policy :persisted-independent-review
+             :snapshot/memories ordered}
+      provenance-summary
+      (assoc :snapshot/provenance-summary provenance-summary))))
 
 (defn candidate-visible?
   "Freshly verify that CANDIDATE describes the current reviewed attachment and
@@ -119,6 +127,41 @@
               {:ok false :error/code :memory-snapshot-postcondition-failed}))
           (finally
             (Files/deleteIfExists tmp)))))))
+
+(defn publish-cumulative!
+  "Publish OWN-CANDIDATES on top of the campaign-ordered PRIOR-CANDIDATES.
+  Prior candidates are deduplicated first (last frame wins), then stale prior
+  reviews are dropped with an explicit account. Own candidates remain subject
+  to publish!'s fail-closed validation and visibility boundary."
+  [{:keys [prior-candidates own-candidates evidence-visible?] :as args}]
+  (let [prior-by-id (reduce (fn [acc candidate]
+                              (assoc acc (:memory-id candidate) candidate))
+                            {} prior-candidates)
+        own-ids (set (map :memory-id own-candidates))
+        prior (remove #(contains? own-ids (:memory-id %)) (vals prior-by-id))
+        inspected
+        (mapv (fn [candidate]
+                (let [shape (validate-candidate candidate)
+                      visible? (and (:ok shape)
+                                    (or (not (fn? evidence-visible?))
+                                        (evidence-visible? candidate)))]
+                  (cond
+                    (not (:ok shape))
+                    {:candidate candidate :finding (:finding shape)}
+                    (not visible?)
+                    {:candidate candidate :finding :snapshot-review-not-visible}
+                    :else {:candidate candidate})))
+              prior)
+        retained (mapv :candidate (remove :finding inspected))
+        dropped (mapv (fn [{:keys [candidate finding]}]
+                        {:memory-id (:memory-id candidate)
+                         :provenance (:provenance candidate)
+                         :finding finding})
+                      (filter :finding inspected))
+        merged (into retained own-candidates)
+        published (publish! (assoc args :candidates merged))]
+    (cond-> published
+      (:ok published) (assoc :prior-dropped dropped))))
 
 (defn verify-student-access
   [{:keys [path expected frame-id problem-id accessible-memory-ids]}]

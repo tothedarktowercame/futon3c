@@ -78,3 +78,42 @@
     (is (false? (sut/candidate-visible?
                  (assoc candidate :reviewer "solver")
                  (constantly [edge]) entries)))))
+
+(deftest cumulative-publication-drops-stale-priors-but-fails-closed-on-own
+  (let [dir (Files/createTempDirectory "apm-cumulative-snapshot-test"
+                                       (make-array FileAttribute 0))
+        visible-prior (assoc candidate :memory-id "prior-ok"
+                             :provenance {:frame-id "f28" :problem-id "p28"})
+        stale-prior (assoc candidate :memory-id "prior-stale"
+                           :review-evidence-id "missing-review"
+                           :provenance {:frame-id "f29" :problem-id "p29"})
+        own (assoc candidate :memory-id "own"
+                   :provenance {:frame-id "f31" :problem-id "p31"})
+        visible? #(not= "missing-review" (:review-evidence-id %))
+        path (.resolve dir "union.edn")
+        result (sut/publish-cumulative!
+                {:frame-id "f31" :problem-id "p31"
+                 :prior-candidates [visible-prior stale-prior]
+                 :own-candidates [own] :path path
+                 :evidence-visible? visible?})]
+    (is (:ok result))
+    (is (= ["own" "prior-ok"]
+           (mapv :memory-id (get-in result [:snapshot :snapshot/memories]))))
+    (is (= {"f28" 1 "f31" 1}
+           (get-in result [:snapshot :snapshot/provenance-summary])))
+    (is (= [{:memory-id "prior-stale"
+             :provenance {:frame-id "f29" :problem-id "p29"}
+             :finding :snapshot-review-not-visible}]
+           (:prior-dropped result)))
+    (is (:ok (sut/verify-student-access
+              {:path path :expected (get-in result [:snapshot :snapshot/digest])
+               :frame-id "f31" :problem-id "p31"
+               :accessible-memory-ids ["prior-ok" "own"]})))
+    (is (= :memory-snapshot-review-not-visible
+           (:error/code
+            (sut/publish-cumulative!
+             {:frame-id "f31" :problem-id "p31"
+              :prior-candidates []
+              :own-candidates [(assoc own :review-evidence-id "missing-review")]
+              :path (.resolve dir "own-stale.edn")
+              :evidence-visible? visible?}))))))
