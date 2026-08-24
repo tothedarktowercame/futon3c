@@ -276,6 +276,34 @@
                                {:root root}))))
     (is (= :review-pending (:phase (runner/read-state dir))))))
 
+(deftest continue-without-bank-cli-records-disposition-without-effects
+  (let [root (temp-dir)
+        dir (exec/run-dir root "t00J02")]
+    (init-at! dir :checkpoint-ready 20)
+    (runner/install-checkpoint! dir (claim))
+    (let [review (runner/begin-action! dir :review)
+          identity (:pending-checkpoint (runner/read-state dir))]
+      (runner/append-receipt!
+       dir review (merge identity
+                         {:outcome :approved :bank-authorized? true
+                          :progress-ruling :reduced
+                          :review-rationale "Approved partial progress."
+                          :consecutive-nonreductions 0}))
+      (runner/reconcile! dir (constantly nil)))
+    (let [result (exec/cli! ["continue-without-bank" "t00J02"]
+                            {:root root})
+          state (runner/read-state dir)]
+      (is (= :settled (:status result)))
+      (is (= :continue-without-bank
+             (get-in result [:receipt :action])))
+      (is (= :continued-without-bank
+             (get-in result [:receipt :result :outcome])))
+      (is (= :turn-ready (:phase state)))
+      (is (= 21 (:turn state)))
+      (is (= 1 (:checkpoint state)))
+      (is (= "base" (:base-sha state)))
+      (is (= "candidate" (:head-sha state))))))
+
 (defn- bank-ready! [dir]
   (let [base (assoc (runner/initial-state
                      {:problem-id "t00J02" :workspace "/tmp/apm-lean"

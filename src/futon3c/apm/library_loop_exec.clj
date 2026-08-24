@@ -195,6 +195,24 @@
                                      (:prior-review intent)))
       (runner/reconcile! run-dir (constantly nil)))))
 
+(defn continue-without-bank!
+  "Records an explicit operator disposition to continue after an approved
+  checkpoint without performing or pretending to perform a bank."
+  [run-dir]
+  (let [state (runner/read-state run-dir)
+        intent (require-intent-action!
+                (or (:intent state)
+                    (runner/begin-continue-without-bank! run-dir))
+                :continue-without-bank)]
+    (when-not (runner/read-receipt run-dir intent)
+      (runner/append-receipt!
+       run-dir intent {:outcome :continued-without-bank
+                       :checkpoint/identity (:checkpoint/identity intent)
+                       :approving-review (:approving-review intent)
+                       :base-sha (:base-sha intent)
+                       :head-sha (:head-sha intent)}))
+    (runner/reconcile! run-dir (constantly nil))))
+
 (defn- settle-bank! [run-dir state intent slate-path result]
   (runner/append-receipt! run-dir intent result)
   (when slate-path
@@ -335,6 +353,8 @@
       "reconsider-review" (reconsider-review! (run-dir root problem-id)
                                                (read-edn-file (first rest))
                                                (read-edn-file (second rest)))
+      "continue-without-bank" (continue-without-bank!
+                               (run-dir root problem-id))
       "bank" (run-bank! (run-dir root problem-id) deps)
       (throw (ex-info "unknown-library-loop-command" {:command command})))))
 

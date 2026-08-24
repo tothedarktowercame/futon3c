@@ -206,6 +206,22 @@ Reconsideration is chained to the exact latest append-only
 each further rejection remains immutable and a later reconsideration, if any,
 must chain from that newest rejection.
 
+After an exact approved partial-progress review, banking remains the default
+durable boundary. An operator may instead explicitly defer that bank and keep
+working:
+
+```sh
+scripts/library-loop continue-without-bank t00J02
+```
+
+This appends a disposition receipt bound to the installed checkpoint and its
+canonical approving review. It advances the logical turn/checkpoint while
+retaining the old base SHA and current candidate HEAD, so later gates continue
+to rebuild the cumulative unbanked range. It performs no Git or slate action
+and is not a bank. A later bank requires a new checkpoint and independent
+review of the final exact HEAD. Generic `resume` never chooses this operator
+disposition.
+
 Banking rebuilds the base-to-candidate ConstructionTargets closure and problem
 `Main.lean`, verifies clean worktrees and ancestry, and executes only
 `git merge --ff-only CANDIDATE` in the configured trunk. It never pushes.

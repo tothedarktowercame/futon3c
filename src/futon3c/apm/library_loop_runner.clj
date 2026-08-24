@@ -25,6 +25,7 @@
    :gate :gating
    :review :review-pending
    :review-reconsideration :review-pending
+   :continue-without-bank :review-pending
    :bank :bank-pending})
 
 (def allowed-transitions
@@ -35,7 +36,7 @@
    :turn-running #{:gating :paused}
    :gating #{:turn-ready :checkpoint-ready :paused}
    :checkpoint-ready #{:review-pending :paused}
-   :review-pending #{:bank-pending :paused}
+   :review-pending #{:turn-ready :bank-pending :paused}
    :bank-pending #{:turn-ready :paused}
    :paused #{:review-pending}})
 
@@ -327,6 +328,12 @@
                [:schema :problem-id :turn :checkpoint :head-sha
                 :obligation-id :checkpoint-digest]))
 
+(defn- reconsideration-intent-id [state prior]
+  (sha256 (pr-str [schema-version (:problem-id state) (:turn state)
+                   (:checkpoint state) :review-reconsideration
+                   (:base-sha state) (:head-sha state)
+                   (:pending-checkpoint state) prior])))
+
 (defn- canonical-rejected-review!
   [run-dir state]
   (let [pause (:pause/finding state)
@@ -368,9 +375,7 @@
              {:intent (:intent state) :action :review-reconsideration}))
     (let [prior (canonical-rejected-review! run-dir state)
           identity (:pending-checkpoint state)
-          id (sha256 (pr-str [schema-version (:problem-id state) (:turn state)
-                              (:checkpoint state) :review-reconsideration
-                              (:base-sha state) (:head-sha state) identity prior]))
+          id (reconsideration-intent-id state prior)
           intent {:schema schema-version
                   :problem-id (:problem-id state)
                   :turn (:turn state)
@@ -382,6 +387,66 @@
                   :checkpoint/identity identity
                   :prior-review prior}]
       (write-state! run-dir (assoc state :phase :review-pending :intent intent))
+      intent)))
+
+(defn- canonical-approving-review!
+  [run-dir state]
+  (let [pause (:pause/finding state)
+        prior {:action (:action pause) :intent-id (:intent-id pause)}
+        action (if (= :review-not-approved (:type pause))
+                 :review-reconsideration
+                 :review)
+        id (if (= :review-reconsideration action)
+             (reconsideration-intent-id state prior)
+             (intent-id state :review))
+        receipt (read-receipt run-dir {:action action :id id})
+        result (:result receipt)]
+    (when-not (and (= :review-pending (:phase state))
+                   (nil? (:intent state))
+                   (nil? (:pending-bank state))
+                   (map? (:pending-checkpoint state))
+                   (= schema-version (:schema receipt))
+                   (= (:problem-id state) (:problem-id receipt))
+                   (= (:turn state) (:turn receipt))
+                   (= action (:action receipt))
+                   (= id (:intent-id receipt))
+                   (= (:pending-checkpoint state)
+                      (checkpoint-identity result))
+                   (or (= :review action)
+                       (= prior (:prior-review result)))
+                   (= :approved (:outcome result))
+                   (true? (:bank-authorized? result))
+                   (checkpoint/valid-decision? state result))
+      (fail! :approving-review-receipt-invalid
+             {:problem-id (:problem-id state) :turn (:turn state)
+              :action action :intent-id id}))
+    {:action action :intent-id id}))
+
+(defn begin-continue-without-bank!
+  "Persists an operator disposition that deliberately defers exact approved
+  bank authority and continues work over the cumulative unbanked range."
+  [run-dir]
+  (let [state (read-state run-dir)]
+    (when (:intent state)
+      (fail! :action-already-pending
+             {:intent (:intent state) :action :continue-without-bank}))
+    (let [approval (canonical-approving-review! run-dir state)
+          identity (:pending-checkpoint state)
+          id (sha256 (pr-str [schema-version (:problem-id state) (:turn state)
+                              (:checkpoint state) :continue-without-bank
+                              (:base-sha state) (:head-sha state)
+                              identity approval]))
+          intent {:schema schema-version
+                  :problem-id (:problem-id state)
+                  :turn (:turn state)
+                  :checkpoint (:checkpoint state)
+                  :action :continue-without-bank
+                  :id id
+                  :base-sha (:base-sha state)
+                  :head-sha (:head-sha state)
+                  :checkpoint/identity identity
+                  :approving-review approval}]
+      (write-state! run-dir (assoc state :intent intent))
       intent)))
 
 (defn install-checkpoint!
@@ -535,6 +600,19 @@
 
                     :else
                     (pause (or (:finding result) :review-not-approved))))
+        :continue-without-bank
+        (if (and (= :continued-without-bank (:outcome result))
+                 (= (get-in state [:intent :checkpoint/identity])
+                    (:checkpoint/identity result))
+                 (= (get-in state [:intent :approving-review])
+                    (:approving-review result)))
+          (advance :turn-ready
+                   {:turn (inc (:turn state))
+                    :checkpoint (inc (:checkpoint state))
+                    :pending-checkpoint nil
+                    :pending-bank nil
+                    :pause/finding nil})
+          (pause :continue-without-bank-authority-mismatch))
         :bank (if (and (= :banked (:outcome result))
                        (= (get-in state [:intent :head-sha]) (:bank-sha result)))
                 (advance :turn-ready

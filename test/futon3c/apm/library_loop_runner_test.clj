@@ -53,6 +53,18 @@
     (runner/reconcile! dir (constantly nil))
     intent))
 
+(defn- approve-review! [dir]
+  (runner/write-state!
+   dir (assoc (runner/initial-state
+               {:problem-id "t00J02" :workspace "/tmp/apm-lean-t00J02"
+                :base-sha "base" :head-sha "candidate"})
+              :phase :checkpoint-ready))
+  (runner/install-checkpoint! dir (checkpoint-claim))
+  (let [intent (runner/begin-action! dir :review)]
+    (runner/append-receipt! dir intent (review-result dir {}))
+    (runner/reconcile! dir (constantly nil))
+    intent))
+
 (deftest atomic-state-round-trip-and-validation
   (let [dir (temp-dir)
         state (init! dir)]
@@ -408,4 +420,80 @@
       (is (thrown-with-msg? clojure.lang.ExceptionInfo
                             #"prior-review-receipt-invalid"
                             (runner/begin-review-reconsideration! dir))
+          (name label)))))
+
+(deftest continue-without-bank-retains-cumulative-range-and-is-restart-safe
+  (let [dir (temp-dir)
+        approval (approve-review! dir)
+        intent (runner/begin-continue-without-bank! dir)
+        state-with-intent (runner/read-state dir)
+        result {:outcome :continued-without-bank
+                :checkpoint/identity (:checkpoint/identity intent)
+                :approving-review (:approving-review intent)
+                :base-sha "base" :head-sha "candidate"}]
+    (is (= {:action :review :intent-id (:id approval)}
+           (:approving-review intent)))
+    (is (= intent (:intent state-with-intent)))
+    (is (= :review-pending (:phase state-with-intent)))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
+                          (runner/begin-continue-without-bank! dir)))
+    (runner/append-receipt! dir intent result)
+    ;; Restart reconciliation consumes the existing receipt without effects.
+    (runner/reconcile! dir (fn [_] (throw (Exception. "must not observe"))))
+    (let [settled (runner/read-state dir)]
+      (is (= :turn-ready (:phase settled)))
+      (is (= 2 (:turn settled)))
+      (is (= 1 (:checkpoint settled)))
+      (is (= "base" (:base-sha settled)))
+      (is (= "candidate" (:head-sha settled)))
+      (is (nil? (:pending-checkpoint settled)))
+      (is (nil? (:pause/finding settled))))))
+
+(deftest continue-without-bank-binds-reconsideration-approval-chain
+  (let [dir (temp-dir)
+        rejected (pause-at-rejected-review! dir)
+        reconsideration (runner/begin-review-reconsideration! dir)]
+    (runner/append-receipt!
+     dir reconsideration
+     (assoc (review-result dir {}) :prior-review (:prior-review reconsideration)))
+    (runner/reconcile! dir (constantly nil))
+    (let [intent (runner/begin-continue-without-bank! dir)]
+      (is (= {:action :review-reconsideration
+              :intent-id (:id reconsideration)}
+             (:approving-review intent)))
+      (is (= {:action :review :intent-id (:id rejected)}
+             (:prior-review
+              (:result (runner/read-receipt dir reconsideration))))))))
+
+(deftest continue-without-bank-refuses-invalid-authority-or-phase
+  (let [wrong-phase (temp-dir)]
+    (init! wrong-phase)
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                          #"approving-review-receipt-invalid"
+                          (runner/begin-continue-without-bank! wrong-phase))))
+  (let [pending (temp-dir)]
+    (approve-review! pending)
+    (runner/write-state! pending
+                         (assoc (runner/read-state pending)
+                                :intent {:schema 1 :problem-id "t00J02" :turn 1
+                                         :checkpoint 0 :action :review
+                                         :id "pending" :base-sha "base"
+                                         :head-sha "candidate"}
+                                :phase :review-pending))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"action-already-pending"
+                          (runner/begin-continue-without-bank! pending))))
+  (doseq [[label mutate]
+          [[:head #(assoc-in % [:result :head-sha] "wrong")]
+           [:digest #(assoc-in % [:result :checkpoint-digest]
+                              (apply str (repeat 64 "f")))]
+           [:obligation #(assoc-in % [:result :obligation-id] :wrong/id)]
+           [:not-approved #(assoc-in % [:result :bank-authorized?] false)]
+           [:fabricated #(assoc % :intent-id (apply str (repeat 64 "b")))]]]
+    (let [dir (temp-dir)
+          approval (approve-review! dir)
+          path (.toFile (runner/receipt-path dir approval))]
+      (spit path (str (pr-str (mutate (runner/read-receipt dir approval))) "\n"))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"approving-review-receipt-invalid"
+                            (runner/begin-continue-without-bank! dir))
           (name label)))))
