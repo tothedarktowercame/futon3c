@@ -2,6 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.test :refer [deftest is]]
             [futon3c.agency.registry :as reg]
+            [futon3c.apm.role-memory-search :as role-memory-search]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.transport.http :as http])
   (:import (java.io ByteArrayInputStream)))
@@ -69,6 +70,36 @@
         (is (= #{"channel-audit"} (set (:evidence/missing (parsed bad)))))
         (is (= 200 (:status good)))
         (is (= "submitted" (:status (parsed good))))))))
+
+(deftest authenticated-role-memory-search-crosses-real-http-boundary
+  (let [authority-root (.toString (java.nio.file.Files/createTempDirectory
+                                    "http-role-search-authority"
+                                    (make-array java.nio.file.attribute.FileAttribute 0)))
+        receipt-root (.toString (java.nio.file.Files/createTempDirectory
+                                  "http-role-search-receipts"
+                                  (make-array java.nio.file.attribute.FileAttribute 0)))
+        authority {:submission/token "search-token" :dispatch/id "search-dispatch"
+                   :agent-id "f30-student" :frame-id "f30" :problem-id "m00A00"
+                   :phase :student-attempt-1 :role :student}
+        uri "/api/alpha/invoke/jobs/search-job/memory-search"]
+    (binding [submission/*submission-root* authority-root
+              role-memory-search/*receipt-root* receipt-root
+              role-memory-search/*search-fn*
+              (fn [_ query {:keys [trace-id]}]
+                {:ok true :query query :trace-id trace-id :index-as-of "i1"
+                 :content-matches [{:memory/id "open-memory"}]
+                 :candidates []})]
+      (is (:ok (submission/register! authority {:job-id "search-job"})))
+      (let [handler (http/make-handler {})
+            response (post-json handler uri
+                                {:token "search-token" :query "finite sums"
+                                 :limit 4})
+            body (parsed response)]
+        (is (= 200 (:status response)))
+        (is (= "recorded" (:status body)))
+        (is (= "reviewed-mathematics"
+               (get-in body [:receipt :corpus/scope])))
+        (is (= ["open-memory"] (get-in body [:receipt :result-ids])))))))
 
 (deftest every-role-schema-completes-through-real-handler-with-exact-authority
   (with-isolated-invoke-ledger

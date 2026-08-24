@@ -58,6 +58,7 @@
             [futon3c.apm.conductor-open :as conductor-open]
             [futon3c.apm.conductor-surface :as conductor-surface]
             [futon3c.apm.campaign-machine :as campaign-machine]
+            [futon3c.apm.role-memory-search :as role-memory-search]
             [futon3c.apm.typed-role-submission :as role-submission]
             [futon3c.transport.encyclopedia :as enc]
             [futon3c.evidence.boundary :as boundary]
@@ -7440,6 +7441,26 @@
                        :role-submission-conflict}
                      (:error/code result))
           (json-response 409 result)
+          :else (json-response 422 result)))
+
+      (and (= :post method)
+           (re-matches #"/api/alpha/invoke/jobs/[^/]+/memory-search" uri))
+      (let [[_ job-id] (re-matches
+                        #"/api/alpha/invoke/jobs/([^/]+)/memory-search" uri)
+            payload (parse-json-map (read-body request))
+            result (when payload
+                     (role-memory-search/search!
+                      job-id (:token payload) (:query payload)
+                      (or (:limit payload) 10)))]
+        (cond
+          (nil? payload) (json-response 400 {:ok false :error/code :invalid-json})
+          (:ok result) (json-response 200 result)
+          (= :role-submission-authority-missing (:error/code result))
+          (json-response 404 result)
+          (= :role-submission-token-mismatch (:error/code result))
+          (json-response 409 result)
+          (= :role-memory-search-not-authorized (:error/code result))
+          (json-response 403 result)
           :else (json-response 422 result)))
 
       ;; Durable activation is deliberately mounted at the reload-safe boundary:

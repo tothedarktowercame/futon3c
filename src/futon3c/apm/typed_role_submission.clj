@@ -25,6 +25,8 @@
 (def checkpoint-authority-fields
   #{:solver/round :solver/strategy-checkpoint?})
 
+(def memory-search-capable-roles #{:student :scribe :promotion-proctor})
+
 (def common-required #{:command-own-exit :outcome :failure-account :evidence})
 
 (def evidence-required-by-phase
@@ -166,6 +168,18 @@
              :evidence-required
              (vec (sort (evidence-required auth)))})))
 
+(defn authenticate
+  "Return immutable controller authority for a valid job token.  Auxiliary
+   role services use this boundary rather than trusting role-supplied identity."
+  [job-id token]
+  (let [record (read-record job-id)
+        auth (:authority record)]
+    (cond
+      (nil? record) {:ok false :error/code :role-submission-authority-missing}
+      (not= token (:submission/token auth))
+      {:ok false :error/code :role-submission-token-mismatch}
+      :else {:ok true :authority auth})))
+
 (defn submit!
   "Validate and persist an agent's observational payload. The canonical result
    is content-addressed and receives authority exclusively from registration."
@@ -205,7 +219,16 @@
   (let [base (str "/home/joe/code/futon3c/scripts/apm-submit-role.py"
                   " --job-id " (:job-id ticket)
                   " --token " (:submission/token request))
-        payload (str "/tmp/apm-role-" (:job-id ticket) ".json")]
-    (str base " --init --payload " payload
+        payload (str "/tmp/apm-role-" (:job-id ticket) ".json")
+        search (when (contains? memory-search-capable-roles (:role request))
+                 (str "\n# Search the open reviewed mathematics memory corpus; "
+                      "the returned receipt is execution evidence:\n"
+                      "/home/joe/code/futon3c/scripts/apm-search-memory.py"
+                      " --job-id " (:job-id ticket)
+                      " --token " (:submission/token request)
+                      " --query 'YOUR QUERY'"))]
+    (str (or search "")
+         (when search "\n")
+         base " --init --payload " payload
          "\n# edit " payload ", then submit:\n"
          base " --payload " payload)))
