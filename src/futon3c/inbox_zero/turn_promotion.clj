@@ -123,6 +123,35 @@
           (count (:include plan)) (:repo/id plan)
           (str/join ", " (map :path (:include plan)))))
 
+(defn- held-message [plan]
+  (let [by-reason (frequencies (map :reason (:exclude plan)))
+        reason-labels [[:unattributed "unattributed"]
+                       [:other-seat "other-seat"]
+                       [:ambiguous "ambiguous"]]
+        counts (->> reason-labels
+                    (keep (fn [[reason label]]
+                            (let [n (get by-reason reason 0)]
+                              (when (pos? n) (str n " " label)))))
+                    (str/join ", "))
+        unattributed (->> (:exclude plan)
+                          (filter #(= :unattributed (:reason %)))
+                          (map :path)
+                          sort
+                          vec)
+        shown (take 5 unattributed)
+        more (- (count unattributed) (count shown))]
+    (str "inbox-zero: nothing promotable for " (:seat/id plan)
+         " in " (:repo/id plan) " — "
+         (if (seq counts) counts "no exclusions recorded")
+         (when (seq unattributed)
+           (str "; unattributed: " (str/join ", " shown)
+                (when (pos? more) (str " (+" more " more)")))))))
+
+(defn- propose-message [plan]
+  (if (seq (:include plan))
+    (would-message plan)
+    (held-message plan)))
+
 (defn- member-hash [item]
   (sha-256 (select-keys (or (:plan item) item)
                            [:seat/id :repo/id :worktree/id :include :exclude])))
@@ -238,7 +267,7 @@
                             (mapv (fn [decision]
                                     (if (= 1 (:route/tier decision))
                                       (assoc decision :route/message
-                                             (would-message (:route/item decision)))
+                                             (propose-message (:route/item decision)))
                                       decision))
                                   decisions)
                             decisions)]

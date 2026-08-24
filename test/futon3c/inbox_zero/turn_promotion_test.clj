@@ -42,6 +42,45 @@
     (is (not-any? #{:execute :push} @calls))
     (is (= "inbox-zero would promote 1 path(s) in repo: a.clj" (:prompt payload)))))
 
+(deftest propose-held-plan-summarizes-exclusion-reasons-and-unattributed-paths
+  (let [calls (atom [])
+        held (assoc proposed
+                    :include []
+                    :exclude [{:path "c.clj" :reason :unattributed}
+                              {:path "a.clj" :reason :unattributed}
+                              {:path "owned.clj" :reason :other-seat}
+                              {:path "b.clj" :reason :unattributed}]
+                    :verdict :held :held/reason :nothing-promotable)]
+    (sut/promote-at-turn-end!
+     "a" "s" (assoc (opts calls) :mode :propose
+                      :plan-fn (fn [& _] [held])))
+    (let [payload (second (first (filter #(and (vector? %)
+                                                (= :deliver (first %)))
+                                          @calls)))]
+      (is (= (str "inbox-zero: nothing promotable for seat:a:s in repo — "
+                  "3 unattributed, 1 other-seat; "
+                  "unattributed: a.clj, b.clj, c.clj")
+             (:prompt payload))))))
+
+(deftest propose-held-plan-caps-unattributed-path-list
+  (let [calls (atom [])
+        held (assoc proposed
+                    :include []
+                    :exclude (mapv #(hash-map :path (str "p" % ".clj")
+                                              :reason :unattributed)
+                                   (range 1 8))
+                    :verdict :held :held/reason :nothing-promotable)]
+    (sut/promote-at-turn-end!
+     "a" "s" (assoc (opts calls) :mode :propose
+                      :plan-fn (fn [& _] [held])))
+    (let [payload (second (first (filter #(and (vector? %)
+                                                (= :deliver (first %)))
+                                          @calls)))]
+      (is (= (str "inbox-zero: nothing promotable for seat:a:s in repo — "
+                  "7 unattributed; unattributed: "
+                  "p1.clj, p2.clj, p3.clj, p4.clj, p5.clj (+2 more)")
+             (:prompt payload))))))
+
 (deftest propose-sensitive-plan-goes-to-tier-three-ledger
   (let [calls (atom [])
         sensitive (assoc proposed :verdict :held :held/reason :sensitive-content
@@ -56,7 +95,9 @@
                                     :route/message "hold"}])
                       :execute-fn (fn [& _] (swap! calls conj :execute))))
     (is (not-any? #{:execute} @calls))
-    (is (= 1 (count (filter #(and (vector? %) (= :ledger (first %))) @calls))))))
+    (let [ledgered (filter #(and (vector? %) (= :ledger (first %))) @calls)]
+      (is (= 1 (count ledgered)))
+      (is (= "hold" (get-in (first ledgered) [1 :route/message]))))))
 
 (deftest execute-commits-then-pushes-in-order-with-no-routing
   (let [calls (atom [])
