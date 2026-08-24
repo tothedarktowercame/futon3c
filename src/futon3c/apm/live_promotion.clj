@@ -121,7 +121,8 @@
                           deposit-request))
         state (if (and state-request (:job stored-state)
                        (or (nil? (:request stored-state))
-                           (nil? (:ticket stored-state))))
+                           (not= (:job stored-state)
+                                 (get-in stored-state [:ticket :job-id]))))
                 (assoc stored-state :request state-request
                                     :ticket {:job-id (:job stored-state)})
                 stored-state)
@@ -246,6 +247,7 @@
           (let [next-state
                 (-> state
                     (assoc :job (:job retry)
+                           :ticket {:job-id (:job retry)}
                            :attempt (if boundary-repair? attempt (inc attempt)))
                     (cond-> format-repair?
                       (assoc :format-repairs (inc format-repairs))

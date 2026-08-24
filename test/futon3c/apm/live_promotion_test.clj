@@ -105,6 +105,7 @@
     (is (:ok result))
     (is (= :awaiting-terminal (:status result)))
     (is (= "scribe-retry" (:job-id result)))
+    (is (= {:job-id "scribe-retry"} (:ticket @saved)))
     (is (= 2 (:attempt @saved)))
     (is (= 1 @repair-attempt))
     (is (= [{:attempt 1 :job "malformed"
