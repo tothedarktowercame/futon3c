@@ -101,6 +101,8 @@
 
 (defn- audit-module! [run-process workspace run-dir head ledger module]
   (let [declarations (declaration-names ledger module)
+        build-result (command! run-process workspace ["lake" "build" module]
+                               :axiom-audit-module-build-failed)
         audit-dir (io/file run-dir "audit-inputs")
         _ (.mkdirs audit-dir)
         path (Files/createTempFile (.toPath audit-dir) "axioms-" ".lean"
@@ -115,7 +117,11 @@
           (refuse! :axiom-audit-sorry-axiom
                    {:module module :declarations declarations :output output}))
         [module {:ok? true :head-sha head
-                 :declarations (mapv symbol declarations)}])
+                 :declarations (mapv symbol declarations)
+                 :build (select-keys build-result
+                                     [:argv :cwd :exit :stdout :stderr])
+                 :audit (select-keys result
+                                     [:argv :cwd :exit :stdout :stderr])}])
       (finally
         (Files/deleteIfExists path)))))
 

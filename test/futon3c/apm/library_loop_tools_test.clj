@@ -61,23 +61,47 @@
         {:root root :workspace workspace :run-dir run-dir
          :base base :head head}))))
 
-(defn- injected-runner [lean-output]
-  (fn [cwd argv]
-    (if (= "lake" (first argv))
-      {:exit 0 :stdout lean-output :stderr "" :argv argv :cwd (str cwd)}
-      (adapter/run-process cwd argv))))
+(defn- injected-runner
+  ([lean-output] (injected-runner lean-output (atom [])))
+  ([lean-output calls]
+   (let [built (atom #{})]
+     (fn [cwd argv]
+       (if (= "lake" (first argv))
+         (do
+           (swap! calls conj argv)
+           (cond
+             (= "build" (second argv))
+             (do (swap! built conj (nth argv 2))
+                 {:exit 0 :stdout "built\n" :stderr ""
+                  :argv argv :cwd (str cwd)})
 
-(deftest audit-is-state-bound-and-refuses-sorry-axioms
+             (and (= ["env" "lean"] (subvec argv 1 3))
+                  (or (not (str/includes? (last argv) "audit-inputs"))
+                      (seq @built)))
+             {:exit 0 :stdout lean-output :stderr ""
+              :argv argv :cwd (str cwd)}
+
+             :else
+             {:exit 1 :stdout "" :stderr "missing olean"
+              :argv argv :cwd (str cwd)}))
+         (adapter/run-process cwd argv))))))
+
+(deftest audit-builds-first-time-target-before-state-bound-axiom-check
   (let [{:keys [workspace run-dir base head]} (repository!)
+        calls (atom [])
         evidence (tools/audit! base head run-dir
                                (injected-runner
-                                "'promoted' depends on axioms: [propext]\n")
+                                "'promoted' depends on axioms: [propext]\n"
+                                calls)
                                workspace)]
-    (is (= {:schema 1 :head-sha head
-            :modules {"ConstructionTargets.A"
-                      {:ok? true :head-sha head
-                       :declarations ['promoted]}}}
-           evidence))
+    (is (= ["lake" "build" "ConstructionTargets.A"] (first @calls)))
+    (is (= ["lake" "env" "lean"] (subvec (second @calls) 0 3)))
+    (is (= ['promoted]
+           (get-in evidence [:modules "ConstructionTargets.A" :declarations])))
+    (is (= ["lake" "build" "ConstructionTargets.A"]
+           (get-in evidence [:modules "ConstructionTargets.A" :build :argv])))
+    (is (= 0 (get-in evidence
+                     [:modules "ConstructionTargets.A" :audit :exit])))
     (is (= evidence
            (edn/read-string
             (slurp (io/file run-dir "audits" (str head ".edn"))))))

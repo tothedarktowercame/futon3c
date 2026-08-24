@@ -77,11 +77,16 @@ Problem registration is read from
 ```
 
 `:declarations` is the exact, nonempty set of promoted declarations owned by
-the ledger row. The production audit executable imports the changed module and
-runs Lean `#print axioms` for every listed declaration. A missing/duplicate
-list, an unknown declaration, a failed elaboration, or output containing
-`sorryAx` prevents green evidence. The audit is bound to the run state's exact
-workspace, base, and HEAD and writes `audits/HEAD.edn` atomically.
+the ledger row. For every changed module, the production audit executable
+first runs `lake build MODULE` in the solver workspace, then imports it and
+runs Lean `#print axioms` for every listed declaration. This ordering makes a
+first-time target auditable without relying on a pre-existing olean; the
+ordinary gate still performs its deterministic rebuild closure afterward. A
+missing/duplicate list, failed target build, unknown declaration, failed audit
+elaboration, or output containing `sorryAx` prevents green evidence. The audit
+is bound to the run state's exact workspace, base, and HEAD, records complete
+argv/cwd/exit/stdout/stderr evidence for both build and audit per module, and
+writes `audits/HEAD.edn` atomically.
 
 The production status executable runs only after the exact candidate is the
 configured trunk HEAD. It requires a clean trunk, elaborates the canonical
