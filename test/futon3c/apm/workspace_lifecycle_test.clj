@@ -240,6 +240,7 @@
       (is (addressed? candidate :candidate/id))
       (is (= 0 (:candidate/lean-exit candidate)))
       (is (true? (:candidate/worktree-clean? candidate)))
+      (is (true? (:candidate/persisted-before-receipt? candidate)))
       (is (= "preserve the whole attempt\n"
              (:out (sh "git" "-C" (str repo) "show"
                        (str (:candidate/ref candidate) ":student-notes.txt")))))

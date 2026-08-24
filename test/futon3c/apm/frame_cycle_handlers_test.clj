@@ -12,6 +12,21 @@
 (defn addressed [body]
   (assoc body :receipt/id (machine/ledger-digest [body])))
 
+(defn student-candidate [frame-id problem-id ordinal]
+  (let [head (apply str (repeat 40 (str ordinal)))
+        body {:candidate/type :student-terminal
+              :workspace/id (str frame-id "-student")
+              :frame/id frame-id :problem/id problem-id
+              :attempt/ordinal ordinal
+              :candidate/head head
+              :candidate/ref (str "refs/apm/student-candidates/" frame-id "/"
+                                  problem-id "/attempt-" ordinal "/" head)
+              :candidate/problem-blob (apply str (repeat 40 "a"))
+              :candidate/lean-exit 0
+              :candidate/worktree-clean? true
+              :candidate/persisted-before-receipt? true}]
+    (assoc body :candidate/id (machine/ledger-digest [body]))))
+
 (defn student-receipt [ordinal session]
   (addressed
    {:receipt/type :student-attempt :receipt/frame-id "f18"
@@ -19,7 +34,8 @@
     :receipt/fresh-session-id session :receipt/job-id (str "student-" ordinal)
     :receipt/outcome :stuck
     :receipt/failure-account {:tried "x" :expected "y" :actual "z"}
-    :receipt/memory-use {:surfaced-ids []}}))
+    :receipt/memory-use {:surfaced-ids []}
+    :receipt/candidate (student-candidate "f18" "a97J07" ordinal)}))
 
 (def preflight
   (addressed {:receipt/type :frame-preflight :receipt/frame-id "f18"
@@ -124,6 +140,21 @@
               :problem-id "a97J07"}
              bad {:preflight preflight :student-attempt-1 attempt-1}))))))
 
+(deftest f30-shaped-unbound-student-candidate-is-refused
+  (let [bad (-> attempt-1
+                (dissoc :receipt/id)
+                (update :receipt/candidate
+                        dissoc :candidate/persisted-before-receipt?)
+                addressed)]
+    (is (= :frame-cycle-student-candidate-invalid
+           (:error/code
+            (handlers/validate-completion
+             cycle-contract
+             {:kind :student-attempt :role :student
+              :phase :student-attempt-1 :frame-id "f18"
+              :problem-id "a97J07"}
+             bad {:preflight preflight}))))))
+
 (deftest close-refuses-reused-student-session
   (let [duplicate-attempt (student-receipt 3 "fresh-2")
         prior (assoc prior-through-students :student-attempt-3 duplicate-attempt
@@ -219,7 +250,8 @@
     :receipt/fresh-session-id session :receipt/job-id (str "student-" ordinal)
     :receipt/outcome :stuck :receipt/failure-account []
     :receipt/memory-use {:surfaced-ids [] :used-ids [] :queries []}
-    :receipt/memory-snapshot binding}))
+    :receipt/memory-snapshot binding
+    :receipt/candidate (student-candidate "f18" "a97J07" ordinal)}))
 
 (def v2-promotion
   (addressed

@@ -27,6 +27,21 @@
    :workspace {:workspace/path "/tmp/student"}
    :receipts {:preflight preflight-receipt}})
 
+(defn certified-candidate [frame-id problem-id ordinal]
+  (let [head (apply str (repeat 40 (str ordinal)))
+        body {:candidate/type :student-terminal
+              :workspace/id (str frame-id "-student")
+              :frame/id frame-id :problem/id problem-id
+              :attempt/ordinal ordinal
+              :candidate/head head
+              :candidate/ref (str "refs/apm/student-candidates/" frame-id "/"
+                                  problem-id "/attempt-" ordinal "/" head)
+              :candidate/problem-blob (apply str (repeat 40 "b"))
+              :candidate/lean-exit 0
+              :candidate/worktree-clean? true
+              :candidate/persisted-before-receipt? true}]
+    (assoc body :candidate/id (machine/ledger-digest [body]))))
+
 (deftest student-request-is-fresh-and-bound-to-preflight
   (let [result (sut/build-request
                 (merge base {:action {:kind :student-attempt
@@ -61,9 +76,7 @@
                                    :queries [] :surfaced-ids [] :used-ids []}}}
         ticket {:job-id "j1"}
         validated (sut/validate-terminal request ticket job)
-        candidate {:candidate/id "candidate-id" :candidate/head "head"
-                   :candidate/ref "refs/apm/student-candidates/f19/a01J05/attempt-1/head"
-                   :candidate/lean-exit 0}
+        candidate (certified-candidate "f19" "a01J05" 1)
         result (sut/receipt contract action (:receipts base) request ticket job
                             (assoc validated :candidate candidate))]
     (is (:ok validated))
@@ -374,6 +387,7 @@
                                 :receipt/harness-observed}}}}
         action {:kind :student-attempt :role :student :phase :student-attempt-1
                 :frame-id "fixture-f25" :problem-id "m94A02"}
+        candidate (certified-candidate "fixture-f25" "m94A02" 1)
         result (sut/missing-observation-receipt
                 contract action {}
                 {:frame-id "fixture-f25" :problem-id "m94A02"
@@ -385,7 +399,9 @@
                 {:job-id "f25-shaped-job"}
                 {:job-id "f25-shaped-job" :agent-id "fixture-f25-student"
                  :state :done :terminal-code 0}
-                1 {:collection/id "collection-evidence"})]
+                1 {:collection/id "collection-evidence"}
+                (fn [] {:ok true :source {:blob "source-blob"}})
+                (fn [] {:ok true :candidate candidate}))]
     (is (:ok result))
     (is (= :controller (get-in result [:certificate :receipt/author])))
     (is (= :typed-submission-missing
@@ -394,6 +410,7 @@
             :snapshot-id "frozen-snapshot"
             :snapshot-digest "frozen-digest"}
            (get-in result [:certificate :receipt/memory-snapshot])))
+    (is (= candidate (get-in result [:certificate :receipt/candidate])))
     (is (nil? (get-in result [:certificate :receipt/fresh-session-id])))))
 
 (deftest f30-shaped-missing-observation-certifies-the-preserved-candidate
@@ -412,12 +429,7 @@
                                 :receipt/harness-observed}}}}
         action {:kind :student-attempt :role :student :phase :student-attempt-3
                 :frame-id "f30" :problem-id "a01J06"}
-        candidate {:candidate/id "candidate-id"
-                   :candidate/head "5865822658658226586582265865822658658226"
-                   :candidate/ref
-                   "refs/apm/student-candidates/f30/a01J06/attempt-3/5865822658658226586582265865822658658226"
-                   :candidate/lean-exit 0
-                   :candidate/worktree-clean? true}
+        candidate (certified-candidate "f30" "a01J06" 3)
         result (sut/missing-observation-receipt
                 contract action {}
                 {:frame-id "f30" :problem-id "a01J06" :attempt-ordinal 3
@@ -432,6 +444,7 @@
     (is (= candidate
            (get-in result [:certificate :receipt/harness-observed
                            :workspace :candidate])))
+    (is (= candidate (get-in result [:certificate :receipt/candidate])))
     (is (= :controller (get-in result [:certificate :receipt/author])))))
 
 (deftest student-request-carries-the-workspace-base-for-reset-and-archive
@@ -504,7 +517,9 @@
                   request "/tmp/campaign/live/student-attempt-1.edn"
                   (fn [lease] {:ok true :source (assoc lease :blob "abc" :head "h")}))
         result (sut/receipt contract action (:receipts base) request {:job-id "j1"} job
-                            (assoc validated :source (:source archived)))]
+                            (assoc validated :source (:source archived)
+                                   :candidate
+                                   (certified-candidate "f19" "a01J05" 1)))]
     (is (:ok validated))
     (is (= "/tmp/campaign/live/student-attempt-1-source"
            (get-in archived [:source :archive-directory])))

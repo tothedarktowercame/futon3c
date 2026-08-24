@@ -265,7 +265,8 @@
                           :candidate/head head :candidate/ref ref
                           :candidate/problem-blob (:problem/blob validation)
                           :candidate/lean-exit (:probe/exit validation)
-                          :candidate/worktree-clean? (:worktree-clean? validation)}]
+                          :candidate/worktree-clean? (:worktree-clean? validation)
+                          :candidate/persisted-before-receipt? true}]
                 {:ok true
                  :candidate (assoc body :candidate/id (address body))
                  :created-commit? (boolean dirty?)

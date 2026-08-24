@@ -6,6 +6,9 @@
 (def generated-path
   "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
 
+(def candidate-generated-path
+  "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
+
 (def clojure-contract
   (edn/read-string
    (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")))
@@ -15,6 +18,22 @@
     (is (:ok result) (pr-str result))
     (is (= "promote-solver"
            (get-in result [:contract :transitions 2 :to])))))
+
+(deftest candidate-strengthened-contract-round-trips-without-rewriting-v3
+  (let [result (sut/validate-round-trip candidate-generated-path
+                                        clojure-contract)]
+    (is (:ok result) (pr-str result))
+    (is (= sut/required-student-candidate-policy
+           (select-keys (get-in result [:contract :terminal-policy])
+                        (keys sut/required-student-candidate-policy))))))
+
+(deftest partial-student-candidate-policy-is-refused
+  (let [contract (:contract (sut/read-contract candidate-generated-path))
+        result (sut/validate
+                (update contract :terminal-policy
+                        dissoc :student-candidate-persisted-before-receipt))]
+    (is (= [:generated-contract-student-candidate-policy-invalid]
+           (:findings result)))))
 
 (deftest complete-cycle-is-non-vacuous
   (let [contract (:contract (sut/read-contract generated-path))]

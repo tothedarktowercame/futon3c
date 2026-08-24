@@ -367,7 +367,7 @@
         ;; unobserved attempt's worktree is still evidence.
         archived (when (fn? archive-fn) (archive-fn))
         candidate (when (fn? candidate-fn) (candidate-fn))
-        body {:receipt/type :student-observation-missing
+        body (cond-> {:receipt/type :student-observation-missing
               :receipt/frame-id (:frame-id request)
               :receipt/problem-id (:problem-id request)
               :receipt/attempt-ordinal (:attempt-ordinal request)
@@ -395,6 +395,8 @@
                                           (select-keys candidate
                                                        [:error/code :head :ref])))}
                :memory {:snapshot (:memory-snapshot request)}}}
+               (and candidate (:ok candidate))
+               (assoc :receipt/candidate (:candidate candidate)))
         addressed (assoc body :receipt/id (machine/ledger-digest [body]))]
     (if (and candidate (not (:ok candidate)))
       candidate

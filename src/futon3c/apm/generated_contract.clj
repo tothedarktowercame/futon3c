@@ -128,6 +128,14 @@
    :missing-observation-may-satisfy-observation-dependency true
    :missing-observation-may-impersonate-student false})
 
+(def required-student-candidate-policy
+  {:student-terminal-candidate-required true
+   :student-candidate-content-addressed true
+   :student-candidate-lean-validated true
+   :student-candidate-persisted-before-receipt true
+   :student-candidate-replay-idempotent true
+   :missing-observation-records-certified-candidate true})
+
 (def required-analyst-policy
   {:outside-frame-order true :wake-after-terminal-only true
    :partial-terminal-wakes-analyst true
@@ -152,6 +160,12 @@
   [contract]
   (let [phase-order (:phase-order contract)
         transitions (:transitions contract)
+        terminal-policy (:terminal-policy contract)
+        candidate-policy
+        (select-keys terminal-policy (keys required-student-candidate-policy))
+        allowed-terminal-policy-keys
+        (into (set (keys required-terminal-policy))
+              (keys required-student-candidate-policy))
         findings
         (cond-> []
           (not= 1 (:schema-version contract))
@@ -175,8 +189,14 @@
           (conj :generated-contract-promotion-policy-invalid)
           (not= required-isolation-policy (:isolation-policy contract))
           (conj :generated-contract-isolation-policy-invalid)
-          (not= required-terminal-policy (:terminal-policy contract))
+          (not= required-terminal-policy
+                (select-keys terminal-policy (keys required-terminal-policy)))
           (conj :generated-contract-terminal-policy-invalid)
+          (not (every? allowed-terminal-policy-keys (keys terminal-policy)))
+          (conj :generated-contract-terminal-policy-invalid)
+          (and (seq candidate-policy)
+               (not= required-student-candidate-policy candidate-policy))
+          (conj :generated-contract-student-candidate-policy-invalid)
           (not= required-analyst-policy (:analyst-policy contract))
           (conj :generated-contract-analyst-policy-invalid))]
     (if (seq findings)

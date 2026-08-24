@@ -4,7 +4,8 @@
   Receipt providers are effects supplied at the boundary. Validation here is
   pure: a handler cannot certify a phase unless its typed receipt and every
   required prior receipt agree with the registered frame and problem."
-  (:require [futon3c.apm.frame-cycle-contract :as contract]))
+  (:require [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.frame-cycle-contract :as contract]))
 
 (def executable-kinds
   #{:student-attempt :guide-intervention :scribe-reduce :close-frame})
@@ -54,6 +55,32 @@
      :snapshot-id (:receipt/snapshot-id receipt)
      :snapshot-digest (:receipt/snapshot-digest receipt)}))
 
+(defn valid-student-terminal-candidate?
+  "A Student phase receipt must bind the exact controller-preserved candidate.
+  The candidate id addresses every evidential field; the ref, clean compile,
+  and persistence marker establish that reset/retirement cannot erase it."
+  [receipt]
+  (let [candidate (:receipt/candidate receipt)
+        body (when (map? candidate) (dissoc candidate :candidate/id))
+        head (:candidate/head candidate)]
+    (and (map? candidate)
+         (= :student-terminal (:candidate/type candidate))
+         (= (:candidate/id candidate) (machine/ledger-digest [body]))
+         (= (:receipt/frame-id receipt) (:frame/id candidate))
+         (= (:receipt/problem-id receipt) (:problem/id candidate))
+         (= (:receipt/attempt-ordinal receipt) (:attempt/ordinal candidate))
+         (string? head)
+         (boolean (re-matches #"[0-9a-f]{40}" head))
+         (= (str "refs/apm/student-candidates/"
+                 (:frame/id candidate) "/" (:problem/id candidate)
+                 "/attempt-" (:attempt/ordinal candidate) "/" head)
+            (:candidate/ref candidate))
+         (boolean (re-matches #"[0-9a-f]{40}"
+                              (or (:candidate/problem-blob candidate) "")))
+         (= 0 (:candidate/lean-exit candidate))
+         (true? (:candidate/worktree-clean? candidate))
+         (true? (:candidate/persisted-before-receipt? candidate)))))
+
 (defn- dependency-evidence [cycle-contract phase receipts]
   (let [required (get-in cycle-contract [:phases phase :requires])
         producers (into {} (map (fn [artifact]
@@ -99,6 +126,10 @@
       (and (= :student-attempt (:kind spec))
            (not= ordinal (:receipt/attempt-ordinal receipt)))
       {:error/code :frame-cycle-student-ordinal-mismatch}
+
+      (and (= :student-attempt (:kind spec))
+           (not (valid-student-terminal-candidate? receipt)))
+      {:error/code :frame-cycle-student-candidate-invalid}
 
       (and missing-observation?
            (not= {:author :controller :reason :typed-submission-missing}
