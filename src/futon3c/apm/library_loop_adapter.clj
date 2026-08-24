@@ -205,9 +205,20 @@
                              :problem (:problem-id intent)
                              :run-dir (.getCanonicalPath (io/file run-dir))})}))
 
-(defn- codex-command [run-dir config]
+(defn- render-gate-feedback [feedback]
+  (when feedback
+    (str "\n\n# Durable feedback from the immediately preceding gate\n\n"
+         "This is a state-bound runner receipt, not a new mathematical goal. "
+         "Correct the reported infrastructure or registration finding while "
+         "preserving valid work.\n\n"
+         (pr-str feedback)
+         "\n")))
+
+(defn- codex-command [run-dir config state]
   (let [prompt (canonical-file (io/file run-dir "standing-goal.md"))
-        argv (:codex-command config)]
+        argv (:codex-command config)
+        feedback (runner/preceding-gate-feedback run-dir state)
+        prompt-text (str (slurp prompt) (render-gate-feedback feedback))]
     (when-not (and (.isFile prompt) (pos? (.length prompt)))
       (refuse! :standing-goal-missing {:path (str prompt)}))
     (when-not (and (vector? argv) (>= (count argv) 2)
@@ -215,7 +226,7 @@
                    (= "exec" (second argv)))
       (refuse! :codex-command-invalid {:command argv}))
     (substitute argv {:prompt (str prompt)
-                      :prompt-text (slurp prompt)})))
+                      :prompt-text prompt-text})))
 
 (defn deps
   "Deployment adapter entry point loaded via LIBRARY_LOOP_ADAPTER_NS."
@@ -245,7 +256,7 @@
       (refuse! :bank-trunk-branch-mismatch
                {:expected (:trunk-branch config) :observed trunk-branch}))
     {:run-command runner-command
-     :turn-command (fn [_] (codex-command run-dir config))
+     :turn-command (fn [turn-state] (codex-command run-dir config turn-state))
      :observe-head #(git! workspace "rev-parse" "HEAD")
      :reconcile-turn (fn [intent]
                        {:outcome :failed

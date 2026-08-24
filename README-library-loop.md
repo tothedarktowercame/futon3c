@@ -99,12 +99,33 @@ manufacture closure, and neither executable edits apm-lean.
 Missing or stale audit evidence, missing ledgers, dirty/racing worktrees, and
 divergent SHAs fail closed.
 
-`{prompt-text}` is replaced with the exact contents of `standing-goal.md` as
-one argv item. `{prompt}` is also available when a vetted Codex wrapper accepts
-a file path. To retain one Codex session, configure the argv with the explicit
-durable session id, for example
+`{prompt-text}` begins with the exact contents of `standing-goal.md` as one
+argv item. When the immediately preceding transition was a gate, the adapter
+derives that gate's canonical intent id from durable state and appends a small
+feedback record containing only problem, turn, intent, candidate HEAD,
+outcome, finding, failure fingerprint, and registration outcome. It never
+copies command output, repository snapshots, or environment data into the
+prompt. A receipt whose problem, turn, intent, or HEAD does not match fails
+closed; directory ordering cannot select feedback. Thus a red gate is visible
+to the next persistent turn exactly once and cannot be replayed as a later
+turn's authority.
+
+`{prompt}` is also available when a vetted Codex wrapper accepts a file path.
+To retain one Codex session, configure the argv with the explicit durable
+session id, for example
 `["codex" "exec" "resume" "SESSION-ID" "{prompt-text}"]`; never use a global
 `--last` selector in an unattended multi-run environment.
+
+Before a qualification begins in a fresh apm-lean worktree, install the pinned
+Mathlib binary cache with the repository toolchain and manifest unchanged:
+
+```sh
+lake exe cache get
+```
+
+This populates `.lake` only. Verify `lean-toolchain`, `lake-manifest.json`, and
+`git status --porcelain=v1` before and after; cache installation is not a gate
+retry and must not change tracked source.
 
 ## Operate one transition at a time
 

@@ -163,6 +163,66 @@
       (is (= 1 (:consecutive-same-failures
                 (runner/read-state gate-dir)))))))
 
+(deftest preceding-red-gate-feedback-is-exact-bounded-and-turn-bound
+  (let [dir (temp-dir)]
+    (init! dir)
+    (let [turn (runner/begin-action! dir :turn)]
+      (runner/append-receipt! dir turn {:outcome :ok :head-sha "candidate"})
+      (runner/reconcile! dir (constantly nil)))
+    (let [gate (runner/begin-action! dir :gate)]
+      (runner/append-receipt!
+       dir gate
+       {:outcome :red
+        :failure-fingerprint "malformed-ledger"
+        :plan {:inputs {:head-sha "candidate"
+                        :file-digests {"secret" "not-rendered"}}}
+        :registration {:outcome :red
+                       :finding :malformed-target-record
+                       :snapshot {:files "not-rendered"}}
+        :observation/evidence [{:stdout "not-rendered" :stderr "not-rendered"}]})
+      (runner/reconcile! dir (constantly nil)))
+    (let [feedback (runner/preceding-gate-feedback dir (runner/read-state dir))]
+      (is (= {:schema 1
+              :problem-id "t00J02"
+              :turn 1
+              :intent-id (:intent-id feedback)
+              :head-sha "candidate"
+              :outcome :red
+              :finding :malformed-target-record
+              :failure-fingerprint "malformed-ledger"
+              :registration/outcome :red}
+             feedback))
+      (is (not (re-find #"not-rendered" (pr-str feedback)))))
+    ;; Advancing the durable turn makes the old receipt ineligible for replay.
+    (runner/write-state! dir (assoc (runner/read-state dir) :turn 3))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                          #"preceding-gate-receipt-missing"
+                          (runner/preceding-gate-feedback
+                           dir (runner/read-state dir))))))
+
+(deftest malformed-expected-gate-receipt-fails-closed
+  (let [dir (temp-dir)]
+    (init! dir)
+    (let [turn (runner/begin-action! dir :turn)]
+      (runner/append-receipt! dir turn {:outcome :ok :head-sha "candidate"})
+      (runner/reconcile! dir (constantly nil)))
+    (let [gate (runner/begin-action! dir :gate)]
+      (runner/append-receipt!
+       dir gate {:outcome :red :failure-fingerprint "red"
+                 :plan {:inputs {:head-sha "candidate"}}
+                 :registration {:outcome :red :finding :malformed-target-record}})
+      (runner/reconcile! dir (constantly nil))
+      ;; Model corruption/fabrication at the otherwise expected durable path.
+      (spit (.toFile (runner/receipt-path dir gate))
+            (pr-str {:schema 1 :problem-id "another-problem" :turn 1
+                     :action :gate :intent-id (:id gate)
+                     :result {:outcome :red
+                              :plan {:inputs {:head-sha "candidate"}}}}))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"preceding-gate-receipt-mismatch"
+                            (runner/preceding-gate-feedback
+                             dir (runner/read-state dir)))))))
+
 (deftest only-an-approved-review-authorizes-bank
   (doseq [ruling [:rejected :unclear :equivalent]]
     (let [dir (temp-dir)]

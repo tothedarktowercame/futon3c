@@ -185,11 +185,70 @@
   [run-dir {:keys [action id]}]
   (.toPath (io/file run-dir "receipts" (name action) (str id ".edn"))))
 
+(declare intent-id)
+
 (defn read-receipt [run-dir intent]
   (let [path (receipt-path run-dir intent)]
     (when (Files/exists path (make-array java.nio.file.LinkOption 0))
       (with-open [reader (PushbackReader. (io/reader (.toFile path)))]
         (edn/read {:eof nil} reader)))))
+
+(defn preceding-gate-feedback
+  "Returns a bounded, state-bound summary of the immediately preceding gate.
+
+  The receipt path is derived from the current durable state and the canonical
+  gate intent identity; callers never select a receipt by directory order. A
+  receipt at that path must bind the same problem, preceding turn, intent, and
+  candidate head or the runner fails closed. Captured process output and
+  repository snapshots are deliberately excluded from the returned value."
+  [run-dir state]
+  (validate-state state)
+  (when (and (= :turn-ready (:phase state))
+             (> (:turn state) 1))
+    (let [gate-turn (dec (:turn state))
+          prior-state (assoc state :turn gate-turn :intent nil)
+          expected-id (intent-id prior-state :gate)
+          intent {:action :gate :id expected-id}
+          receipt (read-receipt run-dir intent)]
+      (when (and (nil? receipt) (:failure-fingerprint state))
+        (fail! :preceding-gate-receipt-missing
+               {:problem-id (:problem-id state)
+                :turn gate-turn
+                :intent-id expected-id}))
+      (when receipt
+        (let [result (:result receipt)
+              inputs (get-in result [:plan :inputs])
+              registration (:registration result)
+              outcome (:outcome result)
+              finding (or (:finding registration)
+                          (:finding result)
+                          (when (= :red outcome) :command-failed))]
+          (when-not (and (= schema-version (:schema receipt))
+                         (= (:problem-id state) (:problem-id receipt))
+                         (= gate-turn (:turn receipt))
+                         (= :gate (:action receipt))
+                         (= expected-id (:intent-id receipt))
+                         (map? result)
+                         (contains? #{:green :red} outcome)
+                         (= (:head-sha state) (:head-sha inputs)))
+            (fail! :preceding-gate-receipt-mismatch
+                   {:expected {:problem-id (:problem-id state)
+                               :turn gate-turn
+                               :action :gate
+                               :intent-id expected-id
+                               :head-sha (:head-sha state)}
+                    :receipt receipt}))
+          (cond-> {:schema schema-version
+                   :problem-id (:problem-id receipt)
+                   :turn gate-turn
+                   :intent-id expected-id
+                   :head-sha (:head-sha inputs)
+                   :outcome outcome}
+            finding (assoc :finding finding)
+            (:failure-fingerprint result)
+            (assoc :failure-fingerprint (:failure-fingerprint result))
+            (:outcome registration)
+            (assoc :registration/outcome (:outcome registration))))))))
 
 (defn append-receipt!
   "Creates one immutable receipt. Repeating the identical write is

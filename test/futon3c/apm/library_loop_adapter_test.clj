@@ -165,6 +165,28 @@
     (is (not (.exists (:log tools))))
     (is (= (:base configured) (sh! (:workspace configured) "git" "rev-parse" "HEAD")))))
 
+(deftest next-turn-receives-prior-red-gate-feedback-once
+  (let [repo (repository!) tools (tools! (:root repo))
+        {:keys [root run-dir base]} (configure! repo tools)]
+    (let [turn (runner/begin-action! run-dir :turn)]
+      (runner/append-receipt! run-dir turn {:outcome :ok :head-sha base})
+      (runner/reconcile! run-dir (constantly nil)))
+    (let [gate (runner/begin-action! run-dir :gate)]
+      (runner/append-receipt!
+       run-dir gate
+       {:outcome :red :failure-fingerprint "ledger-red"
+        :plan {:inputs {:head-sha base}}
+        :registration {:outcome :red :finding :malformed-target-record}})
+      (runner/reconcile! run-dir (constantly nil)))
+    (exec/resume-one! root "t00J02"
+                      (adapter/deps {:root root :problem-id "t00J02"}))
+    (let [log (slurp (:log tools))]
+      (is (= 1 (count (re-seq #"Durable feedback from the immediately preceding gate"
+                              log))))
+      (is (str/includes? log ":finding :malformed-target-record"))
+      (is (str/includes? log ":turn 1")))
+    (is (= :gating (:phase (runner/read-state run-dir))))))
+
 (deftest observation-sees-committed-ct-and-missing-audit-never-green
   (let [repo (repository!) tools (tools! (:root repo))
         {:keys [root workspace run-dir]} (configure! repo tools)]
