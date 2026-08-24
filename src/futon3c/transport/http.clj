@@ -7599,6 +7599,25 @@
       (and (= :post method) (= "/api/alpha/followups/cancel" uri))
       (handle-followup-cancel request)
 
+      (and (= :post method) (= "/api/alpha/inbox-zero/confirm-attribution" uri))
+      (let [body (parse-json-map (read-body request))
+            raw-key (or (:path-key body) (get body "path-key"))
+            input {:agent (or (:agent body) (get body "agent"))
+                   :session (or (:session body) (get body "session"))
+                   :response-id (or (:response-id body) (get body "response-id"))
+                   :path-key {:repo/id (or (:repo-id raw-key) (get raw-key "repo-id"))
+                              :worktree/id (or (:worktree-id raw-key)
+                                               (get raw-key "worktree-id"))
+                              :path (or (:path raw-key) (get raw-key "path"))}}]
+        (try
+          (let [confirm! (requiring-resolve
+                          'futon3c.inbox-zero.confirm-intake/confirm-attribution!)
+                result (confirm! input {})]
+            (json-response (if (:ok result) 200 409) result))
+          (catch clojure.lang.ExceptionInfo error
+            (json-response 400 {:ok false :error (name (:error/type (ex-data error)))
+                                :message (.getMessage error)}))))
+
       ;; M-live-efe-map VERIFY: read-only live join over agents, WM ticks,
       ;; clocks, invoke jobs, and the frozen EFE coordinate set.
       (and (= :get method) (= "/api/alpha/live-efe-map" uri))

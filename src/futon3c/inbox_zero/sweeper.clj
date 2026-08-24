@@ -52,13 +52,24 @@
   (->> (:evidence candidate) (keep :source/id) distinct sort vec sha-256))
 
 (defn- followup-payload [result candidate]
-  (let [[agent session] (parse-seat (:seat/id candidate))]
+  (let [[agent session] (parse-seat (:seat/id candidate))
+        path-key (:path/key result)
+        confirmation-body
+        (json/generate-string
+         {:agent agent :session session
+          :path-key {:repo-id (:repo/id path-key)
+                     :worktree-id (:worktree/id path-key)
+                     :path (:path path-key)}
+          :response-id (str "inbox-zero-confirm:" (evidence-hash candidate))})]
     {:agent agent :session session :type "inbox-zero"
-     :dedupe-key [(:path/key result) (:seat/id candidate)
+     :dedupe-key [path-key (:seat/id candidate)
                   (evidence-hash candidate)]
-     :prompt (infer/confirmation-followup-text result candidate)
+     :prompt (str (infer/confirmation-followup-text result candidate)
+                  " Confirm with: curl -sS -X POST "
+                  "http://127.0.0.1:7070/api/alpha/inbox-zero/confirm-attribution "
+                  "-H 'Content-Type: application/json' -d '" confirmation-body "'")
      :metadata {:proposal/type :inbox-zero/attribution
-                :path/key (:path/key result)
+                :path/key path-key
                 :confidence (:confidence candidate)}}))
 
 (defn- ledger-decision [result reason]

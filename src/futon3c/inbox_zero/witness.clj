@@ -8,6 +8,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon3.inbox-zero.state :as inbox-state]
             [futon3c.watcher.roots :as roots])
   (:import [java.net InetAddress]
            [java.nio.charset StandardCharsets]
@@ -34,29 +35,71 @@
 (defn- target-path [directory id]
   (.resolve directory (str (subs (sha-256-value id) 7) ".edn")))
 
-(defn- publish-immutable! [witness-dir record]
+(defn published-record
+  "Read the immutable witness record for ID, or nil when it is absent."
+  [witness-dir id]
+  (let [target (target-path (.toPath (io/file witness-dir)) id)]
+    (when (.exists (.toFile target))
+      (edn/read-string (slurp (.toFile target))))))
+
+(defn- compatible-existing? [record existing]
+  (or (= existing record)
+      ;; A seat is established once. Later observations of the exact session
+      ;; reuse its first immutable registration witness.
+      (and (= :inbox-zero/session-seat (:record/type record))
+           (= :inbox-zero/session-seat (:record/type existing))
+           (= (:seat/id record) (:seat/id existing)))))
+
+(defn publish-immutable-batch!
+  "Publish RECORDS after validating and staging the entire batch.
+
+  Records are ordered seat first, claim second. Renames are individually
+  atomic, not transactionally atomic across targets: a hard crash between the
+  two can leave the harmless partial (an inert seat without a claim), never a
+  claim published before its seat. Ordinary rename failure removes only files
+  created by this batch. Returns one result per ordered record with :already?."
+  [witness-dir records]
   (let [directory (.toPath (io/file witness-dir))
         attrs (make-array FileAttribute 0)
-        id (record-id record)]
+        ordered (vec (sort-by #(case (:record/type %) :inbox-zero/session-seat 0
+                                    :inbox-zero/session-file-claim 1 2)
+                              records))]
+    (doseq [record ordered] (inbox-state/validate-record record))
+    (when-not (= (count ordered) (count (distinct (map record-id ordered))))
+      (throw (ex-info "Inbox-zero witness batch repeats an id"
+                      {:error/type :inbox-zero/witness-batch-duplicate-id})))
     (Files/createDirectories directory attrs)
-    (let [target (target-path directory id)]
-      (if (.exists (.toFile target))
-        (let [existing (edn/read-string (slurp (.toFile target)))]
-          ;; A seat is established once. Later successful edits in that same
-          ;; exact session reuse it without rewriting its first observation.
-          (when-not (or (= existing record)
-                        (and (= :inbox-zero/session-seat (:record/type record))
-                             (= id (:seat/id existing))))
-            (throw (ex-info "Inbox-zero witness id conflict" {:record/id id})))
-          target)
-        (let [tmp (Files/createTempFile directory ".witness-" ".edn" attrs)]
-          (try
+    (let [prepared
+          (mapv
+           (fn [record]
+             (let [id (record-id record)
+                   target (target-path directory id)
+                   existing (when (.exists (.toFile target))
+                              (edn/read-string (slurp (.toFile target))))]
+               (when (and existing (not (compatible-existing? record existing)))
+                 (throw (ex-info "Inbox-zero witness id conflict"
+                                 {:error/type :inbox-zero/witness-id-conflict
+                                  :record/id id})))
+               {:record record :id id :target target :already? (boolean existing)}))
+           ordered)
+          staged (atom [])
+          created (atom [])]
+      (try
+        (doseq [{:keys [record already?] :as item} prepared
+                :when (not already?)]
+          (let [tmp (Files/createTempFile directory ".witness-" ".edn" attrs)]
             (spit (.toFile tmp) (str (pr-str record) "\n"))
-            (Files/move tmp target
-                        (into-array StandardCopyOption
-                                    [StandardCopyOption/ATOMIC_MOVE]))
-            target
-            (finally (Files/deleteIfExists tmp))))))))
+            (swap! staged conj (assoc item :tmp tmp))))
+        (doseq [{:keys [tmp target]} @staged]
+          (Files/move tmp target
+                      (into-array StandardCopyOption [StandardCopyOption/ATOMIC_MOVE]))
+          (swap! created conj target))
+        (mapv #(select-keys % [:record :id :target :already?]) prepared)
+        (catch Throwable error
+          (doseq [target @created] (Files/deleteIfExists target))
+          (throw error))
+        (finally
+          (doseq [{:keys [tmp]} @staged] (Files/deleteIfExists tmp)))))))
 
 (defn- git-root [file]
   (let [cwd (if (.isDirectory file) file (.getParentFile file))
@@ -101,6 +144,5 @@
                      :witness/type :tool-edit :witness/id tool-id
                      :first-observed-at observed-at :last-observed-at observed-at
                      :state :active}]
-          (publish-immutable! witness-dir seat)
-          (publish-immutable! witness-dir claim)
+          (publish-immutable-batch! witness-dir [seat claim])
           {:seat seat :claim claim})))))

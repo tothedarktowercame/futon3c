@@ -1,5 +1,6 @@
 (ns futon3c.inbox-zero.sweeper-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is]]
             [futon3.inbox-zero.state :as state]
             [futon3c.inbox-zero.sweeper :as sweeper]))
 
@@ -46,6 +47,13 @@
             :unswept 0} first-counts))
     (is (= "live" (get-in (first @calls) [1 :agent])))
     (is (= "s1" (get-in (first @calls) [1 :session])))
+    (is (re-find #"curl -sS -X POST .*confirm-attribution"
+                 (get-in (first @calls) [1 :prompt])))
+    (is (str/includes? (get-in (first @calls) [1 :prompt]) "a.clj"))
+    (is (str/includes? (get-in (first @calls) [1 :prompt])
+                       "\"agent\":\"live\""))
+    (is (str/includes? (get-in (first @calls) [1 :prompt])
+                       "\"session\":\"s1\""))
     (is (= first-key (get-in (first @calls) [1 :dedupe-key])))
     (is (not-any? #(= :ledger (first %)) @calls))))
 
