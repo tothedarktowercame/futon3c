@@ -79,6 +79,9 @@
                  (string? (:workspace state))
                  (string? (:base-sha state))
                  (string? (:head-sha state))
+                 (nat-int? (:consecutive-same-failures state))
+                 (or (nil? (:failure-fingerprint state))
+                     (string? (:failure-fingerprint state)))
                  (nat-int? (:consecutive-nonreductions state))
                  (or (nil? (:obligation/id state))
                      (keyword? (:obligation/id state))))
@@ -119,15 +122,14 @@
                                         [StandardOpenOption/READ]))]
     (.force channel true)))
 
-(defn write-state!
-  "Atomically replaces state.edn using temp-write, file fsync, rename, and
-  directory fsync.  The temp file is in the destination directory."
-  [run-dir state]
-  (validate-state state)
-  (let [dir (.toPath (io/file run-dir))
-        target (state-path run-dir)
-        temp (.resolve dir (str ".state.edn." (UUID/randomUUID) ".tmp"))
-        bytes (.getBytes (str (pr-str state) "\n") StandardCharsets/UTF_8)]
+(defn atomic-write-edn!
+  "Atomically replaces an arbitrary EDN file with fsync durability."
+  [target-file value]
+  (let [^Path target (.toPath (io/file target-file))
+        dir (.getParent target)
+        temp (.resolve dir (str "." (.getFileName target) "."
+                                (UUID/randomUUID) ".tmp"))
+        bytes (.getBytes (str (pr-str value) "\n") StandardCharsets/UTF_8)]
     (Files/createDirectories dir (make-array java.nio.file.attribute.FileAttribute 0))
     (try
       (with-open [out (FileOutputStream. (.toFile temp))]
@@ -139,9 +141,40 @@
                               [StandardCopyOption/ATOMIC_MOVE
                                StandardCopyOption/REPLACE_EXISTING]))
       (fsync-directory! dir)
-      state
-      (finally
-        (Files/deleteIfExists temp)))))
+      value
+      (finally (Files/deleteIfExists temp)))))
+
+(defn append-edn-once!
+  "Creates an immutable EDN artifact. Identical replay is idempotent."
+  [target-file value]
+  (let [^Path path (.toPath (io/file target-file))
+        bytes (.getBytes (str (pr-str value) "\n") StandardCharsets/UTF_8)]
+    (Files/createDirectories (.getParent path)
+                             (make-array java.nio.file.attribute.FileAttribute 0))
+    (try
+      (with-open [channel (java.nio.channels.FileChannel/open
+                           path
+                           (into-array StandardOpenOption
+                                       [StandardOpenOption/CREATE_NEW
+                                        StandardOpenOption/WRITE]))]
+        (.write channel (java.nio.ByteBuffer/wrap bytes))
+        (.force channel true))
+      (fsync-directory! (.getParent path))
+      value
+      (catch java.nio.file.FileAlreadyExistsException _
+        (let [existing (with-open [reader (PushbackReader. (io/reader target-file))]
+                         (edn/read {:eof nil} reader))]
+          (if (= value existing)
+            existing
+            (fail! :append-only-artifact-conflict
+                   {:path (str path) :existing existing :attempted value})))))))
+
+(defn write-state!
+  "Atomically replaces state.edn using temp-write, file fsync, rename, and
+  directory fsync.  The temp file is in the destination directory."
+  [run-dir state]
+  (validate-state state)
+  (atomic-write-edn! (.toFile (state-path run-dir)) state))
 
 (defn read-state [run-dir]
   (with-open [reader (PushbackReader. (io/reader (.toFile (state-path run-dir))))]
@@ -297,11 +330,36 @@
         :gate (if (= :green (:outcome result))
                 (if (:checkpoint-due? result)
                   (advance :checkpoint-ready
-                           {:last-green-gate (:receipt/path result)})
+                           {:last-green-gate (:receipt/path result)
+                            :failure-fingerprint nil
+                            :consecutive-same-failures 0})
                   (advance :turn-ready
                            {:turn (inc (:turn state))
-                            :last-green-gate (:receipt/path result)}))
-                (pause :gate-failed))
+                            :last-green-gate (:receipt/path result)
+                            :failure-fingerprint nil
+                            :consecutive-same-failures 0}))
+                (let [fingerprint (:failure-fingerprint result)
+                      same? (= fingerprint (:failure-fingerprint state))
+                      count (if same?
+                              (inc (:consecutive-same-failures state))
+                              1)
+                      updates {:failure-fingerprint fingerprint
+                               :consecutive-same-failures count}]
+                  (cond
+                    (not (and (string? fingerprint) (not-empty fingerprint)))
+                    (pause :invalid-gate-failure)
+
+                    (>= count 2)
+                    (advance :paused
+                             (assoc updates :intent nil
+                                    :pause/finding
+                                    {:type :repeated-gate-failure
+                                     :action :gate
+                                     :intent-id (get-in state [:intent :id])
+                                     :result result}))
+
+                    :else
+                    (advance :turn-ready (assoc updates :turn (inc (:turn state)))))))
         :review (let [observed-identity
                       (select-keys result
                                    [:schema :problem-id :turn :checkpoint
@@ -320,7 +378,8 @@
 
                     :else
                     (pause (or (:finding result) :review-not-approved))))
-        :bank (if (= :banked (:outcome result))
+        :bank (if (and (= :banked (:outcome result))
+                       (= (get-in state [:intent :head-sha]) (:bank-sha result)))
                 (advance :turn-ready
                          {:turn (inc (:turn state))
                           :checkpoint (inc (:checkpoint state))

@@ -127,12 +127,12 @@
       (is (= :pending (:status (runner/reconcile! dir (fn [_]
                                                        (swap! bank-observations inc)
                                                        :pending)))))
-      (runner/append-receipt! dir bank {:outcome :banked :bank-sha "banked"})
+      (runner/append-receipt! dir bank {:outcome :banked :bank-sha "candidate"})
       (is (= :settled (:status (runner/reconcile! dir (fn [_]
                                                        (throw (Exception. "duplicate bank")))))))
       (is (= 1 @bank-observations))
       (is (= :turn-ready (:phase (runner/read-state dir))))
-      (is (= "banked" (:base-sha (runner/read-state dir)))))))
+      (is (= "candidate" (:base-sha (runner/read-state dir)))))))
 
 (deftest rejects-out-of-order-transitions
   (let [dir (temp-dir)]
@@ -155,11 +155,13 @@
       (runner/append-receipt! gate-dir turn {:outcome :ok :head-sha "h1"})
       (runner/reconcile! gate-dir (constantly nil)))
     (let [gate (runner/begin-action! gate-dir :gate)]
-      (runner/append-receipt! gate-dir gate {:outcome :red :finding :lean-failed})
+      (runner/append-receipt! gate-dir gate
+                              {:outcome :red :finding :lean-failed
+                               :failure-fingerprint "failure-a"})
       (runner/reconcile! gate-dir (constantly nil))
-      (is (= :paused (:phase (runner/read-state gate-dir))))
-      (is (= :gate-failed (get-in (runner/read-state gate-dir)
-                                  [:pause/finding :type]))))))
+      (is (= :turn-ready (:phase (runner/read-state gate-dir))))
+      (is (= 1 (:consecutive-same-failures
+                (runner/read-state gate-dir)))))))
 
 (deftest only-an-approved-review-authorizes-bank
   (doseq [ruling [:rejected :unclear :equivalent]]
