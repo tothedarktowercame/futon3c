@@ -111,14 +111,16 @@
                   saved))))))))))
 
 (defn- dispatch-terminal-repair!
-  [{:keys [announce-fn activate-fn persist-fn ticket-register-fn]} state]
+  [{:keys [announce-fn activate-fn persist-fn ticket-register-fn]}
+   state findings]
   (let [active (:active state)
         attempt (inc (or (:terminal-repair-attempts active) 0))
         body (-> (:request active)
                  (dissoc :dispatch/id)
                  (assoc :repair/attempt attempt
                         :repair/of-job-id (get-in active [:ticket :job-id])
-                        :repair/findings [:typed-submission-missing]))
+                        :repair/findings (or findings
+                                             [:typed-submission-missing])))
         request (submission/prepare-request
                  (assoc body :dispatch/id (machine/ledger-digest [body])))
         announced (job-driver/ticket request (announce-fn request))]
@@ -303,7 +305,8 @@
           (let [max-repairs (get-in effects [:terminal-budget-config
                                              :repair-attempts] 1)]
             (if (< (or (:terminal-repair-attempts active) 0) max-repairs)
-              (dispatch-terminal-repair! effects state)
+              (dispatch-terminal-repair! effects state
+                                         [:typed-submission-missing])
               {:ok false :error/code :solver-typed-submission-repair-exhausted
                :repair/attempts (:terminal-repair-attempts active)
                :collection (:evidence collection) :state state}))
@@ -377,13 +380,24 @@
                   (and (< (count rounds) max-rounds)
                        (strategy-checkpoint-round? ordinal)
                        (not (strategy-checkpoint-valid? (:report completed))))
-                  (let [stopped (assoc next-state
-                                       :state/type :solver-strategy-checkpoint-required)
-                        saved (persist-container persist-fn stopped)]
-                    (if (:ok saved)
-                      {:ok false :error/code :solver-strategy-checkpoint-required
-                       :state stopped}
-                      saved))
+                  (let [max-repairs (get-in effects [:terminal-budget-config
+                                                     :repair-attempts] 1)]
+                    (if (< (or (:terminal-repair-attempts active) 0)
+                           max-repairs)
+                      (dispatch-terminal-repair!
+                       effects
+                       (update state :checkpoint/invalid-observations
+                               (fnil conj []) completed)
+                       [:solver-strategy-missing-or-invalid])
+                      (let [stopped (assoc next-state
+                                           :state/type
+                                           :solver-strategy-checkpoint-required)
+                            saved (persist-container persist-fn stopped)]
+                        (if (:ok saved)
+                          {:ok false
+                           :error/code :solver-strategy-checkpoint-required
+                           :state stopped}
+                          saved))))
 
                   (= :claimed-defect (:outcome completed))
                   (let [stopped (assoc next-state
@@ -446,6 +460,36 @@
                 {:ok true :status :certified :state certified
                  :certificate (:certificate receipt)}
                 saved))))))))
+
+(defn resume-strategy-collection!
+  "Dispatch one bounded, typed collection repair for a persisted checkpoint.
+
+   The invalid terminal observation remains durable under
+   :checkpoint/invalid-observations.  It is not counted as a proof-search
+   round, and the repair request retains the same checkpoint ordinal."
+  [{:keys [state] :as effects}]
+  (if-not (and (= :solver-strategy-checkpoint-required (:state/type state))
+               (seq (:rounds state))
+               (nil? (:active state)))
+    {:ok false :error/code :solver-strategy-collection-resume-input-invalid}
+    (let [completed (last (:rounds state))
+          ordinal (:ordinal completed)
+          prior-rounds (pop (:rounds state))
+          request (round-request (:base-request state) ordinal
+                                 (last prior-rounds))
+          active {:state/type :live-job-dispatched
+                  :request request
+                  :ticket {:job-id (:job-id completed)}
+                  :activation/accepted? true
+                  :terminal-repair-attempts 0}
+          resumed (-> state
+                      (assoc :state/type :solver-rounds
+                             :rounds prior-rounds
+                             :active active)
+                      (update :checkpoint/invalid-observations
+                              (fnil conj []) completed))]
+      (dispatch-terminal-repair!
+       effects resumed [:solver-strategy-missing-or-invalid]))))
 
 (defn resume-remediation!
   "Resume a halted siege with one corrective round carrying typed findings.

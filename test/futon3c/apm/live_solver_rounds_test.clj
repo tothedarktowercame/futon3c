@@ -264,9 +264,33 @@
         state {:state/type :solver-rounds :budget/max-rounds 50
                :base-request base-request :rounds prior :active checkpoint-active}
         result (sut/drive! (assoc (effects persisted) :state state))]
-    (is (= :solver-strategy-checkpoint-required (:error/code result)))
-    (is (= :solver-strategy-checkpoint-required (:state/type @persisted)))
-    (is (nil? (:active @persisted)))))
+    (is (:ok result))
+    (is (:repair? result))
+    (is (= 10 (get-in @persisted [:active :request :solver/round])))
+    (is (= [:solver-strategy-missing-or-invalid]
+           (get-in @persisted [:active :request :repair/findings])))
+    (is (= 9 (count (:rounds @persisted))))
+    (is (= 1 (count (:checkpoint/invalid-observations @persisted))))))
+
+(deftest persisted-checkpoint-failure-resumes-as-same-round-collection-repair
+  (let [persisted (atom nil)
+        rounds (mapv (fn [ordinal]
+                       {:ordinal ordinal :job-id (str "j" ordinal)
+                        :session-id "same" :terminal-state :done
+                        :report {:outcome "progress"}})
+                     (range 1 11))
+        state {:state/type :solver-strategy-checkpoint-required
+               :budget/max-rounds 50 :base-request base-request
+               :rounds rounds :active nil}
+        result (sut/resume-strategy-collection!
+                (assoc (effects persisted) :state state))]
+    (is (:ok result))
+    (is (= 10 (get-in @persisted [:active :request :solver/round])))
+    (is (= "j10" (get-in @persisted
+                          [:active :request :repair/of-job-id])))
+    (is (= 9 (count (:rounds @persisted))))
+    (is (= (last rounds)
+           (last (:checkpoint/invalid-observations @persisted))))))
 
 (deftest valid-ten-round-strategy-allows-next-episode
   (let [persisted (atom nil)
