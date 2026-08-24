@@ -33,6 +33,7 @@
           (not (contains? learning-outcomes (:learning/outcome receipt)))
           (conj :terminal-learning-outcome-invalid)
           (and (not progress-retry?)
+               (not= :void (:frame/result receipt))
                (not (and (string? (:verify-receipt/id receipt))
                          (re-matches #"[0-9a-f]{64}"
                                      (:verify-receipt/id receipt)))))

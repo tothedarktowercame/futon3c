@@ -1,12 +1,18 @@
 (ns futon3c.apm.frame-void
-  "Explicit, pinned terminal transition for a known-failing frame baseline."
+  "Explicit, pinned terminal transition for a typed invalid frame."
   (:require [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine])
   (:import [java.time Instant]))
 
+(def void-classifications
+  {:known-failing-baseline :known-failing-baseline
+   :apparatus-invalidated :apparatus-invalidated})
+
 (defn prepare
   [{:keys [projection events]} {:keys [frame-id problem-id expected-version
-                                       expected-ledger-digest failures now actor]}]
+                                       expected-ledger-digest failures now actor
+                                       classification]
+                                :or {classification :known-failing-baseline}}]
   (let [active (:active/frame projection)]
     (cond
       (not= :valid (:projection/status projection))
@@ -22,11 +28,13 @@
       (not (and (vector? failures) (seq failures)
                 (every? keyword? failures)))
       {:ok false :error/code :frame-void-failures-required}
+      (not (contains? void-classifications classification))
+      {:ok false :error/code :frame-void-classification-invalid}
       :else
       (let [certificate-body
             {:certificate/type :frame-void
              :frame/id frame-id :problem/id problem-id
-             :classification :known-failing-baseline
+             :classification classification
              :failed-invariants failures
              :source/version expected-version
              :source/ledger-digest expected-ledger-digest}
@@ -56,7 +64,7 @@
                         :event/at (str (or now (Instant/now)))
                         :event/expected-version (inc expected-version)
                         :event/body {:frame-id frame-id
-                                     :reason :known-failing-baseline
+                                     :reason (get void-classifications classification)
                                      :obligation/id (:obligation/id obligation)
                                      :certificate certificate}}
             event (assoc event-base :event/id (machine/ledger-digest [event-base]))

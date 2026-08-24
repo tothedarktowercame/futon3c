@@ -183,3 +183,23 @@
     (is (= :closed (:frame/result result)))
     (is (= :solved (get-in result [:terminal-receipt :problem/outcome])))
     (is (= "exp/f30" (get-in result [:terminal-receipt :solver :branch])))))
+
+(deftest apparatus-invalidated-void-derives-terminal-without-verify-or-close
+  (let [void {:certificate/type :frame-void :certificate/id digest
+              :classification :apparatus-invalidated
+              :failed-invariants [:student-snapshot-not-campaign-cumulative]}
+        result
+        (sut/terminal-from-ledger
+         {:frame frame
+          :ledger {:events [{:event/body {:certificate void}}]}
+          :preparation {:workspaces
+                        {:solver {:branch "exp/f30" :terminal-head
+                                  (apply str (repeat 40 "b"))}
+                         :student {:terminal-head
+                                   (apply str (repeat 40 "c"))}}}})]
+    (is (:ok result) (pr-str result))
+    (is (= :void (:frame/result result)))
+    (is (= :invalid (get-in result [:terminal-receipt :problem/outcome])))
+    (is (= :skipped (get-in result [:terminal-receipt :learning/outcome])))
+    (is (= :apparatus-invalidated
+           (get-in result [:terminal-receipt :void/classification])))))

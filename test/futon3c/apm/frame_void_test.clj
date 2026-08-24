@@ -38,3 +38,24 @@
                        {:frame-id "f18" :problem-id "a97J07"
                         :expected-version 11 :expected-ledger-digest "digest"
                         :failures []})))))
+
+(deftest apparatus-invalidated-is-a-distinct-typed-void-cause
+  (let [result (sut/prepare
+                {:projection projection :events (vec (repeat 11 {}))}
+                {:frame-id "f18" :problem-id "a97J07"
+                 :expected-version 11 :expected-ledger-digest "digest"
+                 :classification :apparatus-invalidated
+                 :failures [:student-snapshot-not-campaign-cumulative
+                            :scribe-seats-not-separated]
+                 :now "2026-08-24T21:00:00Z"})]
+    (is (:ok result))
+    (is (= :apparatus-invalidated
+           (get-in result [:certificate :classification])))
+    (is (= :apparatus-invalidated (get-in result [:event :event/body :reason]))))
+  (is (= :frame-void-classification-invalid
+         (:error/code
+          (sut/prepare {:projection projection :events []}
+                       {:frame-id "f18" :problem-id "a97J07"
+                        :expected-version 11 :expected-ledger-digest "digest"
+                        :classification :ad-hoc
+                        :failures [:known]})))))

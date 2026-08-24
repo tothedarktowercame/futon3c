@@ -133,9 +133,10 @@
         solve (some #(when (= :frame-solve (:receipt/type %)) %) certificates)
         verify (some #(when (= :frame-verify (:receipt/type %)) %) certificates)
         close (some #(when (= :frame-close (:receipt/type %)) %) certificates)
+        void (some #(when (= :frame-void (:certificate/type %)) %) certificates)
         observation-missing? (some #(= :student-observation-missing
                                        (:receipt/type %)) certificates)
-        raw-result (:receipt/result close)
+        raw-result (or (:receipt/result close) (when void :void))
         frame-result (cond
                        (contains? #{:closed "closed"} raw-result) :closed
                        (contains? #{:partial "partial"} raw-result) :partial
@@ -153,16 +154,20 @@
         body {:receipt/type :frame-terminal
               :frame/id (:frame/id frame) :problem/id (:problem/id frame)
               :frame/result frame-result
-              :problem/outcome (if (and (= 0 (get-in solve [:receipt/lean
+              :problem/outcome (if void :invalid
+                                 (if (and (= 0 (get-in solve [:receipt/lean
                                                              :sorry-warnings]))
                                         (true? (:receipt/mathematical-sound? verify)))
-                                 :solved :partial)
-              :learning/outcome (or (:receipt/learning-outcome close)
+                                   :solved :partial))
+              :learning/outcome (if void :skipped
+                                  (or (:receipt/learning-outcome close)
                                     (when observation-missing? :partially-observed)
-                                    :observed)
+                                    :observed))
               :verify-receipt/id (:receipt/id verify)
               :solver {:branch (:branch solver-workspace)
-                       :head (:receipt/final-head solve)}
+                       :head (or (:receipt/final-head solve) (:solver heads))}
+              :void/certificate-id (:certificate/id void)
+              :void/classification (:classification void)
               :workspace/terminal-heads heads}
         receipt (assoc body :receipt/id (machine/ledger-digest [body]))
         checked (terminal/validate-terminal frame receipt)]
@@ -172,7 +177,7 @@
        :terminal-check checked
        :missing (cond-> [] (nil? solve) (conj :solve-receipt)
                         (nil? verify) (conj :verify-receipt)
-                        (nil? close) (conj :close-receipt))})))
+                        (and (nil? close) (nil? void)) (conj :close-or-void))})))
 
 (defn- roster-seats [response frame-id]
   (let [ids (into {} (map (fn [role] [role (str frame-id "-" (name role))])
