@@ -586,9 +586,9 @@
                                       :report r})))]
     (is (nil? (findings (assoc report :candidates [guide-candidate]))))
     (is (nil? (findings report)) "no candidates is a valid store-mode turn")
-    (is (some #{:guide-candidates-invalid}
-              (findings (assoc report :candidates
-                               [(assoc guide-candidate :pattern-ids [])]))))
+    (is (nil? (findings (assoc report :candidates
+                               [(assoc guide-candidate :pattern-ids [])])))
+        "well-shaped but unbound memories are recorded as mechanical rejects")
     (is (some #{:guide-candidates-outside-store-mode}
               (findings (assoc report :mode "harness-mode"
                                :candidates [guide-candidate]))))))
@@ -666,10 +666,14 @@
     (is (= :certified (:status (sut/guide-promotion-step! driver request report)))
         "certified review is idempotent and runs nothing")
     (is (= 2 @runs))
-    (is (= :guide-candidates-invalid
-           (:error/code (sut/guide-promotion-step!
-                         (assoc driver :state-path (.resolve dir "other.edn"))
-                         request {:candidates [(assoc guide-candidate :pattern-ids [])]}))))))
+    (let [mechanical-path (.resolve dir "other.edn")]
+      (sut/guide-promotion-step!
+       {:state-path mechanical-path
+        :run-fn (fn [] {:ok true :status :certified})}
+       request {:candidates [(assoc guide-candidate :pattern-ids [])]})
+      (is (= [:no-parent-pattern]
+             (get-in (runtime/read-state mechanical-path)
+                     [:mechanical-reviews 0 :finding-codes]))))))
 
 (deftest student-attempt-two-binds-to-a-guide-union-snapshot
   (let [addressed (fn [body] (assoc body :receipt/id (machine/ledger-digest [body])))

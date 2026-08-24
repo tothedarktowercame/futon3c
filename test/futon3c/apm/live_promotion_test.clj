@@ -335,6 +335,29 @@
     (is (= :independent-review (:stage @saved)))
     (is (= "f27-guide" (get-in @saved [:deposit :depositor])))))
 
+(deftest guide-mechanical-rejection-is-published-in-its-review-receipt
+  (let [published (atom nil)
+        mechanical [{:memory-id "guide-proof"
+                     :reviewer "promotion-mechanical-guard"
+                     :verdict :reject
+                     :reason "mechanical rejection: proof-text-not-memory"
+                     :residual "revise"
+                     :finding-codes [:proof-text-not-memory]}]
+        result (sut/drive!
+                {:state {:state/type :promotion :stage :review-pending
+                         :deposit {:depositor "f30-guide"}
+                         :candidates [] :mechanical-reviews mechanical}
+                 :review-fn (fn [& _]
+                              (throw (ex-info "mechanical rejection needs no LLM" {})))
+                 :publish-fn (fn [value]
+                               (reset! published value)
+                               {:ok true :receipt {:receipt/id "guide-rejected"}})
+                 :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= mechanical (:reviews @published)))
+    (is (= "promotion-mechanical-guard" (:reviewer @published)))
+    (is (empty? (:candidates @published)))))
+
 (deftest independent-review-validates-against-the-gated-candidates
   (let [candidates [{:memory-id "m" :content-digest "d" :pattern-ids ["p"]
                      :source-attempts [1]}]

@@ -60,6 +60,24 @@
       (not (seq (:pattern-ids candidate)))
       (conj :no-parent-pattern))))
 
+(defn- apply-mechanical-reviews [candidates context]
+  (let [deduped (dedupe-candidates candidates)
+        rejected (keep (fn [candidate]
+                         (when-let [codes (seq
+                                           (mechanical-candidate-findings
+                                            candidate context))]
+                           {:memory-id (:memory-id candidate)
+                            :reviewer mechanical-reviewer
+                            :verdict :reject
+                            :reason (str "mechanical rejection: "
+                                         (str/join ", " (map name codes)))
+                            :residual "revise into a reusable, witnessed pattern memory"
+                            :finding-codes (vec codes)}))
+                       deduped)
+        rejected-ids (set (map :memory-id rejected))]
+    {:candidates (vec (remove #(contains? rejected-ids (:memory-id %)) deduped))
+     :mechanical-reviews (vec rejected)}))
+
 (defn- valid-lane? [{:keys [lane status reason]}]
   (and (contains? required-lanes lane)
        (contains? lane-statuses status)
@@ -82,29 +100,13 @@
                              (every? valid-lane? lanes)))
                    (conj :lane-report-invalid))]
     (if (seq findings) {:ok false :findings findings}
-        (let [deduped (dedupe-candidates candidates)
-              rejected (keep (fn [candidate]
-                               (when-let [codes (seq
-                                                 (mechanical-candidate-findings
-                                                  candidate context))]
-                                 {:memory-id (:memory-id candidate)
-                                  :reviewer mechanical-reviewer
-                                  :verdict :reject
-                                  :reason (str "mechanical rejection: "
-                                               (str/join ", " (map name codes)))
-                                  :residual "revise into a reusable, witnessed pattern memory"
-                                  :finding-codes (vec codes)}))
-                             deduped)
-              rejected-ids (set (map :memory-id rejected))]
-          {:ok true
-           :candidates (vec (remove #(contains? rejected-ids (:memory-id %))
-                                    deduped))
-           :mechanical-reviews (vec rejected)})))))
+        (assoc (apply-mechanical-reviews candidates context) :ok true)))))
 
 (defn validate-guide-deposit
   "Gate a Guide's store-mode candidates. The Guide is not a mining seat, so
   there is no lane report; every candidate must still name a bound pattern."
-  [{:keys [depositor candidates]}]
+  ([deposit] (validate-guide-deposit deposit {}))
+  ([{:keys [depositor candidates]} context]
   (let [findings (cond-> []
                    (not (string? depositor)) (conj :depositor-missing)
                    (not (and (vector? candidates) (seq candidates)))
@@ -113,12 +115,9 @@
                                     (string? (:content-digest %))
                                     (vector? (:pattern-ids %))
                                     (vector? (:source-attempts %)))) candidates)
-                   (conj :candidate-shape-invalid)
-                   (some #(and (vector? (:pattern-ids %))
-                               (not (seq (:pattern-ids %)))) candidates)
-                   (conj :candidate-patterns-missing))]
+                   (conj :candidate-shape-invalid))]
     (if (seq findings) {:ok false :findings findings}
-        {:ok true :candidates (dedupe-candidates candidates)})))
+        (assoc (apply-mechanical-reviews candidates context) :ok true)))))
 
 (declare validate-review*)
 

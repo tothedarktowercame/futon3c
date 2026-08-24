@@ -364,15 +364,32 @@
     ;; Entry for candidates gated elsewhere (a Guide's store-mode deposit):
     ;; no Scribe deposit job, straight to the independent reviewer.
     (= :review-pending (:stage state))
-    (let [review (review-fn (:candidates state))]
+    (let [candidates (:candidates state)
+          mechanical (:mechanical-reviews state)
+          review (if (seq candidates)
+                   (review-fn candidates)
+                   {:ok true :job nil})]
       (if-not (:ok review) review
         (let [s {:state/type :promotion :stage :independent-review
-                 :deposit (:deposit state) :candidates (:candidates state)
+                 :deposit (:deposit state) :candidates candidates
+                 :mechanical-reviews mechanical
                  :job (:job review) :request reviewer-request
                  :ticket {:job-id (:job review)}}]
           (persist-fn s)
-          {:ok true :status :awaiting-terminal
-           :job-id (:job review) :state s})))
+          (if (seq candidates)
+            {:ok true :status :awaiting-terminal
+             :job-id (:job review) :state s}
+            (let [published (publish-fn
+                             {:candidates []
+                              :deposit (:deposit state)
+                              :reviewer pipeline/mechanical-reviewer
+                              :reviews mechanical})]
+              (if-not (:ok published) published
+                (let [done {:state/type :promotion-certified
+                            :receipt (:receipt published)}]
+                  (persist-fn done)
+                  {:ok true :status :certified :state done
+                   :certificate (:receipt published)})))))))
 
     (= :independent-review (:stage state))
     (let [r (review-fn (:job state) (:candidates state))]

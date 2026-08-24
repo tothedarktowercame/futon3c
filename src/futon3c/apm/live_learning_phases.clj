@@ -659,7 +659,10 @@
       (nil? state)
       (let [gated (pipeline/validate-guide-deposit
                    {:depositor (:agent-id request)
-                    :candidates (:candidates report)})]
+                    :candidates (:candidates report)}
+                   {:problem-id (:problem-id request)
+                    :solver-certified-source
+                    (:solver-certified-source request)})]
         (if-not (:ok gated)
           {:ok false :error/code :guide-candidates-invalid
            :findings (:findings gated)}
@@ -667,7 +670,8 @@
                         :deposit {:depositor (:agent-id request)
                                   :dispatch/id (:dispatch/id request)
                                   :prior-snapshot (:prior-snapshot request)}
-                        :candidates (:candidates gated)}
+                        :candidates (:candidates gated)
+                        :mechanical-reviews (:mechanical-reviews gated)}
                 persisted (runtime/atomic-persist! state-path seeded)]
             (if-not (:ok persisted)
               {:ok false :error/code :guide-promotion-persistence-failed}

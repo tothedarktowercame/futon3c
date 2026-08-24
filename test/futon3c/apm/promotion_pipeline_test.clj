@@ -81,16 +81,36 @@
                                         :candidates [candidate]})]
     (is (:ok ok))
     (is (= [candidate] (:candidates ok))))
-  (is (= [:candidate-patterns-missing]
-         (:findings (sut/validate-guide-deposit
-                     {:depositor "f27-guide"
-                      :candidates [(assoc candidate :pattern-ids [])]}))))
+  (is (= [:no-parent-pattern]
+         (get-in (sut/validate-guide-deposit
+                  {:depositor "f27-guide"
+                   :candidates [(assoc candidate :pattern-ids [])]})
+                 [:mechanical-reviews 0 :finding-codes])))
   (is (some #{:candidate-shape-invalid}
             (:findings (sut/validate-guide-deposit
                         {:depositor "f27-guide"
                          :candidates [(dissoc candidate :source-attempts)]}))))
   (is (some #{:candidates-missing}
             (:findings (sut/validate-guide-deposit {:depositor "g" :candidates []})))))
+
+(deftest guide-deposits-pass-through-the-shared-mechanical-guards
+  (let [proof-body (get-in (edn/read-string
+                            (slurp "test/fixtures/apm/f30-guide-proof-text-memory.edn"))
+                           [:evidence/body :body])
+        proof (assoc candidate :body proof-body)
+        prose (assoc candidate :body (apply str (repeat 40 "reusable prose move ")))
+        rejected (sut/validate-guide-deposit
+                  {:depositor "f30-guide" :candidates [proof]}
+                  {:problem-id "a01J06"})
+        accepted (sut/validate-guide-deposit
+                  {:depositor "f30-guide" :candidates [prose]}
+                  {:problem-id "a01J06"})]
+    (is (some #{:proof-text-not-memory}
+              (get-in rejected [:mechanical-reviews 0 :finding-codes])))
+    (is (empty? (:candidates rejected)))
+    (is (:ok accepted))
+    (is (= [prose] (:candidates accepted)))
+    (is (empty? (:mechanical-reviews accepted)))))
 
 (deftest review-core-matches-the-deposit-entry-point
   (let [deposit {:depositor "f22-scribe" :candidates [candidate] :lanes lanes}
