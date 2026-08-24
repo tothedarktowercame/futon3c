@@ -1,7 +1,9 @@
 (ns futon3c.apm.live-promotion-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is]]
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-promotion :as sut]
+            [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.typed-role-submission :as submission]))
 
 (deftest dispatch-failure-retains-the-failing-boundary
@@ -125,6 +127,28 @@
             (assoc request :submission/attempt 1))
            (submission/canonical-job-id
             (assoc request :submission/attempt 1))))))
+
+(deftest f28-string-enum-reviews-cannot-silently-publish-empty
+  (let [fixture (edn/read-string
+                 (slurp "test/fixtures/apm/f28-solver-promotion-string-enums.edn"))
+        candidates (:candidates fixture)
+        raw-reviews (:reviews fixture)
+        raw (pipeline/validate-review* candidates (:depositor fixture)
+                                       (:reviewer fixture) raw-reviews)
+        reviews (mapv #'sut/normalize-review-entry raw-reviews)
+        validated (pipeline/validate-review* candidates (:depositor fixture)
+                                             (:reviewer fixture) reviews)]
+    (is (= [:review-verdict-invalid]
+           (:findings raw))
+        "the F28 wire representation must fail closed before filtering")
+    (is (:ok validated))
+    (is (= 4 (count (:candidates validated))))
+    (is (= :promotion-publication-accounting-invalid
+           (:error/code
+            (pipeline/validate-publication-accounting reviews [])))
+        "four approvals may not certify an empty snapshot")
+    (is (:ok (pipeline/validate-publication-accounting
+              reviews (:candidates validated))))))
 
 (deftest invalid-deposit-shape-is-bounded
   (let [result (sut/drive!

@@ -25,6 +25,7 @@
             [futon3c.apm.live-supervisor :as live-supervisor]
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
             [futon3c.apm.memory-snapshot :as memory-snapshot]
+            [futon3c.apm.promotion-pipeline :as promotion-pipeline]
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
             [futon3c.apm.problem-projection :as problem-projection]
@@ -731,6 +732,8 @@
     (if-not (:ok published)
       published
       (let [snapshot (:snapshot published)
+            accounting (promotion-pipeline/validate-publication-accounting
+                        reviews (:snapshot/memories snapshot))
             body {:receipt/type :solver-promotion
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
@@ -749,9 +752,10 @@
             receipt (assoc body :receipt/id (machine/ledger-digest [body]))
             checked (frame-cycle-handlers/validate-completion
                      contract action receipt receipts)]
-        (if (:ok checked)
-          {:ok true :receipt receipt}
-          checked)))))
+        (cond
+          (not (:ok accounting)) accounting
+          (:ok checked) {:ok true :receipt receipt}
+          :else checked)))))
 
 (defn- guide-review-state-path [state-path]
   (let [path (Path/of (str state-path) (make-array String 0))
@@ -792,6 +796,8 @@
         (if-not (:ok published)
           published
           (let [snapshot (:snapshot published)
+                accounting (promotion-pipeline/validate-publication-accounting
+                            reviews (:snapshot/memories snapshot))
                 body {:receipt/type :guide-promotion
                       :receipt/frame-id (:frame-id action)
                       :receipt/problem-id (:problem-id action)
@@ -805,8 +811,11 @@
                       (mapv :memory-id (:snapshot/memories snapshot))
                       :receipt/independent-review? (not= (:depositor deposit)
                                                          reviewer)}]
-            (if-not (:receipt/independent-review? body)
+            (cond
+              (not (:ok accounting)) accounting
+              (not (:receipt/independent-review? body))
               {:ok false :error/code :guide-promotion-reviewer-is-depositor}
+              :else
               {:ok true
                :receipt (assoc body :receipt/id
                                (machine/ledger-digest [body]))})))))))

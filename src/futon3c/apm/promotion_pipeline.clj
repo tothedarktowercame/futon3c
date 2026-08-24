@@ -1,6 +1,7 @@
 (ns futon3c.apm.promotion-pipeline
   "Pure gates for Scribe deposit -> independent Proctor review -> snapshot."
-  (:require [clojure.string :as str]))
+  (:require [clojure.set :as set]
+            [clojure.string :as str]))
 
 (defn candidate-key [candidate]
   [(:content-digest candidate) (vec (sort (:pattern-ids candidate)))])
@@ -18,6 +19,7 @@
 
 (def required-lanes #{:solve :arc :trajectory :challenge})
 (def lane-statuses #{:ran :ran-empty :not-run})
+(def review-verdicts #{:approve :reassign :reject})
 
 (defn- valid-lane? [{:keys [lane status reason]}]
   (and (contains? required-lanes lane)
@@ -85,6 +87,8 @@
                    (conj :review-set-mismatch)
                    (some #(not= reviewer (:reviewer %)) reviews)
                    (conj :review-attribution-mismatch)
+                   (some #(not (contains? review-verdicts (:verdict %))) reviews)
+                   (conj :review-verdict-invalid)
                    (some #(not (and (string? (:reason %))
                                     (not (str/blank? (:reason %)))
                                     (string? (:residual %))
@@ -105,3 +109,23 @@
                         (select-keys review [:reviewer :review-evidence-id
                                              :attachment-status :pattern-ids])))
                approved)})))
+
+(defn validate-publication-accounting
+  "Require an exact accounting between approved reviews and attached snapshot
+  memories. Rejected candidates remain explicit in REVIEWS; approvals may not
+  be silently filtered at any later boundary."
+  [reviews snapshot-candidates]
+  (let [approved-ids (->> reviews
+                          (filter #(contains? #{:approve :reassign}
+                                              (:verdict %)))
+                          (map :memory-id)
+                          set)
+        attached-ids (set (map :memory-id snapshot-candidates))]
+    (if (= approved-ids attached-ids)
+      {:ok true :approved-memory-ids approved-ids}
+      {:ok false :error/code :promotion-publication-accounting-invalid
+       :approved-memory-ids approved-ids
+       :attached-memory-ids attached-ids
+       :missing-approved-memory-ids (set/difference approved-ids attached-ids)
+       :unapproved-attached-memory-ids
+       (set/difference attached-ids approved-ids)})))

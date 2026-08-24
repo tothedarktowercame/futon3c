@@ -34,8 +34,21 @@
            (select-keys payload
                         [:command-own-exit :outcome :failure-account]))))
 
+(defn- normalize-review-entry
+  "Reviewer verdicts arrive through the typed JSON submission, which strings
+  every keyword, while the substrate and the pure gates use keywords
+  (:approve, :reviewed). Re-keyword the two enum fields at ingestion — the
+  same normalization conductor-surface applies at its boundary. Without it,
+  validate-review* filters every approval out and the union snapshot
+  publishes empty (f28 promote-solver and guide-intervention-1, 2026-08-24)."
+  [review]
+  (cond-> review
+    (string? (:verdict review)) (update :verdict keyword)
+    (string? (:attachment-status review)) (update :attachment-status keyword)))
+
 (defn- normalize-review-report [report expected-digest expected-base-blob]
-  (let [reviews (or (:reviews report) (:promotion-reviews report))
+  (let [reviews (let [rs (or (:reviews report) (:promotion-reviews report))]
+                  (if (vector? rs) (mapv normalize-review-entry rs) rs))
         reviewers (set (keep :reviewer reviews))
         reviewer (or (:reviewer report)
                      (when (= 1 (count reviewers)) (first reviewers)))]

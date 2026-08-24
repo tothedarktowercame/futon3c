@@ -1,0 +1,13 @@
+{:fixture/type :f28-solver-promotion-string-enums
+ :frame-id "f28" :problem-id "a01A12"
+ :depositor "f28-scribe" :reviewer "f28-promotion-proctor"
+ :candidates
+ [{:memory-id "e-14c2c205-5789-4f53-ab05-b6e2d7230975" :content-digest "fixture-complex-arg" :pattern-ids ["math-formalization-CA/complex-arg-of-cpow-root"] :source-attempts ["solve-round-1" "verify"]}
+  {:memory-id "e-4b95d2fd-d543-4eed-afbd-085b1af188d4" :content-digest "fixture-oriented-root" :pattern-ids ["math-formalization-CA/surj-via-oriented-root-preimage"] :source-attempts ["solve-round-2" "verify"]}
+  {:memory-id "e-56018477-7104-433f-bfb6-037bd73b78d9" :content-digest "fixture-schwarz-1" :pattern-ids ["math-formalization-CA/schwarz-disk-automorphism-formula"] :source-attempts ["solve-round-10" "verify"]}
+  {:memory-id "e-925c0ab3-75e5-4666-8148-239c6656cc7b" :content-digest "fixture-schwarz-2" :pattern-ids ["math-formalization-CA/schwarz-disk-automorphism-formula"] :source-attempts ["solve-round-17" "verify"]}]
+ :reviews
+ [{:memory-id "e-14c2c205-5789-4f53-ab05-b6e2d7230975" :reviewer "f28-promotion-proctor" :verdict "approve" :attachment-status "reviewed" :review-evidence-id "review-1" :pattern-ids ["math-formalization-CA/complex-arg-of-cpow-root"] :reason "actionable cpow argument fact" :residual "Main.lean:247"}
+  {:memory-id "e-4b95d2fd-d543-4eed-afbd-085b1af188d4" :reviewer "f28-promotion-proctor" :verdict "approve" :attachment-status "reviewed" :review-evidence-id "review-2" :pattern-ids ["math-formalization-CA/surj-via-oriented-root-preimage"] :reason "actionable surjectivity construction" :residual "Main.lean:247"}
+  {:memory-id "e-56018477-7104-433f-bfb6-037bd73b78d9" :reviewer "f28-promotion-proctor" :verdict "approve" :attachment-status "reviewed" :review-evidence-id "review-3" :pattern-ids ["math-formalization-CA/schwarz-disk-automorphism-formula"] :reason "actionable Schwarz rigidity route" :residual "Main.lean:202"}
+  {:memory-id "e-925c0ab3-75e5-4666-8148-239c6656cc7b" :reviewer "f28-promotion-proctor" :verdict "approve" :attachment-status "reviewed" :review-evidence-id "review-4" :pattern-ids ["math-formalization-CA/schwarz-disk-automorphism-formula"] :reason "actionable coefficient transport" :residual "Main.lean:202"}]}

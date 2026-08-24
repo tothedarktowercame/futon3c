@@ -32,6 +32,10 @@
    :terminal-collection-attempts-per-role 1
    :terminal-repair-attempts-per-role 1
    :terminal-collection-covered-role-count 7
+   :promotion-review-enums-normalized true
+   :promotion-approved-candidates-accounted true
+   :promotion-approved-unattached-refused true
+   :promotion-rejections-explicit true
    :role-terminal-budgets
    {:solver {:collection-attempts 1 :repair-attempts 1}
     :student {:collection-attempts 1 :repair-attempts 1}
