@@ -163,6 +163,41 @@ loop (turn budget, default 130):
   4. cooldown; stall pager as in codex-autowake
 ```
 
+### Runner state and restart contract
+
+"Files-only" is a persistence choice, not by itself a restart contract. Each
+problem has one runner directory, e.g. `data/apm-lane/runs/t00J02/`, containing
+an atomically replaced `state.edn` plus append-only gate/checkpoint receipts.
+`state.edn` records at least:
+
+```
+{:schema 1
+ :problem-id "t00J02"
+ :phase :turn-ready                 ; see transitions below
+ :turn 21
+ :checkpoint 1
+ :workspace "/absolute/path"
+ :base-sha "..."                    ; trunk at the last bank
+ :head-sha "..."                    ; last observed workspace HEAD
+ :last-green-gate "gates/turn-020.edn"
+ :failure-fingerprint nil
+ :consecutive-same-failures 0
+ :pending-bank nil}
+```
+
+The allowed phases are
+`:turn-ready -> :turn-running -> :gating -> :turn-ready`, with
+`:gating -> :checkpoint-ready -> :review-pending -> :bank-pending ->
+:turn-ready` every 20 turns. Any phase may enter `:paused`; only an explicit
+review disposition leaves it. Before invoking an external action the runner
+writes the intent phase; after it finishes the runner writes a receipt and
+advances the phase. State replacement is write-temp + fsync + atomic rename.
+On restart, the runner reconciles the recorded SHAs and receipts with Git and
+the filesystem before deciding whether to resume, rerun an idempotent gate, or
+pause. In particular it never infers that a bank landed merely because the
+workspace is clean. This gives kill/restart acceptance a precise oracle and
+prevents duplicate turns or banks.
+
 ### The two ceremonies that stay
 
 1. **Construction-target registration.** When a turn creates
@@ -177,10 +212,28 @@ loop (turn budget, default 130):
    `strategy-NN.md`: (a) the current statement of the remaining obligation
    (for t00J02: the `Producer` statement), (b) what was *reduced* — not
    restated — since the last checkpoint, (c) the plan for the next 20 turns.
-   The runner digests (a). **If the obligation digest is unchanged across
-   two consecutive checkpoints, the loop pauses for review instead of
-   continuing** — this is the anti-reformulation valve the frame machine
-   lacked, and it replaces `max-consecutive-non-landings`.
+   The runner does not digest prose or pretty-printed Lean alone. Each
+   checkpoint carries a structured obligation record:
+
+   ```
+   {:id :t00J02/nonzero-top-map-has-non-null-winding
+    :declaration `OrientedSurfacePreimageDuality.Producer`
+    :statement-digest "..."          ; normalised declaration text
+    :dependencies #{...}             ; unresolved producer/seam identifiers
+    :strength :equivalent             ; agent's claim vs prior checkpoint
+    :reduction-witness "..."}         ; concrete discharged premise/subgoal
+   ```
+
+   The stable `:id` prevents a renamed or reformatted statement from looking
+   new; the normalised statement digest detects actual declaration changes;
+   dependencies expose movement behind an unchanged outer type. The agent's
+   `:strength` claim is evidence, not authority: the independent checkpoint
+   reviewer rules the delta `:reduced`, `:equivalent`, or `:stronger/unclear`
+   and records why. **Two consecutive reviewer rulings other than `:reduced`
+   for the same obligation id pause the loop.** This is the
+   anti-reformulation valve the frame machine lacked, and it replaces
+   `max-consecutive-non-landings` without pretending syntactic equality is
+   semantic equality.
 
 ### Bank and review
 
@@ -193,6 +246,19 @@ loop (turn budget, default 130):
   Claude review of the diff + gate outputs + obligation delta before the
   bank lands. One review per checkpoint replaces per-frame
   proctor/verify/receipt ceremony.
+
+The rebuild set is deterministic. At each turn it is the union of
+`ConstructionTargets/*.lean` paths added, modified, renamed, or deleted in
+`git diff --name-status <last-green-head>..<current-head>` plus uncommitted
+changes from `git status --porcelain=v1`; at bank time the same computation is
+made from `base-sha` to the candidate bank head. Renames contribute both old
+and new module identities. The runner resolves that seed through the Lean
+import graph and rebuilds the changed modules and all in-repository consumers,
+with the problem `Main.lean` last. It writes the seed, resolved closure, exact
+commands, SHAs, and results into the gate receipt. Failure to parse a changed
+path or resolve an import is a gate failure, never permission to omit it. This
+definition makes the missing-olean regression testable rather than dependent
+on an agent's interpretation of "touched".
 
 ### Success ledger
 
@@ -221,11 +287,14 @@ backlog the lane derivation (`library_lane.clj`) already computes.
 1. A dry run on t00J02 executes ≥20 turns end-to-end (gates + one strategy
    checkpoint) with **zero** futon3c repair commits during the run.
 2. Runner state is files-only: kill it at any turn, restart, and it resumes
-   at the next turn with no JVM involvement.
+   at the uniquely determined next transition with no JVM involvement; tests
+   cover kills in `:turn-running`, `:gating`, `:review-pending`, and
+   `:bank-pending`, and prove that neither a Codex turn nor a bank is duplicated.
 3. Regression for the olean killer: a bank that advances a CT module
    followed immediately by consumer elaboration passes without manual
    rebuild.
-4. The checkpoint valve fires in anger: an unchanged obligation digest
-   across two checkpoints demonstrably pauses the loop.
+4. The checkpoint valve fires in anger: an unchanged obligation digest or two
+   reviewer-confirmed equivalent reformulations across consecutive checkpoints
+   demonstrably pause the loop.
 5. `demonstrators.edn` exists and a closure updates it through the ordinary
    status-recompute path.
