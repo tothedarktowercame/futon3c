@@ -235,7 +235,14 @@
                                             (select-keys payload
                                                          [:command-own-exit
                                                           :outcome
-                                                          :failure-account]))
+                                                          :failure-account
+                                                          ;; Some JSON clients
+                                                          ;; emit the Student's
+                                                          ;; query ledger beside
+                                                          ;; :evidence. Preserve
+                                                          ;; it for canonical
+                                                          ;; memory-use validation.
+                                                          :queries]))
                              :typed-submission submission))
                     job)
               validated (if (and (fn? terminal-submission-provider)

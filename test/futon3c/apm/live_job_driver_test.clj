@@ -274,6 +274,7 @@
                           :submission/id "persisted-submission"
                           :payload {:command-own-exit 0 :outcome "complete"
                                     :failure-account []
+                                    :queries ["dyadic shell summability"]
                                     :evidence {:verified true}}})
                        :terminal-validator
                        (fn [_ _ terminal]
@@ -285,6 +286,7 @@
     (is (= "f19" (:frame-id @seen)))
     (is (= 1 @collections))
     (is (= true (:verified @seen)))
+    (is (= ["dyadic shell summability"] (:queries @seen)))
     (is (not= "forged" (:frame-id @seen)))))
 
 (deftest missing-typed-submission-never-validates-conversation
