@@ -320,11 +320,14 @@
     :terminal-submission-provider (fn [_ ticket _]
                                     (submission/submitted (:job-id ticket)))}]
     (if (= :solve kind)
-      (solver-rounds/drive!
-       (assoc effects
-              :validate-solved (partial validate-terminal :solve)
-              :provide-receipt (partial receipt contract :solve)
-              :max-rounds max-rounds))
+      (let [solver-effects
+            (assoc effects
+                   :validate-solved (partial validate-terminal :solve)
+                   :provide-receipt (partial receipt contract :solve)
+                   :max-rounds max-rounds)]
+        (if (= :solver-strategy-checkpoint-required (:state/type state))
+          (solver-rounds/resume-strategy-collection! solver-effects)
+          (solver-rounds/drive! solver-effects)))
       (drive! effects))))
 
 (defn resume-solver-remediation-live!

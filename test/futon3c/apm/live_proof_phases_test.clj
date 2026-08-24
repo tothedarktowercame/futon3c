@@ -1,7 +1,9 @@
 (ns futon3c.apm.live-proof-phases-test
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
-            [futon3c.apm.live-proof-phases :as sut]))
+            [futon3c.apm.live-preflight-runtime :as runtime]
+            [futon3c.apm.live-proof-phases :as sut]
+            [futon3c.apm.live-solver-rounds :as solver-rounds]))
 
 (def contract (edn/read-string
                (slurp "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")))
@@ -157,6 +159,20 @@
     (is (= '[propext Classical.choice Quot.sound] (:axioms normalized)))
     (is (= strategy (:solver/strategy normalized)))
     (is (:ok (sut/validate-terminal :solve req {:job-id "job-1"} shaped)))))
+
+(deftest live-solve-routes-persisted-checkpoint-failure-to-collection-repair
+  (let [called (atom nil)
+        state {:state/type :solver-strategy-checkpoint-required
+               :rounds [{:ordinal 10 :job-id "job-10"}] :active nil}]
+    (with-redefs [runtime/read-state (constantly state)
+                  solver-rounds/resume-strategy-collection!
+                  (fn [effects]
+                    (reset! called effects)
+                    {:ok true :status :awaiting-terminal})]
+      (is (:ok (sut/run-live! {:kind :solve :contract {}
+                               :request (request :solve)
+                               :state-path "ignored.edn"})))
+      (is (= state (:state @called))))))
 
 (deftest proof-terminal-rejects-mutation-outside-registered-problem
   (let [req (request :solve)
