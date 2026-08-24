@@ -90,16 +90,38 @@ def components(adj):
 
 
 def use_receipts():
-    surfaced, used, frames = collections.Counter(), collections.Counter(), collections.defaultdict(set)
+    """Per memory: how often surfaced/used, which frames used it, and which
+    PROBLEMS used it (the frame's :receipt/problem-id). Reuse is judged on
+    problems, not frames: a memory used on the problem it was mined from is
+    transfer, not reuse."""
+    surfaced, used = collections.Counter(), collections.Counter()
+    frames, problems = collections.defaultdict(set), collections.defaultdict(set)
     for f in glob.glob(os.path.join(CAMPAIGNS, "*", "*", "live", "student-attempt-*.edn")):
         frame = os.path.basename(os.path.dirname(os.path.dirname(f))).rsplit("-", 1)[-1]
         s = open(f, encoding="utf-8", errors="replace").read()
+        mp = re.search(r':receipt/problem-id "([^"]+)"', s)
+        problem = mp.group(1) if mp else None
         mu, ms = re.search(r":used-ids \[([^\]]*)\]", s), re.search(r":surfaced-ids \[([^\]]*)\]", s)
         for i in re.findall(r'"(e-[^"]+)"', mu.group(1) if mu else ""):
             used[i] += 1; frames[i].add(frame)
+            if problem: problems[i].add(problem)
         for i in re.findall(r'"(e-[^"]+)"', ms.group(1) if ms else ""):
             surfaced[i] += 1
-    return surfaced, used, frames
+    return surfaced, used, frames, problems
+
+
+def mined_from(m):
+    """The problem a memory was mined from: its :evidence/subject when that is a
+    problem ref, else the first problem id in its name/hook/body (the f29/f30
+    guide memories name it), else None."""
+    subj = m.get("evidence/subject") or m.get(":evidence/subject") or {}
+    if isinstance(subj, dict):
+        rid = subj.get("ref/id") or subj.get(":ref/id")
+        if rid and PROBLEM_ID.fullmatch(str(rid)):
+            return str(rid)
+    b = body_of(m)
+    hit = PROBLEM_ID.search(" ".join(str(b.get(k, "")) for k in ("name", "hook", "body")))
+    return hit.group(0) if hit else None
 
 
 def main():
@@ -195,10 +217,18 @@ def main():
     R["hygiene-since-by-author"] = {k: hyg(v) for k, v in sorted(by_author.items()) if len(v) >= 3}
 
     # --- use receipts (duty C: used x route precondition)
-    surfaced, used, frames = use_receipts()
+    surfaced, used, frames, problems = use_receipts()
     proof_text_used = [i for i in used if i in mem_by_id and json.dumps(body_of(mem_by_id[i])).count(":= by") > 3]
+    # Reuse = used on a problem other than the one it was mined from. "Used in
+    # >=2 frames" was the wrong metric: two frames on the same problem (or a
+    # re-run) would count, and one frame per problem never can.
+    origin = {i: (mined_from(mem_by_id[i]) if i in mem_by_id else None) for i in used}
+    reused = {i: sorted(ps - {origin[i]}) for i, ps in problems.items() if origin[i] and (ps - {origin[i]})}
     R["use"] = {
         "distinct-surfaced": len(surfaced), "distinct-used": len(used),
+        "used-on-problem-!=-mined-from": reused,
+        "used-only-on-mined-from-problem": sorted(i for i, ps in problems.items() if origin[i] and ps <= {origin[i]}),
+        "used-with-unknown-origin": sorted(i for i in used if not origin[i]),
         "used-in->=2-frames": [i for i, fs in frames.items() if len(fs) >= 2],
         "used-memories-that-are-proof-text": proof_text_used,
         "used-but-unattached": [i for i in used if i not in mem_pats],
