@@ -78,7 +78,8 @@
         result (sut/validate-payload authority payload)]
     (is (= :role-submission-payload-invalid (:error/code result)))
     (is (some #{expected-finding} (:findings result)))
-    (is (= #{:memory-search-receipt-ids} (:evidence/missing result)))))
+    (is (= #{:memory-search-receipt-ids :receipt}
+           (:evidence/missing result)))))
 
 (deftest capable-role-may-honestly-report-no-search
   (let [auth (assoc (authority :student-attempt-1) :role :student)

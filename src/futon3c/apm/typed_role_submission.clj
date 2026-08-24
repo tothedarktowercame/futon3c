@@ -56,6 +56,9 @@
    ordinary solve turns retain the ordinary proof-report schema."
   [auth]
   (cond-> (get evidence-required-by-phase (:phase auth))
+    (and (= :promote-solver (:phase auth))
+         (= :scribe (:role auth)))
+    (conj :receipt)
     (contains? memory-search-capable-roles (:role auth))
     (conj :memory-search-receipt-ids)
     (and (= :solve (:phase auth))

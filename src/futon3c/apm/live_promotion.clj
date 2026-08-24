@@ -181,6 +181,11 @@
                             "coherent fit and is rejected at the gate. EDN does not "
                             "concatenate adjacent string literals; use one string value "
                             "per field.")
+        deposit-prompt (str deposit-prompt
+                            " The conversational map is not authoritative. Put the "
+                            "same complete EDN map in the typed submission evidence "
+                            "field :receipt (encoded as a JSON object or EDN string); "
+                            "the controller reads promotion data only from that field.")
         deposit-stage (agency-stage agency-base deposit-request deposit-prompt)
         deposit-fn (fn
                      ([] (deposit-stage))

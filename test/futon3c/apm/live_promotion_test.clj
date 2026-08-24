@@ -37,6 +37,15 @@
     (is (= "f27" (:frame-id report)))
     (is (= 0 (:command-own-exit report)))))
 
+(deftest scribe-promotion-requires-authoritative-typed-receipt
+  (let [auth {:phase :promote-solver :role :scribe}
+        missing (submission/validate-payload
+                 auth {:command-own-exit 0 :outcome "deposited"
+                       :failure-account []
+                       :evidence {:memory-search-receipt-ids []}})]
+    (is (= #{:receipt} (:evidence/missing missing)))
+    (is (contains? (submission/evidence-required auth) :receipt))))
+
 (deftest f29-string-enum-deposit-is-normalized-at-typed-boundary
   (let [fixture (edn/read-string
                  (slurp "test/fixtures/apm/f29-promotion-deposit-string-enums.edn"))
