@@ -154,14 +154,27 @@
         {:ok false :http/status (.statusCode response)}))
     (catch Throwable t {:ok false :exception/message (.getMessage t)})))
 
+(defn- phase-state-path
+  "Resolve the canonical durable state selected by the projected operation.
+  Guide promotion review is a nested, separately persisted phase machine; its
+  typed promotion-proctor operation must not be compared with the completed
+  outer Guide ticket."
+  [frame-dir transition]
+  (let [phase (:phase transition)
+        promotion-review? (and (= :promotion-proctor
+                                  (get-in transition [:operation :role]))
+                               (str/starts-with? (name phase)
+                                                 "guide-intervention-"))
+        filename (str (name phase) (when promotion-review? "-review") ".edn")]
+    (.resolve (.resolve frame-dir "live") filename)))
+
 (defn observe [{:keys [transition-log coordinator-state agency-base
                        max-heartbeat-age-seconds]}]
   (let [transition (last-edn-line transition-log)
         coordinator (read-edn coordinator-state)
         frame-dir (.getParent (.toAbsolutePath (Path/of transition-log (make-array String 0))))
         publication (read-edn (.resolve frame-dir "publications/latest.edn"))
-        phase-state (read-edn (.resolve (.resolve frame-dir "live")
-                                       (str (name (:phase transition)) ".edn")))
+        phase-state (read-edn (phase-state-path frame-dir transition))
         agent-id (get-in transition [:operation :agent-id])
         job-id (get-in transition [:operation :job-id])]
     {:now (Instant/now)

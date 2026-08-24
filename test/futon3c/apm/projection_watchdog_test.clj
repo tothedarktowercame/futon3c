@@ -108,6 +108,14 @@
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))
 
+(deftest guide-promotion-review-selects-its-nested-durable-state
+  (let [frame-dir (java.nio.file.Path/of "/tmp/frame" (make-array String 0))
+        transition {:phase :guide-intervention-1
+                    :operation {:role :promotion-proctor}}
+        selected (#'watchdog/phase-state-path frame-dir transition)]
+    (is (= "/tmp/frame/live/guide-intervention-1-review.edn"
+           (str selected)))))
+
 (deftest recently-terminal-job-is-a-bounded-collection-state
   (let [collecting (-> healthy
                        (assoc-in [:agent :agent :status] "idle")
