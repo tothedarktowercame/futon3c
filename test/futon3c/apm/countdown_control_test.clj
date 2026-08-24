@@ -475,7 +475,8 @@
 
 (deftest jit-queue-wires-concrete-adapter-and-countdown-supervision
   (let [adapter-config (atom nil)
-        tick-options (atom nil)]
+        tick-options (atom nil)
+        supervised-calls (atom 0)]
     (with-redefs [queued-frame-adapter/live-effects
                   (fn [config]
                     (reset! adapter-config config)
@@ -484,7 +485,10 @@
                   (fn [options]
                     (reset! tick-options options)
                     {:ok true :status :frame-prepared})
-                  sut/set-alight! (constantly {:ok true :status :frame-complete})
+                  sut/set-alight!
+                  (fn [& _]
+                    (swap! supervised-calls inc)
+                    {:ok true :status :frame-complete})
                   ledger/read-ledger (constantly {:ok true :events []})
                   runtime/read-state (constantly {:preparation/version 2})
                   queued-frame-adapter/terminal-from-ledger
@@ -505,6 +509,8 @@
                {:frame/id "f40" :problem/id "p1"}
                {:ledger-path "/tmp/ledger"
                 :preparation-path "/tmp/preparation"}))))
+      (is (zero? @supervised-calls)
+          "an already terminal ledger bypasses obsolete launch authority")
       (is (fn? (:mint-frame-fn @tick-options)))
       (is (nil? (:jit/config @tick-options))))))
 

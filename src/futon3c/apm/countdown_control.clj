@@ -1528,19 +1528,31 @@
                     :frame-tick-fn
                     (or (:frame-tick-fn jit-config)
                         (fn [frame frame-config]
-                          (let [result
-                                (set-alight!
-                                 (merge authority
-                                        {:target-frame (:frame/id frame)
-                                         :campaign-config frame-config})
-                                 (cond-> {}
-                                   (:continuation-payload authority)
-                                   (assoc :continuation-payload
-                                          (:continuation-payload authority))
-                                   (:autonomous? authority)
-                                   (assoc :park-fn
-                                          (constantly {:ok true
-                                                       :mode :machine}))))]
+                          (let [observed-terminal
+                                (with-campaign frame-config
+                                  (queued-frame-adapter/terminal-from-ledger
+                                   {:frame frame
+                                    :ledger (ledger/read-ledger
+                                             (control-path ledger-path))
+                                    :preparation
+                                    (live-preflight-runtime/read-state
+                                     (control-path preparation-path))}))
+                                result
+                                (if (:ok observed-terminal)
+                                  (assoc observed-terminal
+                                         :status :frame-complete)
+                                  (set-alight!
+                                   (merge authority
+                                          {:target-frame (:frame/id frame)
+                                           :campaign-config frame-config})
+                                   (cond-> {}
+                                     (:continuation-payload authority)
+                                     (assoc :continuation-payload
+                                            (:continuation-payload authority))
+                                     (:autonomous? authority)
+                                     (assoc :park-fn
+                                            (constantly {:ok true
+                                                         :mode :machine})))))]
                             (if-not (and (:ok result)
                                          (= :frame-complete (:status result)))
                               result
