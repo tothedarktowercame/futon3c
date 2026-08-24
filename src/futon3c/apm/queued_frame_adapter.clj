@@ -87,6 +87,11 @@
      :analyst-state-path (str (.resolve root "analyst/state.edn"))
      :batch-cursor-path (str (.resolve root "live/batch-cursor.edn"))
      :problem-queue-state-path (str (.resolve root "live/problem-queue.edn"))
+     ;; Outer queue order is the authority for campaign-cumulative memory.
+     ;; Keep it distinct from this one-off frame's internal problem queue.
+     :campaign-queue-state-path
+     (str (.resolve (Path/of (str campaign-root) (make-array String 0))
+                    "queue-state.edn"))
      :certificate-directory (str (.resolve root "certificates"))
      :projection-directory (str (.resolve root "projection"))
      :problem-buffer-path (str (.resolve root "problem-buffer.md"))

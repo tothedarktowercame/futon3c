@@ -57,6 +57,7 @@
 (def ^:dynamic regulator-state-path "data/apm-campaigns/countdown-f19-f27-r4/live/regulator.edn")
 (def ^:dynamic problem-queue-state-path
   "data/apm-campaigns/problem-queue/live/queue.edn")
+(def ^:dynamic campaign-queue-state-path nil)
 (def ^:dynamic analyst-state-path "data/apm-campaigns/countdown-f19-f27-r4/analyst/state.edn")
 (def ^:dynamic preparation-path
   "holes/labs/M-apm-demonstration/countdown-f19-live-preparation-v2.edn")
@@ -129,6 +130,8 @@
                regulator-state-path (or (:regulator-state-path config#) regulator-state-path)
                problem-queue-state-path
                (or (:problem-queue-state-path config#) problem-queue-state-path)
+               campaign-queue-state-path
+               (or (:campaign-queue-state-path config#) campaign-queue-state-path)
                analyst-state-path (or (:analyst-state-path config#) analyst-state-path)
                preparation-path (or (:preparation-path config#) preparation-path)]
        ~@body)))
@@ -783,7 +786,8 @@
   "Read prior frames from the durable queue order and each frame ledger's last
   snapshot receipt. This deliberately does not discover frames or snapshots by
   directory globbing or filename order."
-  ([] (campaign-prior-memories (control-path problem-queue-state-path)))
+  ([] (campaign-prior-memories
+       (control-path (or campaign-queue-state-path problem-queue-state-path))))
   ([queue-path]
    (let [queue-path (Path/of (str queue-path) (make-array String 0))
          queue-state (live-preflight-runtime/read-state queue-path)

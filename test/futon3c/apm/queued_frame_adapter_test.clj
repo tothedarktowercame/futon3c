@@ -14,6 +14,8 @@
   (let [paths (sut/campaign-paths {:campaign-root "/tmp/apm-campaigns"}
                                   frame)]
     (is (= "*problem*" (:problem-buffer-name paths)))
+    (is (= "/tmp/apm-campaigns/queue-state.edn"
+           (:campaign-queue-state-path paths)))
     (is (.endsWith ^String (:problem-buffer-path paths)
                    "problem-buffer.md"))))
 
