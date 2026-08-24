@@ -1,7 +1,1 @@
-{:schema 1
- :demonstrators
- [{:problem-id "t01A03" :success? false :last-ruling nil}
-  {:problem-id "t91A05" :success? false :last-ruling nil}
-  {:problem-id "t00A02" :success? false :last-ruling nil}
-  {:problem-id "t00J02" :success? false :last-ruling nil}
-  {:problem-id "t96J06" :success? false :last-ruling nil}]}
+{:schema 1, :demonstrators [{:problem-id "t01A03", :success? true, :last-ruling :closed, :status-sha "0b642fd68b9dd12c7722d52c49523ed4a18cc6e94d0a5c13d1164683161b1076"} {:problem-id "t91A05", :success? false, :last-ruling nil} {:problem-id "t00A02", :success? false, :last-ruling nil} {:problem-id "t00J02", :success? false, :last-ruling nil} {:problem-id "t96J06", :success? false, :last-ruling nil}]}
