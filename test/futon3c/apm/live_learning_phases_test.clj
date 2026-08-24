@@ -533,6 +533,48 @@
   {:memory-id "e-guide-1" :content-digest "d1" :pattern-ids ["math-informal/x"]
    :source-attempts [1]})
 
+(deftest f30-fixture-builds-exact-three-attempt-zai-scribe-request
+  (let [root "data/apm-campaigns/jit-all-open-nontopology-v1/jit-all-open-nontopology-v1-f30/live"
+        states (mapv #(edn/read-string
+                       (slurp (str root "/student-attempt-" % ".edn")))
+                     [1 2 3])
+        attempt-inputs
+        (mapv (fn [n state]
+                (let [receipt (:receipt state)
+                      job-id (:receipt/job-id receipt)]
+                  {:phase (keyword (str "student-attempt-" n))
+                   :job-id job-id
+                   :job-trace-ref (str "http://localhost:7070/api/alpha/invoke/jobs/"
+                                       job-id)
+                   :repair-job-ids []
+                   :memory-use (:receipt/memory-use receipt)
+                   :failure-account (:receipt/failure-account receipt)}))
+              [1 2 3] states)
+        action {:kind :scribe-reduce :role :scribe :phase :scribe-reduce
+                :frame-id "f30" :problem-id "a01J06"}
+        local-contract (assoc-in contract [:phases :scribe-reduce :requires] #{})
+        built (sut/build-request
+               {:contract local-contract :action action
+                :ledger {:digest (apply str (repeat 64 "d"))}
+                :unit {:frame/id "f30" :problem/id "a01J06"
+                       :problem {:blob (apply str (repeat 40 "b"))
+                                 :path "problems/a01J06/lean/Main.lean"}}
+                :role-card {:path "zai-scribe-v1.md"
+                            :blob (apply str (repeat 40 "c"))}
+                :seat-role :zai-scribe
+                :seat {:agent-id "f30-zai-scribe" :invoke-ready? true}
+                :receipts {:solve {:receipt/id "solve"
+                                   :receipt/final-head
+                                   (apply str (repeat 40 "e"))}}
+                :student-attempt-inputs attempt-inputs})
+        request (:request built)]
+    (is (:ok built) (pr-str built))
+    (is (= :zai-scribe (:role request)))
+    (is (= (mapv #(get-in % [:receipt :receipt/job-id]) states)
+           (mapv :job-id (:student-attempts request))))
+    (is (= (mapv #(get-in % [:receipt :receipt/memory-use]) states)
+           (mapv :memory-use (:student-attempts request))))))
+
 (deftest guide-candidates-must-be-gate-shaped-and-store-mode
   (let [request {:dispatch/type :guide-intervention :agent-id "f27-guide"
                  :frame-id "f27" :problem-id "m94A03"}

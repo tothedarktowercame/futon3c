@@ -608,6 +608,29 @@
                   (when-let [receipt (:receipt state)] [(keyword phase) receipt]))))
         (:phase-order contract)))
 
+(defn student-attempt-inputs
+  "Stable, receipt-derived end-of-frame mining inputs. Job traces remain
+  controller-owned and are fetched through their immutable Agency job ids."
+  [contract frame-id]
+  (->> (:phase-order contract)
+       (filter #(str/starts-with? (name %) "student-attempt-"))
+       (keep (fn [phase]
+               (let [state (live-preflight-runtime/read-state
+                            (state-path-for frame-id phase))
+                     receipt (:receipt state)
+                     job-id (:receipt/job-id receipt)]
+                 (when (string? job-id)
+                   {:phase phase
+                    :job-id job-id
+                    :job-trace-ref (str "http://localhost:7070/api/alpha/invoke/jobs/"
+                                        job-id)
+                    :repair-job-ids
+                    (vec (distinct (keep identity
+                                         [(:terminal-repair/original-job-id state)])))
+                    :memory-use (:receipt/memory-use receipt)
+                    :failure-account (:receipt/failure-account receipt)}))))
+       vec))
+
 (defn live-learning-phase-inputs [action]
   (let [context (frame-context (:frame-id action))]
     (if-not (:ok context)
@@ -615,7 +638,9 @@
       (let [{:keys [manifest contract unit preparation]} context
         kind (:kind action)
         phase (:phase action)
-        role (get live-learning-phases/role-for-kind kind)
+        role (if (and (= :scribe-reduce kind) (= :scribe-reduce phase))
+               :zai-scribe
+               (get live-learning-phases/role-for-kind kind))
         state-path (state-path-for (:frame/id unit) phase)
         existing (live-preflight-runtime/read-state state-path)
         response (live-preflight-runtime/http-json
@@ -651,6 +676,10 @@
                        :invoke-ready? (:invoke-ready? agent)}
                 :workspace (get-in preparation [:workspaces :student])
                 :receipts receipts :snapshot-access snapshot-access
+                :seat-role role
+                :student-attempt-inputs
+                (when (= :scribe-reduce phase)
+                  (student-attempt-inputs contract (:frame/id unit)))
                 :terminal-budgets (generated-terminal-budgets contract)
                 :turn-timeout-ms (generated-bound
                                   contract :seat-turn-timeout-ms 3600000)})]

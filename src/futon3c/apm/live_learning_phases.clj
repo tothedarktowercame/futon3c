@@ -32,8 +32,8 @@
        set))
 
 (defn build-request
-  [{:keys [contract action ledger unit role-card seat workspace receipts
-           snapshot-access turn-timeout-ms terminal-budgets]
+  [{:keys [contract action ledger unit role-card seat seat-role workspace receipts
+           snapshot-access student-attempt-inputs turn-timeout-ms terminal-budgets]
     :or {turn-timeout-ms 3600000}}]
   (let [kind (:kind action)
         phase (:phase action)
@@ -43,7 +43,7 @@
                             ({:student-attempt-1 1
                               :student-attempt-2 2
                               :student-attempt-3 3} phase))
-        role (role-for-kind kind)
+        role (or seat-role (role-for-kind kind))
         expected-agent (str (:frame/id unit) "-" (name role))
         terminal-budget (merge driver/default-terminal-budget
                                (get terminal-budgets role))
@@ -89,7 +89,18 @@
                                   (string? (get-in unit [:problem :path]))
                                   (string? (:receipt/final-head
                                             (get receipts :solve))))))
-                   (conj :promotion-residual-inputs-missing))]
+                   (conj :promotion-residual-inputs-missing))
+        findings (cond-> findings
+                   (and (= :scribe-reduce kind) (= :scribe-reduce phase)
+                        (not (and (= 3 (count student-attempt-inputs))
+                                  (every? #(and (string? (:job-id %))
+                                                (string? (:job-trace-ref %))
+                                                (map? (:memory-use %)))
+                                          student-attempt-inputs)
+                                  (string? (get-in unit [:problem :blob]))
+                                  (string? (:receipt/final-head
+                                            (get receipts :solve))))))
+                   (conj :student-trace-inputs-missing))]
     (if (seq findings)
       {:ok false :error/code :live-learning-request-invalid :findings findings}
       (let [body (cond-> {:dispatch/type kind :phase phase :role role
@@ -120,6 +131,12 @@
                            (vec (sort (:accessible-memory-ids snapshot-access)))})
                    (and (= :scribe-reduce kind) (= :promote-solver phase))
                    (assoc :base-problem-blob (get-in unit [:problem :blob])
+                          :problem-path (get-in unit [:problem :path])
+                          :solver-final-head
+                          (:receipt/final-head (get receipts :solve)))
+                   (and (= :scribe-reduce kind) (= :scribe-reduce phase))
+                   (assoc :student-attempts student-attempt-inputs
+                          :base-problem-blob (get-in unit [:problem :blob])
                           :problem-path (get-in unit [:problem :path])
                           :solver-final-head
                           (:receipt/final-head (get receipts :solve)))
@@ -467,7 +484,9 @@
                                "lane is {:lane KEYWORD :status :ran|:ran-empty|:not-run}; "
                                "empty or unrun lanes require a nonblank :reason. "
                                "The controller owns independent review and snapshot publication.")
-                          "Reduce the certified receipts into lanes, dispositions, and promotion reviews.")
+                          (str "Mine the Student's turns into arc-lane rewrite rules "
+                               "and trajectory/challenge memories; return :lanes, "
+                               ":dispositions, :promotion-reviews and :memory-candidates."))
          :close-frame "Audit the complete receipt graph and return a content-addressable trace result.")
        (if-let [job-id (:submission/job-id request)]
          (str " Completion is accepted only through the typed submission tool; "
