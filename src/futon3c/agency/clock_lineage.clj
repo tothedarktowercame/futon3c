@@ -200,8 +200,11 @@
    retracted edges are excluded). Returns a seq of hyperedge maps, or []."
   [hx-type]
   (let [url  (str FUTON1A "/api/alpha/hyperedges?type="
+                  ;; limit is server-capped at 1000 and 400s above it
+                  ;; (futon1b API-CONTRACT.md); 10000 made every reconstitute
+                  ;; read silently [] via the error-swallowing fallback below.
                   (URLEncoder/encode hx-type "UTF-8")
-                  "&limit=10000&include-total=false")
+                  "&limit=1000&include-total=false")
         resp (try (http/get url {:headers {"Accept" "application/edn"} :throw false})
                   (catch Exception _ nil))]
     (or (when (and resp (= 200 (:status resp)) (string? (:body resp)))
