@@ -57,11 +57,14 @@
                           :digest (apply str (repeat 64 "a"))
                           :phase :preflight :claim nil}
                  :unit unit :role-card role-card
+                 :terminal-budget {:collection-attempts 2 :repair-attempts 1}
                  :seat {:agent-id "f19-proctor" :type :codex
                         :frame-id "f19" :invoke-ready? true}
                  :workspace workspace})]
     (is (:ok result))
     (is (= :preflight (get-in result [:request :phase])))
+    (is (= {:collection-attempts 2 :repair-attempts 1}
+           (get-in result [:request :terminal-budget])))
     (is (= "/tmp/f19-solver"
            (get-in result [:request :problem-repository])))
     (is (re-find #":sorry-warnings INT" (sut/prompt (:request result))))))

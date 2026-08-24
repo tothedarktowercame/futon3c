@@ -49,7 +49,7 @@
       report)))
 
 (defn build-request
-  [{:keys [ledger unit role-card seat timeouts]}]
+  [{:keys [ledger unit role-card seat timeouts terminal-budget]}]
   (let [problem (:problem unit)
         findings (cond-> []
                    (not (pos-int? (:version ledger))) (conj :ledger-version-invalid)
@@ -87,6 +87,7 @@
                   :problem-revision (:revision problem)
                   :problem-path (:path problem) :problem-blob (:blob problem)
                   :timeouts timeouts
+                  :terminal-budget terminal-budget
                   :instructions
                   "Read-only preflight. Report command-own exit status, exact revision/blob, direct Lean warnings/errors/sorry count, and before/after cleanliness. Make no mutations."}]
         {:ok true :request (assoc body :dispatch/id (machine/ledger-digest [body]))}))))

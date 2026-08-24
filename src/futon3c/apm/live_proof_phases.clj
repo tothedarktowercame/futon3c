@@ -92,6 +92,8 @@
                   :unit (assoc-in unit [:problem :repository]
                                   (:workspace/path workspace))
                   :role-card role-card :seat seat
+                  :terminal-budget (or terminal-budget
+                                       driver/default-terminal-budget)
                   :timeouts
                   {:request-timeout-ms (get-in action [:timeouts :request-ms])
                    :turn-timeout-ms (get-in action [:timeouts :turn-ms])}})
