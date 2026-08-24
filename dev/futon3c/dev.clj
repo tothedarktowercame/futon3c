@@ -61,6 +61,7 @@
             [futon3c.agency.clock-store :as clock-store]
             [futon3c.agency.clock-lineage :as clock-lineage]
             [futon3c.inbox-zero.witness :as inbox-zero-witness]
+            [futon3c.inbox-zero.turn-promotion :as turn-promotion]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.process-watchdog :as process-watchdog]
@@ -3747,6 +3748,7 @@ RESPOND WITH ONLY:
                                               (when (seq tool-results)
                                                 (record-inbox-zero-tool-results!
                                                  aid-val used-sid tool-results))
+                                              (turn-promotion/launch-at-turn-end! aid-val used-sid)
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
                                                                               'get-invoke-event-sink)]
                                                 (when-let [sink (get-sink aid-val)]
@@ -3985,7 +3987,8 @@ RESPOND WITH ONLY:
                                                                  (mapv #(select-keys % [:tool_use_id :is_error :content]))))]
                                               (when (seq results)
                                                 (record-inbox-zero-tool-results!
-                                                 aid-val warm-sid results)))))})
+                                                 aid-val warm-sid results))
+                                              (turn-promotion/launch-at-turn-end! aid-val warm-sid))))})
                                       warm-result-sid (some-> (:session-id warm-result) str str/trim not-empty)
                                       result-text (str (or (:result warm-result) ""))]
                                   ;; Persist like invoke-once does (cold path, above): today
