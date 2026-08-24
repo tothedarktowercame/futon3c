@@ -106,6 +106,48 @@
            (filter string?)
            set))))
 
+(defn receipt-surfaced-ids
+  "Return every reviewed-corpus identifier explicitly surfaced by RECEIPT.
+
+   :result-ids names the primary matches. The returned content also exposes
+   typed subject, mission, and pattern identifiers which a role must account
+   for if it reports them as surfaced. This does not authorize identifiers
+   absent from the content-addressed receipt."
+  [receipt]
+  (let [matches (:content-matches receipt)
+        candidates (:candidates receipt)]
+    (->> (concat (:result-ids receipt)
+                 (map :memory/id matches)
+                 (mapcat :memory/mission-ids matches)
+                 (mapcat :memory/subject-ids matches)
+                 (mapcat :memory/pattern-ids matches)
+                 (map :pattern-id candidates)
+                 (mapcat (fn [candidate]
+                           (map :memory-id (:memory-support candidate)))
+                         candidates))
+         (filter string?)
+         set)))
+
+(defn recorded-surfaced-ids-for-job
+  "Return identifiers explicitly surfaced by valid receipts for JOB-ID."
+  [job-id]
+  (let [directory (io/file *receipt-root* "receipts")]
+    (if-not (and (string? job-id) (.isDirectory directory))
+      #{}
+      (->> (.listFiles directory)
+           (filter #(.isFile ^java.io.File %))
+           (keep (fn [file]
+                   (try
+                     (let [value (edn/read-string (slurp file))]
+                       (when (and (= job-id (:job-id value))
+                                  (= (:receipt/id value)
+                                     (machine/ledger-digest
+                                      [(dissoc value :receipt/id)])))
+                         value))
+                     (catch Throwable _ nil))))
+           (mapcat receipt-surfaced-ids)
+           set))))
+
 (defn- valid-receipt? [auth value]
   (and (= :apm-role-memory-search (:receipt/type value))
        (= (:job-id auth) (:job-id value))

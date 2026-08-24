@@ -202,7 +202,7 @@
                   (fn [_ receipt-ids]
                     (is (= ["receipt"] receipt-ids))
                     {:ok true :receipts [{:result-ids ["e-open"]}]})
-                  role-memory/recorded-result-ids-for-job (constantly #{})]
+                  role-memory/recorded-surfaced-ids-for-job (constantly #{})]
       (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
 
 (deftest terminal-repair-inherits-recorded-search-results-from-explicit-predecessor
@@ -228,7 +228,7 @@
                                    :used-ids ["e-prior"]}}}]
     (with-redefs [role-memory/validate-claims
                   (fn [_ _] {:ok true :receipts []})
-                  role-memory/recorded-result-ids-for-job
+                  role-memory/recorded-surfaced-ids-for-job
                   (fn [job-id]
                     (is (= "original" job-id))
                     #{"e-prior"})]
@@ -252,7 +252,7 @@
                                    :snapshot-digest "digest"
                                    :surfaced-ids ["e-reviewed"]
                                    :used-ids ["e-reviewed"]}}}]
-    (with-redefs [role-memory/recorded-result-ids-for-job (constantly #{})]
+    (with-redefs [role-memory/recorded-surfaced-ids-for-job (constantly #{})]
       (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
 
 (deftest student-prompt-names-frame-and-exact-memory-evidence-shape

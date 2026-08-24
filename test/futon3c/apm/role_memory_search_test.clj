@@ -44,12 +44,26 @@
         (is (= receipt (sut/receipt (:receipt/id receipt))))
         (is (= #{"math/canonical-pattern" "outside-snapshot-memory"}
                (sut/recorded-result-ids-for-job "student-job")))
+        (is (= #{"math/canonical-pattern" "outside-snapshot-memory"}
+               (sut/recorded-surfaced-ids-for-job "student-job")))
         (is (= #{} (sut/recorded-result-ids-for-job "another-job")))
         (is (:ok (sut/validate-claims
                   {:job-id "student-job" :dispatch/id "dispatch" :role :student}
                   [(:receipt/id receipt)])))
         (is (= (first @calls) (second @calls))
             "read-only effect replay uses identical deterministic trace identity")))))
+
+(deftest receipt-surfaced-ids-includes-explicit-linked-identifiers
+  (is (= #{"primary" "memory" "mission" "subject" "pattern"
+           "candidate" "support"}
+         (sut/receipt-surfaced-ids
+          {:result-ids ["primary"]
+           :content-matches [{:memory/id "memory"
+                              :memory/mission-ids ["mission"]
+                              :memory/subject-ids ["subject"]
+                              :memory/pattern-ids ["pattern"]}]
+           :candidates [{:pattern-id "candidate"
+                         :memory-support [{:memory-id "support"}]}]}))))
 
 (deftest unauthorized-role-and-narrative-only-query-are-refused
   (let [authority-root (temp-dir "role-search-auth-refusal")

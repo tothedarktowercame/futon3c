@@ -176,10 +176,11 @@
                          {:ok true :receipts []}))
         searched-memory-ids
         (if (:ok search-check)
-          (set (mapcat :result-ids (:receipts search-check)))
+          (set (mapcat role-memory/receipt-surfaced-ids
+                       (:receipts search-check)))
           #{})
         predecessor-search-ids
-        (role-memory/recorded-result-ids-for-job
+        (role-memory/recorded-surfaced-ids-for-job
          (:repair/of-job-id request))
         allowed-memory-ids
         (into (set (get-in request [:memory-snapshot
