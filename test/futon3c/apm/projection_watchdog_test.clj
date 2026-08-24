@@ -75,3 +75,13 @@
         result (watchdog/evaluate completed)]
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))
+
+(deftest bounded-solver-round-envelope-exposes-its-active-job
+  (let [solver (assoc healthy :phase-state
+                      {:state/type :solver-rounds
+                       :budget/max-rounds 50
+                       :rounds []
+                       :active (:phase-state healthy)})
+        result (watchdog/evaluate solver)]
+    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))))

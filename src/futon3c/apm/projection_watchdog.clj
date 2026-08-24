@@ -30,6 +30,12 @@
   [{:keys [now coordinator coordinator-age-seconds transition publication
            phase-state agent max-heartbeat-age-seconds]}]
   (let [operation (:operation transition)
+        ;; Solver phases wrap the same durable live-job state in the bounded
+        ;; round machine. Observe its active member without weakening any job
+        ;; identity, timeout, or terminal-budget check.
+        phase-state (if (= :solver-rounds (:state/type phase-state))
+                      (:active phase-state)
+                      phase-state)
         complete? (and (= :complete (:regulator/status coordinator))
                        (true? (get-in coordinator [:regulator/last-result :ok]))
                        (= :frame-complete
