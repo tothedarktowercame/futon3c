@@ -1561,7 +1561,18 @@
                     :frame-tick-fn
                     (or (:frame-tick-fn jit-config)
                         (fn [frame frame-config]
-                          (let [observed-terminal
+                          (let [prior-terminal-path
+                                (.resolve
+                                 (Path/of (:state-directory frame-config)
+                                          (make-array String 0))
+                                 "terminal/frame-terminal.edn")
+                                prior-terminal
+                                (when (java.nio.file.Files/isRegularFile
+                                       prior-terminal-path
+                                       (make-array java.nio.file.LinkOption 0))
+                                  (edn/read-string
+                                   (slurp (str prior-terminal-path))))
+                                observed-terminal
                                 (with-campaign frame-config
                                   (queued-frame-adapter/terminal-from-ledger
                                    {:frame frame
@@ -1569,7 +1580,8 @@
                                              (control-path ledger-path))
                                     :preparation
                                     (live-preflight-runtime/read-state
-                                     (control-path preparation-path))}))
+                                     (control-path preparation-path))
+                                    :prior-terminal prior-terminal}))
                                 result
                                 (if (:ok observed-terminal)
                                   (assoc observed-terminal
@@ -1598,7 +1610,8 @@
                                       terminal
                                       (queued-frame-adapter/terminal-from-ledger
                                        {:frame frame :ledger loaded
-                                        :preparation preparation})]
+                                        :preparation preparation
+                                        :prior-terminal prior-terminal})]
                                   (if (:ok terminal)
                                     (merge result terminal)
                                     terminal))))))))))]

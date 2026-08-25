@@ -186,6 +186,36 @@
     (is (= :solved (get-in result [:terminal-receipt :problem/outcome])))
     (is (= "exp/f30" (get-in result [:terminal-receipt :solver :branch])))))
 
+(deftest terminal-replay-uses-a-validated-prior-terminal-after-retirement
+  (let [solver-head (apply str (repeat 40 "b"))
+        student-head (apply str (repeat 40 "c"))
+        solve {:receipt/type :frame-solve :receipt/id digest
+               :receipt/final-head solver-head
+               :receipt/lean {:sorry-warnings 0}}
+        verify {:receipt/type :frame-verify :receipt/id digest
+                :receipt/mathematical-sound? true}
+        close {:receipt/type :frame-close :receipt/id digest
+               :receipt/result :closed}
+        ledger {:events (mapv #(hash-map :event/body {:certificate %})
+                              [solve verify close])}
+        initial (sut/terminal-from-ledger
+                 {:frame frame :ledger ledger
+                  :preparation {:workspaces
+                                {:solver {:branch "exp/f30"
+                                          :terminal-head solver-head}
+                                 :student {:terminal-head student-head}}}})
+        replayed (sut/terminal-from-ledger
+                  {:frame frame :ledger ledger
+                   :preparation {:workspaces
+                                 {:solver {:branch "exp/f30"
+                                           :workspace/path "/absent/solver"}
+                                  :student {:workspace/path "/absent/student"}}}
+                   :prior-terminal (:terminal-receipt initial)})]
+    (is (:ok initial) (pr-str initial))
+    (is (:ok replayed) (pr-str replayed))
+    (is (= {:solver solver-head :student student-head}
+           (get-in replayed [:terminal-receipt :workspace/terminal-heads])))))
+
 (deftest apparatus-invalidated-void-derives-terminal-without-verify-or-close
   (let [void {:certificate/type :frame-void :certificate/id digest
               :classification :apparatus-invalidated

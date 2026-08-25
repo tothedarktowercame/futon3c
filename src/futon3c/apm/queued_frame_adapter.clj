@@ -129,7 +129,7 @@
 
 (defn terminal-from-ledger
   "Derive queue terminal evidence from the validated ledger and preparation."
-  [{:keys [frame ledger preparation]}]
+  [{:keys [frame ledger preparation prior-terminal]}]
   (let [certificates (keep #(get-in % [:event/body :certificate]) (:events ledger))
         solve (some #(when (= :frame-solve (:receipt/type %)) %) certificates)
         verify (some #(when (= :frame-verify (:receipt/type %)) %) certificates)
@@ -143,13 +143,16 @@
                        (contains? #{:partial "partial"} raw-result) :partial
                        (contains? #{:void "void"} raw-result) :void
                        :else nil)
+        prior-terminal-valid? (:ok (terminal/validate-terminal frame prior-terminal))
         workspace-head
         (fn [role]
           (let [workspace (get-in preparation [:workspaces role])]
             (or (:terminal-head workspace)
                 (when-let [path (:workspace/path workspace)]
                   (let [result (shell/sh "git" "-C" path "rev-parse" "HEAD")]
-                    (when (zero? (:exit result)) (str/trim (:out result))))))))
+                    (when (zero? (:exit result)) (str/trim (:out result)))))
+                (when prior-terminal-valid?
+                  (get-in prior-terminal [:workspace/terminal-heads role])))))
         solver-workspace (get-in preparation [:workspaces :solver])
         heads {:solver (workspace-head :solver) :student (workspace-head :student)}
         body {:receipt/type :frame-terminal
