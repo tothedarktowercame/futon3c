@@ -9,6 +9,7 @@
    :guide-interventions 2
    :analyst-tenure-frames 2
    :seat-turn-timeout-ms 3600000
+   :student-turn-timeout-ms 1800000
    :zai-request-timeout-ms 300000})
 
 (def required-dispatch-policy

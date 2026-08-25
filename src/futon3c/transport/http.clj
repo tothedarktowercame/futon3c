@@ -2641,21 +2641,25 @@
 
       nil)))
 
-(defn- frame-seat-timeout-policy [agent-type]
+(defn- frame-seat-timeout-policy [agent-id agent-type]
   {:request-timeout-ms (if (= :zai agent-type)
                          zai-api/default-request-timeout-ms
                          :not-applicable)
-   :turn-timeout-ms zai-api/default-turn-timeout-ms
+   :turn-timeout-ms (if (str/ends-with? agent-id "-student")
+                      1800000
+                      zai-api/default-turn-timeout-ms)
    :request/source (if (= :zai agent-type)
                      :zai-api/default-request-timeout-ms
                      :not-applicable)
-   :turn/source :frame-seat/code-default})
+   :turn/source (if (str/ends-with? agent-id "-student")
+                  :apm-contract/student-turn-timeout-ms
+                  :frame-seat/code-default)})
 
 (defn- prepare-frame-seat
   [config {:keys [agent-id agent-type model memory-domain]}]
   (let [session-file (default-session-file-for-agent agent-type agent-id)
         stale-file (some-> session-file java.io.File.)
-        timeout-policy (frame-seat-timeout-policy agent-type)]
+        timeout-policy (frame-seat-timeout-policy agent-id agent-type)]
     ;; A newly minted identity must not inherit an orphaned session left by an
     ;; earlier process incarnation with the same deterministic frame seat id.
     (if (and stale-file

@@ -148,15 +148,15 @@ require byte equality with the registered Clojure-readable artifact:
 
 ```text
 cd /home/joe/code/mathlib4-apm-validation
-lake env lean --run DarkTower/APMCycleContractEmitter.lean > /tmp/apm-cycle-contract-v3.json
-cmp /tmp/apm-cycle-contract-v3.json \
-  /home/joe/code/futon3c-apm-control/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json
+lake env lean --run DarkTower/APMCycleContractEmitter.lean > /tmp/apm-cycle-contract-v4.json
+cmp /tmp/apm-cycle-contract-v4.json \
+  /home/joe/code/futon3c/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json
 ```
 
 Then generate the report from command-owned exits and the observed digest:
 
 ```text
-cd /home/joe/code/futon3c-apm-control
+cd /home/joe/code/futon3c
 clojure -M -e '(require (quote futon3c.apm.qualification))
 (prn (futon3c.apm.qualification/run-qualification!
  "holes/labs/M-apm-demonstration/apm-qualification-v1.edn"

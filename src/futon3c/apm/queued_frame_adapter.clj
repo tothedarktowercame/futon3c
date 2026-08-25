@@ -281,6 +281,7 @@
                       :workspaces workspaces :seats seats
                       :seat-policy {:fresh-sessions? true :invoke-ready? true
                                     :turn-timeout-ms 3600000
+                                    :student-turn-timeout-ms 1800000
                                     :zai-request-timeout-ms 300000}}]
             {:ok true :preparation
              (assoc body :preparation/id (machine/ledger-digest [body]))

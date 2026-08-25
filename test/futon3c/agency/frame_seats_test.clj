@@ -323,9 +323,12 @@
         (is (= zai-api/default-request-timeout-ms
                (get-in prepared [:metadata :effective-timeouts
                                  :request-timeout-ms])))
-        (is (= zai-api/default-turn-timeout-ms
+        (is (= 1800000
                (get-in prepared [:metadata :effective-timeouts
                                  :turn-timeout-ms])))
+        (is (= :apm-contract/student-turn-timeout-ms
+               (get-in prepared [:metadata :effective-timeouts
+                                 :turn/source])))
         (is (= (select-keys (:opts @captured)
                             [:request-timeout-ms :turn-timeout-ms])
                (select-keys (get-in prepared [:metadata :effective-timeouts])
@@ -345,9 +348,9 @@
       (is (= :zai student-type))
       (is (= :mathematics (:memory-domain student-opts)))
       (is (= {:request-timeout-ms zai-api/default-request-timeout-ms
-              :turn-timeout-ms zai-api/default-turn-timeout-ms
+              :turn-timeout-ms 1800000
               :request/source :zai-api/default-request-timeout-ms
-              :turn/source :frame-seat/code-default}
+              :turn/source :apm-contract/student-turn-timeout-ms}
              (get-in (registry/get-agent "domain-frame-student")
                      [:agent/metadata :effective-timeouts])))
       (doseq [agent-id ["domain-frame-solver" "domain-frame-guide"

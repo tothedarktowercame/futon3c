@@ -4,7 +4,7 @@
             [futon3c.apm.generated-contract :as sut]))
 
 (def generated-path
-  "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
+  "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
 
 (def candidate-generated-path
   "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
@@ -19,10 +19,12 @@
     (is (= "promote-solver"
            (get-in result [:contract :transitions 2 :to])))))
 
-(deftest candidate-strengthened-contract-round-trips-without-rewriting-v3
+(deftest candidate-strengthened-contract-round-trips
   (let [result (sut/validate-round-trip candidate-generated-path
                                         clojure-contract)]
     (is (:ok result) (pr-str result))
+    (is (= 1800000 (get-in result [:contract :bounds
+                                   :student-turn-timeout-ms])))
     (is (= sut/required-student-candidate-policy
            (select-keys (get-in result [:contract :terminal-policy])
                         (keys sut/required-student-candidate-policy))))))

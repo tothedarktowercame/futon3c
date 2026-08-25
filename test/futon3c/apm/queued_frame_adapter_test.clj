@@ -89,7 +89,9 @@
                   :metadata {:effective-timeouts
                              {:request-timeout-ms (if (= type :zai)
                                                     300000 :not-applicable)
-                              :turn-timeout-ms 3600000}}}]))
+                              :turn-timeout-ms (if (= role :student)
+                                                 1800000
+                                                 3600000)}}}]))
          {:solver :codex :student :zai :guide :claude
           :proctor :codex :promotion-proctor :codex
           :scribe :zai :zai-scribe :zai :analyst :claude})})

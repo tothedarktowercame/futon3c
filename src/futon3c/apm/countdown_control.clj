@@ -43,7 +43,7 @@
 (def ^:dynamic manifest-path "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")
 (def ^:dynamic contract-path "holes/labs/M-apm-demonstration/frame-cycle-contract-v1.edn")
 (def ^:dynamic generated-contract-path
-  "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
+  "holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
 (def ^:dynamic qualification-report-path
   "data/apm-validation/qualification-report-v1.edn")
 (def ^:dynamic state-directory "data/apm-campaigns/countdown-f19-f27-r4")
@@ -193,6 +193,13 @@
 
 (defn- generated-bound [contract bound fallback]
   (or (get-in contract [:generated/bounds bound]) fallback))
+
+(defn- role-turn-timeout-ms [contract role]
+  (generated-bound contract
+                   (if (= :student role)
+                     :student-turn-timeout-ms
+                     :seat-turn-timeout-ms)
+                   (if (= :student role) 1800000 3600000)))
 
 (defn- generated-terminal-budgets [contract]
   (get-in contract [:generated/dispatch-policy :role-terminal-budgets]))
@@ -696,8 +703,7 @@
                 (when (= :scribe-reduce phase)
                   (student-attempt-inputs contract (:frame/id unit)))
                 :terminal-budgets (generated-terminal-budgets contract)
-                :turn-timeout-ms (generated-bound
-                                  contract :seat-turn-timeout-ms 3600000)})]
+                :turn-timeout-ms (role-turn-timeout-ms contract role)})]
     (cond
       (not (:ok card)) card
       (and existing (map? (:request existing)))
@@ -1795,7 +1801,7 @@
          :campaign-root campaign-root
          :contract-path (str control-root "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
          :generated-contract-path
-         (str control-root "/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v3.json")
+         (str control-root "/holes/labs/M-apm-demonstration/generated/apm-cycle-contract-v4.json")
          :qualification-report-path
          (str control-root "/data/apm-validation/qualification-report-v1.edn")
          :apparatus-repository apparatus-repository

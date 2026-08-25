@@ -11,7 +11,14 @@
    :analyst :claude})
 
 (def required-timeouts
-  {:request-timeout-ms 300000 :turn-timeout-ms 3600000})
+  {:request-timeout-ms 300000
+   :turn-timeout-ms 3600000
+   :student-turn-timeout-ms 1800000})
+
+(defn required-turn-timeout-ms [role]
+  (if (= :student role)
+    (:student-turn-timeout-ms required-timeouts)
+    (:turn-timeout-ms required-timeouts)))
 
 (declare validate)
 
@@ -119,7 +126,7 @@
                       (conj {:finding :seat-frame-mismatch :role role})
                       (not (true? (:invoke-ready? seat)))
                       (conj {:finding :seat-not-invoke-ready :role role})
-                      (not= (:turn-timeout-ms required-timeouts)
+                      (not= (required-turn-timeout-ms role)
                             (:turn-timeout-ms timeouts))
                       (conj {:finding :seat-turn-timeout-mismatch :role role})
                       (and (= :zai expected-type)

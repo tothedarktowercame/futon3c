@@ -20,7 +20,8 @@
                           :frame-id "f19" :invoke-ready? true
                           :effective-timeouts
                           {:request-timeout-ms (if (= type :zai) 300000 :not-applicable)
-                           :turn-timeout-ms 3600000}}])
+                           :turn-timeout-ms
+                           (sut/required-turn-timeout-ms role)}}])
                  sut/required-seat-types))
    :role-cards
    (into {} (map (fn [role] [role {:path (str (name role) ".md")
@@ -41,7 +42,7 @@
     (let [bad (-> (observation)
                   (assoc-in [:ledger :version] 6)
                   (assoc-in [:workspaces :solver :validation :valid?] false)
-                  (assoc-in [:seats :student :effective-timeouts :turn-timeout-ms] 300000)
+                  (assoc-in [:seats :student :effective-timeouts :turn-timeout-ms] 3600000)
                   (assoc-in [:role-cards :guide] {}))
           findings (set (map :finding (:findings (sut/validate bad))))]
       (is (= #{:ledger-version-mismatch :workspace-validation-failed

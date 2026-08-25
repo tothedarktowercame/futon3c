@@ -23,6 +23,13 @@
           :certificate {:effect :countdown-campaign-closed}}
          (#'sut/drive-live-action! {:kind :close-campaign}))))
 
+(deftest role-turn-timeout-distinguishes-student-attempts
+  (let [contract {:generated/bounds {:seat-turn-timeout-ms 3600000
+                                     :student-turn-timeout-ms 1800000}}]
+    (is (= 1800000 (#'sut/role-turn-timeout-ms contract :student)))
+    (is (= 3600000 (#'sut/role-turn-timeout-ms contract :solver)))
+    (is (= 3600000 (#'sut/role-turn-timeout-ms contract :guide)))))
+
 (deftest promote-solver-selects-durable-two-seat-adapter
   (let [captured (atom nil)
         action {:kind :scribe-reduce :role :scribe :phase :promote-solver

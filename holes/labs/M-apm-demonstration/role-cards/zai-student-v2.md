@@ -38,7 +38,7 @@ memory system carries, not what a conversation carries.
 
 ## Bounds
 
-- **3 attempts. Hard stop at 120 minutes.** Each is a cold start.
+- **3 attempts. Hard stop at 30 minutes per attempt.** Each is a cold start.
 
 ## The thing you are actually here to produce
 
