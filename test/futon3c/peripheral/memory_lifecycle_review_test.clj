@@ -312,6 +312,22 @@
     (is (not (:idempotent-replay? rejected)))
     (is (= 2 (count @(:posts graph))))))
 
+(deftest reassign-records-the-returned-verdict-and-repoints-the-attachment
+  (let [new-pattern "p4ng/R10-canonical"
+        graph (graph-fixture proposed-edge)
+        evidence (review-entry review-id :reassign "claude-4" [new-pattern])
+        result
+        (lifecycle/review-attachment!
+         ctx (assoc request :verdict :reassign :pattern-ids [new-pattern])
+         (opts graph {memory-id memory-entry review-id evidence}))
+        edge (first @(:posts graph))]
+    (is (:ok result) result)
+    (is (= :reviewed (:attachment-status result)))
+    (is (= :reassign (get-in edge [:hx/props :review :verdict])))
+    (is (= [new-pattern] (get-in edge [:hx/props :roles :patterns])))
+    (is (some #{new-pattern} (:hx/endpoints edge)))
+    (is (not-any? #{pattern-id} (:hx/endpoints edge)))))
+
 (deftest invocation-reviewer-must-match-evidence-author
   (let [graph (graph-fixture proposed-edge)]
     (is (thrown-with-msg?

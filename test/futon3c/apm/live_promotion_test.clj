@@ -525,3 +525,32 @@
     (is (= :certified (:status result)))
     (is (= "f27-guide" (get-in @published [:candidates 0 :depositor])))
     (is (= "f27-promotion-proctor" (:reviewer @published)))))
+
+(deftest independent-review-persists-returned-verdict-before-publication
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reassign
+                :review-evidence-id "review" :attachment-status :reviewed
+                :pattern-ids ["canonical"] :reason "returned reason"
+                :residual "returned residual"}
+        calls (atom [])
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :independent-review
+                  :deposit {:depositor "scribe"} :candidates [candidate]
+                  :job "review-job"}
+          :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                :reviews [review]})
+          :persist-reviews-fn
+          (fn [value]
+            (swap! calls conj [:persist-review value])
+            {:ok true :reviews (:reviews value)})
+          :publish-fn
+          (fn [value]
+            (swap! calls conj [:publish value])
+            {:ok true :receipt {:receipt/id "done"}})
+          :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= [:persist-review :publish] (mapv first @calls)))
+    (is (= :reassign
+           (get-in (second @calls) [1 :reviews 0 :verdict])))))

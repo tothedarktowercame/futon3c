@@ -89,7 +89,7 @@
   edge)
 
 (def ^:private review-verdicts
-  #{:approve :challenge :reject})
+  #{:approve :reassign :challenge :reject})
 
 (def ^:private witness-statuses
   #{:self-asserted :independently-witnessed})
@@ -423,10 +423,11 @@
                            review-entry)
          existing-review (get-in edge [:hx/props :review])
          attachment-status (case verdict
-                             :approve :reviewed
+                             (:approve :reassign) :reviewed
                              :challenge :challenged
                              :reject :proposed)]
-     (when-not (exact-patterns? edge-patterns pattern-ids)
+     (when-not (or (= :reassign verdict)
+                   (exact-patterns? edge-patterns pattern-ids))
        (throw (ex-info "review pattern set does not match attachment"
                        {:memory-id memory-id
                         :edge-patterns edge-patterns
@@ -459,8 +460,20 @@
                              :pattern-ids pattern-ids
                              :reviewed-at reviewed-at}
                       (some? kind) (assoc :memory-use/kind kind))
+             repointed
+             (if (= :reassign verdict)
+               (let [old-patterns (set edge-patterns)
+                     retain (fn [values]
+                              (vec (distinct
+                                    (concat (remove old-patterns values)
+                                            pattern-ids))))]
+                 (-> edge
+                     (update :hx/endpoints retain)
+                     (update-in [:hx/props :roles :subjects] retain)
+                     (assoc-in [:hx/props :roles :patterns] pattern-ids)))
+               edge)
              updated
-             (cond-> (-> edge
+             (cond-> (-> repointed
                          (assoc-in [:hx/props :attachment-status]
                                    attachment-status)
                          (assoc-in [:hx/props :review] review)

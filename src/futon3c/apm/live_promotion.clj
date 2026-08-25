@@ -8,6 +8,7 @@
             [futon3c.apm.job-port :as job-port]
             [futon3c.apm.promotion-candidate-store :as candidate-store]
             [futon3c.apm.promotion-pipeline :as pipeline]
+            [futon3c.apm.promotion-review-store :as review-store]
             [futon3c.apm.typed-role-submission :as submission]))
 
 (defn resolved-role-card-path [control-root request]
@@ -19,6 +20,9 @@
 (declare drive!)
 
 (def ^:private max-deposit-attempts 3)
+
+(defn- pass-reviews [result]
+  {:ok true :reviews (:reviews result)})
 
 (defn- wire-keyword [value]
   (when (string? value)
@@ -286,6 +290,7 @@
              :reviewer-request reviewer-request
              :persist-candidates-fn #(candidate-store/persist!
                                       % deposit-request)
+             :persist-reviews-fn review-store/persist!
              :candidate-visible-fn candidate-store/visible?
              :publish-fn publish-fn
              :persist-fn persist-fn})))
@@ -340,12 +345,13 @@
 (defn drive!
   [{:keys [state deposit-fn review-fn publish-fn persist-fn
            prepare-patterns-fn persist-candidates-fn candidate-visible-fn
-           deposit-request reviewer-request]
+           persist-reviews-fn deposit-request reviewer-request]
     :or {prepare-patterns-fn coined-pattern/publish!
          persist-candidates-fn
          (fn [deposit] {:ok true :deposit deposit
                         :candidates (:candidates deposit)})
-         candidate-visible-fn (constantly true)}}]
+         candidate-visible-fn (constantly true)
+         persist-reviews-fn pass-reviews}}]
   (cond
     (nil? state)
     (let [r (deposit-fn)]
@@ -490,20 +496,28 @@
                            (:reviewer r) (:reviews r))]
               (if-not (:ok checked)
                 checked
-                (let [published
-                      (publish-fn
-                       {:candidates (:candidates checked)
-                        :deposit (:deposit state)
+                (let [persisted
+                      (persist-reviews-fn
+                       {:deposit (:deposit state)
                         :reviewer (:reviewer r)
-                        :reviews (into (vec (:mechanical-reviews state))
-                                       (:reviews r))})]
-                  (if-not (:ok published)
-                    published
-                    (let [s {:state/type :promotion-certified
-                             :receipt (:receipt published)}]
-                      (persist-fn s)
-                      {:ok true :status :certified :state s
-                       :certificate (:receipt published)})))))))))
+                        :reviews (:reviews r)
+                        :review-job (:job state)})]
+                  (if-not (:ok persisted)
+                    persisted
+                    (let [published
+                          (publish-fn
+                           {:candidates (:candidates checked)
+                            :deposit (:deposit state)
+                            :reviewer (:reviewer r)
+                            :reviews (into (vec (:mechanical-reviews state))
+                                           (:reviews persisted))})]
+                      (if-not (:ok published)
+                        published
+                        (let [s {:state/type :promotion-certified
+                                 :receipt (:receipt published)}]
+                          (persist-fn s)
+                          {:ok true :status :certified :state s
+                           :certificate (:receipt published)})))))))))))
 
     (= :promotion-certified (:state/type state))
     {:ok true :status :certified :state state :certificate (:receipt state)}
