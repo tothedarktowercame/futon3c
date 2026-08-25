@@ -32,9 +32,9 @@
     (is (string? (get-in manifest [:apparatus :artifacts :scribe :blob])))
     (is (string? (get-in manifest [:apparatus :artifacts :zai-scribe :blob])))
     (is (.endsWith (get-in manifest [:apparatus :artifacts :scribe :path])
-                   "codex-scribe-v1.md"))
+                   "codex-scribe-v2.md"))
     (is (.endsWith (get-in manifest [:apparatus :artifacts :zai-scribe :path])
-                   "zai-scribe-v1.md"))))
+                   "zai-scribe-v2.md"))))
 
 (deftest open-precedes-all-resource-effects
   (let [calls (atom [])

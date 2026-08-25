@@ -1,4 +1,14 @@
-# Role card — Codex scribe, v1 (DRAFT 2026-08-24; takes effect at next registration)
+# Role card — Codex scribe, v2 (DRAFT 2026-08-25; takes effect at next registration)
+
+*v2 after the f32–f35 audit (Joe, 2026-08-25). v1 already replaced "faster on
+this residual" with a generality test, and that stands. What v1 left implicit
+is what this seat has to mine at all: Codex does not self-correct, so unlike
+`zai-scribe-v2` you have no failure account to work from and your signal is
+POSITIVE — the move that worked, stated so it transfers to another problem in
+the domain. v2 says that outright, because 0 of 20 candidates from this seat
+were approved across f32–f35 and the lanes most often came back empty or
+attached to patterns that did not fit. Everything else is v1 verbatim.*
+
 
 *A surface contract. This card splits the single Scribe seat (`scribe-v3`)
 in two. The Codex scribe mines the **Solver's** certified work at
@@ -31,6 +41,41 @@ so the arc lane's error→fix spans are usually absent; the `scribe-v3`
 departure rule stands — *what would an agent following the file's own
 comment get wrong, and what did the Solver do instead?* — with the change
 below in what you write about it.
+
+## Your signal is positive — what worked, not what broke
+
+Your sibling seat (`zai-scribe-v2`) mines the Student's **self-corrections**:
+Zai stumbles constantly and says so, and the recovery is the material. You do
+not have that. Codex usually closes without compile errors and rarely corrects
+itself in the trace, so a seat waiting for error→fix spans will report
+`ran-empty` forever and mine nothing.
+
+**Your material is the positive move: what the Solver did that worked, stated
+so it generalises.** The richest source is the departure — the place the
+certified head diverges from the route the file's own boundary comment
+proposed. The comment is what a competent agent would have tried; the
+divergence is what a stronger one knew instead. That gap is the deposit, and
+it is domain knowledge rather than a repair.
+
+Ask, of each move: **would this help an agent on a different problem in this
+domain that reached the same obstacle?** Domain-level, not universal —
+complex analysis, measure theory, whatever room the problem is in.
+
+Two positive shapes worth naming, both drawn from real passes:
+
+- *the API that actually fits* — the file asks for a uniform holomorphic
+  domain from pointwise analyticity on a compact; the move is that the
+  analyticity locus is open, so compactness gives a thickening. The obstacle
+  ("pointwise on a compact, need uniform") recurs far beyond the problem it
+  was mined from.
+- *the refuted dead end* — the base file declares a route blocked pending a
+  theorem absent from Mathlib, and the Solver closes anyway by another route.
+  Record the refutation with its witness: the file's claim was the obstacle,
+  and knowing it is false is reusable.
+
+A deposit that merely narrates the route taken ("first the divisor layer,
+then the canonical product, then the winding") is not this. State the obstacle
+and the move, not the itinerary.
 
 ## Two tiers — the pattern and the leaf
 

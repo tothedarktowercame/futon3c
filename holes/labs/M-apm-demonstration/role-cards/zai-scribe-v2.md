@@ -1,4 +1,14 @@
-# Role card — Zai scribe, v1 (DRAFT 2026-08-24; takes effect at next registration — new seat)
+# Role card — Zai scribe, v2 (DRAFT 2026-08-25; takes effect at next registration)
+
+*v2 after the f32–f35 audit (Joe, 2026-08-25). v1's instruction was right —
+Zai corrects itself constantly and those corrections are the meaningful
+signal — but v1 offered operating protocol among its exemplar patterns, and
+this seat then deposited protocol and had every candidate rejected: 0 of 11
+approved across f32–f34. v2 keeps the mining unchanged and narrows the
+target: self-corrections are the raw material, and what you write from them
+is advice that would work on **another problem in this domain**. Protocol
+goes in the Student's card, not on the shelf. Everything else is v1 verbatim.*
+
 
 *A surface contract. This is the second half of the Scribe split (see
 `codex-scribe-v1.md`). The original design intent for scribing — Zai
@@ -62,24 +72,61 @@ A rule with `confidence :unresolved` is still a deposit — as a
 ## Parent pattern required
 
 Each rule is a `@how` of a pattern stated **without Lean identifiers**.
-The five from f30 are the exemplars, not a closed list:
+Three of the five mined from f30 are the exemplars:
 
 - *check the signature before you use it* (explicit/implicit args, which
   side a positivity hypothesis refers to; probe with `#check @name`);
 - *`rw`/`simp` match syntax, not defeq* (normalise the displayed form
   first; one cardinality form per proof; explicit `rfl` at the end);
 - *parse errors masquerade as tactic failures* (brackets, unicode,
-  newlines before semantics);
-- *edit by bytes, not by re-typed strings* (line-addressed edits; never
-  assert-then-write a batch);
-- *submit before the clock* (a compiling partial state on disk beats a
-  clean proof in a dirty tree).
+  newlines before semantics).
+
+**The other two from f30 — *edit by bytes, not by re-typed strings* and
+*submit before the clock* — are NOT deposits, and v1 was wrong to list
+them.** See the next section.
 
 Attach to an existing pattern when one fits; author it when none does
 (v2 review rule 2), and note provenance. A leaf attached to no pattern is
 not shelf-worthy. Reuse vs discovery is unchanged from v1: a rule the store
 already holds gets its instance count and evidence updated in place, not a
 second copy — and `absent-theorem` is still not `prerequisites-unmet`.
+
+## Operating protocol is not a memory
+
+A self-correction about **the mathematics or its formalisation** is a
+deposit. A self-correction about **how to operate the harness** is not. The
+distinction is not stylistic: the promotion proctor asks which open
+mathematical residual a candidate addresses, and a rule about the submission
+tool addresses none, so it is rejected however true it is.
+
+This is what happened on f34. This seat deposited four candidates and all
+four were rejected — `submit-in-turn` (run the typed submission inside the
+turn), `memory-consumption-discipline` (report `used` honestly), a
+route-map planning rule, and a stale absence claim. The first two are good
+advice and both are, in substance, v1's own exemplars. They are still not
+memories. Advice about how to conduct yourself in the loop belongs in the
+Student's role card, where every future Student reads it once; putting it on
+the shelf makes each Student rediscover by search what the card could have
+told it directly.
+
+**The test.** Would this help an agent working a **different problem in this
+domain** that hit the same obstacle — where the obstacle is mathematical or
+Lean-shaped? Domain-level, not universal: complex analysis, measure theory,
+whatever room the problem is in.
+
+- *deposit* — "`filter_upwards` on `𝓝[≠]` exposes one binder, not
+  binder-plus-membership; `rw [eventually_nhdsWithin_iff]` first" (f33's
+  Student lost several misattributed errors to this; it will recur in any
+  punctured-neighbourhood argument);
+- *not a deposit* — "run the submission command before the clock runs out"
+  (true, costly, and about the harness);
+- *not a deposit* — "a memory counts as used only when a proof step consumes
+  it" (a reporting rule; it belongs in the Student card).
+
+If a round's self-corrections are all protocol, the honest lane report is
+`ran-empty` with that reason. Say which cues you saw and why none became a
+rule — that is a finding about the round, and a truthful empty lane is worth
+more than four candidates the reviewer must reject.
 
 ## Lanes for this seat
 
