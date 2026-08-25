@@ -36,7 +36,7 @@
   "missing-canonical-node-count": 0,
   "canonical-node-without-edges-count": 4,
   "finding": "2 honest hole kinds: {'no-capability': 1, 'canonical-node-without-edges': 1}; 0 BGE missions have no canonical entity, 4 have one with zero hyperedges; capability keys are 178 canonical, 0 bare, 0 unclassified",
-  "wall-clock-seconds": 434.655,
+  "wall-clock-seconds": 462.161,
   "dry-run?": true,
   "writes-to-7073?": false
  },
