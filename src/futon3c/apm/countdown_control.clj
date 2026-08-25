@@ -1266,7 +1266,9 @@
     (and (= :promotion (:state/type phase-job-state))
          (string? (:job phase-job-state)))
     (let [role (case (:stage phase-job-state)
-                 :deposit :scribe
+                 :deposit (if (= :scribe-reduce active-phase)
+                            :zai-scribe
+                            :scribe)
                  :independent-review :promotion-proctor
                  nil)]
       {:status :waiting-for-terminal-result

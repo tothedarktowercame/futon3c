@@ -368,6 +368,15 @@
                  {:state/type :promotion :stage :independent-review
                   :job "review-job"})))))
 
+(deftest end-reduction-projection-observes-the-zai-scribe-job
+  (is (= {:status :waiting-for-terminal-result
+          :role :zai-scribe
+          :agent-id "f32-zai-scribe"
+          :job-id "zai-deposit-job"}
+         (#'sut/projection-operation
+          "f32" :scribe-reduce
+          {:state/type :promotion :stage :deposit :job "zai-deposit-job"}))))
+
 (deftest checkpoint-projection-does-not-downgrade-current-live-view
   (with-redefs [runtime/read-state
                 (constantly {:ledger/digest "ledger-current"})
