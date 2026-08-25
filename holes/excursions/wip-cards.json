@@ -422,7 +422,69 @@
       }
     ],
     "cards_enter_at": "EVALUATE",
-    "fall_back_rule": null,
+    "transitions": {
+      "edges": [
+        {
+          "from": "PERCEIVE",
+          "to": "BELIEVE",
+          "direction": "promote",
+          "rule": null,
+          "stated": false
+        },
+        {
+          "from": "BELIEVE",
+          "to": "PERCEIVE",
+          "direction": "demote",
+          "rule": "failure class reaches DEMOTE_AT occurrences with nothing written in its ticket (scripts/failure-tickets.py)",
+          "stated": true
+        },
+        {
+          "from": "BELIEVE",
+          "to": "EVALUATE",
+          "direction": "promote",
+          "rule": null,
+          "stated": false
+        },
+        {
+          "from": "EVALUATE",
+          "to": "BELIEVE",
+          "direction": "demote",
+          "rule": null,
+          "stated": false
+        },
+        {
+          "from": "EVALUATE",
+          "to": "SELECT",
+          "direction": "promote",
+          "rule": "card.promotion_test becomes non-null",
+          "stated": true
+        },
+        {
+          "from": "SELECT",
+          "to": "EVALUATE",
+          "direction": "demote",
+          "rule": null,
+          "stated": false
+        },
+        {
+          "from": "SELECT",
+          "to": "ACT",
+          "direction": "promote",
+          "rule": null,
+          "stated": false
+        },
+        {
+          "from": "ACT",
+          "to": "SELECT",
+          "direction": "demote",
+          "rule": null,
+          "stated": false
+        }
+      ],
+      "stated": 2,
+      "total": 8,
+      "note": "an unstated rule means nothing crosses that boundary except by someone doing it by hand, unrecorded"
+    },
     "as_of": "2026-08-25"
   }
 }

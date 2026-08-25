@@ -197,6 +197,42 @@ def age_days(iso, today):
         return None
 
 
+# Every boundary between two stages, in both directions, with the rule that
+# moves a thing across it -- or null where no rule has been stated.
+#
+# This exists because the observation "the promotion and demotion pathways are
+# missing" had nowhere to live (Joe, 2026-08-25). A remark in a note is not
+# checkable and does not shrink as the gaps get filled; four nulls in the
+# artefact are, and do. Same move the cards already make with promotion_test:
+# an absent rule is recorded as an absence rather than left to be inferred from
+# the fact that nothing ever moves.
+#
+# A stated rule here is one that some code actually evaluates. "Somebody could
+# decide to promote this" is not a rule; it is the absence of one.
+TRANSITIONS = [
+    ("PERCEIVE", "BELIEVE", "promote", None),
+    ("BELIEVE", "PERCEIVE", "demote",
+     "failure class reaches DEMOTE_AT occurrences with nothing written in its "
+     "ticket (scripts/failure-tickets.py)"),
+    ("BELIEVE", "EVALUATE", "promote", None),
+    ("EVALUATE", "BELIEVE", "demote", None),
+    ("EVALUATE", "SELECT", "promote", "card.promotion_test becomes non-null"),
+    ("SELECT", "EVALUATE", "demote", None),
+    ("SELECT", "ACT", "promote", None),
+    ("ACT", "SELECT", "demote", None),
+]
+
+
+def transitions():
+    rows = [{"from": a, "to": b, "direction": d, "rule": r, "stated": r is not None}
+            for a, b, d, r in TRANSITIONS]
+    return {"edges": rows,
+            "stated": sum(1 for r in rows if r["stated"]),
+            "total": len(rows),
+            "note": "an unstated rule means nothing crosses that boundary except "
+                    "by someone doing it by hand, unrecorded"}
+
+
 def build_board(cards, pile, offline=False):
     """The five columns of the control loop, each fed by its own source.
 
@@ -307,7 +343,7 @@ def build_board(cards, pile, offline=False):
     return {"stages": ["PERCEIVE", "BELIEVE", "EVALUATE", "SELECT", "ACT"],
             "columns": [perceive, believe, evaluate, select, act],
             "cards_enter_at": "EVALUATE",
-            "fall_back_rule": None,
+            "transitions": transitions(),
             "as_of": today.isoformat()}
 
 
@@ -385,6 +421,11 @@ def main():
     with open(out, "w") as f:
         json.dump(doc, f, indent=2)
     c = doc["counts"]
+    t = doc["board"]["transitions"]
+    print(f"  transitions: {t['stated']} of {t['total']} boundaries carry a stated rule")
+    for e in t["edges"]:
+        if not e["stated"]:
+            print(f"    {e['from']:>8} -{e['direction'][:3]}-> {e['to']:<8} no rule")
     for b in doc["board"]["columns"]:
         n = b["count"] if b["available"] else "--"
         print(f"  {b['stage']:<9}{str(n):>7}   {b['source']}")
