@@ -1,7 +1,8 @@
 # Pattern library additions — zai-scribe, frame f34 scribe-reduce (a95J03)
 
 Created because no existing math library pattern fits the mined rules.
-The watcher ingests this file; ids below are pattern ids for attachment.
+This file is ingested explicitly by `scripts/apm-ingest-coined-pattern-files.sh`;
+ids below are pattern ids for attachment.
 
 ## math-strategy/route-map-before-reconstruction
 A retrieved method memory that names a route (lemmas, splits, tactic order)

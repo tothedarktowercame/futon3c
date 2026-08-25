@@ -2,6 +2,7 @@
   "Durable two-seat promotion dispatcher."
   (:require [clojure.edn :as edn]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.coined-pattern :as coined-pattern]
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.job-port :as job-port]
@@ -310,7 +311,9 @@
 
 (defn drive!
   [{:keys [state deposit-fn review-fn publish-fn persist-fn
-           deposit-request reviewer-request]}]
+           prepare-patterns-fn
+           deposit-request reviewer-request]
+    :or {prepare-patterns-fn coined-pattern/publish!}}]
   (cond
     (nil? state)
     (let [r (deposit-fn)]
@@ -336,10 +339,12 @@
             (retry-deposit! state checked deposit-fn persist-fn)
             (let [candidates (:candidates checked)
                   mechanical (:mechanical-reviews checked)
-                  review (if (seq candidates)
-                           (review-fn candidates)
-                           {:ok true :job nil})]
-              (if-not (:ok review) review
+                  patterns (prepare-patterns-fn (:report r))]
+              (if-not (:ok patterns) patterns
+                (let [review (if (seq candidates)
+                               (review-fn candidates)
+                               {:ok true :job nil})]
+                 (if-not (:ok review) review
                 (let [s {:state/type :promotion :stage :independent-review
                          :deposit (:report r) :candidates candidates
                          :mechanical-reviews mechanical
@@ -359,17 +364,19 @@
                                     :receipt (:receipt published)}]
                           (persist-fn done)
                           {:ok true :status :certified :state done
-                           :certificate (:receipt published)})))))))))))
+                           :certificate (:receipt published)})))))))))))))
 
     ;; Entry for candidates gated elsewhere (a Guide's store-mode deposit):
     ;; no Scribe deposit job, straight to the independent reviewer.
     (= :review-pending (:stage state))
     (let [candidates (:candidates state)
           mechanical (:mechanical-reviews state)
-          review (if (seq candidates)
-                   (review-fn candidates)
-                   {:ok true :job nil})]
-      (if-not (:ok review) review
+          patterns (prepare-patterns-fn (:deposit state))]
+      (if-not (:ok patterns) patterns
+        (let [review (if (seq candidates)
+                       (review-fn candidates)
+                       {:ok true :job nil})]
+         (if-not (:ok review) review
         (let [s {:state/type :promotion :stage :independent-review
                  :deposit (:deposit state) :candidates candidates
                  :mechanical-reviews mechanical
@@ -389,7 +396,7 @@
                             :receipt (:receipt published)}]
                   (persist-fn done)
                   {:ok true :status :certified :state done
-                   :certificate (:receipt published)})))))))
+                   :certificate (:receipt published)})))))))))
 
     (= :independent-review (:stage state))
     (let [r (review-fn (:job state) (:candidates state))]

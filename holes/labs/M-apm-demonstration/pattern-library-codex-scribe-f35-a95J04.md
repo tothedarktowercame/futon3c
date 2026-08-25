@@ -1,7 +1,8 @@
 # Pattern library additions — codex-scribe, frame f35 promote-solver (a95J04)
 
 Created because no existing math library pattern fits the mined rules.
-The watcher ingests this file; ids below are pattern ids for attachment.
+This file is ingested explicitly by `scripts/apm-ingest-coined-pattern-files.sh`;
+ids below are pattern ids for attachment.
 
 ## math-formalization/pointwise-hassum-to-taylor-coefficients-via-fps-uniqueness
 Trigger: a coefficient sequence is pinned to a function only by a pointwise

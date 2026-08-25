@@ -192,6 +192,37 @@
     (is (empty? (:candidates validated)))
     (is (:ok (pipeline/validate-publication-accounting [review] [])))))
 
+(deftest coined-pattern-is-published-before-independent-review
+  (let [visible? (atom false)
+        reviewed? (atom false)
+        deposit {:depositor "scribe"
+                 :new-pattern-rationales {"new-pattern" "No existing fit."}
+                 :candidates [{:memory-id "memory" :content-digest "digest"
+                               :pattern-ids ["new-pattern"]
+                               :source-attempts [1]}]
+                 :lanes [{:lane :solve :status :ran}
+                         {:lane :arc :status :ran-empty :reason "none"}
+                         {:lane :trajectory :status :ran-empty :reason "none"}
+                         {:lane :challenge :status :ran-empty :reason "none"}]}
+        saved (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :deposit :job "deposit-job"}
+          :deposit-fn (fn [_] {:ok true :report deposit})
+          :prepare-patterns-fn (fn [observed]
+                                 (is (= deposit observed))
+                                 (reset! visible? true)
+                                 {:ok true})
+          :review-fn (fn [_]
+                       (is @visible?)
+                       (reset! reviewed? true)
+                       {:ok true :job "review-job"})
+          :persist-fn #(reset! saved %)
+          :deposit-request {}})]
+    (is @reviewed?)
+    (is (= :awaiting-terminal (:status result)))
+    (is (= :independent-review (:stage @saved)))))
+
 (deftest invalid-deposit-shape-is-bounded
   (let [result (sut/drive!
                 {:state {:state/type :promotion :stage :deposit
