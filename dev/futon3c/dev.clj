@@ -3748,7 +3748,6 @@ RESPOND WITH ONLY:
                                               (when (seq tool-results)
                                                 (record-inbox-zero-tool-results!
                                                  aid-val used-sid tool-results))
-                                              (turn-promotion/launch-at-turn-end! aid-val used-sid)
                                               (when-let [get-sink (ns-resolve 'futon3c.agency.registry
                                                                               'get-invoke-event-sink)]
                                                 (when-let [sink (get-sink aid-val)]
@@ -3789,6 +3788,15 @@ RESPOND WITH ONLY:
                 (persist-session-id! session-file final-sid))
               (when (and ok? session-id-atom final-sid (not (str/blank? final-sid)))
                 (reset! session-id-atom final-sid))
+              ;; Inbox-zero turn-end promotion fires HERE, once per completed
+              ;; turn, and only on success with a session id the CLI reported.
+              ;; It used to fire inside the stream loop on every tool_result
+              ;; batch: in execute mode that commits and pushes a shared
+              ;; checkout between Edit 1 and Edit 3 of one sequence (Joe,
+              ;; 2026-08-25: an I-0 violation), and used-sid there is
+              ;; sometimes nil, which is the refusal flood c4922353 made legible.
+              (when (and ok? final-sid (not (str/blank? final-sid)))
+                (turn-promotion/launch-at-turn-end! aid-val final-sid))
               ;; Evidence: invoke complete
               (emit-invoke-evidence! agent-id "invoke-complete"
                                      {"ok" ok?
@@ -3987,8 +3995,7 @@ RESPOND WITH ONLY:
                                                                  (mapv #(select-keys % [:tool_use_id :is_error :content]))))]
                                               (when (seq results)
                                                 (record-inbox-zero-tool-results!
-                                                 aid-val warm-sid results))
-                                              (turn-promotion/launch-at-turn-end! aid-val warm-sid))))})
+                                                 aid-val warm-sid results)))))})
                                       warm-result-sid (some-> (:session-id warm-result) str str/trim not-empty)
                                       result-text (str (or (:result warm-result) ""))]
                                   ;; Persist like invoke-once does (cold path, above): today
@@ -4013,6 +4020,11 @@ RESPOND WITH ONLY:
                                     (catch Throwable _))
                                   (println (str "[invoke] " aid-val " warm-turn done text-len=" (count result-text)))
                                   (flush)
+                                  ;; Inbox-zero turn-end promotion: once per completed warm
+                                  ;; turn (feed-turn! throws on failure, so this is the
+                                  ;; success path), never per tool_result — see the cold path.
+                                  (when warm-result-sid
+                                    (turn-promotion/launch-at-turn-end! aid-val warm-result-sid))
                                   ;; Context retrieval: fire-and-forget (pattern
                                   ;; retrieval is a must-have on warm turns too).
                                   (future

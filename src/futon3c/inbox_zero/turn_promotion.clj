@@ -368,6 +368,11 @@
               {:mode mode :error error})))))))
 
 (defn launch-at-turn-end!
-  "Fire-and-forget dev seam; all failures are printed and never rethrown."
+  "Fire-and-forget dev seam; all failures are printed and never rethrown.
+
+  Call this ONCE per completed turn, after the CLI has reported the turn's
+  session id, never from inside the tool-result stream: in :execute mode a
+  mid-turn call commits and pushes a shared checkout between two edits of one
+  sequence."
   [agent-id session-id]
   (future (promote-at-turn-end! agent-id session-id {})))
