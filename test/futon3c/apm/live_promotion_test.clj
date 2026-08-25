@@ -186,6 +186,61 @@
            (submission/canonical-job-id
             (assoc request :submission/attempt 1))))))
 
+(deftest repaired-deposit-launches-review-as-append-only-successor
+  (let [saved (atom nil)
+        launched (atom nil)
+        predecessor "review-terminal"
+        state {:state/type :promotion :stage :deposit
+               :job "scribe-repair"
+               :deposit-job "scribe-original"
+               :deposit-request {:role :scribe}
+               :abandoned-review-job predecessor
+               :attempt 2}
+        candidate {:name "general pattern" :hook "when formalizing"
+                   :body "Use the reviewed library pattern."
+                   :kind :pattern/strategy :pattern-ids ["pattern"]
+                   :source-attempts [1]}
+        result
+        (sut/drive!
+         {:state state
+          :deposit-request {:role :scribe}
+          :reviewer-request {:role :promotion-proctor}
+          :deposit-fn (fn [job-id]
+                        (is (= "scribe-repair" job-id))
+                        {:ok true :job job-id
+                         :report {:depositor "scribe" :candidates [candidate]
+                                  :lanes [{:lane :solve :status :ran}
+                                          {:lane :arc :status :ran-empty
+                                           :reason "no arc"}
+                                          {:lane :trajectory :status :ran-empty
+                                           :reason "no trajectory"}
+                                          {:lane :challenge :status :ran-empty
+                                           :reason "no challenge"}]}})
+          :persist-candidates-fn
+          (fn [deposit]
+            (let [persisted (assoc candidate :memory-id "memory-successor"
+                                             :content-digest "digest-successor")]
+              {:ok true
+               :deposit (assoc deposit :candidates [persisted])
+               :candidates [persisted]}))
+          :prepare-patterns-fn (fn [_] {:ok true})
+          :review-fn (fn
+                       ([_] (throw (ex-info "ordinary replay forbidden" {})))
+                       ([_ _] (throw (ex-info "observation forbidden" {})))
+                       ([candidates prior attempt]
+                        (reset! launched {:candidates candidates
+                                          :predecessor prior
+                                          :attempt attempt})
+                        {:ok true :job "review-successor"}))
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "review-successor" (:job-id result)))
+    (is (= predecessor (:predecessor @launched)))
+    (is (= 1 (:attempt @launched)))
+    (is (= predecessor (:predecessor-job-id @saved)))
+    (is (= 1 (:review-successor-attempt @saved)))
+    (is (= :independent-review (:stage @saved)))))
+
 (deftest f28-string-enum-reviews-cannot-silently-publish-empty
   (let [fixture (edn/read-string
                  (slurp "test/fixtures/apm/f28-solver-promotion-string-enums.edn"))

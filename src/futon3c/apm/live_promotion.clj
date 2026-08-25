@@ -256,7 +256,28 @@
                  (if (:ok normalized)
                    (merge result (select-keys normalized [:reviewer :reviews]))
                    normalized))
-               result))))]
+               result)))
+          ([candidates predecessor-job-id successor-attempt]
+           (let [digest (machine/ledger-digest [candidates])
+                 request (assoc reviewer-request :candidates candidates
+                                :phase :promotion-review
+                                :role :promotion-proctor
+                                :candidate-set-digest digest
+                                :predecessor-job-id predecessor-job-id
+                                :submission/attempt successor-attempt)
+                 prompt (str "Independently review this exact candidate set as an "
+                             "append-only successor to terminal job "
+                             predecessor-job-id ". Authority:\n"
+                             (pr-str request)
+                             "\nRead and follow the frozen role card at "
+                             (resolved-role-card-path control-root request)
+                             " (blob " (:role-card-blob request) ")."
+                             "\nFollow the pinned promotion Proctor card and return "
+                             "exactly one EDN map. Persist each approval's evidence "
+                             "body with nonblank :review/reason and :review/residual "
+                             "fields; return the same nonblank :reason and :residual "
+                             "on every review.")]
+             ((agency-stage agency-base request prompt)))))]
     ;; Upgrade legacy promotion envelopes before observing their terminal job.
     ;; This is a lossless durability migration: the job identity is unchanged.
     (when (not= stored-state state) (persist-fn state))
@@ -365,12 +386,19 @@
                       patterns (prepare-patterns-fn deposit)]
                   (if-not (:ok patterns)
                     patterns
-                    (let [review (if (seq candidates)
-                                   (review-fn candidates)
+                    (let [review-successor? (some? (:abandoned-review-job state))
+                          review-attempt (inc (or (:review-successor-attempt state) 0))
+                          review (if (seq candidates)
+                                   (if review-successor?
+                                     (review-fn candidates
+                                                (:abandoned-review-job state)
+                                                review-attempt)
+                                     (review-fn candidates))
                                    {:ok true :job nil})]
                       (if-not (:ok review)
                         review
-                        (let [s {:state/type :promotion
+                        (let [s (cond->
+                                {:state/type :promotion
                                  :stage :independent-review
                                  :deposit deposit
                                  :candidates candidates
@@ -379,7 +407,11 @@
                                  :deposit-request deposit-request
                                  :job (:job review)
                                  :request reviewer-request
-                                 :ticket {:job-id (:job review)}}]
+                                 :ticket {:job-id (:job review)}}
+                                  review-successor?
+                                  (assoc :predecessor-job-id
+                                         (:abandoned-review-job state)
+                                         :review-successor-attempt review-attempt))]
                           (persist-fn s)
                           (if (seq candidates)
                             {:ok true :status :awaiting-terminal

@@ -21,7 +21,8 @@
 
 (def authority-fields
   #{:job-id :dispatch/id :agent-id :frame-id :problem-id :phase :role
-    :attempt-ordinal :submission/attempt :fresh-session-nonce :memory-snapshot})
+    :attempt-ordinal :submission/attempt :predecessor-job-id
+    :fresh-session-nonce :memory-snapshot})
 
 (def checkpoint-authority-fields
   #{:solver/round :solver/strategy-checkpoint?})
