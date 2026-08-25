@@ -108,7 +108,11 @@ def draw_pile(d):
     """The tickets, with their git-recorded age. Reference, never cache."""
     pile = []
     for fn in sorted(os.listdir(d)):
-        if not (fn.startswith("T-") and fn.endswith(".md")):
+        # T-fail-* are the generated failure-class tickets. They ARE the
+        # failure entries the board already shows, with a multiplicity; listing
+        # them here as well would count each class twice and make an
+        # auto-written queue look like curation.
+        if not (fn.startswith("T-") and fn.endswith(".md")) or fn.startswith("T-fail-"):
             continue
         path = os.path.join(d, fn)
         first = read(path).split("\n", 1)[0].lstrip("# ").strip()
@@ -134,11 +138,24 @@ AGENCY = os.environ.get("AGENCY", "http://localhost:7070")
 # definition in one place rather than restating the grouping here, where it
 # would drift from the report the same numbers are read out of.
 import importlib.util as _ilu
-_census_path = os.path.join(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))), "scripts", "failure-census.py")
-_spec = _ilu.spec_from_file_location("failure_census", _census_path)
-_census = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(_census)
+_scripts = os.path.join(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))), "scripts")
+
+
+def _load(name, fname):
+    sp = _ilu.spec_from_file_location(name, os.path.join(_scripts, fname))
+    m = _ilu.module_from_spec(sp)
+    sp.loader.exec_module(m)
+    return m
+
+
+# The census defines what a failure CLASS is; failure-tickets owns the
+# fall-back rule and records its outcome in the queue. Both are imported rather
+# than restated: a rule evaluated in two places will eventually be evaluated
+# two ways, and here the queue is the copy that has to be right, because that
+# is where somebody writes the response that reverses a demotion.
+_census = _load("failure_census", "failure-census.py")
+_ftick = _load("failure_tickets", "failure-tickets.py")
 
 
 def fetch(path, timeout=45):
@@ -231,20 +248,26 @@ def build_board(cards, pile, offline=False):
     if not offline:
         try:
             rows, _ = _census.classes(_census.fetch_jobs(agency=AGENCY))
+            st = _ftick.current_stages()
             fails = [{"kind": "failure-class", "code": r["terminal_code"],
                       "n": r["count"], "first": r["first"], "last": r["last"],
                       "top_target": r["targets"][0][0] if r["targets"] else None,
-                      "ticket": r["tickets"][0] if r["tickets"] else None}
+                      "ticket": r["tickets"][0] if r["tickets"] else None,
+                      # BELIEVE unless the class fell back for going unanswered.
+                      # Read from the ticket, never recomputed here.
+                      "stage": st.get(r["terminal_code"], "BELIEVE")}
                      for r in rows]
         except Exception as e:
             fails = [{"kind": "failure-class", "unavailable": f"{type(e).__name__}: {e}"}]
     tickets = [{"kind": "ticket", "id": t["id"]} for t in pile]
     live = [f for f in fails if "unavailable" not in f]
+    held = [f for f in live if f["stage"] == "BELIEVE"]
+    fell = [f for f in live if f["stage"] != "BELIEVE"]
     believe = col("BELIEVE", "holes/tickets/T-*.md + typed failure classes",
-                  len(tickets) + len(live), tickets[:12] + live,
-                  note=(f"{len(live)} failure class(es) over "
-                        f"{sum(f['n'] for f in live)} occurrences; "
-                        f"{sum(1 for f in live if not f['ticket'])} of them named by no ticket")
+                  len(tickets) + len(held), tickets[:12] + held,
+                  note=(f"{len(held)} failure class(es) over "
+                        f"{sum(f['n'] for f in held)} occurrences"
+                        + (f"; {len(fell)} fell back to PERCEIVE unanswered" if fell else ""))
                   if live else (fails[0]["unavailable"] if fails else None))
     evaluate = col("EVALUATE", "wr-overlay.edn badges with :holds false",
                    len(cards), [c["id"] for c in cards])
@@ -272,6 +295,14 @@ def build_board(cards, pile, offline=False):
                       note=(f"{len(flight)} turns in flight, {len(clocked)} clocked into a "
                             f"mission -- the gap IS route A's coverage")
                       if len(flight) != len(clocked) else None)
+
+    # A class that fell back is still perceived -- "I see this and no longer
+    # treat it as a problem" -- so it belongs in PERCEIVE, not nowhere.
+    if perceive["available"] and fell:
+        perceive["count"] += len(fell)
+        perceive["items"] = fell + perceive["items"]
+        perceive["note"] = (f"includes {len(fell)} failure class(es) that fell back "
+                            f"here unanswered")
 
     return {"stages": ["PERCEIVE", "BELIEVE", "EVALUATE", "SELECT", "ACT"],
             "columns": [perceive, believe, evaluate, select, act],

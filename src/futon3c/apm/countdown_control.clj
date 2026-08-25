@@ -640,7 +640,20 @@
                (let [state (live-preflight-runtime/read-state
                             (state-path-for frame-id phase))
                      receipt (:receipt state)
-                     job-id (:receipt/job-id receipt)]
+                     job-id (:receipt/job-id receipt)
+                     memory-use
+                     (or (:receipt/memory-use receipt)
+                         (when (= :student-observation-missing
+                                  (:receipt/type receipt))
+                           (merge (:receipt/memory-snapshot receipt)
+                                  {:surfaced-ids
+                                   (vec (sort
+                                         (get-in receipt
+                                                 [:receipt/harness-observed
+                                                  :memory :snapshot
+                                                  :accessible-memory-ids])))
+                                   :used-ids []
+                                   :queries []})))]
                  (when (string? job-id)
                    {:phase phase
                     :job-id job-id
@@ -649,7 +662,7 @@
                     :repair-job-ids
                     (vec (distinct (keep identity
                                          [(:terminal-repair/original-job-id state)])))
-                    :memory-use (:receipt/memory-use receipt)
+                    :memory-use memory-use
                     :failure-account (:receipt/failure-account receipt)}))))
        vec))
 

@@ -245,8 +245,18 @@
       {
         "stage": "PERCEIVE",
         "source": "cascade-real/graph tickets.count-total",
-        "count": 3170,
+        "count": 3171,
         "items": [
+          {
+            "kind": "failure-class",
+            "code": "agent-not-found",
+            "n": 72,
+            "first": "2026-08-22T07:32",
+            "last": "2026-08-25T13:34",
+            "top_target": "claude-cli",
+            "ticket": "T-fail-agent-not-found",
+            "stage": "PERCEIVE"
+          },
           "M-formal-war-machine",
           "E-early-memories-review",
           "E-inbox-zero-implementation",
@@ -261,12 +271,12 @@
           "M-war-machine-first-outing"
         ],
         "available": true,
-        "note": null
+        "note": "includes 1 failure class(es) that fell back here unanswered"
       },
       {
         "stage": "BELIEVE",
         "source": "holes/tickets/T-*.md + typed failure classes",
-        "count": 27,
+        "count": 26,
         "items": [
           {
             "kind": "ticket",
@@ -318,21 +328,13 @@
           },
           {
             "kind": "failure-class",
-            "code": "agent-not-found",
-            "n": 72,
-            "first": "2026-08-22T07:32",
-            "last": "2026-08-25T13:34",
-            "top_target": "claude-cli",
-            "ticket": null
-          },
-          {
-            "kind": "failure-class",
             "code": "operator-cancelled",
             "n": 4,
             "first": "2026-08-23T10:59",
             "last": "2026-08-24T15:16",
             "top_target": "codex-10",
-            "ticket": null
+            "ticket": "T-fail-operator-cancelled",
+            "stage": "BELIEVE"
           },
           {
             "kind": "failure-class",
@@ -341,7 +343,8 @@
             "first": "2026-08-21T08:23",
             "last": "2026-08-22T14:17",
             "top_target": "f9045569047055-solver",
-            "ticket": null
+            "ticket": "T-fail-worker-lost-on-restart",
+            "stage": "BELIEVE"
           },
           {
             "kind": "failure-class",
@@ -350,7 +353,8 @@
             "first": "2026-08-21T08:23",
             "last": "2026-08-24T11:31",
             "top_target": "codex-10",
-            "ticket": null
+            "ticket": "T-fail-invoke-error",
+            "stage": "BELIEVE"
           },
           {
             "kind": "failure-class",
@@ -359,7 +363,8 @@
             "first": "2026-08-24T14:04",
             "last": "2026-08-24T14:04",
             "top_target": "codex-12",
-            "ticket": null
+            "ticket": "T-fail-invoke-interrupted",
+            "stage": "BELIEVE"
           },
           {
             "kind": "failure-class",
@@ -368,7 +373,8 @@
             "first": "2026-08-22T14:42",
             "last": "2026-08-22T14:42",
             "top_target": "f24-proctor",
-            "ticket": null
+            "ticket": "T-fail-activation-authority-unavailable",
+            "stage": "BELIEVE"
           },
           {
             "kind": "failure-class",
@@ -377,11 +383,12 @@
             "first": "2026-08-21T08:23",
             "last": "2026-08-21T08:23",
             "top_target": "codex-bell-noev",
-            "ticket": null
+            "ticket": "T-fail-no-execution-evidence",
+            "stage": "BELIEVE"
           }
         ],
         "available": true,
-        "note": "7 failure class(es) over 84 occurrences; 7 of them named by no ticket"
+        "note": "6 failure class(es) over 12 occurrences; 1 fell back to PERCEIVE unanswered"
       },
       {
         "stage": "EVALUATE",
@@ -411,7 +418,7 @@
         "count": 0,
         "items": [],
         "available": true,
-        "note": "9 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage"
+        "note": "7 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage"
       }
     ],
     "cards_enter_at": "EVALUATE",
