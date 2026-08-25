@@ -179,6 +179,19 @@
     (is (:ok (pipeline/validate-publication-accounting
               reviews (:candidates validated))))))
 
+(deftest cannot-judge-is-a-valid-nonpublishing-review
+  (let [candidate {:memory-id "candidate" :content-digest "digest"
+                   :pattern-ids ["pattern"]}
+        review {:memory-id "candidate" :reviewer "proctor"
+                :verdict :cannot-judge
+                :reason "persisted candidate evidence is unavailable"
+                :residual "retain the unresolved candidate for a later review"}
+        validated (pipeline/validate-review* [candidate] "zai-scribe"
+                                             "proctor" [review])]
+    (is (:ok validated))
+    (is (empty? (:candidates validated)))
+    (is (:ok (pipeline/validate-publication-accounting [review] [])))))
+
 (deftest invalid-deposit-shape-is-bounded
   (let [result (sut/drive!
                 {:state {:state/type :promotion :stage :deposit

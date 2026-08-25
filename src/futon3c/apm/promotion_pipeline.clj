@@ -19,7 +19,7 @@
 
 (def required-lanes #{:solve :arc :trajectory :challenge})
 (def lane-statuses #{:ran :ran-empty :not-run})
-(def review-verdicts #{:approve :reassign :reject})
+(def review-verdicts #{:approve :reassign :reject :cannot-judge})
 (def mechanical-reviewer "promotion-mechanical-guard")
 
 (defn- occurrence-count [s needle]
