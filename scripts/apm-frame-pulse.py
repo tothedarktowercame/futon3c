@@ -133,8 +133,8 @@ def main():
         newest = sorted(stamps)[-1]
         try:
             import datetime
-            t = datetime.datetime.fromisoformat(newest[:19])
-            age_h = (datetime.datetime.utcnow() - t).total_seconds() / 3600.0
+            t = datetime.datetime.fromisoformat(newest[:19]).replace(tzinfo=datetime.timezone.utc)
+            age_h = (datetime.datetime.now(datetime.timezone.utc) - t).total_seconds() / 3600.0
         except Exception:
             age_h = None
         n = len(stamps)
