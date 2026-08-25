@@ -42,8 +42,9 @@
                 :fetch-entry #(estore/get-entry* backend %)
                 :append-entry #(boundary/append! backend %)
                 :fetch-hyperedges substrate/hyperedges-by-end
-                :post-hyperedge #(memory-write/post-hyperedge!
-                                  {:evidence-store backend} %)})))
+                :post-hyperedge (fn [_ edge]
+                                  (memory-write/post-hyperedge!
+                                   {:evidence-store backend} edge))})))
   ([{:keys [deposit reviewer reviews review-job]}
     {:keys [evidence-store fetch-entry append-entry
             fetch-hyperedges post-hyperedge]}]
