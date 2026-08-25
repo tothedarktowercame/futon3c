@@ -144,6 +144,35 @@
            (:failed-attempts @saved)))
     (is (false? @review-called?))))
 
+(deftest invisible-candidate-redispatches-scribe-before-observing-review
+  (let [saved (atom nil)
+        reviewed? (atom false)
+        state {:state/type :promotion :stage :independent-review
+               :deposit {:depositor "scribe" :job-id "scribe-original"}
+               :deposit-job "scribe-original"
+               :candidates [{:memory-id "missing"}]
+               :job "review-that-must-not-be-observed"
+               :attempt 1}
+        result
+        (sut/drive!
+         {:state state
+          :candidate-visible-fn (constantly false)
+          :deposit-fn (fn [failure]
+                        (is (= :promotion-candidates-not-persisted
+                               (:error/code failure)))
+                        {:ok true :job "scribe-repair"})
+          :review-fn (fn [& _] (reset! reviewed? true))
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (:ok result))
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "scribe-repair" (:job-id result)))
+    (is (= :deposit (:stage @saved)))
+    (is (= "review-that-must-not-be-observed"
+           (:abandoned-review-job @saved)))
+    (is (= :promotion-candidates-not-persisted
+           (get-in @saved [:failed-attempts 0 :failure :error/code])))
+    (is (false? @reviewed?))))
+
 (deftest repair-attempt-produces-a-distinct-stable-job-identity
   (let [request {:dispatch/id "dispatch" :agent-id "scribe"
                  :phase :promote-solver}]

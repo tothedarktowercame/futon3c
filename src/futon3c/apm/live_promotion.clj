@@ -6,6 +6,7 @@
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.job-port :as job-port]
+            [futon3c.apm.promotion-candidate-store :as candidate-store]
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.typed-role-submission :as submission]))
 
@@ -176,9 +177,11 @@
                             "must occur exactly once as {:lane <keyword> :status one-of "
                             "#{:ran :ran-empty :not-run} :reason <nonblank string when "
                             "status is not :ran>}; do not encode status as a map key. "
-                            "Every candidate must contain string "
-                            ":memory-id, string :content-digest, NON-EMPTY vector "
-                            ":pattern-ids, and vector :source-attempts. Each pattern id "
+                            "Every candidate must contain nonblank strings :name, "
+                            ":hook and :body, keyword :kind, NON-EMPTY vector "
+                            ":pattern-ids, and vector :source-attempts. The controller "
+                            "derives :memory-id and :content-digest after persisting the "
+                            "candidate; do not mint either identifier. Each pattern id "
                             "names a pattern in the mathematics libraries (math-informal* / "
                             "math-formalization); create a library file if none fits. "
                             "A candidate with no bound pattern cannot be reviewed for "
@@ -259,6 +262,9 @@
     (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
              :deposit-request deposit-request
              :reviewer-request reviewer-request
+             :persist-candidates-fn #(candidate-store/persist!
+                                      % deposit-request)
+             :candidate-visible-fn candidate-store/visible?
              :publish-fn publish-fn
              :persist-fn persist-fn})))
 
@@ -311,9 +317,13 @@
 
 (defn drive!
   [{:keys [state deposit-fn review-fn publish-fn persist-fn
-           prepare-patterns-fn
+           prepare-patterns-fn persist-candidates-fn candidate-visible-fn
            deposit-request reviewer-request]
-    :or {prepare-patterns-fn coined-pattern/publish!}}]
+    :or {prepare-patterns-fn coined-pattern/publish!
+         persist-candidates-fn
+         (fn [deposit] {:ok true :deposit deposit
+                        :candidates (:candidates deposit)})
+         candidate-visible-fn (constantly true)}}]
   (cond
     (nil? state)
     (let [r (deposit-fn)]
@@ -330,41 +340,63 @@
         (= :awaiting-terminal (:status r)) (assoc r :job-id (:job state))
         (not (:ok r)) (retry-deposit! state r deposit-fn persist-fn)
         :else
-        (let [checked (pipeline/validate-deposit
-                       (:report r)
-                       {:problem-id (:problem-id deposit-request)
-                        :solver-certified-source
-                        (:solver-certified-source deposit-request)})]
-          (if-not (:ok checked)
-            (retry-deposit! state checked deposit-fn persist-fn)
-            (let [candidates (:candidates checked)
-                  mechanical (:mechanical-reviews checked)
-                  patterns (prepare-patterns-fn (:report r))]
-              (if-not (:ok patterns) patterns
-                (let [review (if (seq candidates)
-                               (review-fn candidates)
-                               {:ok true :job nil})]
-                 (if-not (:ok review) review
-                (let [s {:state/type :promotion :stage :independent-review
-                         :deposit (:report r) :candidates candidates
-                         :mechanical-reviews mechanical
-                         :job (:job review) :request reviewer-request
-                         :ticket {:job-id (:job review)}}]
-                  (persist-fn s)
-                  (if (seq candidates)
-                    {:ok true :status :awaiting-terminal
-                     :job-id (:job review) :state s}
-                    (let [published (publish-fn
-                                     {:candidates []
-                                      :deposit (:report r)
-                                      :reviewer pipeline/mechanical-reviewer
-                                      :reviews mechanical})]
-                      (if-not (:ok published) published
-                        (let [done {:state/type :promotion-certified
-                                    :receipt (:receipt published)}]
-                          (persist-fn done)
-                          {:ok true :status :certified :state done
-                           :certificate (:receipt published)})))))))))))))
+        (let [persisted (persist-candidates-fn (:report r))]
+          (cond
+            (and (not (:ok persisted))
+                 (= :promotion-candidate-content-invalid
+                    (:error/code persisted)))
+            (retry-deposit! state persisted deposit-fn persist-fn)
+
+            (not (:ok persisted)) persisted
+
+            :else
+            (let [deposit (:deposit persisted)
+                  checked (pipeline/validate-deposit
+                           deposit
+                           {:problem-id (:problem-id deposit-request)
+                            :solver-certified-source
+                            (:solver-certified-source deposit-request)})]
+              (if-not (:ok checked)
+                (retry-deposit! state checked deposit-fn persist-fn)
+                (let [candidates (:candidates checked)
+                      mechanical (:mechanical-reviews checked)
+                      patterns (prepare-patterns-fn deposit)]
+                  (if-not (:ok patterns)
+                    patterns
+                    (let [review (if (seq candidates)
+                                   (review-fn candidates)
+                                   {:ok true :job nil})]
+                      (if-not (:ok review)
+                        review
+                        (let [s {:state/type :promotion
+                                 :stage :independent-review
+                                 :deposit deposit
+                                 :candidates candidates
+                                 :mechanical-reviews mechanical
+                                 :deposit-job (:job state)
+                                 :job (:job review)
+                                 :request reviewer-request
+                                 :ticket {:job-id (:job review)}}]
+                          (persist-fn s)
+                          (if (seq candidates)
+                            {:ok true :status :awaiting-terminal
+                             :job-id (:job review) :state s}
+                            (let [published
+                                  (publish-fn
+                                   {:candidates []
+                                    :deposit deposit
+                                    :reviewer pipeline/mechanical-reviewer
+                                    :reviews mechanical})]
+                              (if-not (:ok published)
+                                published
+                                (let [done
+                                      {:state/type :promotion-certified
+                                       :receipt (:receipt published)}]
+                                  (persist-fn done)
+                                  {:ok true :status :certified
+                                   :state done
+                                   :certificate
+                                   (:receipt published)})))))))))))))))
 
     ;; Entry for candidates gated elsewhere (a Guide's store-mode deposit):
     ;; no Scribe deposit job, straight to the independent reviewer.
@@ -399,24 +431,44 @@
                    :certificate (:receipt published)})))))))))
 
     (= :independent-review (:stage state))
-    (let [r (review-fn (:job state) (:candidates state))]
-      (if (= :awaiting-terminal (:status r)) (assoc r :job-id (:job state))
-        (let [checked (pipeline/validate-review*
-                       (:candidates state) (:depositor (:deposit state))
-                       (:reviewer r) (:reviews r))]
-          (if-not (:ok checked) checked
-            (let [published (publish-fn
-                             {:candidates (:candidates checked)
-                              :deposit (:deposit state)
-                              :reviewer (:reviewer r)
-                              :reviews (into (vec (:mechanical-reviews state))
-                                             (:reviews r))})]
-              (if-not (:ok published) published
-                (let [s {:state/type :promotion-certified
-                         :receipt (:receipt published)}]
-                  (persist-fn s)
-                  {:ok true :status :certified :state s
-                   :certificate (:receipt published)})))))))
+    (let [invisible (filterv (complement candidate-visible-fn)
+                             (:candidates state))]
+      (if (seq invisible)
+        (retry-deposit!
+         (-> state
+             (assoc :stage :deposit
+                    :job (or (:deposit-job state)
+                             (get-in state [:deposit :job-id]))
+                    :abandoned-review-job (:job state)))
+         {:ok false :error/code :promotion-candidates-not-persisted
+          :findings (mapv (fn [candidate]
+                            {:finding :candidate-not-visible
+                             :memory-id (:memory-id candidate)})
+                          invisible)}
+         deposit-fn persist-fn)
+        (let [r (review-fn (:job state) (:candidates state))]
+          (if (= :awaiting-terminal (:status r))
+            (assoc r :job-id (:job state))
+            (let [checked (pipeline/validate-review*
+                           (:candidates state)
+                           (:depositor (:deposit state))
+                           (:reviewer r) (:reviews r))]
+              (if-not (:ok checked)
+                checked
+                (let [published
+                      (publish-fn
+                       {:candidates (:candidates checked)
+                        :deposit (:deposit state)
+                        :reviewer (:reviewer r)
+                        :reviews (into (vec (:mechanical-reviews state))
+                                       (:reviews r))})]
+                  (if-not (:ok published)
+                    published
+                    (let [s {:state/type :promotion-certified
+                             :receipt (:receipt published)}]
+                      (persist-fn s)
+                      {:ok true :status :certified :state s
+                       :certificate (:receipt published)})))))))))
 
     (= :promotion-certified (:state/type state))
     {:ok true :status :certified :state state :certificate (:receipt state)}
