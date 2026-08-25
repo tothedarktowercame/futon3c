@@ -45,8 +45,8 @@
       "established": "2026-08-22",
       "why_path": "futon3/library/war-room/wr-25-good-news-gets-the-same-evidence-discipline-as-bad.flexiarg",
       "how_path": "futon3/library/problems/satisfied-rungs-are-counted-and-surfaced.flexiarg",
-      "promotion_test": null,
-      "promotion_test_drafted": null,
+      "promotion_test": "given a criterion set that an operator has weighted, the evaluate stage reports what the criterion set does NOT cover, and does so with the same discipline it applies to a poor score -- not only how the candidates rank under the weights it was handed.",
+      "promotion_test_drafted": "given a criterion set that an operator has weighted, the evaluate stage reports what the criterion set does NOT cover, and does so with the same discipline it applies to a poor score -- not only how the candidates rank under the weights it was handed.",
       "promotion_blocked_on": null,
       "watu": null,
       "wip": false,
@@ -62,8 +62,8 @@
       "established": "2026-08-22",
       "why_path": "futon3/library/war-room/wr-19-tension-must-generate-not-only-rank.flexiarg",
       "how_path": "futon3/library/problems/tension-proposes-candidates.flexiarg",
-      "promotion_test": null,
-      "promotion_test_drafted": null,
+      "promotion_test": "given a demonstrated option that is not being taken up, the select stage GENERATES a candidate that would move it -- a different buyer, a different obligation, a different unit of acceptance -- rather than re-ranking the menu it already has.",
+      "promotion_test_drafted": "given a demonstrated option that is not being taken up, the select stage GENERATES a candidate that would move it -- a different buyer, a different obligation, a different unit of acceptance -- rather than re-ranking the menu it already has.",
       "promotion_blocked_on": null,
       "watu": null,
       "wip": false,
@@ -239,7 +239,7 @@
   "counts": {
     "cards": 5,
     "with_supplier": 3,
-    "without_promotion_test": 4,
+    "without_promotion_test": 2,
     "without_watu": 5,
     "draw_pile": 20
   },
@@ -260,9 +260,9 @@
           {
             "kind": "failure-class",
             "code": "agent-not-found",
-            "n": 72,
+            "n": 74,
             "first": "2026-08-22T07:32",
-            "last": "2026-08-25T13:34",
+            "last": "2026-08-25T18:01",
             "top_target": "claude-cli",
             "ticket": "T-fail-agent-not-found",
             "stage": "PERCEIVE"
@@ -417,8 +417,10 @@
       {
         "stage": "SELECT",
         "source": "card.promotion_test non-null",
-        "count": 1,
+        "count": 3,
         "items": [
+          "C-R5",
+          "C-R6",
           "C-R8"
         ],
         "available": true,
@@ -430,7 +432,7 @@
         "count": 0,
         "items": [],
         "available": true,
-        "note": "5 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage"
+        "note": "7 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage"
       }
     ],
     "cards_enter_at": "EVALUATE",
