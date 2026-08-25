@@ -60,6 +60,38 @@ def how_path(node):
         if re.search(r"^@holds-at\s+.*\b" + re.escape(node) + r"\b", txt, re.M):
             return "futon3/library/problems/" + f
     return None
+def build_path(node):
+    """The @style implementation-pattern flexiarg that says what to BUILD.
+
+    Distinct from how_path's @style pattern, which says what the problem is and
+    what shape the move has. A mission is heavy; for a feature one flexiarg can
+    be enough to build from (Joe, 2026-08-25, recalling futon3/holes/features).
+    So writing one is the SELECT -> ACT crossing: the card stops being a stated
+    intention and becomes a specification somebody can work off.
+
+    CONVENTION INTRODUCED HERE, not discovered: @holds-at currently appears only
+    in library/problems and library/war-room, and none of the ten existing
+    implementation-patterns carries it. A feature flexiarg for a red ring has to
+    name its node for this to resolve, and nothing enforces that yet.
+    """
+    d = os.path.join(LIBRARY)
+    if not os.path.isdir(d):
+        return None
+    for sub in sorted(os.listdir(d)):
+        p_ = os.path.join(d, sub)
+        if not os.path.isdir(p_):
+            continue
+        for f in sorted(os.listdir(p_)):
+            if not f.endswith(".flexiarg"):
+                continue
+            txt = open(os.path.join(p_, f), encoding="utf-8", errors="replace").read()
+            if not re.search(r"^@style\s+implementation-pattern", txt, re.M):
+                continue
+            if re.search(r"^@holds-at\s+.*\b" + re.escape(node) + r"\b", txt, re.M):
+                return f"futon3/library/{sub}/{f}"
+    return None
+
+
 OVERLAY = f"{P4NG}/empirics-futon/wr-overlay.edn"
 PROMOTION = f"{P4NG}/empirics-futon/promotion-tests.edn"
 CASCADE = f"{P4NG}/empirics-futon/cascade-map.edn"
@@ -261,7 +293,10 @@ TRANSITIONS = [
     ("EVALUATE", "BELIEVE", "demote", None),
     ("EVALUATE", "SELECT", "promote", "card.promotion_test becomes non-null"),
     ("SELECT", "EVALUATE", "demote", None),
-    ("SELECT", "ACT", "promote", None),
+    ("SELECT", "ACT", "promote",
+     "an @style implementation-pattern flexiarg exists naming the node "
+     "(gen-wip-cards.py build_path) -- a feature can be built from one flexiarg "
+     "where a mission would be heavier"),
     ("ACT", "SELECT", "demote", None),
 ]
 
@@ -369,11 +404,15 @@ def build_board(cards, pile, offline=False):
                 else (a.get("agents") or [])
             flight = [r for r in rows if r.get("invoke-started-at")]
             clocked = [r for r in flight if r.get("mission-id")]
-            act = col("ACT", "/api/alpha/agents with mission-id and a turn in flight",
-                      len(clocked), [r["id"]["id/value"] for r in clocked],
+            built = [c["id"] for c in cards if c["build_path"]]
+            act = col("ACT",
+                      "/api/alpha/agents with mission-id and a turn in flight; "
+                      "cards with an implementation-pattern flexiarg",
+                      len(clocked) + len(built),
+                      [r["id"]["id/value"] for r in clocked] + built,
                       note=(f"{len(flight)} turns in flight, {len(clocked)} clocked into a "
-                            f"mission -- the gap IS route A's coverage")
-                      if len(flight) != len(clocked) else None)
+                            f"mission -- the gap IS route A's coverage; "
+                            f"{len(built)} of {len(cards)} cards have a build spec"))
 
     # A class that fell back is still perceived -- "I see this and no longer
     # treat it as a problem" -- so it belongs in PERCEIVE, not nowhere.
@@ -424,6 +463,9 @@ def main():
             # The route from the compression back to what it stands for.
             "why_path": why_path(r["wr"]),
             "how_path": how_path(r["node"]),
+            # The build spec, if one has been written. Its presence is the
+            # SELECT -> ACT crossing for this card.
+            "build_path": build_path(r["node"]),
             # Honest null: no card has a defined promotion test yet. This is the
             # field that makes the colour clock mean something -- without it,
             # "how old is this mark" has no answer, because nothing says what

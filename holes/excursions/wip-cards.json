@@ -23,6 +23,7 @@
       "established": "2026-08-25",
       "why_path": "futon3/library/war-room/wr-16-operationalised-exploit-loops-are-first-class-observation-channels.flexiarg",
       "how_path": "futon3/library/problems/operator-turns-become-inference-observations.flexiarg",
+      "build_path": null,
       "promotion_test": null,
       "promotion_test_drafted": "observe.clj carries a channel that reads an operator TURN rather than the operator's absence, and the operator lane's nag class fires at least once in a window of >= 111 classifications.",
       "promotion_blocked_on": "prior work on modelling operator turns (Joe, 2026-08-25). The pattern already carries the same reservation as its own ?evidence(required): 'A pilot has not yet shown that processed operator turns enter the inference vector and change an inference result.' The test below is not withdrawn -- it says what closing looks like, and stays written so the pilot has something to aim at. It is sequenced, not rejected: a card with a statement AND a blocker is a different state from one with no statement, and does not enter SELECT.",
@@ -45,6 +46,7 @@
       "established": "2026-08-22",
       "why_path": "futon3/library/war-room/wr-25-good-news-gets-the-same-evidence-discipline-as-bad.flexiarg",
       "how_path": "futon3/library/problems/satisfied-rungs-are-counted-and-surfaced.flexiarg",
+      "build_path": null,
       "promotion_test": "given a criterion set that an operator has weighted, the evaluate stage reports what the criterion set does NOT cover, and does so with the same discipline it applies to a poor score -- not only how the candidates rank under the weights it was handed.",
       "promotion_test_drafted": "given a criterion set that an operator has weighted, the evaluate stage reports what the criterion set does NOT cover, and does so with the same discipline it applies to a poor score -- not only how the candidates rank under the weights it was handed.",
       "promotion_blocked_on": null,
@@ -62,6 +64,7 @@
       "established": "2026-08-22",
       "why_path": "futon3/library/war-room/wr-19-tension-must-generate-not-only-rank.flexiarg",
       "how_path": "futon3/library/problems/tension-proposes-candidates.flexiarg",
+      "build_path": null,
       "promotion_test": "given a demonstrated option that is not being taken up, the select stage GENERATES a candidate that would move it -- a different buyer, a different obligation, a different unit of acceptance -- rather than re-ranking the menu it already has.",
       "promotion_test_drafted": "given a demonstrated option that is not being taken up, the select stage GENERATES a candidate that would move it -- a different buyer, a different obligation, a different unit of acceptance -- rather than re-ranking the menu it already has.",
       "promotion_blocked_on": null,
@@ -84,6 +87,7 @@
       "established": "2026-08-22",
       "why_path": "futon3/library/war-room/wr-27-a-loop-is-born-instrumented-for-its-gain.flexiarg",
       "how_path": "futon3/library/problems/per-tick-mismatch-instruments-outer-loop-gain.flexiarg",
+      "build_path": null,
       "promotion_test": "the per-tick mismatch is recorded at every tick for a run of consecutive ticks, routed into the outer-loop update, and the subsequent reward action differs from the action the same tick sequence produces with the mismatch held constant.",
       "promotion_test_drafted": "the per-tick mismatch is recorded at every tick for a run of consecutive ticks, routed into the outer-loop update, and the subsequent reward action differs from the action the same tick sequence produces with the mismatch held constant.",
       "promotion_blocked_on": null,
@@ -106,6 +110,7 @@
       "established": "2026-08-22",
       "why_path": "futon3/library/war-room/wr-27-a-loop-is-born-instrumented-for-its-gain.flexiarg",
       "how_path": "futon3/library/problems/commitment-temperature-is-instrumented-as-gain.flexiarg",
+      "build_path": null,
       "promotion_test": null,
       "promotion_test_drafted": null,
       "promotion_blocked_on": "one dated observation in which commitment temperature mattered",
@@ -428,11 +433,11 @@
       },
       {
         "stage": "ACT",
-        "source": "/api/alpha/agents with mission-id and a turn in flight",
+        "source": "/api/alpha/agents with mission-id and a turn in flight; cards with an implementation-pattern flexiarg",
         "count": 0,
         "items": [],
         "available": true,
-        "note": "7 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage"
+        "note": "6 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage; 0 of 5 cards have a build spec"
       }
     ],
     "cards_enter_at": "EVALUATE",
@@ -484,8 +489,8 @@
           "from": "SELECT",
           "to": "ACT",
           "direction": "promote",
-          "rule": null,
-          "stated": false
+          "rule": "an @style implementation-pattern flexiarg exists naming the node (gen-wip-cards.py build_path) -- a feature can be built from one flexiarg where a mission would be heavier",
+          "stated": true
         },
         {
           "from": "ACT",
@@ -495,7 +500,7 @@
           "stated": false
         }
       ],
-      "stated": 2,
+      "stated": 3,
       "total": 8,
       "note": "an unstated rule means nothing crosses that boundary except by someone doing it by hand, unrecorded"
     },
