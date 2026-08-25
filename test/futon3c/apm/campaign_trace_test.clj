@@ -48,6 +48,11 @@
      :content-digest "snapshot-verified"}
     {:ordinal 2 :snapshot-digest "snapshot-verified"
      :content-digest "snapshot-verified"}]
+   :review-passes
+   [{:phase :promote-solver :ordinal 0 :verdicts [:reject :reject]}
+    {:phase :guide-intervention-1 :ordinal 1 :verdicts [:approve]}
+    {:phase :guide-intervention-2 :ordinal 2 :verdicts [:approve]}
+    {:phase :scribe-reduce :ordinal 0 :verdicts [:reject]}]
    :snapshot-admitted-after-solve-verify true
    :snapshot-depositor "scribe-1" :snapshot-reviewer "proctor-1"
    :student-bindings
@@ -96,12 +101,16 @@
     (is (= [1 2]
            (mapv #(get % "ordinal")
                  (get (json/parse-string (slurp a)) "reviewSnapshots"))))
+    (is (= ["reject" "reject"]
+           (get-in (json/parse-string (slurp a))
+                   ["reviewPasses" 0 "verdicts"])))
     (is (= 2 (count (get (json/parse-string (slurp a))
                          "campaignLanes"))))
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/valid.json"))
            (dissoc (json/parse-string (slurp a))
-                   "solverSnapshotContentDigest" "reviewSnapshots")))))
+                   "solverSnapshotContentDigest" "reviewSnapshots"
+                   "reviewPasses")))))
 
 (deftest durable-state-projection-does-not-invent-job-success
   (let [step (first (:steps valid))
@@ -135,7 +144,24 @@
                    [{:ordinal 1 :snapshot-digest "snapshot-verified"
                      :content-digest "snapshot-verified"}
                     {:ordinal 2 :snapshot-digest "snapshot-verified"
-                     :content-digest "snapshot-verified"}]}})]
+                     :content-digest "snapshot-verified"}]
+                   :review-passes
+                   [{:phase :promote-solver :ordinal 0
+                     :verdicts [:reject]}]}})]
     (is (= true (get-in projected ["steps" 0 "clientTimeoutObserved"])))
     (is (= false (get-in projected ["steps" 0 "timeoutTreatedAsSuccess"])))
     (is (= 202 (get-in projected ["steps" 0 "activationStatus"])))))
+
+(deftest persisted-review-passes-retain-apparatus-failures
+  (let [root "data/apm-campaigns/jit-all-open-nontopology-v1"
+        expected {"f32" [0 0 0 4]
+                  "f33" [4 3 0 7]
+                  "f34" [0 0 0 0]
+                  "f35" [5 3 4 0]}]
+    (doseq [[frame counts] expected]
+      (let [directory (str root "/jit-all-open-nontopology-v1-" frame)
+            passes (sut/review-passes-from-live directory)]
+        (is (= counts
+               (mapv #(count (filter #{:cannot-judge} (:verdicts %)))
+                     passes))
+            frame)))))

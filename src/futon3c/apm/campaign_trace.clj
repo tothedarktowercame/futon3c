@@ -1,6 +1,7 @@
 (ns futon3c.apm.campaign-trace
   "Canonical refinement trace exported for the Lean campaign checker."
   (:require [cheshire.core :as json]
+            [clojure.edn]
             [clojure.java.io :as io]))
 
 (defn- canonical [x]
@@ -11,10 +12,30 @@
     (keyword? x) (name x)
     :else x))
 
+(def review-pass-phases
+  [[:promote-solver 0] [:guide-intervention-1 1]
+   [:guide-intervention-2 2] [:scribe-reduce 0]])
+
+(defn review-passes-from-live
+  "Read completed review verdicts in protocol order from a frame's durable
+  live receipts. Missing phase files and missing verdict vectors are errors;
+  replay must not manufacture a resolved pass."
+  [frame-directory]
+  (mapv
+   (fn [[phase ordinal]]
+     (let [path (io/file frame-directory "live" (str (name phase) ".edn"))
+           state (clojure.edn/read-string (slurp path))
+           reviews (get-in state [:receipt :receipt/promotion-reviews])]
+       (when-not (vector? reviews)
+         (throw (ex-info "Durable review pass missing"
+                         {:phase phase :path (.getCanonicalPath path)})))
+       {:phase phase :ordinal ordinal :verdicts (mapv :verdict reviews)}))
+   review-pass-phases))
+
 (defn trace
   [{:keys [campaign-id manifest-hash contract-id phase-order steps closed
            terminal-ledger-digest solver-snapshot-digest
-           solver-snapshot-content-digest review-snapshots
+           solver-snapshot-content-digest review-snapshots review-passes
            snapshot-admitted-after-solve-verify snapshot-depositor
            snapshot-reviewer student-bindings campaign-lanes
            phase-receipt-ids problem-outcome frame-result analyst-wakes]}]
@@ -67,6 +88,11 @@
             {"ordinal" ordinal "snapshotDigest" snapshot-digest
              "contentDigest" content-digest})
           review-snapshots)
+    "reviewPasses"
+    (mapv (fn [{:keys [phase ordinal verdicts]}]
+            {"phase" phase "ordinal" ordinal
+             "verdicts" (mapv name verdicts)})
+          review-passes)
     "snapshotAdmittedAfterSolveVerify" snapshot-admitted-after-solve-verify
     "snapshotDepositor" snapshot-depositor
     "snapshotReviewer" snapshot-reviewer
@@ -109,6 +135,7 @@
            :solver-snapshot-digest (:snapshot-digest memory)
            :solver-snapshot-content-digest (:snapshot-content-digest memory)
            :review-snapshots (:review-snapshots memory)
+           :review-passes (:review-passes memory)
            :snapshot-admitted-after-solve-verify (:admitted? memory)
            :snapshot-depositor (:depositor memory)
            :snapshot-reviewer (:reviewer memory)
