@@ -24,6 +24,7 @@ LIST="${1:-}"
 LOG="${2:-/tmp/scope-backlog-$(date -u +%Y%m%dT%H%M%SZ).log}"
 SUBSTRATE="${FUTON_SUBSTRATE_URL:-http://127.0.0.1:7073}"
 cd /home/joe/code/futon3c
+ONE=$(mktemp /tmp/scope-backlog-one.XXXXXX)
 
 census() {
   for t in eightfold-phase loose-section capability-scope map-item source-material pattern; do
@@ -50,11 +51,11 @@ fi
       skip=$((skip+1)); echo "[backlog] $i/${#missions[@]} SKIP $mission (doc missing: ${doc:-no tree})"; continue
     fi
     t0=$(date +%s)
-    if bash scripts/mission-scope-reingest.sh "$doc" >/tmp/scope-backlog-one.log 2>&1; then
+    if bash scripts/mission-scope-reingest.sh "$doc" >"$ONE" 2>&1; then
       ok=$((ok+1)); echo "[backlog] $i/${#missions[@]} ok   $mission ($(( $(date +%s) - t0 ))s)"
     else
       fail=$((fail+1)); echo "[backlog] $i/${#missions[@]} FAIL $mission ($(( $(date +%s) - t0 ))s)"
-      sed 's/^/    /' /tmp/scope-backlog-one.log | tail -15
+      sed 's/^/    /' "$ONE" | tail -15
     fi
   done
   echo "[backlog] done $(date -u +%FT%TZ) ok=$ok fail=$fail skip=$skip"
