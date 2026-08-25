@@ -51,6 +51,30 @@ export FUTON3C_KANGAROO="${FUTON3C_KANGAROO:-true}"
 # Only the serving JVM may project peripheral state into the operator's Emacs.
 # Test and CLI JVMs intentionally do not inherit this explicit opt-in.
 export FUTON3C_BLACKBOARD_PROJECT="${FUTON3C_BLACKBOARD_PROJECT:-1}"
+# Inbox-zero turn-end machinery (futon0/README-inbox-zero.md, slices 1-6 landed
+# 2026-08-21 but activated nowhere: dev-laptop-env got the exports with ENABLED
+# defaulting false, this file got nothing, so the 2026-08-23 restart changed
+# nothing — found 2026-08-24 tracing a live case).
+# Joe: enable, effective at the NEXT restart. BOTH vars are load-bearing:
+# bootstrap gates the watcher lifecycle on ENABLED, while the exact-seat edit
+# witness producer (dev.clj record-inbox-zero-tool-results!) reads WITNESS_DIR
+# raw with no code fallback — ENABLED alone observes dirt but writes no claims,
+# leaving every path :unattributed with zero followups, which looks like working.
+export FUTON3C_INBOX_ZERO_ENABLED="${FUTON3C_INBOX_ZERO_ENABLED:-true}"
+export FUTON3_INBOX_ZERO_WITNESS_DIR="${FUTON3_INBOX_ZERO_WITNESS_DIR:-${HOME}/code/storage/inbox-zero/witnesses}"
+export FUTON3C_INBOX_ZERO_STATE_PATH="${FUTON3C_INBOX_ZERO_STATE_PATH:-${HOME}/code/storage/inbox-zero/state.edn}"
+export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="${FUTON3C_INBOX_ZERO_FOLLOWUP_URL:-http://127.0.0.1:${FUTON3C_PORT}/api/alpha/followups}"
+# Turn-end promotion (futon3c.inbox-zero.turn-promotion, wired 2026-08-24).
+# "propose" is the shakedown mode: full pipeline, tier-1 would-promote
+# followups, tier-2/3 to the escalation ledger, ZERO git writes. Flip to
+# "execute" only after observing propose-mode behaviour (Joe's call).
+export FUTON3C_INBOX_ZERO_PROMOTION="${FUTON3C_INBOX_ZERO_PROMOTION:-propose}"
+# Street-sweeper attribution proposals (futon3c.inbox-zero.sweeper, wired
+# 2026-08-24). Proposes attributions for unattributed dirt via confirmation
+# followups; NEVER mints claims (confirmation minting is a separate slice).
+# First run one interval after boot, then every 30 min.
+export FUTON3C_INBOX_ZERO_SWEEPER="${FUTON3C_INBOX_ZERO_SWEEPER:-true}"
+export FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS="${FUTON3C_INBOX_ZERO_SWEEPER_INTERVAL_MS:-1800000}"
 
 # The wrappers move child CLI processes out of the protected server cgroup and
 # into futon-agents.slice. ZAI makes API calls in-process and has no child CLI.
