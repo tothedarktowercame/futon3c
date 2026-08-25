@@ -722,11 +722,13 @@
       (and existing (map? (:request existing)))
       {:ok true :contract contract :action action :receipts receipts
        :manifest manifest :unit unit :preparation preparation
-       :request (:request existing) :state-path state-path}
+       :request (:request existing) :fresh-request (:request built)
+       :state-path state-path}
       (:ok built)
       {:ok true :contract contract :action action :receipts receipts
        :manifest manifest :unit unit :preparation preparation
-       :request (:request built) :state-path state-path}
+       :request (:request built) :fresh-request (:request built)
+       :state-path state-path}
       :else built)))))
 
 (defn learning-regime-audit
@@ -1046,19 +1048,23 @@
     (if (:ok phase-inputs)
       (case (:kind action)
         :scribe-reduce
-        (if (= :promote-solver (:phase action))
+        (let [deposit-request (or (:fresh-request phase-inputs)
+                                  (:request phase-inputs))
+              promotion-inputs (assoc phase-inputs :request deposit-request)]
+         (if (= :promote-solver (:phase action))
           (live-promotion/run-live!
            {:state-path (:state-path phase-inputs)
             :control-root (str *control-root*)
-            :deposit-request (:request phase-inputs)
-            :reviewer-request (promotion-review-request phase-inputs)
+            :deposit-request deposit-request
+            :reviewer-request (promotion-review-request promotion-inputs)
             :publish-fn #(publish-promotion! phase-inputs %)})
           (live-promotion/run-live!
            {:state-path (:state-path phase-inputs)
             :control-root (str *control-root*)
-            :deposit-request (:request phase-inputs)
-            :reviewer-request (promotion-review-request phase-inputs)
+            :deposit-request deposit-request
+            :reviewer-request (promotion-review-request promotion-inputs)
             :publish-fn #(publish-zai-scribe-promotion! phase-inputs %)}))
+         )
 
         :guide-intervention
         (let [review-path (guide-review-state-path (:state-path phase-inputs))]

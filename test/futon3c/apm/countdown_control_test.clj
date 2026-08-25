@@ -36,8 +36,12 @@
                 :frame-id "f22" :problem-id "p22"}
         inputs {:ok true :action action :contract {} :receipts {}
                 :state-path "/tmp/f22-promotion.edn"
-                :request {:ledger-digest "ledger"
+                :request {:role :promotion-proctor
+                          :ledger-digest "ledger"
                           :input-receipt-ids #{"solve" "verify"}}
+                :fresh-request {:role :scribe
+                                :ledger-digest "ledger"
+                                :input-receipt-ids #{"solve" "verify"}}
                 :manifest {:apparatus {:artifacts
                                        {:promotion-proctor
                                         {:path "holes/labs/M-apm-demonstration/role-cards/promotion-proctor-v2.md"
@@ -53,6 +57,7 @@
                   (fn [opts] (reset! captured opts)
                     {:ok true :status :awaiting-terminal :job-id "scribe-job"})]
       (is (= "scribe-job" (:job-id (sut/drive-live-learning-phase! action))))
+      (is (= :scribe (get-in @captured [:deposit-request :role])))
       (is (= "f22-promotion-proctor"
              (get-in @captured [:reviewer-request :agent-id])))
       (is (= "blob" (get-in @captured [:reviewer-request :role-card-blob])))
