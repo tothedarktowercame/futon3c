@@ -87,7 +87,7 @@
       "established": "2026-08-22",
       "why_path": "futon3/library/war-room/wr-27-a-loop-is-born-instrumented-for-its-gain.flexiarg",
       "how_path": "futon3/library/problems/per-tick-mismatch-instruments-outer-loop-gain.flexiarg",
-      "build_path": null,
+      "build_path": "futon3/library/features/emit-per-tick-mismatch.flexiarg",
       "promotion_test": "the per-tick mismatch is recorded at every tick for a run of consecutive ticks, routed into the outer-loop update, and the subsequent reward action differs from the action the same tick sequence produces with the mismatch held constant.",
       "promotion_test_drafted": "the per-tick mismatch is recorded at every tick for a run of consecutive ticks, routed into the outer-loop update, and the subsequent reward action differs from the action the same tick sequence produces with the mismatch held constant.",
       "promotion_blocked_on": null,
@@ -434,10 +434,12 @@
       {
         "stage": "ACT",
         "source": "/api/alpha/agents with mission-id and a turn in flight; cards with an implementation-pattern flexiarg",
-        "count": 0,
-        "items": [],
+        "count": 1,
+        "items": [
+          "C-R8"
+        ],
         "available": true,
-        "note": "6 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage; 0 of 5 cards have a build spec"
+        "note": "6 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage; 1 of 5 cards have a build spec"
       }
     ],
     "cards_enter_at": "EVALUATE",
