@@ -6760,11 +6760,23 @@
               "scheduler" scheduler
               "vsatarcs-status" vsatarcs-status)))))
 
+(defn- wm-scheduler-autostart? []
+  ;; Default OFF.  Reading GET /api/alpha/war-machine used to arm the
+  ;; 300-second snapshot scheduler as a side effect (ensure-started! on
+  ;; every read), so any viewer, curl, or agent probe silently started a
+  ;; recurring tick loop that ran until the JVM restarted and flooded the
+  ;; Morning Brief loss ledger with :wm-scheduler-tick failures (288/day
+  ;; on 2026-08-01; ghost ticks on 2026-08-23).  Opt in explicitly with
+  ;; -Dfuton.wm.scheduler.autostart=true; otherwise the scheduler is only
+  ;; started deliberately via futon3c.wm.scheduler/start!.
+  (= "true" (System/getProperty "futon.wm.scheduler.autostart")))
+
 (defn- wm-scheduler-ensure-started! []
-  (try
-    (when-let [f (requiring-resolve 'futon3c.wm.scheduler/ensure-started!)]
-      (f))
-    (catch Throwable _ nil)))
+  (when (wm-scheduler-autostart?)
+    (try
+      (when-let [f (requiring-resolve 'futon3c.wm.scheduler/ensure-started!)]
+        (f))
+      (catch Throwable _ nil))))
 
 (defn- wm-scheduler-status-snapshot []
   (try
