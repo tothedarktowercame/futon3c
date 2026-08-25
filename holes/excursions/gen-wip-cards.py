@@ -117,6 +117,23 @@ def promotion_tests(path):
     return out
 
 
+def promotion_blockers(path):
+    """{node: blocked-on}. A card can know exactly what closing looks like and
+    still not be startable -- R2 has a written test and is sequenced behind
+    prior work on modelling operator turns. That is a third state on the
+    EVALUATE -> SELECT edge, distinct both from having no test and from being
+    selected, and collapsing it either way loses the reason."""
+    if not os.path.exists(path):
+        return {}
+    txt = read(path)
+    out = {}
+    for m in re.finditer(r'\{:node\s+"(R\d+)"(.*?)(?=\n  \{:node|\]\})', txt, re.S):
+        b = re.search(r':blocked-on\s+\n?\s*"([^"]+)"', m.group(2))
+        if b:
+            out[m.group(1)] = " ".join(b.group(1).split())
+    return out
+
+
 def blue_rings(cm):
     return {m.group(2): {"box": m.group(1), "pattern": m.group(3), "why": m.group(4)}
             for m in re.finditer(
@@ -387,6 +404,7 @@ def main():
         assert b["box"] in mis, f"blue ring {b['box']} has no mission in cascade-map.edn"
 
     ptests = promotion_tests(PROMOTION)
+    pblocked = promotion_blockers(PROMOTION)
     established = as_of(ov)
     cards = []
     for r in reds:
@@ -410,7 +428,11 @@ def main():
             # field that makes the colour clock mean something -- without it,
             # "how old is this mark" has no answer, because nothing says what
             # re-establishing it would involve.
-            "promotion_test": ptests.get(r["node"]),
+            # A blocked card does NOT reach SELECT even with a written test.
+            "promotion_test": (None if pblocked.get(r["node"])
+                               else ptests.get(r["node"])),
+            "promotion_test_drafted": ptests.get(r["node"]),
+            "promotion_blocked_on": pblocked.get(r["node"]),
             # Second honest null, and a different absence from the first.
             # promotion_test says nobody has stated what SHIPPED would look
             # like; watu says nobody has reconstructed what HAPPENED. A card can

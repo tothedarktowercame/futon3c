@@ -23,7 +23,9 @@
       "established": "2026-08-25",
       "why_path": "futon3/library/war-room/wr-16-operationalised-exploit-loops-are-first-class-observation-channels.flexiarg",
       "how_path": "futon3/library/problems/operator-turns-become-inference-observations.flexiarg",
-      "promotion_test": "observe.clj carries a channel that reads an operator TURN rather than the operator's absence, and the operator lane's nag class fires at least once in a window of >= 111 classifications.",
+      "promotion_test": null,
+      "promotion_test_drafted": "observe.clj carries a channel that reads an operator TURN rather than the operator's absence, and the operator lane's nag class fires at least once in a window of >= 111 classifications.",
+      "promotion_blocked_on": "prior work on modelling operator turns (Joe, 2026-08-25). The pattern already carries the same reservation as its own ?evidence(required): 'A pilot has not yet shown that processed operator turns enter the inference vector and change an inference result.' The test below is not withdrawn -- it says what closing looks like, and stays written so the pilot has something to aim at. It is sequenced, not rejected: a card with a statement AND a blocker is a different state from one with no statement, and does not enter SELECT.",
       "watu": null,
       "wip": false,
       "age_days": 0
@@ -44,6 +46,8 @@
       "why_path": "futon3/library/war-room/wr-25-good-news-gets-the-same-evidence-discipline-as-bad.flexiarg",
       "how_path": "futon3/library/problems/satisfied-rungs-are-counted-and-surfaced.flexiarg",
       "promotion_test": null,
+      "promotion_test_drafted": null,
+      "promotion_blocked_on": null,
       "watu": null,
       "wip": false,
       "age_days": 3
@@ -59,6 +63,8 @@
       "why_path": "futon3/library/war-room/wr-19-tension-must-generate-not-only-rank.flexiarg",
       "how_path": "futon3/library/problems/tension-proposes-candidates.flexiarg",
       "promotion_test": null,
+      "promotion_test_drafted": null,
+      "promotion_blocked_on": null,
       "watu": null,
       "wip": false,
       "age_days": 3
@@ -79,6 +85,8 @@
       "why_path": "futon3/library/war-room/wr-27-a-loop-is-born-instrumented-for-its-gain.flexiarg",
       "how_path": "futon3/library/problems/per-tick-mismatch-instruments-outer-loop-gain.flexiarg",
       "promotion_test": "the per-tick mismatch is recorded at every tick for a run of consecutive ticks, routed into the outer-loop update, and the subsequent reward action differs from the action the same tick sequence produces with the mismatch held constant.",
+      "promotion_test_drafted": "the per-tick mismatch is recorded at every tick for a run of consecutive ticks, routed into the outer-loop update, and the subsequent reward action differs from the action the same tick sequence produces with the mismatch held constant.",
+      "promotion_blocked_on": null,
       "watu": null,
       "wip": false,
       "age_days": 3
@@ -99,6 +107,8 @@
       "why_path": "futon3/library/war-room/wr-27-a-loop-is-born-instrumented-for-its-gain.flexiarg",
       "how_path": "futon3/library/problems/commitment-temperature-is-instrumented-as-gain.flexiarg",
       "promotion_test": null,
+      "promotion_test_drafted": null,
+      "promotion_blocked_on": "one dated observation in which commitment temperature mattered",
       "watu": null,
       "wip": false,
       "age_days": 3
@@ -229,7 +239,7 @@
   "counts": {
     "cards": 5,
     "with_supplier": 3,
-    "without_promotion_test": 3,
+    "without_promotion_test": 4,
     "without_watu": 5,
     "draw_pile": 20
   },
@@ -407,9 +417,8 @@
       {
         "stage": "SELECT",
         "source": "card.promotion_test non-null",
-        "count": 2,
+        "count": 1,
         "items": [
-          "C-R2",
           "C-R8"
         ],
         "available": true,
