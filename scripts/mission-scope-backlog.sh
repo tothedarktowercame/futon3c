@@ -46,7 +46,7 @@ fi
   for mission in "${missions[@]}"; do
     i=$((i+1))
     tree="$TREES/$mission.json"
-    doc=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("path",""))' "$tree" 2>/dev/null)
+    doc=$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])).get("path",""); print(p if p.startswith("/") or not p else "/home/joe/code/"+p)' "$tree" 2>/dev/null)
     if [ -z "$doc" ] || [ ! -f "$doc" ]; then
       skip=$((skip+1)); echo "[backlog] $i/${#missions[@]} SKIP $mission (doc missing: ${doc:-no tree})"; continue
     fi

@@ -17,7 +17,9 @@
   (println (format "[backlog] start %s missions=%d shard=%s" (java.time.Instant/now) n shard))
   (doseq [[i mission] (map-indexed vector missions)]
     (let [tree (io/file trees (str mission ".json"))
-          doc (when (.exists tree) (get (json/parse-string (slurp tree)) "path"))
+          ;; 17 trees carry paths relative to the code root (futon7/holes/…)
+          doc (some-> (when (.exists tree) (get (json/parse-string (slurp tree)) "path"))
+                      (as-> p (if (str/starts-with? p "/") p (str "/home/joe/code/" p))))
           t0 (System/currentTimeMillis)]
       (if (or (nil? doc) (not (.exists (io/file doc))))
         (println (format "[backlog] %d/%d SKIP %s (doc missing: %s)" (inc i) n mission doc))
