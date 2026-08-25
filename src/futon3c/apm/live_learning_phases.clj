@@ -378,13 +378,18 @@
         reset-invalid (when (and candidate (not (:ok candidate))
                                  (fn? reset-invalid-fn))
                         (reset-invalid-fn))
-        body (cond-> {:receipt/type :student-observation-missing
+        observation-recovered? (or (:ok archived) (map? candidate))
+        body (cond-> {:receipt/type (if observation-recovered?
+                                     :student-observation-recovered
+                                     :student-observation-missing)
               :receipt/frame-id (:frame-id request)
               :receipt/problem-id (:problem-id request)
               :receipt/attempt-ordinal (:attempt-ordinal request)
               :receipt/job-id (:job-id ticket)
               :receipt/author :controller
-              :receipt/reason :typed-submission-missing
+              :receipt/reason (if observation-recovered?
+                                :typed-submission-collection-failed-but-observation-recovered
+                                :typed-submission-missing)
               :receipt/repair-attempts repair-attempts
               :receipt/memory-use (controller-memory-use request ticket [])
               :receipt/memory-snapshot
@@ -410,7 +415,12 @@
                            (when reset-invalid
                              (select-keys reset-invalid
                                           [:ok :head :preservation-ref]))}
-               :memory {:snapshot (:memory-snapshot request)}}}
+               :memory {:snapshot (:memory-snapshot request)}}
+              :receipt/candidate-disposition
+              (cond
+                (and candidate (:ok candidate)) :certified
+                candidate :rejected-evidence
+                :else :absent)}
                (and candidate (:ok candidate))
                (assoc :receipt/candidate (:candidate candidate)))
         addressed (assoc body :receipt/id (machine/ledger-digest [body]))]
@@ -418,7 +428,8 @@
     ;; validator.  A rejected candidate remains pinned and described under
     ;; :receipt/harness-observed, but must neither be certified under
     ;; :receipt/candidate nor prevent the controller-authored missing
-    ;; observation from advancing the frame.
+    ;; observation from advancing the frame. When durable attempt evidence
+    ;; exists, record recovery rather than claiming the observation was absent.
     (if (and reset-invalid (not (:ok reset-invalid)))
       {:ok false :error/code :student-invalid-candidate-reset-failed
        :candidate (select-keys candidate [:error/code :head :ref])

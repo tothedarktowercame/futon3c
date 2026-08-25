@@ -161,6 +161,24 @@
     (is (= 1 (get-in result [:certificate :repair-attempts])))
     (is (= :unobserved (get-in result [:state :learning/outcome])))))
 
+(deftest recovered-controller-observation-is-observed
+  (let [calls (atom []) job (atom {:job-id "job-1" :state :done})
+        state (assoc (:state (sut/drive! (effects calls job)))
+                     :terminal-repair-attempts 1
+                     :typed-submission-migration-attempts 1)
+        base (assoc (effects calls job) :state state
+                    :terminal-submission-provider (constantly nil)
+                    :missing-observation-provider
+                    (fn [& _]
+                      {:ok true
+                       :certificate
+                       {:receipt/type :student-observation-recovered
+                        :receipt/author :controller}}))
+        collected (sut/drive! base)
+        result (sut/drive! (assoc base :state (:state collected)))]
+    (is (= :certified (:status result)))
+    (is (= :observed (get-in result [:state :learning/outcome])))))
+
 (deftest pre-contract-terminal-gets-one-fresh-typed-migration
   (let [calls (atom [])
         seen-failure (atom nil)

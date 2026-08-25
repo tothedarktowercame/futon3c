@@ -372,7 +372,8 @@
                   :phases {:student-attempt-1
                            {:kind :student-attempt :role :student :ordinal 1
                             :receipt/type :student-attempt
-                            :alternate-receipt/types #{:student-observation-missing}
+                            :alternate-receipt/types #{:student-observation-missing
+                                                       :student-observation-recovered}
                             :requires #{} :produces #{:attempt :memory-use}}}
                   :receipt/schemas
                   {:student-observation-missing
@@ -380,7 +381,14 @@
                                 :receipt/problem-id :receipt/attempt-ordinal
                                 :receipt/job-id :receipt/author :receipt/reason
                                 :receipt/repair-attempts :receipt/memory-snapshot
-                                :receipt/harness-observed}}}}
+                                :receipt/harness-observed}}
+                   :student-observation-recovered
+                   {:required #{:receipt/id :receipt/type :receipt/frame-id
+                                :receipt/problem-id :receipt/attempt-ordinal
+                                :receipt/job-id :receipt/author :receipt/reason
+                                :receipt/repair-attempts :receipt/memory-snapshot
+                                :receipt/harness-observed :receipt/memory-use
+                                :receipt/candidate-disposition}}}}
         action {:kind :student-attempt :role :student :phase :student-attempt-1
                 :frame-id "fixture-f25" :problem-id "m94A02"}
         candidate (certified-candidate "fixture-f25" "m94A02" 1)
@@ -403,7 +411,9 @@
     (is (= [] (get-in result [:certificate :receipt/memory-use :used-ids])))
     (is (= ["memory-1"]
            (get-in result [:certificate :receipt/memory-use :surfaced-ids])))
-    (is (= :typed-submission-missing
+    (is (= :student-observation-recovered
+           (get-in result [:certificate :receipt/type])))
+    (is (= :typed-submission-collection-failed-but-observation-recovered
            (get-in result [:certificate :receipt/reason])))
     (is (= {:receipt-id "promotion-receipt"
             :snapshot-id "frozen-snapshot"
@@ -417,7 +427,8 @@
                   :phases {:student-attempt-3
                            {:kind :student-attempt :role :student :ordinal 3
                             :receipt/type :student-attempt
-                            :alternate-receipt/types #{:student-observation-missing}
+                            :alternate-receipt/types #{:student-observation-missing
+                                                       :student-observation-recovered}
                             :requires #{} :produces #{:attempt :memory-use}}}
                   :receipt/schemas
                   {:student-observation-missing
@@ -425,7 +436,14 @@
                                 :receipt/problem-id :receipt/attempt-ordinal
                                 :receipt/job-id :receipt/author :receipt/reason
                                 :receipt/repair-attempts :receipt/memory-snapshot
-                                :receipt/harness-observed}}}}
+                                :receipt/harness-observed}}
+                   :student-observation-recovered
+                   {:required #{:receipt/id :receipt/type :receipt/frame-id
+                                :receipt/problem-id :receipt/attempt-ordinal
+                                :receipt/job-id :receipt/author :receipt/reason
+                                :receipt/repair-attempts :receipt/memory-snapshot
+                                :receipt/harness-observed :receipt/memory-use
+                                :receipt/candidate-disposition}}}}
         action {:kind :student-attempt :role :student :phase :student-attempt-3
                 :frame-id "f30" :problem-id "a01J06"}
         candidate (certified-candidate "f30" "a01J06" 3)
@@ -451,7 +469,8 @@
                   :phases {:student-attempt-3
                            {:kind :student-attempt :role :student :ordinal 3
                             :receipt/type :student-attempt
-                            :alternate-receipt/types #{:student-observation-missing}
+                            :alternate-receipt/types #{:student-observation-missing
+                                                       :student-observation-recovered}
                             :requires #{} :produces #{:attempt :memory-use}}}
                   :receipt/schemas
                   {:student-observation-missing
@@ -459,7 +478,14 @@
                                 :receipt/problem-id :receipt/attempt-ordinal
                                 :receipt/job-id :receipt/author :receipt/reason
                                 :receipt/repair-attempts :receipt/memory-snapshot
-                                :receipt/harness-observed}}}}
+                                :receipt/harness-observed}}
+                   :student-observation-recovered
+                   {:required #{:receipt/id :receipt/type :receipt/frame-id
+                                :receipt/problem-id :receipt/attempt-ordinal
+                                :receipt/job-id :receipt/author :receipt/reason
+                                :receipt/repair-attempts :receipt/memory-snapshot
+                                :receipt/harness-observed :receipt/memory-use
+                                :receipt/candidate-disposition}}}}
         action {:kind :student-attempt :role :student :phase :student-attempt-3
                 :frame-id "f34" :problem-id "a95J03"}
         rejected {:ok false :error/code :student-candidate-validation-failed
@@ -484,6 +510,10 @@
            (get-in result [:certificate :receipt/harness-observed
                            :workspace :candidate])))
     (is (nil? (get-in result [:certificate :receipt/candidate])))
+    (is (= :student-observation-recovered
+           (get-in result [:certificate :receipt/type])))
+    (is (= :rejected-evidence
+           (get-in result [:certificate :receipt/candidate-disposition])))
     (is (= 1 @resets))
     (is (true? (get-in result [:certificate :receipt/harness-observed
                                :workspace :reset-after-rejection :ok])))

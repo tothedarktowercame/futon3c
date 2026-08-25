@@ -25,7 +25,7 @@
   :student-attempt-1
   {:kind :student-attempt :role :student :ordinal 1 :fresh-session? true
    :receipt/type :student-attempt
-   :alternate-receipt/types #{:student-observation-missing}
+   :alternate-receipt/types #{:student-observation-missing :student-observation-recovered}
    :requires #{:preflight-receipt :solver-memory-snapshot}
    :produces #{:student-attempt-1-receipt :memory-use-1-receipt}}
   :guide-intervention-1
@@ -36,7 +36,7 @@
   :student-attempt-2
   {:kind :student-attempt :role :student :ordinal 2 :fresh-session? true
    :receipt/type :student-attempt
-   :alternate-receipt/types #{:student-observation-missing}
+   :alternate-receipt/types #{:student-observation-missing :student-observation-recovered}
    :requires #{:guide-intervention-1-receipt :solver-memory-snapshot}
    :produces #{:student-attempt-2-receipt :memory-use-2-receipt}}
   :guide-intervention-2
@@ -47,7 +47,7 @@
   :student-attempt-3
   {:kind :student-attempt :role :student :ordinal 3 :fresh-session? true
    :receipt/type :student-attempt
-   :alternate-receipt/types #{:student-observation-missing}
+   :alternate-receipt/types #{:student-observation-missing :student-observation-recovered}
    :requires #{:guide-intervention-2-receipt :solver-memory-snapshot}
    :produces #{:student-attempt-3-receipt :memory-use-3-receipt}}
   :scribe-reduce
@@ -97,6 +97,12 @@
                :receipt/attempt-ordinal :receipt/job-id :receipt/author
                :receipt/reason :receipt/repair-attempts
                :receipt/memory-snapshot :receipt/harness-observed}}
+  :student-observation-recovered
+  {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
+               :receipt/attempt-ordinal :receipt/job-id :receipt/author
+               :receipt/reason :receipt/repair-attempts
+               :receipt/memory-snapshot :receipt/harness-observed
+               :receipt/memory-use :receipt/candidate-disposition}}
   :guide-intervention
   {:required #{:receipt/id :receipt/type :receipt/frame-id :receipt/problem-id
                :receipt/intervention-ordinal :receipt/mode

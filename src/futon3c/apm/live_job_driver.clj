@@ -287,9 +287,13 @@
                                 (get-in state [:terminal-collection :evidence]))]
                   (if-not (:ok provided)
                     provided
-                    (let [next-state (assoc state :state/type :live-job-certified
-                                            :receipt (:certificate provided)
-                                            :learning/outcome :unobserved)]
+                    (let [receipt (:certificate provided)
+                          recovered? (= :student-observation-recovered
+                                        (:receipt/type receipt))
+                          next-state (assoc state :state/type :live-job-certified
+                                            :receipt receipt
+                                            :learning/outcome
+                                            (if recovered? :observed :unobserved))]
                       (if (:ok (persist-fn next-state))
                         {:ok true :status :certified :state next-state
                          :certificate (:certificate provided)}

@@ -131,7 +131,12 @@
    :missing-observation-receipt-type "student-observation-missing"
    :missing-observation-author "controller"
    :missing-observation-may-satisfy-observation-dependency true
-   :missing-observation-may-impersonate-student false})
+   :missing-observation-may-impersonate-student false
+   :recovered-observation-receipt-type "student-observation-recovered"
+   :recovered-observation-author "controller"
+   :recovered-observation-satisfies-observation true
+   :recovered-observation-forces-partial-learning false
+   :recovered-observation-certifies-rejected-candidate false})
 
 (def required-student-candidate-policy
   {:student-terminal-candidate-required true
@@ -245,6 +250,12 @@
     "receipt/attempt-ordinal" "receipt/job-id" "receipt/author"
     "receipt/reason" "receipt/repair-attempts" "receipt/memory-snapshot"
     "receipt/harness-observed" "receipt/memory-use"]
+   :student-observation-recovered
+   ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
+    "receipt/attempt-ordinal" "receipt/job-id" "receipt/author"
+    "receipt/reason" "receipt/repair-attempts" "receipt/memory-snapshot"
+    "receipt/harness-observed" "receipt/memory-use"
+    "receipt/candidate-disposition"]
    :guide-intervention
    ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
     "receipt/intervention-ordinal" "receipt/mode" "receipt/input-attempt-id"

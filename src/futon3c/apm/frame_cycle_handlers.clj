@@ -100,6 +100,9 @@
         dependency (dependency-evidence cycle-contract phase prior-receipts)
         declared-inputs (some-> (:receipt/input-receipt-ids receipt) set)
         missing-observation? (= :student-observation-missing (:receipt/type receipt))
+        recovered-observation? (= :student-observation-recovered
+                                  (:receipt/type receipt))
+        controller-observation? (or missing-observation? recovered-observation?)
         student-sessions
         (->> prior-receipts
              (keep (fn [[prior-phase prior-receipt]]
@@ -128,7 +131,7 @@
       {:error/code :frame-cycle-student-ordinal-mismatch}
 
       (and (= :student-attempt (:kind spec))
-           (not missing-observation?)
+           (not controller-observation?)
            (not (valid-student-terminal-candidate? receipt)))
       {:error/code :frame-cycle-student-candidate-invalid}
 
@@ -143,6 +146,21 @@
                      (pos-int? (:receipt/repair-attempts receipt))
                      (map? (:receipt/harness-observed receipt)))))
       {:error/code :frame-cycle-missing-observation-evidence-invalid}
+
+      (and recovered-observation?
+           (not= {:author :controller
+                  :reason :typed-submission-collection-failed-but-observation-recovered}
+                 {:author (:receipt/author receipt)
+                  :reason (:receipt/reason receipt)}))
+      {:error/code :frame-cycle-recovered-observation-authority-invalid}
+
+      (and recovered-observation?
+           (not (and (string? (:receipt/job-id receipt))
+                     (pos-int? (:receipt/repair-attempts receipt))
+                     (map? (:receipt/harness-observed receipt))
+                     (contains? #{:certified :rejected-evidence :absent}
+                                (:receipt/candidate-disposition receipt)))))
+      {:error/code :frame-cycle-recovered-observation-evidence-invalid}
 
       (and (= :student-attempt (:kind spec))
            (contains? (:requires spec) :solver-memory-snapshot)
