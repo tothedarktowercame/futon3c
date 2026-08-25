@@ -128,7 +128,7 @@ candidate that passes neither is not a deposit; say so.
 | `before` | what the apparatus did or proposed, and what Joe said, **verbatim** — his phrasing is the match key |
 | `after` | what changed, with the record that shows it changed |
 | `destination` | `shelf` (a `@how` under a parent pattern) or `card` (`CLAUDE.md` / a `feedback` memory) — never both |
-| `confidence` | `witnessed` (a record shows the course change: a commit, a retraction, a reverted decision), `narrated` (Joe said it, nothing in the record moved), `unresolved` |
+| `confidence` | `witnessed` (a record shows the course change: a commit, a retraction, a reverted decision), `recurrent` (the evidence landscape holds operator-authored precedent — see "Confirmation without the operator"), `narrated` (Joe said it, nothing in the record moved), `unresolved` |
 | `evidence-ids` | the turn's context-retrieval evidence id, the session-commit-link if any, the job/park ids of anything dispatched |
 
 A candidate with `confidence :unresolved` is still a deposit — as a
@@ -173,16 +173,79 @@ corrected the apparatus and this seat deposited nothing is a finding — say
 which cues you saw and why none became a candidate. A truthful empty lane is
 worth more than four candidates the operator must decline.
 
-## You cannot confirm your own deposits
+## Confirmation without the operator (Joe, 2026-08-25)
 
-Inference proposes; confirmation mints. You emit candidates; Joe confirms or
-declines; only confirmation writes. Declining costs nothing and writes nothing.
-The measured cost of skipping this step is on record: autoclock mission-linkage
-inferred and written without confirmation was present on 65% of turns and
-substantially wrong (`M-futon-problems` D8).
+Inference proposes and something must confirm, but **the operator does not have
+time to be that something**, and a design that requires his keystroke per
+candidate is a design that will not run. The substitute is not a second opinion
+about the same text — it is **recurrence in the evidence landscape**.
+
+You compose a full-text query from the turn and run it against the evidence
+corpus. Precedent is the confirmation: finding that this correction has been
+made before establishes two things at once — that the reading is right, and
+that it is a pattern rather than a one-off. That is strictly more than
+agreement between two codings gives you, and it feeds the reuse-vs-discovery
+rule this card inherits: a rule the store already holds gets its instance count
+and evidence updated in place, not a second copy.
+
+**Measured 2026-08-25, working today.** The corpus is 170,820 evidence rows,
+index level with the store (delta 0), basis ~85 s old
+(`futon1b/scripts/fts-status.py 7073`). Two routes on :7073 do the whole job:
+
+- `GET /api/alpha/evidence/text-search?df=t1,t2,…` — index-only document
+  frequencies, at most 32 terms, **no XTDB read**;
+- `GET /api/alpha/evidence/text-search?q=…&limit=&hydrate=false` — bm25-ranked
+  candidates with id, timestamp, author and type.
+
+**`df` is what makes your job well-defined.** Composing the query is not
+"write a search" — it is choosing terms in the useful frequency band, and `df`
+tells you the band for free before anything expensive runs. Measured on this
+corpus: `carnage` 1 · `unpushed` 87 · `sigil` 672 · `confirmation` 648 ·
+`kondo` 2014 · `commit` 17161 · `operator` 28887. A term at 1 discriminates
+perfectly and has no precedent to find; a term at 17k retrieves noise.
+Check `df` first, always.
+
+This also absorbs the operator's spelling. A lexical index would break on his
+typos — except that you compose the query, and normalising noisy free text into
+clean search terms is exactly the work this seat is for. Report what you
+normalised; do not rewrite the `before` field.
+
+**Why this channel counts as independent.** The other codings on a turn come
+from futon3a *embedding* retrieval over the *pattern shelf*. This one is a
+*generatively composed* query against a *lexical* fts5 index over the *evidence
+corpus*. Different query construction, different index type, different target.
+Note that the sigil is NOT an independent coding: `session-mode.el` resolves it
+by table lookup from the top retrieved pattern (`patterns-index.tsv`, 1400 rows,
+890 with both sigil columns populated and 505 reading `unknown/unknown`), so
+sigil distance against anything retrieval-derived measures nothing.
+
+**The guard, and it is the one this apparatus keeps failing.** The evidence
+landscape contains the apparatus's own output. Chat turns are stored with
+`:event "chat-turn"`, `:role`, `:transport` and `:turn-id`, so an assistant turn
+reporting Joe's correction is in the index alongside Joe's correction. Confirming
+hits MUST be operator-authored — `:role "user"` with `Origin: operator` in the
+envelope — and must not come from the session that produced the candidate.
+Without that filter this seat confirms itself, which is exactly how the
+inbox-zero sweeper came to propose a file to a seat because that seat's own
+probe had printed it (2026-08-25).
+
+**What the operator still owns.** `recurrent` is a reliability estimate, not an
+authority act, and the two must not share a basis value. A `card` candidate —
+one that would amend `CLAUDE.md` or a `feedback` memory — is an instruction
+about how agents behave and still needs Joe. A `shelf` candidate with
+operator-authored precedent does not.
 
 Deliver candidates through the existing followup queue — exact-seat, deduped,
 busy-gated — not as bells. A proposal is not a request for a turn.
+
+## What "nomadic" buys, concretely
+
+The turn-based system can only confirm forward: something is said, an agent
+responds, the loop advances one step. Retrieval confirms from anywhere in
+170,820 rows regardless of position in any session — a correction Joe made in
+May confirms one he makes tonight. That position-independence is the whole of
+what overlaying this on the linear system gains, and it is why the seat can run
+at 4 tok/s off the loop: nothing it does is on the critical path of a turn.
 
 ## Wiring this card needs (operator / apparatus, not you)
 
