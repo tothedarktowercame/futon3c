@@ -59,6 +59,8 @@
 (defn- http-client [] (HttpClient/newHttpClient))
 (def ^:dynamic *retry-sleep!* (fn [millis] (Thread/sleep millis)))
 (def ^:private max-expensive-read-retries 300)
+(def ^:private http-timeout-seconds
+  (or (some-> (System/getenv "FUTON3C_SUBSTRATE_HTTP_TIMEOUT_S") parse-long) 120))
 
 (defn- http-edn
   ([client method url] (http-edn client method url nil))
@@ -70,6 +72,10 @@
          req (-> builder
                  (.header "accept" "application/edn")
                  (.header "content-type" "application/edn")
+                 ;; A request with no deadline parked a backlog worker for
+                 ;; 10+ minutes on one entities read (2026-08-25). Time out,
+                 ;; throw, and let the caller record the mission as FAILED.
+                 (.timeout (java.time.Duration/ofSeconds http-timeout-seconds))
                  (.build))
          resp (.send client req (HttpResponse$BodyHandlers/ofString))
          body-text (.body resp)]

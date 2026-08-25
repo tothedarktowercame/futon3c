@@ -16,6 +16,6 @@ echo "remaining=$total workers=$N tag=$TAG"
 for i in $(seq 0 $((N-1))); do
   awk -v n="$N" -v i="$i" "NR % n == i" "/tmp/scope-backlog-remaining-$TAG.txt" > "/tmp/scope-backlog-shard-$TAG-w$i.txt"
   systemd-run --user --unit="scope-backlog-$TAG-w$i" --collect \
-    /home/joe/code/futon3c/scripts/mission-scope-backlog.sh \
+    "${WORKER:-/home/joe/code/futon3c/scripts/mission-scope-backlog.sh}" \
     "/tmp/scope-backlog-shard-$TAG-w$i.txt" "/tmp/scope-backlog-$TAG-w$i.log"
 done
