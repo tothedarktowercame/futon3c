@@ -64,7 +64,7 @@
       "id": "C-R8",
       "node": "R8",
       "wr": "WR-27",
-      "gap": "a loop is born instrumented for its gain -- the per-tick mismatch IS the gain reading, and the outer loop has been dead since 2026-07-14",
+      "gap": "a loop is born instrumented for its gain -- the per-tick mismatch IS the gain reading, and the daily cadence that would read it stopped 2026-07-14 (last outer-loop run 2026-07-27); the 2026-08-20 instrumented campaigns are a separate mechanism",
       "supplier": {
         "box": "m5",
         "label": "reward eats labels",
