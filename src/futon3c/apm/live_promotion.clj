@@ -154,6 +154,7 @@
     :or {agency-base "http://localhost:7070"}}]
   (let [persist-fn #(runtime/atomic-persist! state-path %)
         stored-state (runtime/read-state state-path)
+        deposit-request (or (:deposit-request stored-state) deposit-request)
         state-request (when (= :promotion (:state/type stored-state))
                         (if (= :independent-review (:stage stored-state))
                           reviewer-request
@@ -329,7 +330,8 @@
     (let [r (deposit-fn)]
       (if-not (:ok r) r
         (let [s {:state/type :promotion :stage :deposit :job (:job r)
-                 :request deposit-request :ticket {:job-id (:job r)}
+                 :request deposit-request :deposit-request deposit-request
+                 :ticket {:job-id (:job r)}
                  :attempt 1}]
           (persist-fn s) {:ok true :status :awaiting-terminal
                           :job-id (:job r) :state s})))
@@ -374,6 +376,7 @@
                                  :candidates candidates
                                  :mechanical-reviews mechanical
                                  :deposit-job (:job state)
+                                 :deposit-request deposit-request
                                  :job (:job review)
                                  :request reviewer-request
                                  :ticket {:job-id (:job review)}}]
