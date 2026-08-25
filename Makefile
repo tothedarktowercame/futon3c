@@ -73,9 +73,14 @@ test:
 test-diff:
 	bash scripts/test-differential.sh $(BASE)
 
-# Single namespace, the gate that actually discriminates.
+# Single namespace, the gate that actually discriminates. ^:slow tests
+# (Lean-backed manifest qualification) are excluded by the :test alias.
 test-ns:
 	$(CLOJURE) -M:test -n $(NS)
+
+# The ^:slow tests only (about 30 s each; runs `lake env lean` ten times).
+test-slow:
+	bash scripts/apm-test-slow.sh
 
 claude:
 	./scripts/claude-picker $(ARGS)

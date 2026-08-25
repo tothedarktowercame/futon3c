@@ -60,9 +60,18 @@
          :extra-deps {io.github.cognitect-labs/test-runner
                       {:git/url "https://github.com/cognitect-labs/test-runner.git"
                        :sha "5e91ee0989d93115cfb5e15b6f242f5ec7ab762e"}}
-         :main-opts ["-m" "cognitect.test-runner"]
+         ;; Tests tagged ^:slow (Lean-backed manifest qualification, ~25 s
+         ;; each) are excluded by default so `clojure -M:test -n <ns>` is
+         ;; always the fast path. Include them with the :test-all overlay:
+         ;;   clojure -M:test:test-all -i :slow -n <ns>   (scripts/apm-test-slow.sh)
+         :main-opts ["-m" "cognitect.test-runner" "-e" ":slow"]
          :exec-fn cognitect.test-runner.api/test
-         :exec-args {:dirs ["test"]}}
+         :exec-args {:dirs ["test"] :excludes [:slow]}}
+
+  ;; Overlay on :test that lifts the ^:slow exclusion. Always combine:
+  ;; -M:test:test-all / -X:test:test-all.
+  :test-all {:main-opts ["-m" "cognitect.test-runner"]
+             :exec-args {:excludes []}}
 
   ;; Long-lived serving image.  This is the Lisp-machine development runtime:
   ;; Drawbridge remains available, but namespace removal/recreation is refused

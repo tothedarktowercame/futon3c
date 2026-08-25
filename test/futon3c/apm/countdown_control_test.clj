@@ -6,6 +6,8 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-runner :as runner]
             [futon3c.apm.countdown-control :as sut]
+            [futon3c.apm.countdown-manifest :as countdown-manifest]
+            [futon3c.apm.test-support :refer [with-stubbed-qualification]]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.live-promotion :as live-promotion]
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
@@ -86,8 +88,8 @@
         (is (= :promote-solver (get-in result [:request :phase])))
         (is (= "f22-scribe" (get-in result [:request :agent-id])))))))
 
-(deftest ^:slow replacement-registration-starts-at-f19-with-complete-cycle
-  (let [body (sut/registration-body)
+(deftest replacement-registration-starts-at-f19-with-complete-cycle
+  (let [body (with-stubbed-qualification (sut/registration-body))
         units (get-in body [:block-plan 0 :units])]
     (is (= 9 (count units)))
     (is (= "f19" (:frame-id (first units))))
@@ -420,10 +422,10 @@
       (is (= :countdown-registration-mismatch
              (:error/code (sut/bootstrap!)))))))
 
-(deftest ^:slow qualified-v2-launch-dry-run-dispatches-nothing
+(deftest qualified-v2-launch-dry-run-dispatches-nothing
   (binding [sut/contract-path
             "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
-    (let [result (sut/dry-run-v2-launch)]
+    (let [result (with-stubbed-qualification (sut/dry-run-v2-launch))]
       (is (:ok result) (pr-str result))
       (is (= [] (:dispatches result)))
       (is (= [] (:historical-state-mutations result)))
@@ -445,12 +447,23 @@
       (binding [sut/contract-path
                 "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
                 sut/qualification-report-path (.getAbsolutePath temp)]
-        (let [result (sut/dry-run-v2-launch)]
+        (let [result (with-stubbed-qualification (sut/dry-run-v2-launch))]
           (is (false? (:ok result)))
           (is (some #{:qualification-observed-artifact-stale}
                     (get-in result [:qualification :findings])))
           (is (= [] (:dispatches result)))))
       (finally (.delete temp)))))
+
+(deftest ^:slow v2-manifest-qualifies-under-real-lean
+  ;; The one test that provisions the qualification worktrees and runs
+  ;; `lake env lean` on all ten pinned problems (~25 s). Everything else
+  ;; stubs `qualify-unit` (see futon3c.apm.test-support). Excluded by
+  ;; default; run with scripts/apm-test-slow.sh.
+  (let [manifest (:manifest (#'sut/inputs))
+        result (countdown-manifest/validate manifest)]
+    (is (:valid? result) (pr-str (:findings result)))
+    (is (= 10 (count (:eligibility-observations result))))
+    (is (every? :valid? (:eligibility-observations result)))))
 
 (deftest problem-list-entry-does-not-preconstruct-frame-resources
   (let [captured (atom nil)

@@ -2,7 +2,8 @@
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.countdown-control :as control]
-            [futon3c.apm.live-orchestration-contract :as sut]))
+            [futon3c.apm.live-orchestration-contract :as sut]
+            [futon3c.apm.test-support :refer [with-stubbed-qualification]]))
 
 (def spec-path
   "holes/labs/M-apm-demonstration/countdown-live-orchestration-v1.edn")
@@ -10,7 +11,9 @@
   (edn/read-string
    (slurp "holes/labs/M-apm-demonstration/countdown-10-manifest-v2.edn")))
 (def spec (:spec (sut/read-spec spec-path)))
-(def registration (control/registration-body))
+(def registration
+  ;; Built at load time; stubbed so loading this namespace does not run Lean.
+  (with-stubbed-qualification (control/registration-body)))
 (def required-kinds
   (into (:administrative-kinds spec) (keys (:phase-kinds spec))))
 (def complete-handlers (zipmap required-kinds (repeat (fn [_] {:ok true}))))
