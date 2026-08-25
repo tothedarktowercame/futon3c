@@ -205,6 +205,7 @@
                          {:lane :trajectory :status :ran-empty :reason "none"}
                          {:lane :challenge :status :ran-empty :reason "none"}]}
         saved (atom nil)
+        published (atom nil)
         result
         (sut/drive!
          {:state {:state/type :promotion :stage :deposit :job "deposit-job"}
@@ -221,7 +222,25 @@
           :deposit-request {}})]
     (is @reviewed?)
     (is (= :awaiting-terminal (:status result)))
-    (is (= :independent-review (:stage @saved)))))
+    (is (= :independent-review (:stage @saved)))
+    (let [completed
+          (sut/drive!
+           {:state @saved
+            :review-fn
+            (fn [_ _]
+              {:ok true :reviewer "proctor"
+               :reviews [{:memory-id "memory" :reviewer "proctor"
+                           :verdict :approve :reason "coherent and witnessed"
+                           :residual "none"
+                           :review-evidence-id "review-evidence"
+                           :attachment-status :reviewed
+                           :pattern-ids ["new-pattern"]}]})
+            :publish-fn (fn [value]
+                          (reset! published value)
+                          {:ok true :receipt {:receipt/id "published"}})
+            :persist-fn #(reset! saved %)})]
+      (is (= :certified (:status completed)))
+      (is (= :approve (get-in @published [:reviews 0 :verdict]))))))
 
 (deftest invalid-deposit-shape-is-bounded
   (let [result (sut/drive!
