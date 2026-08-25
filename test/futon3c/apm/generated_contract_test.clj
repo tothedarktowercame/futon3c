@@ -37,6 +37,22 @@
     (is (= [:generated-contract-student-candidate-policy-invalid]
            (:findings result)))))
 
+(deftest rejected-candidate-and-retirement-order-mutations-are-refused
+  (let [contract (:contract (sut/read-contract candidate-generated-path))]
+    (doseq [[path bad-value finding]
+            [[[:terminal-policy :rejected-student-candidate-evidence-only]
+              false :generated-contract-student-candidate-policy-invalid]
+             [[:terminal-policy :missing-observation-records-certified-candidate]
+              true :generated-contract-student-candidate-policy-invalid]
+             [[:terminal-policy :missing-observation-controller-memory-use-required]
+              false :generated-contract-student-candidate-policy-invalid]
+             [[:dispatch-policy :frame-terminal-persisted-before-retirement]
+              false :generated-contract-dispatch-policy-invalid]
+             [[:dispatch-policy :retirement-replay-uses-persisted-terminal]
+              false :generated-contract-dispatch-policy-invalid]]]
+      (let [result (sut/validate (assoc-in contract path bad-value))]
+        (is (some #{finding} (:findings result)) (pr-str path))))))
+
 (deftest complete-cycle-is-non-vacuous
   (let [contract (:contract (sut/read-contract generated-path))]
     (is (= 11 (count (:phase-order contract))))

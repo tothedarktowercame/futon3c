@@ -63,6 +63,9 @@
    :client-timeout-is-success false
    :terminal-lifecycle-actions-covered ["close-block" "close-campaign"]
    :retirement-binds-recorded-terminal-head true
+   :frame-terminal-persisted-before-retirement true
+   :retirement-replay-uses-persisted-terminal true
+   :retired-workspace-absence-is-postcondition true
    :terminal-collection-is-supervisor-progress true
    :artifact-identity-from-authority-not-observation true
    :preflight-requires-positive-sorry-baseline true
@@ -136,7 +139,10 @@
    :student-candidate-lean-validated true
    :student-candidate-persisted-before-receipt true
    :student-candidate-replay-idempotent true
-   :missing-observation-records-certified-candidate true})
+   :rejected-student-candidate-evidence-only true
+   :missing-observation-records-certified-candidate false
+   :missing-observation-controller-memory-use-required true
+   :missing-observation-scribe-compatible true})
 
 (def required-analyst-policy
   {:outside-frame-order true :wake-after-terminal-only true
@@ -238,7 +244,7 @@
    ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
     "receipt/attempt-ordinal" "receipt/job-id" "receipt/author"
     "receipt/reason" "receipt/repair-attempts" "receipt/memory-snapshot"
-    "receipt/harness-observed"]
+    "receipt/harness-observed" "receipt/memory-use"]
    :guide-intervention
    ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
     "receipt/intervention-ordinal" "receipt/mode" "receipt/input-attempt-id"
