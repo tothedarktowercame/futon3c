@@ -114,6 +114,25 @@
         (is (some #{:generated-contract-memory-policy-invalid}
                   (:findings result)) (str field))))))
 
+(deftest generated-receipt-and-submission-schema-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))
+        submission-mutant
+        (assoc-in contract
+                  [:submission-schemas :student-memory-use
+                   :role-authored-fields]
+                  ["used-ids" "surfaced-ids"])
+        receipt-mutant
+        (update-in contract [:receipt-schemas :student-attempt :required]
+                   pop)
+        phase-mutant
+        (update-in contract [:phases :student-attempt-2 :requires] pop)]
+    (is (some #{:generated-contract-submission-schemas-invalid}
+              (:findings (sut/validate submission-mutant))))
+    (is (some #{:generated-contract-receipt-schemas-invalid}
+              (:findings (sut/validate receipt-mutant))))
+    (is (some #{:generated-contract-phase-io-invalid}
+              (:findings (sut/validate phase-mutant))))))
+
 (deftest wire-result-and-session-rotation-policy-mutations-are-killed
   (let [contract (:contract (sut/read-contract generated-path))]
     (is (some #{:generated-contract-terminal-policy-invalid}

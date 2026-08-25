@@ -33,23 +33,22 @@ the controller-derived surfaced set.
 | Common role authority (`job-id`, dispatch, agent, frame, problem, phase, role, token) | Controller fact | Already injected by `typed-role-submission`; agent-supplied authority is rejected. |
 | Solver/proctor branch, revision, head, Lean result | Observation about workspace | Legitimate role evidence; independently checked against Git/Lean. |
 | Student `used-ids` | Semantic attribution by Student | Retained as a foreign-key claim; checked against controller-derived surfacing. A future tool-owned use receipt would be stronger. |
-| Scribe/promotion-proctor search receipt ids | Redundant replay of job-bound controller receipts | Open follow-up: derive the complete job receipt set at typed-submission validation while preserving pattern-accounting checks. |
+| Scribe/Zai-Scribe/Promotion-Proctor search receipt ids | Redundant replay of job-bound controller receipts | Removed: typed-submission validation now derives the complete content-address-valid job receipt set while preserving pattern-accounting checks. |
 | Promotion reviews keyed by candidate/memory id | Semantic judgement mapping | Retain until reviews use controller-issued ordinal handles; IDs are checked against the exact candidate set. |
 | Guide store candidates naming newly written memory/hyperedge ids | Effect result replay | Open follow-up: bind memory-write receipts to the Guide job and derive deposit candidates from them. Current independent review prevents publication of nonexistent identities. |
 | Close-frame trace/result | Semantic audit conclusion | Retained; terminal receipt identity and inputs are controller-derived. |
 
-The two open follow-ups are real instances of the same design smell, but they
-are not changed here because their consumers require a distinct typed receipt
-for write effects or candidate-review selection. They must be replaced with
-controller-owned receipts, not silently ignored or normalized.
+The remaining Guide write-result replay and promotion-review selection are
+real instances of the same design smell. They require distinct typed receipts
+for write effects or controller-issued ordinal handles for candidate review;
+they must not be silently ignored or normalized.
 
 ## Formal-spec status
 
-The Clojure frame-cycle contract now states
-`:student-terminal-search-accounting-controller-derived`. The checked-in
-generated campaign contract already states that self-reported queries are not
-search evidence and that submission authority is controller-owned, but its
-Lean generator source is not present in this repository. The next canonical
-Lean contract generation must add the stronger Student terminal-accounting
-property before regenerating the JSON artifact; hand-editing generated JSON
-would violate its authority boundary.
+The Lean cycle model now distinguishes content, semantic references, and
+controller accounting at field granularity. It proves that Student
+`:used-ids` is a valid role-authored semantic claim and that role-authored
+`:surfaced-ids` is invalid. The emitter owns phase I/O, receipt schemas, and
+terminal submission authority schemas; Clojure validates their exact generated
+form and the typed submission tool consumes the Student memory-use boundary.
+The generated-receipt-schema residual hole is therefore closed.

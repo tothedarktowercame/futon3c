@@ -11,7 +11,11 @@
 
 (defn payload [phase]
   {:command-own-exit 0 :outcome "complete" :failure-account []
-   :evidence (zipmap (sut/evidence-required-by-phase phase) (repeat true))})
+   :evidence (cond-> (zipmap (sut/evidence-required-by-phase phase)
+                             (repeat true))
+               (contains? #{:student-attempt-1 :student-attempt-2
+                            :student-attempt-3} phase)
+               (assoc :memory-use {:used-ids []}))})
 
 (deftest every-modelled-live-phase-has-an-executable-schema
   (doseq [phase (keys sut/evidence-required-by-phase)]
@@ -78,7 +82,7 @@
         result (sut/validate-payload authority payload)]
     (is (= :role-submission-payload-invalid (:error/code result)))
     (is (some #{expected-finding} (:findings result)))
-    (is (= #{:memory-search-receipt-ids :receipt}
+    (is (= #{:receipt}
            (:evidence/missing result)))))
 
 (deftest capable-role-may-honestly-report-no-search
@@ -91,12 +95,21 @@
 (deftest canonical-pattern-search-is-mandatory-for-scribe-and-promotion-proctor
   (doseq [role [:scribe :promotion-proctor]]
     (let [auth (assoc (authority :promote-solver) :role role)
-          value (assoc-in (payload :promote-solver)
-                          [:evidence :memory-search-receipt-ids] [])
+          value (payload :promote-solver)
           result (sut/validate-payload auth value)]
       (is (= :role-submission-payload-invalid (:error/code result)) (name role))
-      (is (some #{:canonical-pattern-search-required}
-                (get-in result [:memory-search/check :findings])) (name role)))))
+      (is (= :canonical-pattern-search-required
+             (get-in result [:memory-search/check :error/code])) (name role)))))
+
+(deftest student-cannot-replay-controller-owned-memory-accounting
+  (let [auth (assoc (authority :student-attempt-2) :role :student)
+        valid (payload :student-attempt-2)
+        replayed (assoc-in valid [:evidence :memory-use :surfaced-ids]
+                           ["controller-memory-id"])
+        result (sut/validate-payload auth replayed)]
+    (is (:ok (sut/validate-payload auth valid)))
+    (is (= [:controller-derived-memory-field-supplied-by-agent]
+           (:findings result)))))
 
 (deftest only-zai-scribe-end-reduction-has-candidate-authority
   (let [codex-auth (assoc (authority :scribe-reduce) :role :scribe)

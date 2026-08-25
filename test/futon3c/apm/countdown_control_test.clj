@@ -380,7 +380,7 @@
                             :active/frame {:frame-id "f27"
                                            :problem-id "m94A03"}}}))))))
 
-(deftest v2-countdown-policy-is-lean-generated-and-schema-hole-is-explicit
+(deftest v2-countdown-policy-and-receipt-schemas-are-lean-generated
   (binding [sut/contract-path
             "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"]
     (let [loaded (#'sut/inputs)
@@ -392,8 +392,11 @@
       (is (= 50 (get-in contract [:generated/bounds :solver-max-rounds])))
       (is (= "apm-complete-frame-cycle-v2" (:contract-id emitted)))
       (is (map? (:receipt/schemas contract)))
-      (is (nil? (:receipt-schemas contract)))
-      (is (= :open (:hole/status hole)))
+      (is (= (set (map keyword
+                       (get-in emitted
+                               [:receipt-schemas :student-attempt :required])))
+             (get-in contract [:receipt/schemas :student-attempt :required])))
+      (is (= :closed (:hole/status hole)))
       (is (= 11 (count (:phase-order contract)))))))
 
 (deftest mutated-emitted-contract-fails-before-registration

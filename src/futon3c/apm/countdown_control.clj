@@ -158,6 +158,20 @@
       {:ok true :card (assoc card :path (:path checked))}
       checked)))
 
+(defn- apply-generated-receipt-contract [legacy generated]
+  (let [phases
+        (reduce-kv
+         (fn [result phase {:keys [requires produces]}]
+           (-> result
+               (assoc-in [phase :requires] (set (map keyword requires)))
+               (assoc-in [phase :produces] (set (map keyword produces)))))
+         (:phases legacy) (:phases generated))
+        receipt-schemas
+        (update-vals (:receipt-schemas generated)
+                     (fn [{:keys [required]}]
+                       {:required (set (map keyword required))}))]
+    (assoc legacy :phases phases :receipt/schemas receipt-schemas)))
+
 (defn- inputs []
   (let [manifest (edn/read-string (slurp (str (control-path manifest-path))))
         legacy (edn/read-string (slurp (str (control-path contract-path))))]
@@ -169,9 +183,7 @@
           (throw (ex-info "Lean-generated campaign contract rejected" result)))
         (let [generated (:contract result)]
           {:manifest manifest
-           ;; Receipt schemas and phase requires/produces remain EDN-owned.
-           ;; The executable ordering and numerical policy are Lean-owned.
-           :contract (assoc legacy
+           :contract (assoc (apply-generated-receipt-contract legacy generated)
                             :phase-order (mapv keyword (:phase-order generated))
                             :generated/bounds (:bounds generated)
                             :generated/dispatch-policy (:dispatch-policy generated)
@@ -1095,7 +1107,7 @@
         role-budgets (:role-terminal-budgets dispatch-policy)
         policy-audit
         {:all-live-roles-bounded?
-         (and (= #{:solver :student :guide :scribe :proctor
+         (and (= #{:solver :student :guide :scribe :zai-scribe :proctor
                    :promotion-proctor :analyst}
                  (set (keys role-budgets)))
               (every? #(every? pos-int? (vals %)) (vals role-budgets)))

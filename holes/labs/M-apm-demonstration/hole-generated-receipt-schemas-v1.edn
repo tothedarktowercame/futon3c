@@ -1,7 +1,7 @@
 {:hole/id :apm-generated-receipt-schemas
- :hole/status :open
- :authority :frame-cycle-contract-v2-edn
+ :hole/status :closed
+ :authority :apm-cycle-contract-v3-json
  :generated-authority :apm-cycle-contract-v3-json
- :retained-fields [:phases :receipt/schemas :global-invariants]
- :reason "The Lean emitter owns phase order, total transitions, and executable bounds, but does not yet emit receipt schemas or per-phase requires/produces declarations."
- :closure-test "A future Lean emitter includes these fields; Clojure validates their generated form and removes the EDN merge without changing an accepted campaign trace."}
+ :retained-fields [:global-invariants]
+ :reason "The Lean emitter now owns per-phase requires/produces, receipt schemas, and terminal submission field authority. Clojure validates and consumes their generated form; EDN phase/receipt copies are no longer runtime authority."
+ :closure-test "Lean emits phases, receipt-schemas, and submission-schemas; Clojure mutation tests reject drift, and typed Student submissions reject controller-derived memory accounting fields."}

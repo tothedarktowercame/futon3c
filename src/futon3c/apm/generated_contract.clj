@@ -25,13 +25,13 @@
    :submission-persisted-before-advance true
    :conversation-is-receipt-authority false
    :submission-conflict-policy "reject"
-   :submission-covered-role-count 7
+   :submission-covered-role-count 8
    :terminal-collection-required true
    :terminal-collection-persisted true
    :terminal-collection-before-missing-observation true
    :terminal-collection-attempts-per-role 1
    :terminal-repair-attempts-per-role 1
-   :terminal-collection-covered-role-count 7
+   :terminal-collection-covered-role-count 8
    :promotion-review-enums-normalized true
    :promotion-approved-candidates-accounted true
    :promotion-approved-unattached-refused true
@@ -41,6 +41,7 @@
     :student {:collection-attempts 1 :repair-attempts 1}
     :guide {:collection-attempts 1 :repair-attempts 1}
     :scribe {:collection-attempts 1 :repair-attempts 1}
+    :zai-scribe {:collection-attempts 1 :repair-attempts 1}
     :proctor {:collection-attempts 1 :repair-attempts 1}
     :promotion-proctor {:collection-attempts 1 :repair-attempts 1}
     :analyst {:collection-attempts 1 :repair-attempts 1}}
@@ -143,6 +144,113 @@
    :tenure-frames 2 :successor-handoff-required true
    :in-flight-mutation false})
 
+(def required-submission-schemas
+  {:schema-version 1
+   :controller-derived-fields
+   ["job-id" "dispatch-id" "agent-id" "frame-id" "problem-id" "phase"
+    "role" "attempt-ordinal" "submission-attempt" "fresh-session-nonce"
+    "memory-snapshot" "evidence.memory-use.receipt-id"
+    "evidence.memory-use.snapshot-id" "evidence.memory-use.snapshot-digest"
+    "evidence.memory-use.accessible-memory-ids"
+    "evidence.memory-use.surfaced-ids" "evidence.memory-use.queries"
+    "evidence.memory-search-receipt-ids"]
+   :role-authored-fields
+   {:solver ["command-own-exit" "outcome" "failure-account" "evidence"]
+    :student ["command-own-exit" "outcome" "failure-account"
+              "evidence.memory-use.used-ids"]
+    :guide ["command-own-exit" "outcome" "failure-account" "evidence"]
+    :scribe ["command-own-exit" "outcome" "failure-account" "evidence"]
+    :zai-scribe ["command-own-exit" "outcome" "failure-account" "evidence"]
+    :proctor ["command-own-exit" "outcome" "failure-account" "evidence"]
+    :promotion-proctor
+    ["command-own-exit" "outcome" "failure-account" "evidence"]
+    :analyst ["command-own-exit" "outcome" "failure-account" "evidence"]}
+   :student-memory-use
+   {:role-authored-fields ["used-ids"]
+    :controller-derived-fields
+    ["receipt-id" "snapshot-id" "snapshot-digest" "accessible-memory-ids"
+     "surfaced-ids" "queries"]}
+   :self-reported-controller-identifiers-are-evidence false})
+
+(def required-phase-io
+  {:preflight {:requires [] :produces ["preflight-receipt"]}
+   :solve {:requires ["preflight-receipt"]
+           :produces ["solve-receipt" "committed-proof"]}
+   :verify {:requires ["solve-receipt" "committed-proof"]
+            :produces ["verify-receipt"]}
+   :promote-solver {:requires ["solve-receipt" "verify-receipt"]
+                    :produces ["solver-promotion-receipt"
+                               "solver-memory-snapshot"]}
+   :student-attempt-1
+   {:requires ["preflight-receipt" "solver-memory-snapshot"]
+    :produces ["student-attempt-1-receipt" "memory-use-1-receipt"]}
+   :guide-intervention-1
+   {:requires ["student-attempt-1-receipt" "memory-use-1-receipt"]
+    :produces ["guide-intervention-1-receipt"]}
+   :student-attempt-2
+   {:requires ["guide-intervention-1-receipt" "solver-memory-snapshot"]
+    :produces ["student-attempt-2-receipt" "memory-use-2-receipt"]}
+   :guide-intervention-2
+   {:requires ["student-attempt-2-receipt" "memory-use-2-receipt"]
+    :produces ["guide-intervention-2-receipt"]}
+   :student-attempt-3
+   {:requires ["guide-intervention-2-receipt" "solver-memory-snapshot"]
+    :produces ["student-attempt-3-receipt" "memory-use-3-receipt"]}
+   :scribe-reduce
+   {:requires ["solve-receipt" "verify-receipt" "solver-promotion-receipt"
+               "student-attempt-1-receipt" "memory-use-1-receipt"
+               "student-attempt-2-receipt" "memory-use-2-receipt"
+               "student-attempt-3-receipt" "memory-use-3-receipt"
+               "guide-intervention-1-receipt" "guide-intervention-2-receipt"]
+    :produces ["scribe-lane-receipt" "memory-disposition-receipt"
+               "promotion-review-receipt"]}
+   :close-frame
+   {:requires ["solve-receipt" "verify-receipt" "solver-promotion-receipt"
+               "student-attempt-1-receipt" "memory-use-1-receipt"
+               "student-attempt-2-receipt" "memory-use-2-receipt"
+               "student-attempt-3-receipt" "memory-use-3-receipt"
+               "guide-intervention-1-receipt" "guide-intervention-2-receipt"
+               "scribe-lane-receipt" "memory-disposition-receipt"
+               "promotion-review-receipt"]
+    :produces ["frame-close-receipt" "frame-trace"]}})
+
+(def required-receipt-schemas
+  {:frame-preflight ["receipt/id" "receipt/type" "receipt/frame-id"
+                     "receipt/problem-id" "receipt/result"]
+   :frame-solve ["receipt/id" "receipt/type" "receipt/frame-id"
+                 "receipt/problem-id" "receipt/final-head" "receipt/lean"]
+   :frame-verify ["receipt/id" "receipt/type" "receipt/frame-id"
+                  "receipt/problem-id" "receipt/solve-receipt-id"
+                  "receipt/mathematical-sound?"]
+   :solver-promotion
+   ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
+    "receipt/input-receipt-ids" "receipt/lanes" "receipt/dispositions"
+    "receipt/promotion-reviews" "receipt/snapshot-id" "receipt/snapshot-digest"
+    "receipt/snapshot-path" "receipt/reviewed-memory-ids"
+    "receipt/independent-review?"]
+   :student-attempt
+   ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
+    "receipt/attempt-ordinal" "receipt/fresh-session-id" "receipt/job-id"
+    "receipt/outcome" "receipt/failure-account" "receipt/memory-use"
+    "receipt/memory-snapshot"]
+   :student-observation-missing
+   ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
+    "receipt/attempt-ordinal" "receipt/job-id" "receipt/author"
+    "receipt/reason" "receipt/repair-attempts" "receipt/memory-snapshot"
+    "receipt/harness-observed"]
+   :guide-intervention
+   ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
+    "receipt/intervention-ordinal" "receipt/mode" "receipt/input-attempt-id"
+    "receipt/effect" "receipt/channel-audit"]
+   :scribe-reduce
+   ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
+    "receipt/input-receipt-ids" "receipt/lanes" "receipt/dispositions"
+    "receipt/promotion-reviews"]
+   :frame-close
+   ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
+    "receipt/input-receipt-ids" "receipt/trace-id" "receipt/result"
+    "receipt/learning-outcome"]})
+
 (defn read-contract [path]
   (try
     {:ok true :contract (json/parse-string (slurp path) true)}
@@ -198,7 +306,14 @@
                (not= required-student-candidate-policy candidate-policy))
           (conj :generated-contract-student-candidate-policy-invalid)
           (not= required-analyst-policy (:analyst-policy contract))
-          (conj :generated-contract-analyst-policy-invalid))]
+          (conj :generated-contract-analyst-policy-invalid)
+          (not= required-submission-schemas (:submission-schemas contract))
+          (conj :generated-contract-submission-schemas-invalid)
+          (not= required-phase-io (:phases contract))
+          (conj :generated-contract-phase-io-invalid)
+          (not= required-receipt-schemas
+                (update-vals (:receipt-schemas contract) :required))
+          (conj :generated-contract-receipt-schemas-invalid))]
     (if (seq findings)
       {:ok false :error/code :generated-contract-invalid :findings findings}
       {:ok true :contract contract})))

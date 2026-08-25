@@ -7,7 +7,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.set :as set]
-            [futon3c.apm.campaign-machine :as machine])
+            [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.generated-contract :as generated-contract])
   (:import (java.nio.file Files StandardCopyOption)
            (java.util UUID)))
 
@@ -63,9 +64,6 @@
     (and (= :promote-solver (:phase auth))
          (= :scribe (:role auth)))
     (conj :receipt)
-    (and (contains? memory-search-capable-roles (:role auth))
-         (not= :student (:role auth)))
-    (conj :memory-search-receipt-ids)
     (and (= :solve (:phase auth))
          (true? (:solver/strategy-checkpoint? auth)))
     (conj :solver/strategy)))
@@ -148,14 +146,17 @@
                            (set/difference evidence-required
                                            (set (keys (:evidence payload))))
                            #{})
-        search-check (when (and (contains? memory-search-capable-roles (:role auth))
-                                (map? (:evidence payload))
-                                (contains? (:evidence payload)
-                                           :memory-search-receipt-ids))
-                       ((requiring-resolve
-                         'futon3c.apm.role-memory-search/validate-claims)
-                        auth (get-in payload
-                                     [:evidence :memory-search-receipt-ids])))
+        search-check
+        (when (and (contains? memory-search-capable-roles (:role auth))
+                   (not= :student (:role auth)))
+          (let [receipts
+                ((requiring-resolve
+                  'futon3c.apm.role-memory-search/recorded-receipts-for-job)
+                 (:job-id auth))]
+            (if (and (contains? #{:scribe :promotion-proctor} (:role auth))
+                     (empty? receipts))
+              {:ok false :error/code :canonical-pattern-search-required}
+              {:ok true :receipts receipts})))
         pattern-check (when (and (:ok search-check)
                                  (contains? #{:scribe :zai-scribe
                                               :promotion-proctor}
@@ -163,6 +164,10 @@
                         ((requiring-resolve
                           'futon3c.apm.role-memory-search/validate-pattern-accounting)
                          (:receipts search-check) (:evidence payload)))
+        student-memory-use (get-in payload [:evidence :memory-use])
+        allowed-student-memory-use
+        (->> generated-contract/required-submission-schemas
+             :student-memory-use :role-authored-fields (map keyword) set)
         findings (cond-> []
                    (nil? evidence-required) (conj :phase-schema-unknown)
                    (seq (set/intersection authority-fields (set (keys payload))))
@@ -179,7 +184,21 @@
                    (and search-check (not (:ok search-check)))
                    (conj :memory-search-receipts-invalid)
                    (and pattern-check (not (:ok pattern-check)))
-                   (conj :memory-search-pattern-accounting-invalid))]
+                   (conj :memory-search-pattern-accounting-invalid)
+                   (and (= :student (:role auth))
+                        (not (map? student-memory-use)))
+                   (conj :student-memory-use-not-map)
+                   (and (= :student (:role auth))
+                        (map? student-memory-use)
+                        (not (and (vector? (:used-ids student-memory-use))
+                                  (every? string? (:used-ids
+                                                   student-memory-use)))))
+                   (conj :student-memory-used-ids-invalid)
+                   (and (= :student (:role auth))
+                        (map? student-memory-use)
+                        (seq (set/difference (set (keys student-memory-use))
+                                             allowed-student-memory-use)))
+                   (conj :controller-derived-memory-field-supplied-by-agent))]
     (if (seq findings)
       {:ok false :error/code :role-submission-payload-invalid
        :findings findings :missing missing :evidence/missing evidence-missing

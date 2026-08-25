@@ -12,7 +12,7 @@
 
 (def ^:dynamic *receipt-root* "data/apm-role-memory-searches")
 (def ^:dynamic *search-fn* recall/propose-patterns-by-query)
-(def search-capable-roles #{:student :scribe :promotion-proctor})
+(def search-capable-roles #{:student :scribe :zai-scribe :promotion-proctor})
 (def max-results 10)
 
 (defn- receipt-path [receipt-id]
