@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$repo_root"
 
-clojure -Sdeps '{:paths ["dev"]}' -M -e '
+clojure -Sdeps '{:paths ["src" "resources" "library" "dev"]}' -M -e '
 (require (quote futon3c.apm.coined-pattern))
 (doseq [[path coiner]
         [["holes/labs/M-apm-demonstration/pattern-library-zai-scribe-f34-a95J03.md"
