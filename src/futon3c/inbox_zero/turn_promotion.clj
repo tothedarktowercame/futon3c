@@ -5,7 +5,13 @@
   routing, and honest delivery; :execute additionally commits and applies the
   ordinary-vs-outlier push policy. Tier-1 exact seats use the durable followup
   queue. Tier-2/3 transports do not yet exist, so those decisions are appended
-  to a durable ledger and printed loudly instead of being forged as deliveries."
+  to a durable ledger and printed loudly instead of being forged as deliveries.
+
+  Mode resolution: explicit `:mode` in options, else the live operator override
+  set with `set-mode!`, else FUTON3C_INBOX_ZERO_PROMOTION, else :off. The
+  override exists so the operator can flip propose/execute in the serving JVM
+  without a restart; the env default in scripts/dev-zone-env is what survives
+  one."
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
             [clojure.edn :as edn]
@@ -239,6 +245,17 @@
                        (:route/message decision))))))
   decisions)
 
+(defonce ^:private !mode-override (atom nil))
+
+(defn set-mode!
+  "Override the promotion mode for this JVM (:off, :propose, :execute), or
+  clear the override with nil so the environment default applies again.
+  Returns the mode now in effect for option-less calls."
+  [mode]
+  (reset! !mode-override (some-> mode mode-keyword))
+  (mode-keyword (or @!mode-override
+                    (System/getenv "FUTON3C_INBOX_ZERO_PROMOTION"))))
+
 (defn promote-at-turn-end!
   "Run the configured turn-end pipeline for exact AGENT-ID/SESSION-ID.
 
@@ -246,6 +263,7 @@
   this dev-facing entry never propagates backpressure into invoke completion."
   [agent-id session-id options]
   (let [mode (mode-keyword (or (:mode options)
+                               @!mode-override
                                (System/getenv "FUTON3C_INBOX_ZERO_PROMOTION")))]
     (when-not (= :off mode)
       (let [print-fn (or (:print-fn options) println)]

@@ -200,3 +200,17 @@
     (is (nil? (:verdict result)))
     (is (= :propose (:mode result)))
     (is (some #{:load} @calls))))
+
+(deftest live-mode-override-applies-to-option-less-calls-and-clears
+  ;; Zone's serving JVM reads FUTON3C_INBOX_ZERO_PROMOTION once at boot; the
+  ;; override is how the operator flips modes without a restart.
+  (try
+    (let [calls (atom [])]
+      (is (= :propose (sut/set-mode! :propose)))
+      (is (= :propose (:mode (sut/promote-at-turn-end! "a" "s" (opts calls)))))
+      ;; an explicit :mode still wins over the override
+      (is (nil? (sut/promote-at-turn-end! "a" "s" (assoc (opts calls) :mode :off))))
+      (is (= :off (sut/set-mode! "nonsense")) "unknown modes resolve to :off"))
+    (finally
+      (sut/set-mode! nil)
+      (is (nil? @@#'sut/!mode-override)))))

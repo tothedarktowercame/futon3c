@@ -65,10 +65,11 @@ export FUTON3_INBOX_ZERO_WITNESS_DIR="${FUTON3_INBOX_ZERO_WITNESS_DIR:-${HOME}/c
 export FUTON3C_INBOX_ZERO_STATE_PATH="${FUTON3C_INBOX_ZERO_STATE_PATH:-${HOME}/code/storage/inbox-zero/state.edn}"
 export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="${FUTON3C_INBOX_ZERO_FOLLOWUP_URL:-http://127.0.0.1:${FUTON3C_PORT}/api/alpha/followups}"
 # Turn-end promotion (futon3c.inbox-zero.turn-promotion, wired 2026-08-24).
-# "propose" is the shakedown mode: full pipeline, tier-1 would-promote
-# followups, tier-2/3 to the escalation ledger, ZERO git writes. Flip to
-# "execute" only after observing propose-mode behaviour (Joe's call).
-export FUTON3C_INBOX_ZERO_PROMOTION="${FUTON3C_INBOX_ZERO_PROMOTION:-propose}"
+# "propose" = full pipeline with ZERO git writes (shakedown mode, 08-24/25);
+# "execute" = commit + ordinary-vs-outlier push at turn end. Flipped to execute
+# 2026-08-25 (Joe: "turn it on in production") once the attribution arc closed.
+# Live flip without restart: (turn-promotion/set-mode! :execute) via proof-eval.
+export FUTON3C_INBOX_ZERO_PROMOTION="${FUTON3C_INBOX_ZERO_PROMOTION:-execute}"
 # Street-sweeper attribution proposals (futon3c.inbox-zero.sweeper, wired
 # 2026-08-24). Proposes attributions for unattributed dirt via confirmation
 # followups; NEVER mints claims (confirmation minting is a separate slice).
