@@ -1,6 +1,7 @@
 (ns futon3c.apm.promotion-review-store-test
   (:require [clojure.test :refer [deftest is]]
-            [futon3c.apm.promotion-review-store :as sut]))
+            [futon3c.apm.promotion-review-store :as sut]
+            [futon3c.social.shapes :as shapes]))
 
 (deftest returned-reassign-is-persisted-before-attachment-projection
   (let [memory-id "e-memory"
@@ -51,6 +52,9 @@
            (get-in evidence [:evidence/body :review/reason])))
     (is (= "returned residual"
            (get-in evidence [:evidence/body :review/residual])))
+    (is (= [:memory :memory/attachment-review :apm/promotion-review]
+           (:evidence/tags evidence)))
+    (is (shapes/valid? shapes/EvidenceEntry evidence))
     (is (= :reviewed (get-in edge [:hx/props :attachment-status])))
     (is (= :reassign (get-in edge [:hx/props :review :verdict])))
     (is (= [new-pattern] (get-in edge [:hx/props :roles :patterns])))

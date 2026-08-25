@@ -19,6 +19,7 @@
    :evidence/author reviewer
    :evidence/session-id review-job
    :evidence/at (str (Instant/now))
+   :evidence/tags [:memory :memory/attachment-review :apm/promotion-review]
    :evidence/body
    {:review/event :memory-attachment-review
     :review/memory-id (:memory-id review)
