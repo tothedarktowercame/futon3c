@@ -122,12 +122,21 @@ def dedupe_usage_records(records):
 
 
 def is_typed_prompt(record):
-    """A user record whose content is a plain string is something the operator
-    typed; tool results are user records with a list content."""
+    """A user record holding operator input, not a tool result.  Interactive
+    sessions record the prompt as a plain string; SDK/pouch-driven sessions
+    (promptSource "sdk") record it as a list of text blocks.  Tool results are
+    lists containing tool_result blocks, so text-only lists are safe to count."""
     if record.get("type") != "user":
         return False
     message = record.get("message") or {}
-    return message.get("role") == "user" and isinstance(message.get("content"), str)
+    if message.get("role") != "user":
+        return False
+    content = message.get("content")
+    if isinstance(content, str):
+        return True
+    return (isinstance(content, list) and len(content) > 0
+            and all(isinstance(block, dict) and block.get("type") == "text"
+                    for block in content))
 
 
 def last_turn_records(path, records):
