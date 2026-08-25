@@ -64,6 +64,58 @@
         (atomic-write! path next-value)
         next-value))))
 
+(defonce ^:private refusal-counts (atom {}))
+
+(defn- incomplete-seat
+  "Which half of the exact seat is missing, or nil when both are present."
+  [agent-id session-id]
+  (let [blank? (fn [v] (str/blank? (some-> v str)))]
+    (cond
+      (and (blank? agent-id) (blank? session-id)) :no-seat
+      (blank? agent-id)                           :no-agent-id
+      (blank? session-id)                         :no-session-id
+      :else nil)))
+
+(defn- refuse-incomplete-seat!
+  "Refuse to plan for a seat id that cannot join a claim, and say so.
+
+  A plan is computed for `seat:<agent>:<session>` and `plan-promotion` includes
+  a path only when a claim carries that exact string. A blank half therefore
+  yields a seat that matches nothing: every path reads :unattributed or
+  :other-seat, every plan holds, and every hold escalates to the sweeper.
+  Measured on zone before this guard — 3,263 such plans over 30 hours from six
+  sessionless seats, :include empty in every one. Planning anyway manufactures
+  a hold that reads as a judgement about dirt when it is a judgement about
+  nothing.
+
+  Ledgered once per (agent, reason) per process with a running count, then
+  counted silently and re-printed every hundredth, so the refusal is visible
+  without replacing one flood with another."
+  [agent-id session-id reason {:keys [ledger-fn ledger-path print-fn now-fn]}]
+  (let [seat-id (str "seat:" agent-id ":" session-id)
+        k [(str agent-id) reason]
+        n (get (swap! refusal-counts update k (fnil inc 0)) k)]
+    (when (or (= 1 n) (zero? (mod n 100)))
+      (print-fn (str "[inbox-zero] REFUSED turn promotion for " (pr-str seat-id)
+                     " — " (name reason)
+                     ": a seat id with a blank half joins to no claim, so every"
+                     " plan would hold on nothing (occurrence " n ")")))
+    (when (= 1 n)
+      (try
+        (ledger-fn ledger-path
+                   {:record/type :inbox-zero/refusal
+                    :refusal/reason reason
+                    :refusal/agent-id (str agent-id)
+                    :refusal/seat-id seat-id
+                    :refusal/first-at (now-fn)
+                    :refusal/note (str "no plan computed; subsequent identical "
+                                       "refusals are counted in-process only")})
+        (catch Throwable error
+          (try (print-fn (str "[inbox-zero] refusal ledger append failed: "
+                              (.getMessage error)))
+               (catch Throwable _)))))
+    {:verdict :refused :reason reason :seat/id seat-id :occurrence n}))
+
 (defn- parse-seat [seat-id]
   (when-let [[_ agent session] (and (string? seat-id)
                                     (re-matches #"seat:([^:]+):(.+)" seat-id))]
@@ -197,90 +249,105 @@
                                (System/getenv "FUTON3C_INBOX_ZERO_PROMOTION")))]
     (when-not (= :off mode)
       (let [print-fn (or (:print-fn options) println)]
-        (try
-          (let [state-path (or (:state-path options)
-                               (System/getenv "FUTON3C_INBOX_ZERO_STATE_PATH")
-                               default-state-path)
-                now-fn (or (:now-fn options) #(Date.))
-                load-state-fn (or (:load-state-fn options) inbox-state/load-state)
-                plan-fn (or (:plan-fn options) promotion/plan-promotion)
-                screen-fn (or (:screen-fn options) escalation/screen-sensitivity)
-                execute-fn (or (:execute-fn options) promote-exec/execute-plan!)
-                push-fn (or (:push-fn options) promote-push/push-promoted!)
-                route-fn (or (:route-fn options) escalation/route)
-                roster-fn (or (:roster-fn options) default-roster)
-                clock-fn (or (:clock-fn options) clock-store/current-clock)
-                size-fn (or (:size-fn options)
-                            (fn [root path]
-                              (let [file (io/file root path)]
-                                (when (and (.exists file) (.isFile file)) (.length file)))))
-                gates (if (contains? options :gates) (:gates options) (read-gates))
-                followup-url (or (:followup-url options)
-                                 (System/getenv "FUTON3C_INBOX_ZERO_FOLLOWUP_URL")
-                                 "http://127.0.0.1:7070/api/alpha/followups")
-                deliver! (or (:deliver! options) #(default-deliver followup-url %))
-                ledger-path (or (:escalation-ledger-path options)
-                                (System/getenv "FUTON3C_INBOX_ZERO_ESCALATION_LEDGER")
-                                (str (.getParent (io/file state-path))
-                                     "/escalation-ledger.edn"))
-                ledger-fn (or (:ledger-fn options) append-escalation!)
-                state (load-state-fn state-path)
-                roots (repo-roots state)
-                seat-id (str "seat:" agent-id ":" session-id)
-                plans (plan-fn state seat-id (now-fn))
-                screened (mapv (fn [plan]
-                                 (let [root (get roots [(:repo/id plan)
-                                                       (:worktree/id plan)])]
-                                   (screen-fn (enrich-sizes plan root size-fn)
-                                              escalation/default-rules)))
-                               plans)
-                live-seats (roster-fn)
-                route-context {:live-seats live-seats
-                               :sweeper-recipient (or (:sweeper-recipient options)
-                                                      "street-sweeper")
-                               :operator-recipient (or (:operator-recipient options) "joe")}
-                outcomes
-                (if (= :propose mode)
-                  screened
-                  (mapv
-                   (fn [plan]
-                     (if (= :held (:verdict plan))
-                       plan
-                       (let [root (get roots [(:repo/id plan) (:worktree/id plan)])
-                             executed (execute-fn
-                                       plan {:repo-root root :gates gates
-                                             :message (commit-message
-                                                       agent-id plan
-                                                       (clock-fn agent-id session-id))})]
-                         (if (= :committed (:verdict executed))
-                           (assoc (push-fn {:repo-root root})
-                                  :seat/id seat-id :repo/id (:repo/id plan)
-                                  :worktree/id (:worktree/id plan) :plan plan)
-                           executed))))
-                   screened))
-                routable (if (= :propose mode)
-                           outcomes
-                           (filterv #(or (= :held (:verdict %))
-                                         (= :escalate (:verdict %))) outcomes))
-                decisions (route-fn routable route-context)
-                decisions (if (= :propose mode)
-                            (mapv (fn [decision]
-                                    (if (= 1 (:route/tier decision))
-                                      (assoc decision :route/message
-                                             (propose-message (:route/item decision)))
-                                      decision))
-                                  decisions)
-                            decisions)]
-            (deliver-decisions! decisions
-                                {:deliver! deliver! :ledger-fn ledger-fn
-                                 :ledger-path ledger-path :print-fn print-fn})
-            {:mode mode :plans screened :outcomes outcomes :decisions decisions})
-          (catch Throwable error
-            (try
-              (print-fn (str "[inbox-zero] turn promotion failed for " agent-id
-                             ": " (.getMessage error)))
-              (catch Throwable _))
-            {:mode mode :error error}))))))
+        (if-let [reason (incomplete-seat agent-id session-id)]
+          ;; Refuse before any planning: an inexact seat cannot produce a plan
+          ;; that means anything, and a held plan is not the honest verdict.
+          (refuse-incomplete-seat!
+           agent-id session-id reason
+           {:ledger-fn (or (:ledger-fn options) append-escalation!)
+            :ledger-path (or (:escalation-ledger-path options)
+                             (System/getenv "FUTON3C_INBOX_ZERO_ESCALATION_LEDGER")
+                             (str (.getParent
+                                   (io/file (or (:state-path options)
+                                                (System/getenv "FUTON3C_INBOX_ZERO_STATE_PATH")
+                                                default-state-path)))
+                                  "/escalation-ledger.edn"))
+            :print-fn print-fn
+            :now-fn (or (:now-fn options) #(Date.))})
+          (try
+            (let [state-path (or (:state-path options)
+                                 (System/getenv "FUTON3C_INBOX_ZERO_STATE_PATH")
+                                 default-state-path)
+                  now-fn (or (:now-fn options) #(Date.))
+                  load-state-fn (or (:load-state-fn options) inbox-state/load-state)
+                  plan-fn (or (:plan-fn options) promotion/plan-promotion)
+                  screen-fn (or (:screen-fn options) escalation/screen-sensitivity)
+                  execute-fn (or (:execute-fn options) promote-exec/execute-plan!)
+                  push-fn (or (:push-fn options) promote-push/push-promoted!)
+                  route-fn (or (:route-fn options) escalation/route)
+                  roster-fn (or (:roster-fn options) default-roster)
+                  clock-fn (or (:clock-fn options) clock-store/current-clock)
+                  size-fn (or (:size-fn options)
+                              (fn [root path]
+                                (let [file (io/file root path)]
+                                  (when (and (.exists file) (.isFile file)) (.length file)))))
+                  gates (if (contains? options :gates) (:gates options) (read-gates))
+                  followup-url (or (:followup-url options)
+                                   (System/getenv "FUTON3C_INBOX_ZERO_FOLLOWUP_URL")
+                                   "http://127.0.0.1:7070/api/alpha/followups")
+                  deliver! (or (:deliver! options) #(default-deliver followup-url %))
+                  ledger-path (or (:escalation-ledger-path options)
+                                  (System/getenv "FUTON3C_INBOX_ZERO_ESCALATION_LEDGER")
+                                  (str (.getParent (io/file state-path))
+                                       "/escalation-ledger.edn"))
+                  ledger-fn (or (:ledger-fn options) append-escalation!)
+                  state (load-state-fn state-path)
+                  roots (repo-roots state)
+                  seat-id (str "seat:" agent-id ":" session-id)
+                  plans (plan-fn state seat-id (now-fn))
+                  screened (mapv (fn [plan]
+                                   (let [root (get roots [(:repo/id plan)
+                                                         (:worktree/id plan)])]
+                                     (screen-fn (enrich-sizes plan root size-fn)
+                                                escalation/default-rules)))
+                                 plans)
+                  live-seats (roster-fn)
+                  route-context {:live-seats live-seats
+                                 :sweeper-recipient (or (:sweeper-recipient options)
+                                                        "street-sweeper")
+                                 :operator-recipient (or (:operator-recipient options) "joe")}
+                  outcomes
+                  (if (= :propose mode)
+                    screened
+                    (mapv
+                     (fn [plan]
+                       (if (= :held (:verdict plan))
+                         plan
+                         (let [root (get roots [(:repo/id plan) (:worktree/id plan)])
+                               executed (execute-fn
+                                         plan {:repo-root root :gates gates
+                                               :message (commit-message
+                                                         agent-id plan
+                                                         (clock-fn agent-id session-id))})]
+                           (if (= :committed (:verdict executed))
+                             (assoc (push-fn {:repo-root root})
+                                    :seat/id seat-id :repo/id (:repo/id plan)
+                                    :worktree/id (:worktree/id plan) :plan plan)
+                             executed))))
+                     screened))
+                  routable (if (= :propose mode)
+                             outcomes
+                             (filterv #(or (= :held (:verdict %))
+                                           (= :escalate (:verdict %))) outcomes))
+                  decisions (route-fn routable route-context)
+                  decisions (if (= :propose mode)
+                              (mapv (fn [decision]
+                                      (if (= 1 (:route/tier decision))
+                                        (assoc decision :route/message
+                                               (propose-message (:route/item decision)))
+                                        decision))
+                                    decisions)
+                              decisions)]
+              (deliver-decisions! decisions
+                                  {:deliver! deliver! :ledger-fn ledger-fn
+                                   :ledger-path ledger-path :print-fn print-fn})
+              {:mode mode :plans screened :outcomes outcomes :decisions decisions})
+            (catch Throwable error
+              (try
+                (print-fn (str "[inbox-zero] turn promotion failed for " agent-id
+                               ": " (.getMessage error)))
+                (catch Throwable _))
+              {:mode mode :error error})))))))
 
 (defn launch-at-turn-end!
   "Fire-and-forget dev seam; all failures are printed and never rethrown."

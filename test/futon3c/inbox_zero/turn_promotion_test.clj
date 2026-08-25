@@ -162,3 +162,41 @@
     (sut/append-escalation! path {:route/tier 3 :id 2})
     (is (= [{:route/tier 2 :id 1} {:route/tier 3 :id 2}]
            (edn/read-string (slurp path))))))
+
+(deftest incomplete-seat-is-refused-before-any-planning
+  ;; A plan is computed for `seat:<agent>:<session>` and includes a path only
+  ;; when a claim carries that exact string, so a blank half can only ever
+  ;; produce a hold on nothing. Verified on zone: 3,263 such plans, 0 includes.
+  (doseq [[agent session reason] [["a" nil :no-session-id]
+                                  ["a" "" :no-session-id]
+                                  ["a" "   " :no-session-id]
+                                  [nil "s" :no-agent-id]
+                                  [nil nil :no-seat]]]
+    (let [calls (atom [])
+          result (sut/promote-at-turn-end!
+                  agent session (assoc (opts calls) :mode :propose))]
+      (is (= :refused (:verdict result)) (pr-str [agent session]))
+      (is (= reason (:reason result)) (pr-str [agent session]))
+      ;; nothing was loaded, planned, routed or delivered
+      (is (not-any? #{:load} @calls))
+      (is (not-any? #(and (vector? %) (= :deliver (first %))) @calls)))))
+
+(deftest refusal-is-ledgered-once-and-printed-with-a-count
+  (let [calls (atom [])
+        options (assoc (opts calls) :mode :propose)
+        seat "seat:refusal-probe-agent:"]
+    (dotimes [_ 3] (sut/promote-at-turn-end! "refusal-probe-agent" nil options))
+    (let [ledgered (filter #(and (vector? %) (= :ledger (first %))) @calls)
+          printed  (filter #(and (vector? %) (= :print (first %))) @calls)]
+      (is (= 1 (count ledgered)) "ledgered once per (agent, reason) per process")
+      (is (= :inbox-zero/refusal (:record/type (second (first ledgered)))))
+      (is (= seat (:refusal/seat-id (second (first ledgered)))))
+      (is (= 1 (count printed)) "printed on the first occurrence only")
+      (is (re-find #"REFUSED" (second (first printed)))))))
+
+(deftest complete-seat-still-plans
+  (let [calls (atom [])
+        result (sut/promote-at-turn-end! "a" "s" (assoc (opts calls) :mode :propose))]
+    (is (nil? (:verdict result)))
+    (is (= :propose (:mode result)))
+    (is (some #{:load} @calls))))
