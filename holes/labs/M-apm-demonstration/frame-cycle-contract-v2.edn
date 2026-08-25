@@ -113,6 +113,7 @@
  #{:receipt-content-addressed :receipt-frame-and-problem-match
    :solver-memory-independently-reviewed :student-snapshot-content-addressed
    :student-snapshot-equals-promoted-snapshot :three-distinct-student-session-ids
+   :student-terminal-search-accounting-controller-derived
    :student-has-memory-substrate-only :guide-mode-exactly-one-of-store-or-harness
    :guide-never-directly-contacts-student :scribe-authorship-distinct-from-guide
    :proctor-distinct-from-solver :close-inputs-equal-certified-produced-receipts}}

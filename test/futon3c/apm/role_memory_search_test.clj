@@ -46,6 +46,8 @@
                (sut/recorded-result-ids-for-job "student-job")))
         (is (= #{"math/canonical-pattern" "outside-snapshot-memory"}
                (sut/recorded-surfaced-ids-for-job "student-job")))
+        (is (= [receipt] (sut/recorded-receipts-for-job "student-job")))
+        (is (= [] (sut/recorded-receipts-for-job "another-job")))
         (is (= #{} (sut/recorded-result-ids-for-job "another-job")))
         (is (:ok (sut/validate-claims
                   {:job-id "student-job" :dispatch/id "dispatch" :role :student}

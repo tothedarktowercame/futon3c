@@ -62,11 +62,12 @@ equal cost to "memory surfaced nothing" with no queries listed.
 
 ## Report shape
 
-Your terminal EDN includes `:memory-use` with the exact `:receipt-id`,
-`:snapshot-id`, `:snapshot-digest` from the request, vector-valued
-`:surfaced-ids` and `:used-ids`, and **`:queries [STRING ...]`** — every
-search string you issued, in order. Record an explicit failure account even
-on success.
+Your terminal EDN includes `:memory-use {:used-ids [STRING ...]}` naming only
+the memories that actually affected your work. The controller owns and derives
+the snapshot binding, surfaced identifiers, query strings, and search receipt
+identifiers from the immutable dispatch and job-bound search receipts. Do not
+copy those fields into your submission. Record an explicit failure account
+even on success.
 
 ## One thing worth knowing
 

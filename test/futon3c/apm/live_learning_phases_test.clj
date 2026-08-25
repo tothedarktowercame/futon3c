@@ -141,7 +141,7 @@
               (:findings (sut/validate-terminal request {:job-id "j"}
                                                        (job "void")))))))
 
-(deftest promoted-solver-snapshot-is-bound-into-student-request-and-use
+(deftest promoted-solver-snapshot-is-controller-bound-into-student-use
   (let [promotion {:receipt/id "promotion-receipt"
                    :receipt/snapshot-id "snapshot-1"
                    :receipt/snapshot-digest "snapshot-digest"}
@@ -163,18 +163,25 @@
              :report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
                       :outcome :stuck :failure-account {}
                       :memory-use {:receipt-id "wrong"
-                                   :snapshot-id "snapshot-1"
-                                   :snapshot-digest "snapshot-digest"
-                                   :queries [] :surfaced-ids [] :used-ids []}}}]
+                                   :surfaced-ids ["agent-typo"]
+                                   :queries ["agent replay"]
+                                   :used-ids []}}}]
     (is (= {:receipt-id "promotion-receipt"
             :snapshot-id "snapshot-1" :snapshot-digest "snapshot-digest"
             :accessible-memory-ids ["m1"]}
            (:memory-snapshot request)))
     (is (= 1 (:attempt-ordinal request)))
-    (is (some #{:student-memory-snapshot-mismatch}
-              (:findings (sut/validate-terminal request {:job-id "j"} job))))))
+    (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
+      (let [result (sut/validate-terminal request {:job-id "j"} job)]
+        (is (:ok result))
+        (is (= {:receipt-id "promotion-receipt"
+                :snapshot-id "snapshot-1"
+                :snapshot-digest "snapshot-digest"
+                :accessible-memory-ids ["m1"]
+                :surfaced-ids ["m1"] :used-ids [] :queries []}
+               (get-in result [:report :memory-use])))))))
 
-(deftest student-cannot-report-global-store-memory-outside-frozen-snapshot
+(deftest student-cannot-use-global-store-memory-outside-controller-evidence
   (let [request {:dispatch/type :student-attempt
                  :agent-id "f22-student" :frame-id "f22"
                  :problem-id "a98J02"
@@ -186,15 +193,11 @@
              :state :done
              :report {:command-own-exit 0 :frame-id "f22"
                       :problem-id "a98J02"
-                      :memory-use {:receipt-id "promotion"
-                                   :snapshot-id "snapshot"
-                                   :snapshot-digest "digest"
-                                   :queries ["Banach fixed point"]
-                                   :surfaced-ids ["e-global"]
-                                   :used-ids ["e-global"]}}}
-        result (sut/validate-terminal request {:job-id "j"} job)]
-    (is (some #{:student-memory-surfaced-outside-snapshot}
-              (:findings result)))))
+                      :memory-use {:used-ids ["e-global"]}}}]
+    (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
+      (let [result (sut/validate-terminal request {:job-id "j"} job)]
+        (is (some #{:student-memory-used-without-surfacing}
+                  (:findings result)))))))
 
 (deftest student-may-use-memory-covered-by-validated-open-search-receipt
   (let [request {:dispatch/type :student-attempt
@@ -209,18 +212,13 @@
              :typed-submission {:authority {:job-id "repair"}}
              :report {:command-own-exit 0 :frame-id "f30"
                       :problem-id "a01J06"
-                      :memory-search-receipt-ids ["receipt"]
-                      :memory-use {:receipt-id "promotion"
-                                   :snapshot-id "snapshot"
-                                   :snapshot-digest "digest"
-                                   :queries ["Jensen formula"]
-                                   :surfaced-ids ["e-open"]
-                                   :used-ids ["e-open"]}}}]
-    (with-redefs [role-memory/validate-claims
-                  (fn [_ receipt-ids]
-                    (is (= ["receipt"] receipt-ids))
-                    {:ok true :receipts [{:result-ids ["e-open"]}]})
-                  role-memory/recorded-surfaced-ids-for-job (constantly #{})]
+                      :memory-use {:used-ids ["e-open"]}}}]
+    (with-redefs [role-memory/recorded-receipts-for-job
+                  (fn [job-id]
+                    (if (= "repair" job-id)
+                      [{:receipt/id "receipt" :query "Jensen formula"
+                        :result-ids ["e-open"]}]
+                      []))]
       (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
 
 (deftest terminal-repair-inherits-recorded-search-results-from-explicit-predecessor
@@ -237,41 +235,39 @@
              :typed-submission {:authority {:job-id "repair"}}
              :report {:command-own-exit 0 :frame-id "f30"
                       :problem-id "a01J06"
-                      :memory-search-receipt-ids []
-                      :memory-use {:receipt-id "promotion"
-                                   :snapshot-id "snapshot"
-                                   :snapshot-digest "digest"
-                                   :queries ["Jensen formula"]
-                                   :surfaced-ids ["e-prior"]
-                                   :used-ids ["e-prior"]}}}]
-    (with-redefs [role-memory/validate-claims
-                  (fn [_ _] {:ok true :receipts []})
-                  role-memory/recorded-surfaced-ids-for-job
+                      :memory-use {:used-ids ["e-prior"]}}}]
+    (with-redefs [role-memory/recorded-receipts-for-job
                   (fn [job-id]
-                    (is (= "original" job-id))
-                    #{"e-prior"})]
+                    (if (= "original" job-id)
+                      [{:receipt/id "prior" :query "Jensen formula"
+                        :result-ids ["e-prior"]}]
+                      []))]
       (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
 
-(deftest f30-json-query-ledger-beside-memory-use-is-consumed-losslessly
+(deftest f32-freehand-surfaced-id-typo-is-ignored-in-favor-of-controller-data
   (let [request {:dispatch/type :student-attempt
                  :agent-id "f30-student" :frame-id "f30"
                  :problem-id "a01J06"
                  :memory-snapshot {:receipt-id "promotion"
                                    :snapshot-id "snapshot"
                                    :snapshot-digest "digest"
-                                   :accessible-memory-ids ["e-reviewed"]}}
+                                   :accessible-memory-ids
+                                   ["e-1866fc8e-aa5a-426c-aa30-d8d57c224238"]}}
         job {:job-id "repair" :agent-id "f30-student" :session-id "fresh"
              :state :done
              :report {:command-own-exit 0 :frame-id "f30"
                       :problem-id "a01J06"
-                      :queries ["dyadic shell summability"]
                       :memory-use {:receipt-id "promotion"
-                                   :snapshot-id "snapshot"
-                                   :snapshot-digest "digest"
-                                   :surfaced-ids ["e-reviewed"]
-                                   :used-ids ["e-reviewed"]}}}]
-    (with-redefs [role-memory/recorded-surfaced-ids-for-job (constantly #{})]
-      (is (:ok (sut/validate-terminal request {:job-id "repair"} job))))))
+                                   :queries ["agent replay"]
+                                   :surfaced-ids
+                                   ["e-1866fc8e-aa5e-426c-aa30-d8d57c224238"]
+                                   :used-ids []}}}]
+    (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
+      (let [result (sut/validate-terminal request {:job-id "repair"} job)]
+        (is (:ok result))
+        (is (= ["e-1866fc8e-aa5a-426c-aa30-d8d57c224238"]
+               (get-in result [:report :memory-use :surfaced-ids])))
+        (is (= [] (get-in result [:report :memory-use :queries])))))))
 
 (deftest student-prompt-names-frame-and-exact-memory-evidence-shape
   (let [text (sut/prompt {:dispatch/type :student-attempt
@@ -280,17 +276,17 @@
                           :role-card-blob "blob"
                           :memory-snapshot {:accessible-memory-ids []}})]
     (is (.startsWith text "F22 student-attempt-1"))
-    (is (re-find #":surfaced-ids and :used-ids" text))
+    (is (re-find #"only vector-valued :used-ids" text))
     (is (re-find #"controller-owned open mathematics search" text))
-    (is (re-find #":memory-search-receipt-ids" text))))
+    (is (re-find #"must not be copied" text))))
 
-(deftest student-report-must-record-exact-search-queries
+(deftest student-report-must-record-used-ids-vector
   (let [request {:dispatch/type :student-attempt :agent-id "f22-student"
                  :frame-id "f22" :problem-id "p22"}
         job {:job-id "j" :agent-id "f22-student" :session-id "fresh"
              :state :done
              :report {:command-own-exit 0 :frame-id "f22" :problem-id "p22"
-                      :memory-use {:surfaced-ids [] :used-ids []}}}]
+                      :memory-use {}}}]
     (is (some #{:student-memory-use-ids-invalid}
               (:findings (sut/validate-terminal request {:job-id "j"} job))))))
 

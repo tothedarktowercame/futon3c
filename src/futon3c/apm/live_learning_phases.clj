@@ -172,39 +172,28 @@
 (defn validate-terminal [request ticket job]
   (let [kind (:dispatch/type request)
         report (:report job)
-        ;; JSON role submissions have historically emitted the query ledger
-        ;; beside :memory-use even though the canonical EDN shape nests it.
-        ;; Preserve that observation losslessly at the consumer boundary; a
-        ;; missing query ledger in both locations still fails closed below.
-        memory-use (cond-> (:memory-use report)
-                     (and (map? (:memory-use report))
-                          (not (contains? (:memory-use report) :queries))
-                          (vector? (:queries report)))
-                     (assoc :queries (:queries report)))
-        snapshot-binding (select-keys memory-use
-                                      [:receipt-id :snapshot-id
-                                       :snapshot-digest])
-        search-authority (get-in job [:typed-submission :authority])
-        search-receipt-ids (:memory-search-receipt-ids report)
-        search-check (when (= :student-attempt kind)
-                       (if (map? search-authority)
-                         (role-memory/validate-claims search-authority
-                                                     search-receipt-ids)
-                         {:ok true :receipts []}))
+        submitted-memory-use (:memory-use report)
+        current-search-receipts
+        (role-memory/recorded-receipts-for-job (:job-id ticket))
+        predecessor-search-receipts
+        (role-memory/recorded-receipts-for-job (:repair/of-job-id request))
+        search-receipts (vec (concat predecessor-search-receipts
+                                     current-search-receipts))
         searched-memory-ids
-        (if (:ok search-check)
-          (set (mapcat role-memory/receipt-surfaced-ids
-                       (:receipts search-check)))
-          #{})
-        predecessor-search-ids
-        (role-memory/recorded-surfaced-ids-for-job
-         (:repair/of-job-id request))
+        (set (mapcat role-memory/receipt-surfaced-ids search-receipts))
+        snapshot-memory-ids
+        (set (get-in request [:memory-snapshot :accessible-memory-ids]))
         allowed-memory-ids
-        (into (set (get-in request [:memory-snapshot
-                                    :accessible-memory-ids]))
-              (concat searched-memory-ids predecessor-search-ids))
-        surfaced-memory-ids (set (:surfaced-ids memory-use))
-        used-memory-ids (set (:used-ids memory-use))
+        (into snapshot-memory-ids searched-memory-ids)
+        used-memory-ids (set (:used-ids submitted-memory-use))
+        memory-use (merge (:memory-snapshot request)
+                          {:surfaced-ids (vec (sort allowed-memory-ids))
+                           :used-ids (vec (:used-ids submitted-memory-use))
+                           :queries (->> search-receipts
+                                         (map :query)
+                                         (filter string?)
+                                         distinct
+                                         vec)})
         findings
         (cond-> []
           (not= (:job-id ticket) (:job-id job)) (conj :job-id-mismatch)
@@ -218,31 +207,13 @@
           (and (= :student-attempt kind)
                (not (map? (:memory-use report)))) (conj :memory-use-evidence-missing)
           (and (= :student-attempt kind)
-               (map? memory-use)
-               (not (and (vector? (:surfaced-ids memory-use))
-                         (vector? (:used-ids memory-use))
-                         (vector? (:queries memory-use))
-                         (every? string? (:queries memory-use)))))
+               (map? submitted-memory-use)
+               (not (and (vector? (:used-ids submitted-memory-use))
+                         (every? string? (:used-ids submitted-memory-use)))))
           (conj :student-memory-use-ids-invalid)
           (and (= :student-attempt kind)
-               (:memory-snapshot request)
-               (not= (:memory-snapshot request)
-                     (assoc snapshot-binding
-                            :accessible-memory-ids
-                            (get-in request [:memory-snapshot
-                                             :accessible-memory-ids]))))
-          (conj :student-memory-snapshot-mismatch)
-          (and (= :student-attempt kind)
-               (map? memory-use)
-               (not (:ok search-check)))
-          (conj :student-memory-search-receipts-invalid)
-          (and (= :student-attempt kind)
-               (map? memory-use)
-               (not (every? allowed-memory-ids surfaced-memory-ids)))
-          (conj :student-memory-surfaced-outside-snapshot)
-          (and (= :student-attempt kind)
-               (map? memory-use)
-               (not (every? surfaced-memory-ids used-memory-ids)))
+               (map? submitted-memory-use)
+               (not (every? allowed-memory-ids used-memory-ids)))
           (conj :student-memory-used-without-surfacing)
           (and (= :guide-intervention kind)
                (not= false (get-in report [:channel-audit :direct-student-contact?])))
@@ -277,7 +248,9 @@
           (conj :close-evidence-invalid))]
     (if (seq findings)
       {:ok false :error/code :live-learning-terminal-invalid :findings findings}
-      {:ok true :report report})))
+      {:ok true :report (cond-> report
+                          (= :student-attempt kind)
+                          (assoc :memory-use memory-use))})))
 
 (defn receipt [contract action receipts request ticket job validated]
   (let [kind (:kind action)
@@ -469,13 +442,11 @@
          (str "Attempt the problem independently. The :memory-snapshot map is "
               "the reviewed starting shelf. You may also use the controller-owned "
               "open mathematics search command; any additionally surfaced memory "
-              "must be covered by typed :memory-search-receipt-ids (including "
-              "receipts recorded by an explicit terminal-repair predecessor). "
-              "Return :memory-use "
-              "with the exact :receipt-id, :snapshot-id, and :snapshot-digest "
-              "from the request, plus vector-valued :surfaced-ids and :used-ids. "
-              "Also return vector-valued :queries containing the exact search "
-              "strings used (an empty vector means no query was run). "
+              "is recorded automatically in a job-bound typed receipt. "
+              "Return :memory-use with only vector-valued :used-ids naming "
+              "memories actually used (an empty vector means none). Snapshot "
+              "binding, surfaced ids, queries, and search receipt ids are "
+              "controller-owned and must not be copied into the submission. "
               "Record an explicit failure account even on success.")
          :guide-intervention "Improve only the memory store or harness channel. Do not contact the Student directly."
          :scribe-reduce (if (= :promote-solver (:phase request))

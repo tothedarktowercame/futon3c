@@ -156,6 +156,30 @@
            (mapcat receipt-surfaced-ids)
            set))))
 
+(defn recorded-receipts-for-job
+  "Return every content-address-valid search receipt recorded for JOB-ID.
+
+   This is controller-owned evidence.  Consumers use it instead of asking a
+   role to copy receipt ids, result ids, or query strings into its terminal
+   submission."
+  [job-id]
+  (let [directory (io/file *receipt-root* "receipts")]
+    (if-not (and (string? job-id) (.isDirectory directory))
+      []
+      (->> (.listFiles directory)
+           (filter #(.isFile ^java.io.File %))
+           (keep (fn [file]
+                   (try
+                     (let [value (edn/read-string (slurp file))]
+                       (when (and (= job-id (:job-id value))
+                                  (= (:receipt/id value)
+                                     (machine/ledger-digest
+                                      [(dissoc value :receipt/id)])))
+                         value))
+                     (catch Throwable _ nil))))
+           (sort-by :receipt/id)
+           vec))))
+
 (defn- valid-receipt? [auth value]
   (and (= :apm-role-memory-search (:receipt/type value))
        (= (:job-id auth) (:job-id value))

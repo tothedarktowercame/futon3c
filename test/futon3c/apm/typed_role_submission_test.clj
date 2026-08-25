@@ -83,8 +83,9 @@
 
 (deftest capable-role-may-honestly-report-no-search
   (let [auth (assoc (authority :student-attempt-1) :role :student)
-        value (assoc-in (payload :student-attempt-1)
-                        [:evidence :memory-search-receipt-ids] [])]
+        value (payload :student-attempt-1)]
+    (is (not (contains? (sut/evidence-required auth)
+                        :memory-search-receipt-ids)))
     (is (:ok (sut/validate-payload auth value)))))
 
 (deftest canonical-pattern-search-is-mandatory-for-scribe-and-promotion-proctor
