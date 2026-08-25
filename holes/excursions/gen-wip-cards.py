@@ -187,12 +187,21 @@ def build_board(cards, pile, offline=False):
                        None, available=False, note="offline: not fetched")
     else:
         g, err = fetch("/api/alpha/cascade-real/graph")
+        # Fail closed on :section-status, not on the shape of :counts. The
+        # endpoint has a 5s per-page deadline and marks a section :failed when
+        # it blows -- HTTP 200, well-formed, honest in the payload. During the
+        # 2026-08-25 mission-scope backfill 5 of 6 samples came back that way,
+        # and a consumer reading only :counts saw zeros and could not tell them
+        # from an empty backlog (futon1b/README-backlog-catchup.md §4).
+        bad = sorted(k for k, v in ((g or {}).get("section-status") or {}).items()
+                     if v.get("status") != "ok")
         t = (g or {}).get("tickets") or {}
         total = t.get("count-total")
-        if total is None:
+        if err or bad or total is None:
             perceive = col("PERCEIVE", "cascade-real/graph tickets.count-total",
                            None, available=False,
-                           note=err or "payload carried no tickets.count-total")
+                           note=err or (f"sections not ok: {', '.join(bad)}" if bad
+                                        else "payload carried no tickets.count-total"))
         else:
             perceive = col("PERCEIVE", "cascade-real/graph tickets.count-total",
                            total, [i.get("stem") for i in t.get("items", [])[:12]])
