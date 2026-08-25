@@ -169,6 +169,25 @@
     (string? result) (keyword result)
     :else nil))
 
+(defn- controller-memory-use
+  [request ticket used-ids]
+  (let [search-receipts
+        (vec (concat
+              (role-memory/recorded-receipts-for-job (:repair/of-job-id request))
+              (role-memory/recorded-receipts-for-job (:job-id ticket))))
+        surfaced-ids
+        (into (set (get-in request [:memory-snapshot :accessible-memory-ids]))
+              (mapcat role-memory/receipt-surfaced-ids)
+              search-receipts)]
+    (merge (:memory-snapshot request)
+           {:surfaced-ids (vec (sort surfaced-ids))
+            :used-ids (vec used-ids)
+            :queries (->> search-receipts
+                          (map :query)
+                          (filter string?)
+                          distinct
+                          vec)})))
+
 (defn validate-terminal [request ticket job]
   (let [kind (:dispatch/type request)
         report (:report job)
@@ -186,14 +205,8 @@
         allowed-memory-ids
         (into snapshot-memory-ids searched-memory-ids)
         used-memory-ids (set (:used-ids submitted-memory-use))
-        memory-use (merge (:memory-snapshot request)
-                          {:surfaced-ids (vec (sort allowed-memory-ids))
-                           :used-ids (vec (:used-ids submitted-memory-use))
-                           :queries (->> search-receipts
-                                         (map :query)
-                                         (filter string?)
-                                         distinct
-                                         vec)})
+        memory-use (controller-memory-use request ticket
+                                          (:used-ids submitted-memory-use))
         findings
         (cond-> []
           (not= (:job-id ticket) (:job-id job)) (conj :job-id-mismatch)
@@ -365,6 +378,7 @@
               :receipt/author :controller
               :receipt/reason :typed-submission-missing
               :receipt/repair-attempts repair-attempts
+              :receipt/memory-use (controller-memory-use request ticket [])
               :receipt/memory-snapshot
               (select-keys (:memory-snapshot request)
                            [:receipt-id :snapshot-id :snapshot-digest])
@@ -388,9 +402,12 @@
                (and candidate (:ok candidate))
                (assoc :receipt/candidate (:candidate candidate)))
         addressed (assoc body :receipt/id (machine/ledger-digest [body]))]
-    (if (and candidate (not (:ok candidate)))
-      candidate
-      (handlers/validate-completion contract action addressed receipts)))))
+    ;; Candidate preservation is evidence collection, not an alternate proof
+    ;; validator.  A rejected candidate remains pinned and described under
+    ;; :receipt/harness-observed, but must neither be certified under
+    ;; :receipt/candidate nor prevent the controller-authored missing
+    ;; observation from advancing the frame.
+    (handlers/validate-completion contract action addressed receipts))))
 
 (defn prepare-student-workspace!
   "Before an original fresh Student attempt, return the Student worktree to

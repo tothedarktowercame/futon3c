@@ -128,6 +128,7 @@
       {:error/code :frame-cycle-student-ordinal-mismatch}
 
       (and (= :student-attempt (:kind spec))
+           (not missing-observation?)
            (not (valid-student-terminal-candidate? receipt)))
       {:error/code :frame-cycle-student-candidate-invalid}
 

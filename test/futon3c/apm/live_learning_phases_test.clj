@@ -400,6 +400,9 @@
                 (fn [] {:ok true :candidate candidate}))]
     (is (:ok result))
     (is (= :controller (get-in result [:certificate :receipt/author])))
+    (is (= [] (get-in result [:certificate :receipt/memory-use :used-ids])))
+    (is (= ["memory-1"]
+           (get-in result [:certificate :receipt/memory-use :surfaced-ids])))
     (is (= :typed-submission-missing
            (get-in result [:certificate :receipt/reason])))
     (is (= {:receipt-id "promotion-receipt"
@@ -441,6 +444,42 @@
            (get-in result [:certificate :receipt/harness-observed
                            :workspace :candidate])))
     (is (= candidate (get-in result [:certificate :receipt/candidate])))
+    (is (= :controller (get-in result [:certificate :receipt/author])))))
+
+(deftest missing-observation-records-but-does-not-certify-invalid-candidate
+  (let [contract {:phase-order [:student-attempt-3]
+                  :phases {:student-attempt-3
+                           {:kind :student-attempt :role :student :ordinal 3
+                            :receipt/type :student-attempt
+                            :alternate-receipt/types #{:student-observation-missing}
+                            :requires #{} :produces #{:attempt :memory-use}}}
+                  :receipt/schemas
+                  {:student-observation-missing
+                   {:required #{:receipt/id :receipt/type :receipt/frame-id
+                                :receipt/problem-id :receipt/attempt-ordinal
+                                :receipt/job-id :receipt/author :receipt/reason
+                                :receipt/repair-attempts :receipt/memory-snapshot
+                                :receipt/harness-observed}}}}
+        action {:kind :student-attempt :role :student :phase :student-attempt-3
+                :frame-id "f34" :problem-id "a95J03"}
+        rejected {:ok false :error/code :student-candidate-validation-failed
+                  :head (apply str (repeat 40 "5"))
+                  :ref "refs/apm/student-candidates/f34/a95J03/attempt-3/rejected"}
+        result (sut/missing-observation-receipt
+                contract action {}
+                {:frame-id "f34" :problem-id "a95J03" :attempt-ordinal 3
+                 :workspace "/does/not/exist" :memory-snapshot {}}
+                {:job-id "f34-student-job"}
+                {:job-id "f34-student-job" :agent-id "f34-student"
+                 :state :done :terminal-code 0}
+                1 {:collection/id "collection"}
+                (fn [] {:ok true :source {:blob "source-blob"}})
+                (fn [] rejected))]
+    (is (:ok result) (pr-str result))
+    (is (= (select-keys rejected [:error/code :head :ref])
+           (get-in result [:certificate :receipt/harness-observed
+                           :workspace :candidate])))
+    (is (nil? (get-in result [:certificate :receipt/candidate])))
     (is (= :controller (get-in result [:certificate :receipt/author])))))
 
 (deftest student-request-carries-the-workspace-base-for-reset-and-archive
