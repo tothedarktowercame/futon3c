@@ -130,6 +130,16 @@ def draw_pile(d):
 
 AGENCY = os.environ.get("AGENCY", "http://localhost:7070")
 
+# The census defines what a "failure class" is; importing it keeps that
+# definition in one place rather than restating the grouping here, where it
+# would drift from the report the same numbers are read out of.
+import importlib.util as _ilu
+_census_path = os.path.join(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))), "scripts", "failure-census.py")
+_spec = _ilu.spec_from_file_location("failure_census", _census_path)
+_census = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_census)
+
 
 def fetch(path, timeout=45):
     """A live read, or an honest null. Never a zero.
@@ -206,8 +216,36 @@ def build_board(cards, pile, offline=False):
             perceive = col("PERCEIVE", "cascade-real/graph tickets.count-total",
                            total, [i.get("stem") for i in t.get("items", [])[:12]])
 
-    believe = col("BELIEVE", "holes/tickets/T-*.md", len(pile),
-                  [t["id"] for t in pile[:12]])
+    # BELIEVE takes two feeds, and typed failures jump PERCEIVE to get here.
+    # Typing a failure IS the belief step: a terminal-code exists because
+    # somebody understood the class well enough to name it, so it arrives
+    # already curated and does not need to be noticed first (Joe, 2026-08-25).
+    #
+    # Classes, with multiplicity -- never one entry per occurrence. A repeat
+    # carries no new decision: the 72nd agent-not-found makes its class heavier,
+    # it does not add a 72nd thing to triage. That is what stops this channel
+    # flooding the column: its ceiling is the size of the code vocabulary (7
+    # codes have reached terminal-code in the four days the ledger holds), not
+    # the number of failures.
+    fails = []
+    if not offline:
+        try:
+            rows, _ = _census.classes(_census.fetch_jobs(agency=AGENCY))
+            fails = [{"kind": "failure-class", "code": r["terminal_code"],
+                      "n": r["count"], "first": r["first"], "last": r["last"],
+                      "top_target": r["targets"][0][0] if r["targets"] else None,
+                      "ticket": r["tickets"][0] if r["tickets"] else None}
+                     for r in rows]
+        except Exception as e:
+            fails = [{"kind": "failure-class", "unavailable": f"{type(e).__name__}: {e}"}]
+    tickets = [{"kind": "ticket", "id": t["id"]} for t in pile]
+    live = [f for f in fails if "unavailable" not in f]
+    believe = col("BELIEVE", "holes/tickets/T-*.md + typed failure classes",
+                  len(tickets) + len(live), tickets[:12] + live,
+                  note=(f"{len(live)} failure class(es) over "
+                        f"{sum(f['n'] for f in live)} occurrences; "
+                        f"{sum(1 for f in live if not f['ticket'])} of them named by no ticket")
+                  if live else (fails[0]["unavailable"] if fails else None))
     evaluate = col("EVALUATE", "wr-overlay.edn badges with :holds false",
                    len(cards), [c["id"] for c in cards])
     selected = [c["id"] for c in cards if c["promotion_test"]]

@@ -265,24 +265,123 @@
       },
       {
         "stage": "BELIEVE",
-        "source": "holes/tickets/T-*.md",
-        "count": 20,
+        "source": "holes/tickets/T-*.md + typed failure classes",
+        "count": 27,
         "items": [
-          "T-agency-desktop-save",
-          "T-car3-phase2-impl",
-          "T-car3-queue-routing-design-note",
-          "T-car3-queue-routing",
-          "T-codex-auto-bellback",
-          "T-cx-new-blocks-emacs",
-          "T-devmap-forward-model-calibration",
-          "T-dispatch-clock-excursion-prefix",
-          "T-durable-queue-rename-and-tidies",
-          "T-exogenous-evidence-update-rule",
-          "T-forward-model-vs-active-work",
-          "T-kangaroo-caching-and-compaction"
+          {
+            "kind": "ticket",
+            "id": "T-agency-desktop-save"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-car3-phase2-impl"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-car3-queue-routing-design-note"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-car3-queue-routing"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-codex-auto-bellback"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-cx-new-blocks-emacs"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-devmap-forward-model-calibration"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-dispatch-clock-excursion-prefix"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-durable-queue-rename-and-tidies"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-exogenous-evidence-update-rule"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-forward-model-vs-active-work"
+          },
+          {
+            "kind": "ticket",
+            "id": "T-kangaroo-caching-and-compaction"
+          },
+          {
+            "kind": "failure-class",
+            "code": "agent-not-found",
+            "n": 72,
+            "first": "2026-08-22T07:32",
+            "last": "2026-08-25T13:34",
+            "top_target": "claude-cli",
+            "ticket": null
+          },
+          {
+            "kind": "failure-class",
+            "code": "operator-cancelled",
+            "n": 4,
+            "first": "2026-08-23T10:59",
+            "last": "2026-08-24T15:16",
+            "top_target": "codex-10",
+            "ticket": null
+          },
+          {
+            "kind": "failure-class",
+            "code": "worker-lost-on-restart",
+            "n": 3,
+            "first": "2026-08-21T08:23",
+            "last": "2026-08-22T14:17",
+            "top_target": "f9045569047055-solver",
+            "ticket": null
+          },
+          {
+            "kind": "failure-class",
+            "code": "invoke-error",
+            "n": 2,
+            "first": "2026-08-21T08:23",
+            "last": "2026-08-24T11:31",
+            "top_target": "codex-10",
+            "ticket": null
+          },
+          {
+            "kind": "failure-class",
+            "code": "invoke-interrupted",
+            "n": 1,
+            "first": "2026-08-24T14:04",
+            "last": "2026-08-24T14:04",
+            "top_target": "codex-12",
+            "ticket": null
+          },
+          {
+            "kind": "failure-class",
+            "code": "activation-authority-unavailable",
+            "n": 1,
+            "first": "2026-08-22T14:42",
+            "last": "2026-08-22T14:42",
+            "top_target": "f24-proctor",
+            "ticket": null
+          },
+          {
+            "kind": "failure-class",
+            "code": "no-execution-evidence",
+            "n": 1,
+            "first": "2026-08-21T08:23",
+            "last": "2026-08-21T08:23",
+            "top_target": "codex-bell-noev",
+            "ticket": null
+          }
         ],
         "available": true,
-        "note": null
+        "note": "7 failure class(es) over 84 occurrences; 7 of them named by no ticket"
       },
       {
         "stage": "EVALUATE",
@@ -312,7 +411,7 @@
         "count": 0,
         "items": [],
         "available": true,
-        "note": "5 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage"
+        "note": "9 turns in flight, 0 clocked into a mission -- the gap IS route A's coverage"
       }
     ],
     "cards_enter_at": "EVALUATE",
