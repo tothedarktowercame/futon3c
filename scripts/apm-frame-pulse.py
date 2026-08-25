@@ -123,9 +123,28 @@ def main():
               f"{'sorries='+sor.group(1) if sor else ''} "
               f"{'outcome='+out.group(1) if out else ''}")
 
-    fails = re.findall(r":regulator/failures\s*\[([^\]]{0,300})", coord)
-    if fails and fails[-1].strip():
-        print(f"  failures: {fails[-1][:200]}")
+    # Only surface failures that are NEW relative to this frame. The
+    # coordinator accumulates :regulator/failures for the whole campaign, so
+    # printing the latest unconditionally shows a stale entry on every run --
+    # a permanently-displayed old failure is what hides a fresh one.
+    stamps = re.findall(r':failed-at\s*"([0-9T:.\-]+)Z?"', coord)
+    codes = re.findall(r':error/code\s*(:[\w/-]+)', coord)
+    if stamps:
+        newest = sorted(stamps)[-1]
+        try:
+            import datetime
+            t = datetime.datetime.fromisoformat(newest[:19])
+            age_h = (datetime.datetime.utcnow() - t).total_seconds() / 3600.0
+        except Exception:
+            age_h = None
+        n = len(stamps)
+        if age_h is not None and age_h < 2:
+            print(f"  failures: {n} recorded; NEWEST {age_h*60:.0f}m ago "
+                  f"{codes[-1] if codes else ''}  <-- RECENT")
+        else:
+            print(f"  failures: {n} recorded, newest "
+                  f"{'%.0fh' % age_h if age_h is not None else '?'} ago (stale, "
+                  f"pre-dates this frame)")
 
     if unresolved_total:
         print(f"\nGATE: {unresolved_total} unresolved verdict(s) — "
