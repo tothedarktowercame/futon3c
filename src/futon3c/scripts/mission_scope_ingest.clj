@@ -24,17 +24,15 @@
    "pattern" "psr" "pur" "plain-argument" "verify-gate" "certificate"
    "operator-gate"])
 (def ^:private archival-binders #{"operator-gate"})
-;; Must stay at or below futon1b's max-result-limit (5000, futon1b_server.clj:313)
-;; and at or above the largest hyperedge population this ingest reads, because
-;; `hyperedges-by-type` fails closed on truncation rather than reading a partial
-;; window.  It sat at 1000 against a mission-scope/loose-section population that
-;; reached 1002, so from ~2026-07 EVERY scope reingest threw "futon1b hyperedge
-;; result truncated" and no mission's scope surface could land — which is why the
-;; futon1b scope surface holds ~1/9th of what futon1a's did.
-;;
-;; 5000 is a ceiling, not a fix: futon1b exposes no cursor, so once any single
-;; type exceeds 5000 this fails closed again with nowhere left to go.  The real
-;; repair is pagination in futon1b (see TN-futon1a-sweep-2026-08-02.md §2).
+;; Must stay at or below futon1b's max-result-limit (5000,
+;; futon1b_server.clj:313).  This is a page size, not a population ceiling:
+;; whole-population hyperedge reads follow futon1b's keyset `next-cursor` until
+;; the final page, then fail closed if the first page's total still exceeds the
+;; accumulated rows.  It previously sat at 1000 with no pagination against a
+;; mission-scope/loose-section population that reached 1002, so from ~2026-07
+;; EVERY scope reingest threw "futon1b hyperedge result truncated" and no
+;; mission's scope surface could land — which is why the futon1b scope surface
+;; holds ~1/9th of what futon1a's did.
 (def ^:private substrate-page-limit
   (or (some-> (System/getenv "FUTON3C_SUBSTRATE_PAGE_LIMIT") parse-long) 5000))
 (def ^:private pattern-library-limit substrate-page-limit)
@@ -185,20 +183,40 @@
   (reset! !hyperedge-type-cache {})
   (reset! !pattern-library-cache nil))
 
+(defn- paginated-hyperedges
+  [client base-url query-param query-value context]
+  (loop [after nil
+         first-total nil
+         accumulated []]
+    (let [resp (-> (http-edn-read
+                    client
+                    (str base-url "/api/alpha/hyperedges?"
+                         query-param "=" (url-encode query-value)
+                         "&limit=" substrate-page-limit
+                         (when after
+                           (str "&after=" (url-encode after)
+                                "&include-total=false"))))
+                   (ok! context))
+          body (:body resp)
+          page (or (:hyperedges body) [])
+          total (if after first-total (:count body))
+          accumulated (into accumulated page)]
+      (if-let [next-cursor (:next-cursor body)]
+        (recur next-cursor total accumulated)
+        (do
+          (when (and (integer? total) (> total (count accumulated)))
+            (throw (ex-info "futon1b hyperedge result truncated"
+                            (assoc context
+                                   :returned (count accumulated)
+                                   :total total))))
+          accumulated)))))
+
 (defn- hyperedges-by-type [client base-url hx-type]
   (if-let [cached (get @!hyperedge-type-cache hx-type)]
     cached
-    (let [resp (-> (http-edn-read client
-                                  (str base-url "/api/alpha/hyperedges?type="
-                                       (url-encode hx-type)
-                                       "&limit=" substrate-page-limit))
-                   (ok! {:op :hyperedges-by-type :type hx-type}))
-          hxs (or (get-in resp [:body :hyperedges]) [])
-          total (get-in resp [:body :count])]
-      (when (and (integer? total) (> total (count hxs)))
-        (throw (ex-info "futon1b hyperedge result truncated"
-                        {:op :hyperedges-by-type :type hx-type
-                         :returned (count hxs) :total total})))
+    (let [hxs (paginated-hyperedges
+               client base-url "type" hx-type
+               {:op :hyperedges-by-type :type hx-type})]
       (swap! !hyperedge-type-cache assoc hx-type hxs)
       hxs)))
 
@@ -1385,18 +1403,9 @@
             structural-binders)))
 
 (defn- hyperedges-by-end [client base-url end-id]
-  (let [resp (-> (http-edn-read client
-                                (str base-url "/api/alpha/hyperedges?end="
-                                     (url-encode end-id)
-                                     "&limit=" substrate-page-limit))
-                 (ok! {:op :hyperedges-by-end :end end-id}))
-        hxs (or (get-in resp [:body :hyperedges]) [])
-        total (get-in resp [:body :count])]
-    (when (and (integer? total) (> total (count hxs)))
-      (throw (ex-info "futon1b hyperedge result truncated"
-                      {:op :hyperedges-by-end :end end-id
-                       :returned (count hxs) :total total})))
-    hxs))
+  (paginated-hyperedges
+   client base-url "end" end-id
+   {:op :hyperedges-by-end :end end-id}))
 
 (defn- stored-scope-hyperedges-for-mission [client base-url mission]
   (->> structural-binders

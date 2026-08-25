@@ -34,6 +34,59 @@
         (is (= 3 @attempts))
         (is (= [2000 2000] @sleeps))))))
 
+(deftest hyperedges-by-type-walks-cursor-pages-in-order
+  (let [urls (atom [])
+        pages [{:count 5
+                :hyperedges [{:hx/id "hx-1"} {:hx/id "hx-2"}]
+                :next-cursor "hx|2"}
+               {:hyperedges [{:hx/id "hx-3"} {:hx/id "hx-4"}]
+                :next-cursor "hx|4"}
+               {:hyperedges [{:hx/id "hx-5"}]}]]
+    (#'ingest/reset-run-caches!)
+    (with-redefs [ingest/http-edn
+                  (fn [_ method url & [_body]]
+                    (is (= :get method))
+                    (let [page (nth pages (count @urls))]
+                      (swap! urls conj url)
+                      {:status 200 :body page}))]
+      (is (= ["hx-1" "hx-2" "hx-3" "hx-4" "hx-5"]
+             (mapv :hx/id
+                   (#'ingest/hyperedges-by-type
+                    :client "http://substrate" "mission-scope/test"))))
+      (is (= ["http://substrate/api/alpha/hyperedges?type=mission-scope%2Ftest&limit=5000"
+              (str "http://substrate/api/alpha/hyperedges?type=mission-scope%2Ftest"
+                   "&limit=5000&after=hx%7C2&include-total=false")
+              (str "http://substrate/api/alpha/hyperedges?type=mission-scope%2Ftest"
+                   "&limit=5000&after=hx%7C4&include-total=false")]
+             @urls)))))
+
+(deftest hyperedges-by-type-fails-closed-after-short-cursor-walk
+  (#'ingest/reset-run-caches!)
+  (with-redefs [ingest/http-edn
+                (fn [& _]
+                  {:status 200
+                   :body {:count 2 :hyperedges [{:hx/id "hx-1"}]}})]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"futon1b hyperedge result truncated"
+         (#'ingest/hyperedges-by-type
+          :client "http://substrate" "mission-scope/truncated")))))
+
+(deftest hyperedges-by-type-single-page-issues-one-request
+  (let [urls (atom [])]
+    (#'ingest/reset-run-caches!)
+    (with-redefs [ingest/http-edn
+                  (fn [_ _method url & [_body]]
+                    (swap! urls conj url)
+                    {:status 200
+                     :body {:count 2
+                            :hyperedges [{:hx/id "hx-1"} {:hx/id "hx-2"}]}})]
+      (is (= ["hx-1" "hx-2"]
+             (mapv :hx/id
+                   (#'ingest/hyperedges-by-type
+                    :client "http://substrate" "mission-scope/single"))))
+      (is (= 1 (count @urls))))))
+
 (deftest removal-falls-back-only-for-an-unported-route
   (let [calls (atom [])
         documents [{:table :hyperedges :id "hx-1"}
