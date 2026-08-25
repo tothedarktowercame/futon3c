@@ -61,6 +61,7 @@ def how_path(node):
             return "futon3/library/problems/" + f
     return None
 OVERLAY = f"{P4NG}/empirics-futon/wr-overlay.edn"
+PROMOTION = f"{P4NG}/empirics-futon/promotion-tests.edn"
 CASCADE = f"{P4NG}/empirics-futon/cascade-map.edn"
 
 
@@ -88,6 +89,31 @@ def red_rings(ov):
             # one field it exists to report (Joe, 2026-08-25).
             out.append({"node": m.group(1), "wr": m.group(2), "gap": m.group(4),
                         "established": m.group(5)})
+    return out
+
+
+def promotion_tests(path):
+    """{node: statement-or-None} from promotion-tests.edn.
+
+    Read rather than hardcoded, so writing a promotion test is a data edit and
+    the EVALUATE -> SELECT transition can actually be crossed. Until this file
+    existed the field was a literal None in this script, which meant SELECT
+    could never be non-empty however much work was done -- the column reported
+    the generator, not the world.
+
+    A node present with :statement nil is DIFFERENT from a node absent: it
+    means somebody looked and recorded why no test can be written yet. That
+    distinction is the whole point of the field.
+    """
+    if not os.path.exists(path):
+        return {}
+    txt = read(path)
+    out = {}
+    for m in re.finditer(r'\{:node\s+"(R\d+)"\s+:wr\s+"[^"]+"\s+:statement\s+(nil|")', txt):
+        out[m.group(1)] = None if m.group(2) == "nil" else True
+    # The statement text itself, for the ones that have one.
+    for m in re.finditer(r'\{:node\s+"(R\d+)"[^{]*?:statement\s+\n?\s*"([^"]+)"', txt, re.S):
+        out[m.group(1)] = " ".join(m.group(2).split())
     return out
 
 
@@ -360,6 +386,7 @@ def main():
     for b in blues.values():
         assert b["box"] in mis, f"blue ring {b['box']} has no mission in cascade-map.edn"
 
+    ptests = promotion_tests(PROMOTION)
     established = as_of(ov)
     cards = []
     for r in reds:
@@ -383,7 +410,7 @@ def main():
             # field that makes the colour clock mean something -- without it,
             # "how old is this mark" has no answer, because nothing says what
             # re-establishing it would involve.
-            "promotion_test": None,
+            "promotion_test": ptests.get(r["node"]),
             # Second honest null, and a different absence from the first.
             # promotion_test says nobody has stated what SHIPPED would look
             # like; watu says nobody has reconstructed what HAPPENED. A card can
