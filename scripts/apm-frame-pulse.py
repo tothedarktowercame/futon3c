@@ -104,6 +104,29 @@ def main():
         approved += len(re.findall(r":verdict\s*:approve", t))
     print(f"  supply:   {approved} approved this frame")
 
+    # Solve progress: rounds alone cannot separate real work from spinning,
+    # because :solver/outcome :progress is the solver's own claim and reads the
+    # same either way. Distinct :final-head values and the sorry trajectory are
+    # artifact facts, so they can.
+    sp = os.path.join(live, "solve.edn")
+    if os.path.exists(sp):
+        t = read(sp)
+        rounds = re.findall(r":solver/round (\d+)", t)
+        sorries = re.findall(r":sorry-warnings (\d+)", t)
+        heads = re.findall(r':final-head "([0-9a-f]+)"', t)
+        rem = re.findall(r":solver/remaining-rounds (\d+)", t)
+        if rounds:
+            moved = len(set(sorries)) > 1
+            traj = f"{sorries[0]}->{sorries[-1]}" if sorries else "?"
+            note = ""
+            if heads and len(set(heads)) < max(1, len(heads)) // 2:
+                note = "  <-- heads repeating; solver may be spinning"
+            elif not moved and len(rounds) >= 20:
+                note = "  (sorries flat; check heads/apm-lean before calling it a wall)"
+            print(f"  solve:    round {rounds[-1]}, {rem[-1] if rem else '?'} left; "
+                  f"sorries {traj}; {len(set(heads))} distinct heads/{len(heads)} "
+                  f"rounds{note}")
+
     print("  attempts:")
     for n in (1, 2, 3):
         p = os.path.join(live, f"student-attempt-{n}.edn")
