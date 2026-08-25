@@ -22,7 +22,7 @@ used as a gate as well as a report.
 
 usage: apm-frame-pulse.py [CAMPAIGN_DIR] [--frame fNN]
 """
-import os, re, sys, glob, time
+import os, re, sys, glob, time, subprocess
 
 ROOT = os.environ.get("APM_CAMPAIGNS",
                       os.path.expanduser("~/code/futon3c/data/apm-campaigns"))
@@ -122,10 +122,34 @@ def main():
             if heads and len(set(heads)) < max(1, len(heads)) // 2:
                 note = "  <-- heads repeating; solver may be spinning"
             elif not moved and len(rounds) >= 20:
-                note = "  (sorries flat; check heads/apm-lean before calling it a wall)"
+                note = "  (sorries flat; judge by worktree growth, not by apm-lean)"
+            # The receipts' :final-head values live on the frame's own worktree
+            # branch, NOT apm-lean master -- frame work never lands there until
+            # promotion. Reading apm-lean for progress shows commits that
+            # predate the frame and is how this check first misread f36.
+            grow = ""
+            pid = re.search(r':problem-id "([^"]+)"', t)
+            if pid:
+                wt = f"/home/joe/code/apm-frames/{fid}-{pid.group(1)}-solver"
+                mainlean = os.path.join(wt, "problems", pid.group(1),
+                                        "lean", "Main.lean")
+                if os.path.exists(mainlean):
+                    try:
+                        n = sum(1 for _ in open(mainlean, encoding="utf-8",
+                                                errors="replace"))
+                        base = subprocess.run(
+                            ["git", "show",
+                             f"HEAD~{min(5, max(1, len(heads)-1))}:problems/"
+                             f"{pid.group(1)}/lean/Main.lean"],
+                            cwd=wt, capture_output=True, text=True, timeout=15)
+                        prev = len(base.stdout.splitlines()) if base.returncode == 0 else None
+                        grow = (f"; worktree Main.lean {n} lines"
+                                + (f" (was {prev} a few rounds back)" if prev else ""))
+                    except Exception:
+                        pass
             print(f"  solve:    round {rounds[-1]}, {rem[-1] if rem else '?'} left; "
                   f"sorries {traj}; {len(set(heads))} distinct heads/{len(heads)} "
-                  f"rounds{note}")
+                  f"rounds{grow}{note}")
 
     print("  attempts:")
     for n in (1, 2, 3):
