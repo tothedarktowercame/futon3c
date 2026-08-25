@@ -515,7 +515,17 @@
         "<div class='wip-field'><b>Supplier:</b> "+supplierHtml+"</div>"+
         "<div class='wip-field'><b>Register:</b> <code>"+esc(c.register)+"</code></div>"+
         "<div class='wip-field'><b>Promotion test:</b> "+promotion+"</div>"+
-        "<div class='wip-field'><b>WATU replay:</b> "+watu+"</div></div>";
+        "<div class='wip-field'><b>WATU replay:</b> "+watu+"</div>"+
+        // The card's `wr` is a label standing in for a ruling, an incident and
+        // a cost. Carry the route back to both expansions: the @why ruling and
+        // the @how pattern that would close the ring. A compression is
+        // legitimate when its expansion is reachable from where it is read.
+        "<div class='wip-field'><b>Why:</b> "+(c.why_path
+          ? "<code class='muted'>"+esc(c.why_path)+"</code>"
+          : "<span class='wip-none'>no ruling file resolved</span>")+"</div>"+
+        "<div class='wip-field'><b>How:</b> "+(c.how_path
+          ? "<code class='muted'>"+esc(c.how_path)+"</code>"
+          : "<span class='wip-none'>no pattern proposes a mechanism</span>")+"</div></div>";
     }).join("");
     var rows=pile.map(function(t){
       return "<tr><td>"+esc(t.title)+"<br><code class='muted'>"+esc(t.repo_path)+"</code></td><td class='muted'>"+esc(t.last_touched||"unknown")+"</td></tr>";

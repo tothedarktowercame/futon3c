@@ -28,6 +28,38 @@ import json, re, sys, os, subprocess, datetime
 
 P4NG = os.environ.get("P4NG", "/home/joe/code/p4ng")
 TICKETS = os.environ.get("TICKETS", "/home/joe/code/futon3c/holes/tickets")
+LIBRARY = os.environ.get("LIBRARY", "/home/joe/code/futon3/library")
+
+
+def why_path(wr):
+    """The ruling this card compresses, as a path.
+
+    A card carries `wr` as a bare label, which is a compression whose expansion
+    -- the IF/HOWEVER/EXAMPLE/BECAUSE and the dated incident -- sits in the
+    library and was not reachable from the card. A compression is legitimate
+    when its expansion is reachable from where the compression is read
+    (Joe, 2026-08-25), so emit the route back.
+    """
+    n = wr.split("-")[-1]
+    d = os.path.join(LIBRARY, "war-room")
+    hits = [f for f in sorted(os.listdir(d))
+            if f.startswith("wr-" + n + "-") and f.endswith(".flexiarg")] \
+        if os.path.isdir(d) else []
+    return "futon3/library/war-room/" + hits[0] if hits else None
+
+
+def how_path(node):
+    """The @how pattern that would close this ring, found by its @holds-at."""
+    d = os.path.join(LIBRARY, "problems")
+    if not os.path.isdir(d):
+        return None
+    for f in sorted(os.listdir(d)):
+        if not f.endswith(".flexiarg"):
+            continue
+        txt = open(os.path.join(d, f), encoding="utf-8").read()
+        if re.search(r"^@holds-at\s+.*\b" + re.escape(node) + r"\b", txt, re.M):
+            return "futon3/library/problems/" + f
+    return None
 OVERLAY = f"{P4NG}/empirics-futon/wr-overlay.edn"
 CASCADE = f"{P4NG}/empirics-futon/cascade-map.edn"
 
@@ -46,9 +78,16 @@ def red_rings(ov):
     """Badges whose governing WR ruling does not currently hold."""
     out = []
     for m in re.finditer(
-            r'\{:node\s+"(R\d+)"\s+:wr\s+"([^"]+)"\s+:holds\s+(\w+)\s+:note\s+"([^"]*)"', ov):
+            r'\{:node\s+"(R\d+)"\s+:wr\s+"([^"]+)"\s+:holds\s+(\w+)\s+:note\s+"([^"]*)"'
+            r'(?:\s+:established\s+"([^"]+)")?', ov):
         if m.group(3) == "false":
-            out.append({"node": m.group(1), "wr": m.group(2), "gap": m.group(4)})
+            # A badge may carry its own :established. The file-level :as-of is
+            # when the whole overlay was last swept; a ring revised after that
+            # sweep is younger than the sweep, and dating it to the sweep would
+            # make this layer -- whose job is the AGE of a mark -- lie about the
+            # one field it exists to report (Joe, 2026-08-25).
+            out.append({"node": m.group(1), "wr": m.group(2), "gap": m.group(4),
+                        "established": m.group(5)})
     return out
 
 
@@ -117,7 +156,10 @@ def main():
             # No red ring has a mechanism behind it by definition, so all four
             # sit at `plan`. Recorded as data rather than assumed by the renderer.
             "register": "plan",
-            "established": established,
+            "established": r.get("established") or established,
+            # The route from the compression back to what it stands for.
+            "why_path": why_path(r["wr"]),
+            "how_path": how_path(r["node"]),
             # Honest null: no card has a defined promotion test yet. This is the
             # field that makes the colour clock mean something -- without it,
             # "how old is this mark" has no answer, because nothing says what

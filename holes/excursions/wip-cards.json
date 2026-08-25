@@ -14,6 +14,20 @@
   "promotion_rule": "produced its effect AND a matched null control fails",
   "cards": [
     {
+      "id": "C-R2",
+      "node": "R2",
+      "wr": "WR-16",
+      "gap": "first-class for machine evidence, not for the operator's -- observe.clj wires ten channels, all mission-state, none reading operator turns; turns persist to the landscape unread",
+      "supplier": null,
+      "register": "plan",
+      "established": "2026-08-25",
+      "why_path": "futon3/library/war-room/wr-16-operationalised-exploit-loops-are-first-class-observation-channels.flexiarg",
+      "how_path": "futon3/library/problems/operator-turns-become-inference-observations.flexiarg",
+      "promotion_test": null,
+      "watu": null,
+      "wip": false
+    },
+    {
       "id": "C-R5",
       "node": "R5",
       "wr": "WR-25",
@@ -26,6 +40,8 @@
       },
       "register": "plan",
       "established": "2026-08-22",
+      "why_path": "futon3/library/war-room/wr-25-good-news-gets-the-same-evidence-discipline-as-bad.flexiarg",
+      "how_path": "futon3/library/problems/satisfied-rungs-are-counted-and-surfaced.flexiarg",
       "promotion_test": null,
       "watu": null,
       "wip": false
@@ -38,6 +54,8 @@
       "supplier": null,
       "register": "plan",
       "established": "2026-08-22",
+      "why_path": "futon3/library/war-room/wr-19-tension-must-generate-not-only-rank.flexiarg",
+      "how_path": "futon3/library/problems/tension-proposes-candidates.flexiarg",
       "promotion_test": null,
       "watu": null,
       "wip": false
@@ -55,6 +73,8 @@
       },
       "register": "plan",
       "established": "2026-08-22",
+      "why_path": "futon3/library/war-room/wr-27-a-loop-is-born-instrumented-for-its-gain.flexiarg",
+      "how_path": "futon3/library/problems/per-tick-mismatch-instruments-outer-loop-gain.flexiarg",
       "promotion_test": null,
       "watu": null,
       "wip": false
@@ -72,6 +92,8 @@
       },
       "register": "plan",
       "established": "2026-08-22",
+      "why_path": "futon3/library/war-room/wr-27-a-loop-is-born-instrumented-for-its-gain.flexiarg",
+      "how_path": "futon3/library/problems/commitment-temperature-is-instrumented-as-gain.flexiarg",
       "promotion_test": null,
       "watu": null,
       "wip": false
@@ -200,10 +222,10 @@
     }
   ],
   "counts": {
-    "cards": 4,
+    "cards": 5,
     "with_supplier": 3,
-    "without_promotion_test": 4,
-    "without_watu": 4,
+    "without_promotion_test": 5,
+    "without_watu": 5,
     "draw_pile": 20
   }
 }
