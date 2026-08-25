@@ -22,7 +22,7 @@ Those two numbers are what this layer exists to surface.
 Registers: plan -> built -> ran -> live. Promotion to `live` requires the
 artefact to produce its effect AND a matched null control to fail (the m3 rule).
 
-usage: python3 gen-wip-cards.py [--out wip-cards.json]
+usage: python3 gen-wip-cards.py [--out wip-cards.json] [--offline]
 """
 import json, re, sys, os, subprocess, datetime
 
@@ -128,6 +128,111 @@ def draw_pile(d):
     return pile
 
 
+AGENCY = os.environ.get("AGENCY", "http://localhost:7070")
+
+
+def fetch(path, timeout=45):
+    """A live read, or an honest null. Never a zero.
+
+    The board's whole claim is that a count means something. A partial payload
+    from the cascade graph -- which on 2026-08-25 returned patterns=0 on five
+    of six requests -- would otherwise be written out as "0 tickets", which
+    reads as an empty backlog rather than as a failed read. So the column
+    carries `available: false` and the reason, and the renderer shows the
+    column as unread rather than as empty.
+    """
+    import urllib.request
+    try:
+        with urllib.request.urlopen(AGENCY + path, timeout=timeout) as r:
+            return json.load(r), None
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
+def col(stage, source, count, items=None, available=True, note=None):
+    return {"stage": stage, "source": source, "count": count,
+            "items": items or [], "available": available, "note": note}
+
+
+def age_days(iso, today):
+    """Days since a mark was established -- the input to the fall-back rule.
+
+    A card falls to a lower stage when it is neglected, so the stage a card is
+    IN is not enough to render it; the board needs to know how long it has been
+    there. Computed here rather than in the page so the number is in the
+    artefact and can be checked against it.
+    """
+    if not iso:
+        return None
+    try:
+        return (today - datetime.date.fromisoformat(iso[:10])).days
+    except ValueError:
+        return None
+
+
+def build_board(cards, pile, offline=False):
+    """The five columns of the control loop, each fed by its own source.
+
+    Not a progress lane per card: the stages are populated from five different
+    places, and a thing moves between them by being taken up, not by being
+    ticked. PERCEIVE is everything the sweep has seen; BELIEVE is what someone
+    curated into a ticket; EVALUATE is what has a ruling against it that does
+    not hold; SELECT is what has a stated promotion test; ACT is what a session
+    is actually clocked into right now.
+    """
+    today = datetime.date.today()
+
+    if offline:
+        perceive = col("PERCEIVE", "cascade-real/graph tickets.count-total",
+                       None, available=False, note="offline: not fetched")
+    else:
+        g, err = fetch("/api/alpha/cascade-real/graph")
+        t = (g or {}).get("tickets") or {}
+        total = t.get("count-total")
+        if total is None:
+            perceive = col("PERCEIVE", "cascade-real/graph tickets.count-total",
+                           None, available=False,
+                           note=err or "payload carried no tickets.count-total")
+        else:
+            perceive = col("PERCEIVE", "cascade-real/graph tickets.count-total",
+                           total, [i.get("stem") for i in t.get("items", [])[:12]])
+
+    believe = col("BELIEVE", "holes/tickets/T-*.md", len(pile),
+                  [t["id"] for t in pile[:12]])
+    evaluate = col("EVALUATE", "wr-overlay.edn badges with :holds false",
+                   len(cards), [c["id"] for c in cards])
+    selected = [c["id"] for c in cards if c["promotion_test"]]
+    select = col("SELECT", "card.promotion_test non-null", len(selected), selected,
+                 note=None if selected else
+                 "empty because no card states what would promote it, not because "
+                 "nothing was chosen")
+
+    if offline:
+        act = col("ACT", "/api/alpha/agents with mission-id and a turn in flight",
+                  None, available=False, note="offline: not fetched")
+    else:
+        a, err = fetch("/api/alpha/agents", timeout=15)
+        if a is None:
+            act = col("ACT", "/api/alpha/agents with mission-id and a turn in flight",
+                      None, available=False, note=err)
+        else:
+            rows = list(a["agents"].values()) if isinstance(a.get("agents"), dict) \
+                else (a.get("agents") or [])
+            flight = [r for r in rows if r.get("invoke-started-at")]
+            clocked = [r for r in flight if r.get("mission-id")]
+            act = col("ACT", "/api/alpha/agents with mission-id and a turn in flight",
+                      len(clocked), [r["id"]["id/value"] for r in clocked],
+                      note=(f"{len(flight)} turns in flight, {len(clocked)} clocked into a "
+                            f"mission -- the gap IS route A's coverage")
+                      if len(flight) != len(clocked) else None)
+
+    return {"stages": ["PERCEIVE", "BELIEVE", "EVALUATE", "SELECT", "ACT"],
+            "columns": [perceive, believe, evaluate, select, act],
+            "cards_enter_at": "EVALUATE",
+            "fall_back_rule": None,
+            "as_of": today.isoformat()}
+
+
 def main():
     out = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else "wip-cards.json"
     ov, cm = read(OVERLAY), read(CASCADE)
@@ -173,7 +278,15 @@ def main():
             # ruling (WR-25) that put C-R5 on this list.
             "watu": None,
             "wip": False,
+            # Input to the fall-back rule: a card that sits at EVALUATE
+            # untouched is meant to decay to a lower stage, so the board
+            # needs the age of the mark and not only its stage.
+            "age_days": None,
         })
+
+    today = datetime.date.today()
+    for c in cards:
+        c["age_days"] = age_days(c["established"], today)
 
     doc = {
         "generated_from": {"overlay": OVERLAY, "cascade": CASCADE, "tickets": TICKETS},
@@ -189,9 +302,16 @@ def main():
                    "draw_pile": None},
     }
     doc["counts"]["draw_pile"] = len(doc["draw_pile"])
+    doc["board"] = build_board(cards, doc["draw_pile"],
+                               offline="--offline" in sys.argv)
     with open(out, "w") as f:
         json.dump(doc, f, indent=2)
     c = doc["counts"]
+    for b in doc["board"]["columns"]:
+        n = b["count"] if b["available"] else "--"
+        print(f"  {b['stage']:<9}{str(n):>7}   {b['source']}")
+        if b["note"]:
+            print(f"           {'':>7}   ({b['note']})")
     print(f"  {out}: {c['cards']} cards ({c['with_supplier']} with a supplier, "
           f"{c['without_promotion_test']} with no promotion test, "
           f"{c['without_watu']} with no replay), "
