@@ -1586,18 +1586,32 @@
                                 (if (:ok observed-terminal)
                                   (assoc observed-terminal
                                          :status :frame-complete)
-                                  (set-alight!
-                                   (merge authority
-                                          {:target-frame (:frame/id frame)
-                                           :campaign-config frame-config})
-                                   (cond-> {}
-                                     (:continuation-payload authority)
-                                     (assoc :continuation-payload
-                                            (:continuation-payload authority))
-                                     (:autonomous? authority)
-                                     (assoc :park-fn
-                                            (constantly {:ok true
-                                                         :mode :machine})))))]
+                                  (let [driven
+                                        (set-alight!
+                                         (merge authority
+                                                {:target-frame (:frame/id frame)
+                                                 :campaign-config frame-config})
+                                         (cond-> {}
+                                           (:continuation-payload authority)
+                                           (assoc :continuation-payload
+                                                  (:continuation-payload authority))
+                                           (:autonomous? authority)
+                                           (assoc :park-fn
+                                                  (constantly {:ok true
+                                                               :mode :machine}))))]
+                                    (if (= :solver-human-intervention-required
+                                           (:error/code driven))
+                                      (with-campaign frame-config
+                                        (queued-frame-adapter/solver-human-intervention-park
+                                         {:frame frame
+                                          :ledger (ledger/read-ledger
+                                                   (control-path ledger-path))
+                                          :solver-state-path
+                                          (str (control-path
+                                                (state-path-for (:frame/id frame)
+                                                                :solve)))
+                                          :result driven}))
+                                      driven)))]
                             (if-not (and (:ok result)
                                          (= :frame-complete (:status result)))
                               result

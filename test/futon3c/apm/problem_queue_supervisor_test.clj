@@ -56,6 +56,45 @@
       (is (= :parked (:status result)))
       (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
 
+(deftest solver-round-exhaustion-parks-frame-and-prepares-successor
+  (let [{:keys [providers state calls]} (harness)
+        park {:state/type :solver-human-intervention-frame-park
+              :frame/id "q1" :problem/id "p1"
+              :solver/rounds-completed 50
+              :solver/final-head "head-50"
+              :solver/branch "exp/q1-solver"
+              :solver/state-path "/campaign/q1/live/solve.edn"
+              :last-valid-receipt/id "receipt-49"
+              :residual "prove the missing Jordan ordering theorem"
+              :student/decision :operator-required}]
+    (is (= :frame-prepared (:status (sut/tick! providers))))
+    (let [result
+          (sut/tick!
+           (assoc providers :frame-tick-fn
+                  (constantly {:ok true :status :frame-parked
+                               :frame/park park})))]
+      (is (= :frame-prepared (:status result)))
+      (is (= "p2" (get-in @state [:active :frame :problem/id])))
+      (is (= [park] (:parked @state)))
+      (is (empty? (filter #(= :retire (first %)) @calls)))
+      (is (= ["p1" "p2"]
+             (mapv second (filter #(= :mint (first %)) @calls)))))))
+
+(deftest invalid-frame-park-does-not-advance-queue
+  (let [{:keys [providers state calls]} (harness)]
+    (sut/tick! providers)
+    (let [before @state
+          result (sut/tick!
+                  (assoc providers :frame-tick-fn
+                         (constantly {:ok true :status :frame-parked
+                                      :frame/park
+                                      {:state/type
+                                       :solver-human-intervention-frame-park
+                                       :frame/id "q1" :problem/id "p1"}})))]
+      (is (= :problem-queue-frame-park-invalid (:error/code result)))
+      (is (= before @state))
+      (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
+
 (deftest pause-after-active-retires-current-frame-without-minting-successor
   (let [{:keys [providers state calls]} (harness)]
     (is (= :frame-prepared (:status (sut/tick! providers))))

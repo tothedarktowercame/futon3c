@@ -17,6 +17,38 @@
 
 (declare mint qualify open-and-prepare!)
 
+(defn solver-human-intervention-park
+  "Convert a durably exhausted Solver checkpoint into a re-enterable frame
+  park.  This does not certify the proof, retire its workspace, or decide
+  whether Student should run later."
+  [{:keys [frame ledger solver-state-path result]}]
+  (let [state (:state result)
+        completed (last (:rounds state))
+        report (:report completed)
+        receipt (last (keep #(get-in % [:event/body :certificate])
+                            (:events ledger)))
+        residual (last (:failure-account report))
+        park {:state/type :solver-human-intervention-frame-park
+              :frame/id (:frame/id frame)
+              :problem/id (:problem/id frame)
+              :solver/rounds-completed (count (:rounds state))
+              :solver/final-head (:final-head report)
+              :solver/branch (:branch report)
+              :solver/state-path solver-state-path
+              :last-valid-receipt/id (or (:receipt/id receipt)
+                                         (:certificate/id receipt))
+              :residual residual
+              :student/decision :operator-required}]
+    (if (and (= :solver-human-intervention-required (:error/code result))
+             (= :solver-human-intervention-required (:state/type state))
+             (every? #(and (string? %) (not (str/blank? %)))
+                     ((juxt :frame/id :problem/id :solver/final-head
+                            :solver/state-path :last-valid-receipt/id
+                            :residual) park))
+             (pos-int? (:solver/rounds-completed park)))
+      {:ok true :status :frame-parked :frame/park park}
+      result)))
+
 (def default-artifacts
   {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
    :typed-completion

@@ -539,7 +539,8 @@
              (:frame/result
               ((:frame-tick-fn @adapter-config)
                {:frame/id "f40" :problem/id "p1"}
-               {:ledger-path "/tmp/ledger"
+               {:state-directory "/tmp"
+                :ledger-path "/tmp/ledger"
                 :preparation-path "/tmp/preparation"}))))
       (is (zero? @supervised-calls)
           "an already terminal ledger bypasses obsolete launch authority")

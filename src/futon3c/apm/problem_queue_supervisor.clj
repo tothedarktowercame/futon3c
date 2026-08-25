@@ -7,6 +7,14 @@
 
 (def terminal-results #{:closed :partial :void})
 
+(defn valid-frame-park?
+  [park]
+  (and (= :solver-human-intervention-frame-park (:state/type park))
+       (every? #(and (string? %) (not-empty %))
+               ((juxt :frame/id :problem/id :residual :solver/final-head
+                      :last-valid-receipt/id :solver/state-path) park))
+       (pos-int? (:solver/rounds-completed park))))
+
 (defn queue-plan [problems]
   (let [body {:queue/type :apm-problem-queue :queue/version 1
               :problems (mapv #(select-keys % [:problem/id :repository
@@ -176,9 +184,30 @@
         (cond
           (not (:ok result)) result
           (not (contains? #{:parked :phase-advanced :terminal-collected
-                            :claim-recovered :frame-complete}
+                            :claim-recovered :frame-parked :frame-complete}
                           (:status result)))
           {:ok false :error/code :problem-queue-frame-status-invalid}
+          (= :frame-parked (:status result))
+          (let [park (:frame/park result)]
+            (if-not (and (valid-frame-park? park)
+                         (= (:frame/id park)
+                            (get-in active [:frame :frame/id]))
+                         (= (:problem/id park)
+                            (get-in active [:frame :problem/id])))
+              {:ok false :error/code :problem-queue-frame-park-invalid}
+              (let [pause? (= :pause-after-active (:status state))
+                    cleared (addressed
+                             (-> state
+                                 (update :parked (fnil conj []) park)
+                                 (assoc :active nil)
+                                 (cond-> pause? (assoc :status :paused))))
+                    persisted (persist-state-fn cleared)]
+                (if-not (:ok persisted)
+                  {:ok false :error/code
+                   :problem-queue-state-persistence-failed}
+                  (if pause?
+                    {:ok true :status :batch-paused :state cleared}
+                    (prepare-next plan cleared providers))))))
           (not= :frame-complete (:status result))
           (assoc result :queue/id (:queue/id plan)
                  :active/frame-id (get-in active [:frame :frame/id]))

@@ -25,6 +25,38 @@
   (is (:ok (sut/qualify {:frame frame :generated-contract-digest digest
                          :qualification-digest digest}))))
 
+(deftest exhausted-solver-checkpoint-becomes-reenterable-frame-park
+  (let [round {:ordinal 50
+               :report {:final-head "solver-head-50"
+                        :branch "exp/countdown-f30-p1-solver"
+                        :failure-account ["earlier" "exact residual"]}}
+        result
+        (sut/solver-human-intervention-park
+         {:frame frame
+          :solver-state-path "/campaign/f30/live/solve.edn"
+          :ledger {:events [{:event/body
+                             {:certificate {:receipt/id "last-valid"}}}]}
+          :result {:ok false
+                   :error/code :solver-human-intervention-required
+                   :state {:state/type :solver-human-intervention-required
+                           :rounds (vec (repeat 50 round))}}})
+        park (:frame/park result)]
+    (is (:ok result))
+    (is (= :frame-parked (:status result)))
+    (is (= :solver-human-intervention-frame-park (:state/type park)))
+    (is (= 50 (:solver/rounds-completed park)))
+    (is (= "solver-head-50" (:solver/final-head park)))
+    (is (= "exact residual" (:residual park)))
+    (is (= "last-valid" (:last-valid-receipt/id park)))
+    (is (= :operator-required (:student/decision park)))))
+
+(deftest non-exhaustion-error-is-not-reclassified
+  (let [result {:ok false :error/code :solver-remediation-required}]
+    (is (= result
+           (sut/solver-human-intervention-park
+            {:frame frame :ledger {:events []}
+             :solver-state-path "/solve.edn" :result result})))))
+
 (deftest fresh-one-off-manifest-pins-both-scribe-cards
   (let [manifest (sut/one-off-manifest
                   {:frame frame :apparatus-repository "."
