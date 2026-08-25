@@ -14,6 +14,7 @@
 (defn trace
   [{:keys [campaign-id manifest-hash contract-id phase-order steps closed
            terminal-ledger-digest solver-snapshot-digest
+           solver-snapshot-content-digest review-snapshots
            snapshot-admitted-after-solve-verify snapshot-depositor
            snapshot-reviewer student-bindings campaign-lanes
            phase-receipt-ids problem-outcome frame-result analyst-wakes]}]
@@ -60,6 +61,12 @@
     "closed" closed
     "terminalLedgerDigest" terminal-ledger-digest
     "solverSnapshotDigest" solver-snapshot-digest
+    "solverSnapshotContentDigest" solver-snapshot-content-digest
+    "reviewSnapshots"
+    (mapv (fn [{:keys [ordinal snapshot-digest content-digest]}]
+            {"ordinal" ordinal "snapshotDigest" snapshot-digest
+             "contentDigest" content-digest})
+          review-snapshots)
     "snapshotAdmittedAfterSolveVerify" snapshot-admitted-after-solve-verify
     "snapshotDepositor" snapshot-depositor
     "snapshotReviewer" snapshot-reviewer
@@ -100,6 +107,8 @@
    (merge registration
           {:closed closed :terminal-ledger-digest terminal-ledger-digest
            :solver-snapshot-digest (:snapshot-digest memory)
+           :solver-snapshot-content-digest (:snapshot-content-digest memory)
+           :review-snapshots (:review-snapshots memory)
            :snapshot-admitted-after-solve-verify (:admitted? memory)
            :snapshot-depositor (:depositor memory)
            :snapshot-reviewer (:reviewer memory)

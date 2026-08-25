@@ -42,6 +42,12 @@
                :student-attempt-3 :scribe-reduce :close-frame]))
    :closed true :terminal-ledger-digest "ledger-11"
    :solver-snapshot-digest "snapshot-verified"
+   :solver-snapshot-content-digest "snapshot-verified"
+   :review-snapshots
+   [{:ordinal 1 :snapshot-digest "snapshot-verified"
+     :content-digest "snapshot-verified"}
+    {:ordinal 2 :snapshot-digest "snapshot-verified"
+     :content-digest "snapshot-verified"}]
    :snapshot-admitted-after-solve-verify true
    :snapshot-depositor "scribe-1" :snapshot-reviewer "proctor-1"
    :student-bindings
@@ -84,11 +90,18 @@
     (is (.contains (slurp a) "\"promote-solver\""))
     (is (= 3 (count (get (json/parse-string (slurp a))
                          "studentBindings"))))
+    (is (= "snapshot-verified"
+           (get (json/parse-string (slurp a))
+                "solverSnapshotContentDigest")))
+    (is (= [1 2]
+           (mapv #(get % "ordinal")
+                 (get (json/parse-string (slurp a)) "reviewSnapshots"))))
     (is (= 2 (count (get (json/parse-string (slurp a))
                          "campaignLanes"))))
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/valid.json"))
-           (json/parse-string (slurp a))))))
+           (dissoc (json/parse-string (slurp a))
+                   "solverSnapshotContentDigest" "reviewSnapshots")))))
 
 (deftest durable-state-projection-does-not-invent-job-success
   (let [step (first (:steps valid))
@@ -115,7 +128,14 @@
                                :schema-valid? true :authority-derived? true
                                :conversation-used-as-receipt? false
                                :job-id (:job-id step)}}}]
-          :closed false :terminal-ledger-digest (:ledger-after step)})]
+          :closed false :terminal-ledger-digest (:ledger-after step)
+          :memory {:snapshot-digest "snapshot-verified"
+                   :snapshot-content-digest "snapshot-verified"
+                   :review-snapshots
+                   [{:ordinal 1 :snapshot-digest "snapshot-verified"
+                     :content-digest "snapshot-verified"}
+                    {:ordinal 2 :snapshot-digest "snapshot-verified"
+                     :content-digest "snapshot-verified"}]}})]
     (is (= true (get-in projected ["steps" 0 "clientTimeoutObserved"])))
     (is (= false (get-in projected ["steps" 0 "timeoutTreatedAsSuccess"])))
     (is (= 202 (get-in projected ["steps" 0 "activationStatus"])))))
