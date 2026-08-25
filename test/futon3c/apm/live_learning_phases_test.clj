@@ -465,6 +465,7 @@
         rejected {:ok false :error/code :student-candidate-validation-failed
                   :head (apply str (repeat 40 "5"))
                   :ref "refs/apm/student-candidates/f34/a95J03/attempt-3/rejected"}
+        resets (atom 0)
         result (sut/missing-observation-receipt
                 contract action {}
                 {:frame-id "f34" :problem-id "a95J03" :attempt-ordinal 3
@@ -474,12 +475,18 @@
                  :state :done :terminal-code 0}
                 1 {:collection/id "collection"}
                 (fn [] {:ok true :source {:blob "source-blob"}})
-                (fn [] rejected))]
+                (fn [] rejected)
+                (fn [] (swap! resets inc)
+                  {:ok true :head (apply str (repeat 40 "b"))
+                   :preservation-ref (:ref rejected)}))]
     (is (:ok result) (pr-str result))
     (is (= (select-keys rejected [:error/code :head :ref])
            (get-in result [:certificate :receipt/harness-observed
                            :workspace :candidate])))
     (is (nil? (get-in result [:certificate :receipt/candidate])))
+    (is (= 1 @resets))
+    (is (true? (get-in result [:certificate :receipt/harness-observed
+                               :workspace :reset-after-rejection :ok])))
     (is (= :controller (get-in result [:certificate :receipt/author])))))
 
 (deftest student-request-carries-the-workspace-base-for-reset-and-archive

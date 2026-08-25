@@ -363,6 +363,11 @@
                                 repair-attempts collection-evidence archive-fn nil))
   ([contract action receipts request ticket job repair-attempts collection-evidence
     archive-fn candidate-fn]
+   (missing-observation-receipt contract action receipts request ticket job
+                                repair-attempts collection-evidence archive-fn
+                                candidate-fn nil))
+  ([contract action receipts request ticket job repair-attempts collection-evidence
+    archive-fn candidate-fn reset-invalid-fn]
   (let [workspace (:workspace request)
         head-result (when (string? workspace)
                       (shell/sh "git" "-C" workspace "rev-parse" "HEAD"))
@@ -370,6 +375,9 @@
         ;; unobserved attempt's worktree is still evidence.
         archived (when (fn? archive-fn) (archive-fn))
         candidate (when (fn? candidate-fn) (candidate-fn))
+        reset-invalid (when (and candidate (not (:ok candidate))
+                                 (fn? reset-invalid-fn))
+                        (reset-invalid-fn))
         body (cond-> {:receipt/type :student-observation-missing
               :receipt/frame-id (:frame-id request)
               :receipt/problem-id (:problem-id request)
@@ -397,7 +405,11 @@
                                         (if (:ok candidate)
                                           (:candidate candidate)
                                           (select-keys candidate
-                                                       [:error/code :head :ref])))}
+                                                       [:error/code :head :ref])))
+                           :reset-after-rejection
+                           (when reset-invalid
+                             (select-keys reset-invalid
+                                          [:ok :head :preservation-ref]))}
                :memory {:snapshot (:memory-snapshot request)}}}
                (and candidate (:ok candidate))
                (assoc :receipt/candidate (:candidate candidate)))
@@ -407,7 +419,11 @@
     ;; :receipt/harness-observed, but must neither be certified under
     ;; :receipt/candidate nor prevent the controller-authored missing
     ;; observation from advancing the frame.
-    (handlers/validate-completion contract action addressed receipts))))
+    (if (and reset-invalid (not (:ok reset-invalid)))
+      {:ok false :error/code :student-invalid-candidate-reset-failed
+       :candidate (select-keys candidate [:error/code :head :ref])
+       :reset reset-invalid}
+      (handlers/validate-completion contract action addressed receipts)))))
 
 (defn prepare-student-workspace!
   "Before an original fresh Student attempt, return the Student worktree to
@@ -578,7 +594,10 @@
                                        {:lease (get-in preparation
                                                        [:workspaces :student])
                                         :attempt-ordinal
-                                        (:attempt-ordinal request)}))))
+                                        (:attempt-ordinal request)})
+                                     #(workspace-reset-fn
+                                       (get-in preparation
+                                               [:workspaces :student])))))
     :receipt-provider
     (fn [request ticket job validated]
       (cond
