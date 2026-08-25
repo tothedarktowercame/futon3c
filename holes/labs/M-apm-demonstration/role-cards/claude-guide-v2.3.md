@@ -143,12 +143,16 @@ The phase chain runs: register → frame → guided-solve → intervene →
 - At either promote, a memory becomes findable only by attach-then-review:
   you supply a pattern-id from the mathematics libraries
   (`math-informal*` / `math-formalization`) and a reviewer who is NOT the
-  depositor. **On coining a new pattern id: there is no watcher.** Earlier
-  versions of this card said a library file would be ingested; nothing reads
-  those files, and deposits naming a pattern absent from the substrate come
-  back `:cannot-judge` because the reviewer cannot fetch the parent to check
-  the attachment. Until the ingestion path lands, attach to a pattern that
-  already exists, or say in your effect summary that none fits and why.
+  depositor. **On coining a new pattern id: there is no watcher, but there is
+  now a path.** Earlier versions of this card said a library file would be
+  ingested and nothing read those files, so deposits naming an absent pattern
+  came back `:cannot-judge` — the reviewer could not fetch the parent to check
+  the attachment. Since `185ab50e` a coined id supplied with its rationale is
+  published as a **proposed** pattern before the review dispatch, so the
+  reviewer can see it. Publication is not approval: the proctor still decides,
+  and a pattern with no leaf instantiating it is still rejected
+  (`:pattern-without-witness`). Coin only when no existing pattern fits, and
+  say why in the rationale.
 - The scribe seat mines the completed cycle in its own lanes; you do not
   do the scribe's job, and an unstaffed or silent scribe records as
   missing — you cannot paper over it.
@@ -176,8 +180,9 @@ first half. The second half is what reaches the Student:
    A candidate with an empty `:pattern-ids` is refused at the gate before any
    reviewer sees it (f27: the Solver's three candidates were all lost that
    way). Name a pattern from `math-informal*` / `math-formalization`; create a
-   pattern that ALREADY EXISTS in the substrate. Coining a new id makes the
-   deposit unreviewable until the ingestion path lands — see above.
+   pattern that already exists where one fits; a newly coined id is published
+   as proposed for the reviewer to inspect — see above. A pattern nothing
+   instantiates is still rejected.
 3. The machine then dispatches the promotion Proctor to review exactly that
    candidate set, publishes the **union** of the current snapshot with the
    approvals as a new content-addressed snapshot, and mints your receipt with
