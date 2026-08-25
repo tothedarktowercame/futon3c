@@ -228,7 +228,13 @@
   (let [discovered (->> receipt-values (mapcat :candidates)
                         (keep :pattern-id) (filter string?) set)
         proposed (pattern-ids-in evidence)
-        rationales (or (:new-pattern-rationales evidence) {})
+        ;; The typed JSON boundary keywordizes map keys, so a rationale keyed
+        ;; by "math-formalization/x" arrives as :math-formalization/x; the
+        ;; proposed ids stay strings. Normalize before the lookup.
+        rationales (into {}
+                         (map (fn [[k v]]
+                                [(if (keyword? k) (subs (str k) 1) k) v]))
+                         (or (:new-pattern-rationales evidence) {}))
         unaccounted (->> (set/difference proposed discovered)
                          (remove #(let [reason (get rationales %)]
                                     (and (string? reason) (not-empty reason))))

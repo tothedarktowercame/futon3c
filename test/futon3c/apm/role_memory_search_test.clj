@@ -112,3 +112,22 @@
     (is (= #{f29-proposed-pattern-id} (:unaccounted-pattern-ids refused)))
     (is (:ok reused))
     (is (:ok justified))))
+
+(deftest f35-keywordized-rationale-keys-still-account-for-new-patterns
+  ;; The typed JSON submission keywordizes map keys, so the promotion
+  ;; Proctor's :new-pattern-rationales arrive keyed by namespaced keywords
+  ;; while :pattern-ids stay strings. Before this normalization every guide
+  ;; approval naming a pattern outside the reviewer's FTS hits was refused
+  ;; (f33 and f35 guide-intervention-1, 2026-08-25).
+  (let [receipt {:candidates [{:pattern-id "math-informal/local-to-global"}]}
+        proposed "math-formalization/compact-thickening-upgrades-pointwise-analyticity"
+        evidence {:reviews [{:pattern-ids [proposed]}]
+                  :new-pattern-rationales
+                  {(keyword proposed) "No canonical pattern covers the thickening step."}}
+        accounted (sut/validate-pattern-accounting [receipt] evidence)
+        still-refused (sut/validate-pattern-accounting
+                       [receipt] (assoc evidence :new-pattern-rationales
+                                        {(keyword proposed) ""}))]
+    (is (:ok accounted))
+    (is (= #{proposed} (:proposed-pattern-ids accounted)))
+    (is (= :canonical-pattern-reuse-unaccounted (:error/code still-refused)))))
