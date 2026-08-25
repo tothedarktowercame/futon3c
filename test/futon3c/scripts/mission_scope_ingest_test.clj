@@ -34,6 +34,24 @@
         (is (= 3 @attempts))
         (is (= [2000 2000] @sleeps))))))
 
+(deftest mission-scope-reads-push-the-mission-filter-down
+  (let [urls (atom [])]
+    (#'ingest/reset-run-caches!)
+    (with-redefs [ingest/http-edn
+                  (fn [_ _method url & [_body]]
+                    (swap! urls conj url)
+                    {:status 200
+                     :body {:hyperedges [{:hx/id "hx-1"
+                                          :hx/props {:mission "M-x"
+                                                     :scope/binder-type "loose-section"}}]}})]
+      (is (= ["hx-1"]
+             (mapv :hx/id
+                   (#'ingest/mission-scope-hyperedges
+                    :client "http://substrate" "loose-section" "M-x"))))
+      (is (= [(str "http://substrate/api/alpha/hyperedges?type=mission-scope%2Floose-section"
+                   "&mission=M-x&limit=250&include-total=false")]
+             @urls)))))
+
 (deftest removal-falls-back-only-for-an-unported-route
   (let [calls (atom [])
         documents [{:table :hyperedges :id "hx-1"}

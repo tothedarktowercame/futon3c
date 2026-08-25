@@ -219,55 +219,71 @@
   (reset! !entity-cache {})
   (reset! !run-telemetry {}))
 
+(defn- walk-hyperedges
+  "Every row of a futon1b /api/alpha/hyperedges QUERY (a query-string fragment
+   such as \"type=…\"), following the keyset cursor page by page. Fails closed
+   — throws — if the walk stops before the population is exhausted, so a
+   partial read is never used as if complete."
+  [client base-url query context]
+  (let [hxs (loop [after nil
+                   requests 0
+                   rows []]
+              (if (>= requests hyperedge-request-budget)
+                (with-meta (vec rows)
+                  {:partial? true
+                   :reason :request-budget-exhausted
+                   :next-cursor after
+                   :requests requests
+                   :request-budget hyperedge-request-budget})
+                (let [resp (-> (http-edn-read
+                                client
+                                (str base-url "/api/alpha/hyperedges?" query
+                                     "&limit=" hyperedge-page-size
+                                     "&include-total=false"
+                                     (when after
+                                       (str "&after=" (url-encode after)))))
+                               (ok! (assoc context :after after)))
+                      page (or (get-in resp [:body :hyperedges]) [])
+                      rows' (into rows page)
+                      requests' (inc requests)
+                      next-cursor (get-in resp [:body :next-cursor])]
+                  (cond
+                    next-cursor
+                    (recur next-cursor requests' rows')
+
+                    (= hyperedge-page-size (count page))
+                    (with-meta (vec rows')
+                      {:partial? true
+                       :reason :server-page-full-without-cursor
+                       :requests requests'
+                       :request-budget hyperedge-request-budget})
+
+                    :else
+                    (vec rows')))))]
+    (when (true? (:partial? (meta hxs)))
+      (throw (ex-info "futon1b hyperedge pagination stopped early"
+                      (merge context {:returned (count hxs)} (meta hxs)))))
+    hxs))
+
 (defn- hyperedges-by-type [client base-url hx-type]
   (if-let [cached (get @!hyperedge-type-cache hx-type)]
     cached
-    (let [hxs (loop [after nil
-                     requests 0
-                     rows []]
-                (if (>= requests hyperedge-request-budget)
-                  (with-meta (vec rows)
-                    {:partial? true
-                     :reason :request-budget-exhausted
-                     :next-cursor after
-                     :requests requests
-                     :request-budget hyperedge-request-budget})
-                  (let [resp (-> (http-edn-read
-                                  client
-                                  (str base-url "/api/alpha/hyperedges?type="
-                                       (url-encode hx-type)
-                                       "&limit=" hyperedge-page-size
-                                       "&include-total=false"
-                                       (when after
-                                         (str "&after=" (url-encode after)))))
-                                 (ok! {:op :hyperedges-by-type
-                                       :type hx-type
-                                       :after after}))
-                        page (or (get-in resp [:body :hyperedges]) [])
-                        rows' (into rows page)
-                        next-cursor (get-in resp [:body :next-cursor])
-                        requests' (inc requests)]
-                    (cond
-                      next-cursor
-                      (recur next-cursor requests' rows')
-
-                      (= hyperedge-page-size (count page))
-                      (with-meta (vec rows')
-                        {:partial? true
-                         :reason :server-page-full-without-cursor
-                         :requests requests'
-                         :request-budget hyperedge-request-budget})
-
-                      :else
-                      (vec rows')))))]
-      (when (true? (:partial? (meta hxs)))
-        (throw (ex-info "futon1b hyperedge pagination stopped early"
-                        (merge {:op :hyperedges-by-type
-                                :type hx-type
-                                :returned (count hxs)}
-                               (meta hxs)))))
+    (let [hxs (walk-hyperedges client base-url
+                               (str "type=" (url-encode hx-type))
+                               {:op :hyperedges-by-type :type hx-type})]
       (swap! !hyperedge-type-cache assoc hx-type hxs)
       hxs)))
+
+(defn- mission-scope-hyperedges
+  "Stored mission-scope/BINDER rows for MISSION only, pushed down on futon1b's
+   denormalized prop/mission column. The per-binder ingest needs one mission's
+   rows; reading the whole type instead cost ~13 s per 1000 hydrated rows on
+   Zone, for ~15 types per -main call."
+  [client base-url binder mission]
+  (walk-hyperedges client base-url
+                   (str "type=" (url-encode (str "mission-scope/" binder))
+                        "&mission=" (url-encode mission))
+                   {:op :mission-scope-hyperedges :binder binder :mission mission}))
 
 (defn- repo-name-from-path [path]
   (or (second (re-find #"/code/([^/]+)/" (str path)))
@@ -1063,11 +1079,10 @@
   generation at once (caught live by Joe on M-first-flights 2026-06-11:
   three '## 3. DERIVE' generations, 46 scopes). For this mission+binder,
   any stored scope whose id is absent from SELECTED-IDS is retracted."
-  [client base-url penholder mission-entity binder-filter selected-ids]
+  [client base-url penholder mission mission-entity binder-filter selected-ids]
   (let [stale-hxs (if (archival-binder? binder-filter)
                     []
-                    (->> (hyperedges-by-type client base-url
-                                             (str "mission-scope/" binder-filter))
+                    (->> (mission-scope-hyperedges client base-url binder-filter mission)
                          (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
                          (remove #(let [sid (or (get-in % [:hx/props :scope/id])
                                                 (scope-endpoint-id %))]
@@ -1088,11 +1103,10 @@
      :stale-doc-retract-count (count documents)}))
 
 (defn- retract-legacy-position-scopes!
-  [client base-url penholder mission-entity binder-filter]
+  [client base-url penholder mission mission-entity binder-filter]
   (let [legacy-hxs (if (archival-binder? binder-filter)
                      []
-                     (->> (hyperedges-by-type client base-url
-                                              (str "mission-scope/" binder-filter))
+                     (->> (mission-scope-hyperedges client base-url binder-filter mission)
                           (filter #(some #{(:id mission-entity)} (:hx/endpoints %)))
                           (filter #(legacy-position-scope-hyperedge? binder-filter %))
                           vec))
@@ -1554,8 +1568,7 @@
 
 (defn- stored-scope-hyperedges-for-mission [client base-url mission]
   (->> structural-binders
-       (mapcat (fn [binder]
-                 (hyperedges-by-type client base-url (str "mission-scope/" binder))))
+       (mapcat (fn [binder] (mission-scope-hyperedges client base-url binder mission)))
        (filter #(= mission (get (hx-props %) :mission)))
        vec))
 
@@ -1903,7 +1916,7 @@
                                         :props {:mission/id mission
                                                 :mission/path mission-path}})
         legacy-report (if binder-filter
-                        (retract-legacy-position-scopes! client base-url penholder mission-entity binder-filter)
+                        (retract-legacy-position-scopes! client base-url penholder mission mission-entity binder-filter)
                         {:legacy-hyperedge-retract-count 0
                          :legacy-entity-retract-count 0
                          :legacy-entity-retained-count 0
@@ -1911,7 +1924,7 @@
                          :legacy-doc-retract-count 0})
         stale-report (if binder-filter
                        (retract-stale-generation-scopes! client base-url penholder
-                                                         mission-entity binder-filter
+                                                         mission mission-entity binder-filter
                                                          selected-ids)
                        {:stale-hyperedge-retract-count 0
                         :stale-entity-retract-count 0
