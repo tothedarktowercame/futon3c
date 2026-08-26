@@ -42,7 +42,7 @@ Not "the cascade ran". The demo succeeds when a single frame's receipt shows
 
 (1) alone is "built". (1)+(2) is "built and used", and is the claim worth making.
 
-## Three handoffs, smallest first
+## Five handoffs, smallest first
 
 ### H0 — dry-run the expander before wiring anything (30 minutes, no code)
 
@@ -81,12 +81,75 @@ position-of-used-memory per frame. Baseline to beat: 47/48.
 
 ### H3 — put `cascade-receipt-offers` on the countdown path
 
+**Ordering note: run H4's search before this.** H4 works entirely on archived
+data and decides whether H3 is worth building; wiring first is how the
+honest-holes outcome happens.
+
+
 Behind the existing `:memory-cascade-enabled?` flag, which already exists and is
 already read — this is wiring, not new machinery.
 
 **Run it as a NEW campaign arm.** The TN is explicit that this changes the
 independent variable mid-campaign and "is not a change to make quietly". The
 previous arm's config must be recorded alongside so the comparison is honest.
+
+### H4 — the worked example: show the cascade being USED on a named problem
+
+*Joe, 2026-08-26: "otherwise we get the 'wired but no example' failure case we
+saw with 'honest holes' in the Cascade Live sheet."*
+
+That failure is on record and worth stating precisely, because H3 alone
+reproduces it. O5 honest-holes in `C-cascade-real` is fully wired: a generator
+(`scripts/o5_honest_holes.py`), a dry-run artifact, arrows certified
+`:consistent? true` and explicitly described as "real, not aspirational". Its
+output is **2 holes across 231 core missions**, and no case was ever shown where
+a hole changed anyone's decision. The machinery is not in doubt; the
+demonstration never happened. H3 delivers exactly that state for cascades —
+route labels in a receipt, and nothing anyone can point at.
+
+**H4 is therefore not optional and not last.** Its search should run against the
+existing campaign archive BEFORE H3 is wired, because it can be done entirely on
+recorded data and it decides whether H3 is worth doing.
+
+**The selection criterion, fixed in advance.** Pick the demonstration frame by
+this rule, stated before any outcome is examined, so the case cannot be chosen
+to flatter the cascade:
+
+> a **closed** frame in which the student stumbled, where some leaf memory M
+> satisfies: (a) M was NOT in that frame's `:memory-use/surfaced-ids`, (b) M is
+> attached to a pattern P' reachable by `pattern/has-semantic-why` from a pattern
+> P that WAS attached to a surfaced memory, and (c) M's body addresses the
+> specific obstacle the student hit.
+
+(a) and (b) are mechanical over the archive and the 23 math `has-semantic-why`
+edges. (c) is a judgement and must be made by a seat that is not the one that
+selected the frame.
+
+**Not f42.** Its closing memory was already in the seed set, ranked 47th of 48.
+The cascade would not have added it — ordering (H2) is what addresses f42, and
+using it to demonstrate H3 would be the flattering-case error in its most
+tempting form. Note also that `jit-all-open-nontopology-v1-f42` is
+`:campaign/status :running` as of 2026-08-26T12:38, so it is not archive
+material at all.
+
+**What the deliverable is.** One page, on one named problem, containing:
+
+1. the problem and the obstacle the student actually hit, quoted from the trace;
+2. the shelf as delivered — the flat hash-sorted list, with positions;
+3. memory M, which was not on it;
+4. the route: seed memory → pattern P → `has-semantic-why` → P' → M, with the
+   edge ids, so a reader can re-walk it;
+5. the counterfactual, stated honestly as a counterfactual: what the student
+   would have been handed with the cascade on, and why M addresses the obstacle;
+6. what it would have cost — `:expanded-count` at the frame's seed set, against
+   the cap.
+
+**A null result is a valid and valuable deliverable.** If no frame across the
+seven archived campaigns satisfies the criterion, then the cascade's usefulness
+is unevidenced on the whole recorded history, and H3 should not be built. Say
+that plainly rather than relaxing the criterion until a case appears — relaxing
+it is how "wired but no example" becomes "wired with a bad example", which is
+worse.
 
 ## What to measure
 
