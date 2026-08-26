@@ -68,4 +68,81 @@
    :decision/not-done
    (str "The frame is NOT voided and NOT forgotten: this record disposes it "
         "as :partial with its residual and artifacts intact. I did not edit "
-        "queue-state.edn, which is machine-owned durable state.")}]}
+        "queue-state.edn, which is machine-owned durable state.")}
+ {:frame/id "f38"
+   :problem/id "a96J08"
+   :campaign/id "jit-all-open-nontopology-v1"
+   :last-valid-receipt/id
+   "b0a5e2ea418c62e98e2612f0e43c252346445909a801194bd694d6b3a0a8117c"
+   :park/state-type :solver-human-intervention-frame-park
+   :decision/owner :claude-supervisor
+   :decision/by "claude-12"
+   :decision/at "2026-08-26T11:25:00Z"
+   :decision/status :decided
+   :decision/disposition :partial
+   :decision/class :problem-statement-false
+   :decision/redispatch-solver? false
+   :decision/apparatus-repair-required? false
+   :decision/frame-voided? false
+
+   ;; VERIFIED INDEPENDENTLY, not accepted from the residual.
+   ;; Artifact: /home/joe/code/apm-frames/f38-a96J08-solver at head
+   ;; 79a46d0e4f2b13ba76434674e60eb6af79c2e7bf (present, matches the park).
+   :verification
+   {:problem-file "problems/a96J08/lean/Main.lean"
+    :lines 240
+    :sorry-count 1
+    :sorry-line 212
+    :sorry-owner "apm_a96J08_bridge_1"
+    :refutation "not_apm_a96J08_claim"
+    :refutation-line 190
+    :refutation-independent-of-sorry? true
+    :refutation-independence-argument
+    (str "not_apm_a96J08_claim is defined at line 190, ABOVE "
+         "apm_a96J08_bridge_1 at line 205 which owns the file's only sorry "
+         "at line 212. A term cannot depend on one declared after it, so the "
+         "refutation cannot route through the sorry.")
+    :solver/rounds-completed 50
+    :solver/outcome-round-1 :claimed-defect}
+
+   ;; I checked the mathematics myself rather than trusting the failure
+   ;; account, and it is correct.
+   :mathematics-checked
+   {:integrand "e^(omega*x)/(1-e^x)"
+    :frozen-rhs "-pi*cot(pi*omega)"
+    :correct-rhs "pi*cot(pi*omega)"
+    :witness "omega = 1/4"
+    :derivation
+    (str "f(x) = e^(x/4)/(1-e^x) = -e^(x/4)/(e^x-1); "
+         "f(-x) = e^(-x/4)/(1-e^(-x)) = e^(3x/4)/(e^x-1). "
+         "Sum = (e^(3x/4) - e^(x/4))/(e^x-1), strictly positive for x > 0 "
+         "since 3x/4 > x/4 and e^x > 1. Every symmetric truncation integral "
+         "is therefore positive, so its limit is >= 0 and cannot equal "
+         "-pi*cos(pi/4)/sin(pi/4) = -pi < 0.")
+    :conclusion "The frozen target theorem is FALSE. It is not provable."}
+
+   :decision/rationale
+   (str "This is not solver failure and not an apparatus fault. The problem "
+        "bundle is defective: the RHS carries the wrong sign. a96J08 cannot "
+        "be closed by any amount of solver budget because the statement it "
+        "asks to prove is false, and the solver proved it false sorry-free.")
+
+   ;; The process finding, which matters more than this one frame.
+   :decision/process-finding
+   (str "The solver returned :solver/outcome :claimed-defect in ROUND 1 with "
+        "the correct mathematical argument, and then ran 49 further rounds "
+        "because -- in the park record's own words -- 'no corrected authority "
+        "arrived in 50 rounds'. The machine has no route by which a solver "
+        "that has correctly refuted its own target can get the statement "
+        "corrected or the frame stopped. A :claimed-defect outcome should "
+        "park the frame for a decision immediately, not run to budget "
+        "exhaustion. 49 rounds were spent on a question already answered.")
+
+   :decision/recommended-route
+   (str "Correct the frozen statement's RHS sign (-pi*cot -> pi*cot) and "
+        "re-mint the problem. NOT DONE HERE: problem bundles are pinned by "
+        "blob, so editing one mutates the campaign's pinned queue and its "
+        "inputs. That is Joe's call, not mine, and I am not making it "
+        "unilaterally. Until then a96J08 stays disposed :partial with its "
+        "refutation preserved -- which is a real result: the campaign has a "
+        "sorry-free proof that one of its own problems is misstated.")}]}
