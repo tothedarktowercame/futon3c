@@ -240,12 +240,12 @@
        vec))
 
 ;; The substrate refuses any hyperedge window above 1000 with a layer-4
-;; :invalid-limit (futon1b 999af15, 2026-07-22). This reader asked for 5000
-;; from the day it was written, so every live expansion since then — including
-;; the nine round-1 registrations that set :reg/memory-cascade-enabled? true —
-;; would have thrown before reading a single attachment (D0, 2026-08-26).
-;; The `end=` form also ignores `after`, so there is no cursor to page with;
-;; a full page is therefore refused rather than silently truncated.
+;; :invalid-limit (futon1b 4cd17bc, parse-hyperedge-limit, 2026-08-23). This
+;; reader asked for 5000, which worked until that day — the round-1 frames
+;; f9/f10/f13/f15 (2026-08-18/20) expanded through it and persisted routed
+;; offers (D1-round1-cascade-offers-2026-08-26.md) — and threw from then on
+;; (D0, 2026-08-26). The `end=` form ignores `after`, so there is no cursor to
+;; page with; a full page is therefore refused rather than silently truncated.
 (def ^:private cascade-hyperedge-page-limit 1000)
 
 (defn- complete-page

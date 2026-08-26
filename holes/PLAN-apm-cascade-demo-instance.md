@@ -248,3 +248,13 @@ credited.
 - `futon2/holes/E-cascade-sampler-four-2026-08-26.md` — the cross-stack tally
 - `futon3c/holes/excursions/E-operator-turn-modelling-2026-08-25.md` — why the
   ordering question (H2) is where operator-turn mining could first pay
+
+---
+
+*Correction, 2026-08-26 (claude-19), to the table row "and has never run":
+D1 (`technotes/D1-round1-cascade-offers-2026-08-26.md`) found the cascade DID
+run on the round-1 conductor path in f9/f10/f13/f15 — 1–5 seeds, 115–132
+available, cap 100 fired every time, student arm `:memory-channel :none`, so
+nothing consumed the offers. The row should read "has run, built-not-used, on
+a path no student was on". H0/D0 is unaffected, and the live reader was
+un-runnable from 2026-08-23 until `7534419c` (TN addendum 2/3).*

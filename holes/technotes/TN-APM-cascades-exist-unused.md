@@ -16,9 +16,13 @@ f42, snapshot
 in `conductor.clj`, is reachable only from an interactive HTTP surface, and has
 left zero artifacts in the entire campaign.**
 
-*(Re-verified 2026-08-26 across all seven campaigns, not one. One claim below is
-corrected by the addendum: pattern→pattern edges DO exist, as relations rather
-than hyperedges. See "Addendum — 2026-08-26".)*
+*(Re-verified 2026-08-26 across all seven campaigns, not one. Two claims below
+are corrected by addenda: pattern→pattern edges DO exist, as relations rather
+than hyperedges ("Addendum — 2026-08-26"); and "zero artifacts" is true of the
+campaign directories only — the round-1 conductor path ran the cascade in four
+frames and persisted routed offers under `data/problem-state/`, delivered to
+nobody ("Addendum 3"). The HEAD line stands for the countdown path that feeds
+the student.)*
 
 The question that prompted this — for the f42 use, was Zai using patterns or
 leaf memories? — has a clean answer: **leaf memories**. The 29 identifiers the
@@ -308,12 +312,14 @@ invocation of `expand-memory-cascade` over f42's 48 seed ids with
 `live-cascade-readers`. It never reached expansion. The reader requested
 `GET /api/alpha/hyperedges?end=…&type=memory/assert&limit=5000`, and the
 substrate answered HTTP 400, layer 4 `:invalid-limit` (`:maximum 1000`).
-That cap landed in futon1b `999af15` on **2026-07-22** — before any of the nine
+~~That cap landed in futon1b `999af15` on **2026-07-22** — before any of the nine
 round-1 registrations (f9–f17, 2026-08-18/20) set
-`:reg/memory-cascade-enabled? true`. `response-edn` throws on any non-200, so
-on every path since July a live expansion would have failed on its first
-attachment read. Whether that throw was ever *reached* on the round-1 path is
-D1's question; on the countdown path it is unreachable because nothing calls it.
+`:reg/memory-cascade-enabled? true`.~~ **Corrected the same day (Addendum 3):**
+the hyperedge cap is `parse-hyperedge-limit`, futon1b `4cd17bc`,
+**2026-08-23** — three days *after* the round-1 frames, which ran through this
+reader successfully. `999af15` capped a different endpoint. `response-edn`
+throws on any non-200, so from 2026-08-23 a live expansion fails on its first
+attachment read; on the countdown path it is unreachable because nothing calls it.
 
 Two further facts from probing the endpoint: the `end=` form ignores `after`
 (the same first id is returned), so there is no cursor to page with; and the
@@ -325,3 +331,43 @@ full window (`complete-page`, throws `memory cascade attachment window
 overflow`) instead of truncating silently — the §2.2 shape from V3 would
 otherwise reappear inside the instrument being built to measure it. D0 is
 re-dispatched against the fixed reader.
+
+## Addendum 3 — 2026-08-26 (claude-19): the cascade ran on the round-1 path, and reached nobody
+
+D1 (codex-12, `holes/technotes/D1-round1-cascade-offers-2026-08-26.md`,
+commit `a7f8fd2b`) reconstructed frames f9–f17 from the evidence store and
+`data/problem-state/<cycle-id>/vN.edn` — the conductor's `:problem-save`
+output, which no campaign-directory grep reaches. Spot-checked by claude-19
+against the state files directly: routed offers with `:why-hop` and
+`:co-incidence` are present for the four frames named, every run has
+`:offer/cascade-truncated? true`, and the `expanded-available` values match.
+
+| frame | seeds (solver surfaced-ids) | offers | `:why-hop` | `:co-incidence` | available | truncated at cap 100 |
+|---|---:|---:|---:|---:|---:|---|
+| f9 | 1 | 101 | 0 | 100 | 115 | yes |
+| f10 | 2 | 102 | 48 | 52 | 131 | yes |
+| f13 | 5 | 105 | 0 | 100 | 128 | yes |
+| f15 (×3 solver attempts) | 5 each | 105 each | 48 each | 52 each | 132 | yes |
+
+f11, f12, f17 reached the same call with **empty** surfaced-ids (nothing to
+expand); f14 never dispatched; f16 bypassed the conductor with direct bells.
+
+So the precise claims are now:
+
+1. **The HEAD line holds for the countdown path** — the path that feeds the
+   student in the live campaign — and "zero artifacts" was true of the
+   directories searched, not of the stack.
+2. **On the round-1 path the cascade was built and delivered to nobody.** The
+   offers are computed in `record-solver-attempt!` *after* the solver's
+   attempt, from the solver's own receipt; the student arm in every one of
+   these frames had `:memory-channel :none`. Nothing downstream consumed an
+   offer. "Built and used" (PLAN §"precisely") is still true nowhere.
+3. **The flooding argument has real numbers.** One to five seed memories
+   expand to 115–132 available offers, the cap of 100 fired on every run, and
+   in two of four frames the whole expansion is co-incidence (0 why-hops).
+   This is claude-13's counterfactual reading of f42 (53 why-hop from one
+   star, 88 co-incidence) confirmed on frames that actually ran.
+4. **Addendum 2's date was wrong** and is struck through above: the reader was
+   runnable until futon1b `4cd17bc` (2026-08-23) and has been un-runnable
+   since. The fix in `7534419c` stands; its commit message repeats the wrong
+   date and this addendum is its correction.
