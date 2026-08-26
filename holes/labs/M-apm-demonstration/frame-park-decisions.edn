@@ -1,12 +1,20 @@
 ;; Append-only decision records for parked frames.
 ;;
-;; Written because the machine can park a frame with :decision/owner
-;; :claude-supervisor and bell for a decision, but has no path to CONSUME the
-;; decision that comes back -- there is no frame-park resolution function
-;; (conductor_surface/resume-parked! is the Agency agent-park protocol, not
-;; this).  Until that lands, a decision recorded anywhere else is lost.  Each
-;; record carries :last-valid-receipt/id so it can be matched to its park
-;; without ambiguity when a consumption path exists.
+;; Each record carries :last-valid-receipt/id so it can be matched to its
+;; park without ambiguity.
+;;
+;; THE CONSUMPTION PATH NOW EXISTS AND IS AUTOMATIC (verified 2026-08-26 on
+;; f43).  futon3c.apm.frame-park-decisions reconciles this file into
+;; queue-state.edn, matching on :last-valid-receipt/id, preserving each park's
+;; residual and receipt, and setting :decision/bell-required false so the bell
+;; stops.  Appending a well-formed record here is sufficient: f43's record was
+;; applied about thirty seconds after it was appended, with no manual step.
+;;
+;; So do NOT run the reconciler by hand -- you would race the automatic pass.
+;; Append the record, then read queue-state.edn back and confirm the park went
+;; :decided with its residual intact.  (This header previously said no
+;; consumption path existed, which was true when it was written and is the
+;; kind of stale instruction that gets a duplicate write done.)
 {:decisions
  [{:frame/id "f36"
    :problem/id "a96A07"
@@ -216,4 +224,76 @@
         "experimental data to make a number look better. This matches Joe's "
         "stated preference on f31 -- rather get the next frames running than "
         "repair an old one. Re-running the reviews is his call, and my "
-        "recommendation is no.")}]}
+        "recommendation is no.")}
+  {:frame/id "f43"
+   :problem/id "a97J08"
+   :campaign/id "jit-all-open-nontopology-v1"
+   :last-valid-receipt/id
+   "16c0fb0e28d58521cadb406983e3ae25844c67a9d7c42e9b49e77e379322bb44"
+   :park/state-type :solver-human-intervention-frame-park
+   :decision/owner :claude-supervisor
+   :decision/by "claude-12"
+   :decision/at "2026-08-26T17:31:36Z"
+   :decision/status :decided
+   :decision/disposition :partial
+   :decision/class :library-infrastructure-absent
+   :decision/apparatus-repair-required? false
+   :decision/redispatch-solver? false
+   :verification
+   {:artifact-head "a3e800ba1db642e154b0d896c73ca98c14b75f4c"
+    :problem-file "problems/a97J08/lean/Main.lean"
+    :lines 1962
+    :sorry-count 1
+    :sorry-line 1806
+    :named-theorems-present
+    ["apm_a97j08_exists_noncontractible_circle_of_bounded_compl_component"]
+    :solver/rounds-completed 50
+    :mathlib-audit
+    {:files-searched 7863
+     :jordan-curve 0 :alexander-duality 0 :winding-number 0
+     :nullhomotopic 2}}
+   :decision/rationale
+   (str "Not an apparatus failure. The machine behaved correctly: 50 rounds, "
+        "receipts preserved, a precise residual, three artifact commits, and "
+        "the claim reads back exactly -- 1962 lines with exactly one sorry at "
+        "line 1806, and the named residual lemma present at 1796 and consumed "
+        "at 1821, so everything downstream of the gap compiles. "
+        "The residual is a library gap, not a proof gap the solver can close: "
+        "an open plane domain with a bounded connected complement component "
+        "admits a non-nullhomotopic circle. The file's own comment isolates "
+        "it as the Jordan/winding-number input, and states that the deduction "
+        "from it is purely fundamental-groupoid API, which is proved below. "
+        "I audited the pinned Mathlib rather than take that on trust: across "
+        "7863 Lean files there are zero hits for Jordan curve, zero for "
+        "Alexander duality and zero for winding number. Nullhomotopic exists "
+        "in two files, which is the API the solver did use. "
+        "So more solver budget will not move this. Under Joe's rule -- "
+        "continue while the obstruction moves, stop when it repeats -- this "
+        "obstruction has stopped moving.")
+   :decision/second-finding
+   (str "This is the SECOND frame blocked on the same absent machinery. f36 "
+        "(a96A07) was disposed :library-infrastructure-absent for want of "
+        "Jordan curve, topological degree, winding-number, circle-homology, "
+        "Alexander duality or planar separation; f43 (a97J08) is blocked on "
+        "the same planar family. Two of the four parked frames are the same "
+        "gap, which makes this a corpus-selection property rather than bad "
+        "luck: the queue is admitting problems whose proofs require content "
+        "the pinned Mathlib does not have, and each one costs 50 solver "
+        "rounds to discover. A pre-screen over corpus-selection.edn for the "
+        "planar-topology family would have saved 100 rounds across these two "
+        "frames alone. Recommend that screen before the queue admits more "
+        "a9x problems of this shape; that is Joe's call, not mine.")
+   :decision/recommended-route
+   (str "Classify a97J08 out of the active queue as infrastructure-blocked, "
+        "as was recommended for a96A07, and revisit if the pinned Mathlib "
+        "gains planar Jordan/winding/Alexander machinery. Do not redispatch "
+        "the solver. The frame's artifacts are worth keeping: 1961 of 1962 "
+        "lines compile, including the full analytic Rouche transfer and the "
+        "H1 detection assembly, so this is a near-complete formalisation "
+        "waiting on one library theorem, not a failed attempt.")
+   :decision/not-done
+   (str "The frame is NOT voided and NOT forgotten: this record disposes it "
+        "as :partial with its residual, receipt and three artifact commits "
+        "intact. I did not hand-edit queue-state.edn; this record is applied "
+        "through futon3c.apm.frame-park-decisions, which matches on "
+        ":last-valid-receipt/id and preserves the park's residual.")}]}
