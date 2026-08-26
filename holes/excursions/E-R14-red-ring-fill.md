@@ -778,13 +778,30 @@ converts the gain into a binary interrupt and throws away the gradation τ was
 supposed to supply. (d) changes the **type** of the signal, and whether that is
 acceptable is a design question, not an implementation detail.
 
-**To check, not to assert:** R6's ring reads *"the select stage GENERATES a
-candidate rather than re-ranking the menu it already has"*, and
+**Checked, 2026-08-26 — and the absence claim is wrong again.**
 `NOTE-modular-formalisation-order.md` says R6 *"needs a candidate proposer that
-does not exist."* `repair-entry` is a candidate generator, and
-`portfolio_action_proposer.clj` exists. That claim of non-existence needs
-re-checking before it is used again — absence claims have been wrong three times
-in this thread.
+does not exist"*, and R6's own pattern says *"the tension proposer is unbuilt"*.
+Two proposers exist: `action_proposer.clj`, and
+**`portfolio_action_proposer.clj`**, which is explicitly a candidate generator
+for the families the base proposer lacks — `:close-mission`, `:survey-mission`,
+`:apply-cascade` — and which is **dark by default**
+(`*portfolio-proposer-active?*` `false`, bound `true` in exactly one place:
+`test/futon2/portfolio_dry_run.clj:36`). It has never run live.
+
+So R6 is not "unbuilt". It is **built and switched off** — the WR-26 shape, in
+the polarity WR-26 does not cover, which is the same gap the 2026-07-08 arming
+exposed from the other side.
+
+**And there is a candidate link to the 07-15 archive worth one date check.** The
+22 repeated attempts selected `{:type :learn-action-class, :target-class
+:fire-pattern}` and recorded *"no addressable entities"* for
+`:close-mission`, `:survey-mission` and `:apply-cascade` — **precisely the three
+families the dark proposer supplies.** R6's own salience reads: *"the War Machine
+exhausted its proposer-fed queue into learn-action-class before any outward
+open-mission surfaced — a system full of unresolved tension with nothing to do."*
+That is a description of what the archive holds in full checkpoint detail.
+Whether they are the same episode is a date check, not an inference — and it is
+the first thing an R6 excursion should do.
 
 ## The operator level — open, and deliberately left thin
 
