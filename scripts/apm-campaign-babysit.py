@@ -395,7 +395,16 @@ while True:
             if not between_frames_logged:
                 out(f"queue active frame is nil (between {current_frame} and next "
                     f"mint), next-index={q.get('next_index')} -- queue may be "
-                    f"minting the successor frame now")
+                    f"minting the successor frame now. Detaching the frame "
+                    f"watcher: the frame it was watching has reached a terminal "
+                    f"state (certified, or parked at "
+                    f":solver-human-intervention-frame-park), and a terminal "
+                    f"frame is not a fault. Leaving it attached makes the "
+                    f"watchdog alert forever on a finished frame while the live "
+                    f"one runs unobserved -- that happened four times on the "
+                    f"night of 2026-08-25/26 (f36 parked, f37 certified, f38 "
+                    f"parked) and each time cost a manual restart.")
+                stop_watch()
                 between_frames_logged = True
         if active_frame and active_frame != current_frame:
             between_frames_logged = False
