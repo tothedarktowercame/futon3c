@@ -2,9 +2,9 @@
 
 Claude (claude-12), 2026-08-26, written live while watching the frame.
 Campaign `jit-all-open-nontopology-v1`, frame f41, problem **a97J06**.
-Status at time of writing: **provisional** — attempt 3 and certification are
-still pending (frame is at `guide-intervention-2`). Sections marked PENDING
-close when the frame does.
+Status: attempts 1-3 are complete and analysed below; **certification is
+still pending**, so the closing tally and scribe-reduce verdicts are not yet
+recorded.
 
 Companion to `TN-fable-F32-F35-bank-review.md`. The running working record is
 `TN-spec-delta-cannot-judge-and-trace-checker.md`; this note cites it rather
@@ -163,7 +163,36 @@ The tally so far:
 |---|---|---|---|
 | a1 | 4 / 39 | 1 — `e-73ac922d`, f37-guide, mined from a96A08 | no artifact committed |
 | a2 | 5 / 41 | 0 — three f41-scribe, two f41-guide, all a97J06 | scratch only, uncommitted |
-| a3 | PENDING | PENDING | PENDING |
+| a3 | 4 / 42 | 1 — `e-3411c0c2`, f33-guide, mined from a94A07 | committed, but **0 of 16 identifiers present** |
+
+**Condition 3 is not met in f41.** Attempt 3 is the one that finally produced
+a committed artifact (`:candidate/head` a35590e6, outcome `not-closed`), so
+it is the only attempt where the cross-problem question could be answered at
+all — and the answer is no. `e-3411c0c2`
+(`entire-injective-affine-route-second-pass-spellings`, about entire
+injective affine maps) names sixteen identifiers, and not one of them appears
+in the artifact. That is consultation, not transfer: the student read a
+memory from a94A07, and nothing from it reached the proof. It is the same
+shape as f40's `e-e9f9c621`, where 0 of 38 identifiers were present.
+
+The identifier that *is* novel in the artifact —
+`integral_exp_mul_complex_Ioi`, in the proved `half_line_exp` — comes from
+f41's own scribe deposits. Fingerprinted, and irrelevant to condition 3.
+
+**f40's four approved memories were used zero times across all three
+attempts**, having been on the shelf throughout. That is the plainest fact
+f41 produced, and the one most worth explaining: the shelf offered exactly
+the kind of material the design predicts should transfer between siblings,
+and the student never reached for it.
+
+### The student routed around the gitignore by itself
+
+Attempt 3's commit adds `Reports/f41-student-attempt-3-scratch.lean` — 23
+lines, a path the ignore rule does not match. So the student found the
+workaround unaided, which is evidence the §17 fix should name the mechanism
+rather than prescribe a workflow. But it preserved 23 lines out of a
+184-line `Scratch.lean`, and `Main.lean` never moved from 182 lines and 5
+sorries. Partial self-mitigation, not a solution.
 
 **None of f40's four memories has been used in either attempt**, though all
 four have been on the shelf throughout. Attempt 1's one genuine cross-problem
