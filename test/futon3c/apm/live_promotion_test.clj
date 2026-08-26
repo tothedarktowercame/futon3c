@@ -544,7 +544,11 @@
           :persist-reviews-fn
           (fn [value]
             (swap! calls conj [:persist-review value])
-            {:ok true :reviews (:reviews value)})
+            {:ok true
+             :reviews [(assoc review
+                              :review-evidence-id "controller-review"
+                              :depositor "scribe"
+                              :reviewer "proctor")]})
           :publish-fn
           (fn [value]
             (swap! calls conj [:publish value])
@@ -553,4 +557,7 @@
     (is (= :certified (:status result)))
     (is (= [:persist-review :publish] (mapv first @calls)))
     (is (= :reassign
-           (get-in (second @calls) [1 :reviews 0 :verdict])))))
+           (get-in (second @calls) [1 :reviews 0 :verdict])))
+    (is (= "controller-review"
+           (get-in (second @calls)
+                   [1 :candidates 0 :review-evidence-id])))))

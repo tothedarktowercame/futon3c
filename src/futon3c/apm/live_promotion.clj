@@ -504,20 +504,30 @@
                         :review-job (:job state)})]
                   (if-not (:ok persisted)
                     persisted
-                    (let [published
-                          (publish-fn
-                           {:candidates (:candidates checked)
-                            :deposit (:deposit state)
-                            :reviewer (:reviewer r)
-                            :reviews (into (vec (:mechanical-reviews state))
-                                           (:reviews persisted))})]
-                      (if-not (:ok published)
-                        published
-                        (let [s {:state/type :promotion-certified
-                                 :receipt (:receipt published)}]
-                          (persist-fn s)
-                          {:ok true :status :certified :state s
-                           :certificate (:receipt published)})))))))))))
+                    (let [persisted-checked
+                          (pipeline/validate-review*
+                           (:candidates state)
+                           (:depositor (:deposit state))
+                           (:reviewer r) (:reviews persisted))]
+                      (if-not (:ok persisted-checked)
+                        (assoc persisted-checked
+                               :error/code
+                               :persisted-promotion-review-invalid)
+                        (let [published
+                              (publish-fn
+                               {:candidates (:candidates persisted-checked)
+                                :deposit (:deposit state)
+                                :reviewer (:reviewer r)
+                                :reviews
+                                (into (vec (:mechanical-reviews state))
+                                      (:reviews persisted))})]
+                          (if-not (:ok published)
+                            published
+                            (let [s {:state/type :promotion-certified
+                                     :receipt (:receipt published)}]
+                              (persist-fn s)
+                              {:ok true :status :certified :state s
+                               :certificate (:receipt published)})))))))))))))
 
     (= :promotion-certified (:state/type state))
     {:ok true :status :certified :state state :certificate (:receipt state)}
