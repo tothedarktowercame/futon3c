@@ -14,8 +14,12 @@
            ((juxt :frame/id :problem/id :residual
                   :last-valid-receipt/id) park))
    (= :claude-supervisor (:decision/owner park))
-   (= :awaiting-decision (:decision/status park))
-   (true? (:decision/bell-required park))
+   (or (and (= :awaiting-decision (:decision/status park))
+            (true? (:decision/bell-required park)))
+       (and (= :decided (:decision/status park))
+            (false? (:decision/bell-required park))
+            (= (:last-valid-receipt/id park)
+               (get-in park [:decision/record :last-valid-receipt/id]))))
    (case (:state/type park)
      :solver-human-intervention-frame-park
      (and (every? #(and (string? %) (not-empty %))
@@ -86,6 +90,46 @@
 (defn- addressed [state]
   (assoc (dissoc state :state/id) :state/id
          (machine/ledger-digest [(dissoc state :state/id)])))
+
+(defn reconcile-park-decisions
+  "Attach authoritative decision records to their receipt-matched parks.
+
+  Matching is deliberately by the last valid receipt rather than frame id: a
+  frame may park more than once. Unmatched parks and records are inert. The
+  decision's disposition is recorded but never executed here."
+  [state decision-records]
+  (if-not (valid-state? state)
+    {:ok false :error/code :problem-queue-state-invalid}
+    (let [by-receipt (into {}
+                           (keep (fn [record]
+                                   (when-let [receipt
+                                              (:last-valid-receipt/id record)]
+                                     [receipt record])))
+                           decision-records)
+          matched (volatile! [])
+          parks (mapv
+                 (fn [park]
+                   (if-let [record (get by-receipt
+                                        (:last-valid-receipt/id park))]
+                     (do
+                       (vswap! matched conj (:last-valid-receipt/id park))
+                       (assoc park
+                              :decision/status :decided
+                              :decision/bell-required false
+                              :decision/record record))
+                     park))
+                 (:parked state))
+          changed? (not= parks (:parked state))]
+      {:ok true
+       :changed? changed?
+       :matched-receipt-ids @matched
+       :unmatched-records (->> decision-records
+                               (remove #(contains? (set @matched)
+                                                   (:last-valid-receipt/id %)))
+                               vec)
+       :state (if changed?
+                (addressed (assoc state :parked parks))
+                state)})))
 
 (defn pause-after-active
   "Durably request that the active frame finish and retire without minting a

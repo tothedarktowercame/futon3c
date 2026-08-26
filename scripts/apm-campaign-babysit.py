@@ -39,6 +39,9 @@ FROM_ID = os.environ.get("APM_BABYSIT_FROM_ID", "claude-cli")
 TO_ID = os.environ.get("APM_BABYSIT_TO_ID", "codex-10")
 PARK_DECISION_TO_ID = os.environ.get(
     "APM_BABYSIT_PARK_DECISION_TO_ID", "claude-12")
+PARK_DECISIONS = os.environ.get(
+    "APM_BABYSIT_PARK_DECISIONS",
+    f"{REPO}/holes/labs/M-apm-demonstration/frame-park-decisions.edn")
 POLL_S = int(os.environ.get("APM_BABYSIT_POLL_S", "20"))
 DISCOVERY_LOG_EVERY_S = int(
     os.environ.get("APM_BABYSIT_DISCOVERY_LOG_S", "300"))
@@ -171,6 +174,20 @@ def parse_queue_state(text):
                  'owner': owners[-1] if owners else None})
     d['pending_parks'] = list({p['frame_id']: p for p in pending_parks}.values())
     return d
+
+
+def reconcile_park_decisions():
+    """Persist recorded decisions before considering any decision bells."""
+    if not QUEUE_STATE or not os.path.exists(PARK_DECISIONS):
+        return
+    result = subprocess.run(
+        ["clojure", "-M", "-m", "futon3c.apm.frame-park-decisions",
+         QUEUE_STATE, PARK_DECISIONS],
+        cwd=REPO, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:
+        out(f"park-decision reconciliation failed: {result.stderr.strip()}")
+    elif ":changed? true" in result.stdout:
+        out(f"park decisions reconciled: {result.stdout.strip()}")
 
 
 def send_bell(subject, body, to_id=TO_ID):
@@ -310,6 +327,9 @@ while True:
 
     text = read_text(COORD)
     c = parse_coordinator(text)
+    initial_q = parse_queue_state(read_text(QUEUE_STATE)) or {}
+    if initial_q.get('pending_parks'):
+        reconcile_park_decisions()
     q = parse_queue_state(read_text(QUEUE_STATE)) or {}
     for park in q.get('pending_parks', []):
         if park.get('owner') == 'claude-supervisor':
