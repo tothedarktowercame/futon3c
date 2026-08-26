@@ -1908,6 +1908,28 @@
                         (:final-head report) retained-blob)}
                       persisted)))))))))))
 
+(defn memory-cascade-arm
+  "The memory-cascade arm for frames minted from CAMPAIGN-ROOT.
+
+   An EXPLICIT launch value wins. Otherwise the operator file
+   <campaign-root>/memory-cascade-arm.edn is read on every tick, so a running
+   coordinator (whose persisted launch predates the arm) can carry the arm
+   into its next mint without a restart. The value is copied into the
+   manifest unit at mint and content-addressed there; editing the file later
+   changes only later mints. Absent, unreadable, or not a map => nil (arm off)."
+  [explicit campaign-root]
+  (or explicit
+      (let [path (java.io.File. (str campaign-root) "memory-cascade-arm.edn")]
+        (when (.isFile path)
+          (try
+            (let [value (edn/read-string (slurp path))]
+              (when (map? value) value))
+            (catch Throwable t
+              (binding [*out* *err*]
+                (println "[apm.memory-cascade-arm] unreadable"
+                         (str path) (.getMessage t)))
+              nil))))))
+
 (defn set-alight-problem-list!
   "List-only JIT entry point. PROBLEMS contain immutable problem pins."
   [{:keys [problems authority queue-name frame-number-base agency-base autonomous?
@@ -1946,6 +1968,7 @@
                            [:solver :solver-restrategize :student :guide :proctor
                             :promotion-proctor
                             :scribe :zai-scribe :analyst]))
+        memory-cascade (memory-cascade-arm memory-cascade campaign-root)
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :memory-cascade memory-cascade

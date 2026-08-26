@@ -706,3 +706,18 @@
     (is (= expected actual))
     (is (= #{"f28" "f29" "f30"}
            (set (map #(get-in % [:provenance :frame-id]) actual))))))
+
+(deftest memory-cascade-arm-file-is-read-only-when-launch-has-no-arm
+  (let [dir (java.nio.file.Files/createTempDirectory
+             "memory-cascade-arm-" (make-array java.nio.file.attribute.FileAttribute 0))
+        root (str dir)
+        arm {:enabled? true :routes [:sibling] :cap 100}]
+    (is (nil? (sut/memory-cascade-arm nil root)) "no file, no explicit => off")
+    (spit (str root "/memory-cascade-arm.edn") (pr-str arm))
+    (is (= arm (sut/memory-cascade-arm nil root)) "file read when launch has no arm")
+    (is (= {:enabled? false} (sut/memory-cascade-arm {:enabled? false} root))
+        "an explicit launch value wins over the file")
+    (spit (str root "/memory-cascade-arm.edn") "[:not :a :map]")
+    (is (nil? (sut/memory-cascade-arm nil root)) "a non-map file is off")
+    (spit (str root "/memory-cascade-arm.edn") "{:unbalanced")
+    (is (nil? (sut/memory-cascade-arm nil root)) "an unreadable file is off, not an exception")))
