@@ -2,8 +2,7 @@
   "Derive a content-addressable JIT queue from the pinned APM Lean corpus."
   (:require [clojure.data.json :as json]
             [clojure.java.shell :as shell]
-            [clojure.string :as str])
-  (:import [java.io File]))
+            [clojure.string :as str]))
 
 (def excluded-classifications
   "Classifications that keep a problem OUT of the open non-topology queue.
@@ -23,13 +22,29 @@
   (let [result (apply shell/sh (concat ["git" "-C" repository] args))]
     (when (zero? (:exit result)) (str/trim (:out result)))))
 
-(defn- status-files [repository]
-  (let [problems-root (File. repository "problems")]
-    (->> (.listFiles problems-root)
-       (filter #(.isDirectory ^File %))
-       (map #(File. ^File % "status.json"))
-       (filter #(.isFile ^File %))
-       (sort-by #(.getPath ^File %)))))
+(defn- status-blobs
+  "Read every problems/*/status.json AT REVISION, as [path content] pairs.
+
+  Deliberately NOT the working tree. Reading the checkout made the corpus
+  depend on whichever branch happened to be checked out: on 2026-08-26
+  ~/code/apm-lean sat on a colleague's `repair/m97A06-energy-regularity`, so a
+  launch would have derived the corpus from that branch and silently re-admitted
+  a96A07 and a97J08 -- both just classified construction-blocked on master after
+  each burned ~50 solver rounds against the same absent planar-topology
+  machinery -- along with four problems already banked as solved. The pinned
+  :revision would have recorded that branch, so the frame records would have
+  looked perfectly consistent."
+  [repository revision]
+  (->> (or (git-out repository "ls-tree" "-r" "--name-only" revision "problems/")
+           "")
+       str/split-lines
+       (filter #(re-matches #"problems/[^/]+/status\.json" %))
+       sort
+       (keep (fn [path]
+               (when-let [content (git-out repository "show"
+                                           (str revision ":" path))]
+                 [path content])))
+       vec))
 
 (defn derive-queue
   "Return immutable problem pins plus an auditable exclusion ledger.
@@ -37,11 +52,13 @@
   Open means the canonical bundle status records at least one remaining Lean
   sorry. Topology is the corpus's `t` subject. Defective/invalid statements
   are retained in :excluded rather than silently disappearing."
-  [repository]
-  (let [revision (git-out repository "rev-parse" "HEAD")
-        branch (git-out repository "branch" "--show-current")
-        rows (mapv (fn [^File file]
-                     (let [status (json/read-str (slurp file) :key-fn keyword)
+  ([repository] (derive-queue repository nil))
+  ([repository rev]
+  (let [rev (or rev "origin/master")
+        revision (git-out repository "rev-parse" rev)
+        branch rev
+        rows (mapv (fn [[_path content]]
+                     (let [status (json/read-str content :key-fn keyword)
                            id (:problem_id status)
                            classification (:classification status)
                            sorry-count (long (or (get-in status [:lean :sorry_count_total]) 0))
@@ -49,12 +66,20 @@
                            reason (cond
                                     (zero? sorry-count) :not-open
                                     (str/starts-with? id "t") :topology
+                                    (= "construction-blocked" classification)
+                                    ;; Not a defect. The Solver ran out of
+                                    ;; rounds against absent library
+                                    ;; infrastructure, so the exclusion ledger
+                                    ;; must not label it the same as a broken
+                                    ;; statement -- these come back when the
+                                    ;; construction target exists.
+                                    :construction-blocked
                                     (contains? excluded-classifications classification)
                                     :defective-or-invalid-statement
                                     :else nil)]
                        {:problem/id id :classification classification
                         :sorry-count sorry-count :path path :reason reason}))
-                   (status-files repository))
+                   (status-blobs repository revision))
         selected (filterv (comp nil? :reason) rows)
         excluded (filterv (comp some? :reason) rows)
         problems (mapv (fn [{:keys [problem/id path]}]
@@ -78,4 +103,4 @@
                         :excluded-classifications excluded-classifications}
        :problems problems
        :excluded (mapv #(select-keys % [:problem/id :classification
-                                        :sorry-count :reason]) excluded)})))
+                                        :sorry-count :reason]) excluded)}))))
