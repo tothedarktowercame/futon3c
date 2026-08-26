@@ -583,6 +583,68 @@ real: sometimes effort is the binding constraint. It fails when the model is
 wrong, because effort on a wrong model only costs more. The audit's phrase for
 that failure is exact — *effort increased without proportionate understanding*.
 
+### Why the sign is inverted, and the archive shows the mechanism
+
+Joe, 2026-08-26: *"stop the line, you'd think, would be 'not working' because we
+stop work to fix the problem — but globally, it's the way to get things working.
+TryHarder would just make a mess when expectations are violated."*
+
+The 07-15 archive is this asymmetry with the covers off. **All 24 attempts
+closed** — every one has a `007-closed.edn` checkpoint, a duration, and a
+`:morning-brief-ref`. Locally each is a completed cycle. Globally they are 22
+identical no-ops.
+
+Three details make it sharper than a throughput argument:
+
+1. **Each attempt records, in writing, why it cannot work.** The selection step
+   carries `:rationale "no addressable entities for :fire-pattern in current
+   substrate"` — and not only for that class. Across the 23 repeated attempts
+   the same sentence appears for **every** action class: `:apply-cascade`,
+   `:close`, `:close-hole`, `:close-mission`, `:fire-pattern`, `:survey`,
+   `:survey-mission`. The machine wrote down that nothing was addressable, and
+   closed the attempt.
+2. **The close is honest and still useless.** `007-closed.edn` reads
+   `:outcome :no-selection, :grounded? false`. The instrument did *not* score
+   these as successes — this is not a mis-signed metric. The reading was correct
+   and had **no path to behaviour**, which is the fourth instance today of that
+   exact shape.
+3. **TryHarder was cheap, which is why it ran 22 times.**
+   `:resource-use {:agent-turns 0}`, duration ≈27 s. A cost-based governor sees
+   nothing to complain about. Stop-the-line, by contrast, would have shown up as
+   one *non*-closure — the only visible blemish in the series.
+
+So the inversion is not that activity is mis-measured. It is that **closure is
+observable at the attempt and understanding is only observable at the end of the
+line**, and every per-attempt instrument is therefore blind in exactly the
+direction that rewards continuing. Correcting it needs downstream defect cost
+attributed back to the attempt that could have stopped — which is what a
+coverage/cascade account is for, and is the machinery the WM already has.
+
+### Candidate ruling — the corpus has the trade but not this ruling
+
+Checked: 28 rulings, WR-0..WR-27, none states this. The nearest are WR-26, whose
+BECAUSE weighs *"a stranded flag costs more than the throughput saved by the
+pause"* — the same trade, applied to switching a capability off — and WR-25,
+*good news gets the same evidence discipline as bad*, whose shape this
+generalises from pleasant readings to active-looking strategies.
+
+    IF        a loop is scored by what each attempt closes.
+    HOWEVER   the strategy that repairs it registers as a non-closure, while the
+              strategy that degrades it registers as a full series of closures —
+              22 of them at agent-turns 0, each carrying in writing the reason it
+              could not work.
+    THEN      attribute downstream defect cost back to the attempt that could
+              have stopped, and treat a repeated identical close as a stop
+              condition rather than as a cadence.
+    BECAUSE   effort is observable at the station and understanding is only
+              observable at the end of the line.
+
+Candidate, not a ruling. War Room decisions are Joe's.
+
+**Pointer for slice 3:** each of the 22 also wrote a `:morning-brief-ref` into
+`data/wm-morning-brief/items/`. That is step ㉛, which E-R8's slice 3 covers, and
+it means the operator-facing queue received 22 notices of the same no-op.
+
 ### Does 0/22 fill the salience hole? Presented, not filed.
 
 **For.** Dated, ours, and costly: 22 attempts and an operator intervention, with
