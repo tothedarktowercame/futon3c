@@ -215,11 +215,18 @@
     (str x)))
 
 (defn- reviewed-attachment? [edge]
+  ;; A superseded edge version keeps its :reviewed status; only the :current
+  ;; version is an attachment. Without this the hub counted 41 where the store
+  ;; held 40 (H5b, 2026-08-26). Mirrors memory_snapshot/candidate-visible?.
   (and (= "memory/assert" (qualified-name (:hx/type edge)))
        (= "reviewed"
           (qualified-name
            (or (get-in edge [:hx/props :attachment-status])
-               (:prop/attachment-status edge))))))
+               (:prop/attachment-status edge))))
+       (= "current"
+          (qualified-name
+           (or (get-in edge [:hx/props :state])
+               (:prop/state edge))))))
 
 (defn- attachment-memory-id [edge]
   (or (get-in edge [:hx/props :roles :entry])

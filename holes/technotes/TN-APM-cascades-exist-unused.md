@@ -470,3 +470,8 @@ available all along — cheapest-route credit had been hiding them behind the
 hub. V2's instrument (λ₂ on the memory/assert graph, reproduced in numpy)
 cannot see H5a at all, and shows the store is no longer a forest of stars:
 largest reviewed component 342 nodes / 21 patterns, λ₂ ≈ 0.024.
+
+*Reader fix, same day:* `reviewed-attachment?` in `conductor.clj` now requires
+the edge to be `:current` as well as `:reviewed` (a superseded version keeps
+its status; the hub read 41 where the store held 40). Mirrors
+`memory_snapshot/candidate-visible?`. Test added; reloaded from master.

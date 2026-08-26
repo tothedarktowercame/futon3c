@@ -22,6 +22,7 @@
 (defn- cascade-edge [memory-id pattern-id problem-id]
   {:hx/type :memory/assert
    :hx/props {:attachment-status :reviewed
+              :state :current
               :roles {:entry memory-id
                       :patterns [pattern-id]
                       :subjects [problem-id pattern-id]}}})
@@ -1021,3 +1022,14 @@
     (is (thrown-with-msg? clojure.lang.ExceptionInfo
                           #"window overflow"
                           (complete-page [:a :b :c] 3 {:endpoint "p"})))))
+
+(deftest superseded-reviewed-edges-are-not-attachments
+  (let [reviewed-attachment? #'conductor/reviewed-attachment?
+        current (cascade-edge "memory/one" "pattern/p" "a01A01")
+        superseded (assoc-in current [:hx/props :state] :superseded)
+        live-shape {:hx/type :memory/assert :prop/attachment-status :reviewed
+                    :prop/state :current :prop/roles {:entry "memory/two"}}]
+    (is (reviewed-attachment? current))
+    (is (not (reviewed-attachment? superseded)))
+    (is (reviewed-attachment? live-shape))
+    (is (not (reviewed-attachment? (assoc live-shape :prop/state :superseded))))))
