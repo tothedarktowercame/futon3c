@@ -29,6 +29,7 @@
             [futon3c.apm.promotion-candidate-store :as promotion-candidate-store]
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
+            [futon3c.apm.bank-audit :as bank-audit]
             [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.open-problem-queue :as open-problem-queue]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
@@ -1788,6 +1789,14 @@
      {:lease lease :validation validation :observations observations
       :terminal-head terminal-head :context :jit-read-only-auditor})))
 
+(defn- pin-solved-head!
+  [frame terminal]
+  (bank-audit/verify-and-pin!
+   {:frame (:frame/id frame) :problem-id (:problem/id frame)
+    :head (get-in terminal [:workspace/terminal-heads :solver])
+    :status :unbanked
+    :repo (get-in frame [:problem :repository])}))
+
 (defn finalize-solver-progress-retry!
   "Append-only terminalization of an unsolved checkpoint for same-problem retry."
   [{:keys [frame campaign-config queue-state-path agency-base]
@@ -1832,6 +1841,7 @@
                 retired
                 (queued-frame-terminal/retire!
                  {:frame frame :terminal-receipt terminal :leases leases
+                  :pin-solve-fn pin-solved-head!
                   :audit-fn (fn [f t role lease]
                               (jit-retirement-audit agency-base campaign-config
                                                     f t role lease))
@@ -1989,12 +1999,14 @@
                    (if (:ok opened) {:ok true} (or opened block boot)))))))
          :ledger-fn jit-ledger-observation}
         jit-config
-        (assoc base-jit-config :retirement-audit-fn
-         (fn [frame terminal-receipt role lease]
-           (jit-retirement-audit agency-base
-                                 (queued-frame-adapter/campaign-paths
-                                  base-jit-config frame)
-                                 frame terminal-receipt role lease)))
+        (assoc base-jit-config
+               :pin-solve-fn pin-solved-head!
+               :retirement-audit-fn
+               (fn [frame terminal-receipt role lease]
+                 (jit-retirement-audit agency-base
+                                       (queued-frame-adapter/campaign-paths
+                                        base-jit-config frame)
+                                       frame terminal-receipt role lease)))
         result
         (set-alight-problem-queue!
          {:problems problems :campaign-config outer-config

@@ -30,6 +30,10 @@
         (sut/retire!
          {:frame frame :terminal-receipt (terminal-receipt frame)
           :leases (leases frame)
+          :pin-solve-fn
+          (fn [_ terminal]
+            (swap! calls conj [:pin (get-in terminal [:solver :head])])
+            {:status :pinned :ref (str "refs/apm/banked-solves/f40/p0/" head)})
           :persist-bank-fn #(do (swap! calls conj [:bank (:receipt/id %2)])
                                 {:ok true})
           :retirement-status-fn
@@ -45,8 +49,12 @@
                              {:ok true})})]
     (is (:ok result))
     (is (true? (get-in result [:bank-receipt :branch-retained?])))
+    (is (= :pinned (get-in result [:bank-receipt :solve/pin-status])))
+    (is (= (str "refs/apm/banked-solves/f40/p0/" head)
+           (get-in result [:bank-receipt :solve/pin-ref])))
     (is (= "exp/f40" (get-in result [:bank-receipt :solver/branch])))
-    (is (= [:bank :audit :retire :audit :retire :seats]
+    (is (= [:pin head] (first @calls)))
+    (is (= [:pin :bank :audit :retire :audit :retire :seats]
            (mapv first @calls)))))
 
 (deftest solved-partial-banking-preserves-independent-learning-outcomes
@@ -91,6 +99,7 @@
         result (sut/retire!
                 {:frame frame :terminal-receipt {:receipt/type :frame-terminal}
                  :leases (leases frame)
+                 :pin-solve-fn #(swap! calls conj :pin)
                  :persist-bank-fn #(swap! calls conj :bank)
                  :retirement-status-fn #(swap! calls conj :status)
                  :audit-fn #(swap! calls conj :audit)
@@ -135,6 +144,11 @@
                  (sut/retire!
                   {:frame frame :terminal-receipt terminal-receipt
                    :leases (leases frame)
+                   :pin-solve-fn
+                   (fn [_ _]
+                     {:status :pinned
+                      :ref (str "refs/apm/banked-solves/" (:frame/id frame)
+                                "/" (:problem/id frame) "/" head)})
                    :persist-bank-fn #(do (swap! banks conj %2) {:ok true})
                    :retirement-status-fn
                    (fn [_ _] {:ok true :status :not-retired})
@@ -176,6 +190,10 @@
         (fn []
           (sut/retire!
            {:frame frame :terminal-receipt terminal :leases (leases frame)
+            :pin-solve-fn
+            (fn [_ _]
+              {:status :pinned
+               :ref (str "refs/apm/banked-solves/fixture-f30/a01J06/" head)})
             :persist-bank-fn (fn [_ _] {:ok true})
             :retirement-status-fn
             (fn [lease _]
@@ -206,3 +224,76 @@
       (is (= [:solver :student :student] @audits))
       (is (= "retired-solver"
              (get-in replayed [:workspace-receipts :solver :receipt/id]))))))
+
+(defn- closing-effects
+  [frame terminal pin-solve-fn persisted]
+  {:frame frame :terminal-receipt terminal :leases (leases frame)
+   :pin-solve-fn pin-solve-fn
+   :persist-bank-fn (fn [_ bank]
+                      (reset! persisted bank)
+                      {:ok true})
+   :retirement-status-fn
+   (fn [_ _] {:ok true :status :not-retired})
+   :audit-fn
+   (fn [_ _ role _]
+     {:ok true :audit {:audit/id (str "audit-" (name role))}})
+   :retire-workspace-fn
+   (fn [lease _]
+     {:ok true :receipt {:receipt/id (str "retired-" (name (:role lease)))}})
+   :retire-seats-fn (fn [_ _] {:ok true})})
+
+(deftest refused-solve-pin-is-recorded-without-blocking-close
+  (let [frame {:frame/id "f42" :problem/id "a97J07"}
+        persisted (atom nil)
+        result (sut/retire!
+                (closing-effects
+                 frame (terminal-receipt frame)
+                 (fn [_ _] {:status :refused :reason :sorry-ax}) persisted))]
+    (is (:ok result) (pr-str result))
+    (is (= :refused (get-in result [:bank-receipt :solve/pin-status])))
+    (is (= :sorry-ax (get-in result [:bank-receipt :solve/pin-reason])))
+    (is (false? (get-in result [:bank-receipt :branch-retained?])))
+    (is (= #{:solver :student} (set (keys (:workspace-receipts result)))))
+    (is (= (:bank-receipt result) @persisted))))
+
+(deftest non-solved-terminal-skips-pin-effect
+  (let [frame {:frame/id "f43" :problem/id "a97J08"}
+        body (-> (terminal-receipt frame)
+                 (dissoc :receipt/id :verify-receipt/id)
+                 (assoc :frame/result :partial :problem/outcome :partial
+                        :learning/outcome :skipped
+                        :solver-progress-receipt/id digest))
+        terminal (assoc body :receipt/id (machine/ledger-digest [body]))
+        calls (atom 0)
+        persisted (atom nil)
+        result (sut/retire!
+                (closing-effects frame terminal
+                                 (fn [& _] (swap! calls inc)) persisted))]
+    (is (:ok result) (pr-str result))
+    (is (zero? @calls))
+    (is (= :skipped (get-in result [:bank-receipt :solve/pin-status])))
+    (is (false? (get-in result [:bank-receipt :branch-retained?])))))
+
+(deftest throwing-pin-effect-is-recorded-without-blocking-close
+  (let [frame {:frame/id "f44" :problem/id "a97J09"}
+        persisted (atom nil)
+        result (sut/retire!
+                (closing-effects
+                 frame (terminal-receipt frame)
+                 (fn [& _] (throw (ex-info "lake unavailable" {}))) persisted))]
+    (is (:ok result) (pr-str result))
+    (is (= :refused (get-in result [:bank-receipt :solve/pin-status])))
+    (is (= :pin-effect-threw
+           (get-in result [:bank-receipt :solve/pin-reason])))))
+
+(deftest problem-bank-id-covers-solve-pin-evidence
+  (let [frame {:frame/id "f45" :problem/id "a97J10"}
+        terminal (terminal-receipt frame)
+        pinned (sut/build-problem-bank
+                frame terminal
+                {:status :pinned :ref (str "refs/apm/banked-solves/f45/a97J10/" head)})
+        refused (sut/build-problem-bank
+                 frame terminal {:status :refused :reason :sorry-ax})]
+    (is (not= (:receipt/id pinned) (:receipt/id refused)))
+    (is (sut/addressed? pinned :receipt/id))
+    (is (sut/addressed? refused :receipt/id))))

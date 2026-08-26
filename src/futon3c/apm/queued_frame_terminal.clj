@@ -1,9 +1,9 @@
 (ns futon3c.apm.queued-frame-terminal
   "Atomic terminal boundary for a just-in-time queued frame.
 
-  Solved-problem banking retains the exact certified branch. Workspace removal
-  is separately authorized by independent retirement audits; neither operation
-  is allowed from a conversational or merely terminal-looking status."
+  The problem-bank metadata receipt records verified solve pinning. Workspace
+  removal is separately authorized by independent retirement audits; neither
+  operation is allowed from a conversational or merely terminal-looking status."
   (:require [futon3c.apm.campaign-machine :as machine]))
 
 (def frame-results #{:closed :partial :void})
@@ -59,9 +59,12 @@
       {:ok false :error/code :queued-frame-terminal-invalid
        :findings (conj findings :terminal-workspace-heads-invalid)})))
 
-(defn build-problem-bank [frame terminal]
-  (let [progress-retry? (and (= :partial (:problem/outcome terminal))
-                             (= :partial (:frame/result terminal)))
+(defn build-problem-bank
+  ([frame terminal]
+   (build-problem-bank frame terminal {:status :skipped}))
+  ([frame terminal pin-result]
+   (let [progress-retry? (and (= :partial (:problem/outcome terminal))
+                              (= :partial (:frame/result terminal)))
         body {:receipt/type (if progress-retry?
                               :queued-solver-progress-bank
                               :queued-problem-bank)
@@ -77,26 +80,43 @@
               :solver/branch (get-in terminal [:solver :branch])
               :solver/head (get-in terminal [:solver :head])
               :workspace/terminal-heads (:workspace/terminal-heads terminal)
-              :branch-retained? true}]
-    (assoc body :receipt/id (machine/ledger-digest [body]))))
+              :branch-retained? (= :pinned (:status pin-result))
+              :solve/pin-status (:status pin-result)}
+        body (cond-> body
+               (:ref pin-result) (assoc :solve/pin-ref (:ref pin-result))
+               (:reason pin-result) (assoc :solve/pin-reason (:reason pin-result)))]
+     (assoc body :receipt/id (machine/ledger-digest [body])))))
+
+(defn- pin-outcome
+  [frame terminal-receipt pin-solve-fn]
+  (if-not (= :solved (:problem/outcome terminal-receipt))
+    {:status :skipped}
+    (try
+      (let [result (pin-solve-fn frame terminal-receipt)]
+        (if (contains? #{:pinned :refused :skipped} (:status result))
+          result
+          {:status :refused :reason :pin-result-invalid}))
+      (catch Throwable _
+        {:status :refused :reason :pin-effect-threw}))))
 
 (defn retire!
-  "Bank, independently audit, and retire one terminal frame.
+  "Pin a verified solve, persist terminal metadata, audit, and retire one frame.
 
   The bank receipt is persisted before workspace retirement. Every audit must
   be supplied by AUDIT-FN and satisfy workspace-lifecycle's full certificate."
   [{:keys [frame terminal-receipt leases audit-fn retire-workspace-fn
-           retirement-status-fn persist-bank-fn retire-seats-fn]}]
+           retirement-status-fn persist-bank-fn retire-seats-fn pin-solve-fn]}]
   (let [terminal-check (validate-terminal frame terminal-receipt)]
     (cond
       (not (:ok terminal-check)) terminal-check
       (not (every? fn? [audit-fn retire-workspace-fn retirement-status-fn
-                        persist-bank-fn retire-seats-fn]))
+                        persist-bank-fn retire-seats-fn pin-solve-fn]))
       {:ok false :error/code :queued-frame-terminal-provider-missing}
       (not= #{:solver :student} (set (keys leases)))
       {:ok false :error/code :queued-frame-terminal-leases-incomplete}
       :else
-      (let [bank (build-problem-bank frame terminal-receipt)
+      (let [pin-result (pin-outcome frame terminal-receipt pin-solve-fn)
+            bank (build-problem-bank frame terminal-receipt pin-result)
             persisted (persist-bank-fn frame bank)]
         (if-not (:ok persisted)
           {:ok false :error/code :queued-frame-bank-persistence-failed}

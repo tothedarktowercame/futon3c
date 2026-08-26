@@ -399,7 +399,7 @@
   [{:keys [frame-number-base campaign-prefix generated-contract-path
            qualification-report-path manifest-fn ledger-fn
            role-cards workspace-root substrate-path agency-base http-fn
-           open-frame-fn frame-tick-fn retire-frame-fn retirement-audit-fn
+           open-frame-fn frame-tick-fn retire-frame-fn retirement-audit-fn pin-solve-fn
            persist-fn]
     :as config}]
   {:mint-frame-fn
@@ -464,6 +464,7 @@
              :else
              (terminal/retire!
               {:frame frame :terminal-receipt terminal-receipt :leases leases
+             :pin-solve-fn pin-solve-fn
              :audit-fn retirement-audit-fn
              :retirement-status-fn
              (fn [lease terminal-head]
