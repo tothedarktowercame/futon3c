@@ -888,3 +888,38 @@ running blind, not that the transfer result has been achieved.
    silently indistinguishable from an idle turn.
 3. Role-card edits change the pinned card blob, so they wait until f41
    certifies rather than churning a running frame.
+
+
+## 17.1 Correction — a preservation path exists, and it fired only once
+
+Attempt 3 committed. `:candidate/head` moved to `a35590e6`, a commit authored
+by "APM Student Candidate Controller" titled *preserve f41 a97J06 student
+attempt 3*, adding `Reports/f41-student-attempt-3-scratch.lean` — a path that
+is **not** gitignored.
+
+So §17's headline ("the student's work is invisible to the machine") is too
+strong as written, and I am correcting it rather than leaving it to be
+discovered. The machine has a route for preserving scratch work. What is
+wrong is narrower and still worth fixing:
+
+- **It fired on attempt 3 and not on attempts 1 or 2.** Those two left
+  `:candidate/head` at the base revision with 8110 bytes of real Lean —
+  including two lemmas the student reported sorry-free — sitting in the
+  ignored `problems/a97J06/lean/Scratch.lean`, preserved nowhere. Whatever
+  triggers preservation did not trigger there.
+- **It preserved 23 lines of 184.** `Scratch.lean` still holds 184 lines and
+  7 sorries in the workspace; the preserved artifact is a 23-line curated
+  extract with one complete lemma and one `sorry`. The preserved file is a
+  designated submission, not a capture of the work.
+
+The corrected finding: the difference between "the student did nothing" and
+"the student did the work where I do not look" is *sometimes* recorded and
+sometimes not, with no signal in the receipt saying which happened. That is
+still the §15 shape — an instrument whose silence is ambiguous — but the fix
+is smaller than §17 implied. The receipt work in P1 should make preservation
+**unconditional and reported**, rather than introduce a mechanism that
+already exists.
+
+`Reports/` being outside the ignore rule is also the answer to the card
+question in §17's item 1: the student can be told exactly where to put work
+it wants kept, because the machine already reads that location.
