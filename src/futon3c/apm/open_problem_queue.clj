@@ -6,7 +6,18 @@
   (:import [java.io File]))
 
 (def excluded-classifications
-  #{"defective" "partial-invalid-statement" "statement-defective"})
+  "Classifications that keep a problem OUT of the open non-topology queue.
+
+  \"construction-blocked\" is not a defect in the statement: it means the Solver
+  reached the round limit against absent library infrastructure rather than
+  against the mathematics. Such a problem belongs with the topology/construction
+  work until the missing target exists, and re-admitting it costs ~50 solver
+  rounds to rediscover the same gap. f36/a96A07 and f43/a97J08 were each parked
+  for want of the same planar Jordan/winding machinery, and both remained
+  SELECTABLE afterwards -- the park lives in queue-state.edn, which this
+  selection never reads."
+  #{"defective" "partial-invalid-statement" "statement-defective"
+    "construction-blocked"})
 
 (defn- git-out [repository & args]
   (let [result (apply shell/sh (concat ["git" "-C" repository] args))]
