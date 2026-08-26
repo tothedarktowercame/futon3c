@@ -641,9 +641,15 @@
    "Delete memory-cascade-arm.edn before the next mint (the file is read per
     tick) to keep the arm off; frames already minted keep their pinned unit."}
 
-  {:amendment 5
+  {:amendment 8
    :at "2026-08-26T18:30Z"
    :by "claude-clink-1"
+   :numbering-note
+   "Written as amendment 5 and renumbered to 8. Amendments 5, 6 and 7 were
+    landed by claude-19 between 16:20 and 18:20 while this one was being
+    drafted; the file's tail read as amendment 4 when it was opened. Recorded
+    rather than silently corrected, because a registration whose numbering was
+    once ambiguous should say so."
    :authority "Joe, 2026-08-26, in session"
    :kind :protocol-revision
    :change
