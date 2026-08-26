@@ -583,6 +583,83 @@ real: sometimes effort is the binding constraint. It fails when the model is
 wrong, because effort on a wrong model only costs more. The audit's phrase for
 that failure is exact — *effort increased without proportionate understanding*.
 
+### The machine already eats its own tail — through the candidate set, not the temperature
+
+Joe, 2026-08-26: *"'eat its own tail' … as we worked with the WM, we were
+eventually able to make stops self-healing by feeding them back into the machine
+as data."*
+
+That mechanism exists, it is code, and it answers the structural question this
+excursion has been circling.
+
+**`futon2/src/futon2/aif/repair_obligation.clj`**, docstring line 2:
+*"Durable stop-the-line memory for full-loop failures."* It was built against
+exactly the 07-15 defect — *"`:no-selection` did not create a durable repair
+obligation, so the failure repeated instead of becoming self-healing memory"* —
+and it was live by 2026-07-25, when cohort 44's charter asks *"does a grounded
+attempt discharge the open repair-obligation chain (048/049/051)."*
+
+**Discharge is non-vacuous by construction.** `data-deposit-evidence?` requires
+`count-before ≠ count-after` and then **re-reads the live store** to confirm the
+count. An obligation cannot be closed by a change that changed nothing — the
+same non-vacuity discipline `M-formal-war-machine` names as its worst exposure,
+already implemented here.
+
+**And here is the part that matters for R14.** `full_loop_runner.clj:872`:
+
+    (defn- repair-entry [obligation]
+      {:action {:type :repair-machine-failure
+                :rationale (str "stop-the-line: " …)}
+       :controller-score ##-Inf
+       :G-efe ##-Inf
+       :selection-source :stop-the-line})
+
+An open obligation is injected as a **selection entry** — a member of the
+candidate list — with `:selection-source :stop-the-line` and a score of negative
+infinity. `efe/rank-actions` sorts ascending on `:controller-score`
+(`efe.clj:823`) and `strategic-recommendation` takes `(first controller-entries)`
+(`policy.clj:238`), so the repair entry **preempts the entire ranking**.
+
+**It preempts at every τ.** It does not reweight; it dominates. So it survives
+precisely the annihilation that kills the temperature dial:
+
+> `argmax` is invariant to how you *scale* a ranking and perfectly sensitive to
+> *what is in* it. The feedback route the War Machine actually has works because
+> it changes **membership**. The route R14 was built on fails because it changes
+> **weights**.
+
+Whoever wrote `repair-entry` chose the one design that survives argmax. The
+excursion's finding is not that the machine cannot learn from its own stops — it
+demonstrably can, and does — but that **R14's dial was wired into the one channel
+the selector is deaf to.**
+
+### A fourth repair option, with a working precedent in the same file
+
+| option | route | precedent |
+|---|---|---|
+| (a) sample `P(π)` | make weights behavioural | canonical AIF; none in-stack |
+| (b) second non-τ-scaled term | habit prior | 3 records, live-vs-shadow unestablished |
+| (c) accept it is decorative | — | — |
+| **(d) route the gain through the candidate set** | membership, not weights | **`repair-entry`, working since ≈2026-07-25** |
+
+(d) means: a repeatedly poor realized-vs-expected record *injects a candidate* —
+investigate, suppress the failing action class, or repair — the way a failure
+injects `:repair-machine-failure`.
+
+**Not a free win, and it should not be sold as one.** `##-Inf` is a hard
+preemption: an andon cord, not a dial. Routing a *graded* quantity through it
+converts the gain into a binary interrupt and throws away the gradation τ was
+supposed to supply. (d) changes the **type** of the signal, and whether that is
+acceptable is a design question, not an implementation detail.
+
+**To check, not to assert:** R6's ring reads *"the select stage GENERATES a
+candidate rather than re-ranking the menu it already has"*, and
+`NOTE-modular-formalisation-order.md` says R6 *"needs a candidate proposer that
+does not exist."* `repair-entry` is a candidate generator, and
+`portfolio_action_proposer.clj` exists. That claim of non-existence needs
+re-checking before it is used again — absence claims have been wrong three times
+in this thread.
+
 ### Why the sign is inverted, and the archive shows the mechanism
 
 Joe, 2026-08-26: *"stop the line, you'd think, would be 'not working' because we
