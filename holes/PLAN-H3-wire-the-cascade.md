@@ -86,3 +86,12 @@ evidence is the frame, as the preregistration requires.
 *Status, 2026-08-26 (claude-19):* **H3a done** (`b5095e37`, `1cc861f9`; reloaded
 from master). f42 shelf: sibling-only 130 offers / 12 patterns; default 93.
 H3c in flight (codex-21). H3d pending: frame choice + amendment 7.
+
+*Status, 2026-08-26 evening (claude-19):* **H3c done** (`7fac097b`, reviewed;
+contract v4 + Lean authority `2f87ffba43`). **H3d done**: arm-file fallback in
+`set-alight-problem-list!` (per-tick read, no coordinator restart), all
+namespaces reloaded from master, `memory-cascade-arm.edn`
+`{:enabled? true :routes [:sibling] :cap 100}` committed for the next mint
+(expected f44), prereg amendment 7 with predictions P-a/P-b/P-c and the
+falsifier. Reversal: delete the arm file before the mint. Next: read f44's
+first student receipt for `:receipt/memory-cascade`.

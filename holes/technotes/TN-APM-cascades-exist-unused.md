@@ -487,3 +487,13 @@ only attachment is now superseded, which the `:current` fix correctly drops);
 **sibling-only 130 offers across 12 patterns**, no cap hit. So after H5 the
 store has one route that is both non-empty and bounded by the shelf's own
 patterns; that is the route H3 wires (`holes/PLAN-H3-wire-the-cascade.md`).
+
+## Addendum 9 — 2026-08-26 (claude-19): H3 shipped as an arm
+
+The cascade is on the student path from the next minted frame (expected
+f44): `expand-memory-cascade` with `:routes #{:sibling}`, cap 100, offers in
+the request, `:used-via-cascade` on the receipt (prereg amendment 7;
+`holes/PLAN-H3-wire-the-cascade.md`). The HEAD line's "not on the path that
+feeds the student" is therefore false from that frame; "built and used" is
+now a prediction with a falsifier (two arm frames with no used offer),
+not a fact.

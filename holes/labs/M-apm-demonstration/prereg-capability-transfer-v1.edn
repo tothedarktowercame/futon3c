@@ -590,4 +590,53 @@
    :fallback
    "If the base problem file cannot be read at the pinned revision, all overlap
     scores are 0 and :base-text-present? false is recorded; the shelf then
-    falls to promoted-this-frame then :memory-id."}]}
+    falls to promoted-this-frame then :memory-id."}
+
+  {:amendment 7
+   :at "2026-08-26T18:20Z"
+   :by "claude-19"
+   :authority "Joe, 2026-08-26, in session: 'let's finish off H3'"
+   :kind :instrument-change
+   :what
+   "A memory-cascade ARM. From the next frame minted after 2026-08-26T18:15Z
+    (expected f44), each Student attempt's request carries :memory-cascade —
+    route-labelled offers computed at dispatch by
+    futon3c.apm.conductor/expand-memory-cascade over the attempt's accessible
+    shelf with {:enabled? true :routes [:sibling] :cap 100}: the other
+    reviewed, current memories attached to the shelf's own patterns, not on
+    the shelf. The Student may read and cite them; :used-ids validation
+    accepts shelf ∪ search-surfaced ∪ offered. The receipt gains
+    :receipt/memory-cascade {:routes-enabled :cap :truncated?
+    :expanded-available :histogram :offers :used-via-cascade :expansion-ms}.
+    The arm is pinned on the manifest unit (:memory-cascade, content-addressed
+    in :manifest/id) from the operator file
+    data/apm-campaigns/jit-all-open-nontopology-v1/memory-cascade-arm.edn, read
+    per tick by set-alight-problem-list! when the persisted launch has no arm.
+    Code: futon3c 7fac097b (wiring), b5095e37 + 1cc861f9 (routes, sibling),
+    the arm-file fallback commit after them; contract v4 JSON and Lean
+    authority mathlib4-apm-validation 2f87ffba43 updated together; all
+    reloaded from master 2026-08-26T18:05Z with f43 at :solve and the arm file
+    absent, so f43 is unaffected. :surfaced-ids, :accessible-memory-ids and
+    verify-student-access are unchanged."
+   :why
+   "PLAN-apm-cascade-demo-instance's H3: one frame where a cascade is built
+    AND used. After H5 (amendments 5–6 context; TN addenda 7–8) the why-hop
+    route is empty on an API-heavy shelf (f42c: 0) and co-incidence floods
+    (96), so the arm uses the sibling route, which measured 130 offers over 12
+    patterns on f42's 48-memory shelf. Predictions, written before any arm
+    frame ran: (P-a) :histogram non-empty on every attempt ('built');
+    (P-b) :truncated? true on shelves of ~40+ entries under cap 100;
+    (P-c) 'built and used' = :used-via-cascade non-empty on at least one
+    attempt in the first two arm frames — FALSIFIER: none in two frames, in
+    which case the sibling route joins why-hop as measured-and-empty and the
+    demo instance does not exist yet."
+   :boundary
+   "Frames with the arm are a separate condition from f29–f43; no comparison
+    of memory use may pool across the boundary. Dispatch is delayed by the
+    expansion (f42-sized shelf: ~230 s of substrate reads), recorded as
+    :expansion-ms. Offers are delivered in the expander's order, not H2's;
+    one variable per arm. A failed expansion records :memory-cascade {:error}
+    and the attempt proceeds."
+   :reversal
+   "Delete memory-cascade-arm.edn before the next mint (the file is read per
+    tick) to keep the arm off; frames already minted keep their pinned unit."}]}
