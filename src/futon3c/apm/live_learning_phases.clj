@@ -11,7 +11,10 @@
             [futon3c.apm.role-memory-search :as role-memory]
             [futon3c.apm.typed-role-submission :as submission]
             [futon3c.apm.workspace-lifecycle :as workspace-lifecycle])
-  (:import [java.nio.file Path]
+  (:import [java.nio.charset StandardCharsets]
+           [java.nio.file CopyOption Files OpenOption Path StandardCopyOption
+            StandardOpenOption]
+           [java.nio.file.attribute FileAttribute]
            [java.util UUID]))
 
 (def role-for-kind
@@ -467,6 +470,39 @@
   (str (.resolveSibling (Path/of (str state-path) (make-array String 0))
                         (str (name phase) "-source"))))
 
+(defn packet-archive-path [state-path phase]
+  (.resolveSibling (Path/of (str state-path) (make-array String 0))
+                   (str (name phase) "-packet.txt")))
+
+(defn archive-rendered-packet!
+  "Atomically archive the exact text delivered at activation. Packet archival
+  is evidence collection, so an I/O failure is returned for logging rather
+  than thrown across the job activation boundary."
+  [state-path phase packet]
+  (let [target (.toAbsolutePath ^Path (packet-archive-path state-path phase))
+        directory (.getParent target)]
+    (try
+      (Files/createDirectories directory (make-array FileAttribute 0))
+      (let [temporary (Files/createTempFile
+                       directory (str "." (name phase) "-packet-") ".tmp"
+                       (make-array FileAttribute 0))]
+        (try
+          (Files/writeString
+           temporary packet StandardCharsets/UTF_8
+           (into-array OpenOption [StandardOpenOption/WRITE
+                                   StandardOpenOption/TRUNCATE_EXISTING
+                                   StandardOpenOption/SYNC]))
+          (Files/move temporary target
+                      (into-array CopyOption
+                                  [StandardCopyOption/ATOMIC_MOVE
+                                   StandardCopyOption/REPLACE_EXISTING]))
+          {:ok true :path (str target)}
+          (finally
+            (Files/deleteIfExists temporary))))
+      (catch Throwable t
+        {:ok false :error/code :rendered-packet-archive-failed
+         :path (str target) :error/message (.getMessage t)}))))
+
 (defn archive-student-source!
   "Archive the Student's problem file beside the phase state before the
   worktree is reset for the next attempt or retired with the frame."
@@ -577,11 +613,20 @@
           (not reset-ok?)
           {:ok false :error/code :student-session-reset-failed}
           :else
-          (job-port/activate!
-           agency-base
-           {:agent-id (:agent-id req)
-            :prompt (prompt (submission/with-job-authority req))
-            :job-id (:job-id ticket)}))))
+          (let [packet (prompt (submission/with-job-authority req))
+                archived (archive-rendered-packet! state-path (:phase req)
+                                                   packet)
+                _ (when-not (:ok archived)
+                    (binding [*out* *err*]
+                      (println "[apm.packet-archive]" (pr-str archived))))
+                activated (job-port/activate!
+                           agency-base
+                           {:agent-id (:agent-id req)
+                            :prompt packet
+                            :job-id (:job-id ticket)})]
+            (cond-> activated
+              (not (:ok archived))
+              (assoc :packet/archive-finding archived))))))
     :job-fn
     (fn [job-id]
       (job-port/observe agency-base job-id))

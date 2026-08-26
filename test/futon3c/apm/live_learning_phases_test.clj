@@ -2,9 +2,11 @@
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is testing]]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-learning-phases :as sut]
             [futon3c.apm.live-preflight-runtime :as runtime]
-            [futon3c.apm.role-memory-search :as role-memory]))
+            [futon3c.apm.role-memory-search :as role-memory]
+            [futon3c.apm.typed-role-submission :as submission]))
 
 (deftest terminal-report-parser-accepts-one-prose-wrapped-edn-map-only
   (is (= {:command-own-exit 0 :frame-id "f21"}
@@ -279,6 +281,88 @@
     (is (re-find #"only vector-valued :used-ids" text))
     (is (re-find #"controller-owned open mathematics search" text))
     (is (re-find #"must not be copied" text))))
+
+(deftest run-live-archives-the-exact-student-activation-packet
+  (let [directory (java.nio.file.Files/createTempDirectory
+                   "student-packet-"
+                   (make-array java.nio.file.attribute.FileAttribute 0))
+        state-path (.resolve directory "student-attempt-2.edn")
+        request {:dispatch/type :student-attempt
+                 :dispatch/id "dispatch-student-2"
+                 :phase :student-attempt-2
+                 :agent-id "f42-student"
+                 :frame-id "f42"
+                 :problem-id "a94A02"
+                 :role-card-path "student.md"
+                 :role-card-blob "student-blob"
+                 :fresh-session? false}
+        action {:kind :student-attempt :phase :student-attempt-2}
+        activated (atom nil)
+        job-id (submission/canonical-job-id request)
+        expected (sut/prompt (submission/with-job-authority request))]
+    (with-redefs [job-port/announce!
+                  (fn [_ payload]
+                    (is (= expected (:prompt payload)))
+                    {:ok true :job-id job-id})
+                  job-port/activate!
+                  (fn [_ payload]
+                    (reset! activated payload)
+                    {:ok true})
+                  submission/register!
+                  (fn [_ _] {:ok true})]
+      (let [result (sut/run-live!
+                    {:contract contract :action action :receipts {}
+                     :request request :state-path state-path
+                     :preparation {}})
+            packet-path (sut/packet-archive-path
+                         state-path :student-attempt-2)]
+        (is (:ok result))
+        (is (= expected (:prompt @activated)))
+        (is (java.nio.file.Files/isRegularFile
+             packet-path (make-array java.nio.file.LinkOption 0)))
+        (is (= expected
+               (java.nio.file.Files/readString
+                packet-path java.nio.charset.StandardCharsets/UTF_8)))))))
+
+(deftest packet-archive-failure-is-reported-without-blocking-activation
+  (let [directory (java.nio.file.Files/createTempDirectory
+                   "student-packet-failure-"
+                   (make-array java.nio.file.attribute.FileAttribute 0))
+        state-path (.resolve directory "student-attempt-1.edn")
+        request {:dispatch/type :student-attempt
+                 :dispatch/id "dispatch-student-1"
+                 :phase :student-attempt-1
+                 :agent-id "f42-student"
+                 :frame-id "f42"
+                 :problem-id "a94A02"
+                 :role-card-path "student.md"
+                 :role-card-blob "student-blob"
+                 :fresh-session? false}
+        activated? (atom false)
+        error-output (java.io.StringWriter.)]
+    (binding [*err* error-output]
+      (with-redefs [sut/archive-rendered-packet!
+                    (fn [& _]
+                      {:ok false :error/code :rendered-packet-archive-failed
+                       :path "/unwritable/student-attempt-1-packet.txt"})
+                    job-port/announce!
+                    (fn [_ _]
+                      {:ok true
+                       :job-id (submission/canonical-job-id request)})
+                    job-port/activate!
+                    (fn [_ _]
+                      (reset! activated? true)
+                      {:ok true})
+                    submission/register! (fn [_ _] {:ok true})]
+        (let [result (sut/run-live!
+                      {:contract contract
+                       :action {:kind :student-attempt
+                                :phase :student-attempt-1}
+                       :receipts {} :request request :state-path state-path
+                       :preparation {}})]
+          (is (:ok result))
+          (is @activated?))))
+    (is (re-find #"rendered-packet-archive-failed" (str error-output)))))
 
 (deftest student-report-must-record-used-ids-vector
   (let [request {:dispatch/type :student-attempt :agent-id "f22-student"
