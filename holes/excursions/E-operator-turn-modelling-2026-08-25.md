@@ -132,3 +132,110 @@ building either consumer.
    consumer out of the first cut (see the R2 flexiarg).
 4. The Joe-Scribe card's five wiring gaps; it has no force until the first four
    land.
+
+---
+
+# Addendum 2026-08-26 — the WM side, measured on the mechanism itself
+
+*Joe, 2026-08-26: the §1 experiment "was a scratch-paper exercise that has very
+little to do with what actually goes on inside the War Machine when it runs …
+we need to build from both sides." He is right, and the flaw is specific: §1
+queried `notions_search.py` with my own paraphrases. That tests the per-turn
+`context-retrieval` path. It is not how a WM cascade is built. What follows runs
+the WM's own constructor.*
+
+## How cascades are actually used in the WM
+
+Two distinct uses, not one:
+
+1. **`strategic-cascade/outer-frontier`** — control patterns (`p4ng/*`) as
+   ordered lenses. Each step runs a Phase-4 adapter query returning candidate
+   and excluded missions; the result is a frontier of `:ready`/`:held` missions
+   with reasons, plus `:no-witnessed-mission` holes for steps that yielded
+   nothing. Budget truncates: `(take budget shown)` runs, the rest are
+   `skipped-patterns`.
+2. **`chipwitz/find-warrant`** — the deliberation gate. Given a circumstance
+   `{:psi <text> :choice-point {…}}` it calls `cascade-policy-for psi budget`,
+   takes the top `:rel`, and if `rel >= *warrant-threshold*` (0.45) the choice
+   is DETERMINED and the WM proceeds without deliberating.
+
+`:rel` is **raw MiniLM cosine**: `cascade_construct.py` loads
+`resources/notions/minilm_pattern_embeddings.json` — the file that was 15 days
+stale — and encodes psi with `normalize_embeddings=True`. So the staleness in §4
+was not a side issue; it was degrading `rel` for every choice point the WM made.
+
+## Weakness 1 — the live fallback psi is a mission slug, and it carries no signal
+
+`portfolio/effect.clj:78`:
+
+    psi      (or (:psi effect) mission-id "")
+    psi-text (-> (str psi) (str/replace #"^M-" "") (str/replace #"-" " "))
+
+With no `:focus`/`:circumstance`, the cascade for a mission is constructed from
+its **name**. Same mission, two psi sources, through `cascade_serve.py 20 0.15`:
+
+| mission | psi = name | psi = first 890 chars of the mission doc |
+|---|---|---|
+| apm-demonstration | size 2 · wholeness 0.395 · top **0.2440** `iching/hexagram-16-yu` | size 5 · wholeness 2.101 · top **0.5150** `invariant-coherence/shape-first-identify` |
+| dionysus-winddown | size 2 · wholeness 0.340 · top **0.2040** `iching/hexagram-33-dun` | size 3 · wholeness 1.354 · top **0.4910** `exotic/live-sync-source-truth` |
+| case-studies | size 3 · wholeness 0.987 · top **0.4310** | size 2 · wholeness 0.869 · top **0.4840** |
+
+Mission text clears the 0.45 warrant threshold in all three; the slug clears it
+in none. And the slug scores are indistinguishable from nonsense of the same
+length:
+
+    "apm demonstration" 0.2440   |  "banana forklift"  0.2410
+    "dionysus winddown" 0.2040   |  "purple tuesday"   0.1360
+
+So on the fallback path the WM constructs a policy cascade whose top pattern is
+an I Ching hexagram matched to a two-word slug at cosine ~0.22. (iching is 64 of
+1371 patterns, median text 1904 chars against 1346 overall — long, evocative,
+weakly similar to everything, which is why it surfaces when there is no signal.)
+
+**Unmeasured, and it bounds this finding:** how often the live path actually
+falls back to the slug rather than carrying a real `:focus`/`:circumstance`.
+Measure that before sizing the fix.
+
+## Weakness 2 — cascade depth is a function of psi length
+
+Coverage-saturated `size` was 1 for one-sentence circumstances, 2–3 for slugs,
+2–5 for 890-char mission text. A cascade is only as structured as its input is
+long. Any per-turn cascade built from operator turns — which are short — is
+degenerate by construction unless psi is enriched first.
+
+## Weakness 3 — the threshold is calibrated for mission text, the gate fires on choice points
+
+0.45 sits just under mission-text tops (0.48–0.52) and far above
+circumstance-sentence tops (~0.30). `find-warrant`'s docstring says the
+motivating example "had expected-information-gain at rel ~0.5". So the gate is
+tuned to the long-psi regime while being invoked on choice points, whose
+descriptions are short.
+
+## Weakness 4 — two smaller ones
+
+- `find-warrant` defaults to **budget 6**; `cascade-lane/default-budget` is
+  **20** by operator ruling of 2026-07-05, because invariant-grade patterns
+  arrived at greedy ranks 10–16. `shown` is in greedy-coverage order, not rel
+  order, so budget 6 can exclude the pattern that would have topped by rel.
+- `cascade-policy-for` memoizes on `[psi-text budget epsilon]` and
+  `clear-cache!` is called from nowhere outside its own namespace. After a
+  re-embed the live JVM keeps scores computed against the old index.
+
+## What this says about the operator model
+
+The cascade machinery is not the weak part; **the psi is**. The constructor
+produces real structure when handed a real circumstance description and noise
+when handed a slug — and the slug is the live default. A better model of the
+operator contributes exactly the missing thing: operator turns are the richest
+available statement of what the current circumstance IS, in the operator's own
+terms, at the moment the choice is live.
+
+That reframes the Joe-Scribe seat's output. Not only candidate memories — a
+**psi constructor**: turning a session's operator turns into a circumstance
+description long and specific enough for the cascade to have wholeness. Joe's
+earlier "Air composes the FTS query" idea is the same move one layer over.
+
+**The test to run before building anything:** take a mission where the WM
+currently falls back to the slug, construct psi from that session's operator
+turns instead, and compare `size`, `wholeness` and top `rel` against both the
+slug and the mission doc. That is the two-sided experiment, and it is cheap.
