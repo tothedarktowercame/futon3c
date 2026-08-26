@@ -32,6 +32,56 @@
 (defn- address [body]
   (machine/ledger-digest [body]))
 
+(defn- ensure-substrate-link!
+  [workspace substrate-path]
+  (let [local-lake (.resolve workspace ".lake")
+        packages (.resolve local-lake "packages")
+        expected (.resolve (canonical substrate-path) "packages")]
+    (Files/createDirectories local-lake (make-array FileAttribute 0))
+    (cond
+      (not (Files/exists packages (into-array LinkOption [LinkOption/NOFOLLOW_LINKS])))
+      (do (Files/createSymbolicLink packages expected
+                                    (make-array FileAttribute 0))
+          {:ok true})
+
+      (and (Files/isSymbolicLink packages)
+           (= expected (.normalize (.toAbsolutePath (.resolve local-lake
+                                                     (Files/readSymbolicLink packages))))))
+      {:ok true}
+
+      :else
+      {:ok false :error/code :workspace-provision-substrate-link-mismatch
+       :path (str packages) :expected (str expected)})))
+
+(defn- lease-for
+  [{:keys [problem role repository workspace substrate-path frame-id problem-id
+           branch now]}]
+  (let [body {:workspace/id nil
+              :workspace/path (str workspace)
+              :repository/path (str repository)
+              :branch branch :base-revision (:revision problem)
+              :problem/id problem-id :problem/path (:path problem)
+              :problem/blob (:blob problem) :frame/id frame-id :role role
+              :created-at (str (or now (Instant/now)))
+              :retention/state :provisioned
+              :substrate/path (str (.resolve workspace ".lake"))
+              :substrate/source (str (canonical substrate-path))}]
+    (assoc body :workspace/id (address (dissoc body :workspace/id)))))
+
+(defn- recoverable-partial?
+  [repository workspace branch problem]
+  (let [registered (run repository "worktree" "list" "--porcelain")
+        registered? (some #{(str "worktree " workspace)}
+                          (str/split-lines (or (:out registered) "")))
+        observed-branch (out (run workspace "branch" "--show-current"))
+        observed-head (out (run workspace "rev-parse" "HEAD"))
+        observed-blob (out (run workspace "rev-parse"
+                                (str "HEAD:" (:path problem))))
+        clean? (= "" (or (out (run workspace "status" "--porcelain=v1")) ""))]
+    (and registered? clean? (= branch observed-branch)
+         (= (:revision problem) observed-head)
+         (= (:blob problem) observed-blob))))
+
 (defn provision!
   "Create one exact branch-backed worktree and return its content-addressed lease."
   [{:keys [unit role workspace-root substrate-path now]}]
@@ -50,7 +100,17 @@
     (cond
       (not shape?) {:ok false :error/code :workspace-provision-shape-invalid}
       (Files/exists workspace (make-array LinkOption 0))
-      {:ok false :error/code :workspace-provision-path-exists :path (str workspace)}
+      (if-not (recoverable-partial? repository workspace branch problem)
+        {:ok false :error/code :workspace-provision-path-exists
+         :path (str workspace)}
+        (let [linked (ensure-substrate-link! workspace substrate-path)]
+          (if (:ok linked)
+            {:ok true :status :recovered-partial
+             :lease (lease-for {:problem problem :role role
+                                :repository repository :workspace workspace
+                                :substrate-path substrate-path :frame-id frame-id
+                                :problem-id problem-id :branch branch :now now})}
+            linked)))
       :else
       (let [branch-head (out (run repository "rev-parse" "--verify"
                                   (str "refs/heads/" branch)))
@@ -67,24 +127,14 @@
           {:ok false :error/code :workspace-provision-git-failed
            :finding {:exit (:exit added) :stderr (:err added)}}
           (try
-            (let [local-lake (.resolve workspace ".lake")]
-              (Files/createDirectories local-lake (make-array FileAttribute 0))
-              (Files/createSymbolicLink
-               (.resolve local-lake "packages")
-               (.resolve (canonical substrate-path) "packages")
-               (make-array FileAttribute 0)))
-            (let [body {:workspace/id nil
-                        :workspace/path (str workspace)
-                        :repository/path (str repository)
-                        :branch branch :base-revision (:revision problem)
-                        :problem/id problem-id :problem/path (:path problem)
-                        :problem/blob (:blob problem) :frame/id frame-id :role role
-                        :created-at (str (or now (Instant/now)))
-                        :retention/state :provisioned
-                        :substrate/path (str (.resolve workspace ".lake"))
-                        :substrate/source (str (canonical substrate-path))}
-                  lease (assoc body :workspace/id (address (dissoc body :workspace/id)))]
-              {:ok true :lease lease})
+            (let [linked (ensure-substrate-link! workspace substrate-path)]
+              (if (:ok linked)
+                {:ok true
+                 :lease (lease-for {:problem problem :role role
+                                    :repository repository :workspace workspace
+                                    :substrate-path substrate-path :frame-id frame-id
+                                    :problem-id problem-id :branch branch :now now})}
+                linked))
             (catch Throwable t
               ;; A partially provisioned worktree is reported, never force-removed.
               {:ok false :error/code :workspace-provision-substrate-link-failed

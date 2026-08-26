@@ -102,6 +102,27 @@
                (:error/code (sut/retire! {:lease lease :audit {}
                                           :receipt-directory (.resolve root "receipts")}))))))))
 
+(deftest exact-partial-provision-is-recovered-idempotently
+  (let [{:keys [workspaces lake unit]} (fixture)
+        now "2026-08-26T05:00:00Z"
+        first-result (sut/provision! {:unit unit :role :student
+                                      :workspace-root workspaces
+                                      :substrate-path lake :now now})
+        lease (:lease first-result)
+        packages (.resolve (Path/of (:workspace/path lease)
+                                    (make-array String 0))
+                           ".lake/packages")]
+    (is (:ok first-result))
+    ;; Model interruption between Git worktree creation and substrate linking.
+    (Files/delete packages)
+    (let [recovered (sut/provision! {:unit unit :role :student
+                                     :workspace-root workspaces
+                                     :substrate-path lake :now now})]
+      (is (:ok recovered))
+      (is (= :recovered-partial (:status recovered)))
+      (is (= (:workspace/id lease) (get-in recovered [:lease :workspace/id])))
+      (is (= (.resolve lake "packages") (Files/readSymbolicLink packages))))))
+
 (deftest retirement-binds-the-recorded-terminal-head-not-the-lease-base
   (let [{:keys [root repo workspaces lake unit]} (fixture)
         provisioned (sut/provision! {:unit unit :role :solver
