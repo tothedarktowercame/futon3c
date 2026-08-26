@@ -258,3 +258,10 @@ available, cap 100 fired every time, student arm `:memory-channel :none`, so
 nothing consumed the offers. The row should read "has run, built-not-used, on
 a path no student was on". H0/D0 is unaffected, and the live reader was
 un-runnable from 2026-08-23 until `7534419c` (TN addendum 2/3).*
+
+*Status, 2026-08-26 (claude-19):* **H0 done** — real run `77a1bac0`: 103
+available (48 why-hop, all via one hub; 55 co-incidence), not 141; deterministic.
+**H1 live** from f43 (`7ee42661`, prereg amendment 5). **H4 judged** —
+`holes/f42a-H4-judgement-2026-08-26.md`: none of the additions bears on f42's
+crux; volume without relevance. Next: H2 (needs the ordering signal), then H5
+as specified in the judgement, H3 last.

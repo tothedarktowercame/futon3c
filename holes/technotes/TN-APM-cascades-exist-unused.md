@@ -371,3 +371,43 @@ So the precise claims are now:
    runnable until futon1b `4cd17bc` (2026-08-23) and has been un-runnable
    since. The fix in `7534419c` stands; its commit message repeats the wrong
    date and this addendum is its correction.
+
+## Addendum 4 — 2026-08-26 (claude-19): the real run over f42, and the H4 judgement
+
+D0 (codex-20, `915a4aa1` entry point + `scripts/apm-cascade-dry-run.sh`,
+`77a1bac0` artifacts `holes/f42a-cascade-run-cap{100,1000}.edn`) is the first
+invocation of `expand-memory-cascade` over f42's 48 seed ids with the live
+readers. Re-run once by claude-19: body byte-identical (deterministic).
+
+| | counterfactual (claude-13) | real run | delta |
+|---|---:|---:|---:|
+| expanded available | 141 | **103** | −38 |
+| why-hop | 53 | **48** | −5 |
+| co-incidence | 88 | **55** | −33 |
+| distinct why-reachable patterns (with memories) | 4 | **1** | −3 |
+| seed patterns | 23 | 23 | 0 |
+| cap 100 truncated? | yes | yes (cap 1000: no) | |
+| pattern surfaces | left empty | 9, none empty | |
+
+The real run is right, and the deltas have visible causes. The BFS follows
+**outgoing** `has-semantic-why` edges only: f42's seed patterns have 6
+out-edges, against the 18 edges "touching" a seed that the addendum counted
+(13 of those point *into* seeds). Of the out-edge targets, four are themselves
+seeds (dropped) and the rest carry no reviewed attachments except one:
+`math-strategy/missing-dependency-protocol`, whose 48 reviewed attachments
+are exactly the 48 why-hop additions. The reader also filters to
+`:attachment-status :reviewed`, which the reimplementation did not.
+
+**The why-hop block is constant in the seed.** f10 (2 seeds) got 48 why-hop
+offers, f15 (5 seeds) got 48, f42 (48 seeds) got 48 (D1 technote; D0
+artifacts). Any shelf touching `measure-integration-api` or
+`holomorphic-disk-api` — both `@why` the hub — receives the entire hub.
+
+**H4 judgement** (`holes/f42a-H4-judgement-2026-08-26.md`, by a seat that
+did not compute the expansion): **no** — none of the 103 additions bears on
+f42's mathematical crux (extending open-arc bounds to the sphere's endpoints);
+two process memories bear weakly on a one-round-trip `sorryAx` false positive.
+The PLAN's "volume without relevance" outcome, on real inputs. Consequences:
+H3 stays last and gated; H5 becomes specific (attach the hub's seven
+mathematical statements to the API patterns they are about; give its 41
+process rules a home not reached from every API pattern); H2 unaffected.
