@@ -69,6 +69,12 @@ export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="${FUTON3C_INBOX_ZERO_FOLLOWUP_URL:-http:
 # "execute" = commit + ordinary-vs-outlier push at turn end. Flipped to execute
 # 2026-08-25 (Joe: "turn it on in production") once the attribution arc closed.
 # Live flip without restart: (turn-promotion/set-mode! :execute) via proof-eval.
+# codex-19 set this to "off" on 2026-08-26 while the routing/attribution
+# design was repaired (seats were being spammed with stale notices). Repairs
+# landed the same morning (actionable-only routing, ledger-only propose,
+# delivery-time validity, sweeper propose-once, claims cleaned by a commit,
+# attested-only corroboration, idle-gated launch) and execute was re-enabled
+# live via set-mode!; this default keeps it on across the next restart.
 export FUTON3C_INBOX_ZERO_PROMOTION="${FUTON3C_INBOX_ZERO_PROMOTION:-execute}"
 # Street-sweeper attribution proposals (futon3c.inbox-zero.sweeper, wired
 # 2026-08-24). Proposes attributions for unattributed dirt via confirmation
