@@ -18,22 +18,38 @@
 (defn canonical-review
   "Replace an agent-reported evidence name with a controller-owned identity.
   The reported name remains evidence about the submission, never authority."
-  [review-job review]
-  (when (and (nonblank? review-job)
-             (nonblank? (:memory-id review))
-             (contains? attachment-verdicts (:verdict review)))
-    (let [identity-digest
-          (machine/ledger-digest
-           [{:review-job review-job
-             :memory-id (:memory-id review)
-             :verdict (:verdict review)
-             :reason (:reason review)
-             :residual (:residual review)
-             :pattern-ids (:pattern-ids review)}])]
-      (assoc review
-             :reported-review-evidence-id (:review-evidence-id review)
-             :review-evidence-id
-             (str "e-apm-promotion-review-" (subs identity-digest 0 32))))))
+  ([review-job review] (canonical-review review-job [] review))
+  ([review-job candidates review]
+   (let [reported-patterns (:pattern-ids review)
+         candidate-patterns
+         (:pattern-ids
+          (some #(when (= (:memory-id review) (:memory-id %)) %)
+                candidates))
+         effective-patterns
+         (if (and (= :reject (:verdict review)) (empty? reported-patterns))
+           candidate-patterns
+           reported-patterns)]
+     (when (and (nonblank? review-job)
+                (nonblank? (:memory-id review))
+                (contains? attachment-verdicts (:verdict review))
+                (vector? effective-patterns)
+                (seq effective-patterns)
+                (every? nonblank? effective-patterns))
+       (let [identity-digest
+             (machine/ledger-digest
+              [{:review-job review-job
+                :memory-id (:memory-id review)
+                :verdict (:verdict review)
+                :reason (:reason review)
+                :residual (:residual review)
+                :pattern-ids effective-patterns}])]
+         (assoc review
+                :reported-review-evidence-id (:review-evidence-id review)
+                :reported-pattern-ids reported-patterns
+                :pattern-ids effective-patterns
+                :review-evidence-id
+                (str "e-apm-promotion-review-"
+                     (subs identity-digest 0 32))))))))
 
 (defn- review-entry [reviewer review-job review]
   {:evidence/id (:review-evidence-id review)
@@ -52,6 +68,7 @@
     :review/reason (:reason review)
     :review/residual (:residual review)
     :review/reported-evidence-id (:reported-review-evidence-id review)
+    :review/reported-pattern-ids (:reported-pattern-ids review)
     :review/provenance {:kind :promotion-review :job-id review-job}}})
 
 (defn- exact-entry? [expected observed]
@@ -80,7 +97,9 @@
         :depositor depositor :reviewer reviewer :review-job review-job}
        (let [attachment-reviews
              (filterv #(contains? attachment-verdicts (:verdict %)) reviews)
-             canonical (mapv #(canonical-review review-job %) attachment-reviews)]
+             canonical (mapv #(canonical-review review-job
+                                                (:candidates deposit) %)
+                             attachment-reviews)]
          (if (some nil? canonical)
            {:ok false :error/code :promotion-review-identity-invalid
             :findings
@@ -89,7 +108,9 @@
                      :verdict (:verdict review)
                      :reported-review-evidence-id
                      (:review-evidence-id review)})
-                  (keep #(when-not (canonical-review review-job %) %)
+                  (keep #(when-not (canonical-review review-job
+                                                     (:candidates deposit) %)
+                           %)
                         attachment-reviews))}
            (loop [remaining canonical
                   persisted []]
@@ -98,7 +119,17 @@
                  review-id (:evidence/id entry)
                  existing (fetch-entry review-id)
                  appended (when-not existing (append-entry entry))
-                 observed (fetch-entry review-id)]
+                 ;; boundary/append! returns :entry only after its own durable
+                 ;; backend readback.  The substrate query projection can lag
+                 ;; that receipt briefly, so retain the verified delivery in
+                 ;; this transaction instead of declaring a false absence.
+                 delivered (when (:ok appended) (:entry appended))
+                 observed (or (fetch-entry review-id) delivered)
+                 fetch-verified
+                 (fn [evidence-id]
+                   (if (= review-id evidence-id)
+                     (or (fetch-entry evidence-id) observed)
+                     (fetch-entry evidence-id)))]
              (cond
                (and existing (not (exact-entry? entry existing)))
                {:ok false :error/code :promotion-review-evidence-id-conflict
@@ -117,7 +148,7 @@
                          :session-id review-job :domain :mathematics}
                         (select-keys review [:memory-id :review-evidence-id
                                              :verdict :pattern-ids])
-                        {:fetch-entry fetch-entry
+                        {:fetch-entry fetch-verified
                          :fetch-hyperedges fetch-hyperedges
                          :post-hyperedge post-hyperedge})
                        (catch clojure.lang.ExceptionInfo e

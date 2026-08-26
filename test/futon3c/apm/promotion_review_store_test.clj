@@ -74,7 +74,8 @@
                    "review-job"
                    {:memory-id "e-memory" :review-evidence-id nil
                     :verdict :reject :reason "not actionable"
-                    :residual "open goal" :pattern-ids []})]
+                    :residual "open goal"
+                    :pattern-ids ["math-formalization/pattern"]})]
     (is (string? (:review-evidence-id canonical)))
     (is (nil? (:reported-review-evidence-id canonical)))
     (is (not-empty (:review-evidence-id canonical)))
@@ -96,3 +97,42 @@
           :post-hyperedge (fn [_ _] {:ok true})})]
     (is (= :promotion-review-identity-invalid (:error/code result)))
     (is (empty? @fetches))))
+
+(deftest verified-delivery-bridges-immediate-query-projection-lag
+  (let [memory-id "e-memory"
+        pattern "math-formalization/pattern"
+        memory-entry {:evidence/id memory-id
+                      :evidence/subject {:ref/type :problem :ref/id "p"}
+                      :evidence/type :memory :evidence/claim-type :assert
+                      :evidence/author "scribe" :evidence/session-id "deposit"
+                      :evidence/at "2026-08-25T00:00:00Z"
+                      :evidence/body {:name "n" :hook "h" :body "b"}}
+        edges (atom
+               [{:hx/id "hx-memory" :hx/type :memory/assert
+                 :hx/endpoints [memory-id "p" pattern]
+                 :hx/props {:domain :mathematics :state :current
+                            :attachment-status :proposed
+                            :roles {:entry memory-id :subjects ["p" pattern]
+                                    :patterns [pattern]}}}])
+        result
+        (sut/persist!
+         {:deposit {:depositor "scribe"
+                    :candidates [{:memory-id memory-id
+                                  :pattern-ids [pattern]}]}
+          :reviewer "proctor"
+          :review-job "review-job"
+          :reviews [{:memory-id memory-id :review-evidence-id nil
+                     :verdict :reject :reason "not actionable"
+                     :residual "open goal" :pattern-ids []}]}
+         {:evidence-store :store
+          ;; The durable append succeeds, while the query projection still
+          ;; exposes only the pre-existing memory entry.
+          :fetch-entry #(when (= memory-id %) memory-entry)
+          :append-entry (fn [entry] {:ok true :entry entry})
+          :fetch-hyperedges (fn [end & _]
+                              (filterv #(some #{end} (:hx/endpoints %)) @edges))
+          :post-hyperedge (fn [_ edge]
+                            (reset! edges [edge])
+                            {:ok true :hyperedge edge})})]
+    (is (:ok result) result)
+    (is (= :reject (get-in @edges [0 :hx/props :review :verdict])))))
