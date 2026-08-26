@@ -91,6 +91,23 @@ not shelf-worthy. Reuse vs discovery is unchanged from v1: a rule the store
 already holds gets its instance count and evidence updated in place, not a
 second copy — and `absent-theorem` is still not `prerequisites-unmet`.
 
+## Candidate submission schema
+
+For every proposed memory, return this complete agent-authored content map:
+
+```clojure
+{:name        "stable obstacle-oriented name"
+ :hook        "the situation in which this memory should be retrieved"
+ :body        "the reusable mathematical or Mathlib knowledge"
+ :pattern-ids ["math-formalization/existing-parent-pattern"]}
+```
+
+`:pattern-ids` must be a non-empty vector of non-blank strings. The controller,
+not this seat, derives `:memory-id`, `:content-digest`, `:kind`, and
+`:source-attempts` from the persisted content and the Student and repair job
+ids in this dispatch. If you report any of those controller-owned fields, it
+is retained only as a reported claim and does not govern persistence or review.
+
 ## Operating protocol is not a memory
 
 A self-correction about **the mathematics or its formalisation** is a

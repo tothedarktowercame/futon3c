@@ -20,15 +20,33 @@
 (defn- evidence-body [candidate]
   (select-keys candidate [:name :hook :kind :body :why :how-to-apply]))
 
+(defn controller-source-attempts
+  "Return the source receipts/jobs named by the controller-owned request."
+  [request]
+  (vec
+   (distinct
+    (concat
+     (:source-attempt-ids request)
+     (when-let [attempt-id (:input-attempt-id request)] [attempt-id])
+     (mapcat (fn [{:keys [job-id repair-job-ids]}]
+               (cond-> [] job-id (conj job-id) true (into repair-job-ids)))
+             (:student-attempts request))))))
+
 (defn canonical-candidate
   "Derive controller-owned identity and digest for one described candidate."
   [deposit-request depositor ordinal candidate]
   (let [reported-kind (:kind candidate)
+        reported-source-attempts (:source-attempts candidate)
         kind (if (pipeline/proof-text?
                   candidate (:solver-certified-source deposit-request))
                :proof-text
                :memory)
-        candidate (assoc candidate :reported-kind reported-kind :kind kind)
+        candidate (assoc candidate
+                         :reported-kind reported-kind
+                         :reported-source-attempts reported-source-attempts
+                         :kind kind
+                         :source-attempts
+                         (controller-source-attempts deposit-request))
         body (evidence-body candidate)
         digest (machine/ledger-digest [body])
         identity-digest
@@ -51,9 +69,7 @@
     (not (and (vector? (:pattern-ids candidate))
               (seq (:pattern-ids candidate))
               (every? nonblank? (:pattern-ids candidate))))
-    (conj :candidate-patterns-missing)
-    (not (vector? (:source-attempts candidate)))
-    (conj :candidate-source-attempts-missing)))
+    (conj :candidate-patterns-missing)))
 
 (defn- memory-entry [deposit-request depositor candidate]
   {:evidence/id (:memory-id candidate)
@@ -113,18 +129,22 @@
                 :fetch-hyperedges substrate/hyperedges-by-end})))
   ([{:keys [depositor candidates] :as deposit} deposit-request
     {:keys [fetch-entry append-entry post-edge fetch-hyperedges]}]
-   (let [shape-findings
+   (let [source-attempts (controller-source-attempts deposit-request)
+         shape-findings
          (mapv (fn [ordinal candidate]
                  {:ordinal ordinal :findings (candidate-errors candidate)})
                (range 1 (inc (count candidates))) candidates)
          invalid (filterv (comp seq :findings) shape-findings)]
-     (if (or (not (nonblank? depositor)) (not (seq candidates)) (seq invalid))
+     (if (or (not (nonblank? depositor)) (not (seq candidates))
+             (empty? source-attempts) (seq invalid))
        {:ok false :error/code :promotion-candidate-content-invalid
         :findings (cond-> invalid
                     (not (nonblank? depositor))
                     (conj {:finding :depositor-missing})
                     (not (seq candidates))
-                    (conj {:finding :candidates-missing}))}
+                    (conj {:finding :candidates-missing})
+                    (empty? source-attempts)
+                    (conj {:finding :controller-source-attempts-missing}))}
        (loop [remaining (map-indexed vector candidates)
               persisted []]
          (if-let [[index candidate] (first remaining)]

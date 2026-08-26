@@ -167,15 +167,20 @@ first half. The second half is what reaches the Student:
 
 1. Write each memory to the substrate as before (`record-memory!`, subject
    the problem), with a **hook phrased from the residual's own vocabulary**.
-2. In your typed terminal report, in `store-mode` only, list them as
-   candidates:
+2. In your typed terminal report, in `store-mode` only, list each proposed
+   memory using the same agent-authored content schema as both Scribe seats:
 
    ```clojure
-   :candidates [{:memory-id       "e-…"          ; the substrate id you wrote
-                 :content-digest  "…"            ; digest of the memory body
-                 :pattern-ids     ["math-informal/…"]   ; NON-EMPTY
-                 :source-attempts [1]}]          ; the attempt(s) it distils
+   :candidates [{:name        "stable obstacle-oriented name"
+                 :hook        "when this memory should be retrieved"
+                 :body        "the reusable mathematical or Mathlib knowledge"
+                 :pattern-ids ["math-informal/…"]}] ; NON-EMPTY
    ```
+
+   The controller derives `:memory-id`, `:content-digest`, `:kind`, and
+   `:source-attempts` from the persisted content and the input Student receipt.
+   If you report one of those controller-owned fields, it is retained only as
+   a reported claim and does not govern persistence or review.
 
    A candidate with an empty `:pattern-ids` is refused at the gate before any
    reviewer sees it (f27: the Solver's three candidates were all lost that

@@ -16,7 +16,7 @@
 (deftest controller-persists-and-verifies-candidates-before-review
   (let [entries (atom {}) edges (atom {})
         request {:dispatch/id "dispatch-1" :problem-id "p1"
-                 :job-id "scribe-job"}
+                 :job-id "scribe-job" :source-attempt-ids ["solver-job"]}
         result
         (sut/persist!
          {:depositor "scribe" :candidates [(dissoc candidate :kind)] :lanes []}
@@ -39,6 +39,8 @@
     (is (= "llm-invented-id" (:reported-memory-id persisted)))
     (is (= :memory (:kind persisted)))
     (is (nil? (:reported-kind persisted)))
+    (is (= ["solver-job"] (:source-attempts persisted)))
+    (is (= [1] (:reported-source-attempts persisted)))
     (is (= (machine/ledger-digest [(:evidence/body entry)])
            (:content-digest persisted)))
     (is (sut/visible? persisted #(get @entries %)
@@ -51,7 +53,8 @@
         result (sut/persist!
                 {:depositor "scribe"
                  :candidates [(dissoc candidate :body)]}
-                {:dispatch/id "dispatch" :problem-id "p"}
+                {:dispatch/id "dispatch" :problem-id "p"
+                 :source-attempt-ids ["source"]}
                 {:fetch-entry (constantly nil)
                  :append-entry #(do (swap! writes inc) {:ok true})
                  :post-edge #(do (swap! writes inc) {:ok true})
@@ -59,6 +62,28 @@
     (is (= :promotion-candidate-content-invalid (:error/code result)))
     (is (some #{:candidate-body-missing}
               (mapcat :findings (:findings result))))
+    (is (zero? @writes))))
+
+(deftest controller-derives-student-and-repair-source-attempts
+  (is (= ["student-1" "repair-1" "student-2"]
+         (sut/controller-source-attempts
+          {:student-attempts [{:job-id "student-1"
+                               :repair-job-ids ["repair-1"]}
+                              {:job-id "student-2"
+                               :repair-job-ids []}]}))))
+
+(deftest missing-controller-source-authority-fails-before-write
+  (let [writes (atom 0)
+        result (sut/persist!
+                {:depositor "scribe" :candidates [(dissoc candidate :source-attempts)]}
+                {:dispatch/id "dispatch" :problem-id "p"}
+                {:fetch-entry (constantly nil)
+                 :append-entry #(do (swap! writes inc) {:ok true})
+                 :post-edge #(do (swap! writes inc) {:ok true})
+                 :fetch-hyperedges (constantly [])})]
+    (is (= :promotion-candidate-content-invalid (:error/code result)))
+    (is (some #(= :controller-source-attempts-missing (:finding %))
+              (:findings result)))
     (is (zero? @writes))))
 
 (deftest controller-derives-kind-and-retains-agent-claim

@@ -144,6 +144,23 @@ seat re-creates the f29 channel.
 
 ## Hook, tags, reuse vs discovery, review
 
+## Candidate submission schema
+
+For every proposed memory, return this complete agent-authored content map:
+
+```clojure
+{:name        "stable obstacle-oriented name"
+ :hook        "the situation in which this memory should be retrieved"
+ :body        "the reusable mathematical or Mathlib knowledge"
+ :pattern-ids ["math-formalization/existing-parent-pattern"]}
+```
+
+`:pattern-ids` must be a non-empty vector of non-blank strings. The controller,
+not this seat, derives `:memory-id`, `:content-digest`, `:kind`, and
+`:source-attempts` from the persisted content and the Solver dispatch being
+mined. If you report any of those controller-owned fields, it is retained only
+as a reported claim and does not govern persistence or review.
+
 Unchanged from `scribe-v3` / v1: name by the obstacle, tag by the need,
 keep the stereotyped register, update a reuse in place rather than filing
 it twice, never review your own deposits. The promotion proctor applies

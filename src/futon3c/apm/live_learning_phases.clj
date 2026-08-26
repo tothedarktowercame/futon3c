@@ -132,6 +132,9 @@
                    (and (= :scribe-reduce kind) (= :promote-solver phase))
                    (assoc :base-problem-blob (get-in unit [:problem :blob])
                           :problem-path (get-in unit [:problem :path])
+                          :source-attempt-ids
+                          [(or (:receipt/job-id (get receipts :solve))
+                               (:receipt/id (get receipts :solve)))]
                           :solver-final-head
                           (:receipt/final-head (get receipts :solve)))
                    (and (= :scribe-reduce kind) (= :scribe-reduce phase))
