@@ -95,6 +95,27 @@
       (is (= before @state))
       (is (= 1 (count (filter #(= :mint (first %)) @calls)))))))
 
+(deftest scribe-apparatus-park-preserves-record-and-prepares-successor
+  (let [{:keys [providers state calls]} (harness)
+        park {:state/type :scribe-reduce-apparatus-frame-park
+              :frame/id "q1" :problem/id "p1" :phase :scribe-reduce
+              :promotion/state-path "/campaign/q1/live/scribe-reduce.edn"
+              :last-valid-receipt/id "student-attempt-3"
+              :error/code :promotion-deposit-retries-exhausted
+              :deposit/attempts 3
+              :deposit/findings [{:ordinal 1
+                                  :findings [:candidate-body-missing]}]
+              :residual "candidate body missing"}]
+    (sut/tick! providers)
+    (let [result (sut/tick!
+                  (assoc providers :frame-tick-fn
+                         (constantly {:ok true :status :frame-parked
+                                      :frame/park park})))]
+      (is (= :frame-prepared (:status result)))
+      (is (= "p2" (get-in @state [:active :frame :problem/id])))
+      (is (= [park] (:parked @state)))
+      (is (empty? (filter #(= :retire (first %)) @calls))))))
+
 (deftest pause-after-active-retires-current-frame-without-minting-successor
   (let [{:keys [providers state calls]} (harness)]
     (is (= :frame-prepared (:status (sut/tick! providers))))

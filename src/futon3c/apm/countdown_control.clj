@@ -1617,7 +1617,20 @@
                                                 (state-path-for (:frame/id frame)
                                                                 :solve)))
                                           :result driven}))
-                                      driven)))]
+                                      (if (= :promotion-deposit-retries-exhausted
+                                             (:error/code driven))
+                                        (with-campaign frame-config
+                                          (queued-frame-adapter/scribe-reduce-apparatus-park
+                                           {:frame frame
+                                            :ledger (ledger/read-ledger
+                                                     (control-path ledger-path))
+                                            :promotion-state-path
+                                            (str (control-path
+                                                  (state-path-for
+                                                   (:frame/id frame)
+                                                   :scribe-reduce)))
+                                            :result driven}))
+                                        driven))))]
                             (if-not (and (:ok result)
                                          (= :frame-complete (:status result)))
                               result

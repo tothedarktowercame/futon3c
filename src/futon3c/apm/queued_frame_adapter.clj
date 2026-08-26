@@ -49,6 +49,32 @@
       {:ok true :status :frame-parked :frame/park park}
       result)))
 
+(defn scribe-reduce-apparatus-park
+  "Park a frame whose completed mining dispatch cannot produce a valid
+  deposit.  All prior phase receipts remain authoritative and untouched."
+  [{:keys [frame ledger promotion-state-path result]}]
+  (let [receipt (last (keep #(get-in % [:event/body :certificate])
+                            (:events ledger)))
+        park {:state/type :scribe-reduce-apparatus-frame-park
+              :frame/id (:frame/id frame)
+              :problem/id (:problem/id frame)
+              :phase :scribe-reduce
+              :promotion/state-path promotion-state-path
+              :last-valid-receipt/id (or (:receipt/id receipt)
+                                         (:certificate/id receipt))
+              :error/code (:error/code result)
+              :deposit/attempts (:attempts result)
+              :deposit/findings (:findings result)
+              :residual (pr-str (:findings result))}]
+    (if (and (= :promotion-deposit-retries-exhausted (:error/code result))
+             (every? #(and (string? %) (not (str/blank? %)))
+                     ((juxt :frame/id :problem/id :promotion/state-path
+                            :last-valid-receipt/id :residual) park))
+             (pos-int? (:deposit/attempts park))
+             (seq (:deposit/findings park)))
+      {:ok true :status :frame-parked :frame/park park}
+      result)))
+
 (def default-artifacts
   {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
    :typed-completion

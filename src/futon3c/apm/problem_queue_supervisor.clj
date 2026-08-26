@@ -9,11 +9,24 @@
 
 (defn valid-frame-park?
   [park]
-  (and (= :solver-human-intervention-frame-park (:state/type park))
-       (every? #(and (string? %) (not-empty %))
-               ((juxt :frame/id :problem/id :residual :solver/final-head
-                      :last-valid-receipt/id :solver/state-path) park))
-       (pos-int? (:solver/rounds-completed park))))
+  (and
+   (every? #(and (string? %) (not-empty %))
+           ((juxt :frame/id :problem/id :residual
+                  :last-valid-receipt/id) park))
+   (case (:state/type park)
+     :solver-human-intervention-frame-park
+     (and (every? #(and (string? %) (not-empty %))
+                  ((juxt :solver/final-head :solver/state-path) park))
+          (pos-int? (:solver/rounds-completed park)))
+
+     :scribe-reduce-apparatus-frame-park
+     (and (= :scribe-reduce (:phase park))
+          (= :promotion-deposit-retries-exhausted (:error/code park))
+          (string? (:promotion/state-path park))
+          (pos-int? (:deposit/attempts park))
+          (seq (:deposit/findings park)))
+
+     false)))
 
 (defn queue-plan [problems]
   (let [body {:queue/type :apm-problem-queue :queue/version 1

@@ -57,6 +57,26 @@
             {:frame frame :ledger {:events []}
              :solver-state-path "/solve.edn" :result result})))))
 
+(deftest exhausted-scribe-deposit-parks-with-prior-receipt-intact
+  (let [result
+        (sut/scribe-reduce-apparatus-park
+         {:frame frame
+          :promotion-state-path "/campaign/f30/live/scribe-reduce.edn"
+          :ledger {:events [{:event/body
+                             {:certificate {:receipt/id "attempt-3-receipt"}}}]}
+          :result {:ok false
+                   :error/code :promotion-deposit-retries-exhausted
+                   :attempts 3
+                   :findings [{:ordinal 1
+                               :findings [:candidate-body-missing]}]}})
+        park (:frame/park result)]
+    (is (= :frame-parked (:status result)))
+    (is (= :scribe-reduce-apparatus-frame-park (:state/type park)))
+    (is (= "attempt-3-receipt" (:last-valid-receipt/id park)))
+    (is (= "/campaign/f30/live/scribe-reduce.edn"
+           (:promotion/state-path park)))
+    (is (= 3 (:deposit/attempts park)))))
+
 (deftest fresh-one-off-manifest-pins-both-scribe-cards
   (let [manifest (sut/one-off-manifest
                   {:frame frame :apparatus-repository "."
