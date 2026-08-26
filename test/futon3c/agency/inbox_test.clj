@@ -16,6 +16,29 @@
   [response]
   (json/parse-string (:body response) true))
 
+(defn- request
+  ([handler method uri]
+   (request handler method uri {}))
+  ([handler method uri payload]
+   (handler {:request-method method
+             :uri uri
+             :body (json/generate-string payload)})))
+
+(defn- register-inbox-agent!
+  [agent-id]
+  (reg/register-agent!
+   {:agent-id agent-id
+    :type :mock
+    :delivery-mode :inbox
+    :invoke-fn (fn [& _] (throw (ex-info "pull-only invoke-fn ran" {})))
+    :capabilities [:invoke]}))
+
+(defn- set-job-created-at!
+  [job-id instant]
+  (#'http/update-invoke-jobs-ledger!
+   (fn [ledger]
+     (assoc-in ledger [:jobs job-id :created-at] (str instant)))))
+
 (use-fixtures
   :each
   (fn [f]
@@ -94,3 +117,79 @@
     (post-bell {:agent-id push-id :caller "test-caller" :prompt "push prompt"})
     (is (= true (deref push-called 5000 false))
         "default push delivery still invokes the registered invoke-fn")))
+
+(deftest inbox-ack-is-the-single-consumption-receipt
+  (let [root (System/getenv "FUTON3C_AGENCY_INBOX_DIR")
+        suffix (str (java.util.UUID/randomUUID))
+        agent-id (str "ack-seat-" suffix)
+        handler (http/make-handler {})]
+    (register-inbox-agent! agent-id)
+    (let [missing (request handler :post
+                           "/api/alpha/invoke/jobs/missing-inbox-job/ack")]
+      (is (= 404 (:status missing)))
+      (is (= "invoke-job-not-found" (:error (response-body missing)))))
+    (let [first-bell (response-body
+                      (post-bell {:agent-id agent-id
+                                  :caller "test-caller"
+                                  :prompt "old unread delivery"}))
+          first-id (:job-id first-bell)
+          first-file (io/file root agent-id (str first-id ".json"))]
+      (set-job-created-at! first-id (.minusSeconds (java.time.Instant/now) 120))
+      (let [status (get-in (reg/registry-status) [:agents agent-id])]
+        (is (= 1 (:unconsumed-count status)))
+        (is (<= 120000 (:oldest-unconsumed-age-ms status))))
+      (let [ack-response (request handler :post
+                                  (str "/api/alpha/invoke/jobs/" first-id "/ack")
+                                  {:note "read by test" :result "consumed"})
+            ack-body (response-body ack-response)
+            job (#'http/get-invoke-job first-id)
+            original-receipt (:delivery job)
+            consumed-file (io/file root agent-id "consumed" (str first-id ".json"))]
+        (is (= 200 (:status ack-response)))
+        (is (= "done" (:state ack-body)))
+        (is (= "done" (:state job)))
+        (is (= "inbox-consumed-ack" (get-in job [:delivery :note])))
+        (is (some #(and (= "acked" (:type %))
+                        (= "read by test" (:note %)))
+                  (:events job)))
+        (is (false? (.exists first-file)))
+        (is (.isFile consumed-file))
+        (is (= 0 (get-in (reg/registry-status)
+                         [:agents agent-id :unconsumed-count])))
+        (let [second (request handler :post
+                              (str "/api/alpha/invoke/jobs/" first-id "/ack"))]
+          (is (= 409 (:status second)))
+          (is (= "invoke-job-not-delivered" (:error (response-body second))))
+          (is (= original-receipt
+                 (:delivery (#'http/get-invoke-job first-id))))))
+      (let [push-job (#'http/create-invoke-job!
+                      {:requested-job-id (str "push-job-" suffix)
+                       :agent-id "push-seat"
+                       :prompt "not an inbox delivery"
+                       :caller "test-caller"
+                       :surface "bell"})
+            response (request handler :post
+                              (str "/api/alpha/invoke/jobs/" push-job "/ack"))]
+        (is (= 409 (:status response)))
+        (is (= "not-inbox-job" (:error (response-body response)))))
+      (let [older (response-body
+                   (post-bell {:agent-id agent-id
+                               :caller "test-caller"
+                               :prompt "older backlog item"}))
+            newer (response-body
+                   (post-bell {:agent-id agent-id
+                               :caller "test-caller"
+                               :prompt "newer backlog item"}))
+            older-id (:job-id older)
+            newer-id (:job-id newer)]
+        (set-job-created-at! older-id (.minusSeconds (java.time.Instant/now) 180))
+        (set-job-created-at! newer-id (.minusSeconds (java.time.Instant/now) 30))
+        (is (= 200 (:status (request handler :post
+                                    (str "/api/alpha/invoke/jobs/" newer-id "/ack")))))
+        (let [status (get-in (reg/registry-status) [:agents agent-id])
+              health (response-body (request handler :get "/health"))]
+          (is (= 1 (:unconsumed-count status)))
+          (is (<= 180000 (:oldest-unconsumed-age-ms status)))
+          (is (= 1 (:unconsumed-count health)))
+          (is (= agent-id (:oldest-unconsumed-agent-id health)))
+          (is (<= 180000 (:oldest-unconsumed-age-ms health))))))))

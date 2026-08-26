@@ -49,3 +49,19 @@
                             [StandardCopyOption/ATOMIC_MOVE
                              StandardCopyOption/REPLACE_EXISTING]))
     (.getAbsolutePath final-file)))
+
+(defn move-to-consumed!
+  "Move a delivered inbox file under its seat's consumed/ directory."
+  [inbox-path job-id]
+  (let [job-id (safe-path-segment :job-id job-id)
+        inbox-file (io/file (str inbox-path))
+        consumed-directory (io/file (.getParentFile inbox-file) "consumed")
+        consumed-file (io/file consumed-directory (str job-id ".json"))]
+    (Files/createDirectories (.toPath consumed-directory)
+                             (make-array java.nio.file.attribute.FileAttribute 0))
+    (Files/move (.toPath inbox-file)
+                (.toPath consumed-file)
+                (into-array java.nio.file.CopyOption
+                            [StandardCopyOption/ATOMIC_MOVE
+                             StandardCopyOption/REPLACE_EXISTING]))
+    (.getAbsolutePath consumed-file)))

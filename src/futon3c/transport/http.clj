@@ -17,6 +17,7 @@
      GET  /api/alpha/coordination/edges — list social-layer mesh edges
      GET  /api/alpha/coordination/qa — run mesh misrouting QA
      GET  /api/alpha/invoke/jobs/:id — retrieve invoke job details
+     POST /api/alpha/invoke/jobs/:id/ack — acknowledge an inbox delivery
      POST /api/alpha/invoke/jobs/:id/cancel — terminate a job by explicit request
      GET  /api/alpha/agency/queue — operator view of the per-agent turn queues
      POST /api/alpha/agency/queue/hold — pause a queue after the turn in flight
@@ -1098,24 +1099,52 @@
         addressed)))
 
 (defn active-invoke-job-counts
-  "Return canonical non-terminal invoke-job counts keyed by agent-id.
+  "Return canonical non-terminal counts and inbox age keyed by agent-id.
    Example:
    {\"codex-1\" {:queued-jobs 1 :running-jobs 0 :nonterminal-jobs 1}}"
   []
   (ensure-invoke-jobs-ledger!)
-  (reduce
+  (let [now-ms (System/currentTimeMillis)]
+    (reduce
    (fn [acc job]
      (let [aid (canonical-job-agent-id (:agent-id job))
-           state (some-> (:state job) str)]
+           state (some-> (:state job) str)
+           delivered? (= "delivered" state)
+           created-ms (when delivered?
+                        (try
+                          (.toEpochMilli (Instant/parse (str (:created-at job))))
+                          (catch Throwable _ now-ms)))
+           age-ms (when created-ms (max 0 (- now-ms created-ms)))]
        (if-not (and aid (#{"queued" "activating" "running" "overrun" "delivered"} state))
          acc
-         (-> acc
-             (update-in [aid :queued-jobs] (fnil + 0)
-                        (if (#{"queued" "activating"} state) 1 0))
-             (update-in [aid :running-jobs] (fnil + 0) (if (#{"running" "overrun"} state) 1 0))
-             (update-in [aid :nonterminal-jobs] (fnil inc 0))))))
+         (cond-> (-> acc
+                     (update-in [aid :queued-jobs] (fnil + 0)
+                                (if (#{"queued" "activating"} state) 1 0))
+                     (update-in [aid :running-jobs] (fnil + 0)
+                                (if (#{"running" "overrun"} state) 1 0))
+                     (update-in [aid :nonterminal-jobs] (fnil inc 0)))
+           delivered?
+           (-> (update-in [aid :unconsumed-count] (fnil inc 0))
+               (update-in [aid :oldest-unconsumed-age-ms]
+                          (fn [oldest] (max (long (or oldest 0)) age-ms))))))))
    {}
-   (vals (get @!invoke-jobs-ledger :jobs {}))))
+   (vals (get @!invoke-jobs-ledger :jobs {})))))
+
+(defn- inbox-health-summary
+  [job-counts]
+  (reduce-kv
+   (fn [summary agent-id {:keys [unconsumed-count oldest-unconsumed-age-ms]}]
+     (let [count* (long (or unconsumed-count 0))
+           age-ms (long (or oldest-unconsumed-age-ms 0))]
+       (cond-> (update summary :unconsumed-count + count*)
+         (and (pos? count*)
+              (>= age-ms (long (or (:oldest-unconsumed-age-ms summary) -1))))
+         (assoc :oldest-unconsumed-age-ms age-ms
+                :oldest-unconsumed-agent-id agent-id))))
+   {:unconsumed-count 0
+    :oldest-unconsumed-age-ms nil
+    :oldest-unconsumed-agent-id nil}
+   job-counts))
 
 (defn- running-invoke-job-for-agent
   [agent-id]
@@ -1758,6 +1787,7 @@
         live-status (reg/registry-status)
         live-count (:count live-status)
         config-count (count (get-in config [:registry :agents]))
+        inbox-health (inbox-health-summary (:agents live-status))
         agent-summary (into {}
                             (map (fn [[id info]]
                                    [id {:type (:type info)
@@ -1785,6 +1815,9 @@
                          "irc-relay-configured" irc-relay-configured?
                          "irc-send-base" irc-send-base
                          "queue-hardening" queue-hardening
+                         "unconsumed-count" (:unconsumed-count inbox-health)
+                         "oldest-unconsumed-age-ms" (:oldest-unconsumed-age-ms inbox-health)
+                         "oldest-unconsumed-agent-id" (:oldest-unconsumed-agent-id inbox-health)
                          "started-at" (str started-at)
                          "uptime-seconds" uptime-seconds
                          "bridge" bridge})))
@@ -5198,6 +5231,67 @@
                         :error "invoke-job-not-found"
                         :job-id (str job-id)})))
 
+(defn- handle-ack-invoke-job
+  "POST /api/alpha/invoke/jobs/:id/ack — acknowledge consumption of one inbox job."
+  [job-id request]
+  (let [payload (or (parse-json-map (read-body request)) {})
+        note (some-> (or (:note payload) (get payload "note")) str)
+        result-text (some-> (or (:result payload) (get payload "result")) str)
+        job (get-invoke-job job-id)]
+    (cond
+      (nil? job)
+      (json-response 404 {:ok false
+                          :error "invoke-job-not-found"
+                          :job-id (str job-id)})
+
+      (nil? (:inbox-path job))
+      (json-response 409 {:ok false
+                          :error "not-inbox-job"
+                          :job-id (str job-id)
+                          :state (str (:state job))})
+
+      (not= "delivered" (str (:state job)))
+      (json-response 409 {:ok false
+                          :error "invoke-job-not-delivered"
+                          :job-id (str job-id)
+                          :state (str (:state job))})
+
+      :else
+      (let [finalized? (finalize-invoke-job!
+                        (str job-id) "done" nil nil
+                        (cond-> {:ok true}
+                          result-text (assoc :result result-text))
+                        (:session-id job))]
+        (if-not finalized?
+          (let [current (get-invoke-job job-id)]
+            (json-response 409 {:ok false
+                                :error "invoke-job-not-delivered"
+                                :job-id (str job-id)
+                                :state (str (:state current))}))
+          (do
+            (record-invoke-job-delivery-by-job-id!
+             (str job-id)
+             {:surface "inbox"
+              :destination (:inbox-path job)
+              :delivered? true
+              :note "inbox-consumed-ack"})
+            (update-invoke-jobs-ledger!
+             (fn [ledger]
+               (if-let [current (get-in ledger [:jobs (str job-id)])]
+                 (assoc-in ledger [:jobs (str job-id)]
+                           (append-job-event current "acked" {:note note}))
+                 ledger)))
+            (try
+              (agency-inbox/move-to-consumed! (:inbox-path job) job-id)
+              (catch Throwable t
+                (println (str "[agency-inbox] consumed-file move failed for " job-id
+                              ": " (.getMessage t)))
+                (flush)))
+            (json-response 200 {:ok true
+                                :job-id (str job-id)
+                                :state "done"
+                                :delivery (:delivery (get-invoke-job job-id))})))))))
+
 (defn- handle-agency-queue
   "GET /api/alpha/agency/queue?all=1 — operator view of the per-agent turn
    queues: pending depth, the queued turns themselves, who is mid-drain, and
@@ -7920,6 +8014,11 @@
           (and (= :post method) (= "/api/alpha/invoke/jobs/reap" uri))
           (let [n (reap-stale-invoke-jobs!)]
             (json-response 200 {:ok true :reaped n}))
+
+          (and (= :post method) (re-matches #"/api/alpha/invoke/jobs/([^/]+)/ack" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/invoke/jobs/([^/]+)/ack" uri)
+                job-id (enc/decode-uri-component raw-id)]
+            (handle-ack-invoke-job job-id request))
 
           ;; Explicit operator termination — the replacement for the wall-clock
           ;; ceiling (README-agency-cap.md).

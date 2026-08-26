@@ -1654,7 +1654,8 @@
                         excursion-id (or (:excursion-id external-invoke)
                                          (get-in agent [:agent/metadata :excursion-id])
                                          (get-in agent [:agent/metadata "excursion-id"]))
-                        {:keys [queued-jobs running-jobs nonterminal-jobs]}
+                        {:keys [queued-jobs running-jobs nonterminal-jobs
+                                unconsumed-count oldest-unconsumed-age-ms]}
                         (get invoke-job-counts aid {})
                         external-codex-invoking?
                         (and (= :codex (:agent/type agent))
@@ -1707,6 +1708,9 @@
                            (assoc :running-jobs running-jobs)
                            nonterminal-jobs
                            (assoc :nonterminal-jobs nonterminal-jobs)
+                           (= :inbox (:agent/delivery-mode agent))
+                           (assoc :unconsumed-count (long (or unconsumed-count 0))
+                                  :oldest-unconsumed-age-ms oldest-unconsumed-age-ms)
                            invoke-started-at
                            (assoc :invoke-started-at (str invoke-started-at)
                                   :invoke-prompt-preview invoke-prompt-preview)
