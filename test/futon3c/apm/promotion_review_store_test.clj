@@ -44,9 +44,16 @@
           :post-hyperedge (fn [_ edge]
                             (swap! edges assoc (:hx/id edge) edge)
                             {:ok true :hyperedge edge})})
-        evidence (get @entries review-id)
+        persisted-review (first (:reviews result))
+        canonical-review-id (:review-evidence-id persisted-review)
+        evidence (get @entries canonical-review-id)
         edge (get @edges "hx-memory")]
     (is (:ok result) result)
+    (is (not= review-id canonical-review-id))
+    (is (= review-id (:reported-review-evidence-id persisted-review)))
+    (is (= review-id
+           (get-in evidence [:evidence/body
+                             :review/reported-evidence-id])))
     (is (= :reassign (get-in evidence [:evidence/body :review/verdict])))
     (is (= "returned reason"
            (get-in evidence [:evidence/body :review/reason])))
@@ -60,3 +67,32 @@
     (is (= [new-pattern] (get-in edge [:hx/props :roles :patterns])))
     (is (some #{new-pattern} (:hx/endpoints edge)))
     (is (not-any? #{old-pattern} (:hx/endpoints edge)))))
+
+(deftest absent-agent-review-id-is-derived-before-any-fetch
+  (let [fetched (atom [])
+        canonical (sut/canonical-review
+                   "review-job"
+                   {:memory-id "e-memory" :review-evidence-id nil
+                    :verdict :reject :reason "not actionable"
+                    :residual "open goal" :pattern-ids []})]
+    (is (string? (:review-evidence-id canonical)))
+    (is (nil? (:reported-review-evidence-id canonical)))
+    (is (not-empty (:review-evidence-id canonical)))
+    ;; Identity construction is pure: nil is never presented to the store.
+    (is (empty? @fetched))))
+
+(deftest unidentifiable-review-fails-before-fetch
+  (let [fetches (atom [])
+        result
+        (sut/persist!
+         {:deposit {:depositor "scribe"} :reviewer "proctor"
+          :review-job "review-job"
+          :reviews [{:memory-id nil :review-evidence-id nil
+                     :verdict :reject :reason "bad" :residual "r"}]}
+         {:evidence-store :store
+          :fetch-entry #(do (swap! fetches conj %) nil)
+          :append-entry (constantly {:ok true})
+          :fetch-hyperedges (constantly [])
+          :post-hyperedge (fn [_ _] {:ok true})})]
+    (is (= :promotion-review-identity-invalid (:error/code result)))
+    (is (empty? @fetches))))

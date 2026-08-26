@@ -2,6 +2,7 @@
   "Persist an independent promotion judgement and project it onto the exact
   candidate attachment before snapshot publication."
   (:require [futon3c.evidence.boundary :as boundary]
+            [futon3c.apm.campaign-machine :as machine]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.store :as estore]
             [futon3c.peripheral.memory-lifecycle :as lifecycle]
@@ -10,6 +11,29 @@
   (:import [java.time Instant]))
 
 (def ^:private attachment-verdicts #{:approve :reassign :reject})
+
+(defn- nonblank? [value]
+  (and (string? value) (not-empty value)))
+
+(defn canonical-review
+  "Replace an agent-reported evidence name with a controller-owned identity.
+  The reported name remains evidence about the submission, never authority."
+  [review-job review]
+  (when (and (nonblank? review-job)
+             (nonblank? (:memory-id review))
+             (contains? attachment-verdicts (:verdict review)))
+    (let [identity-digest
+          (machine/ledger-digest
+           [{:review-job review-job
+             :memory-id (:memory-id review)
+             :verdict (:verdict review)
+             :reason (:reason review)
+             :residual (:residual review)
+             :pattern-ids (:pattern-ids review)}])]
+      (assoc review
+             :reported-review-evidence-id (:review-evidence-id review)
+             :review-evidence-id
+             (str "e-apm-promotion-review-" (subs identity-digest 0 32))))))
 
 (defn- review-entry [reviewer review-job review]
   {:evidence/id (:review-evidence-id review)
@@ -27,6 +51,7 @@
     :review/pattern-ids (:pattern-ids review)
     :review/reason (:reason review)
     :review/residual (:residual review)
+    :review/reported-evidence-id (:reported-review-evidence-id review)
     :review/provenance {:kind :promotion-review :job-id review-job}}})
 
 (defn- exact-entry? [expected observed]
@@ -53,9 +78,21 @@
                   (not= reviewer depositor) (string? review-job))
        {:ok false :error/code :promotion-review-authority-invalid
         :depositor depositor :reviewer reviewer :review-job review-job}
-       (loop [remaining (filterv #(contains? attachment-verdicts (:verdict %))
-                                  reviews)
-              persisted []]
+       (let [attachment-reviews
+             (filterv #(contains? attachment-verdicts (:verdict %)) reviews)
+             canonical (mapv #(canonical-review review-job %) attachment-reviews)]
+         (if (some nil? canonical)
+           {:ok false :error/code :promotion-review-identity-invalid
+            :findings
+            (mapv (fn [review]
+                    {:memory-id (:memory-id review)
+                     :verdict (:verdict review)
+                     :reported-review-evidence-id
+                     (:review-evidence-id review)})
+                  (keep #(when-not (canonical-review review-job %) %)
+                        attachment-reviews))}
+           (loop [remaining canonical
+                  persisted []]
          (if-let [review (first remaining)]
            (let [entry (review-entry reviewer review-job review)
                  review-id (:evidence/id entry)
@@ -94,4 +131,9 @@
                      {:ok false
                       :error/code :promotion-review-projection-not-visible
                       :finding result})))))
-           {:ok true :reviews reviews :persisted persisted}))))))
+             {:ok true
+              :reviews (into (filterv #(not (contains? attachment-verdicts
+                                                       (:verdict %)))
+                                      reviews)
+                             canonical)
+              :persisted persisted}))))))))
