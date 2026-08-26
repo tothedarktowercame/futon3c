@@ -221,9 +221,11 @@ Clojure:
 
 ## Implementation prerequisite
 
-The four requested Lean targets are currently split between
-`/home/joe/code/mathlib4` and the `mathlib4-apm-validation` worktree. Consolidate
-them before implementation so one checkout owns the coherent model and checker.
+The mixed-source dependency was removed on 2026-08-26. Commit `be9a6efe02` merges
+the validation branch into `/home/joe/code/mathlib4`; that canonical checkout
+now owns the cycle machine, contract emitter, campaign trace checker,
+qualification model, and trace-fixture script together. Builds must use those
+files from that one checkout, never a mixture of worktree paths.
 
 Also, `/home/joe/code/mathlib4/.lake/packages` is a real directory rather than
 the required symlink to the canonical package authority. Workspace policy
