@@ -114,8 +114,13 @@ def main():
         pairs = dispositions(t)
         if not pairs:
             continue
+        # Sorted, so the rendering is a function of the verdicts alone. An
+        # insertion-ordered dict made the line churn between runs with identical
+        # content ({'approve': 1, 'reassign': 1} one run, reversed the next),
+        # which a watcher diffing this output reports as a change. A channel
+        # that cries wolf on key order stops being read.
         tally = {}
-        for _mid, v in pairs:
+        for _mid, v in sorted(pairs, key=lambda x: (x[1], x[0])):
             tally[v] = tally.get(v, 0) + 1
         cj = tally.get("cannot-judge", 0)
         unresolved_total += cj
