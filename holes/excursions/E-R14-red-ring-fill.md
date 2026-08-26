@@ -329,8 +329,36 @@ an instance filling it. R14's honest re-description is **red on a disconnected
 dial** — a third kind of red, alongside R8's demonstrated defect and this
 excursion's opening guess of an evidence hole.
 
+## The company level
+
+`futon0/analysis/business-models/NOTE-select-column-and-R14.md` (2026-08-26)
+develops the demand-side story for this ring, as the R8 workup did for its own.
+Three points bear on the slices above:
+
+1. **Four of the corpus's 15 phase-located cases sit in SELECT**, and all four
+   say the same thing in nearly the same words — the appraisal completed and the
+   commitment did not follow. PlanetMath: *"The step that never completed is the
+   commitment, not the appraisal."* Lightbend: *"Nothing failed at perception or
+   evaluation; the choice went against the seller."*
+2. **Both greens are green on episodic sponsorship**, not on a commitment that
+   followed an appraisal — Galois's record splits the buyer (DARPA `:engaged`,
+   the services `:declined-on-capacity`), and PlanetMath's says of its Springer
+   and Google funding that *"none became a standing budget line."* In this
+   column, green does not mean the loop closed.
+3. **Docker and Lightbend belong to R14's column, not R8's.** The earlier note
+   assigned Docker to R8 through WR-27, which carries `@holds-open R8 R14` and
+   so does not discriminate; the corpus's `:failing-phase` field says SELECT.
+   Its *"0 of 2 returned signals changed the next action"* is therefore a
+   reading of the commitment step.
+
+**These are not a salience instance**, and the note says so at length: they are
+a demand-side argument for instrumenting the step, not evidence that our
+uninstrumented dial cost anyone anything. Same discipline as the strategy notes'
+treatment of the disconnection finding.
+
 ## Related
 
+- `futon0/analysis/business-models/NOTE-select-column-and-R14.md` — the company level.
 - `futon3/library/problems/commitment-temperature-is-instrumented-as-gain.flexiarg` — the pattern, including the hole.
 - `futon3c/holes/excursions/E-R8-red-ring-fill.md` — the predecessor.
 - `p4ng/empirics-futon/NOTE-light-formalisation-standard.md` — the module recipe.
