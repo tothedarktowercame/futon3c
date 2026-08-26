@@ -761,6 +761,44 @@ is preserved by leaving the candidate `:proposed` and recording the finding.
 It does not require halting the campaign, and halting it is what makes the
 machine "hardly able to run".
 
+### 16.1 Correction — the rule above merges two cases that must stay apart
+
+codex-10 pushed back on the wording, and it is right. "An invalid review"
+covers two conditions with opposite correct responses:
+
+1. **A completed judgement whose pattern set differs from the attachment.**
+   A `:reject` naming better patterns, or a `:reassign`, is a *valid finished
+   review*. It was never a defect at all. It proceeds; for a reject the
+   candidate is not promoted, and nothing needs repairing.
+2. **A failure of the projection apparatus itself** — the substrate
+   unreachable, the edge unreadable, the review evidence not visible. This is
+   not a defect *in one candidate*. It is the machine failing to perform a
+   review it was asked to perform.
+
+My original sentence licensed treating case 2 like case 1: leave the
+candidate `:proposed`, record a finding, carry on. That is void-and-advance
+in miniature, scoped to a candidate rather than a frame, and Joe rejected
+void-and-advance after F32 — the rule there was *fix the apparatus defect and
+resume*.
+
+The fix as built inherits the conflation. `publishing-review?` gates on
+`(not= false (:projection/valid? review))`, so an apparatus failure becomes an
+ordinary nonpublishing disposition and the frame moves on. §17's unread
+`:findings` compounds it: the apparatus failure is then neither repaired nor
+recorded anywhere.
+
+Restating the rule so it carries both halves:
+
+> **Where a defect has a natural blast radius, the machine must not exceed
+> it — and must not fall short of it either.** A completed judgement is not a
+> defect and needs no repair. An apparatus failure is not a candidate-level
+> outcome and must not be dispositioned as one.
+
+codex-10 reports the pending Lean contract models `projectionInvalid` as a
+complete nonpublishing disposition, and is holding deployment until this is
+settled. That hold is correct and I have endorsed it: the contract should not
+ship before F42 with an apparatus fault typed as a normal terminal state.
+
 Dispatched to codex-10 as `invoke-1787732828037-1423-93b3dd78` with the fix
 scoped to: `exact-patterns?` required only for `:approve`; the promotion
 review store routed through the finding-returning path; a per-candidate

@@ -78,6 +78,18 @@ requirement that unreviewable material be impossible is met by leaving the
 candidate `:proposed` and recording the finding; it never required halting
 the queue, and halting is a large part of why the machine "can hardly run".
 
+**Corrected after codex-10's review** (spec-delta §16.1). That statement
+merges two cases with opposite correct responses. A `:reject` or `:reassign`
+naming different patterns is a *completed valid judgement* — never a defect,
+proceeds, nothing to repair. A failure of the projection apparatus itself is
+not a candidate-level outcome at all, and dispositioning it as one is
+void-and-advance scoped to a candidate, which Joe rejected after F32. The
+rule needs both halves: the machine must not exceed a defect's natural blast
+radius, and must not fall short of it either. The shipped
+`publishing-review?` gate inherits the conflation, and the pending Lean
+contract types `projectionInvalid` as a complete nonpublishing disposition;
+codex-10 is holding that contract until this is settled, which I endorse.
+
 ## Defect 2 — the student's work is invisible to the machine
 
 **Found, not yet fixed.** Full detail in spec-delta §17.
