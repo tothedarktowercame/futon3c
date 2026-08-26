@@ -75,6 +75,37 @@
       {:ok true :status :frame-parked :frame/park park}
       result)))
 
+(defn promotion-apparatus-park
+  "Park a frame after bounded promotion projection/publication repair is
+  exhausted. The persisted merit judgement and last valid phase receipt remain
+  re-enterable; this park does not disposition the affected candidate."
+  [{:keys [frame ledger result]}]
+  (let [receipt (last (keep #(get-in % [:event/body :certificate])
+                            (:events ledger)))
+        state (:state result)
+        park {:state/type :promotion-apparatus-frame-park
+              :frame/id (:frame/id frame)
+              :problem/id (:problem/id frame)
+              :phase :promotion
+              :promotion/state-path (:promotion/state-path result)
+              :last-valid-receipt/id (or (:receipt/id receipt)
+                                         (:certificate/id receipt))
+              :error/code (:error/code result)
+              :repair/kind (:repair/kind result)
+              :repair/attempts (:repair/attempts result)
+              :promotion/findings (:findings result)
+              :persisted-review-result (:persisted-review-result state)
+              :residual (pr-str (:findings result))}]
+    (if (and (= :promotion-apparatus-repair-exhausted (:error/code result))
+             (every? #(and (string? %) (not (str/blank? %)))
+                     ((juxt :frame/id :problem/id :promotion/state-path
+                            :last-valid-receipt/id :residual) park))
+             (keyword? (:repair/kind park))
+             (pos-int? (:repair/attempts park))
+             (seq (:promotion/findings park)))
+      {:ok true :status :frame-parked :frame/park park}
+      result)))
+
 (def default-artifacts
   {:cycle-contract "holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn"
    :typed-completion

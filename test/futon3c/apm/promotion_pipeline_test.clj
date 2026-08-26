@@ -10,6 +10,64 @@
             {:lane :trajectory :status :ran}
             {:lane :challenge :status :not-run :reason "no prior claim"}])
 
+(defn materialization [id digest]
+  {:artifact-id id :content-digest digest
+   :persisted-content-digest digest :read-back-content-digest digest
+   :persistence-receipt-id id})
+
+(deftest completed-pass-requires-one-materialized-disposition-per-candidate
+  (let [candidate (assoc candidate :materialization (materialization "m1" "d1"))
+        review {:memory-id "m1" :verdict :reject
+                :attachment-status :proposed :pattern-ids ["p1"]
+                :review-materialization (materialization "r1" "rd1")}
+        valid (sut/validate-complete-dispositions [candidate] [review])]
+    (is (:ok valid) valid)
+    (is (= [{:memory-id "m1" :verdict :reject
+             :candidate-materialization (materialization "m1" "d1")
+             :review-materialization (materialization "r1" "rd1")
+             :attachment-status :proposed :pattern-ids ["p1"]
+             :publishing? false}]
+           (:dispositions valid)))
+    (is (= :promotion-pass-incomplete
+           (:error/code
+            (sut/validate-complete-dispositions
+             [candidate] [(assoc review :verdict :cannot-judge)]))))
+    (is (= :promotion-pass-incomplete
+           (:error/code
+            (sut/validate-complete-dispositions [candidate] []))))))
+
+(deftest projection-failure-is-not-a-completed-disposition
+  (let [candidate (assoc candidate :materialization
+                         (materialization "m1" "d1"))
+        review {:memory-id "m1" :verdict :approve
+                :attachment-status :proposed :pattern-ids ["p1"]
+                :projection/valid? false
+                :projection/finding {:failure :edge-write-failed}
+                :review-materialization (materialization "r1" "rd1")}
+        result (sut/validate-complete-dispositions [candidate] [review])]
+    (is (false? (:ok result)))
+    (is (= :promotion-pass-incomplete (:error/code result)))
+    (is (= :promotion-review-projection-failed
+           (get-in result [:findings 0 :finding])))
+    (is (nil? (:dispositions result)))))
+
+(deftest certification-binds-exact-publishing-subset-to-materialized-snapshot
+  (let [dispositions [{:memory-id "approved" :publishing? true}
+                      {:memory-id "rejected" :publishing? false}]
+        snapshot {:snapshot/id "snapshot-digest"
+                  :snapshot/digest "snapshot-digest"}
+        valid (sut/validate-certified-promotion-pass
+               dispositions snapshot "/snapshots/f42.edn"
+               [{:memory-id "approved"}])]
+    (is (:ok valid) valid)
+    (is (= ["approved"]
+           (get-in valid [:witness :published-memory-ids])))
+    (is (= :certified-promotion-pass-invalid
+           (:error/code
+            (sut/validate-certified-promotion-pass
+             dispositions snapshot "/snapshots/f42.edn"
+             [{:memory-id "rejected"}]))))))
+
 (deftest three-student-reductions-deduplicate-with-provenance
   (let [result (sut/dedupe-candidates
                 [candidate (assoc candidate :memory-id "m2" :source-attempts [2 3])])]
@@ -29,7 +87,11 @@
     (is (some #{:reviewer-is-depositor}
               (:findings (sut/validate-review deposit "f22-scribe" [review]))))
     (is (some #{:review-set-mismatch}
-              (:findings (sut/validate-review deposit "f22-proctor" []))))))
+              (:findings (sut/validate-review deposit "f22-proctor" []))))
+    (is (some #{:review-verdict-invalid}
+              (:findings
+               (sut/validate-review deposit "f22-proctor"
+                                    [(assoc review :verdict :challenge)]))))))
 
 (deftest deposit-requires-all-four-typed-lanes
   (is (:ok (sut/validate-deposit {:depositor "scribe" :candidates [candidate]

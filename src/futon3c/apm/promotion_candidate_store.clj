@@ -114,6 +114,17 @@
               (= (:hx/props expected) (:hx/props %)))
         (fetch-hyperedges (get-in expected [:hx/props :roles :entry]))))
 
+(defn- materialization-witness [candidate observed]
+  (let [digest (machine/ledger-digest [(:evidence/body observed)])]
+    {:artifact-id (:memory-id candidate)
+     :content-digest (:content-digest candidate)
+     :persisted-content-digest digest
+     :read-back-content-digest digest
+     ;; boundary/append! returns the readable evidence id as its durable
+     ;; delivery receipt.  On idempotent replay the same readable id is the
+     ;; persistence authority.
+     :persistence-receipt-id (:evidence/id observed)}))
+
 (defn persist!
   "Persist and verify all candidates in DEPOSIT before independent review.
 
@@ -186,7 +197,11 @@
                     :memory-id (:memory-id canonical)}
 
                    :else
-                   (recur (next remaining) (conj persisted canonical))))))
+                   (recur (next remaining)
+                          (conj persisted
+                                (assoc canonical :materialization
+                                       (materialization-witness canonical
+                                                                observed))))))))
            {:ok true
             :deposit (assoc deposit :candidates persisted)
             :candidates persisted}))))))

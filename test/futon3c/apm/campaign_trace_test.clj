@@ -108,9 +108,7 @@
                          "campaignLanes"))))
     (is (= (json/parse-string
             (slurp "test/resources/apm-traces/valid.json"))
-           (dissoc (json/parse-string (slurp a))
-                   "solverSnapshotContentDigest" "reviewSnapshots"
-                   "reviewPasses")))))
+           (json/parse-string (slurp a))))))
 
 (deftest durable-state-projection-does-not-invent-job-success
   (let [step (first (:steps valid))

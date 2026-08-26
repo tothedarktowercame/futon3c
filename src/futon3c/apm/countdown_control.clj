@@ -187,6 +187,10 @@
                             :phase-order (mapv keyword (:phase-order generated))
                             :generated/bounds (:bounds generated)
                             :generated/dispatch-policy (:dispatch-policy generated)
+                            :generated/promotion-policy (:promotion-policy generated)
+                            :generated/contract-digest
+                            (qualification/file-digest
+                             (str (control-path generated-contract-path)))
                             :generated/terminal-policy (:terminal-policy generated)
                             :generated/source generated-contract-path)
            :generated/contract generated})))))
@@ -859,7 +863,7 @@
 
 (defn- publish-promotion!
   [{:keys [contract action receipts request]}
-   {:keys [candidates deposit reviewer reviews]}]
+   {:keys [candidates deposit reviewer reviews dispositions]}]
   (let [prior (campaign-prior-memories)
         own (mapv #(assoc % :provenance
                           {:frame-id (:frame-id action)
@@ -885,13 +889,18 @@
             accounting
             (promotion-pipeline/validate-extension-publication-accounting
              reviews retained-prior snapshot-memories)
+            certification
+            (when (vector? dispositions)
+              (promotion-pipeline/validate-certified-promotion-pass
+               dispositions snapshot (:path published) own))
             prior-dropped (into (vec (:dropped prior)) (:prior-dropped published))
-            body {:receipt/type :solver-promotion
+            body (cond-> {:receipt/type :solver-promotion
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/lanes (or (:lanes deposit) (:lanes-run deposit) [])
-                  :receipt/dispositions (or (:dispositions deposit)
+                  :receipt/dispositions (or dispositions
+                                            (:dispositions deposit)
                                             (:rejections deposit) [])
                   :receipt/promotion-reviews reviews
                   :receipt/prior-dropped prior-dropped
@@ -902,10 +911,14 @@
                   (mapv :memory-id (:snapshot/memories snapshot))
                   :receipt/independent-review? (not= (:depositor deposit)
                                                      reviewer)}
+                   certification
+                   (assoc :receipt/promotion-pass-witness
+                          (:witness certification)))
             receipt (assoc body :receipt/id (machine/ledger-digest [body]))
             checked (frame-cycle-handlers/validate-completion
                      contract action receipt receipts)]
         (cond
+          (and certification (not (:ok certification))) certification
           (not (:ok accounting)) accounting
           (:ok checked) {:ok true :receipt receipt}
           :else checked)))))
@@ -914,7 +927,7 @@
   "Independently review the Student-mined candidates, publish their exact
   snapshot, and certify the ordinary end-of-frame scribe receipt."
   [{:keys [contract action receipts request]}
-   {:keys [candidates deposit reviewer reviews]}]
+   {:keys [candidates deposit reviewer reviews dispositions]}]
   (let [prior (frame-cycle-handlers/latest-snapshot-receipt receipts 4)
         prior-path (:receipt/snapshot-path prior)
         prior-memories (if (string? prior-path)
@@ -951,12 +964,17 @@
             accounting
             (promotion-pipeline/validate-extension-publication-accounting
              reviews prior-memories (:snapshot/memories snapshot))
-            body {:receipt/type :scribe-reduce
+            certification
+            (when (vector? dispositions)
+              (promotion-pipeline/validate-certified-promotion-pass
+               dispositions snapshot (:path published) current))
+            body (cond-> {:receipt/type :scribe-reduce
                   :receipt/frame-id (:frame-id action)
                   :receipt/problem-id (:problem-id action)
                   :receipt/input-receipt-ids (:input-receipt-ids request)
                   :receipt/lanes (or (:lanes deposit) [])
-                  :receipt/dispositions (or (:dispositions deposit) [])
+                  :receipt/dispositions (or dispositions
+                                            (:dispositions deposit) [])
                   :receipt/promotion-reviews reviews
                   :receipt/snapshot-id (:snapshot/id snapshot)
                   :receipt/snapshot-digest (:snapshot/digest snapshot)
@@ -965,10 +983,14 @@
                   (mapv :memory-id (:snapshot/memories snapshot))
                   :receipt/independent-review? (not= (:depositor deposit)
                                                      reviewer)}
+                   certification
+                   (assoc :receipt/promotion-pass-witness
+                          (:witness certification)))
             receipt (assoc body :receipt/id (machine/ledger-digest [body]))
             checked (frame-cycle-handlers/validate-completion
                      contract action receipt receipts)]
         (cond
+          (and certification (not (:ok certification))) certification
           (not (:ok accounting)) accounting
           (not (:receipt/independent-review? body))
           {:ok false :error/code :zai-scribe-reviewer-is-depositor}
@@ -985,7 +1007,8 @@
   the promotion Proctor approved. Every prior memory is re-validated and
   re-checked against the substrate, so the union is as fresh as a first
   snapshot; an identical republish is idempotent."
-  [{:keys [action request]} {:keys [candidates deposit reviewer reviews]}]
+  [{:keys [action request]}
+   {:keys [candidates deposit reviewer reviews dispositions]}]
   (let [prior (:prior-snapshot request)
         prior-path (when (string? (:snapshot-path prior)) (:snapshot-path prior))
         prior-memories (if prior-path
@@ -1021,11 +1044,16 @@
                 accounting
                 (promotion-pipeline/validate-extension-publication-accounting
                  reviews prior-memories (:snapshot/memories snapshot))
-                body {:receipt/type :guide-promotion
+                certification
+                (when (vector? dispositions)
+                  (promotion-pipeline/validate-certified-promotion-pass
+                   dispositions snapshot (:path published) current))
+                body (cond-> {:receipt/type :guide-promotion
                       :receipt/frame-id (:frame-id action)
                       :receipt/problem-id (:problem-id action)
                       :receipt/intervention-ordinal ordinal
                       :receipt/prior-snapshot prior
+                      :receipt/dispositions (or dispositions [])
                       :receipt/promotion-reviews reviews
                       :receipt/snapshot-id (:snapshot/id snapshot)
                       :receipt/snapshot-digest (:snapshot/digest snapshot)
@@ -1033,8 +1061,12 @@
                       :receipt/reviewed-memory-ids
                       (mapv :memory-id (:snapshot/memories snapshot))
                       :receipt/independent-review? (not= (:depositor deposit)
-                                                         reviewer)}]
+                                                         reviewer)}
+                       certification
+                       (assoc :receipt/promotion-pass-witness
+                              (:witness certification)))]
             (cond
+              (and certification (not (:ok certification))) certification
               (not (:ok accounting)) accounting
               (not (:receipt/independent-review? body))
               {:ok false :error/code :guide-promotion-reviewer-is-depositor}
@@ -1057,12 +1089,20 @@
             :control-root (str *control-root*)
             :deposit-request deposit-request
             :reviewer-request (promotion-review-request promotion-inputs)
+            :promotion-policy (:generated/promotion-policy
+                               (:contract phase-inputs))
+            :contract-digest (:generated/contract-digest
+                              (:contract phase-inputs))
             :publish-fn #(publish-promotion! phase-inputs %)})
           (live-promotion/run-live!
            {:state-path (:state-path phase-inputs)
             :control-root (str *control-root*)
             :deposit-request deposit-request
             :reviewer-request (promotion-review-request promotion-inputs)
+            :promotion-policy (:generated/promotion-policy
+                               (:contract phase-inputs))
+            :contract-digest (:generated/contract-digest
+                              (:contract phase-inputs))
             :publish-fn #(publish-zai-scribe-promotion! phase-inputs %)}))
          )
 
@@ -1077,6 +1117,10 @@
                       :control-root (str *control-root*)
                       :deposit-request (:request phase-inputs)
                       :reviewer-request (promotion-review-request phase-inputs)
+                      :promotion-policy (:generated/promotion-policy
+                                         (:contract phase-inputs))
+                      :contract-digest (:generated/contract-digest
+                                        (:contract phase-inputs))
                       :publish-fn (fn [published]
                                     (publish-guide-promotion! phase-inputs
                                                               published))})})))
@@ -1630,7 +1674,15 @@
                                                    (:frame/id frame)
                                                    :scribe-reduce)))
                                             :result driven}))
-                                        driven))))]
+                                        (if (= :promotion-apparatus-repair-exhausted
+                                               (:error/code driven))
+                                          (with-campaign frame-config
+                                            (queued-frame-adapter/promotion-apparatus-park
+                                             {:frame frame
+                                              :ledger (ledger/read-ledger
+                                                       (control-path ledger-path))
+                                              :result driven}))
+                                          driven)))))]
                             (if-not (and (:ok result)
                                          (= :frame-complete (:status result)))
                               result

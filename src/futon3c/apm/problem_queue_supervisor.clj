@@ -26,6 +26,14 @@
           (pos-int? (:deposit/attempts park))
           (seq (:deposit/findings park)))
 
+     :promotion-apparatus-frame-park
+     (and (= :promotion (:phase park))
+          (= :promotion-apparatus-repair-exhausted (:error/code park))
+          (string? (:promotion/state-path park))
+          (keyword? (:repair/kind park))
+          (pos-int? (:repair/attempts park))
+          (seq (:promotion/findings park)))
+
      false)))
 
 (defn queue-plan [problems]

@@ -110,6 +110,43 @@
 
 (def required-promotion-policy
   {:distinct-promotion-proctor true
+   :review-verdicts
+   {:judgements ["approve" "reassign" "reject"]
+    :apparatus-failures ["cannot-judge"]}
+   :promotion-pass-resolution-required true
+   :exact-pattern-set-required-for ["approve"]
+   :nonapproval-pattern-actions
+   {:reassign "replace"
+    :reject "retain-proposed"}
+   :completed-pass-required true
+   :completed-pass-candidate-accounting "exactly-once"
+   :materialized-artifact-required-fields
+   ["artifact-id" "content-digest" "persisted-content-digest"
+    "read-back-content-digest" "persistence-receipt-id"]
+   :materialized-artifact-digests-must-match true
+   :review-evidence-materialized-before-disposition true
+   :nonpublishing-dispositions ["reject"]
+   :projection-failure-action
+   "hold-at-review-awaiting-apparatus-repair"
+   :projection-repair-reuses-persisted-judgement true
+   :projection-repair-redispatches-reviewer false
+   :projection-repair-exhaustion-action
+   "park-frame-and-continue-queue"
+   :promotion-successor-validation
+   "before-snapshot-publication-and-certification"
+   :certified-pass-snapshot-materialized true
+   :certified-pass-published-candidates-exact true
+   :review-dispatch-resolution-required true
+   :review-dispatch-candidate-required
+   ["persisted" "fetchable" "parent-pattern-fetchable"]
+   :review-dispatch-reviewer-inputs-required
+   ["base-problem-blob-fetchable" "solver-final-head-fetchable"
+    "evidence-job-traces-fetchable"]
+   :unresolved-review-dispatch-action
+   "hold-at-deposit-awaiting-apparatus-repair"
+   :unresolved-review-resume-action
+   "append-only-successor-after-contract-change"
+   :resolved-judgements-immutable-on-resume true
    :base-problem-blob-required true
    :problem-path-required true
    :solver-final-head-required true
@@ -239,7 +276,7 @@
     "receipt/input-receipt-ids" "receipt/lanes" "receipt/dispositions"
     "receipt/promotion-reviews" "receipt/snapshot-id" "receipt/snapshot-digest"
     "receipt/snapshot-path" "receipt/reviewed-memory-ids"
-    "receipt/independent-review?"]
+    "receipt/independent-review?" "receipt/promotion-pass-witness"]
    :student-attempt
    ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
     "receipt/attempt-ordinal" "receipt/fresh-session-id" "receipt/job-id"
@@ -263,7 +300,7 @@
    :scribe-reduce
    ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
     "receipt/input-receipt-ids" "receipt/lanes" "receipt/dispositions"
-    "receipt/promotion-reviews"]
+    "receipt/promotion-reviews" "receipt/promotion-pass-witness"]
    :frame-close
    ["receipt/id" "receipt/type" "receipt/frame-id" "receipt/problem-id"
     "receipt/input-receipt-ids" "receipt/trace-id" "receipt/result"

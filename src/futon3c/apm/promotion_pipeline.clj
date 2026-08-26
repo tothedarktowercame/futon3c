@@ -138,6 +138,120 @@
   (and (contains? #{:approve :reassign} (:verdict review))
        (not= false (:projection/valid? review))))
 
+(defn- materialized? [artifact]
+  (and (map? artifact)
+       (every? #(and (string? %) (not (str/blank? %)))
+               ((juxt :artifact-id :content-digest
+                      :persisted-content-digest :read-back-content-digest
+                      :persistence-receipt-id) artifact))
+       (= (:content-digest artifact) (:persisted-content-digest artifact)
+          (:read-back-content-digest artifact))))
+
+(defn- exact-patterns? [expected actual]
+  (and (= (count expected) (count actual))
+       (= (set expected) (set actual))))
+
+(defn- disposition-finding [candidate review]
+  (let [projection-invalid? (= false (:projection/valid? review))
+        verdict (:verdict review)
+        status (:attachment-status review)]
+    (cond
+      (not (materialized? (:materialization candidate)))
+      :candidate-not-materialized
+      (not (materialized? (:review-materialization review)))
+      :review-evidence-not-materialized
+      (not (seq (:pattern-ids review)))
+      :review-patterns-missing
+      projection-invalid?
+      :promotion-review-projection-failed
+      (= :cannot-judge verdict) :promotion-pass-unresolved
+      (= :approve verdict)
+      (cond
+        (not= :reviewed status) :approved-attachment-not-reviewed
+        (not (exact-patterns? (:pattern-ids candidate)
+                              (:pattern-ids review)))
+        :approved-patterns-mismatch
+        :else nil)
+      (= :reassign verdict)
+      (when-not (= :reviewed status) :reassigned-attachment-not-reviewed)
+      (= :reject verdict)
+      (when-not (= :proposed status) :rejected-attachment-not-proposed)
+      :else :promotion-disposition-verdict-invalid)))
+
+(defn validate-complete-dispositions
+  "Require one materialized, persisted disposition for every dispatched
+  candidate before snapshot publication. Projection failure and cannot-judge
+  are apparatus holds, never candidate dispositions."
+  [candidates reviews]
+  (let [candidate-ids (mapv :memory-id candidates)
+        review-ids (mapv :memory-id reviews)
+        by-id (into {} (map (juxt :memory-id identity)) reviews)
+        accounting? (and (= (count candidate-ids) (count (distinct candidate-ids)))
+                         (= (count review-ids) (count (distinct review-ids)))
+                         (= (set candidate-ids) (set review-ids)))
+        findings
+        (cond-> []
+          (not accounting?)
+          (conj {:finding :promotion-disposition-accounting-invalid
+                 :candidate-ids candidate-ids :review-ids review-ids})
+          accounting?
+          (into (keep (fn [candidate]
+                        (let [review (by-id (:memory-id candidate))]
+                          (when-let [finding
+                                     (disposition-finding candidate review)]
+                            {:finding finding
+                             :memory-id (:memory-id candidate)})))
+                      candidates)))]
+    (if (seq findings)
+      {:ok false :error/code :promotion-pass-incomplete
+       :findings findings}
+      {:ok true
+       :dispositions
+       (mapv (fn [candidate]
+               (let [review (by-id (:memory-id candidate))]
+                 {:memory-id (:memory-id candidate)
+                  :verdict (:verdict review)
+                  :candidate-materialization (:materialization candidate)
+                  :review-materialization (:review-materialization review)
+                  :attachment-status (:attachment-status review)
+                  :pattern-ids (:pattern-ids review)
+                  :publishing? (publishing-review? review)}))
+             candidates)})))
+
+(defn validate-certified-promotion-pass
+  "Bind a completed review pass to the freshly read-back snapshot before the
+  phase receipt can certify it.  PRIOR snapshot members are excluded by the
+  caller; PUBLISHED-CANDIDATES is exactly this pass's contribution."
+  [dispositions snapshot snapshot-path published-candidates]
+  (let [expected-ids (->> dispositions
+                          (filter :publishing?)
+                          (mapv :memory-id))
+        published-ids (mapv :memory-id published-candidates)
+        snapshot-id (:snapshot/id snapshot)
+        snapshot-digest (:snapshot/digest snapshot)
+        snapshot-materialization
+        {:artifact-id snapshot-id
+         :content-digest snapshot-digest
+         :persisted-content-digest snapshot-digest
+         :read-back-content-digest snapshot-digest
+         :persistence-receipt-id snapshot-path}
+        findings
+        (cond-> []
+          (not (materialized? snapshot-materialization))
+          (conj :promotion-snapshot-not-materialized)
+          (not= expected-ids published-ids)
+          (conj :promotion-published-candidates-not-exact)
+          (not= (count published-ids) (count (distinct published-ids)))
+          (conj :promotion-published-candidate-duplicate))]
+    (if (seq findings)
+      {:ok false :error/code :certified-promotion-pass-invalid
+       :findings findings :expected-memory-ids expected-ids
+       :published-memory-ids published-ids}
+      {:ok true
+       :witness {:snapshot-materialization snapshot-materialization
+                 :published-memory-ids published-ids
+                 :dispositions dispositions}})))
+
 (defn validate-review [deposit reviewer reviews]
   (validate-review* (:candidates (validate-deposit deposit))
                     (:depositor deposit) reviewer reviews))

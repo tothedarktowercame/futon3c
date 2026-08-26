@@ -116,6 +116,29 @@
       (is (= [park] (:parked @state)))
       (is (empty? (filter #(= :retire (first %)) @calls))))))
 
+(deftest promotion-apparatus-park-preserves-record-and-prepares-successor
+  (let [{:keys [providers state calls]} (harness)
+        park {:state/type :promotion-apparatus-frame-park
+              :frame/id "q1" :problem/id "p1" :phase :promotion
+              :promotion/state-path "/campaign/q1/live/promote-solver.edn"
+              :last-valid-receipt/id "solver-receipt"
+              :error/code :promotion-apparatus-repair-exhausted
+              :repair/kind :review-projection :repair/attempts 1
+              :promotion/findings [{:failure :edge-write-failed}]
+              :persisted-review-result
+              {:review-job "terminal-review"
+               :reviews [{:memory-id "m" :verdict :approve}]}
+              :residual "edge write failed"}]
+    (sut/tick! providers)
+    (let [result (sut/tick!
+                  (assoc providers :frame-tick-fn
+                         (constantly {:ok true :status :frame-parked
+                                      :frame/park park})))]
+      (is (= :frame-prepared (:status result)))
+      (is (= "p2" (get-in @state [:active :frame :problem/id])))
+      (is (= [park] (:parked @state)))
+      (is (empty? (filter #(= :retire (first %)) @calls))))))
+
 (deftest pause-after-active-retires-current-frame-without-minting-successor
   (let [{:keys [providers state calls]} (harness)]
     (is (= :frame-prepared (:status (sut/tick! providers))))

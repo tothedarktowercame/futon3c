@@ -6,6 +6,11 @@
             [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.typed-role-submission :as submission]))
 
+(defn materialization [id digest]
+  {:artifact-id id :content-digest digest
+   :persisted-content-digest digest :read-back-content-digest digest
+   :persistence-receipt-id id})
+
 (deftest dispatch-failure-retains-the-failing-boundary
   (with-redefs [job-port/announce!
                 (constantly {:ok false :error/code :announcement-refused})
@@ -581,3 +586,187 @@
     (is (= "controller-review"
            (get-in (second @calls)
                    [1 :candidates 0 :review-evidence-id])))))
+
+(deftest generated-completed-pass-policy-holds-before-publication
+  (let [materialization
+        (fn [id digest]
+          {:artifact-id id :content-digest digest
+           :persisted-content-digest digest :read-back-content-digest digest
+           :persistence-receipt-id id})
+        candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :cannot-judge
+                :reason "apparatus unavailable" :residual "repair apparatus"
+                :pattern-ids ["p"]}
+        saved (atom nil)
+        published? (atom false)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :independent-review
+                  :deposit {:depositor "scribe" :candidates [candidate]}
+                  :candidates [candidate] :job "review-job"}
+          :promotion-policy {:completed-pass-required true}
+          :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                :reviews [review]})
+          :persist-reviews-fn
+          (fn [_]
+            {:ok true
+             :reviews [(assoc review
+                              :review-evidence-id "review"
+                              :attachment-status :proposed
+                              :review-materialization
+                              (materialization "review" "rd"))]})
+          :publish-fn (fn [_] (reset! published? true))
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (:ok result))
+    (is (= :awaiting-apparatus-repair (:status result)))
+    (is (= :awaiting-apparatus-repair (:stage @saved)))
+    (is (false? @published?))))
+
+(deftest projection-failure-holds-with-persisted-judgement-and-never-publishes
+  (let [materialization
+        (fn [id digest]
+          {:artifact-id id :content-digest digest
+           :persisted-content-digest digest :read-back-content-digest digest
+           :persistence-receipt-id id})
+        candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        returned {:memory-id "m" :reviewer "proctor" :verdict :approve
+                  :review-evidence-id "reported-review"
+                  :attachment-status :reviewed :pattern-ids ["p"]
+                  :reason "appears coherent" :residual "projection failed"}
+        persisted (assoc returned
+                         :review-evidence-id "review"
+                         :attachment-status :proposed
+                         :projection/valid? false
+                         :projection/finding {:failure :edge-write-failed}
+                         :review-materialization
+                         (materialization "review" "rd"))
+        publication (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :independent-review
+                  :deposit {:depositor "scribe" :candidates [candidate]}
+                  :candidates [candidate] :job "review-job"}
+          :promotion-policy {:completed-pass-required true}
+          :contract-digest "contract-v1"
+          :review-fn (fn [_ _] {:ok true :reviewer "proctor"
+                                :reviews [returned]})
+          :persist-reviews-fn
+          (fn [_] {:ok false
+                   :error/code :promotion-review-projection-failed
+                   :review-job "review-job"
+                   :reviews [persisted]
+                   :persisted [{:review-evidence-id "review"}]
+                   :findings [{:memory-id "m"
+                               :failure :promotion-review-projection-failed}]})
+          :publish-fn (fn [value]
+                        (reset! publication value)
+                        {:ok true :receipt {:receipt/id "done"}})
+          :persist-fn (fn [_] {:ok true})})]
+    (is (:ok result))
+    (is (= :awaiting-apparatus-repair (:status result)))
+    (is (nil? @publication))
+    (is (= [persisted]
+           (get-in result [:state :persisted-review-result :reviews])))
+    (is (= [returned]
+           (get-in result
+                   [:state :persisted-review-result :returned-reviews])))
+    (is (= :review-projection (get-in result [:state :repair/kind])))))
+
+(deftest same-contract-projection-repair-reuses-terminal-review-job
+  (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "merit rejection" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe" :candidates [candidate]}
+                    :candidates [candidate] :job "terminal-review"}
+        calls (atom [])
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                  :contract-digest "contract-v1" :last-valid-state last-valid
+                  :repair/kind :review-projection :repair/attempts 0
+                  :repair/max-attempts 1}
+          :promotion-policy {:completed-pass-required true}
+          :contract-digest "contract-v1"
+          :review-fn (fn [job _]
+                       (swap! calls conj job)
+                       {:ok true :reviewer "proctor" :reviews [review]})
+          :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+          :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+          :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))
+    (is (= ["terminal-review"] @calls))))
+
+(deftest exhausted-projection-repair-does-not-advance-promotion
+  (let [state {:state/type :promotion :stage :awaiting-apparatus-repair
+               :contract-digest "contract-v1"
+               :last-valid-state {:stage :independent-review}
+               :repair/kind :review-projection :repair/attempts 1
+               :repair/max-attempts 1 :findings [{:failure :edge-write}]}
+        result (sut/drive! {:state state :contract-digest "contract-v1"})]
+    (is (false? (:ok result)))
+    (is (= :promotion-apparatus-repair-exhausted (:error/code result)))
+    (is (= state (:state result)))))
+
+(deftest apparatus-hold-revalidates-persisted-review-after-contract-change
+  (let [materialization
+        (fn [id digest]
+          {:artifact-id id :content-digest digest
+           :persisted-content-digest digest :read-back-content-digest digest
+           :persistence-receipt-id id})
+        candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]
+                   :source-attempts [1]
+                   :materialization (materialization "m" "d")}
+        review {:memory-id "m" :reviewer "proctor" :verdict :reject
+                :review-evidence-id "review" :attachment-status :proposed
+                :pattern-ids ["p"] :reason "merit rejection" :residual "none"
+                :review-materialization (materialization "review" "rd")}
+        last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe" :candidates [candidate]}
+                    :candidates [candidate] :job "completed-review"}
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                  :contract-digest "contract-v1" :last-valid-state last-valid}
+          :promotion-policy {:completed-pass-required true}
+          :contract-digest "contract-v2"
+          :review-fn (fn [job _]
+                       (is (= "completed-review" job))
+                       {:ok true :reviewer "proctor" :reviews [review]})
+          :persist-reviews-fn (fn [_] {:ok true :reviews [review]})
+          :publish-fn (fn [_] {:ok true :receipt {:receipt/id "done"}})
+          :persist-fn (fn [_] {:ok true})})]
+    (is (= :certified (:status result)))))
+
+(deftest unresolved-review-contract-change-dispatches-append-only-successor
+  (let [last-valid {:state/type :promotion :stage :independent-review
+                    :deposit {:depositor "scribe"}
+                    :candidates [{:memory-id "m"}]
+                    :job "prior-terminal-review"}
+        saved (atom nil)
+        result
+        (sut/drive!
+         {:state {:state/type :promotion :stage :awaiting-apparatus-repair
+                  :repair/kind :unresolved-review
+                  :contract-digest "contract-v1"
+                  :last-valid-state last-valid}
+          :contract-digest "contract-v2"
+          :review-fn
+          (fn [candidates predecessor attempt]
+            (is (= [{:memory-id "m"}] candidates))
+            (is (= "prior-terminal-review" predecessor))
+            (is (= 1 attempt))
+            {:ok true :job "successor-review"})
+          :persist-fn #(do (reset! saved %) {:ok true})})]
+    (is (= :awaiting-terminal (:status result)))
+    (is (= "successor-review" (:job-id result)))
+    (is (= "prior-terminal-review" (:predecessor-job-id @saved)))
+    (is (= 1 (:review-successor-attempt @saved)))))

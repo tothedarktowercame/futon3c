@@ -176,6 +176,27 @@
     (is (some #{:generated-contract-promotion-policy-invalid}
               (:findings result)))))
 
+(deftest completed-promotion-pass-policy-mutations-are-killed
+  (let [contract (:contract (sut/read-contract generated-path))]
+    (doseq [[path value]
+            [[[:promotion-policy :completed-pass-required] false]
+             [[:promotion-policy :completed-pass-candidate-accounting]
+              "at-least-once"]
+             [[:promotion-policy :materialized-artifact-digests-must-match]
+              false]
+             [[:promotion-policy :promotion-successor-validation]
+              "after-certification"]
+             [[:promotion-policy :projection-failure-action]
+              "complete-as-nonpublishing"]
+             [[:promotion-policy :projection-repair-redispatches-reviewer]
+              true]
+             [[:promotion-policy :projection-repair-exhaustion-action]
+              "fail-regulator"]]]
+      (let [result (sut/validate (assoc-in contract path value))]
+        (is (false? (:ok result)) (pr-str path))
+        (is (some #{:generated-contract-promotion-policy-invalid}
+                  (:findings result)) (pr-str path))))))
+
 (deftest terminal-and-analyst-policy-mutations-are-killed
   (let [contract (:contract (sut/read-contract generated-path))]
     (is (some #{:generated-contract-terminal-policy-invalid}

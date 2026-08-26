@@ -10,12 +10,11 @@
             [futon3c.substrate.client :as substrate])
   (:import [java.time Instant]))
 
-(def ^:private attachment-verdicts #{:approve :reassign :reject :challenge})
+(def ^:private attachment-verdicts #{:approve :reassign :reject})
 
 (defn- attachment-status [verdict]
   (case verdict
     (:approve :reassign) :reviewed
-    :challenge :challenged
     :reject :proposed
     nil))
 
@@ -119,6 +118,22 @@
 (defn- exact-entry? [expected observed]
   (= (comparable-entry expected) (comparable-entry observed)))
 
+(defn- materialization-witness [review observed]
+  (let [digest (machine/ledger-digest [(:evidence/body observed)])]
+    {:artifact-id (:review-evidence-id review)
+     :content-digest digest
+     :persisted-content-digest digest
+     :read-back-content-digest digest
+     :persistence-receipt-id (:evidence/id observed)}))
+
+(defn- observed-attachment-status [fetch-hyperedges memory-id]
+  (some->> (fetch-hyperedges memory-id)
+           (filter #(= :memory/assert (:hx/type %)))
+           (filter #(= :current (get-in % [:hx/props :state])))
+           first
+           :hx/props
+           :attachment-status))
+
 (defn persist!
   "Persist every attachment-changing review exactly as returned, then apply
   that persisted evidence through memory-lifecycle."
@@ -210,21 +225,38 @@
                           :finding (ex-data e)}))]
                  (if (:ok result)
                    (recur (next remaining)
-                          (conj effective review)
+                          (conj effective
+                                (assoc review :review-materialization
+                                       (materialization-witness review observed)))
                           (conj persisted result)
                           projection-findings)
                    (let [finding (or (:finding result) result)
-                         nonpublishing
+                         failed-review
                          (assoc review
+                                :attachment-status
+                                (or (observed-attachment-status
+                                     fetch-hyperedges (:memory-id review))
+                                    :proposed)
+                                :review-materialization
+                                (materialization-witness review observed)
                                 :projection/valid? false
                                 :projection/finding finding)]
-                     (recur (next remaining)
-                            (conj effective nonpublishing)
-                            persisted
-                            (conj projection-findings
-                                  {:memory-id (:memory-id review)
-                                   :failure :promotion-review-projection-invalid
-                                   :finding finding})))))))
+                     {:ok false
+                      :error/code :promotion-review-projection-failed
+                      :review-job review-job
+                      :reviews
+                      (into (filterv #(not (contains? attachment-verdicts
+                                                     (:verdict %)))
+                                     reviews)
+                            (conj effective failed-review))
+                      :persisted persisted
+                      :findings
+                      (conj projection-findings
+                            {:memory-id (:memory-id review)
+                             :review-evidence-id (:review-evidence-id review)
+                             :operation :attachment-projection
+                             :failure :promotion-review-projection-failed
+                             :finding finding})})))))
              {:ok true
               :reviews (into (filterv #(not (contains? attachment-verdicts
                                                        (:verdict %)))

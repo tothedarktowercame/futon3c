@@ -46,6 +46,12 @@
     (is (= "scribe" (get-in result [:deposit :reported-depositor])))
     (is (= (machine/ledger-digest [(:evidence/body entry)])
            (:content-digest persisted)))
+    (is (= {:artifact-id (:memory-id persisted)
+            :content-digest (:content-digest persisted)
+            :persisted-content-digest (:content-digest persisted)
+            :read-back-content-digest (:content-digest persisted)
+            :persistence-receipt-id (:memory-id persisted)}
+           (:materialization persisted)))
     (is (sut/visible? persisted #(get @entries %)
                       (fn [end]
                         (filterv #(some #{end} (:hx/endpoints %))

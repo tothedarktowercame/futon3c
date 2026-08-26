@@ -77,6 +77,27 @@
            (:promotion/state-path park)))
     (is (= 3 (:deposit/attempts park)))))
 
+(deftest exhausted-promotion-repair-parks-with-persisted-review-intact
+  (let [review-result {:review-job "terminal-review"
+                       :reviews [{:memory-id "m" :verdict :approve}]}
+        result
+        (sut/promotion-apparatus-park
+         {:frame frame
+          :ledger {:events [{:event/body
+                             {:certificate {:receipt/id "last-valid"}}}]}
+          :result {:ok false
+                   :error/code :promotion-apparatus-repair-exhausted
+                   :promotion/state-path "/campaign/f30/live/promote-solver.edn"
+                   :repair/kind :review-projection :repair/attempts 1
+                   :findings [{:failure :edge-write-failed}]
+                   :state {:persisted-review-result review-result}}})
+        park (:frame/park result)]
+    (is (= :frame-parked (:status result)))
+    (is (= :promotion-apparatus-frame-park (:state/type park)))
+    (is (= "last-valid" (:last-valid-receipt/id park)))
+    (is (= review-result (:persisted-review-result park)))
+    (is (= :review-projection (:repair/kind park)))))
+
 (deftest fresh-one-off-manifest-pins-both-scribe-cards
   (let [manifest (sut/one-off-manifest
                   {:frame frame :apparatus-repository "."

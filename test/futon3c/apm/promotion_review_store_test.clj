@@ -1,6 +1,5 @@
 (ns futon3c.apm.promotion-review-store-test
   (:require [clojure.test :refer [deftest is]]
-            [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.promotion-review-store :as sut]
             [futon3c.social.shapes :as shapes]))
 
@@ -67,6 +66,13 @@
            (get-in evidence [:evidence/body :review/residual])))
     (is (= [:memory :memory/attachment-review :apm/promotion-review]
            (:evidence/tags evidence)))
+    (is (= canonical-review-id
+           (get-in persisted-review
+                   [:review-materialization :persistence-receipt-id])))
+    (is (= (get-in persisted-review
+                   [:review-materialization :content-digest])
+           (get-in persisted-review
+                   [:review-materialization :read-back-content-digest])))
     (is (shapes/valid? shapes/EvidenceEntry evidence))
     (is (= :reviewed (get-in edge [:hx/props :attachment-status])))
     (is (= :reassign (get-in edge [:hx/props :review :verdict])))
@@ -196,7 +202,7 @@
     (is (:ok result) result)
     (is (= :reject (get-in @edges [0 :hx/props :review :verdict])))))
 
-(deftest invalid-candidate-projection-is-recorded-and-does-not-publish
+(deftest invalid-candidate-projection-is-an-apparatus-failure
   (let [memory-id "e-memory"
         attached-pattern "math-formalization/attached"
         claimed-pattern "math-formalization/claimed"
@@ -232,14 +238,12 @@
                               (if (some #{end} (:hx/endpoints edge)) [edge] []))
           :post-hyperedge (fn [_ _]
                             (throw (ex-info "must not publish" {})))})
-        review (first (:reviews result))
-        checked (pipeline/validate-review*
-                 [{:memory-id memory-id :pattern-ids [attached-pattern]}]
-                 "scribe" "proctor" (:reviews result))]
-    (is (:ok result) result)
+        review (first (:reviews result))]
+    (is (false? (:ok result)) result)
+    (is (= :promotion-review-projection-failed (:error/code result)))
     (is (= false (:projection/valid? review)))
     (is (= :approve (:verdict review)))
-    (is (= :promotion-review-projection-invalid
+    (is (= :promotion-review-projection-failed
            (get-in result [:findings 0 :failure])))
-    (is (:ok checked) checked)
-    (is (empty? (:candidates checked)))))
+    (is (string? (:review-evidence-id review)))
+    (is (map? (:review-materialization review)))))

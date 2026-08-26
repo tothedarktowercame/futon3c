@@ -188,7 +188,7 @@
 
 (defn run-live!
   [{:keys [state-path agency-base control-root deposit-request reviewer-request
-           publish-fn]
+           publish-fn promotion-policy contract-digest]
     :or {agency-base "http://localhost:7070"}}]
   (let [persist-fn #(runtime/atomic-persist! state-path %)
         stored-state (runtime/read-state state-path)
@@ -325,15 +325,19 @@
     ;; Upgrade legacy promotion envelopes before observing their terminal job.
     ;; This is a lossless durability migration: the job identity is unchanged.
     (when (not= stored-state state) (persist-fn state))
-    (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
-             :deposit-request deposit-request
-             :reviewer-request reviewer-request
-             :persist-candidates-fn #(candidate-store/persist!
-                                      % deposit-request)
-             :persist-reviews-fn review-store/persist!
-             :candidate-visible-fn candidate-store/visible?
-             :publish-fn publish-fn
-             :persist-fn persist-fn})))
+    (assoc
+     (drive! {:state state :deposit-fn deposit-fn :review-fn review-fn
+              :deposit-request deposit-request
+              :reviewer-request reviewer-request
+              :persist-candidates-fn #(candidate-store/persist!
+                                       % deposit-request)
+              :persist-reviews-fn review-store/persist!
+              :candidate-visible-fn candidate-store/visible?
+              :publish-fn publish-fn
+              :promotion-policy promotion-policy
+              :contract-digest contract-digest
+              :persist-fn persist-fn})
+     :promotion/state-path (str state-path))))
 
 (defn- retry-deposit!
   [state failure deposit-fn persist-fn]
@@ -382,10 +386,88 @@
              :retry/reason (or (:error/code failure) :deposit-invalid)
              :state next-state}))))))
 
+(defn- persist-mechanical-reviews!
+  [deposit reviews persist-reviews-fn]
+  (if (empty? reviews)
+    {:ok true :reviews []}
+    (let [job-id (str "controller-mechanical-review-"
+                      (subs (machine/ledger-digest
+                             [{:deposit-candidates
+                               (mapv :memory-id (:candidates deposit))
+                               :reviews reviews}]) 0 32))]
+      (persist-reviews-fn
+       {:deposit deposit
+        :reviewer pipeline/mechanical-reviewer
+        :reviews reviews
+        :review-job job-id}))))
+
+(defn- hold-incomplete-pass!
+  [state checked contract-digest persist-fn]
+  (let [projection-failure?
+        (or (= :promotion-review-projection-failed (:error/code checked))
+            (some #(= :promotion-review-projection-failed (:finding %))
+                  (:findings checked)))
+        unresolved-review?
+        (some #(= :promotion-pass-unresolved (:finding %))
+              (:findings checked))
+        repair-kind (or (:repair/kind checked)
+                        (cond
+                          projection-failure? :review-projection
+                          unresolved-review? :unresolved-review
+                          :else :promotion-pass))
+        hold {:state/type :promotion
+              :stage :awaiting-apparatus-repair
+              :last-valid-state state
+              :contract-digest contract-digest
+              :error/code (:error/code checked)
+              :findings (:findings checked)
+              :persisted-review-result
+              (select-keys checked
+                           [:review-job :returned-reviews :reviews :persisted])
+              :repair/kind repair-kind
+              :repair/attempts (or (:projection-repair-attempt state) 0)
+              :repair/max-attempts 1}]
+    (persist-fn hold)
+    {:ok true :status :awaiting-apparatus-repair
+     :state hold :findings (:findings checked)}))
+
+(defn- publish-completed-pass!
+  [state action promotion-policy contract-digest publish-fn persist-fn]
+  (let [checked (if (:completed-pass-required promotion-policy)
+                  (pipeline/validate-complete-dispositions
+                   (:dispatched-candidates action) (:reviews action))
+                  {:ok true :dispositions []})]
+    (if-not (:ok checked)
+      (hold-incomplete-pass!
+       state
+       (assoc checked :review-job (:job state) :reviews (:reviews action))
+       contract-digest persist-fn)
+      (let [published-action
+            (cond-> action
+              (:completed-pass-required promotion-policy)
+              (assoc :dispositions (:dispositions checked)))
+            published (publish-fn published-action)]
+        (if-not (:ok published)
+          (hold-incomplete-pass!
+           state
+           {:ok false :error/code :promotion-publication-failed
+            :repair/kind :promotion-publication
+            :review-job (:job state)
+            :reviews (:reviews action)
+            :findings [published]}
+           contract-digest persist-fn)
+          (let [done {:state/type :promotion-certified
+                      :receipt (:receipt published)}]
+            (persist-fn done)
+            {:ok true :status :certified :state done
+             :certificate (:receipt published)}))))))
+
 (defn drive!
   [{:keys [state deposit-fn review-fn publish-fn persist-fn
            prepare-patterns-fn persist-candidates-fn candidate-visible-fn
-           persist-reviews-fn deposit-request reviewer-request]
+           persist-reviews-fn deposit-request reviewer-request
+           promotion-policy contract-digest]
+    :as inputs
     :or {prepare-patterns-fn coined-pattern/publish!
          persist-candidates-fn
          (fn [deposit] {:ok true :deposit deposit
@@ -462,22 +544,28 @@
                           (if (seq candidates)
                             {:ok true :status :awaiting-terminal
                              :job-id (:job review) :state s}
-                            (let [published
-                                  (publish-fn
-                                   {:candidates []
-                                    :deposit deposit
-                                    :reviewer pipeline/mechanical-reviewer
-                                    :reviews mechanical})]
-                              (if-not (:ok published)
-                                published
-                                (let [done
-                                      {:state/type :promotion-certified
-                                       :receipt (:receipt published)}]
-                                  (persist-fn done)
-                                  {:ok true :status :certified
-                                   :state done
-                                   :certificate
-                                   (:receipt published)})))))))))))))))
+                            (let [persisted-mechanical
+                                  (if (:completed-pass-required promotion-policy)
+                                    (persist-mechanical-reviews!
+                                     deposit mechanical persist-reviews-fn)
+                                    {:ok true :reviews mechanical})]
+                              (if-not (:ok persisted-mechanical)
+                                (hold-incomplete-pass!
+                                 s (assoc persisted-mechanical
+                                          :findings [persisted-mechanical])
+                                 contract-digest persist-fn)
+                                (publish-completed-pass!
+                                 s
+                                 {:candidates []
+                                  :dispatched-candidates
+                                  (filterv
+                                   (set (map :memory-id mechanical))
+                                   (:candidates deposit))
+                                  :deposit deposit
+                                  :reviewer pipeline/mechanical-reviewer
+                                  :reviews (:reviews persisted-mechanical)}
+                                 promotion-policy contract-digest publish-fn
+                                 persist-fn)))))))))))))))
 
     ;; Entry for candidates gated elsewhere (a Guide's store-mode deposit):
     ;; no Scribe deposit job, straight to the independent reviewer.
@@ -499,17 +587,28 @@
           (if (seq candidates)
             {:ok true :status :awaiting-terminal
              :job-id (:job review) :state s}
-            (let [published (publish-fn
-                             {:candidates []
-                              :deposit (:deposit state)
-                              :reviewer pipeline/mechanical-reviewer
-                              :reviews mechanical})]
-              (if-not (:ok published) published
-                (let [done {:state/type :promotion-certified
-                            :receipt (:receipt published)}]
-                  (persist-fn done)
-                  {:ok true :status :certified :state done
-                   :certificate (:receipt published)})))))))))
+            (let [persisted-mechanical
+                  (if (:completed-pass-required promotion-policy)
+                    (persist-mechanical-reviews!
+                     (:deposit state) mechanical persist-reviews-fn)
+                    {:ok true :reviews mechanical})]
+              (if-not (:ok persisted-mechanical)
+                (hold-incomplete-pass!
+                 s (assoc persisted-mechanical
+                          :findings [persisted-mechanical])
+                 contract-digest persist-fn)
+                (publish-completed-pass!
+                 s
+                 {:candidates []
+                  :dispatched-candidates
+                  (filterv
+                   (set (map :memory-id mechanical))
+                   (get-in state [:deposit :candidates]))
+                  :deposit (:deposit state)
+                  :reviewer pipeline/mechanical-reviewer
+                  :reviews (:reviews persisted-mechanical)}
+                 promotion-policy contract-digest
+                 publish-fn persist-fn)))))))))
 
     (= :independent-review (:stage state))
     (let [invisible (filterv (complement candidate-visible-fn)
@@ -535,7 +634,11 @@
                            (:depositor (:deposit state))
                            (:reviewer r) (:reviews r))]
               (if-not (:ok checked)
-                checked
+                (if (:completed-pass-required promotion-policy)
+                  (hold-incomplete-pass!
+                   state (assoc checked :error/code :promotion-pass-incomplete)
+                   contract-digest persist-fn)
+                  checked)
                 (let [persisted
                       (persist-reviews-fn
                        {:deposit (:deposit state)
@@ -543,31 +646,109 @@
                         :reviews (:reviews r)
                         :review-job (:job state)})]
                   (if-not (:ok persisted)
-                    persisted
+                    (if (:completed-pass-required promotion-policy)
+                      (hold-incomplete-pass!
+                       state
+                       (cond-> persisted
+                         (empty? (:findings persisted))
+                         (assoc :findings [persisted])
+                         (seq (:reviews r))
+                         (assoc :returned-reviews (:reviews r)))
+                       contract-digest persist-fn)
+                      persisted)
                     (let [persisted-checked
                           (pipeline/validate-review*
                            (:candidates state)
                            (:depositor (:deposit state))
                            (:reviewer r) (:reviews persisted))]
                       (if-not (:ok persisted-checked)
-                        (assoc persisted-checked
-                               :error/code
-                               :persisted-promotion-review-invalid)
-                        (let [published
-                              (publish-fn
-                               {:candidates (:candidates persisted-checked)
-                                :deposit (:deposit state)
-                                :reviewer (:reviewer r)
-                                :reviews
-                                (into (vec (:mechanical-reviews state))
-                                      (:reviews persisted))})]
-                          (if-not (:ok published)
-                            published
-                            (let [s {:state/type :promotion-certified
-                                     :receipt (:receipt published)}]
-                              (persist-fn s)
-                              {:ok true :status :certified :state s
-                               :certificate (:receipt published)})))))))))))))
+                        (if (:completed-pass-required promotion-policy)
+                          (hold-incomplete-pass!
+                           state
+                           (assoc persisted-checked
+                                  :error/code
+                                  :persisted-promotion-review-invalid)
+                           contract-digest persist-fn)
+                          (assoc persisted-checked
+                                 :error/code
+                                 :persisted-promotion-review-invalid))
+                        (let [persisted-mechanical
+                              (if (:completed-pass-required promotion-policy)
+                                (persist-mechanical-reviews!
+                                 (:deposit state) (:mechanical-reviews state)
+                                 persist-reviews-fn)
+                                {:ok true
+                                 :reviews (:mechanical-reviews state)})]
+                          (if-not (:ok persisted-mechanical)
+                            (hold-incomplete-pass!
+                             state
+                             (assoc persisted-mechanical
+                                    :findings [persisted-mechanical])
+                             contract-digest persist-fn)
+                            (publish-completed-pass!
+                             state
+                             {:candidates (:candidates persisted-checked)
+                              :dispatched-candidates
+                              (let [ids (set (map :memory-id
+                                                  (:reviews persisted-mechanical)))]
+                                (into (vec (:candidates state))
+                                      (filter #(contains? ids (:memory-id %))
+                                              (get-in state
+                                                      [:deposit :candidates]))))
+                              :deposit (:deposit state)
+                              :reviewer (:reviewer r)
+                              :reviews
+                              (into (vec (:reviews persisted-mechanical))
+                                    (:reviews persisted))}
+                             promotion-policy contract-digest publish-fn
+                             persist-fn)))))))))))))
+
+    (= :awaiting-apparatus-repair (:stage state))
+    (cond
+      (and (= :unresolved-review (:repair/kind state))
+           (string? contract-digest)
+           (not= contract-digest (:contract-digest state)))
+      (let [prior (:last-valid-state state)
+            successor-attempt (inc (or (:review-successor-attempt prior) 0))
+            successor (review-fn (:candidates prior) (:job prior)
+                                 successor-attempt)]
+        (if-not (:ok successor)
+          successor
+          (let [next-state (assoc prior
+                                  :job (:job successor)
+                                  :ticket {:job-id (:job successor)}
+                                  :predecessor-job-id (:job prior)
+                                  :review-successor-attempt successor-attempt)]
+            (persist-fn next-state)
+            {:ok true :status :awaiting-terminal
+             :job-id (:job successor) :state next-state})))
+
+      (and (string? contract-digest)
+           (not= contract-digest (:contract-digest state)))
+      (drive! (assoc inputs :state
+                     (assoc (:last-valid-state state)
+                            :projection-repair-attempt 0)))
+
+      (and (contains? #{:review-projection :promotion-publication}
+                      (:repair/kind state))
+           (< (:repair/attempts state) (:repair/max-attempts state)))
+      (drive! (assoc inputs :state
+                     (assoc (:last-valid-state state)
+                            :projection-repair-attempt
+                            (inc (:repair/attempts state)))))
+
+      (contains? #{:review-projection :promotion-publication}
+                 (:repair/kind state))
+      {:ok false
+       :error/code :promotion-apparatus-repair-exhausted
+       :state state
+       :repair/kind (:repair/kind state)
+       :repair/attempts (:repair/attempts state)
+       :findings (:findings state)}
+
+      :else
+      {:ok true :status :awaiting-apparatus-repair
+       :state state :findings (:findings state)})
 
     (= :promotion-certified (:state/type state))
     {:ok true :status :certified :state state :certificate (:receipt state)}
