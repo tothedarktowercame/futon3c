@@ -265,6 +265,19 @@ whatever the model says about evidence.
   **with a working instrument attached** — a better-evidenced red than today's,
   and the correct place to stop.
 
+## The outline formalisation
+
+**`mathlib4/DarkTower/WarMachine/GainChain.lean`** (2026-08-26, `d6824aeb` by
+codex-18, reviewed and extended at `159a9c77`). Module 1 stated in Lean: the
+four family predicates `threadedIdentity`, `inhabitedHandle`,
+`durableBeforeFold`, `declaredDomain`, plus `typedAbsence`,
+`dischargedPrecondition`, `domainNotNarrowed` and `gainAdvances`; the chain
+property `gainChainSound`; and `foldCompliant`, which an out-of-domain mission
+must satisfy even though it cannot move the gain. Six theorems named after the
+dated incidents, including a positive witness modelled on the 88 pre-07-08
+outcomes. Standalone — no Mathlib import — `lake env lean` exit 0, zero
+`sorry`. It is an outline: no emitter, no Clojure contract, no mutation tests.
+
 ## Related
 
 - `futon2/holes/NOTE-step9-reachability.md` — slice 1 and the 88 outcomes.
