@@ -5,8 +5,18 @@
   (:import [java.time Instant]))
 
 (def void-classifications
+  "Why a frame is void.
+
+  :statement-refuted was added 2026-08-26 for f45/a96J08, where the Solver
+  DISPROVED the registered target with axiom-clean refutations at two instances
+  and correctly refused to proceed. Neither existing value fits that: the
+  baseline was not known to fail, and nothing about the apparatus was wrong --
+  the mathematics as registered was false. Voiding it under either of the other
+  labels would have recorded the machine's most valuable result of the day as a
+  housekeeping failure."
   {:known-failing-baseline :known-failing-baseline
-   :apparatus-invalidated :apparatus-invalidated})
+   :apparatus-invalidated :apparatus-invalidated
+   :statement-refuted :statement-refuted})
 
 (defn prepare
   [{:keys [projection events]} {:keys [frame-id problem-id expected-version
