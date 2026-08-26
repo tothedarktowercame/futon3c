@@ -22,7 +22,7 @@
                  :workspace-heads {:solver head :student head}})]
     (is (:ok result))
     (is (:ok (terminal/validate-terminal frame (:terminal-receipt result))))
-    (is (= :partial (get-in result [:terminal-receipt :problem/outcome])))
+    (is (= :unsolved (get-in result [:terminal-receipt :problem/outcome])))
     (is (true? (get-in result [:terminal-receipt :retry/same-problem?])))))
 
 (deftest premature-rollover-is-refused
