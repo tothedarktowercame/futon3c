@@ -202,10 +202,15 @@ current_frame = None
 log_q = queue.Queue()
 
 
+WATCHER_EOF = "__watcher_eof__"
+
+
 def reader_thread(proc):
     for line in proc.stdout:
         log_q.put(line.rstrip("\n"))
-    log_q.put(None)
+    # Tagged with the emitting process so a sentinel from a watcher that has
+    # already been stopped or replaced cannot be mistaken for a live crash.
+    log_q.put((WATCHER_EOF, proc))
 
 
 def stop_watch():
@@ -437,11 +442,17 @@ while True:
     try:
         while True:
             line = log_q.get_nowait()
-            if line is None:
+            if isinstance(line, tuple) and line[0] == WATCHER_EOF:
+                if line[1] is not current_proc:
+                    # The watcher that emitted this EOF is no longer the
+                    # installed one: stop_watch() cleared current_proc (a
+                    # deliberate detach at a terminal frame, or the queue
+                    # pausing), or start_watch() has since replaced it. Only a
+                    # sentinel from the *current* watcher means a real crash.
+                    # Restarting on a stale sentinel is how f40 was re-attached
+                    # seconds after it certified.
+                    continue
                 if current_frame in SENTINEL_FRAMES or not current_frame:
-                    # Stale EOF sentinel from a stop_watch() teardown that
-                    # happened before current_frame moved to a placeholder
-                    # (queue paused/complete) -- nothing to restart.
                     continue
                 out(f"frame watcher process for {current_frame} exited; restarting")
                 start_watch(current_frame)
