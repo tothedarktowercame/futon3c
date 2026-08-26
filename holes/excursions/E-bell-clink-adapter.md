@@ -220,7 +220,29 @@ bell.
   with the age climbing — the alarm correctly describing an unread bell.
 - `clink-inbox.py list` and `read` worked against the real file.
 
-**What did not complete: the ack.** `POST …/ack` is a new route, and route topology is
+### After the restart (2026-08-26, ~11:57Z)
+
+Joe restarted the JVM and the remaining leg closed:
+
+- `POST /api/alpha/invoke/jobs/:id/ack` served. The delivery left pending above acked to
+  `done` with receipt `inbox-consumed-ack`, the file moved to
+  `consumed/invoke-1787744055336-1458-986e7491.json`, `/health` returned to
+  `unconsumed-count 0`, and a second ack was refused `invoke-job-not-delivered`.
+- A further bell was sent, delivered, listed, and acked cleanly — a full cycle on the
+  restarted server.
+- The `delivery-mode` round-trip was verified in both legs: registering pull-only writes
+  `:delivery-mode :inbox` into the durable roster, and replaying that payload through
+  `POST /api/alpha/agents/restore` (exactly what `restore-agent-via-handler!` sends on
+  boot) brings the seat back as `invoke-route inbox`.
+
+Note for anyone reloading rather than restarting: the seat came back `push` across this
+restart, which looked like a persistence defect and was not. `roster_store` had not been
+among the namespaces reloaded into the running JVM, so the row was persisted by the old
+projection with no `delivery-mode` field at all, and restore defaulted it. **Reload every
+namespace a change touches, or the durable artifact is written by the old code while the
+roster shows the new behaviour.**
+
+**What did not complete at the time of writing: the ack.** `POST …/ack` is a new route, and route topology is
 captured in the handler closure at build time. The namespace reload took (all the function
 redefinitions above are live), but `!handler-builder` is nil on this JVM — it was started
 by a path that never captured a rebuild function — so the handler cannot be rebuilt in
