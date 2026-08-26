@@ -351,6 +351,20 @@
   (let [updated (swap! !invoke-jobs-ledger f)]
     (persist-invoke-jobs-ledger! updated)))
 
+(defn- update-invoke-jobs-ledger-vals!
+  "Like update-invoke-jobs-ledger!, but returns [ledger-before ledger-after].
+
+   Use this wherever the caller must know whether ITS OWN attempt was the one
+   that committed. Deciding that from a flag set inside the function passed to
+   swap! is unsound: swap! re-runs that function on CAS contention, and the
+   side effects of an attempt that is then discarded have already happened, so
+   a losing thread comes away holding the winner's flag."
+  [f]
+  (ensure-invoke-jobs-ledger!)
+  (let [[before after] (swap-vals! !invoke-jobs-ledger f)]
+    (persist-invoke-jobs-ledger! after)
+    [before after]))
+
 (defn- trim-stream-event
   "Compact a live invoke event for the durable job ledger. Text is
    truncated; tool inputs reduce to short previews; tool outputs retain a
@@ -1186,40 +1200,47 @@
         summary (when result-text (summarize-result-text result-text))
         artifact-ref (or (first-artifact-ref result-text)
                          (first-artifact-ref summary))
-        updated-terminal-job (atom nil)]
-    (update-invoke-jobs-ledger!
-     (fn [ledger]
-       (if-let [job (get-in ledger [:jobs job-id])]
-         ;; First terminal transition wins: if the ceiling reaper already
-         ;; force-terminated this job ("timeout"), the interrupted worker's
-         ;; own finalize must not overwrite it (no timeout->failed flip,
-         ;; no double delivery). Non-terminal states
-         ;; (queued/running/overrun/delivered)
-         ;; finalize normally.
-         (if (not (#{"queued" "running" "overrun" "delivered"} (str (:state job))))
-           ledger
-           (let [finished-at (str (Instant/now))
-               updated-job (-> job
-                               (assoc :state terminal-state
-                                      :finished-at finished-at
-                                      :terminal-code terminal-code
-                                      :terminal-message terminal-message
-                                      :session-id sid
-                                      :trace-id trace-id
-                                      :result result-text
-                                      :result-summary summary
-                                      :result-text bellback-text
-                                      :artifact-ref artifact-ref
-                                      :execution execution)
-                               (append-job-event terminal-state
-                                                 {:code terminal-code
-                                                  :message terminal-message}))]
-           (reset! updated-terminal-job updated-job)
-           (cond-> (assoc-in ledger [:jobs job-id] updated-job)
-             (and (string? trace-id) (not (str/blank? trace-id)))
-             (assoc-in [:trace->job trace-id] job-id))))
-         ledger)))
-    (when @updated-terminal-job
+        non-terminal-states #{"queued" "running" "overrun" "delivered"}
+        [ledger-before ledger-after]
+        (update-invoke-jobs-ledger-vals!
+         (fn [ledger]
+           (if-let [job (get-in ledger [:jobs job-id])]
+             ;; First terminal transition wins: if the ceiling reaper already
+             ;; force-terminated this job ("timeout"), the interrupted worker's
+             ;; own finalize must not overwrite it (no timeout->failed flip,
+             ;; no double delivery). Non-terminal states
+             ;; (queued/running/overrun/delivered)
+             ;; finalize normally.
+             (if (not (#{"queued" "running" "overrun" "delivered"} (str (:state job))))
+               ledger
+               (let [finished-at (str (Instant/now))
+                     updated-job (-> job
+                                   (assoc :state terminal-state
+                                          :finished-at finished-at
+                                          :terminal-code terminal-code
+                                          :terminal-message terminal-message
+                                          :session-id sid
+                                          :trace-id trace-id
+                                          :result result-text
+                                          :result-summary summary
+                                          :result-text bellback-text
+                                          :artifact-ref artifact-ref
+                                          :execution execution)
+                                   (append-job-event terminal-state
+                                                     {:code terminal-code
+                                                      :message terminal-message}))]
+               (cond-> (assoc-in ledger [:jobs job-id] updated-job)
+                 (and (string? trace-id) (not (str/blank? trace-id)))
+                 (assoc-in [:trace->job trace-id] job-id))))
+             ledger)))
+        ;; Whether THIS call performed the transition is read from the ledger
+        ;; value that was in place before the successful CAS — not from a flag
+        ;; written inside the swap function, which a retried attempt would also
+        ;; have written. Only one caller can observe the job non-terminal here.
+        updated-terminal-job (when (non-terminal-states
+                                    (str (get-in ledger-before [:jobs job-id :state])))
+                               (get-in ledger-after [:jobs job-id]))]
+    (when updated-terminal-job
       (let [released-park-records
             (:released-records (parked-on-notify! job-id result-text))
             bellback-request (atom nil)]
@@ -1259,7 +1280,7 @@
               (println (str "[invoke-jobs] auto-bellback enqueue failed for " job-id ": "
                             (.getMessage t)))
               (flush))))))
-    (boolean @updated-terminal-job)))
+    (boolean updated-terminal-job)))
 
 (defn- record-invoke-job-delivery!
   [invoke-trace-id {:keys [surface destination delivered? note]}]
