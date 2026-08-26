@@ -115,9 +115,31 @@ def main():
         sorries = re.findall(r":sorry-warnings (\d+)", t)
         heads = re.findall(r':final-head "([0-9a-f]+)"', t)
         rem = re.findall(r":solver/remaining-rounds (\d+)", t)
+        # Resolve the solver worktree first: the sorry trajectory and the
+        # growth check both need it, and an empty trajectory means different
+        # things depending on whether the file is even there.
+        pid = re.search(r':problem-id "([^"]+)"', t)
+        wt = mainlean = None
+        if pid:
+            wt = f"/home/joe/code/apm-frames/{fid}-{pid.group(1)}-solver"
+            mainlean = os.path.join(wt, "problems", pid.group(1),
+                                    "lean", "Main.lean")
         if rounds:
             moved = len(set(sorries)) > 1
-            traj = f"{sorries[0]}->{sorries[-1]}" if sorries else "?"
+            # A bare "?" here used to cover every way the trajectory could be
+            # empty -- no Main.lean, no worktree, and apm-lean simply not
+            # reporting -- which are different situations and want different
+            # responses. Name which one it is (TN-apm-watcher, open items).
+            if sorries:
+                traj = f"{sorries[0]}->{sorries[-1]}"
+            elif mainlean is None:
+                traj = "no-problem-id"
+            elif not os.path.isdir(wt):
+                traj = "no-worktree"
+            elif not os.path.exists(mainlean):
+                traj = "no-Main.lean"
+            else:
+                traj = "unreported"
             note = ""
             if heads and len(set(heads)) < max(1, len(heads)) // 2:
                 note = "  <-- heads repeating; solver may be spinning"
@@ -128,11 +150,7 @@ def main():
             # promotion. Reading apm-lean for progress shows commits that
             # predate the frame and is how this check first misread f36.
             grow = ""
-            pid = re.search(r':problem-id "([^"]+)"', t)
-            if pid:
-                wt = f"/home/joe/code/apm-frames/{fid}-{pid.group(1)}-solver"
-                mainlean = os.path.join(wt, "problems", pid.group(1),
-                                        "lean", "Main.lean")
+            if mainlean:
                 if os.path.exists(mainlean):
                     try:
                         n = sum(1 for _ in open(mainlean, encoding="utf-8",
