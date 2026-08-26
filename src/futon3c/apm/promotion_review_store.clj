@@ -69,19 +69,15 @@
     :review/residual (:residual review)
     :review/reported-evidence-id (:reported-review-evidence-id review)
     :review/reported-pattern-ids (:reported-pattern-ids review)
+    :review/reported-depositor (:reported-depositor review)
+    :review/reported-reviewer (:reported-reviewer review)
     :review/provenance {:kind :promotion-review :job-id review-job}}})
 
 (defn- normalize-review-body [body]
-  (let [body (if (and (not (contains? body :review/reported-pattern-ids))
-                      (not= :reject (:review/verdict body)))
-               (assoc body :review/reported-pattern-ids
-                      (:review/pattern-ids body))
-               body)]
-    (cond-> body
-      (nil? (:review/reported-evidence-id body))
-      (dissoc :review/reported-evidence-id)
-      (empty? (:review/reported-pattern-ids body))
-      (dissoc :review/reported-pattern-ids))))
+  ;; Reported fields are retained for audit but are not controller authority
+  ;; and therefore do not change the identity or idempotence of the review.
+  (dissoc body :review/reported-evidence-id :review/reported-pattern-ids
+          :review/reported-depositor :review/reported-reviewer))
 
 (defn- comparable-entry [entry]
   (-> entry
@@ -114,8 +110,12 @@
         :depositor depositor :reviewer reviewer :review-job review-job}
        (let [attachment-reviews
              (filterv #(contains? attachment-verdicts (:verdict %)) reviews)
-             canonical (mapv #(canonical-review review-job
-                                                (:candidates deposit) %)
+             canonical (mapv #(some-> (canonical-review review-job
+                                                       (:candidates deposit) %)
+                                      (assoc :reported-depositor (:depositor %)
+                                             :reported-reviewer (:reviewer %)
+                                             :depositor depositor
+                                             :reviewer reviewer))
                              attachment-reviews)]
          (if (some nil? canonical)
            {:ok false :error/code :promotion-review-identity-invalid

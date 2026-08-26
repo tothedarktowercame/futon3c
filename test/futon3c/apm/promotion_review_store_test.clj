@@ -29,7 +29,8 @@
                       (filterv #(some #{end} (:hx/endpoints %))
                                (vals @edges)))
         review {:memory-id memory-id :review-evidence-id review-id
-                :reviewer "proctor" :verdict :reassign
+                :depositor "reported-wrong" :reviewer "reported-wrong"
+                :verdict :reassign
                 :attachment-status :reviewed :pattern-ids [new-pattern]
                 :reason "returned reason" :residual "returned residual"}
         result
@@ -51,6 +52,10 @@
     (is (:ok result) result)
     (is (not= review-id canonical-review-id))
     (is (= review-id (:reported-review-evidence-id persisted-review)))
+    (is (= "scribe" (:depositor persisted-review)))
+    (is (= "proctor" (:reviewer persisted-review)))
+    (is (= "reported-wrong" (:reported-depositor persisted-review)))
+    (is (= "reported-wrong" (:reported-reviewer persisted-review)))
     (is (= review-id
            (get-in evidence [:evidence/body
                              :review/reported-evidence-id])))
