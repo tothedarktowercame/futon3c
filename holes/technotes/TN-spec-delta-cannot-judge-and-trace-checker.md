@@ -767,3 +767,86 @@ review store routed through the finding-returning path; a per-candidate
 invalid review must not set `:regulator/status :failed`. Recovery is the
 verification — f41 must get past promote-solver on the proctor's existing
 verdicts, which are not to be re-authored.
+
+## 17. The student's work is invisible to the machine because it lands in a gitignored file — f41, 2026-08-26
+
+f41 attempts 1 and 2 both recorded `:outcome "partial"` with
+`:candidate/head` equal to `:base-revision`, and `Main.lean` untouched at 182
+lines / 5 sorries. Read through the receipts alone, the student sat for 34
+and 25 minutes and wrote no Lean at all, twice.
+
+It did not. The workspace holds
+`problems/a97J06/lean/Scratch.lean` — 8110 bytes of real Lean, last written
+at the end of attempt 2 — containing seven lemmas, two of which
+(`fourier_expAbs_pos`, `fourier_expAbs_neg`) the student reports compile
+sorry-free. The file is ignored:
+
+    $ git check-ignore -v problems/a97J06/lean/Scratch.lean
+    .gitignore:13:Scratch*.lean	problems/a97J06/lean/Scratch.lean
+
+An ignored file cannot be committed, so `:candidate/head` can never move,
+so the attempt is scored as having produced nothing.
+
+**Nobody told the student to do this and nobody told it not to.** The
+student role card does not mention scratch files at all. Proving leaves in a
+scratch file and assembling afterwards is an ordinary way to write Lean; the
+name it reached for happens to be the one apm-lean's `.gitignore` excludes.
+
+### The work carries the memories' fingerprints, and they are novel to the base
+
+| identifier (named by the used memories) | in Scratch.lean | in base Main.lean |
+|---|---|---|
+| `integral_exp_mul_complex_Ioi` | 2 | 0 |
+| `Real.fourier_real_eq_integral_exp_smul` | 1 | 0 |
+| `intervalIntegral.integral_Iic_add_Ioi` | 1 | 0 |
+
+Differenced against the base, as §3.1 requires, these are fingerprinted uses.
+The student's own account is more pointed still: it checked every lemma the
+memories named against the pinned Mathlib and reported **"Zero phantom
+names."** It then credits `e-bd971ae9` for predicting the exact cast-
+normalization friction it hit, and attributes the three remaining sorries to
+"mechanical shape-matching I did not finish within the 30-minute budget" —
+not to any mathematical obstruction.
+
+So the memory system did something like what it is supposed to do, and the
+campaign recorded the attempt as a total failure.
+
+### Why this matters more than one frame
+
+The witness standard reads committed artifacts, and it is right to
+(§3.1: prose attribution is design signal, never outcome data). But the
+standard is only as good as its reach. Where a student can do its work
+somewhere the standard structurally cannot look, every USE claim in that
+attempt reads as unwitnessed and every attempt reads as barren — and the
+campaign under-measures exactly the thing it exists to measure.
+
+This is the third instance of the §15 shape, and the sharpest:
+
+> the machine could not distinguish **"the student did nothing"** from
+> **"the student did the work where I do not look."**
+
+The two are opposite findings. One says the memory system is not helping;
+the other says it is helping and the instrument cannot see it. Two frames'
+worth of evidence was filed under the first while being the second.
+
+### Caveat, so this is not over-read
+
+All the memories involved are **same-problem** — f41's own scribe and guide
+deposits about a97J06. Fully witnessed, they would still not bear on tier-A
+condition 3, which needs a fingerprinted use of a memory mined from a
+*different* problem. Attempt 1's one cross-problem use (`e-73ac922d`,
+f37-guide, mined from a96A08) remains unwitnessed. **Condition 3 is still
+open.** What this section establishes is that the measurement has been
+running blind, not that the transfer result has been achieved.
+
+### What to change (not dispatched yet — f41 is mid-flight)
+
+1. The student card must say where work is collected from, and that a
+   scratch file is not collected. Naming the mechanism beats forbidding the
+   habit: a student told "Scratch*.lean is gitignored and will be discarded"
+   can keep its workflow and still land the result.
+2. The attempt receipt should record that the workspace contains uncommitted
+   or ignored Lean that compiles, so this condition is *reported* rather than
+   silently indistinguishable from an idle turn.
+3. Role-card edits change the pinned card blob, so they wait until f41
+   certifies rather than churning a running frame.
