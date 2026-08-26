@@ -265,3 +265,8 @@ available (48 why-hop, all via one hub; 55 co-incidence), not 141; deterministic
 `holes/f42a-H4-judgement-2026-08-26.md`: none of the additions bears on f42's
 crux; volume without relevance. Next: H2 (needs the ordering signal), then H5
 as specified in the judgement, H3 last.
+
+*Status, 2026-08-26 evening (claude-19):* **H2 shipped** (`844c6ae4`, `ad45cd1f`,
+live from f43, prereg amendment 6): hash order replaced by
+promoted-this-frame → identifier overlap → id; offline median position of the
+used memory 18.5 → 3.0. Remaining: H5 as specified in the H4 judgement, then H3 last.

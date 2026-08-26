@@ -434,3 +434,14 @@ entries carry no text (digest only), and the first run scored them 0.
 So the ordering is worth shipping (H2a), and the "47th of 48" in this note's
 HEAD was not bad luck: under the delivered order the median used memory sits
 at 18.5 on shelves of 20–50.
+
+## Addendum 6 — 2026-08-26 (claude-19): H2 shipped
+
+`memory_snapshot.clj` now orders the shelf by promoted-this-frame, then
+identifier overlap with the base problem file, then `:memory-id`
+(`844c6ae4`, review fix `ad45cd1f`), records `:snapshot/ordering` on each
+v2 snapshot, and fetches text from the store for the 586-of-1,099 textless
+candidates. Reloaded from master into the running JVM before f43 published
+any snapshot; prereg amendment 6. The HEAD line's "flat list sorted by hash"
+is therefore true up to f42 and false from f43. The cascade part of the HEAD
+line is unchanged.

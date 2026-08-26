@@ -557,4 +557,37 @@
    :also-reloaded
    "futon3c.apm.conductor (7534419c, 8a5ffce8): the live cascade reader's
     hyperedge window is 1000 and a full window is refused. Not on the countdown
-    path; affects only the interactive conductor surface."}]}
+    path; affects only the interactive conductor surface."}
+
+  {:amendment 6
+   :at "2026-08-26T17:05Z"
+   :by "claude-19"
+   :authority "Joe, 2026-08-26, in session: approved the H2 ordering framing; reload under the H1 'if safe by drawbridge' rule"
+   :kind :instrument-change
+   :what
+   "From f43 onward the reviewed shelf (:snapshot/memories) is ordered by a
+    stated signal instead of by :memory-id hash: promoted-this-frame first,
+    then descending count of distinct Lean identifiers shared with the base
+    problem file, then :memory-id. Snapshots are :snapshot/version 2 and carry
+    :snapshot/ordering {:signal :base-text-present? :base-file-blob :scores
+    :promoted-this-frame :textless-fetched :fetch-failed}. futon3c 844c6ae4 +
+    ad45cd1f, reloaded from master into the running JVM at 2026-08-26T17:00Z
+    while f43 was at :solve with no snapshot published, so every f43 snapshot
+    (solver, guide union, student-mined) is v2. The SET of memories delivered
+    is unchanged; only their order in the packet changes."
+   :why
+   "TN-APM-cascades-exist-unused addendum 5 / NOTE-shelf-order-audit-2026-08-26:
+    offline over 12 archived frames (56 positioned use events) the used memory's
+    median position falls from 18.5 under hash order to 3.0 under this ordering;
+    f42's closing memory from 47/48 to 7/48. Hash order was never a design
+    choice; it fell out of (sort-by :memory-id)."
+   :boundary
+   "Position-of-used-memory is comparable across f42/f43 only as archived-order
+    vs stated-order; per-frame it is measured by
+    analysis/shelf_order_audit.py against the receipt's :accessible-memory-ids.
+    A v1 snapshot file republished after the reload fails closed as
+    :memory-snapshot-existing-mismatch by design; none existed for f43."
+   :fallback
+   "If the base problem file cannot be read at the pinned revision, all overlap
+    scores are 0 and :base-text-present? false is recorded; the shelf then
+    falls to promoted-this-frame then :memory-id."}]}
