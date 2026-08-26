@@ -37,6 +37,8 @@ WATCH_SCRIPT = f"{REPO}/scripts/apm-watch-projection.sh"
 BELL_SCRIPT = f"{REPO}/scripts/bell-file.sh"
 FROM_ID = os.environ.get("APM_BABYSIT_FROM_ID", "claude-cli")
 TO_ID = os.environ.get("APM_BABYSIT_TO_ID", "codex-10")
+PARK_DECISION_TO_ID = os.environ.get(
+    "APM_BABYSIT_PARK_DECISION_TO_ID", "claude-12")
 POLL_S = int(os.environ.get("APM_BABYSIT_POLL_S", "20"))
 DISCOVERY_LOG_EVERY_S = int(
     os.environ.get("APM_BABYSIT_DISCOVERY_LOG_S", "300"))
@@ -156,16 +158,28 @@ def parse_queue_state(text):
     # next-index == count(plan.problems)) is authoritative for "batch done."
     m = re.search(r', :status :(\S+?)[,}]', text)
     d['queue_status'] = m.group(1) if m else None
+    pending_parks = []
+    for decision in re.finditer(r':decision/status :awaiting-decision', text):
+        prefix = text[max(0, decision.start() - 4000):decision.start()]
+        frames = re.findall(r':frame/id "([^"]+)"', prefix)
+        types = re.findall(r':state/type :(\S+?)[,}]', prefix)
+        owners = re.findall(r':decision/owner :(\S+?)[,}]',
+                            text[decision.start() - 500:decision.end() + 500])
+        if frames and types:
+            pending_parks.append(
+                {'frame_id': frames[-1], 'state_type': types[-1],
+                 'owner': owners[-1] if owners else None})
+    d['pending_parks'] = list({p['frame_id']: p for p in pending_parks}.values())
     return d
 
 
-def send_bell(subject, body):
+def send_bell(subject, body, to_id=TO_ID):
     tmp = f"/tmp/claude-babysit-bell-{int(time.time() * 1000)}.md"
     with open(tmp, "w") as f:
         f.write(body)
     try:
         r = subprocess.run(
-            [BELL_SCRIPT, "--from", FROM_ID, "--to", TO_ID, "--kind", "bell", tmp],
+            [BELL_SCRIPT, "--from", FROM_ID, "--to", to_id, "--kind", "bell", tmp],
             cwd=REPO, capture_output=True, text=True, timeout=90)
         out(f"BELL SENT [{subject}]: rc={r.returncode} "
             f"{r.stdout.strip()[:200]} {r.stderr.strip()[:200]}")
@@ -180,7 +194,7 @@ BELLS_PAUSED = os.environ.get(
     "APM_BABYSIT_BELLS_PAUSED", "false").lower() in ("1", "true", "yes")
 
 
-def maybe_bell(key, subject, body):
+def maybe_bell(key, subject, body, to_id=TO_ID):
     now = time.time()
     prev = last_bell.get(key)
     if prev is None or now - prev >= BELL_COOLDOWN_S:
@@ -188,7 +202,7 @@ def maybe_bell(key, subject, body):
             out(f"BELL SUPPRESSED (paused, not interrupting codex-10) [{subject}]")
             last_bell[key] = now
             return
-        send_bell(subject, body)
+        send_bell(subject, body, to_id=to_id)
         last_bell[key] = now
 
 
@@ -297,6 +311,20 @@ while True:
     text = read_text(COORD)
     c = parse_coordinator(text)
     q = parse_queue_state(read_text(QUEUE_STATE)) or {}
+    for park in q.get('pending_parks', []):
+        if park.get('owner') == 'claude-supervisor':
+            maybe_bell(
+                f"park-decision-{park['frame_id']}-{park['state_type']}",
+                "parked APM frame awaits Claude decision",
+                f"Campaign {CAMPAIGN_ID}: frame {park['frame_id']} is parked "
+                f"as :{park['state_type']} with "
+                f":decision/owner :claude-supervisor and "
+                f":decision/status :awaiting-decision. The authoritative "
+                f"park record is in {QUEUE_STATE}. Please inspect the "
+                f"preserved receipt and residual, then record the disposition "
+                f"or apparatus repair; do not void or silently forget the "
+                f"frame.",
+                to_id=PARK_DECISION_TO_ID)
     if c is None:
         maybe_bell("coordinator-missing", "coordinator.edn unreadable",
                    f"coordinator.edn at {COORD} could not be read. Please check "

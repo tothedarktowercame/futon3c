@@ -130,8 +130,11 @@
    "hold-at-review-awaiting-apparatus-repair"
    :projection-repair-reuses-persisted-judgement true
    :projection-repair-redispatches-reviewer false
+   :projection-repair-max-attempts 1
    :projection-repair-exhaustion-action
    "park-frame-and-continue-queue"
+   :projection-repair-exhaustion-decision-owner "claude-supervisor"
+   :projection-repair-exhaustion-bell-required true
    :promotion-successor-validation
    "before-snapshot-publication-and-certification"
    :certified-pass-snapshot-materialized true

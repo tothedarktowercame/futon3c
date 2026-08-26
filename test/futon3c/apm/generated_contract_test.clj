@@ -190,8 +190,15 @@
               "complete-as-nonpublishing"]
              [[:promotion-policy :projection-repair-redispatches-reviewer]
               true]
+             [[:promotion-policy :projection-repair-max-attempts] 0]
              [[:promotion-policy :projection-repair-exhaustion-action]
-              "fail-regulator"]]]
+              "fail-regulator"]
+             [[:promotion-policy
+               :projection-repair-exhaustion-decision-owner]
+              "operator"]
+             [[:promotion-policy
+               :projection-repair-exhaustion-bell-required]
+              false]]]
       (let [result (sut/validate (assoc-in contract path value))]
         (is (false? (:ok result)) (pr-str path))
         (is (some #{:generated-contract-promotion-policy-invalid}

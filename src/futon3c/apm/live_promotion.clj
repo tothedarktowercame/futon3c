@@ -402,7 +402,7 @@
         :review-job job-id}))))
 
 (defn- hold-incomplete-pass!
-  [state checked contract-digest persist-fn]
+  [state checked promotion-policy contract-digest persist-fn]
   (let [projection-failure?
         (or (= :promotion-review-projection-failed (:error/code checked))
             (some #(= :promotion-review-projection-failed (:finding %))
@@ -426,7 +426,8 @@
                            [:review-job :returned-reviews :reviews :persisted])
               :repair/kind repair-kind
               :repair/attempts (or (:projection-repair-attempt state) 0)
-              :repair/max-attempts 1}]
+              :repair/max-attempts
+              (or (:projection-repair-max-attempts promotion-policy) 1)}]
     (persist-fn hold)
     {:ok true :status :awaiting-apparatus-repair
      :state hold :findings (:findings checked)}))
@@ -441,7 +442,7 @@
       (hold-incomplete-pass!
        state
        (assoc checked :review-job (:job state) :reviews (:reviews action))
-       contract-digest persist-fn)
+       promotion-policy contract-digest persist-fn)
       (let [published-action
             (cond-> action
               (:completed-pass-required promotion-policy)
@@ -455,7 +456,7 @@
             :review-job (:job state)
             :reviews (:reviews action)
             :findings [published]}
-           contract-digest persist-fn)
+           promotion-policy contract-digest persist-fn)
           (let [done {:state/type :promotion-certified
                       :receipt (:receipt published)}]
             (persist-fn done)
@@ -553,7 +554,7 @@
                                 (hold-incomplete-pass!
                                  s (assoc persisted-mechanical
                                           :findings [persisted-mechanical])
-                                 contract-digest persist-fn)
+                                 promotion-policy contract-digest persist-fn)
                                 (publish-completed-pass!
                                  s
                                  {:candidates []
@@ -596,7 +597,7 @@
                 (hold-incomplete-pass!
                  s (assoc persisted-mechanical
                           :findings [persisted-mechanical])
-                 contract-digest persist-fn)
+                 promotion-policy contract-digest persist-fn)
                 (publish-completed-pass!
                  s
                  {:candidates []
@@ -637,7 +638,7 @@
                 (if (:completed-pass-required promotion-policy)
                   (hold-incomplete-pass!
                    state (assoc checked :error/code :promotion-pass-incomplete)
-                   contract-digest persist-fn)
+                   promotion-policy contract-digest persist-fn)
                   checked)
                 (let [persisted
                       (persist-reviews-fn
@@ -654,7 +655,7 @@
                          (assoc :findings [persisted])
                          (seq (:reviews r))
                          (assoc :returned-reviews (:reviews r)))
-                       contract-digest persist-fn)
+                       promotion-policy contract-digest persist-fn)
                       persisted)
                     (let [persisted-checked
                           (pipeline/validate-review*
@@ -668,7 +669,7 @@
                            (assoc persisted-checked
                                   :error/code
                                   :persisted-promotion-review-invalid)
-                           contract-digest persist-fn)
+                           promotion-policy contract-digest persist-fn)
                           (assoc persisted-checked
                                  :error/code
                                  :persisted-promotion-review-invalid))
@@ -684,7 +685,7 @@
                              state
                              (assoc persisted-mechanical
                                     :findings [persisted-mechanical])
-                             contract-digest persist-fn)
+                             promotion-policy contract-digest persist-fn)
                             (publish-completed-pass!
                              state
                              {:candidates (:candidates persisted-checked)

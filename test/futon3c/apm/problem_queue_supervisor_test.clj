@@ -59,6 +59,9 @@
 (deftest solver-round-exhaustion-parks-frame-and-prepares-successor
   (let [{:keys [providers state calls]} (harness)
         park {:state/type :solver-human-intervention-frame-park
+              :decision/owner :claude-supervisor
+              :decision/status :awaiting-decision
+              :decision/bell-required true
               :frame/id "q1" :problem/id "p1"
               :solver/rounds-completed 50
               :solver/final-head "head-50"
@@ -66,7 +69,7 @@
               :solver/state-path "/campaign/q1/live/solve.edn"
               :last-valid-receipt/id "receipt-49"
               :residual "prove the missing Jordan ordering theorem"
-              :student/decision :operator-required}]
+              :student/decision :claude-required}]
     (is (= :frame-prepared (:status (sut/tick! providers))))
     (let [result
           (sut/tick!
@@ -98,6 +101,9 @@
 (deftest scribe-apparatus-park-preserves-record-and-prepares-successor
   (let [{:keys [providers state calls]} (harness)
         park {:state/type :scribe-reduce-apparatus-frame-park
+              :decision/owner :claude-supervisor
+              :decision/status :awaiting-decision
+              :decision/bell-required true
               :frame/id "q1" :problem/id "p1" :phase :scribe-reduce
               :promotion/state-path "/campaign/q1/live/scribe-reduce.edn"
               :last-valid-receipt/id "student-attempt-3"
@@ -119,6 +125,9 @@
 (deftest promotion-apparatus-park-preserves-record-and-prepares-successor
   (let [{:keys [providers state calls]} (harness)
         park {:state/type :promotion-apparatus-frame-park
+              :decision/owner :claude-supervisor
+              :decision/status :awaiting-decision
+              :decision/bell-required true
               :frame/id "q1" :problem/id "p1" :phase :promotion
               :promotion/state-path "/campaign/q1/live/promote-solver.edn"
               :last-valid-receipt/id "solver-receipt"

@@ -202,6 +202,66 @@
     (is (:ok result) result)
     (is (= :reject (get-in @edges [0 :hx/props :review :verdict])))))
 
+(deftest successful-hyperedge-post-with-stale-readback-retries-idempotently
+  (let [memory-id "e-memory"
+        pattern "math-formalization/pattern"
+        memory-entry {:evidence/id memory-id
+                      :evidence/subject {:ref/type :problem :ref/id "p"}
+                      :evidence/type :memory :evidence/claim-type :assert
+                      :evidence/author "scribe" :evidence/session-id "deposit"
+                      :evidence/at "2026-08-25T00:00:00Z"
+                      :evidence/body {:name "n" :hook "h" :body "b"}}
+        proposed {:hx/id "hx-memory" :hx/type :memory/assert
+                  :hx/endpoints [memory-id "p" pattern]
+                  :hx/props {:domain :mathematics :state :current
+                             :attachment-status :proposed
+                             :roles {:entry memory-id :subjects ["p" pattern]
+                                     :patterns [pattern]}}}
+        entries (atom {memory-id memory-entry})
+        query-edge (atom proposed)
+        durable-edge (atom proposed)
+        appends (atom 0)
+        posts (atom 0)
+        request {:deposit {:depositor "scribe"
+                           :candidates [{:memory-id memory-id
+                                         :pattern-ids [pattern]}]}
+                 :reviewer "proctor" :review-job "review-job"
+                 :reviews [{:memory-id memory-id
+                            :verdict :reject
+                            :reason "not actionable"
+                            :residual "open goal"
+                            :pattern-ids [pattern]}]}
+        effects {:evidence-store :store
+                 :fetch-entry #(get @entries %)
+                 :append-entry (fn [entry]
+                                 (swap! appends inc)
+                                 (swap! entries assoc (:evidence/id entry) entry)
+                                 {:ok true :entry entry})
+                 :fetch-hyperedges (fn [end & _]
+                                     (if (= memory-id end)
+                                       [@query-edge]
+                                       []))
+                 :post-hyperedge (fn [_ edge]
+                                   (swap! posts inc)
+                                   (reset! durable-edge edge)
+                                   {:ok true :hyperedge edge})}
+        first-result (sut/persist! request effects)]
+    (is (= :promotion-review-projection-failed
+           (:error/code first-result)))
+    (is (= 1 @posts))
+    (is (= 1 @appends))
+    ;; The durable post is now visible. Replaying the exact persisted review
+    ;; must observe it, not append evidence or post a second edge version.
+    (reset! query-edge @durable-edge)
+    (let [second-result (sut/persist! request effects)]
+      (is (:ok second-result) second-result)
+      (is (= 1 @posts))
+      (is (= 1 @appends))
+      (is (= :reject
+             (get-in @query-edge [:hx/props :review :verdict])))
+      (is (true? (get-in second-result
+                         [:persisted 0 :idempotent-replay?]))))))
+
 (deftest invalid-candidate-projection-is-an-apparatus-failure
   (let [memory-id "e-memory"
         attached-pattern "math-formalization/attached"

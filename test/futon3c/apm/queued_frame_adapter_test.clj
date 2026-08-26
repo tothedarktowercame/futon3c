@@ -48,7 +48,10 @@
     (is (= "solver-head-50" (:solver/final-head park)))
     (is (= "exact residual" (:residual park)))
     (is (= "last-valid" (:last-valid-receipt/id park)))
-    (is (= :operator-required (:student/decision park)))))
+    (is (= :claude-required (:student/decision park)))
+    (is (= :claude-supervisor (:decision/owner park)))
+    (is (= :awaiting-decision (:decision/status park)))
+    (is (true? (:decision/bell-required park)))))
 
 (deftest non-exhaustion-error-is-not-reclassified
   (let [result {:ok false :error/code :solver-remediation-required}]
@@ -75,7 +78,8 @@
     (is (= "attempt-3-receipt" (:last-valid-receipt/id park)))
     (is (= "/campaign/f30/live/scribe-reduce.edn"
            (:promotion/state-path park)))
-    (is (= 3 (:deposit/attempts park)))))
+    (is (= 3 (:deposit/attempts park)))
+    (is (= :claude-supervisor (:decision/owner park)))))
 
 (deftest exhausted-promotion-repair-parks-with-persisted-review-intact
   (let [review-result {:review-job "terminal-review"
@@ -96,7 +100,9 @@
     (is (= :promotion-apparatus-frame-park (:state/type park)))
     (is (= "last-valid" (:last-valid-receipt/id park)))
     (is (= review-result (:persisted-review-result park)))
-    (is (= :review-projection (:repair/kind park)))))
+    (is (= :review-projection (:repair/kind park)))
+    (is (= :claude-supervisor (:decision/owner park)))
+    (is (true? (:decision/bell-required park)))))
 
 (deftest fresh-one-off-manifest-pins-both-scribe-cards
   (let [manifest (sut/one-off-manifest

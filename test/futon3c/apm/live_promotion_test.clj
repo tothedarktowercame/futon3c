@@ -650,7 +650,8 @@
          {:state {:state/type :promotion :stage :independent-review
                   :deposit {:depositor "scribe" :candidates [candidate]}
                   :candidates [candidate] :job "review-job"}
-          :promotion-policy {:completed-pass-required true}
+          :promotion-policy {:completed-pass-required true
+                             :projection-repair-max-attempts 2}
           :contract-digest "contract-v1"
           :review-fn (fn [_ _] {:ok true :reviewer "proctor"
                                 :reviews [returned]})
@@ -674,7 +675,8 @@
     (is (= [returned]
            (get-in result
                    [:state :persisted-review-result :returned-reviews])))
-    (is (= :review-projection (get-in result [:state :repair/kind])))))
+    (is (= :review-projection (get-in result [:state :repair/kind])))
+    (is (= 2 (get-in result [:state :repair/max-attempts])))))
 
 (deftest same-contract-projection-repair-reuses-terminal-review-job
   (let [candidate {:memory-id "m" :content-digest "d" :pattern-ids ["p"]

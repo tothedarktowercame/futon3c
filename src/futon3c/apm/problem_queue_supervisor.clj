@@ -13,10 +13,14 @@
    (every? #(and (string? %) (not-empty %))
            ((juxt :frame/id :problem/id :residual
                   :last-valid-receipt/id) park))
+   (= :claude-supervisor (:decision/owner park))
+   (= :awaiting-decision (:decision/status park))
+   (true? (:decision/bell-required park))
    (case (:state/type park)
      :solver-human-intervention-frame-park
      (and (every? #(and (string? %) (not-empty %))
                   ((juxt :solver/final-head :solver/state-path) park))
+          (= :claude-required (:student/decision park))
           (pos-int? (:solver/rounds-completed park)))
 
      :scribe-reduce-apparatus-frame-park
