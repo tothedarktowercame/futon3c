@@ -412,6 +412,45 @@ quantity"* the strategy notes warn against.
 why establishing whether they are live or shadow is now the highest-value cheap
 check in this excursion.
 
+## The operator level — open, and deliberately left thin
+
+R8's workup ran at three levels: machine, operator surface, company. R14 now has
+the machine level (verified and formalised) and the company level (below). The
+operator level is **open**, and Joe has no strong view on it (2026-08-26). This
+section records what is actually there rather than filling the gap.
+
+**What exists.** One cell: `p4ng/empirics-futon/NOTE-thirtyfour-steps-both-levels.md`
+step ⑯, operator column — *"temperature demonstrably varies — after two wrong
+assumptions the search got more conservative."*
+
+**Why it should not be leaned on.** That is an agent's self-report about its own
+behaviour, on the agent-self-report channel — which **slice 3 of this excursion
+identifies as the uninstrumented one**, on the strength of a same-day case where
+codex-12's completion summary contradicted its own commits. So the strongest
+*noticed* instance of a commitment temperature in the stack sits on the channel
+we have the least reason to trust, and it is uncorroborated. Treating it as
+evidence would be R9 (no self-certification) in the one place the excursion is
+most tempted to skip it.
+
+**What today's finding does establish at this level**, and it is a correction
+rather than a new claim: the WM's ⑯ cell in that note read *"runs, but `g`
+pinned at 1.0 so temperature never adapts"*, locating the fault in the input.
+That is wrong — the selector's argmax is invariant in τ, so ⑯ would not steer
+the choice with a freely moving gain either. Corrected in that note, 2026-08-26.
+
+**And it constrains a live proposal.** The note argues that the WM and operator
+loops *"fail in complementary halves"* and that closing the AIF over the operator
+is **"joining two half-loops that fail in opposite places."** That still holds,
+with one joint now qualified: **the WM's ⑯ cannot consume a gain as built.**
+Feeding operator outcomes into `g` would move `τ_eff` and change no action, so
+this joint's payoff is gated on the reconnection decision, not on the data.
+
+**The one thing the operator level does supply** is an existence proof rather
+than evidence: at that level the τ→action edge is closed — the search *did* get
+more conservative. Whatever mechanism does that is the nearest working instance
+of what R14 asks for. Worth looking at if and when the reconnection is on the
+table; not worth building an argument on now.
+
 ## The company level
 
 `futon0/analysis/business-models/NOTE-select-column-and-R14.md` (2026-08-26)
