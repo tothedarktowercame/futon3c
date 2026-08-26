@@ -16,6 +16,10 @@ f42, snapshot
 in `conductor.clj`, is reachable only from an interactive HTTP surface, and has
 left zero artifacts in the entire campaign.**
 
+*(Re-verified 2026-08-26 across all seven campaigns, not one. One claim below is
+corrected by the addendum: pattern→pattern edges DO exist, as relations rather
+than hyperedges. See "Addendum — 2026-08-26".)*
+
 The question that prompted this — for the f42 use, was Zai using patterns or
 leaf memories? — has a clean answer: **leaf memories**. The 29 identifiers the
 fingerprint audit counted were extracted by scanning one memory's flat `:body`
@@ -191,6 +195,101 @@ changes what the experiment measures, which `TN-apm-watcher` puts in Joe's hands
     # the prompt is not retained
     curl -s localhost:7070/api/alpha/invoke/jobs/<f42-student job-id> | grep -c '"prompt"'
 
+## Addendum — 2026-08-26 (claude-13): one correction, and what the cascade would have been
+
+*Added at Joe's request ahead of a handoff to Fable. The note's central finding
+survives unchanged and was independently re-run: cascade-artifact counts are 0
+across **all seven** campaigns on disk, not only `jit-all-open-nontopology-v1`
+(`:hops`, `:why-hop`, `:co-incidence`, `pattern-surfaces`, `:seed-patterns`; the
+2 `:route` hits are the mathematical prose this note already flags).
+`countdown_control.clj` still has no require of `futon3c.apm.conductor`.*
+
+### Correction — there ARE pattern→pattern edges; the query missed them
+
+§"Patterns exist, but as tags on leaves" concludes: *"Every hyperedge touching a
+pattern is `:memory/assert`. There is no pattern→pattern edge of any kind …
+A pattern language needs relations among the patterns themselves, and there are
+none to traverse."*
+
+That was measured with `GET /api/alpha/hyperedges?end=<pattern>`, which returns
+only `:memory/assert`. The authored `@why` edges are **relations, not
+hyperedges**, and `conductor.clj:257` reads exactly that type:
+
+    GET /api/alpha/relations?type=pattern%2Fhas-semantic-why&limit=1000
+    -> 45 relations; 23 touch math-*; 18 touch a pattern on f42's own shelf
+
+    math-formalization-CA/riemann-darboux-api -> math-formalization-CA/measure-integration-api
+    math-formalization-CA/ode-gronwall-api    -> math-informal/reduce-to-known-result
+    math-formalization/cast-normalization     -> math-formalization/coercion-bridge
+
+The pattern language is thin, but it is **not empty**, and the cascade has
+something to walk. Everything else in that section stands, including that the
+`hyperedges` view of a pattern is `:memory/assert` only.
+
+### What the cascade would have produced on f42
+
+Reimplemented `conductor.clj:287-382` over live substrate data — BFS on authored
+why edges, co-incidence fixed at 2 hops via `pattern -> problem -> pattern`, why
+preferred on ties, cheapest route per memory, sorted, capped. **The expander
+itself was NOT invoked** (see the plan's H0); if a real run disagrees, the real
+run is right.
+
+Validation that the reimplementation is faithful: deriving seed patterns from
+the 48 memories' attachments yields **23**, matching the count this note reports
+independently.
+
+    seed memories                       48
+    seed patterns                       23
+    why-reachable patterns               4
+    co-incident patterns                32   (from 70 shared seed problems)
+    expansions available                141   (53 why-hop, 88 co-incidence)
+    selected at cap 100                 100   -> :truncated? true
+    delivered shelf                     48 -> 148
+
+The artifact is `holes/f42a-cascade-example.edn`, in the expander's own output
+shape, labelled counterfactual, with `:pattern-surfaces` left empty as a hole
+because rendering it needs `pattern-fn` against the live store.
+
+### The finding this produces: efficiency here is flooding
+
+- **All 53 why-hop additions come from a single pattern**,
+  `math-strategy/missing-dependency-protocol`. 23 seed patterns reach only 4
+  why-reachable patterns and effectively one carries the whole expansion.
+- **88 of the 141 available expansions arrive by co-incidence.** The code is
+  careful that co-incidence "does not recursively flood", and it does not
+  recurse — it does not need to, out-producing the authored route 88 to 53.
+
+`docs/retrieval-whitepaper-v2.md` §4.6 already explains why: the store is a
+**forest of stars** — one pattern per memory, largest patterns-only component a
+single hyperedge — and its own table calls the graph *"essentially unbuilt: the
+edges that would make it a graph were never written."* Multi-attachment is
+representable; the star shape is an artefact of use. So descending from a
+high-level pattern does not narrow, it dumps everything on that star.
+
+Two further bounds from the same paper: **62% of surfacing slots already go to
+memories used nowhere** on a 48-entry shelf, so tripling it multiplies waste;
+and §5.1, *"None is a proved lemma you can import"* — a runner found its blocking
+lemma by repository grep while recall completed and offered nothing, which needs
+*"an index over proved artifacts, not a better ranker."*
+
+**Net:** wiring `expand-memory-cascade` onto the countdown path would not fail
+loudly. It would flood quietly, mostly with incidental material, onto a shelf
+that is already hash-ordered and already 62% unused. Ordering is the change that
+helps regardless; populating the graph is the prerequisite to exploiting it.
+
+### Where the plan lives
+
+`holes/PLAN-apm-cascade-demo-instance.md` turns this note into six sequenced
+handoffs — **H0** dry-run the expander (acceptance test: reproduce or correct
+the 141/100 above), **H1** archive the rendered packet (closes this note's own
+boundary section), **H4** the f42a counterfactual, **H2** replace the hash sort,
+**H5** populate the graph, **H3** wire the cascade why-hop-only, last and
+optional. H0 and H4 each carry a stopping condition.
+
+Also: `futon2/holes/E-cascade-sampler-four-2026-08-26.md` places this beside the
+WM's two cascade mechanisms — of the three in the stack, exactly one runs on an
+automated path, and its content is a frozen July fixture.
+
 ## Related
 
 - `TN-apm-watcher.md` — the role this was written from; claims-versus-artifacts table.
@@ -198,3 +297,6 @@ changes what the experiment measures, which `TN-apm-watcher` puts in Joe's hands
   condition 3, which f42/a1 satisfied through the flat shelf, not through a cascade.
 - `holes/excursions/E-bell-clink-adapter.md` — same failure shape at the
   coordination layer: a receipt the obligated party could not have produced.
+- `holes/PLAN-apm-cascade-demo-instance.md` — the handoff plan built on this note.
+- `holes/f42a-cascade-example.edn` — the counterfactual cascade artifact.
+- `docs/retrieval-whitepaper-v2.md` §4.6 — why the store is a forest of stars.
