@@ -63,7 +63,12 @@
         request (:request (sut/build-request
                            (merge base {:action action
                                         :seat {:agent-id "f19-student"
-                                               :invoke-ready? true}})))
+                                               :invoke-ready? true}
+                                        :cascade-readers-fn
+                                        (fn []
+                                          (throw (ex-info
+                                                  "arm-off reader was called"
+                                                  {})))})))
         request (assoc request :memory-snapshot
                        {:receipt-id "promotion" :snapshot-id "snapshot"
                         :snapshot-digest "digest"
@@ -87,7 +92,149 @@
             :snapshot-digest "digest"}
            (get-in result [:certificate :receipt/memory-snapshot])))
     (is (= candidate (get-in result [:certificate :receipt/candidate])))
-    (is (= "fresh-s1" (get-in result [:certificate :receipt/fresh-session-id])))))
+    (is (= "fresh-s1" (get-in result [:certificate :receipt/fresh-session-id])))
+    (is (not (contains? request :memory-cascade))
+        "an absent arm config preserves the pre-cascade request shape")
+    (is (not (contains? (:certificate result) :receipt/memory-cascade))
+        "an absent arm config preserves the pre-cascade receipt shape")
+    (is (= {:dispatch/type :student-attempt :phase :student-attempt-1
+            :role :student :agent-id "f19-student" :frame-id "f19"
+            :problem-id "a01J05" :ledger-digest (:digest (:ledger base))
+            :role-card-path "card.md" :role-card-blob "card-blob"
+            :input-receipt-ids #{(:receipt/id preflight-receipt)}
+            :terminal-budget {:collection-attempts 1 :repair-attempts 1}
+            :turn-timeout-ms 3600000 :attempt-ordinal 1
+            :workspace "/tmp/student" :fresh-session? true
+            :memory-snapshot
+            {:receipt-id "promotion" :snapshot-id "snapshot"
+             :snapshot-digest "digest" :accessible-memory-ids []}
+            :fresh-session-nonce (:fresh-session-nonce request)
+            :dispatch/id (:dispatch/id request)
+            :submission/token (:submission/token request)}
+           request)
+        "the arm-off request is exactly the pre-change request")
+    (let [certificate (:certificate result)]
+      (is (= {:receipt/type :student-attempt :receipt/frame-id "f19"
+              :receipt/problem-id "a01J05" :receipt/attempt-ordinal 1
+              :receipt/fresh-session-id "fresh-s1" :receipt/job-id "j1"
+              :receipt/outcome :stuck
+              :receipt/failure-account {:reason :gap}
+              :receipt/memory-use
+              {:receipt-id "promotion" :snapshot-id "snapshot"
+               :snapshot-digest "digest" :accessible-memory-ids []
+               :surfaced-ids [] :used-ids [] :queries []}
+              :receipt/memory-snapshot
+              {:receipt-id "promotion" :snapshot-id "snapshot"
+               :snapshot-digest "digest"}
+              :receipt/candidate candidate :receipt/id (:receipt/id certificate)}
+             certificate)
+          "the arm-off receipt is exactly the pre-change receipt"))))
+
+(def cascade-action
+  {:kind :student-attempt :phase :student-attempt-1 :role :student
+   :ordinal 1 :frame-id "f19" :problem-id "a01J05"})
+
+(defn- cascade-request
+  [cascade-fn]
+  (:request
+   (sut/build-request
+    (merge base
+           {:unit (assoc unit :memory-cascade
+                         {:enabled? true :routes [:sibling] :cap 10})
+            :action cascade-action
+            :snapshot-access {:accessible-memory-ids #{"shelf-memory"}}
+            :seat {:agent-id "f19-student" :invoke-ready? true}
+            :cascade-fn cascade-fn
+            :cascade-readers {:attachments-fn (constantly [])
+                              :why-targets-fn (constantly [])
+                              :pattern-fn (constantly nil)}}))))
+
+(defn- student-job
+  [used-ids]
+  {:job-id "cascade-job" :agent-id "f19-student" :session-id "fresh-cascade"
+   :state :done
+   :report {:command-own-exit 0 :frame-id "f19" :problem-id "a01J05"
+            :outcome :stuck :failure-account {:reason :gap}
+            :memory-use {:used-ids used-ids}}})
+
+(deftest configured-cascade-offers-are-readable-citable-and-receipted
+  (let [request (-> (cascade-request
+                     (fn [seed-ids options]
+                       (is (= ["shelf-memory"] seed-ids))
+                       (is (= #{:sibling} (:routes options)))
+                       {:routes [["shelf-memory" {:route :leaf :hops 0}]
+                                 ["offered-memory"
+                                  {:route :sibling :hops 1
+                                   :pattern "math-strategy/p"}]]
+                        :pattern-surfaces
+                        {"math-strategy/p" {:offer/pattern-hook "Try the bridge"}}
+                        :expanded-available 1 :expanded-count 1 :cap 10
+                        :truncated? false :routes-enabled #{:sibling}}))
+                    (assoc :memory-snapshot
+                           {:receipt-id "promotion" :snapshot-id "snapshot"
+                            :snapshot-digest "digest"
+                            :accessible-memory-ids ["shelf-memory"]}))
+        ticket {:job-id "cascade-job"}
+        job (student-job ["offered-memory"])]
+    (is (= [{:memory-id "offered-memory" :route :sibling :hops 1
+             :pattern "math-strategy/p" :pattern-hook "Try the bridge"}]
+           (get-in request [:memory-cascade :offers])))
+    (is (= {:sibling 1} (get-in request [:memory-cascade :histogram])))
+    (is (re-find #"memory-cascade offers are also readable and citable"
+                 (sut/prompt request)))
+    (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
+      (let [validated (sut/validate-terminal request ticket job)
+            result (sut/receipt contract cascade-action (:receipts base)
+                                request ticket job
+                                (assoc validated :candidate
+                                       (certified-candidate "f19" "a01J05" 1)))]
+        (is (:ok validated))
+        (is (:ok result) (pr-str result))
+        (is (= [{:memory-id "offered-memory" :route :sibling
+                 :pattern "math-strategy/p"}]
+               (get-in result [:certificate :receipt/memory-cascade
+                               :used-via-cascade])))
+        (is (not (contains? (get-in result
+                                    [:certificate :receipt/memory-cascade
+                                     :offers 0])
+                            :pattern-hook)))))
+    (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
+      (is (some #{:student-memory-used-without-surfacing}
+                (:findings
+                 (sut/validate-terminal request ticket
+                                        (student-job ["not-offered"]))))))))
+
+(deftest cascade-expansion-failure-does-not-block-student-dispatch
+  (let [plain (:request
+               (sut/build-request
+                (merge base {:action cascade-action
+                             :seat {:agent-id "f19-student"
+                                    :invoke-ready? true}})))
+        request (cascade-request
+                 (fn [& _] (throw (ex-info "substrate unavailable" {}))))
+        request (assoc request :memory-snapshot
+                       {:receipt-id "promotion" :snapshot-id "snapshot"
+                        :snapshot-digest "digest"
+                        :accessible-memory-ids ["shelf-memory"]})]
+    (is (map? request))
+    (is (= "substrate unavailable" (get-in request [:memory-cascade :error])))
+    (is (not (re-find #"memory-cascade offers are also readable"
+                      (sut/prompt request))))
+    (is (= (dissoc plain :dispatch/id :fresh-session-nonce :submission/token)
+           (dissoc request :dispatch/id :fresh-session-nonce :submission/token
+                   :memory-cascade :memory-snapshot)))
+    (with-redefs [role-memory/recorded-receipts-for-job (constantly [])]
+      (let [ticket {:job-id "cascade-job"}
+            job (student-job [])
+            validated (sut/validate-terminal request ticket job)
+            result (sut/receipt contract cascade-action (:receipts base)
+                                request ticket job
+                                (assoc validated :candidate
+                                       (certified-candidate "f19" "a01J05" 1)))]
+        (is (:ok validated))
+        (is (= {:error "substrate unavailable"
+                :expansion-ms (get-in request [:memory-cascade :expansion-ms])}
+               (get-in result [:certificate :receipt/memory-cascade])))))))
 
 (deftest typed-terminal-repair-preserves-authority-and-carries-findings
   (let [repair (sut/terminal-repair-request

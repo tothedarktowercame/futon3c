@@ -34,9 +34,55 @@
        (keep #(get-in receipts [% :receipt/id]))
        set))
 
+(defn- cascade-request
+  [config seed-ids cascade-fn cascade-readers cascade-readers-fn]
+  (let [started (System/nanoTime)]
+    (try
+      (let [readers (if (fn? cascade-readers-fn)
+                      (cascade-readers-fn)
+                      cascade-readers)
+            options (cond-> (or readers {})
+                      (some? (:cap config)) (assoc :cap (:cap config))
+                      (some? (:routes config)) (assoc :routes
+                                                      (set (:routes config))))
+            expanded (cascade-fn seed-ids options)
+            offers (->> (:routes expanded)
+                        (remove #(= :leaf (get-in % [1 :route])))
+                        (mapv (fn [[memory-id {:keys [route hops pattern]}]]
+                                {:memory-id memory-id
+                                 :route route
+                                 :hops hops
+                                 :pattern pattern
+                                 :pattern-hook
+                                 (or (get-in expanded
+                                             [:pattern-surfaces pattern
+                                              :offer/pattern-hook])
+                                     (get-in expanded
+                                             [:pattern-surfaces pattern
+                                              :pattern/hook])
+                                     (get-in expanded
+                                             [:pattern-surfaces pattern :hook])
+                                     (get-in expanded
+                                             [:pattern-surfaces pattern :entity
+                                              :entity/props :hook])
+                                     (get-in expanded
+                                             [:pattern-surfaces pattern :entity
+                                              :props :hook]))})))]
+        {:routes-enabled (:routes-enabled expanded)
+         :cap (:cap expanded)
+         :truncated? (:truncated? expanded)
+         :expanded-available (:expanded-available expanded)
+         :offers offers
+         :histogram (frequencies (map :route offers))
+         :expansion-ms (quot (- (System/nanoTime) started) 1000000)})
+      (catch Throwable t
+        {:error (or (.getMessage t) (.getName (class t)))
+         :expansion-ms (quot (- (System/nanoTime) started) 1000000)}))))
+
 (defn build-request
   [{:keys [contract action ledger unit role-card seat seat-role workspace receipts
-           snapshot-access student-attempt-inputs turn-timeout-ms terminal-budgets]
+           snapshot-access student-attempt-inputs turn-timeout-ms terminal-budgets
+           cascade-fn cascade-readers cascade-readers-fn]
     :or {turn-timeout-ms 3600000}}]
   (let [kind (:kind action)
         phase (:phase action)
@@ -106,7 +152,14 @@
                    (conj :student-trace-inputs-missing))]
     (if (seq findings)
       {:ok false :error/code :live-learning-request-invalid :findings findings}
-      (let [body (cond-> {:dispatch/type kind :phase phase :role role
+      (let [cascade-config (:memory-cascade unit)
+            cascade (when (and (= :student-attempt kind)
+                               (true? (:enabled? cascade-config)))
+                      (cascade-request
+                       cascade-config
+                       (vec (sort (:accessible-memory-ids snapshot-access)))
+                       cascade-fn cascade-readers cascade-readers-fn))
+            body (cond-> {:dispatch/type kind :phase phase :role role
                           :agent-id (:agent-id seat)
                           :frame-id (:frame/id unit) :problem-id (:problem/id unit)
                           :ledger-digest (:digest ledger)
@@ -119,6 +172,8 @@
                           :workspace (:workspace/path workspace)
                           :fresh-session? true
                           :fresh-session-nonce (str (UUID/randomUUID)))
+                   (and (= :student-attempt kind) (some? cascade))
+                   (assoc :memory-cascade cascade)
                    ;; The base is what each fresh attempt is reset to and what
                    ;; the archived source is measured against.
                    (and (= :student-attempt kind)
@@ -208,8 +263,11 @@
         (set (mapcat role-memory/receipt-surfaced-ids search-receipts))
         snapshot-memory-ids
         (set (get-in request [:memory-snapshot :accessible-memory-ids]))
+        cascade-memory-ids
+        (set (map :memory-id (get-in request [:memory-cascade :offers])))
         allowed-memory-ids
-        (into snapshot-memory-ids searched-memory-ids)
+        (into snapshot-memory-ids (concat searched-memory-ids
+                                          cascade-memory-ids))
         used-memory-ids (set (:used-ids submitted-memory-use))
         memory-use (controller-memory-use request ticket
                                           (:used-ids submitted-memory-use))
@@ -290,6 +348,25 @@
                           :receipt/memory-snapshot
                           (select-keys (:memory-snapshot request)
                                        [:receipt-id :snapshot-id :snapshot-digest])}
+                   (map? (:memory-cascade request))
+                   (assoc :receipt/memory-cascade
+                          (let [cascade (:memory-cascade request)
+                                used-ids (set (get-in report
+                                                     [:memory-use :used-ids]))]
+                            (if (vector? (:offers cascade))
+                              (-> cascade
+                                  (update :offers
+                                          #(mapv (fn [offer]
+                                                   (dissoc offer :pattern-hook))
+                                                 %))
+                                  (assoc :used-via-cascade
+                                         (->> (:offers cascade)
+                                              (filter #(contains? used-ids
+                                                                  (:memory-id %)))
+                                              (mapv #(select-keys
+                                                      % [:memory-id :route
+                                                         :pattern])))))
+                              cascade)))
                    (map? (:source validated))
                    (assoc :receipt/source (:source validated))
                    (map? (:candidate validated))
@@ -526,6 +603,9 @@
               "the reviewed starting shelf. You may also use the controller-owned "
               "open mathematics search command; any additionally surfaced memory "
               "is recorded automatically in a job-bound typed receipt. "
+              (when (seq (get-in request [:memory-cascade :offers]))
+                (str "The :memory-cascade offers are also readable and citable, "
+                     "each labelled by the pattern route that reached it. "))
               "Return :memory-use with only vector-valued :used-ids naming "
               "memories actually used (an empty vector means none). Snapshot "
               "binding, surfaced ids, queries, and search receipt ids are "

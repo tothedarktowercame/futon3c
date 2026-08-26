@@ -11,6 +11,7 @@
             [futon3c.apm.campaign-stepper :as stepper]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.countdown-pre-admission :as admission]
+            [futon3c.apm.conductor :as conductor]
             [futon3c.apm.generated-contract :as generated-contract]
             [futon3c.apm.authority-port :as authority-port]
             [futon3c.apm.job-port :as job-port]
@@ -722,6 +723,9 @@
                 (when (= :scribe-reduce phase)
                   (student-attempt-inputs contract (:frame/id unit)))
                 :terminal-budgets (generated-terminal-budgets contract)
+                :cascade-fn conductor/expand-memory-cascade
+                :cascade-readers-fn
+                #(#'conductor/live-cascade-readers {})
                 :turn-timeout-ms (role-turn-timeout-ms contract role)})]
     (cond
       (not (:ok card)) card
@@ -1906,7 +1910,8 @@
 
 (defn set-alight-problem-list!
   "List-only JIT entry point. PROBLEMS contain immutable problem pins."
-  [{:keys [problems authority queue-name frame-number-base agency-base autonomous?]
+  [{:keys [problems authority queue-name frame-number-base agency-base autonomous?
+           memory-cascade]
     :or {queue-name "jit-problem-list-v1" frame-number-base 24
          agency-base "http://localhost:7070"}}]
   (let [control-root (or (:control-root authority) "/home/joe/code/futon3c-apm-control")
@@ -1943,6 +1948,7 @@
                             :scribe :zai-scribe :analyst]))
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
+         :memory-cascade memory-cascade
          :campaign-root campaign-root
          :contract-path (str control-root "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
          :generated-contract-path
@@ -1963,11 +1969,13 @@
                      expected [(:frame/id frame) (:problem/id frame)
                                (get-in frame [:problem :revision])
                                (get-in frame [:problem :path])
-                               (get-in frame [:problem :blob])]
+                               (get-in frame [:problem :blob])
+                               (:memory-cascade frame)]
                      observed [(:frame/id unit) (:problem/id unit)
                                (get-in unit [:problem :revision])
                                (get-in unit [:problem :path])
-                               (get-in unit [:problem :blob])]]
+                               (get-in unit [:problem :blob])
+                               (:memory-cascade unit)]]
                  (if (= expected observed)
                    existing
                    (throw (ex-info "Persisted JIT manifest identity mismatch"

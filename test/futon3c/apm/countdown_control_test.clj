@@ -510,6 +510,23 @@
       (is (fn? (:state-provider @captured)))
       (is (fn? (:persist-state-fn @captured))))))
 
+(deftest problem-list-threads-memory-cascade-arm-into-jit-adapter
+  (let [adapter-config (atom nil)
+        cascade {:enabled? true :routes [:sibling] :cap 100}
+        problem {:problem/id "m-test" :repository "/repo" :revision "r"
+                 :path "Main.lean" :blob "b" :classification :non-excluded}]
+    (with-redefs [queued-frame-adapter/live-effects
+                  (fn [config]
+                    (reset! adapter-config config)
+                    {:mint-frame-fn identity})
+                  problem-queue/tick!
+                  (constantly {:ok true :status :batch-complete})]
+      (sut/set-alight-problem-list!
+       {:problems [problem] :memory-cascade cascade
+        :authority {:agent "codex-21" :control-root "/home/joe/code/futon3c"}
+        :autonomous? true})
+      (is (= cascade (:memory-cascade @adapter-config))))))
+
 (deftest jit-queue-wires-concrete-adapter-and-countdown-supervision
   (let [adapter-config (atom nil)
         tick-options (atom nil)

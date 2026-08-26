@@ -151,7 +151,7 @@
         apparatus (assoc apparatus-body :pin/id
                          (machine/ledger-digest [apparatus-body]))
         problem (:problem frame)
-        unit {:frame/id (:frame/id frame) :ordinal 1 :arm :treatment
+        unit (cond-> {:frame/id (:frame/id frame) :ordinal 1 :arm :treatment
               :problem/id (:problem/id frame)
               :classification/value :non-topology
               :classification/source :operator-reviewed-statement
@@ -162,6 +162,8 @@
                         :branch (or (:base-branch problem) "master")
                         :revision (:revision problem) :path (:path problem)
                         :blob (:blob problem)}}
+               (contains? frame :memory-cascade)
+               (assoc :memory-cascade (:memory-cascade frame)))
         body {:manifest/version 2 :manifest/scope :one-off
               :campaign/id (:campaign/id frame)
               :block/id (str (:frame/id frame) "-one-off")
@@ -396,7 +398,7 @@
   OPEN-FRAME-FN and FRAME-TICK-FN are countdown-control boundaries.  They are
   explicit to avoid a namespace cycle; all resource effects below use the
   production lifecycle/Agency adapters."
-  [{:keys [frame-number-base campaign-prefix generated-contract-path
+  [{:keys [frame-number-base campaign-prefix memory-cascade generated-contract-path
            qualification-report-path manifest-fn ledger-fn
            role-cards workspace-root substrate-path agency-base http-fn
            open-frame-fn frame-tick-fn retire-frame-fn retirement-audit-fn pin-solve-fn
@@ -404,7 +406,8 @@
     :as config}]
   {:mint-frame-fn
    #(mint (assoc % :frame-number-base frame-number-base
-                 :campaign-prefix campaign-prefix))
+                 :campaign-prefix campaign-prefix
+                 :memory-cascade memory-cascade))
    :qualify-frame-fn
    #(qualify-current {:frame % :generated-contract-path generated-contract-path
                       :qualification-report-path qualification-report-path})
@@ -494,12 +497,15 @@
                   :responses responses}))})))))})
 
 (defn mint
-  [{:keys [problem ordinal queue/id frame-number-base campaign-prefix]}]
+  [{:keys [problem ordinal queue/id frame-number-base campaign-prefix
+           memory-cascade]}]
   (let [frame-id (str "f" (+ (or frame-number-base 1) ordinal))
         campaign-id (str (or campaign-prefix "apm-queued") "-" frame-id)
-        body {:frame/id frame-id :problem/id (:problem/id problem)
-              :problem problem :campaign/id campaign-id :queue/id id
-              :ordinal ordinal}]
+        body (cond-> {:frame/id frame-id :problem/id (:problem/id problem)
+                      :problem problem :campaign/id campaign-id :queue/id id
+                      :ordinal ordinal}
+               (some? memory-cascade)
+               (assoc :memory-cascade memory-cascade))]
     {:ok true :frame (assoc body :frame/mint-id
                             (machine/ledger-digest [body]))}))
 

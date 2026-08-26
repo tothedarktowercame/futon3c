@@ -115,6 +115,19 @@
     (is (.endsWith (get-in manifest [:apparatus :artifacts :zai-scribe :path])
                    "zai-scribe-v2.md"))))
 
+(deftest memory-cascade-arm-is-pinned-from-minted-frame-into-manifest
+  (let [config {:enabled? true :routes [:sibling :why-hop] :cap 37}
+        frame (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                                 :frame-number-base 30
+                                 :memory-cascade config}))
+        manifest (sut/one-off-manifest
+                  {:frame frame :apparatus-repository "."
+                   :apparatus-branch "master" :baseline {}})]
+    (is (= config (:memory-cascade frame)))
+    (is (= config (get-in manifest [:units 0 :memory-cascade])))
+    (is (sut/valid-mint? frame))
+    (is (string? (:manifest/id manifest)))))
+
 (deftest open-precedes-all-resource-effects
   (let [calls (atom [])
         body {:preparation/version 2 :frame/id "f30" :problem/id "p1"}
