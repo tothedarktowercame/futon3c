@@ -1,8 +1,12 @@
 # Excursion: E-bell-clink-adapter — a pull delivery lane for CLI seats ("clink" = CLI Link)
 
 **Date:** 2026-08-26
-**Status:** IDENTIFY (design sketched; not built). Written at Joe's request after a live
-bifurcation during the f41 watch.
+**Status:** BUILT, awaiting a restart to finish. P1 (`f6462999`) + P2 (`66858f5a`) by
+codex-20, review fixes `dd3a9e61` and `3f842893`. The pull lane is live and was
+demonstrated end-to-end on 2026-08-26; the ack endpoint is written and tested but is a
+NEW ROUTE, so the running JVM cannot serve it until Joe restarts. See "What was built"
+at the end. Originally written at Joe's request after a live bifurcation during the f41
+watch.
 **Repo:** futon3c — the delivery path: `agency/agent_pouch.clj` (`spawn-pouch!`),
 `transport/http.clj` (handle-bell + auto-bellback), the roster
 (`GET /api/alpha/agents`), and `scripts/agency_send.py`.
@@ -142,3 +146,84 @@ problem actually is.
 - **Does the ack need to be in-band?** A file move is simplest and needs no endpoint, but then
   job state lives in the filesystem rather than the ledger. An explicit
   `POST /api/alpha/invoke/jobs/<id>/ack` keeps the ledger authoritative. Undecided.
+
+## What was measured before building (2026-08-26)
+
+From the 1,450-job invoke ledger:
+
+- **The typed-bell obligation check proposed above is degenerate.** One `:query` in the
+  entire ledger, zero `:answer`s (796 `:request`, 653 untyped). n=1 says nothing about
+  size, so "queries with no answer on the ref" was not worth building on.
+- **The delivery side carries the events.** 57 bells addressed to `claude-cli` — an
+  unregistered CLI seat — every one `failed / agent-not-found`, all on 2026-08-24 between
+  08:30 and 13:09. That is the no-return-path cost, measured. Separately, 24 auto-bellbacks
+  to claude-type seats, all `state done`.
+- **Every one of the 108 jobs to claude-type seats carries the same self-issued receipt:**
+  `{:status "delivered", :note "bell-job-ready"}`, written by Agency at dispatch. This is
+  the criterion failing in the data rather than in the argument.
+- claude-12 received two further auto-bellbacks at 10:20 and 10:22 on 2026-08-26 — after
+  this note was written — and was still registered push-capable on session-id
+  `c77bb7c4-…`, the same uuid as the live terminal. The hazard was open while the note
+  describing it sat in the repo.
+
+## What was built
+
+- `:agent/delivery-mode` (`:push` / `:inbox`) on the agent record, persisted through
+  `roster_store` and the restore path so a pull-only seat cannot come back push-capable
+  after a restart.
+- The no-spawn guard lives in `reg/invoke-agent!`, not in the bell handler. Every dispatch
+  path funnels through it via `invoke-agent-with-session-recovery!`, including
+  `enqueue-auto-bellback!`, which bypasses `handle-bell` entirely and is the path that
+  actually forked claude-12. A guard in the handler alone would have left the measured
+  defect open.
+- `futon3c.agency.inbox` writes `<root>/<agent-id>/<job-id>.json` with a tmp-then-rename
+  so a watcher never reads a truncated file, and embeds `ack-url` so the file is
+  self-describing to a reader that knows nothing about Agency.
+- `delivered` as a non-terminal job state. Three sites define "terminal" and two of them
+  do it as the complement of `{queued, running, overrun}`, so a naive `delivered` would
+  have been born terminal and unackable. They still disagree with the explicit allow-list
+  in `terminal-invoke-state?`; unifying them is a separate change.
+- `POST /api/alpha/invoke/jobs/:id/ack`, the consumption receipt. Records
+  `inbox-consumed-ack` — deliberately distinguishable in the ledger from Agency's own
+  `bell-job-ready` — appends an `acked` event, and moves the file to `consumed/`.
+- Age-of-oldest-unconsumed per seat on `GET /api/alpha/agents`, and as an aggregate with
+  the owning agent-id on `/health`, folded over the in-memory ledger with no filesystem
+  scan.
+- `scripts/clink-inbox.py` — `list` / `read` / `ack` for a CLI seat, reading `ack-url`
+  out of the payload rather than reconstructing it.
+
+### The finalize race, found in review
+
+`finalize-invoke-job!` decided whether ITS call had performed the terminal transition by
+reading an atom that the function passed to `swap!` had `reset!`. `swap!` re-runs that
+function on CAS contention, and a discarded attempt's side effect has already happened —
+so a losing caller came away holding the winner's flag. Two callers could both believe
+they finalized: two auto-bellbacks, and, once the ack existed, two consumption acks.
+This is very likely the `reaper-and-supervisor-race-finalizes-once` flake that showed two
+bellbacks once during P2 and did not reproduce. Fixed in `3f842893` by reading the
+transition from `swap-vals!`: the caller that saw the job non-terminal in the
+ledger-before value is the one that committed, and only one caller can.
+
+## Live acceptance, 2026-08-26
+
+`claude-clink-1` was registered pull-only from a live CLI session (an ordinary HTTP POST),
+a directory watcher was armed on its inbox, and codex-20 was asked to send it one real
+bell.
+
+- The bell landed as `~/.claude/agency-inbox/claude-clink-1/invoke-1787744055336-1458-986e7491.json`
+  and the watcher surfaced it in the terminal within seconds. **No copy of the session was
+  started.** That is the thing this excursion exists to achieve.
+- The job sat at `delivered` with `{:status "pending"}` — not a self-issued `done`.
+- The roster row read `delivery-mode inbox`, `invoke-route inbox`,
+  `"pull-only seat — bells are written to its inbox; invoke is refused"`.
+- `/health` reported `unconsumed-count 1`, `oldest-unconsumed-agent-id claude-clink-1`,
+  with the age climbing — the alarm correctly describing an unread bell.
+- `clink-inbox.py list` and `read` worked against the real file.
+
+**What did not complete: the ack.** `POST …/ack` is a new route, and route topology is
+captured in the handler closure at build time. The namespace reload took (all the function
+redefinitions above are live), but `!handler-builder` is nil on this JVM — it was started
+by a path that never captured a rebuild function — so the handler cannot be rebuilt in
+place and the route 404s. `README-drawbridge` already classifies route-topology changes as
+restart-only. **A restart of the futon3c JVM, which is Joe's call, finishes this.** The
+delivery above is deliberately left unacked so the restart has something real to discharge.
