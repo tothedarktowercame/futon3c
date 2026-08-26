@@ -42,7 +42,7 @@ Not "the cascade ran". The demo succeeds when a single frame's receipt shows
 
 (1) alone is "built". (1)+(2) is "built and used", and is the claim worth making.
 
-## Five handoffs, smallest first
+## Six handoffs, smallest first
 
 ### H0 — dry-run the expander before wiring anything (30 minutes, no code)
 
@@ -158,6 +158,73 @@ f42 are different and should not be conflated in the write-up.
 **Note that `jit-all-open-nontopology-v1-f42` is `:campaign/status :running`
 as of 2026-08-26T12:38.** f42a must be a replay against the archived snapshot,
 touching nothing in the live arm.
+
+### The whitepaper check (Joe, 2026-08-26): efficiency here means faster flooding
+
+*Joe: "this relates to the 'memory whitepaper' where the idea was that memories
+could be searched efficiently by starting from high-level patterns and going to
+leaves … what you've just described sounds like 'efficiency' would lead to
+'even faster flooding' unless we're careful."*
+
+Read `docs/retrieval-whitepaper-v2.md` against the f42a numbers. The concern is
+right, and §4.6 of the paper already names the reason.
+
+**The store is a forest of stars.** §4.6: "each memory attaches to exactly one
+pattern, patterns carry many memories, and the largest component of the
+patterns-only projection is a **single hyperedge**." Its own summary table:
+schema *well-constructed*, content *well-curated*, graph **"essentially unbuilt
+— the edges that would make it a graph were never written."** Multi-attachment
+is fully representable (`review-attachment!` takes a non-empty vector of pattern
+ids); the star forest is "an artefact of use, not a representational limit".
+
+**Descent from a high-level pattern therefore does not narrow — it dumps.**
+f42a, with the incidental route switched off:
+
+    why-hop additions only:  53      shelf 48 -> 101
+    and all 53 come from ONE pattern: math-strategy/missing-dependency-protocol
+
+23 seed patterns reach just **4** why-reachable patterns, and effectively one of
+them carries the entire expansion. That is the star topology showing through:
+the pattern is a star centre, its leaves are 53 memories, and there is no
+intermediate structure to prune against. Efficiency-by-descent presupposes a
+hierarchy to descend; this store has one level.
+
+**With the incidental route on, it is worse.** Of 141 available expansions,
+**88 arrive by co-incidence** — `pattern -> problem -> pattern`, from 70 shared
+seed problems reaching 32 patterns. `conductor.clj` is careful that co-incidence
+"does not recursively flood", and it does not recurse; it does not need to. One
+hop through shared problems out-produces the authored route 88 to 53.
+
+**And the delivery is already mostly waste before any of this.** The paper
+measures **62% of surfacing slots consumed by memories used nowhere**, on a
+48-entry shelf. Tripling the shelf multiplies the unused fraction; it cannot
+improve it.
+
+**A deeper mismatch, from §5.1.** "Every memory examined is a pattern, caution,
+route, or stopping rule … **None is a proved lemma you can import.**" The
+paper's own natural experiment has a runner finding a blocking lemma **by
+repository grep, not by recall**, on a dispatch where recall completed and
+contributed two used memories. Its conclusion: measuring that gap "needs a
+different instrument: an index over proved artifacts, not a better ranker." More
+advice, delivered faster, does not address it.
+
+**Consequence for this plan.** The cascade is a mechanism for exploiting graph
+structure, applied to a graph the paper states was never populated. Wiring it
+(H3) does not fail loudly — it floods quietly, and mostly with co-incidence
+material. So:
+
+- **H3 gains a gate.** If it is built at all, build it **why-hop only**, with
+  co-incidence off, and state the cap argument explicitly. On f42 that is still
+  53 additions from one star, so the gate is necessary and not sufficient.
+- **H5 (new, and prior to H3) — populate the graph before exploiting it.**
+  Multi-attach memories to the patterns they actually bear on, and author
+  pattern→pattern edges. §4.6 says this is a habit of writing, not a schema
+  change. Until it happens, every structural result — including f42a — is a
+  finding about population, not about design, and the paper is explicit that
+  reporting it otherwise would be uninformative.
+- **H2 rises further.** Ordering is the only change here that helps a shelf
+  which is already 62% unused, and it helps whether or not the graph is ever
+  populated.
 
 ## What to measure
 
