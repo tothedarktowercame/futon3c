@@ -1,0 +1,108 @@
+[
+{:namespaces ["futon3c.apm.live-learning-phases"],
+ :since-frame "f43",
+ :amendment 5,
+ :note
+ "H1 (backfilled): student/guide packets archived verbatim to live/<phase>-packet.txt; reloaded from master with f42 at :solve, so from f43. Amendment 5 (claude-19, 16:20Z).",
+ :head "0bc2b81f",
+ :id "C-1",
+ :kind :code,
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :loaded? true,
+ :sha "7ee42661"}
+{:namespaces
+ ["futon3c.apm.memory-snapshot" "futon3c.apm.countdown-control"],
+ :expect
+ "median position of a later-used memory falls (offline audit: 18.5 -> 3.0)",
+ :since-frame "f43",
+ :field [:snapshot/ordering],
+ :amendment 6,
+ :note
+ "H2 (backfilled): snapshot ordering v2 [promoted-this-frame, identifier-overlap, memory-id] with :snapshot/ordering record (844c6ae4 + ad45cd1f); reloaded before f43. Amendment 6.",
+ :head "0bc2b81f",
+ :id "C-2",
+ :kind :code,
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :loaded? true,
+ :sha "ad45cd1f"}
+{:namespaces ["futon3c.apm.conductor"],
+ :since-frame "f43",
+ :note
+ "Cascade reader fixes (backfilled): hyperedge window 1000 with full-page refusal (7534419c), reviewed attachments must be :current (b40a3d4d). Affects only expand-memory-cascade, which no frame before f45 calls.",
+ :head "0bc2b81f",
+ :id "C-3",
+ :kind :reload,
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :loaded? true,
+ :sha "b40a3d4d"}
+{:id "C-4",
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :kind :library,
+ :note
+ "H5a (backfilled, Joe authorised): futon3 library @why of measure-integration-api, holomorphic-disk-api, weak-convergence-hilbert repointed from math-strategy/missing-dependency-protocol to math-informal/reduce-to-known-result; frontier-bound-from-arc-hypotheses -> holomorphic-disk-api; stale has-semantic-why relations retracted and re-ingested. Hub in-degree 0. Shelf contents unchanged; cascade why-hop route changed (48 -> 0 on f42).",
+ :head "0bc2b81f",
+ :sha "1b75c1f"}
+{:id "C-5",
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :kind :substrate,
+ :note
+ "H5b (backfilled, applied by codex-20): seven codex-lane mathematical memories reassigned from the missing-dependency-protocol hub to their API patterns (review verdict :reassign); hub 47 -> 40. None on the live shelf at the time.",
+ :head "0bc2b81f"}
+{:namespaces
+ ["futon3c.apm.conductor"
+  "futon3c.apm.live-learning-phases"
+  "futon3c.apm.queued-frame-adapter"
+  "futon3c.apm.countdown-control"
+  "futon3c.apm.generated-contract"],
+ :expect
+ "P-a histogram non-empty on every student attempt; P-b :truncated? true on ~40+ shelves under cap 100; P-c :used-via-cascade non-empty on >=1 attempt in the first two arm frames (falsifier: none in two frames)",
+ :since-frame "f45",
+ :field [:receipt/memory-cascade :used-via-cascade],
+ :amendment 7,
+ :note
+ "H3 memory-cascade arm (backfilled): sibling route, cap 100, from memory-cascade-arm.edn read per tick (7fac097b, b5095e37, 1cc861f9, c0c399cf; arm file 2f8d6696; contract v4). Reloaded 18:05Z. f44 minted 17:28 on 7c0a9338, BEFORE the arm: first arm frame is f45, not f44 as amendment 7 says.",
+ :head "0bc2b81f",
+ :id "C-6",
+ :kind :arm,
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :loaded? true,
+ :sha "c0c399cf"}
+{:namespaces ["futon3c.apm.open-problem-queue"],
+ :note
+ "On master, NOT loaded (probe 18:36Z: excluded-classifications in the JVM lacks construction-blocked): open-queue exclusion of construction-blocked problems (Joe + Opus session). Takes effect at the next reload of open-problem-queue; register that reload.",
+ :head "0bc2b81f",
+ :id "C-7",
+ :kind :code,
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :loaded? false,
+ :sha "6a7735e1"}
+{:namespaces ["futon3c.apm.live-learning-phases"],
+ :field [:shelf/holdout :shelf/withheld-count],
+ :amendment 5,
+ :note
+ "On master, NOT loaded (probe 18:36Z: loaded receipt var at line 332, file has 355): same-problem holdout on student attempt 1 (claude-clink-1; second entry numbered 'amendment 5', 18:30Z). Its own text says frames from the amendment on are not comparable to f28-f44 on attempt-1 outcomes -- that boundary is the RELOAD, not the commit.",
+ :head "0bc2b81f",
+ :id "C-8",
+ :kind :code,
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :loaded? false,
+ :sha "0e4b71ba"}
+{:id "C-9",
+ :at "2026-08-26T18:41Z",
+ :by "claude-19",
+ :kind :reload,
+ :note
+ "conditions registry: campaign-conditions read per tick and pinned into the manifest as :conditions from the next mint",
+ :head "0bc2b81f",
+ :namespaces
+ ["futon3c.apm.queued-frame-adapter" "futon3c.apm.countdown-control"],
+ :loaded? true}
+]

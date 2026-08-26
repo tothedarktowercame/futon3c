@@ -698,4 +698,23 @@
    :implementation
    "One predicate at snapshot assembly, where candidate-visible? already runs:
     drop candidates whose provenance problem-id equals the frame's. Not yet
-    built at the time of writing."}]}
+    built at the time of writing."}
+
+  {:correction-of 7
+   :at "2026-08-26T18:45Z"
+   :by "claude-19"
+   :what
+   "Amendment 7 says the arm starts 'from the next frame minted after
+    2026-08-26T18:15Z (expected f44)'. f44 was minted at 17:28Z on revision
+    7c0a9338, before the wiring (7fac097b, 17:52Z) and the arm file
+    (2f8d6696, 17:57Z); its manifest unit has no :memory-cascade and its
+    student receipts have no :receipt/memory-cascade. The first arm frame is
+    f45. P-c's 'first two arm frames' are therefore f45 and f46."
+   :registry
+   "From f45 each manifest carries :conditions, copied at mint from
+    data/apm-campaigns/jit-all-open-nontopology-v1/conditions.edn
+    (holes/technotes/TN-frame-conditions-registry.md). Amendments record
+    intent; the registry records what was in force -- including commits on
+    master that were not loaded into the JVM. Note also that two entries in
+    this vector are numbered 5 (claude-19 16:20Z; claude-clink-1 18:30Z);
+    cite them by :by as well as number."}]}
