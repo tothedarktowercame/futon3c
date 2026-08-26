@@ -56,6 +56,29 @@ def frames(camp):
     return [d for _, d in sorted(fs)]
 
 
+def dispositions(text):
+    """Distinct (memory-id, verdict) pairs in a review record.
+
+    Counting raw ":verdict" occurrences over-counts from f42 onward: the
+    promotion receipt gained :candidate-materialization and
+    :review-materialization sub-records (the artifact read-back that makes a
+    promotion checkable), and EACH carries its own copy of the disposition.
+    f42's two rejected memories rendered as "reject: 8", and its one approval
+    as "approve: 3". Frames f28-f41 predate the schema and are unaffected --
+    verified, both countings agree on every one of them.
+
+    Each :verdict belongs to the nearest :memory-id before it, which is the
+    association the receipt actually encodes.
+    """
+    ids = [(m.start(), m.group(1)) for m in re.finditer(r':memory-id "([^"]+)"', text)]
+    pairs = set()
+    for m in re.finditer(r":verdict\s*:([\w-]+)", text):
+        prior = [i for i in ids if i[0] < m.start()]
+        if prior:
+            pairs.add((prior[-1][1], m.group(1)))
+    return pairs
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     want = None
@@ -88,11 +111,11 @@ def main():
         if not os.path.exists(p):
             continue
         t = read(p)
-        vs = re.findall(r":verdict\s*:([\w-]+)", t)
-        if not vs:
+        pairs = dispositions(t)
+        if not pairs:
             continue
         tally = {}
-        for v in vs:
+        for _mid, v in pairs:
             tally[v] = tally.get(v, 0) + 1
         cj = tally.get("cannot-judge", 0)
         unresolved_total += cj
@@ -101,7 +124,7 @@ def main():
     approved = 0
     for ph in REVIEW_PHASES:
         t = read(os.path.join(live, ph + ".edn"))
-        approved += len(re.findall(r":verdict\s*:approve", t))
+        approved += len([1 for _mid, v in dispositions(t) if v == "approve"])
     print(f"  supply:   {approved} approved this frame")
 
     # Solve progress: rounds alone cannot separate real work from spinning,
