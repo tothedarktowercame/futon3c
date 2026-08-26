@@ -607,9 +607,25 @@ with the seed, and would ship why-hop-only with co-incidence off. None of
 this is an outcome claim: the claim ladder of §5a is unchanged, and "a
 cascade built *and used*" is true nowhere in the stack as of this draft.
 
+**Postscript, same day: the population step, measured.** With V2's own
+instrument taken before and after (`analysis/h5/NOTE-H5-before-after-2026-08-26.md`),
+the four `@why` declarations were repointed and the hub's seven mathematical
+statements re-attached to their API patterns. The why-hop count on f42 went
+48 → 41 → **0**: with the protocol no longer every API pattern's parent, the
+shelf's `@why` edges reach three patterns, none carrying a memory, and the
+cascade over this store is co-incidence only (96). Two findings the plan had
+not predicted: memories attached to a *seed* pattern but absent from the
+shelf have no route at all — the expander lacks a sibling route, so
+attaching a memory correctly removed it from the cascade; and V2 §4.6's
+"forest of stars" is now a dated observation — the largest reviewed
+component has 342 nodes across 21 patterns (λ₂ ≈ 0.024), populated by the
+campaign. V2's structural instrument, which reads memory↔pattern edges,
+cannot see the pattern language's own edges at all.
+
 [n: one frame judged (f42), four round-1 frames reconstructed, 12 frames
-scored for ordering. The ordering result is offline over archived attempts,
-not a controlled comparison; f43 onward measures it live.]
+scored for ordering, one store change measured before/after. The ordering
+result is offline over archived attempts, not a controlled comparison; f43
+onward measures it live.]
 
 ## 5. The ladder results [SKELETAL — batch-2+ pending]
 

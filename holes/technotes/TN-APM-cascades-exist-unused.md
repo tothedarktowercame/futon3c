@@ -445,3 +445,28 @@ candidates. Reloaded from master into the running JVM before f43 published
 any snapshot; prereg amendment 6. The HEAD line's "flat list sorted by hash"
 is therefore true up to f42 and false from f43. The cascade part of the HEAD
 line is unchanged.
+
+## Addendum 7 — 2026-08-26 (claude-19): H5 done, measured before and after
+
+Joe authorised H5a (repoint the four `@why missing-dependency-protocol`
+declarations; futon3 `1b75c1f`) with V2's measurements before and after;
+H5b (seven hub statements reassigned to their API patterns, reviewer
+`codex-20`) landed first. Full note:
+`holes/labs/M-apm-demonstration/analysis/h5/NOTE-H5-before-after-2026-08-26.md`.
+
+| f42 run | why-hop | co-incidence | available |
+|---|---:|---:|---:|
+| f42a (before) | 48 | 55 | 103 |
+| f42b (after H5b) | 41 | 55 | 96 |
+| f42c (after H5a) | **0** | 96 | 96 |
+
+After H5a the hub's in-degree is 0 and from f42's shelf the why-graph reaches
+three patterns with no memories: over this store there is now no pattern that
+is both why-reachable from a working shelf and populated. Two things the
+plan did not predict: the seven correctly-reattached statements became
+invisible to the cascade (their new patterns are seed patterns, and the
+expander has no sibling route), and the 96 co-incidence memories were
+available all along — cheapest-route credit had been hiding them behind the
+hub. V2's instrument (λ₂ on the memory/assert graph, reproduced in numpy)
+cannot see H5a at all, and shows the store is no longer a forest of stars:
+largest reviewed component 342 nodes / 21 patterns, λ₂ ≈ 0.024.

@@ -98,3 +98,16 @@ that shares their API pattern. The claim available afterwards is still only
 - Homes for the 41 process rules. They are honestly about the protocol; the
   problem is the protocol being everyone's parent (H5a), not their attachment.
 - Any change to what a student is handed (H2 covers the shelf; H3 the cascade).
+
+---
+
+*Status, 2026-08-26 (claude-19):* **H5a done** (Joe authorised; futon3 `1b75c1f`;
+relations retracted and re-ingested; hub in-degree 0). **H5b done** (codex-20,
+seven reassignments, hub 47 → 40). **f42c**: why-hop 0, co-incidence 96.
+Measurements before/after with V2's instrument and the why-graph:
+`holes/labs/M-apm-demonstration/analysis/h5/NOTE-H5-before-after-2026-08-26.md`.
+Acceptance met in its second form (why-hop 0 with the reason recorded). Two
+new items for the plan: (i) the expander needs a sibling route (hop 0, same
+pattern, not on the shelf) before H3 is worth revisiting; (ii) the population
+step that would make descent narrow is `@why` edges among API patterns and
+memories on the `math-informal`/`math-strategy` tier — not more attachments.
