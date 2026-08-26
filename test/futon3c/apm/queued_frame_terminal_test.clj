@@ -80,7 +80,7 @@
   (let [frame {:frame/id "fixture-f26" :problem/id "m94A03"}
         body {:receipt/type :frame-terminal :frame/id (:frame/id frame)
               :problem/id (:problem/id frame) :frame/result :partial
-              :problem/outcome :partial :learning/outcome :skipped
+              :problem/outcome :unsolved :learning/outcome :skipped
               :solver-progress-receipt/id digest
               :solver {:branch "exp/countdown-f26-m94A03-solver" :head head}
               :workspace/terminal-heads {:solver head :student head}}
@@ -90,7 +90,7 @@
     (is (:ok checked))
     (is (= :queued-solver-progress-bank (:receipt/type bank)))
     (is (true? (:retry/same-problem? bank)))
-    (is (= :partial (:problem/outcome bank)))
+    (is (= :unsolved (:problem/outcome bank)))
     (is (nil? (:verify-receipt/id bank)))))
 
 (deftest invalid-terminal-evidence-performs-no-effects
@@ -262,7 +262,7 @@
   (let [frame {:frame/id "f43" :problem/id "a97J08"}
         body (-> (terminal-receipt frame)
                  (dissoc :receipt/id :verify-receipt/id)
-                 (assoc :frame/result :partial :problem/outcome :partial
+                 (assoc :frame/result :partial :problem/outcome :unsolved
                         :learning/outcome :skipped
                         :solver-progress-receipt/id digest))
         terminal (assoc body :receipt/id (machine/ledger-digest [body]))

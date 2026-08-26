@@ -110,6 +110,22 @@
             (slurp "test/resources/apm-traces/valid.json"))
            (json/parse-string (slurp a))))))
 
+(deftest early-statement-refuted-trace-emits-only-executed-prefix
+  (let [directory (.toFile (java.nio.file.Files/createTempDirectory
+                            "apm-void-trace"
+                            (make-array java.nio.file.attribute.FileAttribute 0)))
+        output (java.io.File. directory "void.json")
+        trace (-> valid
+                  (update :steps #(subvec % 0 3))
+                  (update :phase-receipt-ids #(subvec % 0 3))
+                  (assoc :closed false :terminal-ledger-digest "ledger-3"
+                         :problem-outcome :refuted :frame-result :void
+                         :void-classification :statement-refuted))]
+    (is (:ok (sut/emit! output trace)))
+    (is (= (json/parse-string
+            (slurp "test/resources/apm-traces/early-statement-refuted.json"))
+           (json/parse-string (slurp output))))))
+
 (deftest durable-state-projection-does-not-invent-job-success
   (let [step (first (:steps valid))
         projected

@@ -194,7 +194,7 @@
         _ (sut/tick! providers)
         before-index (:next-index @state)
         receipt {:receipt/id (apply str (repeat 64 "a"))
-                 :frame/result :partial :problem/outcome :partial
+                 :frame/result :partial :problem/outcome :unsolved
                  :retry/same-problem? true}
         result (sut/complete-active-without-successor @state receipt)]
     (is (:ok result))
@@ -202,6 +202,34 @@
     (is (nil? (get-in result [:state :active])))
     (is (= :retry-superseded (get-in result [:state :status])))
     (is (= 1 (count (filter #(= :mint (first %)) @calls))))))
+
+(deftest void-erases-frame-and-recasts-same-queue-slot
+  (let [{:keys [providers state]} (harness)
+        _ (sut/tick! providers)
+        void-result
+        (sut/tick!
+         (assoc providers :frame-tick-fn
+                (constantly
+                 {:ok true :status :frame-complete :frame/result :void
+                  :terminal-receipt {:receipt/id "void-q1"
+                                     :problem/outcome :refuted}})))
+        replacement (assoc (first problems)
+                           :revision "corrected-revision"
+                           :blob "corrected-blob")
+        revised (sut/revise-voided-slot (:plan providers) @state replacement)]
+    (is (= :voided-slot-awaiting-revision (:status void-result)))
+    (is (nil? (:active @state)))
+    (is (empty? (:completed @state)))
+    (is (= 0 (:next-index @state)))
+    (is (:ok revised) (pr-str revised))
+    (is (= "p1" (get-in revised [:plan :problems 0 :problem/id])))
+    (is (= "corrected-blob" (get-in revised [:plan :problems 0 :blob])))
+    (is (not= (:queue/id (:plan providers))
+              (get-in revised [:plan :queue/id])))
+    (reset! state (:state revised))
+    (is (= :frame-prepared
+           (:status (sut/tick! (assoc providers :plan (:plan revised))))))
+    (is (= "p1" (get-in @state [:active :frame :problem/id])))))
 
 (deftest queue-plan-preserves-explicit-retained-branch
   (let [problem (assoc (first problems) :base-branch "exp/retained")]

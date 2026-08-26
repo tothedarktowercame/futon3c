@@ -165,6 +165,14 @@
    :solved-partial-bankable true
    :bankable-solved-successor-eligible true
    :unsolved-partial-retry-same-problem true
+   :problem-outcomes ["solved" "unsolved" "refuted"]
+   :refuted-requires-frame-void true
+   :refuted-retry-same-problem false
+   :statement-refuted-void-outcome "refuted"
+   :non-refutation-void-outcome "unsolved"
+   :early-void-canonical-prefix true
+   :voided-slot-reuses-logical-problem-id true
+   :corrected-pins-require-plan-revision true
    :retry-requires-retained-solver-head true
    :retry-does-not-advance-problem-queue true
    :close-result-wire-canonicalization true

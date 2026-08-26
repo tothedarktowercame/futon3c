@@ -1,0 +1,215 @@
+{
+  "campaignId": "qualified-cycle",
+  "closed": false,
+  "contractId": "apm-complete-frame-cycle-v2",
+  "manifestHash": "manifest-1",
+  "phaseOrder": [
+    "preflight",
+    "solve",
+    "verify",
+    "promote-solver",
+    "student-attempt-1",
+    "guide-intervention-1",
+    "student-attempt-2",
+    "guide-intervention-2",
+    "student-attempt-3",
+    "scribe-reduce",
+    "close-frame"
+  ],
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "fromPhase": "registered",
+      "ledgerAfter": "ledger-1",
+      "ledgerBefore": "ledger-0",
+      "priorReceiptId": null,
+      "receiptId": "receipt-0",
+      "toPhase": "preflight",
+      "activatedJobId": "job-0",
+      "activationStatus": 202,
+      "claimPersisted": true,
+      "clientTimeoutObserved": false,
+      "commandOwnExit": 0,
+      "jobId": "job-0",
+      "reactivatedJobId": "job-0",
+      "receiptPersisted": true,
+      "resumedJobId": "job-0",
+      "terminalJobId": "job-0",
+      "timeoutTreatedAsSuccess": false,
+      "submissionRegistered": true,
+      "submissionPersisted": true,
+      "submissionSchemaValid": true,
+      "submissionAuthorityDerived": true,
+      "conversationUsedAsReceipt": false,
+      "submissionJobId": "job-0"
+    },
+    {
+      "fromPhase": "preflight",
+      "ledgerAfter": "ledger-2",
+      "ledgerBefore": "ledger-1",
+      "priorReceiptId": "receipt-0",
+      "receiptId": "receipt-1",
+      "toPhase": "solve",
+      "activatedJobId": "job-1",
+      "activationStatus": 202,
+      "claimPersisted": true,
+      "clientTimeoutObserved": false,
+      "commandOwnExit": 0,
+      "jobId": "job-1",
+      "reactivatedJobId": "job-1",
+      "receiptPersisted": true,
+      "resumedJobId": "job-1",
+      "terminalJobId": "job-1",
+      "timeoutTreatedAsSuccess": false,
+      "submissionRegistered": true,
+      "submissionPersisted": true,
+      "submissionSchemaValid": true,
+      "submissionAuthorityDerived": true,
+      "conversationUsedAsReceipt": false,
+      "submissionJobId": "job-1"
+    },
+    {
+      "fromPhase": "solve",
+      "ledgerAfter": "ledger-3",
+      "ledgerBefore": "ledger-2",
+      "priorReceiptId": "receipt-1",
+      "receiptId": "receipt-2",
+      "toPhase": "verify",
+      "activatedJobId": "job-2",
+      "activationStatus": 202,
+      "claimPersisted": true,
+      "clientTimeoutObserved": false,
+      "commandOwnExit": 0,
+      "jobId": "job-2",
+      "reactivatedJobId": "job-2",
+      "receiptPersisted": true,
+      "resumedJobId": "job-2",
+      "terminalJobId": "job-2",
+      "timeoutTreatedAsSuccess": false,
+      "submissionRegistered": true,
+      "submissionPersisted": true,
+      "submissionSchemaValid": true,
+      "submissionAuthorityDerived": true,
+      "conversationUsedAsReceipt": false,
+      "submissionJobId": "job-2"
+    }
+  ],
+  "terminalLedgerDigest": "ledger-3",
+  "solverSnapshotDigest": "snapshot-verified",
+  "snapshotAdmittedAfterSolveVerify": true,
+  "snapshotDepositor": "scribe-1",
+  "snapshotReviewer": "proctor-1",
+  "studentBindings": [
+    {
+      "ordinal": 1,
+      "sessionId": "student-session-1",
+      "snapshotDigest": "snapshot-verified"
+    },
+    {
+      "ordinal": 2,
+      "sessionId": "student-session-2",
+      "snapshotDigest": "snapshot-verified"
+    },
+    {
+      "ordinal": 3,
+      "sessionId": "student-session-3",
+      "snapshotDigest": "snapshot-verified"
+    }
+  ],
+  "campaignLanes": [
+    {
+      "campaignId": "qualified-cycle",
+      "regulatorId": "regulator:qualified-cycle",
+      "problemBuffer": "*problem: qualified-cycle*",
+      "continuationSession": "controller-session-1",
+      "analystSession": "analyst-session-1",
+      "ledgerDigest": "ledger-11",
+      "projectionLedgerDigest": "ledger-11"
+    },
+    {
+      "campaignId": "parallel-cycle",
+      "regulatorId": "regulator:parallel-cycle",
+      "problemBuffer": "*problem: parallel-cycle*",
+      "continuationSession": "controller-session-2",
+      "analystSession": "analyst-session-2",
+      "ledgerDigest": "parallel-ledger",
+      "projectionLedgerDigest": "parallel-ledger"
+    }
+  ],
+  "phaseReceiptIds": [
+    "receipt-0",
+    "receipt-1",
+    "receipt-2"
+  ],
+  "problemOutcome": "refuted",
+  "frameResult": "void",
+  "analystWakes": [
+    {
+      "frameId": "f1",
+      "terminal": true,
+      "ordinal": 1,
+      "seriesInputVersion": 1,
+      "appendOnly": true,
+      "proposalType": null,
+      "proposalDigest": null,
+      "successorHandoff": false,
+      "mutatesInFlight": false
+    },
+    {
+      "frameId": "f2",
+      "terminal": true,
+      "ordinal": 2,
+      "seriesInputVersion": 2,
+      "appendOnly": true,
+      "proposalType": "regime-proposal",
+      "proposalDigest": "proposal-digest-2",
+      "successorHandoff": true,
+      "mutatesInFlight": false
+    }
+  ],
+  "solverSnapshotContentDigest": "snapshot-verified",
+  "reviewSnapshots": [
+    {
+      "ordinal": 1,
+      "snapshotDigest": "snapshot-verified",
+      "contentDigest": "snapshot-verified"
+    },
+    {
+      "ordinal": 2,
+      "snapshotDigest": "snapshot-verified",
+      "contentDigest": "snapshot-verified"
+    }
+  ],
+  "reviewPasses": [
+    {
+      "ordinal": 0,
+      "phase": "promote-solver",
+      "verdicts": [
+        "reject",
+        "reject"
+      ]
+    },
+    {
+      "ordinal": 1,
+      "phase": "guide-intervention-1",
+      "verdicts": [
+        "approve"
+      ]
+    },
+    {
+      "ordinal": 2,
+      "phase": "guide-intervention-2",
+      "verdicts": [
+        "approve"
+      ]
+    },
+    {
+      "ordinal": 0,
+      "phase": "scribe-reduce",
+      "verdicts": [
+        "reject"
+      ]
+    }
+  ],
+  "voidClassification": "statement-refuted"
+}

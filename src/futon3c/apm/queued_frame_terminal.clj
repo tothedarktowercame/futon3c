@@ -14,8 +14,13 @@
      (machine/ledger-digest [(dissoc receipt id-key)])))
 
 (defn validate-terminal [frame receipt]
-  (let [progress-retry? (and (= :partial (:problem/outcome receipt))
+  (let [progress-retry? (and (= :unsolved (:problem/outcome receipt))
                              (= :partial (:frame/result receipt)))
+        valid-outcome? (contains?
+                        #{[:solved :closed] [:solved :partial]
+                          [:unsolved :partial] [:unsolved :void]
+                          [:refuted :void]}
+                        [(:problem/outcome receipt) (:frame/result receipt)])
         findings
         (cond-> []
           (not= :frame-terminal (:receipt/type receipt))
@@ -28,8 +33,11 @@
           (conj :terminal-problem-mismatch)
           (not (contains? frame-results (:frame/result receipt)))
           (conj :terminal-frame-result-invalid)
-          (not (contains? #{:solved :partial :invalid} (:problem/outcome receipt)))
+          (not (contains? #{:solved :unsolved :refuted}
+                          (:problem/outcome receipt)))
           (conj :terminal-problem-outcome-invalid)
+          (not valid-outcome?)
+          (conj :terminal-outcome-result-invalid)
           (not (contains? learning-outcomes (:learning/outcome receipt)))
           (conj :terminal-learning-outcome-invalid)
           (and (not progress-retry?)
@@ -63,7 +71,7 @@
   ([frame terminal]
    (build-problem-bank frame terminal {:status :skipped}))
   ([frame terminal pin-result]
-   (let [progress-retry? (and (= :partial (:problem/outcome terminal))
+   (let [progress-retry? (and (= :unsolved (:problem/outcome terminal))
                               (= :partial (:frame/result terminal)))
         body {:receipt/type (if progress-retry?
                               :queued-solver-progress-bank

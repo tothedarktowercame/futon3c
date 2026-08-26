@@ -89,7 +89,7 @@
                            :frame/id frame-id :problem/id problem-id
                            :outcome :partial :reason reason
                            :stopped/phase (:phase active-frame)
-                           :problem/outcome (or problem-outcome :partial)
+                           :problem/outcome (or problem-outcome :unsolved)
                            :proof/receipt-ids (vec proof-receipt-ids)
                            :solver/final-head final-head :solver/rounds rounds
                            :solver/residual residual

@@ -7,7 +7,9 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.apm.campaign-machine :as machine]
+            [futon3c.apm.campaign-ledger :as campaign-ledger]
             [futon3c.apm.campaign-qualification :as campaign-qualification]
+            [futon3c.apm.frame-void :as frame-void]
             [futon3c.apm.live-launch-preparation :as live-preparation]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.qualification :as qualification]
@@ -16,6 +18,26 @@
   (:import [java.nio.file Files LinkOption Path]))
 
 (declare mint qualify open-and-prepare!)
+
+(defn apply-reviewed-void!
+  "Apply Ground Control's typed void disposition to the active frame ledger.
+
+  The caller supplies the reviewed classification; Solver error codes are not
+  interpreted here. Queue reconciliation subsequently observes the persisted
+  void certificate through `terminal-from-ledger`."
+  [{:keys [ledger-path frame-id problem-id classification failures actor now]}]
+  (if-not (contains? frame-void/void-classifications classification)
+    {:ok false :error/code :reviewed-void-classification-invalid}
+    (let [loaded (campaign-ledger/read-ledger ledger-path)]
+      (if-not (:ok loaded)
+        loaded
+        (frame-void/void!
+         {:ledger-path ledger-path
+          :frame-id frame-id :problem-id problem-id
+          :classification classification :failures failures
+          :actor actor :now now
+          :expected-version (get-in loaded [:projection :campaign/version])
+          :expected-ledger-digest (get-in loaded [:projection :ledger/digest])})))))
 
 (defn- awaiting-claude-decision [park]
   (assoc park
@@ -264,7 +286,10 @@
         body {:receipt/type :frame-terminal
               :frame/id (:frame/id frame) :problem/id (:problem/id frame)
               :frame/result frame-result
-              :problem/outcome (if void :invalid
+              :problem/outcome (if void
+                                 (if (= :statement-refuted
+                                        (:classification void))
+                                   :refuted :unsolved)
                                  (if (and (= 0 (get-in solve [:receipt/lean
                                                              :sorry-warnings]))
                                         (true? (:receipt/mathematical-sound? verify)))

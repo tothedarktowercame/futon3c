@@ -91,6 +91,37 @@
   (assoc (dissoc state :state/id) :state/id
          (machine/ledger-digest [(dissoc state :state/id)])))
 
+(defn revise-voided-slot
+  "Replace the pins of the slot restored by a void, preserving its logical id.
+
+  Returns a new content-addressed plan and matching state. No other queue slot
+  or cursor position may change."
+  [plan state replacement]
+  (let [slot (:next-index state)
+        current (get (:problems plan) slot)]
+    (cond
+      (not (valid-state? state))
+      {:ok false :error/code :problem-queue-state-invalid}
+      (not= :voided-slot-awaiting-revision (:status state))
+      {:ok false :error/code :problem-queue-slot-revision-not-authorized}
+      (not= (:queue/id plan) (:queue/id state))
+      {:ok false :error/code :problem-queue-state-plan-mismatch}
+      (nil? current)
+      {:ok false :error/code :problem-queue-voided-slot-missing}
+      (not= (:problem/id current) (:problem/id replacement))
+      {:ok false :error/code :problem-queue-slot-problem-id-changed}
+      :else
+      (let [problems (assoc (:problems plan) slot replacement)
+            revised (queue-plan problems)
+            checked (validate-plan revised)]
+        (if-not (:ok checked)
+          checked
+          {:ok true :plan revised
+           :state (addressed
+                   (-> state
+                       (assoc :queue/id (:queue/id revised))
+                       (dissoc :status)))})))))
+
 (defn reconcile-park-decisions
   "Attach authoritative decision records to their receipt-matched parks.
 
@@ -172,7 +203,7 @@
       (nil? active)
       {:ok false :error/code :problem-queue-no-active-frame}
       (not (and (= :partial (:frame/result terminal-receipt))
-                (= :partial (:problem/outcome terminal-receipt))
+                (= :unsolved (:problem/outcome terminal-receipt))
                 (true? (:retry/same-problem? terminal-receipt))))
       {:ok false :error/code :problem-queue-retry-terminal-invalid}
       :else
@@ -294,23 +325,30 @@
                           (:terminal-receipt result)})]
             (if-not (:ok retired)
               retired
-              (let [pause? (= :pause-after-active (:status state))
+              (let [void? (= :void (:frame/result result))
+                    pause? (= :pause-after-active (:status state))
                     cleared (addressed
-                             (-> state
-                                 (update :completed conj
-                                         {:frame/id (get-in active [:frame :frame/id])
-                                          :problem/id (get-in active
-                                                              [:frame :problem/id])
-                                          :frame/result (:frame/result result)
-                                          :terminal-receipt/id
-                                          (get-in result
-                                                  [:terminal-receipt :receipt/id])})
-                                 (assoc :active nil)
-                                 (cond-> pause? (assoc :status :paused))))
+                             (cond-> (assoc state :active nil)
+                               (not void?)
+                               (update :completed conj
+                                       {:frame/id (get-in active [:frame :frame/id])
+                                        :problem/id (get-in active
+                                                            [:frame :problem/id])
+                                        :frame/result (:frame/result result)
+                                        :terminal-receipt/id
+                                        (get-in result
+                                                [:terminal-receipt :receipt/id])})
+                               void? (update :next-index dec)
+                               void? (assoc :status
+                                            :voided-slot-awaiting-revision)
+                               pause? (assoc :status :paused)))
                     persisted (persist-state-fn cleared)]
                 (if-not (:ok persisted)
                   {:ok false :error/code
                    :problem-queue-state-persistence-failed}
-                  (if pause?
+                  (if void?
+                    {:ok true :status :voided-slot-awaiting-revision
+                     :state cleared}
+                    (if pause?
                     {:ok true :status :batch-paused :state cleared}
-                    (prepare-next plan cleared providers)))))))))))
+                    (prepare-next plan cleared providers))))))))))))

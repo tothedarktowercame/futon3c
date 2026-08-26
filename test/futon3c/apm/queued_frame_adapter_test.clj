@@ -348,7 +348,25 @@
                                    (apply str (repeat 40 "c"))}}}})]
     (is (:ok result) (pr-str result))
     (is (= :void (:frame/result result)))
-    (is (= :invalid (get-in result [:terminal-receipt :problem/outcome])))
+    (is (= :unsolved (get-in result [:terminal-receipt :problem/outcome])))
     (is (= :skipped (get-in result [:terminal-receipt :learning/outcome])))
     (is (= :apparatus-invalidated
+           (get-in result [:terminal-receipt :void/classification])))))
+
+(deftest statement-refuted-void-has-distinct-problem-outcome
+  (let [void {:certificate/type :frame-void :certificate/id digest
+              :classification :statement-refuted
+              :failed-invariants [:registered-statement-false]}
+        result (sut/terminal-from-ledger
+                {:frame frame
+                 :ledger {:events [{:event/body {:certificate void}}]}
+                 :preparation {:workspaces
+                               {:solver {:branch "exp/f45" :terminal-head
+                                         (apply str (repeat 40 "b"))}
+                                :student {:terminal-head
+                                          (apply str (repeat 40 "c"))}}}})]
+    (is (:ok result) (pr-str result))
+    (is (= :void (:frame/result result)))
+    (is (= :refuted (get-in result [:terminal-receipt :problem/outcome])))
+    (is (= :statement-refuted
            (get-in result [:terminal-receipt :void/classification])))))

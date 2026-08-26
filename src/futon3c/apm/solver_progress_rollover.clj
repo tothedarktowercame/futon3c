@@ -21,7 +21,7 @@
         terminal-body
         {:receipt/type :frame-terminal
          :frame/id (:frame/id frame) :problem/id (:problem/id frame)
-         :frame/result :partial :problem/outcome :partial
+         :frame/result :partial :problem/outcome :unsolved
          :learning/outcome :skipped :retry/same-problem? true
          :solver-progress-receipt/id (:receipt/id progress)
          :solver {:branch (:branch report) :head head}

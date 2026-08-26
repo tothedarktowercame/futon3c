@@ -38,7 +38,8 @@
            solver-snapshot-content-digest review-snapshots review-passes
            snapshot-admitted-after-solve-verify snapshot-depositor
            snapshot-reviewer student-bindings campaign-lanes
-           phase-receipt-ids problem-outcome frame-result analyst-wakes]}]
+           phase-receipt-ids problem-outcome frame-result void-classification
+           analyst-wakes]}]
   (canonical
    {"schemaVersion" 1
     "campaignId" campaign-id
@@ -113,6 +114,7 @@
     "phaseReceiptIds" phase-receipt-ids
     "problemOutcome" problem-outcome
     "frameResult" frame-result
+    "voidClassification" void-classification
     "analystWakes"
     (mapv (fn [{:keys [frame-id terminal ordinal series-input-version
                        append-only proposal-type proposal-digest
@@ -144,6 +146,7 @@
            :phase-receipt-ids (mapv #(get-in % [:receipt :id]) observations)
            :problem-outcome (:problem-outcome frame)
            :frame-result (:frame-result frame)
+           :void-classification (:void-classification frame)
            :analyst-wakes analyst-wakes
            :steps
            (mapv
