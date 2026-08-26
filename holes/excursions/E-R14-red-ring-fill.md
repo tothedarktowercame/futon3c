@@ -6,6 +6,28 @@
 **Read this first: R14 is not red for R8's reason, and this excursion must not
 open as a repair.**
 
+## Status at 2026-08-26 end of day
+
+**Verdict so far: R14 is red on a *disconnected dial*** — a third kind, distinct
+from R8's demonstrated defect and from this excursion's opening guess of an
+evidence hole. On the enacting path no value of τ can change the selected action;
+that is verified at source, proved in Lean, and bounded information-theoretically.
+
+| | state |
+|---|---|
+| **slice 2** — where τ_eff is applied | **DONE.** Located by Fable, verified at source by claude-13. `policy.clj:35/223/238/377`, `war_machine.clj:4476/4527` |
+| **slice 1** — the bearer | **OPEN.** Four candidates on the table, none filed. `?salience(required)` stays empty pending Joe |
+| **slice 3** — the pairing record | **BLOCKED by design.** Do not instrument a cut wire; see repair menu |
+| **formalisation** | **BUILT** — `DarkTower/WarMachine/CommitmentTemperature.lean`, 9 theorems, `lake env lean` exit 0, zero `sorry` |
+| **company level** | **DONE** — `futon0/analysis/business-models/NOTE-select-column-and-R14.md` |
+| **operator level** | **OPEN**, deliberately thin; one uncorroborated self-report |
+
+**The structural finding, in one line:** the War Machine's working feedback edge
+changes the candidate *set* (`repair-entry`, `##-Inf`), which argmax respects;
+R14's dial changes *weights*, which argmax annihilates. The machine can learn
+from its stops and does — R14 was simply wired into the one channel the selector
+is deaf to.
+
 ## The premise, stated before any work
 
 R8 is red on a **demonstrated defect**. Its problem pattern carries
@@ -50,7 +72,7 @@ Those signs hold, but they cover **one face of R14**. R14 has two:
 | face | what it is | status |
 |---|---|---|
 | **gain-in** | `:selection-gain`, the terminal consumer of R8's realised-outcome fold. `selection_gain.clj` — a scalar, clamped to [0.5, 2.0], burn-in at exactly 1.0 until `min-history` samples accrue | **modelled**, as `gainAdvances` in `DarkTower/WarMachine/GainChain.lean` |
-| **temperature-out** | τ_eff = adaptive-temperature(G-spread) / selection-gain, and its effect on the **next selected action** — the pattern's actual demand | **not modelled, and not yet located in the code** |
+| **temperature-out** | τ_eff = adaptive-temperature(G-spread) / selection-gain, and its effect on the **next selected action** — the pattern's actual demand | **located and modelled, 2026-08-26** — `policy.clj:35`, and `CommitmentTemperature.lean`. *This cell read "not yet located in the code" when the excursion opened; that was wrong, from a truncated grep — see the review section.* |
 
 Joe, 2026-08-26: *"maybe it's more than one module."* Correct, and the cut does
 not fall between R8 and R14 — **it falls inside R14**, between the gain it
@@ -59,7 +81,10 @@ where it asserts the gain moved, and says nothing about what the movement did.
 
 ## Slices
 
-### Slice 1 — the bearer *(first, and blocking)*
+*Statuses added 2026-08-26 as the day's work landed; the slice text below is as
+first written, so the reasoning that produced each status stays visible.*
+
+### Slice 1 — the bearer *(opened as blocking; superseded — run slice 2 first)*
 
 **Question.** Does any dated observation record commitment temperature being
 wrong, costly, or noticed?
@@ -104,16 +129,36 @@ other is not evidence.
 of temperatures with no linked transition measures nothing; it is the
 before-and-after the pattern's `BECAUSE` asks for, minus the after.
 
-## The formalisation, if slice 1 finds a bearer
+## The formalisation — BUILT, and why the stated order changed
 
-`DarkTower/WarMachine/CommitmentTemperature.lean`, at the light standard
-(`p4ng/empirics-futon/NOTE-light-formalisation-standard.md`): standalone, one
-chain property, one compliance property, refusal theorems named after dated
-incidents, one positive witness.
+**`mathlib4/DarkTower/WarMachine/CommitmentTemperature.lean`** — codex-18
+`661010e6f8`, reviewed and strengthened at `42e85d7010`. Standalone (no Mathlib),
+integer arithmetic throughout, `lake env lean` exit 0, zero `sorry`, no `sorryAx`.
+Nine theorems:
 
-**Not before slice 1.** With no bearer there is no incident to name a theorem
-after, and a refusal theorem with no incident behind it is the thing this stack
-calls false salience.
+| theorem | what it records |
+|---|---|
+| `live_selector_does_not_govern` | the headline: `¬ governs modeOnly` |
+| `single_term_argmax_annihilates_temperature` | `¬ governs argmaxScore`, and *algebraically* — τ·0 = 0 via `commitmentScore_zero_prior`, not from an unused argument |
+| `repairing_r8_changes_no_action` | deterministic data processing at the R8/R14 seam |
+| `live_gain_repair_changes_no_action`, `default_branch_gain_repair_changes_no_action` | the same, discharged for the actual selectors |
+| `record_sensitivity_is_not_governance` | the live system satisfies the *refused* weakening and fails the requirement |
+| `scores_move_action_does_not` | the finding on one fixed ranking: reported scores differ, action identical |
+| `habit_prior_governs` | non-vacuity — a real two-entry witness whose winner flips |
+| `mode_only_ignores_temperature` | `policy.clj:238` as a lemma |
+
+**No concessions, per Joe (2026-08-26):** `governs` is the unweakened
+existential — two temperatures, different actions — and `governsTheRecord` exists
+only to be refused. `G` is an opaque ordered score, so every result holds for
+**any** `G`: settling `G(π)` is not a prerequisite for this repair.
+
+**Why this preceded slice 1**, against the plan stated below. The section as
+written said *"not before slice 1 — with no bearer there is no incident to name a
+theorem after."* Slice 2's verification supplied the incidents directly:
+**2026-07-13** (τ_eff pinned to 1/g with g unmovable) and **2026-08-01** (argmax
+annihilates τ, ants). Fable's strategy note 4 anticipated exactly this. The
+refusal theorems are therefore named after *disconnection* incidents rather than
+cost incidents, which is honest and leaves `?salience(required)` untouched.
 
 ## Relation to R8
 
@@ -583,83 +628,6 @@ real: sometimes effort is the binding constraint. It fails when the model is
 wrong, because effort on a wrong model only costs more. The audit's phrase for
 that failure is exact — *effort increased without proportionate understanding*.
 
-### The machine already eats its own tail — through the candidate set, not the temperature
-
-Joe, 2026-08-26: *"'eat its own tail' … as we worked with the WM, we were
-eventually able to make stops self-healing by feeding them back into the machine
-as data."*
-
-That mechanism exists, it is code, and it answers the structural question this
-excursion has been circling.
-
-**`futon2/src/futon2/aif/repair_obligation.clj`**, docstring line 2:
-*"Durable stop-the-line memory for full-loop failures."* It was built against
-exactly the 07-15 defect — *"`:no-selection` did not create a durable repair
-obligation, so the failure repeated instead of becoming self-healing memory"* —
-and it was live by 2026-07-25, when cohort 44's charter asks *"does a grounded
-attempt discharge the open repair-obligation chain (048/049/051)."*
-
-**Discharge is non-vacuous by construction.** `data-deposit-evidence?` requires
-`count-before ≠ count-after` and then **re-reads the live store** to confirm the
-count. An obligation cannot be closed by a change that changed nothing — the
-same non-vacuity discipline `M-formal-war-machine` names as its worst exposure,
-already implemented here.
-
-**And here is the part that matters for R14.** `full_loop_runner.clj:872`:
-
-    (defn- repair-entry [obligation]
-      {:action {:type :repair-machine-failure
-                :rationale (str "stop-the-line: " …)}
-       :controller-score ##-Inf
-       :G-efe ##-Inf
-       :selection-source :stop-the-line})
-
-An open obligation is injected as a **selection entry** — a member of the
-candidate list — with `:selection-source :stop-the-line` and a score of negative
-infinity. `efe/rank-actions` sorts ascending on `:controller-score`
-(`efe.clj:823`) and `strategic-recommendation` takes `(first controller-entries)`
-(`policy.clj:238`), so the repair entry **preempts the entire ranking**.
-
-**It preempts at every τ.** It does not reweight; it dominates. So it survives
-precisely the annihilation that kills the temperature dial:
-
-> `argmax` is invariant to how you *scale* a ranking and perfectly sensitive to
-> *what is in* it. The feedback route the War Machine actually has works because
-> it changes **membership**. The route R14 was built on fails because it changes
-> **weights**.
-
-Whoever wrote `repair-entry` chose the one design that survives argmax. The
-excursion's finding is not that the machine cannot learn from its own stops — it
-demonstrably can, and does — but that **R14's dial was wired into the one channel
-the selector is deaf to.**
-
-### A fourth repair option, with a working precedent in the same file
-
-| option | route | precedent |
-|---|---|---|
-| (a) sample `P(π)` | make weights behavioural | canonical AIF; none in-stack |
-| (b) second non-τ-scaled term | habit prior | 3 records, live-vs-shadow unestablished |
-| (c) accept it is decorative | — | — |
-| **(d) route the gain through the candidate set** | membership, not weights | **`repair-entry`, working since ≈2026-07-25** |
-
-(d) means: a repeatedly poor realized-vs-expected record *injects a candidate* —
-investigate, suppress the failing action class, or repair — the way a failure
-injects `:repair-machine-failure`.
-
-**Not a free win, and it should not be sold as one.** `##-Inf` is a hard
-preemption: an andon cord, not a dial. Routing a *graded* quantity through it
-converts the gain into a binary interrupt and throws away the gradation τ was
-supposed to supply. (d) changes the **type** of the signal, and whether that is
-acceptable is a design question, not an implementation detail.
-
-**To check, not to assert:** R6's ring reads *"the select stage GENERATES a
-candidate rather than re-ranking the menu it already has"*, and
-`NOTE-modular-formalisation-order.md` says R6 *"needs a candidate proposer that
-does not exist."* `repair-entry` is a candidate generator, and
-`portfolio_action_proposer.clj` exists. That claim of non-existence needs
-re-checking before it is used again — absence claims have been wrong three times
-in this thread.
-
 ### Why the sign is inverted, and the archive shows the mechanism
 
 Joe, 2026-08-26: *"stop the line, you'd think, would be 'not working' because we
@@ -740,6 +708,84 @@ ants dead τ, operator ⑯, and this). **Joe's call whether the distinction betw
 "the dial is wrong" and "there is no dial" matters here.** The slot stays empty
 until he rules.
 
+## The machine already eats its own tail — through the candidate set, not the temperature
+
+Joe, 2026-08-26: *"'eat its own tail' … as we worked with the WM, we were
+eventually able to make stops self-healing by feeding them back into the machine
+as data."*
+
+That mechanism exists, it is code, and it answers the structural question this
+excursion has been circling.
+
+**`futon2/src/futon2/aif/repair_obligation.clj`**, docstring line 2:
+*"Durable stop-the-line memory for full-loop failures."* It was built against
+exactly the 07-15 defect — *"`:no-selection` did not create a durable repair
+obligation, so the failure repeated instead of becoming self-healing memory"* —
+and it was live by 2026-07-25, when cohort 44's charter asks *"does a grounded
+attempt discharge the open repair-obligation chain (048/049/051)."*
+
+**Discharge is non-vacuous by construction.** `data-deposit-evidence?` requires
+`count-before ≠ count-after` and then **re-reads the live store** to confirm the
+count. An obligation cannot be closed by a change that changed nothing — the
+same non-vacuity discipline `M-formal-war-machine` names as its worst exposure,
+already implemented here.
+
+**And here is the part that matters for R14.** `full_loop_runner.clj:872`:
+
+    (defn- repair-entry [obligation]
+      {:action {:type :repair-machine-failure
+                :rationale (str "stop-the-line: " …)}
+       :controller-score ##-Inf
+       :G-efe ##-Inf
+       :selection-source :stop-the-line})
+
+An open obligation is injected as a **selection entry** — a member of the
+candidate list — with `:selection-source :stop-the-line` and a score of negative
+infinity. `efe/rank-actions` sorts ascending on `:controller-score`
+(`efe.clj:823`) and `strategic-recommendation` takes `(first controller-entries)`
+(`policy.clj:238`), so the repair entry **preempts the entire ranking**.
+
+**It preempts at every τ.** It does not reweight; it dominates. So it survives
+precisely the annihilation that kills the temperature dial:
+
+> `argmax` is invariant to how you *scale* a ranking and perfectly sensitive to
+> *what is in* it. The feedback route the War Machine actually has works because
+> it changes **membership**. The route R14 was built on fails because it changes
+> **weights**.
+
+Whoever wrote `repair-entry` chose the one design that survives argmax. The
+excursion's finding is not that the machine cannot learn from its own stops — it
+demonstrably can, and does — but that **R14's dial was wired into the one channel
+the selector is deaf to.**
+
+### A fourth repair option, with a working precedent in the same file
+
+
+| option | route | precedent |
+|---|---|---|
+| (a) sample `P(π)` | make weights behavioural | canonical AIF; none in-stack |
+| (b) second non-τ-scaled term | habit prior | 3 records, live-vs-shadow unestablished |
+| (c) accept it is decorative | — | — |
+| **(d) route the gain through the candidate set** | membership, not weights | **`repair-entry`, working since ≈2026-07-25** |
+
+(d) means: a repeatedly poor realized-vs-expected record *injects a candidate* —
+investigate, suppress the failing action class, or repair — the way a failure
+injects `:repair-machine-failure`.
+
+**Not a free win, and it should not be sold as one.** `##-Inf` is a hard
+preemption: an andon cord, not a dial. Routing a *graded* quantity through it
+converts the gain into a binary interrupt and throws away the gradation τ was
+supposed to supply. (d) changes the **type** of the signal, and whether that is
+acceptable is a design question, not an implementation detail.
+
+**To check, not to assert:** R6's ring reads *"the select stage GENERATES a
+candidate rather than re-ranking the menu it already has"*, and
+`NOTE-modular-formalisation-order.md` says R6 *"needs a candidate proposer that
+does not exist."* `repair-entry` is a candidate generator, and
+`portfolio_action_proposer.clj` exists. That claim of non-existence needs
+re-checking before it is used again — absence claims have been wrong three times
+in this thread.
+
 ## The operator level — open, and deliberately left thin
 
 R8's workup ran at three levels: machine, operator surface, company. R14 now has
@@ -806,8 +852,34 @@ a demand-side argument for instrumenting the step, not evidence that our
 uninstrumented dial cost anyone anything. Same discipline as the strategy notes'
 treatment of the disconnection finding.
 
+## Joe's calls, outstanding
+
+1. **The repair menu.** (a) sample `P(π)` instead of argmax; (b) keep argmax with
+   a second non-τ-scaled term; (c) accept the dial is decorative and stop
+   reporting τ as if it governed; (d) route the gain through the candidate set,
+   as `repair-entry` already does — noting (d) converts a graded signal into a
+   binary interrupt. Touches the enactment path.
+2. **Does "there is no dial" satisfy a pattern that asks whether "the dial is
+   wrong"?** Four salience candidates are on the table and none is filed: the
+   τ-mode flip (2026-07-13), ants dead τ (2026-08-01), operator ⑯ (2026-08-26,
+   self-report), and TryHarder 0/22 (2026-07-15). The last is strongest and is
+   evidence about the **missing edge**, not the dial.
+3. **The candidate WR** on local-closure vs global-understanding scoring —
+   drafted in flexiarg form above; checked against WR-0..WR-27 and not present.
+4. **Scheduling.** `CommitmentTemperature.lean` proves R8's repairs cannot move an
+   action until this edge is reconnected, which argues against
+   `NOTE-modular-formalisation-order.md`'s current ordering.
+
 ## Related
 
+- `mathlib4/DarkTower/WarMachine/CommitmentTemperature.lean` — this ring, formalised.
+- `mathlib4/DarkTower/WarMachine/GainChain.lean` — module 1; `gainAdvances` is the seam.
+- `futon2/src/futon2/aif/repair_obligation.clj` — the working tail-eating edge.
+- `futon2/src/futon2/aif/full_loop_runner.clj:872` — `repair-entry`, the `##-Inf` preemption.
+- `futon2/src/futon2/aif/policy.clj:35,223,238,377` — τ computed, and where it stops.
+- `futon2/data/wm-full-loop/archives/stop-line-2026-07-15/` — the 24-attempt archive.
+- `futon3c/holes/labs/M-apm-demonstration/PROTOCOL-defective-problem.md` — stop-the-line, ruled.
+- `futon6/holes/handoffs/futon6-hotspots-tryharder-loop-audit-2026-03-05.md` — TryHarder audited, with six numbered stop gates.
 - `futon0/analysis/business-models/NOTE-select-column-and-R14.md` — the company level.
 - `futon3/library/problems/commitment-temperature-is-instrumented-as-gain.flexiarg` — the pattern, including the hole.
 - `futon3c/holes/excursions/E-R8-red-ring-fill.md` — the predecessor.
