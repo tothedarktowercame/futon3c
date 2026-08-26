@@ -1,5 +1,6 @@
 (ns futon3c.apm.promotion-review-store-test
   (:require [clojure.test :refer [deftest is]]
+            [futon3c.apm.promotion-pipeline :as pipeline]
             [futon3c.apm.promotion-review-store :as sut]
             [futon3c.social.shapes :as shapes]))
 
@@ -194,3 +195,51 @@
                             {:ok true :hyperedge edge})})]
     (is (:ok result) result)
     (is (= :reject (get-in @edges [0 :hx/props :review :verdict])))))
+
+(deftest invalid-candidate-projection-is-recorded-and-does-not-publish
+  (let [memory-id "e-memory"
+        attached-pattern "math-formalization/attached"
+        claimed-pattern "math-formalization/claimed"
+        memory-entry {:evidence/id memory-id
+                      :evidence/subject {:ref/type :problem :ref/id "p"}
+                      :evidence/type :memory :evidence/claim-type :assert
+                      :evidence/author "scribe" :evidence/session-id "deposit"
+                      :evidence/at "2026-08-26T00:00:00Z"
+                      :evidence/body {:name "n" :hook "h" :body "b"}}
+        entries (atom {memory-id memory-entry})
+        edge {:hx/id "hx-memory" :hx/type :memory/assert
+              :hx/endpoints [memory-id "p" attached-pattern]
+              :hx/props {:domain :mathematics :state :current
+                         :attachment-status :proposed
+                         :roles {:entry memory-id
+                                 :subjects ["p" attached-pattern]
+                                 :patterns [attached-pattern]}}}
+        result
+        (sut/persist!
+         {:deposit {:depositor "scribe"
+                    :candidates [{:memory-id memory-id
+                                  :pattern-ids [attached-pattern]}]}
+          :reviewer "proctor" :review-job "review-job"
+          :reviews [{:memory-id memory-id :verdict :approve
+                     :reviewer "proctor" :reason "claimed fit"
+                     :residual "open" :pattern-ids [claimed-pattern]
+                     :attachment-status :reviewed}]}
+         {:evidence-store :store
+          :fetch-entry #(get @entries %)
+          :append-entry #(do (swap! entries assoc (:evidence/id %) %)
+                             {:ok true :entry %})
+          :fetch-hyperedges (fn [end & _]
+                              (if (some #{end} (:hx/endpoints edge)) [edge] []))
+          :post-hyperedge (fn [_ _]
+                            (throw (ex-info "must not publish" {})))})
+        review (first (:reviews result))
+        checked (pipeline/validate-review*
+                 [{:memory-id memory-id :pattern-ids [attached-pattern]}]
+                 "scribe" "proctor" (:reviews result))]
+    (is (:ok result) result)
+    (is (= false (:projection/valid? review)))
+    (is (= :approve (:verdict review)))
+    (is (= :promotion-review-projection-invalid
+           (get-in result [:findings 0 :failure])))
+    (is (:ok checked) checked)
+    (is (empty? (:candidates checked)))))

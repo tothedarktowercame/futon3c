@@ -10,11 +10,12 @@
             [futon3c.substrate.client :as substrate])
   (:import [java.time Instant]))
 
-(def ^:private attachment-verdicts #{:approve :reassign :reject})
+(def ^:private attachment-verdicts #{:approve :reassign :reject :challenge})
 
 (defn- attachment-status [verdict]
   (case verdict
     (:approve :reassign) :reviewed
+    :challenge :challenged
     :reject :proposed
     nil))
 
@@ -163,7 +164,9 @@
                            %)
                         attachment-reviews))}
            (loop [remaining canonical
-                  persisted []]
+                  effective []
+                  persisted []
+                  projection-findings []]
          (if-let [review (first remaining)]
            (let [entry (review-entry reviewer review-job review)
                  review-id (:evidence/id entry)
@@ -206,15 +209,26 @@
                           :error/code :promotion-review-projection-invalid
                           :finding (ex-data e)}))]
                  (if (:ok result)
-                   (recur (next remaining) (conj persisted result))
-                   (if (:error/code result)
-                     result
-                     {:ok false
-                      :error/code :promotion-review-projection-not-visible
-                      :finding result})))))
+                   (recur (next remaining)
+                          (conj effective review)
+                          (conj persisted result)
+                          projection-findings)
+                   (let [finding (or (:finding result) result)
+                         nonpublishing
+                         (assoc review
+                                :projection/valid? false
+                                :projection/finding finding)]
+                     (recur (next remaining)
+                            (conj effective nonpublishing)
+                            persisted
+                            (conj projection-findings
+                                  {:memory-id (:memory-id review)
+                                   :failure :promotion-review-projection-invalid
+                                   :finding finding})))))))
              {:ok true
               :reviews (into (filterv #(not (contains? attachment-verdicts
                                                        (:verdict %)))
                                       reviews)
-                             canonical)
-              :persisted persisted}))))))))
+                             effective)
+              :persisted persisted
+              :findings projection-findings}))))))))

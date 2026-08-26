@@ -328,6 +328,37 @@
     (is (some #{new-pattern} (:hx/endpoints edge)))
     (is (not-any? #{pattern-id} (:hx/endpoints edge)))))
 
+(deftest differing-patterns-are-constrained-only-by-publishing-verdicts
+  (let [new-pattern "p4ng/R10-canonical"]
+    (doseq [[verdict expected-status expected-patterns]
+            [[:reject :proposed [pattern-id]]
+             [:challenge :challenged [pattern-id]]
+             [:reassign :reviewed [new-pattern]]]]
+      (let [id (str "e-review-" (name verdict))
+            graph (graph-fixture proposed-edge)
+            evidence (review-entry id verdict "claude-4" [new-pattern])
+            result
+            (lifecycle/review-attachment!
+             ctx {:memory-id memory-id :review-evidence-id id
+                  :verdict verdict :pattern-ids [new-pattern]}
+             (opts graph {memory-id memory-entry id evidence}))
+            edge (first @(:posts graph))]
+        (is (:ok result) (str verdict " " (pr-str result)))
+        (is (= expected-status (:attachment-status result)) (str verdict))
+        (is (= expected-patterns
+               (get-in edge [:hx/props :roles :patterns])) (str verdict))))
+    (let [id "e-review-approve-mismatch"
+          graph (graph-fixture proposed-edge)
+          evidence (review-entry id :approve "claude-4" [new-pattern])]
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"pattern set does not match"
+           (lifecycle/review-attachment!
+            ctx {:memory-id memory-id :review-evidence-id id
+                 :verdict :approve :pattern-ids [new-pattern]}
+            (opts graph {memory-id memory-entry id evidence}))))
+      (is (empty? @(:posts graph))))))
+
 (deftest invocation-reviewer-must-match-evidence-author
   (let [graph (graph-fixture proposed-edge)]
     (is (thrown-with-msg?

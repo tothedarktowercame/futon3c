@@ -243,7 +243,8 @@
                             :memory-id memory-id
                             :attachment-status edge-status}}
 
-       (not (exact-patterns? pattern-ids edge-patterns))
+       (and (= :approve (:verdict request))
+            (not (exact-patterns? pattern-ids edge-patterns)))
        {:ok false :finding {:failure :promotion-patterns-review-mismatch
                             :memory-id memory-id
                             :edge-patterns edge-patterns
@@ -426,7 +427,7 @@
                              (:approve :reassign) :reviewed
                              :challenge :challenged
                              :reject :proposed)]
-     (when-not (or (= :reassign verdict)
+     (when-not (or (contains? #{:reassign :reject :challenge} verdict)
                    (exact-patterns? edge-patterns pattern-ids))
        (throw (ex-info "review pattern set does not match attachment"
                        {:memory-id memory-id

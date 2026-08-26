@@ -132,6 +132,12 @@
 
 (declare validate-review*)
 
+(defn publishing-review?
+  "A merit verdict publishes only when its attachment projection succeeded."
+  [review]
+  (and (contains? #{:approve :reassign} (:verdict review))
+       (not= false (:projection/valid? review))))
+
 (defn validate-review [deposit reviewer reviews]
   (validate-review* (:candidates (validate-deposit deposit))
                     (:depositor deposit) reviewer reviews))
@@ -140,7 +146,7 @@
   "Validate an independent review against already-gated CANDIDATES."
   [candidates depositor reviewer reviews]
   (let [by-id (into {} (map (juxt :memory-id identity)) candidates)
-        approved (filterv #(contains? #{:approve :reassign} (:verdict %)) reviews)
+        approved (filterv publishing-review? reviews)
         findings (cond-> []
                    (not (string? reviewer)) (conj :reviewer-missing)
                    (= depositor reviewer) (conj :reviewer-is-depositor)
@@ -156,7 +162,7 @@
                                     (not (str/blank? (:residual %)))))
                          reviews)
                    (conj :review-reasoning-missing)
-                   (some #(and (contains? #{:approve :reassign} (:verdict %))
+                   (some #(and (publishing-review? %)
                                (not (and (string? (:review-evidence-id %))
                                          (= :reviewed (:attachment-status %))
                                          (seq (:pattern-ids %))))) reviews)
@@ -177,8 +183,7 @@
   be silently filtered at any later boundary."
   [reviews snapshot-candidates]
   (let [approved-ids (->> reviews
-                          (filter #(contains? #{:approve :reassign}
-                                              (:verdict %)))
+                          (filter publishing-review?)
                           (map :memory-id)
                           set)
         attached-ids (set (map :memory-id snapshot-candidates))]
@@ -196,8 +201,7 @@
   and adds only candidates approved by the current independent review."
   [reviews prior-candidates snapshot-candidates]
   (let [approved-ids (->> reviews
-                          (filter #(contains? #{:approve :reassign}
-                                              (:verdict %)))
+                          (filter publishing-review?)
                           (map :memory-id)
                           set)
         prior-ids (set (map :memory-id prior-candidates))
