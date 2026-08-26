@@ -1246,6 +1246,7 @@
                                 route-label (case route
                                               :local "local"
                                               :ws "ws"
+                                              :inbox "inbox"
                                               "unreachable")
                                 surface (:surface metadata)
                                 lane (:lane metadata)

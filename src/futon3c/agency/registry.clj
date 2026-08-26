@@ -188,11 +188,19 @@
   (let [metadata (:agent/metadata agent)
         stale-proxy? (and (:proxy? metadata)
                           (:federation/stale? metadata))
+        inbox? (= :inbox (:agent/delivery-mode agent))
+        ;; A pull-only seat is reachable (a bell lands in its inbox) but is
+        ;; NEVER invocable — invoke-agent! refuses it with :pull-only-agent.
+        ;; Reporting :local here would leave the row claiming a spawn path
+        ;; that cannot fire, which is the failure E-bell-clink-adapter exists
+        ;; to prevent: a seat that reads as reachable while its inbox is unread.
         local? (and (fn? (:agent/invoke-fn agent))
-                    (not stale-proxy?))
-        ws-available? (ws-invoke/available? aid-val)
+                    (not stale-proxy?)
+                    (not inbox?))
+        ws-available? (and (ws-invoke/available? aid-val) (not inbox?))
         route (cond
                 stale-proxy? :none
+                inbox? :inbox
                 local? :local
                 ws-available? :ws
                 :else :none)
@@ -200,6 +208,7 @@
                  (get metadata "note"))
         agent-type (:agent/type agent)
         diagnostic (case route
+                     :inbox "pull-only seat — bells are written to its inbox; invoke is refused"
                      :local "local invoke-fn registered"
                      :ws "ws bridge connected"
                      (let [base (cond
