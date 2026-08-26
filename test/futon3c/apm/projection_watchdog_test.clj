@@ -87,6 +87,20 @@
     (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
     (is (empty? (:watch/findings result)))))
 
+(deftest durable-frame-closure-retires-the-last-projected-role-job
+  (let [closed (-> healthy
+                   (assoc :frame-closed? true
+                          :phase-state {:state/type :live-job-certified}
+                          :agent {:ok false}
+                          :job {:ok true :job
+                                {:state "done"
+                                 :finished-at "2026-08-23T21:00:00Z"}})
+                   (assoc-in [:transition :event/observed-at]
+                             "2026-08-23T21:00:00Z"))
+        result (watchdog/evaluate closed)]
+    (is (= :healthy (:watch/status result)) (pr-str (:watch/findings result)))
+    (is (empty? (:watch/findings result)))))
+
 (deftest bounded-solver-round-envelope-exposes-its-active-job
   (let [solver (assoc healthy :phase-state
                       {:state/type :solver-rounds

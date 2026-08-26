@@ -31,7 +31,7 @@
 (defn evaluate
   "Pure watchdog evaluation. INPUTS must contain parsed durable observations."
   [{:keys [now coordinator coordinator-age-seconds transition publication
-           phase-state agent job max-heartbeat-age-seconds]}]
+           phase-state agent job frame-closed? max-heartbeat-age-seconds]}]
   (let [operation (:operation transition)
         ;; Solver phases wrap the same durable live-job state in the bounded
         ;; round machine. Observe its active member without weakening any job
@@ -49,6 +49,7 @@
                        (= :frame-complete
                           (get-in coordinator [:regulator/last-result :status])))
         waiting? (and (not complete?)
+                      (not frame-closed?)
                       (= :waiting-for-terminal-result (:status operation)))
         request (:request phase-state)
         ticket (:ticket phase-state)
@@ -80,7 +81,7 @@
                          :projection-publication-diverged
                          {:transition (:event/id transition)
                           :publication-transition (:transition/event-id publication)}))
-          (and (not waiting?) transition-age
+          (and (not waiting?) (not frame-closed?) transition-age
                (> transition-age max-heartbeat-age-seconds)
                (not= :complete (:regulator/status coordinator)))
           (conj (finding :unattended-transition-current
@@ -173,6 +174,12 @@
   (let [transition (last-edn-line transition-log)
         coordinator (read-edn coordinator-state)
         frame-dir (.getParent (.toAbsolutePath (Path/of transition-log (make-array String 0))))
+        terminal-path (.resolve frame-dir "terminal/frame-terminal.edn")
+        terminal (when (Files/exists terminal-path
+                                     (make-array java.nio.file.LinkOption 0))
+                   (read-edn terminal-path))
+        frame-closed? (and (= (:frame-id transition) (:frame/id terminal))
+                           (= :closed (:frame/result terminal)))
         publication (read-edn (.resolve frame-dir "publications/latest.edn"))
         phase-state (read-edn (phase-state-path frame-dir transition))
         agent-id (get-in transition [:operation :agent-id])
@@ -186,11 +193,12 @@
                 (Path/of coordinator-state (make-array String 0))
                 (make-array java.nio.file.LinkOption 0)))) 1000)
      :max-heartbeat-age-seconds max-heartbeat-age-seconds
+     :frame-closed? frame-closed?
      :transition transition :publication publication :phase-state phase-state
-     :job (if job-id
+     :job (if (and job-id (not frame-closed?))
             (http-json (str agency-base "/api/alpha/invoke/jobs/" job-id))
             {:ok true})
-     :agent (if agent-id
+     :agent (if (and agent-id (not frame-closed?))
               (http-json (str agency-base "/api/alpha/agents/" agent-id))
               {:ok true})}))
 
