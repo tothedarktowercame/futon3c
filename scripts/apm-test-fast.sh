@@ -10,6 +10,7 @@ exec clojure -M:test -e :slow \
   -n futon3c.apm.live-solver-rounds-test \
   -n futon3c.apm.live-proof-phases-test \
   -n futon3c.apm.generated-contract-test \
+  -n futon3c.apm.qualification-test \
   -n futon3c.apm.job-port-contract-test \
   -n futon3c.apm.authority-port-test \
   -n futon3c.apm.toolchain-port-test \

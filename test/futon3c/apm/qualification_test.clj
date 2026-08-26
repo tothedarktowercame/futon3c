@@ -6,6 +6,18 @@
 (def plan (edn/read-string
            (slurp "holes/labs/M-apm-demonstration/apm-qualification-v1.edn")))
 
+(def report-path "data/apm-validation/qualification-report-v1.edn")
+
+(deftest committed-contract-and-qualification-are-one-coherent-state
+  (let [report (edn/read-string (slurp report-path))
+        contract (:generated-contract plan)]
+    (is (:ok (sut/validate-report report contract)))
+    (is (= :apm-qualification-report-invalid
+           (:error/code
+            (sut/validate-report
+             (assoc-in report [:generated-contract :observed-digest] "stale")
+             contract))))))
+
 (deftest six-part-plan-is-non-vacuous
   (is (:ok (sut/validate-plan plan)))
   (let [report (sut/qualify plan (constantly {:exit 0}))]
