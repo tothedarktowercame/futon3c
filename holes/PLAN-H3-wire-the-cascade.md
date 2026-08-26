@@ -82,3 +82,7 @@ evidence is the frame, as the preregistration requires.
 - Changing what co-incidence or why-hop compute (H3a only selects among them).
 - Applying H2's ordering to the offers.
 - Any claim about benefit: this is the existence demo the PLAN asked for.
+
+*Status, 2026-08-26 (claude-19):* **H3a done** (`b5095e37`, `1cc861f9`; reloaded
+from master). f42 shelf: sibling-only 130 offers / 12 patterns; default 93.
+H3c in flight (codex-21). H3d pending: frame choice + amendment 7.

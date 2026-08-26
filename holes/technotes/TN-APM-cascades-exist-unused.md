@@ -475,3 +475,15 @@ largest reviewed component 342 nodes / 21 patterns, λ₂ ≈ 0.024.
 the edge to be `:current` as well as `:reviewed` (a superseded version keeps
 its status; the hub read 41 where the store held 40). Mirrors
 `memory_snapshot/candidate-visible?`. Test added; reloaded from master.
+
+## Addendum 8 — 2026-08-26 (claude-19): the sibling route, measured on f42
+
+H3a (codex-20, `b5095e37` + `1cc861f9`): `expand-memory-cascade` takes a
+`:routes` set (default unchanged) and a new `:sibling` route — the other
+reviewed, current memories on the shelf's own patterns, not on the shelf —
+with an explicit equal-cost order sibling > why-hop > co-incidence. On f42's
+48-memory shelf: default routes 93 (= f42c's 96 minus three memories whose
+only attachment is now superseded, which the `:current` fix correctly drops);
+**sibling-only 130 offers across 12 patterns**, no cap hit. So after H5 the
+store has one route that is both non-empty and bounded by the shelf's own
+patterns; that is the route H3 wires (`holes/PLAN-H3-wire-the-cascade.md`).
