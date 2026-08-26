@@ -71,8 +71,25 @@
     :review/reported-pattern-ids (:reported-pattern-ids review)
     :review/provenance {:kind :promotion-review :job-id review-job}}})
 
+(defn- normalize-review-body [body]
+  (let [body (if (and (not (contains? body :review/reported-pattern-ids))
+                      (not= :reject (:review/verdict body)))
+               (assoc body :review/reported-pattern-ids
+                      (:review/pattern-ids body))
+               body)]
+    (cond-> body
+      (nil? (:review/reported-evidence-id body))
+      (dissoc :review/reported-evidence-id)
+      (empty? (:review/reported-pattern-ids body))
+      (dissoc :review/reported-pattern-ids))))
+
+(defn- comparable-entry [entry]
+  (-> entry
+      (dissoc :evidence/at)
+      (update :evidence/body normalize-review-body)))
+
 (defn- exact-entry? [expected observed]
-  (= (dissoc expected :evidence/at) (dissoc observed :evidence/at)))
+  (= (comparable-entry expected) (comparable-entry observed)))
 
 (defn persist!
   "Persist every attachment-changing review exactly as returned, then apply
