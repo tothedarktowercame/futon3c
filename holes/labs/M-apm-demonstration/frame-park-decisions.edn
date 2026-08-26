@@ -145,4 +145,75 @@
         "inputs. That is Joe's call, not mine, and I am not making it "
         "unilaterally. Until then a96J08 stays disposed :partial with its "
         "refutation preserved -- which is a real result: the campaign has a "
-        "sorry-free proof that one of its own problems is misstated.")}]}
+        "sorry-free proof that one of its own problems is misstated.")}
+ {:frame/id "f39"
+   :problem/id "a97A01"
+   :campaign/id "jit-all-open-nontopology-v1"
+   :last-valid-receipt/id
+   "734410d20cc4a9e6c96663d0f961f23ba8e91d3096f20734675991e2724a2b21"
+   :park/state-type :scribe-reduce-apparatus-frame-park
+   :error/code :promotion-deposit-retries-exhausted
+   :decision/owner :claude-supervisor
+   :decision/by "claude-12"
+   :decision/at "2026-08-26T11:35:00Z"
+   :decision/status :decided
+   :decision/disposition :partial
+   :decision/class :apparatus-fault-already-repaired
+   :decision/apparatus-repair-required? true
+   :decision/apparatus-repair-available? true
+   :decision/frame-voided? false
+   :decision/tier-a-eligible? false
+
+   ;; The park cause, diagnosed and already fixed.
+   :apparatus-fault
+   {:symptom "4 deposits, each :candidate-hook-missing :candidate-body-missing"
+    :deposit/attempts 3
+    :root-cause
+    (str "f39's scribe ran at 04:53 against zai-scribe-v2.md at blob "
+         "771d3b0ee1ba13eda6fecc2e6851c8f26ae45b92, which documents :hook "
+         "ZERO times and :body ZERO times. The controller required both. The "
+         "scribe was asked for fields its card never mentioned.")
+    :card-blob-used "771d3b0ee1ba13eda6fecc2e6851c8f26ae45b92"
+    :card-blob-current "1731382f168c509ddef497ed4f23907fd354ac97"
+    :fix-commit "af5a6ea2"
+    :fix-landed-at "2026-08-26T05:02:01Z"
+    :fault-window "the fix landed 9 minutes after f39's scribe ran"
+    :class
+    (str "Same shape as :candidate-kind-missing: a machine-required field "
+         "that no role card documented. The current card documents the exact "
+         "deposit shape {:name :hook :body :pattern-ids} at lines 99-102.")}
+
+   :decision/repair-action
+   (str "Re-dispatch scribe-reduce ONLY, against the current card blob "
+        "1731382f. Nothing upstream is touched: solve, verify, "
+        "promote-solver, all three student attempts and both guide "
+        "interventions are complete and intact on disk. The deposit never "
+        "succeeded, so there is no prior artifact to overwrite and nothing to "
+        "re-author. Of the three parked frames this is the only one that is "
+        "genuinely re-runnable.")
+
+   ;; A SECOND, separate defect the park record does not mention.
+   :decision/second-finding
+   {:issue "5 unresolved :cannot-judge verdicts"
+    :where {:promote-solver 3 :guide-intervention-1-review 2}
+    :consequence
+    (str "Under prereg tier-A condition 2 (zero unresolved passes) f39 must "
+         "NOT certify as tier-A even after the scribe-reduce repair. Repairing "
+         "the park does not make the frame experimentally sound.")
+    :do-not-re-author
+    (str "These are COMPLETED judgements -- the reviewer judged, and its "
+         "judgement was that it could not judge. Under the repair principle "
+         "codex-10 and I agreed (spec-delta 16.1), repair never redispatches a "
+         "reviewer or invents a replacement verdict. They stand.")
+    :also "attempt 1 of this frame is the 0-of-27 zero-uptake result."}
+
+   :decision/recommended-route
+   (str "Repair scribe-reduce so the frame's mined memories are not lost, "
+        "then close f39 as :partial and mark it DEFECTIVE for the experiment "
+        "alongside f31-f35 -- design-research data, not experimental data. "
+        "Do NOT re-run its promotion reviews to clear the cannot-judge "
+        "verdicts: that would re-author completed judgements and change "
+        "experimental data to make a number look better. This matches Joe's "
+        "stated preference on f31 -- rather get the next frames running than "
+        "repair an old one. Re-running the reviews is his call, and my "
+        "recommendation is no.")}]}
