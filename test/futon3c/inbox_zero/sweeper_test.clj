@@ -26,12 +26,17 @@
    :verdict verdict :candidates candidates})
 
 (defn base-options [paths calls infer-fn]
-  {:state-path "/unused/state.edn" :load-state-fn (fn [_] (apply store paths))
-   :now-fn (constantly now) :roster-fn (fn [] #{"seat:live:s1"})
-   :build-bundle-fn (fn [path _] {:path (:path path)}) :infer-fn infer-fn
-   :deliver! (fn [payload] (swap! calls conj [:deliver payload]) {:status 200})
-   :ledger-fn (fn [_ decision] (swap! calls conj [:ledger decision]))
-   :print-fn (fn [line] (swap! calls conj [:print line]))})
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "sweeper-test-"
+                      (make-array java.nio.file.attribute.FileAttribute 0)))]
+    {:state-path (str (java.io.File. dir "state.edn"))
+     :proposals-path (str (java.io.File. dir "attribution-proposals.edn"))
+     :load-state-fn (fn [_] (apply store paths))
+     :now-fn (constantly now) :roster-fn (fn [] #{"seat:live:s1"})
+     :build-bundle-fn (fn [path _] {:path (:path path)}) :infer-fn infer-fn
+     :deliver! (fn [payload] (swap! calls conj [:deliver payload]) {:status 200})
+     :ledger-fn (fn [_ decision] (swap! calls conj [:ledger decision]))
+     :print-fn (fn [line] (swap! calls conj [:print line]))}))
 
 (deftest live-proposal-delivers-stable-exact-seat-followup
   (let [calls (atom [])
@@ -40,22 +45,26 @@
                            [(candidate "seat:live:s1" "evidence:one")]))
         options (base-options ["a.clj"] calls infer-fn)
         first-counts (sweeper/sweep-attributions! options)
-        first-key (get-in (first @calls) [1 :dedupe-key])]
-    (reset! calls [])
-    (sweeper/sweep-attributions! options)
+        first-call (first @calls)
+        first-key (get-in first-call [1 :dedupe-key])]
     (is (= {:swept 1 :proposed 1 :ledgered 0 :insufficient 0 :errored 0
+            :already-proposed 0 :already-ledgered 0
             :unswept 0} first-counts))
-    (is (= "live" (get-in (first @calls) [1 :agent])))
-    (is (= "s1" (get-in (first @calls) [1 :session])))
+    (is (= "live" (get-in first-call [1 :agent])))
+    (is (= "s1" (get-in first-call [1 :session])))
     (is (re-find #"curl -sS -X POST .*confirm-attribution"
-                 (get-in (first @calls) [1 :prompt])))
-    (is (str/includes? (get-in (first @calls) [1 :prompt]) "a.clj"))
-    (is (str/includes? (get-in (first @calls) [1 :prompt])
+                 (get-in first-call [1 :prompt])))
+    (is (str/includes? (get-in first-call [1 :prompt]) "a.clj"))
+    (is (str/includes? (get-in first-call [1 :prompt])
                        "\"agent\":\"live\""))
-    (is (str/includes? (get-in (first @calls) [1 :prompt])
+    (is (str/includes? (get-in first-call [1 :prompt])
                        "\"session\":\"s1\""))
-    (is (= first-key (get-in (first @calls) [1 :dedupe-key])))
-    (is (not-any? #(= :ledger (first %)) @calls))))
+    (is (= first-key (get-in first-call [1 :dedupe-key])))
+    (reset! calls [])
+    (let [second-counts (sweeper/sweep-attributions! options)]
+      (is (= 1 (:already-proposed second-counts)))
+      (is (zero? (:proposed second-counts))))
+    (is (empty? @calls))))
 
 (deftest dead-seat-proposal-ledgers-without-delivery
   (let [calls (atom [])
@@ -82,6 +91,7 @@
                               (candidate "seat:b:s" "b")])
                      (result (:path path) :insufficient [])))))]
     (is (= {:swept 2 :proposed 0 :ledgered 1 :insufficient 1 :errored 0
+            :already-proposed 0 :already-ledgered 0
             :unswept 0} counts))
     (is (= 1 (count (filter #(= :ledger (first %)) @calls))))))
 
@@ -128,4 +138,58 @@
                    (let [[verdict candidates] (get table (:path path))]
                      (result (:path path) verdict candidates)))))]
     (is (= {:swept 4 :proposed 2 :ledgered 2 :insufficient 1 :errored 0
+            :already-proposed 0 :already-ledgered 0
             :unswept 0} counts))))
+
+(deftest changed-evidence-is-proposed-again
+  (let [calls (atom []) source (atom "evidence:one")
+        options (base-options
+                 ["a.clj"] calls
+                 (fn [path _]
+                   (result (:path path) :propose
+                           [(candidate "seat:live:s1" @source)])))]
+    (sweeper/sweep-attributions! options)
+    (reset! source "evidence:two")
+    (sweeper/sweep-attributions! options)
+    (is (= 2 (count (filter #(= :deliver (first %)) @calls))))))
+
+(deftest ledgered-decisions-are-not-appended-twice
+  (doseq [[verdict candidates]
+          [[:propose [(candidate "seat:dead:s2" "dead")]]
+           [:ambiguous [(candidate "seat:a:s" "a")
+                        (candidate "seat:b:s" "b")]]]]
+    (let [calls (atom [])
+          options (base-options
+                   ["a.clj"] calls
+                   (fn [path _] (result (:path path) verdict candidates)))]
+      (sweeper/sweep-attributions! options)
+      (let [counts (sweeper/sweep-attributions! options)]
+        (is (= 1 (:already-ledgered counts)))
+        (is (= 1 (count (filter #(= :ledger (first %)) @calls))))))))
+
+(deftest failed-delivery-is-retried
+  (let [calls (atom [])
+        options (assoc
+                 (base-options
+                  ["a.clj"] calls
+                  (fn [path _]
+                    (result (:path path) :propose
+                            [(candidate "seat:live:s1" "same")])))
+                 :deliver! (fn [payload]
+                             (swap! calls conj [:deliver payload])
+                             {:status 503}))]
+    (is (= 1 (:errored (sweeper/sweep-attributions! options))))
+    (is (= 1 (:errored (sweeper/sweep-attributions! options))))
+    (is (= 2 (count (filter #(= :deliver (first %)) @calls))))))
+
+(deftest corrupt-proposals-file-is-tolerated-once
+  (let [calls (atom [])
+        options (base-options
+                 ["a.clj"] calls
+                 (fn [path _]
+                   (result (:path path) :propose
+                           [(candidate "seat:live:s1" "same")])))]
+    (spit (:proposals-path options) "not-edn[")
+    (is (= 1 (:proposed (sweeper/sweep-attributions! options))))
+    (is (= 1 (count (filter #(= :print (first %)) @calls))))
+    (is (= 1 (count (filter #(= :deliver (first %)) @calls))))))

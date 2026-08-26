@@ -6,6 +6,7 @@
   quiet and countable."
   (:require [babashka.http-client :as http]
             [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3.inbox-zero.infer :as infer]
@@ -14,12 +15,15 @@
             [futon3c.inbox-zero.infer-adapters :as infer-adapters]
             [futon3c.inbox-zero.turn-promotion :as turn-promotion])
   (:import [java.nio.charset StandardCharsets]
+           [java.nio.file Files StandardCopyOption]
+           [java.nio.file.attribute FileAttribute]
            [java.security MessageDigest]
            [java.util Date]))
 
 (def default-max-paths 25)
 (def default-interval-ms 1800000)
 (defonce ^:private !loop (atom nil))
+(defonce ^:private proposals-monitor (Object.))
 
 (defn- sha-256 [value]
   (let [digest (.digest (MessageDigest/getInstance "SHA-256")
@@ -50,6 +54,50 @@
 
 (defn- evidence-hash [candidate]
   (->> (:evidence candidate) (keep :source/id) distinct sort vec sha-256))
+
+(defn- proposal-key [result candidate]
+  [(:path/key result) (evidence-hash candidate)])
+
+(defn- atomic-write! [path value]
+  (let [target (.toPath (io/file path))
+        parent (or (.getParent target) (.toPath (io/file ".")))
+        attrs (make-array FileAttribute 0)]
+    (Files/createDirectories parent attrs)
+    (let [tmp (Files/createTempFile parent ".attribution-proposals-" ".edn" attrs)]
+      (try
+        (spit (.toFile tmp) (str (pr-str value) "\n"))
+        (Files/move tmp target
+                    (into-array StandardCopyOption
+                                [StandardCopyOption/ATOMIC_MOVE
+                                 StandardCopyOption/REPLACE_EXISTING]))
+        (finally (Files/deleteIfExists tmp))))))
+
+(defn- load-proposals [path print-fn]
+  (locking proposals-monitor
+    (try
+      (let [file (io/file path)]
+        (if-not (.exists file)
+          {}
+          (let [value (edn/read-string (slurp file))]
+            (if (map? value)
+              value
+              (throw (ex-info "proposal ledger is not an EDN map" {}))))))
+      (catch Throwable error
+        (print-fn (str "[inbox-zero] attribution proposals unreadable; "
+                       "starting empty: " (.getMessage error)))
+        {}))))
+
+(defn- record-proposal! [path proposals key value]
+  (locking proposals-monitor
+    (let [next-value (assoc @proposals key value)]
+      (atomic-write! path next-value)
+      (reset! proposals next-value))))
+
+(defn- already-count [counts entry]
+  (update counts (if (= :proposed (:outcome entry))
+                   :already-proposed
+                   :already-ledgered)
+          inc))
 
 (defn- followup-payload [result candidate]
   (let [[agent session] (parse-seat (:seat/id candidate))
@@ -86,6 +134,7 @@
 
 (defn- empty-counts [unswept]
   {:swept 0 :proposed 0 :ledgered 0 :insufficient 0 :errored 0
+   :already-proposed 0 :already-ledgered 0
    :unswept unswept})
 
 (defn sweep-attributions!
@@ -110,6 +159,9 @@
                             (System/getenv "FUTON3C_INBOX_ZERO_ESCALATION_LEDGER")
                             (str (.getParent (io/file state-path))
                                  "/escalation-ledger.edn"))
+            state-parent (or (.getParent (io/file state-path)) ".")
+            proposals-path (or (:proposals-path options)
+                               (str state-parent "/attribution-proposals.edn"))
             now-fn (or (:now-fn options) #(Date.))
             max-paths (max 0 (long (or (:max-paths options) default-max-paths)))
             state (load-state-fn state-path)
@@ -118,6 +170,7 @@
             selected (subvec paths 0 (min max-paths (count paths)))
             unswept (- (count paths) (count selected))
             live-seats (roster-fn)
+            proposals (atom (load-proposals proposals-path print-fn))
             bundle-options (assoc options :state-path state-path
                                            :load-state-fn (constantly state))]
         (when (pos? unswept)
@@ -129,22 +182,42 @@
              (let [bundle (build-bundle-fn path-fact bundle-options)
                    result (infer-fn path-fact bundle)
                    candidate (first (:candidates result))
+                   key (proposal-key result candidate)
+                   prior (get @proposals key)
                    counts (update counts :swept inc)]
                (case (:verdict result)
                  :propose
-                 (if (contains? live-seats (:seat/id candidate))
-                   (let [response (deliver! (followup-payload result candidate))]
-                     (when (and (map? response) (contains? response :status)
-                                (not= 200 (:status response)))
-                       (throw (ex-info "Attribution followup delivery failed"
-                                       {:status (:status response)})))
-                     (update counts :proposed inc))
-                   (do (ledger-fn ledger-path (ledger-decision result :seat-not-live))
-                       (-> counts (update :proposed inc) (update :ledgered inc))))
+                 (if prior
+                   (already-count counts prior)
+                   (if (contains? live-seats (:seat/id candidate))
+                     (let [response (deliver! (followup-payload result candidate))]
+                       (when (not= 200 (:status response))
+                         (throw (ex-info "Attribution followup delivery failed"
+                                         {:status (:status response)})))
+                       (record-proposal!
+                        proposals-path proposals key
+                        {:seat/id (:seat/id candidate) :outcome :proposed
+                         :reason :live-seat :at (now-fn)})
+                       (update counts :proposed inc))
+                     (do
+                       (ledger-fn ledger-path
+                                  (ledger-decision result :seat-not-live))
+                       (record-proposal!
+                        proposals-path proposals key
+                        {:seat/id (:seat/id candidate) :outcome :ledgered
+                         :reason :seat-not-live :at (now-fn)})
+                       (-> counts (update :proposed inc) (update :ledgered inc)))))
 
                  :ambiguous
-                 (do (ledger-fn ledger-path (ledger-decision result :ambiguous))
-                     (update counts :ledgered inc))
+                 (if prior
+                   (already-count counts prior)
+                   (do
+                     (ledger-fn ledger-path (ledger-decision result :ambiguous))
+                     (record-proposal!
+                      proposals-path proposals key
+                      {:seat/id (:seat/id candidate) :outcome :ledgered
+                       :reason :ambiguous :at (now-fn)})
+                     (update counts :ledgered inc)))
 
                  :insufficient (update counts :insufficient inc)
                  (throw (ex-info "Unknown attribution verdict" {:result result}))))
