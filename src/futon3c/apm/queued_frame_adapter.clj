@@ -164,10 +164,16 @@
                         :blob (:blob problem)}}
                (contains? frame :memory-cascade)
                (assoc :memory-cascade (:memory-cascade frame)))
-        body {:manifest/version 2 :manifest/scope :one-off
-              :campaign/id (:campaign/id frame)
-              :block/id (str (:frame/id frame) "-one-off")
-              :apparatus apparatus :units [unit]}]
+        ;; Registered operational conditions (countdown-control/campaign-conditions):
+        ;; what held at mint beyond the git revision. Pinned here so the
+        ;; manifest, not a reader's memory of the day, says which reloads,
+        ;; arms and substrate edits were in force.
+        body (cond-> {:manifest/version 2 :manifest/scope :one-off
+                      :campaign/id (:campaign/id frame)
+                      :block/id (str (:frame/id frame) "-one-off")
+                      :apparatus apparatus :units [unit]}
+               (seq (:conditions frame))
+               (assoc :conditions (vec (:conditions frame))))]
     (if (and revision (every? (comp string? :blob val) artifact-pins))
       (assoc body :manifest/id (machine/ledger-digest [body]))
       {:error/code :queued-frame-apparatus-pin-unavailable})))
@@ -398,7 +404,8 @@
   OPEN-FRAME-FN and FRAME-TICK-FN are countdown-control boundaries.  They are
   explicit to avoid a namespace cycle; all resource effects below use the
   production lifecycle/Agency adapters."
-  [{:keys [frame-number-base campaign-prefix memory-cascade generated-contract-path
+  [{:keys [frame-number-base campaign-prefix memory-cascade conditions
+           generated-contract-path
            qualification-report-path manifest-fn ledger-fn
            role-cards workspace-root substrate-path agency-base http-fn
            open-frame-fn frame-tick-fn retire-frame-fn retirement-audit-fn pin-solve-fn
@@ -407,7 +414,8 @@
   {:mint-frame-fn
    #(mint (assoc % :frame-number-base frame-number-base
                  :campaign-prefix campaign-prefix
-                 :memory-cascade memory-cascade))
+                 :memory-cascade memory-cascade
+                 :conditions conditions))
    :qualify-frame-fn
    #(qualify-current {:frame % :generated-contract-path generated-contract-path
                       :qualification-report-path qualification-report-path})
@@ -498,14 +506,16 @@
 
 (defn mint
   [{:keys [problem ordinal queue/id frame-number-base campaign-prefix
-           memory-cascade]}]
+           memory-cascade conditions]}]
   (let [frame-id (str "f" (+ (or frame-number-base 1) ordinal))
         campaign-id (str (or campaign-prefix "apm-queued") "-" frame-id)
         body (cond-> {:frame/id frame-id :problem/id (:problem/id problem)
                       :problem problem :campaign/id campaign-id :queue/id id
                       :ordinal ordinal}
                (some? memory-cascade)
-               (assoc :memory-cascade memory-cascade))]
+               (assoc :memory-cascade memory-cascade)
+               (seq conditions)
+               (assoc :conditions (vec conditions)))]
     {:ok true :frame (assoc body :frame/mint-id
                             (machine/ledger-digest [body]))}))
 

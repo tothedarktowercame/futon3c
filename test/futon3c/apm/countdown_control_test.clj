@@ -527,6 +527,40 @@
         :autonomous? true})
       (is (= cascade (:memory-cascade @adapter-config))))))
 
+(deftest campaign-conditions-file-is-read-per-tick-and-threaded-into-mint
+  (let [dir (java.nio.file.Files/createTempDirectory
+             "campaign-conditions-" (make-array java.nio.file.attribute.FileAttribute 0))
+        root (str dir)
+        live {:id "C-1" :at "2026-08-26T18:40Z" :by "claude-19" :kind :arm
+              :note "memory-cascade arm on" :head "2f8d6696"}
+        withdrawn (assoc live :id "C-0" :until "2026-08-26T18:41Z")
+        adapter-config (atom nil)
+        problem {:problem/id "m-test" :repository "/repo" :revision "r"
+                 :path "Main.lean" :blob "b" :classification :non-excluded}]
+    (is (= [] (sut/campaign-conditions root)) "no file => nothing registered")
+    (spit (str root "/conditions.edn") (pr-str [withdrawn live]))
+    (is (= [live] (sut/campaign-conditions root))
+        "entries with :until are no longer in force")
+    (with-redefs [queued-frame-adapter/live-effects
+                  (fn [config]
+                    (reset! adapter-config config)
+                    {:mint-frame-fn identity})
+                  problem-queue/tick!
+                  (constantly {:ok true :status :batch-complete})]
+      (sut/set-alight-problem-list!
+       {:problems [problem]
+        :authority {:agent "claude-19" :control-root "/home/joe/code/futon3c"
+                    :campaign-root root}
+        :autonomous? true})
+      (is (= [live] (:conditions @adapter-config))
+          "the in-force entries reach the adapter (and so the mint)"))
+    (spit (str root "/conditions.edn") "{:not :a :vector}")
+    (is (= :registry-error (:kind (first (sut/campaign-conditions root))))
+        "an ill-formed registry is recorded as a condition, not dropped")
+    (spit (str root "/conditions.edn") "[{:unbalanced")
+    (is (= :registry-error (:kind (first (sut/campaign-conditions root))))
+        "an unreadable registry is recorded as a condition, not an exception")))
+
 (deftest jit-queue-wires-concrete-adapter-and-countdown-supervision
   (let [adapter-config (atom nil)
         tick-options (atom nil)

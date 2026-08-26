@@ -128,6 +128,31 @@
     (is (sut/valid-mint? frame))
     (is (string? (:manifest/id manifest)))))
 
+(deftest registered-conditions-are-pinned-from-minted-frame-into-manifest
+  (let [conditions [{:id "C-1" :at "2026-08-26T18:40Z" :by "claude-19"
+                     :kind :reload :head "0bc2b81f"
+                     :namespaces ["futon3c.apm.countdown-control"]
+                     :note "conditions registry read at mint"}]
+        with (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                                :frame-number-base 30 :conditions conditions}))
+        bare (:frame (sut/mint {:problem problem :ordinal 0 :queue/id "queue"
+                                :frame-number-base 30 :conditions []}))
+        manifest (sut/one-off-manifest
+                  {:frame with :apparatus-repository "."
+                   :apparatus-branch "master" :baseline {}})
+        bare-manifest (sut/one-off-manifest
+                       {:frame bare :apparatus-repository "."
+                        :apparatus-branch "master" :baseline {}})]
+    (is (= conditions (:conditions with)))
+    (is (sut/valid-mint? with))
+    (is (= conditions (:conditions manifest)))
+    (is (string? (:manifest/id manifest)))
+    (is (not (contains? bare :conditions)) "empty registry => frame unchanged")
+    (is (not (contains? bare-manifest :conditions))
+        "empty registry => manifest unchanged")
+    (is (not= (:manifest/id manifest) (:manifest/id bare-manifest))
+        "conditions are covered by :manifest/id")))
+
 (deftest open-precedes-all-resource-effects
   (let [calls (atom [])
         body {:preparation/version 2 :frame/id "f30" :problem/id "p1"}

@@ -1930,6 +1930,37 @@
                          (str path) (.getMessage t)))
               nil))))))
 
+(defn campaign-conditions
+  "Operational conditions registered for frames minted from CAMPAIGN-ROOT.
+
+   <campaign-root>/conditions.edn is an append-only vector of maps: the
+   changelog of what was done to the running instrument that the pinned git
+   revision does NOT record -- which namespaces were reloaded into the JVM
+   and when, arm files, library and substrate edits, prereg amendments, and
+   commits on master that are deliberately not loaded. It is read on every
+   tick, like the arm file. The entries in force (no :until) are copied into
+   the frame at mint and from there into the manifest under :conditions,
+   covered by :manifest/id, so each frame states the conditions that held
+   when it was minted. Absent or empty => no :conditions key, byte-identical
+   to before. An unreadable or ill-formed file is itself recorded as a
+   condition rather than silently dropped. Append entries with
+   scripts/apm-condition.bb; reload with scripts/apm-reload.sh, which
+   registers the reload as an entry."
+  [campaign-root]
+  (let [path (java.io.File. (str campaign-root) "conditions.edn")]
+    (if (.isFile path)
+      (try
+        (let [value (edn/read-string (slurp path))]
+          (if (and (vector? value) (every? map? value))
+            (vec (remove :until value))
+            [{:id "registry-error" :kind :registry-error
+              :note (str "conditions.edn is not a vector of maps: "
+                         (pr-str (type value)))}]))
+        (catch Throwable t
+          [{:id "registry-error" :kind :registry-error
+            :note (str "conditions.edn unreadable: " (.getMessage t))}]))
+      [])))
+
 (defn set-alight-problem-list!
   "List-only JIT entry point. PROBLEMS contain immutable problem pins."
   [{:keys [problems authority queue-name frame-number-base agency-base autonomous?
@@ -1969,9 +2000,11 @@
                             :promotion-proctor
                             :scribe :zai-scribe :analyst]))
         memory-cascade (memory-cascade-arm memory-cascade campaign-root)
+        conditions (campaign-conditions campaign-root)
         base-jit-config
         {:frame-number-base frame-number-base :campaign-prefix queue-name
          :memory-cascade memory-cascade
+         :conditions conditions
          :campaign-root campaign-root
          :contract-path (str control-root "/holes/labs/M-apm-demonstration/frame-cycle-contract-v2.edn")
          :generated-contract-path
