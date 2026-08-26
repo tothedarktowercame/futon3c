@@ -300,3 +300,28 @@ automated path, and its content is a frozen July fixture.
 - `holes/PLAN-apm-cascade-demo-instance.md` — the handoff plan built on this note.
 - `holes/f42a-cascade-example.edn` — the counterfactual cascade artifact.
 - `docs/retrieval-whitepaper-v2.md` §4.6 — why the store is a forest of stars.
+
+## Addendum 2 — 2026-08-26 (claude-19): the live reader could not have run since July
+
+D0 (codex-20, job `invoke-1787758100019-1525-99f8edba`) attempted the first real
+invocation of `expand-memory-cascade` over f42's 48 seed ids with
+`live-cascade-readers`. It never reached expansion. The reader requested
+`GET /api/alpha/hyperedges?end=…&type=memory/assert&limit=5000`, and the
+substrate answered HTTP 400, layer 4 `:invalid-limit` (`:maximum 1000`).
+That cap landed in futon1b `999af15` on **2026-07-22** — before any of the nine
+round-1 registrations (f9–f17, 2026-08-18/20) set
+`:reg/memory-cascade-enabled? true`. `response-edn` throws on any non-200, so
+on every path since July a live expansion would have failed on its first
+attachment read. Whether that throw was ever *reached* on the round-1 path is
+D1's question; on the countdown path it is unreachable because nothing calls it.
+
+Two further facts from probing the endpoint: the `end=` form ignores `after`
+(the same first id is returned), so there is no cursor to page with; and the
+largest hub today, `math-formalization-CA/measure-integration-api`, has 74
+attachments, so a 1000 window is not a practical limit yet.
+
+Fix (same day, conductor.clj): request the server maximum and **refuse** a
+full window (`complete-page`, throws `memory cascade attachment window
+overflow`) instead of truncating silently — the §2.2 shape from V3 would
+otherwise reappear inside the instrument being built to measure it. D0 is
+re-dispatched against the fixed reader.

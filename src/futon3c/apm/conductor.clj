@@ -239,15 +239,36 @@
        (filter #(and (string? %) (re-matches #"[A-Za-z]\d{2}[A-Z]\d{2}" %)))
        vec))
 
+;; The substrate refuses any hyperedge window above 1000 with a layer-4
+;; :invalid-limit (futon1b 999af15, 2026-07-22). This reader asked for 5000
+;; from the day it was written, so every live expansion since then — including
+;; the nine round-1 registrations that set :reg/memory-cascade-enabled? true —
+;; would have thrown before reading a single attachment (D0, 2026-08-26).
+;; The `end=` form also ignores `after`, so there is no cursor to page with;
+;; a full page is therefore refused rather than silently truncated.
+(def ^:private cascade-hyperedge-page-limit 1000)
+
+(defn- complete-page
+  "ROWS as returned for a window of LIMIT. A full window cannot be shown to be
+   exhaustive on an endpoint form without a cursor, so it is an error, not a
+   result."
+  [rows limit context]
+  (if (>= (count rows) limit)
+    (throw (ex-info "memory cascade attachment window overflow"
+                    (assoc context :limit limit :count (count rows))))
+    rows))
+
 (defn- live-cascade-readers [config]
   (let [base (or (:evidence-store-url config) (substrate/configured-url))]
     {:attachments-fn
      (fn [endpoint]
-       (->> (:hyperedges
-             (cascade-get base "/api/alpha/hyperedges"
-                          {:end endpoint :type "memory/assert" :limit 5000}))
-            (filter reviewed-attachment?)
-            vec))
+       (-> (:hyperedges
+            (cascade-get base "/api/alpha/hyperedges"
+                         {:end endpoint :type "memory/assert"
+                          :limit cascade-hyperedge-page-limit}))
+           (complete-page cascade-hyperedge-page-limit {:endpoint endpoint})
+           (->> (filter reviewed-attachment?)
+                vec)))
      :why-targets-fn
      (fn [pattern-id]
        (->> (:relations

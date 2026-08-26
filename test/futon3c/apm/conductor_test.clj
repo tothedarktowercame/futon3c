@@ -1012,3 +1012,12 @@
         (agency/unregister-agent! old-agent)
         (agency/unregister-agent! new-agent)
         (doseq [path paths] (Files/deleteIfExists path))))))
+
+(deftest cascade-attachment-window-refuses-a-full-page
+  ;; The substrate caps hyperedge windows at 1000 and the end= form has no
+  ;; cursor, so a full window is refused rather than silently truncated.
+  (let [complete-page #'conductor/complete-page]
+    (is (= [:a :b] (complete-page [:a :b] 3 {:endpoint "p"})))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                          #"window overflow"
+                          (complete-page [:a :b :c] 3 {:endpoint "p"})))))
