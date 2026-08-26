@@ -5296,6 +5296,18 @@
               :destination (:inbox-path job)
               :delivered? true
               :note "inbox-consumed-ack"})
+            ;; An ack IS the liveness signal for a pull-only seat, and the only
+            ;; one it can emit. invoke-agent! refuses such a seat before it
+            ;; reaches the last-active update, and nothing on the inbox path
+            ;; touched it -- so :agent/last-active froze at registration and the
+            ;; seat aged monotonically however much traffic it consumed. The
+            ;; idle reaper reads last-active, so a busy pull-only seat was
+            ;; reapable by construction; claude-clink-1 was reaped mid-watch on
+            ;; 2026-08-26 and its bells then failed agent-not-found in silence.
+            (try (reg/update-agent! (str (:agent-id job)))
+                 (catch Throwable t
+                   (println (str "[agency-inbox] last-active touch failed for "
+                                 (:agent-id job) ": " (.getMessage t)))))
             (update-invoke-jobs-ledger!
              (fn [ledger]
                (if-let [current (get-in ledger [:jobs (str job-id)])]
