@@ -639,4 +639,63 @@
     and the attempt proceeds."
    :reversal
    "Delete memory-cascade-arm.edn before the next mint (the file is read per
-    tick) to keep the arm off; frames already minted keep their pinned unit."}]}
+    tick) to keep the arm off; frames already minted keep their pinned unit."}
+
+  {:amendment 5
+   :at "2026-08-26T18:30Z"
+   :by "claude-clink-1"
+   :authority "Joe, 2026-08-26, in session"
+   :kind :protocol-revision
+   :change
+   "Student attempt 1 is handed a shelf with every SAME-PROBLEM memory withheld.
+    A memory whose :evidence/subject problem-id equals the frame's problem is
+    filtered out of the attempt-1 snapshot. Attempts 2 and 3 are unchanged."
+
+   :why
+   "Tier-A condition 3 -- transfer ACROSS problems, through the shelf -- has
+    n=1 across the whole campaign (f42/a1: mined by f29-guide on a01J05, used
+    on a97J07, fingerprinted, surfaced at position 47 of 48). Everything else
+    measured is within-frame: f42/a3 used two memories, both f42-scribe on
+    a97J07; f44/a1 used three, all f44-scribe on a98A02. Amendment 3 already
+    rules that within-frame attempts are not a contrast and must not be
+    reported as one, so those uses are apparatus signal and contribute nothing
+    to the question the campaign exists to answer.
+
+    Withholding same-problem memories on one attempt makes every use on that
+    attempt cross-problem BY CONSTRUCTION. Condition 3 stops depending on a
+    student happening to reach past its own frame's deposits."
+
+   :why-attempt-1
+   "Attempt 1 is the cleanest read: it is the only attempt whose shelf is not
+    also contaminated by deposits mined from EARLIER attempts of the same
+    frame. Note that same-problem memories are present even at attempt 1 --
+    promote-solver runs before the student lane, so the scribe has already
+    mined the Solver's work -- so this is a real holdout at a1, not a no-op."
+
+   :relation-to-the-ablation-arm
+   "This is NOT the :ablation arm. That arm is {:memory :withheld} entirely,
+    status :not-yet-run, and amendment 4 records that it has never existed.
+    This is a partial, targeted holdout: memory is still offered, only the
+    same-problem cache is removed. It tests whether transfer happens when the
+    cache is absent, which is the open question; full withholding tests whether
+    memory helps at all, which the campaign has already answered in the
+    affirmative."
+
+   :confound/unresolved
+   "Withholding same-problem memories shrinks the shelf AND changes its
+    composition. If attempt 1 fares worse, that is consistent with both 'cross-
+    problem memory does not transfer' and 'fewer memories'. A size-matched
+    control -- withholding an equal count of randomly chosen CROSS-problem
+    memories on another attempt -- would separate them. Not adopted here; Joe
+    has not ruled on it. Until it is, the attempt-1 contrast is suggestive
+    about transfer and not clean, and reports must say so."
+
+   :comparability
+   "Frames from this amendment forward are NOT comparable to f28-f44 on
+    attempt-1 outcomes. The independent variable changed. Any tally spanning
+    the boundary must segment at it."
+
+   :implementation
+   "One predicate at snapshot assembly, where candidate-visible? already runs:
+    drop candidates whose provenance problem-id equals the frame's. Not yet
+    built at the time of writing."}]}
