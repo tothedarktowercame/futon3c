@@ -1759,6 +1759,14 @@
                           (str/starts-with? (str aid-val) (str prefix "-"))
                           (= (or (:agent/status agent) :idle) :idle)
                           (nil? (:agent/session-id agent))
+                          ;; A pull-only seat is session-less BY DESIGN -- it is
+                          ;; not spawnable, which is the whole point of the lane
+                          ;; -- so the session-less test misreads it as a ghost.
+                          ;; claude-clink-1 was reclaimed out from under a live
+                          ;; watcher on 2026-08-26; bells to it then failed
+                          ;; agent-not-found silently, which is the exact defect
+                          ;; E-bell-clink-adapter exists to remove.
+                          (not= :inbox (:agent/delivery-mode agent))
                           (or local-auto-ghost?
                               unreachable-remote-placeholder?)))))
          (sort-by #(get-in % [:agent/id :id/value]))
