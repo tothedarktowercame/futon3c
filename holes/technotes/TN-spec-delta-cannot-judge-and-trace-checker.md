@@ -300,6 +300,30 @@ outputs, which the model does not yet cover: a review is not complete until
 its verdict and its evidence are readable. The model should be extended to say
 so, rather than the driver growing a fifth bespoke check.
 
+**Confirmed by prediction, same night.** The list above named the untouched
+sites as *candidate deposit, review evidence, review verdict, snapshot
+publication, guide deposit, terminal submission*. Within the hour f37 failed at
+the next one on that list. codex-10's root cause, verbatim: "snapshot
+publication used pre-persistence agent review claims instead of the
+controller-normalized reviews that were actually written to the substrate. This
+made the valid reassignment attachment appear inconsistent." Six commits to
+clear it (`133f0273`, `95aa4b26`, `e955cdc2`, `7b008ad0`, `ebd9eed9`,
+`a624d9e6`), after which scribe-reduce certified 1 reassign / 3 reject / 0
+cannot-judge and the failure count held at 53 across 40+ ticks.
+
+A rule that predicts where the next instance will appear is worth more than the
+five repairs that preceded it. Two sites on that list remain unaudited: guide
+deposit and terminal submission.
+
+**A correction on how this looked from outside.** While those six commits
+landed, the failure count climbed 48 -> 53 and the error code cycled between
+four classes. I read that as the wall repeating and set a stopping rule. It was
+not repeating: each new class was a deeper layer becoming reachable once the
+one above it was fixed. The distinction matters operationally -- *a changing
+error class means the obstruction is moving; only a REPEATING one means it is
+not* -- and on this evidence I would have stopped the work one commit short of
+the fix.
+
 **Why it kept being missed.** Every one of these emitted a well-formed receipt.
 The scribe's four candidates had content-digests, pattern-ids, lane and leaf
 summaries; the reviewer's verdict had a substantive reason naming real Mathlib
@@ -352,3 +376,328 @@ reviewer is `f37-promotion-proctor`. Reviewer independence held. Worth recording
 because the mislabel is itself a small instance of the same family: a field
 asserting something about provenance that was not the provenance the machine
 actually used.
+
+## 10. The shelf offers identifiers, not knowledge — f37, 2026-08-26
+
+Zero uptake has been the campaign's most persistent symptom: f35 used 0 of 27
+across three attempts, f37 used 0 of 22 and then 0 of 24. It was read as a
+relevance problem (the shelf is full of other problems' guide notes) and that
+reading is not wrong, but it is not the binding constraint.
+
+**What the Student actually receives.** The whole memory input to f37
+attempt 2, from its dispatch prompt:
+
+```clojure
+:memory-snapshot {:snapshot-digest "4e147e0b…"
+                  :accessible-memory-ids ["e-01c38dee-…" "e-07a2f8d1-…" … 24 …]}
+```
+
+Twenty-four opaque UUIDs. No names, no hooks, no bodies. The memories' own
+names -- `removable-singularity-normalize-to-continuous-ae-representative`,
+`symmetric-truncation-limit-to-lebesgue-integral-over-the-line` -- do not
+appear in the prompt at all.
+
+**Why that matters here specifically.** Those two were deposited under
+`claude-guide-v2.3` by a Guide that had read this Student's own failure
+account; they were reviewed, `:attachment-status :reviewed`, verified present
+on the shelf, and aimed at the exact residual the Student was stuck on (the
+reviewer's reasons name `MeasureTheory.aecover_Icc`, `Real.sinc_of_ne_zero`).
+Supply, delivery and relevance were all satisfied simultaneously for the first
+time in the campaign. Uptake was still zero.
+
+**Attribution.** `zai-student-v2.md` line 25 says plainly: "`:accessible-memory-ids`
+lists every memory you may read. Fetch each of them **before you start** and
+again **when you hit a wall**." The Student recorded `:queries []` on both
+attempts. The instruction exists; it was not followed; the apparatus recorded
+the non-compliance correctly. This is an agent behaviour failure, not a machine
+defect.
+
+But the design makes non-compliance the path of least resistance: complying
+means 24 blind fetches before writing a line of Lean, with nothing to triage
+on. The hook -- written expressly to be recognisable from the obstacle's
+vocabulary -- is the one field that would make triage possible, and it is the
+field withheld.
+
+**Corroboration from the one success.** The campaign's only cross-problem
+transfer (f33 attempt 1) came through OPEN SEARCH, not the shelf -- and search
+returns content. The same card's line 30 ("search with the vocabulary of your
+obstacle") is what produced it. When the channel shows the Student what it is
+offering, it gets used; when it shows a list of hashes, it does not.
+
+**Two candidate repairs, different in kind.** (a) Put each accessible memory's
+hook in the prompt beside its id -- cheap, and the difference between a memory
+channel and a list of hashes. (b) Refuse an attempt that records zero queries
+against a non-empty shelf -- enforcement, the same shape as an unresolved
+review not advancing a frame. Both change what the experiment measures, so
+both are Joe's call. Recorded here rather than acted on.
+
+**Consequence for every uptake number banked so far.** They were measured
+against a channel that never showed the Student the content it was counting as
+"offered". `:accessible-memory-ids` has meant *ids listed in a prompt*, not
+*memories the Student could see*.
+
+## 11. The witness standard is silent on procedural memories — f39, 2026-08-26
+
+f39 attempt 2 produced the campaign's first CROSS-PROBLEM use through the
+shelf: `e-63b7c7c1`, `:evidence/subject {:ref/type :problem, :ref/id "a95J03"}`
+— mined from f34's problem, used on a97A01. The Student made 3 queries and
+selected it from 27 accessible memories. That provenance is substrate fact, not
+a claim, and it is the shape tier-A condition 3 asks for.
+
+The fingerprint check returns nothing. None of the memory's named identifiers
+(`Multiset.card_le_card`, `Polynomial.card_roots'`,
+`circleIntegral_logDeriv_eq_divisor_sum`, `MeromorphicOn.divisor`) appears in
+the artifact.
+
+**That is the correct result, and it is why the check cannot adjudicate this
+use.** The memory is PROCEDURAL: "bank cheap sorries first … attempt 2 opened
+bridge_1 first, spent the budget confirming API spellings, and ended with ZERO
+compiled lines — all three sorries open. Order for a time-boxed session: (1)
+bridge_2 …". Its content is the ORDER OF WORK under a budget. Its named
+identifiers belong to a95J03's proof and have no business in a97A01's; their
+absence is what correctness looks like, not what failure looks like.
+
+`retrieval-whitepaper-v3` §3.1 measures whether the committed artifact carries
+identifiers the memory named, differenced against the base file. That works for
+API-transfer memories and is SILENT BY CONSTRUCTION on advice about sequencing,
+budget discipline, or which obstacle to attack first. A procedural memory that
+worked perfectly and one that was never read produce the same fingerprint: none.
+
+**Consequence for §3.1a's numbers.** The 35-event audit reported 0 unwitnessed
+claims. That reads as "every USE claim left a trace" and should read as "every
+USE claim of the KIND this instrument can see left a trace". The audit's
+population was API-naming memories; procedural ones were not distinguished, and
+any that were present were scored by a test that cannot detect them.
+
+**What would witness a procedural memory.** Not a lexical trace. Its claim is
+counterfactual — the Student did X before Y, and would have done otherwise. The
+honest candidates are (a) the ORDER of closure across attempts, which the
+receipts already record (f39: base 4 sorries → 3, 19 lines added, one bridge
+closed), compared against the order the memory prescribes; or (b) treating
+procedural memories as a separate class whose uptake is reported but whose
+load-bearing-ness is not claimed without the ablation. Do NOT extend the
+fingerprint regex to match prose — that would manufacture the appearance of a
+witness where none exists, which is the failure this whole campaign documents.
+
+**Status.** Tier-A condition 3 is NOT recorded as met on this evidence. The
+transfer is cross-problem and real; whether the memory did any work is
+unadjudicated, and the standard as written cannot adjudicate it.
+
+## 12. `:used-ids` records consultation, not load-bearing use — f39 attempt 3
+
+f39 attempt 3 claimed three uses of 29 accessible, including BOTH guide
+memories written for its own stated residual and delivered through the
+corrected review path (`e-23a2940f`, `e-6556333d`, both `:attachment-status
+:reviewed`). It made 2 queries, certified at 16 KB, and closed one sorry
+(base 4 -> 3, 201 -> 223 lines).
+
+**The fingerprint check returns zero.** None of the identifiers those memories
+name -- `Finset.Ico`, `Finset.sum_Ico_eq_sum_range`, `Finset.sum_nbij`,
+`Finset.range`, `Ico_disjoint_Ico`, `Ico_subset_Ico` -- appears in the artifact.
+They are absent from the base blob too, so this is not base contamination.
+Unlike §11's procedural memory, these DO name APIs, so §3.1's standard applies
+and it comes back empty. This is the campaign's first genuinely unwitnessed USE
+claim; the f28-f34 audit found 0 of 35.
+
+**But the student is working the same obstacle.** Its proof contains `Ico` ten
+times and `cell` twenty-three times -- the coarse/fine cell decomposition the
+memories address. It engaged the territory and did not adopt the prescribed
+`Finset` machinery.
+
+**What this says the field means.** `zai-student-v2` asks the Student to report
+memory-use. If it reads that as *which memories I consulted* rather than *which
+load-bear in what I wrote*, then `:used-ids` is a CONSULTATION COUNT. Every
+uptake number in this campaign should be read that way, with the fingerprint as
+the separate and stricter question of whether anything transferred.
+
+The two diverge cleanly here, which is the point of having both:
+
+| | claimed | fingerprinted | closed |
+|---|---|---|---|
+| f37 attempt 3 | 5 | yes -- 4 APIs novel vs base | 0 sorries |
+| f39 attempt 3 | 3 | no -- 0 of 6 named APIs | 3 sorries |
+
+f37 is load-bearing use. f39 is consultation. Reporting them under one heading
+would have made the campaign's uptake look twice as good as it is.
+
+**Consequence.** Do not "fix" the divergence by tightening the Student card
+until `:used-ids` means load-bearing -- an agent cannot reliably know which of
+its reads bore weight, and asking it to assert that manufactures exactly the
+claim §9 warns about. Report consultation and fingerprint separately, and let
+the gap between them be a measurement rather than a defect.
+
+## 13. Two findings from f40, the first healthy frame
+
+f40/a97J05 ran the intended loop with nothing broken in it: scribe mined the
+solver, deposits persisted under controller ids, the reviewer read full
+evidence and APPROVED on merit, the memories reached the Student, the Student
+used them, and attempt 2 closed the problem at 0 sorries in 171 lines against a
+186-line base. Four used memories, all four fingerprinted with APIs absent from
+base blob `539525533e98`. Five approvals across the frame (4 scribe, 1 guide) —
+the scribe seats had been 0-for-31.
+
+**Read the 0-for-31 correctly.** The cards were revised six hours before f40
+and did not change again. What changed is that deposits survived to be read and
+reviewers read real evidence. Every prior zero was destroyed before
+persistence, refused on a hook-only projection, or rejected for fields no card
+documented. None was a judgement about the deposits. The seats may have been
+producing approvable work throughout; the machine could not show it.
+
+### 13.1 A legitimate `cannot-judge` exists after all
+
+§7 catalogued every documented cause of `cannot-judge` and found all of them to
+be apparatus failures, which is why it argued the verdict is a category error.
+codex-10, asked directly, said it saw no legitimate candidate-level meaning
+once dispatch validity holds. f40's guide-intervention-2-review produced a
+counterexample:
+
+> "…**pattern fit cannot be certified under the frozen one-search budget**: the
+> reviewed-corpus search returned no canonical support for the proposed
+> `math-strategy/missing-dependency-protocol` attachment, and assigning any
+> discovered singularity pattern would be incoherent."
+
+The reviewer judged the CONTENT completely — it named `HasSum.congr_fun`,
+explained the `NEW = OLD` versus `OLD = NEW` direction, and called the memory
+findable. It declined only the taxonomy placement, having searched once under a
+bounded budget and found nothing that fits, and refused to force an incoherent
+attachment.
+
+That is not the machine failing to supply evidence. It is a reviewer declining
+to fabricate a category — the same discipline §9 asks for everywhere else.
+**Before `ReviewVerdict.cannotJudge` is retired, this case needs somewhere to
+go**, or the reviewer's only options become fabricating an attachment or
+rejecting good content on a technicality. The honest shape is probably a
+distinct outcome for *content judged, attachment uncertifiable under budget* —
+which is a statement about the corpus and the search budget, not about the
+candidate.
+
+### 13.2 A cosmetic sink can fail a whole tick
+
+f40 also failed with `:live-supervisor-projection-failed` ->
+`:problem-projection-buffer-sink-failed`, whose finding is:
+
+    emacsclient: can't connect to /run/user/1000/emacs/server: Connection refused
+
+The projection PUBLISHED correctly — `:publication {:ok true, :path
+".../f40/problem-buffer.md"}`. Only the mirror into an Emacs buffer failed,
+because no Emacs server was running at 07:00. A display convenience that cannot
+reach a dead socket takes down a regulator tick.
+
+Same structural shape as the night's other blocks: a step with no successor
+state stops the thing it was decorating. The durable record is written and
+correct. A sink that is not the record should not be able to fail the frame.
+
+## 14. The pattern corpus is narrower than what the scribes learn — f40
+
+§13.1 recorded one `cannot-judge` that was not an apparatus failure. f40
+produced two more in `scribe-reduce`, with the same shape, which makes three in
+one frame and turns an anomaly into a structural finding.
+
+All three say a version of:
+
+> "pattern fit cannot be certified under the frozen one-search budget: the
+> corpus search returned no canonical support for the proposed
+> `tactic-algebra-interference` attachment, and the discovered singularity
+> patterns do not coherently describe a scoped-notation parse failure."
+
+In every case the reviewer judged the CONTENT completely. One of the refused
+memories is *"add `open scoped NNReal ENNReal` before binders using ℝ≥0 or
+ℝ≥0∞"* — concrete, actionable, and explicitly checked as "not already in file".
+What could not be certified was where it belongs in the taxonomy.
+
+**The cause is not the reviewer and not the apparatus.** These memories are
+about LEAN MECHANICS — notation scoping, parser errors, tactic interference,
+algebraic packaging — and the canonical pattern corpus is MATHEMATICAL
+(`math-formalization/*`, `math-informal/*`, singularity patterns). A bounded
+search cannot find a home for a scoped-notation parse failure because no such
+home exists. The reviewer is refusing to attach an incoherent parent rather
+than forcing a fit, which is exactly the discipline §9 asks for.
+
+**Consequences.**
+
+1. `ReviewVerdict.cannotJudge` cannot simply be retired (§7 proposed it, §13.1
+   qualified it). Three instances in one frame are the taxonomy speaking, not
+   the machine failing. Retiring the constructor would force reviewers to
+   fabricate attachments or reject good content on a technicality — both worse
+   than an honest "cannot certify fit".
+2. The honest repair is on the CORPUS side, not the verdict side: either the
+   pattern library gains a place for Lean-mechanics knowledge, or such memories
+   are admitted with an explicit "no canonical parent" status rather than
+   blocked. Note `codex-scribe-v2` already asks for exactly this kind of
+   knowledge — "the API that actually fits", parse errors masquerading as
+   tactic failures — so the cards are commissioning work the taxonomy cannot
+   file.
+3. The one-search budget is doing real work here and should be named as a
+   parameter. "Cannot certify under a bounded search" is a different claim from
+   "no such pattern exists", and the receipts currently conflate them.
+
+**Scale of the loss.** f40 approved 5 of 9 reviewed candidates; 3 of the 4
+non-approvals are this class. Roughly a third of the frame's minable knowledge
+is being held up by a taxonomy gap rather than by any judgement about quality.
+
+## 15. Two watcher defects where the failure state is indistinguishable from the quiet state — f40/f41, 2026-08-26
+
+Both found while watching f41 start, both in the watching apparatus rather
+than the machine, and both of the same shape: **the instrument's broken state
+produces exactly the output its healthy quiet state produces.** Neither could
+be caught by looking at the instrument's output, which is the only thing
+anyone looks at.
+
+### 15.1 The frame watcher restarted itself on a signal it generated
+
+`387ba76e` taught the babysitter to detach the frame watcher when the queue's
+`:active` goes nil during the mint gap. It did detach — and then the
+supervisor restarted it on the frame that had just certified, because
+terminating the watcher makes its reader thread emit an EOF, and EOF was the
+crash signal. The teardown was indistinguishable from the failure.
+
+Worse, the restart is self-sustaining: `start_watch()` calls `stop_watch()`,
+which emits another EOF, which the queue may deliver after `start_watch()`'s
+drain, which triggers the next restart. The f40→f41 boundary shows the loop
+in the log — one detach at close-frame, a re-attach to the certified f40,
+then four attach/exit pairs on f41 that were not f41 crashing at all. It
+terminates only by luck, when an EOF happens to land before a drain.
+
+Fix (`b1b581a0`): the EOF sentinel carries the process that emitted it.
+`stop_watch()` already clears `current_proc`, so a sentinel whose process is
+not the installed watcher is stale by construction. This is exact where the
+drain and the frame-id guard were both timing-dependent.
+
+Consequence while it was live: the watchdog alerted continuously on f40 after
+f40 was correctly complete —
+`active-phase-state-invalid+coordinator-heartbeat-stale+terminal-job-collection-stale`,
+every one of which is the truthful description of a *finished* frame. Alerts
+on correct work are how an alert channel stops being read.
+
+### 15.2 The event emitter kept tailing a dead log
+
+`apm-frame-events.py` pinned `APM_BABYSIT_LOG` to one path. Every babysitter
+relaunch — three tonight — produced a new bg id and a new log file, leaving
+the emitter reading a file nothing writes to any more. It did not error, did
+not exit, and reported nothing. **Nothing is also what it reports when the
+queue is quiet.** I restarted the babysitter twice tonight without restarting
+the emitter and had no way to tell from the output.
+
+Fix (`057f2009`): default `auto`, re-resolved every poll to the newest
+`/tmp/futon3c-bg/*.log` that identifies itself as babysitter output. Existence
+is deliberately not the trigger — a relaunched babysitter leaves the old file
+on disk, so "the path still exists" is no evidence it is still live.
+
+### 15.3 The general rule, and where else to look
+
+§9's rule is about minted identifiers: *an id an agent gives you is a claim
+until the artifact is read back.* This is the watcher-side analogue:
+
+> **A watcher must be able to distinguish "nothing is happening" from "I am no
+> longer able to see anything."** Where it cannot, its silence is unfalsifiable
+> and its alerts eventually get ignored.
+
+Both fixes work by attaching an identity to the thing being trusted — which
+process emitted this EOF, which file is the live one — rather than inferring
+liveness from a condition that holds in both states.
+
+Sites not yet audited against this rule: the regulator's own heartbeat
+staleness check (does it distinguish a stalled coordinator from an unreadable
+one?), and `apm-frame-pulse.py`'s `sorries ?` field, which prints the same `?`
+when the worktree has no Main.lean as when the count genuinely cannot be
+parsed.
