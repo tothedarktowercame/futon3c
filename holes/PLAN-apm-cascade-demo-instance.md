@@ -93,63 +93,71 @@ already read — this is wiring, not new machinery.
 independent variable mid-campaign and "is not a change to make quietly". The
 previous arm's config must be recorded alongside so the comparison is honest.
 
-### H4 — the worked example: show the cascade being USED on a named problem
+### H4 — f42a: the counterfactual worked example (Joe, 2026-08-26)
 
-*Joe, 2026-08-26: "otherwise we get the 'wired but no example' failure case we
-saw with 'honest holes' in the Cascade Live sheet."*
+*Joe: "we don't need to find a 'real world' example yet — indeed we could
+perhaps rework f42 into an f42a 'synthetic' example showing how the cascade
+would have changed things."*
 
-That failure is on record and worth stating precisely, because H3 alone
-reproduces it. O5 honest-holes in `C-cascade-real` is fully wired: a generator
-(`scripts/o5_honest_holes.py`), a dry-run artifact, arrows certified
-`:consistent? true` and explicitly described as "real, not aspirational". Its
-output is **2 holes across 231 core missions**, and no case was ever shown where
-a hole changed anyone's decision. The machinery is not in doubt; the
-demonstration never happened. H3 delivers exactly that state for cascades —
-route labels in a receipt, and nothing anyone can point at.
+This replaces the archive search. It is better than synthetic: **every input is
+real, and only the counterfactual is constructed.**
 
-**H4 is therefore not optional and not last.** Its search should run against the
-existing campaign archive BEFORE H3 is wired, because it can be done entirely on
-recorded data and it decides whether H3 is worth doing.
+**Feasibility is already established, by computation over the live substrate
+(claude-13, 2026-08-26):**
 
-**The selection criterion, fixed in advance.** Pick the demonstration frame by
-this rule, stated before any outcome is examined, so the case cannot be chosen
-to flatter the cascade:
+    f42 seed memories                                     48
+    f42 seed patterns                                     23
+    has-semantic-why edges touching an f42 pattern        18  (of 45 in the substrate)
+    why-hop TARGET patterns reached from f42 patterns      5
+    NEW memories the cascade would add at one why-hop     10
 
-> a **closed** frame in which the student stumbled, where some leaf memory M
-> satisfies: (a) M was NOT in that frame's `:memory-use/surfaced-ids`, (b) M is
-> attached to a pattern P' reachable by `pattern/has-semantic-why` from a pattern
-> P that WAS attached to a surfaced memory, and (c) M's body addresses the
-> specific obstacle the student hit.
+        math-strategy/missing-dependency-protocol         +6
+        math-formalization/coercion-bridge                +4
 
-(a) and (b) are mechanical over the archive and the 23 math `has-semantic-why`
-edges. (c) is a judgement and must be made by a seat that is not the one that
-selected the frame.
+So the cascade is not empty on this frame: it expands the delivered shelf from
+**48 to 58**, and the 10 additions are reachable only by a why-hop — retrieval
+did not surface them.
 
-**Not f42.** Its closing memory was already in the seed set, ranked 47th of 48.
-The cascade would not have added it — ordering (H2) is what addresses f42, and
-using it to demonstrate H3 would be the flattering-case error in its most
-tempting form. Note also that `jit-all-open-nontopology-v1-f42` is
-`:campaign/status :running` as of 2026-08-26T12:38, so it is not archive
-material at all.
+*Caveat, stated because it matters: that expansion was computed independently
+from the raw `memory/assert` and `pattern/has-semantic-why` data, NOT by running
+`expand-memory-cascade`. The real expander also has `:co-incidence` routes,
+cheapest-route dedup and a cap, so treat 10 as an independent one-hop estimate,
+not the expander's output. **H0 still has to run** and should reproduce or
+correct this number — that is now H0's acceptance test.*
 
-**What the deliverable is.** One page, on one named problem, containing:
+**What f42a is.** f42 replayed with the cascade on. Real throughout: the 48
+memories, the 23 patterns, the 18 edges, the 10 additions, all from the live
+substrate. The only constructed element is that the frame did not actually run
+this way — so f42a is a **counterfactual, not a fabrication**, and should be
+labelled that way in every artifact it produces.
 
-1. the problem and the obstacle the student actually hit, quoted from the trace;
-2. the shelf as delivered — the flat hash-sorted list, with positions;
-3. memory M, which was not on it;
-4. the route: seed memory → pattern P → `has-semantic-why` → P' → M, with the
-   edge ids, so a reader can re-walk it;
-5. the counterfactual, stated honestly as a counterfactual: what the student
-   would have been handed with the cascade on, and why M addresses the obstacle;
-6. what it would have cost — `:expanded-count` at the frame's seed set, against
-   the cap.
+**What f42a may claim.** That the student would have been handed a different
+shelf, and exactly which one. **It may not claim** that the student would have
+done better; nothing here is an outcome measurement, and f42 closed successfully
+anyway.
 
-**A null result is a valid and valuable deliverable.** If no frame across the
-seven archived campaigns satisfies the criterion, then the cascade's usefulness
-is unevidenced on the whole recorded history, and H3 should not be built. Say
-that plainly rather than relaxing the criterion until a case appears — relaxing
-it is how "wired but no example" becomes "wired with a bad example", which is
-worse.
+**The judgement step, and it is the real test.** Do any of the 10 added memories
+bear on the obstacle f42 actually hit? Take that judgement from a seat that did
+not compute the expansion. Both answers are worth having:
+
+- **Yes** — a worked example exists: here is the obstacle, here is the memory the
+  student did not have, here is the route by which the cascade reaches it, here
+  is what the delivered shelf would have looked like.
+- **No** — the cascade adds **volume without relevance** on this frame, which is
+  a real finding and a sharper argument against H3 than "no example was found".
+  Ten more memories on a shelf already ordered by hash makes the delivery worse,
+  not better, and that would say so.
+
+**Why f42 is now the right frame, having been ruled out above.** The earlier
+objection stands for a *real* demonstration — f42's closing memory was already
+in the seed set at 47/48, so the cascade would not have added it. For a
+counterfactual about delivery, that is irrelevant: the question is what the
+cascade adds to the shelf, not whether it rescues the outcome. The two uses of
+f42 are different and should not be conflated in the write-up.
+
+**Note that `jit-all-open-nontopology-v1-f42` is `:campaign/status :running`
+as of 2026-08-26T12:38.** f42a must be a replay against the archived snapshot,
+touching nothing in the live arm.
 
 ## What to measure
 
