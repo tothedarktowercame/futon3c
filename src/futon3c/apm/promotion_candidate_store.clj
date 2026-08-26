@@ -171,12 +171,26 @@
          edge (->> (fetch-hyperedges (:memory-id candidate))
                    (filter #(= :memory/assert (:hx/type %)))
                    (filter #(= :current (get-in % [:hx/props :state])))
-                   first)]
+                   first)
+         status (get-in edge [:hx/props :attachment-status])
+         edge-patterns (set (get-in edge [:hx/props :roles :patterns]))
+         review (get-in edge [:hx/props :review])
+         review-entry (when (and (= :reviewed status)
+                                 (string? (:evidence-id review)))
+                        (fetch-entry (:evidence-id review)))
+         attachment-visible?
+         (case status
+           :proposed (= (set (:pattern-ids candidate)) edge-patterns)
+           :reviewed
+           (and review-entry
+                (= (:memory-id candidate)
+                   (get-in review-entry [:evidence/body :review/memory-id]))
+                (= (:verdict review)
+                   (get-in review-entry [:evidence/body :review/verdict]))
+                (= edge-patterns (set (:pattern-ids review))))
+           false)]
      (and entry edge
           (= (:content-digest candidate)
              (machine/ledger-digest [(:evidence/body entry)]))
           (= (:memory-id candidate) (get-in edge [:hx/props :roles :entry]))
-          (contains? #{:proposed :reviewed}
-                     (get-in edge [:hx/props :attachment-status]))
-          (= (set (:pattern-ids candidate))
-             (set (get-in edge [:hx/props :roles :patterns])))))))
+          attachment-visible?))))

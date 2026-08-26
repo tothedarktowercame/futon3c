@@ -58,3 +58,48 @@
     (is (some #{:candidate-body-missing}
               (mapcat :findings (:findings result))))
     (is (zero? @writes))))
+
+(deftest independently-reassigned-candidate-remains-visible-on-replay
+  (let [memory-id "e-memory"
+        review-id "e-review"
+        original-pattern "math-formalization/original"
+        reassigned-pattern "math-formalization/canonical"
+        body (select-keys candidate [:name :hook :kind :body :why :how-to-apply])
+        persisted (assoc candidate
+                         :memory-id memory-id
+                         :content-digest (machine/ledger-digest [body])
+                         :pattern-ids [original-pattern])
+        entries
+        {memory-id {:evidence/id memory-id :evidence/body body}
+         review-id {:evidence/id review-id
+                    :evidence/body
+                    {:review/memory-id memory-id
+                     :review/verdict :reassign}}}
+        edge {:hx/id "hx-memory" :hx/type :memory/assert
+              :hx/endpoints [memory-id reassigned-pattern]
+              :hx/props
+              {:state :current :attachment-status :reviewed
+               :roles {:entry memory-id :patterns [reassigned-pattern]}
+               :review {:evidence-id review-id :verdict :reassign
+                        :pattern-ids [reassigned-pattern]}}}]
+    (is (sut/visible? persisted #(get entries %)
+                      (constantly [edge])))))
+
+(deftest reviewed-candidate-with-unreadable-review-is-not-visible
+  (let [memory-id "e-memory"
+        body (select-keys candidate [:name :hook :kind :body :why :how-to-apply])
+        persisted (assoc candidate
+                         :memory-id memory-id
+                         :content-digest (machine/ledger-digest [body]))
+        edge {:hx/id "hx-memory" :hx/type :memory/assert
+              :hx/endpoints [memory-id "math-formalization/canonical"]
+              :hx/props
+              {:state :current :attachment-status :reviewed
+               :roles {:entry memory-id
+                       :patterns ["math-formalization/canonical"]}
+               :review {:evidence-id "missing-review" :verdict :reassign
+                        :pattern-ids ["math-formalization/canonical"]}}}]
+    (is (not (sut/visible? persisted
+                           #(when (= memory-id %)
+                              {:evidence/id memory-id :evidence/body body})
+                           (constantly [edge]))))))
