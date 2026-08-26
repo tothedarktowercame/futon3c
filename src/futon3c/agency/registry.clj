@@ -94,6 +94,7 @@
    {:agent/id         TypedAgentId
     :agent/type       :claude | :codex | :tickle | :mock | :peripheral
     :agent/invoke-fn  (fn [prompt session-id] -> result-map)
+    :agent/delivery-mode :push | :inbox
     :agent/capabilities [:keyword ...]
     :agent/session-id string (may be updated by invoke)
     :agent/registered-at Instant
@@ -116,8 +117,6 @@
 ;; Installing the watch at ns-load ran an eager initial `persist-registry!`
 ;; against the still-empty registry, clobbering the saved roster before restore
 ;; could read it (the round-trip restored 0 agents). See dev/bootstrap.clj.
-
-(declare registry-status)
 
 ;; =============================================================================
 ;; Helpers
@@ -216,7 +215,8 @@
                        (if (and (string? note) (not (str/blank? note)))
                          (str base " (" note ")")
                          base)))]
-    {:invoke-route route
+    {:delivery-mode (:agent/delivery-mode agent :push)
+     :invoke-route route
      :invoke-ready? (not= :none route)
      :invoke-local? local?
      :invoke-ws-available? ws-available?
@@ -473,6 +473,7 @@
      :invoke-fn     - Required. Function (fn [prompt session-id] -> result-map).
      :capabilities  - Required. Vector of keyword capabilities.
      :session-id    - Optional. Initial session ID.
+     :delivery-mode - Optional. :push (default) or :inbox.
      :ttl-ms        - Optional. Bounded lifecycle in milliseconds (R5).
      :metadata      - Optional. Arbitrary metadata map.
      :session-reset-fn - Optional. Zero-arity fn that clears any backing
@@ -481,15 +482,17 @@
    Returns:
      Agent record on success (R1: typed result).
      {:ok false :error SocialError} on failure (R2: duplicate → error, not overwrite)."
-  [{:keys [agent-id type invoke-fn capabilities session-id ttl-ms metadata
+  [{:keys [agent-id type invoke-fn capabilities session-id ttl-ms metadata delivery-mode
            session-reset-fn]}]
   (let [aid-val (agent-id-value agent-id)
+        delivery-mode (or delivery-mode :push)
         typed-id (if (map? agent-id)
                    agent-id
                    {:id/value (str agent-id) :id/type :continuity})
         ts (now)
         agent-record {:agent/id typed-id
                       :agent/type type
+                      :agent/delivery-mode delivery-mode
                       :agent/invoke-fn invoke-fn
                       :agent/capabilities (vec (or capabilities []))
                       :agent/session-id session-id
@@ -512,7 +515,15 @@
                                              (or metadata {}))}
         ;; R2: Atomic check-and-set — reject duplicate, don't overwrite
         result (atom nil)]
-    (swap! !registry
+    (if-not (#{:push :inbox} delivery-mode)
+      (reset! result
+              {:ok false
+               :error (make-social-error
+                       :invalid-delivery-mode
+                       "delivery-mode must be :push or :inbox"
+                       :agent-id aid-val
+                       :delivery-mode delivery-mode)})
+      (swap! !registry
            (fn [m]
              (if (contains? m aid-val)
                (do (reset! result
@@ -533,7 +544,7 @@
                                       :owner-id owner)})
                      m)
                  (do (reset! result agent-record)
-                     (assoc m aid-val agent-record))))))
+                     (assoc m aid-val agent-record)))))))
     (let [r @result]
       ;; Fire on-register hook asynchronously for federation announcement
       (when (and (map? r) (:agent/id r))
@@ -922,6 +933,14 @@
          aid-val (or (some-> resolved-agent :agent/id :id/value str)
                      requested-aid-val)]
      (if-let [agent resolved-agent]
+       (if (= :inbox (:agent/delivery-mode agent))
+         {:ok false
+          :error (make-social-error
+                  :pull-only-agent
+                  (str "Agent " aid-val
+                       " is pull-only (delivery-mode inbox); bells are delivered to its inbox, not by invoke.")
+                  :agent-id aid-val
+                  :delivery-mode :inbox)}
        (let [invoke-fn (:agent/invoke-fn agent)
              routing-info (invoke-routing-info aid-val agent)
              current-session (:agent/session-id agent)
@@ -1124,7 +1143,7 @@
                         :exception-class (.getName (class e)))}))]
            ;; Fire on-idle with outcome — after result is known.
            (fire-on-idle! aid-val invoke-result)
-           invoke-result))
+           invoke-result)))
        {:ok false
         :error (make-social-error
                 :agent-not-found
@@ -1670,6 +1689,7 @@
                                   :invoke-local? (:invoke-local? routing-info)
                                   :invoke-ws-available? (:invoke-ws-available? routing-info)
                                   :invoke-diagnostic (:invoke-diagnostic routing-info)
+                                  :delivery-mode (:delivery-mode routing-info)
                                   :completion-bell-required? (completion-bell-contract? agent)
                                   :status status}
                            queued-jobs

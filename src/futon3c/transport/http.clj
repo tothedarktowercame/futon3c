@@ -64,6 +64,7 @@
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as estore]
             [futon3c.agency.registry :as reg]
+            [futon3c.agency.inbox :as agency-inbox]
             [futon3c.agency.agent-pouch :as agent-pouch]
             [futon3c.agency.frame-seats :as frame-seats]
             [futon3c.agency.federation :as federation]
@@ -675,6 +676,26 @@
 (declare run-invoke-job!)
 (declare record-invoke-job-delivery-by-job-id!)
 
+(defn- inbox-agent?
+  [agent-id]
+  (= :inbox (:agent/delivery-mode (reg/get-agent (str agent-id)))))
+
+(defn- deliver-invoke-job-to-inbox!
+  [job-id prompt]
+  (let [job (get-in (ensure-invoke-jobs-ledger!) [:jobs job-id])
+        inbox-path (agency-inbox/deliver-to-inbox!
+                    (assoc job :prompt prompt))]
+    (update-invoke-jobs-ledger!
+     (fn [ledger]
+       (if-let [current (get-in ledger [:jobs job-id])]
+         (assoc-in ledger [:jobs job-id]
+                   (-> current
+                       (assoc :state "delivered"
+                              :inbox-path inbox-path)
+                       (append-job-event "delivered" {:inbox-path inbox-path})))
+         ledger)))
+    inbox-path))
+
 (defn- enqueue-auto-bellback!
   [{:keys [caller bell-job-id prompt reply-to]}]
   (let [job-id (create-invoke-job! {:requested-job-id bell-job-id
@@ -711,7 +732,9 @@
     ;; downstream (the "transaction"), but two concurrent dispatches for one agent is the
     ;; upstream defect this closes. Gated on drainer-v2 (default on) like the bell path;
     ;; the legacy lane stays as the flag-off fallback.
-    (if (turn-queue/drainer-v2-enabled?)
+    (if (inbox-agent? caller)
+      (deliver-invoke-job-to-inbox! job-id prompt)
+      (if (turn-queue/drainer-v2-enabled?)
       (let [r (turn-queue/accept-async!
                {:to caller :from auto-bellback-caller :surface auto-bellback-caller
                 :prompt prompt
@@ -721,9 +744,9 @@
                 :finalize-fn deliver-result})]
         (when (= :deduped (:status r))
           (deliver-result {:ok true :deduped true})))
-      (.submit invoke-executor
+        (.submit invoke-executor
                ^Runnable
-               (fn [] (deliver-result (run-job)))))
+               (fn [] (deliver-result (run-job))))))
     job-id))
 
 (def ^:dynamic *enqueue-auto-bellback!* enqueue-auto-bellback!)
@@ -956,7 +979,7 @@
              existing (when (seq requested)
                         (get-in ledger [:jobs requested]))
              reuse? (and existing
-                         (#{"queued" "activating" "running"}
+                         (#{"queued" "activating" "running" "delivered"}
                           (str (:state existing))))]
          (if reuse?
            (do (reset! created-id requested)
@@ -1084,7 +1107,7 @@
    (fn [acc job]
      (let [aid (canonical-job-agent-id (:agent-id job))
            state (some-> (:state job) str)]
-       (if-not (and aid (#{"queued" "activating" "running" "overrun"} state))
+       (if-not (and aid (#{"queued" "activating" "running" "overrun" "delivered"} state))
          acc
          (-> acc
              (update-in [aid :queued-jobs] (fnil + 0)
@@ -1141,9 +1164,10 @@
          ;; First terminal transition wins: if the ceiling reaper already
          ;; force-terminated this job ("timeout"), the interrupted worker's
          ;; own finalize must not overwrite it (no timeout->failed flip,
-         ;; no double delivery). Non-terminal states (queued/running/overrun)
+         ;; no double delivery). Non-terminal states
+         ;; (queued/running/overrun/delivered)
          ;; finalize normally.
-         (if (not (#{"queued" "running" "overrun"} (str (:state job))))
+         (if (not (#{"queued" "running" "overrun" "delivered"} (str (:state job))))
            ledger
            (let [finished-at (str (Instant/now))
                updated-job (-> job
@@ -2764,6 +2788,10 @@
       (let [agent-id (or (:agent-id payload) (get payload "agent-id"))
             agent-type-str (or (:type payload) (get payload "type"))
             agent-type (parse-keyword agent-type-str)
+            delivery-mode (or (some-> (or (:delivery-mode payload)
+                                           (get payload "delivery-mode"))
+                                      parse-keyword)
+                              :push)
             origin-url (or (:origin-url payload) (get payload "origin-url"))
             proxy? (or (:proxy payload) (get payload "proxy") (some? origin-url))
             ws-bridge? (boolean (or (:ws-bridge payload)
@@ -2787,6 +2815,10 @@
           (nil? agent-type)
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required (claude, codex, zai, tickle, mock)"})
+
+          (not (#{:push :inbox} delivery-mode))
+          (json-response 400 {:ok false :err "invalid-delivery-mode"
+                              :message "delivery-mode must be push or inbox"})
 
           (and proxy? (str/blank? (str origin-url)))
           (json-response 400 {:ok false :err "missing-origin-url"
@@ -2840,6 +2872,7 @@
                   result (reg/register-agent!
                           {:agent-id {:id/value (str agent-id) :id/type :continuity}
                            :type agent-type
+                           :delivery-mode delivery-mode
                            :invoke-fn invoke-fn
                            :capabilities capabilities
                            :metadata (cond-> {}
@@ -2854,6 +2887,7 @@
                   (json-response 201 {:ok true
                                       :agent-id (get-in result [:agent/id :id/value])
                                       :type (name (:agent/type result))
+                                      :delivery-mode (name (:agent/delivery-mode result))
                                       :proxy false
                                       :ws-bridge ws-bridge?})
                   (json-response 409 {:ok false
@@ -2875,10 +2909,17 @@
 
       :else
       (let [agent-type-str (or (:type payload) (get payload "type"))
-            agent-type (parse-keyword agent-type-str)]
+            agent-type (parse-keyword agent-type-str)
+            delivery-mode (or (some-> (or (:delivery-mode payload)
+                                           (get payload "delivery-mode"))
+                                      parse-keyword)
+                              :push)]
         (if (nil? agent-type)
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required"})
+          (if-not (#{:push :inbox} delivery-mode)
+            (json-response 400 {:ok false :err "invalid-delivery-mode"
+                                :message "delivery-mode must be push or inbox"})
           (let [prefix (name agent-type)
                 ghost (reg/find-reclaimable-agent agent-type)
                 agent-id (or ghost
@@ -2958,6 +2999,7 @@
                                (reg/register-agent!
                                 {:agent-id {:id/value agent-id :id/type :continuity}
                                  :type agent-type
+                                 :delivery-mode delivery-mode
                                  :invoke-fn invoke-fn
                                  :session-reset-fn session-reset-fn
                                  :capabilities (get default-capabilities agent-type [])
@@ -2986,7 +3028,7 @@
                                         :memory-domain memory-domain})
                     (json-response 409 {:ok false
                                         :err "registration-failed"
-                                        :message (str "Could not register: " agent-id)})))))))))))
+                                        :message (str "Could not register: " agent-id)}))))))))))))
 
 (defn- handle-agent-restore
   "POST /api/alpha/agents/restore — rehydrate or refresh an exact agent identity.
@@ -3003,6 +3045,10 @@
                              str str/trim not-empty)
             agent-type (some-> (or (:type payload) (get payload "type"))
                                parse-keyword)
+            delivery-mode (or (some-> (or (:delivery-mode payload)
+                                           (get payload "delivery-mode"))
+                                      parse-keyword)
+                              :push)
             initial-session-id (some-> (or (:session-id payload)
                                            (get payload "session-id"))
                                        str str/trim not-empty)
@@ -3057,6 +3103,10 @@
           (nil? agent-type)
           (json-response 400 {:ok false :err "missing-type"
                               :message "type is required"})
+
+          (not (#{:push :inbox} delivery-mode))
+          (json-response 400 {:ok false :err "invalid-delivery-mode"
+                              :message "delivery-mode must be push or inbox"})
 
           (federation/remote-homed-agent-id? agent-id)
           (remote-home-refusal-response agent-id)
@@ -3116,6 +3166,7 @@
                         result (reg/update-agent!
                                 agent-id
                                 :agent/type agent-type
+                                :agent/delivery-mode delivery-mode
                                 :agent/invoke-fn invoke-fn
                                 :agent/session-reset-fn session-reset-fn
                                 :agent/capabilities (get default-capabilities agent-type [])
@@ -3141,6 +3192,7 @@
                   (let [result (reg/register-agent!
                                 {:agent-id {:id/value agent-id :id/type :continuity}
                                  :type agent-type
+                                 :delivery-mode delivery-mode
                                  :invoke-fn invoke-fn
                                  :session-reset-fn session-reset-fn
                                  :capabilities (get default-capabilities agent-type [])
@@ -4375,7 +4427,20 @@
                                          :delivered? true
                                          :note (if (:ok result) "bell-job-ready" "bell-job-error")}))]
                   (try
-                    (if (turn-queue/drainer-v2-enabled?)
+                    (if (inbox-agent? agent-id)
+                      (let [inbox-path (deliver-invoke-job-to-inbox! job-id prompt)]
+                        (json-response 202 (cond-> {:ok true
+                                                    :accepted true
+                                                    :job-id job-id
+                                                    :state "delivered"
+                                                    :inbox-path inbox-path
+                                                    :mode (invoke-job-mode prompt mode)
+                                                    :status-url (str "/api/alpha/invoke/jobs/" job-id)}
+                                             typed? (assoc :bell-type bell-type
+                                                           :ref ref'
+                                                           :arse (:arse bridge)))))
+                      (do
+                        (if (turn-queue/drainer-v2-enabled?)
                       ;; Drainer v2: enqueue to the agent's dedicated drainer thread and
                       ;; return — never hold a shared invoke-executor lane for the turn.
                       (let [r (turn-queue/accept-async!
@@ -4388,10 +4453,10 @@
                           (finalize-invoke-job! job-id "deduped" "duplicate-msg-id" nil
                                                 {:ok true :deduped true} nil)))
                       ;; Legacy path: run on the shared invoke-executor pool.
-                      (.submit invoke-executor
+                          (.submit invoke-executor
                                ^Runnable
                                (fn [] (deliver-result (run-job)))))
-                    (json-response 202 (cond-> {:ok true
+                        (json-response 202 (cond-> {:ok true
                                                 :accepted true
                                                 :job-id job-id
                                                 :state "queued"
@@ -4399,7 +4464,7 @@
                                                 :status-url (str "/api/alpha/invoke/jobs/" job-id)}
                                          typed? (assoc :bell-type bell-type
                                                        :ref ref'
-                                                       :arse (:arse bridge))))
+                                                       :arse (:arse bridge))))))
                     (catch Throwable t
                       (finalize-invoke-job! job-id "failed" "invoke-submit-failed" (.getMessage t) {:ok false} nil)
                       (json-response 503 {:ok false
@@ -4748,7 +4813,7 @@
 
 (defn- invoke-job-terminal-state?
   [state]
-  (not (#{"queued" "running" "overrun"} (str state))))
+  (not (#{"queued" "running" "overrun" "delivered"} (str state))))
 
 (defn- stream-flag?
   [payload]
@@ -5210,7 +5275,7 @@
                           :error "invoke-job-not-found"
                           :job-id (str job-id)})
 
-      (not (#{"queued" "running" "overrun"} (str (:state job))))
+      (not (#{"queued" "running" "overrun" "delivered"} (str (:state job))))
       (json-response 409 {:ok false
                           :error "invoke-job-already-terminal"
                           :job-id (str job-id)

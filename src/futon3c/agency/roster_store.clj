@@ -76,6 +76,8 @@
     (when (and agent-id agent-type)
       (cond-> {:agent-id agent-id
                :type agent-type}
+        (:agent/delivery-mode agent)
+        (assoc :delivery-mode (:agent/delivery-mode agent))
         (:agent/session-id agent)
         (assoc :session-id (:agent/session-id agent))
         (blank->nil (metadata-value metadata :session-file))
