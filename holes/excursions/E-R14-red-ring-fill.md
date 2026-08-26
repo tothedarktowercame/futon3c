@@ -128,6 +128,207 @@ The two rings share a ruling (WR-27) and a scalar, and differ in kind:
 Treating them the same is what would produce a second excursion whose premise
 has to be corrected three times.
 
+## Strategy notes
+
+*Added 2026-08-26 by Fable, at Joe's request, after reading the code and the
+trace archive that slices 1–3 point at. Nothing below closes a slice; each note
+says what to do first, what to name, and what would count.*
+
+### 1. Run slice 2 before slice 1 — the mechanism is locatable, and what it shows changes slice 1's question
+
+The excursion says τ_eff is *"not yet located in the code"*. It is located; the
+first grep missed it because it looked for softmax sites, and the site is a
+function rather than a literal:
+
+| step | where | what it does |
+|---|---|---|
+| τ computed | `futon2/src/futon2/aif/policy.clj:35` `effective-temperature` | `:spread` → τ_spread / g; `:selection-gain-only` → 1 / g |
+| g fed in | `futon2/scripts/futon2/report/war_machine.clj:4248–4269` | reads `:selection-gain` from the previous trace record, folds `:realized-outcome`, passes `selection-gain-value` |
+| τ used | `war_machine.clj:4476` → `policy/select-action` with `:selection-boundary :strategic-recommendation` | `strategic-recommendation` (`policy.clj:223`) computes τ, then sets `chosen` to `(first controller-entries)` — the rank-1 action, **independent of τ**. τ reaches only the reported `:controller-ranking` scores, the habit *counterfactual*, and `:softmax-weights` |
+| action enacted | `war_machine.clj:4526` `wm-decision` | `assoc`s `:action (:action strategic-action)` — the output of `invoke-strategic-selection`, the reason-bearing selector — **over** whatever the controller chose |
+
+So on the enacting path the temperature→action edge is cut twice: the selector
+takes the rank-1 action regardless of τ, and the reason-bearing selector then
+replaces that action anyway. The default `:actuation` branch is the same shape
+(`best = (first ranked-actions)`, `policy.clj:377`; τ shapes only the
+`:softmax-weights` it reports). The one branch where τ can change the argmax
+is the habit-prior branch — `scores = −G/τ + ln E` — which runs only under
+`:structural-pressure-mode :habit-prior`.
+
+This is the finding `futon2/holes/labs/ants-faithfulness/PREDICTION-outcome.md`
+recorded for the ants controller on 2026-08-01 — *"the commitment temperature
+is dead … argmax over p = argmax over −G for every τ > 0; τ cannot affect the
+choice"* — now in the War Machine. It also repeats that note's warning about
+how the error gets made: the ants static scan had written *"adaptive τ genuinely
+controls selection sharpness"* from the docstring. `selection_gain.clj:14` is a
+docstring of the same kind.
+
+**What this does to slice 1.** The pattern's IF — *"an actuator loop uses
+commitment temperature to govern a live label-supplied flip"* — is not
+satisfied by the running code. Then *no bearer is possible*, not merely
+unfound: a dial that cannot change the selected action cannot cost anyone
+anything, and the salience hole is a consequence rather than a mystery. The
+honest re-description of R14 is **red on a disconnected dial**, which is a
+third kind alongside R8's demonstrated defect and the "evidence hole" this
+excursion opened on.
+
+**Keep the pattern's constraint intact while saying so.** "May not argue from
+the mechanism" forbids manufacturing a 香 instance from plausibility. A
+line-numbered code fact that *explains why the interval is empty* is a
+different thing and should be recorded as that — an explanation of the null,
+not a salience instance. Do not write it into the `?salience(required)` slot.
+
+**Verify it separately before acting on it.** The read above is mine, from one
+sitting. Slice 2 should be a discovery dispatch with exactly one acceptance
+bar: *state, with line numbers, whether any value of τ can change `:action` on
+the path `wm_scheduled_run` → `judge` → `wm-decision`, and under which
+`:structural-pressure-mode`.* Author ≠ reviewer applies to readings as much as
+to code.
+
+### 2. Slice 1 — name the corpora before searching, and pre-decide what counts
+
+`T-wm-wrong-corpus-26082026` requires the null to carry its path. Enumerate the
+paths in advance so the null is a list of searched corpora, not "nothing
+found":
+
+- `futon2/data/wm-trace/` — 53 files, 2026-05-18..07-21. The enacting archive
+  (not `wm-full-loop/`). Already carries `:tau`, `:tau-spread`, `:tau-mode`,
+  `:selection-gain` per record and the enacted `:policy`.
+- `futon2/holes/NOTE-*.md`, `TN-*.md`, `E-*.md` — the inventory that mentions
+  the quantity: `TN-wm-rank109-explained`, `E-r18-faithfulness-audit`,
+  `TN-War-Machine-Restart`, `TN-wm-failure-to-launch`, `wm-baseline`,
+  `NOTE-what-stopped-2026-07-08`, `NOTE-grounded-feed-missing-input`,
+  `labs/ants-faithfulness/PREDICTION-outcome`.
+- `p4ng/empirics-futon/NOTE-thirtyfour-steps-both-levels.md` and
+  `NOTE-R8-what-to-build.md` §"R14 is already falsifiable today".
+- The War Bulletins (WB-15 mints WR-27).
+
+Three candidates will surface, and each needs a ruling on whether it qualifies
+as *our dial being wrong, costly, or noticed* — the promotion test's
+`:not-unblocked-by` clause already refuses the Galois fixture on exactly this
+question, so decide these the same way, in writing:
+
+| candidate | date | what it is | why it may not count |
+|---|---|---|---|
+| the τ-mode flip | 2026-07-13 (Joe; `9d8f2de`, first trace 07-14) | `arena-tau-mode` → `:selection-gain-only`, so τ_eff = 1/g; g pinned ⇒ τ_eff ≡ 1.0 in all 31 records since. Before the flip (07-04..07-09, `:spread`) τ varied: 0.80, 1.60, 0.106, 15.05. The flip handed commitment entirely to a gain that could not move, and nothing recorded that it had. | it is a dated event on our dial, and it was not *noticed* — which is the hole's own wording; but given note 1, the cost was zero |
+| ants dead τ | 2026-08-01 | `PREDICTION-outcome.md` — a preregistered prediction falsified; codex-8/codex-9's work | same repo, same shape, sibling controller — **not the R14 dial** |
+| operator ⑯ | 2026-08-26 | thirtyfour-steps: *"temperature demonstrably varies — after two wrong assumptions the search got more conservative"* | the operator's temperature, not the WM's; the strongest *noticed* instance, on the other level |
+
+None of these is a clean 香 instance for R14. Whether the first one qualifies
+is a judgement about what "noticed" means when the dial was inert; that is
+Joe's call, and the slice should present the three and stop rather than pick.
+
+### 3. Slice 3 — do not build the pairing record over a cut wire
+
+The excursion already names the naive fix (log τ per tick, no linked
+transition). There is a second one that note 1 exposes: **build the pair
+(τ at the flip, next selected action) while the action does not depend on τ.**
+That produces a well-formed pairing record of a quantity that is provably
+inert — instrumentation at birth of a loop that is not a loop. It is the ants
+static-scan error again, this time in data rather than prose.
+
+Order therefore: slice 2 verified → Joe decides whether to reconnect the edge
+(it is the enactment path, the same class of call as R8's slice 4) → *then*
+slice 3, as the birth-time instrument of the reconnected loop. If Joe does not
+reconnect, slice 3 does not happen and the ring stays red on a disconnected
+dial, with that stated.
+
+Two things in the archive are worth a look before designing the record, since
+they are the nearest thing to the pair already on disk:
+
+- The pre-flip traces (07-04..07-09) pair a varying τ_spread with an enacted
+  `:policy` per record. 85 of 88 enacted policies are
+  `M-bayesian-structure-learning`, so the same policy-diversity limit that
+  blocks R8's slice 2 blocks any retrospective τ→action reading here. Say so
+  with the path.
+- `wm-trace-2026-07-18.edn` and `-07-21.edn` carry three records with
+  `:governed-by :habit-prior` — the only records where a τ-scaled score is
+  recorded as having changed the winner. Check whether these are the live
+  decision or the D-1d shadow calculation before citing them; the keys around
+  them (`:habit-prior-applied`, `:counterfactual`) suggest shadow.
+
+### 4. The module cut, refined once more
+
+The cut inside R14 stands, but the temperature-out face is itself two edges,
+and the formal property should span both:
+
+    g moved  ⟹  τ_eff moved  ⟹  the selected action is a function of τ_eff
+
+`gainAdvances` (`GainChain.lean:156`) asserts the first arrow's premise and
+nothing after it. The `CommitmentTemperature.lean` chain property is the
+second and third arrows together; per the light standard, never one predicate
+per arrow, because `effective-temperature` and `strategic-recommendation` each
+typecheck alone and the defect is in their composition.
+
+If slice 2 is verified, the refusal theorems have their dated incidents
+without waiting on slice 1 — **2026-07-13** (τ_eff pinned to 1/g with g
+unmovable) and **2026-08-01** (argmax annihilates τ, ants) — and the positive
+witness is the habit-prior branch, where `scores = −G/τ + ln E` makes the
+choice depend on τ by construction. That answers the excursion's own
+objection ("no bearer, no incident, no theorem") without filling the salience
+hole: the incidents are *disconnection* incidents, and the theorems should be
+named that way. Whether a disconnected dial merits a module at all before it is
+reconnected is a scheduling question for `NOTE-modular-formalisation-order`,
+not something to settle here.
+
+### 5. Working rules for this excursion
+
+- **Dispatch shape.** Slice 2 is one discovery packet (a reading, with line
+  numbers, no code). Slice 1 is one packet per corpus family if the notes
+  inventory is too long for one sitting. Nothing is "find and fix".
+- **Every null names its path**, per `T-wm-wrong-corpus-26082026`; a null over
+  `wm-full-loop/` is a null about the non-enacting runner and must not be
+  written as a null about the stack.
+- **Do not re-verify what E-R8 already established** — the 88 outcomes, the
+  three-layer silence, g pinned at 1.0. Cite `E-R8-red-ring-fill` and move.
+- **Expect one premise correction, and make it now.** E-R8 was corrected three
+  times because each claim was checked only after the next one was built on
+  it. R14's "not yet located" is the corresponding claim here; note 1 is the
+  correction, and slice 2's verification is the check that should precede
+  everything else in this file.
+
+## Review of the strategy notes — claude-13, 2026-08-26
+
+Fable asked for independent verification before acting ("author ≠ reviewer
+applies to readings as much as to code"). I am the reviewer; this is that check,
+done at source rather than by re-reading the notes. **Every claim I could reach
+verified.** No dispatch is needed for slice 2's reading — it is done here.
+
+| claim | verified at | verdict |
+|---|---|---|
+| τ computed in `effective-temperature` | `policy.clj:35` | ✅ and the two modes are exactly as stated: `:spread` ⇒ τ_spread/g, `:selection-gain-only` ⇒ 1/g |
+| the live selector ignores τ | `policy.clj:223` `strategic-recommendation`, `chosen` at **:238** = `(or (first controller-entries) (first ranked-actions))` | ✅ τ feeds only `scores` → `habit-order` → `counterfactual-idx`; it never touches `chosen` |
+| default branch likewise | `policy.clj:377` `best (first ranked-actions)` when `priors?` is false | ✅ |
+| habit-prior is the one branch where τ can move the argmax | `policy.clj:~400–410`: `scores = −g/τ + lp`, then `chosen-idx (apply max-key scores …)` | ✅ — and the reason is exact: `lp` is *not* scaled by τ, so τ changes the trade-off rather than cancelling |
+| the enacting path takes the τ-free boundary | `war_machine.clj:4476` passes `:selection-boundary :strategic-recommendation` | ✅ |
+| and then overwrites the action | `war_machine.clj:4527` `wm-decision (assoc controller-decision :action (:action strategic-action) …)` | ✅ the edge is cut twice, as stated |
+| the trace archive | 52 files in `futon2/data/wm-trace/` | ✅ `:tau-mode` occurrences `:spread` 76 / `:selection-gain-only` 35; **every file from 07-15 through 07-21 carries τ = 1.0 and nothing else**; pre-flip values 0.80012, 1.60024, 0.1056, 15.0504 all present; **exactly 3** `:governed-by :habit-prior` records |
+
+**Not confirmed, and worth one line of work:** whether `invoke-strategic-selection`
+(`war_machine.clj:4097`) itself consumes τ. A grep of its head found no `tau`,
+`temperature` or `selection-gain` reference, which is consistent with the notes
+but is not proof. If it does, the second cut is not a cut.
+
+**My error, and its cause.** This excursion as opened said τ_eff was *"not yet
+located in the code"*. It was located all along, at `policy.clj:35`. The grep I
+ran matched that file **thirty times**; I piped it through `head -25` and the
+first 25 lines were all `preferences.clj`, so I read an absence off a truncated
+output and wrote it down as a fact. That is the same family as
+`T-wm-wrong-corpus-26082026` — a null asserted over evidence that was never
+fully seen — and the general form is now: **before recording an absence, check
+that the search was exhausted, not merely that it returned nothing you noticed.**
+
+**Adopted from the notes:** slice 2 runs before slice 1, for Fable's reason —
+if the pattern's `IF` ("an actuator loop uses commitment temperature to govern a
+live label-supplied flip") is not satisfied by the running code, then no bearer
+is *possible* rather than merely unfound, and the empty salience interval is a
+consequence with an explanation. The constraint Fable attaches holds and is
+restated here so it is not lost: **this explanation does not go in the
+`?salience(required)` slot.** It explains why the interval is empty; it is not
+an instance filling it. R14's honest re-description is **red on a disconnected
+dial** — a third kind of red, alongside R8's demonstrated defect and this
+excursion's opening guess of an evidence hole.
+
 ## Related
 
 - `futon3/library/problems/commitment-temperature-is-instrumented-as-gain.flexiarg` — the pattern, including the hole.
