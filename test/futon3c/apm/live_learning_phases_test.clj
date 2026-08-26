@@ -724,13 +724,19 @@
                                                 :receipt/reviewed-memory-ids ["e-guide-1"]
                                                 :receipt/promotion-reviews []}})
                          {:ok true :status :certified}))))
-        driver {:state-path state-path :run-fn run-fn}
+        materialized (assoc guide-candidate :memory-id "e-controller-guide-1"
+                            :materialization {:artifact-id "e-controller-guide-1"})
+        driver {:state-path state-path :run-fn run-fn
+                :persist-candidates-fn
+                (fn [deposit _request]
+                  {:ok true :deposit (assoc deposit :candidates [materialized])
+                   :candidates [materialized]})}
         first-step (sut/guide-promotion-step! driver request report)
         seeded (runtime/read-state state-path)
         second-step (sut/guide-promotion-step! driver request report)]
     (is (= :awaiting-terminal (:status first-step)))
     (is (= "review-1" (:job-id first-step)))
-    (is (= [guide-candidate] (:candidates seeded)))
+    (is (= [materialized] (:candidates seeded)))
     (is (= "f27-guide" (get-in seeded [:deposit :depositor])))
     (is (= :certified (:status second-step)))
     (is (= "u" (get-in second-step [:memory-snapshot :snapshot-digest])))
@@ -741,6 +747,9 @@
     (let [mechanical-path (.resolve dir "other.edn")]
       (sut/guide-promotion-step!
        {:state-path mechanical-path
+        :persist-candidates-fn
+        (fn [deposit _] {:ok true :deposit deposit
+                         :candidates (:candidates deposit)})
         :run-fn (fn [] {:ok true :status :certified})}
        request {:candidates [(assoc guide-candidate :pattern-ids [])]})
       (is (= [:no-parent-pattern]

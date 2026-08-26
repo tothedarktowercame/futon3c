@@ -673,7 +673,7 @@
   review state lives beside the Guide phase state; RUN-FN steps the durable
   promotion machine from it. Returns :awaiting-terminal until the reviewer's
   verdicts are published, then :certified with the union snapshot."
-  [{:keys [state-path run-fn]} request report]
+  [{:keys [state-path run-fn persist-candidates-fn]} request report]
   (let [state-path (Path/of (str state-path) (make-array String 0))
         state (runtime/read-state state-path)]
     (cond
@@ -687,16 +687,23 @@
         (if-not (:ok gated)
           {:ok false :error/code :guide-candidates-invalid
            :findings (:findings gated)}
-          (let [seeded {:state/type :promotion :stage :review-pending
-                        :deposit {:depositor (:agent-id request)
-                                  :dispatch/id (:dispatch/id request)
-                                  :prior-snapshot (:prior-snapshot request)}
-                        :candidates (:candidates gated)
-                        :mechanical-reviews (:mechanical-reviews gated)}
-                persisted (runtime/atomic-persist! state-path seeded)]
-            (if-not (:ok persisted)
-              {:ok false :error/code :guide-promotion-persistence-failed}
-              (run-fn)))))
+          (if-not (fn? persist-candidates-fn)
+            {:ok false :error/code :guide-candidate-persistence-missing}
+            (let [deposit {:depositor (:agent-id request)
+                           :dispatch/id (:dispatch/id request)
+                           :prior-snapshot (:prior-snapshot request)
+                           :candidates (:candidates gated)}
+                  materialized (persist-candidates-fn deposit request)]
+              (if-not (:ok materialized)
+                materialized
+                (let [seeded {:state/type :promotion :stage :review-pending
+                              :deposit (:deposit materialized)
+                              :candidates (:candidates materialized)
+                              :mechanical-reviews (:mechanical-reviews gated)}
+                      persisted (runtime/atomic-persist! state-path seeded)]
+                  (if-not (:ok persisted)
+                    {:ok false :error/code :guide-promotion-persistence-failed}
+                    (run-fn))))))))
 
       (= :promotion-certified (:state/type state))
       (let [published (:receipt state)]
@@ -712,6 +719,7 @@
       :else
       (let [stepped (run-fn)]
         (if (= :certified (:status stepped))
-          (guide-promotion-step! {:state-path state-path :run-fn run-fn}
+          (guide-promotion-step! {:state-path state-path :run-fn run-fn
+                                  :persist-candidates-fn persist-candidates-fn}
                                  request report)
           stepped)))))

@@ -26,6 +26,7 @@
             [futon3c.apm.jit-queue-coordinator :as jit-coordinator]
             [futon3c.apm.memory-snapshot :as memory-snapshot]
             [futon3c.apm.promotion-pipeline :as promotion-pipeline]
+            [futon3c.apm.promotion-candidate-store :as promotion-candidate-store]
             [futon3c.apm.frame-cycle-handlers :as frame-cycle-handlers]
             [futon3c.apm.analyst-campaign :as analyst-campaign]
             [futon3c.apm.problem-projection :as problem-projection]
@@ -1111,6 +1112,7 @@
           (live-learning-phases/run-live!
            (assoc phase-inputs :guide-promotion
                   {:state-path review-path
+                   :persist-candidates-fn promotion-candidate-store/persist!
                    :run-fn
                    #(live-promotion/run-live!
                      {:state-path review-path

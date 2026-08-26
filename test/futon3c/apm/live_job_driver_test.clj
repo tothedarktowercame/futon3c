@@ -73,6 +73,24 @@
     (is (= [:poll :validate :receipt [:persist :live-job-certified]]
            (take-last 4 @calls)))))
 
+(deftest receipt-provider-hold-never-certifies-a-nil-receipt
+  (let [calls (atom [])
+        job (atom {:job-id "job-1" :agent-id "f19-proctor" :state :done})
+        dispatched (:state (sut/drive! (effects calls (atom {:state :running}))))
+        held (sut/drive!
+              (assoc (effects calls job) :state dispatched
+                     :receipt-provider
+                     (fn [& _] {:ok true :status :awaiting-apparatus-repair
+                                :findings [:candidate-not-materialized]})))
+        missing (sut/drive!
+                 (assoc (effects calls job) :state dispatched
+                        :receipt-provider
+                        (fn [& _] {:ok true :status :certified})))]
+    (is (= :awaiting-apparatus-repair (:status held)))
+    (is (= :live-job-dispatched (get-in held [:state :state/type])))
+    (is (= :live-job-certificate-missing (:error/code missing)))
+    (is (not-any? #{[:persist :live-job-certified]} @calls))))
+
 (deftest failure-and-mismatch-stop-closed
   (testing "terminal failure never reaches receipt provider"
     (let [calls (atom [])

@@ -268,6 +268,19 @@
                 (= :awaiting-terminal (:status provided))
                 (assoc provided :state state)
 
+                ;; Receipt providers may hold at another durable boundary
+                ;; (for example, a Guide promotion awaiting apparatus repair).
+                ;; Only an explicit :certified result carrying a certificate
+                ;; may turn the live job into :live-job-certified.
+                (and (some? (:status provided))
+                     (not= :certified (:status provided)))
+                (assoc provided :state state)
+
+                (not (map? (:certificate provided)))
+                {:ok false
+                 :error/code :live-job-certificate-missing
+                 :provider-result (dissoc provided :state)}
+
                 :else
                 (let [next-state (assoc state :state/type :live-job-certified
                                         :receipt (:certificate provided))]
