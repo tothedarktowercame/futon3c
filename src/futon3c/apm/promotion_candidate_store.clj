@@ -129,7 +129,12 @@
                 :fetch-hyperedges substrate/hyperedges-by-end})))
   ([{:keys [depositor candidates] :as deposit} deposit-request
     {:keys [fetch-entry append-entry post-edge fetch-hyperedges]}]
-   (let [source-attempts (controller-source-attempts deposit-request)
+   (let [reported-depositor depositor
+         depositor (:agent-id deposit-request)
+         deposit (assoc deposit
+                        :reported-depositor reported-depositor
+                        :depositor depositor)
+         source-attempts (controller-source-attempts deposit-request)
          shape-findings
          (mapv (fn [ordinal candidate]
                  {:ordinal ordinal :findings (candidate-errors candidate)})
@@ -140,7 +145,7 @@
        {:ok false :error/code :promotion-candidate-content-invalid
         :findings (cond-> invalid
                     (not (nonblank? depositor))
-                    (conj {:finding :depositor-missing})
+                    (conj {:finding :controller-depositor-missing})
                     (not (seq candidates))
                     (conj {:finding :candidates-missing})
                     (empty? source-attempts)

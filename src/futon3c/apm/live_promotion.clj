@@ -64,6 +64,12 @@
             (vector? (:memory-candidates evidence)))
        (assoc :candidates (:memory-candidates evidence))))))
 
+(defn- reviewed-attachment-status [verdict]
+  (case verdict
+    (:approve :reassign) :reviewed
+    :reject :proposed
+    nil))
+
 (defn- normalize-review-entry
   "Reviewer verdicts arrive through the typed JSON submission, which strings
   every keyword, while the substrate and the pure gates use keywords
@@ -71,17 +77,30 @@
   same normalization conductor-surface applies at its boundary. Without it,
   validate-review* filters every approval out and the union snapshot
   publishes empty (f28 promote-solver and guide-intervention-1, 2026-08-24)."
-  [review]
-  (cond-> review
-    (string? (:verdict review)) (update :verdict keyword)
-    (string? (:attachment-status review)) (update :attachment-status keyword)))
+  [expected-reviewer review]
+  (let [review (cond-> review
+                 (string? (:verdict review)) (update :verdict wire-keyword)
+                 (string? (:attachment-status review))
+                 (update :attachment-status wire-keyword)
+                 (string? (:witness-status review))
+                 (update :witness-status wire-keyword)
+                 (string? (:memory-use/kind review))
+                 (update :memory-use/kind wire-keyword))]
+    (assoc review
+           :reported-reviewer (:reviewer review)
+           :reported-attachment-status (:attachment-status review)
+           :reported-witness-status (:witness-status review)
+           :reviewer expected-reviewer
+           :attachment-status
+           (reviewed-attachment-status (:verdict review)))))
 
-(defn- normalize-review-report [report expected-digest expected-base-blob]
+(defn- normalize-review-report
+  [report expected-digest expected-base-blob expected-reviewer]
   (let [reviews (let [rs (or (:reviews report) (:promotion-reviews report))]
-                  (if (vector? rs) (mapv normalize-review-entry rs) rs))
-        reviewers (set (keep :reviewer reviews))
-        reviewer (or (:reviewer report)
-                     (when (= 1 (count reviewers)) (first reviewers)))]
+                  (if (vector? rs)
+                    (mapv #(normalize-review-entry expected-reviewer %) rs)
+                    rs))
+        reviewer expected-reviewer]
     (cond
       (not= expected-digest (:candidate-set-digest report))
       {:ok false :error/code :promotion-review-candidate-digest-mismatch
@@ -100,8 +119,7 @@
                         (:open-residuals report))))
       {:ok false :error/code :promotion-review-open-residuals-missing}
 
-      (or (not (string? reviewer))
-          (some #(not= reviewer (:reviewer %)) reviews))
+      (not (and (string? reviewer) (not-empty reviewer)))
       {:ok false :error/code :promotion-review-attribution-ambiguous}
 
       :else {:ok true :reviewer reviewer :reviews reviews})))
@@ -199,10 +217,10 @@
                             "#{:ran :ran-empty :not-run} :reason <nonblank string when "
                             "status is not :ran>}; do not encode status as a map key. "
                             "Every candidate must contain nonblank strings :name, "
-                            ":hook and :body, keyword :kind, NON-EMPTY vector "
-                            ":pattern-ids, and vector :source-attempts. The controller "
-                            "derives :memory-id and :content-digest after persisting the "
-                            "candidate; do not mint either identifier. Each pattern id "
+                            ":hook and :body and a NON-EMPTY vector :pattern-ids. "
+                            "The controller derives :memory-id, :content-digest, :kind, "
+                            ":source-attempts, and depositor identity after persisting "
+                            "the candidate; do not mint or restate those values. Each pattern id "
                             "names a pattern in the mathematics libraries (math-informal* / "
                             "math-formalization); create a library file if none fits. "
                             "A candidate with no bound pattern cannot be reviewed for "
@@ -272,9 +290,10 @@
                              " (blob " (:role-card-blob request) ").")
                  result ((agency-stage agency-base request prompt) job-id)]
              (if (:report result)
-               (let [normalized (normalize-review-report
+                 (let [normalized (normalize-review-report
                                  (:report result) digest
-                                 (:base-problem-blob reviewer-request))]
+                                 (:base-problem-blob reviewer-request)
+                                 (:agent-id reviewer-request))]
                  (if (:ok normalized)
                    (merge result (select-keys normalized [:reviewer :reviews]))
                    normalized))

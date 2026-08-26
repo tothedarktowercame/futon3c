@@ -73,6 +73,59 @@
     (is (some #{new-pattern} (:hx/endpoints edge)))
     (is (not-any? #{old-pattern} (:hx/endpoints edge)))))
 
+(deftest independent-approval-derives-witness-authority
+  (let [memory-id "e-memory"
+        pattern "math-formalization/pattern"
+        entries (atom
+                 {memory-id
+                  {:evidence/id memory-id
+                   :evidence/subject {:ref/type :problem :ref/id "p"}
+                   :evidence/type :memory :evidence/claim-type :assert
+                   :evidence/author "scribe" :evidence/session-id "deposit"
+                   :evidence/at "2026-08-26T00:00:00Z"
+                   :evidence/body {:name "n" :hook "h" :body "b"}}})
+        edges (atom
+               [{:hx/id "hx-memory" :hx/type :memory/assert
+                 :hx/endpoints [memory-id "p" pattern]
+                 :hx/props {:domain :mathematics :state :current
+                            :attachment-status :proposed
+                            :roles {:entry memory-id :subjects ["p" pattern]
+                                    :patterns [pattern]}}}])
+        fetch-edges (fn [end & _]
+                      (filterv #(some #{end} (:hx/endpoints %)) @edges))
+        result
+        (sut/persist!
+         {:deposit {:depositor "scribe"
+                    :candidates [{:memory-id memory-id
+                                  :pattern-ids [pattern]}]}
+          :reviewer "proctor" :review-job "review-job"
+          :reviews [{:memory-id memory-id :verdict :approve
+                     :reason "fits residual" :residual "open residual"
+                     :pattern-ids [pattern]
+                     :attachment-status :reviewed
+                     :witness-status :self-asserted}]}
+         {:evidence-store :store
+          :fetch-entry #(get @entries %)
+          :append-entry #(do (swap! entries assoc (:evidence/id %) %)
+                             {:ok true :entry %})
+          :fetch-hyperedges fetch-edges
+          :post-hyperedge (fn [_ edge]
+                            (reset! edges [edge])
+                            {:ok true :hyperedge edge})})
+        review (first (:reviews result))
+        review-body (:evidence/body
+                     (get @entries (:review-evidence-id review)))
+        edge (first @edges)]
+    (is (:ok result) result)
+    (is (= :independently-witnessed (:witness-status review)))
+    (is (= :self-asserted (:reported-witness-status review)))
+    (is (= :independently-witnessed
+           (:review/witness-status review-body)))
+    (is (= :self-asserted
+           (:review/reported-witness-status review-body)))
+    (is (= :independently-witnessed
+           (get-in edge [:hx/props :witness-status])))))
+
 (deftest absent-agent-review-id-is-derived-before-any-fetch
   (let [fetched (atom [])
         canonical (sut/canonical-review

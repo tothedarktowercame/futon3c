@@ -248,7 +248,9 @@
         raw-reviews (:reviews fixture)
         raw (pipeline/validate-review* candidates (:depositor fixture)
                                        (:reviewer fixture) raw-reviews)
-        reviews (mapv #'sut/normalize-review-entry raw-reviews)
+        reviews (mapv (partial #'sut/normalize-review-entry
+                               (:reviewer fixture))
+                      raw-reviews)
         validated (pipeline/validate-review* candidates (:depositor fixture)
                                              (:reviewer fixture) reviews)]
     (is (= [:review-verdict-invalid]
@@ -412,24 +414,28 @@
                              :base-problem-blob "blob"
                              :open-residuals []
                              :promotion-reviews reviews}
-                            "digest" "blob")]
+                            "digest" "blob" "proctor")]
     (is (:ok accepted))
     (is (= "proctor" (:reviewer accepted)))
-    (is (= reviews (:reviews accepted)))
+    (is (= :proposed (get-in accepted [:reviews 0 :attachment-status])))
+    (is (= "proctor" (get-in accepted [:reviews 0 :reported-reviewer])))
     (is (= :promotion-review-candidate-digest-mismatch
            (:error/code
             (normalize {:candidate-set-digest "other"
                         :base-problem-blob "blob" :open-residuals []
                         :promotion-reviews reviews}
-                       "digest" "blob"))))
-    (is (= :promotion-review-attribution-ambiguous
-           (:error/code
-            (normalize {:candidate-set-digest "digest"
-                        :base-problem-blob "blob" :open-residuals []
-                        :promotion-reviews
-                        (conj reviews {:memory-id "n" :reviewer "other"
-                                       :verdict :reject :pattern-ids []})}
-                       "digest" "blob"))))))
+                       "digest" "blob" "proctor"))))
+    (let [reported-other
+          (normalize {:candidate-set-digest "digest"
+                      :base-problem-blob "blob" :open-residuals []
+                      :promotion-reviews
+                      [{:memory-id "n" :reviewer "other"
+                        :verdict :reject :pattern-ids []}]}
+                     "digest" "blob" "proctor")]
+      (is (:ok reported-other))
+      (is (= "proctor" (get-in reported-other [:reviews 0 :reviewer])))
+      (is (= "other"
+             (get-in reported-other [:reviews 0 :reported-reviewer]))))))
 
 (deftest reviewer-authority-carries-full-persisted-evidence
   (let [candidate {:memory-id "m" :content-digest "digest"}

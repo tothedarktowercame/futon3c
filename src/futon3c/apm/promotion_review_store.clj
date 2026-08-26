@@ -12,6 +12,12 @@
 
 (def ^:private attachment-verdicts #{:approve :reassign :reject})
 
+(defn- attachment-status [verdict]
+  (case verdict
+    (:approve :reassign) :reviewed
+    :reject :proposed
+    nil))
+
 (defn- nonblank? [value]
   (and (string? value) (not-empty value)))
 
@@ -21,6 +27,10 @@
   ([review-job review] (canonical-review review-job [] review))
   ([review-job candidates review]
    (let [reported-patterns (:pattern-ids review)
+         reported-attachment-status (or (:reported-attachment-status review)
+                                        (:attachment-status review))
+         reported-witness-status (or (:reported-witness-status review)
+                                     (:witness-status review))
          candidate-patterns
          (:pattern-ids
           (some #(when (= (:memory-id review) (:memory-id %)) %)
@@ -35,18 +45,29 @@
                 (vector? effective-patterns)
                 (seq effective-patterns)
                 (every? nonblank? effective-patterns))
-       (let [identity-digest
+       (let [witness-status (when (= :approve (:verdict review))
+                              :independently-witnessed)
+             effective-attachment-status (attachment-status (:verdict review))
+             identity-digest
              (machine/ledger-digest
-              [{:review-job review-job
+              [{:review-schema 2
+                :review-job review-job
                 :memory-id (:memory-id review)
                 :verdict (:verdict review)
                 :reason (:reason review)
                 :residual (:residual review)
-                :pattern-ids effective-patterns}])]
+                :pattern-ids effective-patterns
+                :attachment-status effective-attachment-status
+                :witness-status witness-status
+                :memory-use/kind (:memory-use/kind review)}])]
          (assoc review
                 :reported-review-evidence-id (:review-evidence-id review)
                 :reported-pattern-ids reported-patterns
+                :reported-attachment-status reported-attachment-status
+                :reported-witness-status reported-witness-status
                 :pattern-ids effective-patterns
+                :attachment-status effective-attachment-status
+                :witness-status witness-status
                 :review-evidence-id
                 (str "e-apm-promotion-review-"
                      (subs identity-digest 0 32))))))))
@@ -61,23 +82,33 @@
    :evidence/at (str (Instant/now))
    :evidence/tags [:memory :memory/attachment-review :apm/promotion-review]
    :evidence/body
-   {:review/event :memory-attachment-review
-    :review/memory-id (:memory-id review)
-    :review/verdict (:verdict review)
-    :review/pattern-ids (:pattern-ids review)
-    :review/reason (:reason review)
-    :review/residual (:residual review)
-    :review/reported-evidence-id (:reported-review-evidence-id review)
-    :review/reported-pattern-ids (:reported-pattern-ids review)
-    :review/reported-depositor (:reported-depositor review)
-    :review/reported-reviewer (:reported-reviewer review)
-    :review/provenance {:kind :promotion-review :job-id review-job}}})
+   (cond->
+       {:review/event :memory-attachment-review
+        :review/memory-id (:memory-id review)
+        :review/verdict (:verdict review)
+        :review/pattern-ids (:pattern-ids review)
+        :review/reason (:reason review)
+        :review/residual (:residual review)
+        :review/reported-evidence-id (:reported-review-evidence-id review)
+        :review/reported-pattern-ids (:reported-pattern-ids review)
+        :review/reported-depositor (:reported-depositor review)
+        :review/reported-reviewer (:reported-reviewer review)
+        :review/reported-attachment-status
+        (:reported-attachment-status review)
+        :review/reported-witness-status (:reported-witness-status review)
+        :review/provenance {:kind :promotion-review :job-id review-job}}
+     (:witness-status review)
+     (assoc :review/witness-status (:witness-status review))
+     (:memory-use/kind review)
+     (assoc :memory-use/kind (:memory-use/kind review)))})
 
 (defn- normalize-review-body [body]
   ;; Reported fields are retained for audit but are not controller authority
   ;; and therefore do not change the identity or idempotence of the review.
   (dissoc body :review/reported-evidence-id :review/reported-pattern-ids
-          :review/reported-depositor :review/reported-reviewer))
+          :review/reported-depositor :review/reported-reviewer
+          :review/reported-attachment-status
+          :review/reported-witness-status))
 
 (defn- comparable-entry [entry]
   (-> entry
@@ -113,7 +144,9 @@
              canonical (mapv #(some-> (canonical-review review-job
                                                        (:candidates deposit) %)
                                       (assoc :reported-depositor (:depositor %)
-                                             :reported-reviewer (:reviewer %)
+                                             :reported-reviewer
+                                             (or (:reported-reviewer %)
+                                                 (:reviewer %))
                                              :depositor depositor
                                              :reviewer reviewer))
                              attachment-reviews)]

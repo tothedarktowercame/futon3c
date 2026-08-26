@@ -16,7 +16,8 @@
 (deftest controller-persists-and-verifies-candidates-before-review
   (let [entries (atom {}) edges (atom {})
         request {:dispatch/id "dispatch-1" :problem-id "p1"
-                 :job-id "scribe-job" :source-attempt-ids ["solver-job"]}
+                 :job-id "scribe-job" :agent-id "scribe"
+                 :source-attempt-ids ["solver-job"]}
         result
         (sut/persist!
          {:depositor "scribe" :candidates [(dissoc candidate :kind)] :lanes []}
@@ -41,6 +42,8 @@
     (is (nil? (:reported-kind persisted)))
     (is (= ["solver-job"] (:source-attempts persisted)))
     (is (= [1] (:reported-source-attempts persisted)))
+    (is (= "scribe" (get-in result [:deposit :depositor])))
+    (is (= "scribe" (get-in result [:deposit :reported-depositor])))
     (is (= (machine/ledger-digest [(:evidence/body entry)])
            (:content-digest persisted)))
     (is (sut/visible? persisted #(get @entries %)
@@ -54,6 +57,7 @@
                 {:depositor "scribe"
                  :candidates [(dissoc candidate :body)]}
                 {:dispatch/id "dispatch" :problem-id "p"
+                 :agent-id "scribe"
                  :source-attempt-ids ["source"]}
                 {:fetch-entry (constantly nil)
                  :append-entry #(do (swap! writes inc) {:ok true})
@@ -76,7 +80,8 @@
   (let [writes (atom 0)
         result (sut/persist!
                 {:depositor "scribe" :candidates [(dissoc candidate :source-attempts)]}
-                {:dispatch/id "dispatch" :problem-id "p"}
+                {:dispatch/id "dispatch" :problem-id "p"
+                 :agent-id "scribe"}
                 {:fetch-entry (constantly nil)
                  :append-entry #(do (swap! writes inc) {:ok true})
                  :post-edge #(do (swap! writes inc) {:ok true})
@@ -85,6 +90,28 @@
     (is (some #(= :controller-source-attempts-missing (:finding %))
               (:findings result)))
     (is (zero? @writes))))
+
+(deftest depositor-is-derived-from-dispatch-authority
+  (let [entries (atom {}) edges (atom {})
+        result
+        (sut/persist!
+         {:depositor "reported-other" :candidates [candidate]}
+         {:dispatch/id "dispatch" :problem-id "p" :agent-id "f40-scribe"
+          :source-attempt-ids ["solver-job"]}
+         {:fetch-entry #(get @entries %)
+          :append-entry #(do (swap! entries assoc (:evidence/id %) %)
+                             {:ok true :entry %})
+          :post-edge #(do (swap! edges assoc (:hx/id %) %)
+                          {:ok true :hyperedge %})
+          :fetch-hyperedges
+          (fn [end]
+            (filterv #(some #{end} (:hx/endpoints %)) (vals @edges)))})]
+    (is (:ok result) result)
+    (is (= "f40-scribe" (get-in result [:deposit :depositor])))
+    (is (= "reported-other" (get-in result [:deposit :reported-depositor])))
+    (is (= "f40-scribe"
+           (:evidence/author
+            (get @entries (get-in result [:candidates 0 :memory-id])))))))
 
 (deftest controller-derives-kind-and-retains-agent-claim
   (let [ordinary (sut/canonical-candidate
