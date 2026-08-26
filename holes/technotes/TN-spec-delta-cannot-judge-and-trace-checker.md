@@ -701,3 +701,69 @@ staleness check (does it distinguish a stalled coordinator from an unreadable
 one?), and `apm-frame-pulse.py`'s `sorries ?` field, which prints the same `?`
 when the worktree has no Main.lean as when the count genuinely cannot be
 parsed.
+
+## 16. The machine halted a 141-problem campaign on a correct rejection — f41, 2026-08-26
+
+At 08:21:01Z, with f41 already solved (a97J06 closed at 0 sorries in 3
+rounds), the regulator went `:failed` with
+`:error/code :promotion-review-projection-invalid` and stayed down.
+
+The f41 promotion proctor had **rejected** a candidate because its pattern
+attachment was incoherent:
+
+> its attachment to `math-informal/failure-mode-characterization` is
+> incoherent because that pattern explicitly concerns a theorem's sharp
+> failure regime rather than a proof method failing on one problem
+
+— naming `math-formalization-CA/measure-integration-api` as the pattern it
+judged correct. That is `promotion-proctor-v3.md` rule 5 carried out to the
+letter ("an incoherent attachment is never `:approve`"). The reviewer did
+its job well, and the machine stopped the line on it.
+
+### The guard governs a value it does not use
+
+`memory_lifecycle.clj:429`:
+
+```clojure
+(when-not (or (= :reassign verdict)
+              (exact-patterns? edge-patterns pattern-ids))
+  (throw (ex-info "review pattern set does not match attachment" ...)))
+```
+
+Four lines above, `attachment-status` is `:proposed` for `:reject` and the
+edge's patterns are rewritten only for `:reassign`. On the reject path the
+review's `:pattern-ids` are stored on the review record and never touch the
+edge. The invariant is load-bearing only for `:approve`, where it means
+"these patterns are right"; for `:reject` it demands the reviewer echo back
+the attachment it has just called incoherent.
+
+### The graceful path already exists and is bypassed
+
+`apply-existing-attachment-review!` (`memory_lifecycle.clj:246`) runs the
+same comparison and returns `{:ok false :finding {:failure
+:promotion-patterns-review-mismatch …}}`; its `:else` branch is what calls
+`review-attachment!`. But `promotion_review_store.clj:196` calls the raw
+`review-attachment!` directly, so the mismatch arrives as an exception,
+becomes `:promotion-review-projection-invalid`, and takes the regulator down.
+
+So the same condition has a designed non-fatal response and a fatal one, and
+the promotion pipeline is wired to the fatal one. This is the third shape in
+this note's collection, after §9 (a minted id is a claim) and §15 (a watcher
+must know when it has gone blind):
+
+> **Where a defect has a natural blast radius, the machine must not exceed
+> it.** An invalid review is a defect in one candidate. Its correct
+> consequence is that the candidate is not promoted — it stays `:proposed`,
+> which is already the safe state — not that 141 problems stop.
+
+The safety property Joe asked for (unreviewable material must be impossible)
+is preserved by leaving the candidate `:proposed` and recording the finding.
+It does not require halting the campaign, and halting it is what makes the
+machine "hardly able to run".
+
+Dispatched to codex-10 as `invoke-1787732828037-1423-93b3dd78` with the fix
+scoped to: `exact-patterns?` required only for `:approve`; the promotion
+review store routed through the finding-returning path; a per-candidate
+invalid review must not set `:regulator/status :failed`. Recovery is the
+verification — f41 must get past promote-solver on the proctor's existing
+verdicts, which are not to be re-authored.
