@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "usage: $0 SNAPSHOT-PATH CAP OUT-PATH" >&2
+if [[ $# -lt 3 || $# -gt 4 ]]; then
+  echo "usage: $0 SNAPSHOT-PATH CAP OUT-PATH [ROUTE,...]" >&2
   exit 2
 fi
 

@@ -41,8 +41,55 @@
                         {})
                        {:cap 10}))]
     (is (= [["memory/leaf" {:route :leaf :hops 0}]] (:routes result)))
+    (is (= #{:why-hop :co-incidence} (:routes-enabled result)))
     (is (= 1 (:patterns-per-problem result)))
     (is (false? (:truncated? result)))))
+
+(deftest minimum-cascade-sibling-route-finds-other-seed-pattern-attachments
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        sibling (cascade-edge "memory/sibling" "pattern/seed" "a02A02")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf]
+                         "pattern/seed" [leaf sibling]}
+                        {})
+                       {:routes #{:sibling} :cap 10}))]
+    (is (= [["memory/leaf" {:route :leaf :hops 0}]
+            ["memory/sibling" {:route :sibling :hops 1
+                               :pattern "pattern/seed"}]]
+           (:routes result)))
+    (is (= #{:sibling} (:routes-enabled result)))))
+
+(deftest minimum-cascade-sibling-wins-an-equal-hop-why-route
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        as-sibling (cascade-edge "memory/shared" "pattern/seed" "a02A02")
+        as-why (cascade-edge "memory/shared" "pattern/why" "a03A03")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf]
+                         "pattern/seed" [leaf as-sibling]
+                         "pattern/why" [as-why]}
+                        {"pattern/seed" ["pattern/why"]})
+                       {:routes #{:sibling :why-hop} :cap 10}))]
+    (is (= {:route :sibling :hops 1 :pattern "pattern/seed"}
+           (second (some #(when (= "memory/shared" (first %)) %)
+                         (:routes result)))))))
+
+(deftest minimum-cascade-empty-route-set-yields-only-leaves
+  (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
+        sibling (cascade-edge "memory/sibling" "pattern/seed" "a02A02")
+        result (conductor/expand-memory-cascade
+                ["memory/leaf"]
+                (merge (cascade-readers
+                        {"memory/leaf" [leaf]
+                         "pattern/seed" [leaf sibling]}
+                        {"pattern/seed" ["pattern/why"]})
+                       {:routes #{} :cap 10}))]
+    (is (= [["memory/leaf" {:route :leaf :hops 0}]] (:routes result)))
+    (is (zero? (:expanded-available result)))
+    (is (= #{} (:routes-enabled result)))))
 
 (deftest minimum-cascade-follows-authored-why-hops
   (let [leaf (cascade-edge "memory/leaf" "pattern/seed" "a01A01")
@@ -118,8 +165,10 @@
                             :memory-use {:memory-use/surfaced-ids
                                          ["memory/leaf"]}}}
                     {:memory-cascade-enabled? true
-                     :memory-cascade-cap 37})]
+                     :memory-cascade-cap 37
+                     :memory-cascade-routes #{:sibling}})]
         (is (= 37 (:cap @expansion-opts)))
+        (is (= #{:sibling} (:routes @expansion-opts)))
         (is (= [:leaf :why-hop] (mapv :offer/route offers)))
         (is (= [0 1] (mapv :offer/hops offers)))
         (is (every? #(= 3 (:offer/patterns-per-problem %)) offers))

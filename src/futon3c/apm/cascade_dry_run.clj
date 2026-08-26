@@ -3,6 +3,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.pprint :as pprint]
+            [clojure.string :as str]
             [futon3c.apm.conductor :as conductor]
             [futon3c.substrate.client :as substrate])
   (:import [java.time Instant]))
@@ -38,38 +39,51 @@
       (throw (ex-info "git rev-parse HEAD failed" {})))
     (.trim output)))
 
-(defn write-real-run! [snapshot-path cap out-path]
-  (let [snapshot (edn/read-string (slurp snapshot-path))
-        seeds (snapshot-memory-ids snapshot)
-        substrate-url (substrate/configured-url)
-        sha (git-sha)
-        command (or (System/getenv "APM_CASCADE_DRY_RUN_COMMAND")
-                    (str "futon3c.apm.cascade-dry-run " snapshot-path " " cap " " out-path))
-        started-ns (System/nanoTime)
-        result (conductor/expand-memory-cascade
-                seeds (assoc (#'conductor/live-cascade-readers {}) :cap cap))
-        wall-clock-ms (quot (- (System/nanoTime) started-ns) 1000000)
-        timestamp (Instant/now)]
-    (io/make-parents out-path)
-    (with-open [writer (io/writer out-path)]
-      (.write writer (str ";; REAL RUN (not counterfactual)\n"
-                          ";; futon3c git sha: " sha "\n"
-                          ";; substrate URL: " substrate-url "\n"
-                          ";; ISO timestamp: " timestamp "\n"
-                          ";; snapshot path: " snapshot-path "\n"
-                          ";; seed count: " (count seeds) "\n"
-                          ";; exact command: " command "\n"))
-      (binding [*out* writer] (pprint/pprint result)))
-    {:out-path out-path
-     :wall-clock-ms wall-clock-ms
-     :window-overflow? false
-     :summary (cascade-summary result)}))
+(defn write-real-run!
+  ([snapshot-path cap out-path]
+   (write-real-run! snapshot-path cap out-path nil))
+  ([snapshot-path cap out-path routes]
+   (let [snapshot (edn/read-string (slurp snapshot-path))
+         seeds (snapshot-memory-ids snapshot)
+         substrate-url (substrate/configured-url)
+         sha (git-sha)
+         command (or (System/getenv "APM_CASCADE_DRY_RUN_COMMAND")
+                     (str "futon3c.apm.cascade-dry-run " snapshot-path " " cap
+                          " " out-path))
+         started-ns (System/nanoTime)
+         result (conductor/expand-memory-cascade
+                 seeds
+                 (cond-> (assoc (#'conductor/live-cascade-readers {}) :cap cap)
+                   (some? routes) (assoc :routes routes)))
+         wall-clock-ms (quot (- (System/nanoTime) started-ns) 1000000)
+         timestamp (Instant/now)]
+     (io/make-parents out-path)
+     (with-open [writer (io/writer out-path)]
+       (.write writer (str ";; REAL RUN (not counterfactual)\n"
+                           ";; futon3c git sha: " sha "\n"
+                           ";; substrate URL: " substrate-url "\n"
+                           ";; ISO timestamp: " timestamp "\n"
+                           ";; snapshot path: " snapshot-path "\n"
+                           ";; seed count: " (count seeds) "\n"
+                           ";; exact command: " command "\n"))
+       (binding [*out* writer] (pprint/pprint result)))
+     {:out-path out-path
+      :wall-clock-ms wall-clock-ms
+      :window-overflow? false
+      :summary (cascade-summary result)})))
 
 (defn -main [& args]
-  (when-not (= 3 (count args))
-    (throw (ex-info "usage: cascade-dry-run SNAPSHOT-PATH CAP OUT-PATH" {:args args})))
-  (let [[snapshot-path cap-text out-path] args
-        cap (parse-long cap-text)]
+  (when-not (contains? #{3 4} (count args))
+    (throw (ex-info
+            "usage: cascade-dry-run SNAPSHOT-PATH CAP OUT-PATH [ROUTE,...]"
+            {:args args})))
+  (let [[snapshot-path cap-text out-path routes-text] args
+        cap (parse-long cap-text)
+        routes (when routes-text
+                 (->> (str/split routes-text #",")
+                      (remove str/blank?)
+                      (map keyword)
+                      set))]
     (when-not (and cap (pos? cap))
       (throw (ex-info "cap must be a positive integer" {:cap cap-text})))
-    (prn (write-real-run! snapshot-path cap out-path))))
+    (prn (write-real-run! snapshot-path cap out-path routes))))
