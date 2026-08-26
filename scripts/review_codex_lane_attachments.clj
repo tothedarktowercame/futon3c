@@ -29,8 +29,9 @@
 ;;     --reviewer ID --session-id ID --verdict approve|reject
 ;;     --review-evidence-prefix PREFIX
 ;;   clojure -M scripts/review_codex_lane_attachments.clj [--commit]
-;;     --reviewer ID --session-id ID --verdict approve|reject
-;;     --memory-id ID --review-evidence-id ID --pattern-id ID
+;;     --reviewer ID --session-id ID --verdict approve|reject|reassign
+;;     --memory-id ID --review-evidence-id ID
+;;     (--pattern-id ID | --pattern-ids ID[,ID...])
 ;;
 ;; The explicit form is the forward promotion seam: a promotion invokes it
 ;; immediately after appending the separately authored review evidence.  The
@@ -40,6 +41,7 @@
 (require '[clojure.edn :as edn]
          '[clojure.java.io :as io]
          '[clojure.string :as str]
+         '[org.httpkit.client :as http]
          '[futon3c.peripheral.memory-lifecycle :as lifecycle]
          '[futon3c.substrate.client :as substrate]
          '[futon3c.evidence.futon1b-backend :as f1b]
@@ -69,9 +71,9 @@
 (def verdict
   (let [value (require-invocation-value "--verdict" "ATTACHMENT_REVIEW_VERDICT")
         parsed (keyword (str/replace value #"^:" ""))]
-    (when-not (contains? #{:approve :reject} parsed)
-      (throw (ex-info "attachment review verdict must be approve or reject"
-                      {:verdict value :allowed [:approve :reject]})))
+    (when-not (contains? #{:approve :reject :reassign} parsed)
+      (throw (ex-info "attachment review verdict must be approve, reject, or reassign"
+                      {:verdict value :allowed [:approve :reject :reassign]})))
     parsed))
 (def review-evidence-prefix
   (invocation-value "--review-evidence-prefix"
@@ -96,6 +98,27 @@
            (filterv #(str/includes? % "/")
                     (get-in edge [:hx/props :roles :subjects] [])))))
 
+(defn- fetch-pattern [pattern-id]
+  (let [encoded (java.net.URLEncoder/encode pattern-id "UTF-8")
+        response @(http/get (str (str/replace base-url #"/+$" "")
+                                 "/api/alpha/entity/" encoded)
+                            {:headers {"Accept" "application/edn"}
+                             :timeout 60000})
+        body (cond
+               (string? (:body response)) (:body response)
+               (some? (:body response)) (slurp (:body response))
+               :else "")]
+    (when-not (= 200 (:status response))
+      (throw (ex-info "proposed attachment pattern does not exist"
+                      {:pattern-id pattern-id :status (:status response)
+                       :body body})))
+    (let [pattern (edn/read-string body)]
+      {:pattern-id pattern-id
+       :hook (or (:pattern/hook pattern) (:hook pattern)
+                 (get-in pattern [:entity :pattern/hook])
+                 (get-in pattern [:entity :hook])
+                 (get-in pattern [:entity :source]))})))
+
 (def names-filter
   (when-let [f (arg-value "--names-file")]
     (set (edn/read-string (slurp f)))))
@@ -103,18 +126,30 @@
 (def explicit-target
   (let [memory-id (arg-value "--memory-id")
         review-id (arg-value "--review-evidence-id")
-        pattern-id (arg-value "--pattern-id")]
-    (when (some some? [memory-id review-id pattern-id])
+        pattern-id (arg-value "--pattern-id")
+        pattern-ids-arg (arg-value "--pattern-ids")
+        pattern-ids (if pattern-ids-arg
+                      (->> (str/split pattern-ids-arg #",")
+                           (mapv str/trim)
+                           (into [] (remove str/blank?)))
+                      (when pattern-id [pattern-id]))]
+    (when (some some? [memory-id review-id pattern-id pattern-ids-arg])
       (when-not (every? #(and (string? %) (not (str/blank? %)))
-                        [memory-id review-id pattern-id])
+                        [memory-id review-id])
         (throw (ex-info "explicit review requires memory, review-evidence, and pattern ids"
                         {:memory-id memory-id
                          :review-evidence-id review-id
-                         :pattern-id pattern-id})))
+                         :pattern-ids pattern-ids})))
+      (when-not (seq pattern-ids)
+        (throw (ex-info "explicit review requires at least one pattern id"
+                        {:pattern-ids pattern-ids})))
+      (when (and (= :reassign verdict) (nil? pattern-ids-arg))
+        (throw (ex-info "reassign requires the explicit --pattern-ids form"
+                        {:verdict verdict :flag "--pattern-ids"})))
       {:name memory-id
        :memory-id memory-id
        :review-evidence-id review-id
-       :pattern-ids [pattern-id]})))
+       :pattern-ids pattern-ids})))
 
 (defn- codex-lane-memory-ids []
   ;; Names come from the promotion reports, which are the authoritative record of
@@ -134,6 +169,9 @@
          vec)))
 
 (defn -main [& _]
+  (when (and (= :reassign verdict) (nil? explicit-target))
+    (throw (ex-info "reassign is available only for one explicit memory"
+                    {:verdict verdict :flag "--memory-id"})))
   (let [evidence-store (f1b/make-futon1b-backend base-url)
         ctx {:agent-id reviewer
              :session-id review-session-id
@@ -144,23 +182,32 @@
         results
         (mapv
          (fn [{:keys [name memory-id pattern-ids] :as target}]
-           (let [edge (memory-edge memory-id)
+           (let [proposed-patterns (when (= :reassign verdict)
+                                     (mapv fetch-pattern pattern-ids))
+                 edge (memory-edge memory-id)
                  rev-id (or (:review-evidence-id target)
                             (review-evidence-id name))
                  pats (or pattern-ids (pattern-ids-of edge))
-                 status (get-in edge [:hx/props :attachment-status])]
+                 current-patterns (pattern-ids-of edge)
+                 status (get-in edge [:hx/props :attachment-status])
+                 review-entry (delay (estore/get-entry* evidence-store rev-id))]
              (cond
                (nil? edge) {:name name :result :no-edge}
                (and (= :approve verdict) (= :reviewed status))
                {:name name :result :existing}
                (empty? pats) {:name name :result :no-pattern-ids}
-               (nil? (estore/get-entry* evidence-store rev-id))
+               (and commit? (nil? @review-entry))
                {:name name :result :no-review-evidence :expected rev-id}
 
                (not commit?)
                {:name name :result :would-review
-                :memory-id memory-id :review-evidence-id rev-id
-                :pattern-ids pats}
+                :memory-id memory-id
+                :reviewer reviewer :session-id review-session-id
+                :verdict verdict
+                :current-patterns current-patterns
+                :proposed-patterns (or proposed-patterns pats)
+                :review-evidence-id rev-id
+                :review-evidence-present? (boolean @review-entry)}
 
                :else
                (let [r (lifecycle/review-attachment!
@@ -172,7 +219,9 @@
                  {:name name :result (if (:ok r)
                                        (if (= :approve verdict)
                                          :reviewed
-                                         :rejection-recorded)
+                                         (if (= :reassign verdict)
+                                           :reassigned
+                                           :rejection-recorded))
                                        :failed)
                   :detail (when-not (:ok r) r)}))))
          targets)]
@@ -180,6 +229,7 @@
           :commit? (boolean commit?)
           :total (count targets)
           :tally (frequencies (map :result results))
+          :results (when-not commit? results)
           :failures (filterv #(#{:failed :no-edge :no-review-evidence :no-pattern-ids} (:result %)) results)})))
 
 (-main)
