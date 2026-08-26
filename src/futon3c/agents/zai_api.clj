@@ -24,7 +24,7 @@
 (def ^:private default-base-url
   "https://api.z.ai/api/coding/paas/v4")
 
-(def ^:private default-model "glm-5.2")
+(def ^:private default-model "glm-5.3")
 
 (def default-request-timeout-ms
   "Maximum duration of one Z.AI HTTP request. This is not a logical turn bound."

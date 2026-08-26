@@ -722,4 +722,36 @@
     (holes/technotes/TN-frame-conditions-registry.md). Amendments record
     intent; the registry records what was in force -- including commits on
     master that were not loaded into the JVM. (At 18:45Z two entries were
-    numbered 5; claude-clink-1 renumbered theirs to 8 at 18:46Z, ecd34c1d.)"}]}
+    numbered 5; claude-clink-1 renumbered theirs to 8 at 18:46Z, ecd34c1d.)"}
+  {:amendment 9
+   :at "2026-08-26T20:00Z"
+   :by "claude-clink-1"
+   :authority "Joe, 2026-08-26, in session: \"let's just realign on 5.3\""
+   :kind :casting-correction
+   :finding
+   "The vendor rotation the role cards describe -- guide and scribe on zai
+    glm-5.3, STUDENT on zai glm-5.2 -- never happened. z.ai no longer serves
+    glm-5.2: a request for it on the coding endpoint returns HTTP 200 with
+    \"model\":\"glm-5.3\" in the body. Silent substitution, not a fallback --
+    a nonsense model name on the same endpoint returns HTTP 400 \"modelCode:
+    does not exist\", so the name is recognised and deliberately routed."
+   :consequence
+   "Every zai seat -- guide, scribe and student -- has been running glm-5.3.
+    Any frame whose reading depends on the student being a different or weaker
+    model than the guide/scribe was not measuring that contrast. The casting
+    block reports the REQUEST and cannot detect substitution; zai_api.clj says
+    so at the :cost/model assignment."
+   :how-it-surfaced
+   "Joe read the z.ai usage panel and saw total consumption equal to 5.3
+    consumption. The machine could not have told him: :cost/model is captured
+    from the response but reaches only the in-memory invoke-jobs ring buffer,
+    which the code notes is gone on JVM restart, and never lands in a frame
+    record."
+   :change
+   "default-model is now glm-5.3 (zai_api.clj:27) and the ground-control role
+    cards v1/v2 name 5.3 for every seat. Historical frame records are left as
+    written; this entry is the correction."
+   :not-done
+   "Persisting :cost/model into the attempt receipt, which would make the
+    casting claim checkable per turn instead of via a billing panel. Joe
+    declined to spend time on the model question now; recorded as open."}]}

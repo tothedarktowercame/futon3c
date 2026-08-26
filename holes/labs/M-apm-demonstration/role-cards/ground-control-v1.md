@@ -162,7 +162,7 @@ Seat vendors used to be hardcoded. They are now yours to set at mint time:
     {"frame-id": "f16",
      "cast": {"guide":   {"type": "zai", "model": "glm-5.3"},
               "scribe":  {"type": "zai", "model": "glm-5.3"},
-              "student": {"type": "zai", "model": "glm-5.2"}}}
+              "student": {"type": "zai", "model": "glm-5.3"}}}
 
 - Seat keys are `solver`, `student`, `guide`, `proctor`, `scribe`.
 - `type` is `claude`, `codex` or `zai`. `model` is optional and per-seat.

@@ -135,7 +135,7 @@ Use per-seat overrides on a mixed-vendor frame:
 {"frame-id":"f16",
  "cast":{"guide":{"type":"zai","model":"glm-5.3"},
          "scribe":{"type":"zai","model":"glm-5.3"},
-         "student":{"type":"zai","model":"glm-5.2"}}}
+         "student":{"type":"zai","model":"glm-5.3"}}}
 ```
 
 Valid seats are `solver`, `student`, `guide`, `proctor`, and `scribe`; valid
