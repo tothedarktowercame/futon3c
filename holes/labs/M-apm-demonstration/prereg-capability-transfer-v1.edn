@@ -530,4 +530,31 @@
     "Two, both identified: the keywordized new-pattern-rationales lookup (fixed,
      2d9e08a8) and coined pattern ids absent from the substrate (open). Neither is a
      defect in the frames' mathematics; both are defects in the memory channel,
-     which is what these frames were run to exercise."}}]}
+     which is what these frames were run to exercise."}}
+
+  {:amendment 5
+   :at "2026-08-26T16:20Z"
+   :by "claude-19"
+   :authority "Joe, 2026-08-26, in session: 'if these are safe to reload by drawbridge you can do that'"
+   :kind :instrument-change
+   :what
+   "From f43 onward the exact packet string handed to each role at activation is
+    archived beside the phase state as live/<phase>-packet.txt (futon3c 7ee42661,
+    reloaded from master into the running JVM at 2026-08-26T16:15Z, before any
+    f43 student attempt was dispatched: f43 was at :solve). Nothing the student
+    sees changes; the archive is a copy of the delivered text. A write failure
+    is logged as :rendered-packet-archive-failed and does not block activation."
+   :why
+   "TN-APM-cascades-exist-unused: the student packet was not recoverable, so a
+    zero-uptake attempt could not be separated into 'surfaced and ignored' vs
+    'never shown'. The independent variable of this registration was being
+    attested by the snapshot standing in for the prompt (the same substitution
+    TN-apm-watcher names). The packet archive closes that boundary from f43."
+   :boundary
+   "Comparisons of packet content across the f43 boundary are between an archived
+    text and a reconstruction; report which side each attempt falls on. No
+    comparison of what the student was shown may silently span f42/f43."
+   :also-reloaded
+   "futon3c.apm.conductor (7534419c, 8a5ffce8): the live cascade reader's
+    hyperedge window is 1000 and a full window is refused. Not on the countdown
+    path; affects only the interactive conductor surface."}]}
