@@ -90,6 +90,8 @@
     {:ordered (mapv :candidate ordered)
      :ordering
      {:signal [:promoted-this-frame :identifier-overlap :memory-id]
+      ;; A missing base text silently zeroes every overlap score; say so.
+      :base-text-present? (boolean (seq base-identifiers))
       :scores (into (sorted-map) (map (juxt :memory-id :score)) measured)
       :promoted-this-frame (count (filter :promoted? measured))
       :textless-fetched (count (filter :fetched? measured))

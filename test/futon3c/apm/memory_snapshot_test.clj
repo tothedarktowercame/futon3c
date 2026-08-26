@@ -35,12 +35,20 @@
            (mapv :memory-id (:ordered result))))
     (is (= ["b-fetched" "c-failed"] @fetched))
     (is (= {:signal [:promoted-this-frame :identifier-overlap :memory-id]
+            :base-text-present? true
             :scores {"a-inline" 1 "b-fetched" 2 "c-failed" 0
                      "z-promoted" 0}
             :promoted-this-frame 1
             :textless-fetched 1
             :fetch-failed ["c-failed"]}
            (:ordering result)))))
+
+(deftest missing-base-text-is-recorded-not-hidden
+  (let [result (sut/order-candidates
+                [{:memory-id "a" :body "sharedAlpha"}]
+                {:problem-id "p1" :base-text nil})]
+    (is (false? (get-in result [:ordering :base-text-present?])))
+    (is (= {"a" 0} (get-in result [:ordering :scores])))))
 
 (deftest atomic-snapshot-is-idempotent-and-student-access-is-exact
   (let [dir (Files/createTempDirectory "apm-snapshot-test"
