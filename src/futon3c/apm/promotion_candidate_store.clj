@@ -200,3 +200,45 @@
              (machine/ledger-digest [(:evidence/body entry)]))
           (= (:memory-id candidate) (get-in edge [:hx/props :roles :entry]))
           attachment-visible?))))
+
+(defn review-inputs
+  "Freshly read the full persisted evidence used to construct a review
+  dispatch. A missing entry and an entry whose content body is absent are
+  distinct apparatus failures; neither can be sent to a reviewer."
+  ([candidates]
+   (let [backend (f1b/make-futon1b-backend (substrate/configured-url))]
+     (review-inputs candidates #(estore/get-entry* backend %)
+                    (substrate/configured-url))))
+  ([candidates fetch-entry substrate-url]
+   (loop [remaining candidates
+          inputs []]
+     (if-let [candidate (first remaining)]
+       (let [memory-id (:memory-id candidate)
+             entry (fetch-entry memory-id)
+             body (:evidence/body entry)]
+         (cond
+           (nil? entry)
+           {:ok false
+            :error/code :promotion-review-candidate-evidence-unfetchable
+            :memory-id memory-id}
+
+           (not (nonblank? (:body body)))
+           {:ok false
+            :error/code :promotion-review-candidate-body-missing
+            :memory-id memory-id}
+
+           (not= (:content-digest candidate)
+                 (machine/ledger-digest [body]))
+           {:ok false
+            :error/code :promotion-review-candidate-content-mismatch
+            :memory-id memory-id}
+
+           :else
+           (recur (next remaining)
+                  (conj inputs
+                        {:memory-id memory-id
+                         :content-digest (:content-digest candidate)
+                         :read-ref (str (str/replace (str substrate-url) #"/$" "")
+                                        "/api/alpha/evidence/" memory-id)
+                         :entry entry}))))
+       {:ok true :candidate-evidence inputs}))))

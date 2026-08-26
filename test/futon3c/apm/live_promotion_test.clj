@@ -431,6 +431,20 @@
                                        :verdict :reject :pattern-ids []})}
                        "digest" "blob"))))))
 
+(deftest reviewer-authority-carries-full-persisted-evidence
+  (let [candidate {:memory-id "m" :content-digest "digest"}
+        entry {:evidence/id "m"
+               :evidence/body {:hook "hook" :body "full persisted body"}}
+        request (#'sut/reviewer-authority
+                 {:frame-id "f"} [candidate]
+                 [{:memory-id "m" :read-ref "http://store/evidence/m"
+                   :entry entry}])]
+    (is (= entry (get-in request [:candidate-evidence 0 :entry])))
+    (is (= "full persisted body"
+           (get-in request [:candidate-evidence 0 :entry :evidence/body :body])))
+    (is (= "http://store/evidence/m"
+           (get-in request [:candidate-evidence 0 :read-ref])))))
+
 (deftest mechanical-rejection-is-recorded-without-llm-self-review
   (let [saved (atom nil) published (atom nil)
         result (sut/drive!

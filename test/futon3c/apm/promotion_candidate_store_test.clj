@@ -123,3 +123,24 @@
                            #(when (= memory-id %)
                               {:evidence/id memory-id :evidence/body body})
                            (constantly [edge]))))))
+
+(deftest review-inputs-require-a-full-persisted-body
+  (let [body {:name "n" :hook "h" :kind :memory :body "complete body"}
+        candidate {:memory-id "m" :content-digest (machine/ledger-digest [body])}
+        accepted (sut/review-inputs [candidate]
+                                    (constantly {:evidence/id "m"
+                                                 :evidence/body body})
+                                    "http://substrate/")]
+    (is (:ok accepted))
+    (is (= body (get-in accepted [:candidate-evidence 0 :entry :evidence/body])))
+    (is (= "http://substrate/api/alpha/evidence/m"
+           (get-in accepted [:candidate-evidence 0 :read-ref])))
+    (is (= :promotion-review-candidate-evidence-unfetchable
+           (:error/code (sut/review-inputs [candidate] (constantly nil)
+                                           "http://substrate"))))
+    (is (= :promotion-review-candidate-body-missing
+           (:error/code
+            (sut/review-inputs [candidate]
+                               (constantly {:evidence/id "m"
+                                            :evidence/body {:hook "only"}})
+                               "http://substrate"))))))

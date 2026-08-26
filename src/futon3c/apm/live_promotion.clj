@@ -106,6 +106,22 @@
 
       :else {:ok true :reviewer reviewer :reviews reviews})))
 
+(defn- reviewer-authority
+  [reviewer-request candidates candidate-evidence]
+  (assoc reviewer-request
+         :candidates candidates
+         :candidate-evidence candidate-evidence
+         :phase :promotion-review
+         :role :promotion-proctor
+         :candidate-set-digest (machine/ledger-digest [candidates])))
+
+(defn- review-read-instruction []
+  (str "\nThe controller freshly read each complete persisted EvidenceEntry "
+       "into :candidate-evidence. Treat its :entry :evidence/body as the "
+       "authoritative body and its :read-ref as the dedicated full-entry "
+       "read endpoint. A hyperedge-neighborhood projection intentionally "
+       "embeds only an envelope-grade hook and is not a body read."))
+
 (defn- agency-stage [agency-base request prompt]
   (let [request (submission/prepare-request request)]
    (fn
@@ -226,21 +242,23 @@
         review-fn
         (fn
           ([candidates]
-           (let [digest (machine/ledger-digest [candidates])
-                 request (assoc reviewer-request :candidates candidates
-                                :phase :promotion-review
-                                :role :promotion-proctor
-                                :candidate-set-digest digest)
-                 prompt (str "Independently review this exact candidate set. Authority:\n"
-                             (pr-str request)
-                             "\nRead and follow the frozen role card at "
-                             (resolved-role-card-path control-root request)
-                             " (blob " (:role-card-blob request) ")."
-                             "\nFollow the pinned promotion Proctor card and return exactly one EDN map. "
-                             "Persist each approval's evidence body with nonblank "
-                             ":review/reason and :review/residual fields; return the "
-                             "same nonblank :reason and :residual on every review.")]
-             ((agency-stage agency-base request prompt))))
+           (let [inputs (candidate-store/review-inputs candidates)]
+             (if-not (:ok inputs)
+               inputs
+               (let [request (reviewer-authority
+                              reviewer-request candidates
+                              (:candidate-evidence inputs))
+                     prompt (str "Independently review this exact candidate set. Authority:\n"
+                                 (pr-str request)
+                                 (review-read-instruction)
+                                 "\nRead and follow the frozen role card at "
+                                 (resolved-role-card-path control-root request)
+                                 " (blob " (:role-card-blob request) ")."
+                                 "\nFollow the pinned promotion Proctor card and return exactly one EDN map. "
+                                 "Persist each approval's evidence body with nonblank "
+                                 ":review/reason and :review/residual fields; return the "
+                                 "same nonblank :reason and :residual on every review.")]
+                 ((agency-stage agency-base request prompt))))))
           ([job-id candidates]
            (let [digest (machine/ledger-digest [candidates])
                  request (assoc reviewer-request :candidates candidates
@@ -262,26 +280,29 @@
                    normalized))
                result)))
           ([candidates predecessor-job-id successor-attempt]
-           (let [digest (machine/ledger-digest [candidates])
-                 request (assoc reviewer-request :candidates candidates
-                                :phase :promotion-review
-                                :role :promotion-proctor
-                                :candidate-set-digest digest
-                                :predecessor-job-id predecessor-job-id
-                                :submission/attempt successor-attempt)
-                 prompt (str "Independently review this exact candidate set as an "
-                             "append-only successor to terminal job "
-                             predecessor-job-id ". Authority:\n"
-                             (pr-str request)
-                             "\nRead and follow the frozen role card at "
-                             (resolved-role-card-path control-root request)
-                             " (blob " (:role-card-blob request) ")."
-                             "\nFollow the pinned promotion Proctor card and return "
-                             "exactly one EDN map. Persist each approval's evidence "
-                             "body with nonblank :review/reason and :review/residual "
-                             "fields; return the same nonblank :reason and :residual "
-                             "on every review.")]
-             ((agency-stage agency-base request prompt)))))]
+           (let [inputs (candidate-store/review-inputs candidates)]
+             (if-not (:ok inputs)
+               inputs
+               (let [request (assoc
+                              (reviewer-authority
+                               reviewer-request candidates
+                               (:candidate-evidence inputs))
+                              :predecessor-job-id predecessor-job-id
+                              :submission/attempt successor-attempt)
+                     prompt (str "Independently review this exact candidate set as an "
+                                 "append-only successor to terminal job "
+                                 predecessor-job-id ". Authority:\n"
+                                 (pr-str request)
+                                 (review-read-instruction)
+                                 "\nRead and follow the frozen role card at "
+                                 (resolved-role-card-path control-root request)
+                                 " (blob " (:role-card-blob request) ")."
+                                 "\nFollow the pinned promotion Proctor card and return "
+                                 "exactly one EDN map. Persist each approval's evidence "
+                                 "body with nonblank :review/reason and :review/residual "
+                                 "fields; return the same nonblank :reason and :residual "
+                                 "on every review.")]
+                 ((agency-stage agency-base request prompt)))))))]
     ;; Upgrade legacy promotion envelopes before observing their terminal job.
     ;; This is a lossless durability migration: the job identity is unchanged.
     (when (not= stored-state state) (persist-fn state))
