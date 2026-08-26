@@ -107,7 +107,14 @@
                           :at (normalized-time (:evidence/at entry))
                           :source/id (:evidence/id entry)
                           :candidate-authored? (= agent-id (evidence-author entry))
-                          :names-modification? true})))]
+                          ;; Substrate evidence bodies are turn-level text
+                          ;; (prompt, result preview): a path named there is
+                          ;; context, not a write the seat issued. Never
+                          ;; attested; the inferrer therefore treats it as
+                          ;; :weak at most. Attested mentions will come from
+                          ;; tool-input adapters (shell-write witnessing).
+                          :attested? false
+                          :evidence/kind :turn-text})))]
         {:mentions mentions :windows [window]}))))
 
 (defn build-evidence-bundle

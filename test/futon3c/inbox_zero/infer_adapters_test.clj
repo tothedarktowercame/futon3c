@@ -51,17 +51,22 @@
 (defn response [xs]
   {:status 200 :body (pr-str {:entries xs})})
 
-(deftest tracer-fixture-produces-corroborated-proposal
+(deftest tracer-fixture-is-visible-but-insufficient-without-an-attested-write
+  ;; Turn-text mentions are context, not attestation: the tracer's evidence
+  ;; ranks the seat first at :weak, which the sweeper (no :allow-weak?) does
+  ;; not propose. A structured/shell write is what would make it :direct.
   (let [requested (atom nil)
         bundle (adapters/build-evidence-bundle
                 path-fact
                 (options (fn [url _] (reset! requested url) (response entries))))
         result (infer/infer-attribution path-fact bundle)
         candidate (first (:candidates result))]
-    (is (= :propose (:verdict result)))
+    (is (= :insufficient (:verdict result)))
     (is (= seat-id (:seat/id candidate)))
     (is (= 1 (:rank candidate)))
-    (is (= :corroborated (:confidence candidate)))
+    (is (= :weak (:confidence candidate)))
+    (is (false? (:attested? (first (:substrate-mentions bundle)))))
+    (is (= :propose (:verdict (infer/infer-attribution path-fact bundle {:allow-weak? true}))))
     (is (= ["claim:781b"] (mapv :source/id (:same-worktree-claims bundle))))
     (is (= ["emacs-6427"] (mapv :source/id (:substrate-mentions bundle))))
     (is (= #inst "2026-08-24T08:19:09.618Z"

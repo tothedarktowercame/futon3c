@@ -24,10 +24,8 @@
             [futon3.inbox-zero.projection :as projection]
             [futon3.inbox-zero.state :as inbox-state]
             [futon3c.agency.clock-store :as clock-store])
-  (:import [java.nio.charset StandardCharsets]
-           [java.nio.file Files StandardCopyOption]
+  (:import [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
-           [java.security MessageDigest]
            [java.util Date]))
 
 (def default-state-path "/home/joe/code/storage/inbox-zero/state.edn")
@@ -36,11 +34,6 @@
 (defn- mode-keyword [mode]
   (let [value (some-> mode name str/lower-case keyword)]
     (if (#{:off :propose :execute} value) value :off)))
-
-(defn- sha-256 [value]
-  (let [digest (.digest (MessageDigest/getInstance "SHA-256")
-                        (.getBytes (pr-str value) StandardCharsets/UTF_8))]
-    (apply str (map #(format "%02x" (bit-and % 0xff)) digest))))
 
 (defn- atomic-write! [path value]
   (let [target (.toPath (io/file path))
@@ -181,50 +174,44 @@
           (count (:include plan)) (:repo/id plan)
           (str/join ", " (map :path (:include plan)))))
 
-(defn- held-message [plan]
-  (let [by-reason (frequencies (map :reason (:exclude plan)))
-        reason-labels [[:unattributed "unattributed"]
-                       [:other-seat "other-seat"]
-                       [:ambiguous "ambiguous"]]
-        counts (->> reason-labels
-                    (keep (fn [[reason label]]
-                            (let [n (get by-reason reason 0)]
-                              (when (pos? n) (str n " " label)))))
-                    (str/join ", "))
-        unattributed (->> (:exclude plan)
-                          (filter #(= :unattributed (:reason %)))
-                          (map :path)
-                          sort
-                          vec)
-        shown (take 5 unattributed)
-        more (- (count unattributed) (count shown))]
-    (str "inbox-zero: nothing promotable for " (:seat/id plan)
-         " in " (:repo/id plan) " — "
-         (if (seq counts) counts "no exclusions recorded")
-         (when (seq unattributed)
-           (str "; unattributed: " (str/join ", " shown)
-                (when (pos? more) (str " (+" more " more)")))))))
+(defn- plan-of [item] (or (:plan item) item))
 
-(defn- propose-message [plan]
-  (if (seq (:include plan))
-    (would-message plan)
-    (held-message plan)))
+(defn- actionable-proposal?
+  "True when ITEM carries included paths, i.e. work the seat can act on.
 
-(defn- member-hash [item]
-  (sha-256 (select-keys (or (:plan item) item)
-                           [:seat/id :repo/id :worktree/id :include :exclude])))
+  A plan with no included paths (:nothing-promotable and friends) is
+  diagnostic output, not work for the agent, regardless of its verdict label.
+  Delivering it starts a model turn whose completion launches another
+  inbox-zero pass, so one no-op report per repository becomes a feedback loop
+  (codex-19, 2026-08-26). Such plans are neither delivered nor ledgered; they
+  stay observable in the returned :plans."
+  [item]
+  (boolean (seq (:include (plan-of item)))))
 
 (defn- tier-one-payload [decision]
   (let [item (:route/item decision)
-        plan (or (:plan item) item)
+        plan (plan-of item)
         [agent session] (parse-seat (:route/recipient decision))
         reason (or (:route/reason decision) :propose)]
     {:agent agent :session session :type "inbox-zero"
-     :dedupe-key [(:seat/id plan) (:repo/id plan) (:worktree/id plan)
-                  reason (member-hash item)]
+     ;; One outstanding followup per seat/repo/worktree/reason. Membership is
+     ;; deliberately NOT part of the key: when it was, every projection change
+     ;; minted a fresh notice, which is how 84 of them queued on one seat.
+     :dedupe-key [(:seat/id plan) (:repo/id plan) (:worktree/id plan) reason]
      :prompt (:route/message decision)
      :metadata {:route-tier 1 :reason reason
                 :repo-id (:repo/id plan) :worktree-id (:worktree/id plan)}}))
+
+(defn- ledger-decisions!
+  "Propose mode: record every decision in the ledger; deliver nothing to seats.
+  A dry run's audience is the operator reading the ledger, not the seats."
+  [decisions {:keys [ledger-fn ledger-path print-fn]}]
+  (doseq [decision decisions]
+    (ledger-fn ledger-path (assoc decision :delivery :ledger-only :mode :propose)))
+  (when (seq decisions)
+    (print-fn (str "[inbox-zero] propose: " (count decisions)
+                   " decision(s) ledgered, none delivered")))
+  decisions)
 
 (defn- deliver-decisions!
   [decisions {:keys [deliver! ledger-fn ledger-path print-fn]}]
@@ -343,23 +330,32 @@
                                     :worktree/id (:worktree/id plan) :plan plan)
                              executed))))
                      screened))
-                  routable (if (= :propose mode)
-                             outcomes
-                             (filterv #(or (= :held (:verdict %))
-                                           (= :escalate (:verdict %))) outcomes))
+                  considered (if (= :propose mode)
+                               outcomes
+                               (filterv #(or (= :held (:verdict %))
+                                             (= :escalate (:verdict %))) outcomes))
+                  ;; Only plans with included paths can be work for a seat;
+                  ;; empty-include diagnostics are dropped here in every mode.
+                  routable (filterv actionable-proposal? considered)
                   decisions (route-fn routable route-context)
                   decisions (if (= :propose mode)
                               (mapv (fn [decision]
                                       (if (= 1 (:route/tier decision))
                                         (assoc decision :route/message
-                                               (propose-message (:route/item decision)))
+                                               (would-message
+                                                (plan-of (:route/item decision))))
                                         decision))
                                     decisions)
                               decisions)]
-              (deliver-decisions! decisions
-                                  {:deliver! deliver! :ledger-fn ledger-fn
-                                   :ledger-path ledger-path :print-fn print-fn})
-              {:mode mode :plans screened :outcomes outcomes :decisions decisions})
+              (if (= :propose mode)
+                (ledger-decisions! decisions
+                                   {:ledger-fn ledger-fn :ledger-path ledger-path
+                                    :print-fn print-fn})
+                (deliver-decisions! decisions
+                                    {:deliver! deliver! :ledger-fn ledger-fn
+                                     :ledger-path ledger-path :print-fn print-fn}))
+              {:mode mode :plans screened :outcomes outcomes :decisions decisions
+               :diagnostic (- (count considered) (count routable))})
             (catch Throwable error
               (try
                 (print-fn (str "[inbox-zero] turn promotion failed for " agent-id
@@ -367,12 +363,62 @@
                 (catch Throwable _))
               {:mode mode :error error})))))))
 
-(defn launch-at-turn-end!
-  "Fire-and-forget dev seam; all failures are printed and never rethrown.
+(def ^:private default-quiet-ms 20000)
+(def ^:private default-max-wait-ms (* 3 60 60 1000))
+(defonce ^:private !pending-launches (atom {}))
 
-  Call this ONCE per completed turn, after the CLI has reported the turn's
-  session id, never from inside the tool-result stream: in :execute mode a
-  mid-turn call commits and pushes a shared checkout between two edits of one
-  sequence."
-  [agent-id session-id]
-  (future (promote-at-turn-end! agent-id session-id {})))
+(defn- seat-invoking?
+  "The registry's :invoking status is the authoritative busy signal across every
+  turn path (see transport.http/agent-in-flight-turn?). Unknown seat → not busy."
+  [agent-id]
+  (try
+    (= :invoking (get-in ((requiring-resolve 'futon3c.agency.registry/registry-status))
+                         [:agents (str agent-id) :status]))
+    (catch Throwable _ false)))
+
+(defn launch-at-turn-end!
+  "Debounced, idle-gated, fire-and-forget launch of promote-at-turn-end!.
+
+  Callers may invoke this many times during one turn (the live invoke stream
+  still calls it per tool-result batch until the JVM restarts on cdde47c8).
+  Each call supersedes the previous pending one; after QUIET-MS of no further
+  calls the seat's registry status is consulted, and promotion runs only once
+  the seat is no longer :invoking — i.e. once per completed turn, never
+  between two edits of one sequence (Joe, 2026-08-25: an I-0 violation).
+  Gives up, loudly, if the seat is still busy after MAX-WAIT-MS.
+  All failures are printed and never rethrown. Returns the future."
+  ([agent-id session-id] (launch-at-turn-end! agent-id session-id {}))
+  ([agent-id session-id
+    {:keys [quiet-ms max-wait-ms invoking?-fn run-fn print-fn run-options]
+     :or {quiet-ms default-quiet-ms max-wait-ms default-max-wait-ms
+          invoking?-fn seat-invoking? run-fn promote-at-turn-end!
+          print-fn println run-options {}}}]
+   (let [k [(str agent-id) (str session-id)]
+         n (get (swap! !pending-launches update k (fnil inc 0)) k)]
+     (future
+       (try
+         (loop [waited 0]
+           (Thread/sleep (long quiet-ms))
+           (let [busy? (invoking?-fn agent-id)]
+             (cond
+               (not= n (get @!pending-launches k))
+               :superseded
+
+               (and busy? (< waited max-wait-ms))
+               (recur (+ waited quiet-ms))
+
+               busy?
+               (do (swap! !pending-launches dissoc k)
+                   (print-fn (str "[inbox-zero] turn-end promotion for " agent-id
+                                  " gave up after " waited "ms: seat still invoking"))
+                   :gave-up)
+
+               :else
+               (do (swap! !pending-launches dissoc k)
+                   (run-fn agent-id session-id run-options)))))
+         (catch Throwable error
+           (try
+             (print-fn (str "[inbox-zero] turn-end launch failed for " agent-id
+                            ": " (.getMessage error)))
+             (catch Throwable _))
+           nil))))))

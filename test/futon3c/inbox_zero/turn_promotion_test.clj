@@ -31,18 +31,23 @@
                                         (assoc (opts calls) :mode :off))))
     (is (empty? @calls))))
 
-(deftest propose-delivers-would-message-without-execute-or-push
+(deftest propose-ledgers-would-message-and-delivers-nothing
+  ;; Propose mode is a dry run for the operator's ledger; seats hear nothing.
   (let [calls (atom [])
         result (sut/promote-at-turn-end!
                 "a" "s" (assoc (opts calls) :mode :propose
                                  :execute-fn (fn [& _] (swap! calls conj :execute))
                                  :push-fn (fn [& _] (swap! calls conj :push))))
-        payload (second (first (filter vector? @calls)))]
+        ledgered (filter #(and (vector? %) (= :ledger (first %))) @calls)]
     (is (= :propose (:mode result)))
     (is (not-any? #{:execute :push} @calls))
-    (is (= "inbox-zero would promote 1 path(s) in repo: a.clj" (:prompt payload)))))
+    (is (not-any? #(and (vector? %) (= :deliver (first %))) @calls))
+    (is (= 1 (count ledgered)))
+    (is (= "inbox-zero would promote 1 path(s) in repo: a.clj"
+           (get-in (first ledgered) [1 :route/message])))
+    (is (= :ledger-only (get-in (first ledgered) [1 :delivery])))))
 
-(deftest propose-held-plan-summarizes-exclusion-reasons-and-unattributed-paths
+(deftest propose-held-nothing-promotable-does-not-invoke-agent
   (let [calls (atom [])
         held (assoc proposed
                     :include []
@@ -54,32 +59,32 @@
     (sut/promote-at-turn-end!
      "a" "s" (assoc (opts calls) :mode :propose
                       :plan-fn (fn [& _] [held])))
-    (let [payload (second (first (filter #(and (vector? %)
-                                                (= :deliver (first %)))
-                                          @calls)))]
-      (is (= (str "inbox-zero: nothing promotable for seat:a:s in repo — "
-                  "3 unattributed, 1 other-seat; "
-                  "unattributed: a.clj, b.clj, c.clj")
-             (:prompt payload))))))
+    (is (not-any? #(and (vector? %) (= :deliver (first %))) @calls))))
 
-(deftest propose-held-plan-caps-unattributed-path-list
+(deftest propose-held-nothing-promotable-is-not-routed
   (let [calls (atom [])
         held (assoc proposed
                     :include []
                     :exclude (mapv #(hash-map :path (str "p" % ".clj")
                                               :reason :unattributed)
                                    (range 1 8))
-                    :verdict :held :held/reason :nothing-promotable)]
-    (sut/promote-at-turn-end!
-     "a" "s" (assoc (opts calls) :mode :propose
-                      :plan-fn (fn [& _] [held])))
-    (let [payload (second (first (filter #(and (vector? %)
-                                                (= :deliver (first %)))
-                                          @calls)))]
-      (is (= (str "inbox-zero: nothing promotable for seat:a:s in repo — "
-                  "7 unattributed; unattributed: "
-                  "p1.clj, p2.clj, p3.clj, p4.clj, p5.clj (+2 more)")
-             (:prompt payload))))))
+                    :verdict :held :held/reason :nothing-promotable)
+        result (sut/promote-at-turn-end!
+                "a" "s" (assoc (opts calls) :mode :propose
+                                 :plan-fn (fn [& _] [held])))]
+    (is (= [held] (:plans result)) "the diagnostic plan remains observable")
+    (is (empty? (:decisions result)))
+    (is (not-any? #(and (vector? %) (= :deliver (first %))) @calls))))
+
+(deftest propose-labelled-plan-with-zero-includes-does-not-invoke-agent
+  (let [calls (atom [])
+        empty-proposal (assoc proposed :include [] :exclude [])
+        result (sut/promote-at-turn-end!
+                "a" "s" (assoc (opts calls) :mode :propose
+                                 :plan-fn (fn [& _] [empty-proposal])))]
+    (is (= [empty-proposal] (:plans result)))
+    (is (empty? (:decisions result)))
+    (is (not-any? #(and (vector? %) (= :deliver (first %))) @calls))))
 
 (deftest propose-sensitive-plan-goes-to-tier-three-ledger
   (let [calls (atom [])
@@ -137,14 +142,64 @@
 (deftest failed-tier-one-delivery-is-loud-and-next-decision-continues
   (let [calls (atom [])
         second-plan (assoc proposed :repo/id "repo-2")
-        options (assoc (opts calls) :mode :propose
+        options (assoc (opts calls) :mode :execute
                        :plan-fn (fn [& _] [proposed second-plan])
+                       :execute-fn (fn [plan _]
+                                     (assoc plan :verdict :held :held/reason :gate-failed))
                        :deliver! (fn [payload]
                                    (swap! calls conj [:attempt (:repo-id (:metadata payload))])
                                    {:status (if (= "repo" (:repo-id (:metadata payload))) 503 200)}))]
     (is (map? (sut/promote-at-turn-end! "a" "s" options)))
     (is (= 2 (count (filter #(and (vector? %) (= :attempt (first %))) @calls))))
     (is (some #(and (vector? %) (= :print (first %))) @calls))))
+
+(deftest execute-drops-empty-include-diagnostics-without-delivery-or-ledger
+  (let [calls (atom [])
+        held (assoc proposed :include []
+                    :exclude [{:path "x.clj" :reason :unattributed}]
+                    :verdict :held :held/reason :nothing-promotable)
+        result (sut/promote-at-turn-end!
+                "a" "s" (assoc (opts calls) :mode :execute
+                                 :screen-fn (fn [_ _] held)
+                                 :execute-fn (fn [& _] (swap! calls conj :execute))))]
+    (is (not-any? #{:execute} @calls))
+    (is (empty? (:decisions result)))
+    (is (= 1 (:diagnostic result)))
+    (is (not-any? #(and (vector? %) (#{:deliver :ledger} (first %))) @calls))))
+
+(deftest tier-one-dedupe-key-ignores-membership
+  (let [calls (atom [])
+        options (assoc (opts calls) :mode :execute
+                       :execute-fn (fn [plan _]
+                                     (assoc plan :verdict :held :held/reason :gate-failed)))
+        _ (sut/promote-at-turn-end! "a" "s" options)
+        payload (second (first (filter #(and (vector? %) (= :deliver (first %))) @calls)))]
+    (is (= ["seat:a:s" "repo" "wt" :gate-failed] (:dedupe-key payload)))))
+
+(deftest launch-debounces-many-calls-into-one-run-after-the-seat-goes-idle
+  (let [runs (atom [])
+        busy (atom 2)                       ; first two checks: still invoking
+        opts* {:quiet-ms 15
+               :invoking?-fn (fn [_] (pos? (swap! busy dec)))
+               :run-fn (fn [agent session options] (swap! runs conj [agent session options]))
+               :print-fn (fn [_])
+               :run-options {:mode :off}}
+        futures (doall (repeatedly 3 #(sut/launch-at-turn-end! "a" "s" opts*)))]
+    (is (= [:superseded :superseded [["a" "s" {:mode :off}]]]
+           [(deref (first futures) 2000 :timeout)
+            (deref (second futures) 2000 :timeout)
+            (do (deref (last futures) 2000 :timeout) @runs)]))
+    (is (= 1 (count @runs)) "three calls, one promotion, after the seat went idle")))
+
+(deftest launch-gives-up-loudly-when-the-seat-never-goes-idle
+  (let [runs (atom []) printed (atom [])
+        f (sut/launch-at-turn-end! "b" "s" {:quiet-ms 5 :max-wait-ms 20
+                                            :invoking?-fn (fn [_] true)
+                                            :run-fn (fn [& _] (swap! runs conj :run))
+                                            :print-fn (fn [line] (swap! printed conj line))})]
+    (is (= :gave-up (deref f 2000 :timeout)))
+    (is (empty? @runs))
+    (is (re-find #"gave up" (first @printed)))))
 
 (deftest collaborator-exception-never-propagates
   (let [calls (atom [])
