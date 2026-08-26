@@ -136,6 +136,103 @@ vocabulary: no predicted outcome distribution is present"*, evaluation (b) is
 unbuilt, and codex-8's audit found no `P(s′ | π, s)` and no state-indexed
 `G(s′)`. Conflating the two is the error this excursion exists to avoid.
 
+## Per-slice requirements, in the family vocabulary
+
+*Added 2026-08-26 after `M-formal-war-machine` §2.1 mapped the APM machine's 35
+predicates to seven WM requirement families. Each open slice now carries the
+family it instantiates, the requirement, and — the point of the exercise — **the
+naive fix that would recreate the defect.***
+
+### Slice 5 — family 5 (provenance containment) + family 2 (non-empty handle)
+
+**Requirement.** A producer must declare its domain, and must never return a
+bare `nil` that conflates *out of domain* with *no measurement*.
+
+    APM: validControllerMemoryUse:326 —
+         surfacedIds.all (fun id => id ∈ accessibleIds ∨ id ∈ searchReceiptIds)
+    WM:  the mission being grounded ∈ the producer's declared domain,
+         and the result is typed: value | :domain-mismatch | :no-data
+
+**❌ The naive fix that recreates the defect.** Add
+`futon6-d/mission/bayesian-structure-learning` to `reviewed-candidate-cleans`.
+That yields a **five**-entry hardcoded map with the identical failure mode, and
+it is worse than it looks: **there is no CLean on disk for that mission**
+(checked — 31 `.clean.edn` files, none matching), so the "fix" would also
+require authoring a CLean for a mission that may legitimately not touch
+substrate-2 at all.
+
+**✅ The requirement-satisfying fix.** The vocabulary already exists **one
+function above**, in the same namespace. `actuator_a3/a3-live-test:395`:
+
+    :regime (cond (zero? bound) :domain-mismatch
+                  (< inhabited bound) :discriminating
+                  :else :all-inhabited)
+
+`bound = 0` is a *named regime*, `:domain-mismatch` — "mission does not touch
+substrate-2", per its own docstring. `realized-outcome-grounded` reaches the
+same condition at `fold_realized.clj:163` and returns `nil`.
+
+So: **derive the domain** (a mission is in-domain iff a reviewed CLean resolves
+for it) and **return `:domain-mismatch`** instead of `nil`. No list is edited;
+adding a CLean adds a mission automatically.
+
+**And it exposes the real design question**, which the whitelist hid: the two
+producers have *different domains*. `realized-outcome-of` covers any enacted
+decision; `realized-outcome-grounded` covers missions with a substrate dial.
+Selection between them should be **per-mission, by domain** — not global, by a
+boolean flag. That is precisely what the module-1 emitter's producer-selection
+table should carry.
+
+**Acceptance.** For a mission with no CLean, ⑨ receives `:domain-mismatch` and
+records it; for one with a CLean, a number. Neither is `nil`. No hardcoded
+mission list is consulted anywhere on the path.
+
+### Slice 4 — family 3 (digest agreement across a boundary)
+
+**Requirement.** A durable record's reconstruction must not depend on state that
+can change after the record was made.
+
+    APM: validStudentTerminalCandidate:240 —
+         receiptCandidateDigest = candidateDigest   (both inside the record)
+    WM:  a deposit's prompt digest must be checkable from the deposit alone
+
+**❌ The naive fix.** Repair the eight rejected deposits by recomputing their
+shas against today's prose. They pass today and die on the next flexiarg edit —
+and editing pattern prose is normal, encouraged work.
+
+**✅ The requirement-satisfying fix.** Make the comparison internal to the
+record: store the prose, or pin `pattern@git-sha` and read the historical blob.
+The APM predicate compares two fields *of the same structure*; the WM compares a
+stored field against a mutable tree, which is the whole defect.
+
+**Acceptance.** A deposit that validated on the day it was made still validates
+after any edit to `futon3/library`. Demonstrate on
+`ft-bayesian-structure-learning-003`, whose two drifted proses
+(`aif/expected-free-energy-scorecard` 08-23,
+`structure/interest-event-vocabulary` 08-15) are the live case.
+
+**Separate, cheap, and not the same question:** `fold_escrow/load-deposits`
+degrades by design — *"valid deposits still serve"* — and
+`actuator_a3/deposits-by-id:149` throws on any rejection. Whether that
+strictness is load-bearing is a one-line decision for its author, independent of
+the fix above.
+
+### Slice 3 — family 2 (non-empty handle), operator side
+
+**Requirement.** Unchanged, and now with a family: ⑧ per-channel precision and
+㉛ the Morning Brief queue are both *"a step counts only if it left something
+durable"* applied to the operator loop. The 2026-08-26 case is concrete —
+codex-12's completion summary contradicted its own commits, and nothing recorded
+that as a precision signal on the agent-self-report channel.
+
+### What all three share
+
+Every naive fix above **adds an entry** — one more mission, one more repaired
+deposit, one more observation. Every requirement-satisfying fix **removes the
+need for entries**, by deriving what was enumerated or internalising what was
+external. That is the test to apply to slice work from here: *does this fix
+scale by editing a list?* If yes, it is the whitelist again under another name.
+
 ## Global findings — the backlog these slices generated
 
 Three findings from this diagnosis outlive the excursion and are tracked as
