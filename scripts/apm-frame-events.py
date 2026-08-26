@@ -77,8 +77,14 @@ while True:
                             tally[v] = tally.get(v, 0) + 1
                         cj = tally.get("cannot-judge", 0)
                         if cj:
-                            out(f"UNRESOLVED {fid} {name} {tally} "
-                                f"-- {cj} cannot-judge; this pass resolved nothing")
+                            judged = sum(v for k, v in tally.items()
+                                         if k != "cannot-judge")
+                            note = (f"-- {cj} cannot-judge, {judged} judged; "
+                                    f"pass UNRESOLVED (a pass resolves only when "
+                                    f"every candidate is judged)"
+                                    if judged else
+                                    f"-- {cj} cannot-judge; this pass resolved nothing")
+                            out(f"UNRESOLVED {fid} {name} {tally} {note}")
                         else:
                             out(f"PHASE {fid} {name} {tally}")
                 elif name == "close-frame":
