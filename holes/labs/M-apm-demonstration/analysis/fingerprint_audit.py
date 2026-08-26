@@ -93,9 +93,18 @@ def tokens_of(body):
             continue
         if t.lower() in STOPWORDS or t in STOPWORDS:
             continue
-        # require a real word-join: an underscore, or a dotted qualified name
+        # Require a real word-join: an underscore, a dotted qualified name, or
+        # a multi-hump CamelCase name. Mathlib is full of single-word type
+        # names carrying neither an underscore nor a dot -- NNReal, ENNReal,
+        # MeasureTheory -- and dropping them made a memory whose whole content
+        # is `open scoped NNReal ENNReal` score zero tokens, so it read
+        # `unwitnessed` in every frame that surfaced it no matter what the
+        # student did. Prose capitalises one letter (Trigger, Fourier, Lean);
+        # a Lean type name carries two, which is the discriminator.
         if "_" not in t and "." not in t:
-            continue
+            caps = sum(1 for c in t if c.isupper())
+            if not (caps >= 2 and any(c.islower() for c in t)):
+                continue
         # drop pure prose that happens to be dotted (sentence ends)
         if re.fullmatch(r"[a-z]+\.[a-z]+", t):
             continue
