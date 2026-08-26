@@ -319,26 +319,29 @@
    `why-targets-fn` returns authored @why targets for a pattern. The result is
    bounded after cheapest-route deduplication. `:expanded-count` excludes the
    leaf memories already surfaced by retrieval."
-  [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn cap]
+  [seed-memory-ids {:keys [attachments-fn why-targets-fn pattern-fn cap routes]
                     :or {cap default-memory-cascade-cap}}]
-  (let [seed-memory-ids (vec (distinct seed-memory-ids))
+  (let [routes-enabled (or routes #{:why-hop :co-incidence})
+        seed-memory-ids (vec (distinct seed-memory-ids))
         seed-memory-set (set seed-memory-ids)
         seed-edges (mapcat attachments-fn seed-memory-ids)
         seed-patterns (vec (distinct (mapcat attachment-patterns seed-edges)))
         ;; Authored why edges form a directed graph. Record the shortest
         ;; distance from any seed pattern.
         why-patterns
-        (loop [queue (into clojure.lang.PersistentQueue/EMPTY
-                           (map #(vector % 0) seed-patterns))
-               seen (zipmap seed-patterns (repeat 0))]
-          (if (empty? queue)
-            (dissoc seen nil)
-            (let [[pattern hops] (peek queue)
-                  queue (pop queue)
-                  next-hop (inc hops)
-                  targets (remove #(contains? seen %) (why-targets-fn pattern))]
-              (recur (into queue (map #(vector % next-hop) targets))
-                     (reduce #(assoc %1 %2 next-hop) seen targets)))))
+        (if (contains? routes-enabled :why-hop)
+          (loop [queue (into clojure.lang.PersistentQueue/EMPTY
+                             (map #(vector % 0) seed-patterns))
+                 seen (zipmap seed-patterns (repeat 0))]
+            (if (empty? queue)
+              (dissoc seen nil)
+              (let [[pattern hops] (peek queue)
+                    queue (pop queue)
+                    next-hop (inc hops)
+                    targets (remove #(contains? seen %) (why-targets-fn pattern))]
+                (recur (into queue (map #(vector % next-hop) targets))
+                       (reduce #(assoc %1 %2 next-hop) seen targets)))))
+          {})
         why-patterns (apply dissoc why-patterns seed-patterns)
         ;; Co-incidence is exactly pattern -> problem -> pattern. Only the
         ;; original seed patterns initiate it; it does not recursively flood.
@@ -346,42 +349,47 @@
         seed-problems (vec (distinct (mapcat attachment-problems
                                              seed-pattern-edges)))
         coincident-patterns
-        (->> seed-problems
-             (mapcat attachments-fn)
-             (mapcat attachment-patterns)
-             (remove (set seed-patterns))
-             distinct
-             (map #(vector % 2))
-             (into {}))
-        pattern-routes
-        ;; On equal cost retain the authored why route (the left map). The
-        ;; receipt then distinguishes authored structure from an incidental
-        ;; co-incidence without claiming a cheaper path.
-        (merge-with (fn [a b] (if (<= (:hops a) (:hops b)) a b))
-                    (into {} (map (fn [[pattern hops]]
-                                    [pattern {:route :why-hop :hops hops
-                                              :pattern pattern}])
-                                  why-patterns))
-                    (into {} (map (fn [[pattern hops]]
-                                    [pattern {:route :co-incidence :hops hops
-                                              :pattern pattern}])
-                                  coincident-patterns)))
+        (if (contains? routes-enabled :co-incidence)
+          (->> seed-problems
+               (mapcat attachments-fn)
+               (mapcat attachment-patterns)
+               (remove (set seed-patterns))
+               distinct
+               (map #(vector % 2))
+               (into {}))
+          {})
+        route-rank {:sibling 0 :why-hop 1 :co-incidence 2}
+        route-key (fn [{:keys [route hops pattern]}]
+                    [hops (get route-rank route 3) (str pattern)])
         structural
-        (for [[pattern route] pattern-routes
-              edge (attachments-fn pattern)
-              :let [memory-id (attachment-memory-id edge)]
-              :when (and memory-id (not (seed-memory-set memory-id)))]
-          [memory-id route])
+        (concat
+         (when (contains? routes-enabled :sibling)
+           (for [pattern seed-patterns
+                 edge (attachments-fn pattern)
+                 :let [memory-id (attachment-memory-id edge)]
+                 :when (and memory-id (not (seed-memory-set memory-id)))]
+             [memory-id {:route :sibling :hops 1 :pattern pattern}]))
+         (for [[pattern hops] why-patterns
+               edge (attachments-fn pattern)
+               :let [memory-id (attachment-memory-id edge)]
+               :when (and memory-id (not (seed-memory-set memory-id)))]
+           [memory-id {:route :why-hop :hops hops :pattern pattern}])
+         (for [[pattern hops] coincident-patterns
+               edge (attachments-fn pattern)
+               :let [memory-id (attachment-memory-id edge)]
+               :when (and memory-id (not (seed-memory-set memory-id)))]
+           [memory-id {:route :co-incidence :hops hops :pattern pattern}]))
         cheapest
         (reduce (fn [by-memory [memory-id route]]
                   (update by-memory memory-id
-                          #(if (or (nil? %) (< (:hops route) (:hops %)))
+                          #(if (or (nil? %)
+                                   (neg? (compare (route-key route)
+                                                  (route-key %))))
                              route %)))
                 {} structural)
         ordered (->> cheapest
-                     (sort-by (fn [[memory-id {:keys [route hops]}]]
-                                [hops ({:why-hop 0 :co-incidence 1} route 2)
-                                 memory-id]))
+                     (sort-by (fn [[memory-id route]]
+                                (conj (route-key route) memory-id)))
                      vec)
         selected (vec (take cap ordered))
         offered-pattern-ids
@@ -400,6 +408,7 @@
           {})]
     {:routes (into (mapv #(vector % {:route :leaf :hops 0}) seed-memory-ids)
                    selected)
+     :routes-enabled routes-enabled
      :pattern-surfaces pattern-surfaces
      :seed-patterns seed-patterns
      :patterns-per-problem (count seed-patterns)
@@ -418,9 +427,12 @@
         expansion (when enabled?
                     (expand-memory-cascade
                      memory-ids
-                     (merge (live-cascade-readers config)
-                            {:cap (or (:memory-cascade-cap config)
-                                      default-memory-cascade-cap)})))
+                     (cond->
+                      (merge (live-cascade-readers config)
+                             {:cap (or (:memory-cascade-cap config)
+                                       default-memory-cascade-cap)})
+                       (contains? config :memory-cascade-routes)
+                       (assoc :routes (:memory-cascade-routes config)))))
         routes (or (:routes expansion)
                    (mapv #(vector % {:route :leaf :hops 0}) memory-ids))
         routed-counts (frequencies (keep (comp :pattern second) routes))
