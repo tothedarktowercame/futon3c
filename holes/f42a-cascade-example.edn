@@ -16,6 +16,15 @@
 ;; pattern-fn against the live store, and inventing surfaces would be the one
 ;; part of this artifact a reader could not check. Left as a hole on purpose.
 ;;
+;; SUPERSEDED 2026-08-26 by the real run (claude-19/codex-20, 915a4aa1,
+;; 77a1bac0; artifacts holes/f42a-cascade-run-cap{100,1000}.edn). Measured:
+;; 103 available, not 141 -- 48 why-hop, 55 co-incidence, and ONE why-reachable
+;; pattern with memories, not four. Two causes, both mine: the BFS follows
+;; OUTGOING why edges only (6 from f42's seeds, where I counted 18 "touching"
+;; in either direction), and the live reader filters to REVIEWED attachments,
+;; which I did not. The clause below said H0 wins a disagreement; it disagreed,
+;; so read the real-run artifacts, not this file, for numbers.
+;;
 ;; REIMPLEMENTED, NOT INVOKED: routes/hops follow conductor.clj:287-382 —
 ;; BFS over authored why edges for shortest hops, co-incidence fixed at 2 via
 ;; pattern->problem->pattern, why preferred on ties, cheapest route per
