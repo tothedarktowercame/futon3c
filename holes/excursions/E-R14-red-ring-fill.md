@@ -412,6 +412,103 @@ quantity"* the strategy notes warn against.
 why establishing whether they are live or shadow is now the highest-value cheap
 check in this excursion.
 
+## Stop-the-line — the operator-level mechanism, and the one that is not blocked
+
+Joe, 2026-08-26: *"how about 'stop the line semantics'? That's crucial. I engage
+that, for example, when what we see matches neither my mental model nor the
+agent's expectation."*
+
+This is already in the stack twice over, so it is a mechanism to characterise
+rather than a proposal to evaluate:
+
+- **Ruled.** `futon3c/holes/labs/M-apm-demonstration/PROTOCOL-defective-problem.md`,
+  Joe 2026-08-19, standing: *"If we find a flaw in the problem, stop the line and
+  repair it, move the problem to a new frame, mark the previous one as void, and
+  retry."*
+- **Instantiated, in the War Machine, with an artifact.**
+  `futon2/data/wm-full-loop/archives/stop-line-2026-07-15/` — a preserved
+  snapshot with a deterministic tar SHA-256 and a README naming its own
+  condition.
+
+### The trigger is a two-model quantity, and that is why the WM cannot compute it
+
+*"Matches neither my mental model nor the agent's expectation"* is high surprise
+under **two** generative models at once. R8's fold measures something
+categorically smaller: expected ΔG against realized ΔG, a scalar mismatch under
+**one** model. No amount of repairing R8 produces Joe's trigger, because the
+second model is not in the machine.
+
+**The operator is the second model.** That gives *"close the AIF over the
+operator"* a specific payload rather than a general one: not more data for γ, but
+the second opinion that makes a double-mismatch computable.
+
+### Why this one is not blocked behind the reconnection decision
+
+**Stop-the-line acts through the gate, not through the ranking.** τ reweights a
+ranking, and argmax annihilates the reweighting — that is the whole R14 finding.
+An andon cord does not need to change an argmax: it removes the policy set from
+play. So it **survives the annihilation that kills τ**, and it is the one
+mechanism identified in this excursion that could transfer to the machine
+*today*, without waiting on the choice between sampling, a habit term, or
+accepting the dial is decorative.
+
+Where it would sit is already τ-free: the abstain gate at ⑰ compares in G-units
+against an ε (`policy.clj`), and the act gate at ㉒ is a two-condition test. An
+andon condition belongs beside those, not in the softmax.
+
+### The 07-15 event names its own defect in the family vocabulary
+
+From the archive README:
+
+> The stop-line condition was a **policy-support mismatch**. Selection admitted
+> and repeatedly reinforced `{:type :learn-action-class, :target-class
+> :fire-pattern}`, while the coding full-loop surface had no construction for
+> that action. **`:no-selection` did not create a durable repair obligation, so
+> the failure repeated instead of becoming self-healing memory.**
+
+That is family 2 — *a step counts only if it left something durable* — applied to
+the **stop signal itself**. The mismatch recurred through 22 attempts
+(`attempt-002`..`attempt-022`, `attempt-024`) before the line stopped. So the
+line stopped because a person noticed, not because the machine did: **the cord
+exists and only the operator can reach it.** Making it machine-pullable is the
+concrete slice, and it is a recording requirement, not a measurement-design one.
+
+### The boundary is already ruled, on both sides
+
+A machine-side cord needs a test for *when* to pull, and both answers are on the
+record:
+
+| defect is in… | response | ruled |
+|---|---|---|
+| the **problem** | stop, repair, new frame, void the previous, retry | 2026-08-19, `PROTOCOL-defective-problem.md` |
+| the **apparatus** | fix the defect and resume; void-and-advance rejected | 2026-08-25, after F32 |
+
+So the discriminating question is *where the defect sits*, and the two rulings
+partition on it cleanly. That is the test an automated andon cord would have to
+compute, and it is stated rather than needing invention.
+
+### What this is not
+
+**Not a salience instance for R14.** The 07-15 stop-line condition was a
+policy-support mismatch, not a commitment-temperature failure. Stop-the-line is
+the operator-level *commitment mechanism*; it is not evidence that our dial cost
+anyone anything. The `?salience(required)` slot stays empty.
+
+### One thing to check, not to conclude
+
+R8's problem pattern reads the cadence as having *"stopped on 2026-07-14 with one
+`ERROR nil`"* and treats the persistence of that gap as its salience. The archive
+describes something different: a **deliberate stop with a re-arm condition in
+writing** — *"its next eligible opportunity is therefore `attempt-002`, after the
+defect is repaired, independently reviewed, validated by a full canary, and
+marked with a new semantic epoch."* That is WR-26 **satisfied**, not decay.
+
+Three archives carry three end dates — `wm-full-loop` 07-14/15, `wm-trace` 07-21,
+`wm-outer-loop` 07-27 — and today's wrong-corpus error came from treating one as
+though it spoke for the others. **Recording the discrepancy; not resolving it
+here.** If R8's redness is partly a stopped line awaiting a named repair rather
+than a loop that decayed, that changes what R8's slices are for.
+
 ## The operator level — open, and deliberately left thin
 
 R8's workup ran at three levels: machine, operator surface, company. R14 now has
