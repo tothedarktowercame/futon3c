@@ -203,7 +203,7 @@
     (is (str/includes? (nth @call 2) "base64-decode-string"))
     (is (not (str/includes? (nth @call 2) "erase-buffer) λ")))))
 
-(deftest publication-fails-closed-when-buffer-readback-differs
+(deftest publication-records-nonauthoritative-buffer-readback-mismatch
   (let [{:keys [dir ledger-path certificate-path]} (fixture)
         output (.resolve dir "mismatch.md")
         result (problem/project!
@@ -211,10 +211,37 @@
                  :output-path output
                  :buffer-sink (fn [_]
                                 {:ok true :content/digest "wrong"})})]
+    (is (:ok result) (pr-str result))
+    (is (= :failed (:buffer/status result)))
     (is (= :problem-projection-buffer-readback-mismatch
-           (:error/code result)))
-    (is (false? (Files/exists (.resolve (.resolve dir "publications") "latest.edn")
-                              (make-array java.nio.file.LinkOption 0))))))
+           (get-in result [:warnings 0 :error/code])))
+    (is (= :failed
+           (get-in result [:publication-receipt :buffer/status])))
+    (is (Files/exists (.resolve (.resolve dir "publications") "latest.edn")
+                      (make-array java.nio.file.LinkOption 0)))))
+
+(deftest unavailable-emacs-mirror-does-not-block-durable-publication
+  (let [{:keys [dir ledger-path certificate-path]} (fixture)
+        output (.resolve dir "emacs-unavailable.md")
+        sink-failure
+        {:ok false
+         :error/code :problem-projection-buffer-replace-failed
+         :finding {:exit 1
+                   :stderr "emacsclient: Connection refused"}}
+        result (problem/project!
+                {:ledger-path ledger-path :certificate-path certificate-path
+                 :output-path output
+                 :buffer-sink (constantly sink-failure)})]
+    (is (:ok result) (pr-str result))
+    (is (= :failed (:buffer/status result)))
+    (is (= sink-failure (:buffer result)))
+    (is (= :problem-projection-buffer-sink-failed
+           (get-in result [:warnings 0 :error/code])))
+    (is (= sink-failure
+           (get-in result [:publication-receipt :buffer/finding :buffer])))
+    (is (Files/exists output (make-array java.nio.file.LinkOption 0)))
+    (is (Files/exists (.resolve (.resolve dir "publications") "latest.edn")
+                      (make-array java.nio.file.LinkOption 0)))))
 
 (deftest transition-log-deduplicates-certificate-refreshes
   (let [dir (temp-dir)

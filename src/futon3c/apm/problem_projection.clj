@@ -290,6 +290,30 @@
                    :transition transition}
                   pointer-write)))))))))
 
+(defn- observe-buffer-mirror [buffer-sink payload expected-digest]
+  (try
+    (let [result (buffer-sink payload)]
+      (cond
+        (not (and (map? result) (:ok result)))
+        {:status :failed
+         :result result
+         :finding {:error/code :problem-projection-buffer-sink-failed
+                   :buffer result}}
+
+        (not= expected-digest (:content/digest result))
+        {:status :failed
+         :result result
+         :finding {:error/code :problem-projection-buffer-readback-mismatch
+                   :expected expected-digest
+                   :observed (:content/digest result)}}
+
+        :else
+        {:status :mirrored :result result}))
+    (catch Throwable t
+      {:status :failed
+       :finding {:error/code :problem-projection-buffer-sink-threw
+                 :message (.getMessage t)}})))
+
 (defn project!
   [{:keys [ledger-path certificate-path output-path buffer-sink buffer-name
            expected-frame-id expected-problem-id solver-progress operation]
@@ -325,50 +349,46 @@
                 (if-not (= content-digest disk-digest)
                   {:ok false :error/code :problem-projection-disk-readback-mismatch
                    :expected content-digest :observed disk-digest}
-                  (try
-                    (let [buffer-result
-                          (buffer-sink {:buffer-name buffer-name :content content
-                                        :content/digest content-digest
-                                        :problem-projection problem-projection})]
-                      (cond
-                        (not (and (map? buffer-result) (:ok buffer-result)))
-                        {:ok false :error/code :problem-projection-buffer-sink-failed
-                         :publication written :buffer buffer-result}
-
-                        (not= content-digest (:content/digest buffer-result))
-                        {:ok false :error/code :problem-projection-buffer-readback-mismatch
-                         :expected content-digest
-                         :observed (:content/digest buffer-result)}
-
-                        :else
-                        (let [receipt-body
-                              {:receipt/type :problem-projection-publication
-                               :projection/id (:projection/id problem-projection)
-                               :ledger/digest (:ledger/digest problem-projection)
-                               :ledger/event-count (:ledger/event-count problem-projection)
-                               :certificate/id (:certificate/id problem-projection)
-                               :frame-id (get-in problem-projection [:frame :frame-id])
-                               :problem-id (get-in problem-projection [:frame :problem-id])
-                               :phase (get-in problem-projection [:frame :phase])
-                               :operation (:operation problem-projection)
-                               :solver/progress (:solver/progress problem-projection)
-                               :output/path (:path written)
-                               :buffer/name buffer-name
-                               :content/digest content-digest}
-                              receipt (assoc receipt-body :receipt/id
-                                             (machine/ledger-digest [receipt-body]))
-                              persisted (persist-publication! options receipt)]
-                          (if (:ok persisted)
-                            {:ok true :projection problem-projection
-                             :publication written :buffer buffer-result
-                             :publication-receipt (:receipt persisted)
-                             :publication-pointer (:pointer persisted)
-                             :transition (get-in persisted [:transition :event])}
-                            persisted))))
-                    (catch Throwable t
-                      {:ok false :error/code :problem-projection-buffer-sink-threw
-                       :publication written
-                       :finding {:message (.getMessage t)}})))))))))))
+                  (let [buffer-observation
+                        (observe-buffer-mirror
+                         buffer-sink
+                         {:buffer-name buffer-name :content content
+                          :content/digest content-digest
+                          :problem-projection problem-projection}
+                         content-digest)
+                        receipt-body
+                        (cond->
+                         {:receipt/type :problem-projection-publication
+                          :projection/id (:projection/id problem-projection)
+                          :ledger/digest (:ledger/digest problem-projection)
+                          :ledger/event-count (:ledger/event-count problem-projection)
+                          :certificate/id (:certificate/id problem-projection)
+                          :frame-id (get-in problem-projection [:frame :frame-id])
+                          :problem-id (get-in problem-projection [:frame :problem-id])
+                          :phase (get-in problem-projection [:frame :phase])
+                          :operation (:operation problem-projection)
+                          :solver/progress (:solver/progress problem-projection)
+                          :output/path (:path written)
+                          :buffer/name buffer-name
+                          :buffer/status (:status buffer-observation)
+                          :content/digest content-digest}
+                          (= :failed (:status buffer-observation))
+                          (assoc :buffer/finding (:finding buffer-observation)))
+                        receipt (assoc receipt-body :receipt/id
+                                       (machine/ledger-digest [receipt-body]))
+                        persisted (persist-publication! options receipt)]
+                    (if (:ok persisted)
+                      (cond->
+                       {:ok true :projection problem-projection
+                        :publication written
+                        :buffer (:result buffer-observation)
+                        :buffer/status (:status buffer-observation)
+                        :publication-receipt (:receipt persisted)
+                        :publication-pointer (:pointer persisted)
+                        :transition (get-in persisted [:transition :event])}
+                        (= :failed (:status buffer-observation))
+                        (assoc :warnings [(:finding buffer-observation)]))
+                      persisted)))))))))))
 
 (defn project-latest!
   [{:keys [projection-directory] :as options}]
