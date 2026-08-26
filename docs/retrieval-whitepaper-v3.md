@@ -1,7 +1,8 @@
 # Silence, Witness, and Demand: an Agent Memory System Audited by Its Own Twins
 
 **V3 — DRAFT. Phase 1 sections 2026-08-11; §§2.1 (items 14–20), 3.1a,
-3.1b, 5a added 2026-08-25 from the f28–f35 frame campaign. Batch-dependent
+3.1b, 5a added 2026-08-25 from the f28–f35 frame campaign; §4a (the delivery
+layer) added 2026-08-26 from the cascade investigation. Batch-dependent
 sections are skeletal and marked.** Successor to V1 ("Warrant-Disciplined Agent Memory:
 Architecture, Instrumentation, and a Pre-Repair Baseline") and V2 ("Catching
 Our Own Instruments: Construct Validity, Self-Applied"). Programme:
@@ -496,6 +497,120 @@ preregistration. **Status: under live test as batch-2 (prereg
 `batch-2-prereg.md`; falsifier on surfacing relevance, outcomes
 predicted null; blind relevance scoring by a third-party model lane).**
 
+## 4a. The delivery layer [DRAFT — claude-19, 2026-08-26]
+
+§4 characterised retrieval by its users. This section is about the step after
+retrieval and before use: what a student is *handed*, in what order, and
+through what structure. V2 §4.6 established that the store's graph was never
+populated — one pattern per memory, a forest of stars — and left open what
+that costs. §5a's students are the first consumers whose shelf is archived
+per attempt, so the cost can now be read off the record. Every number below
+is from a real artifact (`holes/f42a-cascade-run-cap{100,1000}.edn`,
+`holes/technotes/D1-round1-cascade-offers-2026-08-26.md`,
+`holes/labs/M-apm-demonstration/analysis/shelf-order-2026-08-26.json`); the
+finding they refine is `holes/technotes/TN-APM-cascades-exist-unused.md`.
+
+### 4a.1 What the student is handed
+
+Through f42 the shelf was `:snapshot/memories`: a flat vector of reviewed leaf
+memories **sorted by `:memory-id`** — hash order, carrying no relevance
+signal, because `(sort-by :memory-id candidates)` was never a design decision.
+On f42 the memory that closed the problem sat at position 47 of 48. Across the
+12 archived frames with snapshots, the used memory's median position under
+that order was **18.5** on shelves of 20–50 (56 positioned use events). The
+packet text itself was not archived until f43 (§2.2's mechanism at the
+independent variable: the snapshot stood in for the prompt, so "surfaced and
+ignored" and "never shown" were indistinguishable).
+
+Two facts about the shelf entries matter for everything downstream. First,
+**586 of 1,099 snapshot entries on disk carry no text** — older promotions are
+recorded by content digest only — so any ordering or scoring that reads the
+snapshot alone scores them zero. Second, an entry's `:provenance :problem-id`
+is the problem of the *frame that promoted it*, not the problem it was mined
+from.
+
+### 4a.2 Ordering: measured offline, then shipped
+
+Two keys were proposed and scored against the archive before touching the
+pipeline: *promoted-this-frame first* (§5a: 25 of 26 distinct used memories
+were used on the problem they came from), then *distinct Lean identifiers
+shared with the base problem file*, then id.
+
+| ordering | median position | mean | top-10 of 56 |
+|---|---:|---:|---:|
+| delivered (hash) | 18.5 | 17.0 | 19 |
+| promoted-this-frame first | 2.5 | 4.6 | 52 |
+| identifier overlap | 3.0 | 5.3 | 48 |
+| combined | 3.0 | 3.5 | 54 |
+
+The first key carries most of the gain and is, in §5a's own vocabulary, a
+cache effect. The second is what moves the five cross-problem uses (median
+15 → 9) and is the only key that rescues f42's closing memory (47 → 7 of 48,
+sharing `closedBall`, `DiffContOnCl`, `norm_le_of_forall_mem_frontier_norm_le`
+with the base file). The audit had to be corrected once, for the textless
+entries, before it said that. The combined ordering is live from f43 as
+`:snapshot/version 2`, with the signal, per-memory scores and a
+`:base-text-present?` flag recorded on the snapshot (prereg amendment 6).
+
+### 4a.3 The cascade: built, run, delivered to nobody
+
+`conductor.clj` carries a memory cascade in exactly the shape V2 modelled —
+`:leaf` at zero hops, then `:why-hop` along authored `pattern/has-semantic-why`
+edges, then `:co-incidence` through shared problems, cheapest route per
+memory, a cap and a `:truncated?` flag. Its history is a silence instance in
+its own right:
+
+- it is not on the path that feeds §5a's students (`countdown_control.clj`
+  does not reach it; no campaign directory contains a route label);
+- it **did** run on the round-1 conductor path in four frames (f9, f10, f13,
+  f15), where 1–5 seed memories expanded to 115–132 available offers, the cap
+  of 100 fired every time, and the offers were computed *after* the solver's
+  attempt and persisted under `data/problem-state/` — read by no one, since
+  every student arm on that path had `:memory-channel :none`;
+- from 2026-08-23 it could not run at all: its reader asked the substrate
+  for a 5,000-row window three days after the substrate began refusing
+  anything over 1,000, and the failure was a thrown exception no path
+  reached (fixed `7534419c`; a full window is now refused, not truncated).
+
+### 4a.4 What the cascade adds, on real inputs
+
+Run for the first time with live readers over f42's 48-memory shelf (cap
+1,000, deterministic on re-run): **103 additions — 48 by why-hop, 55 by
+co-incidence.** All 48 why-hop additions arrive through one pattern,
+`math-strategy/missing-dependency-protocol`, and are exactly its 48 reviewed
+attachments. The same 48 arrived on f10 (2 seeds) and f15 (5 seeds). **The
+why-hop expansion is constant in the seed**: any shelf touching an API
+pattern that declares `@why missing-dependency-protocol` receives the whole
+hub. Over this store the cascade is one fixed shelf appended to every shelf.
+
+Judged against what f42 actually hit — the student's own failure account
+names the crux as extending open-arc bounds to the sphere's endpoints — none
+of the 103 additions bears on it; two process memories bear weakly on a
+one-round-trip `sorryAx` false positive (`holes/f42a-H4-judgement-2026-08-26.md`).
+That is the outcome the plan named in advance as *volume without relevance*,
+and it is a fact about the store, not the expander: the seed patterns' `@why`
+edges lead, once seeds and memory-less targets are removed, to a single node
+with 48 children and no structure among them. Descent from a high-level
+pattern does not narrow here; it dumps. V2 §4.6 predicted the shape; this is
+the shape's cost, measured from the consumer's side.
+
+### 4a.5 What follows
+
+The order of repairs falls out of the numbers. Ordering the shelf helps
+whatever happens to the graph and shipped first. Populating the graph —
+repointing the four `@why` declarations that make the protocol every API
+pattern's parent, and attaching the hub's seven mathematical statements to
+the API regions they are about — is the precondition for any descent that
+narrows (`holes/PLAN-H5-populate-the-graph.md`). Wiring the cascade onto the
+student path is last, gated on a re-run showing an expansion that varies
+with the seed, and would ship why-hop-only with co-incidence off. None of
+this is an outcome claim: the claim ladder of §5a is unchanged, and "a
+cascade built *and used*" is true nowhere in the stack as of this draft.
+
+[n: one frame judged (f42), four round-1 frames reconstructed, 12 frames
+scored for ordering. The ordering result is offline over archived attempts,
+not a controlled comparison; f43 onward measures it live.]
+
 ## 5. The ladder results [SKELETAL — batch-2+ pending]
 
 Batch-1 (B1: channel on/off): falsifier fired; sorry deltas identical
@@ -746,6 +861,17 @@ ledger: substrate, session "vote-and-callback-pipeline", tags
 :concept-vote :glue-census :use-adjudication :retrieval-miss. Runbook:
 `E-batch-operator-runbook.md`. Day synthesis: `E-2026-08-10-learnings.md`.
 Priors: `E-memory-priors-survey.md`.
+
+**§4a (delivery layer).** Real cascade runs `holes/f42a-cascade-run-cap100.edn`,
+`-cap1000.edn` (`scripts/apm-cascade-dry-run.sh`); counterfactual
+`holes/f42a-cascade-example.edn`; judgement `holes/f42a-H4-judgement-2026-08-26.md`;
+round-1 reconstruction `holes/technotes/D1-round1-cascade-offers-2026-08-26.md`;
+ordering audit `holes/labs/M-apm-demonstration/analysis/shelf_order_audit.py`,
+`shelf-order-2026-08-26.json`, `NOTE-shelf-order-audit-2026-08-26.md`; finding
+and addenda `holes/technotes/TN-APM-cascades-exist-unused.md`; plans
+`holes/PLAN-apm-cascade-demo-instance.md`, `holes/PLAN-H5-populate-the-graph.md`.
+Packet archive from f43: `live/<phase>-packet.txt` (prereg amendment 5);
+ordered shelf from f43 (amendment 6).
 
 **§§2.1 items 14–20, 3.1a, 3.1b, 5a (frame campaign).** Frame records,
 per-phase receipts and archived attempt sources:
