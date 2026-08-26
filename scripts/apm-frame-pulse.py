@@ -166,9 +166,17 @@ def main():
         mins = int((os.path.getmtime(p) - os.path.getmtime(
             os.path.join(live, "preflight.edn")))/60) if os.path.exists(
             os.path.join(live, "preflight.edn")) else -1
+        # An attempt with no :used-ids KEY has not reported yet; one with an
+        # empty :used-ids has reported zero uptake.  Printing both as
+        # "0/N used" makes an in-flight attempt look like the campaign's most
+        # serious finding -- these must never share a rendering.
+        if ":used-ids" not in t:
+            print(f"    a{n}: IN FLIGHT, {na} accessible, no result yet")
+            continue
+        flag = "   <-- ZERO UPTAKE" if (na and not nu) else ""
         print(f"    a{n}: memory {nu}/{na} used   "
               f"{'sorries='+sor.group(1) if sor else ''} "
-              f"{'outcome='+out.group(1) if out else ''}")
+              f"{'outcome='+out.group(1) if out else ''}{flag}")
 
     # Only surface failures that are NEW relative to this frame. The
     # coordinator accumulates :regulator/failures for the whole campaign, so
