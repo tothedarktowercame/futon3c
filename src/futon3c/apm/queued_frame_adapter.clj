@@ -10,6 +10,7 @@
             [futon3c.apm.campaign-ledger :as campaign-ledger]
             [futon3c.apm.campaign-qualification :as campaign-qualification]
             [futon3c.apm.frame-void :as frame-void]
+            [futon3c.apm.job-port :as job-port]
             [futon3c.apm.live-launch-preparation :as live-preparation]
             [futon3c.apm.live-preflight-runtime :as runtime]
             [futon3c.apm.qualification :as qualification]
@@ -423,6 +424,32 @@
              :launch-receipt (:receipt result)
              :seat-mint @minted-response}))))))
 
+(defn- observe-statement-repair
+  [{:keys [agency-base http-fn]} handoff]
+  (let [request-fn (or http-fn runtime/http-json)
+        base (or agency-base "http://localhost:7070")
+        observation (job-port/observe request-fn base (:dispatch/id handoff))
+        retire-guide! #(request-fn "DELETE"
+                                   (str base "/api/alpha/agents/"
+                                        (:frame/id handoff) "-guide"))]
+    (cond
+      (not (:ok observation)) observation
+      (not (:terminal? observation)) {:ok true :status :pending}
+      (= :done (:state observation))
+      (let [report (:report observation)
+            valid? (and (map? (:replacement-pinned-problem report))
+                        (map? (:guide-receipt report))
+                        (= (:obligation/id handoff)
+                           (get-in report [:guide-receipt :obligation/id])))]
+        (if-not valid?
+          {:ok false :error/code :guide-statement-repair-report-invalid}
+          (do (retire-guide!)
+              {:ok true :status :complete
+               :replacement-pinned-problem (:replacement-pinned-problem report)
+               :guide-receipt (:guide-receipt report)})))
+      :else
+      (do (retire-guide!) {:ok true :status :failed}))))
+
 (defn live-effects
   "Build queue-supervisor effects for JIT preparation and supervised execution.
 
@@ -436,7 +463,38 @@
            open-frame-fn frame-tick-fn retire-frame-fn retirement-audit-fn pin-solve-fn
            persist-fn]
     :as config}]
-  {:mint-frame-fn
+  {:dispatch-statement-repair-fn
+   (fn [handoff]
+     (let [agent-id (str (:frame/id handoff) "-guide")
+           job-id (str "statement-repair-" (:obligation/id handoff))
+           prompt (str "STATEMENT REPAIR HANDOFF\n"
+                       "You are the Guide. Repair the registered problem statement "
+                       "once, without changing its logical problem id.\n"
+                       "Authority:\n" (pr-str handoff) "\n"
+                       "Return exactly one EDN map containing "
+                       ":replacement-pinned-problem and :guide-receipt. "
+                       "The receipt must repeat :obligation/id. If the repair cannot "
+                       "be completed in this attempt, return {:repair/status :failed}; "
+                       "the queue will discard this slot and advance.")
+           announced (job-port/announce!
+                      (or http-fn runtime/http-json)
+                      (or agency-base "http://localhost:7070")
+                      {:agent-id agent-id :prompt prompt :surface "bell"
+                       :caller "apm-problem-queue" :job-id job-id})]
+       (if-not (:ok announced)
+         {:ok false :dispatch/error (:response announced)}
+         (let [activated (job-port/activate!
+                          (or http-fn runtime/http-json)
+                          (or agency-base "http://localhost:7070")
+                          {:agent-id agent-id :prompt prompt :surface "bell"
+                           :caller "apm-problem-queue"
+                           :job-id (:job-id announced)})]
+           (if (:ok activated)
+             {:ok true :dispatch/id (:job-id announced)}
+             {:ok false :dispatch/error (:response activated)})))))
+   :observe-statement-repair-fn
+   #(observe-statement-repair config %)
+   :mint-frame-fn
    #(mint (assoc % :frame-number-base frame-number-base
                  :campaign-prefix campaign-prefix
                  :memory-cascade memory-cascade
@@ -525,7 +583,10 @@
                                             "/api/alpha/agents/"
                                             (:frame/id retired-frame) "-"
                                             (name role))))
-                           (keys live-preparation/required-seat-types))]
+                           (if (= :refuted (:problem/outcome terminal-receipt))
+                             (remove #{:guide}
+                                     (keys live-preparation/required-seat-types))
+                             (keys live-preparation/required-seat-types)))]
                  {:ok (every? #(and (:ok %) (= 200 (:http/status %))) responses)
                   :responses responses}))})))))})
 

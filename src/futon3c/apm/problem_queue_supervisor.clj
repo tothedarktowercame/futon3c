@@ -7,6 +7,8 @@
 
 (def terminal-results #{:closed :partial :void})
 
+(declare prepare-next)
+
 (defn valid-frame-park?
   [park]
   (and
@@ -84,12 +86,65 @@
 (defn valid-state? [state]
   (and (= :apm-problem-queue (:state/type state))
        (= 1 (:state/version state))
+       (or (not= :voided-slot-awaiting-revision (:status state))
+           (let [handoff (:statement-repair/handoff state)]
+             (and (= :statement-repair (:obligation/type handoff))
+                  (= :guide (:repair/role handoff))
+                  (= 1 (:repair/attempt handoff))
+                  (= 1 (:repair/max-attempts handoff))
+                  (true? (:dispatch/intent-persisted handoff))
+                  (every? #(and (string? %) (not-empty %))
+                          ((juxt :obligation/id :frame/id :problem/id
+                                 :source/revision :source/path :source/blob)
+                           handoff)))))
        (= (:state/id state)
           (machine/ledger-digest [(dissoc state :state/id)]))))
 
 (defn- addressed [state]
   (assoc (dissoc state :state/id) :state/id
          (machine/ledger-digest [(dissoc state :state/id)])))
+
+(defn- statement-repair-handoff [frame terminal-receipt]
+  (let [problem (:problem frame)
+        body {:obligation/type :statement-repair
+              :frame/id (:frame/id frame) :problem/id (:problem/id frame)
+              :repair/role :guide :repair/attempt 1 :repair/max-attempts 1
+              :source/repository (:repository problem)
+              :source/revision (:revision problem) :source/path (:path problem)
+              :source/blob (:blob problem)
+              :diagnostic (merge
+                           {:problem/outcome :refuted
+                            :terminal-receipt/id (:receipt/id terminal-receipt)}
+                           (select-keys terminal-receipt
+                                        [:problem/registered-target
+                                         :void/failed-invariants :error/code]))
+              :instruction :repair-registered-statement-once
+              :required-output [:replacement-pinned-problem :guide-receipt]
+              :exhaustion/action :discard-and-advance
+              :dispatch/intent-persisted true
+              :dispatch/status :pending}]
+    (assoc body :obligation/id (machine/ledger-digest [body]))))
+
+(defn- dispatch-repair [state dispatch-fn persist-state-fn]
+  (let [handoff (:statement-repair/handoff state)]
+    (if-not (fn? dispatch-fn)
+      {:ok false :error/code :problem-queue-guide-dispatch-provider-missing
+       :state state}
+      (let [result (dispatch-fn handoff)]
+        (if-not (and (:ok result)
+                     (string? (:dispatch/id result))
+                     (not-empty (:dispatch/id result)))
+          (merge {:ok false :error/code :problem-queue-guide-dispatch-failed
+                  :state state} (select-keys result [:dispatch/error]))
+          (let [dispatched (addressed
+                            (assoc state :statement-repair/handoff
+                                   (assoc handoff :dispatch/status :dispatched
+                                          :dispatch/id (:dispatch/id result))))]
+            (if (:ok (persist-state-fn dispatched))
+              {:ok true :status :guide-statement-repair-dispatched
+               :state dispatched :handoff (:statement-repair/handoff dispatched)}
+              {:ok false :error/code
+               :problem-queue-state-persistence-failed})))))))
 
 (defn revise-voided-slot
   "Replace the pins of the slot restored by a void, preserving its logical id.
@@ -113,6 +168,8 @@
       (not= (:problem/id current) (:problem/id replacement))
       {:ok false :error/code :problem-queue-slot-problem-id-changed}
       (not (and (= :guide (:repair/role repair-receipt))
+                (= (get-in state [:statement-repair/handoff :obligation/id])
+                   (:obligation/id repair-receipt))
                 (string? (:receipt/id repair-receipt))
                 (re-matches #"[0-9a-f]{64}" (:receipt/id repair-receipt))))
       {:ok false :error/code :problem-queue-guide-repair-receipt-invalid}
@@ -131,7 +188,40 @@
                        (assoc-in [:statement-repair-attempts problem-id] 1)
                        (assoc-in [:statement-repair-receipts problem-id]
                                  (:receipt/id repair-receipt))
-                       (dissoc :status)))})))))
+                       (dissoc :status :statement-repair/handoff)))})))))
+
+(defn- collect-repair [plan state providers]
+  (let [{:keys [observe-statement-repair-fn persist-state-fn]} providers
+        handoff (:statement-repair/handoff state)]
+    (if-not (fn? observe-statement-repair-fn)
+      {:ok false :error/code :problem-queue-guide-observation-provider-missing}
+      (let [observed (observe-statement-repair-fn handoff)]
+        (cond
+          (not (:ok observed)) observed
+          (= :pending (:status observed))
+          {:ok true :status :guide-statement-repair-dispatched
+           :state state :handoff handoff}
+          (= :failed (:status observed))
+          (let [problem-id (:problem/id handoff)
+                advanced (addressed
+                          (-> state
+                              (assoc-in [:statement-repair-attempts problem-id] 1)
+                              (update :next-index inc)
+                              (dissoc :status :statement-repair/handoff)))]
+            (if-not (:ok (persist-state-fn advanced))
+              {:ok false :error/code :problem-queue-state-persistence-failed}
+              (prepare-next plan advanced providers)))
+          (= :complete (:status observed))
+          (let [revised (revise-voided-slot
+                         plan state (:replacement-pinned-problem observed)
+                         (:guide-receipt observed))]
+            (if-not (:ok revised)
+              revised
+              (if-not (:ok (persist-state-fn (:state revised)))
+                {:ok false :error/code :problem-queue-state-persistence-failed}
+                (prepare-next (:plan revised) (:state revised) providers))))
+          :else
+          {:ok false :error/code :problem-queue-guide-observation-invalid})))))
 
 (defn reconcile-park-decisions
   "Attach authoritative decision records to their receipt-matched parks.
@@ -275,7 +365,8 @@
   one supervised tick. Only a terminal result can retire it and authorize
   just-in-time creation of its successor."
   [{:keys [plan state-provider persist-state-fn mint-frame-fn
-           qualify-frame-fn prepare-frame-fn frame-tick-fn retire-frame-fn]
+           qualify-frame-fn prepare-frame-fn frame-tick-fn retire-frame-fn
+           dispatch-statement-repair-fn]
     :as providers}]
   (let [plan-check (validate-plan plan)
         state (or (state-provider) (initial-state plan))]
@@ -293,6 +384,11 @@
       {:ok true :status :batch-complete :state state}
       (= :paused (:status state))
       {:ok true :status :batch-paused :state state}
+      (= :voided-slot-awaiting-revision (:status state))
+      (if (= :dispatched
+             (get-in state [:statement-repair/handoff :dispatch/status]))
+        (collect-repair plan state providers)
+        (dispatch-repair state dispatch-statement-repair-fn persist-state-fn))
       (nil? (:active state))
       (prepare-next plan state providers)
       :else
@@ -363,15 +459,19 @@
                                (and refuted? (not repair-exhausted?))
                                (update :next-index dec)
                                (and refuted? (not repair-exhausted?))
-                               (assoc :status :voided-slot-awaiting-revision)
+                               (assoc :status :voided-slot-awaiting-revision
+                                      :statement-repair/handoff
+                                      (statement-repair-handoff
+                                       (:frame active)
+                                       (:terminal-receipt result)))
                                pause? (assoc :status :paused)))
                     persisted (persist-state-fn cleared)]
                 (if-not (:ok persisted)
                   {:ok false :error/code
                    :problem-queue-state-persistence-failed}
                   (if (and refuted? (not repair-exhausted?))
-                    {:ok true :status :voided-slot-awaiting-revision
-                     :state cleared}
+                    (dispatch-repair cleared dispatch-statement-repair-fn
+                                     persist-state-fn)
                     (if pause?
                     {:ok true :status :batch-paused :state cleared}
                     (prepare-next plan cleared providers))))))))))))

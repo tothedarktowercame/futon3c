@@ -232,3 +232,42 @@ the required symlink to the canonical package authority. Workspace policy
 forbids running Lake there until the canonical lifecycle repairs it. No Lake
 command was run during this design revision, and
 `.lake/build/lib/Mathlib.olean` remains absent.
+
+## 2026-08-26: Guide handoff is part of queue validity
+
+The first implementation could enter `:voided-slot-awaiting-revision` without
+creating any Guide work. That state depended on a human noticing it and calling
+`revise-voided-slot`; worse, the next ordinary queue tick ignored the status and
+could mint the unchanged pins. It was not a valid automated transition.
+
+The corrected rule is:
+
+- before dispatch, persist a content-addressed `:statement-repair` obligation;
+- bind it to the voided frame, unchanged problem id, and current repository,
+  revision, path, and blob;
+- name `:guide` as owner, attempt 1 of 1, the two required outputs (replacement
+  pinned problem and Guide receipt), and `:discard-and-advance` on exhaustion;
+- dispatch the obligation to the frame's Guide and persist the Agency job id;
+- after a crash, retry a pending dispatch; never mint while the handoff is
+  pending or dispatched;
+- accept revised pins only from a Guide receipt that repeats the exact
+  obligation id;
+- collect the terminal Guide job: success installs the returned plan revision
+  and immediately enters ordinary reminting, while failure consumes the sole
+  attempt, discards the slot, and prepares the next problem.
+
+`valid-state?` now rejects an awaiting state without that complete persisted
+intent. The Lean `StatementRepairHandoff` and
+`awaiting_statement_repair_requires_executable_guide_handoff` theorem state the
+same rule, and the generated terminal policy requires intent-before-dispatch,
+retryable dispatch, terminal-result collection, and the two Guide outputs.
+
+The Guide seat is retained when a refuted frame's other resources are retired,
+so the production adapter can announce and activate the repair job. A failed
+Agency call leaves the durable pending intent in place for the next queue tick;
+it cannot fall through to reminting.
+
+The APM model is now owned by `/home/joe/code/apm-lean`, which is itself the
+canonical package authority (its `.lake/packages` is therefore the real package
+directory to which frame worktrees link). The four explicit targets build
+successfully, and `.lake/build/lib/Mathlib.olean` remains absent.

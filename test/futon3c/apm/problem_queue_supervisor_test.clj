@@ -25,6 +25,11 @@
       :prepare-frame-fn #(do (swap! calls conj [:prepare (:frame/id %)])
                              {:ok true :preparation/id
                               (str "prep-" (:frame/id %))})
+      :dispatch-statement-repair-fn
+      (fn [handoff]
+        (swap! calls conj [:dispatch-repair (:obligation/id handoff)])
+        {:ok true :dispatch/id (str "guide-job-" (:frame/id handoff))})
+      :observe-statement-repair-fn (constantly {:ok true :status :pending})
       :frame-tick-fn (fn [frame] (swap! calls conj [:tick (:frame/id frame)])
                        {:ok true :status :frame-complete :frame/result :closed
                         :terminal-receipt {:receipt/id
@@ -217,10 +222,16 @@
                            :revision "corrected-revision"
                            :blob "corrected-blob")
         guide-receipt {:repair/role :guide
+                       :obligation/id (get-in @state
+                                              [:statement-repair/handoff
+                                               :obligation/id])
                        :receipt/id (apply str (repeat 64 "d"))}
         revised (sut/revise-voided-slot (:plan providers) @state replacement
                                         guide-receipt)]
-    (is (= :voided-slot-awaiting-revision (:status void-result)))
+    (is (= :guide-statement-repair-dispatched (:status void-result)))
+    (is (= :guide (get-in @state [:statement-repair/handoff :repair/role])))
+    (is (= :dispatched
+           (get-in @state [:statement-repair/handoff :dispatch/status])))
     (is (nil? (:active @state)))
     (is (empty? (:completed @state)))
     (is (= 0 (:next-index @state)))
@@ -262,7 +273,57 @@
             (sut/revise-voided-slot
              (:plan providers) @state replacement
              {:repair/role :solver
+              :obligation/id (get-in @state
+                                     [:statement-repair/handoff :obligation/id])
               :receipt/id (apply str (repeat 64 "e"))}))))))
+
+(deftest awaiting-repair-never-remints-and-retries-a-persisted-dispatch
+  (let [{:keys [providers state calls]} (harness)
+        _ (sut/tick! providers)
+        failed (sut/tick!
+                (assoc providers
+                       :dispatch-statement-repair-fn (constantly {:ok false})
+                       :frame-tick-fn
+                       (constantly
+                        {:ok true :status :frame-complete :frame/result :void
+                         :terminal-receipt {:receipt/id "void-q1"
+                                            :problem/outcome :refuted}})))
+        pending-state @state
+        mint-count (count (filter #(= :mint (first %)) @calls))
+        retried (sut/tick! providers)]
+    (is (= :problem-queue-guide-dispatch-failed (:error/code failed)))
+    (is (= :voided-slot-awaiting-revision (:status pending-state)))
+    (is (= :pending
+           (get-in pending-state [:statement-repair/handoff :dispatch/status])))
+    (is (= :guide-statement-repair-dispatched (:status retried)))
+    (is (= mint-count (count (filter #(= :mint (first %)) @calls))))))
+
+(deftest completed-guide-handoff-installs-repair-and-remints-without-human-step
+  (let [{:keys [providers state]} (harness)
+        _ (sut/tick! providers)
+        _ (sut/tick!
+           (assoc providers :frame-tick-fn
+                  (constantly
+                   {:ok true :status :frame-complete :frame/result :void
+                    :terminal-receipt {:receipt/id "void-q1"
+                                       :problem/outcome :refuted}})))
+        obligation-id (get-in @state
+                              [:statement-repair/handoff :obligation/id])
+        replacement (assoc (first problems)
+                           :revision "guide-revision" :blob "guide-blob")
+        result (sut/tick!
+                (assoc providers :observe-statement-repair-fn
+                       (constantly
+                        {:ok true :status :complete
+                         :replacement-pinned-problem replacement
+                         :guide-receipt
+                         {:repair/role :guide :obligation/id obligation-id
+                          :receipt/id (apply str (repeat 64 "f"))}})))]
+    (is (= :frame-prepared (:status result)))
+    (is (= "guide-blob"
+           (get-in result [:frame :problem :blob])))
+    (is (= 1 (get-in @state [:statement-repair-attempts "p1"])))
+    (is (nil? (:statement-repair/handoff @state)))))
 
 (deftest queue-plan-preserves-explicit-retained-branch
   (let [problem (assoc (first problems) :base-branch "exp/retained")]

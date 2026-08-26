@@ -175,6 +175,13 @@
    :corrected-pins-require-plan-revision true
    :statement-repair-role "guide"
    :statement-repair-max-attempts 1
+   :statement-repair-handoff-required true
+   :statement-repair-intent-before-dispatch true
+   :statement-repair-dispatch-retryable true
+   :statement-repair-terminal-result-collected true
+   :statement-repair-success-action "install-and-remint"
+   :statement-repair-required-output
+   ["replacement-pinned-problem" "guide-receipt"]
    :statement-repair-exhaustion-action "discard-and-advance"
    :retry-requires-retained-solver-head true
    :retry-does-not-advance-problem-queue true
