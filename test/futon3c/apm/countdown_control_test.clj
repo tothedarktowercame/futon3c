@@ -6,6 +6,7 @@
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-runner :as runner]
             [futon3c.apm.countdown-control :as sut]
+            [futon3c.apm.countdown-pre-admission :as admission]
             [futon3c.apm.countdown-manifest :as countdown-manifest]
             [futon3c.apm.test-support :refer [with-stubbed-qualification]]
             [futon3c.apm.live-preflight-runtime :as runtime]
@@ -14,6 +15,28 @@
             [futon3c.apm.problem-projection :as problem-projection]
             [futon3c.apm.problem-queue-supervisor :as problem-queue]
             [futon3c.apm.queued-frame-adapter :as queued-frame-adapter]))
+
+(deftest jit-gate-uses-captured-one-off-manifest
+  (let [one-off {:manifest/id "f46-manifest" :manifest/scope :one-off
+                 :units [{:frame/id "f46" :problem/id "a96J08"}]}
+        countdown {:manifest/id "countdown-f18-f27"
+                   :units [{:frame/id "f18"}]}
+        contract {:contract/id :apm-complete-frame-cycle-v2}
+        observed (atom nil)]
+    (with-redefs [admission/validate
+                  (fn [request]
+                    (reset! observed request)
+                    {:checks {:unit-present? true
+                              :unit-non-topology? true
+                              :unit-apparatus-matches? true}})]
+      (let [provider (partial #'sut/gate-provider
+                              {:manifest one-off :contract contract})
+            [gate] (provider {:obligation
+                              {:obligation/action {:frame-id "f46"}}})]
+        (is (= :pass (:gate/status gate)))
+        (is (= one-off (:countdown-manifest @observed)))
+        (is (not= countdown (:countdown-manifest @observed)))
+        (is (= "f46" (:frame-id @observed)))))))
 
 (deftest terminal-lifecycle-actions-have-deterministic-handlers
   (is (= {:ok true :status :certified

@@ -439,9 +439,8 @@
           :buffer-sink problem-projection/emacs-buffer-sink})))
     {:ok true :projected? false :reason :no-active-frame}))
 
-(defn- gate-provider [{:keys [obligation]}]
-  (let [{:keys [manifest contract]} (inputs)
-        frame-id (get-in obligation [:obligation/action :frame-id])
+(defn- gate-provider [{:keys [manifest contract]} {:keys [obligation]}]
+  (let [frame-id (get-in obligation [:obligation/action :frame-id])
         check (when frame-id
                 (admission/validate {:countdown-manifest manifest
                                      :cycle-contract contract
@@ -470,12 +469,14 @@
        :finding {:kind kind :state/type (:state/type state)}})))
 
 (defn- options []
-  {:ledger-path (control-path ledger-path)
+  (let [gate-context (select-keys (inputs) [:manifest :contract])]
+   {:ledger-path (control-path ledger-path)
    :certificate-directory (control-path certificate-directory)
    :projection-directory (control-path projection-directory) :now-fn #(Instant/now)
    :observation-fn (fn [_] {:binding-response {:ok true :bound? false}
                             :jobs-response {:ok true :jobs []}})
-   :gate-provider gate-provider :postcondition-fn postconditions/validate
+   :gate-provider (partial gate-provider gate-context)
+   :postcondition-fn postconditions/validate
    :project-fn projection-sink
    :handlers {:open-block (fn [action]
                             {:ok true :certificate
@@ -501,7 +502,7 @@
               :guide-intervention (partial certified-handler :guide-intervention)
               :scribe-reduce (partial certified-handler :scribe-reduce)
               :close-frame (partial certified-handler :close-frame)}
-   :actor "countdown-control"})
+   :actor "countdown-control"}))
 
 (defn inspect! [] (stepper/inspect! (options)))
 
