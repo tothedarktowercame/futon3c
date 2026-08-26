@@ -70,3 +70,79 @@
       (is (= [] (bank-audit/unbanked-solved
                  {:campaign-dir (.getPath campaign-dir)
                   :read-at-rev (constantly nil)}))))))
+
+(defn- verification-input
+  [repo status run-lean git]
+  {:frame "f42"
+   :problem-id "a97J07"
+   :head "d84e28b164f3355c53089c19a58f2056e8c1b6db"
+   :status status
+   :repo (.getPath repo)
+   :run-lean run-lean
+   :git git})
+
+(defn- stub-git
+  [calls]
+  (fn [_repo & args]
+    (swap! calls conj args)
+    (case (first args)
+      "show" {:exit 0 :out "theorem apm_a97j07 : True := by trivial" :err ""}
+      "update-ref" {:exit 0 :out "" :err ""})))
+
+(deftest verified-clean-head-is-pinned
+  (with-temp-dir
+    (fn [repo]
+      (let [calls (atom [])
+            result (bank-audit/verify-and-pin!
+                    (verification-input
+                     repo :unbanked
+                     (fn [_repo _file]
+                       {:exit 0
+                        :out "'apm_a97j07' depends on axioms: [propext, Classical.choice, Quot.sound]"
+                        :err ""})
+                     (stub-git calls)))]
+        (is (= :pinned (:status result)))
+        (is (= (str "refs/apm/banked-solves/f42/a97J07/"
+                    "d84e28b164f3355c53089c19a58f2056e8c1b6db")
+               (:ref result)))
+        (is (= "update-ref" (first (last @calls))))
+        (is (not (.exists (io/file repo ".lake/build/lib/Mathlib.olean"))))))))
+
+(deftest sorry-ax-and-elaboration-failure-never-pin
+  (with-temp-dir
+    (fn [repo]
+      (let [sorry-calls (atom [])
+            sorry-result
+            (bank-audit/verify-and-pin!
+             (verification-input
+              repo :unbanked
+              (fn [_repo _file]
+                {:exit 0
+                 :out "'apm_a97j07' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]"
+                 :err ""})
+              (stub-git sorry-calls)))
+            failed-calls (atom [])
+            failed-result
+            (bank-audit/verify-and-pin!
+             (verification-input
+              repo :unbanked
+              (fn [_repo _file] {:exit 1 :out "" :err "type mismatch"})
+              (stub-git failed-calls)))]
+        (is (= {:status :refused :reason :sorry-ax
+                :axioms ["propext" "sorryAx" "Classical.choice" "Quot.sound"]}
+               sorry-result))
+        (is (not-any? #(= "update-ref" (first %)) @sorry-calls))
+        (is (= {:status :refused :reason :elaboration-failed :exit 1}
+               failed-result))
+        (is (not-any? #(= "update-ref" (first %)) @failed-calls))))))
+
+(deftest non-unbanked-inputs-skip-elaboration-and-git
+  (with-temp-dir
+    (fn [repo]
+      (doseq [status [:banked :head-unresolvable]]
+        (let [calls (atom [])
+              fail-if-called (fn [& _] (swap! calls inc))]
+          (is (= {:status :skipped :reason status}
+                 (bank-audit/verify-and-pin!
+                  (verification-input repo status fail-if-called fail-if-called))))
+          (is (empty? @calls)))))))
