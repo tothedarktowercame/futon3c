@@ -30,6 +30,7 @@ def read(p):
         return ""
 
 seen_frames, seen_phase, baby_pos = set(), {}, 0
+last_emit = {}   # path -> last emitted line, so an in-progress record is not re-announced
 last_status, last_fail_count = None, None
 for d in glob.glob(os.path.join(CAMP, "*-f*")):
     seen_frames.add(d)
@@ -93,14 +94,20 @@ while True:
                     st = re.search(r":state/type\s*(:[\w-]+)", t)
                     stt = st.group(1) if st else ""
                     if "dispatched" in stt:
-                        out(f"PHASE {fid} {name} dispatched")
+                        line = f"PHASE {fid} {name} dispatched"
+                        if last_emit.get(p) != line:
+                            last_emit[p] = line
+                            out(line)
                     else:
                         u = re.findall(r":used-ids\s*\[([^\]]*)\]", t)
                         a = re.findall(r":accessible-memory-ids\s*\[([^\]]*)\]", t)
                         n = len(set(re.findall(r'"(e-[^"]+)"', u[0]))) if u else 0
                         na = len(re.findall(r'"e-[^"]+"', a[0])) if a else 0
                         flag = "  <-- ZERO UPTAKE" if (na and not n) else ""
-                        out(f"PHASE {fid} {name} used={n}/{na}{flag}")
+                        line = f"PHASE {fid} {name} used={n}/{na}{flag}"
+                        if last_emit.get(p) != line:
+                            last_emit[p] = line
+                            out(line)
 
         if BABYLOG and os.path.exists(BABYLOG):
             sz = os.path.getsize(BABYLOG)
